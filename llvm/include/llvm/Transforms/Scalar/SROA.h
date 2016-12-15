@@ -17,12 +17,14 @@
 #define LLVM_TRANSFORMS_SCALAR_SROA_H
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class AllocaInst;
+class SelectInst;
+class PHINode;
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.
@@ -54,7 +56,6 @@ class SROALegacyPass;
 class SROA : public PassInfoMixin<SROA> {
   LLVMContext *C;
   DominatorTree *DT;
-  AssumptionCache *AC;
 
   /// \brief Worklist of alloca instructions to simplify.
   ///
@@ -99,7 +100,7 @@ class SROA : public PassInfoMixin<SROA> {
   SetVector<SelectInst *, SmallVector<SelectInst *, 2>> SpeculatableSelects;
 
 public:
-  SROA() : C(nullptr), DT(nullptr), AC(nullptr) {}
+  SROA() : C(nullptr), DT(nullptr) {}
 
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -109,8 +110,7 @@ private:
   friend class sroa::SROALegacyPass;
 
   /// Helper used by both the public run method and by the legacy pass.
-  PreservedAnalyses runImpl(Function &F, DominatorTree &RunDT,
-                            AssumptionCache &RunAC);
+  PreservedAnalyses runImpl(Function &F, DominatorTree &RunDT);
 
   bool presplitLoadsAndStores(AllocaInst &AI, sroa::AllocaSlices &AS);
   AllocaInst *rewritePartition(AllocaInst &AI, sroa::AllocaSlices &AS,

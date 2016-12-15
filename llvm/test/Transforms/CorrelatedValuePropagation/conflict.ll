@@ -26,7 +26,7 @@ declare void @llvm.assume(i1)
 define i8 @test2(i8 %a) {
 ; CHECK-LABEL: @test2
   %cmp1 = icmp eq i8 %a, 5
-  call void @llvm.assume(i1 %cmp1)
+  call void @llvm.assume(i1 %cmp1) [ "affected"(i8 %a) ]
   %cmp2 = icmp eq i8 %a, 3
 ; CHECK: br i1 false, label %dead, label %exit
   br i1 %cmp2, label %dead, label %exit
@@ -43,7 +43,7 @@ define i8 @test3(i8 %a) {
 dead:
   %cmp2 = icmp eq i8 %a, 3
 ; CHECK: call void @llvm.assume(i1 false)
-  call void @llvm.assume(i1 %cmp2)
+  call void @llvm.assume(i1 %cmp2) [ "affected"(i8 %a) ]
   ret i8 %a
 exit:
   ret i8 0

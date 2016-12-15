@@ -78,8 +78,7 @@ public:
   /// code in the .debug_info data.
   /// \param Attr DWARF attribute to search for.
   /// \param U the DWARFUnit the contains the DIE.
-  /// \param FormValue the form value that will be filled in.
-  /// \returns true if the attribute was extracted into \p FormValue.
+  /// \returns Optional DWARF form value if the attribute was extracted.
   Optional<DWARFFormValue> getAttributeValue(const uint32_t DIEOffset,
                                              const dwarf::Attribute Attr,
                                              const DWARFUnit &U) const;

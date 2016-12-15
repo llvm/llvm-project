@@ -130,7 +130,9 @@ def M0_CLASS : RegisterClass<"AMDGPU", [i32], 32, (add M0)> {
 // SGPR 32-bit registers
 def SGPR_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
                             (add (sequence "SGPR%u", 0, 103))> {
-  let AllocationPriority = 1;
+  // Give all SGPR classes higher priority than VGPR classes, because
+  // we want to spill SGPRs to VGPRs.
+  let AllocationPriority = 7;
 }
 
 // SGPR 64-bit registers
@@ -259,23 +261,23 @@ def VGPR_512 : RegisterTuples<[sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7,
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI,
    TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI)> {
-  let AllocationPriority = 1;
+  let AllocationPriority = 7;
 }
 
 def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
-  let AllocationPriority = 1;
+  let AllocationPriority = 7;
 }
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16], 32,
   (add SReg_32_XM0, M0_CLASS, EXEC_LO, EXEC_HI)> {
-  let AllocationPriority = 1;
+  let AllocationPriority = 7;
 }
 
 def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add SGPR_64Regs)> {
   let CopyCost = 1;
-  let AllocationPriority = 2;
+  let AllocationPriority = 8;
 }
 
 def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> {
@@ -285,20 +287,20 @@ def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> 
 def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
   (add SGPR_64, VCC, FLAT_SCR, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
-  let AllocationPriority = 2;
+  let AllocationPriority = 8;
 }
 
 def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
   (add SReg_64_XEXEC, EXEC)> {
   let CopyCost = 1;
-  let AllocationPriority = 2;
+  let AllocationPriority = 8;
 }
 
 // Requires 2 s_mov_b64 to copy
 let CopyCost = 2 in {
 
 def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128Regs)> {
-  let AllocationPriority = 4;
+  let AllocationPriority = 10;
 }
 
 def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add TTMP_128Regs)> {
@@ -306,7 +308,7 @@ def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add TTMP_128R
 }
 
 def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128, TTMP_128)> {
-  let AllocationPriority = 4;
+  let AllocationPriority = 10;
 }
 
 } // End CopyCost = 2
@@ -314,13 +316,13 @@ def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128,
 def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add SGPR_256)> {
   // Requires 4 s_mov_b64 to copy
   let CopyCost = 4;
-  let AllocationPriority = 5;
+  let AllocationPriority = 11;
 }
 
 def SReg_512 : RegisterClass<"AMDGPU", [v64i8, v16i32], 32, (add SGPR_512)> {
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
-  let AllocationPriority = 6;
+  let AllocationPriority = 12;
 }
 
 // Register class for all vector registers (VGPRs + Interploation Registers)

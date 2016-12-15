@@ -301,6 +301,9 @@ protected:
   /// Generate calls via indirect call instructions.
   bool GenLongCalls = false;
 
+  /// Generate code that does not contain data access to code sections.
+  bool GenExecuteOnly = false;
+
   /// Target machine allowed unsafe FP math (such as use of NEON fp)
   bool UnsafeFPMath = false;
 
@@ -494,6 +497,7 @@ public:
   bool useNaClTrap() const { return UseNaClTrap; }
   bool useSjLjEH() const { return UseSjLjEH; }
   bool genLongCalls() const { return GenLongCalls; }
+  bool genExecuteOnly() const { return GenExecuteOnly; }
 
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }

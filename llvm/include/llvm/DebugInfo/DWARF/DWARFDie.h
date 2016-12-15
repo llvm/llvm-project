@@ -149,6 +149,16 @@ public:
   /// describes an address.
   uint64_t getAttributeValueAsAddress(dwarf::Attribute Attr,
                                       uint64_t FailValue) const;
+
+  /// Extract the specified attribute from this DIE as an address.
+  ///
+  /// Extract an attribute value from this DIE only. This call doesn't look
+  /// for the attribute value in any DW_AT_specification or
+  /// DW_AT_abstract_origin referenced DIEs.
+  ///
+  /// \param Attr the attribute to extract.
+  /// \returns an optional value for the attribute.
+  Optional<uint64_t> getAttributeValueAsAddress(dwarf::Attribute Attr) const;
   
   /// Extract the specified attribute from this DIE as a signed integer.
   ///
@@ -164,6 +174,17 @@ public:
   /// that describes a signed integer.
   int64_t getAttributeValueAsSignedConstant(dwarf::Attribute Attr,
                                             int64_t FailValue) const;
+
+  /// Extract the specified attribute from this DIE as a signed integer.
+  ///
+  /// Extract an attribute value from this DIE only. This call doesn't look
+  /// for the attribute value in any DW_AT_specification or
+  /// DW_AT_abstract_origin referenced DIEs.
+  ///
+  /// \param Attr the attribute to extract.
+  /// \returns an optional value for the attribute.
+  Optional<int64_t>
+  getAttributeValueAsSignedConstant(dwarf::Attribute Attr) const;
   
   /// Extract the specified attribute from this DIE as an unsigned integer.
   ///
@@ -180,6 +201,17 @@ public:
   uint64_t getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr,
                                                uint64_t FailValue) const;
   
+  /// Extract the specified attribute from this DIE as an unsigned integer.
+  ///
+  /// Extract an attribute value from this DIE only. This call doesn't look
+  /// for the attribute value in any DW_AT_specification or
+  /// DW_AT_abstract_origin referenced DIEs.
+  ///
+  /// \param Attr the attribute to extract.
+  /// \returns an optional value for the attribute.
+  Optional<uint64_t>
+  getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr) const;
+
   /// Extract the specified attribute from this DIE as absolute DIE Offset.
   ///
   /// Extract an attribute value from this DIE only. This call doesn't look
@@ -195,6 +227,16 @@ public:
   uint64_t getAttributeValueAsReference(dwarf::Attribute Attr,
                                         uint64_t FailValue) const;
   
+  /// Extract the specified attribute from this DIE as absolute DIE Offset.
+  ///
+  /// Extract an attribute value from this DIE only. This call doesn't look
+  /// for the attribute value in any DW_AT_specification or
+  /// DW_AT_abstract_origin referenced DIEs.
+  ///
+  /// \param Attr the attribute to extract.
+  /// \returns an optional value for the attribute.
+  Optional<uint64_t> getAttributeValueAsReference(dwarf::Attribute Attr) const;
+  
   /// Extract the specified attribute from this DIE as absolute section offset.
   ///
   /// Extract an attribute value from this DIE only. This call doesn't look
@@ -209,6 +251,16 @@ public:
   /// that describes a section offset.
   uint64_t getAttributeValueAsSectionOffset(dwarf::Attribute Attr,
                                             uint64_t FailValue) const;
+  /// Extract the specified attribute from this DIE as absolute section offset.
+  ///
+  /// Extract an attribute value from this DIE only. This call doesn't look
+  /// for the attribute value in any DW_AT_specification or
+  /// DW_AT_abstract_origin referenced DIEs.
+  ///
+  /// \param Attr the attribute to extract.
+  /// \returns an optional value for the attribute.
+  Optional<uint64_t>
+  getAttributeValueAsSectionOffset(dwarf::Attribute Attr) const;
   
   /// Extract the specified attribute from this DIE as the referenced DIE.
   ///
@@ -230,9 +282,8 @@ public:
   /// This is a utility function that checks for either the DW_AT_rnglists_base
   /// or DW_AT_GNU_ranges_base attribute.
   ///
-  /// \returns the absolute section offset value of the attribute or FailValue
-  /// if the attribute doesn't exist.
-  uint64_t getRangesBaseAttribute(uint64_t FailValue) const;
+  /// \returns anm optional absolute section offset value for the attribute.
+  Optional<uint64_t> getRangesBaseAttribute() const;
   
   /// Retrieves DW_AT_low_pc and DW_AT_high_pc from CU.
   /// Returns true if both attributes are present.

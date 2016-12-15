@@ -18,12 +18,12 @@ namespace llvm {
 enum class AlignStyle { Left, Center, Right };
 
 struct FmtAlign {
-  detail::format_wrapper &Wrapper;
+  detail::format_adapter &Adapter;
   AlignStyle Where;
   size_t Amount;
 
-  FmtAlign(detail::format_wrapper &Wrapper, AlignStyle Where, size_t Amount)
-      : Wrapper(Wrapper), Where(Where), Amount(Amount) {}
+  FmtAlign(detail::format_adapter &Adapter, AlignStyle Where, size_t Amount)
+      : Adapter(Adapter), Where(Where), Amount(Amount) {}
 
   void format(raw_ostream &S, StringRef Options) {
     // If we don't need to align, we can format straight into the underlying
@@ -32,13 +32,13 @@ struct FmtAlign {
     // TODO: Make the format method return the number of bytes written, that
     // way we can also skip the intermediate stream for left-aligned output.
     if (Amount == 0) {
-      Wrapper.format(S, Options);
+      Adapter.format(S, Options);
       return;
     }
     SmallString<64> Item;
     raw_svector_ostream Stream(Item);
 
-    Wrapper.format(Stream, Options);
+    Adapter.format(Stream, Options);
     if (Amount <= Item.size()) {
       S << Item;
       return;

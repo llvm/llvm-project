@@ -1291,6 +1291,24 @@ public:
   /// Returns a new DILocation with updated \p Discriminator.
   inline DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
 
+  /// When two instructions are combined into a single instruction we also
+  /// need to combine the original locations into a single location.
+  ///
+  /// When the locations are the same we can use either location. When they
+  /// differ, we need a third location which is distinct from either. If
+  /// they have the same file/line but have a different discriminator we
+  /// could create a location with a new discriminator. If they are from
+  /// different files/lines the location is ambiguous and can't be
+  /// represented in a single line entry.  In this case, no location
+  /// should be set.
+  ///
+  /// Currently this function is simply a stub, and no location will be
+  /// used for all cases.
+  static DILocation *getMergedLocation(const DILocation *LocA,
+                                       const DILocation *LocB) {
+    return nullptr;
+  }
+
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
     if (getNumOperands() == 2)

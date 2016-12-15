@@ -841,10 +841,9 @@ void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
   int64_t UnitPcOffset = 0;
-  uint64_t OrigLowPc = OrigUnitDie.getAttributeValueAsAddress(
-      dwarf::DW_AT_low_pc, -1ULL);
-  if (OrigLowPc != -1ULL)
-    UnitPcOffset = int64_t(OrigLowPc) - Unit.getLowPc();
+  auto OrigLowPc = OrigUnitDie.getAttributeValueAsAddress(dwarf::DW_AT_low_pc);
+  if (OrigLowPc)
+    UnitPcOffset = int64_t(*OrigLowPc) - Unit.getLowPc();
 
   for (const auto &Attr : Attributes) {
     uint32_t Offset = Attr.first.get();
@@ -2124,10 +2123,9 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
   std::tie(LowPcOffset, LowPcEndOffset) =
       getAttributeOffsets(Abbrev, *LowPcIdx, Offset, OrigUnit);
 
-  uint64_t LowPc =
-      DIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc, -1ULL);
-  assert(LowPc != -1ULL && "low_pc attribute is not an address.");
-  if (LowPc == -1ULL ||
+  auto LowPc = DIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc);
+  assert(LowPc.hasValue() && "low_pc attribute is not an address.");
+  if (!LowPc ||
       !RelocMgr.hasValidRelocation(LowPcOffset, LowPcEndOffset, MyInfo))
     return Flags;
 
@@ -2148,12 +2146,12 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
     HighPc = *HighPcValue->getAsAddress();
   } else {
     assert(HighPcValue->isFormClass(DWARFFormValue::FC_Constant));
-    HighPc = LowPc + *HighPcValue->getAsUnsignedConstant();
+    HighPc = *LowPc + *HighPcValue->getAsUnsignedConstant();
   }
 
   // Replace the debug map range with a more accurate one.
-  Ranges[LowPc] = std::make_pair(HighPc, MyInfo.AddrAdjust);
-  Unit.addFunctionRange(LowPc, HighPc, MyInfo.AddrAdjust);
+  Ranges[*LowPc] = std::make_pair(HighPc, MyInfo.AddrAdjust);
+  Unit.addFunctionRange(*LowPc, HighPc, MyInfo.AddrAdjust);
   return Flags;
 }
 
@@ -2974,9 +2972,8 @@ static void patchStmtList(DIE &Die, DIEInteger Offset) {
 void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
                                         DWARFContext &OrigDwarf) {
   DWARFDie CUDie = Unit.getOrigUnit().getUnitDIE();
-  uint64_t StmtList = CUDie.getAttributeValueAsSectionOffset(
-      dwarf::DW_AT_stmt_list, -1ULL);
-  if (StmtList == -1ULL)
+  auto StmtList = CUDie.getAttributeValueAsSectionOffset(dwarf::DW_AT_stmt_list);
+  if (!StmtList)
     return;
 
   // Update the cloned DW_AT_stmt_list with the correct debug_line offset.
@@ -2985,7 +2982,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
 
   // Parse the original line info for the unit.
   DWARFDebugLine::LineTable LineTable;
-  uint32_t StmtOffset = StmtList;
+  uint32_t StmtOffset = *StmtList;
   StringRef LineData = OrigDwarf.getLineSection().Data;
   DataExtractor LineExtractor(LineData, OrigDwarf.isLittleEndian(),
                               Unit.getOrigUnit().getAddressByteSize());
@@ -3079,7 +3076,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   }
 
   // Finished extracting, now emit the line tables.
-  uint32_t PrologueEnd = StmtList + 10 + LineTable.Prologue.PrologueLength;
+  uint32_t PrologueEnd = *StmtList + 10 + LineTable.Prologue.PrologueLength;
   // FIXME: LLVM hardcodes it's prologue values. We just copy the
   // prologue over and that works because we act as both producer and
   // consumer. It would be nicer to have a real configurable line
@@ -3094,7 +3091,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
     Params.DWARF2LineBase = LineTable.Prologue.LineBase;
     Params.DWARF2LineRange = LineTable.Prologue.LineRange;
     Streamer->emitLineTableForUnit(Params,
-                                   LineData.slice(StmtList + 4, PrologueEnd),
+                                   LineData.slice(*StmtList + 4, PrologueEnd),
                                    LineTable.Prologue.MinInstLength, NewRows,
                                    Unit.getOrigUnit().getAddressByteSize());
   }
@@ -3207,12 +3204,13 @@ void DwarfLinker::DIECloner::copyAbbrev(
 
 static uint64_t getDwoId(const DWARFDie &CUDie,
                          const DWARFUnit &Unit) {
-  uint64_t DwoId =
-      CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_dwo_id, 0);
-  if (!DwoId)
-    DwoId = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_GNU_dwo_id,
-                                                      0);
-  return DwoId;
+  auto DwoId = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_dwo_id);
+  if (DwoId)
+    return *DwoId;
+  DwoId = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_GNU_dwo_id);
+  if (DwoId)
+    return *DwoId;
+  return 0;
 }
 
 bool DwarfLinker::registerModuleReference(

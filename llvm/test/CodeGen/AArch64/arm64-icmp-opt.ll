@@ -8,8 +8,8 @@
 define i32 @t1(i64 %a) {
 ; CHECK-LABEL: t1:
 ; CHECK:       // BB#0:
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    lsr x8, x0, #63
+; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
   %cmp = icmp sgt i64 %a, -1

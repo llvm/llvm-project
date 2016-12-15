@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -56,11 +55,7 @@ public:
   InlineCost getInlineCost(CallSite CS) override {
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-        [&](Function &F) -> AssumptionCache & {
-      return ACT->getAssumptionCache(F);
-    };
-    return llvm::getInlineCost(CS, Params, TTI, GetAssumptionCache, PSI);
+    return llvm::getInlineCost(CS, Params, TTI, PSI);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
@@ -76,7 +71,6 @@ private:
 char SimpleInliner::ID = 0;
 INITIALIZE_PASS_BEGIN(SimpleInliner, "inline", "Function Integration/Inlining",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

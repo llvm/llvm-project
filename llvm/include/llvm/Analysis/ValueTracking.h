@@ -24,7 +24,6 @@ namespace llvm {
 template <typename T> class ArrayRef;
   class APInt;
   class AddOperator;
-  class AssumptionCache;
   class DataLayout;
   class DominatorTree;
   class GEPOperator;
@@ -50,7 +49,6 @@ template <typename T> class ArrayRef;
   /// for all of the elements in the vector.
   void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
                         const DataLayout &DL, unsigned Depth = 0,
-                        AssumptionCache *AC = nullptr,
                         const Instruction *CxtI = nullptr,
                         const DominatorTree *DT = nullptr);
   /// Compute known bits from the range metadata.
@@ -61,7 +59,6 @@ template <typename T> class ArrayRef;
   /// Return true if LHS and RHS have no common bits set.
   bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
                            const DataLayout &DL,
-                           AssumptionCache *AC = nullptr,
                            const Instruction *CxtI = nullptr,
                            const DominatorTree *DT = nullptr);
 
@@ -69,7 +66,6 @@ template <typename T> class ArrayRef;
   /// wrapper around computeKnownBits.
   void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
                       const DataLayout &DL, unsigned Depth = 0,
-                      AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
@@ -80,7 +76,6 @@ template <typename T> class ArrayRef;
   /// value is either a power of two or zero.
   bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                               bool OrZero = false, unsigned Depth = 0,
-                              AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
@@ -89,35 +84,30 @@ template <typename T> class ArrayRef;
   /// defined. Supports values with integer or pointer type and vectors of
   /// integers.
   bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                      AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
   /// Returns true if the give value is known to be non-negative.
   bool isKnownNonNegative(const Value *V, const DataLayout &DL,
                           unsigned Depth = 0,
-                          AssumptionCache *AC = nullptr,
                           const Instruction *CxtI = nullptr,
                           const DominatorTree *DT = nullptr);
 
   /// Returns true if the given value is known be positive (i.e. non-negative
   /// and non-zero).
   bool isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                       AssumptionCache *AC = nullptr,
                        const Instruction *CxtI = nullptr,
                        const DominatorTree *DT = nullptr);
 
   /// Returns true if the given value is known be negative (i.e. non-positive
   /// and non-zero).
   bool isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                       AssumptionCache *AC = nullptr,
                        const Instruction *CxtI = nullptr,
                        const DominatorTree *DT = nullptr);
 
   /// Return true if the given values are known to be non-equal when defined.
   /// Supports scalar integer types only.
   bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
-                      AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
@@ -132,7 +122,7 @@ template <typename T> class ArrayRef;
   /// for all of the elements in the vector.
   bool MaskedValueIsZero(const Value *V, const APInt &Mask,
                          const DataLayout &DL,
-                         unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                         unsigned Depth = 0,
                          const Instruction *CxtI = nullptr,
                          const DominatorTree *DT = nullptr);
 
@@ -144,7 +134,7 @@ template <typename T> class ArrayRef;
   /// sign bits for the vector element with the mininum number of known sign
   /// bits.
   unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
-                              unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                              unsigned Depth = 0,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
@@ -325,24 +315,20 @@ template <typename T> class ArrayRef;
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const DataLayout &DL,
-                                               AssumptionCache *AC,
                                                const Instruction *CxtI,
                                                const DominatorTree *DT);
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const DataLayout &DL,
-                                               AssumptionCache *AC,
                                                const Instruction *CxtI,
                                                const DominatorTree *DT);
   OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
                                              const DataLayout &DL,
-                                             AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
   /// This version also leverages the sign bit of Add if known.
   OverflowResult computeOverflowForSignedAdd(const AddOperator *Add,
                                              const DataLayout &DL,
-                                             AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
 
@@ -475,7 +461,6 @@ template <typename T> class ArrayRef;
                                     const DataLayout &DL,
                                     bool InvertAPred = false,
                                     unsigned Depth = 0,
-                                    AssumptionCache *AC = nullptr,
                                     const Instruction *CxtI = nullptr,
                                     const DominatorTree *DT = nullptr);
 } // end namespace llvm

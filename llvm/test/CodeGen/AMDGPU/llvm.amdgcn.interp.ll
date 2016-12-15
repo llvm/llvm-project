@@ -4,10 +4,10 @@
 ; GCN-LABEL: {{^}}v_interp:
 ; GCN-NOT: s_wqm
 ; GCN: s_mov_b32 m0, s{{[0-9]+}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 0{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, 0, 0{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, attr0.x{{$}}
 define amdgpu_ps void @v_interp(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg, <2 x float>) {
 main_body:
   %i = extractelement <2 x float> %4, i32 0
@@ -24,19 +24,19 @@ main_body:
 
 ; GCN-LABEL: {{^}}v_interp_p1:
 ; GCN: s_movk_i32 m0, 0x100
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 0{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 0{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2, 0{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 3, 0{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 4, 0{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.z{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.w{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
 
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 1{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 2{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2, 3{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 3, 4{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 3, 63{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 3, 64{{$}}
-; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, 4, 64{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr1.x{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr2.y{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr3.z{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr4.w{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr63.w{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr64.w{{$}}
+; GCN-DAG: v_interp_p1_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr64.x{{$}}
 define amdgpu_ps void @v_interp_p1(float %i) {
   %p0_0 = call float @llvm.amdgcn.interp.p1(float %i, i32 0, i32 0, i32 256)
   %p0_1 = call float @llvm.amdgcn.interp.p1(float %i, i32 1, i32 0, i32 256)
@@ -68,15 +68,15 @@ define amdgpu_ps void @v_interp_p1(float %i) {
 
 ; GCN-LABEL: {{^}}v_interp_p2:
 ; GCN: s_movk_i32 m0, 0x100
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 3, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 4, 0{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 1{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 63{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 64{{$}}
-; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, 4, 64{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.z{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.w{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr0.x{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr63.x{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr64.x{{$}}
+; GCN-DAG: v_interp_p2_f32 v{{[0-9]+}}, v{{[0-9]+}}, attr64.x{{$}}
 define amdgpu_ps void @v_interp_p2(float %x, float %j) {
   %p2_0 = call float @llvm.amdgcn.interp.p2(float %x, float %j, i32 0, i32 0, i32 256)
   %p2_1 = call float @llvm.amdgcn.interp.p2(float %x, float %j, i32 1, i32 0, i32 256)
@@ -103,21 +103,21 @@ define amdgpu_ps void @v_interp_p2(float %x, float %j) {
 
 ; GCN-LABEL: {{^}}v_interp_mov:
 ; GCN: s_movk_i32 m0, 0x100
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 0, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p20, 0, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, 0, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_3, 0, 0{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr0.x{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p20, attr0.x{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, attr0.x{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_3, attr0.x{{$}}
 
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 1, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 2, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 3, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 4, 0{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_8, 4, 0{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr0.x{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr0.z{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr0.w{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr0.x{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_8, attr0.x{{$}}
 
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 1, 63{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 1, 64{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, 1, 64{{$}}
-; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_10, 4, 64{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr63.y{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, p10, attr64.y{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_3, attr64.y{{$}}
+; GCN-DAG: v_interp_mov_f32 v{{[0-9]+}}, invalid_param_10, attr64.x{{$}}
 define amdgpu_ps void @v_interp_mov(float %x, float %j) {
   %mov_0 = call float @llvm.amdgcn.interp.mov(i32 0, i32 0, i32 0, i32 256)
   %mov_1 = call float @llvm.amdgcn.interp.mov(i32 1, i32 0, i32 0, i32 256)
@@ -158,7 +158,7 @@ define amdgpu_ps void @v_interp_mov(float %x, float %j) {
 ; VI-LABEL: v_interp_readnone:
 ; VI: s_mov_b32 m0, 0
 ; VI-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-; VI-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, 0, 0{{$}}
+; VI-DAG: v_interp_mov_f32 v{{[0-9]+}}, p0, attr0.x{{$}}
 ; VI: s_mov_b32 m0, -1{{$}}
 ; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
 define amdgpu_ps void @v_interp_readnone(float addrspace(3)* %lds) {

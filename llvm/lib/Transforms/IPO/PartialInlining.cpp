@@ -46,19 +46,11 @@ struct PartialInlinerLegacyPass : public ModulePass {
     initializePartialInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-  }
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
 
-    AssumptionCacheTracker *ACT = &getAnalysis<AssumptionCacheTracker>();
-    std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-        [&ACT](Function &F) -> AssumptionCache & {
-      return ACT->getAssumptionCache(F);
-    };
-    InlineFunctionInfo IFI(nullptr, &GetAssumptionCache);
+    InlineFunctionInfo IFI(nullptr);
     return PartialInlinerImpl(IFI).run(M);
   }
 };
@@ -200,11 +192,8 @@ bool PartialInlinerImpl::run(Module &M) {
 }
 
 char PartialInlinerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(PartialInlinerLegacyPass, "partial-inliner",
-                      "Partial Inliner", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(PartialInlinerLegacyPass, "partial-inliner",
-                    "Partial Inliner", false, false)
+INITIALIZE_PASS(PartialInlinerLegacyPass, "partial-inliner",
+                "Partial Inliner", false, false)
 
 ModulePass *llvm::createPartialInliningPass() {
   return new PartialInlinerLegacyPass();
@@ -212,12 +201,7 @@ ModulePass *llvm::createPartialInliningPass() {
 
 PreservedAnalyses PartialInlinerPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-      [&FAM](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(F);
-  };
-  InlineFunctionInfo IFI(nullptr, &GetAssumptionCache);
+  InlineFunctionInfo IFI(nullptr);
   if (PartialInlinerImpl(IFI).run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

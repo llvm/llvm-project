@@ -5,6 +5,7 @@
 ; rdar://problem/16165191
 ; runtime library implementations should not be renamed
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-darwin11"
 
 @str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"

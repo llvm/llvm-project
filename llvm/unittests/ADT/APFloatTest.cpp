@@ -39,20 +39,20 @@ TEST(APFloatTest, isSignaling) {
   // positive/negative distinction is included only since the getQNaN/getSNaN
   // API provides the option.
   APInt payload = APInt::getOneBitSet(4, 2);
-  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle, false).isSignaling());
-  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle, true).isSignaling());
-  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle, false, &payload).isSignaling());
-  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle, true, &payload).isSignaling());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, false).isSignaling());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, true).isSignaling());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, false, &payload).isSignaling());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, true, &payload).isSignaling());
+  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), false).isSignaling());
+  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), true).isSignaling());
+  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), false, &payload).isSignaling());
+  EXPECT_FALSE(APFloat::getQNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isSignaling());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true).isSignaling());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false, &payload).isSignaling());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
 }
 
 TEST(APFloatTest, next) {
 
-  APFloat test(APFloat::IEEEquad, APFloat::uninitialized);
-  APFloat expected(APFloat::IEEEquad, APFloat::uninitialized);
+  APFloat test(APFloat::IEEEquad(), APFloat::uninitialized);
+  APFloat expected(APFloat::IEEEquad(), APFloat::uninitialized);
 
   // 1. Test Special Cases Values.
   //
@@ -70,37 +70,37 @@ TEST(APFloatTest, next) {
   //   10. -0
 
   // nextUp(+inf) = +inf.
-  test = APFloat::getInf(APFloat::IEEEquad, false);
-  expected = APFloat::getInf(APFloat::IEEEquad, false);
+  test = APFloat::getInf(APFloat::IEEEquad(), false);
+  expected = APFloat::getInf(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isInfinity());
   EXPECT_TRUE(!test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+inf) = -nextUp(-inf) = -(-getLargest()) = getLargest()
-  test = APFloat::getInf(APFloat::IEEEquad, false);
-  expected = APFloat::getLargest(APFloat::IEEEquad, false);
+  test = APFloat::getInf(APFloat::IEEEquad(), false);
+  expected = APFloat::getLargest(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(!test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-inf) = -getLargest()
-  test = APFloat::getInf(APFloat::IEEEquad, true);
-  expected = APFloat::getLargest(APFloat::IEEEquad, true);
+  test = APFloat::getInf(APFloat::IEEEquad(), true);
+  expected = APFloat::getLargest(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-inf) = -nextUp(+inf) = -(+inf) = -inf.
-  test = APFloat::getInf(APFloat::IEEEquad, true);
-  expected = APFloat::getInf(APFloat::IEEEquad, true);
+  test = APFloat::getInf(APFloat::IEEEquad(), true);
+  expected = APFloat::getInf(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isInfinity() && test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(getLargest()) = +inf
-  test = APFloat::getLargest(APFloat::IEEEquad, false);
-  expected = APFloat::getInf(APFloat::IEEEquad, false);
+  test = APFloat::getLargest(APFloat::IEEEquad(), false);
+  expected = APFloat::getInf(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isInfinity() && !test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
@@ -108,100 +108,100 @@ TEST(APFloatTest, next) {
   // nextDown(getLargest()) = -nextUp(-getLargest())
   //                        = -(-getLargest() + inc)
   //                        = getLargest() - inc.
-  test = APFloat::getLargest(APFloat::IEEEquad, false);
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat::getLargest(APFloat::IEEEquad(), false);
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x1.fffffffffffffffffffffffffffep+16383");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(!test.isInfinity() && !test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-getLargest()) = -getLargest() + inc.
-  test = APFloat::getLargest(APFloat::IEEEquad, true);
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat::getLargest(APFloat::IEEEquad(), true);
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x1.fffffffffffffffffffffffffffep+16383");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-getLargest()) = -nextUp(getLargest()) = -(inf) = -inf.
-  test = APFloat::getLargest(APFloat::IEEEquad, true);
-  expected = APFloat::getInf(APFloat::IEEEquad, true);
+  test = APFloat::getLargest(APFloat::IEEEquad(), true);
+  expected = APFloat::getInf(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isInfinity() && test.isNegative());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(getSmallest()) = getSmallest() + inc.
-  test = APFloat(APFloat::IEEEquad, "0x0.0000000000000000000000000001p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "0x0.0000000000000000000000000001p-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x0.0000000000000000000000000002p-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(getSmallest()) = -nextUp(-getSmallest()) = -(-0) = +0.
-  test = APFloat(APFloat::IEEEquad, "0x0.0000000000000000000000000001p-16382");
-  expected = APFloat::getZero(APFloat::IEEEquad, false);
+  test = APFloat(APFloat::IEEEquad(), "0x0.0000000000000000000000000001p-16382");
+  expected = APFloat::getZero(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isPosZero());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-getSmallest()) = -0.
-  test = APFloat(APFloat::IEEEquad, "-0x0.0000000000000000000000000001p-16382");
-  expected = APFloat::getZero(APFloat::IEEEquad, true);
+  test = APFloat(APFloat::IEEEquad(), "-0x0.0000000000000000000000000001p-16382");
+  expected = APFloat::getZero(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isNegZero());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-getSmallest()) = -nextUp(getSmallest()) = -getSmallest() - inc.
-  test = APFloat(APFloat::IEEEquad, "-0x0.0000000000000000000000000001p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "-0x0.0000000000000000000000000001p-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x0.0000000000000000000000000002p-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(qNaN) = qNaN
-  test = APFloat::getQNaN(APFloat::IEEEquad, false);
-  expected = APFloat::getQNaN(APFloat::IEEEquad, false);
+  test = APFloat::getQNaN(APFloat::IEEEquad(), false);
+  expected = APFloat::getQNaN(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(qNaN) = qNaN
-  test = APFloat::getQNaN(APFloat::IEEEquad, false);
-  expected = APFloat::getQNaN(APFloat::IEEEquad, false);
+  test = APFloat::getQNaN(APFloat::IEEEquad(), false);
+  expected = APFloat::getQNaN(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(sNaN) = qNaN
-  test = APFloat::getSNaN(APFloat::IEEEquad, false);
-  expected = APFloat::getQNaN(APFloat::IEEEquad, false);
+  test = APFloat::getSNaN(APFloat::IEEEquad(), false);
+  expected = APFloat::getQNaN(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opInvalidOp);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(sNaN) = qNaN
-  test = APFloat::getSNaN(APFloat::IEEEquad, false);
-  expected = APFloat::getQNaN(APFloat::IEEEquad, false);
+  test = APFloat::getSNaN(APFloat::IEEEquad(), false);
+  expected = APFloat::getQNaN(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(true), APFloat::opInvalidOp);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(+0) = +getSmallest()
-  test = APFloat::getZero(APFloat::IEEEquad, false);
-  expected = APFloat::getSmallest(APFloat::IEEEquad, false);
+  test = APFloat::getZero(APFloat::IEEEquad(), false);
+  expected = APFloat::getSmallest(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+0) = -nextUp(-0) = -getSmallest()
-  test = APFloat::getZero(APFloat::IEEEquad, false);
-  expected = APFloat::getSmallest(APFloat::IEEEquad, true);
+  test = APFloat::getZero(APFloat::IEEEquad(), false);
+  expected = APFloat::getSmallest(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-0) = +getSmallest()
-  test = APFloat::getZero(APFloat::IEEEquad, true);
-  expected = APFloat::getSmallest(APFloat::IEEEquad, false);
+  test = APFloat::getZero(APFloat::IEEEquad(), true);
+  expected = APFloat::getSmallest(APFloat::IEEEquad(), false);
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-0) = -nextUp(0) = -getSmallest()
-  test = APFloat::getZero(APFloat::IEEEquad, true);
-  expected = APFloat::getSmallest(APFloat::IEEEquad, true);
+  test = APFloat::getZero(APFloat::IEEEquad(), true);
+  expected = APFloat::getSmallest(APFloat::IEEEquad(), true);
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
@@ -214,35 +214,35 @@ TEST(APFloatTest, next) {
   //     * nextDown(+Smallest Normal) -> +Largest Denormal.
 
   // nextUp(+Largest Denormal) -> +Smallest Normal.
-  test = APFloat(APFloat::IEEEquad, "0x0.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "0x0.ffffffffffffffffffffffffffffp-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x1.0000000000000000000000000000p-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-Largest Denormal) -> -Smallest Normal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x0.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x1.0000000000000000000000000000p-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-Smallest Normal) -> -LargestDenormal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x1.0000000000000000000000000000p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x0.ffffffffffffffffffffffffffffp-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+Smallest Normal) -> +Largest Denormal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "+0x1.0000000000000000000000000000p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                      "+0x0.ffffffffffffffffffffffffffffp-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -255,27 +255,27 @@ TEST(APFloatTest, next) {
   //     * nextDown(-Normal Binade Boundary + 1) -> -Normal Binade Boundary.
 
   // nextUp(-Normal Binade Boundary) -> -Normal Binade Boundary + 1.
-  test = APFloat(APFloat::IEEEquad, "-0x1p+1");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "-0x1p+1");
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x1.ffffffffffffffffffffffffffffp+0");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+Normal Binade Boundary) -> +Normal Binade Boundary - 1.
-  test = APFloat(APFloat::IEEEquad, "0x1p+1");
-  expected = APFloat(APFloat::IEEEquad, "0x1.ffffffffffffffffffffffffffffp+0");
+  test = APFloat(APFloat::IEEEquad(), "0x1p+1");
+  expected = APFloat(APFloat::IEEEquad(), "0x1.ffffffffffffffffffffffffffffp+0");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(+Normal Binade Boundary - 1) -> +Normal Binade Boundary.
-  test = APFloat(APFloat::IEEEquad, "0x1.ffffffffffffffffffffffffffffp+0");
-  expected = APFloat(APFloat::IEEEquad, "0x1p+1");
+  test = APFloat(APFloat::IEEEquad(), "0x1.ffffffffffffffffffffffffffffp+0");
+  expected = APFloat(APFloat::IEEEquad(), "0x1p+1");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-Normal Binade Boundary + 1) -> -Normal Binade Boundary.
-  test = APFloat(APFloat::IEEEquad, "-0x1.ffffffffffffffffffffffffffffp+0");
-  expected = APFloat(APFloat::IEEEquad, "-0x1p+1");
+  test = APFloat(APFloat::IEEEquad(), "-0x1.ffffffffffffffffffffffffffffp+0");
+  expected = APFloat(APFloat::IEEEquad(), "-0x1p+1");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
@@ -291,8 +291,8 @@ TEST(APFloatTest, next) {
   //   * nextDown(-Smallest Normal) -> -Smallest Normal - inc.
 
   // nextUp(-Largest Denormal) -> -Largest Denormal + inc.
-  test = APFloat(APFloat::IEEEquad, "-0x0.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "-0x0.ffffffffffffffffffffffffffffp-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x0.fffffffffffffffffffffffffffep-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -300,8 +300,8 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+Largest Denormal) -> +Largest Denormal - inc.
-  test = APFloat(APFloat::IEEEquad, "0x0.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "0x0.ffffffffffffffffffffffffffffp-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x0.fffffffffffffffffffffffffffep-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -309,8 +309,8 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(+Smallest Normal) -> +Smallest Normal + inc.
-  test = APFloat(APFloat::IEEEquad, "0x1.0000000000000000000000000000p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "0x1.0000000000000000000000000000p-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x1.0000000000000000000000000001p-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -318,8 +318,8 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-Smallest Normal) -> -Smallest Normal - inc.
-  test = APFloat(APFloat::IEEEquad, "-0x1.0000000000000000000000000000p-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "-0x1.0000000000000000000000000000p-16382");
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x1.0000000000000000000000000001p-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -336,28 +336,28 @@ TEST(APFloatTest, next) {
   //     * nextDown(0x1p-16382) -> 0x1.ffffffffffffffffffffffffffffp-16382
 
   // nextUp(-0x1p-16381) -> -0x1.ffffffffffffffffffffffffffffp-16382
-  test = APFloat(APFloat::IEEEquad, "-0x1p-16381");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "-0x1p-16381");
+  expected = APFloat(APFloat::IEEEquad(),
                      "-0x1.ffffffffffffffffffffffffffffp-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-0x1.ffffffffffffffffffffffffffffp-16382) ->
   //         -0x1p-16381
-  test = APFloat(APFloat::IEEEquad, "-0x1.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad, "-0x1p-16381");
+  test = APFloat(APFloat::IEEEquad(), "-0x1.ffffffffffffffffffffffffffffp-16382");
+  expected = APFloat(APFloat::IEEEquad(), "-0x1p-16381");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(0x1.ffffffffffffffffffffffffffffp-16382) -> 0x1p-16381
-  test = APFloat(APFloat::IEEEquad, "0x1.ffffffffffffffffffffffffffffp-16382");
-  expected = APFloat(APFloat::IEEEquad, "0x1p-16381");
+  test = APFloat(APFloat::IEEEquad(), "0x1.ffffffffffffffffffffffffffffp-16382");
+  expected = APFloat(APFloat::IEEEquad(), "0x1p-16381");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(0x1p-16381) -> 0x1.ffffffffffffffffffffffffffffp-16382
-  test = APFloat(APFloat::IEEEquad, "0x1p-16381");
-  expected = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(), "0x1p-16381");
+  expected = APFloat(APFloat::IEEEquad(),
                      "0x1.ffffffffffffffffffffffffffffp-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
@@ -374,9 +374,9 @@ TEST(APFloatTest, next) {
   //   * nextDown(-Normal) -> -Normal.
 
   // nextUp(+Denormal) -> +Denormal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "0x0.ffffffffffffffffffffffff000cp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "0x0.ffffffffffffffffffffffff000dp-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -384,9 +384,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+Denormal) -> +Denormal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "0x0.ffffffffffffffffffffffff000cp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "0x0.ffffffffffffffffffffffff000bp-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -394,9 +394,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-Denormal) -> -Denormal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x0.ffffffffffffffffffffffff000cp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "-0x0.ffffffffffffffffffffffff000bp-16382");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -404,9 +404,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-Denormal) -> -Denormal
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x0.ffffffffffffffffffffffff000cp-16382");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "-0x0.ffffffffffffffffffffffff000dp-16382");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(test.isDenormal());
@@ -414,9 +414,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(+Normal) -> +Normal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "0x1.ffffffffffffffffffffffff000cp-16000");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "0x1.ffffffffffffffffffffffff000dp-16000");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -424,9 +424,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(+Normal) -> +Normal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "0x1.ffffffffffffffffffffffff000cp-16000");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "0x1.ffffffffffffffffffffffff000bp-16000");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -434,9 +434,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-Normal) -> -Normal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x1.ffffffffffffffffffffffff000cp-16000");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "-0x1.ffffffffffffffffffffffff000bp-16000");
   EXPECT_EQ(test.next(false), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -444,9 +444,9 @@ TEST(APFloatTest, next) {
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-Normal) -> -Normal.
-  test = APFloat(APFloat::IEEEquad,
+  test = APFloat(APFloat::IEEEquad(),
                  "-0x1.ffffffffffffffffffffffff000cp-16000");
-  expected = APFloat(APFloat::IEEEquad,
+  expected = APFloat(APFloat::IEEEquad(),
                  "-0x1.ffffffffffffffffffffffff000dp-16000");
   EXPECT_EQ(test.next(true), APFloat::opOK);
   EXPECT_TRUE(!test.isDenormal());
@@ -509,8 +509,8 @@ TEST(APFloatTest, FMA) {
 
   // Test -ve sign preservation when small negative results underflow.
   {
-    APFloat f1(APFloat::IEEEdouble,  "-0x1p-1074");
-    APFloat f2(APFloat::IEEEdouble, "+0x1p-1074");
+    APFloat f1(APFloat::IEEEdouble(),  "-0x1p-1074");
+    APFloat f2(APFloat::IEEEdouble(), "+0x1p-1074");
     APFloat f3(0.0);
     f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
     EXPECT_TRUE(f1.isNegative() && f1.isZero());
@@ -518,13 +518,13 @@ TEST(APFloatTest, FMA) {
 
   // Test x87 extended precision case from http://llvm.org/PR20728.
   {
-    APFloat M1(APFloat::x87DoubleExtended, 1.0);
-    APFloat M2(APFloat::x87DoubleExtended, 1.0);
-    APFloat A(APFloat::x87DoubleExtended, 3.0);
+    APFloat M1(APFloat::x87DoubleExtended(), 1.0);
+    APFloat M2(APFloat::x87DoubleExtended(), 1.0);
+    APFloat A(APFloat::x87DoubleExtended(), 3.0);
 
     bool losesInfo = false;
     M1.fusedMultiplyAdd(M1, A, APFloat::rmNearestTiesToEven);
-    M1.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven, &losesInfo);
+    M1.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(4.0f, M1.convertToFloat());
   }
@@ -533,7 +533,7 @@ TEST(APFloatTest, FMA) {
 TEST(APFloatTest, MinNum) {
   APFloat f1(1.0);
   APFloat f2(2.0);
-  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble);
+  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
 
   EXPECT_EQ(1.0, minnum(f1, f2).convertToDouble());
   EXPECT_EQ(1.0, minnum(f2, f1).convertToDouble());
@@ -544,7 +544,7 @@ TEST(APFloatTest, MinNum) {
 TEST(APFloatTest, MaxNum) {
   APFloat f1(1.0);
   APFloat f2(2.0);
-  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble);
+  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
 
   EXPECT_EQ(2.0, maxnum(f1, f2).convertToDouble());
   EXPECT_EQ(2.0, maxnum(f2, f1).convertToDouble());
@@ -558,11 +558,11 @@ TEST(APFloatTest, Denormal) {
   // Test single precision
   {
     const char *MinNormalStr = "1.17549435082228750797e-38";
-    EXPECT_FALSE(APFloat(APFloat::IEEEsingle, MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEsingle, 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), MinNormalStr).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), 0.0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEsingle, 2.0e0);
-    APFloat T(APFloat::IEEEsingle, MinNormalStr);
+    APFloat Val2(APFloat::IEEEsingle(), 2.0e0);
+    APFloat T(APFloat::IEEEsingle(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
   }
@@ -570,11 +570,11 @@ TEST(APFloatTest, Denormal) {
   // Test double precision
   {
     const char *MinNormalStr = "2.22507385850720138309e-308";
-    EXPECT_FALSE(APFloat(APFloat::IEEEdouble, MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEdouble, 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEdouble(), MinNormalStr).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEdouble(), 0.0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEdouble, 2.0e0);
-    APFloat T(APFloat::IEEEdouble, MinNormalStr);
+    APFloat Val2(APFloat::IEEEdouble(), 2.0e0);
+    APFloat T(APFloat::IEEEdouble(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
   }
@@ -582,11 +582,11 @@ TEST(APFloatTest, Denormal) {
   // Test Intel double-ext
   {
     const char *MinNormalStr = "3.36210314311209350626e-4932";
-    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended, MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended, 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended(), MinNormalStr).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::x87DoubleExtended(), 0.0).isDenormal());
 
-    APFloat Val2(APFloat::x87DoubleExtended, 2.0e0);
-    APFloat T(APFloat::x87DoubleExtended, MinNormalStr);
+    APFloat Val2(APFloat::x87DoubleExtended(), 2.0e0);
+    APFloat T(APFloat::x87DoubleExtended(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
   }
@@ -594,11 +594,11 @@ TEST(APFloatTest, Denormal) {
   // Test quadruple precision
   {
     const char *MinNormalStr = "3.36210314311209350626267781732175260e-4932";
-    EXPECT_FALSE(APFloat(APFloat::IEEEquad, MinNormalStr).isDenormal());
-    EXPECT_FALSE(APFloat(APFloat::IEEEquad, 0.0).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEquad(), MinNormalStr).isDenormal());
+    EXPECT_FALSE(APFloat(APFloat::IEEEquad(), 0.0).isDenormal());
 
-    APFloat Val2(APFloat::IEEEquad, 2.0e0);
-    APFloat T(APFloat::IEEEquad, MinNormalStr);
+    APFloat Val2(APFloat::IEEEquad(), 2.0e0);
+    APFloat T(APFloat::IEEEquad(), MinNormalStr);
     T.divide(Val2, rdmd);
     EXPECT_TRUE(T.isDenormal());
   }
@@ -617,7 +617,7 @@ TEST(APFloatTest, Zero) {
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
   // Make sure that we can parse strings without null terminators.
   // rdar://14323230.
-  APFloat Val(APFloat::IEEEdouble);
+  APFloat Val(APFloat::IEEEdouble());
   Val.convertFromString(StringRef("0.00", 3),
                         llvm::APFloat::rmNearestTiesToEven);
   EXPECT_EQ(Val.convertToDouble(), 0.0);
@@ -640,292 +640,292 @@ TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
 }
 
 TEST(APFloatTest, fromZeroDecimalString) {
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  ".0").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+.0").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-.0").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  ".0").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+.0").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-.0").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.0").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.0").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.0").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.0").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.0").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.0").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "00000.").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+00000.").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-00000.").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "00000.").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+00000.").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-00000.").convertToDouble());
 
-  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble, ".00000").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+.00000").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-.00000").convertToDouble());
+  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), ".00000").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+.00000").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-.00000").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0000.00000").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0000.00000").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0000.00000").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0000.00000").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0000.00000").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0000.00000").convertToDouble());
 }
 
 TEST(APFloatTest, fromZeroDecimalSingleExponentString) {
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,   "0e1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble,  "+0e1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble,  "-0e1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),   "0e1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(),  "+0e1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(),  "-0e1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0e+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0e+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0e+1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0e+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0e+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0e+1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0e-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0e-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0e-1").convertToDouble());
-
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,   "0.e1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble,  "+0.e1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble,  "-0.e1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.e+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.e+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.e+1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.e-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.e-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.e-1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,   ".0e1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble,  "+.0e1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble,  "-.0e1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  ".0e+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+.0e+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-.0e+1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  ".0e-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+.0e-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-.0e-1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0e-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0e-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0e-1").convertToDouble());
 
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,   "0.0e1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble,  "+0.0e1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble,  "-0.0e1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),   "0.e1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(),  "+0.e1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(),  "-0.e1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.0e+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.0e+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.0e+1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.e+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.e+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.e+1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0.0e-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0.0e-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0.0e-1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.e-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.e-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.e-1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),   ".0e1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(),  "+.0e1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(),  "-.0e1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  ".0e+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+.0e+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-.0e+1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  ".0e-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+.0e-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-.0e-1").convertToDouble());
 
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "000.0000e1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+000.0000e+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-000.0000e+1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),   "0.0e1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(),  "+0.0e1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(),  "-0.0e1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.0e+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.0e+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.0e+1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0.0e-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0.0e-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0.0e-1").convertToDouble());
+
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "000.0000e1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+000.0000e+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-000.0000e+1").convertToDouble());
 }
 
 TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0e1234").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0e1234").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0e1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0e1234").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0e1234").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0e1234").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0e+1234").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0e+1234").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0e+1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0e+1234").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0e+1234").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0e+1234").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0e-1234").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0e-1234").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0e-1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0e-1234").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0e-1234").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0e-1234").convertToDouble());
 
-  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble, "000.0000e1234").convertToDouble());
-  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble, "000.0000e-1234").convertToDouble());
+  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), "000.0000e1234").convertToDouble());
+  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), "000.0000e-1234").convertToDouble());
 
-  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble, StringRef("0e1234\02", 6)).convertToDouble());
+  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234\02", 6)).convertToDouble());
 }
 
 TEST(APFloatTest, fromZeroHexadecimalString) {
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0p1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0p1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0p1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0p+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0p+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0p+1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0p+1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0p-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0p-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0p-1").convertToDouble());
-
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.p1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.p1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.p1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.p+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.p+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.p+1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.p-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.p-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.p-1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0p-1").convertToDouble());
 
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x.0p1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x.0p1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x.0p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.p1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.p1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.p1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x.0p+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x.0p+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x.0p+1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.p+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.p+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.p+1").convertToDouble());
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x.0p-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x.0p-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x.0p-1").convertToDouble());
-
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.0p1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.0p1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.0p1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.0p+1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.0p+1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.0p+1").convertToDouble());
-
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble,  "0x0.0p-1").convertToDouble());
-  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble, "+0x0.0p-1").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0.0p-1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.p-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.p-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.p-1").convertToDouble());
 
 
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x00000.p1").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x0000.00000p1").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x.00000p1").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x0.p1").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x0p1234").convertToDouble());
-  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble, "-0x0p1234").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x00000.p1234").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x0000.00000p1234").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x.00000p1234").convertToDouble());
-  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble, "0x0.p1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x.0p1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x.0p1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x.0p1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x.0p+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x.0p+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x.0p+1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x.0p-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x.0p-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x.0p-1").convertToDouble());
+
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.0p1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.0p1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.0p1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.0p+1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.0p+1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.0p+1").convertToDouble());
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0.0p-1").convertToDouble());
+  EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0.0p-1").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0.0p-1").convertToDouble());
+
+
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x00000.p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0000.00000p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x.00000p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0.p1").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0p1234").convertToDouble());
+  EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0x0p1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x00000.p1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0000.00000p1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x.00000p1234").convertToDouble());
+  EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0.p1234").convertToDouble());
 }
 
 TEST(APFloatTest, fromDecimalString) {
-  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble, "1").convertToDouble());
-  EXPECT_EQ(2.0,      APFloat(APFloat::IEEEdouble, "2.").convertToDouble());
-  EXPECT_EQ(0.5,      APFloat(APFloat::IEEEdouble, ".5").convertToDouble());
-  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble, "1.0").convertToDouble());
-  EXPECT_EQ(-2.0,     APFloat(APFloat::IEEEdouble, "-2").convertToDouble());
-  EXPECT_EQ(-4.0,     APFloat(APFloat::IEEEdouble, "-4.").convertToDouble());
-  EXPECT_EQ(-0.5,     APFloat(APFloat::IEEEdouble, "-.5").convertToDouble());
-  EXPECT_EQ(-1.5,     APFloat(APFloat::IEEEdouble, "-1.5").convertToDouble());
-  EXPECT_EQ(1.25e12,  APFloat(APFloat::IEEEdouble, "1.25e12").convertToDouble());
-  EXPECT_EQ(1.25e+12, APFloat(APFloat::IEEEdouble, "1.25e+12").convertToDouble());
-  EXPECT_EQ(1.25e-12, APFloat(APFloat::IEEEdouble, "1.25e-12").convertToDouble());
-  EXPECT_EQ(1024.0,   APFloat(APFloat::IEEEdouble, "1024.").convertToDouble());
-  EXPECT_EQ(1024.05,  APFloat(APFloat::IEEEdouble, "1024.05000").convertToDouble());
-  EXPECT_EQ(0.05,     APFloat(APFloat::IEEEdouble, ".05000").convertToDouble());
-  EXPECT_EQ(2.0,      APFloat(APFloat::IEEEdouble, "2.").convertToDouble());
-  EXPECT_EQ(2.0e2,    APFloat(APFloat::IEEEdouble, "2.e2").convertToDouble());
-  EXPECT_EQ(2.0e+2,   APFloat(APFloat::IEEEdouble, "2.e+2").convertToDouble());
-  EXPECT_EQ(2.0e-2,   APFloat(APFloat::IEEEdouble, "2.e-2").convertToDouble());
-  EXPECT_EQ(2.05e2,    APFloat(APFloat::IEEEdouble, "002.05000e2").convertToDouble());
-  EXPECT_EQ(2.05e+2,   APFloat(APFloat::IEEEdouble, "002.05000e+2").convertToDouble());
-  EXPECT_EQ(2.05e-2,   APFloat(APFloat::IEEEdouble, "002.05000e-2").convertToDouble());
-  EXPECT_EQ(2.05e12,   APFloat(APFloat::IEEEdouble, "002.05000e12").convertToDouble());
-  EXPECT_EQ(2.05e+12,  APFloat(APFloat::IEEEdouble, "002.05000e+12").convertToDouble());
-  EXPECT_EQ(2.05e-12,  APFloat(APFloat::IEEEdouble, "002.05000e-12").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1").convertToDouble());
+  EXPECT_EQ(2.0,      APFloat(APFloat::IEEEdouble(), "2.").convertToDouble());
+  EXPECT_EQ(0.5,      APFloat(APFloat::IEEEdouble(), ".5").convertToDouble());
+  EXPECT_EQ(1.0,      APFloat(APFloat::IEEEdouble(), "1.0").convertToDouble());
+  EXPECT_EQ(-2.0,     APFloat(APFloat::IEEEdouble(), "-2").convertToDouble());
+  EXPECT_EQ(-4.0,     APFloat(APFloat::IEEEdouble(), "-4.").convertToDouble());
+  EXPECT_EQ(-0.5,     APFloat(APFloat::IEEEdouble(), "-.5").convertToDouble());
+  EXPECT_EQ(-1.5,     APFloat(APFloat::IEEEdouble(), "-1.5").convertToDouble());
+  EXPECT_EQ(1.25e12,  APFloat(APFloat::IEEEdouble(), "1.25e12").convertToDouble());
+  EXPECT_EQ(1.25e+12, APFloat(APFloat::IEEEdouble(), "1.25e+12").convertToDouble());
+  EXPECT_EQ(1.25e-12, APFloat(APFloat::IEEEdouble(), "1.25e-12").convertToDouble());
+  EXPECT_EQ(1024.0,   APFloat(APFloat::IEEEdouble(), "1024.").convertToDouble());
+  EXPECT_EQ(1024.05,  APFloat(APFloat::IEEEdouble(), "1024.05000").convertToDouble());
+  EXPECT_EQ(0.05,     APFloat(APFloat::IEEEdouble(), ".05000").convertToDouble());
+  EXPECT_EQ(2.0,      APFloat(APFloat::IEEEdouble(), "2.").convertToDouble());
+  EXPECT_EQ(2.0e2,    APFloat(APFloat::IEEEdouble(), "2.e2").convertToDouble());
+  EXPECT_EQ(2.0e+2,   APFloat(APFloat::IEEEdouble(), "2.e+2").convertToDouble());
+  EXPECT_EQ(2.0e-2,   APFloat(APFloat::IEEEdouble(), "2.e-2").convertToDouble());
+  EXPECT_EQ(2.05e2,    APFloat(APFloat::IEEEdouble(), "002.05000e2").convertToDouble());
+  EXPECT_EQ(2.05e+2,   APFloat(APFloat::IEEEdouble(), "002.05000e+2").convertToDouble());
+  EXPECT_EQ(2.05e-2,   APFloat(APFloat::IEEEdouble(), "002.05000e-2").convertToDouble());
+  EXPECT_EQ(2.05e12,   APFloat(APFloat::IEEEdouble(), "002.05000e12").convertToDouble());
+  EXPECT_EQ(2.05e+12,  APFloat(APFloat::IEEEdouble(), "002.05000e+12").convertToDouble());
+  EXPECT_EQ(2.05e-12,  APFloat(APFloat::IEEEdouble(), "002.05000e-12").convertToDouble());
 
   // These are "carefully selected" to overflow the fast log-base
   // calculations in APFloat.cpp
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "99e99999").isInfinity());
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-99e99999").isInfinity());
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "1e-99999").isPosZero());
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-1e-99999").isNegZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "99e99999").isInfinity());
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-99e99999").isInfinity());
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "1e-99999").isPosZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-1e-99999").isNegZero());
 
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
 TEST(APFloatTest, fromHexadecimalString) {
-  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble,  "0x1p0").convertToDouble());
-  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble, "+0x1p0").convertToDouble());
-  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble, "-0x1p0").convertToDouble());
+  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p0").convertToDouble());
+  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p0").convertToDouble());
+  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble(), "-0x1p0").convertToDouble());
 
-  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble,  "0x1p+0").convertToDouble());
-  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble, "+0x1p+0").convertToDouble());
-  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble, "-0x1p+0").convertToDouble());
+  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p+0").convertToDouble());
+  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p+0").convertToDouble());
+  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble(), "-0x1p+0").convertToDouble());
 
-  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble,  "0x1p-0").convertToDouble());
-  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble, "+0x1p-0").convertToDouble());
-  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble, "-0x1p-0").convertToDouble());
-
-
-  EXPECT_EQ( 2.0, APFloat(APFloat::IEEEdouble,  "0x1p1").convertToDouble());
-  EXPECT_EQ(+2.0, APFloat(APFloat::IEEEdouble, "+0x1p1").convertToDouble());
-  EXPECT_EQ(-2.0, APFloat(APFloat::IEEEdouble, "-0x1p1").convertToDouble());
-
-  EXPECT_EQ( 2.0, APFloat(APFloat::IEEEdouble,  "0x1p+1").convertToDouble());
-  EXPECT_EQ(+2.0, APFloat(APFloat::IEEEdouble, "+0x1p+1").convertToDouble());
-  EXPECT_EQ(-2.0, APFloat(APFloat::IEEEdouble, "-0x1p+1").convertToDouble());
-
-  EXPECT_EQ( 0.5, APFloat(APFloat::IEEEdouble,  "0x1p-1").convertToDouble());
-  EXPECT_EQ(+0.5, APFloat(APFloat::IEEEdouble, "+0x1p-1").convertToDouble());
-  EXPECT_EQ(-0.5, APFloat(APFloat::IEEEdouble, "-0x1p-1").convertToDouble());
+  EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p-0").convertToDouble());
+  EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p-0").convertToDouble());
+  EXPECT_EQ(-1.0, APFloat(APFloat::IEEEdouble(), "-0x1p-0").convertToDouble());
 
 
-  EXPECT_EQ( 3.0, APFloat(APFloat::IEEEdouble,  "0x1.8p1").convertToDouble());
-  EXPECT_EQ(+3.0, APFloat(APFloat::IEEEdouble, "+0x1.8p1").convertToDouble());
-  EXPECT_EQ(-3.0, APFloat(APFloat::IEEEdouble, "-0x1.8p1").convertToDouble());
+  EXPECT_EQ( 2.0, APFloat(APFloat::IEEEdouble(),  "0x1p1").convertToDouble());
+  EXPECT_EQ(+2.0, APFloat(APFloat::IEEEdouble(), "+0x1p1").convertToDouble());
+  EXPECT_EQ(-2.0, APFloat(APFloat::IEEEdouble(), "-0x1p1").convertToDouble());
 
-  EXPECT_EQ( 3.0, APFloat(APFloat::IEEEdouble,  "0x1.8p+1").convertToDouble());
-  EXPECT_EQ(+3.0, APFloat(APFloat::IEEEdouble, "+0x1.8p+1").convertToDouble());
-  EXPECT_EQ(-3.0, APFloat(APFloat::IEEEdouble, "-0x1.8p+1").convertToDouble());
+  EXPECT_EQ( 2.0, APFloat(APFloat::IEEEdouble(),  "0x1p+1").convertToDouble());
+  EXPECT_EQ(+2.0, APFloat(APFloat::IEEEdouble(), "+0x1p+1").convertToDouble());
+  EXPECT_EQ(-2.0, APFloat(APFloat::IEEEdouble(), "-0x1p+1").convertToDouble());
 
-  EXPECT_EQ( 0.75, APFloat(APFloat::IEEEdouble,  "0x1.8p-1").convertToDouble());
-  EXPECT_EQ(+0.75, APFloat(APFloat::IEEEdouble, "+0x1.8p-1").convertToDouble());
-  EXPECT_EQ(-0.75, APFloat(APFloat::IEEEdouble, "-0x1.8p-1").convertToDouble());
-
-
-  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble,  "0x1000.000p1").convertToDouble());
-  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble, "+0x1000.000p1").convertToDouble());
-  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble, "-0x1000.000p1").convertToDouble());
-
-  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble,  "0x1000.000p+1").convertToDouble());
-  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble, "+0x1000.000p+1").convertToDouble());
-  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble, "-0x1000.000p+1").convertToDouble());
-
-  EXPECT_EQ( 2048.0, APFloat(APFloat::IEEEdouble,  "0x1000.000p-1").convertToDouble());
-  EXPECT_EQ(+2048.0, APFloat(APFloat::IEEEdouble, "+0x1000.000p-1").convertToDouble());
-  EXPECT_EQ(-2048.0, APFloat(APFloat::IEEEdouble, "-0x1000.000p-1").convertToDouble());
+  EXPECT_EQ( 0.5, APFloat(APFloat::IEEEdouble(),  "0x1p-1").convertToDouble());
+  EXPECT_EQ(+0.5, APFloat(APFloat::IEEEdouble(), "+0x1p-1").convertToDouble());
+  EXPECT_EQ(-0.5, APFloat(APFloat::IEEEdouble(), "-0x1p-1").convertToDouble());
 
 
-  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble,  "0x1000p1").convertToDouble());
-  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble, "+0x1000p1").convertToDouble());
-  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble, "-0x1000p1").convertToDouble());
+  EXPECT_EQ( 3.0, APFloat(APFloat::IEEEdouble(),  "0x1.8p1").convertToDouble());
+  EXPECT_EQ(+3.0, APFloat(APFloat::IEEEdouble(), "+0x1.8p1").convertToDouble());
+  EXPECT_EQ(-3.0, APFloat(APFloat::IEEEdouble(), "-0x1.8p1").convertToDouble());
 
-  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble,  "0x1000p+1").convertToDouble());
-  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble, "+0x1000p+1").convertToDouble());
-  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble, "-0x1000p+1").convertToDouble());
+  EXPECT_EQ( 3.0, APFloat(APFloat::IEEEdouble(),  "0x1.8p+1").convertToDouble());
+  EXPECT_EQ(+3.0, APFloat(APFloat::IEEEdouble(), "+0x1.8p+1").convertToDouble());
+  EXPECT_EQ(-3.0, APFloat(APFloat::IEEEdouble(), "-0x1.8p+1").convertToDouble());
 
-  EXPECT_EQ( 2048.0, APFloat(APFloat::IEEEdouble,  "0x1000p-1").convertToDouble());
-  EXPECT_EQ(+2048.0, APFloat(APFloat::IEEEdouble, "+0x1000p-1").convertToDouble());
-  EXPECT_EQ(-2048.0, APFloat(APFloat::IEEEdouble, "-0x1000p-1").convertToDouble());
+  EXPECT_EQ( 0.75, APFloat(APFloat::IEEEdouble(),  "0x1.8p-1").convertToDouble());
+  EXPECT_EQ(+0.75, APFloat(APFloat::IEEEdouble(), "+0x1.8p-1").convertToDouble());
+  EXPECT_EQ(-0.75, APFloat(APFloat::IEEEdouble(), "-0x1.8p-1").convertToDouble());
 
 
-  EXPECT_EQ( 16384.0, APFloat(APFloat::IEEEdouble,  "0x10p10").convertToDouble());
-  EXPECT_EQ(+16384.0, APFloat(APFloat::IEEEdouble, "+0x10p10").convertToDouble());
-  EXPECT_EQ(-16384.0, APFloat(APFloat::IEEEdouble, "-0x10p10").convertToDouble());
+  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble(),  "0x1000.000p1").convertToDouble());
+  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble(), "+0x1000.000p1").convertToDouble());
+  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble(), "-0x1000.000p1").convertToDouble());
 
-  EXPECT_EQ( 16384.0, APFloat(APFloat::IEEEdouble,  "0x10p+10").convertToDouble());
-  EXPECT_EQ(+16384.0, APFloat(APFloat::IEEEdouble, "+0x10p+10").convertToDouble());
-  EXPECT_EQ(-16384.0, APFloat(APFloat::IEEEdouble, "-0x10p+10").convertToDouble());
+  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble(),  "0x1000.000p+1").convertToDouble());
+  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble(), "+0x1000.000p+1").convertToDouble());
+  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble(), "-0x1000.000p+1").convertToDouble());
 
-  EXPECT_EQ( 0.015625, APFloat(APFloat::IEEEdouble,  "0x10p-10").convertToDouble());
-  EXPECT_EQ(+0.015625, APFloat(APFloat::IEEEdouble, "+0x10p-10").convertToDouble());
-  EXPECT_EQ(-0.015625, APFloat(APFloat::IEEEdouble, "-0x10p-10").convertToDouble());
+  EXPECT_EQ( 2048.0, APFloat(APFloat::IEEEdouble(),  "0x1000.000p-1").convertToDouble());
+  EXPECT_EQ(+2048.0, APFloat(APFloat::IEEEdouble(), "+0x1000.000p-1").convertToDouble());
+  EXPECT_EQ(-2048.0, APFloat(APFloat::IEEEdouble(), "-0x1000.000p-1").convertToDouble());
 
-  EXPECT_EQ(1.0625, APFloat(APFloat::IEEEdouble, "0x1.1p0").convertToDouble());
-  EXPECT_EQ(1.0, APFloat(APFloat::IEEEdouble, "0x1p0").convertToDouble());
+
+  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble(),  "0x1000p1").convertToDouble());
+  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble(), "+0x1000p1").convertToDouble());
+  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble(), "-0x1000p1").convertToDouble());
+
+  EXPECT_EQ( 8192.0, APFloat(APFloat::IEEEdouble(),  "0x1000p+1").convertToDouble());
+  EXPECT_EQ(+8192.0, APFloat(APFloat::IEEEdouble(), "+0x1000p+1").convertToDouble());
+  EXPECT_EQ(-8192.0, APFloat(APFloat::IEEEdouble(), "-0x1000p+1").convertToDouble());
+
+  EXPECT_EQ( 2048.0, APFloat(APFloat::IEEEdouble(),  "0x1000p-1").convertToDouble());
+  EXPECT_EQ(+2048.0, APFloat(APFloat::IEEEdouble(), "+0x1000p-1").convertToDouble());
+  EXPECT_EQ(-2048.0, APFloat(APFloat::IEEEdouble(), "-0x1000p-1").convertToDouble());
+
+
+  EXPECT_EQ( 16384.0, APFloat(APFloat::IEEEdouble(),  "0x10p10").convertToDouble());
+  EXPECT_EQ(+16384.0, APFloat(APFloat::IEEEdouble(), "+0x10p10").convertToDouble());
+  EXPECT_EQ(-16384.0, APFloat(APFloat::IEEEdouble(), "-0x10p10").convertToDouble());
+
+  EXPECT_EQ( 16384.0, APFloat(APFloat::IEEEdouble(),  "0x10p+10").convertToDouble());
+  EXPECT_EQ(+16384.0, APFloat(APFloat::IEEEdouble(), "+0x10p+10").convertToDouble());
+  EXPECT_EQ(-16384.0, APFloat(APFloat::IEEEdouble(), "-0x10p+10").convertToDouble());
+
+  EXPECT_EQ( 0.015625, APFloat(APFloat::IEEEdouble(),  "0x10p-10").convertToDouble());
+  EXPECT_EQ(+0.015625, APFloat(APFloat::IEEEdouble(), "+0x10p-10").convertToDouble());
+  EXPECT_EQ(-0.015625, APFloat(APFloat::IEEEdouble(), "-0x10p-10").convertToDouble());
+
+  EXPECT_EQ(1.0625, APFloat(APFloat::IEEEdouble(), "0x1.1p0").convertToDouble());
+  EXPECT_EQ(1.0, APFloat(APFloat::IEEEdouble(), "0x1p0").convertToDouble());
 
   EXPECT_EQ(convertToDoubleFromString("0x1p-150"),
             convertToDoubleFromString("+0x800000000000000001.p-221"));
@@ -954,44 +954,44 @@ TEST(APFloatTest, toInteger) {
   APSInt result(5, /*isUnsigned=*/true);
 
   EXPECT_EQ(APFloat::opOK,
-            APFloat(APFloat::IEEEdouble, "10")
+            APFloat(APFloat::IEEEdouble(), "10")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_TRUE(isExact);
   EXPECT_EQ(APSInt(APInt(5, 10), true), result);
 
   EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble, "-10")
+            APFloat(APFloat::IEEEdouble(), "-10")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_FALSE(isExact);
   EXPECT_EQ(APSInt::getMinValue(5, true), result);
 
   EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble, "32")
+            APFloat(APFloat::IEEEdouble(), "32")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_FALSE(isExact);
   EXPECT_EQ(APSInt::getMaxValue(5, true), result);
 
   EXPECT_EQ(APFloat::opInexact,
-            APFloat(APFloat::IEEEdouble, "7.9")
+            APFloat(APFloat::IEEEdouble(), "7.9")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_FALSE(isExact);
   EXPECT_EQ(APSInt(APInt(5, 7), true), result);
 
   result.setIsUnsigned(false);
   EXPECT_EQ(APFloat::opOK,
-            APFloat(APFloat::IEEEdouble, "-10")
+            APFloat(APFloat::IEEEdouble(), "-10")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_TRUE(isExact);
   EXPECT_EQ(APSInt(APInt(5, -10, true), false), result);
 
   EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble, "-17")
+            APFloat(APFloat::IEEEdouble(), "-17")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_FALSE(isExact);
   EXPECT_EQ(APSInt::getMinValue(5, false), result);
 
   EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble, "16")
+            APFloat(APFloat::IEEEdouble(), "16")
             .convertToInteger(result, APFloat::rmTowardZero, &isExact));
   EXPECT_FALSE(isExact);
   EXPECT_EQ(APSInt::getMaxValue(5, false), result);
@@ -1007,224 +1007,224 @@ static APInt nanbits(const fltSemantics &Sem,
 }
 
 TEST(APFloatTest, makeNaN) {
-  ASSERT_EQ(0x7fc00000, nanbits(APFloat::IEEEsingle, false, false, 0));
-  ASSERT_EQ(0xffc00000, nanbits(APFloat::IEEEsingle, false, true, 0));
-  ASSERT_EQ(0x7fc0ae72, nanbits(APFloat::IEEEsingle, false, false, 0xae72));
-  ASSERT_EQ(0x7fffae72, nanbits(APFloat::IEEEsingle, false, false, 0xffffae72));
-  ASSERT_EQ(0x7fa00000, nanbits(APFloat::IEEEsingle, true, false, 0));
-  ASSERT_EQ(0xffa00000, nanbits(APFloat::IEEEsingle, true, true, 0));
-  ASSERT_EQ(0x7f80ae72, nanbits(APFloat::IEEEsingle, true, false, 0xae72));
-  ASSERT_EQ(0x7fbfae72, nanbits(APFloat::IEEEsingle, true, false, 0xffffae72));
+  ASSERT_EQ(0x7fc00000, nanbits(APFloat::IEEEsingle(), false, false, 0));
+  ASSERT_EQ(0xffc00000, nanbits(APFloat::IEEEsingle(), false, true, 0));
+  ASSERT_EQ(0x7fc0ae72, nanbits(APFloat::IEEEsingle(), false, false, 0xae72));
+  ASSERT_EQ(0x7fffae72, nanbits(APFloat::IEEEsingle(), false, false, 0xffffae72));
+  ASSERT_EQ(0x7fa00000, nanbits(APFloat::IEEEsingle(), true, false, 0));
+  ASSERT_EQ(0xffa00000, nanbits(APFloat::IEEEsingle(), true, true, 0));
+  ASSERT_EQ(0x7f80ae72, nanbits(APFloat::IEEEsingle(), true, false, 0xae72));
+  ASSERT_EQ(0x7fbfae72, nanbits(APFloat::IEEEsingle(), true, false, 0xffffae72));
 
-  ASSERT_EQ(0x7ff8000000000000ULL, nanbits(APFloat::IEEEdouble, false, false, 0));
-  ASSERT_EQ(0xfff8000000000000ULL, nanbits(APFloat::IEEEdouble, false, true, 0));
-  ASSERT_EQ(0x7ff800000000ae72ULL, nanbits(APFloat::IEEEdouble, false, false, 0xae72));
-  ASSERT_EQ(0x7fffffffffffae72ULL, nanbits(APFloat::IEEEdouble, false, false, 0xffffffffffffae72ULL));
-  ASSERT_EQ(0x7ff4000000000000ULL, nanbits(APFloat::IEEEdouble, true, false, 0));
-  ASSERT_EQ(0xfff4000000000000ULL, nanbits(APFloat::IEEEdouble, true, true, 0));
-  ASSERT_EQ(0x7ff000000000ae72ULL, nanbits(APFloat::IEEEdouble, true, false, 0xae72));
-  ASSERT_EQ(0x7ff7ffffffffae72ULL, nanbits(APFloat::IEEEdouble, true, false, 0xffffffffffffae72ULL));
+  ASSERT_EQ(0x7ff8000000000000ULL, nanbits(APFloat::IEEEdouble(), false, false, 0));
+  ASSERT_EQ(0xfff8000000000000ULL, nanbits(APFloat::IEEEdouble(), false, true, 0));
+  ASSERT_EQ(0x7ff800000000ae72ULL, nanbits(APFloat::IEEEdouble(), false, false, 0xae72));
+  ASSERT_EQ(0x7fffffffffffae72ULL, nanbits(APFloat::IEEEdouble(), false, false, 0xffffffffffffae72ULL));
+  ASSERT_EQ(0x7ff4000000000000ULL, nanbits(APFloat::IEEEdouble(), true, false, 0));
+  ASSERT_EQ(0xfff4000000000000ULL, nanbits(APFloat::IEEEdouble(), true, true, 0));
+  ASSERT_EQ(0x7ff000000000ae72ULL, nanbits(APFloat::IEEEdouble(), true, false, 0xae72));
+  ASSERT_EQ(0x7ff7ffffffffae72ULL, nanbits(APFloat::IEEEdouble(), true, false, 0xffffffffffffae72ULL));
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(APFloatTest, SemanticsDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEsingle, 0.0f).convertToDouble(), "Float semantics are not IEEEdouble");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, 0.0 ).convertToFloat(),  "Float semantics are not IEEEsingle");
+  EXPECT_DEATH(APFloat(APFloat::IEEEsingle(), 0.0f).convertToDouble(), "Float semantics are not IEEEdouble");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), 0.0 ).convertToFloat(),  "Float semantics are not IEEEsingle");
 }
 
 TEST(APFloatTest, StringDecimalDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  ""), "Invalid string length");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+"), "String has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-"), "String has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ""), "Invalid string length");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+"), "String has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-"), "String has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("\0", 1)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1\0", 2)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1\02", 3)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1\02e1", 5)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1e\0", 3)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1e1\0", 4)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("1e1\02", 5)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("\0", 1)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\0", 2)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\02", 3)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\02e1", 5)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e\0", 3)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1\0", 4)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1\02", 5)), "Invalid character in exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1.0f"), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0f"), "Invalid character in significand");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, ".."), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "..0"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1.0.0"), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".."), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "..0"), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0.0"), "String contains multiple dots");
 }
 
 TEST(APFloatTest, StringDecimalSignificandDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-."), "Significand has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-e"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-e1"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  ".e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+.e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-.e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+.e1"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-.e1"), "Significand has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  ".e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+.e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-.e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+.e"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-.e"), "Significand has no digits");
 }
 
 TEST(APFloatTest, StringDecimalExponentDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,   "1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "+1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "-1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1e"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,   "1.e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "+1.e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "-1.e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1.e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1.e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1.e"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,   ".1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "+.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "-.1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   ".1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+.1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-.1e"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,   "1.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "+1.1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "-1.1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),   "1.1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "+1.1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "-1.1e"), "Exponent has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1e-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1e+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1e-"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  ".1e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, ".1e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, ".1e-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".1e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".1e+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".1e-"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "1.0e"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1.0e+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "1.0e-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "1.0e"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0e+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0e-"), "Exponent has no digits");
 }
 
 TEST(APFloatTest, StringHexadecimalDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x"), "Invalid string");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x"), "Invalid string");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x"), "Invalid string");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x"), "Invalid string");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x"), "Invalid string");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x"), "Invalid string");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0"), "Hex strings require an exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x0."), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x0."), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x0."), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0."), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0."), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0."), "Hex strings require an exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.0"), "Hex strings require an exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x0.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x0.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x0.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0.0"), "Hex strings require an exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0.0"), "Hex strings require an exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x\0", 3)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1\0", 4)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1\02", 5)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1\02p1", 7)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1p\0", 5)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1p1\0", 6)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, StringRef("0x1p1\02", 7)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x\0", 3)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\0", 4)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\02", 5)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\02p1", 7)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p\0", 5)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1\0", 6)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1\02", 7)), "Invalid character in exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "0x1p0f"), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x1p0f"), "Invalid character in exponent");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "0x..p1"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "0x..0p1"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "0x1.0.0p1"), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x..p1"), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x..0p1"), "String contains multiple dots");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x1.0.0p1"), "String contains multiple dots");
 }
 
 TEST(APFloatTest, StringHexadecimalSignificandDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x."), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x."), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0xp"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0xp"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0xp"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0xp+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0xp+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0xp+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp+"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0xp-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0xp-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0xp-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp-"), "Significand has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.p"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.p"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.p"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.p+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.p+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.p+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p+"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p+"), "Significand has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.p-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.p-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.p-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p-"), "Significand has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p-"), "Significand has no digits");
 }
 
 TEST(APFloatTest, StringHexadecimalExponentDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p+"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1p-"), "Exponent has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.p"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.p+"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p-"), "Exponent has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p+"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p-"), "Exponent has no digits");
 
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p+"), "Exponent has no digits");
 
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble,  "0x1.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "+0x1.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble, "-0x1.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p-"), "Exponent has no digits");
+
+
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p"), "Exponent has no digits");
+
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p+"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p+"), "Exponent has no digits");
+
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p-"), "Exponent has no digits");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p-"), "Exponent has no digits");
 }
 #endif
 #endif
@@ -1237,12 +1237,12 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(0.5)));
   EXPECT_TRUE(APFloat(2.0f).getExactInverse(&inv));
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(0.5f)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEquad, "2.0").getExactInverse(&inv));
-  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::IEEEquad, "0.5")));
-  EXPECT_TRUE(APFloat(APFloat::PPCDoubleDouble, "2.0").getExactInverse(&inv));
-  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble, "0.5")));
-  EXPECT_TRUE(APFloat(APFloat::x87DoubleExtended, "2.0").getExactInverse(&inv));
-  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::x87DoubleExtended, "0.5")));
+  EXPECT_TRUE(APFloat(APFloat::IEEEquad(), "2.0").getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::IEEEquad(), "0.5")));
+  EXPECT_TRUE(APFloat(APFloat::PPCDoubleDouble(), "2.0").getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0.5")));
+  EXPECT_TRUE(APFloat(APFloat::x87DoubleExtended(), "2.0").getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::x87DoubleExtended(), "0.5")));
 
   // FLT_MIN
   EXPECT_TRUE(APFloat(1.17549435e-38f).getExactInverse(&inv));
@@ -1257,7 +1257,7 @@ TEST(APFloatTest, exactInverse) {
 }
 
 TEST(APFloatTest, roundToIntegral) {
-  APFloat T(-0.5), S(3.14), R(APFloat::getLargest(APFloat::IEEEdouble)), P(0.0);
+  APFloat T(-0.5), S(3.14), R(APFloat::getLargest(APFloat::IEEEdouble())), P(0.0);
 
   P = T;
   P.roundToIntegral(APFloat::rmTowardZero);
@@ -1298,19 +1298,19 @@ TEST(APFloatTest, roundToIntegral) {
   P.roundToIntegral(APFloat::rmNearestTiesToEven);
   EXPECT_EQ(R.convertToDouble(), P.convertToDouble());
 
-  P = APFloat::getZero(APFloat::IEEEdouble);
+  P = APFloat::getZero(APFloat::IEEEdouble());
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_EQ(0.0, P.convertToDouble());
-  P = APFloat::getZero(APFloat::IEEEdouble, true);
+  P = APFloat::getZero(APFloat::IEEEdouble(), true);
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_EQ(-0.0, P.convertToDouble());
-  P = APFloat::getNaN(APFloat::IEEEdouble);
+  P = APFloat::getNaN(APFloat::IEEEdouble());
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_TRUE(std::isnan(P.convertToDouble()));
-  P = APFloat::getInf(APFloat::IEEEdouble);
+  P = APFloat::getInf(APFloat::IEEEdouble());
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_TRUE(std::isinf(P.convertToDouble()) && P.convertToDouble() > 0.0);
-  P = APFloat::getInf(APFloat::IEEEdouble, true);
+  P = APFloat::getInf(APFloat::IEEEdouble(), true);
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_TRUE(std::isinf(P.convertToDouble()) && P.convertToDouble() < 0.0);
 }
@@ -1320,45 +1320,45 @@ TEST(APFloatTest, isInteger) {
   EXPECT_TRUE(T.isInteger());
   T = APFloat(3.14159);
   EXPECT_FALSE(T.isInteger());
-  T = APFloat::getNaN(APFloat::IEEEdouble);
+  T = APFloat::getNaN(APFloat::IEEEdouble());
   EXPECT_FALSE(T.isInteger());
-  T = APFloat::getInf(APFloat::IEEEdouble);
+  T = APFloat::getInf(APFloat::IEEEdouble());
   EXPECT_FALSE(T.isInteger());
-  T = APFloat::getInf(APFloat::IEEEdouble, true);
+  T = APFloat::getInf(APFloat::IEEEdouble(), true);
   EXPECT_FALSE(T.isInteger());
-  T = APFloat::getLargest(APFloat::IEEEdouble);
+  T = APFloat::getLargest(APFloat::IEEEdouble());
   EXPECT_TRUE(T.isInteger());
 }
 
 TEST(APFloatTest, getLargest) {
-  EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle).convertToFloat());
-  EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble).convertToDouble());
+  EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
+  EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());
 }
 
 TEST(APFloatTest, getSmallest) {
-  APFloat test = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat expected = APFloat(APFloat::IEEEsingle, "0x0.000002p-126");
+  APFloat test = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat expected = APFloat(APFloat::IEEEsingle(), "0x0.000002p-126");
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallest(APFloat::IEEEsingle, true);
-  expected = APFloat(APFloat::IEEEsingle, "-0x0.000002p-126");
+  test = APFloat::getSmallest(APFloat::IEEEsingle(), true);
+  expected = APFloat(APFloat::IEEEsingle(), "-0x0.000002p-126");
   EXPECT_TRUE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallest(APFloat::IEEEquad, false);
-  expected = APFloat(APFloat::IEEEquad, "0x0.0000000000000000000000000001p-16382");
+  test = APFloat::getSmallest(APFloat::IEEEquad(), false);
+  expected = APFloat(APFloat::IEEEquad(), "0x0.0000000000000000000000000001p-16382");
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallest(APFloat::IEEEquad, true);
-  expected = APFloat(APFloat::IEEEquad, "-0x0.0000000000000000000000000001p-16382");
+  test = APFloat::getSmallest(APFloat::IEEEquad(), true);
+  expected = APFloat(APFloat::IEEEquad(), "-0x0.0000000000000000000000000001p-16382");
   EXPECT_TRUE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_TRUE(test.isDenormal());
@@ -1366,29 +1366,29 @@ TEST(APFloatTest, getSmallest) {
 }
 
 TEST(APFloatTest, getSmallestNormalized) {
-  APFloat test = APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
-  APFloat expected = APFloat(APFloat::IEEEsingle, "0x1p-126");
+  APFloat test = APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
+  APFloat expected = APFloat(APFloat::IEEEsingle(), "0x1p-126");
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
-  expected = APFloat(APFloat::IEEEsingle, "-0x1p-126");
+  test = APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
+  expected = APFloat(APFloat::IEEEsingle(), "-0x1p-126");
   EXPECT_TRUE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallestNormalized(APFloat::IEEEquad, false);
-  expected = APFloat(APFloat::IEEEquad, "0x1p-16382");
+  test = APFloat::getSmallestNormalized(APFloat::IEEEquad(), false);
+  expected = APFloat(APFloat::IEEEquad(), "0x1p-16382");
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
-  test = APFloat::getSmallestNormalized(APFloat::IEEEquad, true);
-  expected = APFloat(APFloat::IEEEquad, "-0x1p-16382");
+  test = APFloat::getSmallestNormalized(APFloat::IEEEquad(), true);
+  expected = APFloat(APFloat::IEEEquad(), "-0x1p-16382");
   EXPECT_TRUE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
@@ -1402,18 +1402,18 @@ TEST(APFloatTest, getZero) {
     const unsigned long long bitPattern[2];
     const unsigned bitPatternLength;
   } const GetZeroTest[] = {
-    { &APFloat::IEEEhalf, false, {0, 0}, 1},
-    { &APFloat::IEEEhalf, true, {0x8000ULL, 0}, 1},
-    { &APFloat::IEEEsingle, false, {0, 0}, 1},
-    { &APFloat::IEEEsingle, true, {0x80000000ULL, 0}, 1},
-    { &APFloat::IEEEdouble, false, {0, 0}, 1},
-    { &APFloat::IEEEdouble, true, {0x8000000000000000ULL, 0}, 1},
-    { &APFloat::IEEEquad, false, {0, 0}, 2},
-    { &APFloat::IEEEquad, true, {0, 0x8000000000000000ULL}, 2},
-    { &APFloat::PPCDoubleDouble, false, {0, 0}, 2},
-    { &APFloat::PPCDoubleDouble, true, {0x8000000000000000ULL, 0}, 2},
-    { &APFloat::x87DoubleExtended, false, {0, 0}, 2},
-    { &APFloat::x87DoubleExtended, true, {0, 0x8000ULL}, 2},
+    { &APFloat::IEEEhalf(), false, {0, 0}, 1},
+    { &APFloat::IEEEhalf(), true, {0x8000ULL, 0}, 1},
+    { &APFloat::IEEEsingle(), false, {0, 0}, 1},
+    { &APFloat::IEEEsingle(), true, {0x80000000ULL, 0}, 1},
+    { &APFloat::IEEEdouble(), false, {0, 0}, 1},
+    { &APFloat::IEEEdouble(), true, {0x8000000000000000ULL, 0}, 1},
+    { &APFloat::IEEEquad(), false, {0, 0}, 2},
+    { &APFloat::IEEEquad(), true, {0, 0x8000000000000000ULL}, 2},
+    { &APFloat::PPCDoubleDouble(), false, {0, 0}, 2},
+    { &APFloat::PPCDoubleDouble(), true, {0x8000000000000000ULL, 0}, 2},
+    { &APFloat::x87DoubleExtended(), false, {0, 0}, 2},
+    { &APFloat::x87DoubleExtended(), true, {0, 0x8000ULL}, 2},
   };
   const unsigned NumGetZeroTests = 12;
   for (unsigned i = 0; i < NumGetZeroTests; ++i) {
@@ -1445,189 +1445,189 @@ TEST(APFloatTest, copySign) {
 
 TEST(APFloatTest, convert) {
   bool losesInfo;
-  APFloat test(APFloat::IEEEdouble, "1.0");
-  test.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven, &losesInfo);
+  APFloat test(APFloat::IEEEdouble(), "1.0");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_EQ(1.0f, test.convertToFloat());
   EXPECT_FALSE(losesInfo);
 
-  test = APFloat(APFloat::x87DoubleExtended, "0x1p-53");
-  test.add(APFloat(APFloat::x87DoubleExtended, "1.0"), APFloat::rmNearestTiesToEven);
-  test.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven, &losesInfo);
+  test = APFloat(APFloat::x87DoubleExtended(), "0x1p-53");
+  test.add(APFloat(APFloat::x87DoubleExtended(), "1.0"), APFloat::rmNearestTiesToEven);
+  test.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_EQ(1.0, test.convertToDouble());
   EXPECT_TRUE(losesInfo);
 
-  test = APFloat(APFloat::IEEEquad, "0x1p-53");
-  test.add(APFloat(APFloat::IEEEquad, "1.0"), APFloat::rmNearestTiesToEven);
-  test.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven, &losesInfo);
+  test = APFloat(APFloat::IEEEquad(), "0x1p-53");
+  test.add(APFloat(APFloat::IEEEquad(), "1.0"), APFloat::rmNearestTiesToEven);
+  test.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_EQ(1.0, test.convertToDouble());
   EXPECT_TRUE(losesInfo);
 
-  test = APFloat(APFloat::x87DoubleExtended, "0xf.fffffffp+28");
-  test.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven, &losesInfo);
+  test = APFloat(APFloat::x87DoubleExtended(), "0xf.fffffffp+28");
+  test.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
   EXPECT_EQ(4294967295.0, test.convertToDouble());
   EXPECT_FALSE(losesInfo);
 
-  test = APFloat::getSNaN(APFloat::IEEEsingle);
-  APFloat X87SNaN = APFloat::getSNaN(APFloat::x87DoubleExtended);
-  test.convert(APFloat::x87DoubleExtended, APFloat::rmNearestTiesToEven,
+  test = APFloat::getSNaN(APFloat::IEEEsingle());
+  APFloat X87SNaN = APFloat::getSNaN(APFloat::x87DoubleExtended());
+  test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
                &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87SNaN));
   EXPECT_FALSE(losesInfo);
 
-  test = APFloat::getQNaN(APFloat::IEEEsingle);
-  APFloat X87QNaN = APFloat::getQNaN(APFloat::x87DoubleExtended);
-  test.convert(APFloat::x87DoubleExtended, APFloat::rmNearestTiesToEven,
+  test = APFloat::getQNaN(APFloat::IEEEsingle());
+  APFloat X87QNaN = APFloat::getQNaN(APFloat::x87DoubleExtended());
+  test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
                &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87QNaN));
   EXPECT_FALSE(losesInfo);
 
-  test = APFloat::getSNaN(APFloat::x87DoubleExtended);
-  test.convert(APFloat::x87DoubleExtended, APFloat::rmNearestTiesToEven,
+  test = APFloat::getSNaN(APFloat::x87DoubleExtended());
+  test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
                &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87SNaN));
   EXPECT_FALSE(losesInfo);
 
-  test = APFloat::getQNaN(APFloat::x87DoubleExtended);
-  test.convert(APFloat::x87DoubleExtended, APFloat::rmNearestTiesToEven,
+  test = APFloat::getQNaN(APFloat::x87DoubleExtended());
+  test.convert(APFloat::x87DoubleExtended(), APFloat::rmNearestTiesToEven,
                &losesInfo);
   EXPECT_TRUE(test.bitwiseIsEqual(X87QNaN));
   EXPECT_FALSE(losesInfo);
 }
 
 TEST(APFloatTest, PPCDoubleDouble) {
-  APFloat test(APFloat::PPCDoubleDouble, "1.0");
+  APFloat test(APFloat::PPCDoubleDouble(), "1.0");
   EXPECT_EQ(0x3ff0000000000000ull, test.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x0000000000000000ull, test.bitcastToAPInt().getRawData()[1]);
 
-  test.divide(APFloat(APFloat::PPCDoubleDouble, "3.0"), APFloat::rmNearestTiesToEven);
+  test.divide(APFloat(APFloat::PPCDoubleDouble(), "3.0"), APFloat::rmNearestTiesToEven);
   EXPECT_EQ(0x3fd5555555555555ull, test.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x3c75555555555556ull, test.bitcastToAPInt().getRawData()[1]);
 
   // LDBL_MAX
-  test = APFloat(APFloat::PPCDoubleDouble, "1.79769313486231580793728971405301e+308");
+  test = APFloat(APFloat::PPCDoubleDouble(), "1.79769313486231580793728971405301e+308");
   EXPECT_EQ(0x7fefffffffffffffull, test.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x7c8ffffffffffffeull, test.bitcastToAPInt().getRawData()[1]);
 
   // LDBL_MIN
-  test = APFloat(APFloat::PPCDoubleDouble, "2.00416836000897277799610805135016e-292");
+  test = APFloat(APFloat::PPCDoubleDouble(), "2.00416836000897277799610805135016e-292");
   EXPECT_EQ(0x0360000000000000ull, test.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x0000000000000000ull, test.bitcastToAPInt().getRawData()[1]);
 
   // PR30869
   {
-    auto Result = APFloat(APFloat::PPCDoubleDouble, "1.0") +
-                  APFloat(APFloat::PPCDoubleDouble, "1.0");
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    auto Result = APFloat(APFloat::PPCDoubleDouble(), "1.0") +
+                  APFloat(APFloat::PPCDoubleDouble(), "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
 
-    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") -
-             APFloat(APFloat::PPCDoubleDouble, "1.0");
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    Result = APFloat(APFloat::PPCDoubleDouble(), "1.0") -
+             APFloat(APFloat::PPCDoubleDouble(), "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
 
-    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") *
-             APFloat(APFloat::PPCDoubleDouble, "1.0");
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    Result = APFloat(APFloat::PPCDoubleDouble(), "1.0") *
+             APFloat(APFloat::PPCDoubleDouble(), "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
 
-    Result = APFloat(APFloat::PPCDoubleDouble, "1.0") /
-             APFloat(APFloat::PPCDoubleDouble, "1.0");
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    Result = APFloat(APFloat::PPCDoubleDouble(), "1.0") /
+             APFloat(APFloat::PPCDoubleDouble(), "1.0");
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
 
     int Exp;
-    Result = frexp(APFloat(APFloat::PPCDoubleDouble, "1.0"), Exp,
+    Result = frexp(APFloat(APFloat::PPCDoubleDouble(), "1.0"), Exp,
                    APFloat::rmNearestTiesToEven);
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
 
-    Result = scalbn(APFloat(APFloat::PPCDoubleDouble, "1.0"), 1,
+    Result = scalbn(APFloat(APFloat::PPCDoubleDouble(), "1.0"), 1,
                     APFloat::rmNearestTiesToEven);
-    EXPECT_EQ(&APFloat::PPCDoubleDouble, &Result.getSemantics());
+    EXPECT_EQ(&APFloat::PPCDoubleDouble(), &Result.getSemantics());
   }
 }
 
 TEST(APFloatTest, isNegative) {
-  APFloat t(APFloat::IEEEsingle, "0x1p+0");
+  APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_FALSE(t.isNegative());
-  t = APFloat(APFloat::IEEEsingle, "-0x1p+0");
+  t = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
   EXPECT_TRUE(t.isNegative());
 
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, false).isNegative());
-  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle, true).isNegative());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isNegative());
+  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle(), true).isNegative());
 
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, false).isNegative());
-  EXPECT_TRUE(APFloat::getZero(APFloat::IEEEsingle, true).isNegative());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isNegative());
+  EXPECT_TRUE(APFloat::getZero(APFloat::IEEEsingle(), true).isNegative());
 
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, false).isNegative());
-  EXPECT_TRUE(APFloat::getNaN(APFloat::IEEEsingle, true).isNegative());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isNegative());
+  EXPECT_TRUE(APFloat::getNaN(APFloat::IEEEsingle(), true).isNegative());
 
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, false).isNegative());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, true).isNegative());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNegative());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true).isNegative());
 }
 
 TEST(APFloatTest, isNormal) {
-  APFloat t(APFloat::IEEEsingle, "0x1p+0");
+  APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_TRUE(t.isNormal());
 
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, false).isNormal());
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, false).isNormal());
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, false).isNormal());
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, false).isNormal());
-  EXPECT_FALSE(APFloat(APFloat::IEEEsingle, "0x1p-149").isNormal());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isNormal());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isNormal());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isNormal());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNormal());
+  EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isNormal());
 }
 
 TEST(APFloatTest, isFinite) {
-  APFloat t(APFloat::IEEEsingle, "0x1p+0");
+  APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_TRUE(t.isFinite());
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, false).isFinite());
-  EXPECT_TRUE(APFloat::getZero(APFloat::IEEEsingle, false).isFinite());
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, false).isFinite());
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, false).isFinite());
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "0x1p-149").isFinite());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isFinite());
+  EXPECT_TRUE(APFloat::getZero(APFloat::IEEEsingle(), false).isFinite());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isFinite());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isFinite());
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isFinite());
 }
 
 TEST(APFloatTest, isInfinity) {
-  APFloat t(APFloat::IEEEsingle, "0x1p+0");
+  APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_FALSE(t.isInfinity());
-  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle, false).isInfinity());
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, false).isInfinity());
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, false).isInfinity());
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, false).isInfinity());
-  EXPECT_FALSE(APFloat(APFloat::IEEEsingle, "0x1p-149").isInfinity());
+  EXPECT_TRUE(APFloat::getInf(APFloat::IEEEsingle(), false).isInfinity());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isInfinity());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isInfinity());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isInfinity());
+  EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isInfinity());
 }
 
 TEST(APFloatTest, isNaN) {
-  APFloat t(APFloat::IEEEsingle, "0x1p+0");
+  APFloat t(APFloat::IEEEsingle(), "0x1p+0");
   EXPECT_FALSE(t.isNaN());
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, false).isNaN());
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, false).isNaN());
-  EXPECT_TRUE(APFloat::getNaN(APFloat::IEEEsingle, false).isNaN());
-  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle, false).isNaN());
-  EXPECT_FALSE(APFloat(APFloat::IEEEsingle, "0x1p-149").isNaN());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isNaN());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isNaN());
+  EXPECT_TRUE(APFloat::getNaN(APFloat::IEEEsingle(), false).isNaN());
+  EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNaN());
+  EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isNaN());
 }
 
 TEST(APFloatTest, isFiniteNonZero) {
   // Test positive/negative normal value.
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "0x1p+0").isFiniteNonZero());
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "-0x1p+0").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "0x1p+0").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "-0x1p+0").isFiniteNonZero());
 
   // Test positive/negative denormal value.
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "0x1p-149").isFiniteNonZero());
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "-0x1p-149").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "-0x1p-149").isFiniteNonZero());
 
   // Test +/- Infinity.
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, false).isFiniteNonZero());
-  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle, true).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), true).isFiniteNonZero());
 
   // Test +/- Zero.
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, false).isFiniteNonZero());
-  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle, true).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), true).isFiniteNonZero());
 
   // Test +/- qNaN. +/- dont mean anything with qNaN but paranoia can't hurt in
   // this instance.
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, false).isFiniteNonZero());
-  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle, true).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), true).isFiniteNonZero());
 
   // Test +/- sNaN. +/- dont mean anything with sNaN but paranoia can't hurt in
   // this instance.
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, false).isFiniteNonZero());
-  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle, true).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isFiniteNonZero());
+  EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), true).isFiniteNonZero());
 }
 
 TEST(APFloatTest, add) {
@@ -1638,22 +1638,22 @@ TEST(APFloatTest, add) {
   // signaling NaNs should have a result that is a quiet NaN. Currently they
   // return sNaN.
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
-  APFloat PNormalValue = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat MNormalValue = APFloat(APFloat::IEEEsingle, "-0x1p+0");
-  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle, false);
-  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle, true);
-  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat PNormalValue = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat MNormalValue = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
+  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), true);
+  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
 
@@ -1910,7 +1910,7 @@ TEST(APFloatTest, add) {
     APFloat y(SpecialCaseTests[i].y);
     APFloat::opStatus status = x.add(y, APFloat::rmNearestTiesToEven);
 
-    APFloat result(APFloat::IEEEsingle, SpecialCaseTests[i].result);
+    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);
@@ -1926,22 +1926,22 @@ TEST(APFloatTest, subtract) {
   // signaling NaNs should have a result that is a quiet NaN. Currently they
   // return sNaN.
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
-  APFloat PNormalValue = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat MNormalValue = APFloat(APFloat::IEEEsingle, "-0x1p+0");
-  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle, false);
-  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle, true);
-  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat PNormalValue = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat MNormalValue = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
+  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), true);
+  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
 
@@ -2198,7 +2198,7 @@ TEST(APFloatTest, subtract) {
     APFloat y(SpecialCaseTests[i].y);
     APFloat::opStatus status = x.subtract(y, APFloat::rmNearestTiesToEven);
 
-    APFloat result(APFloat::IEEEsingle, SpecialCaseTests[i].result);
+    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);
@@ -2214,22 +2214,22 @@ TEST(APFloatTest, multiply) {
   // signaling NaNs should have a result that is a quiet NaN. Currently they
   // return sNaN.
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
-  APFloat PNormalValue = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat MNormalValue = APFloat(APFloat::IEEEsingle, "-0x1p+0");
-  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle, false);
-  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle, true);
-  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat PNormalValue = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat MNormalValue = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
+  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), true);
+  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
   const int UnderflowStatus = APFloat::opUnderflow | APFloat::opInexact;
@@ -2487,7 +2487,7 @@ TEST(APFloatTest, multiply) {
     APFloat y(SpecialCaseTests[i].y);
     APFloat::opStatus status = x.multiply(y, APFloat::rmNearestTiesToEven);
 
-    APFloat result(APFloat::IEEEsingle, SpecialCaseTests[i].result);
+    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);
@@ -2503,22 +2503,22 @@ TEST(APFloatTest, divide) {
   // signaling NaNs should have a result that is a quiet NaN. Currently they
   // return sNaN.
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
-  APFloat PNormalValue = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat MNormalValue = APFloat(APFloat::IEEEsingle, "-0x1p+0");
-  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle, false);
-  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle, true);
-  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat PNormalValue = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat MNormalValue = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
+  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), true);
+  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
   const int UnderflowStatus = APFloat::opUnderflow | APFloat::opInexact;
@@ -2776,7 +2776,7 @@ TEST(APFloatTest, divide) {
     APFloat y(SpecialCaseTests[i].y);
     APFloat::opStatus status = x.divide(y, APFloat::rmNearestTiesToEven);
 
-    APFloat result(APFloat::IEEEsingle, SpecialCaseTests[i].result);
+    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);
@@ -2786,8 +2786,8 @@ TEST(APFloatTest, divide) {
 
 TEST(APFloatTest, operatorOverloads) {
   // This is mostly testing that these operator overloads compile.
-  APFloat One = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat Two = APFloat(APFloat::IEEEsingle, "0x2p+0");
+  APFloat One = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat Two = APFloat(APFloat::IEEEsingle(), "0x2p+0");
   EXPECT_TRUE(Two.bitwiseIsEqual(One + One));
   EXPECT_TRUE(One.bitwiseIsEqual(Two - One));
   EXPECT_TRUE(Two.bitwiseIsEqual(One * Two));
@@ -2795,24 +2795,24 @@ TEST(APFloatTest, operatorOverloads) {
 }
 
 TEST(APFloatTest, abs) {
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat PQNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat MQNaN = APFloat::getNaN(APFloat::IEEEsingle, true);
-  APFloat PSNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
-  APFloat MSNaN = APFloat::getSNaN(APFloat::IEEEsingle, true);
-  APFloat PNormalValue = APFloat(APFloat::IEEEsingle, "0x1p+0");
-  APFloat MNormalValue = APFloat(APFloat::IEEEsingle, "-0x1p+0");
-  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle, false);
-  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle, true);
-  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, false);
-  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat PQNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat MQNaN = APFloat::getNaN(APFloat::IEEEsingle(), true);
+  APFloat PSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat MSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), true);
+  APFloat PNormalValue = APFloat(APFloat::IEEEsingle(), "0x1p+0");
+  APFloat MNormalValue = APFloat(APFloat::IEEEsingle(), "-0x1p+0");
+  APFloat PLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat MLargestValue = APFloat::getLargest(APFloat::IEEEsingle(), true);
+  APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, false);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle, true);
+    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
 
   EXPECT_TRUE(PInf.bitwiseIsEqual(abs(PInf)));
   EXPECT_TRUE(PInf.bitwiseIsEqual(abs(MInf)));
@@ -2833,68 +2833,68 @@ TEST(APFloatTest, abs) {
 }
 
 TEST(APFloatTest, ilogb) {
-  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, false)));
-  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, true)));
-  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1024")));
-  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023")));
-  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023")));
-  EXPECT_EQ(-51, ilogb(APFloat(APFloat::IEEEdouble, "0x1p-51")));
-  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1023")));
-  EXPECT_EQ(-2, ilogb(APFloat(APFloat::IEEEdouble, "0x0.ffffp-1")));
-  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.fffep-1023")));
-  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, false)));
-  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, true)));
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble(), false)));
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble(), true)));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1024")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-51, ilogb(APFloat(APFloat::IEEEdouble(), "0x1p-51")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-1023")));
+  EXPECT_EQ(-2, ilogb(APFloat(APFloat::IEEEdouble(), "0x0.ffffp-1")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble(), "0x1.fffep-1023")));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble(), false)));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble(), true)));
 
 
-  EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+0")));
-  EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "-0x1p+0")));
-  EXPECT_EQ(42, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+42")));
-  EXPECT_EQ(-42, ilogb(APFloat(APFloat::IEEEsingle, "0x1p-42")));
+  EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle(), "0x1p+0")));
+  EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle(), "-0x1p+0")));
+  EXPECT_EQ(42, ilogb(APFloat(APFloat::IEEEsingle(), "0x1p+42")));
+  EXPECT_EQ(-42, ilogb(APFloat(APFloat::IEEEsingle(), "0x1p-42")));
 
   EXPECT_EQ(APFloat::IEK_Inf,
-            ilogb(APFloat::getInf(APFloat::IEEEsingle, false)));
+            ilogb(APFloat::getInf(APFloat::IEEEsingle(), false)));
   EXPECT_EQ(APFloat::IEK_Inf,
-            ilogb(APFloat::getInf(APFloat::IEEEsingle, true)));
+            ilogb(APFloat::getInf(APFloat::IEEEsingle(), true)));
   EXPECT_EQ(APFloat::IEK_Zero,
-            ilogb(APFloat::getZero(APFloat::IEEEsingle, false)));
+            ilogb(APFloat::getZero(APFloat::IEEEsingle(), false)));
   EXPECT_EQ(APFloat::IEK_Zero,
-            ilogb(APFloat::getZero(APFloat::IEEEsingle, true)));
+            ilogb(APFloat::getZero(APFloat::IEEEsingle(), true)));
   EXPECT_EQ(APFloat::IEK_NaN,
-            ilogb(APFloat::getNaN(APFloat::IEEEsingle, false)));
+            ilogb(APFloat::getNaN(APFloat::IEEEsingle(), false)));
   EXPECT_EQ(APFloat::IEK_NaN,
-            ilogb(APFloat::getSNaN(APFloat::IEEEsingle, false)));
+            ilogb(APFloat::getSNaN(APFloat::IEEEsingle(), false)));
 
-  EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, false)));
-  EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, true)));
+  EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle(), false)));
+  EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle(), true)));
 
-  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, false)));
-  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, true)));
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle(), false)));
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle(), true)));
   EXPECT_EQ(-126,
-            ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle, false)));
+            ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false)));
   EXPECT_EQ(-126,
-            ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle, true)));
+            ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true)));
 }
 
 TEST(APFloatTest, scalbn) {
 
   const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
   EXPECT_TRUE(
-      APFloat(APFloat::IEEEsingle, "0x1p+0")
-      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 0, RM)));
+      APFloat(APFloat::IEEEsingle(), "0x1p+0")
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle(), "0x1p+0"), 0, RM)));
   EXPECT_TRUE(
-      APFloat(APFloat::IEEEsingle, "0x1p+42")
-      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 42, RM)));
+      APFloat(APFloat::IEEEsingle(), "0x1p+42")
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle(), "0x1p+0"), 42, RM)));
   EXPECT_TRUE(
-      APFloat(APFloat::IEEEsingle, "0x1p-42")
-      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), -42, RM)));
+      APFloat(APFloat::IEEEsingle(), "0x1p-42")
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle(), "0x1p+0"), -42, RM)));
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
-  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle, true);
-  APFloat QPNaN = APFloat::getNaN(APFloat::IEEEsingle, false);
-  APFloat QMNaN = APFloat::getNaN(APFloat::IEEEsingle, true);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat QPNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat QMNaN = APFloat::getNaN(APFloat::IEEEsingle(), true);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
 
   EXPECT_TRUE(PInf.bitwiseIsEqual(scalbn(PInf, 0, RM)));
   EXPECT_TRUE(MInf.bitwiseIsEqual(scalbn(MInf, 0, RM)));
@@ -2913,57 +2913,57 @@ TEST(APFloatTest, scalbn) {
                       (UINT64_C(1234) << 32) |
                       1);
 
-  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble, false,
+  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble(), false,
                                              &Payload);
   APFloat QuietPayload = scalbn(SNaNWithPayload, 1, RM);
   EXPECT_TRUE(QuietPayload.isNaN() && !QuietPayload.isSignaling());
   EXPECT_EQ(Payload, QuietPayload.bitcastToAPInt().getLoBits(51));
 
   EXPECT_TRUE(PInf.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 128, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "0x1p+0"), 128, RM)));
   EXPECT_TRUE(MInf.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p+0"), 128, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "-0x1p+0"), 128, RM)));
   EXPECT_TRUE(PInf.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "0x1p+127"), 1, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "0x1p+127"), 1, RM)));
   EXPECT_TRUE(PZero.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "0x1p-127"), -127, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "0x1p-127"), -127, RM)));
   EXPECT_TRUE(MZero.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p-127"), -127, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "-0x1p-149").bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p-127"), -22, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "-0x1p-127"), -127, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "-0x1p-149").bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle(), "-0x1p-127"), -22, RM)));
   EXPECT_TRUE(PZero.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEsingle, "0x1p-126"), -24, RM)));
+                scalbn(APFloat(APFloat::IEEEsingle(), "0x1p-126"), -24, RM)));
 
 
-  APFloat SmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble, false);
-  APFloat NegSmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble, true);
+  APFloat SmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble(), false);
+  APFloat NegSmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble(), true);
 
-  APFloat LargestF64 = APFloat::getLargest(APFloat::IEEEdouble, false);
-  APFloat NegLargestF64 = APFloat::getLargest(APFloat::IEEEdouble, true);
+  APFloat LargestF64 = APFloat::getLargest(APFloat::IEEEdouble(), false);
+  APFloat NegLargestF64 = APFloat::getLargest(APFloat::IEEEdouble(), true);
 
   APFloat SmallestNormalizedF64
-    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, false);
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), false);
   APFloat NegSmallestNormalizedF64
-    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, true);
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), true);
 
-  APFloat LargestDenormalF64(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023");
-  APFloat NegLargestDenormalF64(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023");
+  APFloat LargestDenormalF64(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023");
+  APFloat NegLargestDenormalF64(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1023");
 
 
   EXPECT_TRUE(SmallestF64.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEdouble, "0x1p-1074"), 0, RM)));
+                scalbn(APFloat(APFloat::IEEEdouble(), "0x1p-1074"), 0, RM)));
   EXPECT_TRUE(NegSmallestF64.bitwiseIsEqual(
-                scalbn(APFloat(APFloat::IEEEdouble, "-0x1p-1074"), 0, RM)));
+                scalbn(APFloat(APFloat::IEEEdouble(), "-0x1p-1074"), 0, RM)));
 
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1023")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p+1023")
               .bitwiseIsEqual(scalbn(SmallestF64, 2097, RM)));
 
   EXPECT_TRUE(scalbn(SmallestF64, -2097, RM).isPosZero());
   EXPECT_TRUE(scalbn(SmallestF64, -2098, RM).isPosZero());
   EXPECT_TRUE(scalbn(SmallestF64, -2099, RM).isPosZero());
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1022")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p+1022")
               .bitwiseIsEqual(scalbn(SmallestF64, 2096, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1023")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p+1023")
               .bitwiseIsEqual(scalbn(SmallestF64, 2097, RM)));
   EXPECT_TRUE(scalbn(SmallestF64, 2098, RM).isInfinity());
   EXPECT_TRUE(scalbn(SmallestF64, 2099, RM).isInfinity());
@@ -2977,12 +2977,12 @@ TEST(APFloatTest, scalbn) {
   EXPECT_TRUE(NegLargestDenormalF64
               .bitwiseIsEqual(scalbn(NegLargestDenormalF64, 0, RM)));
 
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1022")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1022")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 1, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1021")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1021")
               .bitwiseIsEqual(scalbn(NegLargestDenormalF64, 2, RM)));
 
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+1")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep+1")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 1024, RM)));
   EXPECT_TRUE(scalbn(LargestDenormalF64, -1023, RM).isPosZero());
   EXPECT_TRUE(scalbn(LargestDenormalF64, -1024, RM).isPosZero());
@@ -2991,25 +2991,25 @@ TEST(APFloatTest, scalbn) {
   EXPECT_TRUE(scalbn(LargestDenormalF64, 2098, RM).isInfinity());
   EXPECT_TRUE(scalbn(LargestDenormalF64, 2099, RM).isInfinity());
 
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-2")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-2")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 1021, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 1022, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+0")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep+0")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 1023, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+1023")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep+1023")
               .bitwiseIsEqual(scalbn(LargestDenormalF64, 2046, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+974")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p+974")
               .bitwiseIsEqual(scalbn(SmallestF64, 2048, RM)));
 
-  APFloat RandomDenormalF64(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+51");
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-972")
+  APFloat RandomDenormalF64(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp+51");
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-972")
               .bitwiseIsEqual(scalbn(RandomDenormalF64, -1023, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-1")
               .bitwiseIsEqual(scalbn(RandomDenormalF64, -52, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-2")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-2")
               .bitwiseIsEqual(scalbn(RandomDenormalF64, -53, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+0")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp+0")
               .bitwiseIsEqual(scalbn(RandomDenormalF64, -51, RM)));
 
   EXPECT_TRUE(scalbn(RandomDenormalF64, -2097, RM).isPosZero());
@@ -3017,60 +3017,60 @@ TEST(APFloatTest, scalbn) {
 
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "-0x1p-1073")
+    APFloat(APFloat::IEEEdouble(), "-0x1p-1073")
     .bitwiseIsEqual(scalbn(NegLargestF64, -2097, RM)));
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "-0x1p-1024")
+    APFloat(APFloat::IEEEdouble(), "-0x1p-1024")
     .bitwiseIsEqual(scalbn(NegLargestF64, -2048, RM)));
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "0x1p-1073")
+    APFloat(APFloat::IEEEdouble(), "0x1p-1073")
     .bitwiseIsEqual(scalbn(LargestF64, -2097, RM)));
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "0x1p-1074")
+    APFloat(APFloat::IEEEdouble(), "0x1p-1074")
     .bitwiseIsEqual(scalbn(LargestF64, -2098, RM)));
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1074")
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1p-1074")
               .bitwiseIsEqual(scalbn(NegLargestF64, -2098, RM)));
   EXPECT_TRUE(scalbn(NegLargestF64, -2099, RM).isNegZero());
   EXPECT_TRUE(scalbn(LargestF64, 1, RM).isInfinity());
 
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "0x1p+0")
-    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble, "0x1p+52"), -52, RM)));
+    APFloat(APFloat::IEEEdouble(), "0x1p+0")
+    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble(), "0x1p+52"), -52, RM)));
 
   EXPECT_TRUE(
-    APFloat(APFloat::IEEEdouble, "0x1p-103")
-    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble, "0x1p-51"), -52, RM)));
+    APFloat(APFloat::IEEEdouble(), "0x1p-103")
+    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble(), "0x1p-51"), -52, RM)));
 }
 
 TEST(APFloatTest, frexp) {
   const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
 
-  APFloat PZero = APFloat::getZero(APFloat::IEEEdouble, false);
-  APFloat MZero = APFloat::getZero(APFloat::IEEEdouble, true);
+  APFloat PZero = APFloat::getZero(APFloat::IEEEdouble(), false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEdouble(), true);
   APFloat One(1.0);
   APFloat MOne(-1.0);
   APFloat Two(2.0);
   APFloat MTwo(-2.0);
 
-  APFloat LargestDenormal(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023");
-  APFloat NegLargestDenormal(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023");
+  APFloat LargestDenormal(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023");
+  APFloat NegLargestDenormal(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1023");
 
-  APFloat Smallest = APFloat::getSmallest(APFloat::IEEEdouble, false);
-  APFloat NegSmallest = APFloat::getSmallest(APFloat::IEEEdouble, true);
+  APFloat Smallest = APFloat::getSmallest(APFloat::IEEEdouble(), false);
+  APFloat NegSmallest = APFloat::getSmallest(APFloat::IEEEdouble(), true);
 
-  APFloat Largest = APFloat::getLargest(APFloat::IEEEdouble, false);
-  APFloat NegLargest = APFloat::getLargest(APFloat::IEEEdouble, true);
+  APFloat Largest = APFloat::getLargest(APFloat::IEEEdouble(), false);
+  APFloat NegLargest = APFloat::getLargest(APFloat::IEEEdouble(), true);
 
-  APFloat PInf = APFloat::getInf(APFloat::IEEEdouble, false);
-  APFloat MInf = APFloat::getInf(APFloat::IEEEdouble, true);
+  APFloat PInf = APFloat::getInf(APFloat::IEEEdouble(), false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEdouble(), true);
 
-  APFloat QPNaN = APFloat::getNaN(APFloat::IEEEdouble, false);
-  APFloat QMNaN = APFloat::getNaN(APFloat::IEEEdouble, true);
-  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEdouble, false);
+  APFloat QPNaN = APFloat::getNaN(APFloat::IEEEdouble(), false);
+  APFloat QMNaN = APFloat::getNaN(APFloat::IEEEdouble(), true);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEdouble(), false);
 
   // Make sure highest bit of payload is preserved.
   const APInt Payload(64, (UINT64_C(1) << 50) |
@@ -3078,16 +3078,16 @@ TEST(APFloatTest, frexp) {
                       (UINT64_C(1234) << 32) |
                       1);
 
-  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble, false,
+  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble(), false,
                                              &Payload);
 
   APFloat SmallestNormalized
-    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, false);
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), false);
   APFloat NegSmallestNormalized
-    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, true);
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), true);
 
   int Exp;
-  APFloat Frac(APFloat::IEEEdouble);
+  APFloat Frac(APFloat::IEEEdouble());
 
 
   Frac = frexp(PZero, Exp, RM);
@@ -3101,37 +3101,37 @@ TEST(APFloatTest, frexp) {
 
   Frac = frexp(One, Exp, RM);
   EXPECT_EQ(1, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p-1").bitwiseIsEqual(Frac));
 
   Frac = frexp(MOne, Exp, RM);
   EXPECT_EQ(1, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1p-1").bitwiseIsEqual(Frac));
 
   Frac = frexp(LargestDenormal, Exp, RM);
   EXPECT_EQ(-1022, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
 
   Frac = frexp(NegLargestDenormal, Exp, RM);
   EXPECT_EQ(-1022, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
 
 
   Frac = frexp(Smallest, Exp, RM);
   EXPECT_EQ(-1073, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p-1").bitwiseIsEqual(Frac));
 
   Frac = frexp(NegSmallest, Exp, RM);
   EXPECT_EQ(-1073, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1p-1").bitwiseIsEqual(Frac));
 
 
   Frac = frexp(Largest, Exp, RM);
   EXPECT_EQ(1024, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
 
   Frac = frexp(NegLargest, Exp, RM);
   EXPECT_EQ(1024, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
 
 
   Frac = frexp(PInf, Exp, RM);
@@ -3159,17 +3159,17 @@ TEST(APFloatTest, frexp) {
   EXPECT_TRUE(Frac.isNaN() && !Frac.isSignaling());
   EXPECT_EQ(Payload, Frac.bitcastToAPInt().getLoBits(51));
 
-  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x0.ffffp-1"), Exp, RM);
+  Frac = frexp(APFloat(APFloat::IEEEdouble(), "0x0.ffffp-1"), Exp, RM);
   EXPECT_EQ(-1, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.fffep-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.fffep-1").bitwiseIsEqual(Frac));
 
-  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x1p-51"), Exp, RM);
+  Frac = frexp(APFloat(APFloat::IEEEdouble(), "0x1p-51"), Exp, RM);
   EXPECT_EQ(-50, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1p-1").bitwiseIsEqual(Frac));
 
-  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+51"), Exp, RM);
+  Frac = frexp(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp+51"), Exp, RM);
   EXPECT_EQ(52, Exp);
-  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
 }
 
 TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
@@ -3205,8 +3205,8 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected, RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.add(A2, RM);
 
     EXPECT_EQ(Expected, A1.getCategory());
@@ -3254,8 +3254,8 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.add(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);
@@ -3283,8 +3283,8 @@ TEST(APFloatTest, PPCDoubleDoubleSubtract) {
     APFloat::roundingMode RM;
     std::tie(Op1[0], Op1[1], Op2[0], Op2[1], Expected[0], Expected[1], RM) = Tp;
 
-    APFloat A1(APFloat::PPCDoubleDouble, APInt(128, 2, Op1));
-    APFloat A2(APFloat::PPCDoubleDouble, APInt(128, 2, Op2));
+    APFloat A1(APFloat::PPCDoubleDouble(), APInt(128, 2, Op1));
+    APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.subtract(A2, RM);
 
     EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);

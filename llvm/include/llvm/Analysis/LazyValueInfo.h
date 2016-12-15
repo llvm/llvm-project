@@ -19,7 +19,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-  class AssumptionCache;
   class Constant;
   class ConstantRange;
   class DataLayout;
@@ -31,7 +30,6 @@ namespace llvm {
 /// This pass computes, caches, and vends lazy value constraint information.
 class LazyValueInfo {
   friend class LazyValueInfoWrapperPass;
-  AssumptionCache *AC = nullptr;
   class TargetLibraryInfo *TLI = nullptr;
   DominatorTree *DT = nullptr;
   void *PImpl = nullptr;
@@ -40,16 +38,15 @@ class LazyValueInfo {
 public:
   ~LazyValueInfo();
   LazyValueInfo() {}
-  LazyValueInfo(AssumptionCache *AC_, TargetLibraryInfo *TLI_,
+  LazyValueInfo(TargetLibraryInfo *TLI_,
                 DominatorTree *DT_)
-      : AC(AC_), TLI(TLI_), DT(DT_) {}
+      : TLI(TLI_), DT(DT_) {}
   LazyValueInfo(LazyValueInfo &&Arg)
-      : AC(Arg.AC), TLI(Arg.TLI), DT(Arg.DT), PImpl(Arg.PImpl) {
+      : TLI(Arg.TLI), DT(Arg.DT), PImpl(Arg.PImpl) {
     Arg.PImpl = nullptr;
   }
   LazyValueInfo &operator=(LazyValueInfo &&Arg) {
     releaseMemory();
-    AC = Arg.AC;
     TLI = Arg.TLI;
     DT = Arg.DT;
     PImpl = Arg.PImpl;

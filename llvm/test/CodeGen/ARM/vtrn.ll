@@ -372,13 +372,18 @@ define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
   ret <8 x i8> %rv
 }
 
-; Negative test that should not generate a vtrn
+; The shuffle mask is half a vtrn; we duplicate the half to produce the
+; full result.
 define void @lower_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
   ; CHECK-LABEL: lower_twice_no_vtrn
   ; CHECK: @ BB#0:
-  ; CHECK-NOT: vtrn
-  ; CHECK: mov pc, lr
+  ; CHECK-NEXT: vldr d16, [r1]
+  ; CHECK-NEXT: vldr d18, [r0]
+  ; CHECK-NEXT: vtrn.16 d18, d16
+  ; CHECK-NEXT: vorr d17, d16, d16
+  ; CHECK-NEXT: vst1.64 {d16, d17}, [r2]
+  ; CHECK-NEXT: mov pc, lr
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %0 = shufflevector <4 x i16> %tmp1, <4 x i16> %tmp2, <8 x i32> <i32 undef, i32 5, i32 3, i32 7, i32 1, i32 5, i32 3, i32 7>
@@ -386,13 +391,18 @@ entry:
   ret void
 }
 
-; Negative test that should not generate a vtrn
+; The shuffle mask is half a vtrn; we duplicate the half to produce the
+; full result.
 define void @upper_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
   ; CHECK-LABEL: upper_twice_no_vtrn
   ; CHECK: @ BB#0:
-  ; CHECK-NOT: vtrn
-  ; CHECK: mov pc, lr
+  ; CHECK-NEXT: vldr d16, [r1]
+  ; CHECK-NEXT: vldr d18, [r0]
+  ; CHECK-NEXT: vtrn.16 d18, d16
+  ; CHECK-NEXT: vorr d19, d18, d18
+  ; CHECK-NEXT: vst1.64 {d18, d19}, [r2]
+  ; CHECK-NEXT: mov pc, lr
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %0 = shufflevector <4 x i16> %tmp1, <4 x i16> %tmp2, <8 x i32> <i32 0, i32 undef, i32 2, i32 6, i32 0, i32 4, i32 2, i32 6>

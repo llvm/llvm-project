@@ -368,7 +368,9 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   StringRef CachedName = Entry.first.SectionName;
 
   SectionKind Kind;
-  if (Flags & ELF::SHF_EXECINSTR)
+  if (Flags & ELF::SHF_ARM_PURECODE)
+    Kind = SectionKind::getExecuteOnly();
+  else if (Flags & ELF::SHF_EXECINSTR)
     Kind = SectionKind::getText();
   else
     Kind = SectionKind::getReadOnly();

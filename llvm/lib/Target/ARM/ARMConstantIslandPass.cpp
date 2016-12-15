@@ -423,7 +423,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     MadeChange |= optimizeThumb2Branches();
 
   // Optimize jump tables using TBB / TBH.
-  if (GenerateTBB)
+  if (GenerateTBB && !STI->genExecuteOnly())
     MadeChange |= optimizeThumb2JumpTables();
 
   // After a while, this might be made debug-only, but it is not expensive.

@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -33,7 +32,6 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   MemoryDependenceResults *MD = nullptr;
   TargetLibraryInfo *TLI = nullptr;
   std::function<AliasAnalysis &()> LookupAliasAnalysis;
-  std::function<AssumptionCache &()> LookupAssumptionCache;
   std::function<DominatorTree &()> LookupDomTree;
 
 public:
@@ -43,7 +41,6 @@ public:
   bool runImpl(Function &F, MemoryDependenceResults *MD_,
                TargetLibraryInfo *TLI_,
                std::function<AliasAnalysis &()> LookupAliasAnalysis_,
-               std::function<AssumptionCache &()> LookupAssumptionCache_,
                std::function<DominatorTree &()> LookupDomTree_);
 
 private:

@@ -23,7 +23,6 @@
 namespace llvm {
 class AliasSet;
 class AliasSetTracker;
-class AssumptionCache;
 class BasicBlock;
 class DataLayout;
 class DominatorTree;

@@ -1317,6 +1317,88 @@ TEST_F(ChangeNamespaceTest, KeepGlobalSpecifier) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, UsingAliasInTemplate) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace some_ns {\n"
+                     "template <typename T, typename S>\n"
+                     "class G {};\n"
+                     "} // namespace some_ns\n"
+                     "namespace na {\n"
+                     "template<typename P>\n"
+                     "using GG = some_ns::G<int, P>;\n"
+                     "} // namespace na\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  GG<float> g;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace some_ns {\n"
+                         "template <typename T, typename S>\n"
+                         "class G {};\n"
+                         "} // namespace some_ns\n"
+                         "namespace na {\n"
+                         "template<typename P>\n"
+                         "using GG = some_ns::G<int, P>;\n"
+                         "} // namespace na\n"
+                         "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "void f() {\n"
+                         "  GG<float> g;\n"
+                         "}\n"
+                         "} // namespace nc\n\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, TemplateUsingAliasInBaseClass) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace some_ns {\n"
+                     "template <typename T, typename S>\n"
+                     "class G {};\n"
+                     "} // namespace some_ns\n"
+                     "namespace na {\n"
+                     "class Base {\n"
+                     "public:\n"
+                     "  template<typename P>\n"
+                     "  using GG = some_ns::G<int, P>;\n"
+                     "};\n"
+                     "class Derived : public Base {};\n"
+                     "} // namespace na\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  Derived::GG<float> g;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace some_ns {\n"
+                         "template <typename T, typename S>\n"
+                         "class G {};\n"
+                         "} // namespace some_ns\n"
+                         "namespace na {\n"
+                         "class Base {\n"
+                         "public:\n"
+                         "  template<typename P>\n"
+                         "  using GG = some_ns::G<int, P>;\n"
+                         "};\n"
+                         "class Derived : public Base {};\n"
+                         "} // namespace na\n"
+                         "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "void f() {\n"
+                         "  Derived::GG<float> g;\n"
+                         "}\n"
+                         "} // namespace nc\n\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang

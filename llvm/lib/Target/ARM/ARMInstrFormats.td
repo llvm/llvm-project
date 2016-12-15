@@ -398,6 +398,14 @@ class tPseudoInst<dag oops, dag iops, int sz, InstrItinClass itin,
   list<Predicate> Predicates = [IsThumb];
 }
 
+// PseudoInst that's in ARMv8-M baseline (Somewhere between Thumb and Thumb2)
+class t2basePseudoInst<dag oops, dag iops, int sz, InstrItinClass itin,
+                    list<dag> pattern>
+  : PseudoInst<oops, iops, itin, pattern> {
+  let Size = sz;
+  list<Predicate> Predicates = [IsThumb,HasV8MBaseline];
+}
+
 // PseudoInst that's Thumb2-mode only.
 class t2PseudoInst<dag oops, dag iops, int sz, InstrItinClass itin,
                     list<dag> pattern>

@@ -555,6 +555,10 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   unsigned mincta;
   if (llvm::getMinCTASm(F, mincta))
     O << ".minnctapersm " << mincta << "\n";
+
+  unsigned maxnreg;
+  if (llvm::getMaxNReg(F, maxnreg))
+    O << ".maxnreg " << maxnreg << "\n";
 }
 
 std::string
@@ -1723,11 +1727,11 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {
   if (Fp->getType()->getTypeID() == Type::FloatTyID) {
     numHex = 8;
     lead = "0f";
-    APF.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven, &ignored);
+    APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &ignored);
   } else if (Fp->getType()->getTypeID() == Type::DoubleTyID) {
     numHex = 16;
     lead = "0d";
-    APF.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven, &ignored);
+    APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &ignored);
   } else
     llvm_unreachable("unsupported fp type");
 

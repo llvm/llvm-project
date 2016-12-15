@@ -71,15 +71,15 @@ protected:
   // parameters in a template class that derives from a non-template superclass.
   // Essentially, we are converting a std::tuple<Derived<Ts...>> to a
   // std::vector<Base*>.
-  struct create_wrappers {
+  struct create_adapters {
     template <typename... Ts>
-    std::vector<detail::format_wrapper *> operator()(Ts &... Items) {
-      return std::vector<detail::format_wrapper *>{&Items...};
+    std::vector<detail::format_adapter *> operator()(Ts &... Items) {
+      return std::vector<detail::format_adapter *>{&Items...};
     }
   };
 
   StringRef Fmt;
-  std::vector<detail::format_wrapper *> Wrappers;
+  std::vector<detail::format_adapter *> Adapters;
   std::vector<ReplacementItem> Replacements;
 
   static bool consumeFieldLayout(StringRef &Spec, AlignStyle &Where,
@@ -91,7 +91,7 @@ protected:
 public:
   formatv_object_base(StringRef Fmt, std::size_t ParamCount)
       : Fmt(Fmt), Replacements(parseFormatString(Fmt)) {
-    Wrappers.reserve(ParamCount);
+    Adapters.reserve(ParamCount);
   }
 
   void format(raw_ostream &S) const {
@@ -102,12 +102,12 @@ public:
         S << R.Spec;
         continue;
       }
-      if (R.Index >= Wrappers.size()) {
+      if (R.Index >= Adapters.size()) {
         S << R.Spec;
         continue;
       }
 
-      auto W = Wrappers[R.Index];
+      auto W = Adapters[R.Index];
 
       FmtAlign Align(*W, R.Where, R.Align);
       Align.format(S, R.Options);
@@ -138,7 +138,7 @@ public:
 };
 
 template <typename Tuple> class formatv_object : public formatv_object_base {
-  // Storage for the parameter wrappers.  Since the base class erases the type
+  // Storage for the parameter adapters.  Since the base class erases the type
   // of the parameters, we have to own the storage for the parameters here, and
   // have the base class store type-erased pointers into this tuple.
   Tuple Parameters;
@@ -147,7 +147,7 @@ public:
   formatv_object(StringRef Fmt, Tuple &&Params)
       : formatv_object_base(Fmt, std::tuple_size<Tuple>::value),
         Parameters(std::move(Params)) {
-    Wrappers = apply_tuple(create_wrappers(), Parameters);
+    Adapters = apply_tuple(create_adapters(), Parameters);
   }
 };
 
@@ -234,12 +234,12 @@ public:
 //
 template <typename... Ts>
 inline auto formatv(const char *Fmt, Ts &&... Vals) -> formatv_object<decltype(
-    std::make_tuple(detail::build_format_wrapper(std::forward<Ts>(Vals))...))> {
+    std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...))> {
   using ParamTuple = decltype(
-      std::make_tuple(detail::build_format_wrapper(std::forward<Ts>(Vals))...));
+      std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
   return formatv_object<ParamTuple>(
       Fmt,
-      std::make_tuple(detail::build_format_wrapper(std::forward<Ts>(Vals))...));
+      std::make_tuple(detail::build_format_adapter(std::forward<Ts>(Vals))...));
 }
 
 } // end namespace llvm

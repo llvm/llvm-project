@@ -117,14 +117,16 @@ static void BuildArgument(BasicBlock &BB, Argument &Arg) {
   Function &F = *Arg.getParent();
   LLVMContext &Ctx = F.getContext();
 
+  Type *I8 = Type::getInt8Ty(Ctx);
+
   FunctionType *FnType = FunctionType::get(Type::getVoidTy(Ctx),
-    {Type::getInt8PtrTy(Ctx), Arg.getType()}, false);
+    {Type::getInt8PtrTy(Ctx), I8, Arg.getType()}, false);
 
   Constant *Fn = F.getParent()->getOrInsertFunction(
     GetArgumentSymbolName(Arg), FnType);
   Value *ArgName = CreateStringPtr(BB, Arg.getName());
 
-  Value *Args[] = {ArgName, &Arg};
+  Value *Args[] = {ArgName, ConstantInt::get(I8, Arg.getArgNo()), &Arg};
   CallInst::Create(Fn, Args, "", &BB);
 }
 

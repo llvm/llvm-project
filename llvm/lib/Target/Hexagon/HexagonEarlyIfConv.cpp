@@ -61,32 +61,46 @@
 
 #define DEBUG_TYPE "hexagon-eif"
 
+#include "Hexagon.h"
+#include "HexagonInstrInfo.h"
+#include "HexagonSubtarget.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "HexagonTargetMachine.h"
-
-#include <functional>
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <iterator>
 
 using namespace llvm;
 
 namespace llvm {
+
   FunctionPass *createHexagonEarlyIfConversion();
   void initializeHexagonEarlyIfConversionPass(PassRegistry& Registry);
-}
+
+} // end namespace llvm
 
 namespace {
+
   cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
     cl::init(false), cl::desc("Enable branch probability info"));
   cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
@@ -103,18 +117,22 @@ namespace {
   }
 
   struct FlowPattern {
-    FlowPattern() : SplitB(0), TrueB(0), FalseB(0), JoinB(0), PredR(0) {}
+    FlowPattern() = default;
     FlowPattern(MachineBasicBlock *B, unsigned PR, MachineBasicBlock *TB,
           MachineBasicBlock *FB, MachineBasicBlock *JB)
       : SplitB(B), TrueB(TB), FalseB(FB), JoinB(JB), PredR(PR) {}
 
-    MachineBasicBlock *SplitB;
-    MachineBasicBlock *TrueB, *FalseB, *JoinB;
-    unsigned PredR;
+    MachineBasicBlock *SplitB = nullptr;
+    MachineBasicBlock *TrueB = nullptr;
+    MachineBasicBlock *FalseB = nullptr;
+    MachineBasicBlock *JoinB = nullptr;
+    unsigned PredR = 0;
   };
+
   struct PrintFP {
     PrintFP(const FlowPattern &P, const TargetRegisterInfo &T)
       : FP(P), TRI(T) {}
+
     const FlowPattern &FP;
     const TargetRegisterInfo &TRI;
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintFP &P);
@@ -133,13 +151,17 @@ namespace {
   class HexagonEarlyIfConversion : public MachineFunctionPass {
   public:
     static char ID;
+
     HexagonEarlyIfConversion() : MachineFunctionPass(ID),
-        HII(0), TRI(0), MFN(0), MRI(0), MDT(0), MLI(0) {
+        HII(nullptr), TRI(nullptr), MFN(nullptr), MRI(nullptr), MDT(nullptr),
+        MLI(nullptr) {
       initializeHexagonEarlyIfConversionPass(*PassRegistry::getPassRegistry());
     }
+
     StringRef getPassName() const override {
       return "Hexagon early if conversion";
     }
+
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBranchProbabilityInfo>();
       AU.addRequired<MachineDominatorTree>();
@@ -147,6 +169,7 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
+
     bool runOnMachineFunction(MachineFunction &MF) override;
 
   private:
@@ -196,7 +219,8 @@ namespace {
   };
 
   char HexagonEarlyIfConversion::ID = 0;
-}
+
+} // end anonymous namespace
 
 INITIALIZE_PASS(HexagonEarlyIfConversion, "hexagon-eif",
   "Hexagon early if conversion", false, false)
@@ -209,7 +233,6 @@ bool HexagonEarlyIfConversion::isPreheader(const MachineBasicBlock *B) const {
   return L && SB == L->getHeader();
 }
 
-
 bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
     MachineLoop *L, FlowPattern &FP) {
   DEBUG(dbgs() << "Checking flow pattern at BB#" << B->getNumber() << "\n");
@@ -217,7 +240,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   // Interested only in conditional branches, no .new, no new-value, etc.
   // Check the terminators directly, it's easier than handling all responses
   // from AnalyzeBranch.
-  MachineBasicBlock *TB = 0, *FB = 0;
+  MachineBasicBlock *TB = nullptr, *FB = nullptr;
   MachineBasicBlock::const_iterator T1I = B->getFirstTerminator();
   if (T1I == B->end())
     return false;
@@ -228,7 +251,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
 
   // Get the layout successor, or 0 if B does not have one.
   MachineFunction::iterator NextBI = std::next(MachineFunction::iterator(B));
-  MachineBasicBlock *NextB = (NextBI != MFN->end()) ? &*NextBI : 0;
+  MachineBasicBlock *NextB = (NextBI != MFN->end()) ? &*NextBI : nullptr;
 
   MachineBasicBlock *T1B = T1I->getOperand(1).getMBB();
   MachineBasicBlock::const_iterator T2I = std::next(T1I);
@@ -273,9 +296,9 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   if (!TOk && !FOk)
     return false;
 
-  MachineBasicBlock *TSB = (TNS > 0) ? *TB->succ_begin() : 0;
-  MachineBasicBlock *FSB = (FNS > 0) ? *FB->succ_begin() : 0;
-  MachineBasicBlock *JB = 0;
+  MachineBasicBlock *TSB = (TNS > 0) ? *TB->succ_begin() : nullptr;
+  MachineBasicBlock *FSB = (FNS > 0) ? *FB->succ_begin() : nullptr;
+  MachineBasicBlock *JB = nullptr;
 
   if (TOk) {
     if (FOk) {
@@ -286,14 +309,14 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
       // TOk && !FOk
       if (TSB == FB) {
         JB = FB;
-        FB = 0;
+        FB = nullptr;
       }
     }
   } else {
     // !TOk && FOk  (at least one must be true by now).
     if (FSB == TB) {
       JB = TB;
-      TB = 0;
+      TB = nullptr;
     }
   }
   // Don't try to predicate loop preheaders.
@@ -308,7 +331,6 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   return true;
 }
 
-
 // KLUDGE: HexagonInstrInfo::AnalyzeBranch won't work on a block that
 // contains EH_LABEL.
 bool HexagonEarlyIfConversion::hasEHLabel(const MachineBasicBlock *B) const {
@@ -317,7 +339,6 @@ bool HexagonEarlyIfConversion::hasEHLabel(const MachineBasicBlock *B) const {
       return true;
   return false;
 }
-
 
 // KLUDGE: HexagonInstrInfo::AnalyzeBranch may be unable to recognize
 // that a block can never fall-through.
@@ -331,7 +352,6 @@ bool HexagonEarlyIfConversion::hasUncondBranch(const MachineBasicBlock *B)
   }
   return false;
 }
-
 
 bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
       const {
@@ -373,7 +393,6 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
   return true;
 }
 
-
 bool HexagonEarlyIfConversion::usesUndefVReg(const MachineInstr *MI) const {
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isUse())
@@ -389,7 +408,6 @@ bool HexagonEarlyIfConversion::usesUndefVReg(const MachineInstr *MI) const {
   }
   return false;
 }
-
 
 bool HexagonEarlyIfConversion::isValid(const FlowPattern &FP) const {
   if (hasEHLabel(FP.SplitB))  // KLUDGE: see function definition
@@ -424,7 +442,6 @@ bool HexagonEarlyIfConversion::isValid(const FlowPattern &FP) const {
   return true;
 }
 
-
 unsigned HexagonEarlyIfConversion::computePhiCost(MachineBasicBlock *B) const {
   assert(B->pred_size() <= 2);
   if (B->pred_size() < 2)
@@ -449,7 +466,6 @@ unsigned HexagonEarlyIfConversion::computePhiCost(MachineBasicBlock *B) const {
   return Cost;
 }
 
-
 unsigned HexagonEarlyIfConversion::countPredicateDefs(
       const MachineBasicBlock *B) const {
   unsigned PredDefs = 0;
@@ -466,7 +482,6 @@ unsigned HexagonEarlyIfConversion::countPredicateDefs(
   }
   return PredDefs;
 }
-
 
 bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
   if (FP.TrueB && FP.FalseB) {
@@ -547,7 +562,6 @@ bool HexagonEarlyIfConversion::isProfitable(const FlowPattern &FP) const {
   return true;
 }
 
-
 bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
       MachineLoop *L) {
   bool Changed = false;
@@ -593,9 +607,8 @@ bool HexagonEarlyIfConversion::visitBlock(MachineBasicBlock *B,
   return true;
 }
 
-
 bool HexagonEarlyIfConversion::visitLoop(MachineLoop *L) {
-  MachineBasicBlock *HB = L ? L->getHeader() : 0;
+  MachineBasicBlock *HB = L ? L->getHeader() : nullptr;
   DEBUG((L ? dbgs() << "Visiting loop H:" << PrintMB(HB)
            : dbgs() << "Visiting function") << "\n");
   bool Changed = false;
@@ -608,7 +621,6 @@ bool HexagonEarlyIfConversion::visitLoop(MachineLoop *L) {
   Changed |= visitBlock(L ? HB : EntryB, L);
   return Changed;
 }
-
 
 bool HexagonEarlyIfConversion::isPredicableStore(const MachineInstr *MI)
       const {
@@ -634,7 +646,6 @@ bool HexagonEarlyIfConversion::isPredicableStore(const MachineInstr *MI)
   return MI->mayStore() && HII->isPredicable(const_cast<MachineInstr&>(*MI));
 }
 
-
 bool HexagonEarlyIfConversion::isSafeToSpeculate(const MachineInstr *MI)
       const {
   if (MI->mayLoad() || MI->mayStore())
@@ -647,12 +658,10 @@ bool HexagonEarlyIfConversion::isSafeToSpeculate(const MachineInstr *MI)
   return true;
 }
 
-
 unsigned HexagonEarlyIfConversion::getCondStoreOpcode(unsigned Opc,
       bool IfTrue) const {
   return HII->getCondOpcode(Opc, !IfTrue);
 }
-
 
 void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
       MachineBasicBlock::iterator At, MachineInstr *MI,
@@ -704,7 +713,6 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
   llvm_unreachable("Unexpected instruction");
 }
 
-
 // Predicate/speculate non-branch instructions from FromB into block ToB.
 // Leave the branches alone, they will be handled later. Btw, at this point
 // FromB should have at most one branch, and it should be unconditional.
@@ -724,7 +732,6 @@ void HexagonEarlyIfConversion::predicateBlockNB(MachineBasicBlock *ToB,
       predicateInstr(ToB, At, &*I, PredR, IfTrue);
   }
 }
-
 
 void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
       const FlowPattern &FP) {
@@ -755,6 +762,7 @@ void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
     assert(TR && FR);
 
     using namespace Hexagon;
+
     unsigned DR = PN->getOperand(0).getReg();
     const TargetRegisterClass *RC = MRI->getRegClass(DR);
     unsigned Opc = 0;
@@ -789,9 +797,8 @@ void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
   }
 }
 
-
 void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
-  MachineBasicBlock *TSB = 0, *FSB = 0;
+  MachineBasicBlock *TSB = nullptr, *FSB = nullptr;
   MachineBasicBlock::iterator OldTI = FP.SplitB->getFirstTerminator();
   assert(OldTI != FP.SplitB->end());
   DebugLoc DL = OldTI->getDebugLoc();
@@ -809,7 +816,7 @@ void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
   // Regenerate new terminators in the split block and update the successors.
   // First, remember any information that may be needed later and remove the
   // existing terminators/successors from the split block.
-  MachineBasicBlock *SSB = 0;
+  MachineBasicBlock *SSB = nullptr;
   FP.SplitB->erase(OldTI, FP.SplitB->end());
   while (FP.SplitB->succ_size() > 0) {
     MachineBasicBlock *T = *FP.SplitB->succ_begin();
@@ -885,7 +892,6 @@ void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
   }
 }
 
-
 void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
   DEBUG(dbgs() << "Removing block " << PrintMB(B) << "\n");
 
@@ -914,7 +920,6 @@ void HexagonEarlyIfConversion::removeBlock(MachineBasicBlock *B) {
   MFN->erase(B->getIterator());
 }
 
-
 void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
   DEBUG(dbgs() << "Removing phi nodes from block " << PrintMB(B) << "\n");
   MachineBasicBlock::iterator I, NextI, NonPHI = B->getFirstNonPHI();
@@ -941,7 +946,6 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
   }
 }
 
-
 void HexagonEarlyIfConversion::replacePhiEdges(MachineBasicBlock *OldB,
       MachineBasicBlock *NewB) {
   for (auto I = OldB->succ_begin(), E = OldB->succ_end(); I != E; ++I) {
@@ -955,7 +959,6 @@ void HexagonEarlyIfConversion::replacePhiEdges(MachineBasicBlock *OldB,
     }
   }
 }
-
 
 void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
       MachineBasicBlock *SuccB) {
@@ -975,7 +978,6 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
   if (!TermOk)
     PredB->updateTerminator();
 }
-
 
 void HexagonEarlyIfConversion::simplifyFlowGraph(const FlowPattern &FP) {
   if (FP.TrueB)
@@ -1000,7 +1002,6 @@ void HexagonEarlyIfConversion::simplifyFlowGraph(const FlowPattern &FP) {
     mergeBlocks(FP.SplitB, SB);
 }
 
-
 bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
@@ -1020,7 +1021,7 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineLoopInfo::iterator I = MLI->begin(), E = MLI->end(); I != E; ++I)
     Changed |= visitLoop(*I);
-  Changed |= visitLoop(0);
+  Changed |= visitLoop(nullptr);
 
   return Changed;
 }
@@ -1031,4 +1032,3 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
 FunctionPass *llvm::createHexagonEarlyIfConversion() {
   return new HexagonEarlyIfConversion();
 }
-

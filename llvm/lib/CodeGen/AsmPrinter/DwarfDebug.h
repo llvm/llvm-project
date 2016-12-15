@@ -216,7 +216,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SmallPtrSet<const MDNode *, 16> ProcessedSPNodes;
+  SmallPtrSet<const DISubprogram *, 16> ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn;
@@ -553,7 +553,7 @@ public:
 
   // FIXME: Sink these functions down into DwarfFile/Dwarf*Unit.
 
-  SmallPtrSet<const MDNode *, 16> &getProcessedSPNodes() {
+  SmallPtrSet<const DISubprogram *, 16> &getProcessedSPNodes() {
     return ProcessedSPNodes;
   }
 };

@@ -68,8 +68,8 @@ struct DenseMapAPIntKeyInfo {
 };
 
 struct DenseMapAPFloatKeyInfo {
-  static inline APFloat getEmptyKey() { return APFloat(APFloat::Bogus, 1); }
-  static inline APFloat getTombstoneKey() { return APFloat(APFloat::Bogus, 2); }
+  static inline APFloat getEmptyKey() { return APFloat(APFloat::Bogus(), 1); }
+  static inline APFloat getTombstoneKey() { return APFloat(APFloat::Bogus(), 2); }
   static unsigned getHashValue(const APFloat &Key) {
     return static_cast<unsigned>(hash_value(Key));
   }

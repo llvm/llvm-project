@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -27,7 +26,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
-class AssumptionCache;
 class DominatorTree;
 class LoopInfo;
 
@@ -41,21 +39,20 @@ class BasicAAResult : public AAResultBase<BasicAAResult> {
 
   const DataLayout &DL;
   const TargetLibraryInfo &TLI;
-  AssumptionCache &AC;
   DominatorTree *DT;
   LoopInfo *LI;
 
 public:
   BasicAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI,
-                AssumptionCache &AC, DominatorTree *DT = nullptr,
+                DominatorTree *DT = nullptr,
                 LoopInfo *LI = nullptr)
-      : AAResultBase(), DL(DL), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
+      : AAResultBase(), DL(DL), TLI(TLI), DT(DT), LI(LI) {}
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
+      : AAResultBase(Arg), DL(Arg.DL), TLI(Arg.TLI), DT(Arg.DT),
         LI(Arg.LI) {}
   BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC),
+      : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI),
         DT(Arg.DT), LI(Arg.LI) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
@@ -145,11 +142,11 @@ private:
   static const Value *
   GetLinearExpression(const Value *V, APInt &Scale, APInt &Offset,
                       unsigned &ZExtBits, unsigned &SExtBits,
-                      const DataLayout &DL, unsigned Depth, AssumptionCache *AC,
+                      const DataLayout &DL, unsigned Depth,
                       DominatorTree *DT, bool &NSW, bool &NUW);
 
   static bool DecomposeGEPExpression(const Value *V, DecomposedGEP &Decomposed,
-      const DataLayout &DL, AssumptionCache *AC, DominatorTree *DT);
+      const DataLayout &DL, DominatorTree *DT);
 
   static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
@@ -166,7 +163,7 @@ private:
   bool
   constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
                           uint64_t V1Size, uint64_t V2Size, int64_t BaseOffset,
-                          AssumptionCache *AC, DominatorTree *DT);
+                          DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 

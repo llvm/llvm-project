@@ -15,12 +15,10 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include <cassert>
 #include <climits>
 
 namespace llvm {
-class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class Function;
@@ -170,7 +168,6 @@ InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 InlineCost
 getInlineCost(CallSite CS, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
-              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
               ProfileSummaryInfo *PSI);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
@@ -181,7 +178,6 @@ getInlineCost(CallSite CS, const InlineParams &Params,
 InlineCost
 getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
-              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
               ProfileSummaryInfo *PSI);
 
 /// \brief Minimal filter to detect invalid constructs for inlining.

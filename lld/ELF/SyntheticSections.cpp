@@ -1460,34 +1460,51 @@ GdbIndexSection<ELFT>::GdbIndexSection()
     : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index") {}
 
 template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  std::vector<InputSection<ELFT> *> &IS =
-      static_cast<OutputSection<ELFT> *>(Out<ELFT>::DebugInfo)->Sections;
-
-  for (InputSection<ELFT> *I : IS)
-    readDwarf(I);
+  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
+    if (InputSection<ELFT> *IS = dyn_cast<InputSection<ELFT>>(S))
+      if (IS->OutSec && IS->Name == ".debug_info")
+        readDwarf(IS);
 }
 
 template <class ELFT>
 void GdbIndexSection<ELFT>::readDwarf(InputSection<ELFT> *I) {
-  std::vector<std::pair<uintX_t, uintX_t>> CuList = readCuList(I);
+  GdbIndexBuilder<ELFT> Builder(I);
+  if (ErrorCount)
+    return;
+
+  size_t CuId = CompilationUnits.size();
+  std::vector<std::pair<uintX_t, uintX_t>> CuList = Builder.readCUList();
   CompilationUnits.insert(CompilationUnits.end(), CuList.begin(), CuList.end());
+
+  std::vector<AddressEntry<ELFT>> AddrArea = Builder.readAddressArea(CuId);
+  AddressArea.insert(AddressArea.end(), AddrArea.begin(), AddrArea.end());
 }
 
 template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
+  if (Finalized)
+    return;
+  Finalized = true;
+
   parseDebugSections();
 
   // GdbIndex header consist from version fields
   // and 5 more fields with different kinds of offsets.
   CuTypesOffset = CuListOffset + CompilationUnits.size() * CompilationUnitSize;
+  SymTabOffset = CuTypesOffset + AddressArea.size() * AddressEntrySize;
+}
+
+template <class ELFT> size_t GdbIndexSection<ELFT>::getSize() const {
+  const_cast<GdbIndexSection<ELFT> *>(this)->finalize();
+  return SymTabOffset;
 }
 
 template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
-  write32le(Buf, 7);                  // Write Version
-  write32le(Buf + 4, CuListOffset);   // CU list offset
-  write32le(Buf + 8, CuTypesOffset);  // Types CU list offset
-  write32le(Buf + 12, CuTypesOffset); // Address area offset
-  write32le(Buf + 16, CuTypesOffset); // Symbol table offset
-  write32le(Buf + 20, CuTypesOffset); // Constant pool offset
+  write32le(Buf, 7);                  // Write version.
+  write32le(Buf + 4, CuListOffset);   // CU list offset.
+  write32le(Buf + 8, CuTypesOffset);  // Types CU list offset.
+  write32le(Buf + 12, CuTypesOffset); // Address area offset.
+  write32le(Buf + 16, SymTabOffset);  // Symbol table offset.
+  write32le(Buf + 20, SymTabOffset);  // Constant pool offset.
   Buf += 24;
 
   // Write the CU list.
@@ -1495,6 +1512,15 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
     write64le(Buf, CU.first);
     write64le(Buf + 8, CU.second);
     Buf += 16;
+  }
+
+  // Write the address area.
+  for (AddressEntry<ELFT> &E : AddressArea) {
+    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    write64le(Buf, BaseAddr + E.LowAddress);
+    write64le(Buf + 8, BaseAddr + E.HighAddress);
+    write32le(Buf + 16, E.CuIndex);
+    Buf += 20;
   }
 }
 

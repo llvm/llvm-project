@@ -126,6 +126,7 @@ static void emitThumbRegPlusImmInReg(
     bool CanChangeCC, const TargetInstrInfo &TII,
     const ARMBaseRegisterInfo &MRI, unsigned MIFlags = MachineInstr::NoFlags) {
   MachineFunction &MF = *MBB.getParent();
+  const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
   bool isHigh = !isARMLowRegister(DestReg) ||
                 (BaseReg != 0 && !isARMLowRegister(BaseReg));
   bool isSub = false;
@@ -154,6 +155,9 @@ static void emitThumbRegPlusImmInReg(
     AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tRSB), LdReg))
         .addReg(LdReg, RegState::Kill)
         .setMIFlags(MIFlags);
+  } else if (ST.genExecuteOnly()) {
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), LdReg)
+      .addImm(NumBytes).setMIFlags(MIFlags);
   } else
     MRI.emitLoadConstPool(MBB, MBBI, dl, LdReg, 0, NumBytes, ARMCC::AL, 0,
                           MIFlags);
@@ -570,7 +574,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     unsigned TmpReg = MI.getOperand(0).getReg();
     bool UseRR = false;
     if (Opcode == ARM::tLDRspi) {
-      if (FrameReg == ARM::SP)
+      if (FrameReg == ARM::SP || STI.genExecuteOnly())
         emitThumbRegPlusImmInReg(MBB, II, dl, TmpReg, FrameReg,
                                  Offset, false, TII, *this);
       else {
@@ -594,7 +598,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       bool UseRR = false;
 
       if (Opcode == ARM::tSTRspi) {
-        if (FrameReg == ARM::SP)
+        if (FrameReg == ARM::SP || STI.genExecuteOnly())
           emitThumbRegPlusImmInReg(MBB, II, dl, VReg, FrameReg,
                                    Offset, false, TII, *this);
         else {

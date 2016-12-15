@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O2 < %s | FileCheck %s
+; RUN: llc -relocation-model=static -verify-machineinstrs -O2 < %s | FileCheck %s
 
 ; The call to function TestBar should be a tail call, when in C++ the string
 ; `ret` is RVO returned.

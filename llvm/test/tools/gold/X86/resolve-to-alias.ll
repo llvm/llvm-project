@@ -15,6 +15,8 @@
 ; RUN: FileCheck --check-prefix=PASS1 %s < %t.ll
 ; RUN: FileCheck --check-prefix=PASS2 %s < %t.ll
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 define void @foo() {
   call void @bar()
   ret void

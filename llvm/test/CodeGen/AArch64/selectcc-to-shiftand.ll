@@ -54,16 +54,15 @@ define i32 @not_pos_sel_same_variable(i32 %a) {
   ret i32 %min
 }
 
-; FIXME: Flipping the comparison condition can be handled by getting the bitwise not of the sign mask.
+; Flipping the comparison condition can be handled by getting the bitwise not of the sign mask.
 
 ; Compare if positive and select of constants where one constant is zero.
 
 define i32 @pos_sel_constants(i32 %a) {
 ; CHECK-LABEL: pos_sel_constants:
 ; CHECK:       // BB#0:
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    mov w8, #5
-; CHECK-NEXT:    csel w0, w8, wzr, ge
+; CHECK-NEXT:    bic w0, w8, w0, asr #31
 ; CHECK-NEXT:    ret
 ;
   %tmp.1 = icmp sgt i32 %a, -1
@@ -76,9 +75,8 @@ define i32 @pos_sel_constants(i32 %a) {
 define i32 @pos_sel_special_constant(i32 %a) {
 ; CHECK-LABEL: pos_sel_special_constant:
 ; CHECK:       // BB#0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    cset w8, ge
-; CHECK-NEXT:    lsl w0, w8, #9
+; CHECK-NEXT:    orr w8, wzr, #0x200
+; CHECK-NEXT:    bic w0, w8, w0, lsr #22
 ; CHECK-NEXT:    ret
 ;
   %tmp.1 = icmp sgt i32 %a, -1
@@ -91,8 +89,7 @@ define i32 @pos_sel_special_constant(i32 %a) {
 define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 ; CHECK-LABEL: pos_sel_variable_and_zero:
 ; CHECK:       // BB#0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w0, w1, wzr, ge
+; CHECK-NEXT:    bic w0, w1, w0, asr #31
 ; CHECK-NEXT:    ret
 ;
   %tmp.1 = icmp sgt i32 %a, -1
@@ -105,8 +102,7 @@ define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 define i32 @not_neg_sel_same_variable(i32 %a) {
 ; CHECK-LABEL: not_neg_sel_same_variable:
 ; CHECK:       // BB#0:
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w0, w0, wzr, gt
+; CHECK-NEXT:    bic w0, w0, w0, asr #31
 ; CHECK-NEXT:    ret
 ;
   %tmp = icmp sgt i32 %a, 0
@@ -121,8 +117,7 @@ define i32 @PR31175(i32 %x, i32 %y) {
 ; CHECK-LABEL: PR31175:
 ; CHECK:       // BB#0:
 ; CHECK-NEXT:    sub w8, w0, w1
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w8, wzr, gt
+; CHECK-NEXT:    bic w0, w8, w8, asr #31
 ; CHECK-NEXT:    ret
 ;
   %sub = sub nsw i32 %x, %y

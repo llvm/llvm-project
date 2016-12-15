@@ -166,12 +166,12 @@ public:
 
   const fltSemantics &getFltSemantics() const {
     switch (getTypeID()) {
-    case HalfTyID: return APFloat::IEEEhalf;
-    case FloatTyID: return APFloat::IEEEsingle;
-    case DoubleTyID: return APFloat::IEEEdouble;
-    case X86_FP80TyID: return APFloat::x87DoubleExtended;
-    case FP128TyID: return APFloat::IEEEquad;
-    case PPC_FP128TyID: return APFloat::PPCDoubleDouble;
+    case HalfTyID: return APFloat::IEEEhalf();
+    case FloatTyID: return APFloat::IEEEsingle();
+    case DoubleTyID: return APFloat::IEEEdouble();
+    case X86_FP80TyID: return APFloat::x87DoubleExtended();
+    case FP128TyID: return APFloat::IEEEquad();
+    case PPC_FP128TyID: return APFloat::PPCDoubleDouble();
     default: llvm_unreachable("Invalid floating type");
     }
   }
