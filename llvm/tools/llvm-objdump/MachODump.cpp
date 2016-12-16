@@ -1192,30 +1192,30 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
 // architectures were specified.  If not then an error is generated and this
 // routine returns false.  Else it returns true.
 static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
-  if (isa<MachOObjectFile>(O) && !ArchAll && ArchFlags.size() != 0) {
-    MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(O);
-    bool ArchFound = false;
-    MachO::mach_header H;
-    MachO::mach_header_64 H_64;
-    Triple T;
-    if (MachO->is64Bit()) {
-      H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
-    } else {
-      H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
-    }
-    unsigned i;
-    for (i = 0; i < ArchFlags.size(); ++i) {
-      if (ArchFlags[i] == T.getArchName())
-        ArchFound = true;
-      break;
-    }
-    if (!ArchFound) {
-      errs() << "llvm-objdump: file: " + Filename + " does not contain "
-             << "architecture: " + ArchFlags[i] + "\n";
-      return false;
-    }
+  auto *MachO = dyn_cast<MachOObjectFile>(O);
+
+  if (!MachO || ArchAll || ArchFlags.empty())
+    return true;
+
+  MachO::mach_header H;
+  MachO::mach_header_64 H_64;
+  Triple T;
+  const char *McpuDefault, *ArchFlag;
+  if (MachO->is64Bit()) {
+    H_64 = MachO->MachOObjectFile::getHeader64();
+    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype,
+                                       &McpuDefault, &ArchFlag);
+  } else {
+    H = MachO->MachOObjectFile::getHeader();
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype,
+                                       &McpuDefault, &ArchFlag);
+  }
+  const std::string ArchFlagName(ArchFlag);
+  if (none_of(ArchFlags, [&](const std::string &Name) {
+        return Name == ArchFlagName;
+      })) {
+    errs() << "llvm-objdump: " + Filename + ": No architecture specified.\n";
+    return false;
   }
   return true;
 }
@@ -1444,7 +1444,7 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       }
     }
     if (verbose) {
-      outs() << OFA.getArchTypeName() << "\n";
+      outs() << OFA.getArchFlagName() << "\n";
       printCPUType(cputype, cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
     } else {
       outs() << i << "\n";
@@ -1627,13 +1627,13 @@ void llvm::ParseInputMachO(StringRef Filename) {
         for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                    E = UB->end_objects();
              I != E; ++I) {
-          if (ArchFlags[i] == I->getArchTypeName()) {
+          if (ArchFlags[i] == I->getArchFlagName()) {
             ArchFound = true;
             Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
                 I->getAsObjectFile();
             std::string ArchitectureName = "";
             if (ArchFlags.size() > 1)
-              ArchitectureName = I->getArchTypeName();
+              ArchitectureName = I->getArchFlagName();
             if (ObjOrErr) {
               ObjectFile &O = *ObjOrErr.get();
               if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
@@ -1670,7 +1670,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
             } else {
               consumeError(AOrErr.takeError());
               error("Mach-O universal file: " + Filename + " for " +
-                    "architecture " + StringRef(I->getArchTypeName()) +
+                    "architecture " + StringRef(I->getArchFlagName()) +
                     " is not a Mach-O file or an archive file");
             }
           }
@@ -1690,7 +1690,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
                                                  E = UB->end_objects();
            I != E; ++I) {
         if (MachOObjectFile::getHostArch().getArchName() ==
-            I->getArchTypeName()) {
+            I->getArchFlagName()) {
           Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
           std::string ArchiveName;
           ArchiveName.clear();
@@ -1726,7 +1726,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
           } else {
             consumeError(AOrErr.takeError());
             error("Mach-O universal file: " + Filename + " for architecture " +
-                  StringRef(I->getArchTypeName()) +
+                  StringRef(I->getArchFlagName()) +
                   " is not a Mach-O file or an archive file");
           }
           return;
@@ -1742,7 +1742,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
       Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
       std::string ArchitectureName = "";
       if (moreThanOneArch)
-        ArchitectureName = I->getArchTypeName();
+        ArchitectureName = I->getArchFlagName();
       if (ObjOrErr) {
         ObjectFile &Obj = *ObjOrErr.get();
         if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&Obj))
@@ -1781,7 +1781,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
       } else {
         consumeError(AOrErr.takeError());
         error("Mach-O universal file: " + Filename + " for architecture " +
-              StringRef(I->getArchTypeName()) +
+              StringRef(I->getArchFlagName()) +
               " is not a Mach-O file or an archive file");
       }
     }
