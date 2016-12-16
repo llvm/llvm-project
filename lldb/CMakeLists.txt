@@ -39,15 +39,19 @@ add_subdirectory(unittests)
 add_subdirectory(lit)
 
 if (NOT LLDB_DISABLE_PYTHON)
-    # Add a Post-Build Event to copy over Python files and create the symlink to liblldb.so for the Python API(hardlink on Windows)
-    add_custom_target( finish_swig ALL
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        "--srcRoot=${LLDB_SOURCE_DIR}"
-        "--targetDir=${LLDB_PYTHON_TARGET_DIR}"
-        "--cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}/scripts"
-        "--prefix=${CMAKE_BINARY_DIR}"
-        "--cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}"
-        "--lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}" ${FINISH_EXTRA_ARGS}
+    # Add a Post-Build Event to copy over Python files and create the symlink
+    # to liblldb.so for the Python API(hardlink on Windows)
+    add_custom_target(finish_swig ALL
+        COMMAND
+           ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+               --srcRoot=${LLDB_SOURCE_DIR}
+               --targetDir=${LLDB_PYTHON_TARGET_DIR}
+               --cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}/scripts
+               --prefix=${CMAKE_BINARY_DIR}
+               --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
+               --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
+               ${FINISH_EXTRA_ARGS}
+        VERBATIM
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
@@ -78,7 +82,7 @@ if (NOT LLDB_DISABLE_PYTHON)
         add_custom_command(
             TARGET finish_swig
             POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR}
+            COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
             COMMENT "Copying Python DLL to LLDB binaries directory.")
     endif ()
 endif ()

@@ -21,6 +21,28 @@
 # RUN: }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+
+## Check that the two argument version of ALIGN command works
+# RUN: echo "SECTIONS { \
+# RUN:  . = ALIGN(0x1234, 0x10000); \
+# RUN:  .aaa : \
+# RUN:  { \
+# RUN:   *(.aaa) \
+# RUN:  } \
+# RUN:  . = ALIGN(., 4096); \
+# RUN:  .bbb : \
+# RUN:  { \
+# RUN:   *(.bbb) \
+# RUN:  } \
+# RUN:  . = ALIGN(., 4096 * 4); \
+# RUN:  .ccc : \
+# RUN:  { \
+# RUN:   *(.ccc) \
+# RUN:  } \
+# RUN: }" > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+
 # CHECK:      Sections:
 # CHECK-NEXT: Idx Name          Size      Address          Type
 # CHECK-NEXT:   0               00000000 0000000000000000

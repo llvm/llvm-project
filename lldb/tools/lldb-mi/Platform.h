@@ -18,12 +18,6 @@
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/windows/windows.h"
 
-// This is not used by MI
-struct timeval {
-  long tv_sec;
-  long tv_usec;
-};
-
 struct winsize {
   long ws_col;
 };

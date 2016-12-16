@@ -76,6 +76,10 @@
 # RUN: ld.lld --sort-section alignment -o %t8 --script %t7.script %t1.o %t2.o
 # RUN: llvm-objdump -s %t8 | FileCheck -check-prefix=SORTED_ALIGNMENT %s
 
+## Check --sort-section= form.
+# RUN: ld.lld --sort-section=alignment -o %t8_1 --script %t7.script %t1.o %t2.o
+# RUN: llvm-objdump -s %t8_1 | FileCheck -check-prefix=SORTED_ALIGNMENT %s
+
 ## Check --sort-section name option.
 # RUN: echo "SECTIONS { .aaa : { *(.aaa.*) } }" > %t8.script
 # RUN: ld.lld --sort-section name -o %t9 --script %t8.script %t1.o %t2.o
