@@ -99,6 +99,10 @@ static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
 
 static cl::opt<bool>
+    OutputThinLTOBC("thinlto-bc",
+                    cl::desc("Write output as ThinLTO-ready bitcode"));
+
+static cl::opt<bool>
 NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
 
 static cl::opt<bool>
@@ -704,7 +708,9 @@ int main(int argc, char **argv) {
       if (EmitModuleHash)
         report_fatal_error("Text output is incompatible with -module-hash");
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
-    } else
+    } else if (OutputThinLTOBC)
+      Passes.add(createWriteThinLTOBitcodePass(*OS));
+    else
       Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
                                          EmitSummaryIndex, EmitModuleHash));
   }

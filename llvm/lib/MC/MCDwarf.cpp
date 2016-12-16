@@ -263,8 +263,8 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   emitAbsValue(*MCOS,
                MakeStartMinusEndExpr(*MCOS, *LineStartSym, *LineEndSym, 4), 4);
 
-  // Next 2 bytes is the Version, which is Dwarf 2.
-  MCOS->EmitIntValue(2, 2);
+  // Next 2 bytes is the Version.
+  MCOS->EmitIntValue(context.getDwarfVersion(), 2);
 
   // Create a symbol for the end of the prologue (to be set when we get there).
   MCSymbol *ProEndSym = context.createTempSymbol(); // Lprologue_end
@@ -279,6 +279,11 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Parameters of the state machine, are next.
   MCOS->EmitIntValue(context.getAsmInfo()->getMinInstAlignment(), 1);
+  // maximum_operations_per_instruction 
+  // For non-VLIW architectures this field is always 1.
+  // FIXME: VLIW architectures need to update this field accordingly.
+  if (context.getDwarfVersion() >= 4)
+    MCOS->EmitIntValue(1, 1);
   MCOS->EmitIntValue(DWARF2_LINE_DEFAULT_IS_STMT, 1);
   MCOS->EmitIntValue(Params.DWARF2LineBase, 1);
   MCOS->EmitIntValue(Params.DWARF2LineRange, 1);

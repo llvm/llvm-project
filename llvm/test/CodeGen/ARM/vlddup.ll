@@ -10,98 +10,11 @@ define <8 x i8> @vld1dupi8(i8* %A) nounwind {
         ret <8 x i8> %tmp3
 }
 
-define <8 x i8> @vld1dupi8_preinc(i8** noalias nocapture %a, i32 %b) nounwind {
-entry:
-;CHECK-LABEL: vld1dupi8_preinc:
-;CHECK: vld1.8 {d16[]}, [r1]
-  %0 = load i8*, i8** %a, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %b
-  %1 = load i8, i8* %add.ptr, align 1
-  %2 = insertelement <8 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  store i8* %add.ptr, i8** %a, align 4
-  ret <8 x i8> %lane
-}
-
-define <8 x i8> @vld1dupi8_postinc_fixed(i8** noalias nocapture %a) nounwind {
-entry:
-;CHECK-LABEL: vld1dupi8_postinc_fixed:
-;CHECK: vld1.8 {d16[]}, [r1]!
-  %0 = load i8*, i8** %a, align 4
-  %1 = load i8, i8* %0, align 1
-  %2 = insertelement <8 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 1
-  store i8* %add.ptr, i8** %a, align 4
-  ret <8 x i8> %lane
-}
-
-define <8 x i8> @vld1dupi8_postinc_register(i8** noalias nocapture %a, i32 %n) nounwind {
-entry:
-;CHECK-LABEL: vld1dupi8_postinc_register:
-;CHECK: vld1.8 {d16[]}, [r2], r1
-  %0 = load i8*, i8** %a, align 4
-  %1 = load i8, i8* %0, align 1
-  %2 = insertelement <8 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %n
-  store i8* %add.ptr, i8** %a, align 4
-  ret <8 x i8> %lane
-}
-
-define <16 x i8> @vld1dupqi8_preinc(i8** noalias nocapture %a, i32 %b) nounwind {
-entry:
-;CHECK-LABEL: vld1dupqi8_preinc:
-;CHECK: vld1.8 {d16[], d17[]}, [r1]
-  %0 = load i8*, i8** %a, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %b
-  %1 = load i8, i8* %add.ptr, align 1
-  %2 = insertelement <16 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> zeroinitializer
-  store i8* %add.ptr, i8** %a, align 4
-  ret <16 x i8> %lane
-}
-
-define <16 x i8> @vld1dupqi8_postinc_fixed(i8** noalias nocapture %a) nounwind {
-entry:
-;CHECK-LABEL: vld1dupqi8_postinc_fixed:
-;CHECK: vld1.8 {d16[], d17[]}, [r1]!
-  %0 = load i8*, i8** %a, align 4
-  %1 = load i8, i8* %0, align 1
-  %2 = insertelement <16 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 1
-  store i8* %add.ptr, i8** %a, align 4
-  ret <16 x i8> %lane
-}
-
-define <16 x i8> @vld1dupqi8_postinc_register(i8** noalias nocapture %a, i32 %n) nounwind {
-entry:
-;CHECK-LABEL: vld1dupqi8_postinc_register:
-;CHECK: vld1.8 {d16[], d17[]}, [r2], r1
-  %0 = load i8*, i8** %a, align 4
-  %1 = load i8, i8* %0, align 1
-  %2 = insertelement <16 x i8> undef, i8 %1, i32 0
-  %lane = shufflevector <16 x i8> %2, <16 x i8> undef, <16 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %n
-  store i8* %add.ptr, i8** %a, align 4
-  ret <16 x i8> %lane
-}
-
 define <4 x i16> @vld1dupi16(i16* %A) nounwind {
 ;CHECK-LABEL: vld1dupi16:
 ;Check the alignment value.  Max for this instruction is 16 bits:
 ;CHECK: vld1.16 {d16[]}, [r0:16]
 	%tmp1 = load i16, i16* %A, align 8
-	%tmp2 = insertelement <4 x i16> undef, i16 %tmp1, i32 0
-	%tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> undef, <4 x i32> zeroinitializer
-        ret <4 x i16> %tmp3
-}
-
-define <4 x i16> @vld1dupi16_misaligned(i16* %A) nounwind {
-;CHECK-LABEL: vld1dupi16_misaligned:
-;CHECK: vld1.16 {d16[]}, [r0]
-	%tmp1 = load i16, i16* %A, align 1
 	%tmp2 = insertelement <4 x i16> undef, i16 %tmp1, i32 0
 	%tmp3 = shufflevector <4 x i16> %tmp2, <4 x i16> undef, <4 x i32> zeroinitializer
         ret <4 x i16> %tmp3
@@ -160,63 +73,6 @@ define <8 x i8> @vld2dupi8(i8* %A) nounwind {
 	%tmp4 = shufflevector <8 x i8> %tmp3, <8 x i8> undef, <8 x i32> zeroinitializer
         %tmp5 = add <8 x i8> %tmp2, %tmp4
         ret <8 x i8> %tmp5
-}
-
-define void @vld2dupi8_preinc(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a, i32 %b) nounwind {
-;CHECK-LABEL: vld2dupi8_preinc:
-;CHECK: vld2.8 {d16[], d17[]}, [r2]
-entry:
-  %0 = load i8*, i8** %a, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %b
-  %vld_dup = tail call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8* %add.ptr, <8 x i8> undef, <8 x i8> undef, i32 0, i32 1)
-  %1 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 0
-  %lane = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %2 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 1
-  %lane1 = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  store i8* %add.ptr, i8** %a, align 4
-  %r8 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 0
-  store <8 x i8> %lane, <8 x i8>* %r8, align 8
-  %r11 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 1
-  store <8 x i8> %lane1, <8 x i8>* %r11, align 8
-  ret void
-}
-
-define void @vld2dupi8_postinc_fixed(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a) nounwind {
-entry:
-;CHECK-LABEL: vld2dupi8_postinc_fixed:
-;CHECK: vld2.8 {d16[], d17[]}, [r2]!
-  %0 = load i8*, i8** %a, align 4
-  %vld_dup = tail call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8* %0, <8 x i8> undef, <8 x i8> undef, i32 0, i32 1)
-  %1 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 0
-  %lane = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %2 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 1
-  %lane1 = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 2
-  store i8* %add.ptr, i8** %a, align 4
-  %r7 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 0
-  store <8 x i8> %lane, <8 x i8>* %r7, align 8
-  %r10 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 1
-  store <8 x i8> %lane1, <8 x i8>* %r10, align 8
-  ret void
-}
-
-define void @vld2dupi8_postinc_variable(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a, i32 %n) nounwind {
-entry:
-;CHECK-LABEL: vld2dupi8_postinc_variable:
-;CHECK: vld2.8 {d16[], d17[]}, [r3], r2
-  %0 = load i8*, i8** %a, align 4
-  %vld_dup = tail call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8* %0, <8 x i8> undef, <8 x i8> undef, i32 0, i32 1)
-  %1 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 0
-  %lane = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %2 = extractvalue %struct.__neon_int8x8x2_t %vld_dup, 1
-  %lane1 = shufflevector <8 x i8> %2, <8 x i8> undef, <8 x i32> zeroinitializer
-  %add.ptr = getelementptr inbounds i8, i8* %0, i32 %n
-  store i8* %add.ptr, i8** %a, align 4
-  %r7 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 0
-  store <8 x i8> %lane, <8 x i8>* %r7, align 8
-  %r10 = getelementptr inbounds %struct.__neon_int8x8x2_t, %struct.__neon_int8x8x2_t* %agg.result, i32 0, i32 1
-  store <8 x i8> %lane1, <8 x i8>* %r10, align 8
-  ret void
 }
 
 define <4 x i16> @vld2dupi16(i8* %A) nounwind {

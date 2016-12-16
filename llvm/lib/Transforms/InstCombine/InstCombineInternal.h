@@ -239,6 +239,7 @@ public:
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
   Value *FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS);
+  Value *FoldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS);
   Value *FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
   Instruction *visitAnd(BinaryOperator &I);
   Value *FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction *CxtI);

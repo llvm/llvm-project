@@ -253,7 +253,7 @@ struct ARMGISelActualAccessor : public GISelAccessor {
   const InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
-  const class LegalizerInfo *getLegalizerInfo() const override {
+  const LegalizerInfo *getLegalizerInfo() const override {
     return Legalizer.get();
   }
   const RegisterBankInfo *getRegBankInfo() const override {

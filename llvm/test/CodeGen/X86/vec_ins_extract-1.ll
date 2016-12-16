@@ -90,8 +90,8 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movdqa %xmm0, (%esp)
-; X32-NEXT:    movd %xmm0, (%esp,%eax,4)
+; X32-NEXT:    movaps %xmm0, (%esp)
+; X32-NEXT:    movss %xmm0, (%esp,%eax,4)
 ; X32-NEXT:    movaps (%esp), %xmm0
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -99,9 +99,9 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t3:
 ; X64:       # BB#0:
-; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movd %xmm0, -24(%rsp,%rax,4)
+; X64-NEXT:    movss %xmm0, -24(%rsp,%rax,4)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
   %t9 = extractelement <4 x i32> %t8, i32 0

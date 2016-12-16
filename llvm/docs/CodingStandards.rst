@@ -131,9 +131,8 @@ unlikely to be supported by our host compilers.
 * Delegating constructors: N1986_
 * Default member initializers (non-static data member initializers): N2756_
 
-  * Only use these for scalar members that would otherwise be left
-    uninitialized. Non-scalar members generally have appropriate default
-    constructors.
+  * Feel free to use these wherever they make sense and where the `=`
+    syntax is allowed. Don't use braced initialization syntax.
 
 .. _N2118: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html
 .. _N2439: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2439.htm

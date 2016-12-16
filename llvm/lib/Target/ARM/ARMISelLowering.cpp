@@ -1428,7 +1428,6 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VBICIMM:       return "ARMISD::VBICIMM";
   case ARMISD::VBSL:          return "ARMISD::VBSL";
   case ARMISD::MEMCPY:        return "ARMISD::MEMCPY";
-  case ARMISD::VLD1DUP:       return "ARMISD::VLD1DUP";
   case ARMISD::VLD2DUP:       return "ARMISD::VLD2DUP";
   case ARMISD::VLD3DUP:       return "ARMISD::VLD3DUP";
   case ARMISD::VLD4DUP:       return "ARMISD::VLD4DUP";
@@ -1439,7 +1438,6 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VLD2LN_UPD:    return "ARMISD::VLD2LN_UPD";
   case ARMISD::VLD3LN_UPD:    return "ARMISD::VLD3LN_UPD";
   case ARMISD::VLD4LN_UPD:    return "ARMISD::VLD4LN_UPD";
-  case ARMISD::VLD1DUP_UPD:   return "ARMISD::VLD1DUP_UPD";
   case ARMISD::VLD2DUP_UPD:   return "ARMISD::VLD2DUP_UPD";
   case ARMISD::VLD3DUP_UPD:   return "ARMISD::VLD3DUP_UPD";
   case ARMISD::VLD4DUP_UPD:   return "ARMISD::VLD4DUP_UPD";
@@ -1623,6 +1621,16 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   }
 }
 
+CCAssignFn *ARMTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
+                                                 bool isVarArg) const {
+  return CCAssignFnForNode(CC, false, isVarArg);
+}
+
+CCAssignFn *ARMTargetLowering::CCAssignFnForReturn(CallingConv::ID CC,
+                                                   bool isVarArg) const {
+  return CCAssignFnForNode(CC, true, isVarArg);
+}
+
 /// CCAssignFnForNode - Selects the correct CCAssignFn for the given
 /// CallingConvention.
 CCAssignFn *ARMTargetLowering::CCAssignFnForNode(CallingConv::ID CC,
@@ -1658,9 +1666,7 @@ SDValue ARMTargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   ARMCCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext(), Call);
-  CCInfo.AnalyzeCallResult(Ins,
-                           CCAssignFnForNode(CallConv, /* Return*/ true,
-                                             isVarArg));
+  CCInfo.AnalyzeCallResult(Ins, CCAssignFnForReturn(CallConv, isVarArg));
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -1821,9 +1827,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   ARMCCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                     *DAG.getContext(), Call);
-  CCInfo.AnalyzeCallOperands(Outs,
-                             CCAssignFnForNode(CallConv, /* Return*/ false,
-                                               isVarArg));
+  CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CallConv, isVarArg));
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
@@ -2345,8 +2349,8 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
   // Check that the call results are passed in the same way.
   LLVMContext &C = *DAG.getContext();
   if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
-                                  CCAssignFnForNode(CalleeCC, true, isVarArg),
-                                  CCAssignFnForNode(CallerCC, true, isVarArg)))
+                                  CCAssignFnForReturn(CalleeCC, isVarArg),
+                                  CCAssignFnForReturn(CallerCC, isVarArg)))
     return false;
   // The callee has to preserve all registers the caller needs to preserve.
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -2371,8 +2375,7 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
     // argument is passed on the stack.
     SmallVector<CCValAssign, 16> ArgLocs;
     ARMCCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C, Call);
-    CCInfo.AnalyzeCallOperands(Outs,
-                               CCAssignFnForNode(CalleeCC, false, isVarArg));
+    CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, isVarArg));
     if (CCInfo.getNextStackOffset()) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
@@ -2426,8 +2429,7 @@ ARMTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                   LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, CCAssignFnForNode(CallConv, /*Return=*/true,
-                                                    isVarArg));
+  return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));
 }
 
 static SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
@@ -2478,8 +2480,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                     *DAG.getContext(), Call);
 
   // Analyze outgoing return values.
-  CCInfo.AnalyzeReturn(Outs, CCAssignFnForNode(CallConv, /* Return */ true,
-                                               isVarArg));
+  CCInfo.AnalyzeReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps;
@@ -3579,9 +3580,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   ARMCCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                     *DAG.getContext(), Prologue);
-  CCInfo.AnalyzeFormalArguments(Ins,
-                                CCAssignFnForNode(CallConv, /* Return*/ false,
-                                                  isVarArg));
+  CCInfo.AnalyzeFormalArguments(Ins, CCAssignFnForCall(CallConv, isVarArg));
 
   SmallVector<SDValue, 16> ArgValues;
   SDValue ArgValue;
@@ -10474,7 +10473,6 @@ static SDValue CombineBaseUpdate(SDNode *N,
       isLaneOp = true;
       switch (N->getOpcode()) {
       default: llvm_unreachable("unexpected opcode for Neon base update");
-      case ARMISD::VLD1DUP: NewOpc = ARMISD::VLD1DUP_UPD; NumVecs = 1; break;
       case ARMISD::VLD2DUP: NewOpc = ARMISD::VLD2DUP_UPD; NumVecs = 2; break;
       case ARMISD::VLD3DUP: NewOpc = ARMISD::VLD3DUP_UPD; NumVecs = 3; break;
       case ARMISD::VLD4DUP: NewOpc = ARMISD::VLD4DUP_UPD; NumVecs = 4; break;
@@ -10589,8 +10587,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
       StVal = DAG.getNode(ISD::BITCAST, dl, AlignedVecTy, StVal);
     }
 
-    EVT LoadVT = isLaneOp ? VecTy.getVectorElementType() : AlignedVecTy;
-    SDValue UpdN = DAG.getMemIntrinsicNode(NewOpc, dl, SDTys, Ops, LoadVT,
+    SDValue UpdN = DAG.getMemIntrinsicNode(NewOpc, dl, SDTys,
+                                           Ops, AlignedVecTy,
                                            MemN->getMemOperand());
 
     // Update the uses.
@@ -10733,30 +10731,6 @@ static SDValue PerformVDUPLANECombine(SDNode *N,
     return SDValue();
 
   return DCI.DAG.getNode(ISD::BITCAST, SDLoc(N), VT, Op);
-}
-
-/// PerformVDUPCombine - Target-specific dag combine xforms for ARMISD::VDUP.
-static SDValue PerformVDUPCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue Op = N->getOperand(0);
-
-  // Match VDUP(LOAD) -> VLD1DUP.
-  // We match this pattern here rather than waiting for isel because the
-  // transform is only legal for unindexed loads.
-  LoadSDNode *LD = dyn_cast<LoadSDNode>(Op.getNode());
-  if (LD && Op.hasOneUse() && LD->isUnindexed()) {
-    SDValue Ops[] = { LD->getOperand(0), LD->getOperand(1),
-                      DAG.getConstant(LD->getAlignment(), SDLoc(N), MVT::i32) };
-    SDVTList SDTys = DAG.getVTList(N->getValueType(0), MVT::Other);
-    SDValue VLDDup = DAG.getMemIntrinsicNode(ARMISD::VLD1DUP, SDLoc(N), SDTys,
-                                             Ops, LD->getMemoryVT(),
-                                             LD->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), VLDDup.getValue(1));
-    return VLDDup;
-  }
-
-  return SDValue();
 }
 
 static SDValue PerformLOADCombine(SDNode *N,
@@ -11586,7 +11560,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
   case ISD::VECTOR_SHUFFLE: return PerformVECTOR_SHUFFLECombine(N, DCI.DAG);
   case ARMISD::VDUPLANE: return PerformVDUPLANECombine(N, DCI);
-  case ARMISD::VDUP: return PerformVDUPCombine(N, DCI);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return PerformVCVTCombine(N, DCI.DAG, Subtarget);
@@ -11602,7 +11575,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::CMOV: return PerformCMOVCombine(N, DCI.DAG);
   case ARMISD::BRCOND: return PerformBRCONDCombine(N, DCI.DAG);
   case ISD::LOAD:       return PerformLOADCombine(N, DCI);
-  case ARMISD::VLD1DUP:
   case ARMISD::VLD2DUP:
   case ARMISD::VLD3DUP:
   case ARMISD::VLD4DUP:

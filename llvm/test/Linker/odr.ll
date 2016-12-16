@@ -14,5 +14,5 @@
 !3 = distinct !DICompositeType(tag: DW_TAG_class_type, scope: !4, file: !1, identifier: "zed")
 !4 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
 !5 = !{!6}
-!6 = distinct !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true)
+!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true))
 !7 = !{i32 2, !"Debug Info Version", i32 3}

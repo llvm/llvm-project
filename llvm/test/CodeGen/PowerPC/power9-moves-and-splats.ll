@@ -152,6 +152,15 @@ entry:
   ret <16 x i8> <i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127, i8 -127>
 }
 
+define <16 x i8> @test13E127() {
+entry:
+; CHECK-LABEL: test13E127
+; CHECK: xxspltib 34, 200
+; CHECK-BE-LABEL: test13E127
+; CHECK-BE: xxspltib 34, 200
+  ret <16 x i8> <i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200>
+}
+
 define <4 x i32> @test14(<4 x i32> %a, i32* nocapture readonly %b) {
 entry:
 ; CHECK-LABEL: test14

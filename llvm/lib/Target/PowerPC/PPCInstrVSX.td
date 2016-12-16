@@ -2865,12 +2865,12 @@ let AddedComplexity = 400 in {
               (v4i32 (MTVSRWS $A))>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
               (v4i32 (MTVSRWS $A))>;
-    def : Pat<(v16i8 (build_vector immSExt8:$A, immSExt8:$A, immSExt8:$A,
-                                   immSExt8:$A, immSExt8:$A, immSExt8:$A,
-                                   immSExt8:$A, immSExt8:$A, immSExt8:$A,
-                                   immSExt8:$A, immSExt8:$A, immSExt8:$A,
-                                   immSExt8:$A, immSExt8:$A, immSExt8:$A,
-                                   immSExt8:$A)),
+    def : Pat<(v16i8 (build_vector immAnyExt8:$A, immAnyExt8:$A, immAnyExt8:$A,
+                                   immAnyExt8:$A, immAnyExt8:$A, immAnyExt8:$A,
+                                   immAnyExt8:$A, immAnyExt8:$A, immAnyExt8:$A,
+                                   immAnyExt8:$A, immAnyExt8:$A, immAnyExt8:$A,
+                                   immAnyExt8:$A, immAnyExt8:$A, immAnyExt8:$A,
+                                   immAnyExt8:$A)),
               (v16i8 (COPY_TO_REGCLASS (XXSPLTIB imm:$A), VSRC))>;
     def : Pat<(v16i8 immAllOnesV),
               (v16i8 (COPY_TO_REGCLASS (XXSPLTIB 255), VSRC))>;

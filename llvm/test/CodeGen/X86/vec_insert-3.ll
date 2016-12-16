@@ -5,10 +5,10 @@
 define <2 x i64> @t1(i64 %s, <2 x i64> %tmp) nounwind {
 ; X32-LABEL: t1:
 ; X32:       # BB#0:
-; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
-; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X32-NEXT:    retl

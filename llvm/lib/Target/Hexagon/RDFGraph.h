@@ -403,9 +403,9 @@ namespace rdf {
     LaneBitmask Mask;
 
     RegisterRef() : RegisterRef(0) {}
-    explicit RegisterRef(RegisterId R, LaneBitmask M = ~LaneBitmask(0))
-      : Reg(R), Mask(R != 0 ? M : 0) {}
-    operator bool() const { return Reg != 0 && Mask != LaneBitmask(0); }
+    explicit RegisterRef(RegisterId R, LaneBitmask M = LaneBitmask::getAll())
+      : Reg(R), Mask(R != 0 ? M : LaneBitmask::getNone()) {}
+    operator bool() const { return Reg != 0 && !Mask.none(); }
     bool operator== (const RegisterRef &RR) const {
       return Reg == RR.Reg && Mask == RR.Mask;
     }
@@ -458,7 +458,7 @@ namespace rdf {
     uint32_t find(T Val) const {
       auto F = llvm::find(Map, Val);
       assert(F != Map.end());
-      return *F;
+      return F - Map.begin();
     }
   private:
     std::vector<T> Map;
@@ -468,15 +468,15 @@ namespace rdf {
     LaneMaskIndex() = default;
 
     LaneBitmask getLaneMaskForIndex(uint32_t K) const {
-      return K == 0 ? ~LaneBitmask(0) : get(K);
+      return K == 0 ? LaneBitmask::getAll() : get(K);
     }
     uint32_t getIndexForLaneMask(LaneBitmask LM) {
-      assert(LM != LaneBitmask(0));
-      return LM == ~LaneBitmask(0) ? 0 : insert(LM);
+      assert(!LM.none());
+      return LM.all() ? 0 : insert(LM);
     }
     uint32_t getIndexForLaneMask(LaneBitmask LM) const {
-      assert(LM != LaneBitmask(0));
-      return LM == ~LaneBitmask(0) ? 0 : find(LM);
+      assert(!LM.none());
+      return LM.all() ? 0 : find(LM);
     }
     PackedRegisterRef pack(RegisterRef RR) {
       return { RR.Reg, getIndexForLaneMask(RR.Mask) };

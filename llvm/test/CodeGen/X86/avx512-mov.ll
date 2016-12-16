@@ -31,7 +31,7 @@ define <2 x i64> @test3(i64 %x) {
 define <4 x i32> @test4(i32* %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovd (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6e,0x07]
+; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0x10,0x07]
 ; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x
@@ -89,7 +89,7 @@ define i64 @test9(<2 x i64> %x) {
 define <4 x i32> @test10(i32* %x) {
 ; CHECK-LABEL: test10:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovd (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6e,0x07]
+; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0x10,0x07]
 ; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x, align 4
@@ -140,7 +140,7 @@ define <4 x i32> @test14(i32 %x) {
 define <4 x i32> @test15(i32* %x) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovd (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6e,0x07]
+; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0x10,0x07]
 ; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x, align 4

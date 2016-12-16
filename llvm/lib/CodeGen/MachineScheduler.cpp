@@ -894,7 +894,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
         break;
     }
     if (UI == VRegUses.end())
-      VRegUses.insert(VReg2SUnit(Reg, 0, &SU));
+      VRegUses.insert(VReg2SUnit(Reg, LaneBitmask::getNone(), &SU));
   }
 }
 
@@ -1040,7 +1040,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
       // this fact anymore => decrement pressure.
       // If the register has just become dead then other uses make it come
       // back to life => increment pressure.
-      bool Decrement = P.LaneMask != 0;
+      bool Decrement = !P.LaneMask.none();
 
       for (const VReg2SUnit &V2SU
            : make_range(VRegUses.find(Reg), VRegUses.end())) {
@@ -1059,7 +1059,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
         );
       }
     } else {
-      assert(P.LaneMask != 0);
+      assert(!P.LaneMask.none());
       DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
       // This may be called before CurrentBottom has been initialized. However,
       // BotRPTracker must have a valid position. We want the value live into the

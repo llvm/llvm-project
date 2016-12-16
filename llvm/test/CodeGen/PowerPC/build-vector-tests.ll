@@ -1018,22 +1018,22 @@ entry:
 ; P9LE-LABEL: fromDiffMemVarDi
 ; P8BE-LABEL: fromDiffMemVarDi
 ; P8LE-LABEL: fromDiffMemVarDi
-; P9BE: sldi r4, r4, 2
-; P9BE-DAG: lxvx {{[vs0-9]+}}, r3, r4
+; P9BE: sldi {{r[0-9]+}}, r4, 2
+; P9BE-DAG: lxvx {{v[0-9]+}}, r3,
 ; P9BE-DAG: lxvx
 ; P9BE: vperm
 ; P9BE: blr
-; P9LE: sldi r4, r4, 2
-; P9LE-DAG: lxvx {{[vs0-9]+}}, r3, r4
+; P9LE: sldi {{r[0-9]+}}, r4, 2
+; P9LE-DAG: lxvx {{v[0-9]+}}, r3,
 ; P9LE-DAG: lxvx
 ; P9LE: vperm
 ; P9LE: blr
-; P8BE: sldi r4, r4, 2
-; P8BE-DAG: lxvw4x {{[vs0-9]+}}, r3, r4
+; P8BE: sldi {{r[0-9]+}}, r4, 2
+; P8BE-DAG: lxvw4x {{v[0-9]+}}, r3,
 ; P8BE-DAG: lxvw4x
 ; P8BE: vperm
 ; P8BE: blr
-; P8LE: sldi r4, r4, 2
+; P8LE: sldi {{r[0-9]+}}, r4, 2
 ; P8LE-DAG: lxvd2x
 ; P8LE-DAG: lxvd2x
 ; P8LE-DAG: xxswapd
@@ -2179,22 +2179,22 @@ entry:
 ; P9LE-LABEL: fromDiffMemVarDui
 ; P8BE-LABEL: fromDiffMemVarDui
 ; P8LE-LABEL: fromDiffMemVarDui
-; P9BE: sldi r4, r4, 2
-; P9BE-DAG: lxvx {{[vs0-9]+}}, r3, r4
+; P9BE-DAG: sldi {{r[0-9]+}}, r4, 2
+; P9BE-DAG: lxvx {{v[0-9]+}}, r3
 ; P9BE-DAG: lxvx
 ; P9BE: vperm
 ; P9BE: blr
-; P9LE: sldi r4, r4, 2
-; P9LE-DAG: lxvx {{[vs0-9]+}}, r3, r4
+; P9LE-DAG: sldi {{r[0-9]+}}, r4, 2
+; P9LE-DAG: lxvx {{v[0-9]+}}, r3
 ; P9LE-DAG: lxvx
 ; P9LE: vperm
 ; P9LE: blr
-; P8BE: sldi r4, r4, 2
-; P8BE-DAG: lxvw4x {{[vs0-9]+}}, r3, r4
+; P8BE-DAG: sldi {{r[0-9]+}}, r4, 2
+; P8BE-DAG: lxvw4x {{v[0-9]+}}, r3
 ; P8BE-DAG: lxvw4x
 ; P8BE: vperm
 ; P8BE: blr
-; P8LE: sldi r4, r4, 2
+; P8LE-DAG: sldi {{r[0-9]+}}, r4, 2
 ; P8LE-DAG: lxvd2x
 ; P8LE-DAG: lxvd2x
 ; P8LE-DAG: xxswapd

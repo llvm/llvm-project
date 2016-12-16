@@ -304,19 +304,43 @@ def sopp_brtarget : Operand<OtherVT> {
 
 def si_ga : Operand<iPTR>;
 
+def InterpSlotMatchClass : AsmOperandClass {
+  let Name = "InterpSlot";
+  let PredicateMethod = "isInterpSlot";
+  let ParserMethod = "parseInterpSlot";
+  let RenderMethod = "addImmOperands";
+}
+
 def InterpSlot : Operand<i32> {
   let PrintMethod = "printInterpSlot";
+  let ParserMatchClass = InterpSlotMatchClass;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def AttrMatchClass : AsmOperandClass {
+  let Name = "Attr";
+  let PredicateMethod = "isInterpAttr";
+  let ParserMethod = "parseInterpAttr";
+  let RenderMethod = "addImmOperands";
 }
 
 // It appears to be necessary to create a separate operand for this to
 // be able to parse attr<num> with no space.
 def Attr : Operand<i32> {
   let PrintMethod = "printInterpAttr";
+  let ParserMatchClass = AttrMatchClass;
   let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def AttrChanMatchClass : AsmOperandClass {
+  let Name = "AttrChan";
+  let PredicateMethod = "isAttrChan";
+  let RenderMethod = "addImmOperands";
 }
 
 def AttrChan : Operand<i32> {
   let PrintMethod = "printInterpAttrChan";
+  let ParserMatchClass = AttrChanMatchClass;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 

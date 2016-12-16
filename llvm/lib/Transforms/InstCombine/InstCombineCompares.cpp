@@ -3030,6 +3030,40 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   return nullptr;
 }
 
+/// Fold icmp Pred smin(X, Y), X.
+static Instruction *foldICmpWithSMin(ICmpInst &Cmp) {
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0);
+  Value *X = Cmp.getOperand(1);
+
+  // TODO: This should be expanded to handle smax/umax/umin.
+
+  // Canonicalize minimum operand to LHS of the icmp.
+  if (match(X, m_c_SMin(m_Specific(Op0), m_Value()))) {
+    std::swap(Op0, X);
+    Pred = Cmp.getSwappedPredicate();
+  }
+
+  Value *Y;
+  if (!match(Op0, m_c_SMin(m_Specific(X), m_Value(Y))))
+    return nullptr;
+
+  // smin(X, Y) == X --> X <= Y
+  // smin(X, Y) >= X --> X <= Y
+  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SGE)
+    return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
+
+  // smin(X, Y) != X --> X > Y
+  // smin(X, Y) <  X --> X > Y
+  if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SLT)
+    return new ICmpInst(ICmpInst::ICMP_SGT, X, Y);
+
+  // These cases should be handled in InstSimplify:
+  // smin(X, Y) <= X --> true
+  // smin(X, Y) > X --> false
+  return nullptr;
+}
+
 Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
   if (!I.isEquality())
     return nullptr;
@@ -4275,6 +4309,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   }
 
   if (Instruction *Res = foldICmpBinOp(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpWithSMin(I))
     return Res;
 
   {

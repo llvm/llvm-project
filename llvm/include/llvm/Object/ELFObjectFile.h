@@ -972,7 +972,7 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_X86_64:
     return Triple::x86_64;
   case ELF::EM_AARCH64:
-    return Triple::aarch64;
+    return IsLittleEndian ? Triple::aarch64 : Triple::aarch64_be;
   case ELF::EM_ARM:
     return Triple::arm;
   case ELF::EM_AVR:

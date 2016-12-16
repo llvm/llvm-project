@@ -1458,6 +1458,12 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
 void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   SDValue Cond = N->getOperand(1);
 
+  if (Cond.isUndef()) {
+    CurDAG->SelectNodeTo(N, AMDGPU::SI_BR_UNDEF, MVT::Other,
+                         N->getOperand(2), N->getOperand(0));
+    return;
+  }
+
   if (isCBranchSCC(N)) {
     // This brcond will use S_CBRANCH_SCC*, so let tablegen handle it.
     SelectCode(N);

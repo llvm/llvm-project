@@ -467,7 +467,8 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                     unsigned Alignment, unsigned AddressSpace) {
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
 
-  if (Opcode == Instruction::Store && Src->isVectorTy() && Alignment != 16 &&
+  if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
+      Src->isVectorTy() && Alignment != 16 &&
       Src->getVectorElementType()->isIntegerTy(64)) {
     // Unaligned stores are extremely inefficient. We don't split
     // unaligned v2i64 stores because the negative impact that has shown in

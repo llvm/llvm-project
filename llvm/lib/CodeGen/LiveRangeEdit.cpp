@@ -236,7 +236,7 @@ bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
   unsigned SubReg = MO.getSubReg();
   LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubReg);
   for (const LiveInterval::SubRange &S : LI.subranges()) {
-    if ((S.LaneMask & LaneMask) != 0 && S.Query(Idx).isKill())
+    if (!(S.LaneMask & LaneMask).none() && S.Query(Idx).isKill())
       return true;
   }
   return false;
@@ -272,10 +272,11 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
   bool ReadsPhysRegs = false;
   bool isOrigDef = false;
   unsigned Dest;
-  if (VRM && MI->getOperand(0).isReg() && MI->getOperand(0).isDef()) {
-    // It is assumed that callers of eliminateDeadDefs() will never pass in dead
-    // instructions with multiple virtual register defs.
-    assert(MI->getDesc().getNumDefs() == 1 && "Unexpected instruction with multiple defs.");
+  // Only optimize rematerialize case when the instruction has one def, since
+  // otherwise we could leave some dead defs in the code.  This case is
+  // extremely rare.
+  if (VRM && MI->getOperand(0).isReg() && MI->getOperand(0).isDef() &&
+      MI->getDesc().getNumDefs() == 1) {
     Dest = MI->getOperand(0).getReg();
     unsigned Original = VRM->getOriginal(Dest);
     LiveInterval &OrigLI = LIS.getInterval(Original);

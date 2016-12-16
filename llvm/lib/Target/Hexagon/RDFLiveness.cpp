@@ -659,7 +659,7 @@ void Liveness::computeLiveIns() {
         RegisterRef UR = DFG.normalizeRef(getRestrictedRegRef(PUA));
         for (const std::pair<RegisterId,NodeRefSet> &T : RUs) {
           // Check if T.first aliases UR?
-          LaneBitmask M = 0;
+          LaneBitmask M;
           for (std::pair<NodeId,LaneBitmask> P : T.second)
             M |= P.second;
 
@@ -710,7 +710,7 @@ void Liveness::computeLiveIns() {
         }
         do {
           LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-          if (M & P.second)
+          if (!(M & P.second).none())
             LV.push_back(RegisterRef(S.getSubReg()));
           ++S;
         } while (S.isValid());
@@ -759,7 +759,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       }
       do {
         LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-        if (M & I.LaneMask)
+        if (!(M & I.LaneMask).none())
           LV.set(S.getSubReg());
         ++S;
       } while (S.isValid());
@@ -1001,7 +1001,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   RegisterAggr &Local = LiveMap[B];
   RefMap &LON = PhiLON[B];
   for (auto &R : LON) {
-    LaneBitmask M = 0;
+    LaneBitmask M;
     for (auto P : R.second)
       M |= P.second;
     Local.insert(RegisterRef(R.first,M));

@@ -23,7 +23,7 @@ define <4 x float> @t1(float %s, <4 x float> %tmp) nounwind {
 define <4 x i32> @t2(i32 %s, <4 x i32> %tmp) nounwind {
 ; X32-LABEL: t2:
 ; X32:       # BB#0:
-; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X32-NEXT:    retl

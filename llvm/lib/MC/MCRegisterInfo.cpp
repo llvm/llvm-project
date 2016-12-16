@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

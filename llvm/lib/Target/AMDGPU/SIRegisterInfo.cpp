@@ -1027,7 +1027,8 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
     return RC;
 
   // We can assume that each lane corresponds to one 32-bit register.
-  unsigned Count = countPopulation(getSubRegIndexLaneMask(SubIdx));
+  LaneBitmask::Type Mask = getSubRegIndexLaneMask(SubIdx).getAsInteger();
+  unsigned Count = countPopulation(Mask);
   if (isSGPRClass(RC)) {
     switch (Count) {
     case 1:
