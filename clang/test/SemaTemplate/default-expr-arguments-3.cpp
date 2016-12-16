@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -emit-llvm -disable-llvm-optzns -verify %s
+// RUN: %clang_cc1 -std=c++14 -emit-llvm -o - %s
 // expected-no-diagnostics
 
 namespace PR28795 {
