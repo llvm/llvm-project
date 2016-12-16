@@ -5,7 +5,7 @@
 ; Mask should be in original state after executed unreachable block
 
 ; GCN-LABEL: {{^}}main:
-; GCN: s_cbranch_vccnz [[RET_BB:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc1 [[RET_BB:BB[0-9]+_[0-9]+]]
 
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: s_xor_b64 [[XOR_EXEC:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_EXEC]]

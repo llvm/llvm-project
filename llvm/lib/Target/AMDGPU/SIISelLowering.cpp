@@ -1765,6 +1765,15 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::SI_BR_UNDEF: {
+    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+    MachineInstr *Br = BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
+      .addOperand(MI.getOperand(0));
+    Br->getOperand(1).setIsUndef(true); // read undef SCC
+    MI.eraseFromParent();
+    return BB;
+  }
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
@@ -2798,8 +2807,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     //
     LLVM_FALLTHROUGH;
   case AMDGPUAS::GLOBAL_ADDRESS: {
-    if (Subtarget->getScalarizeGlobalBehavior() &&
-        isMemOpUniform(Load) && isMemOpHasNoClobberedMemOperand(Load))
+    if (Subtarget->getScalarizeGlobalBehavior() && isMemOpUniform(Load) &&
+                  isMemOpHasNoClobberedMemOperand(Load))
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private

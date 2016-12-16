@@ -150,6 +150,23 @@ void __tsan_java_move(jptr src, jptr dst, jptr size) {
   }
 }
 
+jptr __tsan_java_find(jptr *from_ptr, jptr to) {
+  SCOPED_JAVA_FUNC(__tsan_java_find);
+  DPrintf("#%d: java_find(&%p, %p)\n", *from_ptr, to);
+  CHECK_EQ((*from_ptr) % kHeapAlignment, 0);
+  CHECK_EQ(to % kHeapAlignment, 0);
+  CHECK_GE(*from_ptr, jctx->heap_begin);
+  CHECK_LE(to, jctx->heap_begin + jctx->heap_size);
+  for (uptr from = *from_ptr; from < to; from += kHeapAlignment) {
+    MBlock *b = ctx->metamap.GetBlock(from);
+    if (b) {
+      *from_ptr = from;
+      return b->siz;
+    }
+  }
+  return 0;
+}
+
 void __tsan_java_finalize() {
   SCOPED_JAVA_FUNC(__tsan_java_finalize);
   DPrintf("#%d: java_mutex_finalize()\n", thr->tid);

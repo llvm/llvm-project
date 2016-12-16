@@ -313,7 +313,6 @@ namespace {
     // This transformation requires dominator postdominator info
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<MemoryDependenceWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
@@ -347,7 +346,6 @@ FunctionPass *llvm::createMemCpyOptPass() { return new MemCpyOptLegacyPass(); }
 
 INITIALIZE_PASS_BEGIN(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
@@ -1293,11 +1291,10 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
 
   // If it is greater than the memcpy, then we check to see if we can force the
   // source of the memcpy to the alignment we need.  If we fail, we bail out.
-  AssumptionCache &AC = LookupAssumptionCache();
   DominatorTree &DT = LookupDomTree();
   if (MDep->getAlignment() < ByValAlign &&
       getOrEnforceKnownAlignment(MDep->getSource(), ByValAlign, DL,
-                                 CS.getInstruction(), &AC, &DT) < ByValAlign)
+                                 CS.getInstruction(), &DT) < ByValAlign)
     return false;
 
   // Verify that the copied-from memory doesn't change in between the memcpy and
@@ -1376,15 +1373,11 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto LookupAliasAnalysis = [&]() -> AliasAnalysis & {
     return AM.getResult<AAManager>(F);
   };
-  auto LookupAssumptionCache = [&]() -> AssumptionCache & {
-    return AM.getResult<AssumptionAnalysis>(F);
-  };
   auto LookupDomTree = [&]() -> DominatorTree & {
     return AM.getResult<DominatorTreeAnalysis>(F);
   };
 
-  bool MadeChange = runImpl(F, &MD, &TLI, LookupAliasAnalysis,
-                            LookupAssumptionCache, LookupDomTree);
+  bool MadeChange = runImpl(F, &MD, &TLI, LookupAliasAnalysis, LookupDomTree);
   if (!MadeChange)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -1396,13 +1389,11 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
 bool MemCpyOptPass::runImpl(
     Function &F, MemoryDependenceResults *MD_, TargetLibraryInfo *TLI_,
     std::function<AliasAnalysis &()> LookupAliasAnalysis_,
-    std::function<AssumptionCache &()> LookupAssumptionCache_,
     std::function<DominatorTree &()> LookupDomTree_) {
   bool MadeChange = false;
   MD = MD_;
   TLI = TLI_;
   LookupAliasAnalysis = std::move(LookupAliasAnalysis_);
-  LookupAssumptionCache = std::move(LookupAssumptionCache_);
   LookupDomTree = std::move(LookupDomTree_);
 
   // If we don't have at least memset and memcpy, there is little point of doing
@@ -1432,13 +1423,9 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
   auto LookupAliasAnalysis = [this]() -> AliasAnalysis & {
     return getAnalysis<AAResultsWrapperPass>().getAAResults();
   };
-  auto LookupAssumptionCache = [this, &F]() -> AssumptionCache & {
-    return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  };
   auto LookupDomTree = [this]() -> DominatorTree & {
     return getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   };
 
-  return Impl.runImpl(F, MD, TLI, LookupAliasAnalysis, LookupAssumptionCache,
-                      LookupDomTree);
+  return Impl.runImpl(F, MD, TLI, LookupAliasAnalysis, LookupDomTree);
 }

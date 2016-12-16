@@ -397,7 +397,7 @@ define <4 x float> @PR31296(i8* %in) {
 ; X32-LABEL: PR31296:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    vmovaps {{.*#+}} xmm1 = <0,1,u,u>
 ; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0,0,1]
 ; X32-NEXT:    retl

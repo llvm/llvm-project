@@ -23,7 +23,6 @@
 namespace llvm {
 
 class StringRef;
-class AssumptionCache;
 class DominatorTree;
 class Loop;
 class LoopInfo;
@@ -37,7 +36,7 @@ bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                 bool AllowRuntime, bool AllowExpensiveTripCount,
                 bool PreserveCondBr, bool PreserveOnlyFirst,
                 unsigned TripMultiple, unsigned PeelCount, LoopInfo *LI,
-                ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+                ScalarEvolution *SE, DominatorTree *DT,
                 OptimizationRemarkEmitter *ORE, bool PreserveLCSSA);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,

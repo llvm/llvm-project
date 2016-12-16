@@ -14,7 +14,6 @@
 
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -556,9 +555,9 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
 static unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
                                     bool &NotDuplicatable, bool &Convergent,
                                     const TargetTransformInfo &TTI,
-                                    AssumptionCache *AC, unsigned BEInsns) {
+                                    unsigned BEInsns) {
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(L, AC, EphValues);
+  CodeMetrics::collectEphemeralValues(L, EphValues);
 
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
@@ -956,7 +955,7 @@ static bool computeUnrollCount(
 
 static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                             ScalarEvolution *SE, const TargetTransformInfo &TTI,
-                            AssumptionCache &AC, OptimizationRemarkEmitter &ORE,
+                            OptimizationRemarkEmitter &ORE,
                             bool PreserveLCSSA,
                             Optional<unsigned> ProvidedCount,
                             Optional<unsigned> ProvidedThreshold,
@@ -983,7 +982,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
     return false;
   unsigned LoopSize = ApproximateLoopSize(
-      L, NumInlineCandidates, NotDuplicatable, Convergent, TTI, &AC, UP.BEInsns);
+      L, NumInlineCandidates, NotDuplicatable, Convergent, TTI, UP.BEInsns);
   DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
   if (NotDuplicatable) {
     DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable"
@@ -1059,7 +1058,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Unroll the loop.
   if (!UnrollLoop(L, UP.Count, TripCount, UP.Force, UP.Runtime,
                   UP.AllowExpensiveTripCount, UseUpperBound, MaxOrZero,
-                  TripMultiple, UP.PeelCount, LI, SE, &DT, &AC, &ORE,
+                  TripMultiple, UP.PeelCount, LI, SE, &DT, &ORE,
                   PreserveLCSSA))
     return false;
 
@@ -1104,14 +1103,13 @@ public:
     ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(&F);
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA,
+    return tryToUnrollLoop(L, DT, LI, SE, TTI, ORE, PreserveLCSSA,
                            ProvidedCount, ProvidedThreshold,
                            ProvidedAllowPartial, ProvidedRuntime,
                            ProvidedUpperBound);
@@ -1121,7 +1119,6 @@ public:
   /// loop preheaders be inserted into the CFG...
   ///
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     // FIXME: Loop passes are required to preserve domtree, and for now we just
     // recreate dom info if anything gets unrolled.
@@ -1132,7 +1129,6 @@ public:
 
 char LoopUnroll::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
@@ -1164,7 +1160,6 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM) {
   LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(*F);
   ScalarEvolution *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
   auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
-  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
   auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
   if (!DT)
     report_fatal_error(
@@ -1178,15 +1173,12 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM) {
   if (!TTI)
     report_fatal_error(
         "LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
-  if (!AC)
-    report_fatal_error(
-        "LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
   if (!ORE)
     report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
                        "cached at a higher level");
 
   bool Changed =
-      tryToUnrollLoop(&L, *DT, LI, SE, *TTI, *AC, *ORE, /*PreserveLCSSA*/ true,
+      tryToUnrollLoop(&L, *DT, LI, SE, *TTI, *ORE, /*PreserveLCSSA*/ true,
                       ProvidedCount, ProvidedThreshold, ProvidedAllowPartial,
                       ProvidedRuntime, ProvidedUpperBound);
 

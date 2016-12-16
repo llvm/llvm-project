@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -47,7 +48,7 @@ namespace llvm {
   /// Mask the bits specified in Mask, then rotate them Rol bits to the left
   /// assuming a wraparound at 32bits.
   struct MaskRolPair {
-    unsigned Mask;
+    LaneBitmask Mask;
     uint8_t RotateLeft;
 
     bool operator==(const MaskRolPair Other) const {
@@ -68,7 +69,7 @@ namespace llvm {
     uint16_t Size;
     uint16_t Offset;
     const unsigned EnumValue;
-    mutable unsigned LaneMask;
+    mutable LaneBitmask LaneMask;
     mutable SmallVector<MaskRolPair,1> CompositionLaneMaskTransform;
 
     // Are all super-registers containing this SubRegIndex covered by their
@@ -120,7 +121,7 @@ namespace llvm {
     const CompMap &getComposites() const { return Composed; }
 
     // Compute LaneMask from Composed. Return LaneMask.
-    unsigned computeLaneMask() const;
+    LaneBitmask computeLaneMask() const;
 
   private:
     CompMap Composed;
@@ -206,7 +207,7 @@ namespace llvm {
 
     // List of register units in ascending order.
     typedef SparseBitVector<> RegUnitList;
-    typedef SmallVector<unsigned, 16> RegUnitLaneMaskList;
+    typedef SmallVector<LaneBitmask, 16> RegUnitLaneMaskList;
 
     // How many entries in RegUnitList are native?
     RegUnitList NativeRegUnits;
@@ -215,7 +216,7 @@ namespace llvm {
     // This is only valid after computeSubRegs() completes.
     const RegUnitList &getRegUnits() const { return RegUnits; }
 
-    ArrayRef<unsigned> getRegUnitLaneMasks() const {
+    ArrayRef<LaneBitmask> getRegUnitLaneMasks() const {
       return makeArrayRef(RegUnitLaneMasks).slice(0, NativeRegUnits.count());
     }
 
@@ -316,7 +317,7 @@ namespace llvm {
     std::string AltOrderSelect;
     uint8_t AllocationPriority;
     /// Contains the combination of the lane masks of all subregisters.
-    unsigned LaneMask;
+    LaneBitmask LaneMask;
     /// True if there are at least 2 subregisters which do not interfere.
     bool HasDisjunctSubRegs;
     bool CoveredBySubRegs;
@@ -733,7 +734,7 @@ namespace llvm {
     // Bit mask of lanes that cover their registers. A sub-register index whose
     // LaneMask is contained in CoveringLanes will be completely covered by
     // another sub-register with the same or larger lane mask.
-    unsigned CoveringLanes;
+    LaneBitmask CoveringLanes;
   };
 
 } // end namespace llvm

@@ -82,8 +82,7 @@ join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
 
 void SpecialMemberFunctionsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const CXXRecordDecl *MatchedDecl =
-      Result.Nodes.getNodeAs<CXXRecordDecl>("class-def");
+  const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXRecordDecl>("class-def");
   if (!MatchedDecl)
     return;
 

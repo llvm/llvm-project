@@ -301,7 +301,7 @@ define <16 x float> @shuffle_v16f32_00_01_10_10_04_05_14_14_08_09_18_18_0c_0d_1c
 define <16 x i32> @insert_mem_and_zero_v16i32(i32* %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v16i32:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    retq
   %a = load i32, i32* %ptr
   %v = insertelement <16 x i32> undef, i32 %a, i32 0

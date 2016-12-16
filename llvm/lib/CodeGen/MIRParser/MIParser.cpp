@@ -456,15 +456,18 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
     if (parseNamedRegister(Reg))
       return true;
     lex();
-    LaneBitmask Mask = ~LaneBitmask(0);
+    LaneBitmask Mask = LaneBitmask::getAll();
     if (consumeIfPresent(MIToken::colon)) {
       // Parse lane mask.
       if (Token.isNot(MIToken::IntegerLiteral) &&
           Token.isNot(MIToken::HexLiteral))
         return error("expected a lane mask");
-      static_assert(sizeof(LaneBitmask) == sizeof(unsigned), "");
-      if (getUnsigned(Mask))
+      static_assert(sizeof(LaneBitmask::Type) == sizeof(unsigned),
+                    "Use correct get-function for lane mask");
+      LaneBitmask::Type V;
+      if (getUnsigned(V))
         return error("invalid lane mask value");
+      Mask = LaneBitmask(V);
       lex();
     }
     MBB.addLiveIn(Reg, Mask);

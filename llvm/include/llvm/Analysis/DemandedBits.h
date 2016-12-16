@@ -34,12 +34,11 @@ class FunctionPass;
 class Function;
 class Instruction;
 class DominatorTree;
-class AssumptionCache;
 
 class DemandedBits {
 public:
-  DemandedBits(Function &F, AssumptionCache &AC, DominatorTree &DT) :
-    F(F), AC(AC), DT(DT), Analyzed(false) {}
+  DemandedBits(Function &F, DominatorTree &DT) :
+    F(F), DT(DT), Analyzed(false) {}
 
   /// Return the bits demanded from instruction I.
   APInt getDemandedBits(Instruction *I);
@@ -51,7 +50,6 @@ public:
 
 private:
   Function &F;
-  AssumptionCache &AC;
   DominatorTree &DT;
 
   void performAnalysis();

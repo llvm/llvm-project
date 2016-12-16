@@ -2382,6 +2382,14 @@ static QualType getFunctionTypeWithExceptionSpec(
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
 }
 
+bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
+                                                          QualType U) {
+  return hasSameType(T, U) ||
+         (getLangOpts().CPlusPlus1z &&
+          hasSameType(getFunctionTypeWithExceptionSpec(*this, T, EST_None),
+                      getFunctionTypeWithExceptionSpec(*this, U, EST_None)));
+}
+
 void ASTContext::adjustExceptionSpec(
     FunctionDecl *FD, const FunctionProtoType::ExceptionSpecInfo &ESI,
     bool AsWritten) {

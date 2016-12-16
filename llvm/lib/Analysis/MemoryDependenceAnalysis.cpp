@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
@@ -891,7 +890,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
     return;
   }
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
-  PHITransAddr Address(const_cast<Value *>(Loc.Ptr), DL, &AC);
+  PHITransAddr Address(const_cast<Value *>(Loc.Ptr), DL);
 
   // This is the set of blocks we've inspected, and the pointer we consider in
   // each block.  Because of critical edges, we currently bail out if querying
@@ -1648,17 +1647,15 @@ AnalysisKey MemoryDependenceAnalysis::Key;
 MemoryDependenceResults
 MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AA = AM.getResult<AAManager>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  return MemoryDependenceResults(AA, AC, TLI, DT);
+  return MemoryDependenceResults(AA, TLI, DT);
 }
 
 char MemoryDependenceWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MemoryDependenceWrapperPass, "memdep",
                       "Memory Dependence Analysis", false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
@@ -1677,7 +1674,6 @@ void MemoryDependenceWrapperPass::releaseMemory() {
 
 void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequiredTransitive<AAResultsWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
@@ -1689,9 +1685,8 @@ unsigned MemoryDependenceResults::getDefaultBlockScanLimit() const {
 
 bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  MemDep.emplace(AA, AC, TLI, DT);
+  MemDep.emplace(AA, TLI, DT);
   return false;
 }

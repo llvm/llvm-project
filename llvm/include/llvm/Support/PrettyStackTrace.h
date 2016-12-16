@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_PRETTYSTACKTRACE_H
 #define LLVM_SUPPORT_PRETTYSTACKTRACE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -52,6 +53,16 @@ namespace llvm {
     const char *Str;
   public:
     PrettyStackTraceString(const char *str) : Str(str) {}
+    void print(raw_ostream &OS) const override;
+  };
+
+  /// PrettyStackTraceFormat - This object prints a string (which may use
+  /// printf-style formatting but should not contain newlines) to the stream
+  /// as the stack trace when a crash occurs.
+  class PrettyStackTraceFormat : public PrettyStackTraceEntry {
+    llvm::SmallVector<char, 32> Str;
+  public:
+    PrettyStackTraceFormat(const char *Format, ...);
     void print(raw_ostream &OS) const override;
   };
 

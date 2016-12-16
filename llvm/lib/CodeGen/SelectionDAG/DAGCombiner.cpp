@@ -360,6 +360,7 @@ namespace {
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
+    SDValue BuildLogBase2(SDValue Op, const SDLoc &DL);
     SDValue BuildReciprocalEstimate(SDValue Op, SDNodeFlags *Flags);
     SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags *Flags);
     SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags *Flags);
@@ -2415,24 +2416,31 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
       return Folded;
 
   // fold (udiv x, (1 << c)) -> x >>u c
-  if (N1C && !N1C->isOpaque() && N1C->getAPIntValue().isPowerOf2())
-    return DAG.getNode(ISD::SRL, DL, VT, N0,
-                       DAG.getConstant(N1C->getAPIntValue().logBase2(), DL,
-                                       getShiftAmountTy(N0.getValueType())));
+  if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
+      DAG.isKnownToBeAPowerOfTwo(N1)) {
+    SDValue LogBase2 = BuildLogBase2(N1, DL);
+    AddToWorklist(LogBase2.getNode());
+
+    EVT ShiftVT = getShiftAmountTy(N0.getValueType());
+    SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
+    AddToWorklist(Trunc.getNode());
+    return DAG.getNode(ISD::SRL, DL, VT, N0, Trunc);
+  }
 
   // fold (udiv x, (shl c, y)) -> x >>u (log2(c)+y) iff c is power of 2
   if (N1.getOpcode() == ISD::SHL) {
-    if (ConstantSDNode *SHC = isConstOrConstSplat(N1.getOperand(0))) {
-      if (!SHC->isOpaque() && SHC->getAPIntValue().isPowerOf2()) {
-        EVT ADDVT = N1.getOperand(1).getValueType();
-        SDValue Add = DAG.getNode(ISD::ADD, DL, ADDVT,
-                                  N1.getOperand(1),
-                                  DAG.getConstant(SHC->getAPIntValue()
-                                                                  .logBase2(),
-                                                  DL, ADDVT));
-        AddToWorklist(Add.getNode());
-        return DAG.getNode(ISD::SRL, DL, VT, N0, Add);
-      }
+    SDValue N10 = N1.getOperand(0);
+    if (isConstantOrConstantVector(N10, /*NoOpaques*/ true) &&
+        DAG.isKnownToBeAPowerOfTwo(N10)) {
+      SDValue LogBase2 = BuildLogBase2(N10, DL);
+      AddToWorklist(LogBase2.getNode());
+
+      EVT ADDVT = N1.getOperand(1).getValueType();
+      SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ADDVT);
+      AddToWorklist(Trunc.getNode());
+      SDValue Add = DAG.getNode(ISD::ADD, DL, ADDVT, N1.getOperand(1), Trunc);
+      AddToWorklist(Add.getNode());
+      return DAG.getNode(ISD::SRL, DL, VT, N0, Add);
     }
   }
 
@@ -2482,21 +2490,21 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
   } else {
     // fold (urem x, pow2) -> (and x, pow2-1)
-    if (N1C && !N1C->isNullValue() && !N1C->isOpaque() &&
-        N1C->getAPIntValue().isPowerOf2()) {
-      return DAG.getNode(ISD::AND, DL, VT, N0,
-                         DAG.getConstant(N1C->getAPIntValue() - 1, DL, VT));
+    if (DAG.isKnownToBeAPowerOfTwo(N1)) {
+      APInt NegOne = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+      SDValue Add =
+          DAG.getNode(ISD::ADD, DL, VT, N1, DAG.getConstant(NegOne, DL, VT));
+      AddToWorklist(Add.getNode());
+      return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
     // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
-    if (N1.getOpcode() == ISD::SHL) {
-      ConstantSDNode *SHC = isConstOrConstSplat(N1.getOperand(0));
-      if (SHC && !SHC->isOpaque() && SHC->getAPIntValue().isPowerOf2()) {
-        APInt NegOne = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-        SDValue Add =
-            DAG.getNode(ISD::ADD, DL, VT, N1, DAG.getConstant(NegOne, DL, VT));
-        AddToWorklist(Add.getNode());
-        return DAG.getNode(ISD::AND, DL, VT, N0, Add);
-      }
+    if (N1.getOpcode() == ISD::SHL &&
+        DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
+      APInt NegOne = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+      SDValue Add =
+          DAG.getNode(ISD::ADD, DL, VT, N1, DAG.getConstant(NegOne, DL, VT));
+      AddToWorklist(Add.getNode());
+      return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
   }
 
@@ -14068,16 +14076,20 @@ static SDValue partitionShuffleOfConcats(SDNode *N, SelectionDAG &DAG) {
 
 // Attempt to combine a shuffle of 2 inputs of 'scalar sources' -
 // BUILD_VECTOR or SCALAR_TO_VECTOR into a single BUILD_VECTOR.
-// This combine is done in the following cases:
-// 1. Both N0,N1 are BUILD_VECTOR's composed of constants or undefs.
-// 2. Only one of N0,N1 is a BUILD_VECTOR composed of constants or undefs -
-//    Combine iff that node is ALL_ZEROS. We prefer not to combine a
-//    BUILD_VECTOR of all constants to allow efficient materialization of
-//    constant vectors, but the ALL_ZEROS is an exception because
-//    zero-extension matching seems to rely on having BUILD_VECTOR nodes with
-//    zero padding between elements. FIXME: Eliminate this exception for
-//    ALL_ZEROS constant vectors.
-// 3. Neither N0,N1 are composed of only constants.
+//
+// SHUFFLE(BUILD_VECTOR(), BUILD_VECTOR()) -> BUILD_VECTOR() is always
+// a simplification in some sense, but it isn't appropriate in general: some
+// BUILD_VECTORs are substantially cheaper than others. The general case
+// of a BUILD_VECTOR requires inserting each element individually (or
+// performing the equivalent in a temporary stack variable). A BUILD_VECTOR of
+// all constants is a single constant pool load.  A BUILD_VECTOR where each
+// element is identical is a splat.  A BUILD_VECTOR where most of the operands
+// are undef lowers to a small number of element insertions.
+//
+// To deal with this, we currently use a bunch of mostly arbitrary heuristics.
+// We don't fold shuffles where one side is a non-zero constant, and we don't
+// fold shuffles if the resulting BUILD_VECTOR would have duplicate
+// non-constant operands. This seems to work out reasonably well in practice.
 static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
                                        SelectionDAG &DAG,
                                        const TargetLowering &TLI) {
@@ -14100,6 +14112,7 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
   }
 
   SmallVector<SDValue, 8> Ops;
+  SmallSet<SDValue, 16> DuplicateOps;
   for (int M : SVN->getMask()) {
     SDValue Op = DAG.getUNDEF(VT.getScalarType());
     if (M >= 0) {
@@ -14115,6 +14128,14 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
         return SDValue();
       }
     }
+
+    // Don't duplicate a non-constant BUILD_VECTOR operand; semantically, this is
+    // fine, but it's likely to generate low-quality code if the target can't
+    // reconstruct an appropriate shuffle.
+    if (!Op.isUndef() && !isa<ConstantSDNode>(Op) && !isa<ConstantFPSDNode>(Op))
+      if (!DuplicateOps.insert(Op).second)
+        return SDValue();
+
     Ops.push_back(Op);
   }
   // BUILD_VECTOR requires all inputs to be of the same type, find the
@@ -14871,17 +14892,31 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
 SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
                                             SDValue N1, SDValue N2, SDValue N3,
                                             ISD::CondCode CC) {
-  // Check to see if we can perform the "gzip trick", transforming
-  // (select_cc setlt X, 0, A, 0) -> (and (sra X, size(X)-1), A)
+  // If this is a select where the false operand is zero and the compare is a
+  // check of the sign bit, see if we can perform the "gzip trick":
+  // select_cc setlt X, 0, A, 0 -> and (sra X, size(X)-1), A
+  // select_cc setgt X, 0, A, 0 -> and (not (sra X, size(X)-1)), A
   EVT XType = N0.getValueType();
   EVT AType = N2.getValueType();
-  if (!isNullConstant(N3) || CC != ISD::SETLT || !XType.bitsGE(AType))
+  if (!isNullConstant(N3) || !XType.bitsGE(AType))
     return SDValue();
 
-  // (a < 0) ? b : 0
-  // (a < 1) ? a : 0
-  if (!(isNullConstant(N1) || (isOneConstant(N1) && N0 == N2)))
+  // If the comparison is testing for a positive value, we have to invert
+  // the sign bit mask, so only do that transform if the target has a bitwise
+  // 'and not' instruction (the invert is free).
+  if (CC == ISD::SETGT && TLI.hasAndNot(N2)) {
+    // (X > -1) ? A : 0
+    // (X >  0) ? X : 0 <-- This is canonical signed max.
+    if (!(isAllOnesConstant(N1) || (isNullConstant(N1) && N0 == N2)))
+      return SDValue();
+  } else if (CC == ISD::SETLT) {
+    // (X <  0) ? A : 0
+    // (X <  1) ? X : 0 <-- This is un-canonicalized signed min.
+    if (!(isNullConstant(N1) || (isOneConstant(N1) && N0 == N2)))
+      return SDValue();
+  } else {
     return SDValue();
+  }
 
   // and (sra X, size(X)-1), A -> "and (srl X, C2), A" iff A is a single-bit
   // constant.
@@ -14898,6 +14933,9 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
       AddToWorklist(Shift.getNode());
     }
 
+    if (CC == ISD::SETGT)
+      Shift = DAG.getNOT(DL, Shift, AType);
+
     return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
   }
 
@@ -14909,6 +14947,9 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
     Shift = DAG.getNode(ISD::TRUNCATE, DL, AType, Shift);
     AddToWorklist(Shift.getNode());
   }
+
+  if (CC == ISD::SETGT)
+    Shift = DAG.getNOT(DL, Shift, AType);
 
   return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
 }
@@ -15236,6 +15277,17 @@ SDValue DAGCombiner::BuildUDIV(SDNode *N) {
   for (SDNode *N : Built)
     AddToWorklist(N);
   return S;
+}
+
+/// Determines the LogBase2 value for a non-null input value using the
+/// transform: LogBase2(V) = (EltBits - 1) - ctlz(V).
+SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL) {
+  EVT VT = V.getValueType();
+  unsigned EltBits = VT.getScalarSizeInBits();
+  SDValue Ctlz = DAG.getNode(ISD::CTLZ, DL, VT, V);
+  SDValue Base = DAG.getConstant(EltBits - 1, DL, VT);
+  SDValue LogBase2 = DAG.getNode(ISD::SUB, DL, VT, Base, Ctlz);
+  return LogBase2;
 }
 
 /// Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)

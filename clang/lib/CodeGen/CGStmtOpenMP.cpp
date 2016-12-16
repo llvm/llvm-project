@@ -3439,7 +3439,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitOMPTeamsDirective(const OMPTeamsDirective &S) {
-  // Emit parallel region as a standalone region.
+  // Emit teams region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     OMPPrivateScope PrivateScope(CGF);
     (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);

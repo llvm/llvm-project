@@ -5,9 +5,7 @@ define <4 x i32> @trunc_64_32(<4 x i64> %A) nounwind uwtable readnone ssp{
 ; CHECK-LABEL: trunc_64_32:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %B = trunc <4 x i64> %A to <4 x i32>

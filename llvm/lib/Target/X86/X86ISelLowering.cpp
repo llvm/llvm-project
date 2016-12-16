@@ -10119,26 +10119,31 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
             DL, MVT::v4i32, V1, V2, Mask, Subtarget, DAG))
       return Rotate;
 
-  // If we have direct support for blends, we should lower by decomposing into
-  // a permute. That will be faster than the domain cross.
-  if (IsBlendSupported)
-    return lowerVectorShuffleAsDecomposedShuffleBlend(DL, MVT::v4i32, V1, V2,
-                                                      Mask, DAG);
+  // Assume that a single SHUFPS is faster than an alternative sequence of
+  // multiple instructions (even if the CPU has a domain penalty).
+  // If some CPU is harmed by the domain switch, we can fix it in a later pass.
+  if (!isSingleSHUFPSMask(Mask)) {
+    // If we have direct support for blends, we should lower by decomposing into
+    // a permute. That will be faster than the domain cross.
+    if (IsBlendSupported)
+      return lowerVectorShuffleAsDecomposedShuffleBlend(DL, MVT::v4i32, V1, V2,
+                                                        Mask, DAG);
 
-  // Try to lower by permuting the inputs into an unpack instruction.
-  if (SDValue Unpack = lowerVectorShuffleAsPermuteAndUnpack(DL, MVT::v4i32, V1,
-                                                            V2, Mask, DAG))
-    return Unpack;
+    // Try to lower by permuting the inputs into an unpack instruction.
+    if (SDValue Unpack = lowerVectorShuffleAsPermuteAndUnpack(
+            DL, MVT::v4i32, V1, V2, Mask, DAG))
+      return Unpack;
+  }
 
   // We implement this with SHUFPS because it can blend from two vectors.
   // Because we're going to eventually use SHUFPS, we use SHUFPS even to build
   // up the inputs, bypassing domain shift penalties that we would encur if we
   // directly used PSHUFD on Nehalem and older. For newer chips, this isn't
   // relevant.
-  return DAG.getBitcast(
-      MVT::v4i32,
-      DAG.getVectorShuffle(MVT::v4f32, DL, DAG.getBitcast(MVT::v4f32, V1),
-                           DAG.getBitcast(MVT::v4f32, V2), Mask));
+  SDValue CastV1 = DAG.getBitcast(MVT::v4f32, V1);
+  SDValue CastV2 = DAG.getBitcast(MVT::v4f32, V2);
+  SDValue ShufPS = DAG.getVectorShuffle(MVT::v4f32, DL, CastV1, CastV2, Mask);
+  return DAG.getBitcast(MVT::v4i32, ShufPS);
 }
 
 /// \brief Lowering of single-input v8i16 shuffles is the cornerstone of SSE2
@@ -12227,7 +12232,9 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // efficient instructions that mirror the shuffles across the two 128-bit
   // lanes.
   SmallVector<int, 4> RepeatedMask;
-  if (is128BitLaneRepeatedShuffleMask(MVT::v8i32, Mask, RepeatedMask)) {
+  bool Is128BitLaneRepeatedShuffle =
+      is128BitLaneRepeatedShuffleMask(MVT::v8i32, Mask, RepeatedMask);
+  if (Is128BitLaneRepeatedShuffle) {
     assert(RepeatedMask.size() == 4 && "Unexpected repeated mask size!");
     if (V2.isUndef())
       return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v8i32, V1,
@@ -12266,6 +12273,16 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (V2.isUndef()) {
     SDValue VPermMask = getConstVector(Mask, MVT::v8i32, DAG, DL, true);
     return DAG.getNode(X86ISD::VPERMV, DL, MVT::v8i32, VPermMask, V1);
+  }
+
+  // Assume that a single SHUFPS is faster than an alternative sequence of
+  // multiple instructions (even if the CPU has a domain penalty).
+  // If some CPU is harmed by the domain switch, we can fix it in a later pass.
+  if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
+    SDValue CastV1 = DAG.getBitcast(MVT::v8f32, V1);
+    SDValue CastV2 = DAG.getBitcast(MVT::v8f32, V2);
+    SDValue ShufPS = DAG.getVectorShuffle(MVT::v8f32, DL, CastV1, CastV2, Mask);
+    return DAG.getBitcast(MVT::v8i32, ShufPS);
   }
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
@@ -28231,7 +28248,8 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
 /// If a vector select has an operand that is -1 or 0, simplify the select to a
 /// bitwise logic operation.
-static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
+                                                const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
@@ -28243,6 +28261,16 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::VSELECT)
     return SDValue();
 
+  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
+  // Check if the first operand is all zeros.This situation only 
+  // applies to avx512.
+  if (FValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse()) {
+      //Invert the cond to not(cond) : xor(op,allones)=not(op)
+      SDValue CondNew = DAG.getNode(ISD::XOR, DL, Cond.getValueType(), Cond,
+        DAG.getConstant(1, DL, Cond.getValueType()));
+      //Vselect cond, op1, op2 = Vselect not(cond), op2, op1
+      return DAG.getNode(ISD::VSELECT, DL, VT, CondNew, RHS, LHS);
+  }
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
   // To use the condition operand as a bitwise mask, it must have elements that
@@ -28254,7 +28282,7 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
-  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
+  FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
 
   // Try to invert the condition if true value is not all 1s and false value is
   // not all 0s.
@@ -28736,7 +28764,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG))
+  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, Subtarget))
     return V;
 
   // If this is a *dynamic* select (non-constant condition) and we can match

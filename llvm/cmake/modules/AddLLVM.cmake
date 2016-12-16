@@ -1290,6 +1290,8 @@ endfunction()
 
 function(add_llvm_tool_symlink link_name target)
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "OUTPUT_DIR" "" ${ARGN})
+  set(dest_binary "$<TARGET_FILE:${target}>")
+
   # This got a bit gross... For multi-configuration generators the target
   # properties return the resolved value of the string, not the build system
   # expression. To reconstruct the platform-agnostic path we have to do some
@@ -1298,6 +1300,11 @@ function(add_llvm_tool_symlink link_name target)
   # and replace it with CMAKE_CFG_INTDIR. This allows the build step to be type
   # agnostic again. 
   if(NOT ARG_OUTPUT_DIR)
+    # If you're not overriding the OUTPUT_DIR, we can make the link relative in
+    # the same directory.
+    if(UNIX)
+      set(dest_binary "$<TARGET_FILE_NAME:${target}>")
+    endif()
     if(CMAKE_CONFIGURATION_TYPES)
       list(GET CMAKE_CONFIGURATION_TYPES 0 first_type)
       string(TOUPPER ${first_type} first_type_upper)
@@ -1323,10 +1330,8 @@ function(add_llvm_tool_symlink link_name target)
 
   if(UNIX)
     set(LLVM_LINK_OR_COPY create_symlink)
-    set(dest_binary "$<TARGET_FILE_NAME:${target}>")
   else()
     set(LLVM_LINK_OR_COPY copy)
-    set(dest_binary "$<TARGET_FILE:${target}>")
   endif()
 
   set(output_path "${ARG_OUTPUT_DIR}/${link_name}${CMAKE_EXECUTABLE_SUFFIX}")

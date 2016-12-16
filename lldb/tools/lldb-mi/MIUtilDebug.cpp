@@ -9,7 +9,7 @@
 
 // Third party headers:
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 // In-house headers:

@@ -330,7 +330,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   if (!Safe) {
     APInt KnownZero(BitWidth, 0);
     APInt KnownOne(BitWidth, 0);
-    computeKnownBits(OpA, KnownZero, KnownOne, DL, 0, nullptr, OpA, &DT);
+    computeKnownBits(OpA, KnownZero, KnownOne, DL, 0, OpA, &DT);
     KnownZero &= ~APInt::getHighBitsSet(BitWidth, 1);
     if (KnownZero != 0)
       Safe = true;
@@ -819,7 +819,7 @@ bool Vectorizer::vectorizeStoreChain(
 
     unsigned NewAlign = getOrEnforceKnownAlignment(S0->getPointerOperand(),
                                                    StackAdjustedAlignment,
-                                                   DL, S0, nullptr, &DT);
+                                                   DL, S0, &DT);
     if (NewAlign < StackAdjustedAlignment)
       return false;
   }
@@ -960,7 +960,7 @@ bool Vectorizer::vectorizeLoadChain(
 
     unsigned NewAlign = getOrEnforceKnownAlignment(L0->getPointerOperand(),
                                                    StackAdjustedAlignment,
-                                                   DL, L0, nullptr, &DT);
+                                                   DL, L0, &DT);
     if (NewAlign < StackAdjustedAlignment)
       return false;
 

@@ -3183,7 +3183,7 @@ extern void __kmp_aux_set_stacksize( size_t arg);
 extern void __kmp_aux_set_blocktime (int arg, kmp_info_t *thread, int tid);
 extern void __kmp_aux_set_defaults( char const * str, int len );
 
-/* Functions below put here to call them from __kmp_aux_env_initialize() in kmp_settings.c */
+/* Functions called from __kmp_aux_env_initialize() in kmp_settings.cpp */
 void kmpc_set_blocktime (int arg);
 void ompc_set_nested( int flag );
 void ompc_set_dynamic( int flag );

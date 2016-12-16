@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=x86 -mattr=+sse2 | FileCheck %s
 
-; CHECK: xorpd {{.*}}{{LCPI0_0|__xmm@}}
+; CHECK: xorps {{.*}}{{LCPI0_0|__xmm@}}
 define void @casin({ double, double }* sret  %agg.result, double %z.0, double %z.1) nounwind  {
 entry:
 	%memtmp = alloca { double, double }, align 8		; <{ double, double }*> [#uses=3]

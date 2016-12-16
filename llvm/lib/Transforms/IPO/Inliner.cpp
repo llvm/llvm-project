@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -85,7 +84,6 @@ Inliner::Inliner(char &ID, bool InsertLifetime)
 /// If the derived class implements this method, it should
 /// always explicitly call the implementation here.
 void Inliner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   getAAResultsAnalysisUsage(AU);
@@ -423,7 +421,6 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
 
 static bool
 inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
-                std::function<AssumptionCache &(Function &)> GetAssumptionCache,
                 ProfileSummaryInfo *PSI, TargetLibraryInfo &TLI,
                 bool InsertLifetime,
                 function_ref<InlineCost(CallSite CS)> GetInlineCost,
@@ -496,7 +493,7 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         std::swap(CallSites[i--], CallSites[--FirstCallInSCC]);
 
   InlinedArrayAllocasTy InlinedArrayAllocas;
-  InlineFunctionInfo InlineInfo(&CG, &GetAssumptionCache);
+  InlineFunctionInfo InlineInfo(&CG);
 
   // Now that we have all of the call sites, loop over them and inline them if
   // it looks profitable to do so.
@@ -632,7 +629,6 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
 
 bool Inliner::inlineCalls(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  ACT = &getAnalysis<AssumptionCacheTracker>();
   PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   // We compute dedicated AA results for each function in the SCC as needed. We
@@ -645,10 +641,7 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
     AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
     return *AAR;
   };
-  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
-    return ACT->getAssumptionCache(F);
-  };
-  return inlineCallsImpl(SCC, CG, GetAssumptionCache, PSI, TLI, InsertLifetime,
+  return inlineCallsImpl(SCC, CG, PSI, TLI, InsertLifetime,
                          [this](CallSite CS) { return getInlineCost(CS); },
                          AARGetter, ImportedFunctionsStats);
 }

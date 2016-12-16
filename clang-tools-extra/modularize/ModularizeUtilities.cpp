@@ -75,9 +75,8 @@ ModularizeUtilities *ModularizeUtilities::createModularizeUtilities(
 
 // Load all header lists and dependencies.
 std::error_code ModularizeUtilities::loadAllHeaderListsAndDependencies() {
-  typedef std::vector<std::string>::iterator Iter;
   // For each input file.
-  for (Iter I = InputFilePaths.begin(), E = InputFilePaths.end(); I != E; ++I) {
+  for (auto I = InputFilePaths.begin(), E = InputFilePaths.end(); I != E; ++I) {
     llvm::StringRef InputPath = *I;
     // If it's a module map.
     if (InputPath.endswith(".modulemap")) {
@@ -345,9 +344,8 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   DependentsVector UmbrellaDependents;
 
   // Recursively do submodules.
-  for (clang::Module::submodule_const_iterator MI = Mod.submodule_begin(),
-      MIEnd = Mod.submodule_end();
-      MI != MIEnd; ++MI)
+  for (auto MI = Mod.submodule_begin(), MIEnd = Mod.submodule_end();
+       MI != MIEnd; ++MI)
     collectModuleHeaders(**MI);
 
   if (const FileEntry *UmbrellaHeader = Mod.getUmbrellaHeader().Entry) {

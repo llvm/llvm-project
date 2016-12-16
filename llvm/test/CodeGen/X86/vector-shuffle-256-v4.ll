@@ -1187,7 +1187,7 @@ define <4 x i64> @insert_reg_and_zero_v4i64(i64 %a) {
 define <4 x i64> @insert_mem_and_zero_v4i64(i64* %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v4i64:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    retq
   %a = load i64, i64* %ptr
   %v = insertelement <4 x i64> undef, i64 %a, i64 0

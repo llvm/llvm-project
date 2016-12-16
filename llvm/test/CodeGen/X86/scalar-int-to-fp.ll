@@ -74,14 +74,14 @@ define x86_fp80 @s32_to_x(i32 %a) nounwind {
 }
 
 ; CHECK-LABEL: u64_to_f
-; AVX512_32: vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512_32: vmovq %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32: vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512_32: vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX512_32: fildll
 
 ; AVX512_64: vcvtusi2ssq
 
-; SSE2_32: movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32: movq %xmm0, {{[0-9]+}}(%esp)
+; SSE2_32: movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2_32: movlps %xmm0, {{[0-9]+}}(%esp)
 ; SSE2_32: fildll
 
 ; SSE2_64: cvtsi2ssq

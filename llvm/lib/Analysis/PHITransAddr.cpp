@@ -227,7 +227,7 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
 
     // Simplify the GEP to handle 'gep x, 0' -> x etc.
     if (Value *V = SimplifyGEPInst(GEP->getSourceElementType(),
-                                   GEPOps, DL, TLI, DT, AC)) {
+                                   GEPOps, DL, TLI, DT)) {
       for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
         RemoveInstInputs(GEPOps[i], InstInputs);
 
@@ -276,7 +276,7 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
         }
 
     // See if the add simplifies away.
-    if (Value *Res = SimplifyAddInst(LHS, RHS, isNSW, isNUW, DL, TLI, DT, AC)) {
+    if (Value *Res = SimplifyAddInst(LHS, RHS, isNSW, isNUW, DL, TLI, DT)) {
       // If we simplified the operands, the LHS is no longer an input, but Res
       // is.
       RemoveInstInputs(LHS, InstInputs);
@@ -367,7 +367,7 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
                            SmallVectorImpl<Instruction*> &NewInsts) {
   // See if we have a version of this value already available and dominating
   // PredBB.  If so, there is no need to insert a new instance of it.
-  PHITransAddr Tmp(InVal, DL, AC);
+  PHITransAddr Tmp(InVal, DL);
   if (!Tmp.PHITranslateValue(CurBB, PredBB, &DT, /*MustDominate=*/true))
     return Tmp.getAddr();
 

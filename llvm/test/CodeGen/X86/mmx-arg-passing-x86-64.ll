@@ -10,7 +10,7 @@ define void @t3() nounwind  {
 ; X86-64-LABEL: t3:
 ; X86-64:       ## BB#0:
 ; X86-64-NEXT:    movq _g_v8qi@{{.*}}(%rip), %rax
-; X86-64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-64-NEXT:    movb $1, %al
 ; X86-64-NEXT:    jmp _pass_v8qi ## TAILCALL
   %tmp3 = load <8 x i8>, <8 x i8>* @g_v8qi, align 8

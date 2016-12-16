@@ -102,7 +102,7 @@ bool areParensNeededForOverloadedOperator(OverloadedOperatorKind OperatorKind) {
 }
 
 bool areParensNeededForStatement(const Stmt *Statement) {
-  if (const CXXOperatorCallExpr *OverloadedOperatorCall =
+  if (const auto *OverloadedOperatorCall =
           llvm::dyn_cast<CXXOperatorCallExpr>(Statement)) {
     return areParensNeededForOverloadedOperator(
         OverloadedOperatorCall->getOperator());

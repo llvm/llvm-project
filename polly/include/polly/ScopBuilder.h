@@ -55,7 +55,7 @@ class ScopBuilder {
   std::unique_ptr<Scop> scop;
 
   // Build the SCoP for Region @p R.
-  void buildScop(Region &R, AssumptionCache &AC);
+  void buildScop(Region &R);
 
   /// Try to build a multi-dimensional fixed sized MemoryAccess from the
   /// Load/Store instruction.
@@ -242,9 +242,9 @@ class ScopBuilder {
   void addPHIReadAccess(PHINode *PHI);
 
 public:
-  explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
-                       const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
-                       ScopDetection &SD, ScalarEvolution &SE);
+  explicit ScopBuilder(Region *R, AliasAnalysis &AA, const DataLayout &DL,
+                       DominatorTree &DT, LoopInfo &LI, ScopDetection &SD,
+                       ScalarEvolution &SE);
   ~ScopBuilder() {}
 
   /// Try to build the Polly IR of static control part on the current

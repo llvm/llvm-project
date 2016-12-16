@@ -48,8 +48,7 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
       isKnownToBeAPowerOfTwo(I->getOperand(0), IC.getDataLayout(), false, 0,
-                             &IC.getAssumptionCache(), &CxtI,
-                             &IC.getDominatorTree())) {
+                             &CxtI, &IC.getDominatorTree())) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
@@ -179,7 +178,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyMulInst(Op0, Op1, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifyMulInst(Op0, Op1, DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyUsingDistributiveLaws(I))
@@ -545,7 +544,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     std::swap(Op0, Op1);
 
   if (Value *V =
-          SimplifyFMulInst(Op0, Op1, I.getFastMathFlags(), DL, &TLI, &DT, &AC))
+          SimplifyFMulInst(Op0, Op1, I.getFastMathFlags(), DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   bool AllowReassociate = I.hasUnsafeAlgebra();
@@ -1061,7 +1060,7 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyUDivInst(Op0, Op1, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifyUDivInst(Op0, Op1, DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   // Handle the integer div common cases
@@ -1134,7 +1133,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifySDivInst(Op0, Op1, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifySDivInst(Op0, Op1, DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   // Handle the integer div common cases
@@ -1197,7 +1196,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
         return BO;
       }
 
-      if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
+      if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &I, &DT)) {
         // X sdiv (1 << Y) -> X udiv (1 << Y) ( -> X u>> Y)
         // Safe because the only negative value (1 << Y) can take on is
         // INT_MIN, and X sdiv INT_MIN == X udiv INT_MIN == 0 if X doesn't have
@@ -1249,7 +1248,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyFDivInst(Op0, Op1, I.getFastMathFlags(),
-                                  DL, &TLI, &DT, &AC))
+                                  DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (isa<Constant>(Op0))
@@ -1423,7 +1422,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyURemInst(Op0, Op1, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifyURemInst(Op0, Op1, DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *common = commonIRemTransforms(I))
@@ -1436,7 +1435,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
                           I.getType());
 
   // X urem Y -> X and Y-1, where Y is a power of 2,
-  if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &AC, &I, &DT)) {
+  if (isKnownToBeAPowerOfTwo(Op1, DL, /*OrZero*/ true, 0, &I, &DT)) {
     Constant *N1 = Constant::getAllOnesValue(I.getType());
     Value *Add = Builder->CreateAdd(Op1, N1);
     return BinaryOperator::CreateAnd(Op0, Add);
@@ -1466,7 +1465,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifySRemInst(Op0, Op1, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifySRemInst(Op0, Op1, DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   // Handle the integer rem common cases
@@ -1542,7 +1541,7 @@ Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyFRemInst(Op0, Op1, I.getFastMathFlags(),
-                                  DL, &TLI, &DT, &AC))
+                                  DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   // Handle cases involving: rem X, (select Cond, Y, Z)

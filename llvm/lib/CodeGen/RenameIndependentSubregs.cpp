@@ -184,7 +184,7 @@ bool RenameIndependentSubregs::findComponents(IntEqClasses &Classes,
     unsigned MergedID = ~0u;
     for (RenameIndependentSubregs::SubRangeInfo &SRInfo : SubRangeInfos) {
       const LiveInterval::SubRange &SR = *SRInfo.SR;
-      if ((SR.LaneMask & LaneMask) == 0)
+      if ((SR.LaneMask & LaneMask).none())
         continue;
       SlotIndex Pos = LIS->getInstructionIndex(*MO.getParent());
       Pos = MO.isDef() ? Pos.getRegSlot(MO.isEarlyClobber())
@@ -228,7 +228,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     unsigned ID = ~0u;
     for (const SubRangeInfo &SRInfo : SubRangeInfos) {
       const LiveInterval::SubRange &SR = *SRInfo.SR;
-      if ((SR.LaneMask & LaneMask) == 0)
+      if ((SR.LaneMask & LaneMask).none())
         continue;
       const VNInfo *VNI = SR.getVNInfoAt(Pos);
       if (VNI == nullptr)

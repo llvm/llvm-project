@@ -55,7 +55,7 @@ loop:
   %cmp = icmp slt i32 %iv, 10000
 ; CHECK:  %iv.sext = sext i32 %iv to i64
 ; CHECK-NEXT:  -->  {0,+,3}<nuw><nsw><%loop>
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i32 %iv) ]
   %c = load volatile i1, i1* %cond
   br i1 %c, label %loop, label %leave
 
@@ -159,7 +159,7 @@ loop:
   %cmp = icmp ugt i32 %iv.inc, -10000
 ; CHECK:  %iv.zext = zext i32 %iv to i64
 ; CHECK-NEXT:  -->  {30000,+,-2}<nw><%loop>
-  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp) [ "affected"(i32 %iv.inc) ]
   %c = load volatile i1, i1* %cond
   br i1 %c, label %loop, label %leave
 

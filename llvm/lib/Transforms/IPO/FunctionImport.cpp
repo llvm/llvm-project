@@ -236,8 +236,7 @@ static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
 }
 
 /// Mark the global \p GUID as export by module \p ExportModulePath if found in
-/// this module. If it is a GlobalVariable, we also mark any referenced global
-/// in the current module as exported.
+/// this module.
 static void exportGlobalInModule(const ModuleSummaryIndex &Index,
                                  StringRef ExportModulePath,
                                  GlobalValue::GUID GUID,
@@ -266,7 +265,8 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
   ExportList.insert(GUID);
 }
 
-using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
+using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
+                            GlobalValue::GUID>;
 
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
@@ -316,18 +316,30 @@ static void computeImportForFunction(
     assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
            "selectCallee() didn't honor the threshold");
 
+    auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
+      // Adjust the threshold for next level of imported functions.
+      // The threshold is different for hot callsites because we can then
+      // inline chains of hot calls.
+      if (IsHotCallsite)
+        return Threshold * ImportHotInstrFactor;
+      return Threshold * ImportInstrFactor;
+    };
+
+    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
+    const auto AdjThreshold = GetAdjustedThreshold(Threshold, IsHotCallsite);
+
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();
     auto &ProcessedThreshold = ImportList[ExportModulePath][GUID];
     /// Since the traversal of the call graph is DFS, we can revisit a function
     /// a second time with a higher threshold. In this case, it is added back to
     /// the worklist with the new threshold.
-    if (ProcessedThreshold && ProcessedThreshold >= Threshold) {
+    if (ProcessedThreshold && ProcessedThreshold >= AdjThreshold) {
       DEBUG(dbgs() << "ignored! Target was already seen with Threshold "
                    << ProcessedThreshold << "\n");
       continue;
     }
     // Mark this function as imported in this module, with the current Threshold
-    ProcessedThreshold = Threshold;
+    ProcessedThreshold = AdjThreshold;
 
     // Make exports in the source module.
     if (ExportLists) {
@@ -345,20 +357,8 @@ static void computeImportForFunction(
       }
     }
 
-    auto GetAdjustedThreshold = [](unsigned Threshold, bool IsHotCallsite) {
-      // Adjust the threshold for next level of imported functions.
-      // The threshold is different for hot callsites because we can then
-      // inline chains of hot calls.
-      if (IsHotCallsite)
-        return Threshold * ImportHotInstrFactor;
-      return Threshold * ImportInstrFactor;
-    };
-
-    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
-
     // Insert the newly imported function to the worklist.
-    Worklist.emplace_back(ResolvedCalleeSummary,
-                          GetAdjustedThreshold(Threshold, IsHotCallsite));
+    Worklist.emplace_back(ResolvedCalleeSummary, AdjThreshold, GUID);
   }
 }
 
@@ -392,8 +392,16 @@ static void ComputeImportForModule(
   // Process the newly imported functions and add callees to the worklist.
   while (!Worklist.empty()) {
     auto FuncInfo = Worklist.pop_back_val();
-    auto *Summary = FuncInfo.first;
-    auto Threshold = FuncInfo.second;
+    auto *Summary = std::get<0>(FuncInfo);
+    auto Threshold = std::get<1>(FuncInfo);
+    auto GUID = std::get<2>(FuncInfo);
+
+    // Check if we later added this summary with a higher threshold.
+    // If so, skip this entry.
+    auto ExportModulePath = Summary->modulePath();
+    auto &LatestProcessedThreshold = ImportList[ExportModulePath][GUID];
+    if (LatestProcessedThreshold > Threshold)
+      continue;
 
     computeImportForFunction(*Summary, Index, Threshold, DefinedGVSummaries,
                              Worklist, ImportList, ExportLists);

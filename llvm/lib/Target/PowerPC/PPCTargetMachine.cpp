@@ -181,6 +181,10 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
   if (!RM.hasValue()) {
+    if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+      if (!TT.isOSBinFormatMachO() && !TT.isMacOSX())
+        return Reloc::PIC_;
+    }
     if (TT.isOSDarwin())
       return Reloc::DynamicNoPIC;
     return Reloc::Static;

@@ -10,12 +10,27 @@ public:
   R operator()(ArgTypes...) const {}
 };
 
+namespace x {
 // CHECK: namespace x {
-// CHECK-NEXT: namespace y {
+class X {};
+}
+
 namespace na {
 namespace nb {
+// CHECK: namespace x {
+// CHECK-NEXT: namespace y {
 void f(function<void(int)> func, int param) { func(param); }
 void g() { f([](int x) {}, 1); }
+
+// x::X in function type parameter list will have translation unit context, so
+// we simply replace it with fully-qualified name.
+using TX = function<x::X(x::X)>;
+// CHECK: using TX = function<X(x::X)>;
+
+class A {};
+using TA = function<A(A)>;
+// CHECK: using TA = function<A(A)>;
+
 // CHECK: } // namespace y
 // CHECK-NEXT: } // namespace x
 }

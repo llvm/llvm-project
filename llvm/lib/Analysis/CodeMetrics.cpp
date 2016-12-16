@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -71,45 +70,31 @@ static void completeEphemeralValues(SmallPtrSetImpl<const Value *> &Visited,
 
 // Find all ephemeral values.
 void CodeMetrics::collectEphemeralValues(
-    const Loop *L, AssumptionCache *AC,
-    SmallPtrSetImpl<const Value *> &EphValues) {
+    const Loop *L, SmallPtrSetImpl<const Value *> &EphValues) {
   SmallPtrSet<const Value *, 32> Visited;
   SmallVector<const Value *, 16> Worklist;
 
-  for (auto &AssumeVH : AC->assumptions()) {
-    if (!AssumeVH)
-      continue;
-    Instruction *I = cast<Instruction>(AssumeVH);
-
-    // Filter out call sites outside of the loop so we don't do a function's
-    // worth of work for each of its loops (and, in the common case, ephemeral
-    // values in the loop are likely due to @llvm.assume calls in the loop).
-    if (!L->contains(I->getParent()))
-      continue;
-
-    if (EphValues.insert(I).second)
-      appendSpeculatableOperands(I, Visited, Worklist);
-  }
+  for (auto &B : L->blocks())
+    for (auto &I : *B)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::assume &&
+            EphValues.insert(II).second)
+          appendSpeculatableOperands(II, Visited, Worklist);
 
   completeEphemeralValues(Visited, Worklist, EphValues);
 }
 
 void CodeMetrics::collectEphemeralValues(
-    const Function *F, AssumptionCache *AC,
-    SmallPtrSetImpl<const Value *> &EphValues) {
+    const Function *F, SmallPtrSetImpl<const Value *> &EphValues) {
   SmallPtrSet<const Value *, 32> Visited;
   SmallVector<const Value *, 16> Worklist;
 
-  for (auto &AssumeVH : AC->assumptions()) {
-    if (!AssumeVH)
-      continue;
-    Instruction *I = cast<Instruction>(AssumeVH);
-    assert(I->getParent()->getParent() == F &&
-           "Found assumption for the wrong function!");
-
-    if (EphValues.insert(I).second)
-      appendSpeculatableOperands(I, Visited, Worklist);
-  }
+  for (auto &B : *F)
+    for (auto &I : B)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::assume &&
+            EphValues.insert(II).second)
+          appendSpeculatableOperands(II, Visited, Worklist);
 
   completeEphemeralValues(Visited, Worklist, EphValues);
 }

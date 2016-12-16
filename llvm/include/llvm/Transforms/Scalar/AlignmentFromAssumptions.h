@@ -30,8 +30,7 @@ struct AlignmentFromAssumptionsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, AssumptionCache &AC, ScalarEvolution *SE_,
-               DominatorTree *DT_);
+  bool runImpl(Function &F, ScalarEvolution *SE_, DominatorTree *DT_);
 
   // For memory transfers, we need a common alignment for both the source and
   // destination. If we have a new alignment for only one operand of a transfer

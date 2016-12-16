@@ -31,18 +31,17 @@ define i25 @shift_left_pow_2(i25 %x, i25 %y) {
   ret i25 %urem
 }
 
-; FIXME: A logically right-shifted sign bit is a power-of-2 or UB.
+; A logically right-shifted sign bit is a power-of-2 or UB.
 
 define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 ; CHECK-LABEL: shift_right_pow_2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl $32768, %r8d # imm = 0x8000
+; CHECK-NEXT:    movl $32768, %eax # imm = 0x8000
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrl %cl, %r8d
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    divw %r8w
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
 ;
   %shr = lshr i16 -32768, %y

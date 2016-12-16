@@ -341,9 +341,7 @@ static std::string findInputFile(const CommandLineArguments &CLArgs) {
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
-  for (CommandLineArguments::const_iterator I = CLArgs.begin(),
-                                            E = CLArgs.end();
-       I != E; ++I)
+  for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
     Argv.push_back(I->c_str());
   InputArgList Args = Opts->ParseArgs(Argv, MissingArgIndex, MissingArgCount,
                                       IncludedFlagsBitmask);

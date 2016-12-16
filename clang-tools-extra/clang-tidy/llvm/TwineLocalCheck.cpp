@@ -25,7 +25,7 @@ void TwineLocalCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
-  const VarDecl *VD = Result.Nodes.getNodeAs<VarDecl>("variable");
+  const auto *VD = Result.Nodes.getNodeAs<VarDecl>("variable");
   auto Diag = diag(VD->getLocation(),
                    "twine variables are prone to use-after-free bugs");
 

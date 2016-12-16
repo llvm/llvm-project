@@ -4062,7 +4062,8 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa)) {
     Assert(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
-               isa<VAArgInst>(I),
+               isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
+               isa<AtomicCmpXchgInst>(I),
            "TBAA is only for loads, stores and calls!", &I);
     visitTBAAMetadata(I, TBAA);
   }

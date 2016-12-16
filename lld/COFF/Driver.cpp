@@ -30,6 +30,13 @@
 #include <algorithm>
 #include <memory>
 
+#ifdef _MSC_VER
+// <future> depends on <eh.h> for __uncaught_exception.
+#include <eh.h>
+#endif
+
+#include <future>
+
 using namespace llvm;
 using namespace llvm::COFF;
 using llvm::sys::Process;
@@ -58,33 +65,123 @@ static std::string getOutputPath(StringRef Path) {
   return (S.substr(0, S.rfind('.')) + E).str();
 }
 
-// Opens a file. Path has to be resolved already.
-// Newly created memory buffers are owned by this driver.
-MemoryBufferRef LinkerDriver::openFile(StringRef Path) {
-  std::unique_ptr<MemoryBuffer> MB =
-      check(MemoryBuffer::getFile(Path), "could not open " + Path);
-  MemoryBufferRef MBRef = MB->getMemBufferRef();
-  OwningMBs.push_back(std::move(MB)); // take ownership
+// ErrorOr is not default constructible, so it cannot be used as the type
+// parameter of a future.
+// FIXME: We could open the file in createFutureForFile and avoid needing to
+// return an error here, but for the moment that would cost us a file descriptor
+// (a limited resource on Windows) for the duration that the future is pending.
+typedef std::pair<std::unique_ptr<MemoryBuffer>, std::error_code> MBErrPair;
+
+// Create a std::future that opens and maps a file using the best strategy for
+// the host platform.
+static std::future<MBErrPair> createFutureForFile(std::string Path) {
+#if LLVM_ON_WIN32
+  // On Windows, file I/O is relatively slow so it is best to do this
+  // asynchronously.
+  auto Strategy = std::launch::async;
+#else
+  auto Strategy = std::launch::deferred;
+#endif
+  return std::async(Strategy, [=]() {
+    auto MBOrErr = MemoryBuffer::getFile(Path);
+    if (!MBOrErr)
+      return MBErrPair{nullptr, MBOrErr.getError()};
+    return MBErrPair{std::move(*MBOrErr), std::error_code()};
+  });
+}
+
+MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
+  MemoryBufferRef MBRef = *MB;
+  OwningMBs.push_back(std::move(MB));
+
+  if (Driver->Cpio)
+    Driver->Cpio->append(relativeToRoot(MBRef.getBufferIdentifier()),
+                         MBRef.getBuffer());
+
   return MBRef;
 }
 
-static InputFile *createFile(MemoryBufferRef MB) {
-  if (Driver->Cpio)
-    Driver->Cpio->append(relativeToRoot(MB.getBufferIdentifier()),
-                         MB.getBuffer());
+void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB) {
+  MemoryBufferRef MBRef = takeBuffer(std::move(MB));
 
   // File type is detected by contents, not by file extension.
-  file_magic Magic = identify_magic(MB.getBuffer());
+  file_magic Magic = identify_magic(MBRef.getBuffer());
+  if (Magic == file_magic::windows_resource) {
+    Resources.push_back(MBRef);
+    return;
+  }
+
+  FilePaths.push_back(MBRef.getBufferIdentifier());
   if (Magic == file_magic::archive)
-    return make<ArchiveFile>(MB);
+    return Symtab.addFile(make<ArchiveFile>(MBRef));
   if (Magic == file_magic::bitcode)
-    return make<BitcodeFile>(MB);
+    return Symtab.addFile(make<BitcodeFile>(MBRef));
   if (Magic == file_magic::coff_cl_gl_object)
-    fatal(MB.getBufferIdentifier() + ": is not a native COFF file. "
+    fatal(MBRef.getBufferIdentifier() + ": is not a native COFF file. "
           "Recompile without /GL");
+  Symtab.addFile(make<ObjectFile>(MBRef));
+}
+
+void LinkerDriver::enqueuePath(StringRef Path) {
+  auto Future =
+      std::make_shared<std::future<MBErrPair>>(createFutureForFile(Path));
+  std::string PathStr = Path;
+  enqueueTask([=]() {
+    auto MBOrErr = Future->get();
+    if (MBOrErr.second)
+      fatal(MBOrErr.second, "could not open " + PathStr);
+    Driver->addBuffer(std::move(MBOrErr.first));
+  });
+
   if (Config->OutputFile == "")
-    Config->OutputFile = getOutputPath(MB.getBufferIdentifier());
-  return make<ObjectFile>(MB);
+    Config->OutputFile = getOutputPath(Path);
+}
+
+void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
+                                    StringRef ParentName) {
+  file_magic Magic = identify_magic(MB.getBuffer());
+  if (Magic == file_magic::coff_import_library) {
+    Symtab.addFile(make<ImportFile>(MB));
+    return;
+  }
+
+  InputFile *Obj;
+  if (Magic == file_magic::coff_object)
+    Obj = make<ObjectFile>(MB);
+  else if (Magic == file_magic::bitcode)
+    Obj = make<BitcodeFile>(MB);
+  else
+    fatal("unknown file type: " + MB.getBufferIdentifier());
+
+  Obj->ParentName = ParentName;
+  Symtab.addFile(Obj);
+  if (Config->Verbose)
+    outs() << "Loaded " << toString(Obj) << " for " << SymName << "\n";
+}
+
+void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
+                                        StringRef SymName,
+                                        StringRef ParentName) {
+  if (!C.getParent()->isThin()) {
+    MemoryBufferRef MB = check(
+        C.getMemoryBufferRef(),
+        "could not get the buffer for the member defining symbol " + SymName);
+    enqueueTask([=]() { Driver->addArchiveBuffer(MB, SymName, ParentName); });
+    return;
+  }
+
+  auto Future = std::make_shared<std::future<MBErrPair>>(createFutureForFile(
+      check(C.getFullName(),
+            "could not get the filename for the member defining symbol " +
+                SymName)));
+  enqueueTask([=]() {
+    auto MBOrErr = Future->get();
+    if (MBOrErr.second)
+      fatal(MBOrErr.second,
+            "could not get the buffer for the member defining " + SymName);
+    Driver->addArchiveBuffer(takeBuffer(std::move(MBOrErr.first)), SymName,
+                             ParentName);
+  });
 }
 
 static bool isDecorated(StringRef Sym) {
@@ -102,10 +199,8 @@ void LinkerDriver::parseDirectives(StringRef S) {
       parseAlternateName(Arg->getValue());
       break;
     case OPT_defaultlib:
-      if (Optional<StringRef> Path = findLib(Arg->getValue())) {
-        MemoryBufferRef MB = openFile(*Path);
-        Symtab.addFile(createFile(MB));
-      }
+      if (Optional<StringRef> Path = findLib(Arg->getValue()))
+        enqueuePath(*Path);
       break;
     case OPT_export: {
       Export E = parseExport(Arg->getValue());
@@ -255,7 +350,7 @@ static uint64_t getDefaultImageBase() {
 }
 
 static std::string createResponseFile(const opt::InputArgList &Args,
-                                      ArrayRef<MemoryBufferRef> MBs,
+                                      ArrayRef<StringRef> FilePaths,
                                       ArrayRef<StringRef> SearchPaths) {
   SmallString<0> Data;
   raw_svector_ostream OS(Data);
@@ -277,10 +372,8 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     OS << "/libpath:" << quote(RelPath) << "\n";
   }
 
-  for (MemoryBufferRef MB : MBs) {
-    std::string InputPath = relativeToRoot(MB.getBufferIdentifier());
-    OS << quote(InputPath) << "\n";
-  }
+  for (StringRef Path : FilePaths)
+    OS << quote(relativeToRoot(Path)) << "\n";
 
   return Data.str();
 }
@@ -317,6 +410,19 @@ static std::string getMapFile(const opt::InputArgList &Args) {
   assert(Arg->getOption().getID() == OPT_lldmap);
   StringRef OutFile = Config->OutputFile;
   return (OutFile.substr(0, OutFile.rfind('.')) + ".map").str();
+}
+
+void LinkerDriver::enqueueTask(std::function<void()> Task) {
+  TaskQueue.push_back(std::move(Task));
+}
+
+bool LinkerDriver::run() {
+  bool DidWork = !TaskQueue.empty();
+  while (!TaskQueue.empty()) {
+    TaskQueue.front()();
+    TaskQueue.pop_front();
+  }
+  return DidWork;
 }
 
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
@@ -544,40 +650,20 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.
-  std::vector<StringRef> Paths;
   std::vector<MemoryBufferRef> MBs;
   for (auto *Arg : Args.filtered(OPT_INPUT))
     if (Optional<StringRef> Path = findFile(Arg->getValue()))
-      Paths.push_back(*Path);
+      enqueuePath(*Path);
   for (auto *Arg : Args.filtered(OPT_defaultlib))
     if (Optional<StringRef> Path = findLib(Arg->getValue()))
-      Paths.push_back(*Path);
-  for (StringRef Path : Paths)
-    MBs.push_back(openFile(Path));
+      enqueuePath(*Path);
 
   // Windows specific -- Create a resource file containing a manifest file.
-  if (Config->Manifest == Configuration::Embed) {
-    std::unique_ptr<MemoryBuffer> MB = createManifestRes();
-    MBs.push_back(MB->getMemBufferRef());
-    OwningMBs.push_back(std::move(MB)); // take ownership
-  }
-
-  // Windows specific -- Input files can be Windows resource files (.res files).
-  // We invoke cvtres.exe to convert resource files to a regular COFF file
-  // then link the result file normally.
-  std::vector<MemoryBufferRef> Resources;
-  auto NotResource = [](MemoryBufferRef MB) {
-    return identify_magic(MB.getBuffer()) != file_magic::windows_resource;
-  };
-  auto It = std::stable_partition(MBs.begin(), MBs.end(), NotResource);
-  if (It != MBs.end()) {
-    Resources.insert(Resources.end(), It, MBs.end());
-    MBs.erase(It, MBs.end());
-  }
+  if (Config->Manifest == Configuration::Embed)
+    addBuffer(createManifestRes());
 
   // Read all input files given via the command line.
-  for (MemoryBufferRef MB : MBs)
-    Symtab.addFile(createFile(MB));
+  run();
 
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
@@ -586,18 +672,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Machine = AMD64;
   }
 
-  // Windows specific -- Convert Windows resource files to a COFF file.
-  if (!Resources.empty()) {
-    std::unique_ptr<MemoryBuffer> MB = convertResToCOFF(Resources);
-    Symtab.addFile(createFile(MB->getMemBufferRef()));
-
-    MBs.push_back(MB->getMemBufferRef());
-    OwningMBs.push_back(std::move(MB)); // take ownership
-  }
+  // Windows specific -- Input files can be Windows resource files (.res files).
+  // We invoke cvtres.exe to convert resource files to a regular COFF file
+  // then link the result file normally.
+  if (!Resources.empty())
+    addBuffer(convertResToCOFF(Resources));
 
   if (Cpio)
     Cpio->append("response.txt",
-                 createResponseFile(Args, MBs,
+                 createResponseFile(Args, FilePaths,
                                     ArrayRef<StringRef>(SearchPaths).slice(1)));
 
   // Handle /largeaddressaware
@@ -640,9 +723,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /def
   if (auto *Arg = Args.getLastArg(OPT_deffile)) {
-    MemoryBufferRef MB = openFile(Arg->getValue());
     // parseModuleDefs mutates Config object.
-    parseModuleDefs(MB);
+    parseModuleDefs(
+        takeBuffer(check(MemoryBuffer::getFile(Arg->getValue()),
+                         Twine("could not open ") + Arg->getValue())));
   }
 
   // Handle /delayload
@@ -671,40 +755,46 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
   Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
 
-  // Windows specific -- if entry point is not found,
-  // search for its mangled names.
-  if (Config->Entry)
-    Symtab.mangleMaybe(Config->Entry);
+  // This code may add new undefined symbols to the link, which may enqueue more
+  // symbol resolution tasks, so we need to continue executing tasks until we
+  // converge.
+  do {
+    // Windows specific -- if entry point is not found,
+    // search for its mangled names.
+    if (Config->Entry)
+      Symtab.mangleMaybe(Config->Entry);
 
-  // Windows specific -- Make sure we resolve all dllexported symbols.
-  for (Export &E : Config->Exports) {
-    if (!E.ForwardTo.empty())
-      continue;
-    E.Sym = addUndefined(E.Name);
-    if (!E.Directives)
-      Symtab.mangleMaybe(E.Sym);
-  }
+    // Windows specific -- Make sure we resolve all dllexported symbols.
+    for (Export &E : Config->Exports) {
+      if (!E.ForwardTo.empty())
+        continue;
+      E.Sym = addUndefined(E.Name);
+      if (!E.Directives)
+        Symtab.mangleMaybe(E.Sym);
+    }
 
-  // Add weak aliases. Weak aliases is a mechanism to give remaining
-  // undefined symbols final chance to be resolved successfully.
-  for (auto Pair : Config->AlternateNames) {
-    StringRef From = Pair.first;
-    StringRef To = Pair.second;
-    Symbol *Sym = Symtab.find(From);
-    if (!Sym)
-      continue;
-    if (auto *U = dyn_cast<Undefined>(Sym->body()))
-      if (!U->WeakAlias)
-        U->WeakAlias = Symtab.addUndefined(To);
-  }
+    // Add weak aliases. Weak aliases is a mechanism to give remaining
+    // undefined symbols final chance to be resolved successfully.
+    for (auto Pair : Config->AlternateNames) {
+      StringRef From = Pair.first;
+      StringRef To = Pair.second;
+      Symbol *Sym = Symtab.find(From);
+      if (!Sym)
+        continue;
+      if (auto *U = dyn_cast<Undefined>(Sym->body()))
+        if (!U->WeakAlias)
+          U->WeakAlias = Symtab.addUndefined(To);
+    }
 
-  // Windows specific -- if __load_config_used can be resolved, resolve it.
-  if (Symtab.findUnderscore("_load_config_used"))
-    addUndefined(mangle("_load_config_used"));
+    // Windows specific -- if __load_config_used can be resolved, resolve it.
+    if (Symtab.findUnderscore("_load_config_used"))
+      addUndefined(mangle("_load_config_used"));
+  } while (run());
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.
   Symtab.addCombinedLTOObjects();
+  run();
 
   // Make sure we have resolved all symbols.
   Symtab.reportRemainingUndefines();

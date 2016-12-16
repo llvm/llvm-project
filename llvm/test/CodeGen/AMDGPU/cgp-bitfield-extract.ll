@@ -27,7 +27,7 @@
 
 ; GCN-LABEL: {{^}}sink_ubfe_i32:
 ; GCN-NOT: lshr
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008
 ; GCN: BB0_2:
@@ -121,7 +121,7 @@ ret:
 ; GCN-LABEL: {{^}}sink_ubfe_i16:
 ; GCN-NOT: lshr
 ; VI: s_bfe_u32 s0, s0, 0xc0004
-; GCN: s_cbranch_vccnz
+; GCN: s_cbranch_scc1
 
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
 ; VI: s_and_b32 s0, s0, 0xff
@@ -175,12 +175,13 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
-; GCN: s_cbranch_vccnz BB3_2
+; GCN: s_cbranch_scc1 BB3_2
 
+; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
 ; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0xff
 
 ; GCN: BB3_2:
+; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
 ; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0x7f
 
 ; GCN: BB3_3:
@@ -225,7 +226,7 @@ ret:
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_low32:
 
-; GCN: s_cbranch_vccnz BB4_2
+; GCN: s_cbranch_scc1 BB4_2
 
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
 
@@ -273,7 +274,7 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_high32:
-; GCN: s_cbranch_vccnz BB5_2
+; GCN: s_cbranch_scc1 BB5_2
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
 
 ; GCN: BB5_2:

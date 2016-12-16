@@ -159,13 +159,13 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
       auto CUDIE = CU->getUnitDIE();
       if (!CUDIE)
         continue;
-      unsigned stmtOffset = CUDIE.getAttributeValueAsSectionOffset(
-          DW_AT_stmt_list, -1U);
-      if (stmtOffset != -1U) {
+      if (auto StmtOffset =
+              CUDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list)) {
         DataExtractor lineData(getLineSection().Data, isLittleEndian(),
                                savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
-        LineTable.parse(lineData, &getLineSection().Relocs, &stmtOffset);
+        uint32_t Offset = *StmtOffset;
+        LineTable.parse(lineData, &getLineSection().Relocs, &Offset);
         LineTable.dump(OS);
       }
     }
@@ -416,12 +416,11 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!UnitDIE)
     return nullptr;
 
-  unsigned stmtOffset =
-      UnitDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list, -1U);
-  if (stmtOffset == -1U)
+  auto Offset = UnitDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list);
+  if (!Offset)
     return nullptr; // No line table for this compile unit.
 
-  stmtOffset += U->getLineTableOffset();
+  uint32_t stmtOffset = *Offset + U->getLineTableOffset();
   // See if the line table is cached.
   if (const DWARFLineTable *lt = Line->getLineTable(stmtOffset))
     return lt;

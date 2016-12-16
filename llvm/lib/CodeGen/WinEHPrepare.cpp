@@ -1202,8 +1202,12 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
       Goto->setSuccessor(0, PHIBlock);
       CatchRet->setSuccessor(NewBlock);
       // Update the color mapping for the newly split edge.
+      // Grab a reference to the ColorVector to be inserted before getting the
+      // reference to the vector we are copying because inserting the new
+      // element in BlockColors might cause the map to be reallocated.
+      ColorVector &ColorsForNewBlock = BlockColors[NewBlock];
       ColorVector &ColorsForPHIBlock = BlockColors[PHIBlock];
-      BlockColors[NewBlock] = ColorsForPHIBlock;
+      ColorsForNewBlock = ColorsForPHIBlock;
       for (BasicBlock *FuncletPad : ColorsForPHIBlock)
         FuncletBlocks[FuncletPad].push_back(NewBlock);
       // Treat the new block as incoming for load insertion.

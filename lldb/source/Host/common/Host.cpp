@@ -999,10 +999,6 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   return false;
 }
 
-void Host::SetCrashDescriptionWithFormat(const char *format, ...) {}
-
-void Host::SetCrashDescription(const char *description) {}
-
 #endif
 
 const UnixSignalsSP &Host::GetUnixSignals() {
