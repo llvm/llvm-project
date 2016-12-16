@@ -15,6 +15,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Analysis/CFGStmtMap.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -1372,13 +1373,56 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
   return Event;
 }
 
-bool ConditionBRVisitor::patternMatch(const Expr *Ex, raw_ostream &Out,
+bool ConditionBRVisitor::patternMatch(const Expr *Ex,
+                                      const Expr *ParentEx,
+                                      raw_ostream &Out,
                                       BugReporterContext &BRC,
                                       BugReport &report,
                                       const ExplodedNode *N,
                                       Optional<bool> &prunable) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
+
+  // Use heuristics to determine if Ex is a macro expending to a literal and
+  // if so, use the macro's name.
+  SourceLocation LocStart = Ex->getLocStart();
+  SourceLocation LocEnd = Ex->getLocEnd();
+  if (LocStart.isMacroID() && LocEnd.isMacroID() &&
+      (isa<GNUNullExpr>(Ex) ||
+       isa<ObjCBoolLiteralExpr>(Ex) ||
+       isa<CXXBoolLiteralExpr>(Ex) ||
+       isa<IntegerLiteral>(Ex) ||
+       isa<FloatingLiteral>(Ex))) {
+
+    StringRef StartName = Lexer::getImmediateMacroNameForDiagnostics(LocStart,
+      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
+    StringRef EndName = Lexer::getImmediateMacroNameForDiagnostics(LocEnd,
+      BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
+    bool beginAndEndAreTheSameMacro = StartName.equals(EndName);
+
+    bool partOfParentMacro = false;
+    if (ParentEx->getLocStart().isMacroID()) {
+      StringRef PName = Lexer::getImmediateMacroNameForDiagnostics(
+        ParentEx->getLocStart(), BRC.getSourceManager(),
+        BRC.getASTContext().getLangOpts());
+      partOfParentMacro = PName.equals(StartName);
+    }
+
+    if (beginAndEndAreTheSameMacro && !partOfParentMacro ) {
+      // Get the location of the macro name as written by the caller.
+      SourceLocation Loc = LocStart;
+      while (LocStart.isMacroID()) {
+        Loc = LocStart;
+        LocStart = BRC.getSourceManager().getImmediateMacroCallerLoc(LocStart);
+      }
+      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+        Loc, BRC.getSourceManager(), BRC.getASTContext().getLangOpts());
+
+      // Return the macro name.
+      Out << MacroName;
+      return false;
+    }
+  }
 
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Ex)) {
     const bool quotes = isa<VarDecl>(DR->getDecl());
@@ -1440,10 +1484,10 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), OutLHS, BRC, R, N,
-                                       shouldPrune);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), OutRHS, BRC, R, N,
-                                       shouldPrune);
+    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, OutLHS,
+                                       BRC, R, N, shouldPrune);
+    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, OutRHS,
+                                       BRC, R, N, shouldPrune);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }
