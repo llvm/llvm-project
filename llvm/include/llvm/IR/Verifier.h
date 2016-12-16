@@ -23,6 +23,10 @@
 
 #include "llvm/IR/PassManager.h"
 
+namespace {
+struct VerifierSupport;
+}
+
 namespace llvm {
 
 class Function;
@@ -30,6 +34,41 @@ class FunctionPass;
 class ModulePass;
 class Module;
 class raw_ostream;
+
+/// Verify that the TBAA Metadatas are valid.
+class TBAAVerifier {
+  VerifierSupport *Diagnostic = nullptr;
+
+  /// Helper to diagnose a failure
+  template <typename... Tys> void CheckFailed(Tys &&... Args);
+
+  /// Cache of TBAA base nodes that have already been visited.  This cachce maps
+  /// a node that has been visited to a pair (IsInvalid, BitWidth) where
+  ///
+  ///  \c IsInvalid is true iff the node is invalid.
+  ///  \c BitWidth, if non-zero, is the bitwidth of the integer used to denoting
+  ///    the offset of the access.  If zero, only a zero offset is allowed.
+  ///
+  /// \c BitWidth has no meaning if \c IsInvalid is true.
+  typedef std::pair<bool, unsigned> TBAABaseNodeSummary;
+  DenseMap<MDNode *, TBAABaseNodeSummary> TBAABaseNodes;
+
+  /// \name Helper functions used by \c visitTBAAMetadata.
+  /// @{
+  MDNode *getFieldNodeFromTBAABaseNode(Instruction &I, MDNode *BaseNode,
+                                       APInt &Offset);
+  TBAAVerifier::TBAABaseNodeSummary verifyTBAABaseNode(Instruction &I,
+                                                       MDNode *BaseNode);
+  TBAABaseNodeSummary verifyTBAABaseNodeImpl(Instruction &I, MDNode *BaseNode);
+  /// @}
+
+public:
+  TBAAVerifier(VerifierSupport *Diagnostic = nullptr)
+      : Diagnostic(Diagnostic) {}
+  // Visit an instruction and return true if it is valid, return false it an
+  // invalid TBAA is attached.
+  bool visitTBAAMetadata(Instruction &I, MDNode *MD);
+};
 
 /// \brief Check a function for errors, useful for use when debugging a
 /// pass.

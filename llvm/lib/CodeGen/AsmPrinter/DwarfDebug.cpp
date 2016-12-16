@@ -464,6 +464,26 @@ void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
     D->addChild(TheCU.constructImportedEntityDIE(N));
 }
 
+/// Sort and unique GVEs by comparing their fragment offset.
+static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
+sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
+  std::sort(GVEs.begin(), GVEs.end(),
+            [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
+              if (A.Expr != B.Expr && A.Expr && B.Expr &&
+                  A.Expr->isFragment() && B.Expr->isFragment())
+                return A.Expr->getFragmentOffsetInBits() <
+                       B.Expr->getFragmentOffsetInBits();
+              return false;
+            });
+  GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
+                         [](DwarfCompileUnit::GlobalExpr A,
+                            DwarfCompileUnit::GlobalExpr B) {
+                           return A.Expr == B.Expr;
+                         }),
+             GVEs.end());
+  return GVEs;
+}
+
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
@@ -480,21 +500,30 @@ void DwarfDebug::beginModule() {
   // Tell MMI whether we have debug info.
   MMI->setDebugInfoAvailability(NumDebugCUs > 0);
   SingleCU = NumDebugCUs == 1;
-
-  DenseMap<DIGlobalVariable *, const GlobalVariable *> GVMap;
+  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
+      GVMap;
   for (const GlobalVariable &Global : M->globals()) {
-    SmallVector<DIGlobalVariable *, 1> GVs;
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
     Global.getDebugInfo(GVs);
-    for (auto &GV : GVs)
-      GVMap[GV] = &Global;
+    for (auto *GVE : GVs)
+      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     DwarfCompileUnit &CU = constructDwarfCompileUnit(CUNode);
     for (auto *IE : CUNode->getImportedEntities())
       CU.addImportedEntity(IE);
-    for (auto *GV : CUNode->getGlobalVariables())
-      CU.getOrCreateGlobalVariableDIE(GV, GVMap.lookup(GV));
+
+    // Global Variables.
+    for (auto *GVE : CUNode->getGlobalVariables())
+      GVMap[GVE->getVariable()].push_back({nullptr, GVE->getExpression()});
+    DenseSet<DIGlobalVariable *> Processed;
+    for (auto *GVE : CUNode->getGlobalVariables()) {
+      DIGlobalVariable *GV = GVE->getVariable();
+      if (Processed.insert(GV).second)
+        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
+
     for (auto *Ty : CUNode->getEnumTypes()) {
       // The enum types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
@@ -1155,18 +1184,14 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
       "endFunction should be called with the same function as beginFunction");
 
   const DISubprogram *SP = MF->getFunction()->getSubprogram();
-  if (!MMI->hasDebugInfo() || LScopes.empty() || !SP ||
+  if (!MMI->hasDebugInfo() || !SP ||
       SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug) {
-    // If we don't have a lexical scope for this function then there will
-    // be a hole in the range information. Keep note of this by setting the
-    // previously used section to nullptr.
+    // If we don't have a subprogram for this function then there will be a hole
+    // in the range information. Keep note of this by setting the previously
+    // used section to nullptr.
     PrevCU = nullptr;
     CurFn = nullptr;
     DebugHandlerBase::endFunction(MF);
-    // Mark functions with no debug info on any instructions, but a
-    // valid DISubprogram as processed.
-    if (SP)
-      ProcessedSPNodes.insert(SP);
     return;
   }
 
@@ -1174,7 +1199,7 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
 
   LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
-  SP = cast<DISubprogram>(FnScope->getScopeNode());
+  assert(!FnScope || SP == FnScope->getScopeNode());
   DwarfCompileUnit &TheCU = *CUMap.lookup(SP->getUnit());
 
   DenseSet<InlinedVariable> ProcessedVars;
@@ -1216,11 +1241,12 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
     constructAbstractSubprogramScopeDIE(AScope);
   }
 
-  TheCU.constructSubprogramScopeDIE(FnScope);
+  ProcessedSPNodes.insert(SP);
+  TheCU.constructSubprogramScopeDIE(SP, FnScope);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(FnScope);
+      SkelCU->constructSubprogramScopeDIE(SP, FnScope);
 
   // Clear debug info
   // Ownership of DbgVariables is a bit subtle - ScopeVariables owns all the

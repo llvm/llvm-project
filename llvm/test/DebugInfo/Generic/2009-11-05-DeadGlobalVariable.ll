@@ -18,7 +18,7 @@ entry:
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{!14}
-!14 = !DIGlobalVariable(name: "bar", line: 2, isLocal: true, isDefinition: true, scope: !5, file: !6, type: !9)
+!14 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "bar", line: 2, isLocal: true, isDefinition: true, scope: !5, file: !6, type: !9))
 !15 = !DILocation(line: 3, column: 3, scope: !16)
 !16 = distinct !DILexicalBlock(line: 1, column: 11, file: !17, scope: !5)
 !17 = !DIFile(filename: "fb.c", directory: "/private/tmp")

@@ -190,8 +190,7 @@ namespace llvm {
       MEMCPY,
 
       // Vector load N-element structure to all lanes:
-      VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
-      VLD2DUP,
+      VLD2DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
       VLD3DUP,
       VLD4DUP,
 
@@ -203,7 +202,6 @@ namespace llvm {
       VLD2LN_UPD,
       VLD3LN_UPD,
       VLD4LN_UPD,
-      VLD1DUP_UPD,
       VLD2DUP_UPD,
       VLD3DUP_UPD,
       VLD4DUP_UPD,
@@ -491,6 +489,9 @@ namespace llvm {
     bool hasStandaloneRem(EVT VT) const override {
       return HasStandaloneRem;
     }
+
+    CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
+    CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

@@ -34,7 +34,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -54,6 +54,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1275,10 +1276,10 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
 
     // If the debug loc for I1 and I2 are different, as we are combining them
     // into one instruction, we do not want to select debug loc randomly from 
-    // I1 or I2. Instead, we set the 0-line DebugLoc to note that we do not
-    // know the debug loc of the hoisted instruction.
+    // I1 or I2.
     if (!isa<CallInst>(I1) &&  I1->getDebugLoc() != I2->getDebugLoc())
-      I1->setDebugLoc(DebugLoc());
+      I1->setDebugLoc(
+          DILocation::getMergedLocation(I1->getDebugLoc(), I2->getDebugLoc()));
  
     I2->eraseFromParent();
     Changed = true;

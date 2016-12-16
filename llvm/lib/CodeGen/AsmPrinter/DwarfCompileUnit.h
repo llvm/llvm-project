@@ -91,9 +91,16 @@ public:
   /// Apply the DW_AT_stmt_list from this compile unit to the specified DIE.
   void applyStmtList(DIE &D);
 
-  /// getOrCreateGlobalVariableDIE - get or create global variable DIE.
-  DIE *getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
-                                    const GlobalVariable *Global);
+  /// A pair of GlobalVariable and DIExpression.
+  struct GlobalExpr {
+    const GlobalVariable *Var;
+    const DIExpression *Expr;
+  };
+
+  /// Get or create global variable DIE.
+  DIE *
+  getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
+                               ArrayRef<GlobalExpr> GlobalExprs);
 
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.
@@ -172,7 +179,7 @@ public:
                               unsigned *ChildScopeCount = nullptr);
 
   /// \brief Construct a DIE for this subprogram scope.
-  void constructSubprogramScopeDIE(LexicalScope *Scope);
+  void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 

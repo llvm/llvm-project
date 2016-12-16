@@ -13,7 +13,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!27}
-!0 = distinct !DISubprogram(name: "CGRectStandardize", linkageName: "CGRectStandardize", line: 54, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !1, scope: null)
+!0 = distinct !DISubprogram(name: "CGRectStandardize", linkageName: "CGRectStandardize", line: 54, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !1, scope: null, type: !28)
 !1 = !DIFile(filename: "GSFusedSilica.m", directory: "/Volumes/Data/Users/sabre/Desktop")
 !2 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 2.9 (trunk 115292)", isOptimized: true, runtimeVersion: 1, emissionKind: FullDebug, file: !25, enums: !26, retainedTypes: !26)
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "CGRect", line: 49, file: !25, baseType: null)
@@ -22,3 +22,5 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 !25 = !DIFile(filename: "GSFusedSilica.m", directory: "/Volumes/Data/Users/sabre/Desktop")
 !26 = !{}
 !27 = !{i32 1, !"Debug Info Version", i32 3}
+!28 = !DISubroutineType(types: !29)
+!29 = !{null}

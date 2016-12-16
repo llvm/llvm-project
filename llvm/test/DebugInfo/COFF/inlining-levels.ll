@@ -71,7 +71,7 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !11 = distinct !DISubprogram(name: "g", linkageName: "\01?g@@YAXXZ", scope: !1, file: !1, line: 6, type: !9, isLocal: true, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !12 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXXZ", scope: !1, file: !1, line: 2, type: !9, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !13 = !{!14}
-!14 = !DIGlobalVariable(name: "x", linkageName: "\01?x@@3HC", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true)
+!14 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", linkageName: "\01?x@@3HC", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true))
 !15 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
 !16 = !{i32 2, !"CodeView", i32 1}
 !17 = !{i32 2, !"Debug Info Version", i32 3}

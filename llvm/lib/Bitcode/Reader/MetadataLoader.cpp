@@ -994,12 +994,16 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
           DIGlobalVariable,
           (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-           getDITypeRefOrNull(Record[6]), Record[7], Record[8], Expr,
+           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
            getMDOrNull(Record[10]), AlignInBits));
-      MetadataList.assignValue(DGV, NextMetadataNo++);
 
-      if (Attach)
-        Attach->addDebugInfo(DGV);
+      if (Expr || Attach) {
+        auto *DGVE = DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
+        MetadataList.assignValue(DGVE, NextMetadataNo++);
+        if (Attach)
+          Attach->addDebugInfo(DGVE);
+      } else
+        MetadataList.assignValue(DGV, NextMetadataNo++);
 
       break;
     }
@@ -1047,6 +1051,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
           GET_OR_DISTINCT(DIExpression,
                           (Context, makeArrayRef(Record).slice(1))),
           NextMetadataNo++);
+      break;
+    }
+    case bitc::METADATA_GLOBAL_VAR_EXPR: {
+      if (Record.size() != 3)
+        return error("Invalid record");
+
+      IsDistinct = Record[0];
+      MetadataList.assignValue(GET_OR_DISTINCT(DIGlobalVariableExpression,
+                                               (Context, getMDOrNull(Record[1]),
+                                                getMDOrNull(Record[2]))),
+                               NextMetadataNo++);
       break;
     }
     case bitc::METADATA_OBJC_PROPERTY: {

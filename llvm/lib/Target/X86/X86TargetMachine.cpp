@@ -190,7 +190,7 @@ struct X86GISelActualAccessor : public GISelAccessor {
     //TODO: Implement
     return nullptr;
   }
-  const class LegalizerInfo *getLegalizerInfo() const override {
+  const LegalizerInfo *getLegalizerInfo() const override {
     //TODO: Implement
     return nullptr;
   }

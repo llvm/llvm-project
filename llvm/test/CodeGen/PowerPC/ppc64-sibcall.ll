@@ -142,7 +142,7 @@ define void @wo_hcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_hcaller:
-; CHECK-SCO: bl wo_hcallee
+; CHECK-SCO: b wo_hcallee
 }
 
 define weak_odr protected void @wo_pcallee(%class.T* %this, i8* %c) { ret void }
@@ -151,7 +151,7 @@ define void @wo_pcaller(%class.T* %this, i8* %c) {
   ret void
 
 ; CHECK-SCO-LABEL: wo_pcaller:
-; CHECK-SCO: bl wo_pcallee
+; CHECK-SCO: b wo_pcallee
 }
 
 define weak_odr void @wo_callee(%class.T* %this, i8* %c) { ret void }
@@ -169,7 +169,7 @@ define void @w_pcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_pcaller:
-; CHECK-SCO: bl w_pcallee
+; CHECK-SCO: b w_pcallee
 }
 
 define weak hidden void @w_hcallee(i8* %ptr) { ret void }
@@ -178,7 +178,7 @@ define void @w_hcaller(i8* %ptr) {
   ret void
 
 ; CHECK-SCO-LABEL: w_hcaller:
-; CHECK-SCO: bl w_hcallee
+; CHECK-SCO: b w_hcallee
 }
 
 define weak void @w_callee(i8* %ptr) { ret void }

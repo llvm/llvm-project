@@ -789,8 +789,10 @@ SDValue AMDGPUTargetLowering::LowerCall(CallLoweringInfo &CLI,
       Fn, "unsupported call to function " + FuncName, CLI.DL.getDebugLoc());
   DAG.getContext()->diagnose(NoCalls);
 
-  for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
-    InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+  if (!CLI.IsTailCall) {
+    for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
+      InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+  }
 
   return DAG.getEntryNode();
 }

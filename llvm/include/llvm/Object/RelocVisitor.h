@@ -86,6 +86,7 @@ private:
           return RelocToApply();
         }
       case Triple::aarch64:
+      case Triple::aarch64_be:
         switch (RelocType) {
         case llvm::ELF::R_AARCH64_ABS32:
           return visitELF_AARCH64_ABS32(R, Value);

@@ -1275,7 +1275,7 @@ define <2 x double> @test_mm_cvtsi32_sd(<2 x double> %a0, i32 %a1) nounwind {
 define <2 x i64> @test_mm_cvtsi32_si128(i32 %a0) nounwind {
 ; X32-LABEL: test_mm_cvtsi32_si128:
 ; X32:       # BB#0:
-; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtsi32_si128:
@@ -1523,12 +1523,12 @@ define <2 x i64> @test_mm_loadl_epi64(<2 x i64> %a0, <2 x i64>* %a1) nounwind {
 ; X32-LABEL: test_mm_loadl_epi64:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_loadl_epi64:
 ; X64:       # BB#0:
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %bc = bitcast <2 x i64>* %a1 to i64*
   %ld = load i64, i64* %bc, align 1
@@ -2326,7 +2326,7 @@ define <2 x double> @test_mm_set_pd(double %a0, double %a1) nounwind {
 define <2 x double> @test_mm_set_sd(double %a0) nounwind {
 ; X32-LABEL: test_mm_set_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X32-NEXT:    retl
 ;

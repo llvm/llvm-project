@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses -enable-cond-stores-vec -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s --check-prefix=INTER
+; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s --check-prefix=INTER
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
