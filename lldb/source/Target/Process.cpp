@@ -896,6 +896,7 @@ void Process::Finalize() {
   m_public_run_lock.SetStopped();
   m_private_run_lock.TrySetRunning(); // This will do nothing if already locked
   m_private_run_lock.SetStopped();
+  m_structured_data_plugin_map.clear();
   m_finalize_called = true;
 }
 
