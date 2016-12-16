@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 -std=c++14 -emit-llvm -o - %s
+// FIXME: Remove the next line after a bit; this test used to
+// write a .ll file and that confuses the bots. The next line
+// cleans that up.
+// RUN: rm -f %S/default-expr-arguments-3.ll
+// RUN: %clang_cc1 -std=c++14 -verify %s
 // expected-no-diagnostics
 
 namespace PR28795 {
