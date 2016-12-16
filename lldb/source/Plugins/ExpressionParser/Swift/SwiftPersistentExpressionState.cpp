@@ -139,21 +139,19 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
         auto *lhs_param = lhs_patterns[idx];
         auto *rhs_param = rhs_patterns[idx];
 
-        auto lhs_type = lhs_param->getType(context).getCanonicalTypeOrNull();
-        auto rhs_type = rhs_param->getType(context).getCanonicalTypeOrNull();
-        if (lhs_type != rhs_type) {
+        auto lhs_type = lhs_param->getInterfaceType(context);
+        auto rhs_type = rhs_param->getInterfaceType(context);
+        if (!lhs_type->isEqual(rhs_type)) {
           body_params_equal = false;
           break;
         }
       }
       if (body_params_equal) {
         // The bodies look the same, now try the return values:
-        swift::CanType lhs_result_type =
-            lhs_func_decl->getResultInterfaceType().getCanonicalTypeOrNull();
-        swift::CanType rhs_result_type =
-            rhs_func_decl->getResultInterfaceType().getCanonicalTypeOrNull();
+        auto lhs_result_type = lhs_func_decl->getResultInterfaceType();
+        auto rhs_result_type = rhs_func_decl->getResultInterfaceType();
 
-        if (lhs_result_type == rhs_result_type) {
+        if (lhs_result_type->isEqual(rhs_result_type)) {
           equivalent = true;
         }
       }
