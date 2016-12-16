@@ -378,7 +378,8 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 
 // Add sections that didn't match any sections command.
 template <class ELFT>
-void LinkerScript<ELFT>::addOrphanSections(OutputSectionFactory<ELFT> &Factory) {
+void LinkerScript<ELFT>::addOrphanSections(
+    OutputSectionFactory<ELFT> &Factory) {
   for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
     if (S->Live && !S->OutSec)
       addSection(Factory, S, getOutputSectionName(S->Name));
@@ -464,7 +465,11 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
   if (auto *AssignCmd = dyn_cast<SymbolAssignment>(&Base)) {
     if (AssignCmd->Name == ".") {
       // Update to location counter means update to section size.
-      Dot = AssignCmd->Expression(Dot);
+      uintX_t Val = AssignCmd->Expression(Dot);
+      if (Val < Dot)
+        error("unable to move location counter backward for: " +
+              CurOutSec->Name);
+      Dot = Val;
       CurOutSec->Size = Dot - CurOutSec->Addr;
       return;
     }
@@ -653,8 +658,7 @@ static bool shouldSkip(const BaseCommand &Cmd) {
 // Orphan sections are sections present in the input files which are not
 // explicitly placed into the output file by the linker script. This just
 // places them in the order already decided in OutputSections.
-template <class ELFT>
-void LinkerScript<ELFT>::placeOrphanSections() {
+template <class ELFT> void LinkerScript<ELFT>::placeOrphanSections() {
   // The OutputSections are already in the correct order.
   // This loops creates or moves commands as needed so that they are in the
   // correct order.
@@ -812,8 +816,7 @@ template <class ELFT> bool LinkerScript<ELFT>::ignoreInterpSection() {
          }) == Opt.PhdrsCommands.end();
 }
 
-template <class ELFT>
-uint32_t LinkerScript<ELFT>::getFiller(StringRef Name) {
+template <class ELFT> uint32_t LinkerScript<ELFT>::getFiller(StringRef Name) {
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
       if (Cmd->Name == Name)

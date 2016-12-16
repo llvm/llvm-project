@@ -4696,65 +4696,6 @@ struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
 
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
-
-// __propagate_value_category -- A utility for detecting the value category
-// of a given type and applying that value-category to another type.
-// For example applying the cv-ref quals of a derived type to form the
-// correctly cv-qualified base type.
-template <class _FromType>
-struct __propagate_value_category {
-  template <class _ToType> struct __checked_apply {
-    static_assert(!is_reference<_ToType>::value, "must be unqualified");
-    static_assert(!is_const<_ToType>::value
-               && !is_volatile<_ToType>::value, "must be unqualified");
-    using type = _ToType;
-  };
-  template <class _ToType>
-  using __apply = typename __checked_apply<_ToType>::type;
-};
-
-template <class _FromType>
-struct __propagate_value_category<_FromType&> {
-  template <class _ToType>
-  using __apply = typename add_lvalue_reference<
-    typename __propagate_value_category<_FromType>::template __apply<_ToType>
-  >::type;
-};
-
-template <class _FromType>
-struct __propagate_value_category<_FromType&&> {
-  template <class _ToType>
-  using __apply = typename add_rvalue_reference<
-    typename __propagate_value_category<_FromType>::template __apply<_ToType>
-  >::type;
-};
-
-template <class _FromType>
-struct __propagate_value_category<_FromType const> {
-  template <class _ToType>
-  using __apply = typename add_const<
-    typename __propagate_value_category<_FromType>::template __apply<_ToType>
-  >::type;
-};
-
-template <class _FromType>
-struct __propagate_value_category<_FromType volatile> {
-  template <class _ToType>
-  using __apply = typename add_volatile<
-    typename __propagate_value_category<_FromType>::template __apply<_ToType>
-  >::type;
-};
-
-template <class _FromType>
-struct __propagate_value_category<_FromType const volatile> {
-  template <class _ToType>
-  using __apply = typename add_cv<
-    typename __propagate_value_category<_FromType>::template __apply<_ToType>
-  >::type;
-};
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_TYPE_TRAITS

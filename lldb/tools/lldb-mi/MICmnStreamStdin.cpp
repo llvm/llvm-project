@@ -9,7 +9,7 @@
 
 // Third Party Headers
 #ifdef _MSC_VER
-#include <Windows.h>
+#include <windows.h>
 #endif
 #include <string.h> // For std::strerror()
 

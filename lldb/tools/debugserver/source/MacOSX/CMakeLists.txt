@@ -36,7 +36,7 @@ set(DEBUGSERVER_USED_LIBS
   lldbDebugserverMacOSX_DarwinLog
   )
 
-add_lldb_executable(debugserver INCLUDE_IN_FRAMEWORK
+add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
   HasAVX.s
   CFBundle.cpp
   CFString.cpp
@@ -78,7 +78,3 @@ if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
 endif()
-
-install(TARGETS debugserver
-  RUNTIME DESTINATION bin
-  )

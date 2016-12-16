@@ -555,19 +555,13 @@ class _LIBCPP_TYPE_VIS_ONLY tuple
     {
         template <class _Tuple>
         static constexpr bool __enable_implicit() {
-            using _Deduced = __deduce_tuple_like<_Tuple>;
-            using _QualType = typename _Deduced::_QualType;
-            static_assert(__tuple_like<typename _Deduced::_RawType>::value, "");
-            return __tuple_convertible<_QualType, tuple>::value;
+            return __tuple_convertible<_Tuple, tuple>::value;
         }
 
         template <class _Tuple>
         static constexpr bool __enable_explicit() {
-            using _Deduced = __deduce_tuple_like<_Tuple>;
-            using _QualType = typename _Deduced::_QualType;
-            static_assert(__tuple_like<typename _Deduced::_RawType>::value, "");
-            return __tuple_constructible<_QualType, tuple>::value
-               && !__tuple_convertible<_QualType, tuple>::value;
+            return __tuple_constructible<_Tuple, tuple>::value
+               && !__tuple_convertible<_Tuple, tuple>::value;
         }
     };
 
@@ -820,74 +814,66 @@ public:
                     _VSTD::forward<_Up>(__u)...) {}
 
     template <class _Tuple,
-              class _Deduced = __deduce_tuple_like<_Tuple>,
-              class _TupBase = typename _Deduced::_QualType,
               typename enable_if
                       <
                          _CheckTupleLikeConstructor<
-                            _Deduced::_Size == sizeof...(_Tp)
-                             && !_PackExpandsToThisTuple<_TupBase>::value
-                         >::template __enable_implicit<_TupBase>(),
+                             __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
+                             && !_PackExpandsToThisTuple<_Tuple>::value
+                         >::template __enable_implicit<_Tuple>(),
                          bool
                       >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-        tuple(_Tuple&& __t) _NOEXCEPT_((is_nothrow_constructible<base, _TupBase>::value))
-            : base_(_VSTD::forward<_TupBase>(__t)) {}
+        tuple(_Tuple&& __t) _NOEXCEPT_((is_nothrow_constructible<base, _Tuple>::value))
+            : base_(_VSTD::forward<_Tuple>(__t)) {}
 
     template <class _Tuple,
-              class _Deduced = __deduce_tuple_like<_Tuple>,
-              class _TupBase = typename _Deduced::_QualType,
               typename enable_if
                       <
                          _CheckTupleLikeConstructor<
-                              _Deduced::_Size == sizeof...(_Tp)
-                             && !_PackExpandsToThisTuple<_TupBase>::value
-                         >::template __enable_explicit<_TupBase>(),
+                             __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
+                             && !_PackExpandsToThisTuple<_Tuple>::value
+                         >::template __enable_explicit<_Tuple>(),
                          bool
                       >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit
-        tuple(_Tuple&& __t) _NOEXCEPT_((is_nothrow_constructible<base, _TupBase>::value))
-            : base_(_VSTD::forward<_TupBase>(__t)) {}
+        tuple(_Tuple&& __t) _NOEXCEPT_((is_nothrow_constructible<base, _Tuple>::value))
+            : base_(_VSTD::forward<_Tuple>(__t)) {}
 
     template <class _Alloc, class _Tuple,
-              class _Deduced = __deduce_tuple_like<_Tuple>,
-              class _TupBase = typename _Deduced::_QualType,
               typename enable_if
                       <
                          _CheckTupleLikeConstructor<
-                             _Deduced::_Size == sizeof...(_Tp)
-                         >::template __enable_implicit<_TupBase>(),
+                             __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
+                         >::template __enable_implicit<_Tuple>(),
                          bool
                       >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY
         tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
-            : base_(allocator_arg_t(), __a, _VSTD::forward<_TupBase>(__t)) {}
+            : base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
 
     template <class _Alloc, class _Tuple,
-              class _Deduced = __deduce_tuple_like<_Tuple>,
-              class _TupBase = typename _Deduced::_QualType,
               typename enable_if
                       <
                          _CheckTupleLikeConstructor<
-                             _Deduced::_Size == sizeof...(_Tp)
-                         >::template __enable_explicit<_TupBase>(),
+                             __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
+                         >::template __enable_explicit<_Tuple>(),
                          bool
                       >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY
         explicit
         tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
-            : base_(allocator_arg_t(), __a, _VSTD::forward<_TupBase>(__t)) {}
+            : base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
 
     using _CanCopyAssign = __all<is_copy_assignable<_Tp>::value...>;
     using _CanMoveAssign = __all<is_move_assignable<_Tp>::value...>;
 
     _LIBCPP_INLINE_VISIBILITY
-    tuple& operator=(typename conditional<_CanCopyAssign::value, tuple const&, __nat>::type const& __t)
+    tuple& operator=(typename conditional<_CanCopyAssign::value, tuple, __nat>::type const& __t)
         _NOEXCEPT_((__all<is_nothrow_copy_assignable<_Tp>::value...>::value))
     {
         base_.operator=(__t.base_);
@@ -903,19 +889,16 @@ public:
     }
 
     template <class _Tuple,
-              class _Deduced = __deduce_tuple_like<_Tuple>,
-              class _TupBase = typename _Deduced::_QualType,
               class = typename enable_if
                       <
-                         __tuple_assignable<_TupBase, tuple>::value
+                         __tuple_assignable<_Tuple, tuple>::value
                       >::type
              >
         _LIBCPP_INLINE_VISIBILITY
         tuple&
-        operator=(_Tuple&& __t)
-          _NOEXCEPT_((is_nothrow_assignable<base&, _TupBase>::value))
+        operator=(_Tuple&& __t) _NOEXCEPT_((is_nothrow_assignable<base&, _Tuple>::value))
         {
-            base_.operator=(_VSTD::forward<_TupBase>(__t));
+            base_.operator=(_VSTD::forward<_Tuple>(__t));
             return *this;
         }
 

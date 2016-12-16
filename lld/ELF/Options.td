@@ -283,6 +283,8 @@ def alias_Tdata: J<"Tdata=">, Alias<Tdata>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
 def alias_Ttext: J<"Ttext=">, Alias<Ttext>;
+def alias_Ttext_segment: S<"Ttext-segment">, Alias<Ttext>;
+def alias_Ttext_segment_eq: J<"Ttext-segment=">, Alias<Ttext>;
 def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;

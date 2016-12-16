@@ -393,6 +393,11 @@ struct Symbol {
   // True if this symbol was referenced by a regular (non-bitcode) object.
   unsigned IsUsedInRegularObj : 1;
 
+  // True if we've seen both a lazy and an undefined symbol with this symbol
+  // name, which means that we have enqueued an archive member load and should
+  // not load any more archive members to resolve the same symbol.
+  unsigned PendingArchiveLoad : 1;
+
   // This field is used to store the Symbol's SymbolBody. This instantiation of
   // AlignedCharArrayUnion gives us a struct with a char array field that is
   // large and aligned enough to store any derived class of SymbolBody.
