@@ -438,7 +438,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
               if (var_decl->hasStorage() && !var_decl->isStatic()) {
                 MemberInfo member_info(MemberType::Field);
                 member_info.clang_type = CompilerType(
-                    GetASTContext(), var_decl->getType().getPointer());
+                    GetASTContext(), var_decl->getInterfaceType().getPointer());
                 member_info.byte_size =
                     member_info.clang_type.GetByteSize(nullptr);
                 member_info.is_fragile =
@@ -4154,8 +4154,8 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
     switch (decl->getKind()) {
     case swift::DeclKind::TypeAlias: {
       swift::TypeAliasDecl *alias_decl = llvm::cast<swift::TypeAliasDecl>(decl);
-      if (alias_decl->getAliasType()) {
-        swift::Type swift_type = alias_decl->getAliasType();
+      if (alias_decl->hasInterfaceType()) {
+        swift::Type swift_type = alias_decl->getDeclaredInterfaceType();
         return CompilerType(ast, swift_type.getPointer());
       }
       break;
@@ -4237,8 +4237,8 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::TypeAlias: {
       swift::TypeAliasDecl *alias_decl =
           llvm::dyn_cast_or_null<swift::TypeAliasDecl>(decl);
-      if (alias_decl->getAliasType()) {
-        swift::Type swift_type = alias_decl->getAliasType();
+      if (alias_decl->hasInterfaceType()) {
+        swift::Type swift_type = alias_decl->getDeclaredInterfaceType();
         return CompilerType(ast, swift_type.getPointer());
       }
     } break;
