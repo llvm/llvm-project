@@ -5,6 +5,7 @@ entry:
   call <2 x float> @_Z4cbrtDv2_f(<2 x float> %p2)
   call <3 x float> @_Z3madDv3_fS_S_(<3 x float> %p3, <3 x float> %p3, <3 x float> %p3)
   call <4 x float> @_Z4fmaxDv4_ff(<4 x float> %p4, float %p1)
+  call <2 x half> @_Z5clampDv2_DhDhDh( <2 x half> <half 0xH0000, half 0xH3C00>, half 0xH0000, half 0xH3C00)
   ret void
 }
 
@@ -56,3 +57,14 @@ declare <3 x float> @_Z3madDv3_fS_S_(<3 x float>, <3 x float>, <3 x float>)
 declare <4 x float> @_Z4fmaxDv4_ff(<4 x float>, float)
 ; CHECK: declare float @_Z4fmaxff(float, float)
 ; CHECK-NOT: declare <2 x float> @_Z4fmaxDv2_ff(<2 x float>, float)
+
+; CHECK: define weak <2 x half> @_Z5clampDv2_DhDhDh(<2 x half> %_p1, half %_p2, half %_p3)
+; CHECK: %lo.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
+; CHECK: %[[var13:[0-9]+]] = insertelement <2 x half> undef, half %lo.call, i32 0
+; CHECK: %hi.call = call half @_Z5clampDhDhDh(half %{{[0-9]+}}, half %_p2, half %_p3)
+; CHECK: %[[var14:[0-9]+]] = insertelement <2 x half> %[[var13]], half %hi.call, i32 1
+; CHECK: ret <2 x half> %[[var14]]
+
+declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)
+; CHECK: declare half @_Z5clampDhDhDh(half, half, half)
+; CHECK-NOT: declare <2 x half> @_Z5clampDv2_DhDhDh(<2 x half>, half, half)
