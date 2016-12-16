@@ -280,11 +280,12 @@ StringRef LinkerDriver::doFindLib(StringRef Filename) {
 Optional<StringRef> LinkerDriver::findLib(StringRef Filename) {
   if (Config->NoDefaultLibAll)
     return None;
+  if (!VisitedLibs.insert(Filename.lower()).second)
+    return None;
   StringRef Path = doFindLib(Filename);
   if (Config->NoDefaultLibs.count(Path))
     return None;
-  bool Seen = !VisitedFiles.insert(Path.lower()).second;
-  if (Seen)
+  if (!VisitedFiles.insert(Path.lower()).second)
     return None;
   return Path;
 }

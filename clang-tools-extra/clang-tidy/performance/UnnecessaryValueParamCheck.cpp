@@ -47,6 +47,17 @@ bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
   return !Matches.empty();
 }
 
+bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Stmt &Stmt,
+                         ASTContext &Context) {
+  auto Matches =
+      match(findAll(declRefExpr(
+                equalsNode(&DeclRef),
+                unless(hasAncestor(stmt(anyOf(forStmt(), cxxForRangeStmt(),
+                                              whileStmt(), doStmt())))))),
+            Stmt, Context);
+  return Matches.empty();
+}
+
 } // namespace
 
 UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
@@ -105,6 +116,8 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   if (!IsConstQualified) {
     auto CanonicalType = Param->getType().getCanonicalType();
     if (AllDeclRefExprs.size() == 1 &&
+        !hasLoopStmtAncestor(**AllDeclRefExprs.begin(), *Function->getBody(),
+                             *Result.Context) &&
         ((utils::type_traits::hasNonTrivialMoveConstructor(CanonicalType) &&
           utils::decl_ref_expr::isCopyConstructorArgument(
               **AllDeclRefExprs.begin(), *Function->getBody(),

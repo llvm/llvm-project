@@ -8534,12 +8534,10 @@ void Sema::PushUsingDirective(Scope *S, UsingDirectiveDecl *UDir) {
 
 Decl *Sema::ActOnUsingDeclaration(Scope *S,
                                   AccessSpecifier AS,
-                                  bool HasUsingKeyword,
                                   SourceLocation UsingLoc,
                                   CXXScopeSpec &SS,
                                   UnqualifiedId &Name,
                                   AttributeList *AttrList,
-                                  bool HasTypenameKeyword,
                                   SourceLocation TypenameLoc) {
   assert(S->getFlags() & Scope::DeclScope && "Invalid Scope.");
 
@@ -8581,7 +8579,7 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S,
     return nullptr;
 
   // Warn about access declarations.
-  if (!HasUsingKeyword) {
+  if (UsingLoc.isInvalid()) {
     Diag(Name.getLocStart(),
          getLangOpts().CPlusPlus11 ? diag::err_access_decl
                                    : diag::warn_access_decl_deprecated)
@@ -8595,7 +8593,7 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S,
   NamedDecl *UD = BuildUsingDeclaration(S, AS, UsingLoc, SS,
                                         TargetNameInfo, AttrList,
                                         /* IsInstantiation */ false,
-                                        HasTypenameKeyword, TypenameLoc);
+                                        TypenameLoc.isValid(), TypenameLoc);
   if (UD)
     PushOnScopeChains(UD, S, /*AddToContext*/ false);
 

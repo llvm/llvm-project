@@ -74,6 +74,8 @@ public:
 
   void ModulesDidLoad(Process &process, ModuleList &module_list) override;
 
+  ~StructuredDataDarwinLog();
+
 private:
   // -------------------------------------------------------------------------
   // Private constructors
@@ -129,6 +131,7 @@ private:
   bool m_is_enabled;
   std::mutex m_added_breakpoint_mutex;
   bool m_added_breakpoint;
+  lldb::user_id_t m_breakpoint_id;
 };
 }
 

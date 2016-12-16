@@ -32,7 +32,9 @@ public:
 // why the definition of "a" comes before the declarations while
 // "b" and "c" come after.
 
-// CHECK: [[A]] = distinct !DIGlobalVariable(name: "a", {{.*}} declaration: ![[DECL_A:[0-9]+]])
+// CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AV:.*]])
+// CHECK: [[AV]] = distinct !DIGlobalVariable(name: "a",
+// CHECK-SAME:                                declaration: ![[DECL_A:[0-9]+]])
 //
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "X"{{.*}}, identifier: "_ZTS1X")
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "anon_static_decl_struct"
@@ -43,7 +45,9 @@ public:
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_decl_templ_var"
 
 int C::a = 4;
-// CHECK: [[B]] = distinct !DIGlobalVariable(name: "b", {{.*}} declaration: ![[DECL_B:[0-9]+]])
+// CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BV:.*]])
+// CHECK: [[BV]] = distinct !DIGlobalVariable(name: "b",
+// CHECK-SAME:                                declaration: ![[DECL_B:[0-9]+]])
 // CHECK: ![[DECL_B]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
 // CHECK-NOT:                                 size:
 // CHECK-NOT:                                 align:
@@ -89,7 +93,8 @@ int C::a = 4;
 // CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember)
 
 int C::b = 2;
-// CHECK: [[C]] = distinct !DIGlobalVariable(name: "c", {{.*}} declaration: ![[DECL_C]])
+// CHECK: [[C]] = !DIGlobalVariableExpression(var: [[CV:.*]])
+// CHECK: [[CV]] = distinct !DIGlobalVariable(name: "c", {{.*}} declaration: ![[DECL_C]])
 int C::c = 1;
 
 int main()

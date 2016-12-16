@@ -180,14 +180,43 @@ namespace LLVM.ClangFormat
             var commandService = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
             if (commandService != null)
             {
-                var menuCommandID = new CommandID(GuidList.guidClangFormatCmdSet, (int)PkgCmdIDList.cmdidClangFormat);
-                var menuItem = new MenuCommand(MenuItemCallback, menuCommandID);
-                commandService.AddCommand(menuItem);
+                {
+                    var menuCommandID = new CommandID(GuidList.guidClangFormatCmdSet, (int)PkgCmdIDList.cmdidClangFormatSelection);
+                    var menuItem = new MenuCommand(MenuItemCallback, menuCommandID);
+                    commandService.AddCommand(menuItem);
+                }
+
+                {
+                    var menuCommandID = new CommandID(GuidList.guidClangFormatCmdSet, (int)PkgCmdIDList.cmdidClangFormatDocument);
+                    var menuItem = new MenuCommand(MenuItemCallback, menuCommandID);
+                    commandService.AddCommand(menuItem);
+                }
             }
         }
         #endregion
 
         private void MenuItemCallback(object sender, EventArgs args)
+        {
+            var mc = sender as System.ComponentModel.Design.MenuCommand;
+            if (mc == null)
+                return;
+
+            switch (mc.CommandID.ID)
+            {
+                case (int)PkgCmdIDList.cmdidClangFormatSelection:
+                    FormatSelection();
+                    break;
+
+                case (int)PkgCmdIDList.cmdidClangFormatDocument:
+                    FormatDocument();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Runs clang-format on the current selection
+        /// </summary>
+        private void FormatSelection()
         {
             IWpfTextView view = GetCurrentView();
             if (view == null)
@@ -197,24 +226,40 @@ namespace LLVM.ClangFormat
             int start = view.Selection.Start.Position.GetContainingLine().Start.Position;
             int end = view.Selection.End.Position.GetContainingLine().End.Position;
             int length = end - start;
+            
             // clang-format doesn't support formatting a range that starts at the end
             // of the file.
             if (start >= text.Length && text.Length > 0)
                 start = text.Length - 1;
             string path = GetDocumentParent(view);
             string filePath = GetDocumentPath(view);
+
+            RunClangFormatAndApplyReplacements(text, start, length, path, filePath, view);
+        }
+
+        /// <summary>
+        /// Runs clang-format on the current document
+        /// </summary>
+        private void FormatDocument()
+        {
+            IWpfTextView view = GetCurrentView();
+            if (view == null)
+                // We're not in a text view.
+                return;
+
+            string filePath = GetDocumentPath(view);
+            var path = Path.GetDirectoryName(filePath);
+            string text = view.TextBuffer.CurrentSnapshot.GetText();
+
+            RunClangFormatAndApplyReplacements(text, 0, text.Length, path, filePath, view);
+        }
+
+        private void RunClangFormatAndApplyReplacements(string text, int offset, int length, string path, string filePath, IWpfTextView view)
+        {
             try
             {
-                var root = XElement.Parse(RunClangFormat(text, start, length, path, filePath));
-                var edit = view.TextBuffer.CreateEdit();
-                foreach (XElement replacement in root.Descendants("replacement"))
-                {
-                    var span = new Span(
-                        int.Parse(replacement.Attribute("offset").Value),
-                        int.Parse(replacement.Attribute("length").Value));
-                    edit.Replace(span, replacement.Value);
-                }
-                edit.Apply();
+                string replacements = RunClangFormat(text, offset, length, path, filePath);
+                ApplyClangFormatReplacements(replacements, view);
             }
             catch (Exception e)
             {
@@ -302,6 +347,27 @@ namespace LLVM.ClangFormat
                 throw new Exception(process.StandardError.ReadToEnd());
             }
             return output;
+        }
+
+        /// <summary>
+        /// Applies the clang-format replacements (xml) to the current view
+        /// </summary>
+        private void ApplyClangFormatReplacements(string replacements, IWpfTextView view)
+        {
+            // clang-format returns no replacements if input text is empty
+            if (replacements.Length == 0)
+                return;
+
+            var root = XElement.Parse(replacements);
+            var edit = view.TextBuffer.CreateEdit();
+            foreach (XElement replacement in root.Descendants("replacement"))
+            {
+                var span = new Span(
+                    int.Parse(replacement.Attribute("offset").Value),
+                    int.Parse(replacement.Attribute("length").Value));
+                edit.Replace(span, replacement.Value);
+            }
+            edit.Apply();
         }
 
         /// <summary>

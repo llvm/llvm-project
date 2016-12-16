@@ -538,6 +538,34 @@ void test_builtin_os_log_precision_width(void *buf, const char *data,
   __builtin_os_log_format(buf, "Hello %*.*s World", precision, width, data);
 }
 
+// CHECK-LABEL: define void @test_builtin_os_log_invalid
+// CHECK: (i8* [[BUF:%.*]], i32 [[DATA:%.*]])
+void test_builtin_os_log_invalid(void *buf, int data) {
+  volatile int len;
+  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
+  // CHECK: store i32 [[DATA]], i32* [[DATA_ADDR:%.*]]
+
+  // CHECK: store volatile i32 8,
+  len = __builtin_os_log_format_buffer_size("invalid specifier %: %d even a trailing one%", data);
+
+  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
+  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
+  // CHECK: store i8 0, i8* [[SUMMARY]]
+  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
+  // CHECK: store i8 1, i8* [[NUM_ARGS]]
+
+  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
+  // CHECK: store i8 0, i8* [[ARG1_DESC]]
+  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
+  // CHECK: store i8 4, i8* [[ARG1_SIZE]]
+  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
+  // CHECK: [[ARG1_INT:%.*]] = bitcast i8* [[ARG1]] to i32*
+  // CHECK: [[ARG1_VAL:%.*]] = load i32, i32* [[DATA_ADDR]]
+  // CHECK: store i32 [[ARG1_VAL]], i32* [[ARG1_INT]]
+
+  __builtin_os_log_format(buf, "invalid specifier %: %d even a trailing one%", data);
+}
+
 // CHECK-LABEL: define void @test_builtin_os_log_percent
 // CHECK: (i8* [[BUF:%.*]], i8* [[DATA1:%.*]], i8* [[DATA2:%.*]])
 // Check that the %% which does not consume any argument is correctly handled
