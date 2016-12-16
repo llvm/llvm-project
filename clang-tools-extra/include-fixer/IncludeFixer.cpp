@@ -153,8 +153,8 @@ bool IncludeFixerSemaSource::MaybeDiagnoseMissingCompleteType(
     return false;
 
   clang::ASTContext &context = CI->getASTContext();
-  std::string QueryString =
-      T.getUnqualifiedType().getAsString(context.getPrintingPolicy());
+  std::string QueryString = QualType(T->getUnqualifiedDesugaredType(), 0)
+                                .getAsString(context.getPrintingPolicy());
   DEBUG(llvm::dbgs() << "Query missing complete type '" << QueryString << "'");
   // Pass an empty range here since we don't add qualifier in this case.
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =

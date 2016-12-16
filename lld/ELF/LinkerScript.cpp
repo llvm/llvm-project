@@ -1736,7 +1736,14 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ASSERT")
     return readAssert();
   if (Tok == "ALIGN") {
-    Expr E = readParenExpr();
+    expect("(");
+    Expr E = readExpr();
+    if (consume(",")) {
+      Expr E2 = readExpr();
+      expect(")");
+      return [=](uint64_t Dot) { return alignTo(E(Dot), E2(Dot)); };
+    }
+    expect(")");
     return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
   }
   if (Tok == "CONSTANT") {

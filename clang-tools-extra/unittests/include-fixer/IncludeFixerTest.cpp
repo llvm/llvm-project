@@ -136,6 +136,10 @@ TEST(IncludeFixer, IncompleteType) {
       "namespace std {\nclass string;\n}\nstd::string foo;\n",
       runIncludeFixer("#include \"foo.h\"\n"
                       "namespace std {\nclass string;\n}\nstring foo;\n"));
+
+  EXPECT_EQ("#include <string>\n"
+            "class string;\ntypedef string foo;\nfoo f;\n",
+            runIncludeFixer("class string;\ntypedef string foo;\nfoo f;\n"));
 }
 
 TEST(IncludeFixer, MinimizeInclude) {
