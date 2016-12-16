@@ -359,7 +359,7 @@ define void @v7i32(<4 x i32> %a, <4 x i32> %b, <7 x i32>* %p) nounwind {
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,3,2]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,0,3]
-; AVX1-NEXT:    vmovd %xmm1, 24(%rdi)
+; AVX1-NEXT:    vmovss %xmm1, 24(%rdi)
 ; AVX1-NEXT:    vmovlps %xmm0, 16(%rdi)
 ; AVX1-NEXT:    vmovaps %xmm2, (%rdi)
 ; AVX1-NEXT:    retq
@@ -1102,28 +1102,28 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; SSE2-LABEL: interleave_24i32_out:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    movdqu 80(%rdi), %xmm8
-; SSE2-NEXT:    movdqu 64(%rdi), %xmm10
-; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    movdqu 16(%rdi), %xmm7
+; SSE2-NEXT:    movups 64(%rdi), %xmm10
+; SSE2-NEXT:    movups (%rdi), %xmm0
+; SSE2-NEXT:    movups 16(%rdi), %xmm7
 ; SSE2-NEXT:    movdqu 32(%rdi), %xmm9
-; SSE2-NEXT:    movdqu 48(%rdi), %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,3]
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm3 = xmm3[1],xmm7[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm9[0,1,0,1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[3,0],xmm3[2,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm6[2,0]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[0,1,0,3]
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm6 = xmm6[1],xmm10[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[0,1,0,1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,0],xmm6[2,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm1[2,0]
+; SSE2-NEXT:    movups 48(%rdi), %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,3],xmm10[2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm8[0,1,0,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,0],xmm3[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm5[2,0]
+; SSE2-NEXT:    movaps %xmm0, %xmm5
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,3],xmm7[2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm9[0,1,0,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,0],xmm5[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm1[2,0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm7[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm7[3,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[0,1,2,2]
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,0],xmm0[2,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm5[2,0]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm9[0,1,2,2]
+; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[3,0],xmm0[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm6[2,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm10[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm10[3,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm8[0,1,2,2]
@@ -1134,11 +1134,11 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm9[0,1,0,3]
 ; SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm1[0],xmm4[1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm10[1,1,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[0,1,0,3]
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm5[0],xmm1[1]
-; SSE2-NEXT:    movups %xmm6, 16(%rsi)
-; SSE2-NEXT:    movups %xmm3, (%rsi)
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm6[0],xmm1[1]
+; SSE2-NEXT:    movups %xmm3, 16(%rsi)
+; SSE2-NEXT:    movups %xmm5, (%rsi)
 ; SSE2-NEXT:    movups %xmm2, 16(%rdx)
 ; SSE2-NEXT:    movups %xmm0, (%rdx)
 ; SSE2-NEXT:    movupd %xmm1, 16(%rcx)
@@ -1147,40 +1147,40 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ;
 ; SSE42-LABEL: interleave_24i32_out:
 ; SSE42:       # BB#0:
-; SSE42-NEXT:    movdqu 80(%rdi), %xmm8
-; SSE42-NEXT:    movdqu 64(%rdi), %xmm1
-; SSE42-NEXT:    movdqu (%rdi), %xmm5
-; SSE42-NEXT:    movdqu 16(%rdi), %xmm6
-; SSE42-NEXT:    movdqu 32(%rdi), %xmm2
-; SSE42-NEXT:    movdqu 48(%rdi), %xmm4
-; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[0,3,2,3]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm7 = xmm7[0,1,2,3],xmm6[4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,1,0,1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm7[0,1,2,3,4,5],xmm3[6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[0,3,2,3]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm7 = xmm7[0,1,2,3],xmm1[4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm8[0,1,0,1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm7[0,1,2,3,4,5],xmm0[6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm2[0,1,2,2]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,0,1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm7 = xmm7[0,1],xmm6[2,3],xmm7[4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm5[2,3],xmm6[4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[1,0,3,3]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm5 = xmm5[0,1,2,3,4,5],xmm9[6,7]
+; SSE42-NEXT:    movdqu 80(%rdi), %xmm9
+; SSE42-NEXT:    movdqu 64(%rdi), %xmm10
+; SSE42-NEXT:    movdqu (%rdi), %xmm4
+; SSE42-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE42-NEXT:    movdqu 32(%rdi), %xmm11
+; SSE42-NEXT:    movdqu 48(%rdi), %xmm5
+; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm11[0,1,0,1]
+; SSE42-NEXT:    movdqa %xmm2, %xmm7
+; SSE42-NEXT:    pblendw {{.*#+}} xmm7 = xmm7[0,1],xmm4[2,3],xmm7[4,5,6,7]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,3,0,1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm1[2,3],xmm6[4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5,6,7]
+; SSE42-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3],xmm2[2,3]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,5],xmm8[6,7]
+; SSE42-NEXT:    movdqa %xmm10, %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm5[2,3],xmm1[4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,0,1]
+; SSE42-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,3],xmm10[2,3]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm9[0,1,0,1]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm5[0,1,2,3,4,5],xmm3[6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm11[0,1,2,2]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[1,0,3,3]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm7 = xmm7[0,1,2,3,4,5],xmm5[6,7]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,0,3,3]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm8[0,1,2,2]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm1[0,1,2,3,4,5],xmm4[6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,1,0,3]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm7[0,1,2,3],xmm1[4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm8[0,1,0,3]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm6[0,1,2,3],xmm2[4,5,6,7]
-; SSE42-NEXT:    movdqu %xmm0, 16(%rsi)
-; SSE42-NEXT:    movdqu %xmm3, (%rsi)
-; SSE42-NEXT:    movdqu %xmm4, 16(%rdx)
-; SSE42-NEXT:    movdqu %xmm5, (%rdx)
+; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm9[0,1,2,2]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm5 = xmm1[0,1,2,3,4,5],xmm5[6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm2[2,3],xmm6[4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm11[0,1,0,3]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm6[0,1,2,3],xmm1[4,5,6,7]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm10[2,3],xmm0[4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm9[0,1,0,3]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE42-NEXT:    movdqu %xmm3, 16(%rsi)
+; SSE42-NEXT:    movdqu %xmm4, (%rsi)
+; SSE42-NEXT:    movdqu %xmm5, 16(%rdx)
+; SSE42-NEXT:    movdqu %xmm7, (%rdx)
 ; SSE42-NEXT:    movdqu %xmm2, 16(%rcx)
 ; SSE42-NEXT:    movdqu %xmm1, (%rcx)
 ; SSE42-NEXT:    retq

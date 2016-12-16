@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -68,9 +67,6 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
   /// The TargetTransformInfo available for this compilation.
   const TargetTransformInfo &TTI;
-
-  /// Getter for the cache of @llvm.assume intrinsics.
-  std::function<AssumptionCache &(Function &)> &GetAssumptionCache;
 
   /// Profile summary information.
   ProfileSummaryInfo *PSI;
@@ -201,20 +197,19 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
 public:
   CallAnalyzer(const TargetTransformInfo &TTI,
-               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
                ProfileSummaryInfo *PSI, Function &Callee, CallSite CSArg,
                const InlineParams &Params)
-      : TTI(TTI), GetAssumptionCache(GetAssumptionCache), PSI(PSI), F(Callee),
-        CandidateCS(CSArg), Params(Params), Threshold(Params.DefaultThreshold),
-        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
-        ExposesReturnsTwice(false), HasDynamicAlloca(false),
-        ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
-        NumVectorInstructions(0), FiftyPercentVectorBonus(0),
-        TenPercentVectorBonus(0), VectorBonus(0), NumConstantArgs(0),
-        NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
-        NumConstantPtrDiffs(0), NumInstructionsSimplified(0),
-        SROACostSavings(0), SROACostSavingsLost(0) {}
+      : TTI(TTI), PSI(PSI), F(Callee), CandidateCS(CSArg), Params(Params),
+        Threshold(Params.DefaultThreshold), Cost(0), IsCallerRecursive(false),
+        IsRecursiveCall(false), ExposesReturnsTwice(false),
+        HasDynamicAlloca(false), ContainsNoDuplicateCall(false),
+        HasReturn(false), HasIndirectBr(false), HasFrameEscape(false),
+        AllocatedSize(0), NumInstructions(0), NumVectorInstructions(0),
+        FiftyPercentVectorBonus(0), TenPercentVectorBonus(0), VectorBonus(0),
+        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
+        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
+        NumInstructionsSimplified(0), SROACostSavings(0),
+        SROACostSavingsLost(0) {}
 
   bool analyzeCall(CallSite CS);
 
@@ -962,7 +957,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // out. Pretend to inline the function, with a custom threshold.
   auto IndirectCallParams = Params;
   IndirectCallParams.DefaultThreshold = InlineConstants::IndirectCallThreshold;
-  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F, CS, IndirectCallParams);
+  CallAnalyzer CA(TTI, PSI, *F, CS, IndirectCallParams);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // threshold to get the bonus we want to apply, but don't go below zero.
@@ -1318,7 +1313,7 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // the ephemeral values multiple times (and they're completely determined by
   // the callee, so this is purely duplicate work).
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F), EphValues);
+  CodeMetrics::collectEphemeralValues(&F, EphValues);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -1451,17 +1446,13 @@ static bool functionsHaveCompatibleAttributes(Function *Caller,
 
 InlineCost llvm::getInlineCost(
     CallSite CS, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
-    std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     ProfileSummaryInfo *PSI) {
-  return getInlineCost(CS, CS.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, PSI);
+  return getInlineCost(CS, CS.getCalledFunction(), Params, CalleeTTI, PSI);
 }
 
 InlineCost llvm::getInlineCost(
     CallSite CS, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
-    std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
-    ProfileSummaryInfo *PSI) {
+    TargetTransformInfo &CalleeTTI, ProfileSummaryInfo *PSI) {
 
   // Cannot inline indirect calls.
   if (!Callee)
@@ -1495,7 +1486,7 @@ InlineCost llvm::getInlineCost(
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                      << "...\n");
 
-  CallAnalyzer CA(CalleeTTI, GetAssumptionCache, PSI, *Callee, CS, Params);
+  CallAnalyzer CA(CalleeTTI, PSI, *Callee, CS, Params);
   bool ShouldInline = CA.analyzeCall(CS);
 
   DEBUG(CA.dump());

@@ -16,6 +16,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/AST/DeclCXX.h"
 using namespace clang;
 using namespace ento;
 using llvm::APSInt;
@@ -56,6 +57,10 @@ const FunctionDecl *SVal::getAsFunctionDecl() const {
         return FD;
   }
 
+  if (auto X = getAs<nonloc::PointerToMember>()) {
+    if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(X->getDecl()))
+      return MD;
+  }
   return nullptr;
 }
 
@@ -155,6 +160,20 @@ const TypedValueRegion *nonloc::LazyCompoundVal::getRegion() const {
   return static_cast<const LazyCompoundValData*>(Data)->getRegion();
 }
 
+const DeclaratorDecl *nonloc::PointerToMember::getDecl() const {
+  const auto PTMD = this->getPTMData();
+  if (PTMD.isNull())
+    return nullptr;
+
+  const DeclaratorDecl *DD = nullptr;
+  if (PTMD.is<const DeclaratorDecl *>())
+    DD = PTMD.get<const DeclaratorDecl *>();
+  else
+    DD = PTMD.get<const PointerToMemberData *>()->getDeclaratorDecl();
+
+  return DD;
+}
+
 //===----------------------------------------------------------------------===//
 // Other Iterators.
 //===----------------------------------------------------------------------===//
@@ -165,6 +184,20 @@ nonloc::CompoundVal::iterator nonloc::CompoundVal::begin() const {
 
 nonloc::CompoundVal::iterator nonloc::CompoundVal::end() const {
   return getValue()->end();
+}
+
+nonloc::PointerToMember::iterator nonloc::PointerToMember::begin() const {
+  const PTMDataType PTMD = getPTMData();
+  if (PTMD.is<const DeclaratorDecl *>())
+    return nonloc::PointerToMember::iterator();
+  return PTMD.get<const PointerToMemberData *>()->begin();
+}
+
+nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
+  const PTMDataType PTMD = getPTMData();
+  if (PTMD.is<const DeclaratorDecl *>())
+    return nonloc::PointerToMember::iterator();
+  return PTMD.get<const PointerToMemberData *>()->end();
 }
 
 //===----------------------------------------------------------------------===//
@@ -297,6 +330,26 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
       os << "lazyCompoundVal{" << const_cast<void *>(C.getStore())
          << ',' << C.getRegion()
          << '}';
+      break;
+    }
+    case nonloc::PointerToMemberKind: {
+      os << "pointerToMember{";
+      const nonloc::PointerToMember &CastRes =
+          castAs<nonloc::PointerToMember>();
+      if (CastRes.getDecl())
+        os << "|" << CastRes.getDecl()->getQualifiedNameAsString() << "|";
+      bool first = true;
+      for (const auto &I : CastRes) {
+        if (first) {
+          os << ' '; first = false;
+        }
+        else
+          os << ", ";
+
+        os << (*I).getType().getAsString();
+      }
+
+      os << '}';
       break;
     }
     default:

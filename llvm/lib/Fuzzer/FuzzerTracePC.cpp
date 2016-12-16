@@ -218,6 +218,9 @@ void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
   TPC.HandleValueProfile((PC & 4095) | (Idx << 12));
 }
 
+#ifdef __clang__  // avoid gcc warning.
+__attribute__((no_sanitize("memory")))
+#endif
 void TracePC::AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
                               size_t n) {
   if (!n) return;

@@ -122,6 +122,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
     return {Sym, false};
   Sym = make<Symbol>();
   Sym->IsUsedInRegularObj = false;
+  Sym->PendingArchiveLoad = false;
   return {Sym, true};
 }
 
@@ -136,8 +137,12 @@ Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
     replaceBody<Undefined>(S, Name);
     return S;
   }
-  if (auto *L = dyn_cast<Lazy>(S->body()))
-    addMemberFile(L->File, L->Sym);
+  if (auto *L = dyn_cast<Lazy>(S->body())) {
+    if (!S->PendingArchiveLoad) {
+      S->PendingArchiveLoad = true;
+      L->File->addMember(&L->Sym);
+    }
+  }
   return S;
 }
 
@@ -151,9 +156,10 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
     return;
   }
   auto *U = dyn_cast<Undefined>(S->body());
-  if (!U || U->WeakAlias)
+  if (!U || U->WeakAlias || S->PendingArchiveLoad)
     return;
-  addMemberFile(F, Sym);
+  S->PendingArchiveLoad = true;
+  F->addMember(&Sym);
 }
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
@@ -279,19 +285,6 @@ Symbol *SymbolTable::addImportThunk(StringRef Name, DefinedImportData *ID,
   return S;
 }
 
-// Reads an archive member file pointed by a given symbol.
-void SymbolTable::addMemberFile(ArchiveFile *F, const Archive::Symbol Sym) {
-  InputFile *File = F->getMember(&Sym);
-
-  // getMember returns an empty buffer if the member was already
-  // read from the library.
-  if (!File)
-    return;
-  if (Config->Verbose)
-    outs() << "Loaded " << toString(File) << " for " << Sym.getName() << "\n";
-  addFile(File);
-}
-
 std::vector<Chunk *> SymbolTable::getChunks() {
   std::vector<Chunk *> Res;
   for (ObjectFile *File : ObjectFiles) {
@@ -371,13 +364,8 @@ void SymbolTable::addCombinedLTOObjects() {
   // DefinedBitcode symbols with the definitions in the object file.
   LTOCodeGenerator CG(BitcodeFile::Context);
   CG.setOptLevel(Config->LTOOptLevel);
-  std::vector<ObjectFile *> Objs = createLTOObjects(&CG);
-
-  size_t NumBitcodeFiles = BitcodeFiles.size();
-  for (ObjectFile *Obj : Objs)
+  for (ObjectFile *Obj : createLTOObjects(&CG))
     Obj->parse();
-  if (BitcodeFiles.size() != NumBitcodeFiles)
-    fatal("LTO: late loaded symbol created new bitcode reference");
 }
 
 // Combine and compile bitcode files and then return the result

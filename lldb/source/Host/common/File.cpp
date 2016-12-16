@@ -222,7 +222,7 @@ Error File::Open(const char *path, uint32_t options, uint32_t permissions) {
   }
 
   do {
-#ifdef _WIN32
+#ifdef _MSC_VER
     std::wstring wpath;
     if (!llvm::ConvertUTF8toWide(path, wpath)) {
       m_descriptor = -1;

@@ -154,9 +154,8 @@ const char *DWARFUnit::getCompilationDir() {
   return getUnitDIE().getAttributeValueAsString(DW_AT_comp_dir, nullptr);
 }
 
-uint64_t DWARFUnit::getDWOId() {
-  return getUnitDIE().getAttributeValueAsUnsignedConstant(DW_AT_GNU_dwo_id,
-                                                          -1ULL);
+Optional<uint64_t> DWARFUnit::getDWOId() {
+  return getUnitDIE().getAttributeValueAsUnsignedConstant(DW_AT_GNU_dwo_id);
 }
 
 void DWARFUnit::setDIERelations() {
@@ -254,10 +253,11 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
-    uint64_t BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_low_pc, -1ULL);
-    if (BaseAddr == -1ULL)
-      BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_entry_pc, 0);
-    setBaseAddress(BaseAddr);
+    auto BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_low_pc);
+    if (!BaseAddr)
+      BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_entry_pc);
+    if (BaseAddr)
+      setBaseAddress(*BaseAddr);
     AddrOffsetSectionBase = UnitDie.getAttributeValueAsSectionOffset(
         DW_AT_GNU_addr_base, 0);
     RangeSectionBase = UnitDie.getAttributeValueAsSectionOffset(
@@ -313,8 +313,8 @@ bool DWARFUnit::parseDWO() {
   }
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
   DWOCU->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
-  uint32_t DWORangesBase = UnitDie.getRangesBaseAttribute(0);
-  DWOCU->setRangesSection(RangeSection, DWORangesBase);
+  auto DWORangesBase = UnitDie.getRangesBaseAttribute();
+  DWOCU->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
   return true;
 }
 

@@ -35,8 +35,12 @@ struct DILineInfo {
   uint32_t Line;
   uint32_t Column;
 
+  // DWARF-specific.
+  uint32_t Discriminator;
+
   DILineInfo()
-      : FileName("<invalid>"), FunctionName("<invalid>"), Line(0), Column(0) {}
+      : FileName("<invalid>"), FunctionName("<invalid>"), Line(0), Column(0),
+        Discriminator(0) {}
 
   bool operator==(const DILineInfo &RHS) const {
     return Line == RHS.Line && Column == RHS.Column &&

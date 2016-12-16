@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
@@ -142,13 +141,11 @@ private:
 class SampleProfileLoader {
 public:
   SampleProfileLoader(StringRef Name = SampleProfileFile)
-      : DT(nullptr), PDT(nullptr), LI(nullptr), ACT(nullptr), Reader(),
-        Samples(nullptr), Filename(Name), ProfileIsValid(false),
-        TotalCollectedSamples(0) {}
+      : DT(nullptr), PDT(nullptr), LI(nullptr), Reader(), Samples(nullptr),
+        Filename(Name), ProfileIsValid(false), TotalCollectedSamples(0) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M);
-  void setACT(AssumptionCacheTracker *A) { ACT = A; }
 
   void dump() { Reader->dump(); }
 
@@ -207,8 +204,6 @@ protected:
   std::unique_ptr<DominatorTreeBase<BasicBlock>> PDT;
   std::unique_ptr<LoopInfo> LI;
 
-  AssumptionCacheTracker *ACT;
-
   /// \brief Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
 
@@ -224,7 +219,7 @@ protected:
   FunctionSamples *Samples;
 
   /// \brief Name of the profile file to load.
-  StringRef Filename;
+  std::string Filename;
 
   /// \brief Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid;
@@ -254,10 +249,6 @@ public:
   }
   StringRef getPassName() const override { return "Sample profile pass"; }
   bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-  }
 
 private:
   SampleProfileLoader SampleLoader;
@@ -624,8 +615,6 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 bool SampleProfileLoader::inlineHotFunctions(Function &F) {
   bool Changed = false;
   LLVMContext &Ctx = F.getContext();
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
-      Function &F) -> AssumptionCache & { return ACT->getAssumptionCache(F); };
   while (true) {
     bool LocalChanged = false;
     SmallVector<Instruction *, 10> CIS;
@@ -646,7 +635,7 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       }
     }
     for (auto I : CIS) {
-      InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
+      InlineFunctionInfo IFI(nullptr);
       CallSite CS(I);
       Function *CalledFunction = CS.getCalledFunction();
       if (!CalledFunction || !CalledFunction->getSubprogram())
@@ -1274,11 +1263,8 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 }
 
 char SampleProfileLoaderLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(SampleProfileLoaderLegacyPass, "sample-profile",
-                      "Sample Profile loader", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
-                    "Sample Profile loader", false, false)
+INITIALIZE_PASS(SampleProfileLoaderLegacyPass, "sample-profile",
+                "Sample Profile loader", false, false)
 
 bool SampleProfileLoader::doInitialization(Module &M) {
   auto &Ctx = M.getContext();
@@ -1315,13 +1301,12 @@ bool SampleProfileLoader::runOnModule(Module &M) {
       clearFunctionData();
       retval |= runOnFunction(F);
     }
-  M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
+  if (M.getProfileSummary() == nullptr)
+    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
   return retval;
 }
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
-  // FIXME: pass in AssumptionCache correctly for the new pass manager.
-  SampleLoader.setACT(&getAnalysis<AssumptionCacheTracker>());
   return SampleLoader.runOnModule(M);
 }
 

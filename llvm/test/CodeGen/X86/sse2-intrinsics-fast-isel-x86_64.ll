@@ -55,7 +55,7 @@ declare i64 @llvm.x86.sse2.cvttsd2si64(<2 x double>) nounwind readnone
 define <2 x i64> @test_mm_loadu_si64(i64* %a0) nounwind {
 ; X64-LABEL: test_mm_loadu_si64:
 ; X64:       # BB#0:
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %ld = load i64, i64* %a0, align 1
   %res0 = insertelement <2 x i64> undef, i64 %ld, i32 0

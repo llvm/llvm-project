@@ -44,10 +44,10 @@ enum ChunkState : u8 {
 typedef u64 PackedHeader;
 struct UnpackedHeader {
   u64 Checksum    : 16;
-  u64 UnusedBytes : 24; // Needed for reallocation purposes.
+  u64 UnusedBytes : 20; // Needed for reallocation purposes.
   u64 State       : 2;  // available, allocated, or quarantined
   u64 AllocType   : 2;  // malloc, new, new[], or memalign
-  u64 Offset      : 12; // Offset from the beginning of the backend
+  u64 Offset      : 16; // Offset from the beginning of the backend
                         // allocation to the beginning of the chunk itself,
                         // in multiples of MinAlignment. See comment about
                         // its maximum value and test in init().

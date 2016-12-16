@@ -234,13 +234,13 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::getLiveIns(
   RegisterSet LiveIns;
   RegisterSet Tmp;
   for (auto I : B.liveins()) {
-    if (I.LaneMask == ~LaneBitmask(0)) {
+    if (I.LaneMask.all()) {
       Tmp.insert({I.PhysReg,0});
       continue;
     }
     for (MCSubRegIndexIterator S(I.PhysReg, &TRI); S.isValid(); ++S) {
       LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-      if (M & I.LaneMask)
+      if (!(M & I.LaneMask).none())
         Tmp.insert({S.getSubReg(), 0});
     }
   }

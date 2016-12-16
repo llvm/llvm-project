@@ -243,7 +243,7 @@ endif()
 
 # Use the Unicode (UTF-16) APIs by default on Win32
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	add_definitions( /D _UNICODE /D UNICODE )
+    add_definitions( -D_UNICODE -DUNICODE )
 endif()
 
 set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

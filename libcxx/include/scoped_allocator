@@ -498,8 +498,58 @@ public:
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         void construct(_Tp* __p, _Args&& ...__args)
-            {__construct(__uses_alloc_ctor<_Tp, inner_allocator_type, _Args...>(),
+            {__construct(__uses_alloc_ctor<_Tp, inner_allocator_type&, _Args...>(),
                          __p, _VSTD::forward<_Args>(__args)...);}
+
+    template <class _T1, class _T2, class... _Args1, class... _Args2>
+    void construct(pair<_T1, _T2>* __p, piecewise_construct_t,
+                       tuple<_Args1...> __x, tuple<_Args2...> __y)
+    {
+        typedef __outermost<outer_allocator_type> _OM;
+        allocator_traits<typename _OM::type>::construct(
+            _OM()(outer_allocator()), __p, piecewise_construct
+          , __transform_tuple(
+              typename __uses_alloc_ctor<
+                  _T1, inner_allocator_type&, _Args1...
+              >::type()
+            , _VSTD::move(__x)
+            , typename __make_tuple_indices<sizeof...(_Args1)>::type{}
+          )
+          , __transform_tuple(
+              typename __uses_alloc_ctor<
+                  _T2, inner_allocator_type&, _Args2...
+              >::type()
+            , _VSTD::move(__y)
+            , typename __make_tuple_indices<sizeof...(_Args2)>::type{}
+          )
+        );
+    }
+
+    template <class _T1, class _T2>
+    void construct(pair<_T1, _T2>* __p)
+    { construct(__p, piecewise_construct, tuple<>{}, tuple<>{}); }
+
+    template <class _T1, class _T2, class _Up, class _Vp>
+    void construct(pair<_T1, _T2>* __p, _Up&& __x, _Vp&& __y) {
+        construct(__p, piecewise_construct,
+                  _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x)),
+                  _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__y)));
+    }
+
+    template <class _T1, class _T2, class _Up, class _Vp>
+    void construct(pair<_T1, _T2>* __p, const pair<_Up, _Vp>& __x) {
+        construct(__p, piecewise_construct,
+                  _VSTD::forward_as_tuple(__x.first),
+                  _VSTD::forward_as_tuple(__x.second));
+    }
+
+    template <class _T1, class _T2, class _Up, class _Vp>
+    void construct(pair<_T1, _T2>* __p, pair<_Up, _Vp>&& __x) {
+        construct(__p, piecewise_construct,
+                  _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x.first)),
+                  _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__x.second)));
+    }
+
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
         void destroy(_Tp* __p)
@@ -514,6 +564,7 @@ public:
         {return base::select_on_container_copy_construction();}
 
 private:
+
 
     template <class _OuterA2,
               class = typename enable_if<
@@ -545,9 +596,7 @@ private:
                 allocator_traits<typename _OM::type>::construct
                 (
                     _OM()(outer_allocator()),
-                    __p,
-                    allocator_arg,
-                    inner_allocator(),
+                    __p, allocator_arg, inner_allocator(),
                     _VSTD::forward<_Args>(__args)...
                 );
             }
@@ -565,6 +614,36 @@ private:
                     inner_allocator()
                 );
             }
+
+    template <class ..._Args, size_t ..._Idx>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple<_Args&&...>
+    __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t,
+                      __tuple_indices<_Idx...>)
+    {
+        return _VSTD::forward_as_tuple(_VSTD::get<_Idx>(_VSTD::move(__t))...);
+    }
+
+    template <class ..._Args, size_t ..._Idx>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>
+    __transform_tuple(integral_constant<int, 1>, tuple<_Args...> && __t,
+                      __tuple_indices<_Idx...>)
+    {
+        using _Tup = tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>;
+        return _Tup(allocator_arg, inner_allocator(),
+                    _VSTD::get<_Idx>(_VSTD::move(__t))...);
+    }
+
+    template <class ..._Args, size_t ..._Idx>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple<_Args&&..., inner_allocator_type&>
+    __transform_tuple(integral_constant<int, 2>, tuple<_Args...> && __t,
+                      __tuple_indices<_Idx...>)
+    {
+        using _Tup = tuple<_Args&&..., inner_allocator_type&>;
+        return _Tup(_VSTD::get<_Idx>(_VSTD::move(__t))..., inner_allocator());
+    }
 
     template <class...> friend class __scoped_allocator_storage;
 };

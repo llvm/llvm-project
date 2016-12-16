@@ -18,10 +18,26 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/IR/DebugInfo.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+/// The PHI arguments will be folded into a single operation with a PHI node
+/// as input. The debug location of the single operation will be the merged
+/// locations of the original PHI node arguments.
+DebugLoc InstCombiner::PHIArgMergedDebugLoc(PHINode &PN) {
+  auto *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
+  DILocation *Loc = FirstInst->getDebugLoc();
+
+  for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
+    auto *I = cast<Instruction>(PN.getIncomingValue(i));
+    Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
+  }
+
+  return Loc;
+}
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
 /// adds all have a single use, turn this into a phi and a single binop.
@@ -101,7 +117,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   if (CmpInst *CIOp = dyn_cast<CmpInst>(FirstInst)) {
     CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                      LHSVal, RHSVal);
-    NewCI->setDebugLoc(FirstInst->getDebugLoc());
+    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return NewCI;
   }
 
@@ -114,7 +130,7 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
     NewBinOp->andIRFlags(PN.getIncomingValue(i));
 
-  NewBinOp->setDebugLoc(FirstInst->getDebugLoc());
+  NewBinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewBinOp;
 }
 
@@ -223,7 +239,7 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
       GetElementPtrInst::Create(FirstInst->getSourceElementType(), Base,
                                 makeArrayRef(FixedOperands).slice(1));
   if (AllInBounds) NewGEP->setIsInBounds();
-  NewGEP->setDebugLoc(FirstInst->getDebugLoc());
+  NewGEP->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewGEP;
 }
 
@@ -383,7 +399,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
     for (Value *IncValue : PN.incoming_values())
       cast<LoadInst>(IncValue)->setVolatile(false);
 
-  NewLI->setDebugLoc(FirstLI->getDebugLoc());
+  NewLI->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewLI;
 }
 
@@ -549,7 +565,7 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   if (CastInst *FirstCI = dyn_cast<CastInst>(FirstInst)) {
     CastInst *NewCI = CastInst::Create(FirstCI->getOpcode(), PhiVal,
                                        PN.getType());
-    NewCI->setDebugLoc(FirstInst->getDebugLoc());
+    NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return NewCI;
   }
 
@@ -560,14 +576,14 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
       BinOp->andIRFlags(PN.getIncomingValue(i));
 
-    BinOp->setDebugLoc(FirstInst->getDebugLoc());
+    BinOp->setDebugLoc(PHIArgMergedDebugLoc(PN));
     return BinOp;
   }
 
   CmpInst *CIOp = cast<CmpInst>(FirstInst);
   CmpInst *NewCI = CmpInst::Create(CIOp->getOpcode(), CIOp->getPredicate(),
                                    PhiVal, ConstantOp);
-  NewCI->setDebugLoc(FirstInst->getDebugLoc());
+  NewCI->setDebugLoc(PHIArgMergedDebugLoc(PN));
   return NewCI;
 }
 
@@ -864,7 +880,7 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 // PHINode simplification
 //
 Instruction *InstCombiner::visitPHINode(PHINode &PN) {
-  if (Value *V = SimplifyInstruction(&PN, DL, &TLI, &DT, &AC))
+  if (Value *V = SimplifyInstruction(&PN, DL, &TLI, &DT))
     return replaceInstUsesWith(PN, V);
 
   if (Instruction *Result = FoldPHIArgZextsIntoPHI(PN))
@@ -921,7 +937,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
         Instruction *CtxI = PN.getIncomingBlock(i)->getTerminator();
         Value *VA = PN.getIncomingValue(i);
-        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+        if (isKnownNonZero(VA, DL, 0, CtxI, &DT)) {
           if (!NonZeroConst)
             NonZeroConst = GetAnyNonZeroConstInt(PN);
           PN.setIncomingValue(i, NonZeroConst);

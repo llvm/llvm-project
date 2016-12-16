@@ -28,3 +28,17 @@ entry:
 	ret i32 %0
 }
 
+@y = local_unnamed_addr global i32* null, section ".ldata,block", align 8
+
+define i32 @foo2() nounwind readonly {
+entry:
+; CHECK-SMALL-LABEL:  foo2:
+; CHECK-SMALL: mov hi(y), %r[[REGISTER:[0-9]+]]
+; CHECK-SMALL: or %r[[REGISTER]], lo(y), %r[[REGISTER]]
+; CHECK-LABEL:  foo2:
+; CHECK: mov hi(y), %r[[REGISTER:[0-9]+]]
+; CHECK: or %r[[REGISTER]], lo(y), %r[[REGISTER]]
+  %0 = load i32*, i32** @y, align 8
+  %1 = load i32, i32* %0, align 4
+  ret i32 %1
+}

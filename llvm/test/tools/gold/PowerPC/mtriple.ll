@@ -8,6 +8,9 @@
 ; RUN: llvm-readobj --file-headers %t2 | FileCheck  --check-prefix=DSO %s
 ; RUN: llvm-readobj --file-headers %t3.o | FileCheck --check-prefix=REL %s
 
+target datalayout = "E-m:e-i64:64-n32:64"
+target triple = "powerpc64-unknown-linux-gnu"
+
 ; REL:       Type: Relocatable
 ; REL-NEXT:  Machine: EM_PPC
 

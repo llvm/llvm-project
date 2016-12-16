@@ -341,9 +341,6 @@ possible event codes are:
 ``DONE``
   The fuzzer has completed operation because it has reached the specified
   iteration limit (``-runs``) or time limit (``-max_total_time``).
-``MIN<n>``
-  The fuzzer is minimizing the combination of input corpus directories into
-  a single unified corpus (due to the ``-merge`` command line option).
 ``RELOAD``
   The fuzzer is performing a periodic reload of inputs from the corpus
   directory; this allows it to discover any inputs discovered by other

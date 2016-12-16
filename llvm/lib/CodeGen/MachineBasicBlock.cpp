@@ -291,7 +291,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "    Live Ins:";
     for (const auto &LI : make_range(livein_begin(), livein_end())) {
       OS << ' ' << PrintReg(LI.PhysReg, TRI);
-      if (LI.LaneMask != ~0u)
+      if (!LI.LaneMask.all())
         OS << ':' << PrintLaneMask(LI.LaneMask);
     }
     OS << '\n';
@@ -342,14 +342,14 @@ void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
     return;
 
   I->LaneMask &= ~LaneMask;
-  if (I->LaneMask == 0)
+  if (I->LaneMask.none())
     LiveIns.erase(I);
 }
 
 bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
   livein_iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
-  return I != livein_end() && (I->LaneMask & LaneMask) != 0;
+  return I != livein_end() && !(I->LaneMask & LaneMask).none();
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {

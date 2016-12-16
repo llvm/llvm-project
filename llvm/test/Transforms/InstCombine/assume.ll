@@ -11,7 +11,7 @@ entry:
 ; been removed:
 ; CHECK-LABEL: @foo1
 ; CHECK-DAG: load i32, i32* %a, align 32
-; CHECK-DAG: call void @llvm.assume
+; CHECK-DAG: call void @llvm.assume(i1 %maskcond) [ "affected"(i64 %maskedptr, i64 %ptrint, i32* %a) ]
 ; CHECK: ret i32
 
   %ptrint = ptrtoint i32* %a to i64
@@ -28,7 +28,7 @@ entry:
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 ; CHECK-LABEL: @foo2
 ; CHECK-DAG: load i32, i32* %a, align 32
-; CHECK-DAG: call void @llvm.assume
+; CHECK-DAG: call void @llvm.assume(i1 %maskcond) [ "affected"(i64 %maskedptr, i64 %ptrint, i32* %a) ]
 ; CHECK: ret i32
 
   %ptrint = ptrtoint i32* %a to i64
@@ -51,7 +51,7 @@ entry:
 ; CHECK: ret i32 4
 
   %cmp = icmp eq i32 %a, 4
-  tail call void @llvm.assume(i1 %cmp)
+  tail call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
   ret i32 %a
 }
 
@@ -93,7 +93,7 @@ entry:
   %and1 = and i32 %a, 3
 
 ; CHECK-LABEL: @bar1
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %and, i32 %a) ]
 ; CHECK: ret i32 1
 
   %and = and i32 %a, 7
@@ -107,7 +107,7 @@ entry:
 define i32 @bar2(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @bar2
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %and, i32 %a) ]
 ; CHECK: ret i32 1
 
   %and = and i32 %a, 7
@@ -125,7 +125,7 @@ entry:
 
 ; Don't be fooled by other assumes around.
 ; CHECK-LABEL: @bar3
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %and, i32 %a) ]
 ; CHECK: ret i32 1
 
   tail call void @llvm.assume(i1 %x)
@@ -145,8 +145,8 @@ entry:
   %and1 = and i32 %b, 3
 
 ; CHECK-LABEL: @bar4
-; CHECK: call void @llvm.assume
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %and, i32 %a) ]
+; CHECK: call void @llvm.assume(i1 %cmp2) [ "affected"(i32 %a, i32 %b) ]
 ; CHECK: ret i32 1
 
   %and = and i32 %a, 7
@@ -167,7 +167,7 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: @icmp1
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 1
 
 }
@@ -182,7 +182,7 @@ entry:
   ret i32 %lnot.ext
 
 ; CHECK-LABEL: @icmp2
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
 ; CHECK: ret i32 0
 }
 
@@ -217,7 +217,7 @@ entry:
 
 ; CHECK-LABEL: @nonnull2
 ; CHECK-NOT: !nonnull
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32 %load) ]
 }
 
 ; Make sure the above canonicalization does not trigger
@@ -236,7 +236,7 @@ not_taken:
 
 ; CHECK-LABEL: @nonnull3
 ; CHECK-NOT: !nonnull
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32* %load) ]
 }
 
 ; Make sure the above canonicalization does not trigger
@@ -254,7 +254,7 @@ entry:
 
 ; CHECK-LABEL: @nonnull4
 ; CHECK-NOT: !nonnull
-; CHECK: call void @llvm.assume
+; CHECK: call void @llvm.assume(i1 %cmp) [ "affected"(i32* %load) ]
 }
 
 

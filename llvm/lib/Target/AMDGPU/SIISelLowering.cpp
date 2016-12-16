@@ -2785,7 +2785,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     //
     LLVM_FALLTHROUGH;
   case AMDGPUAS::GLOBAL_ADDRESS: {
-    if (isMemOpUniform(Load) && isMemOpHasNoClobberedMemOperand(Load))
+    if (Subtarget->getScalarizeGlobalBehavior() && isMemOpUniform(Load) &&
+                  isMemOpHasNoClobberedMemOperand(Load))
       return SDValue();
     // Non-uniform loads will be selected to MUBUF instructions, so they
     // have the same legalization requirements as global and private

@@ -722,7 +722,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
 
   if (Value *V =
           SimplifyShlInst(I.getOperand(0), I.getOperand(1), I.hasNoSignedWrap(),
-                          I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
+                          I.hasNoUnsignedWrap(), DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *V = commonShiftTransforms(I))
@@ -763,7 +763,7 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyLShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, &TLI, &DT, &AC))
+                                  DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))
@@ -807,7 +807,7 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyAShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, &TLI, &DT, &AC))
+                                  DL, &TLI, &DT))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))

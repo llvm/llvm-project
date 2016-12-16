@@ -56,35 +56,29 @@
 //   .debug_gnu_pubnames and .debug_gnu_pubtypes sections. Then it builds the
 //   hashtable in according to .gdb_index format specification.
 // 6) Constant pool is populated at the same time as symbol table.
-//
-// Current version of implementation has 1, 2, 3 steps. So it writes .gdb_index
-// header and list of compilation units. Since we so not plan to support types
-// CU list area, it is also empty and so far is "implemented".
-// Other data areas are not yet implemented.
 //===----------------------------------------------------------------------===//
 
 #include "GdbIndex.h"
 
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace lld::elf;
+
+template <class ELFT>
+GdbIndexBuilder<ELFT>::GdbIndexBuilder(InputSection<ELFT> *DebugInfoSec)
+    : DebugInfoSec(DebugInfoSec) {
+  if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
+          object::ObjectFile::createObjectFile(DebugInfoSec->getFile()->MB))
+    Dwarf.reset(new DWARFContextInMemory(*Obj.get(), this));
+  else
+    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
+}
 
 template <class ELFT>
 std::vector<std::pair<typename ELFT::uint, typename ELFT::uint>>
-lld::elf::readCuList(InputSection<ELFT> *DebugInfoSec) {
-  typedef typename ELFT::uint uintX_t;
-
-  std::unique_ptr<DWARFContext> Dwarf;
-  if (Expected<std::unique_ptr<object::ObjectFile>> Obj =
-          object::ObjectFile::createObjectFile(DebugInfoSec->getFile()->MB))
-    Dwarf.reset(new DWARFContextInMemory(*Obj.get()));
-
-  if (!Dwarf) {
-    error(toString(DebugInfoSec->getFile()) + ": error creating DWARF context");
-    return {};
-  }
-
+GdbIndexBuilder<ELFT>::readCUList() {
   std::vector<std::pair<uintX_t, uintX_t>> Ret;
   for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf->compile_units())
     Ret.push_back(
@@ -92,11 +86,126 @@ lld::elf::readCuList(InputSection<ELFT> *DebugInfoSec) {
   return Ret;
 }
 
-template std::vector<std::pair<uint32_t, uint32_t>>
-lld::elf::readCuList<ELF32LE>(InputSection<ELF32LE> *);
-template std::vector<std::pair<uint32_t, uint32_t>>
-lld::elf::readCuList<ELF32BE>(InputSection<ELF32BE> *);
-template std::vector<std::pair<uint64_t, uint64_t>>
-lld::elf::readCuList<ELF64LE>(InputSection<ELF64LE> *);
-template std::vector<std::pair<uint64_t, uint64_t>>
-lld::elf::readCuList<ELF64BE>(InputSection<ELF64BE> *);
+template <class ELFT>
+std::vector<std::pair<StringRef, uint8_t>>
+GdbIndexBuilder<ELFT>::readPubNamesAndTypes() {
+  const bool IsLE = ELFT::TargetEndianness == llvm::support::little;
+  StringRef Data[] = {Dwarf->getGnuPubNamesSection(),
+                      Dwarf->getGnuPubTypesSection()};
+
+  std::vector<std::pair<StringRef, uint8_t>> Ret;
+  for (StringRef D : Data) {
+    DataExtractor PubNames(D, IsLE, 0);
+    uint32_t Offset = 0;
+    while (PubNames.isValidOffset(Offset)) {
+      // Skip length, version, unit offset and size.
+      Offset += 14;
+      while (Offset < D.size()) {
+        uint32_t DieRef = PubNames.getU32(&Offset);
+        if (DieRef == 0)
+          break;
+        uint8_t Flags = PubNames.getU8(&Offset);
+        const char *Name = PubNames.getCStr(&Offset);
+        Ret.push_back({Name, Flags});
+      }
+    }
+  }
+
+  return Ret;
+}
+
+std::pair<bool, GdbSymbol *> GdbHashTab::add(uint32_t Hash, size_t Offset) {
+  if (Size * 4 / 3 >= Table.size())
+    expand();
+
+  GdbSymbol **Slot = findSlot(Hash, Offset);
+  bool New = false;
+  if (*Slot == nullptr) {
+    ++Size;
+    *Slot = new (Alloc) GdbSymbol(Hash, Offset);
+    New = true;
+  }
+  return {New, *Slot};
+}
+
+void GdbHashTab::expand() {
+  if (Table.empty()) {
+    Table.resize(InitialSize);
+    return;
+  }
+  std::vector<GdbSymbol *> NewTable(Table.size() * 2);
+  NewTable.swap(Table);
+
+  for (GdbSymbol *Sym : NewTable) {
+    if (!Sym)
+      continue;
+    GdbSymbol **Slot = findSlot(Sym->NameHash, Sym->NameOffset);
+    *Slot = Sym;
+  }
+}
+
+// Methods finds a slot for symbol with given hash. The step size used to find
+// the next candidate slot when handling a hash collision is specified in
+// .gdb_index section format. The hash value for a table entry is computed by
+// applying an iterative hash function to the symbol's name.
+GdbSymbol **GdbHashTab::findSlot(uint32_t Hash, size_t Offset) {
+  uint32_t Index = Hash & (Table.size() - 1);
+  uint32_t Step = ((Hash * 17) & (Table.size() - 1)) | 1;
+
+  for (;;) {
+    GdbSymbol *S = Table[Index];
+    if (!S || ((S->NameOffset == Offset) && (S->NameHash == Hash)))
+      return &Table[Index];
+    Index = (Index + Step) & (Table.size() - 1);
+  }
+}
+
+template <class ELFT>
+static InputSectionBase<ELFT> *
+findSection(ArrayRef<InputSectionBase<ELFT> *> Arr, uint64_t Offset) {
+  for (InputSectionBase<ELFT> *S : Arr)
+    if (S && S != &InputSection<ELFT>::Discarded)
+      if (Offset >= S->Offset && Offset < S->Offset + S->getSize())
+        return S;
+  return nullptr;
+}
+
+template <class ELFT>
+std::vector<AddressEntry<ELFT>>
+GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
+  std::vector<AddressEntry<ELFT>> Ret;
+  for (const auto &CU : Dwarf->compile_units()) {
+    DWARFAddressRangesVector Ranges;
+    CU->collectAddressRanges(Ranges);
+
+    ArrayRef<InputSectionBase<ELFT> *> Sections =
+        DebugInfoSec->getFile()->getSections();
+
+    for (std::pair<uint64_t, uint64_t> &R : Ranges)
+      if (InputSectionBase<ELFT> *S = findSection(Sections, R.first))
+        Ret.push_back(
+            {S, R.first - S->Offset, R.second - S->Offset, CurrentCU});
+    ++CurrentCU;
+  }
+  return Ret;
+}
+
+template <class ELFT>
+uint64_t GdbIndexBuilder<ELFT>::getSectionLoadAddress(
+    const object::SectionRef &Sec) const {
+  return static_cast<const ELFSectionRef &>(Sec).getOffset();
+}
+
+template <class ELFT>
+std::unique_ptr<LoadedObjectInfo> GdbIndexBuilder<ELFT>::clone() const {
+  return {};
+}
+
+namespace lld {
+namespace elf {
+template class GdbIndexBuilder<ELF32LE>;
+template class GdbIndexBuilder<ELF32BE>;
+template class GdbIndexBuilder<ELF64LE>;
+template class GdbIndexBuilder<ELF64BE>;
+}
+}

@@ -394,16 +394,16 @@ public:
     auto Begin = V.begin();
     auto End = V.end();
     if (Begin != End) {
-      auto Wrapper =
-          detail::build_format_wrapper(std::forward<reference>(*Begin));
-      Wrapper.format(Stream, ArgStyle);
+      auto Adapter =
+          detail::build_format_adapter(std::forward<reference>(*Begin));
+      Adapter.format(Stream, ArgStyle);
       ++Begin;
     }
     while (Begin != End) {
       Stream << Sep;
-      auto Wrapper =
-          detail::build_format_wrapper(std::forward<reference>(*Begin));
-      Wrapper.format(Stream, ArgStyle);
+      auto Adapter =
+          detail::build_format_adapter(std::forward<reference>(*Begin));
+      Adapter.format(Stream, ArgStyle);
       ++Begin;
     }
   }

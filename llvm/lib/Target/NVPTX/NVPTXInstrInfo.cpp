@@ -110,19 +110,6 @@ bool NVPTXInstrInfo::isStoreInstr(const MachineInstr &MI,
   return isStore;
 }
 
-bool NVPTXInstrInfo::CanTailMerge(const MachineInstr *MI) const {
-  unsigned addrspace = 0;
-  if (MI->getOpcode() == NVPTX::INT_BARRIER0)
-    return false;
-  if (isLoadInstr(*MI, addrspace))
-    if (addrspace == NVPTX::PTXLdStInstCode::SHARED)
-      return false;
-  if (isStoreInstr(*MI, addrspace))
-    if (addrspace == NVPTX::PTXLdStInstCode::SHARED)
-      return false;
-  return true;
-}
-
 /// AnalyzeBranch - Analyze the branching code at the end of MBB, returning
 /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
 /// implemented for a target).  Upon success, this returns false and returns

@@ -13,17 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-	.text
-	.file "xray_trampoline_x86.S"
-	.globl __xray_FunctionEntry
-	.align 16, 0x90
-	.type __xray_FunctionEntry,@function
-
-__xray_FunctionEntry:
-  .cfi_startproc
-  // Save caller provided registers before doing any actual work.
-	pushq %rbp
-	.cfi_def_cfa_offset 16
+.macro SAVE_REGISTERS
 	subq $200, %rsp
 	movupd	%xmm0, 184(%rsp)
 	movupd	%xmm1, 168(%rsp)
@@ -34,25 +24,15 @@ __xray_FunctionEntry:
 	movupd	%xmm6, 88(%rsp)
 	movupd	%xmm7, 72(%rsp)
 	movq	%rdi, 64(%rsp)
-	movq  %rax, 56(%rsp)
-	movq  %rdx, 48(%rsp)
+	movq	%rax, 56(%rsp)
+	movq	%rdx, 48(%rsp)
 	movq	%rsi, 40(%rsp)
 	movq	%rcx, 32(%rsp)
 	movq	%r8, 24(%rsp)
 	movq	%r9, 16(%rsp)
+.endm
 
-	// de-mangled, that's __xray::XRayPatchedFunction, and we're doing an acquire
-	// load (on x86 is a normal mov instruction).
-	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
-	testq	%rax, %rax
-	je	.Ltmp0
-
-	// assume that %r10d has the function id.
-	movl	%r10d, %edi
-	xor	%esi,%esi
-	callq	*%rax
-.Ltmp0:
-  // restore the registers
+.macro RESTORE_REGISTERS
 	movupd	184(%rsp), %xmm0
 	movupd	168(%rsp), %xmm1
 	movupd	152(%rsp), %xmm2
@@ -62,13 +42,39 @@ __xray_FunctionEntry:
 	movupd	88(%rsp) , %xmm6
 	movupd	72(%rsp) , %xmm7
 	movq	64(%rsp), %rdi
-	movq  56(%rsp), %rax
-	movq  48(%rsp), %rdx
+	movq	56(%rsp), %rax
+	movq	48(%rsp), %rdx
 	movq	40(%rsp), %rsi
 	movq	32(%rsp), %rcx
 	movq	24(%rsp), %r8
 	movq	16(%rsp), %r9
 	addq	$200, %rsp
+.endm
+
+	.text
+	.file "xray_trampoline_x86.S"
+	.globl __xray_FunctionEntry
+	.align 16, 0x90
+	.type __xray_FunctionEntry,@function
+
+__xray_FunctionEntry:
+	.cfi_startproc
+	pushq %rbp
+	.cfi_def_cfa_offset 16
+	SAVE_REGISTERS
+
+	// This load has to be atomic, it's concurrent with __xray_patch().
+	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
+	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
+	testq	%rax, %rax
+	je	.Ltmp0
+
+	// The patched function prolog puts its xray_instr_map index into %r10d.
+	movl	%r10d, %edi
+	xor	%esi,%esi
+	callq	*%rax
+.Ltmp0:
+	RESTORE_REGISTERS
 	popq	%rbp
 	retq
 .Ltmp1:
@@ -99,7 +105,7 @@ __xray_FunctionExit:
 	movl	$1, %esi
 	callq	*%rax
 .Ltmp2:
-  // Restore the important registers.
+	// Restore the important registers.
 	movupd	40(%rsp), %xmm0
 	movupd	24(%rsp), %xmm1
 	movq	16(%rsp), %rax
@@ -122,22 +128,7 @@ __xray_FunctionTailExit:
 	// this and increment the version number for the header.
 	pushq %rbp
 	.cfi_def_cfa_offset 16
-	subq $200, %rsp
-	movupd	%xmm0, 184(%rsp)
-	movupd	%xmm1, 168(%rsp)
-	movupd	%xmm2, 152(%rsp)
-	movupd	%xmm3, 136(%rsp)
-	movupd	%xmm4, 120(%rsp)
-	movupd	%xmm5, 104(%rsp)
-	movupd	%xmm6, 88(%rsp)
-	movupd	%xmm7, 72(%rsp)
-	movq	%rdi, 64(%rsp)
-	movq  %rax, 56(%rsp)
-	movq  %rdx, 48(%rsp)
-	movq	%rsi, 40(%rsp)
-	movq	%rcx, 32(%rsp)
-	movq	%r8, 24(%rsp)
-	movq	%r9, 16(%rsp)
+	SAVE_REGISTERS
 
 	movq	_ZN6__xray19XRayPatchedFunctionE(%rip), %rax
 	testq %rax,%rax
@@ -148,25 +139,9 @@ __xray_FunctionTailExit:
 	callq	*%rax
 
 .Ltmp4:
-  // Restore the registers.
-	movupd	184(%rsp), %xmm0
-	movupd	168(%rsp), %xmm1
-	movupd	152(%rsp), %xmm2
-	movupd	136(%rsp), %xmm3
-	movupd	120(%rsp), %xmm4
-	movupd	104(%rsp), %xmm5
-	movupd	88(%rsp) , %xmm6
-	movupd	72(%rsp) , %xmm7
-	movq	64(%rsp), %rdi
-	movq  56(%rsp), %rax
-	movq  48(%rsp), %rdx
-	movq	40(%rsp), %rsi
-	movq	32(%rsp), %rcx
-	movq	24(%rsp), %r8
-	movq	16(%rsp), %r9
-	addq	$200, %rsp
+	RESTORE_REGISTERS
 	popq	%rbp
 	retq
 .Ltmp5:
-  .size __xray_FunctionTailExit, .Ltmp5-__xray_FunctionTailExit
+	.size __xray_FunctionTailExit, .Ltmp5-__xray_FunctionTailExit
 	.cfi_endproc

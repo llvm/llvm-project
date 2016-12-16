@@ -126,7 +126,7 @@ define void @legal_vzmovl_2i32_8i32(<2 x i32>* %in, <8 x i32>* %out) {
 ;
 ; X64-LABEL: legal_vzmovl_2i32_8i32:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
@@ -178,7 +178,7 @@ define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
 ;
 ; X64-LABEL: legal_vzmovl_2f32_8f32:
 ; X64:       # BB#0:
-; X64-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)

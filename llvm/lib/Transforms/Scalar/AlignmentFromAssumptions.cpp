@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -54,7 +53,6 @@ struct AlignmentFromAssumptions : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
 
@@ -74,7 +72,6 @@ char AlignmentFromAssumptions::ID = 0;
 static const char aip_name[] = "Alignment from assumptions";
 INITIALIZE_PASS_BEGIN(AlignmentFromAssumptions, AA_NAME,
                       aip_name, false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(AlignmentFromAssumptions, AA_NAME,
@@ -408,15 +405,13 @@ bool AlignmentFromAssumptions::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  return Impl.runImpl(F, AC, SE, DT);
+  return Impl.runImpl(F, SE, DT);
 }
 
-bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
-                                           ScalarEvolution *SE_,
+bool AlignmentFromAssumptionsPass::runImpl(Function &F, ScalarEvolution *SE_,
                                            DominatorTree *DT_) {
   SE = SE_;
   DT = DT_;
@@ -425,9 +420,12 @@ bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
   NewSrcAlignments.clear();
 
   bool Changed = false;
-  for (auto &AssumeVH : AC.assumptions())
-    if (AssumeVH)
-      Changed |= processAssumption(cast<CallInst>(AssumeVH));
+
+  for (auto &B : F)
+    for (auto &I : B)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          Changed |= processAssumption(II);
 
   return Changed;
 }
@@ -435,10 +433,9 @@ bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
 PreservedAnalyses
 AlignmentFromAssumptionsPass::run(Function &F, FunctionAnalysisManager &AM) {
 
-  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  bool Changed = runImpl(F, AC, &SE, &DT);
+  bool Changed = runImpl(F, &SE, &DT);
 
   // FIXME: We need to invalidate this to avoid PR28400. Is there a better
   // solution?

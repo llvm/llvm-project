@@ -91,8 +91,8 @@ set( LLDB_USED_LIBS
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   list(APPEND LLDB_USED_LIBS
     lldbPluginProcessWindowsCommon
-    Ws2_32
-    Rpcrt4
+    ws2_32
+    rpcrt4
     )
 endif ()
 

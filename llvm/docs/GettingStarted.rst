@@ -262,7 +262,7 @@ our build systems:
 
 * Clang 3.1
 * GCC 4.8
-* Visual Studio 2015
+* Visual Studio 2015 (Update 3)
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.

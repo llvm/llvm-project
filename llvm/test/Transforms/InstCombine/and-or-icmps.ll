@@ -51,3 +51,207 @@ define i1 @test(i32 %tmp1030) {
   ret i1 %tmp1042
 }
 
+; Last three instructions (ignoring ret) are equivalent of %val2 < %val1.
+define i1 @test2(i32 %a, i32 %b) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 8
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; Last three instructions (ignoring ret) are equivalent of %val2 < %val1.
+define i1 @test3(i32 %a, i32 %b) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 8
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.a, %cmp.b
+  ret i1 %and
+}
+
+; Last three instructions (ignoring ret) are equivalent of %val2 < %val1.
+define i1 @test4(i32 %a, i32 %b) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 15
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 24
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %val1 = and i32 %a, 15
+  %val2 = and i32 %b, 24
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.a, %cmp.b
+  ret i1 %and
+}
+
+; Last three instructions (ignoring ret) are equivalent of %val2 < %val1.
+define i1 @test5(i32 %a, i32 %b) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 15
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 24
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %val1 = and i32 %a, 15
+  %val2 = and i32 %b, 24
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; An optimization like those of previous tests is not possible
+; for example if %b = 8 and %a = 16, we have %val2 = 8 and
+; % %val1 = 16 so %val2 < %val1 but %and == 0.
+define i1 @test6(i32 %a, i32 %b) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 16
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 24
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ne i32 [[VAL1]], 0
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp eq i32 [[VAL2]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP_B]], [[CMP_A]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %val1 = and i32 %a, 16
+  %val2 = and i32 %b, 24
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; %a and %b have different widths. So optimization is not possible.
+define i1 @test7(i16 %a, i32 %b) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i16 %a, 15
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 24
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ne i16 [[VAL1]], 0
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp eq i32 [[VAL2]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP_B]], [[CMP_A]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %val1 = and i16 %a, 15
+  %val2 = and i32 %b, 24
+  %cmp.a = icmp ne i16 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; The last three instructions can be simplified to checking %val1 != %val2.
+; After that other transformations change the code further.
+define i1 @test8(i32 %a, i32 %b) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 %a, %b
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp ne i32 %val2, 0
+  %and = xor i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; Operands of and instructions, must be identical powers of 2 otherwise
+; a simplification, like that of previous testcase is not possible.
+define i1 @test9(i32 %a, i32 %b) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 24
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 24
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ne i32 [[VAL1]], 0
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp ne i32 [[VAL2]], 0
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP_B]], [[CMP_A]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %val1 = and i32 %a, 24
+  %val2 = and i32 %b, 24
+  %cmp.a = icmp ne i32 %val1, 0
+  %cmp.b = icmp ne i32 %val2, 0
+  %and = xor i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; The last three instructions are equivalent of checking %val1 != %val2.
+; After making this change, other transformation further change the code.
+define i1 @test10(i32 %a, i32 %b) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 %a, %b
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp eq i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = xor i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; Cannot be simplified because of different width of %a and %b
+define i1 @test11(i16 %a, i32 %b) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i16 %a, 8
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 8
+; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ne i16 [[VAL1]], 0
+; CHECK-NEXT:    [[CMP_B:%.*]] = icmp ne i32 [[VAL2]], 0
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP_B]], [[CMP_A]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %val1 = and i16 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ne i16 %val1, 0
+  %cmp.b = icmp ne i32 %val2, 0
+  %and = xor i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; Similar to @test8 except that icmp instns use ugt here instead of ne.
+define i1 @test12(i32 %a, i32 %b) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 %a, %b
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ugt i32 %val1, 0
+  %cmp.b = icmp ugt i32 %val2, 0
+  %and = xor i1 %cmp.b, %cmp.a
+  ret i1 %and
+}
+
+; Similar to @test3 except that the first icmp uses ugt instead of ne.
+define i1 @test13(i32 %a, i32 %b) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[VAL1:%.*]] = and i32 %a, 8
+; CHECK-NEXT:    [[VAL2:%.*]] = and i32 %b, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %val1 = and i32 %a, 8
+  %val2 = and i32 %b, 8
+  %cmp.a = icmp ugt i32 %val1, 0
+  %cmp.b = icmp eq i32 %val2, 0
+  %and = and i1 %cmp.a, %cmp.b
+  ret i1 %and
+}

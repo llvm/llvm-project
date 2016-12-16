@@ -83,8 +83,7 @@ namespace llvm {
     /// A CompileUnit provides an anchor for all debugging
     /// information generated during this instance of compilation.
     /// \param Lang          Source programming language, eg. dwarf::DW_LANG_C99
-    /// \param File          File name
-    /// \param Dir           Directory
+    /// \param File          File info.
     /// \param Producer      Identify the producer of debugging information
     ///                      and code.  Usually this is a compiler
     ///                      version string.
@@ -101,9 +100,9 @@ namespace llvm {
     /// \param Kind          The kind of debug information to generate.
     /// \param DWOId         The DWOId if this is a split skeleton compile unit.
     DICompileUnit *
-    createCompileUnit(unsigned Lang, StringRef File, StringRef Dir,
-                      StringRef Producer, bool isOptimized, StringRef Flags,
-                      unsigned RV, StringRef SplitName = StringRef(),
+    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
+                      bool isOptimized, StringRef Flags, unsigned RV,
+                      StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true);

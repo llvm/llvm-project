@@ -50,7 +50,7 @@ int main()
     test q(d, test_allocator<int>(4));
     assert(q.get_allocator() == test_allocator<int>(4));
     assert(q.size() == 5);
-    for (std::size_t i = 0; i < d.size(); ++i)
+    for (C::size_type i = 0; i < d.size(); ++i)
     {
         assert(q.top() == d[d.size() - i - 1]);
         q.pop();

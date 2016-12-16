@@ -1109,6 +1109,10 @@ public:
   /// \brief Change the result type of a function type once it is deduced.
   void adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType);
 
+  /// \brief Determine whether two function types are the same, ignoring
+  /// exception specifications in cases where they're part of the type.
+  bool hasSameFunctionTypeIgnoringExceptionSpec(QualType T, QualType U);
+
   /// \brief Change the exception specification on a function once it is
   /// delay-parsed, instantiated, or computed.
   void adjustExceptionSpec(FunctionDecl *FD,

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataTypes.h"
 #include <functional>
@@ -34,9 +35,6 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class MachineBranchProbabilityInfo;
-
-// Forward declaration to avoid circular include problem with TargetRegisterInfo
-typedef unsigned LaneBitmask;
 
 template <> struct ilist_traits<MachineInstr> {
 private:
@@ -278,7 +276,8 @@ public:
   /// Adds the specified register as a live in. Note that it is an error to add
   /// the same register to the same set more than once unless the intention is
   /// to call sortUniqueLiveIns after all registers are added.
-  void addLiveIn(MCPhysReg PhysReg, LaneBitmask LaneMask = ~0u) {
+  void addLiveIn(MCPhysReg PhysReg,
+                 LaneBitmask LaneMask = LaneBitmask::getAll()) {
     LiveIns.push_back(RegisterMaskPair(PhysReg, LaneMask));
   }
   void addLiveIn(const RegisterMaskPair &RegMaskPair) {
@@ -296,10 +295,12 @@ public:
   unsigned addLiveIn(MCPhysReg PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask = ~0u);
+  void removeLiveIn(MCPhysReg Reg,
+                    LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask = ~0u) const;
+  bool isLiveIn(MCPhysReg Reg,
+                LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.

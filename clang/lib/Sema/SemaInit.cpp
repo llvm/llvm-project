@@ -4599,7 +4599,7 @@ static void TryValueInitialization(Sema &S,
       MultiExprArg Args(&InitListAsExpr, InitList ? 1 : 0);
       bool InitListSyntax = InitList;
 
-      // FIXME: Instead of creating a CXXConstructExpr of non-array type here,
+      // FIXME: Instead of creating a CXXConstructExpr of array type here,
       // wrap a class-typed CXXConstructExpr in an ArrayInitLoopExpr.
       return TryConstructorInitialization(
           S, Entity, Kind, Args, T, Entity.getType(), Sequence, InitListSyntax);
@@ -6366,6 +6366,8 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
     return E;
 
   // C++1z [conv.rval]/1: T shall be a complete type.
+  // FIXME: Does this ever matter (can we form a prvalue of incomplete type)?
+  // If so, we should check for a non-abstract class type here too.
   QualType T = E->getType();
   if (RequireCompleteType(E->getExprLoc(), T, diag::err_incomplete_type))
     return ExprError();
@@ -6541,6 +6543,17 @@ InitializationSequence::Perform(Sema &S,
     break;
   }
 
+  // C++ [class.abstract]p2:
+  //   no objects of an abstract class can be created except as subobjects
+  //   of a class derived from it
+  auto checkAbstractType = [&](QualType T) -> bool {
+    if (Entity.getKind() == InitializedEntity::EK_Base ||
+        Entity.getKind() == InitializedEntity::EK_Delegating)
+      return false;
+    return S.RequireNonAbstractType(Kind.getLocation(), T,
+                                    diag::err_allocation_of_abstract_type);
+  };
+
   // Walk through the computed steps for the initialization sequence,
   // performing the specified conversions along the way.
   bool ConstructorInitRequiresZeroInit = false;
@@ -6647,6 +6660,9 @@ InitializationSequence::Perform(Sema &S,
     }
 
     case SK_FinalCopy:
+      if (checkAbstractType(Step->Type))
+        return ExprError();
+
       // If the overall initialization is initializing a temporary, we already
       // bound our argument if it was necessary to do so. If not (if we're
       // ultimately initializing a non-temporary), our argument needs to be
@@ -6731,6 +6747,9 @@ InitializationSequence::Perform(Sema &S,
         CreatedObject = Conversion->getReturnType()->isRecordType();
       }
 
+      if (CreatedObject && checkAbstractType(CurInit.get()->getType()))
+        return ExprError();
+
       CurInit = ImplicitCastExpr::Create(S.Context, CurInit.get()->getType(),
                                          CastKind, CurInit.get(), nullptr,
                                          CurInit.get()->getValueKind());
@@ -6813,6 +6832,9 @@ InitializationSequence::Perform(Sema &S,
     }
 
     case SK_ListInitialization: {
+      if (checkAbstractType(Step->Type))
+        return ExprError();
+
       InitListExpr *InitList = cast<InitListExpr>(CurInit.get());
       // If we're not initializing the top-level entity, we need to create an
       // InitializeTemporary entity for our target type.
@@ -6849,6 +6871,9 @@ InitializationSequence::Perform(Sema &S,
     }
 
     case SK_ConstructorInitializationFromList: {
+      if (checkAbstractType(Step->Type))
+        return ExprError();
+
       // When an initializer list is passed for a parameter of type "reference
       // to object", we don't get an EK_Temporary entity, but instead an
       // EK_Parameter entity with reference type.
@@ -6892,6 +6917,9 @@ InitializationSequence::Perform(Sema &S,
 
     case SK_ConstructorInitialization:
     case SK_StdInitializerListConstructorCall: {
+      if (checkAbstractType(Step->Type))
+        return ExprError();
+
       // When an initializer list is passed for a parameter of type "reference
       // to object", we don't get an EK_Temporary entity, but instead an
       // EK_Parameter entity with reference type.

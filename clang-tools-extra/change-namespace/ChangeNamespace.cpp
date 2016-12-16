@@ -172,6 +172,16 @@ tooling::Replacement createReplacement(SourceLocation Start, SourceLocation End,
       ReplacementText);
 }
 
+void addReplacementOrDie(
+    SourceLocation Start, SourceLocation End, llvm::StringRef ReplacementText,
+    const SourceManager &SM,
+    std::map<std::string, tooling::Replacements> *FileToReplacements) {
+  const auto R = createReplacement(Start, End, ReplacementText, SM);
+  auto Err = (*FileToReplacements)[R.getFilePath()].add(R);
+  if (Err)
+    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
+}
+
 tooling::Replacement createInsertion(SourceLocation Loc,
                                      llvm::StringRef InsertText,
                                      const SourceManager &SM) {
@@ -444,8 +454,21 @@ void ChangeNamespaceTool::run(
     BaseCtorInitializerTypeLocs.push_back(
         BaseInitializer->getTypeSourceInfo()->getTypeLoc());
   } else if (const auto *TLoc = Result.Nodes.getNodeAs<TypeLoc>("type")) {
-    fixTypeLoc(Result, startLocationForType(*TLoc), endLocationForType(*TLoc),
-               *TLoc);
+    // This avoids fixing types with record types as qualifier, which is not
+    // filtered by matchers in some cases, e.g. the type is templated. We should
+    // handle the record type qualifier instead.
+    TypeLoc Loc = *TLoc;
+    while (Loc.getTypeLocClass() == TypeLoc::Qualified)
+      Loc = Loc.getNextTypeLoc();
+    if (Loc.getTypeLocClass() == TypeLoc::Elaborated) {
+      NestedNameSpecifierLoc NestedNameSpecifier =
+          Loc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
+      const Type *SpecifierType =
+          NestedNameSpecifier.getNestedNameSpecifier()->getAsType();
+      if (SpecifierType && SpecifierType->isRecordType())
+        return;
+    }
+    fixTypeLoc(Result, startLocationForType(Loc), endLocationForType(Loc), Loc);
   } else if (const auto *VarRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("var_ref")) {
     const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_decl");
@@ -574,11 +597,8 @@ void ChangeNamespaceTool::moveClassForwardDeclaration(
   if (AfterSemi.isValid())
     End = AfterSemi.getLocWithOffset(-1);
   // Delete the forward declaration from the code to be moved.
-  const auto Deletion =
-      createReplacement(Start, End, "", *Result.SourceManager);
-  auto Err = FileToReplacements[Deletion.getFilePath()].add(Deletion);
-  if (Err)
-    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
+  addReplacementOrDie(Start, End, "", *Result.SourceManager,
+                      &FileToReplacements);
   llvm::StringRef Code = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           Result.SourceManager->getSpellingLoc(Start),
@@ -608,6 +628,18 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
     const DeclContext *DeclCtx, SourceLocation Start, SourceLocation End,
     const NamedDecl *FromDecl) {
   const auto *NsDeclContext = DeclCtx->getEnclosingNamespaceContext();
+  if (llvm::isa<TranslationUnitDecl>(NsDeclContext)) {
+    // This should not happen in usual unless the TypeLoc is in function type
+    // parameters, e.g `std::function<void(T)>`. In this case, DeclContext of
+    // `T` will be the translation unit. We simply use fully-qualified name
+    // here.
+    // Note that `FromDecl` must not be defined in the old namespace (according
+    // to `DeclMatcher`), so its fully-qualified name will not change after
+    // changing the namespace.
+    addReplacementOrDie(Start, End, FromDecl->getQualifiedNameAsString(),
+                        *Result.SourceManager, &FileToReplacements);
+    return;
+  }
   const auto *NsDecl = llvm::cast<NamespaceDecl>(NsDeclContext);
   // Calculate the name of the `NsDecl` after it is moved to new namespace.
   std::string OldNs = NsDecl->getQualifiedNameAsString();
@@ -667,10 +699,8 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
   // NewNamespace is the global namespace.
   if (ReplaceName == FromDeclName && !NewNamespace.empty())
     ReplaceName = "::" + ReplaceName;
-  auto R = createReplacement(Start, End, ReplaceName, *Result.SourceManager);
-  auto Err = FileToReplacements[R.getFilePath()].add(R);
-  if (Err)
-    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
+  addReplacementOrDie(Start, End, ReplaceName, *Result.SourceManager,
+                      &FileToReplacements);
 }
 
 // Replace the [Start, End] of `Type` with the shortest qualified name when the
@@ -688,28 +718,33 @@ void ChangeNamespaceTool::fixTypeLoc(
   const auto *FromDecl = Result.Nodes.getNodeAs<NamedDecl>("from_decl");
   // `hasDeclaration` gives underlying declaration, but if the type is
   // a typedef type, we need to use the typedef type instead.
+  auto IsInMovedNs = [&](const NamedDecl *D) {
+    if (!llvm::StringRef(D->getQualifiedNameAsString())
+             .startswith(OldNamespace + "::"))
+      return false;
+    auto ExpansionLoc = Result.SourceManager->getExpansionLoc(D->getLocStart());
+    if (ExpansionLoc.isInvalid())
+      return false;
+    llvm::StringRef Filename = Result.SourceManager->getFilename(ExpansionLoc);
+    return FilePatternRE.match(Filename);
+  };
+  // Make `FromDecl` the immediate declaration that `Type` refers to, i.e. if
+  // `Type` is an alias type, we make `FromDecl` the type alias declaration.
+  // Also, don't fix the \p Type if it refers to a type alias decl in the moved
+  // namespace since the alias decl will be moved along with the type reference.
   if (auto *Typedef = Type.getType()->getAs<TypedefType>()) {
     FromDecl = Typedef->getDecl();
-    auto IsInMovedNs = [&](const NamedDecl *D) {
-      if (!llvm::StringRef(D->getQualifiedNameAsString())
-               .startswith(OldNamespace + "::"))
-        return false;
-      auto ExpansionLoc =
-          Result.SourceManager->getExpansionLoc(D->getLocStart());
-      if (ExpansionLoc.isInvalid())
-        return false;
-      llvm::StringRef Filename =
-          Result.SourceManager->getFilename(ExpansionLoc);
-      return FilePatternRE.match(Filename);
-    };
-    // Don't fix the \p Type if it refers to a type alias decl in the moved
-    // namespace since the alias decl will be moved along with the type
-    // reference.
     if (IsInMovedNs(FromDecl))
       return;
+  } else if (auto *TemplateType =
+                 Type.getType()->getAs<TemplateSpecializationType>()) {
+    if (TemplateType->isTypeAlias()) {
+      FromDecl = TemplateType->getTemplateName().getAsTemplateDecl();
+      if (IsInMovedNs(FromDecl))
+        return;
+    }
   }
-
-  const Decl *DeclCtx = Result.Nodes.getNodeAs<Decl>("dc");
+  const auto *DeclCtx = Result.Nodes.getNodeAs<Decl>("dc");
   assert(DeclCtx && "Empty decl context.");
   replaceQualifiedSymbolInDeclContext(Result, DeclCtx->getDeclContext(), Start,
                                       End, FromDecl);
@@ -731,11 +766,8 @@ void ChangeNamespaceTool::fixUsingShadowDecl(
   // FIXME: check if target_decl_name is in moved ns, which doesn't make much
   // sense. If this happens, we need to use name with the new namespace.
   // Use fully qualified name in UsingDecl for now.
-  auto R = createReplacement(Start, End, "using ::" + TargetDeclName,
-                             *Result.SourceManager);
-  auto Err = FileToReplacements[R.getFilePath()].add(R);
-  if (Err)
-    llvm_unreachable(llvm::toString(std::move(Err)).c_str());
+  addReplacementOrDie(Start, End, "using ::" + TargetDeclName,
+                      *Result.SourceManager, &FileToReplacements);
 }
 
 void ChangeNamespaceTool::fixDeclRefExpr(

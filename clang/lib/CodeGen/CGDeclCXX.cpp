@@ -237,7 +237,8 @@ void CodeGenFunction::registerGlobalDtorWithAtExit(const VarDecl &VD,
     llvm::FunctionType::get(IntTy, dtorStub->getType(), false);
 
   llvm::Constant *atexit =
-    CGM.CreateRuntimeFunction(atexitTy, "atexit");
+      CGM.CreateRuntimeFunction(atexitTy, "atexit", llvm::AttributeSet(),
+                                /*Local=*/true);
   if (llvm::Function *atexitFn = dyn_cast<llvm::Function>(atexit))
     atexitFn->setDoesNotThrow();
 

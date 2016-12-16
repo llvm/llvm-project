@@ -658,10 +658,9 @@ define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
 define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm1
-; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpsubd	%zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm2, %k1
+; CHECK-NEXT:    vpsubd	%zmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %sub_r = sub <16 x i32> %a, %b
   %cmp.i2.i = icmp sgt <16 x i32> %sub_r, %a
@@ -674,10 +673,9 @@ define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm1
-; CHECK-NEXT:    vpcmpleq %zmm0, %zmm1, %k0
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vpsubq	%zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm2, %k1
+; CHECK-NEXT:    vpsubq	%zmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %sub_r = sub <8 x i64> %a, %b
   %cmp.i2.i = icmp sgt <8 x i64> %sub_r, %a

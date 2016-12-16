@@ -31,8 +31,7 @@ public:
     if (!Aliaser)
       Aliaser.reset(new NamespaceAliaser(*Result.SourceManager));
 
-    const CallExpr *Call =
-        Result.Nodes.getNodeAs<CallExpr>("foo");
+    const auto *Call = Result.Nodes.getNodeAs<CallExpr>("foo");
     assert(Call != nullptr && "Did not find node \"foo\"");
     auto Hint = Aliaser->createAlias(*Result.Context, *Call, "::foo::bar",
                                      {"b", "some_alias"});

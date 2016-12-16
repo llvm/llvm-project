@@ -231,9 +231,10 @@ protected:
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(None);
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
-    auto *CU =
-        DBuilder.createCompileUnit(dwarf::DW_LANG_C99, "filename.c",
-                                   "/file/dir", "CloneFunc", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
+                                          DBuilder.createFile("filename.c",
+                                                              "/file/dir"),
+                                          "CloneFunc", false, "", 0);
 
     auto *Subprogram =
         DBuilder.createFunction(CU, "f", "f", File, 4, FuncType, true, true, 3,
@@ -268,7 +269,8 @@ protected:
     // Create another, empty, compile unit
     DIBuilder DBuilder2(*M);
     DBuilder2.createCompileUnit(dwarf::DW_LANG_C99,
-        "extra.c", "/file/dir", "CloneFunc", false, "", 0);
+                                DBuilder.createFile("extra.c", "/file/dir"),
+                                "CloneFunc", false, "", 0);
     DBuilder2.finalize();
   }
 
@@ -422,9 +424,10 @@ protected:
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(None);
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
-    auto *CU =
-        DBuilder.createCompileUnit(dwarf::DW_LANG_C99, "filename.c",
-                                   "/file/dir", "CloneModule", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
+                                          DBuilder.createFile("filename.c",
+                                                              "/file/dir"),
+                                          "CloneModule", false, "", 0);
     // Function DI
     auto *Subprogram =
         DBuilder.createFunction(CU, "f", "f", File, 4, DFuncType, true, true, 3,

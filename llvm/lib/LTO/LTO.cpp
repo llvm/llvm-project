@@ -380,6 +380,11 @@ Error LTO::addModule(InputFile &Input, InputFile::InputModule &IM,
                      const SymbolResolution *ResE) {
   // FIXME: move to backend
   Module &M = *IM.Mod;
+
+  if (M.getDataLayoutStr().empty())
+    return make_error<StringError>("input module has no datalayout",
+                                    inconvertibleErrorCode());
+
   if (!Conf.OverrideTriple.empty())
     M.setTargetTriple(Conf.OverrideTriple);
   else if (M.getTargetTriple().empty())

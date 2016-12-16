@@ -24,6 +24,8 @@
 ; NONAME:  %3 = add i32 %0, %2
 ; NONAME:  ret i32 %3
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 @GlobalValueName = global i32 0
 
 define i32 @foo(i32 %in) {

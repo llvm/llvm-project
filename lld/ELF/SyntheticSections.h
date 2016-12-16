@@ -13,6 +13,7 @@
 #include "GdbIndex.h"
 #include "InputSection.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/MC/StringTableBuilder.h"
 
 namespace lld {
 namespace elf {
@@ -479,17 +480,34 @@ public:
   GdbIndexSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const override { return CuTypesOffset; }
+  size_t getSize() const override;
   bool empty() const override;
 
   // Pairs of [CU Offset, CU length].
   std::vector<std::pair<uintX_t, uintX_t>> CompilationUnits;
+
+  llvm::StringTableBuilder StringPool;
+
+  GdbHashTab SymbolTable;
+
+  // The CU vector portion of the constant pool.
+  std::vector<std::vector<std::pair<uint32_t, uint8_t>>> CuVectors;
+
+  std::vector<AddressEntry<ELFT>> AddressArea;
 
 private:
   void parseDebugSections();
   void readDwarf(InputSection<ELFT> *I);
 
   uint32_t CuTypesOffset;
+  uint32_t SymTabOffset;
+  uint32_t ConstantPoolOffset;
+  uint32_t StringPoolOffset;
+
+  size_t CuVectorsSize = 0;
+  std::vector<size_t> CuVectorsOffset;
+
+  bool Finalized = false;
 };
 
 // --eh-frame-hdr option tells linker to construct a header for all the

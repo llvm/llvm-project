@@ -104,8 +104,7 @@ void MoveForwardingReferenceCheck::check(
 
   // Get the FunctionDecl and FunctionTemplateDecl containing the function
   // parameter.
-  const FunctionDecl *FuncForParam =
-      dyn_cast<FunctionDecl>(ParmVar->getDeclContext());
+  const auto *FuncForParam = dyn_cast<FunctionDecl>(ParmVar->getDeclContext());
   if (!FuncForParam)
     return;
   const FunctionTemplateDecl *FuncTemplate =

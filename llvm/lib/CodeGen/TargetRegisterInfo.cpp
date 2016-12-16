@@ -30,8 +30,8 @@ using namespace llvm;
 TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
                              regclass_iterator RCB, regclass_iterator RCE,
                              const char *const *SRINames,
-                             const unsigned *SRILaneMasks,
-                             unsigned SRICoveringLanes)
+                             const LaneBitmask *SRILaneMasks,
+                             LaneBitmask SRICoveringLanes)
   : InfoDesc(ID), SubRegIndexNames(SRINames),
     SubRegIndexLaneMasks(SRILaneMasks),
     RegClassBegin(RCB), RegClassEnd(RCE),
@@ -124,12 +124,6 @@ Printable PrintVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
     } else {
       OS << PrintRegUnit(Unit, TRI);
     }
-  });
-}
-
-Printable PrintLaneMask(LaneBitmask LaneMask) {
-  return Printable([LaneMask](raw_ostream &OS) {
-    OS << format("%08X", LaneMask);
   });
 }
 

@@ -9,7 +9,6 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -144,7 +143,6 @@ protected:
   Module M;
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;
-  std::unique_ptr<AssumptionCache> AC;
   std::unique_ptr<BasicAAResult> BAR;
   std::unique_ptr<AAResults> AAR;
 
@@ -155,8 +153,7 @@ protected:
     AAR.reset(new AAResults(TLI));
 
     // Build the various AA results and register them.
-    AC.reset(new AssumptionCache(F));
-    BAR.reset(new BasicAAResult(M.getDataLayout(), TLI, *AC));
+    BAR.reset(new BasicAAResult(M.getDataLayout(), TLI));
     AAR->addAAResult(*BAR);
 
     return *AAR;

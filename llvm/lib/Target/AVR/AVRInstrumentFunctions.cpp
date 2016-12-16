@@ -72,6 +72,18 @@ static Value *CreateStringPtr(BasicBlock &BB, StringRef Str) {
     {ConstantInt::get(I8, 0), ConstantInt::get(I8, 0)}, "", &BB);
 }
 
+static std::string GetTypeName(Type &Ty) {
+  if (auto *IntTy = dyn_cast<IntegerType>(&Ty)) {
+    return std::string("i") + std::to_string(IntTy->getBitWidth());
+  }
+
+  if (Ty.isFloatingPointTy()) {
+    return std::string("f") + std::to_string(Ty.getPrimitiveSizeInBits());
+  }
+
+  llvm_unreachable("unknown return type");
+}
+
 /// Builds a call to one of the signature begin/end hooks.
 static void BuildSignatureCall(StringRef SymName, BasicBlock &BB, Function &F) {
   LLVMContext &Ctx = F.getContext();
@@ -103,13 +115,7 @@ static void BuildEndSignature(BasicBlock &BB, Function &F) {
 /// Get the name of the external symbol that we need to call
 /// to notify about this argument.
 static std::string GetArgumentSymbolName(Argument &Arg) {
-  Type *Ty = Arg.getType();
-
-  if (auto *IntTy = dyn_cast<IntegerType>(Ty)) {
-    return (symbols::PREFIX + "_argument_i" + std::to_string(IntTy->getBitWidth())).str();
-  }
-
-  llvm_unreachable("unknown argument type");
+  return (symbols::PREFIX + "_argument_" + GetTypeName(*Arg.getType())).str();
 }
 
 /// Builds a call to one of the argument hooks.
@@ -117,14 +123,16 @@ static void BuildArgument(BasicBlock &BB, Argument &Arg) {
   Function &F = *Arg.getParent();
   LLVMContext &Ctx = F.getContext();
 
+  Type *I8 = Type::getInt8Ty(Ctx);
+
   FunctionType *FnType = FunctionType::get(Type::getVoidTy(Ctx),
-    {Type::getInt8PtrTy(Ctx), Arg.getType()}, false);
+    {Type::getInt8PtrTy(Ctx), I8, Arg.getType()}, false);
 
   Constant *Fn = F.getParent()->getOrInsertFunction(
     GetArgumentSymbolName(Arg), FnType);
   Value *ArgName = CreateStringPtr(BB, Arg.getName());
 
-  Value *Args[] = {ArgName, &Arg};
+  Value *Args[] = {ArgName, ConstantInt::get(I8, Arg.getArgNo()), &Arg};
   CallInst::Create(Fn, Args, "", &BB);
 }
 
@@ -151,13 +159,7 @@ static void BuildEntryBlock(Function &F) {
 }
 
 static std::string GetReturnSymbolName(Value &Val) {
-  Type *Ty = Val.getType();
-
-  if (auto *IntTy = dyn_cast<IntegerType>(Ty)) {
-    return (symbols::PREFIX + "_result_u" + std::to_string(IntTy->getBitWidth())).str();
-  }
-
-  llvm_unreachable("unknown return type");
+  return (symbols::PREFIX + "_result_" + GetTypeName(*Val.getType())).str();
 }
 
 static void BuildExitHook(Instruction &I) {

@@ -3030,6 +3030,40 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   return nullptr;
 }
 
+/// Fold icmp Pred smin(X, Y), X.
+static Instruction *foldICmpWithSMin(ICmpInst &Cmp) {
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0);
+  Value *X = Cmp.getOperand(1);
+
+  // TODO: This should be expanded to handle smax/umax/umin.
+
+  // Canonicalize minimum operand to LHS of the icmp.
+  if (match(X, m_c_SMin(m_Specific(Op0), m_Value()))) {
+    std::swap(Op0, X);
+    Pred = Cmp.getSwappedPredicate();
+  }
+
+  Value *Y;
+  if (!match(Op0, m_c_SMin(m_Specific(X), m_Value(Y))))
+    return nullptr;
+
+  // smin(X, Y) == X --> X <= Y
+  // smin(X, Y) >= X --> X <= Y
+  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SGE)
+    return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
+
+  // smin(X, Y) != X --> X > Y
+  // smin(X, Y) <  X --> X > Y
+  if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SLT)
+    return new ICmpInst(ICmpInst::ICMP_SGT, X, Y);
+
+  // These cases should be handled in InstSimplify:
+  // smin(X, Y) <= X --> true
+  // smin(X, Y) > X --> false
+  return nullptr;
+}
+
 Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
   if (!I.isEquality())
     return nullptr;
@@ -4122,7 +4156,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   }
 
   if (Value *V =
-          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &AC, &I))
+          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &I))
     return replaceInstUsesWith(I, V);
 
   // comparing -val or val with non-zero is the same as just comparing val
@@ -4277,6 +4311,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBinOp(I))
     return Res;
 
+  if (Instruction *Res = foldICmpWithSMin(I))
+    return Res;
+
   {
     Value *A, *B;
     // Transform (A & ~B) == 0 --> (A & B) != 0
@@ -4284,7 +4321,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // if A is a power of 2.
     if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
         match(Op1, m_Zero()) &&
-        isKnownToBeAPowerOfTwo(A, DL, false, 0, &AC, &I, &DT) && I.isEquality())
+        isKnownToBeAPowerOfTwo(A, DL, false, 0, &I, &DT) && I.isEquality())
       return new ICmpInst(I.getInversePredicate(),
                           Builder->CreateAnd(A, B),
                           Op1);
@@ -4607,7 +4644,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyFCmpInst(I.getPredicate(), Op0, Op1,
-                                  I.getFastMathFlags(), DL, &TLI, &DT, &AC, &I))
+                                  I.getFastMathFlags(), DL, &TLI, &DT, &I))
     return replaceInstUsesWith(I, V);
 
   // Simplify 'fcmp pred X, X'

@@ -1,13 +1,11 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld -m elf_x86_64 %t.o -o %t
-; RUN: llvm-objdump -d %t | FileCheck %s
+; RUN: not ld.lld -m elf_x86_64 %t.o -o %t 2>&1 | FileCheck %s
 
-; CHECK: _start:
-; CHECK-NEXT: retq
+; CHECK: input module has no datalayout
 
 ; This bitcode file has no datalayout.
-; Check that we produce a valid binary out of it.
+; Check that we error out producing a reasonable diagnostic.
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @_start() {
