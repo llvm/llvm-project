@@ -17,20 +17,20 @@ NSObject<NSObject>
 @interface TestObject : NSObject
 @end
 
-TestObject * _Nonnull returnsNilObjCInstanceIndirectly() {
-  TestObject *local = 0;
-  return local; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+TestObject *_Nonnull returnsNilObjCInstanceIndirectly() {
+  TestObject *local = nil;
+  return local; // expected-warning {{nil returned from a function that is expected to return a non-null value}}
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceIndirectlyWithSupressingCast() {
-  TestObject *local = 0;
+  TestObject *local = nil;
   return (TestObject * _Nonnull)local; // no-warning
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceDirectly() {
   // The first warning is from Sema. The second is from the static analyzer.
   return nil; // expected-warning {{null returned from function that requires a non-null return value}}
-              // expected-warning@-1 {{Null is returned from a function that is expected to return a non-null value}}
+              // expected-warning@-1 {{nil returned from a function that is expected to return a non-null value}}
 }
 
 TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
@@ -43,7 +43,7 @@ void testObjCNonARCNoInitialization(TestObject * _Nonnull p) {
 }
 
 void testObjCNonARCExplicitZeroInitialization() {
-  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
+  TestObject * _Nonnull explicitlyZeroInitialized = nil; // expected-warning {{nil assigned to a pointer which is expected to have non-null value}}
 }
 
 @interface ClassWithInitializers : NSObject
