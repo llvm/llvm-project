@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -57,7 +56,6 @@ public:
   void collectPrintfsFromModule(Module &M);
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
   }
@@ -80,9 +78,7 @@ private:
   }
 
   Value *simplify(Instruction *I) {
-    auto AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-        *I->getParent()->getParent());
-    return SimplifyInstruction(I, *TD, TLI, DT, AC);
+    return SimplifyInstruction(I, *TD, TLI, DT);
   }
 
   const DataLayout *TD;
@@ -96,7 +92,6 @@ char AMDGPUPrintfRuntimeBinding::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
                       "AMDGPU Printf lowering", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
