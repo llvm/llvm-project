@@ -4382,12 +4382,10 @@ public:
 
   Decl *ActOnUsingDeclaration(Scope *CurScope,
                               AccessSpecifier AS,
-                              bool HasUsingKeyword,
                               SourceLocation UsingLoc,
                               CXXScopeSpec &SS,
                               UnqualifiedId &Name,
                               AttributeList *AttrList,
-                              bool HasTypenameKeyword,
                               SourceLocation TypenameLoc);
   Decl *ActOnAliasDeclaration(Scope *CurScope,
                               AccessSpecifier AS,

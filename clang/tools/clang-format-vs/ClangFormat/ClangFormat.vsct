@@ -61,15 +61,21 @@
               <CommandFlag>DynamicVisibility</CommandFlag>
           If you do not want an image next to your command, remove the Icon node /> -->
 
-      <Button guid="guidClangFormatCmdSet" id="cmdidClangFormat" priority="0x0100" type="Button">
+      <Button guid="guidClangFormatCmdSet" id="cmdidClangFormatSelection" priority="0x0100" type="Button">
         <Parent guid="guidClangFormatCmdSet" id="MyMenuGroup" />
         <Icon guid="guidImages" id="bmpPic1" />
         <Strings>
-          <ButtonText>ClangFormat</ButtonText>
+          <ButtonText>Clang Format Selection</ButtonText>
         </Strings>
       </Button>
 
-
+      <Button guid="guidClangFormatCmdSet" id="cmdidClangFormatDocument" priority="0x0101" type="Button">
+        <Parent guid="guidClangFormatCmdSet" id="MyMenuGroup" />
+        <Icon guid="guidImages" id="bmpPic2" />
+        <Strings>
+          <ButtonText>Clang Format Document</ButtonText>
+        </Strings>
+      </Button>
 
     </Buttons>
    
@@ -88,7 +94,8 @@
 
 
   <KeyBindings>
-    <KeyBinding guid="guidClangFormatCmdSet" id="cmdidClangFormat" editor="guidTextEditor" key1="R" mod1="Control" key2="F" mod2="Control"/>
+    <KeyBinding guid="guidClangFormatCmdSet" id="cmdidClangFormatSelection" editor="guidTextEditor" key1="R" mod1="Control" key2="F" mod2="Control"/>
+    <KeyBinding guid="guidClangFormatCmdSet" id="cmdidClangFormatDocument" editor="guidTextEditor" key1="R" mod1="Control" key2="D" mod2="Control"/>
   </KeyBindings>
 
 
@@ -101,7 +108,8 @@
     <GuidSymbol name="guidClangFormatCmdSet" value="{e39cbab1-0f96-4022-a2bc-da5a9db7eb78}">
 
       <IDSymbol name="MyMenuGroup" value="0x1020" />
-      <IDSymbol name="cmdidClangFormat" value="0x0100" />
+      <IDSymbol name="cmdidClangFormatSelection" value="0x0100" />
+      <IDSymbol name="cmdidClangFormatDocument" value="0x0101" />
     </GuidSymbol>
 
     <GuidSymbol name="guidTextEditor" value="{8B382828-6202-11d1-8870-0000F87579D2}" />

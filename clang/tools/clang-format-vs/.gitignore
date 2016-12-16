@@ -1,5 +1,6 @@
 # Visual Studio files
 .vs/
+*.user
 /packages/
 /ClangFormat/obj/
 /ClangFormat/bin/

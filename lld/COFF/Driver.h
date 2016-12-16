@@ -91,6 +91,7 @@ private:
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> SearchPaths;
   std::set<std::string> VisitedFiles;
+  std::set<std::string> VisitedLibs;
 
   SymbolBody *addUndefined(StringRef Sym);
   StringRef mangle(StringRef Sym);

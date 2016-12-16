@@ -32,6 +32,7 @@ namespace ento {
 
 class CompoundValData;
 class LazyCompoundValData;
+class PointerToMemberData;
 class ProgramState;
 class BasicValueFactory;
 class MemRegion;
@@ -456,6 +457,51 @@ private:
   }
   static bool isKind(const NonLoc& V) {
     return V.getSubKind() == LazyCompoundValKind;
+  }
+};
+
+/// \brief Value representing pointer-to-member.
+///
+/// This value is qualified as NonLoc because neither loading nor storing
+/// operations are aplied to it. Instead, the analyzer uses the L-value coming
+/// from pointer-to-member applied to an object.
+/// This SVal is represented by a DeclaratorDecl which can be a member function
+/// pointer or a member data pointer and a list of CXXBaseSpecifiers. This list
+/// is required to accumulate the pointer-to-member cast history to figure out
+/// the correct subobject field.
+class PointerToMember : public NonLoc {
+  friend class ento::SValBuilder;
+
+public:
+  typedef llvm::PointerUnion<const DeclaratorDecl *,
+                             const PointerToMemberData *> PTMDataType;
+  const PTMDataType getPTMData() const {
+    return PTMDataType::getFromOpaqueValue(const_cast<void *>(Data));
+  }
+  bool isNullMemberPointer() const {
+    return getPTMData().isNull();
+  }
+  const DeclaratorDecl *getDecl() const;
+  template<typename AdjustedDecl>
+  const AdjustedDecl* getDeclAs() const {
+    return dyn_cast_or_null<AdjustedDecl>(getDecl());
+  }
+  typedef llvm::ImmutableList<const CXXBaseSpecifier *>::iterator iterator;
+  iterator begin() const;
+  iterator end() const;
+
+private:
+  explicit PointerToMember(const PTMDataType D)
+    : NonLoc(PointerToMemberKind, D.getOpaqueValue()) {}
+  friend class SVal;
+  PointerToMember() {}
+  static bool isKind(const SVal& V) {
+    return V.getBaseKind() == NonLocKind &&
+           V.getSubKind() == PointerToMemberKind;
+  }
+
+  static bool isKind(const NonLoc& V) {
+    return V.getSubKind() == PointerToMemberKind;
   }
 };
 

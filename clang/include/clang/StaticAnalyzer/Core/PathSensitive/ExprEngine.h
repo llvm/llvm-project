@@ -479,6 +479,22 @@ public:
     return X.isValid() ? svalBuilder.evalComplement(X.castAs<NonLoc>()) : X;
   }
 
+  ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
+                                      const LocationContext *LCtx, QualType T,
+                                      QualType ExTy, const CastExpr *CastE,
+                                      StmtNodeBuilder &Bldr,
+                                      ExplodedNode *Pred);
+
+  ProgramStateRef handleLVectorSplat(ProgramStateRef state,
+                                     const LocationContext *LCtx,
+                                     const CastExpr *CastE,
+                                     StmtNodeBuilder &Bldr,
+                                     ExplodedNode *Pred);
+
+  void handleUOExtension(ExplodedNodeSet::iterator I,
+                         const UnaryOperator* U,
+                         StmtNodeBuilder &Bldr);
+
 public:
 
   SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
