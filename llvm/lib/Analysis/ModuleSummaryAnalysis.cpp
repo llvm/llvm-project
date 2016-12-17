@@ -208,11 +208,6 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   SmallPtrSet<GlobalValue *, 8> Used;
   // First collect those in the llvm.used set.
   collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
-  for (auto *V : Used) {
-    if (V->hasLocalLinkage())
-      LocalsUsed.insert(V);
-  }
-  Used.clear();
   // Next collect those in the llvm.compiler.used set.
   collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ true);
   for (auto *V : Used) {

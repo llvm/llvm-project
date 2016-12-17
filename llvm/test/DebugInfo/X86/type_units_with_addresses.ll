@@ -140,12 +140,12 @@
 !25 = !{!26}
 !26 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, name: "T", type: !7, value: i32* @i)
 !27 = !{!28, !30, !31, !32, !33}
-!28 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", line: 1, isLocal: false, isDefinition: true, scope: null, file: !29, type: !8))
+!28 = !DIGlobalVariable(name: "i", line: 1, isLocal: false, isDefinition: true, scope: null, file: !29, type: !8)
 !29 = !DIFile(filename: "tu.cpp", directory: "/tmp/dbginfo")
-!30 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !4))
-!31 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !9))
-!32 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !13))
-!33 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !19))
+!30 = !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !4)
+!31 = !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !9)
+!32 = !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !13)
+!33 = !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !19)
 !34 = !{i32 2, !"Dwarf Version", i32 4}
 !35 = !{i32 1, !"Debug Info Version", i32 3}
 !36 = !{!"clang version 3.5.0 "}

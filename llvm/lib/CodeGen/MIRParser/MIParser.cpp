@@ -197,6 +197,12 @@ private:
   /// Return true if an error occurred.
   bool getUint64(uint64_t &Result);
 
+  /// Convert the hexadecimal literal in the current token into an unsigned
+  ///  APInt with a minimum bitwidth required to represent the value.
+  ///
+  /// Return true if the literal does not represent an integer value.
+  bool getHexUint(APInt &Result);
+
   /// If the current token is of the given kind, consume it and return false.
   /// Otherwise report an error and return true.
   bool expectAndConsume(MIToken::TokenKind TokenKind);
@@ -1160,16 +1166,10 @@ bool MIParser::getUnsigned(unsigned &Result) {
     return false;
   }
   if (Token.is(MIToken::HexLiteral)) {
-    StringRef S = Token.range();
-    assert(S[0] == '0' && tolower(S[1]) == 'x');
-    // This could be a floating point literal with a special prefix.
-    if (!isxdigit(S[2]))
+    APInt A;
+    if (getHexUint(A))
       return true;
-    StringRef V = S.substr(2);
-    unsigned BW = std::min<unsigned>(V.size()*4, 32);
-    APInt A(BW, V, 16);
-    APInt Limit = APInt(BW, std::numeric_limits<unsigned>::max());
-    if (A.ugt(Limit))
+    if (A.getBitWidth() > 32)
       return error("expected 32-bit integer (too large)");
     Result = A.getZExtValue();
     return false;
@@ -1823,10 +1823,35 @@ bool MIParser::parseIRValue(const Value *&V) {
 }
 
 bool MIParser::getUint64(uint64_t &Result) {
-  assert(Token.hasIntegerValue());
-  if (Token.integerValue().getActiveBits() > 64)
-    return error("expected 64-bit integer (too large)");
-  Result = Token.integerValue().getZExtValue();
+  if (Token.hasIntegerValue()) {
+    if (Token.integerValue().getActiveBits() > 64)
+      return error("expected 64-bit integer (too large)");
+    Result = Token.integerValue().getZExtValue();
+    return false;
+  }
+  if (Token.is(MIToken::HexLiteral)) {
+    APInt A;
+    if (getHexUint(A))
+      return true;
+    if (A.getBitWidth() > 64)
+      return error("expected 64-bit integer (too large)");
+    Result = A.getZExtValue();
+    return false;
+  }
+  return true;
+}
+
+bool MIParser::getHexUint(APInt &Result) {
+  assert(Token.is(MIToken::HexLiteral));
+  StringRef S = Token.range();
+  assert(S[0] == '0' && tolower(S[1]) == 'x');
+  // This could be a floating point literal with a special prefix.
+  if (!isxdigit(S[2]))
+    return true;
+  StringRef V = S.substr(2);
+  APInt A(V.size()*4, V, 16);
+  Result = APInt(A.getActiveBits(),
+                 ArrayRef<uint64_t>(A.getRawData(), A.getNumWords()));
   return false;
 }
 

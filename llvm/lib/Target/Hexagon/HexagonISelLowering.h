@@ -16,12 +16,21 @@
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONISELLOWERING_H
 
 #include "Hexagon.h"
-#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/Target/TargetLowering.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
-  namespace HexagonISD {
+
+namespace HexagonISD {
+
     enum NodeType : unsigned {
       OP_BEGIN = ISD::BUILTIN_OP_END,
 
@@ -80,18 +89,19 @@ namespace llvm {
 
       OP_END
     };
-  }
+
+} // end namespace HexagonISD
 
   class HexagonSubtarget;
 
   class HexagonTargetLowering : public TargetLowering {
     int VarArgsFrameOffset;   // Frame offset to start of varargs area.
+    const HexagonTargetMachine &HTM;
+    const HexagonSubtarget &Subtarget;
 
     bool CanReturnSmallStruct(const Function* CalleeFn, unsigned& RetSize)
         const;
     void promoteLdStType(MVT VT, MVT PromotedLdStVT);
-    const HexagonTargetMachine &HTM;
-    const HexagonSubtarget &Subtarget;
 
   public:
     explicit HexagonTargetLowering(const TargetMachine &TM,
@@ -199,6 +209,7 @@ namespace llvm {
     SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+
     EVT getSetCCResultType(const DataLayout &, LLVMContext &C,
                            EVT VT) const override {
       if (!VT.isVector())
@@ -277,6 +288,7 @@ namespace llvm {
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;
   };
+
 } // end namespace llvm
 
-#endif    // Hexagon_ISELLOWERING_H
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONISELLOWERING_H

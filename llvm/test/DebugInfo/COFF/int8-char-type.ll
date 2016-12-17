@@ -32,12 +32,12 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 !llvm.module.flags = !{!11, !12, !13}
 !llvm.ident = !{!14}
 
-!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !1, file: !6, line: 4, type: !9, isLocal: false, isDefinition: true))
+!0 = distinct !DIGlobalVariable(name: "x", scope: !1, file: !6, line: 4, type: !9, isLocal: false, isDefinition: true)
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 4.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "-", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !3 = !{}
 !4 = !{!0, !5}
-!5 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "y", scope: !1, file: !6, line: 5, type: !7, isLocal: false, isDefinition: true))
+!5 = distinct !DIGlobalVariable(name: "y", scope: !1, file: !6, line: 5, type: !7, isLocal: false, isDefinition: true)
 !6 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !7 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint8_t", file: !6, line: 3, baseType: !8)
 

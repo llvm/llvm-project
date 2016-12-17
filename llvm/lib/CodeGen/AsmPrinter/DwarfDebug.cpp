@@ -464,26 +464,6 @@ void DwarfDebug::constructAndAddImportedEntityDIE(DwarfCompileUnit &TheCU,
     D->addChild(TheCU.constructImportedEntityDIE(N));
 }
 
-/// Sort and unique GVEs by comparing their fragment offset.
-static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
-sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
-  std::sort(GVEs.begin(), GVEs.end(),
-            [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-              if (A.Expr != B.Expr && A.Expr && B.Expr &&
-                  A.Expr->isFragment() && B.Expr->isFragment())
-                return A.Expr->getFragmentOffsetInBits() <
-                       B.Expr->getFragmentOffsetInBits();
-              return false;
-            });
-  GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
-                         [](DwarfCompileUnit::GlobalExpr A,
-                            DwarfCompileUnit::GlobalExpr B) {
-                           return A.Expr == B.Expr;
-                         }),
-             GVEs.end());
-  return GVEs;
-}
-
 // Emit all Dwarf sections that should come prior to the content. Create
 // global DIEs and emit initial debug info sections. This is invoked by
 // the target AsmPrinter.
@@ -500,30 +480,21 @@ void DwarfDebug::beginModule() {
   // Tell MMI whether we have debug info.
   MMI->setDebugInfoAvailability(NumDebugCUs > 0);
   SingleCU = NumDebugCUs == 1;
-  DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
-      GVMap;
+
+  DenseMap<DIGlobalVariable *, const GlobalVariable *> GVMap;
   for (const GlobalVariable &Global : M->globals()) {
-    SmallVector<DIGlobalVariableExpression *, 1> GVs;
+    SmallVector<DIGlobalVariable *, 1> GVs;
     Global.getDebugInfo(GVs);
-    for (auto *GVE : GVs)
-      GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
+    for (auto &GV : GVs)
+      GVMap[GV] = &Global;
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     DwarfCompileUnit &CU = constructDwarfCompileUnit(CUNode);
     for (auto *IE : CUNode->getImportedEntities())
       CU.addImportedEntity(IE);
-
-    // Global Variables.
-    for (auto *GVE : CUNode->getGlobalVariables())
-      GVMap[GVE->getVariable()].push_back({nullptr, GVE->getExpression()});
-    DenseSet<DIGlobalVariable *> Processed;
-    for (auto *GVE : CUNode->getGlobalVariables()) {
-      DIGlobalVariable *GV = GVE->getVariable();
-      if (Processed.insert(GV).second)
-        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
-    }
-
+    for (auto *GV : CUNode->getGlobalVariables())
+      CU.getOrCreateGlobalVariableDIE(GV, GVMap.lookup(GV));
     for (auto *Ty : CUNode->getEnumTypes()) {
       // The enum types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
@@ -1092,7 +1063,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // We have an explicit location, different from the previous location.
   // Don't repeat a line-0 record, but otherwise emit the new location.
   // (The new location might be an explicit line 0, which we do emit.)
-  if (DL.getLine() == 0 && LastAsmLine == 0)
+  if (PrevInstLoc && DL.getLine() == 0 && LastAsmLine == 0)
     return;
   unsigned Flags = 0;
   if (DL == PrologEndLoc) {

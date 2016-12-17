@@ -70,10 +70,10 @@ entry:
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9, !11, !12}
-!9 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "some_data", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10))
+!9 = !DIGlobalVariable(name: "some_data", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!11 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "some_other", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10))
-!12 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "some_bss", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10))
+!11 = !DIGlobalVariable(name: "some_other", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
+!12 = !DIGlobalVariable(name: "some_bss", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !DILocation(line: 7, scope: !4)
 !15 = !DILocation(line: 8, scope: !4)

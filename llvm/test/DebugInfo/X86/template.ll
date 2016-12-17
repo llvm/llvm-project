@@ -119,8 +119,8 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !28 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_template.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !11, type: !29, variables: !2)
 !29 = !DISubroutineType(types: !2)
 !30 = !{!31, !32}
-!31 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "glbl", line: 3, isLocal: false, isDefinition: true, scope: null, file: !11, type: !7))
-!32 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !8))
+!31 = !DIGlobalVariable(name: "glbl", line: 3, isLocal: false, isDefinition: true, scope: null, file: !11, type: !7)
+!32 = !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !8)
 !33 = !{i32 2, !"Dwarf Version", i32 4}
 !34 = !{i32 2, !"Debug Info Version", i32 3}
 !35 = !{!"clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)"}

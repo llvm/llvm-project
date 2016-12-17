@@ -2792,6 +2792,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
       PBI = New_PBI;
     }
 
+    // If BI was a loop latch, it may have had associated loop metadata.
+    // We need to copy it to the new latch, that is, PBI.
+    if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
+      PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
 

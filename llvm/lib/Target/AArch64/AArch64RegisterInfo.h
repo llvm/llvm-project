@@ -95,6 +95,10 @@ public:
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
+
+  bool trackLivenessAfterRegAlloc(const MachineFunction&) const override {
+    return true;
+  }
 };
 
 } // end namespace llvm

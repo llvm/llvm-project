@@ -514,17 +514,18 @@ DIGlobalVariable *
 DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           MDString *LinkageName, Metadata *File, unsigned Line,
                           Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
+                          Metadata *Variable,
                           Metadata *StaticDataMemberDeclaration,
-                          uint32_t AlignInBits, StorageType Storage,
-                          bool ShouldCreate) {
+                          uint32_t AlignInBits,
+                          StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIGlobalVariable,
                         (Scope, Name, LinkageName, File, Line, Type,
-                         IsLocalToUnit, IsDefinition,
+                         IsLocalToUnit, IsDefinition, Variable,
                          StaticDataMemberDeclaration, AlignInBits));
-  Metadata *Ops[] = {
-      Scope, Name, File, Type, Name, LinkageName, StaticDataMemberDeclaration};
+  Metadata *Ops[] = {Scope, Name,        File,     Type,
+                     Name,  LinkageName, Variable, StaticDataMemberDeclaration};
   DEFINE_GETIMPL_STORE(DIGlobalVariable,
                        (Line, IsLocalToUnit, IsDefinition, AlignInBits),
                        Ops);
@@ -580,17 +581,10 @@ bool DIExpression::isValid() const {
     default:
       return false;
     case dwarf::DW_OP_LLVM_fragment:
-      // A fragment operator must appear at the end.
+    case dwarf::DW_OP_stack_value:
+      // We only support fragment and stack value expressions which appear at
+      // the end.
       return I->get() + I->getSize() == E->get();
-    case dwarf::DW_OP_stack_value: {
-      // Must be the last one or followed by a DW_OP_LLVM_fragment.
-      if (I->get() + I->getSize() == E->get())
-        break;
-      auto J = I;
-      if ((++J)->getOp() != dwarf::DW_OP_LLVM_fragment)
-        return false;
-      break;
-    }
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
@@ -617,27 +611,6 @@ uint64_t DIExpression::getFragmentOffsetInBits() const {
 uint64_t DIExpression::getFragmentSizeInBits() const {
   assert(isFragment() && "Expected fragment");
   return getElement(getNumElements() - 1);
-}
-
-bool DIExpression::isConstant() const {
-  // Recognize DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment Len Ofs)?.
-  if (getNumElements() != 3 && getNumElements() != 6)
-    return false;
-  if (getElement(0) != dwarf::DW_OP_constu ||
-      getElement(2) != dwarf::DW_OP_stack_value)
-    return false;
-  if (getNumElements() == 6 && getElement(3) != dwarf::DW_OP_LLVM_fragment)
-    return false;
-  return true;
-}
-
-DIGlobalVariableExpression *
-DIGlobalVariableExpression::getImpl(LLVMContext &Context, Metadata *Variable,
-                                    Metadata *Expression, StorageType Storage,
-                                    bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DIGlobalVariableExpression, (Variable, Expression));
-  Metadata *Ops[] = {Variable, Expression};
-  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIGlobalVariableExpression, Ops);
 }
 
 DIObjCProperty *DIObjCProperty::getImpl(

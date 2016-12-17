@@ -48,6 +48,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -60,6 +61,7 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -146,6 +148,16 @@ static bool convertToString(ArrayRef<uint64_t> Record, unsigned Idx,
   for (unsigned i = Idx, e = Record.size(); i != e; ++i)
     Result += (char)Record[i];
   return false;
+}
+
+// Strip all the TBAA attachment for the module.
+void stripTBAA(Module *M) {
+  for (auto &F : *M) {
+    if (F.isMaterializable())
+      continue;
+    for (auto &I : instructions(F))
+      I.setMetadata(LLVMContext::MD_tbaa, nullptr);
+  }
 }
 
 /// Read the "IDENTIFICATION_BLOCK_ID" block, do some basic enforcement on the
@@ -460,6 +472,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   bool WillMaterializeAllForwardRefs = false;
 
   bool StripDebugInfo = false;
+  TBAAVerifier TBAAVerifyHelper;
 
   std::vector<std::string> BundleTags;
 
@@ -475,7 +488,8 @@ public:
 
   /// \brief Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
-  Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata = false);
+  Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata = false,
+                         bool IsImporting = false);
 
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
@@ -3071,9 +3085,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   }
 }
 
-Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata) {
+Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
+                                      bool IsImporting) {
   TheModule = M;
-  MDLoader = MetadataLoader(Stream, *M, ValueList,
+  MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting,
                             [&](unsigned ID) { return getTypeByID(ID); });
   return parseModule(0, ShouldLazyLoadMetadata);
 }
@@ -4449,6 +4464,17 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
 
+  // Check if the TBAA Metadata are valid, otherwise we will need to strip them.
+  if (!MDLoader->isStrippingTBAA()) {
+    for (auto &I : instructions(F)) {
+      MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa);
+      if (!TBAA || TBAAVerifyHelper.visitTBAAMetadata(I, TBAA))
+        continue;
+      MDLoader->setStripTBAA(true);
+      stripTBAA(F->getParent());
+    }
+  }
+
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.
   return materializeForwardReferencedFunctions();
@@ -5196,7 +5222,7 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
 /// everything.
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
-                             bool ShouldLazyLoadMetadata) {
+                             bool ShouldLazyLoadMetadata, bool IsImporting) {
   BitstreamCursor Stream(Buffer);
 
   std::string ProducerIdentification;
@@ -5219,7 +5245,8 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
   M->setMaterializer(R);
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
-  if (Error Err = R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata))
+  if (Error Err =
+          R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata, IsImporting))
     return std::move(Err);
 
   if (MaterializeAll) {
@@ -5235,9 +5262,9 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 }
 
 Expected<std::unique_ptr<Module>>
-BitcodeModule::getLazyModule(LLVMContext &Context,
-                             bool ShouldLazyLoadMetadata) {
-  return getModuleImpl(Context, false, ShouldLazyLoadMetadata);
+BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
+                             bool IsImporting) {
+  return getModuleImpl(Context, false, ShouldLazyLoadMetadata, IsImporting);
 }
 
 // Parse the specified bitcode buffer, returning the function info index.
@@ -5299,20 +5326,20 @@ static Expected<BitcodeModule> getSingleModule(MemoryBufferRef Buffer) {
 }
 
 Expected<std::unique_ptr<Module>>
-llvm::getLazyBitcodeModule(MemoryBufferRef Buffer,
-                           LLVMContext &Context, bool ShouldLazyLoadMetadata) {
+llvm::getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
+                           bool ShouldLazyLoadMetadata, bool IsImporting) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
-  return BM->getLazyModule(Context, ShouldLazyLoadMetadata);
+  return BM->getLazyModule(Context, ShouldLazyLoadMetadata, IsImporting);
 }
 
-Expected<std::unique_ptr<Module>>
-llvm::getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
-                                 LLVMContext &Context,
-                                 bool ShouldLazyLoadMetadata) {
-  auto MOrErr = getLazyBitcodeModule(*Buffer, Context, ShouldLazyLoadMetadata);
+Expected<std::unique_ptr<Module>> llvm::getOwningLazyBitcodeModule(
+    std::unique_ptr<MemoryBuffer> &&Buffer, LLVMContext &Context,
+    bool ShouldLazyLoadMetadata, bool IsImporting) {
+  auto MOrErr = getLazyBitcodeModule(*Buffer, Context, ShouldLazyLoadMetadata,
+                                     IsImporting);
   if (MOrErr)
     (*MOrErr)->setOwnedMemoryBuffer(std::move(Buffer));
   return MOrErr;
@@ -5320,7 +5347,7 @@ llvm::getOwningLazyBitcodeModule(std::unique_ptr<MemoryBuffer> &&Buffer,
 
 Expected<std::unique_ptr<Module>>
 BitcodeModule::parseModule(LLVMContext &Context) {
-  return getModuleImpl(Context, true, false);
+  return getModuleImpl(Context, true, false, false);
   // TODO: Restore the use-lists to the in-memory state when the bitcode was
   // written.  We must defer until the Module has been fully materialized.
 }

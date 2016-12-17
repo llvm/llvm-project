@@ -35,7 +35,7 @@ attributes #0 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-fra
 !7 = !{!8}
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{!10}
-!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", linkageName: "_ZL1i", line: 1, isLocal: true, isDefinition: true, scope: null, file: !5, type: !8))
+!10 = !DIGlobalVariable(name: "i", linkageName: "_ZL1i", line: 1, isLocal: true, isDefinition: true, scope: null, file: !5, type: !8)
 !11 = !{i32 2, !"Dwarf Version", i32 3}
 !12 = !DILocation(line: 4, scope: !4)
 !13 = !{i32 1, !"Debug Info Version", i32 3}

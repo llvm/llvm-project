@@ -482,7 +482,7 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
 
   const VRegInfo &DefRegInfo = VRegInfos[DefRegIdx];
   LaneBitmask UsedLanes = transferUsedLanes(MI, DefRegInfo.UsedLanes, MO);
-  if (!UsedLanes.none())
+  if (UsedLanes.any())
     return false;
 
   unsigned MOReg = MO.getReg();

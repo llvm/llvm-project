@@ -620,7 +620,7 @@ TEST(Merge, Bad) {
   }
 }
 
-void EQ(const std::set<size_t> &A, const std::set<size_t> &B) {
+void EQ(const std::vector<uint32_t> &A, const std::vector<uint32_t> &B) {
   EXPECT_EQ(A, B);
 }
 
@@ -699,8 +699,11 @@ TEST(Merge, Good) {
   EXPECT_TRUE(M.Parse("3\n1\nA\nB\nC\n"
                         "STARTED 0 1000\nDONE 0 1 2 3\n"
                         "STARTED 1 1001\nDONE 1 4 5 6 \n"
-                        "STARTED 2 1002\nDONE 2 6 1 3 \n"
+                        "STARTED 2 1002\nDONE 2 6 1 3\n"
                         "", true));
+  EQ(M.Files[0].Features, {1, 2, 3});
+  EQ(M.Files[1].Features, {4, 5, 6});
+  EQ(M.Files[2].Features, {1, 3, 6});
   EXPECT_EQ(3U, M.Merge(&NewFiles));
   EQ(NewFiles, {"B"});
 }

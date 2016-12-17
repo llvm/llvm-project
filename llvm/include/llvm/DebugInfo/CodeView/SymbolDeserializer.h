@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
@@ -22,41 +23,50 @@ namespace llvm {
 namespace codeview {
 class SymbolVisitorDelegate;
 class SymbolDeserializer : public SymbolVisitorCallbacks {
+  struct MappingInfo {
+    explicit MappingInfo(ArrayRef<uint8_t> RecordData)
+        : Stream(RecordData), Reader(Stream), Mapping(Reader) {}
+
+    msf::ByteStream Stream;
+    msf::StreamReader Reader;
+    SymbolRecordMapping Mapping;
+  };
+
 public:
   explicit SymbolDeserializer(SymbolVisitorDelegate *Delegate)
       : Delegate(Delegate) {}
 
+  Error visitSymbolBegin(CVSymbol &Record) override {
+    assert(!Mapping && "Already in a symbol mapping!");
+    Mapping = llvm::make_unique<MappingInfo>(Record.content());
+    return Mapping->Mapping.visitSymbolBegin(Record);
+  }
+  Error visitSymbolEnd(CVSymbol &Record) override {
+    assert(Mapping && "Not in a symbol mapping!");
+    auto EC = Mapping->Mapping.visitSymbolEnd(Record);
+    Mapping.reset();
+    return EC;
+  }
+
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \
   Error visitKnownRecord(CVSymbol &CVR, Name &Record) override {               \
-    return defaultVisitKnownRecord(CVR, Record);                               \
+    return visitKnownRecordImpl(CVR, Record);                                  \
   }
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "CVSymbolTypes.def"
 
-protected:
-  template <typename T>
-  Error deserializeRecord(msf::StreamReader &Reader, SymbolKind Kind,
-                          T &Record) const {
-    uint32_t RecordOffset = Delegate ? Delegate->getRecordOffset(Reader) : 0;
-    SymbolRecordKind RK = static_cast<SymbolRecordKind>(Kind);
-    auto ExpectedRecord = T::deserialize(RK, RecordOffset, Reader);
-    if (!ExpectedRecord)
-      return ExpectedRecord.takeError();
-    Record = std::move(*ExpectedRecord);
-    return Error::success();
-  }
-
 private:
-  template <typename T>
-  Error defaultVisitKnownRecord(CVSymbol &CVR, T &Record) {
-    msf::ByteStream S(CVR.content());
-    msf::StreamReader SR(S);
-    if (auto EC = deserializeRecord(SR, CVR.Type, Record))
+  template <typename T> Error visitKnownRecordImpl(CVSymbol &CVR, T &Record) {
+
+    Record.RecordOffset =
+        Delegate ? Delegate->getRecordOffset(Mapping->Reader) : 0;
+    if (auto EC = Mapping->Mapping.visitKnownRecord(CVR, Record))
       return EC;
     return Error::success();
   }
 
   SymbolVisitorDelegate *Delegate;
+  std::unique_ptr<MappingInfo> Mapping;
 };
 }
 }

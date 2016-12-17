@@ -73,8 +73,9 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(StringRef FileName,
       Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID());
 }
 
+/// getOrCreateGlobalVariableDIE - get or create global variable DIE.
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
-    const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
+    const DIGlobalVariable *GV, const GlobalVariable *Global) {
   // Check for pre-existence.
   if (DIE *Die = getDIE(GV))
     return Die;
@@ -127,76 +128,69 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   // Add location.
   bool addToAccelTable = false;
-  DIELoc *Loc = nullptr;
-  std::unique_ptr<DIEDwarfExpression> DwarfExpr;
-  bool AllConstant = std::all_of(
-      GlobalExprs.begin(), GlobalExprs.end(),
-      [&](const GlobalExpr GE) {
-        return GE.Expr && GE.Expr->isConstant();
-      });
 
-  for (const auto &GE : GlobalExprs) {
-    const GlobalVariable *Global = GE.Var;
-    const DIExpression *Expr = GE.Expr;
-    // For compatibility with DWARF 3 and earlier,
-    // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) becomes
-    // DW_AT_const_value(X).
-    if (GlobalExprs.size() == 1 && Expr && Expr->isConstant()) {
-      addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
-      // We cannot describe the location of dllimport'd variables: the
-      // computation of their address requires loads from the IAT.
-    } else if ((Global && !Global->hasDLLImportStorageClass()) || AllConstant) {
-      if (!Loc) {
-        Loc = new (DIEValueAllocator) DIELoc;
-        DwarfExpr = llvm::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
-      }
+  DIExpression *Expr = GV->getExpr();
+
+  // For compatibility with DWARF 3 and earlier,
+  // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) becomes
+  // DW_AT_const_value(X).
+  if (Expr && Expr->getNumElements() == 3 &&
+      Expr->getElement(0) == dwarf::DW_OP_constu &&
+      Expr->getElement(2) == dwarf::DW_OP_stack_value) {
+    addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
+    // We cannot describe the location of dllimport'd variables: the computation
+    // of their address requires loads from the IAT.
+  } else if (!Global || !Global->hasDLLImportStorageClass()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    if (Global) {
       addToAccelTable = true;
-      if (Global) {
-        const MCSymbol *Sym = Asm->getSymbol(Global);
-        if (Global->isThreadLocal()) {
-          if (Asm->TM.Options.EmulatedTLS) {
-            // TODO: add debug info for emulated thread local mode.
-          } else {
-            // FIXME: Make this work with -gsplit-dwarf.
-            unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-            assert((PointerSize == 4 || PointerSize == 8) &&
-                   "Add support for other sizes if necessary");
-            // Based on GCC's support for TLS:
-            if (!DD->useSplitDwarf()) {
-              // 1) Start with a constNu of the appropriate pointer size
-              addUInt(*Loc, dwarf::DW_FORM_data1,
-                      PointerSize == 4 ? dwarf::DW_OP_const4u
-                                       : dwarf::DW_OP_const8u);
-              // 2) containing the (relocated) offset of the TLS variable
-              //    within the module's TLS block.
-              addExpr(*Loc, dwarf::DW_FORM_udata,
-                      Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
-            } else {
-              addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
-              addUInt(*Loc, dwarf::DW_FORM_udata,
-                      DD->getAddressPool().getIndex(Sym, /* TLS */ true));
-            }
-            // 3) followed by an OP to make the debugger do a TLS lookup.
-            addUInt(*Loc, dwarf::DW_FORM_data1,
-                    DD->useGNUTLSOpcode() ? dwarf::DW_OP_GNU_push_tls_address
-                                          : dwarf::DW_OP_form_tls_address);
-          }
+      const MCSymbol *Sym = Asm->getSymbol(Global);
+      if (Global->isThreadLocal()) {
+        if (Asm->TM.Options.EmulatedTLS) {
+          // TODO: add debug info for emulated thread local mode.
         } else {
-          DD->addArangeLabel(SymbolCU(this, Sym));
-          addOpAddress(*Loc, Sym);
+          // FIXME: Make this work with -gsplit-dwarf.
+          unsigned PointerSize = Asm->getDataLayout().getPointerSize();
+          assert((PointerSize == 4 || PointerSize == 8) &&
+                 "Add support for other sizes if necessary");
+          // Based on GCC's support for TLS:
+          if (!DD->useSplitDwarf()) {
+            // 1) Start with a constNu of the appropriate pointer size
+            addUInt(*Loc, dwarf::DW_FORM_data1, PointerSize == 4
+                                                    ? dwarf::DW_OP_const4u
+                                                    : dwarf::DW_OP_const8u);
+            // 2) containing the (relocated) offset of the TLS variable
+            //    within the module's TLS block.
+            addExpr(*Loc, dwarf::DW_FORM_udata,
+                    Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
+          } else {
+            addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
+            addUInt(*Loc, dwarf::DW_FORM_udata,
+                    DD->getAddressPool().getIndex(Sym, /* TLS */ true));
+          }
+          // 3) followed by an OP to make the debugger do a TLS lookup.
+          addUInt(*Loc, dwarf::DW_FORM_data1,
+                  DD->useGNUTLSOpcode() ? dwarf::DW_OP_GNU_push_tls_address
+                                        : dwarf::DW_OP_form_tls_address);
         }
+      } else {
+        DD->addArangeLabel(SymbolCU(this, Sym));
+        addOpAddress(*Loc, Sym);
       }
+
       if (Expr) {
-        DwarfExpr->addFragmentOffset(Expr);
-        DwarfExpr->AddExpression(Expr);
+        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        DwarfExpr.addFragmentOffset(Expr);
+        DwarfExpr.AddExpression(Expr);
+        DwarfExpr.finalize();
       }
     }
-  }
-  if (Loc)
-    addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
 
-  if (DD->useAllLinkageNames())
-    addLinkageName(*VariableDIE, GV->getLinkageName());
+    addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+
+    if (DD->useAllLinkageNames())
+      addLinkageName(*VariableDIE, GV->getLinkageName());
+  }
 
   if (addToAccelTable) {
     DD->addAccelName(GV->getName(), *VariableDIE);
@@ -509,7 +503,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.AddUnsignedConstant(DVInsn->getOperand(0).getImm());
         DwarfExpr.AddExpression(Expr);
-        addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+        DwarfExpr.finalize();
+        addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
       } else
         addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
     } else if (DVInsn->getOperand(0).isFPImm())
@@ -539,7 +534,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     DwarfExpr.AddExpression(*Expr);
     ++Expr;
   }
-  addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+  DwarfExpr.finalize();
+  addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
 
   return VariableDie;
 }
@@ -658,7 +654,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else if (auto *T = dyn_cast<DIType>(Entity))
     EntityDie = getOrCreateTypeDIE(T);
   else if (auto *GV = dyn_cast<DIGlobalVariable>(Entity))
-    EntityDie = getOrCreateGlobalVariableDIE(GV, {});
+    EntityDie = getOrCreateGlobalVariableDIE(GV, nullptr);
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
@@ -744,8 +740,10 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
   if (!validReg)
     return;
 
+  Expr.finalize();
+
   // Now attach the location information to the DIE.
-  addBlock(Die, Attribute, Expr.finalize());
+  addBlock(Die, Attribute, Loc);
 }
 
 /// Start with the address based on the location provided, and generate the

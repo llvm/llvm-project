@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-preheader-prot=true  -march=x86 -stats 2>&1 | grep "Number of blocks eliminated" | grep 6
+; RUN: llc < %s -disable-preheader-prot=true  -march=x86 -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
+; RUN: llc < %s -disable-preheader-prot=true  -march=x86 -stats -cgp-freq-ratio-to-skip-merge=10 2>&1 | grep "Number of blocks eliminated" | grep 6
 ; RUN: llc < %s -disable-preheader-prot=false -march=x86 -stats 2>&1 | grep "Number of blocks eliminated" | grep 3
 ; PR1296
 

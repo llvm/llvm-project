@@ -101,6 +101,10 @@ static cl::list<std::string>
 static cl::opt<bool> ClDemangle("demangle", cl::init(true),
                                 cl::desc("Print demangled function name."));
 
+static cl::opt<bool>
+    ClSkipDeadFiles("skip-dead-files", cl::init(true),
+                    cl::desc("Do not list dead source files in reports."));
+
 static cl::opt<std::string> ClStripPathPrefix(
     "strip_path_prefix", cl::init(""),
     cl::desc("Strip this prefix from file paths in reports."));
@@ -609,16 +613,35 @@ private:
 
 static std::vector<CoveragePoint>
 getCoveragePoints(const std::string &ObjectFile,
-                  const std::set<uint64_t> &Addrs, bool InlinedCode) {
+                  const std::set<uint64_t> &Addrs,
+                  const std::set<uint64_t> &CoveredAddrs) {
   std::vector<CoveragePoint> Result;
   auto Symbolizer(createSymbolizer());
   Blacklists B;
+
+  std::set<std::string> CoveredFiles;
+  if (ClSkipDeadFiles) {
+    for (auto Addr : CoveredAddrs) {
+      auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, Addr);
+      failIfError(LineInfo);
+      CoveredFiles.insert(LineInfo->FileName);
+      auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
+      failIfError(InliningInfo);
+      for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
+        auto FrameInfo = InliningInfo->getFrame(I);
+        CoveredFiles.insert(FrameInfo.FileName);
+      }
+    }
+  }
 
   for (auto Addr : Addrs) {
     std::set<DILineInfo> Infos; // deduplicate debug info.
 
     auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, Addr);
     failIfError(LineInfo);
+    if (ClSkipDeadFiles &&
+        CoveredFiles.find(LineInfo->FileName) == CoveredFiles.end())
+      continue;
     LineInfo->FileName = normalizeFilename(LineInfo->FileName);
     if (B.isBlacklisted(*LineInfo))
       continue;
@@ -628,18 +651,19 @@ getCoveragePoints(const std::string &ObjectFile,
     Infos.insert(*LineInfo);
     Point.Locs.push_back(*LineInfo);
 
-    if (InlinedCode) {
-      auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
-      failIfError(InliningInfo);
-      for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
-        auto FrameInfo = InliningInfo->getFrame(I);
-        FrameInfo.FileName = normalizeFilename(FrameInfo.FileName);
-        if (B.isBlacklisted(FrameInfo))
-          continue;
-        if (Infos.find(FrameInfo) == Infos.end()) {
-          Infos.insert(FrameInfo);
-          Point.Locs.push_back(FrameInfo);
-        }
+    auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
+    failIfError(InliningInfo);
+    for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
+      auto FrameInfo = InliningInfo->getFrame(I);
+      if (ClSkipDeadFiles &&
+          CoveredFiles.find(FrameInfo.FileName) == CoveredFiles.end())
+        continue;
+      FrameInfo.FileName = normalizeFilename(FrameInfo.FileName);
+      if (B.isBlacklisted(FrameInfo))
+        continue;
+      if (Infos.find(FrameInfo) == Infos.end()) {
+        Infos.insert(FrameInfo);
+        Point.Locs.push_back(FrameInfo);
       }
     }
 
@@ -926,7 +950,7 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
                      Data.Addrs->end())) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
-  Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, true);
+  Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs);
   return Coverage;
 }
 
@@ -1134,10 +1158,6 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
     // Read raw coverage and symbolize it.
     for (const auto &Pair : CoverageByObjFile) {
       if (findSanitizerCovFunctions(Pair.first).empty()) {
-        for (const auto &FileName : Pair.second) {
-          CovFiles.erase(FileName);
-        }
-
         errs()
             << "Ignoring " << Pair.first
             << " and its coverage because  __sanitizer_cov* functions were not "

@@ -449,7 +449,7 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
         continue;
       }
 
-      if (!(LaneMask & DefLaneMask).none()) {
+      if ((LaneMask & DefLaneMask).any()) {
         SUnit *UseSU = I->SU;
         MachineInstr *Use = UseSU->getInstr();
         SDep Dep(SU, SDep::Data, Reg);
@@ -461,7 +461,7 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
 
       LaneMask &= ~KillLaneMask;
       // If we found a Def for all lanes of this use, remove it from the list.
-      if (!LaneMask.none()) {
+      if (LaneMask.any()) {
         I->LaneMask = LaneMask;
         ++I;
       } else
@@ -507,11 +507,11 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
     LaneBitmask NonOverlapMask = V2SU.LaneMask & ~LaneMask;
     V2SU.SU = SU;
     V2SU.LaneMask = OverlapMask;
-    if (!NonOverlapMask.none())
+    if (NonOverlapMask.any())
       CurrentVRegDefs.insert(VReg2SUnit(Reg, NonOverlapMask, DefSU));
   }
   // If there was no CurrentVRegDefs entry for some lanes yet, create one.
-  if (!LaneMask.none())
+  if (LaneMask.any())
     CurrentVRegDefs.insert(VReg2SUnit(Reg, LaneMask, SU));
 }
 

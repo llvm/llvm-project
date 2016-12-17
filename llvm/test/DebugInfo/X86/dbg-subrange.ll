@@ -22,7 +22,7 @@ entry:
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !11 = !{!13}
-!13 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s", line: 2, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14))
+!13 = !DIGlobalVariable(name: "s", line: 2, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14)
 !14 = !DICompositeType(tag: DW_TAG_array_type, size: 34359738368, align: 8, baseType: !15, elements: !16)
 !15 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !16 = !{!17}

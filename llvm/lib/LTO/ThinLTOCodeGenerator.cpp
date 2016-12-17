@@ -168,12 +168,13 @@ static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
 
 static std::unique_ptr<Module>
 loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
-                     bool Lazy) {
+                     bool Lazy, bool IsImporting) {
   SMDiagnostic Err;
   Expected<std::unique_ptr<Module>> ModuleOrErr =
-      Lazy ? getLazyBitcodeModule(Buffer, Context,
-                                  /* ShouldLazyLoadMetadata */ true)
-           : parseBitcodeFile(Buffer, Context);
+      Lazy
+          ? getLazyBitcodeModule(Buffer, Context,
+                                 /* ShouldLazyLoadMetadata */ true, IsImporting)
+          : parseBitcodeFile(Buffer, Context);
   if (!ModuleOrErr) {
     handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
       SMDiagnostic Err = SMDiagnostic(Buffer.getBufferIdentifier(),
@@ -191,7 +192,7 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
                       const FunctionImporter::ImportMapTy &ImportList) {
   auto Loader = [&](StringRef Identifier) {
     return loadModuleFromBuffer(ModuleMap[Identifier], TheModule.getContext(),
-                                /*Lazy=*/true);
+                                /*Lazy=*/true, /*IsImporting*/ true);
   };
 
   FunctionImporter Importer(Index, Loader);
@@ -787,7 +788,8 @@ void ThinLTOCodeGenerator::run() {
         Context.setDiscardValueNames(LTODiscardValueNames);
 
         // Parse module now
-        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
+        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false,
+                                              /*IsImporting*/ false);
 
         // CodeGen
         ProducedBinaries[count] = codegen(*TheModule);
@@ -933,7 +935,8 @@ void ThinLTOCodeGenerator::run() {
         }
 
         // Parse module now
-        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
+        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false,
+                                              /*IsImporting*/ false);
 
         // Save temps: original file.
         saveTempBitcode(*TheModule, SaveTempsDir, count, ".0.original.bc");

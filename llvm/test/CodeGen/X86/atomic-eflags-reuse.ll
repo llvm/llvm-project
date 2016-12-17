@@ -176,4 +176,45 @@ entry:
   ret i8 %tmp2
 }
 
+define i8 @test_sub_1_setcc_eq(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_setcc_eq:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp eq i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_add_5_setcc_ne(i64* %p) #0 {
+; CHECK-LABEL: test_add_5_setcc_ne:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock addq $5, (%rdi)
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw add i64* %p, i64 5 seq_cst
+  %tmp1 = icmp ne i64 %tmp0, -5
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_add_5_setcc_ne_comparand_mismatch(i64* %p) #0 {
+; CHECK-LABEL: test_add_5_setcc_ne_comparand_mismatch:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movl $5, %eax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw add i64* %p, i64 5 seq_cst
+  %tmp1 = icmp ne i64 %tmp0, 0
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
 attributes #0 = { nounwind }

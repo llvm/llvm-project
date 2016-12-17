@@ -369,7 +369,7 @@ void HexagonExpandCondsets::updateDeadsInRange(unsigned Reg, LaneBitmask LM,
     if (!TargetRegisterInfo::isVirtualRegister(DR) || DR != Reg)
       return false;
     LaneBitmask SLM = getLaneMask(DR, DSR);
-    return !(SLM & LM).none();
+    return (SLM & LM).any();
   };
 
   // The splitting step will create pairs of predicated definitions without

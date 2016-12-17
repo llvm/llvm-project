@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+  class formatv_object_base;
   class raw_ostream;
 
   /// Twine - A lightweight data structure for efficiently representing the
@@ -102,6 +103,9 @@ namespace llvm {
       /// A pointer to a SmallString instance.
       SmallStringKind,
 
+      /// A pointer to a formatv_object_base instance.
+      FormatvObjectKind,
+
       /// A char value, to render as a character.
       CharKind,
 
@@ -137,6 +141,7 @@ namespace llvm {
       const std::string *stdString;
       const StringRef *stringRef;
       const SmallVectorImpl<char> *smallString;
+      const formatv_object_base *formatvObject;
       char character;
       unsigned int decUI;
       int decI;
@@ -287,6 +292,13 @@ namespace llvm {
     /*implicit*/ Twine(const SmallVectorImpl<char> &Str)
       : LHSKind(SmallStringKind), RHSKind(EmptyKind) {
       LHS.smallString = &Str;
+      assert(isValid() && "Invalid twine!");
+    }
+
+    /// Construct from a formatv_object_base.
+    /*implicit*/ Twine(const formatv_object_base &Fmt)
+        : LHSKind(FormatvObjectKind), RHSKind(EmptyKind) {
+      LHS.formatvObject = &Fmt;
       assert(isValid() && "Invalid twine!");
     }
 

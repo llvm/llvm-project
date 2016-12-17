@@ -86,6 +86,12 @@
 
 using namespace llvm;
 
+/// Flag whether we need to import full type definitions for ThinLTO.
+/// Currently needed for Darwin and LLDB.
+static cl::opt<bool> ImportFullTypeDefinitions(
+    "import-full-type-definitions", cl::init(false), cl::Hidden,
+    cl::desc("Import full type definitions for ThinLTO."));
+
 namespace {
 
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
@@ -382,6 +388,7 @@ class MetadataLoader::MetadataLoaderImpl {
   // Map the bitcode's custom MDKind ID to the Module's MDKind ID.
   DenseMap<unsigned, unsigned> MDKindMap;
 
+  bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
 
   Error parseMetadataStrings(ArrayRef<uint64_t> Record, StringRef Blob,
@@ -398,7 +405,7 @@ public:
         Stream(Stream), Context(TheModule.getContext()), TheModule(TheModule),
         getTypeByID(getTypeByID) {}
 
-  Error parseMetadata(bool ModuleLevel);
+  Error parseMetadata(bool ModuleLevel, bool IsImporting);
 
   bool hasFwdRefs() const { return MetadataList.hasFwdRefs(); }
   Metadata *getMetadataFwdRef(unsigned Idx) {
@@ -420,6 +427,9 @@ public:
 
   Error parseMetadataKinds();
 
+  void setStripTBAA(bool Value) { StripTBAA = Value; }
+  bool isStrippingTBAA() { return StripTBAA; }
+
   unsigned size() const { return MetadataList.size(); }
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
 };
@@ -431,7 +441,8 @@ Error error(const Twine &Message) {
 
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
-Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
+Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel,
+                                                        bool IsImporting) {
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 
@@ -721,18 +732,38 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       Metadata *File = getMDOrNull(Record[3]);
       unsigned Line = Record[4];
       Metadata *Scope = getDITypeRefOrNull(Record[5]);
-      Metadata *BaseType = getDITypeRefOrNull(Record[6]);
+      Metadata *BaseType = nullptr;
       uint64_t SizeInBits = Record[7];
       if (Record[8] > (uint64_t)std::numeric_limits<uint32_t>::max())
         return error("Alignment value is too large");
       uint32_t AlignInBits = Record[8];
-      uint64_t OffsetInBits = Record[9];
+      uint64_t OffsetInBits = 0;
       DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
-      Metadata *Elements = getMDOrNull(Record[11]);
+      Metadata *Elements = nullptr;
       unsigned RuntimeLang = Record[12];
-      Metadata *VTableHolder = getDITypeRefOrNull(Record[13]);
-      Metadata *TemplateParams = getMDOrNull(Record[14]);
+      Metadata *VTableHolder = nullptr;
+      Metadata *TemplateParams = nullptr;
       auto *Identifier = getMDString(Record[15]);
+      // If this module is being parsed so that it can be ThinLTO imported
+      // into another module, composite types only need to be imported
+      // as type declarations (unless full type definitions requested).
+      // Create type declarations up front to save memory. Also, buildODRType
+      // handles the case where this is type ODRed with a definition needed
+      // by the importing module, in which case the existing definition is
+      // used.
+      if (IsImporting && !ImportFullTypeDefinitions &&
+          (Tag == dwarf::DW_TAG_enumeration_type ||
+           Tag == dwarf::DW_TAG_class_type ||
+           Tag == dwarf::DW_TAG_structure_type ||
+           Tag == dwarf::DW_TAG_union_type)) {
+        Flags = Flags | DINode::FlagFwdDecl;
+      } else {
+        BaseType = getDITypeRefOrNull(Record[6]);
+        OffsetInBits = Record[9];
+        Elements = getMDOrNull(Record[11]);
+        VTableHolder = getDITypeRefOrNull(Record[13]);
+        TemplateParams = getMDOrNull(Record[14]);
+      }
       DICompositeType *CT = nullptr;
       if (Identifier)
         CT = DICompositeType::buildODRType(
@@ -994,16 +1025,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
           DIGlobalVariable,
           (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+           getDITypeRefOrNull(Record[6]), Record[7], Record[8], Expr,
            getMDOrNull(Record[10]), AlignInBits));
+      MetadataList.assignValue(DGV, NextMetadataNo++);
 
-      if (Expr || Attach) {
-        auto *DGVE = DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
-        MetadataList.assignValue(DGVE, NextMetadataNo++);
-        if (Attach)
-          Attach->addDebugInfo(DGVE);
-      } else
-        MetadataList.assignValue(DGV, NextMetadataNo++);
+      if (Attach)
+        Attach->addDebugInfo(DGV);
 
       break;
     }
@@ -1051,17 +1078,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
           GET_OR_DISTINCT(DIExpression,
                           (Context, makeArrayRef(Record).slice(1))),
           NextMetadataNo++);
-      break;
-    }
-    case bitc::METADATA_GLOBAL_VAR_EXPR: {
-      if (Record.size() != 3)
-        return error("Invalid record");
-
-      IsDistinct = Record[0];
-      MetadataList.assignValue(GET_OR_DISTINCT(DIGlobalVariableExpression,
-                                               (Context, getMDOrNull(Record[1]),
-                                                getMDOrNull(Record[2]))),
-                               NextMetadataNo++);
       break;
     }
     case bitc::METADATA_OBJC_PROPERTY: {
@@ -1224,6 +1240,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         DenseMap<unsigned, unsigned>::iterator I = MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
+        if (I->second == LLVMContext::MD_tbaa && StripTBAA)
+          continue;
+
         Metadata *Node = MetadataList.getMetadataFwdRef(Record[i + 1]);
         if (isa<LocalAsMetadata>(Node))
           // Drop the attachment.  This used to be legal, but there's no
@@ -1305,17 +1324,19 @@ MetadataLoader &MetadataLoader::operator=(MetadataLoader &&RHS) {
   return *this;
 }
 MetadataLoader::MetadataLoader(MetadataLoader &&RHS)
-    : Pimpl(std::move(RHS.Pimpl)) {}
+    : Pimpl(std::move(RHS.Pimpl)), IsImporting(RHS.IsImporting) {}
 
 MetadataLoader::~MetadataLoader() = default;
 MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                BitcodeReaderValueList &ValueList,
+                               bool IsImporting,
                                std::function<Type *(unsigned)> getTypeByID)
     : Pimpl(llvm::make_unique<MetadataLoaderImpl>(Stream, TheModule, ValueList,
-                                                  getTypeByID)) {}
+                                                  getTypeByID)),
+      IsImporting(IsImporting) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {
-  return Pimpl->parseMetadata(ModuleLevel);
+  return Pimpl->parseMetadata(ModuleLevel, IsImporting);
 }
 
 bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }
@@ -1342,6 +1363,12 @@ Error MetadataLoader::parseMetadataAttachment(
 Error MetadataLoader::parseMetadataKinds() {
   return Pimpl->parseMetadataKinds();
 }
+
+void MetadataLoader::setStripTBAA(bool StripTBAA) {
+  return Pimpl->setStripTBAA(StripTBAA);
+}
+
+bool MetadataLoader::isStrippingTBAA() { return Pimpl->isStrippingTBAA(); }
 
 unsigned MetadataLoader::size() const { return Pimpl->size(); }
 void MetadataLoader::shrinkTo(unsigned N) { return Pimpl->shrinkTo(N); }

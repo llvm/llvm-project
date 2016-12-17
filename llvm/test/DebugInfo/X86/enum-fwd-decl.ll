@@ -9,7 +9,7 @@
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 165274) (llvm/trunk 165272)", isOptimized: false, emissionKind: FullDebug, file: !8, enums: !1, retainedTypes: !1, globals: !3, imports:  !1)
 !1 = !{}
 !3 = !{!5}
-!5 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "e", line: 2, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7))
+!5 = !DIGlobalVariable(name: "e", line: 2, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7)
 !6 = !DIFile(filename: "foo.cpp", directory: "/tmp")
 !7 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", line: 1, size: 16, align: 16, flags: DIFlagFwdDecl, file: !8)
 !8 = !DIFile(filename: "foo.cpp", directory: "/tmp")

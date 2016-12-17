@@ -240,7 +240,7 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::getLiveIns(
     }
     for (MCSubRegIndexIterator S(I.PhysReg, &TRI); S.isValid(); ++S) {
       LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-      if (!(M & I.LaneMask).none())
+      if ((M & I.LaneMask).any())
         Tmp.insert({S.getSubReg(), 0});
     }
   }

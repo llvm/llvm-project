@@ -39,9 +39,9 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !{!8, !10}
-!8 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "ch", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true))
+!8 = !DIGlobalVariable(name: "ch", scope: !0, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true)
 !9 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 2, type: !11, isLocal: false, isDefinition: true))
+!10 = !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 2, type: !11, isLocal: false, isDefinition: true)
 !11 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}

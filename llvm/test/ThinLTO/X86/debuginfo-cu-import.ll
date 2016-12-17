@@ -77,4 +77,4 @@ entry:
 !35 = !{!36}
 !36 = !DICompositeType(tag: DW_TAG_structure_type, name: "Base", line: 1, size: 32, align: 32, file: !1, elements: !30, identifier: "_ZTS4Base")
 !37 = !{!38}
-!38 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "version", scope: !5, file: !1, line: 2, type: !36, isLocal: false, isDefinition: true))
+!38 = !DIGlobalVariable(name: "version", scope: !5, file: !1, line: 2, type: !36, isLocal: false, isDefinition: true)

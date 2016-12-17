@@ -13,7 +13,7 @@ entry:
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", linkageName: "i", line: 2, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !7))
+!6 = !DIGlobalVariable(name: "i", linkageName: "i", line: 2, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !7)
 !7 = !DIDerivedType(tag: DW_TAG_const_type, file: !10, scope: !1, baseType: !5)
 !8 = !DILocation(line: 3, column: 13, scope: !9)
 !9 = distinct !DILexicalBlock(line: 3, column: 11, file: !10, scope: !0)

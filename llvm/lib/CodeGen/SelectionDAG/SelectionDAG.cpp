@@ -6159,14 +6159,14 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
   return New;
 }
 
-/// UpdadeSDLocOnMergedSDNode - If the opt level is -O0 then it throws away
+/// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
 /// This will make the debugger working better at -O0, were there is a higher
 /// probability having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
-SDNode *SelectionDAG::UpdadeSDLocOnMergedSDNode(SDNode *N, const SDLoc &OLoc) {
+SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {
   DebugLoc NLoc = N->getDebugLoc();
   if (NLoc && OptLevel == CodeGenOpt::None && OLoc.getDebugLoc() != NLoc) {
     N->setDebugLoc(DebugLoc());
@@ -6200,7 +6200,7 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opc, VTs, Ops);
     if (SDNode *ON = FindNodeOrInsertPos(ID, SDLoc(N), IP))
-      return UpdadeSDLocOnMergedSDNode(ON, SDLoc(N));
+      return UpdateSDLocOnMergeSDNode(ON, SDLoc(N));
   }
 
   if (!RemoveNodeFromCSEMaps(N))
@@ -6352,7 +6352,7 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
     AddNodeIDNode(ID, ~Opcode, VTs, Ops);
     IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      return cast<MachineSDNode>(UpdadeSDLocOnMergedSDNode(E, DL));
+      return cast<MachineSDNode>(UpdateSDLocOnMergeSDNode(E, DL));
     }
   }
 
