@@ -12281,7 +12281,8 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
     SDValue CastV1 = DAG.getBitcast(MVT::v8f32, V1);
     SDValue CastV2 = DAG.getBitcast(MVT::v8f32, V2);
-    SDValue ShufPS = DAG.getVectorShuffle(MVT::v8f32, DL, CastV1, CastV2, Mask);
+    SDValue ShufPS = lowerVectorShuffleWithSHUFPS(DL, MVT::v8f32, RepeatedMask,
+                                                  CastV1, CastV2, DAG);
     return DAG.getBitcast(MVT::v8i32, ShufPS);
   }
 
@@ -12733,7 +12734,9 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // efficient instructions that mirror the shuffles across the four 128-bit
   // lanes.
   SmallVector<int, 4> RepeatedMask;
-  if (is128BitLaneRepeatedShuffleMask(MVT::v16i32, Mask, RepeatedMask)) {
+  bool Is128BitLaneRepeatedShuffle =
+      is128BitLaneRepeatedShuffleMask(MVT::v16i32, Mask, RepeatedMask);
+  if (Is128BitLaneRepeatedShuffle) {
     assert(RepeatedMask.size() == 4 && "Unexpected repeated mask size!");
     if (V2.isUndef())
       return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v16i32, V1,
@@ -12760,6 +12763,16 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
             DL, MVT::v16i32, V1, V2, Mask, Subtarget, DAG))
       return Rotate;
+
+  // Assume that a single SHUFPS is faster than using a permv shuffle.
+  // If some CPU is harmed by the domain switch, we can fix it in a later pass.
+  if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
+    SDValue CastV1 = DAG.getBitcast(MVT::v16f32, V1);
+    SDValue CastV2 = DAG.getBitcast(MVT::v16f32, V2);
+    SDValue ShufPS = lowerVectorShuffleWithSHUFPS(DL, MVT::v16f32, RepeatedMask,
+                                                  CastV1, CastV2, DAG);
+    return DAG.getBitcast(MVT::v16i32, ShufPS);
+  }
 
   return lowerVectorShuffleWithPERMV(DL, MVT::v16i32, Mask, V1, V2, DAG);
 }
@@ -26072,17 +26085,17 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       ShuffleVT = MVT::v4f32;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {0, 3}) && FloatDomain) {
-      if (Subtarget.hasSSE2()) {
-        std::swap(V1, V2);
-        Shuffle = X86ISD::MOVSD;
-        ShuffleVT = MVT::v2f64;
-        return true;
-      }
+    if (isTargetShuffleEquivalent(Mask, {0, 3}) && Subtarget.hasSSE2() &&
+        (FloatDomain || !Subtarget.hasSSE41())) {
+      std::swap(V1, V2);
+      Shuffle = X86ISD::MOVSD;
+      ShuffleVT = MaskVT;
+      return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {4, 1, 2, 3}) && FloatDomain) {
+    if (isTargetShuffleEquivalent(Mask, {4, 1, 2, 3}) &&
+        (FloatDomain || !Subtarget.hasSSE41())) {
       Shuffle = X86ISD::MOVSS;
-      ShuffleVT = MVT::v4f32;
+      ShuffleVT = MaskVT;
       return true;
     }
   }
@@ -28866,11 +28879,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Combine:
+/// Combine brcond/cmov/setcc/.. based on comparing the result of
+/// atomic_load_add to use EFLAGS produced by the addition
+/// directly if possible. For example:
+///
+///   (setcc (cmp (atomic_load_add x, -C) C), COND_E)
+/// becomes:
+///   (setcc (LADD x, -C), COND_E)
+///
+/// and
 ///   (brcond/cmov/setcc .., (cmp (atomic_load_add x, 1), 0), COND_S)
-/// to:
+/// becomes:
 ///   (brcond/cmov/setcc .., (LADD x, 1), COND_LE)
-/// i.e., reusing the EFLAGS produced by the LOCKed instruction.
+///
 /// Note that this is only legal for some op/cc combinations.
 static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
                                        SelectionDAG &DAG) {
@@ -28879,7 +28900,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
         (Cmp.getOpcode() == X86ISD::SUB && !Cmp->hasAnyUseOfValue(0))))
     return SDValue();
 
-  // This only applies to variations of the common case:
+  // This applies to variations of the common case:
   //   (icmp slt x, 0) -> (icmp sle (add x, 1), 0)
   //   (icmp sge x, 0) -> (icmp sgt (add x, 1), 0)
   //   (icmp sle x, 0) -> (icmp slt (sub x, 1), 0)
@@ -28898,8 +28919,9 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     return SDValue();
 
   auto *CmpRHSC = dyn_cast<ConstantSDNode>(CmpRHS);
-  if (!CmpRHSC || CmpRHSC->getZExtValue() != 0)
+  if (!CmpRHSC)
     return SDValue();
+  APInt Comparand = CmpRHSC->getAPIntValue();
 
   const unsigned Opc = CmpLHS.getOpcode();
 
@@ -28915,16 +28937,19 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   if (Opc == ISD::ATOMIC_LOAD_SUB)
     Addend = -Addend;
 
-  if (CC == X86::COND_S && Addend == 1)
+  if (Comparand == -Addend) {
+    // No change to CC.
+  } else if (CC == X86::COND_S && Comparand == 0 && Addend == 1) {
     CC = X86::COND_LE;
-  else if (CC == X86::COND_NS && Addend == 1)
+  } else if (CC == X86::COND_NS && Comparand == 0 && Addend == 1) {
     CC = X86::COND_G;
-  else if (CC == X86::COND_G && Addend == -1)
+  } else if (CC == X86::COND_G && Comparand == 0 && Addend == -1) {
     CC = X86::COND_GE;
-  else if (CC == X86::COND_LE && Addend == -1)
+  } else if (CC == X86::COND_LE && Comparand == 0 && Addend == -1) {
     CC = X86::COND_L;
-  else
+  } else {
     return SDValue();
+  }
 
   SDValue LockOp = lowerAtomicArithWithLOCK(CmpLHS, DAG);
   DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),

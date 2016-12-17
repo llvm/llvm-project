@@ -53,12 +53,11 @@ void DebugInfoFinder::reset() {
 void DebugInfoFinder::processModule(const Module &M) {
   for (auto *CU : M.debug_compile_units()) {
     addCompileUnit(CU);
-    for (auto DIG : CU->getGlobalVariables()) {
-      if (!addGlobalVariable(DIG))
-        continue;
-      auto *GV = DIG->getVariable();
-      processScope(GV->getScope());
-      processType(GV->getType().resolve());
+    for (auto *DIG : CU->getGlobalVariables()) {
+      if (addGlobalVariable(DIG)) {
+        processScope(DIG->getScope());
+        processType(DIG->getType().resolve());
+      }
     }
     for (auto *ET : CU->getEnumTypes())
       processType(ET);
@@ -207,7 +206,10 @@ bool DebugInfoFinder::addCompileUnit(DICompileUnit *CU) {
   return true;
 }
 
-bool DebugInfoFinder::addGlobalVariable(DIGlobalVariableExpression *DIG) {
+bool DebugInfoFinder::addGlobalVariable(DIGlobalVariable *DIG) {
+  if (!DIG)
+    return false;
+
   if (!NodesSeen.insert(DIG).second)
     return false;
 

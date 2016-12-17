@@ -38,8 +38,8 @@ define i32 @unused() !dbg !10 {
 !11 = !DISubroutineType(types: !12)
 !12 = !{!7}
 !13 = !{!14, !15}
-!14 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "X", scope: !0, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true))
-!15 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "U", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true))
+!14 = !DIGlobalVariable(name: "X", scope: !0, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true)
+!15 = !DIGlobalVariable(name: "U", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{!"clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)"}

@@ -1038,8 +1038,7 @@ private:
           StringRef Producer, bool IsOptimized, StringRef Flags,
           unsigned RuntimeVersion, StringRef SplitDebugFilename,
           unsigned EmissionKind, DICompositeTypeArray EnumTypes,
-          DIScopeArray RetainedTypes,
-          DIGlobalVariableExpressionArray GlobalVariables,
+          DIScopeArray RetainedTypes, DIGlobalVariableArray GlobalVariables,
           DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
           uint64_t DWOId, bool SplitDebugInlining, StorageType Storage,
           bool ShouldCreate = true) {
@@ -1079,7 +1078,7 @@ public:
        bool IsOptimized, StringRef Flags, unsigned RuntimeVersion,
        StringRef SplitDebugFilename, DebugEmissionKind EmissionKind,
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
-       DIGlobalVariableExpressionArray GlobalVariables,
+       DIGlobalVariableArray GlobalVariables,
        DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
        uint64_t DWOId, bool SplitDebugInlining),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
@@ -1114,7 +1113,7 @@ public:
   DIScopeArray getRetainedTypes() const {
     return cast_or_null<MDTuple>(getRawRetainedTypes());
   }
-  DIGlobalVariableExpressionArray getGlobalVariables() const {
+  DIGlobalVariableArray getGlobalVariables() const {
     return cast_or_null<MDTuple>(getRawGlobalVariables());
   }
   DIImportedEntityArray getImportedEntities() const {
@@ -1153,7 +1152,7 @@ public:
   void replaceRetainedTypes(DITypeArray N) {
     replaceOperandWith(5, N.get());
   }
-  void replaceGlobalVariables(DIGlobalVariableExpressionArray N) {
+  void replaceGlobalVariables(DIGlobalVariableArray N) {
     replaceOperandWith(6, N.get());
   }
   void replaceImportedEntities(DIImportedEntityArray N) {
@@ -1982,9 +1981,6 @@ public:
   /// Return the size of this fragment in bits.
   uint64_t getFragmentSizeInBits() const;
 
-  /// Determine whether this represents a standalone constant value.
-  bool isConstant() const;
-
   typedef ArrayRef<uint64_t>::iterator element_iterator;
   element_iterator elements_begin() const { return getElements().begin(); }
   element_iterator elements_end() const { return getElements().end(); }
@@ -2104,30 +2100,30 @@ class DIGlobalVariable : public DIVariable {
         IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition) {}
   ~DIGlobalVariable() = default;
 
-  static DIGlobalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
-                                   StringRef Name, StringRef LinkageName,
-                                   DIFile *File, unsigned Line, DITypeRef Type,
-                                   bool IsLocalToUnit, bool IsDefinition,
-                                   DIDerivedType *StaticDataMemberDeclaration,
-                                   uint32_t AlignInBits, StorageType Storage,
-                                   bool ShouldCreate = true) {
+  static DIGlobalVariable *
+  getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
+          StringRef LinkageName, DIFile *File, unsigned Line, DITypeRef Type,
+          bool IsLocalToUnit, bool IsDefinition, DIExpression *Expr,
+          DIDerivedType *StaticDataMemberDeclaration, uint32_t AlignInBits,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
-                   IsLocalToUnit, IsDefinition, StaticDataMemberDeclaration,
-                   AlignInBits, Storage, ShouldCreate);
+                   IsLocalToUnit, IsDefinition, Expr,
+                   StaticDataMemberDeclaration, AlignInBits, Storage,
+                   ShouldCreate);
   }
   static DIGlobalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
-          bool IsLocalToUnit, bool IsDefinition,
+          bool IsLocalToUnit, bool IsDefinition, Metadata *Expr,
           Metadata *StaticDataMemberDeclaration, uint32_t AlignInBits,
           StorageType Storage, bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
                         getFile(), getLine(), getType(), isLocalToUnit(),
-                        isDefinition(), getStaticDataMemberDeclaration(),
-                        getAlignInBits());
+                        isDefinition(), getExpr(),
+                        getStaticDataMemberDeclaration(), getAlignInBits());
   }
 
 public:
@@ -2135,18 +2131,21 @@ public:
                     (DIScope * Scope, StringRef Name, StringRef LinkageName,
                      DIFile *File, unsigned Line, DITypeRef Type,
                      bool IsLocalToUnit, bool IsDefinition,
+                     DIExpression *Expr,
                      DIDerivedType *StaticDataMemberDeclaration,
                      uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, StaticDataMemberDeclaration, AlignInBits))
+                     IsDefinition, Expr, StaticDataMemberDeclaration,
+                     AlignInBits))
   DEFINE_MDNODE_GET(DIGlobalVariable,
                     (Metadata * Scope, MDString *Name, MDString *LinkageName,
                      Metadata *File, unsigned Line, Metadata *Type,
                      bool IsLocalToUnit, bool IsDefinition,
-                     Metadata *StaticDataMemberDeclaration,
+                     Metadata *Expr, Metadata *StaticDataMemberDeclaration,
                      uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, StaticDataMemberDeclaration, AlignInBits))
+                     IsDefinition, Expr, StaticDataMemberDeclaration,
+                     AlignInBits))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -2154,12 +2153,19 @@ public:
   bool isDefinition() const { return IsDefinition; }
   StringRef getDisplayName() const { return getStringOperand(4); }
   StringRef getLinkageName() const { return getStringOperand(5); }
+  DIExpression *getExpr() const {
+    return cast_or_null<DIExpression>(getRawExpr());
+  }
+  void replaceExpr(DIExpression *E) {
+    replaceOperandWith(6, E);
+  }
   DIDerivedType *getStaticDataMemberDeclaration() const {
     return cast_or_null<DIDerivedType>(getRawStaticDataMemberDeclaration());
   }
 
   MDString *getRawLinkageName() const { return getOperandAs<MDString>(5); }
-  Metadata *getRawStaticDataMemberDeclaration() const { return getOperand(6); }
+  Metadata *getRawExpr() const { return getOperand(6); }
+  Metadata *getRawStaticDataMemberDeclaration() const { return getOperand(7); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIGlobalVariableKind;
@@ -2382,45 +2388,6 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIImportedEntityKind;
-  }
-};
-
-/// A pair of DIGlobalVariable and DIExpression.
-class DIGlobalVariableExpression : public MDNode {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-
-  DIGlobalVariableExpression(LLVMContext &C, StorageType Storage,
-                             ArrayRef<Metadata *> Ops)
-      : MDNode(C, DIGlobalVariableExpressionKind, Storage, Ops) {}
-  ~DIGlobalVariableExpression() = default;
-
-  static DIGlobalVariableExpression *
-  getImpl(LLVMContext &Context, Metadata *Variable, Metadata *Expression,
-          StorageType Storage, bool ShouldCreate = true);
-
-  TempDIGlobalVariableExpression cloneImpl() const {
-    return getTemporary(getContext(), getVariable(), getExpression());
-  }
-
-public:
-  DEFINE_MDNODE_GET(DIGlobalVariableExpression,
-                    (Metadata * Variable, Metadata *Expression),
-                    (Variable, Expression))
-
-  TempDIGlobalVariableExpression clone() const { return cloneImpl(); }
-
-  Metadata *getRawVariable() const { return getOperand(0); }
-  DIGlobalVariable *getVariable() const {
-    return cast_or_null<DIGlobalVariable>(getRawVariable());
-  }
-  Metadata *getRawExpression() const { return getOperand(1); }
-  DIExpression *getExpression() const {
-    return cast_or_null<DIExpression>(getRawExpression());
-  }
-
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIGlobalVariableExpressionKind;
   }
 };
 

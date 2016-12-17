@@ -8,6 +8,12 @@
 #include <cstdio>
 #include <cstdlib>
 
+// Windows does not have strcasestr and memmem, so we are not testing them.
+#ifdef _WIN32
+#define strcasestr strstr
+#define memmem(a, b, c, d) true
+#endif
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size < 4) return 0;
   std::string s(reinterpret_cast<const char*>(Data), Size);

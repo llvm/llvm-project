@@ -104,7 +104,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
 
 LaneBitmask CodeGenSubRegIndex::computeLaneMask() const {
   // Already computed?
-  if (!LaneMask.none())
+  if (LaneMask.any())
     return LaneMask;
 
   // Recursion guard, shouldn't be required.
@@ -114,7 +114,7 @@ LaneBitmask CodeGenSubRegIndex::computeLaneMask() const {
   LaneBitmask M;
   for (const auto &C : Composed)
     M |= C.second->computeLaneMask();
-  assert(!M.none() && "Missing lane mask, sub-register cycle?");
+  assert(M.any() && "Missing lane mask, sub-register cycle?");
   LaneMask = M;
   return LaneMask;
 }
@@ -1267,7 +1267,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
             SrcMask = LaneBitmask::getNone();
           }
         }
-        if (!SrcMask.none()) {
+        if (SrcMask.any()) {
           MaskRolPair MaskRol = { SrcMask, RotateLeft };
           LaneTransforms.push_back(MaskRol);
         }

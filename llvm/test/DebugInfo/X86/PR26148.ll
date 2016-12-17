@@ -86,7 +86,7 @@ entry:
 !18 = !DISubroutineType(types: !19)
 !19 = !{!15}
 !20 = !{!21}
-!21 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true))
+!21 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true)
 !22 = !{i32 2, !"Dwarf Version", i32 2}
 !23 = !{i32 2, !"Debug Info Version", i32 3}
 !24 = !{i32 1, !"PIC Level", i32 2}

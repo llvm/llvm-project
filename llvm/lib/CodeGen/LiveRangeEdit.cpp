@@ -236,7 +236,7 @@ bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
   unsigned SubReg = MO.getSubReg();
   LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubReg);
   for (const LiveInterval::SubRange &S : LI.subranges()) {
-    if (!(S.LaneMask & LaneMask).none() && S.Query(Idx).isKill())
+    if ((S.LaneMask & LaneMask).any() && S.Query(Idx).isKill())
       return true;
   }
   return false;

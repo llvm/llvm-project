@@ -405,7 +405,7 @@ namespace rdf {
     RegisterRef() : RegisterRef(0) {}
     explicit RegisterRef(RegisterId R, LaneBitmask M = LaneBitmask::getAll())
       : Reg(R), Mask(R != 0 ? M : LaneBitmask::getNone()) {}
-    operator bool() const { return Reg != 0 && !Mask.none(); }
+    operator bool() const { return Reg != 0 && Mask.any(); }
     bool operator== (const RegisterRef &RR) const {
       return Reg == RR.Reg && Mask == RR.Mask;
     }
@@ -471,11 +471,11 @@ namespace rdf {
       return K == 0 ? LaneBitmask::getAll() : get(K);
     }
     uint32_t getIndexForLaneMask(LaneBitmask LM) {
-      assert(!LM.none());
+      assert(LM.any());
       return LM.all() ? 0 : insert(LM);
     }
     uint32_t getIndexForLaneMask(LaneBitmask LM) const {
-      assert(!LM.none());
+      assert(LM.any());
       return LM.all() ? 0 : find(LM);
     }
     PackedRegisterRef pack(RegisterRef RR) {

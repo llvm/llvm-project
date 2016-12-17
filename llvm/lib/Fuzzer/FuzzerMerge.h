@@ -50,7 +50,7 @@ namespace fuzzer {
 struct MergeFileInfo {
   std::string Name;
   size_t Size = 0;
-  std::set<size_t> Features;
+  std::vector<uint32_t> Features;
 };
 
 struct Merger {

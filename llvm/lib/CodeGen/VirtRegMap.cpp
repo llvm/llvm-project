@@ -342,7 +342,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
   // See if any of the relevant subregister liveranges is defined at this point.
   for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if (!(SR.LaneMask & UseMask).none() && SR.liveAt(BaseIndex))
+    if ((SR.LaneMask & UseMask).any() && SR.liveAt(BaseIndex))
       return false;
   }
   return true;

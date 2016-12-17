@@ -129,6 +129,12 @@ static void computeCacheKey(
         ArrayRef<uint8_t>((const uint8_t *)&Linkage, sizeof(Linkage)));
   }
 
+  if (!Conf.SampleProfile.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
+    if (FileOrErr)
+      Hasher.update(FileOrErr.get()->getBuffer());
+  }
+
   Key = toHex(Hasher.result());
 }
 
@@ -246,7 +252,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   // ModuleSymbolTable.
   for (auto BM : *BMsOrErr) {
     Expected<std::unique_ptr<Module>> MOrErr =
-        BM.getLazyModule(File->Ctx, /*ShouldLazyLoadMetadata*/ true);
+        BM.getLazyModule(File->Ctx, /*ShouldLazyLoadMetadata*/ true,
+                         /*IsImporting*/ false);
     if (!MOrErr)
       return MOrErr.takeError();
 
@@ -409,7 +416,8 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     RegularLTO.Mover = llvm::make_unique<IRMover>(*RegularLTO.CombinedModule);
   }
   Expected<std::unique_ptr<Module>> MOrErr =
-      BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true);
+      BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true,
+                       /*IsImporting*/ false);
   if (!MOrErr)
     return MOrErr.takeError();
 

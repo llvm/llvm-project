@@ -1,0 +1,37 @@
+# RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_adds32() { ret void }
+...
+---
+name:            test_adds32
+# CHECK-LABEL: name: test_adds32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+#CHECK: id: 0, class: gpr
+#CHECK: id: 1, class: gpr
+#CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]] = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...

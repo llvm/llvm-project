@@ -144,7 +144,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
   }
   if (UseValueProfile)
     ValueProfileMap.ForEach([&](size_t Idx) {
-      if (CB(NumGuards + Idx))
+      if (CB(NumGuards * 8 + Idx))
         Res++;
     });
   return Res;

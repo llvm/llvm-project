@@ -35,8 +35,8 @@ YAML:               Signature:       0
 YAML:               ObjectName:      'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj'
 YAML:           - Kind:            S_COMPILE3
 YAML:             Compile3Sym:
-YAML:               Flags:           8193
-YAML:               Machine:         7
+YAML:               Flags:           [ SecurityChecks ]
+YAML:               Machine:         Pentium3
 YAML:               FrontendMajor:   18
 YAML:               FrontendMinor:   0
 YAML:               FrontendBuild:   31101
@@ -56,7 +56,7 @@ YAML:               DbgStart:        3
 YAML:               DbgEnd:          8
 YAML:               FunctionType:    4097
 YAML:               Segment:         1
-YAML:               Flags:           1
+YAML:               Flags:           [ HasFP ]
 YAML:               DisplayName:     main
 YAML:           - Kind:            S_FRAMEPROC
 YAML:             FrameProcSym:
@@ -66,7 +66,7 @@ YAML:               OffsetToPadding: 0
 YAML:               BytesOfCalleeSavedRegisters: 0
 YAML:               OffsetOfExceptionHandler: 0
 YAML:               SectionIdOfExceptionHandler: 0
-YAML:               Flags:           1212928
+YAML:               Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
 YAML:           - Kind:            S_END
 YAML:             ScopeEndSym:
 YAML:           - Kind:            S_BUILDINFO
@@ -83,8 +83,8 @@ YAML:               Signature:       0
 YAML:               ObjectName:      '* Linker *'
 YAML:           - Kind:            S_COMPILE3
 YAML:             Compile3Sym:
-YAML:               Flags:           7
-YAML:               Machine:         3
+YAML:               Flags:           [  ]
+YAML:               Machine:         Intel80386
 YAML:               FrontendMajor:   0
 YAML:               FrontendMinor:   0
 YAML:               FrontendBuild:   0
@@ -96,7 +96,6 @@ YAML:               BackendQFE:      0
 YAML:               Version:         'Microsoft (R) LINK'
 YAML:           - Kind:            S_ENVBLOCK
 YAML:             EnvBlockSym:
-YAML:               Reserved:        0
 YAML:               Entries:
 YAML:                 - cwd
 YAML:                 - 'd:\src\llvm\test\DebugInfo\PDB\Inputs'
@@ -106,7 +105,7 @@ YAML:                 - pdb
 YAML:                 - 'd:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb'
 YAML:           - Kind:            S_TRAMPOLINE
 YAML:             TrampolineSym:
-YAML:               Type:            0
+YAML:               Type:            TrampIncremental
 YAML:               Size:            5
 YAML:               ThunkOff:        5
 YAML:               TargetOff:       16
@@ -116,7 +115,6 @@ YAML:           - Kind:            S_SECTION
 YAML:             SectionSym:
 YAML:               SectionNumber:   1
 YAML:               Alignment:       12
-YAML:               Reserved:        0
 YAML:               Rva:             4096
 YAML:               Length:          4122
 YAML:               Characteristics: 1610612768
@@ -132,7 +130,6 @@ YAML:           - Kind:            S_SECTION
 YAML:             SectionSym:
 YAML:               SectionNumber:   2
 YAML:               Alignment:       12
-YAML:               Reserved:        0
 YAML:               Rva:             12288
 YAML:               Length:          690
 YAML:               Characteristics: 1073741888
@@ -162,7 +159,6 @@ YAML:           - Kind:            S_SECTION
 YAML:             SectionSym:
 YAML:               SectionNumber:   3
 YAML:               Alignment:       12
-YAML:               Reserved:        0
 YAML:               Rva:             16384
 YAML:               Length:          4
 YAML:               Characteristics: 3221225536
@@ -178,7 +174,6 @@ YAML:           - Kind:            S_SECTION
 YAML:             SectionSym:
 YAML:               SectionNumber:   4
 YAML:               Alignment:       12
-YAML:               Reserved:        0
 YAML:               Rva:             20480
 YAML:               Length:          8
 YAML:               Characteristics: 1107296320

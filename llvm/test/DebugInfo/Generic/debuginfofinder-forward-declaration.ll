@@ -31,7 +31,7 @@
 !1 = !DIFile(filename: "minimal.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "y", scope: !0, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true))
+!4 = !DIGlobalVariable(name: "y", scope: !0, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true)
 !5 = !DICompositeType(tag: DW_TAG_structure_type, name: "Y", file: !1, line: 3, size: 64, align: 64, elements: !6)
 !6 = !{!7}
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !5, file: !1, line: 4, baseType: !8, size: 64, align: 64)

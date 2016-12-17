@@ -252,7 +252,6 @@ enum MetadataCodes {
   METADATA_MACRO_FILE = 34,      // [distinct, macinfo, line, file, ...]
   METADATA_STRINGS = 35,         // [count, offset] blob([lengths][chars])
   METADATA_GLOBAL_DECL_ATTACHMENT = 36, // [valueid, n x [id, mdnode]]
-  METADATA_GLOBAL_VAR_EXPR = 37, // [distinct, var, expr]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each

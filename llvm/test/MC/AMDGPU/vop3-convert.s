@@ -371,9 +371,9 @@ v_lshlrev_b16 v1, v2, v3
 v_lshrrev_b16 v1, v2, v3
 
 // NOSICI: error: instruction not supported on this GPU
-// NOSICI: v_ashrrev_b16 v1, v2, v3
-// VI:     v_ashrrev_b16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x58]
-v_ashrrev_b16 v1, v2, v3
+// NOSICI: v_ashrrev_i16 v1, v2, v3
+// VI:     v_ashrrev_i16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x58]
+v_ashrrev_i16 v1, v2, v3
 
 // NOSICI: error: instruction not supported on this GPU
 // NOSICI: v_max_f16 v1, v2, v3

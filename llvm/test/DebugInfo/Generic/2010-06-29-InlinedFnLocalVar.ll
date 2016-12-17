@@ -45,7 +45,7 @@ entry:
 !13 = !{!14, !15}
 !14 = !DIDerivedType(tag: DW_TAG_member, name: "a", line: 10, size: 32, align: 32, file: !27, scope: !12, baseType: !5)
 !15 = !DIDerivedType(tag: DW_TAG_member, name: "b", line: 10, size: 32, align: 32, offset: 32, file: !27, scope: !12, baseType: !5)
-!16 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !5))
+!16 = !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !5)
 !17 = !DILocation(line: 15, scope: !18)
 !18 = distinct !DILexicalBlock(line: 14, column: 0, file: !1, scope: !6)
 !19 = !DILocation(line: 9, scope: !0, inlinedAt: !17)

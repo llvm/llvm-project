@@ -740,7 +740,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
           if (MO.isUse()) {
             // Reading any undefined lanes?
             LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
-            if (!(UseMask & ~DefinedLanesMask).none())
+            if ((UseMask & ~DefinedLanesMask).any())
               goto CancelKill;
           } else if (MO.getSubReg() == 0) {
             // Writing to the full register?
@@ -980,7 +980,7 @@ private:
       dbgs() << "     ";
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
         dbgs() << PrintReg(Reg);
-        if (!LaneMask.none())
+        if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
       } else {
         dbgs() << PrintRegUnit(Reg, &TRI);
@@ -1314,7 +1314,7 @@ private:
         if (MO.isUndef())
           continue;
         unsigned SubReg = MO.getSubReg();
-        if (SubReg != 0 && !LaneMask.none()
+        if (SubReg != 0 && LaneMask.any()
             && (TRI.getSubRegIndexLaneMask(SubReg) & LaneMask).none())
           continue;
 

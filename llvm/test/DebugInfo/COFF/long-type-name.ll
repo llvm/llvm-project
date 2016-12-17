@@ -28,7 +28,7 @@ target triple = "x86_64-pc-windows-msvc"
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "f", linkageName: "\01?f@@3UFoo@@A", scope: !1, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true))
+!0 = distinct !DIGlobalVariable(name: "f", linkageName: "\01?f@@3UFoo@@A", scope: !1, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true)
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !3 = !{}

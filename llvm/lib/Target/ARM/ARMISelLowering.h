@@ -190,7 +190,8 @@ namespace llvm {
       MEMCPY,
 
       // Vector load N-element structure to all lanes:
-      VLD2DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      VLD2DUP,
       VLD3DUP,
       VLD4DUP,
 
@@ -202,6 +203,7 @@ namespace llvm {
       VLD2LN_UPD,
       VLD3LN_UPD,
       VLD4LN_UPD,
+      VLD1DUP_UPD,
       VLD2DUP_UPD,
       VLD3DUP_UPD,
       VLD4DUP_UPD,

@@ -46,6 +46,17 @@ public:
 
   uint32_t maxFieldLength() const;
 
+  template <typename T> Error mapObject(T &Value) {
+    if (isWriting())
+      return Writer->writeObject(Value);
+
+    const T *ValuePtr;
+    if (auto EC = Reader->readObject(ValuePtr))
+      return EC;
+    Value = *ValuePtr;
+    return Error::success();
+  }
+
   template <typename T> Error mapInteger(T &Value) {
     if (isWriting())
       return Writer->writeInteger(Value);
@@ -74,6 +85,8 @@ public:
   Error mapEncodedInteger(APSInt &Value);
   Error mapStringZ(StringRef &Value);
   Error mapGuid(StringRef &Guid);
+
+  Error mapStringZVectorZ(std::vector<StringRef> &Value);
 
   template <typename SizeType, typename T, typename ElementMapper>
   Error mapVectorN(T &Items, const ElementMapper &Mapper) {
@@ -121,6 +134,7 @@ public:
   }
 
   Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes);
+  Error mapByteVectorTail(std::vector<uint8_t> &Bytes);
 
   Error skipPadding();
 

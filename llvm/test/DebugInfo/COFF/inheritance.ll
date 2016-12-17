@@ -93,7 +93,7 @@ attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 !llvm.module.flags = !{!31, !32, !33}
 !llvm.ident = !{!34}
 
-!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "d", linkageName: "\01?d@@3UD@@A", scope: !1, file: !5, line: 8, type: !6, isLocal: false, isDefinition: true))
+!0 = distinct !DIGlobalVariable(name: "d", linkageName: "\01?d@@3UD@@A", scope: !1, file: !5, line: 8, type: !6, isLocal: false, isDefinition: true)
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 95626d54d6db7e13087089396a80ebaccc4ffe7c) (http://llvm.org/git/llvm.git 374b6e2fa0b230d13c0fb9ee7af69b2146bfad8a)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !3 = !{}

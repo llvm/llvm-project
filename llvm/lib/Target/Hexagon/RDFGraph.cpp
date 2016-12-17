@@ -662,7 +662,7 @@ bool RegisterAggr::hasAliasOf(RegisterRef RR) const {
   RegisterRef NR = normalize(RR);
   auto F = Masks.find(NR.Reg);
   if (F != Masks.end()) {
-    if (!(F->second & NR.Mask).none())
+    if ((F->second & NR.Mask).any())
       return true;
   }
   if (CheckUnits) {
@@ -1089,7 +1089,7 @@ RegisterRef DataFlowGraph::normalizeRef(RegisterRef RR) const {
 RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
   if (AR.Reg == BR.Reg) {
     LaneBitmask M = AR.Mask & BR.Mask;
-    return !M.none() ? RegisterRef(AR.Reg, M) : RegisterRef();
+    return M.any() ? RegisterRef(AR.Reg, M) : RegisterRef();
   }
 #ifndef NDEBUG
   RegisterRef NAR = normalizeRef(AR);
@@ -1221,7 +1221,7 @@ bool DataFlowGraph::alias(RegisterRef RA, RegisterRef RB) const {
       // while the lane mask of r2 in d1 may be 0b0001.
       LaneBitmask LA = PA.second & RA.Mask;
       LaneBitmask LB = PB.second & RB.Mask;
-      if (!LA.none() && !LB.none()) {
+      if (LA.any() && LB.any()) {
         unsigned Root = *MCRegUnitRootIterator(PA.first, &TRI);
         // If register units were guaranteed to only have 1 bit in any lane
         // mask, the code below would not be necessary. This is because LA
@@ -1232,7 +1232,7 @@ bool DataFlowGraph::alias(RegisterRef RA, RegisterRef RB) const {
         const TargetRegisterClass &RC = *TRI.getMinimalPhysRegClass(Root);
         LaneBitmask MaskA = TRI.reverseComposeSubRegIndexLaneMask(SubA, LA);
         LaneBitmask MaskB = TRI.reverseComposeSubRegIndexLaneMask(SubB, LB);
-        if (!(MaskA & MaskB & RC.LaneMask).none())
+        if ((MaskA & MaskB & RC.LaneMask).any())
           return true;
       }
 

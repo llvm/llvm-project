@@ -960,6 +960,9 @@ void MIPrinter::print(const MachineMemOperand &Op) {
       printLLVMNameWithoutPrefix(
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
+    case PseudoSourceValue::TargetCustom:
+      llvm_unreachable("TargetCustom pseudo source values are not supported");
+      break;
     }
   }
   printOffset(Op.getOffset());
