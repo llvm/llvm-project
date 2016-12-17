@@ -687,8 +687,6 @@ static CXErrorCode clang_indexTranslationUnit_Impl(
 // libclang public APIs.
 //===----------------------------------------------------------------------===//
 
-extern "C" {
-
 int clang_index_isEntityObjCContainerKind(CXIdxEntityKind K) {
   return CXIdxEntity_ObjCClass <= K && K <= CXIdxEntity_ObjCCategory;
 }
@@ -977,6 +975,4 @@ CXSourceLocation clang_indexLoc_getCXSourceLocation(CXIdxLoc location) {
       *static_cast<CXIndexDataConsumer*>(location.ptr_data[0]);
   return cxloc::translateSourceLocation(DataConsumer.getASTContext(), Loc);
 }
-
-} // end: extern "C"
 

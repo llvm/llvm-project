@@ -148,3 +148,9 @@ void test_dynamic_size(int s) {
   int *buf = new int[s];
   buf[0] = 1; // no-warning
 }
+//Tests complex arithmetic
+//in new expression
+void test_dynamic_size2(unsigned m,unsigned n){
+  unsigned *U = nullptr;
+  U = new unsigned[m + n + 1];
+}

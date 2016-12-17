@@ -2003,6 +2003,14 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
       });
 }
 
+void CodeGenFunction::EmitOMPTargetTeamsDirective(
+    const OMPTargetTeamsDirective &S) {
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_target_teams,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
 /// \brief Emit a helper variable and return corresponding lvalue.
 static LValue EmitOMPHelperVar(CodeGenFunction &CGF,
                                const DeclRefExpr *Helper) {

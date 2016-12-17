@@ -2855,7 +2855,7 @@ CGDebugInfo::getGlobalVariableForwardDeclaration(const VarDecl *VD) {
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
   auto *GV = DBuilder.createTempGlobalVariableFwdDecl(
       DContext, Name, LinkageName, Unit, Line, getOrCreateType(T, Unit),
-      !VD->isExternallyVisible(), nullptr, Align);
+      !VD->isExternallyVisible(), nullptr, nullptr, Align);
   FwdDeclReplaceMap.emplace_back(
       std::piecewise_construct,
       std::make_tuple(cast<VarDecl>(VD->getCanonicalDecl())),
@@ -2873,12 +2873,8 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
                            getOrCreateFile(TD->getLocation()));
   auto I = DeclCache.find(D->getCanonicalDecl());
 
-  if (I != DeclCache.end()) {
-    auto N = I->second;
-    if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(N))
-      return GVE->getVariable();
-    return dyn_cast_or_null<llvm::DINode>(N);
-  }
+  if (I != DeclCache.end())
+    return dyn_cast_or_null<llvm::DINode>(I->second);
 
   // No definition for now. Emit a forward definition that might be
   // merged with a potential upcoming definition.
@@ -3654,10 +3650,10 @@ CGDebugInfo::getOrCreateStaticDataMemberDeclarationOrNull(const VarDecl *D) {
   return CreateRecordStaticField(D, Ctxt, cast<RecordDecl>(DC));
 }
 
-llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
+llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
     const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
     StringRef LinkageName, llvm::GlobalVariable *Var, llvm::DIScope *DContext) {
-  llvm::DIGlobalVariableExpression *GVE = nullptr;
+  llvm::DIGlobalVariable *GV = nullptr;
 
   for (const auto *Field : RD->fields()) {
     llvm::DIType *FieldTy = getOrCreateType(Field->getType(), Unit);
@@ -3666,17 +3662,16 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-        GVE = CollectAnonRecordDecls(RT->getDecl(), Unit, LineNo, LinkageName,
+        GV = CollectAnonRecordDecls(RT->getDecl(), Unit, LineNo, LinkageName,
                                     Var, DContext);
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
-    GVE = DBuilder.createGlobalVariableExpression(
-        DContext, FieldName, LinkageName, Unit, LineNo, FieldTy,
-        Var->hasLocalLinkage());
-    Var->addDebugInfo(GVE);
+    GV = DBuilder.createGlobalVariable(DContext, FieldName, LinkageName, Unit,
+                                       LineNo, FieldTy, Var->hasLocalLinkage());
+    Var->addDebugInfo(GV);
   }
-  return GVE;
+  return GV;
 }
 
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
@@ -3689,8 +3684,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   // it to the llvm::GlobalVariable.
   auto Cached = DeclCache.find(D->getCanonicalDecl());
   if (Cached != DeclCache.end())
-    return Var->addDebugInfo(
-        cast<llvm::DIGlobalVariableExpression>(Cached->second));
+    return Var->addDebugInfo(cast<llvm::DIGlobalVariable>(Cached->second));
 
   // Create global variable debug descriptor.
   llvm::DIFile *Unit = nullptr;
@@ -3702,7 +3696,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 
   // Attempt to store one global variable for the declaration - even if we
   // emit a lot of fields.
-  llvm::DIGlobalVariableExpression *GVE = nullptr;
+  llvm::DIGlobalVariable *GV = nullptr;
 
   // If this is an anonymous union then we'll want to emit a global
   // variable for each member of the anonymous union so that it's possible
@@ -3711,16 +3705,16 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
-    GVE = CollectAnonRecordDecls(RD, Unit, LineNo, LinkageName, Var, DContext);
+    GV = CollectAnonRecordDecls(RD, Unit, LineNo, LinkageName, Var, DContext);
   } else {
     auto Align = getDeclAlignIfRequired(D, CGM.getContext());
-    GVE = DBuilder.createGlobalVariableExpression(
+    GV = DBuilder.createGlobalVariable(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
         Var->hasLocalLinkage(), /*Expr=*/nullptr,
         getOrCreateStaticDataMemberDeclarationOrNull(D), Align);
-    Var->addDebugInfo(GVE);
+    Var->addDebugInfo(GV);
   }
-  DeclCache[D->getCanonicalDecl()].reset(GVE);
+  DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
@@ -3765,13 +3759,16 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   if (GV)
     return;
   llvm::DIExpression *InitExpr = nullptr;
-  if (Init.isInt())
-    InitExpr =
-        DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
-  else if (Init.isFloat() && CGM.getContext().getTypeSize(VD->getType()) <= 64)
-    InitExpr = DBuilder.createConstantValueExpression(
-        Init.getFloat().bitcastToAPInt().getZExtValue());
-  GV.reset(DBuilder.createGlobalVariableExpression(
+  if (CGM.getContext().getTypeSize(VD->getType()) <= 64) {
+    // FIXME: Add a representation for integer constants wider than 64 bits.
+    if (Init.isInt())
+      InitExpr =
+          DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
+    else if (Init.isFloat())
+      InitExpr = DBuilder.createConstantValueExpression(
+          Init.getFloat().bitcastToAPInt().getZExtValue());
+  }
+  GV.reset(DBuilder.createGlobalVariable(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       Align));
@@ -3918,8 +3915,6 @@ void CGDebugInfo::finalize() {
     else
       Repl = it->second;
 
-    if (auto *GVE = dyn_cast_or_null<llvm::DIGlobalVariableExpression>(Repl))
-      Repl = GVE->getVariable();
     DBuilder.replaceTemporary(std::move(FwdDecl), cast<llvm::MDNode>(Repl));
   }
 

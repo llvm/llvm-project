@@ -26,8 +26,6 @@ using namespace clang;
 using namespace clang::comments;
 using namespace clang::cxcomment;
 
-extern "C" {
-
 CXComment clang_Cursor_getParsedComment(CXCursor C) {
   using namespace clang::cxcursor;
 
@@ -405,6 +403,4 @@ CXString clang_FullComment_getAsXML(CXComment CXC) {
       ->convertCommentToXML(FC, XML, cxtu::getASTUnit(TU)->getASTContext());
   return cxstring::createDup(XML.str());
 }
-
-} // end extern "C"
 
