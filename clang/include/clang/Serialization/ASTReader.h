@@ -284,6 +284,21 @@ private:
   void Error(const char *Msg);
 };
 
+/// \brief ASTReaderListenter implementation to set SuggestedPredefines of
+/// ASTReader which is required to use a pch file. This is the replacement
+/// of PCHValidator or SimplePCHValidator when using a pch file without
+/// validating it.
+class SimpleASTReaderListener : public ASTReaderListener {
+  Preprocessor &PP;
+
+public:
+  SimpleASTReaderListener(Preprocessor &PP)
+    : PP(PP) {}
+
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+                               std::string &SuggestedPredefines) override;
+};
+
 namespace serialization {
 
 class ReadMethodPoolVisitor;
