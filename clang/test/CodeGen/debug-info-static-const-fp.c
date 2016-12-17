@@ -33,22 +33,14 @@ int main() {
   return hVal + fVal + dVal + ldVal;
 }
 
-// CHECK: !DIGlobalVariableExpression(var: [[HVAL:.*]], expr: [[HEXPR:.*]])
-// CHECK: [[HVAL]] = distinct !DIGlobalVariable(name: "hVal",
-// CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[HEXPR]] = !DIExpression(DW_OP_constu, 16502, DW_OP_stack_value)
+// CHECK: !DIGlobalVariable(name: "hVal", {{.*}}, isLocal: true, isDefinition: true, expr: ![[HEXPR:[0-9]+]]
+// CHECK: ![[HEXPR]] = !DIExpression(DW_OP_constu, 16502, DW_OP_stack_value)
 
-// CHECK: !DIGlobalVariableExpression(var: [[FVAL:.*]], expr: [[FEXPR:.*]])
-// CHECK: [[FVAL]] = distinct !DIGlobalVariable(name: "fVal",
-// CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[FEXPR]] = !DIExpression(DW_OP_constu, 3238681178, DW_OP_stack_value)
+// CHECK: !DIGlobalVariable(name: "fVal", {{.*}}, isLocal: true, isDefinition: true, expr: ![[FEXPR:[0-9]+]]
+// CHECK: ![[FEXPR]] = !DIExpression(DW_OP_constu, 3238681178, DW_OP_stack_value)
 
-// CHECK: !DIGlobalVariableExpression(var: [[DVAL:.*]], expr: [[DEXPR:.*]])
-// CHECK: [[DVAL]] = distinct !DIGlobalVariable(name: "dVal",
-// CHECK-SAME:                                  isLocal: true, isDefinition: true
-// CHECK: [[DEXPR]] = !DIExpression(DW_OP_constu, 4658387303597904457, DW_OP_stack_value)
+// CHECK: !DIGlobalVariable(name: "dVal", {{.*}}, isLocal: true, isDefinition: true, expr: ![[DEXPR:[0-9]+]]
+// CHECK: ![[DEXPR]] = !DIExpression(DW_OP_constu, 4658387303597904457, DW_OP_stack_value)
 
-// CHECK-LDlg-DAG: [[LDVAL:.*]] = distinct !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
-// CHECK-LDlg-DAG: !DIGlobalVariableExpression(var: [[LDVAL]])
-// CHECK-LDsm-DAG: [[LDVAL:.*]] = distinct !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
-// CHECK-LDsm-DAG: !DIGlobalVariableExpression(var: [[LDVAL]], expr:
+// CHECK-LDlg: !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true)
+// CHECK-LDsm: !DIGlobalVariable(name: "ldVal", {{.*}}, isLocal: true, isDefinition: true, expr:

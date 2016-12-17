@@ -7727,6 +7727,16 @@ StmtResult TreeTransform<Derived>::TransformOMPTeamsDistributeParallelForDirecti
   return Res;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTargetTeamsDirective(
+    OMPTargetTeamsDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_target_teams, DirName,
+                                             nullptr, D->getLocStart());
+  auto Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
 
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation
@@ -10355,6 +10365,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->isConstexpr());
 
   LSI->CallOperator = NewCallOperator;
+
+  for (unsigned I = 0, NumParams = NewCallOperator->getNumParams();
+       I != NumParams; ++I) {
+    auto *P = NewCallOperator->getParamDecl(I);
+    if (P->hasUninstantiatedDefaultArg()) {
+      EnterExpressionEvaluationContext Eval(
+          getSema(), Sema::PotentiallyEvaluatedIfUsed, P);
+      ExprResult R = getDerived().TransformExpr(
+          E->getCallOperator()->getParamDecl(I)->getDefaultArg());
+      P->setDefaultArg(R.get());
+    }
+  }
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), NewCallOperator);

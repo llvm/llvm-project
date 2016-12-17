@@ -407,8 +407,6 @@ static bool findIncludesInFile(CXTranslationUnit TU, const FileEntry *File,
 // libclang public APIs.
 //===----------------------------------------------------------------------===//
 
-extern "C" {
-
 CXResult clang_findReferencesInFile(CXCursor cursor, CXFile file,
                                     CXCursorAndRangeVisitor visitor) {
   LogRef Log = Logger::make(__func__);
@@ -533,6 +531,4 @@ CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit TU,
                                       block ? _visitCursorAndRange : nullptr };
   return clang_findIncludesInFile(TU, file, visitor);
 }
-
-} // end: extern "C"
 

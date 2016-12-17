@@ -315,6 +315,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
     EmitOMPTeamsDistributeParallelForDirective(
         cast<OMPTeamsDistributeParallelForDirective>(*S));
     break;
+  case Stmt::OMPTargetTeamsDirectiveClass:
+    EmitOMPTargetTeamsDirective(cast<OMPTargetTeamsDirective>(*S));
+    break;
   }
 }
 

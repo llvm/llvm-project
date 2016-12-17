@@ -153,6 +153,9 @@
 #ifndef OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE
 #define OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(Name)
 #endif
+#ifndef OPENMP_TARGET_TEAMS_CLAUSE
+#define OPENMP_TARGET_TEAMS_CLAUSE(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -202,6 +205,7 @@ OPENMP_DIRECTIVE_EXT(teams_distribute, "teams distribute")
 OPENMP_DIRECTIVE_EXT(teams_distribute_simd, "teams distribute simd")
 OPENMP_DIRECTIVE_EXT(teams_distribute_parallel_for_simd, "teams distribute parallel for simd")
 OPENMP_DIRECTIVE_EXT(teams_distribute_parallel_for, "teams distribute parallel for")
+OPENMP_DIRECTIVE_EXT(target_teams, "target teams")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
@@ -451,7 +455,6 @@ OPENMP_TARGET_EXIT_DATA_CLAUSE(nowait)
 OPENMP_TARGET_EXIT_DATA_CLAUSE(depend)
 
 // Clauses allowed for OpenMP directive 'target parallel'.
-// TODO: add target clauses 'is_device_ptr'
 OPENMP_TARGET_PARALLEL_CLAUSE(if)
 OPENMP_TARGET_PARALLEL_CLAUSE(device)
 OPENMP_TARGET_PARALLEL_CLAUSE(map)
@@ -465,6 +468,7 @@ OPENMP_TARGET_PARALLEL_CLAUSE(default)
 OPENMP_TARGET_PARALLEL_CLAUSE(proc_bind)
 OPENMP_TARGET_PARALLEL_CLAUSE(shared)
 OPENMP_TARGET_PARALLEL_CLAUSE(reduction)
+OPENMP_TARGET_PARALLEL_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target parallel for'.
 // TODO: add target clauses 'is_device_ptr'
@@ -723,6 +727,22 @@ OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(linear)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(num_teams)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(thread_limit)
 
+// Clauses allowed for OpenMP directive 'target teams'.
+OPENMP_TARGET_TEAMS_CLAUSE(if)
+OPENMP_TARGET_TEAMS_CLAUSE(device)
+OPENMP_TARGET_TEAMS_CLAUSE(map)
+OPENMP_TARGET_TEAMS_CLAUSE(private)
+OPENMP_TARGET_TEAMS_CLAUSE(nowait)
+OPENMP_TARGET_TEAMS_CLAUSE(depend)
+OPENMP_TARGET_TEAMS_CLAUSE(defaultmap)
+OPENMP_TARGET_TEAMS_CLAUSE(firstprivate)
+OPENMP_TARGET_TEAMS_CLAUSE(is_device_ptr)
+OPENMP_TARGET_TEAMS_CLAUSE(default)
+OPENMP_TARGET_TEAMS_CLAUSE(shared)
+OPENMP_TARGET_TEAMS_CLAUSE(reduction)
+OPENMP_TARGET_TEAMS_CLAUSE(num_teams)
+OPENMP_TARGET_TEAMS_CLAUSE(thread_limit)
+
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
 #undef OPENMP_LINEAR_KIND
@@ -770,3 +790,4 @@ OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(thread_limit)
 #undef OPENMP_TEAMS_DISTRIBUTE_SIMD_CLAUSE
 #undef OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE
 #undef OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE
+#undef OPENMP_TARGET_TEAMS_CLAUSE

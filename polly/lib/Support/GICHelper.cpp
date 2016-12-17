@@ -144,6 +144,11 @@ std::string polly::stringFromIslObj(__isl_keep isl_pw_multi_aff *pma) {
                                   isl_printer_print_pw_multi_aff);
 }
 
+std::string polly::stringFromIslObj(__isl_keep isl_multi_pw_aff *mpa) {
+  return stringFromIslObjInternal(mpa, isl_multi_pw_aff_get_ctx,
+                                  isl_printer_print_multi_pw_aff);
+}
+
 std::string polly::stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma) {
   return stringFromIslObjInternal(upma, isl_union_pw_multi_aff_get_ctx,
                                   isl_printer_print_union_pw_multi_aff);
@@ -220,6 +225,8 @@ DEFINE_ISLPTR(union_set)
 DEFINE_ISLPTR(aff)
 DEFINE_ISLPTR(multi_aff)
 DEFINE_ISLPTR(pw_aff)
+DEFINE_ISLPTR(pw_multi_aff)
+DEFINE_ISLPTR(multi_pw_aff)
 DEFINE_ISLPTR(union_pw_aff)
 DEFINE_ISLPTR(multi_union_pw_aff)
 DEFINE_ISLPTR(union_pw_multi_aff)

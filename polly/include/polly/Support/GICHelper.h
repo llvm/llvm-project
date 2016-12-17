@@ -105,6 +105,7 @@ std::string stringFromIslObj(__isl_keep isl_union_set *uset);
 std::string stringFromIslObj(__isl_keep isl_schedule *schedule);
 std::string stringFromIslObj(__isl_keep isl_multi_aff *maff);
 std::string stringFromIslObj(__isl_keep isl_pw_multi_aff *pma);
+std::string stringFromIslObj(__isl_keep isl_multi_pw_aff *mpa);
 std::string stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma);
 std::string stringFromIslObj(__isl_keep isl_aff *aff);
 std::string stringFromIslObj(__isl_keep isl_pw_aff *pwaff);
@@ -219,6 +220,8 @@ DECLARE_TRAITS(union_set)
 DECLARE_TRAITS(aff)
 DECLARE_TRAITS(multi_aff)
 DECLARE_TRAITS(pw_aff)
+DECLARE_TRAITS(pw_multi_aff)
+DECLARE_TRAITS(multi_pw_aff)
 DECLARE_TRAITS(union_pw_aff)
 DECLARE_TRAITS(multi_union_pw_aff)
 DECLARE_TRAITS(union_pw_multi_aff)

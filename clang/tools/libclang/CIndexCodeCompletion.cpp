@@ -53,8 +53,6 @@
 using namespace clang;
 using namespace clang::cxindex;
 
-extern "C" {
-
 enum CXCompletionChunkKind
 clang_getCompletionChunkKind(CXCompletionString completion_string,
                              unsigned chunk_number) {
@@ -346,8 +344,6 @@ AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
     fprintf(stderr, "--- %u completion results\n",
             --CodeCompletionResultObjects);
 }
-  
-} // end extern "C"
 
 static unsigned long long getContextsForContextKind(
                                           enum CodeCompletionContext::Kind kind, 
@@ -794,7 +790,6 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   return Results;
 }
 
-extern "C" {
 CXCodeCompleteResults *clang_codeCompleteAt(CXTranslationUnit TU,
                                             const char *complete_filename,
                                             unsigned complete_line,
@@ -916,8 +911,6 @@ CXString clang_codeCompleteGetObjCSelector(CXCodeCompleteResults *ResultsIn) {
   return cxstring::createDup(Results->Selector);
 }
   
-} // end extern "C"
-
 /// \brief Simple utility function that appends a \p New string to the given
 /// \p Old string, using the \p Buffer for storage.
 ///
@@ -990,9 +983,7 @@ namespace {
   };
 }
 
-extern "C" {
-  void clang_sortCodeCompletionResults(CXCompletionResult *Results,
-                                       unsigned NumResults) {
-    std::stable_sort(Results, Results + NumResults, OrderCompletionResults());
-  }
+void clang_sortCodeCompletionResults(CXCompletionResult *Results,
+                                     unsigned NumResults) {
+  std::stable_sort(Results, Results + NumResults, OrderCompletionResults());
 }

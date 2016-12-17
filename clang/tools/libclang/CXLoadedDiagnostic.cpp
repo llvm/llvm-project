@@ -387,11 +387,9 @@ std::error_code DiagLoader::visitDiagnosticRecord(
   return std::error_code();
 }
 
-extern "C" {
 CXDiagnosticSet clang_loadDiagnostics(const char *file,
                                       enum CXLoadDiag_Error *error,
                                       CXString *errorString) {
   DiagLoader L(error, errorString);
   return L.load(file);
 }
-} // end extern 'C'.
