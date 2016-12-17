@@ -40,6 +40,13 @@
 // CHECKYAML-NEXT: 'overlay-relative': 'true',
 // CHECKYAML-NEXT: 'ignore-non-existent-contents': 'false'
 // CHECKYAML: 'type': 'directory'
+// CHECKYAML: 'name': "/[[PATH:.*]]/Foo.framework/Headers",
+// CHECKYAML-NEXT: 'contents': [
+// CHECKYAML-NEXT:   {
+// CHECKYAML-NEXT:     'type': 'file',
+// CHECKYAML-NEXT:     'name': "Foo.h",
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Foo.framework/Headers/Foo.h"
+// CHECKYAML: 'type': 'directory'
 // CHECKYAML: 'name': "/[[PATH:.*]]/i",
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
