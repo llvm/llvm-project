@@ -421,6 +421,12 @@ void UnixAPIChecker::checkPreStmt(const CallExpr *CE,
   if (!FD || FD->getKind() != Decl::Function)
     return;
 
+  // Don't treat functions in namespaces with the same name a Unix function
+  // as a call to the Unix function.
+  const DeclContext *NamespaceCtx = FD->getEnclosingNamespaceContext();
+  if (NamespaceCtx && isa<NamespaceDecl>(NamespaceCtx))
+    return;
+
   StringRef FName = C.getCalleeName(FD);
   if (FName.empty())
     return;
