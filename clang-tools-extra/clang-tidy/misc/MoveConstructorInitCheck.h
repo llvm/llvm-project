@@ -33,14 +33,8 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  void
-  handleMoveConstructor(const ast_matchers::MatchFinder::MatchResult &Result);
-  void
-  handleParamNotMoved(const ast_matchers::MatchFinder::MatchResult &Result);
-
   std::unique_ptr<utils::IncludeInserter> Inserter;
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
-  const bool UseCERTSemantics;
 };
 
 } // namespace misc

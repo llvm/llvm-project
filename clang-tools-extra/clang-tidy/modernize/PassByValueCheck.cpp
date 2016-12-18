@@ -119,11 +119,13 @@ collectParamDecls(const CXXConstructorDecl *Ctor,
 PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.get("IncludeStyle", "llvm"))) {}
+          Options.get("IncludeStyle", "llvm"))),
+      ValuesOnly(Options.get("ValuesOnly", 0) != 0) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle",
                 utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "ValuesOnly", ValuesOnly);
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
@@ -136,7 +138,8 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructorDecl(
           forEachConstructorInitializer(
               cxxCtorInitializer(
-                  // Clang builds a CXXConstructExpr only whin it knows which
+                  unless(isBaseInitializer()),
+                  // Clang builds a CXXConstructExpr only when it knows which
                   // constructor will be called. In dependent contexts a
                   // ParenListExpr is generated instead of a CXXConstructExpr,
                   // filtering out templates automatically for us.
@@ -147,7 +150,9 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
                                   // Match only const-ref or a non-const value
                                   // parameters. Rvalues and const-values
                                   // shouldn't be modified.
-                                  anyOf(constRefType(), nonConstValueType()))))
+                                  ValuesOnly ? nonConstValueType()
+                                             : anyOf(constRefType(),
+                                                     nonConstValueType()))))
                               .bind("Param"))))),
                       hasDeclaration(cxxConstructorDecl(
                           isCopyConstructor(), unless(isDeleted()),

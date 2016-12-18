@@ -67,6 +67,11 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- The UseCERTSemantics option for the `misc-move-constructor-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-constructor-init.html>`_ check
+  has been removed as it duplicated the `modernize-pass-by-value
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-pass-by-value.html>`_ check.
+
 - New `misc-move-forwarding-reference
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-forwarding-reference.html>`_ check
 
@@ -90,6 +95,11 @@ Improvements to clang-tidy
   and `modernize-make-shared
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
   now handle calls to the smart pointer's ``reset()`` method.
+
+- The `modernize-pass-by-value
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-pass-by-value.html>`_ check
+  now has a ValuesOnly option to only warn about parameters that are passed by
+  value but not moved.
 
 - The `modernize-use-auto
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check

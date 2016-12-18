@@ -988,7 +988,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
 #define OPENCLEXT(Ext) \
-    if (TI.getSupportedOpenCLOpts().is_##Ext##_supported( \
+    if (TI.getSupportedOpenCLOpts().isSupported(#Ext, \
         LangOpts.OpenCLVersion)) \
       Builder.defineMacro(#Ext);
 #include "clang/Basic/OpenCLExtensions.def"
