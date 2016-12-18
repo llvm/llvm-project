@@ -44,5 +44,14 @@ Error llvm::msf::validateSuperBlock(const SuperBlock &SB) {
     return make_error<MSFError>(msf_error_code::invalid_format,
                                 "Block 0 is reserved");
 
+  if (SB.BlockMapAddr >= SB.NumBlocks)
+    return make_error<MSFError>(msf_error_code::invalid_format,
+                                "Block map address is invalid.");
+
+  if (SB.FreeBlockMapBlock != 1 && SB.FreeBlockMapBlock != 2)
+    return make_error<MSFError>(
+        msf_error_code::invalid_format,
+        "The free block map isn't at block 1 or block 2.");
+
   return Error::success();
 }

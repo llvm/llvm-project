@@ -1284,7 +1284,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (DemandedElts.getLoBits(1) != 1)
+      if (!DemandedElts[0])
         return II->getArgOperand(0);
       // TODO: If only low elt lower SQRT to FSQRT (with rounding/exceptions
       // checks).

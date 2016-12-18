@@ -865,7 +865,7 @@ static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     }
 
     // Okay, we found the prefix, yay. Remember the rest of the line, but ignore
-    // leading and trailing whitespace.
+    // leading whitespace.
     Buffer = Buffer.substr(Buffer.find_first_not_of(" \t"));
 
     // Scan ahead to the end of line.

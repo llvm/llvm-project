@@ -30,6 +30,7 @@ protected:
     ::memset(&SB, 0, sizeof(SB));
 
     ::memcpy(SB.MagicBytes, msf::Magic, sizeof(msf::Magic));
+    SB.FreeBlockMapBlock = 1;
     SB.BlockMapAddr = 1;
     SB.BlockSize = 4096;
     SB.NumDirectoryBytes = 0;
