@@ -95,7 +95,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Do not trigger on non-const value parameters when:
   // 1. they are in a constructor definition since they can likely trigger
-  //    misc-move-constructor-init which will suggest to move the argument.
+  //    modernize-pass-by-value which will suggest to move the argument.
   if (!IsConstQualified && (llvm::isa<CXXConstructorDecl>(Function) ||
                             !Function->doesThisDeclarationHaveABody()))
     return;

@@ -59,7 +59,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GdbIndex.h"
-
+#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
@@ -95,22 +95,11 @@ GdbIndexBuilder<ELFT>::readPubNamesAndTypes() {
 
   std::vector<std::pair<StringRef, uint8_t>> Ret;
   for (StringRef D : Data) {
-    DataExtractor PubNames(D, IsLE, 0);
-    uint32_t Offset = 0;
-    while (PubNames.isValidOffset(Offset)) {
-      // Skip length, version, unit offset and size.
-      Offset += 14;
-      while (Offset < D.size()) {
-        uint32_t DieRef = PubNames.getU32(&Offset);
-        if (DieRef == 0)
-          break;
-        uint8_t Flags = PubNames.getU8(&Offset);
-        const char *Name = PubNames.getCStr(&Offset);
-        Ret.push_back({Name, Flags});
-      }
-    }
+    DWARFDebugPubTable PubTable(D, IsLE, true);
+    for (const DWARFDebugPubTable::Set &S : PubTable.getData())
+      for (const DWARFDebugPubTable::Entry &E : S.Entries)
+        Ret.push_back({E.Name, E.Descriptor.toBits()});
   }
-
   return Ret;
 }
 

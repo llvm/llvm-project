@@ -3164,8 +3164,38 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case OPENCL_EXTENSIONS:
-      // Later tables overwrite earlier ones.
-      OpenCLExtensions.swap(Record);
+      for (unsigned I = 0, E = Record.size(); I != E; ) {
+        auto Name = ReadString(Record, I);
+        auto &Opt = OpenCLExtensions.OptMap[Name];
+        Opt.Supported = Record[I++] != 0;
+        Opt.Enabled = Record[I++] != 0;
+        Opt.Avail = Record[I++];
+        Opt.Core = Record[I++];
+      }
+      break;
+
+    case OPENCL_EXTENSION_TYPES:
+      for (unsigned I = 0, E = Record.size(); I != E;) {
+        auto TypeID = static_cast<::TypeID>(Record[I++]);
+        auto *Type = GetType(TypeID).getTypePtr();
+        auto NumExt = static_cast<unsigned>(Record[I++]);
+        for (unsigned II = 0; II != NumExt; ++II) {
+          auto Ext = ReadString(Record, I);
+          OpenCLTypeExtMap[Type].insert(Ext);
+        }
+      }
+      break;
+
+    case OPENCL_EXTENSION_DECLS:
+      for (unsigned I = 0, E = Record.size(); I != E;) {
+        auto DeclID = static_cast<::DeclID>(Record[I++]);
+        auto *Decl = GetDecl(DeclID);
+        auto NumExt = static_cast<unsigned>(Record[I++]);
+        for (unsigned II = 0; II != NumExt; ++II) {
+          auto Ext = ReadString(Record, I);
+          OpenCLDeclExtMap[Decl].insert(Ext);
+        }
+      }
       break;
 
     case TENTATIVE_DEFINITIONS:
@@ -7093,14 +7123,9 @@ void ASTReader::InitializeSema(Sema &S) {
     SemaObj->FPFeatures.fp_contract = FPPragmaOptions[0];
   }
 
-  // FIXME: What happens if these are changed by a module import?
-  if (!OpenCLExtensions.empty()) {
-    unsigned I = 0;
-#define OPENCLEXT(nm)  SemaObj->OpenCLFeatures.nm = OpenCLExtensions[I++];
-#include "clang/Basic/OpenCLExtensions.def"
-
-    assert(OpenCLExtensions.size() == I && "Wrong number of OPENCL_EXTENSIONS");
-  }
+  SemaObj->OpenCLFeatures.copy(OpenCLExtensions);
+  SemaObj->OpenCLTypeExtMap = OpenCLTypeExtMap;
+  SemaObj->OpenCLDeclExtMap = OpenCLDeclExtMap;
 
   UpdateSema();
 }

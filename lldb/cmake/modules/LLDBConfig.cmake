@@ -416,3 +416,5 @@ endif()
 if(LLDB_USE_BUILTIN_DEMANGLER)
     add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
 endif()
+
+find_package(Backtrace)

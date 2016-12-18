@@ -2529,7 +2529,8 @@ void CastOperation::CheckCStyleCast() {
     }
   }
 
-  if (Self.getLangOpts().OpenCL && !Self.getOpenCLOptions().cl_khr_fp16) {
+  if (Self.getLangOpts().OpenCL &&
+      !Self.getOpenCLOptions().isEnabled("cl_khr_fp16")) {
     if (DestType->isHalfType()) {
       Self.Diag(SrcExpr.get()->getLocStart(), diag::err_opencl_cast_to_half)
         << DestType << SrcExpr.get()->getSourceRange();

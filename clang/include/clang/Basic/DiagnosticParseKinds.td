@@ -968,8 +968,10 @@ def err_opencl_unroll_hint_on_non_loop : Error<
 // OpenCL EXTENSION pragma (OpenCL 1.1 [9.1])
 def warn_pragma_expected_colon : Warning<
   "missing ':' after %0 - ignoring">, InGroup<IgnoredPragmas>;
-def warn_pragma_expected_enable_disable : Warning<
-  "expected 'enable' or 'disable' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_pragma_expected_predicate : Warning<
+  "expected %select{'enable', 'disable', 'begin' or 'end'|'disable'}0 - ignoring">, InGroup<IgnoredPragmas>;
+def warn_pragma_begin_end_mismatch : Warning<
+  "OpenCL extension end directive mismatches begin directive - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_unknown_extension : Warning<
   "unknown OpenCL extension %0 - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_unsupported_extension : Warning<

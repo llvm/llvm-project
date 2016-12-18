@@ -4844,6 +4844,9 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
 
+  if (getLangOpts().OpenCL)
+    setCurrentOpenCLExtensionForDecl(Dcl);
+
   return Dcl;
 }
 
@@ -5945,7 +5948,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NR = NR->getPointeeType();
     }
 
-    if (!getOpenCLOptions().cl_khr_fp16) {
+    if (!getOpenCLOptions().isEnabled("cl_khr_fp16")) {
       // OpenCL v1.2 s6.1.1.1: reject declaring variables of the half and
       // half array type (unless the cl_khr_fp16 extension is enabled).
       if (Context.getBaseElementType(R)->isHalfType()) {
@@ -6915,7 +6918,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // OpenCL v1.2 s6.8 - The static qualifier is valid only in program
   // scope.
   if (getLangOpts().OpenCLVersion == 120 &&
-      !getOpenCLOptions().cl_clang_storage_class_specifiers &&
+      !getOpenCLOptions().isEnabled("cl_clang_storage_class_specifiers") &&
       NewVD->isStaticLocal()) {
     Diag(NewVD->getLocation(), diag::err_static_function_scope);
     NewVD->setInvalidDecl();
@@ -7623,7 +7626,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   // OpenCL extension spec v1.2 s9.5:
   // This extension adds support for half scalar and vector types as built-in
   // types that can be used for arithmetic operations, conversions etc.
-  if (!S.getOpenCLOptions().cl_khr_fp16 && PT->isHalfType())
+  if (!S.getOpenCLOptions().isEnabled("cl_khr_fp16") && PT->isHalfType())
     return InvalidKernelParam;
 
   if (PT->isRecordType())
