@@ -59,12 +59,6 @@ class InputCorpus {
       Res += !II->U.empty();
     return Res;
   }
-  size_t MaxInputSize() const {
-    size_t Res = 0;
-    for (auto II : Inputs)
-        Res = std::max(Res, II->U.size());
-    return Res;
-  }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile = false) {

@@ -19,7 +19,6 @@ namespace fuzzer {
 struct FuzzingOptions {
   int Verbosity = 1;
   size_t MaxLen = 0;
-  bool ExperimentalLenControl = false;
   int UnitTimeoutSec = 300;
   int TimeoutExitCode = 77;
   int ErrorExitCode = 77;
