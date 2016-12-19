@@ -11,11 +11,11 @@
 #include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "Memory.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/LibDriver/LibDriver.h"
@@ -49,6 +49,10 @@ namespace coff {
 
 Configuration *Config;
 LinkerDriver *Driver;
+
+BumpPtrAllocator BAlloc;
+StringSaver Saver{BAlloc};
+std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 
 bool link(ArrayRef<const char *> Args) {
   Config = make<Configuration>();
