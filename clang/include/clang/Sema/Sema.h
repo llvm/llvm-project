@@ -4358,6 +4358,7 @@ public:
                                    SourceLocation NameLoc,
                                    const LookupResult &Previous);
   bool CheckUsingDeclQualifier(SourceLocation UsingLoc,
+                               bool HasTypename,
                                const CXXScopeSpec &SS,
                                const DeclarationNameInfo &NameInfo,
                                SourceLocation NameLoc);

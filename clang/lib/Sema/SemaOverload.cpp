@@ -987,10 +987,17 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
       assert(Old.getLookupKind() == LookupUsingDeclName);
     } else if (isa<TagDecl>(OldD)) {
       // We can always overload with tags by hiding them.
-    } else if (isa<UnresolvedUsingValueDecl>(OldD)) {
+    } else if (auto *UUD = dyn_cast<UnresolvedUsingValueDecl>(OldD)) {
       // Optimistically assume that an unresolved using decl will
       // overload; if it doesn't, we'll have to diagnose during
       // template instantiation.
+      //
+      // Exception: if the scope is dependent and this is not a class
+      // member, the using declaration can only introduce an enumerator.
+      if (UUD->getQualifier()->isDependent() && !UUD->isCXXClassMember()) {
+        Match = *I;
+        return Ovl_NonFunction;
+      }
     } else {
       // (C++ 13p1):
       //   Only function declarations can be overloaded; object and type
