@@ -107,6 +107,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUOCL12AdapterPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUclpVectorExpansionPass(*PR);
+  initializeAMDGPULowerKernelCallsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -422,6 +423,9 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&StackMapLivenessID);
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
+
+  // this pass should be performed on linked module
+  addPass(createAMDGPULowerKernelCallsPass());
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());
