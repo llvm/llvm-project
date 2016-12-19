@@ -7779,6 +7779,42 @@ is256BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask,
   return isRepeatedShuffleMask(256, VT, Mask, RepeatedMask);
 }
 
+/// Test whether a target shuffle mask is equivalent within each sub-lane.
+/// Unlike isRepeatedShuffleMask we must respect SM_SentinelZero.
+static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits, MVT VT,
+                                        ArrayRef<int> Mask,
+                                        SmallVectorImpl<int> &RepeatedMask) {
+  int LaneSize = LaneSizeInBits / VT.getScalarSizeInBits();
+  RepeatedMask.assign(LaneSize, SM_SentinelUndef);
+  int Size = Mask.size();
+  for (int i = 0; i < Size; ++i) {
+    assert(isUndefOrZero(Mask[i]) || (Mask[i] >= 0));
+    if (Mask[i] == SM_SentinelUndef)
+      continue;
+    if (Mask[i] == SM_SentinelZero) {
+      if (!isUndefOrZero(RepeatedMask[i % LaneSize]))
+        return false;
+      RepeatedMask[i % LaneSize] = SM_SentinelZero;
+      continue;
+    }
+    if ((Mask[i] % Size) / LaneSize != i / LaneSize)
+      // This entry crosses lanes, so there is no way to model this shuffle.
+      return false;
+
+    // Ok, handle the in-lane shuffles by detecting if and when they repeat.
+    // Adjust second vector indices to start at LaneSize instead of Size.
+    int LocalM =
+        Mask[i] < Size ? Mask[i] % LaneSize : Mask[i] % LaneSize + LaneSize;
+    if (RepeatedMask[i % LaneSize] == SM_SentinelUndef)
+      // This is the first non-undef entry in this slot of a 128-bit lane.
+      RepeatedMask[i % LaneSize] = LocalM;
+    else if (RepeatedMask[i % LaneSize] != LocalM)
+      // Found a mismatch with the repeated mask.
+      return false;
+  }
+  return true;
+}
+
 /// \brief Checks whether a shuffle mask is equivalent to an explicit list of
 /// arguments.
 ///
@@ -12281,7 +12317,8 @@ static SDValue lowerV8I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
     SDValue CastV1 = DAG.getBitcast(MVT::v8f32, V1);
     SDValue CastV2 = DAG.getBitcast(MVT::v8f32, V2);
-    SDValue ShufPS = DAG.getVectorShuffle(MVT::v8f32, DL, CastV1, CastV2, Mask);
+    SDValue ShufPS = lowerVectorShuffleWithSHUFPS(DL, MVT::v8f32, RepeatedMask,
+                                                  CastV1, CastV2, DAG);
     return DAG.getBitcast(MVT::v8i32, ShufPS);
   }
 
@@ -12733,7 +12770,9 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // efficient instructions that mirror the shuffles across the four 128-bit
   // lanes.
   SmallVector<int, 4> RepeatedMask;
-  if (is128BitLaneRepeatedShuffleMask(MVT::v16i32, Mask, RepeatedMask)) {
+  bool Is128BitLaneRepeatedShuffle =
+      is128BitLaneRepeatedShuffleMask(MVT::v16i32, Mask, RepeatedMask);
+  if (Is128BitLaneRepeatedShuffle) {
     assert(RepeatedMask.size() == 4 && "Unexpected repeated mask size!");
     if (V2.isUndef())
       return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v16i32, V1,
@@ -12760,6 +12799,16 @@ static SDValue lowerV16I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
             DL, MVT::v16i32, V1, V2, Mask, Subtarget, DAG))
       return Rotate;
+
+  // Assume that a single SHUFPS is faster than using a permv shuffle.
+  // If some CPU is harmed by the domain switch, we can fix it in a later pass.
+  if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
+    SDValue CastV1 = DAG.getBitcast(MVT::v16f32, V1);
+    SDValue CastV2 = DAG.getBitcast(MVT::v16f32, V2);
+    SDValue ShufPS = lowerVectorShuffleWithSHUFPS(DL, MVT::v16f32, RepeatedMask,
+                                                  CastV1, CastV2, DAG);
+    return DAG.getBitcast(MVT::v16i32, ShufPS);
+  }
 
   return lowerVectorShuffleWithPERMV(DL, MVT::v16i32, Mask, V1, V2, DAG);
 }
@@ -26072,17 +26121,17 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       ShuffleVT = MVT::v4f32;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {0, 3}) && FloatDomain) {
-      if (Subtarget.hasSSE2()) {
-        std::swap(V1, V2);
-        Shuffle = X86ISD::MOVSD;
-        ShuffleVT = MVT::v2f64;
-        return true;
-      }
+    if (isTargetShuffleEquivalent(Mask, {0, 3}) && Subtarget.hasSSE2() &&
+        (FloatDomain || !Subtarget.hasSSE41())) {
+      std::swap(V1, V2);
+      Shuffle = X86ISD::MOVSD;
+      ShuffleVT = MaskVT;
+      return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {4, 1, 2, 3}) && FloatDomain) {
+    if (isTargetShuffleEquivalent(Mask, {4, 1, 2, 3}) &&
+        (FloatDomain || !Subtarget.hasSSE41())) {
       Shuffle = X86ISD::MOVSS;
-      ShuffleVT = MVT::v4f32;
+      ShuffleVT = MaskVT;
       return true;
     }
   }
@@ -26258,6 +26307,50 @@ static bool matchBinaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
       Shuffle = X86ISD::SHUFP;
       ShuffleVT = MaskVT;
       return true;
+    }
+  }
+
+  // Attempt to combine to SHUFPS.
+  if ((MaskVT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (MaskVT == MVT::v8f32 && Subtarget.hasAVX()) ||
+      (MaskVT == MVT::v16f32 && Subtarget.hasAVX512())) {
+    SmallVector<int, 4> RepeatedMask;
+    if (isRepeatedTargetShuffleMask(128, MaskVT, Mask, RepeatedMask)) {
+      auto MatchHalf = [&](unsigned Offset, int &S0, int &S1) {
+        int M0 = RepeatedMask[Offset];
+        int M1 = RepeatedMask[Offset + 1];
+
+        if (isUndefInRange(RepeatedMask, Offset, 2)) {
+          return DAG.getUNDEF(MaskVT);
+        } else if (isUndefOrZeroInRange(RepeatedMask, Offset, 2)) {
+          S0 = (SM_SentinelUndef == M0 ? -1 : 0);
+          S1 = (SM_SentinelUndef == M1 ? -1 : 1);
+          return getZeroVector(MaskVT, Subtarget, DAG, DL);
+        } else if (isUndefOrInRange(M0, 0, 4) && isUndefOrInRange(M1, 0, 4)) {
+          S0 = (SM_SentinelUndef == M0 ? -1 : M0 & 3);
+          S1 = (SM_SentinelUndef == M1 ? -1 : M1 & 3);
+          return V1;
+        } else if (isUndefOrInRange(M0, 4, 8) && isUndefOrInRange(M1, 4, 8)) {
+          S0 = (SM_SentinelUndef == M0 ? -1 : M0 & 3);
+          S1 = (SM_SentinelUndef == M1 ? -1 : M1 & 3);
+          return V2;
+        }
+
+        return SDValue();
+      };
+
+      int ShufMask[4] = {-1, -1, -1, -1};
+      SDValue Lo = MatchHalf(0, ShufMask[0], ShufMask[1]);
+      SDValue Hi = MatchHalf(2, ShufMask[2], ShufMask[3]);
+
+      if (Lo && Hi) {
+        V1 = Lo;
+        V2 = Hi;
+        Shuffle = X86ISD::SHUFP;
+        ShuffleVT = MaskVT;
+        PermuteImm = getV4X86ShuffleImm(ShufMask);
+        return true;
+      }
     }
   }
 
@@ -27281,7 +27374,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
 
-  switch (N.getOpcode()) {
+  unsigned Opcode = N.getOpcode();
+  switch (Opcode) {
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:
   case X86ISD::PSHUFHW:
@@ -27353,6 +27447,31 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
           SDValue NewMask = DAG.getConstant(1, DL, MVT::i8);
           return DAG.getNode(X86ISD::BLENDI, DL, VT, V1, V0, NewMask);
         }
+
+    return SDValue();
+  }
+  case X86ISD::MOVSD:
+  case X86ISD::MOVSS: {
+    bool isFloat = VT.isFloatingPoint();
+    SDValue V0 = peekThroughBitcasts(N->getOperand(0));
+    SDValue V1 = peekThroughBitcasts(N->getOperand(1));
+    bool isFloat0 = V0.getSimpleValueType().isFloatingPoint();
+    bool isFloat1 = V1.getSimpleValueType().isFloatingPoint();
+    bool isZero0 = ISD::isBuildVectorAllZeros(V0.getNode());
+    bool isZero1 = ISD::isBuildVectorAllZeros(V1.getNode());
+    assert(!(isZero0 && isZero1) && "Zeroable shuffle detected.");
+
+    // We often lower to MOVSD/MOVSS from integer as well as native float
+    // types; remove unnecessary domain-crossing bitcasts if we can to make it
+    // easier to combine shuffles later on. We've already accounted for the
+    // domain switching cost when we decided to lower with it.
+    if ((isFloat != isFloat0 || isZero0) && (isFloat != isFloat1 || isZero1)) {
+      MVT NewVT = isFloat ? (X86ISD::MOVSD == Opcode ? MVT::v2i64 : MVT::v4i32)
+                          : (X86ISD::MOVSD == Opcode ? MVT::v2f64 : MVT::v4f32);
+      V0 = DAG.getBitcast(NewVT, V0);
+      V1 = DAG.getBitcast(NewVT, V1);
+      return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, NewVT, V0, V1));
+    }
 
     return SDValue();
   }
@@ -28262,7 +28381,7 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   bool FValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
-  // Check if the first operand is all zeros.This situation only 
+  // Check if the first operand is all zeros.This situation only
   // applies to avx512.
   if (FValIsAllZeros  && Subtarget.hasAVX512() && Cond.hasOneUse()) {
       //Invert the cond to not(cond) : xor(op,allones)=not(op)
@@ -31880,23 +31999,24 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
 
 static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  if (VT.is512BitVector() && !Subtarget.hasDQI()) {
-    // VXORPS, VORPS, VANDPS, VANDNPS are supported only under DQ extension.
-    // These logic operations may be executed in the integer domain.
+  MVT VT = N->getSimpleValueType(0);
+  // If we have integer vector types available, use the integer opcodes.
+  if (VT.isVector() && Subtarget.hasSSE2()) {
     SDLoc dl(N);
 
-    SDValue Op0 = DAG.getBitcast(MVT::v8i64, N->getOperand(0));
-    SDValue Op1 = DAG.getBitcast(MVT::v8i64, N->getOperand(1));
-    unsigned IntOpcode = 0;
+    MVT IntVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+
+    SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
+    SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
+    unsigned IntOpcode;
     switch (N->getOpcode()) {
-      default: llvm_unreachable("Unexpected FP logic op");
-      case X86ISD::FOR: IntOpcode = ISD::OR; break;
-      case X86ISD::FXOR: IntOpcode = ISD::XOR; break;
-      case X86ISD::FAND: IntOpcode = ISD::AND; break;
-      case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
+    default: llvm_unreachable("Unexpected FP logic op");
+    case X86ISD::FOR: IntOpcode = ISD::OR; break;
+    case X86ISD::FXOR: IntOpcode = ISD::XOR; break;
+    case X86ISD::FAND: IntOpcode = ISD::AND; break;
+    case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
     }
-    SDValue IntOp = DAG.getNode(IntOpcode, dl, MVT::v8i64, Op0, Op1);
+    SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
     return DAG.getBitcast(VT, IntOp);
   }
   return SDValue();

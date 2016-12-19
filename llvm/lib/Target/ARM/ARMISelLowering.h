@@ -492,6 +492,9 @@ namespace llvm {
       return HasStandaloneRem;
     }
 
+    CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
+    CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

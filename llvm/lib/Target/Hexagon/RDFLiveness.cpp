@@ -710,7 +710,7 @@ void Liveness::computeLiveIns() {
         }
         do {
           LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-          if (!(M & P.second).none())
+          if ((M & P.second).any())
             LV.push_back(RegisterRef(S.getSubReg()));
           ++S;
         } while (S.isValid());
@@ -759,7 +759,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       }
       do {
         LaneBitmask M = TRI.getSubRegIndexLaneMask(S.getSubRegIndex());
-        if (!(M & I.LaneMask).none())
+        if ((M & I.LaneMask).any())
           LV.set(S.getSubReg());
         ++S;
       } while (S.isValid());

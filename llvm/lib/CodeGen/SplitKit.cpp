@@ -425,7 +425,7 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
       }
     }
     for (LiveInterval::SubRange &S : LI.subranges())
-      if (!(S.LaneMask & LM).none())
+      if ((S.LaneMask & LM).any())
         S.createDeadDef(Def, LIS.getVNInfoAllocator());
   }
 }

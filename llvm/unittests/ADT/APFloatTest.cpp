@@ -10,6 +10,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <cmath>
@@ -3209,7 +3210,10 @@ TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {
     APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.add(A2, RM);
 
-    EXPECT_EQ(Expected, A1.getCategory());
+    EXPECT_EQ(Expected, A1.getCategory())
+        << formatv("({0:x} + {1:x}) + ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
+                   Op2[1])
+               .str();
   }
 }
 
@@ -3258,9 +3262,14 @@ TEST(APFloatTest, PPCDoubleDoubleAdd) {
     APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.add(A2, RM);
 
-    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);
-    EXPECT_EQ(Expected[1],
-              A1.getSecondFloat().bitcastToAPInt().getRawData()[0]);
+    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
+        << formatv("({0:x} + {1:x}) + ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
+                   Op2[1])
+               .str();
+    EXPECT_EQ(Expected[1], A1.getSecondFloat().bitcastToAPInt().getRawData()[0])
+        << formatv("({0:x} + {1:x}) + ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
+                   Op2[1])
+               .str();
   }
 }
 
@@ -3287,9 +3296,14 @@ TEST(APFloatTest, PPCDoubleDoubleSubtract) {
     APFloat A2(APFloat::PPCDoubleDouble(), APInt(128, 2, Op2));
     A1.subtract(A2, RM);
 
-    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0]);
-    EXPECT_EQ(Expected[1],
-              A1.getSecondFloat().bitcastToAPInt().getRawData()[0]);
+    EXPECT_EQ(Expected[0], A1.bitcastToAPInt().getRawData()[0])
+        << formatv("({0:x} + {1:x}) - ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
+                   Op2[1])
+               .str();
+    EXPECT_EQ(Expected[1], A1.getSecondFloat().bitcastToAPInt().getRawData()[0])
+        << formatv("({0:x} + {1:x}) - ({2:x} + {3:x})", Op1[0], Op1[1], Op2[0],
+                   Op2[1])
+               .str();
   }
 }
 }

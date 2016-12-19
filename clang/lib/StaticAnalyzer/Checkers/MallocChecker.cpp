@@ -1026,8 +1026,7 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
   ASTContext &AstContext = C.getASTContext();
   CharUnits TypeSize = AstContext.getTypeSizeInChars(ElementType);
 
-  if (Optional<DefinedOrUnknownSVal> DefinedSize =
-          ElementCount.getAs<DefinedOrUnknownSVal>()) {
+  if (ElementCount.getAs<NonLoc>()) {
     DefinedOrUnknownSVal Extent = Region->getExtent(svalBuilder);
     // size in Bytes = ElementCount*TypeSize
     SVal SizeInBytes = svalBuilder.evalBinOpNN(
@@ -2576,6 +2575,11 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
 
   if (FName == "postEvent" &&
       FD->getQualifiedNameAsString() == "QCoreApplication::postEvent") {
+    return true;
+  }
+
+  if (FName == "connectImpl" &&
+      FD->getQualifiedNameAsString() == "QObject::connectImpl") {
     return true;
   }
 

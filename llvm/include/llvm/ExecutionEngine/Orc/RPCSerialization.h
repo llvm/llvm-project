@@ -208,9 +208,9 @@ std::string RPCTypeName<std::vector<T>>::Name;
 ///   }
 ///
 ///   @endcode
-template <typename ChannelT, typename WireType, typename From = WireType,
-          typename = void>
-class SerializationTraits {};
+template <typename ChannelT, typename WireType,
+          typename ConcreteType = WireType, typename = void>
+class SerializationTraits;
 
 template <typename ChannelT>
 class SequenceTraits {

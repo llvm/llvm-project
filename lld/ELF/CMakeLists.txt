@@ -53,7 +53,6 @@ add_lld_library(lldELF
   LINK_LIBS
   lldConfig
   lldCore
-  lldSupport
   ${PTHREAD_LIB}
 
   DEPENDS

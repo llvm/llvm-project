@@ -558,7 +558,7 @@ bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
   // OpenCL v1.2 s6.8 changes this to "The auto and register storage-class
   // specifiers are not supported."
   if (S.getLangOpts().OpenCL &&
-      !S.getOpenCLOptions().cl_clang_storage_class_specifiers) {
+      !S.getOpenCLOptions().isEnabled("cl_clang_storage_class_specifiers")) {
     switch (SC) {
     case SCS_extern:
     case SCS_private_extern:

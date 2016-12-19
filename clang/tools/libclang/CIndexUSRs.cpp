@@ -36,8 +36,6 @@ bool cxcursor::getDeclCursorUSR(const Decl *D, SmallVectorImpl<char> &Buf) {
   return generateUSRForDecl(D, Buf);
 }
 
-extern "C" {
-
 CXString clang_getCursorUSR(CXCursor C) {
   const CXCursorKind &K = clang_getCursorKind(C);
 
@@ -140,5 +138,3 @@ CXString clang_constructUSR_ObjCProperty(const char *property,
   generateUSRForObjCProperty(property, /*isClassProp=*/false, OS);
   return cxstring::createDup(OS.str());
 }
-
-} // end extern "C"

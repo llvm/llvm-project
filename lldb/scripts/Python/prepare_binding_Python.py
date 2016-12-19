@@ -196,34 +196,37 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
         temp_dep_file_path = dependency_file + ".tmp"
 
     # Build the SWIG args list
-    command = [
-        options.swig_executable,
-        "-c++",
-        "-shadow",
-        "-python",
-        "-threads",
-        "-I\"%s\"" % os.path.normcase(
-            os.path.join(options.src_root, "include")),
-        "-I\"%s\"" % os.path.normcase("./."),
-        "-D__STDC_LIMIT_MACROS",
-        "-D__STDC_CONSTANT_MACROS"]
-    if options.target_platform == "Darwin":
-        command.append("-D__APPLE__")
-    if options.generate_dependency_file:
-        command.append("-MMD -MF \"%s\"" % temp_dep_file_path)
-    command.extend([
-        "-outdir", "\"%s\"" % config_build_dir,
-        "-o", "\"%s\"" % settings.output_file,
-        "\"%s\"" % settings.input_file
-    ])
-    logging.info("running swig with: %s", command)
+    is_darwin = options.target_platform == "Darwin"
+    gen_deps = options.generate_dependency_file
+    darwin_extras = ["-D__APPLE__"] if is_darwin else []
+    deps_args = ["-MMD", "-MF", temp_dep_file_path] if gen_deps else []
+    command = ([
+            options.swig_executable,
+            "-c++",
+            "-shadow",
+            "-python",
+            "-threads",
+            "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
+            "-I" + os.path.curdir,
+            "-D__STDC_LIMIT_MACROS",
+            "-D__STDC_CONSTANT_MACROS"
+        ]
+        + darwin_extras
+        + deps_args
+        + [
+            "-outdir", config_build_dir,
+            "-o", settings.output_file,
+            settings.input_file
+        ]
+    )
+    logging.info("running swig with: %r", command)
 
     # Execute swig
     process = subprocess.Popen(
-        ' '.join(command),
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True)
+    )
     # Wait for SWIG process to terminate
     swig_stdout, swig_stderr = process.communicate()
     return_code = process.returncode
@@ -265,15 +268,14 @@ def run_python_script(script_and_args):
     the command line arguments to pass to it.
     """
     command = [sys.executable] + script_and_args
-    command_line = " ".join(command)
-    process = subprocess.Popen(command, shell=False)
+    process = subprocess.Popen(command)
     script_stdout, script_stderr = process.communicate()
     return_code = process.returncode
     if return_code != 0:
-        logging.error("failed to run '%s': %s", command_line, script_stderr)
+        logging.error("failed to run %r: %r", command, script_stderr)
         sys.exit(return_code)
     else:
-        logging.info("ran script '%s'", command_line)
+        logging.info("ran script %r'", command)
         if script_stdout is not None:
             logging.info("output: %s", script_stdout)
 

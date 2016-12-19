@@ -219,7 +219,7 @@ MachOUniversalBinary::getObjectForArch(StringRef ArchName) const {
                                           object_error::arch_not_found);
 
   for (auto &Obj : objects())
-    if (Obj.getArchTypeName() == ArchName)
+    if (Obj.getArchFlagName() == ArchName)
       return Obj.getAsObjectFile();
   return make_error<GenericBinaryError>("fat file does not "
                                         "contain " +

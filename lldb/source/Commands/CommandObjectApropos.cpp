@@ -90,9 +90,9 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
           m_interpreter.GetDebugger().Apropos(search_word, properties);
       if (num_properties) {
         const bool dump_qualified_name = true;
-        result.AppendMessageWithFormat(
-            "\nThe following settings variables may relate to '%s': \n\n",
-            args[0].c_str());
+        result.AppendMessageWithFormatv(
+            "\nThe following settings variables may relate to '{0}': \n\n",
+            args[0].ref);
         for (size_t i = 0; i < num_properties; ++i)
           properties[i]->DumpDescription(
               m_interpreter, result.GetOutputStream(), 0, dump_qualified_name);

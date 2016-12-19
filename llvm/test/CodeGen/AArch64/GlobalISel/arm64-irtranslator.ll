@@ -9,7 +9,6 @@ target triple = "aarch64--"
 ; CHECK-LABEL: name: addi64
 ; CHECK:      [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_ADD [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0 
@@ -21,7 +20,6 @@ define i64 @addi64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: muli64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_MUL [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0
@@ -53,9 +51,7 @@ define void @allocai64() {
 ; CHECK-LABEL: name: uncondbr
 ; CHECK: body:
 ;
-; ABI/constant lowering basic block.
-; CHECK: {{bb.[0-9]+}}:
-; IR-level entry basic block
+; ABI/constant lowering and IR-level entry basic block.
 ; CHECK: {{bb.[0-9]+}}:
 ;
 ; Make sure we have one successor and only one.
@@ -77,16 +73,13 @@ end:
 ; CHECK-LABEL: name: condbr
 ; CHECK: body:
 ;
-; ABI/constant lowering basic block.
+; ABI/constant lowering and IR-level entry basic block.
 ; CHECK: {{bb.[0-9]+}}:
-; CHECK: [[ADDR:%.*]](p0) = COPY %x0
-
-; IR-level entry basic block
-; CHECK: {{bb.[0-9]+}}:
-;
 ; Make sure we have two successors
 ; CHECK-NEXT: successors: %[[TRUE:bb.[0-9]+]](0x40000000),
 ; CHECK:                  %[[FALSE:bb.[0-9]+]](0x40000000)
+;
+; CHECK: [[ADDR:%.*]](p0) = COPY %x0
 ;
 ; Check that we emit the correct branch.
 ; CHECK: [[TST:%.*]](s1) = G_LOAD [[ADDR]](p0)
@@ -111,7 +104,6 @@ false:
 ; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_OR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0
@@ -123,7 +115,6 @@ define i64 @ori64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: ori32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_OR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -136,7 +127,6 @@ define i32 @ori32(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: xori64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_XOR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0
@@ -148,7 +138,6 @@ define i64 @xori64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: xori32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_XOR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -161,7 +150,6 @@ define i32 @xori32(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: andi64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_AND [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0
@@ -173,7 +161,6 @@ define i64 @andi64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: andi32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_AND [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -186,7 +173,6 @@ define i32 @andi32(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: subi64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_SUB [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %x0
@@ -198,7 +184,6 @@ define i64 @subi64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: subi32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_SUB [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -451,7 +436,6 @@ define i64 @test_zext(i32 %in) {
 ; CHECK-LABEL: name: test_shl
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_SHL [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -464,7 +448,6 @@ define i32 @test_shl(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_lshr
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_LSHR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -476,7 +459,6 @@ define i32 @test_lshr(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_ashr
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_ASHR [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -488,7 +470,6 @@ define i32 @test_ashr(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_sdiv
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_SDIV [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -500,7 +481,6 @@ define i32 @test_sdiv(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_udiv
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_UDIV [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -512,7 +492,6 @@ define i32 @test_udiv(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_srem
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_SREM [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -524,7 +503,6 @@ define i32 @test_srem(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_urem
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %w1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_UREM [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %w0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
@@ -576,7 +554,6 @@ define void @int_comparison(i32 %a, i32 %b, i1* %addr) {
 ; CHECK: [[LHS:%[0-9]+]](p0) = COPY %x0
 ; CHECK: [[RHS:%[0-9]+]](p0) = COPY %x1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
-; CHECK: bb.1:
 ; CHECK: [[TST:%[0-9]+]](s1) = G_ICMP intpred(eq), [[LHS]](p0), [[RHS]]
 ; CHECK: G_STORE [[TST]](s1), [[ADDR]](p0)
 define void @ptr_comparison(i8* %a, i8* %b, i1* %addr) {
@@ -588,7 +565,6 @@ define void @ptr_comparison(i8* %a, i8* %b, i1* %addr) {
 ; CHECK-LABEL: name: test_fadd
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_FADD [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %s0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %s0
@@ -600,7 +576,6 @@ define float @test_fadd(float %arg1, float %arg2) {
 ; CHECK-LABEL: name: test_fsub
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_FSUB [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %s0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %s0
@@ -612,7 +587,6 @@ define float @test_fsub(float %arg1, float %arg2) {
 ; CHECK-LABEL: name: test_fmul
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_FMUL [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %s0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %s0
@@ -624,7 +598,6 @@ define float @test_fmul(float %arg1, float %arg2) {
 ; CHECK-LABEL: name: test_fdiv
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_FDIV [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %s0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %s0
@@ -636,7 +609,6 @@ define float @test_fdiv(float %arg1, float %arg2) {
 ; CHECK-LABEL: name: test_frem
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1
-; CHECK: bb.1:
 ; CHECK-NEXT: [[RES:%[0-9]+]](s32) = G_FREM [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %s0 = COPY [[RES]]
 ; CHECK-NEXT: RET_ReallyLR implicit %s0
@@ -961,10 +933,9 @@ define void @test_large_const(i128* %addr) {
 ; correct.
 define i8* @test_const_placement() {
 ; CHECK-LABEL: name: test_const_placement
-; CHECK: bb.0:
+; CHECK: bb.{{[0-9]+}}:
 ; CHECK:   [[VAL_INT:%[0-9]+]](s32) = G_CONSTANT i32 42
 ; CHECK:   [[VAL:%[0-9]+]](p0) = G_INTTOPTR [[VAL_INT]](s32)
-; CHECK: bb.1:
 ; CHECK:   G_BR
   br label %next
 

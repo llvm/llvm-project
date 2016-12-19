@@ -205,8 +205,6 @@ CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
 //-----------------------------------------------------------------------------
 // C Interface Routines
 //-----------------------------------------------------------------------------
-extern "C" {
-
 unsigned clang_getNumDiagnostics(CXTranslationUnit Unit) {
   if (cxtu::isNotUsableTU(Unit)) {
     LOG_BAD_TU(Unit);
@@ -477,5 +475,3 @@ unsigned clang_getNumDiagnosticsInSet(CXDiagnosticSet Diags) {
     return D->getNumDiagnostics();
   return 0;
 }
-
-} // end extern "C"

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -w -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -w -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus.NewDelete -analyzer-store=region -verify %s
 
+#include "Inputs/system-header-simulator-cxx.h"
+
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void free(void *);
@@ -124,4 +126,16 @@ namespace PR31226 {
     d *p = new d();
     p->m(); // no-crash // no-warning
   }
+}
+
+// Allow __cxa_demangle to escape.
+char* test_cxa_demangle(const char* sym) {
+  size_t funcnamesize = 256;
+  char* funcname = (char*)malloc(funcnamesize);
+  int status;
+  char* ret = abi::__cxa_demangle(sym, funcname, &funcnamesize, &status);
+  if (status == 0) {
+    funcname = ret;
+  }
+  return funcname; // no-warning
 }

@@ -320,13 +320,10 @@ entry:
 define <8 x i8> @vdup_zip(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 entry:
   ; CHECK-LABEL: vdup_zip:
-  ; CHECK: ldrb
-  ; CHECK-NEXT: ldrb
-  ; CHECK-NEXT: vmov.i16 d{{.*}}, #0x800
-  ; CHECK-NEXT: vmov.8
-  ; CHECK-NEXT: vmov.8
-  ; CHECK-NEXT: vtbl.8
-  ; CHECK-NEXT: vmov    r0, r1
+  ; CHECK: vld1.8
+  ; CHECK-NEXT: vld1.8
+  ; CHECK-NEXT: vzip.8
+  ; CHECK-NEXT: vmov r0, r1
   %0 = load i8, i8* %x, align 1
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
   %lane = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef>

@@ -1011,8 +1011,7 @@ define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
 ;
 ; AVX512VL-LABEL: test_fxor_8f32:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
-; AVX512VL-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpxord {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_fxor_8f32:

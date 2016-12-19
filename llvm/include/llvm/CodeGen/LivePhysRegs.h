@@ -155,6 +155,13 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LivePhysRegs& LR) {
   return OS;
 }
 
+/// Compute the live-in list for \p MBB assuming all of its successors live-in
+/// lists are up-to-date. Uses the given LivePhysReg instance \p LiveRegs; This
+/// is just here to avoid repeated heap allocations when calling this multiple
+/// times in a pass.
+void computeLiveIns(LivePhysRegs &LiveRegs, const TargetRegisterInfo &TRI,
+                    MachineBasicBlock &MBB);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_LIVEPHYSREGS_H

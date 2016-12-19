@@ -225,6 +225,15 @@ void PositiveMoveOnCopyAssignment(ExpensiveMovableType E) {
   // CHECK-FIXES: F = std::move(E);
 }
 
+// The argument could be moved but is not since copy statement is inside a loop.
+void PositiveNoMoveInsideLoop(ExpensiveMovableType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:52: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void PositiveNoMoveInsideLoop(const ExpensiveMovableType& E) {
+  for (;;) {
+    auto F = E;
+  }
+}
+
 void PositiveConstRefNotMoveConstructible(ExpensiveToCopyType T) {
   // CHECK-MESSAGES: [[@LINE-1]]:63: warning: the parameter 'T' is copied
   // CHECK-FIXES: void PositiveConstRefNotMoveConstructible(const ExpensiveToCopyType& T) {

@@ -12,8 +12,8 @@
 
 #include "Chunks.h"
 #include "Config.h"
+#include "Memory.h"
 #include "lld/Core/LLVM.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"

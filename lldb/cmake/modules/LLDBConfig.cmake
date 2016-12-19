@@ -275,6 +275,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
+    COMPONENT lldb_headers
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
@@ -415,3 +416,5 @@ endif()
 if(LLDB_USE_BUILTIN_DEMANGLER)
     add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
 endif()
+
+find_package(Backtrace)

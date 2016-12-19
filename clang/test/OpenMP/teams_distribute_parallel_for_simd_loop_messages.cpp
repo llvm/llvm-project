@@ -659,12 +659,12 @@ void test_loop_eh() {
     try { // expected-error {{'try' statement cannot be used in OpenMP simd region}}
       for (int j = 0; j < 10; ++j) {
         if (a[i] > b[j])
-          throw a[i]; // expected-error {{throw' statement cannot be used in OpenMP simd region}}
+          throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
       }
-      throw a[i]; // expected-error {{throw' statement cannot be used in OpenMP simd region}}
+      throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
     } catch (float f) {
       if (f > 0.1)
-        throw a[i]; // expected-error {{throw' statement cannot be used in OpenMP simd region}}
+        throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
       return; // expected-error {{cannot return from OpenMP region}}
     }
     switch (i) {
@@ -676,7 +676,7 @@ void test_loop_eh() {
     }
     for (int j = 0; j < 10; j++) {
       if (c[i] > 10)
-        throw c[i]; // expected-error {{throw' statement cannot be used in OpenMP simd region}}
+        throw c[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
     }
   }
   if (c[9] > 10)

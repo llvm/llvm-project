@@ -24,5 +24,10 @@ using namespace llvm;
 #endif
 
 ARMLegalizerInfo::ARMLegalizerInfo() {
+  using namespace TargetOpcode;
+  const LLT s32 = LLT::scalar(32);
+
+  setAction({G_ADD, s32}, Legal);
+
   computeTables();
 }

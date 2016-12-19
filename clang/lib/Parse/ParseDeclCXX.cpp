@@ -421,11 +421,11 @@ Decl *Parser::ParseExportDeclaration() {
 
 /// ParseUsingDirectiveOrDeclaration - Parse C++ using using-declaration or
 /// using-directive. Assumes that current token is 'using'.
-Decl *Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
+Parser::DeclGroupPtrTy
+Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
                                          const ParsedTemplateInfo &TemplateInfo,
-                                               SourceLocation &DeclEnd,
-                                             ParsedAttributesWithRange &attrs,
-                                               Decl **OwnedType) {
+                                         SourceLocation &DeclEnd,
+                                         ParsedAttributesWithRange &attrs) {
   assert(Tok.is(tok::kw_using) && "Not using token");
   ObjCDeclContextSwitch ObjCDC(*this);
   
@@ -447,7 +447,8 @@ Decl *Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
         << 0 /* directive */ << R << FixItHint::CreateRemoval(R);
     }
 
-    return ParseUsingDirective(Context, UsingLoc, DeclEnd, attrs);
+    Decl *UsingDir = ParseUsingDirective(Context, UsingLoc, DeclEnd, attrs);
+    return Actions.ConvertDeclToDeclGroup(UsingDir);
   }
 
   // Otherwise, it must be a using-declaration or an alias-declaration.
@@ -456,7 +457,7 @@ Decl *Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
   ProhibitAttributes(attrs);
 
   return ParseUsingDeclaration(Context, TemplateInfo, UsingLoc, DeclEnd,
-                                    AS_none, OwnedType);
+                               AS_none);
 }
 
 /// ParseUsingDirective - Parse C++ using-directive, assumes
@@ -522,58 +523,31 @@ Decl *Parser::ParseUsingDirective(unsigned Context,
                                      IdentLoc, NamespcName, attrs.getList());
 }
 
-/// ParseUsingDeclaration - Parse C++ using-declaration or alias-declaration.
-/// Assumes that 'using' was already seen.
+/// Parse a using-declarator (or the identifier in a C++11 alias-declaration).
 ///
-///     using-declaration: [C++ 7.3.p3: namespace.udecl]
-///       'using' 'typename'[opt] ::[opt] nested-name-specifier
-///               unqualified-id
-///       'using' :: unqualified-id
+///     using-declarator:
+///       'typename'[opt] nested-name-specifier unqualified-id
 ///
-///     alias-declaration: C++11 [dcl.dcl]p1
-///       'using' identifier attribute-specifier-seq[opt] = type-id ;
-///
-Decl *Parser::ParseUsingDeclaration(unsigned Context,
-                                    const ParsedTemplateInfo &TemplateInfo,
-                                    SourceLocation UsingLoc,
-                                    SourceLocation &DeclEnd,
-                                    AccessSpecifier AS,
-                                    Decl **OwnedType) {
-  CXXScopeSpec SS;
-  SourceLocation TypenameLoc;
-  bool HasTypenameKeyword = false;
-
-  // Check for misplaced attributes before the identifier in an
-  // alias-declaration.
-  ParsedAttributesWithRange MisplacedAttrs(AttrFactory);
-  MaybeParseCXX11Attributes(MisplacedAttrs);
+bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
+  D.clear();
 
   // Ignore optional 'typename'.
   // FIXME: This is wrong; we should parse this as a typename-specifier.
-  if (TryConsumeToken(tok::kw_typename, TypenameLoc))
-    HasTypenameKeyword = true;
+  TryConsumeToken(tok::kw_typename, D.TypenameLoc);
 
   if (Tok.is(tok::kw___super)) {
     Diag(Tok.getLocation(), diag::err_super_in_using_declaration);
-    SkipUntil(tok::semi);
-    return nullptr;
+    return true;
   }
 
   // Parse nested-name-specifier.
   IdentifierInfo *LastII = nullptr;
-  ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false,
+  ParseOptionalCXXScopeSpecifier(D.SS, nullptr, /*EnteringContext=*/false,
                                  /*MayBePseudoDtor=*/nullptr,
                                  /*IsTypename=*/false,
                                  /*LastII=*/&LastII);
-
-  // Check nested-name specifier.
-  if (SS.isInvalid()) {
-    SkipUntil(tok::semi);
-    return nullptr;
-  }
-
-  SourceLocation TemplateKWLoc;
-  UnqualifiedId Name;
+  if (D.SS.isInvalid())
+    return true;
 
   // Parse the unqualified-id. We allow parsing of both constructor and
   // destructor names and allow the action module to diagnose any semantic
@@ -587,31 +561,68 @@ Decl *Parser::ParseUsingDeclaration(unsigned Context,
   //   constructor.
   if (getLangOpts().CPlusPlus11 && Context == Declarator::MemberContext &&
       Tok.is(tok::identifier) && NextToken().is(tok::semi) &&
-      SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      !SS.getScopeRep()->getAsNamespace() &&
-      !SS.getScopeRep()->getAsNamespaceAlias()) {
+      D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
+      !D.SS.getScopeRep()->getAsNamespace() &&
+      !D.SS.getScopeRep()->getAsNamespaceAlias()) {
     SourceLocation IdLoc = ConsumeToken();
-    ParsedType Type = Actions.getInheritingConstructorName(SS, IdLoc, *LastII);
-    Name.setConstructorName(Type, IdLoc, IdLoc);
-  } else if (ParseUnqualifiedId(
-                 SS, /*EnteringContext=*/false,
-                 /*AllowDestructorName=*/true,
-                 /*AllowConstructorName=*/!(Tok.is(tok::identifier) &&
-                                            NextToken().is(tok::equal)),
-                 nullptr, TemplateKWLoc, Name)) {
-    SkipUntil(tok::semi);
-    return nullptr;
+    ParsedType Type =
+        Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);
+    D.Name.setConstructorName(Type, IdLoc, IdLoc);
+  } else {
+    if (ParseUnqualifiedId(
+            D.SS, /*EnteringContext=*/false,
+            /*AllowDestructorName=*/true,
+            /*AllowConstructorName=*/!(Tok.is(tok::identifier) &&
+                                       NextToken().is(tok::equal)),
+            nullptr, D.TemplateKWLoc, D.Name))
+      return true;
   }
+
+  // FIXME: Parse optional ellipsis
+
+  return false;
+}
+
+/// ParseUsingDeclaration - Parse C++ using-declaration or alias-declaration.
+/// Assumes that 'using' was already seen.
+///
+///     using-declaration: [C++ 7.3.p3: namespace.udecl]
+///       'using' using-declarator-list[opt] ;
+///
+///     using-declarator-list: [C++1z]
+///       using-declarator '...'[opt]
+///       using-declarator-list ',' using-declarator '...'[opt]
+///
+///     using-declarator-list: [C++98-14]
+///       using-declarator
+///
+///     alias-declaration: C++11 [dcl.dcl]p1
+///       'using' identifier attribute-specifier-seq[opt] = type-id ;
+///
+Parser::DeclGroupPtrTy
+Parser::ParseUsingDeclaration(unsigned Context,
+                              const ParsedTemplateInfo &TemplateInfo,
+                              SourceLocation UsingLoc, SourceLocation &DeclEnd,
+                              AccessSpecifier AS) {
+  // Check for misplaced attributes before the identifier in an
+  // alias-declaration.
+  ParsedAttributesWithRange MisplacedAttrs(AttrFactory);
+  MaybeParseCXX11Attributes(MisplacedAttrs);
+
+  UsingDeclarator D;
+  bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
 
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseGNUAttributes(Attrs);
   MaybeParseCXX11Attributes(Attrs);
 
   // Maybe this is an alias-declaration.
-  TypeResult TypeAlias;
-  bool IsAliasDecl = Tok.is(tok::equal);
-  Decl *DeclFromDeclSpec = nullptr;
-  if (IsAliasDecl) {
+  if (Tok.is(tok::equal)) {
+    if (InvalidDeclarator) {
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
+
     // If we had any misplaced attributes from earlier, this is where they
     // should have been written.
     if (MisplacedAttrs.Range.isValid()) {
@@ -623,76 +634,21 @@ Decl *Parser::ParseUsingDeclaration(unsigned Context,
       Attrs.takeAllFrom(MisplacedAttrs);
     }
 
-    ConsumeToken();
-
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus11 ?
-         diag::warn_cxx98_compat_alias_declaration :
-         diag::ext_alias_declaration);
-
-    // Type alias templates cannot be specialized.
-    int SpecKind = -1;
-    if (TemplateInfo.Kind == ParsedTemplateInfo::Template &&
-        Name.getKind() == UnqualifiedId::IK_TemplateId)
-      SpecKind = 0;
-    if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization)
-      SpecKind = 1;
-    if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
-      SpecKind = 2;
-    if (SpecKind != -1) {
-      SourceRange Range;
-      if (SpecKind == 0)
-        Range = SourceRange(Name.TemplateId->LAngleLoc,
-                            Name.TemplateId->RAngleLoc);
-      else
-        Range = TemplateInfo.getSourceRange();
-      Diag(Range.getBegin(), diag::err_alias_declaration_specialization)
-        << SpecKind << Range;
-      SkipUntil(tok::semi);
-      return nullptr;
-    }
-
-    // Name must be an identifier.
-    if (Name.getKind() != UnqualifiedId::IK_Identifier) {
-      Diag(Name.StartLocation, diag::err_alias_declaration_not_identifier);
-      // No removal fixit: can't recover from this.
-      SkipUntil(tok::semi);
-      return nullptr;
-    } else if (HasTypenameKeyword)
-      Diag(TypenameLoc, diag::err_alias_declaration_not_identifier)
-        << FixItHint::CreateRemoval(SourceRange(TypenameLoc,
-                             SS.isNotEmpty() ? SS.getEndLoc() : TypenameLoc));
-    else if (SS.isNotEmpty())
-      Diag(SS.getBeginLoc(), diag::err_alias_declaration_not_identifier)
-        << FixItHint::CreateRemoval(SS.getRange());
-
-    TypeAlias = ParseTypeName(nullptr, TemplateInfo.Kind
-                                           ? Declarator::AliasTemplateContext
-                                           : Declarator::AliasDeclContext,
-                              AS, &DeclFromDeclSpec, &Attrs);
-    if (OwnedType)
-      *OwnedType = DeclFromDeclSpec;
-  } else {
-    // C++11 attributes are not allowed on a using-declaration, but GNU ones
-    // are.
-    ProhibitAttributes(MisplacedAttrs);
-    ProhibitAttributes(Attrs);
-
-    // Parse (optional) attributes (most likely GNU strong-using extension).
-    MaybeParseGNUAttributes(Attrs);
+    Decl *DeclFromDeclSpec = nullptr;
+    Decl *AD = ParseAliasDeclarationAfterDeclarator(
+        TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
+    return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
   }
 
-  // Eat ';'.
-  DeclEnd = Tok.getLocation();
-  if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                       !Attrs.empty() ? "attributes list"
-                                      : IsAliasDecl ? "alias declaration"
-                                                    : "using declaration"))
-    SkipUntil(tok::semi);
+  // C++11 attributes are not allowed on a using-declaration, but GNU ones
+  // are.
+  ProhibitAttributes(MisplacedAttrs);
+  ProhibitAttributes(Attrs);
 
   // Diagnose an attempt to declare a templated using-declaration.
   // In C++11, alias-declarations can be templates:
   //   template <...> using id = type;
-  if (TemplateInfo.Kind && !IsAliasDecl) {
+  if (TemplateInfo.Kind) {
     SourceRange R = TemplateInfo.getSourceRange();
     Diag(UsingLoc, diag::err_templated_using_directive_declaration)
       << 1 /* declaration */ << R << FixItHint::CreateRemoval(R);
@@ -703,29 +659,184 @@ Decl *Parser::ParseUsingDeclaration(unsigned Context,
     return nullptr;
   }
 
-  // "typename" keyword is allowed for identifiers only,
-  // because it may be a type definition.
-  if (HasTypenameKeyword && Name.getKind() != UnqualifiedId::IK_Identifier) {
-    Diag(Name.getSourceRange().getBegin(), diag::err_typename_identifiers_only)
-      << FixItHint::CreateRemoval(SourceRange(TypenameLoc));
-    // Proceed parsing, but reset the HasTypenameKeyword flag.
-    HasTypenameKeyword = false;
+  SmallVector<Decl *, 8> DeclsInGroup;
+  while (true) {
+    // Parse (optional) attributes (most likely GNU strong-using extension).
+    MaybeParseGNUAttributes(Attrs);
+
+    if (InvalidDeclarator)
+      SkipUntil(tok::comma, tok::semi, StopBeforeMatch);
+    else {
+      // "typename" keyword is allowed for identifiers only,
+      // because it may be a type definition.
+      if (D.TypenameLoc.isValid() &&
+          D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+        Diag(D.Name.getSourceRange().getBegin(),
+             diag::err_typename_identifiers_only)
+            << FixItHint::CreateRemoval(SourceRange(D.TypenameLoc));
+        // Proceed parsing, but discard the typename keyword.
+        D.TypenameLoc = SourceLocation();
+      }
+
+      Decl *UD =
+          Actions.ActOnUsingDeclaration(getCurScope(), AS, UsingLoc, D.SS,
+                                        D.Name, Attrs.getList(), D.TypenameLoc);
+      if (UD)
+        DeclsInGroup.push_back(UD);
+    }
+
+    if (!TryConsumeToken(tok::comma))
+      break;
+
+    // Parse another using-declarator.
+    Attrs.clear();
+    InvalidDeclarator = ParseUsingDeclarator(Context, D);
   }
 
-  if (IsAliasDecl) {
-    TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
-    MultiTemplateParamsArg TemplateParamsArg(
-      TemplateParams ? TemplateParams->data() : nullptr,
-      TemplateParams ? TemplateParams->size() : 0);
-    return Actions.ActOnAliasDeclaration(getCurScope(), AS, TemplateParamsArg,
-                                         UsingLoc, Name, Attrs.getList(),
-                                         TypeAlias, DeclFromDeclSpec);
+  if (DeclsInGroup.size() > 1)
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z ?
+         diag::warn_cxx1z_compat_multi_using_declaration :
+         diag::ext_multi_using_declaration);
+
+  // Eat ';'.
+  DeclEnd = Tok.getLocation();
+  if (ExpectAndConsume(tok::semi, diag::err_expected_after,
+                       !Attrs.empty() ? "attributes list"
+                                      : "using declaration"))
+    SkipUntil(tok::semi);
+
+  return Actions.BuildDeclaratorGroup(DeclsInGroup, /*MayContainAuto*/false);
+}
+
+Decl *Parser::ParseAliasTemplate(const ParsedTemplateInfo &TemplateInfo,
+                                 SourceLocation &DeclEnd, AccessSpecifier AS,
+                                 ParsedAttributesWithRange &MisplacedAttrs1) {
+  assert(Tok.is(tok::kw_using) && "Not using token");
+  ObjCDeclContextSwitch ObjCDC(*this);
+  
+  // Eat 'using'.
+  SourceLocation UsingLoc = ConsumeToken();
+  if (Tok.is(tok::code_completion)) {
+    Actions.CodeCompleteUsing(getCurScope());
+    cutOffParsing();
+    return nullptr;
   }
 
-  return Actions.ActOnUsingDeclaration(getCurScope(), AS,
-                                       /* HasUsingKeyword */ true, UsingLoc,
-                                       SS, Name, Attrs.getList(),
-                                       HasTypenameKeyword, TypenameLoc);
+  // 'using namespace' means this is a using-directive.
+  if (Tok.is(tok::kw_namespace)) {
+    SourceRange R = TemplateInfo.getSourceRange();
+    Diag(UsingLoc, diag::err_templated_using_directive_declaration)
+        << 0 /* directive */ << R;
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  // Check for misplaced attributes before the identifier.
+  ParsedAttributesWithRange MisplacedAttrs2(AttrFactory);
+  MaybeParseCXX11Attributes(MisplacedAttrs2);
+
+  // FIXME: Just parse an identifier here?
+  UsingDeclarator D;
+  if (ParseUsingDeclarator(Declarator::FileContext, D)) {
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  ParsedAttributesWithRange Attrs(AttrFactory);
+
+  // If we had any misplaced attributes from earlier, this is where they
+  // should have been written.
+  for (auto *MisplacedAttrs : {&MisplacedAttrs1, &MisplacedAttrs2}) {
+    if (MisplacedAttrs->Range.isValid()) {
+      Diag(MisplacedAttrs->Range.getBegin(), diag::err_attributes_not_allowed)
+        << FixItHint::CreateInsertionFromRange(
+               Tok.getLocation(),
+               CharSourceRange::getTokenRange(MisplacedAttrs->Range))
+        << FixItHint::CreateRemoval(MisplacedAttrs->Range);
+      Attrs.takeAllFrom(*MisplacedAttrs);
+    }
+  }
+
+  MaybeParseGNUAttributes(Attrs);
+  MaybeParseCXX11Attributes(Attrs);
+
+  return ParseAliasDeclarationAfterDeclarator(TemplateInfo, UsingLoc, D,
+                                              DeclEnd, AS, Attrs);
+}
+
+Decl *Parser::ParseAliasDeclarationAfterDeclarator(
+    const ParsedTemplateInfo &TemplateInfo, SourceLocation UsingLoc,
+    UsingDeclarator &D, SourceLocation &DeclEnd, AccessSpecifier AS,
+    ParsedAttributes &Attrs, Decl **OwnedType) {
+  if (ExpectAndConsume(tok::equal)) {
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus11 ?
+       diag::warn_cxx98_compat_alias_declaration :
+       diag::ext_alias_declaration);
+
+  // Type alias templates cannot be specialized.
+  int SpecKind = -1;
+  if (TemplateInfo.Kind == ParsedTemplateInfo::Template &&
+      D.Name.getKind() == UnqualifiedId::IK_TemplateId)
+    SpecKind = 0;
+  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization)
+    SpecKind = 1;
+  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+    SpecKind = 2;
+  if (SpecKind != -1) {
+    SourceRange Range;
+    if (SpecKind == 0)
+      Range = SourceRange(D.Name.TemplateId->LAngleLoc,
+                          D.Name.TemplateId->RAngleLoc);
+    else
+      Range = TemplateInfo.getSourceRange();
+    Diag(Range.getBegin(), diag::err_alias_declaration_specialization)
+      << SpecKind << Range;
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  // Name must be an identifier.
+  if (D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+    Diag(D.Name.StartLocation, diag::err_alias_declaration_not_identifier);
+    // No removal fixit: can't recover from this.
+    SkipUntil(tok::semi);
+    return nullptr;
+  } else if (D.TypenameLoc.isValid())
+    Diag(D.TypenameLoc, diag::err_alias_declaration_not_identifier)
+        << FixItHint::CreateRemoval(SourceRange(
+               D.TypenameLoc,
+               D.SS.isNotEmpty() ? D.SS.getEndLoc() : D.TypenameLoc));
+  else if (D.SS.isNotEmpty())
+    Diag(D.SS.getBeginLoc(), diag::err_alias_declaration_not_identifier)
+      << FixItHint::CreateRemoval(D.SS.getRange());
+
+  Decl *DeclFromDeclSpec = nullptr;
+  TypeResult TypeAlias =
+      ParseTypeName(nullptr,
+                    TemplateInfo.Kind ? Declarator::AliasTemplateContext
+                                      : Declarator::AliasDeclContext,
+                    AS, &DeclFromDeclSpec, &Attrs);
+  if (OwnedType)
+    *OwnedType = DeclFromDeclSpec;
+
+  // Eat ';'.
+  DeclEnd = Tok.getLocation();
+  if (ExpectAndConsume(tok::semi, diag::err_expected_after,
+                       !Attrs.empty() ? "attributes list"
+                                      : "alias declaration"))
+    SkipUntil(tok::semi);
+
+  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+  MultiTemplateParamsArg TemplateParamsArg(
+    TemplateParams ? TemplateParams->data() : nullptr,
+    TemplateParams ? TemplateParams->size() : 0);
+  return Actions.ActOnAliasDeclaration(getCurScope(), AS, TemplateParamsArg,
+                                       UsingLoc, D.Name, Attrs.getList(),
+                                       TypeAlias, DeclFromDeclSpec);
 }
 
 /// ParseStaticAssertDeclaration - Parse C++0x or C11 static_assert-declaration.
@@ -2376,10 +2487,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       }
 
       return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
-          getCurScope(), AS,
-          /* HasUsingKeyword */ false, SourceLocation(), SS, Name,
-          /* AttrList */ nullptr,
-          /* HasTypenameKeyword */ false, SourceLocation())));
+          getCurScope(), AS, /*UsingLoc*/SourceLocation(), SS, Name,
+          /*AttrList*/nullptr, /*TypenameLoc*/SourceLocation())));
     }
   }
 
@@ -2434,8 +2543,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     }
     SourceLocation DeclEnd;
     // Otherwise, it must be a using-declaration or an alias-declaration.
-    return DeclGroupPtrTy::make(DeclGroupRef(ParseUsingDeclaration(
-        Declarator::MemberContext, TemplateInfo, UsingLoc, DeclEnd, AS)));
+    return ParseUsingDeclaration(Declarator::MemberContext, TemplateInfo,
+                                 UsingLoc, DeclEnd, AS);
   }
 
   // Hold late-parsed attributes so we can attach a Decl to them later.

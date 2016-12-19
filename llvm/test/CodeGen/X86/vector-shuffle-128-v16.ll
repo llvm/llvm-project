@@ -1799,60 +1799,58 @@ define <16 x i8> @PR31301(i8* nocapture readonly %x, i8* nocapture readonly %y) 
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    movzbl (%rdi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    movzbl (%rsi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,1,1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
-; SSE2-NEXT:    pandn %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR31301:
 ; SSSE3:       # BB#0: # %entry
 ; SSSE3-NEXT:    movzbl (%rdi), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSSE3-NEXT:    pshufb %xmm1, %xmm0
 ; SSSE3-NEXT:    movzbl (%rsi), %eax
-; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSSE3-NEXT:    movd %eax, %xmm2
+; SSSE3-NEXT:    pshufb %xmm1, %xmm2
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR31301:
 ; SSE41:       # BB#0: # %entry
 ; SSE41-NEXT:    movzbl (%rdi), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
 ; SSE41-NEXT:    movzbl (%rsi), %eax
-; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE41-NEXT:    movd %eax, %xmm2
+; SSE41-NEXT:    pshufb %xmm1, %xmm2
+; SSE41-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR31301:
 ; AVX1:       # BB#0: # %entry
 ; AVX1-NEXT:    movzbl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    movzbl (%rsi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm1
+; AVX1-NEXT:    vmovd %eax, %xmm2
+; AVX1-NEXT:    vpshufb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: PR31301:
 ; AVX2OR512VL:       # BB#0: # %entry
-; AVX2OR512VL-NEXT:    movzbl (%rdi), %eax
-; AVX2OR512VL-NEXT:    vmovd %eax, %xmm0
-; AVX2OR512VL-NEXT:    movzbl (%rsi), %eax
-; AVX2OR512VL-NEXT:    vmovd %eax, %xmm1
+; AVX2OR512VL-NEXT:    vpbroadcastb (%rdi), %xmm0
+; AVX2OR512VL-NEXT:    vpbroadcastb (%rsi), %xmm1
 ; AVX2OR512VL-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; AVX2OR512VL-NEXT:    vpbroadcastw %xmm0, %xmm0
 ; AVX2OR512VL-NEXT:    retq
 entry:
   %0 = load i8, i8* %x, align 1

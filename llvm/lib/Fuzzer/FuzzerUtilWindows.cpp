@@ -168,7 +168,7 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
   if (PattLen == 1)
     return memchr(Data, *Cpatt, DataLen);
 
-  const char *End = Cdata + DataLen - PattLen;
+  const char *End = Cdata + DataLen - PattLen + 1;
 
   for (const char *It = Cdata; It < End; ++It)
     if (It[0] == Cpatt[0] && memcmp(It, Cpatt, PattLen) == 0)

@@ -451,6 +451,16 @@ def AVX512_256_SET0 : I<0, Pseudo, (outs VR256X:$dst), (ins), "",
                [(set VR256X:$dst, (v8i32 immAllZerosV))]>;
 }
 
+// Alias instructions that map fld0 to xorps for sse or vxorps for avx.
+// This is expanded by ExpandPostRAPseudos.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
+    isPseudo = 1, SchedRW = [WriteZero], Predicates = [HasVLX, HasDQI] in {
+  def AVX512_FsFLD0SS : I<0, Pseudo, (outs FR32X:$dst), (ins), "",
+                          [(set FR32X:$dst, fp32imm0)]>;
+  def AVX512_FsFLD0SD : I<0, Pseudo, (outs FR64X:$dst), (ins), "",
+                          [(set FR64X:$dst, fpimm0)]>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512 - VECTOR INSERT
 //
@@ -4559,6 +4569,43 @@ defm : avx512_fp_logical_lowering_sizes<"VPOR", or>;
 defm : avx512_fp_logical_lowering_sizes<"VPXOR", xor>;
 defm : avx512_fp_logical_lowering_sizes<"VPANDN", X86andnp>;
 
+let Predicates = [HasVLX,HasDQI] in {
+  // Use packed logical operations for scalar ops.
+  def : Pat<(f64 (X86fand FR64X:$src1, FR64X:$src2)),
+            (COPY_TO_REGCLASS (VANDPDZ128rr
+                               (COPY_TO_REGCLASS FR64X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR64X:$src2, VR128X)), FR64X)>;
+  def : Pat<(f64 (X86for FR64X:$src1, FR64X:$src2)),
+            (COPY_TO_REGCLASS (VORPDZ128rr
+                               (COPY_TO_REGCLASS FR64X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR64X:$src2, VR128X)), FR64X)>;
+  def : Pat<(f64 (X86fxor FR64X:$src1, FR64X:$src2)),
+            (COPY_TO_REGCLASS (VXORPDZ128rr
+                               (COPY_TO_REGCLASS FR64X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR64X:$src2, VR128X)), FR64X)>;
+  def : Pat<(f64 (X86fandn FR64X:$src1, FR64X:$src2)),
+            (COPY_TO_REGCLASS (VANDNPDZ128rr
+                               (COPY_TO_REGCLASS FR64X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR64X:$src2, VR128X)), FR64X)>;
+
+  def : Pat<(f32 (X86fand FR32X:$src1, FR32X:$src2)),
+            (COPY_TO_REGCLASS (VANDPSZ128rr
+                               (COPY_TO_REGCLASS FR32X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR32X:$src2, VR128X)), FR32X)>;
+  def : Pat<(f32 (X86for FR32X:$src1, FR32X:$src2)),
+            (COPY_TO_REGCLASS (VORPSZ128rr
+                               (COPY_TO_REGCLASS FR32X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR32X:$src2, VR128X)), FR32X)>;
+  def : Pat<(f32 (X86fxor FR32X:$src1, FR32X:$src2)),
+            (COPY_TO_REGCLASS (VXORPSZ128rr
+                               (COPY_TO_REGCLASS FR32X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR32X:$src2, VR128X)), FR32X)>;
+  def : Pat<(f32 (X86fandn FR32X:$src1, FR32X:$src2)),
+            (COPY_TO_REGCLASS (VANDNPSZ128rr
+                               (COPY_TO_REGCLASS FR32X:$src1, VR128X),
+                               (COPY_TO_REGCLASS FR32X:$src2, VR128X)), FR32X)>;
+}
+
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             X86VectorVTInfo _> {
   defm rr: AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -6060,8 +6107,7 @@ multiclass avx512_cvt_fp_scalar_sd2ss<bits<8> opc, string OpcodeStr,
   let Predicates = [HasAVX512] in {
     defm Z : avx512_cvt_fp_scalar<opc, OpcodeStr, _dst, _src, OpNodeRnd>,
              avx512_cvt_fp_rc_scalar<opc, OpcodeStr, _dst, _src,
-                               OpNodeRnd>, VEX_W, EVEX_CD8<64, CD8VT1>,
-                               EVEX_V512, XD;
+                               OpNodeRnd>, VEX_W, EVEX_CD8<64, CD8VT1>, XD;
   }
 }
 
@@ -6071,7 +6117,7 @@ multiclass avx512_cvt_fp_scalar_ss2sd<bits<8> opc, string OpcodeStr,
   let Predicates = [HasAVX512] in {
     defm Z : avx512_cvt_fp_scalar<opc, OpcodeStr, _dst, _src, OpNodeRnd>,
              avx512_cvt_fp_sae_scalar<opc, OpcodeStr, _dst, _src, OpNodeRnd>,
-             EVEX_CD8<32, CD8VT1>, XS, EVEX_V512;
+             EVEX_CD8<32, CD8VT1>, XS;
   }
 }
 defm VCVTSD2SS : avx512_cvt_fp_scalar_sd2ss<0x5A, "vcvtsd2ss",

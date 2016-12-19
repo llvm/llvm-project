@@ -127,7 +127,8 @@ IRObjectFile::create(MemoryBufferRef Object, LLVMContext &Context) {
   std::vector<std::unique_ptr<Module>> Mods;
   for (auto BM : *BMsOrErr) {
     Expected<std::unique_ptr<Module>> MOrErr =
-        BM.getLazyModule(Context, /*ShouldLazyLoadMetadata*/ true);
+        BM.getLazyModule(Context, /*ShouldLazyLoadMetadata*/ true,
+                         /*IsImporting*/ false);
     if (!MOrErr)
       return MOrErr.takeError();
 

@@ -35,7 +35,7 @@ extern llvm::StringSaver Saver;
 // These two classes are hack to keep track of all
 // SpecificBumpPtrAllocator instances.
 struct SpecificAllocBase {
-  SpecificAllocBase();
+  SpecificAllocBase() { Instances.push_back(this); }
   virtual ~SpecificAllocBase() = default;
   virtual void reset() = 0;
   static std::vector<SpecificAllocBase *> Instances;
@@ -53,7 +53,11 @@ template <typename T, typename... U> inline T *make(U &&... Args) {
   return new (Alloc.Alloc.Allocate()) T(std::forward<U>(Args)...);
 }
 
-void freeArena();
+inline void freeArena() {
+  for (SpecificAllocBase *Alloc : SpecificAllocBase::Instances)
+    Alloc->reset();
+  BAlloc.Reset();
+}
 }
 
 #endif

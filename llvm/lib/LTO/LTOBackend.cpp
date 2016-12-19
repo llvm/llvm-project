@@ -182,6 +182,7 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
   PMB.OptLevel = Conf.OptLevel;
+  PMB.PGOSampleUse = Conf.SampleProfile;
   if (IsThinLTO)
     PMB.populateThinLTOPassManager(passes);
   else
@@ -355,7 +356,8 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
     auto I = ModuleMap.find(Identifier);
     assert(I != ModuleMap.end());
     return I->second.getLazyModule(Mod.getContext(),
-                                   /*ShouldLazyLoadMetadata=*/true);
+                                   /*ShouldLazyLoadMetadata=*/true,
+                                   /*IsImporting*/ true);
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader);

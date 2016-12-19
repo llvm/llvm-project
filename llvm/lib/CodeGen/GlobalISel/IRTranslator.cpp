@@ -815,6 +815,32 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     // Now that the MachineFrameInfo has been configured, no further changes to
     // the reserved registers are possible.
     MRI->freezeReservedRegs(*MF);
+
+    // Merge the argument lowering and constants block with its single
+    // successor, the LLVM-IR entry block.  We want the basic block to
+    // be maximal.
+    assert(EntryBB->succ_size() == 1 &&
+           "Custom BB used for lowering should have only one successor");
+    // Get the successor of the current entry block.
+    MachineBasicBlock &NewEntryBB = **EntryBB->succ_begin();
+    assert(NewEntryBB.pred_size() == 1 &&
+           "LLVM-IR entry block has a predecessor!?");
+    // Move all the instruction from the current entry block to the
+    // new entry block.
+    NewEntryBB.splice(NewEntryBB.begin(), EntryBB, EntryBB->begin(),
+                      EntryBB->end());
+
+    // Update the live-in information for the new entry block.
+    for (const MachineBasicBlock::RegisterMaskPair &LiveIn : EntryBB->liveins())
+      NewEntryBB.addLiveIn(LiveIn);
+    NewEntryBB.sortUniqueLiveIns();
+
+    // Get rid of the now empty basic block.
+    EntryBB->removeSuccessor(&NewEntryBB);
+    MF->remove(EntryBB);
+
+    assert(&MF->front() == &NewEntryBB &&
+           "New entry wasn't next in the list of basic block!");
   }
 
   finalizeFunction();

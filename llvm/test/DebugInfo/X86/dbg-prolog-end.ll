@@ -2,6 +2,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-macosx10.6.7"
 
+;CHECK-LABEL: foo:
 ;CHECK: .loc	1 2 11 prologue_end
 define i32 @foo(i32 %i) nounwind ssp !dbg !1 {
 entry:
@@ -24,10 +25,13 @@ entry:
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
+;CHECK-LABEL: main:
+;CHECK: .loc 1 0 0 prologue_end
+
 define i32 @main() nounwind ssp !dbg !6 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, i32* %retval, !dbg !22
   %call = call i32 @foo(i32 21), !dbg !16
   ret i32 %call, !dbg !16
 }
@@ -57,3 +61,4 @@ entry:
 !19 = !DIFile(filename: "/tmp/a.c", directory: "/private/tmp")
 !20 = !{}
 !21 = !{i32 1, !"Debug Info Version", i32 3}
+!22 = !DILocation(line: 0, column: 0, scope: !17)

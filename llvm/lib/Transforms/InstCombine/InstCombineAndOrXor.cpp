@@ -1345,6 +1345,9 @@ static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
   return nullptr;
 }
 
+// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
+// here. We should standardize that construct where it is needed or choose some
+// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -1543,8 +1546,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(A, B);
 
     // ((~A) ^ B) & (A | B) -> (A & B)
+    // ((~A) ^ B) & (B | A) -> (A & B)
     if (match(Op0, m_Xor(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1, m_Or(m_Specific(A), m_Specific(B))))
+        match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
   }
 
@@ -2161,6 +2165,9 @@ Instruction *InstCombiner::FoldXorWithConstants(BinaryOperator &I, Value *Op,
   return nullptr;
 }
 
+// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
+// here. We should standardize that construct where it is needed or choose some
+// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -2250,8 +2257,9 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       match(Op1, m_Not(m_Specific(A))))
     return BinaryOperator::CreateOr(Builder->CreateNot(A), B);
 
-  // (A & (~B)) | (A ^ B) -> (A ^ B)
-  if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
+  // (A & ~B) | (A ^ B) -> (A ^ B)
+  // (~B & A) | (A ^ B) -> (A ^ B)
+  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
       match(Op1, m_Xor(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateXor(A, B);
 
@@ -2427,14 +2435,15 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
         return BinaryOperator::CreateOr(Not, Op0);
       }
 
-  // (A & B) | ((~A) ^ B) -> (~A ^ B)
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      match(Op1, m_Xor(m_Not(m_Specific(A)), m_Specific(B))))
-    return BinaryOperator::CreateXor(Builder->CreateNot(A), B);
-
-  // ((~A) ^ B) | (A & B) -> (~A ^ B)
-  if (match(Op0, m_Xor(m_Not(m_Value(A)), m_Value(B))) &&
-      match(Op1, m_And(m_Specific(A), m_Specific(B))))
+  // (A & B) | (~A ^ B) -> (~A ^ B)
+  // (A & B) | (B ^ ~A) -> (~A ^ B)
+  // (B & A) | (~A ^ B) -> (~A ^ B)
+  // (B & A) | (B ^ ~A) -> (~A ^ B)
+  // The match order is important: match the xor first because the 'not'
+  // operation defines 'A'. We do not need to match the xor as Op0 because the
+  // xor was canonicalized to Op1 above.
+  if (match(Op1, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+      match(Op0, m_c_And(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateXor(Builder->CreateNot(A), B);
 
   if (SwappedForXor)
@@ -2514,6 +2523,9 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   return Changed ? &I : nullptr;
 }
 
+// FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
+// here. We should standardize that construct where it is needed or choose some
+// other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -2736,20 +2748,22 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
         return BinaryOperator::CreateXor(A, B);
     }
     // (A | ~B) ^ (~A | B) -> A ^ B
-    if (match(Op0I, m_Or(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1I, m_Or(m_Not(m_Specific(A)), m_Specific(B)))) {
+    // (~B | A) ^ (~A | B) -> A ^ B
+    if (match(Op0I, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1I, m_Or(m_Not(m_Specific(A)), m_Specific(B))))
       return BinaryOperator::CreateXor(A, B);
-    }
+
     // (~A | B) ^ (A | ~B) -> A ^ B
     if (match(Op0I, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1I, m_Or(m_Specific(A), m_Not(m_Specific(B))))) {
       return BinaryOperator::CreateXor(A, B);
     }
     // (A & ~B) ^ (~A & B) -> A ^ B
-    if (match(Op0I, m_And(m_Value(A), m_Not(m_Value(B)))) &&
-        match(Op1I, m_And(m_Not(m_Specific(A)), m_Specific(B)))) {
+    // (~B & A) ^ (~A & B) -> A ^ B
+    if (match(Op0I, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1I, m_And(m_Not(m_Specific(A)), m_Specific(B))))
       return BinaryOperator::CreateXor(A, B);
-    }
+
     // (~A & B) ^ (A & ~B) -> A ^ B
     if (match(Op0I, m_And(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1I, m_And(m_Specific(A), m_Not(m_Specific(B))))) {
@@ -2785,9 +2799,10 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       return BinaryOperator::CreateOr(A, B);
   }
 
-  Value *A = nullptr, *B = nullptr;
-  // (A & ~B) ^ (~A) -> ~(A & B)
-  if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
+  // (A & ~B) ^ ~A -> ~(A & B)
+  // (~B & A) ^ ~A -> ~(A & B)
+  Value *A, *B;
+  if (match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
       match(Op1, m_Not(m_Specific(A))))
     return BinaryOperator::CreateNot(Builder->CreateAnd(A, B));
 

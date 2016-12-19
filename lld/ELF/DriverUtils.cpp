@@ -15,10 +15,10 @@
 
 #include "Driver.h"
 #include "Error.h"
+#include "Memory.h"
 #include "ScriptParser.h"
 #include "lld/Config/Version.h"
 #include "lld/Core/Reproduce.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"

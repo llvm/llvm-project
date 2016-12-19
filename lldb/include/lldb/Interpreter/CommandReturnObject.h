@@ -21,6 +21,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <memory>
 
@@ -112,6 +113,21 @@ public:
 
   void AppendErrorWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
+
+  template <typename... Args>
+  void AppendMessageWithFormatv(const char *format, Args &&... args) {
+    AppendMessage(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
+
+  template <typename... Args>
+  void AppendWarningWithFormatv(const char *format, Args &&... args) {
+    AppendWarning(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
+
+  template <typename... Args>
+  void AppendErrorWithFormatv(const char *format, Args &&... args) {
+    AppendError(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
 
   void SetError(const Error &error, const char *fallback_error_cstr = nullptr);
 

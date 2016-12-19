@@ -1990,11 +1990,23 @@ PathDiagnosticPiece *CFRefReportVisitor::VisitNode(const ExplodedNode *N,
       }
 
       if (CurrV.getObjKind() == RetEffect::CF) {
-        os << " returns a Core Foundation object with a ";
+        if (Sym->getType().isNull()) {
+          os << " returns a Core Foundation object with a ";
+        } else {
+          os << " returns a Core Foundation object of type "
+             << Sym->getType().getAsString() << " with a ";
+        }
       }
       else {
         assert (CurrV.getObjKind() == RetEffect::ObjC);
-        os << " returns an Objective-C object with a ";
+        QualType T = Sym->getType();
+        if (T.isNull() || !isa<ObjCObjectPointerType>(T)) {
+          os << " returns an Objective-C object with a ";
+        } else {
+          const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
+          os << " returns an instance of "
+             << PT->getPointeeType().getAsString() << " with a ";
+        }
       }
 
       if (CurrV.isOwned()) {

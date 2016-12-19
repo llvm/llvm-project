@@ -1594,7 +1594,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
-  case OMPD_teams: {
+  case OMPD_teams:
+  case OMPD_target_teams: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
@@ -1930,7 +1931,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
     // Allow some constructs (except teams) to be orphaned (they could be
     // used in functions, called from OpenMP regions with the required
     // preconditions).
-    if (ParentRegion == OMPD_unknown && !isOpenMPTeamsDirective(CurrentRegion))
+    if (ParentRegion == OMPD_unknown &&
+        !isOpenMPNestingTeamsDirective(CurrentRegion))
       return false;
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
@@ -2023,7 +2025,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
                           !(isOpenMPSimdDirective(ParentRegion) ||
                             Stack->isParentOrderedRegion());
       Recommend = ShouldBeInOrderedRegion;
-    } else if (isOpenMPTeamsDirective(CurrentRegion)) {
+    } else if (isOpenMPNestingTeamsDirective(CurrentRegion)) {
       // OpenMP [2.16, Nesting of Regions]
       // If specified, a teams construct must be contained within a target
       // construct.
@@ -2032,7 +2034,10 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       Recommend = ShouldBeInTargetRegion;
       Stack->setParentTeamsRegionLoc(Stack->getConstructLoc());
     }
-    if (!NestingProhibited && ParentRegion == OMPD_teams) {
+    if (!NestingProhibited &&
+        !isOpenMPTargetExecutionDirective(CurrentRegion) &&
+        !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
+        (ParentRegion == OMPD_teams || ParentRegion == OMPD_target_teams)) {
       // OpenMP [2.16, Nesting of Regions]
       // distribute, parallel, parallel sections, parallel workshare, and the
       // parallel loop and parallel loop SIMD constructs are the only OpenMP
@@ -2046,7 +2051,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // OpenMP 4.5 [2.17 Nesting of Regions]
       // The region associated with the distribute construct must be strictly
       // nested inside a teams region
-      NestingProhibited = ParentRegion != OMPD_teams;
+      NestingProhibited =
+          (ParentRegion != OMPD_teams && ParentRegion != OMPD_target_teams);
       Recommend = ShouldBeInTeamsRegion;
     }
     if (!NestingProhibited &&
@@ -2413,6 +2419,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     Res = ActOnOpenMPTeamsDistributeParallelForDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_parallel);
+    break;
+  case OMPD_target_teams:
+    Res = ActOnOpenMPTargetTeamsDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                          EndLoc);
+    AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
@@ -6247,6 +6258,27 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeParallelForDirective(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
 
+StmtResult Sema::ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
+                                                 Stmt *AStmt,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  getCurFunction()->setHasBranchProtectedScope();
+
+  return OMPTargetTeamsDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                         AStmt);
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                              SourceLocation StartLoc,
                                              SourceLocation LParenLoc,
@@ -7247,12 +7279,13 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
       continue;
     }
 
+    auto CurrDir = DSAStack->getCurrentDirective();
     // Variably modified types are not supported for tasks.
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType() &&
-        isOpenMPTaskingDirective(DSAStack->getCurrentDirective())) {
+        isOpenMPTaskingDirective(CurrDir)) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_private) << Type
-          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+          << getOpenMPDirectiveName(CurrDir);
       bool IsDecl =
           !VD ||
           VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
@@ -7265,7 +7298,8 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
     // A list item cannot appear in both a map clause and a data-sharing
     // attribute clause on the same construct
-    if (DSAStack->getCurrentDirective() == OMPD_target) {
+    if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
+        CurrDir == OMPD_target_teams) {
       OpenMPClauseKind ConflictKind;
       if (DSAStack->checkMappableExprComponentListsForDecl(
               VD, /*CurrentRegionOnly=*/true,
@@ -7277,7 +7311,7 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
         Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
             << getOpenMPClauseName(OMPC_private)
             << getOpenMPClauseName(ConflictKind)
-            << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+            << getOpenMPDirectiveName(CurrDir);
         ReportOriginalDSA(*this, DSAStack, D, DVar);
         continue;
       }
@@ -7522,7 +7556,8 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (CurrDir == OMPD_target) {
+      if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
+          CurrDir == OMPD_target_teams) {
         OpenMPClauseKind ConflictKind;
         if (DSAStack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
@@ -10038,7 +10073,7 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if (DKind == OMPD_target && VD) {
+      if ((DKind == OMPD_target || DKind == OMPD_target_teams) && VD) {
         auto DVar = DSAS->getTopDSA(VD, false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)

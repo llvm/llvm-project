@@ -934,6 +934,8 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
                                                        DS, AnonRecord);
     DS.complete(TheDecl);
+    if (getLangOpts().OpenCL)
+      Actions.setCurrentOpenCLExtensionForDecl(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls, /*TypeMayContainAuto=*/false);

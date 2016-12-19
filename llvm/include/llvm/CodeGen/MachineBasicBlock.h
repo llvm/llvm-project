@@ -289,6 +289,9 @@ public:
   /// LiveIn insertion.
   void sortUniqueLiveIns();
 
+  /// Clear live in list.
+  void clearLiveIns();
+
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
@@ -805,6 +808,28 @@ public:
 
   MachineBasicBlock::iterator getInitial() { return I; }
 };
+
+/// Increment \p It until it points to a non-debug instruction or to \p End
+/// and return the resulting iterator. This function should only be used
+/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
+/// const_instr_iterator} and the respective reverse iterators.
+template<typename IterT>
+inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
+  while (It != End && It->isDebugValue())
+    It++;
+  return It;
+}
+
+/// Decrement \p It until it points to a non-debug instruction or to \p Begin
+/// and return the resulting iterator. This function should only be used
+/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
+/// const_instr_iterator} and the respective reverse iterators.
+template<class IterT>
+inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
+  while (It != Begin && It->isDebugValue())
+    It--;
+  return It;
+}
 
 } // End llvm namespace
 

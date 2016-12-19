@@ -4341,12 +4341,10 @@ public:
 
   Decl *ActOnUsingDeclaration(Scope *CurScope,
                               AccessSpecifier AS,
-                              bool HasUsingKeyword,
                               SourceLocation UsingLoc,
                               CXXScopeSpec &SS,
                               UnqualifiedId &Name,
                               AttributeList *AttrList,
-                              bool HasTypenameKeyword,
                               SourceLocation TypenameLoc);
   Decl *ActOnAliasDeclaration(Scope *CurScope,
                               AccessSpecifier AS,
@@ -8053,6 +8051,58 @@ public:
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
   //===--------------------------------------------------------------------===//
+  // OpenCL extensions.
+  //
+private:
+  std::string CurrOpenCLExtension;
+  /// Extensions required by an OpenCL type.
+  llvm::DenseMap<const Type*, std::set<std::string>> OpenCLTypeExtMap;
+  /// Extensions required by an OpenCL declaration.
+  llvm::DenseMap<const Decl*, std::set<std::string>> OpenCLDeclExtMap;
+public:
+  llvm::StringRef getCurrentOpenCLExtension() const {
+    return CurrOpenCLExtension;
+  }
+  void setCurrentOpenCLExtension(llvm::StringRef Ext) {
+    CurrOpenCLExtension = Ext;
+  }
+
+  /// \brief Set OpenCL extensions for a type which can only be used when these
+  /// OpenCL extensions are enabled. If \p Exts is empty, do nothing.
+  /// \param Exts A space separated list of OpenCL extensions.
+  void setOpenCLExtensionForType(QualType T, llvm::StringRef Exts);
+
+  /// \brief Set OpenCL extensions for a declaration which can only be
+  /// used when these OpenCL extensions are enabled. If \p Exts is empty, do
+  /// nothing.
+  /// \param Exts A space separated list of OpenCL extensions.
+  void setOpenCLExtensionForDecl(Decl *FD, llvm::StringRef Exts);
+
+  /// \brief Set current OpenCL extensions for a type which can only be used
+  /// when these OpenCL extensions are enabled. If current OpenCL extension is
+  /// empty, do nothing.
+  void setCurrentOpenCLExtensionForType(QualType T);
+
+  /// \brief Set current OpenCL extensions for a declaration which
+  /// can only be used when these OpenCL extensions are enabled. If current
+  /// OpenCL extension is empty, do nothing.
+  void setCurrentOpenCLExtensionForDecl(Decl *FD);
+
+  bool isOpenCLDisabledDecl(Decl *FD);
+
+  /// \brief Check if type \p T corresponding to declaration specifier \p DS
+  /// is disabled due to required OpenCL extensions being disabled. If so,
+  /// emit diagnostics.
+  /// \return true if type is disabled.
+  bool checkOpenCLDisabledTypeDeclSpec(const DeclSpec &DS, QualType T);
+
+  /// \brief Check if declaration \p D used by expression \p E
+  /// is disabled due to required OpenCL extensions being disabled. If so,
+  /// emit diagnostics.
+  /// \return true if type is disabled.
+  bool checkOpenCLDisabledDecl(const Decl &D, const Expr &E);
+
+  //===--------------------------------------------------------------------===//
   // OpenMP directives and clauses.
   //
 private:
@@ -8067,6 +8117,21 @@ private:
                                         bool StrictlyPositive = true);
   /// Returns OpenMP nesting level for current directive.
   unsigned getOpenMPNestingLevel() const;
+
+  /// Checks if a type or a declaration is disabled due to the owning extension
+  /// being disabled, and emits diagnostic messages if it is disabled.
+  /// \param D type or declaration to be checked.
+  /// \param DiagLoc source location for the diagnostic message.
+  /// \param DiagInfo information to be emitted for the diagnostic message.
+  /// \param SrcRange source range of the declaration.
+  /// \param Map maps type or declaration to the extensions.
+  /// \param Selector selects diagnostic message: 0 for type and 1 for
+  ///        declaration.
+  /// \return true if the type or declaration is disabled.
+  template <typename T, typename DiagLocT, typename DiagInfoT, typename MapT>
+  bool checkOpenCLDisabledTypeOrDecl(T D, DiagLocT DiagLoc, DiagInfoT DiagInfo,
+                                     MapT &Map, unsigned Selector = 0,
+                                     SourceRange SrcRange = SourceRange());
 
 public:
   /// \brief Return true if the provided declaration \a VD should be captured by
@@ -8395,6 +8460,12 @@ public:
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
       llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp target teams' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
+                                             Stmt *AStmt,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc);
 
   /// Checks correctness of linear modifiers.
   bool CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,

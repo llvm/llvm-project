@@ -986,6 +986,9 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::ffs:
   case LibFunc::ffsl:
   case LibFunc::ffsll:
+  case LibFunc::fls:
+  case LibFunc::flsl:
+  case LibFunc::flsll:
     return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(32) &&
             FTy.getParamType(0)->isIntegerTy());
 
@@ -995,9 +998,6 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 1 && FTy.getReturnType()->isIntegerTy(32) &&
             FTy.getReturnType() == FTy.getParamType(0));
 
-  case LibFunc::fls:
-  case LibFunc::flsl:
-  case LibFunc::flsll:
   case LibFunc::abs:
   case LibFunc::labs:
   case LibFunc::llabs:

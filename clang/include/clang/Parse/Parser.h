@@ -1261,6 +1261,11 @@ private:
     ParsedAttributesWithRange(AttributeFactory &factory)
       : ParsedAttributes(factory) {}
 
+    void clear() {
+      ParsedAttributes::clear();
+      Range = SourceRange();
+    }
+
     SourceRange Range;
   };
 
@@ -2418,21 +2423,41 @@ private:
                            BalancedDelimiterTracker &Tracker);
   Decl *ParseLinkage(ParsingDeclSpec &DS, unsigned Context);
   Decl *ParseExportDeclaration();
-  Decl *ParseUsingDirectiveOrDeclaration(unsigned Context,
-                                         const ParsedTemplateInfo &TemplateInfo,
-                                         SourceLocation &DeclEnd,
-                                         ParsedAttributesWithRange &attrs,
-                                         Decl **OwnedType = nullptr);
+  DeclGroupPtrTy ParseUsingDirectiveOrDeclaration(
+      unsigned Context, const ParsedTemplateInfo &TemplateInfo,
+      SourceLocation &DeclEnd, ParsedAttributesWithRange &attrs);
   Decl *ParseUsingDirective(unsigned Context,
                             SourceLocation UsingLoc,
                             SourceLocation &DeclEnd,
                             ParsedAttributes &attrs);
-  Decl *ParseUsingDeclaration(unsigned Context,
-                              const ParsedTemplateInfo &TemplateInfo,
-                              SourceLocation UsingLoc,
-                              SourceLocation &DeclEnd,
-                              AccessSpecifier AS = AS_none,
-                              Decl **OwnedType = nullptr);
+
+  struct UsingDeclarator {
+    SourceLocation TypenameLoc;
+    CXXScopeSpec SS;
+    SourceLocation TemplateKWLoc;
+    UnqualifiedId Name;
+
+    void clear() {
+      TypenameLoc = TemplateKWLoc = SourceLocation();
+      SS.clear();
+      Name.clear();
+    }
+  };
+
+  bool ParseUsingDeclarator(unsigned Context, UsingDeclarator &D);
+  DeclGroupPtrTy ParseUsingDeclaration(unsigned Context,
+                                       const ParsedTemplateInfo &TemplateInfo,
+                                       SourceLocation UsingLoc,
+                                       SourceLocation &DeclEnd,
+                                       AccessSpecifier AS = AS_none);
+  Decl *ParseAliasTemplate(const ParsedTemplateInfo &TemplateInfo,
+                           SourceLocation &DeclEnd, AccessSpecifier AS,
+                           ParsedAttributesWithRange &MisplacedAttrs1);
+  Decl *ParseAliasDeclarationAfterDeclarator(
+      const ParsedTemplateInfo &TemplateInfo, SourceLocation UsingLoc,
+      UsingDeclarator &D, SourceLocation &DeclEnd, AccessSpecifier AS,
+      ParsedAttributes &Attrs, Decl **OwnedType = nullptr);
+
   Decl *ParseStaticAssertDeclaration(SourceLocation &DeclEnd);
   Decl *ParseNamespaceAlias(SourceLocation NamespaceLoc,
                             SourceLocation AliasLoc, IdentifierInfo *Alias,

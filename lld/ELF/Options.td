@@ -275,6 +275,7 @@ def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;
 def alias_shared_Bshareable: F<"Bshareable">, Alias<shared>;
 def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname: S<"soname">, Alias<soname>;
+def alias_sort_section: J<"sort-section=">, Alias<sort_section>;
 def alias_script: J<"script=">, Alias<script>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;

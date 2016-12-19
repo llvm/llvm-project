@@ -8,7 +8,7 @@ define i64 @PR30511(<2 x double> %a) {
 ; CHECK-LABEL: PR30511:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    addpd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; CHECK-NEXT:    mulpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, %rax

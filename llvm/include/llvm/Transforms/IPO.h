@@ -28,6 +28,7 @@ class Pass;
 class Function;
 class BasicBlock;
 class GlobalValue;
+class raw_ostream;
 
 //===----------------------------------------------------------------------===//
 //
@@ -234,6 +235,9 @@ ModulePass *createGlobalSplitPass();
 // IR metadata to reflect the profile.
 ModulePass *createSampleProfileLoaderPass();
 ModulePass *createSampleProfileLoaderPass(StringRef Name);
+
+/// Write ThinLTO-ready bitcode to Str.
+ModulePass *createWriteThinLTOBitcodePass(raw_ostream &Str);
 
 } // End llvm namespace
 

@@ -1,6 +1,23 @@
 #pragma clang system_header
 
+namespace QtPrivate {
+struct QSlotObjectBase {};
+}
+
+namespace Qt {
+enum ConnectionType {};
+}
+
+struct QMetaObject {
+  struct Connection {};
+};
+
 struct QObject {
+  static QMetaObject::Connection connectImpl(const QObject *, void **,
+                                             const QObject *, void **,
+                                             QtPrivate::QSlotObjectBase *,
+                                             Qt::ConnectionType,
+                                             const int *, const QMetaObject *);
 };
 
 struct QEvent {

@@ -568,24 +568,21 @@ DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
   return ObjectPointer;
 }
 
-void DwarfCompileUnit::constructSubprogramScopeDIE(LexicalScope *Scope) {
-  assert(Scope && Scope->getScopeNode());
-  assert(!Scope->getInlinedAt());
-  assert(!Scope->isAbstractScope());
-  auto *Sub = cast<DISubprogram>(Scope->getScopeNode());
-
-  DD->getProcessedSPNodes().insert(Sub);
-
+void DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
+
+  if (Scope) {
+    assert(!Scope->getInlinedAt());
+    assert(!Scope->isAbstractScope());
+    // Collect lexical scope children first.
+    // ObjectPointer might be a local (non-argument) local variable if it's a
+    // block's synthetic this pointer.
+    if (DIE *ObjectPointer = createAndAddScopeChildren(Scope, ScopeDIE))
+      addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer, *ObjectPointer);
+  }
 
   // If this is a variadic function, add an unspecified parameter.
   DITypeRefArray FnArgs = Sub->getType()->getTypeArray();
-
-  // Collect lexical scope children first.
-  // ObjectPointer might be a local (non-argument) local variable if it's a
-  // block's synthetic this pointer.
-  if (DIE *ObjectPointer = createAndAddScopeChildren(Scope, ScopeDIE))
-    addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer, *ObjectPointer);
 
   // If we have a single element of null, it is a function that returns void.
   // If we have more than one elements and the last one is null, it is a
@@ -678,11 +675,7 @@ void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
       // If this subprogram has an abstract definition, reference that
       addDIEEntry(*D, dwarf::DW_AT_abstract_origin, *AbsSPDIE);
   } else {
-    if (!D && !includeMinimalInlineScopes())
-      // Lazily construct the subprogram if we didn't see either concrete or
-      // inlined versions during codegen. (except in -gmlt ^ where we want
-      // to omit these entirely)
-      D = getOrCreateSubprogramDIE(SP);
+    assert(D || includeMinimalInlineScopes());
     if (D)
       // And attach the attributes
       applySubprogramAttributesToDefinition(SP, *D);
