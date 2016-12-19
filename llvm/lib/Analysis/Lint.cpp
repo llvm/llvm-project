@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
@@ -127,6 +128,7 @@ namespace {
     Module *Mod;
     const DataLayout *DL;
     AliasAnalysis *AA;
+    AssumptionCache *AC;
     DominatorTree *DT;
     TargetLibraryInfo *TLI;
 
@@ -143,6 +145,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesAll();
       AU.addRequired<AAResultsWrapperPass>();
+      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       AU.addRequired<DominatorTreeWrapperPass>();
     }
@@ -182,6 +185,7 @@ namespace {
 char Lint::ID = 0;
 INITIALIZE_PASS_BEGIN(Lint, "lint", "Statically lint-checks LLVM IR",
                       false, true)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -199,6 +203,7 @@ bool Lint::runOnFunction(Function &F) {
   Mod = F.getParent();
   DL = &F.getParent()->getDataLayout();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   visit(F);
@@ -520,7 +525,8 @@ void Lint::visitShl(BinaryOperator &I) {
            "Undefined result: Shift count out of range", &I);
 }
 
-static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT) {
+static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
+                   AssumptionCache *AC) {
   // Assume undef could be zero.
   if (isa<UndefValue>(V))
     return true;
@@ -529,7 +535,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT) {
   if (!VecTy) {
     unsigned BitWidth = V->getType()->getIntegerBitWidth();
     APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
-    computeKnownBits(V, KnownZero, KnownOne, DL, 0,
+    computeKnownBits(V, KnownZero, KnownOne, DL, 0, AC,
                      dyn_cast<Instruction>(V), DT);
     return KnownZero.isAllOnesValue();
   }
@@ -560,22 +566,22 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT) {
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT),
+  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
          "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT),
+  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
          "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT),
+  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
          "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT),
+  Assert(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
          "Undefined behavior: Division by zero", &I);
 }
 
@@ -693,7 +699,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
   // As a last resort, try SimplifyInstruction or constant folding.
   if (Instruction *Inst = dyn_cast<Instruction>(V)) {
-    if (Value *W = SimplifyInstruction(Inst, *DL, TLI, DT))
+    if (Value *W = SimplifyInstruction(Inst, *DL, TLI, DT, AC))
       return findValueImpl(W, OffsetOk, Visited);
   } else if (auto *C = dyn_cast<Constant>(V)) {
     if (Value *W = ConstantFoldConstant(C, *DL, TLI))

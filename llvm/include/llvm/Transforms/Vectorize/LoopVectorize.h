@@ -51,6 +51,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DemandedBits.h"
@@ -82,6 +83,7 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AliasAnalysis *AA;
+  AssumptionCache *AC;
   std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
   OptimizationRemarkEmitter *ORE;
 
@@ -93,7 +95,7 @@ struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
   bool runImpl(Function &F, ScalarEvolution &SE_, LoopInfo &LI_,
                TargetTransformInfo &TTI_, DominatorTree &DT_,
                BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
-               DemandedBits &DB_, AliasAnalysis &AA_,
+               DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
                std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
                OptimizationRemarkEmitter &ORE);
 

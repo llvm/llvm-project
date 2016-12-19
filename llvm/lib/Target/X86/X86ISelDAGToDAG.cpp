@@ -1518,7 +1518,7 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root,
   if (ISD::isNON_EXTLoad(N.getNode())) {
     PatternNodeWithChain = N;
     if (IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
-        IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
+        IsLegalToFold(PatternNodeWithChain, *N->use_begin(), Root, OptLevel)) {
       LoadSDNode *LD = cast<LoadSDNode>(PatternNodeWithChain);
       return selectAddr(LD, LD->getBasePtr(), Base, Scale, Index, Disp,
                         Segment);
@@ -1529,7 +1529,7 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root,
   if (N.getOpcode() == X86ISD::VZEXT_LOAD) {
     PatternNodeWithChain = N;
     if (IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
-        IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
+        IsLegalToFold(PatternNodeWithChain, *N->use_begin(), Root, OptLevel)) {
       auto *MI = cast<MemIntrinsicSDNode>(PatternNodeWithChain);
       return selectAddr(MI, MI->getBasePtr(), Base, Scale, Index, Disp,
                         Segment);

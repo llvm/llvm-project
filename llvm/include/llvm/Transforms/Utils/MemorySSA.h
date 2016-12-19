@@ -963,7 +963,7 @@ private:
     if (WalkingPhi && Location.Ptr) {
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
-          OriginalAccess->getBlock()->getModule()->getDataLayout());
+          OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
                                         DefIterator.getPhiArgBlock(), nullptr,
                                         false))

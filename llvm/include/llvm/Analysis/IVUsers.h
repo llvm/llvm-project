@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class AssumptionCache;
 class DominatorTree;
 class Instruction;
 class Value;
@@ -93,6 +94,7 @@ private:
 class IVUsers {
   friend class IVStrideUse;
   Loop *L;
+  AssumptionCache *AC;
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
@@ -106,11 +108,11 @@ class IVUsers {
   SmallPtrSet<const Value *, 32> EphValues;
 
 public:
-  IVUsers(Loop *L, LoopInfo *LI, DominatorTree *DT,
+  IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI, DominatorTree *DT,
           ScalarEvolution *SE);
 
   IVUsers(IVUsers &&X)
-      : L(std::move(X.L)), DT(std::move(X.DT)),
+      : L(std::move(X.L)), AC(std::move(X.AC)), DT(std::move(X.DT)),
         SE(std::move(X.SE)), Processed(std::move(X.Processed)),
         IVUses(std::move(X.IVUses)), EphValues(std::move(X.EphValues)) {
     for (IVStrideUse &U : IVUses)

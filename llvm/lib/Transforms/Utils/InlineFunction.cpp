@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
@@ -1094,8 +1095,11 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
 /// If the inlined function has non-byval align arguments, then
 /// add @llvm.assume-based alignment assumptions to preserve this information.
 static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
-  if (!PreserveAlignmentAssumptions)
+  if (!PreserveAlignmentAssumptions || !IFI.GetAssumptionCache)
     return;
+  AssumptionCache *AC = IFI.GetAssumptionCache
+                            ? &(*IFI.GetAssumptionCache)(*CS.getCaller())
+                            : nullptr;
   auto &DL = CS.getCaller()->getParent()->getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
@@ -1118,11 +1122,13 @@ static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
       // If we can already prove the asserted alignment in the context of the
       // caller, then don't bother inserting the assumption.
       Value *Arg = CS.getArgument(I->getArgNo());
-      if (getKnownAlignment(Arg, DL, CS.getInstruction(), &DT) >= Align)
+      if (getKnownAlignment(Arg, DL, CS.getInstruction(), AC, &DT) >= Align)
         continue;
 
-      IRBuilder<>(CS.getInstruction())
-        .CreateAlignmentAssumption(DL, Arg, Align);
+      CallInst *NewAssumption = IRBuilder<>(CS.getInstruction())
+                                    .CreateAlignmentAssumption(DL, Arg, Align);
+      if (AC)
+        AC->registerAssumption(NewAssumption);
     }
   }
 }
@@ -1233,11 +1239,13 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
     if (ByValAlignment <= 1)  // 0 = unspecified, 1 = no particular alignment.
       return Arg;
 
+    AssumptionCache *AC =
+        IFI.GetAssumptionCache ? &(*IFI.GetAssumptionCache)(*Caller) : nullptr;
     const DataLayout &DL = Caller->getParent()->getDataLayout();
 
     // If the pointer is already known to be sufficiently aligned, or if we can
     // round it up to a larger alignment, then we don't need a temporary.
-    if (getOrEnforceKnownAlignment(Arg, ByValAlignment, DL, TheCall) >=
+    if (getOrEnforceKnownAlignment(Arg, ByValAlignment, DL, TheCall, AC) >=
         ByValAlignment)
       return Arg;
     
@@ -1653,6 +1661,16 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     // Propagate llvm.mem.parallel_loop_access if necessary.
     PropagateParallelLoopAccessMetadata(CS, VMap);
+
+    // Register any cloned assumptions.
+    if (IFI.GetAssumptionCache)
+      for (BasicBlock &NewBlock :
+           make_range(FirstNewBlock->getIterator(), Caller->end()))
+        for (Instruction &I : NewBlock) {
+          if (auto *II = dyn_cast<IntrinsicInst>(&I))
+            if (II->getIntrinsicID() == Intrinsic::assume)
+              (*IFI.GetAssumptionCache)(*Caller).registerAssumption(II);
+        }
   }
 
   // If there are any alloca instructions in the block that used to be the entry
@@ -2173,8 +2191,10 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // the entries are the same or undef).  If so, remove the PHI so it doesn't
   // block other optimizations.
   if (PHI) {
+    AssumptionCache *AC =
+        IFI.GetAssumptionCache ? &(*IFI.GetAssumptionCache)(*Caller) : nullptr;
     auto &DL = Caller->getParent()->getDataLayout();
-    if (Value *V = SimplifyInstruction(PHI, DL, nullptr, nullptr)) {
+    if (Value *V = SimplifyInstruction(PHI, DL, nullptr, nullptr, AC)) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();
     }

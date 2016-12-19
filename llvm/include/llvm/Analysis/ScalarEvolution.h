@@ -37,6 +37,7 @@
 
 namespace llvm {
 class APInt;
+class AssumptionCache;
 class Constant;
 class ConstantInt;
 class DominatorTree;
@@ -474,6 +475,9 @@ private:
   ///
   TargetLibraryInfo &TLI;
 
+  /// The tracker for @llvm.assume intrinsics in this function.
+  AssumptionCache &AC;
+
   /// The dominator tree.
   ///
   DominatorTree &DT;
@@ -527,10 +531,6 @@ private:
   /// This is a cache of the values we have analyzed so far.
   ///
   ValueExprMapType ValueExprMap;
-
-  /// This is a map of SCEVs to intrinsics (e.g. assumptions) that might affect
-  /// (i.e. imply something about) them.
-  DenseMap<const SCEV *, SetVector<Value *>> AffectedMap;
 
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<Value *, 6> PendingLoopPredicates;
@@ -799,9 +799,6 @@ private:
   /// Helper called by \c getRange.
   ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Stop,
                                      const SCEV *MaxBECount, unsigned BitWidth);
-
-  /// Add to the AffectedMap this SCEV if its operands are in the AffectedMap.
-  void addAffectedFromOperands(const SCEV *S);
 
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression.
@@ -1110,7 +1107,7 @@ private:
   bool isAddRecNeverPoison(const Instruction *I, const Loop *L);
 
 public:
-  ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
+  ScalarEvolution(Function &F, TargetLibraryInfo &TLI, AssumptionCache &AC,
                   DominatorTree &DT, LoopInfo &LI);
   ~ScalarEvolution();
   ScalarEvolution(ScalarEvolution &&Arg);

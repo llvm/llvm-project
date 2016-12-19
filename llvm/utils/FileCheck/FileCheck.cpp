@@ -168,10 +168,11 @@ bool Pattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
   this->LineNumber = LineNumber;
   PatternLoc = SMLoc::getFromPointer(PatternStr.data());
 
-  // Ignore trailing whitespace.
-  while (!PatternStr.empty() &&
-         (PatternStr.back() == ' ' || PatternStr.back() == '\t'))
-    PatternStr = PatternStr.substr(0, PatternStr.size() - 1);
+  if (!(NoCanonicalizeWhiteSpace && MatchFullLines))
+    // Ignore trailing whitespace.
+    while (!PatternStr.empty() &&
+           (PatternStr.back() == ' ' || PatternStr.back() == '\t'))
+      PatternStr = PatternStr.substr(0, PatternStr.size() - 1);
 
   // Check that there is something on the line.
   if (PatternStr.empty()) {
@@ -866,7 +867,8 @@ static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
 
     // Okay, we found the prefix, yay. Remember the rest of the line, but ignore
     // leading whitespace.
-    Buffer = Buffer.substr(Buffer.find_first_not_of(" \t"));
+    if (!(NoCanonicalizeWhiteSpace && MatchFullLines))
+      Buffer = Buffer.substr(Buffer.find_first_not_of(" \t"));
 
     // Scan ahead to the end of line.
     size_t EOL = Buffer.find_first_of("\n\r");

@@ -38,6 +38,7 @@ class LoadInst;
 class Value;
 class PHINode;
 class AllocaInst;
+class AssumptionCache;
 class ConstantExpr;
 class DataLayout;
 class TargetLibraryInfo;
@@ -136,7 +137,7 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 /// parameter, providing the set of loop header that SimplifyCFG should not
 /// eliminate.
 bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 unsigned BonusInstThreshold,
+                 unsigned BonusInstThreshold, AssumptionCache *AC = nullptr,
                  SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
@@ -175,13 +176,15 @@ AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 unsigned getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                     const DataLayout &DL,
                                     const Instruction *CxtI = nullptr,
+                                    AssumptionCache *AC = nullptr,
                                     const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
 static inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
                                          const Instruction *CxtI = nullptr,
+                                         AssumptionCache *AC = nullptr,
                                          const DominatorTree *DT = nullptr) {
-  return getOrEnforceKnownAlignment(V, 0, DL, CxtI, DT);
+  return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 
 /// Given a getelementptr instruction/constantexpr, emit the code necessary to

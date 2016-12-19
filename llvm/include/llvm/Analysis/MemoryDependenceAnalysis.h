@@ -30,6 +30,7 @@ class Function;
 class FunctionPass;
 class Instruction;
 class CallSite;
+class AssumptionCache;
 class MemoryDependenceResults;
 class PredIteratorCache;
 class DominatorTree;
@@ -338,15 +339,16 @@ private:
 
   /// Current AA implementation, just a cache.
   AliasAnalysis &AA;
+  AssumptionCache &AC;
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
   PredIteratorCache PredCache;
 
 public:
-  MemoryDependenceResults(AliasAnalysis &AA,
+  MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI,
                           DominatorTree &DT)
-      : AA(AA), TLI(TLI), DT(DT) {}
+      : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
 
   /// Some methods limit the number of instructions they will examine.
   /// The return value of this method is the default limit that will be

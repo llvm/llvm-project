@@ -1753,15 +1753,6 @@ site, these bundles may contain any values that are needed by the
 generated code.  For more details, see :ref:`GC Transitions
 <gc_transition_args>`.
 
-Affected Operand Bundles
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Affected operand bundles are characterized by the ``"affected"`` operand bundle
-tag. These operand bundles indicate that a call, specifically a call to an
-intrinsic like ``llvm.assume``, implies some additional knowledge about the
-values within the bundle. This enables the optimizer to efficiently find these
-relationships. The optimizer will add these automatically.
-
 .. _moduleasm:
 
 Module-Level Inline Assembly
