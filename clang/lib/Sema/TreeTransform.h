@@ -10299,6 +10299,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   LSI->CallOperator = NewCallOperator;
 
+  for (unsigned I = 0, NumParams = NewCallOperator->getNumParams();
+       I != NumParams; ++I) {
+    auto *P = NewCallOperator->getParamDecl(I);
+    if (P->hasUninstantiatedDefaultArg()) {
+      EnterExpressionEvaluationContext Eval(
+          getSema(), Sema::PotentiallyEvaluatedIfUsed, P);
+      ExprResult R = getDerived().TransformExpr(
+          E->getCallOperator()->getParamDecl(I)->getDefaultArg());
+      P->setDefaultArg(R.get());
+    }
+  }
+
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), NewCallOperator);
 
