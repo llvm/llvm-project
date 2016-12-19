@@ -1687,7 +1687,7 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
       // Instantiate default arguments for methods of local classes (DR1484)
       // and non-defining declarations.
       Sema::ContextRAII SavedContext(*this, OwningFunc);
-      LocalInstantiationScope Local(*this);
+      LocalInstantiationScope Local(*this, true);
       ExprResult NewArg = SubstExpr(Arg, TemplateArgs);
       if (NewArg.isUsable()) {
         // It would be nice if we still had this.
