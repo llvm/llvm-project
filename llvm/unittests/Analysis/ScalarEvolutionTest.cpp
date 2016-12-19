@@ -9,6 +9,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,15 +38,17 @@ protected:
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;
 
+  std::unique_ptr<AssumptionCache> AC;
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
 
   ScalarEvolutionsTest() : M("", Context), TLII(), TLI(TLII) {}
 
   ScalarEvolution buildSE(Function &F) {
+    AC.reset(new AssumptionCache(F));
     DT.reset(new DominatorTree(F));
     LI.reset(new LoopInfo(*DT));
-    return ScalarEvolution(F, TLI, *DT, *LI);
+    return ScalarEvolution(F, TLI, *AC, *DT, *LI);
   }
 
   void runWithFunctionAndSE(

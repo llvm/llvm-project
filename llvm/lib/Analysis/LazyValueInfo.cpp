@@ -15,6 +15,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -41,6 +42,7 @@ using namespace PatternMatch;
 char LazyValueInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
@@ -577,6 +579,7 @@ namespace {
       return true;
     }
 
+    AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
     const DataLayout &DL; ///< A mandatory DataLayout
     DominatorTree *DT;    ///< An optional DT pointer.
 
@@ -635,8 +638,9 @@ namespace {
     /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
     void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-    LazyValueInfoImpl(const DataLayout &DL, DominatorTree *DT = nullptr)
-        : DL(DL), DT(DT) {}
+    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
+                       DominatorTree *DT = nullptr)
+        : AC(AC), DL(DL), DT(DT) {}
   };
 } // end anonymous namespace
 
@@ -920,16 +924,14 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!BBI)
     return;
 
-  for (auto *U : Val->users()) {
-    auto *II = dyn_cast<IntrinsicInst>(U);
-    if (!II)
+  for (auto &AssumeVH : AC->assumptions()) {
+    if (!AssumeVH)
       continue;
-    if (II->getIntrinsicID() != Intrinsic::assume)
-      continue;
-    if (!isValidAssumeForContext(II, BBI, DT))
+    auto *I = cast<CallInst>(AssumeVH);
+    if (!isValidAssumeForContext(I, BBI, DT))
       continue;
 
-    BBLV = intersect(BBLV, getValueFromCondition(Val, II->getArgOperand(0)));
+    BBLV = intersect(BBLV, getValueFromCondition(Val, I->getArgOperand(0)));
   }
 
   // If guards are not used in the module, don't spend time looking for them
@@ -1456,16 +1458,18 @@ void LazyValueInfoImpl::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 //===----------------------------------------------------------------------===//
 
 /// This lazily constructs the LazyValueInfoImpl.
-static LazyValueInfoImpl &getImpl(void *&PImpl, const DataLayout *DL,
+static LazyValueInfoImpl &getImpl(void *&PImpl, AssumptionCache *AC,
+                                  const DataLayout *DL,
                                   DominatorTree *DT = nullptr) {
   if (!PImpl) {
     assert(DL && "getCache() called with a null DataLayout");
-    PImpl = new LazyValueInfoImpl(*DL, DT);
+    PImpl = new LazyValueInfoImpl(AC, *DL, DT);
   }
   return *static_cast<LazyValueInfoImpl*>(PImpl);
 }
 
 bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
+  Info.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   DominatorTreeWrapperPass *DTWP =
@@ -1474,7 +1478,7 @@ bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   if (Info.PImpl)
-    getImpl(Info.PImpl, &DL, Info.DT).clear();
+    getImpl(Info.PImpl, Info.AC, &DL, Info.DT).clear();
 
   // Fully lazy.
   return false;
@@ -1482,6 +1486,7 @@ bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
 
 void LazyValueInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
@@ -1492,7 +1497,7 @@ LazyValueInfo::~LazyValueInfo() { releaseMemory(); }
 void LazyValueInfo::releaseMemory() {
   // If the cache was allocated, free it.
   if (PImpl) {
-    delete &getImpl(PImpl, nullptr);
+    delete &getImpl(PImpl, AC, nullptr);
     PImpl = nullptr;
   }
 }
@@ -1500,10 +1505,11 @@ void LazyValueInfo::releaseMemory() {
 void LazyValueInfoWrapperPass::releaseMemory() { Info.releaseMemory(); }
 
 LazyValueInfo LazyValueAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
 
-  return LazyValueInfo(&TLI, DT);
+  return LazyValueInfo(&AC, &TLI, DT);
 }
 
 /// Returns true if we can statically tell that this value will never be a
@@ -1528,7 +1534,7 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
 
   const DataLayout &DL = BB->getModule()->getDataLayout();
   LVILatticeVal Result =
-      getImpl(PImpl, &DL, DT).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1546,7 +1552,7 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
   unsigned Width = V->getType()->getIntegerBitWidth();
   const DataLayout &DL = BB->getModule()->getDataLayout();
   LVILatticeVal Result =
-      getImpl(PImpl, &DL, DT).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
   if (Result.isUndefined())
     return ConstantRange(Width, /*isFullSet=*/false);
   if (Result.isConstantRange())
@@ -1565,7 +1571,7 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
                                            Instruction *CxtI) {
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
   LVILatticeVal Result =
-      getImpl(PImpl, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1653,7 +1659,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
                                   Instruction *CxtI) {
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
   LVILatticeVal Result =
-      getImpl(PImpl, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   return getPredicateResult(Pred, C, Result, DL, TLI);
 }
@@ -1673,7 +1679,7 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
       return LazyValueInfo::True;
   }
   const DataLayout &DL = CxtI->getModule()->getDataLayout();
-  LVILatticeVal Result = getImpl(PImpl, &DL, DT).getValueAt(V, CxtI);
+  LVILatticeVal Result = getImpl(PImpl, AC, &DL, DT).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;
@@ -1763,13 +1769,13 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                BasicBlock *NewSucc) {
   if (PImpl) {
     const DataLayout &DL = PredBB->getModule()->getDataLayout();
-    getImpl(PImpl, &DL, DT).threadEdge(PredBB, OldSucc, NewSucc);
+    getImpl(PImpl, AC, &DL, DT).threadEdge(PredBB, OldSucc, NewSucc);
   }
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   if (PImpl) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
-    getImpl(PImpl, &DL, DT).eraseBlock(BB);
+    getImpl(PImpl, AC, &DL, DT).eraseBlock(BB);
   }
 }

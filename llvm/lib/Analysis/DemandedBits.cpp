@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -44,6 +45,7 @@ using namespace llvm;
 char DemandedBitsWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(DemandedBitsWrapperPass, "demanded-bits",
                       "Demanded bits analysis", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(DemandedBitsWrapperPass, "demanded-bits",
                     "Demanded bits analysis", false, false)
@@ -54,6 +56,7 @@ DemandedBitsWrapperPass::DemandedBitsWrapperPass() : FunctionPass(ID) {
 
 void DemandedBitsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.setPreservesAll();
 }
@@ -85,13 +88,13 @@ void DemandedBits::determineLiveOperandBits(
         KnownZero = APInt(BitWidth, 0);
         KnownOne = APInt(BitWidth, 0);
         computeKnownBits(const_cast<Value *>(V1), KnownZero, KnownOne, DL, 0,
-                         UserI, &DT);
+                         &AC, UserI, &DT);
 
         if (V2) {
           KnownZero2 = APInt(BitWidth, 0);
           KnownOne2 = APInt(BitWidth, 0);
           computeKnownBits(const_cast<Value *>(V2), KnownZero2, KnownOne2, DL,
-                           0, UserI, &DT);
+                           0, &AC, UserI, &DT);
         }
       };
 
@@ -245,8 +248,9 @@ void DemandedBits::determineLiveOperandBits(
 }
 
 bool DemandedBitsWrapperPass::runOnFunction(Function &F) {
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  DB.emplace(F, DT);
+  DB.emplace(F, AC, DT);
   return false;
 }
 
@@ -386,8 +390,9 @@ AnalysisKey DemandedBitsAnalysis::Key;
 
 DemandedBits DemandedBitsAnalysis::run(Function &F,
                                              FunctionAnalysisManager &AM) {
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  return DemandedBits(F, DT);
+  return DemandedBits(F, AC, DT);
 }
 
 PreservedAnalyses DemandedBitsPrinterPass::run(Function &F,

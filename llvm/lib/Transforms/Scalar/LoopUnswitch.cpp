@@ -28,10 +28,10 @@
 
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -138,7 +138,8 @@ namespace {
 
     // Analyze loop. Check its size, calculate is it possible to unswitch
     // it. Returns true if we can unswitch this loop.
-    bool countLoop(const Loop *L, const TargetTransformInfo &TTI);
+    bool countLoop(const Loop *L, const TargetTransformInfo &TTI,
+                   AssumptionCache *AC);
 
     // Clean all data related to given loop.
     void forgetLoop(const Loop *L);
@@ -165,6 +166,7 @@ namespace {
   class LoopUnswitch : public LoopPass {
     LoopInfo *LI;  // Loop information
     LPPassManager *LPM;
+    AssumptionCache *AC;
 
     // Used to check if second loop needs processing after
     // RewriteLoopBodyWithConditionConstant rewrites first loop.
@@ -213,6 +215,7 @@ namespace {
     /// loop preheaders be inserted into the CFG.
     ///
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
       getLoopAnalysisUsage(AU);
     }
@@ -257,7 +260,8 @@ namespace {
 
 // Analyze loop. Check its size, calculate is it possible to unswitch
 // it. Returns true if we can unswitch this loop.
-bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI) {
+bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI,
+                                AssumptionCache *AC) {
 
   LoopPropsMapIt PropsIt;
   bool Inserted;
@@ -275,7 +279,7 @@ bool LUAnalysisCache::countLoop(const Loop *L, const TargetTransformInfo &TTI) {
     // This is a very ad-hoc heuristic.
 
     SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(L, EphValues);
+    CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
     // FIXME: This is overly conservative because it does not take into
     // consideration code simplification opportunities and code that can
@@ -374,6 +378,7 @@ void LUAnalysisCache::cloneData(const Loop *NewLoop, const Loop *OldLoop,
 char LoopUnswitch::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnswitch, "loop-unswitch", "Unswitch loops",
@@ -440,6 +445,8 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   if (skipLoop(L))
     return false;
 
+  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+      *L->getHeader()->getParent());
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   LPM = &LPM_Ref;
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -528,7 +535,8 @@ bool LoopUnswitch::processCurrentLoop() {
   // Analyze loop cost, and stop unswitching if loop content can not be duplicated.
   if (!BranchesInfo.countLoop(
           currentLoop, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-                           *currentLoop->getHeader()->getParent())))
+                           *currentLoop->getHeader()->getParent()),
+          AC))
     return false;
 
   // Try trivial unswitch first before loop over other basic blocks in the loop.
@@ -1120,10 +1128,15 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   }
 
   // Rewrite the code to refer to itself.
-  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i)
-    for (Instruction &I : *NewBlocks[i])
+  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i) {
+    for (Instruction &I : *NewBlocks[i]) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
+    }
+  }
 
   // Rewrite the original preheader to select between versions of the loop.
   BranchInst *OldBR = cast<BranchInst>(loopPreheader->getTerminator());

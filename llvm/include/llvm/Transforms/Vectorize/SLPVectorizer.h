@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -48,6 +49,7 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   AliasAnalysis *AA = nullptr;
   LoopInfo *LI = nullptr;
   DominatorTree *DT = nullptr;
+  AssumptionCache *AC = nullptr;
   DemandedBits *DB = nullptr;
   const DataLayout *DL = nullptr;
 
@@ -57,7 +59,7 @@ public:
   // Glue for old PM.
   bool runImpl(Function &F, ScalarEvolution *SE_, TargetTransformInfo *TTI_,
                TargetLibraryInfo *TLI_, AliasAnalysis *AA_, LoopInfo *LI_,
-               DominatorTree *DT_, DemandedBits *DB_);
+               DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_);
 
 private:
   /// \brief Collect store and getelementptr instructions and organize them

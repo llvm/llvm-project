@@ -74,7 +74,7 @@ uint32_t pdb::hashStringV2(StringRef Str) {
     Hash ^= (Hash >> 6);
   }
 
-  return Hash * 1664525L + 1013904223L;
+  return Hash * 1664525U + 1013904223U;
 }
 
 // Corresponds to `SigForPbCb` in langapi/shared/crc32.h.

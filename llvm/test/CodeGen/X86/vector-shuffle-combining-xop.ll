@@ -75,12 +75,16 @@ define <4 x float> @combine_vpermil2ps_identity(<4 x float> %a0, <4 x float> %a1
 define <4 x float> @combine_vpermil2ps_1z74(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: combine_vpermil2ps_1z74:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[1],zero,xmm1[3,0]
+; X32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[3,0]
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermil2ps_1z74:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[1],zero,xmm1[3,0]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[3,0]
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X64-NEXT:    retq
   %res0 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 1, i32 1, i32 7, i32 4>, i8 0)
   %res1 = shufflevector <4 x float> %res0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 7, i32 2, i32 3>

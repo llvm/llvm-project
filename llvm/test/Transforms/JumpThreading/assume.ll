@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @test1(i32 %a, i32 %b) #0 {
 entry:
   %cmp = icmp sgt i32 %a, 5
-  tail call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
+  tail call void @llvm.assume(i1 %cmp)
   %cmp1 = icmp sgt i32 %b, 1234
   br i1 %cmp1, label %if.then, label %if.else
 
@@ -36,7 +36,7 @@ return:                                           ; preds = %if.else, %if.then, 
 define i32 @test2(i32 %a) #0 {
 entry:
   %cmp = icmp sgt i32 %a, 5
-  tail call void @llvm.assume(i1 %cmp) [ "affected"(i32 %a) ]
+  tail call void @llvm.assume(i1 %cmp)
   %cmp1 = icmp sgt i32 %a, 3
   br i1 %cmp1, label %if.then, label %return
 

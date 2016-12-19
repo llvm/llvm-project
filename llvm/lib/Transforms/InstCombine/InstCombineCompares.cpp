@@ -4156,7 +4156,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   }
 
   if (Value *V =
-          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &I))
+          SimplifyICmpInst(I.getPredicate(), Op0, Op1, DL, &TLI, &DT, &AC, &I))
     return replaceInstUsesWith(I, V);
 
   // comparing -val or val with non-zero is the same as just comparing val
@@ -4321,7 +4321,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // if A is a power of 2.
     if (match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
         match(Op1, m_Zero()) &&
-        isKnownToBeAPowerOfTwo(A, DL, false, 0, &I, &DT) && I.isEquality())
+        isKnownToBeAPowerOfTwo(A, DL, false, 0, &AC, &I, &DT) && I.isEquality())
       return new ICmpInst(I.getInversePredicate(),
                           Builder->CreateAnd(A, B),
                           Op1);
@@ -4644,7 +4644,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyFCmpInst(I.getPredicate(), Op0, Op1,
-                                  I.getFastMathFlags(), DL, &TLI, &DT, &I))
+                                  I.getFastMathFlags(), DL, &TLI, &DT, &AC, &I))
     return replaceInstUsesWith(I, V);
 
   // Simplify 'fcmp pred X, X'

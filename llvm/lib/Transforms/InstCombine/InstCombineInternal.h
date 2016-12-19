@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -178,6 +179,7 @@ private:
   AliasAnalysis *AA;
 
   // Required analyses.
+  AssumptionCache &AC;
   TargetLibraryInfo &TLI;
   DominatorTree &DT;
   const DataLayout &DL;
@@ -191,16 +193,18 @@ private:
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy *Builder,
                bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
-               TargetLibraryInfo &TLI, DominatorTree &DT, const DataLayout &DL,
-               LoopInfo *LI)
+               AssumptionCache &AC, TargetLibraryInfo &TLI,
+               DominatorTree &DT, const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
-        ExpensiveCombines(ExpensiveCombines), AA(AA), TLI(TLI), DT(DT), DL(DL),
-        LI(LI), MadeIRChange(false) {}
+        ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
+        DL(DL), LI(LI), MadeIRChange(false) {}
 
   /// \brief Run the combiner over the entire worklist until it is empty.
   ///
   /// \returns true if the IR is changed.
   bool run();
+
+  AssumptionCache &getAssumptionCache() const { return AC; }
 
   const DataLayout &getDataLayout() const { return DL; }
 
@@ -472,28 +476,30 @@ public:
 
   void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
                         unsigned Depth, Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, KnownZero, KnownOne, DL, Depth, CxtI, &DT);
+    return llvm::computeKnownBits(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
+                                  &DT);
   }
 
   bool MaskedValueIsZero(Value *V, const APInt &Mask, unsigned Depth = 0,
                          Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, CxtI, &DT);
+    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
   }
   unsigned ComputeNumSignBits(Value *Op, unsigned Depth = 0,
                               Instruction *CxtI = nullptr) const {
-    return llvm::ComputeNumSignBits(Op, DL, Depth, CxtI, &DT);
+    return llvm::ComputeNumSignBits(Op, DL, Depth, &AC, CxtI, &DT);
   }
   void ComputeSignBit(Value *V, bool &KnownZero, bool &KnownOne,
                       unsigned Depth = 0, Instruction *CxtI = nullptr) const {
-    return llvm::ComputeSignBit(V, KnownZero, KnownOne, DL, Depth, CxtI, &DT);
+    return llvm::ComputeSignBit(V, KnownZero, KnownOne, DL, Depth, &AC, CxtI,
+                                &DT);
   }
   OverflowResult computeOverflowForUnsignedMul(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
   }
   OverflowResult computeOverflowForUnsignedAdd(Value *LHS, Value *RHS,
                                                const Instruction *CxtI) {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
   }
 
 private:

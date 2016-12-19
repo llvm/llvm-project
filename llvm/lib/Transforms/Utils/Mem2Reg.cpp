@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -26,7 +27,8 @@ using namespace llvm;
 
 STATISTIC(NumPromoted, "Number of alloca's promoted");
 
-static bool promoteMemoryToRegister(Function &F, DominatorTree &DT) {
+static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
+                                    AssumptionCache &AC) {
   std::vector<AllocaInst *> Allocas;
   BasicBlock &BB = F.getEntryBlock(); // Get the entry node for the function
   bool Changed = false;
@@ -44,7 +46,7 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT) {
     if (Allocas.empty())
       break;
 
-    PromoteMemToReg(Allocas, DT, nullptr);
+    PromoteMemToReg(Allocas, DT, nullptr, &AC);
     NumPromoted += Allocas.size();
     Changed = true;
   }
@@ -53,7 +55,8 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT) {
 
 PreservedAnalyses PromotePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!promoteMemoryToRegister(F, DT))
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  if (!promoteMemoryToRegister(F, DT, AC))
     return PreservedAnalyses::all();
 
   // FIXME: This should also 'preserve the CFG'.
@@ -75,10 +78,13 @@ struct PromoteLegacyPass : public FunctionPass {
       return false;
 
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return promoteMemoryToRegister(F, DT);
+    AssumptionCache &AC =
+        getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    return promoteMemoryToRegister(F, DT, AC);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesCFG();
   }
@@ -89,6 +95,7 @@ char PromoteLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(PromoteLegacyPass, "mem2reg", "Promote Memory to "
                                                     "Register",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PromoteLegacyPass, "mem2reg", "Promote Memory to Register",
                     false, false)
