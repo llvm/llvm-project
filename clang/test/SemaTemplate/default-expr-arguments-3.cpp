@@ -1,9 +1,11 @@
-// FIXME: Remove the next line after a bit; this test used to
-// write a .ll file and that confuses the bots. The next line
-// cleans that up.
-// RUN: rm -f %S/default-expr-arguments-3.ll
-// RUN: %clang_cc1 -std=c++14 -verify %s
+// RUN: %clang_cc1 -std=c++14 -verify -ast-dump %s | FileCheck %s
 // expected-no-diagnostics
+
+// CHECK: FunctionDecl {{.*}} used func 'void (void)'
+// CHECK-NEXT: TemplateArgument type 'int'
+// CHECK: LambdaExpr {{.*}} 'class (lambda at
+// CHECK: ParmVarDecl {{.*}} used f 'enum foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
 
 namespace PR28795 {
   template<typename T>
@@ -18,6 +20,12 @@ namespace PR28795 {
   }
 }
 
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct class2 definition
+// CHECK-NEXT: TemplateArgument type 'int'
+// CHECK: LambdaExpr {{.*}} 'class (lambda at
+// CHECK: ParmVarDecl {{.*}} used f 'enum foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
+
 // Template struct case:
 template <class T> struct class2 {
   void bar() {
@@ -27,6 +35,14 @@ template <class T> struct class2 {
 };
 
 template struct class2<int>;
+
+// CHECK: FunctionTemplateDecl {{.*}} f1
+// CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename T
+// CHECK-NEXT: FunctionDecl {{.*}} f1 'void (void)'
+// CHECK: FunctionDecl {{.*}} f1 'void (void)'
+// CHECK-NEXT: TemplateArgument type 'int'
+// CHECK: ParmVarDecl {{.*}} n 'enum foo' cinit
+// CHECK-NEXT: DeclRefExpr {{.*}} 'enum foo' EnumConstant {{.*}} 'a' 'enum foo'
 
 template<typename T>
 void f1() {
