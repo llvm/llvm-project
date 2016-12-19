@@ -528,8 +528,8 @@ AMDGPUclpVectorExpansion::replaceSubstituteTypes(StringRef &Suffix,
   while (!Suffix.empty()) {
     if (Suffix[0] == 'S') {
       Suffix = Suffix.substr(Suffix.find_first_of('_') + 1);
-    } else if (ArgType == Suffix.take_front(1)) {
-      Suffix = Suffix.drop_front(1);
+    } else if (ArgType == Suffix.take_front(ArgType.size())) {
+      Suffix = Suffix.drop_front(ArgType.size());
     } else
       break;
     Oss << ArgType.str();
