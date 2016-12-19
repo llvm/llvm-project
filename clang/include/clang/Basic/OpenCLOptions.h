@@ -70,7 +70,7 @@ public:
   /// \brief Enable or disable support for OpenCL extensions
   /// \param Ext name of the extension optionally prefixed with
   ///        '+' or '-'
-  /// \param Enable used when \p Ext is not prefixed by '+' or '-'
+  /// \param V used when \p Ext is not prefixed by '+' or '-'
   void support(llvm::StringRef Ext, bool V = true) {
     assert(!Ext.empty() && "Extension is empty.");
 
