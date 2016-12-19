@@ -10,13 +10,13 @@
 #include "Writer.h"
 #include "Config.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -770,8 +770,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> V) {
       auto *D = dyn_cast<DefinedRegular<ELFT>>(Body);
       if (!D || !D->Section)
         continue;
-      auto It =
-          Config->SymbolOrderingFile.find(CachedHashString(Body->getName()));
+      auto It = Config->SymbolOrderingFile.find(Body->getName());
       if (It == Config->SymbolOrderingFile.end())
         continue;
 
@@ -782,7 +781,7 @@ static void sortBySymbolsOrder(ArrayRef<OutputSectionBase *> V) {
   }
 
   for (OutputSectionBase *Base : V)
-    if (OutputSection<ELFT> *Sec = dyn_cast<OutputSection<ELFT>>(Base))
+    if (auto *Sec = dyn_cast<OutputSection<ELFT>>(Base))
       Sec->sort([&](InputSection<ELFT> *S) {
         auto It = SectionsOrder.find(S);
         return It == SectionsOrder.end() ? UINT32_MAX : It->second;

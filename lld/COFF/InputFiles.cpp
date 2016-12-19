@@ -7,14 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "Chunks.h"
 #include "Config.h"
 #include "Driver.h"
 #include "Error.h"
-#include "InputFiles.h"
+#include "Memory.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "lld/Support/Memory.h"
+#include "llvm-c/lto.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
@@ -29,7 +30,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm-c/lto.h"
 #include <cstring>
 #include <system_error>
 #include <utility>

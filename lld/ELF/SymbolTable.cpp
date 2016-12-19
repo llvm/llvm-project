@@ -18,8 +18,8 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "Symbols.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
