@@ -8444,8 +8444,7 @@ SwiftASTContext::GetTemplateArgument(void *type, size_t arg_idx,
       for (auto depTy : generic_sig->getAllDependentTypes()) {
         if (arg_idx == 0) {
           return CompilerType(GetASTContext(),
-                              swift::ArchetypeBuilder::mapTypeIntoContext(
-                                  nominal_type_decl, depTy)
+                              nominal_type_decl->mapTypeIntoContext(depTy)
                                   ->castTo<swift::ArchetypeType>());
         }
 
