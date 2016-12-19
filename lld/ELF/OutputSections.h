@@ -20,6 +20,7 @@
 namespace lld {
 namespace elf {
 
+struct PhdrEntry;
 class SymbolBody;
 struct EhSectionPiece;
 template <class ELFT> class EhInputSection;
@@ -207,7 +208,7 @@ template <class ELFT> struct Out {
   static OutputSection<ELFT> *Bss;
   static OutputSectionBase *Opd;
   static uint8_t *OpdBuf;
-  static Elf_Phdr *TlsPhdr;
+  static PhdrEntry *TlsPhdr;
   static OutputSectionBase *DebugInfo;
   static OutputSectionBase *ElfHeader;
   static OutputSectionBase *ProgramHeaders;
@@ -254,7 +255,7 @@ template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> OutputSection<ELFT> *Out<ELFT>::Bss;
 template <class ELFT> OutputSectionBase *Out<ELFT>::Opd;
 template <class ELFT> uint8_t *Out<ELFT>::OpdBuf;
-template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
+template <class ELFT> PhdrEntry *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase *Out<ELFT>::DebugInfo;
 template <class ELFT> OutputSectionBase *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase *Out<ELFT>::ProgramHeaders;

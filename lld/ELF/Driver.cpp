@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -21,7 +22,6 @@
 #include "Writer.h"
 #include "lld/Config/Version.h"
 #include "lld/Driver/Driver.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -41,6 +41,10 @@ using namespace lld::elf;
 
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
+
+BumpPtrAllocator elf::BAlloc;
+StringSaver elf::Saver{BAlloc};
+std::vector<SpecificAllocBase *> elf::SpecificAllocBase::Instances;
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -483,7 +487,7 @@ static void parseSymbolOrderingList(MemoryBufferRef MB) {
   SmallVector<StringRef, 0> Arr;
   MB.getBuffer().split(Arr, '\n');
   for (StringRef S : Arr)
-    Config->SymbolOrderingFile.insert({CachedHashStringRef(S.trim()), I++});
+    Config->SymbolOrderingFile.insert({S.trim(), I++});
 }
 
 // Initializes Config members by the command line options.

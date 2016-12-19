@@ -15,6 +15,7 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
@@ -23,7 +24,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -714,7 +714,7 @@ template <class ELFT> void LinkerScript<ELFT>::placeOrphanSections() {
 }
 
 template <class ELFT>
-void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
+void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
 
@@ -749,9 +749,8 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
 
   uintX_t HeaderSize = getHeaderSize();
   auto FirstPTLoad =
-      std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry<ELFT> &E) {
-        return E.H.p_type == PT_LOAD;
-      });
+      std::find_if(Phdrs.begin(), Phdrs.end(),
+                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
   if (FirstPTLoad == Phdrs.end())
     return;
 
@@ -771,15 +770,14 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs) {
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-template <class ELFT>
-std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
-  std::vector<PhdrEntry<ELFT>> Ret;
+template <class ELFT> std::vector<PhdrEntry> LinkerScript<ELFT>::createPhdrs() {
+  std::vector<PhdrEntry> Ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Ret.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
-    PhdrEntry<ELFT> &Phdr = Ret.back();
+    PhdrEntry &Phdr = Ret.back();
 
     if (Cmd.HasFilehdr)
       Phdr.add(Out<ELFT>::ElfHeader);
@@ -787,7 +785,7 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
       Phdr.add(Out<ELFT>::ProgramHeaders);
 
     if (Cmd.LMAExpr) {
-      Phdr.H.p_paddr = Cmd.LMAExpr(0);
+      Phdr.p_paddr = Cmd.LMAExpr(0);
       Phdr.HasLMA = true;
     }
   }
@@ -801,7 +799,7 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
     for (size_t Id : getPhdrIndices(Sec->getName())) {
       Ret[Id].add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
-        Ret[Id].H.p_flags |= Sec->getPhdrFlags();
+        Ret[Id].p_flags |= Sec->getPhdrFlags();
     }
   }
   return Ret;
