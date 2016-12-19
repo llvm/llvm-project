@@ -107,6 +107,42 @@ define <4 x i16> @vld1dupi16_misaligned(i16* %A) nounwind {
         ret <4 x i16> %tmp3
 }
 
+; This sort of looks like a vld1dup, but there's an extension in the way.
+define <4 x i16> @load_i16_dup_zext(i8* %A) nounwind {
+;CHECK-LABEL: load_i16_dup_zext:
+;CHECK: ldrb    r0, [r0]
+;CHECK-NEXT: vdup.16 d16, r0
+        %tmp1 = load i8, i8* %A, align 1
+        %tmp2 = zext i8 %tmp1 to i16
+        %tmp3 = insertelement <4 x i16> undef, i16 %tmp2, i32 0
+        %tmp4 = shufflevector <4 x i16> %tmp3, <4 x i16> undef, <4 x i32> zeroinitializer
+        ret <4 x i16> %tmp4
+}
+
+; This sort of looks like a vld1dup, but there's an extension in the way.
+define <4 x i16> @load_i16_dup_sext(i8* %A) nounwind {
+;CHECK-LABEL: load_i16_dup_sext:
+;CHECK: ldrsb    r0, [r0]
+;CHECK-NEXT: vdup.16 d16, r0
+        %tmp1 = load i8, i8* %A, align 1
+        %tmp2 = sext i8 %tmp1 to i16
+        %tmp3 = insertelement <4 x i16> undef, i16 %tmp2, i32 0
+        %tmp4 = shufflevector <4 x i16> %tmp3, <4 x i16> undef, <4 x i32> zeroinitializer
+        ret <4 x i16> %tmp4
+}
+
+; This sort of looks like a vld1dup, but there's an extension in the way.
+define <8 x i16> @load_i16_dupq_zext(i8* %A) nounwind {
+;CHECK-LABEL: load_i16_dupq_zext:
+;CHECK: ldrb    r0, [r0]
+;CHECK-NEXT: vdup.16 q8, r0
+        %tmp1 = load i8, i8* %A, align 1
+        %tmp2 = zext i8 %tmp1 to i16
+        %tmp3 = insertelement <8 x i16> undef, i16 %tmp2, i32 0
+        %tmp4 = shufflevector <8 x i16> %tmp3, <8 x i16> undef, <8 x i32> zeroinitializer
+        ret <8 x i16> %tmp4
+}
+
 define <2 x i32> @vld1dupi32(i32* %A) nounwind {
 ;CHECK-LABEL: vld1dupi32:
 ;Check the alignment value.  Max for this instruction is 32 bits:
@@ -115,6 +151,30 @@ define <2 x i32> @vld1dupi32(i32* %A) nounwind {
 	%tmp2 = insertelement <2 x i32> undef, i32 %tmp1, i32 0
 	%tmp3 = shufflevector <2 x i32> %tmp2, <2 x i32> undef, <2 x i32> zeroinitializer
         ret <2 x i32> %tmp3
+}
+
+; This sort of looks like a vld1dup, but there's an extension in the way.
+define <4 x i32> @load_i32_dup_zext(i8* %A) nounwind {
+;CHECK-LABEL: load_i32_dup_zext:
+;CHECK: ldrb    r0, [r0]
+;CHECK-NEXT: vdup.32 q8, r0
+        %tmp1 = load i8, i8* %A, align 1
+        %tmp2 = zext i8 %tmp1 to i32
+        %tmp3 = insertelement <4 x i32> undef, i32 %tmp2, i32 0
+        %tmp4 = shufflevector <4 x i32> %tmp3, <4 x i32> undef, <4 x i32> zeroinitializer
+        ret <4 x i32> %tmp4
+}
+
+; This sort of looks like a vld1dup, but there's an extension in the way.
+define <4 x i32> @load_i32_dup_sext(i8* %A) nounwind {
+;CHECK-LABEL: load_i32_dup_sext:
+;CHECK: ldrsb    r0, [r0]
+;CHECK-NEXT: vdup.32 q8, r0
+        %tmp1 = load i8, i8* %A, align 1
+        %tmp2 = sext i8 %tmp1 to i32
+        %tmp3 = insertelement <4 x i32> undef, i32 %tmp2, i32 0
+        %tmp4 = shufflevector <4 x i32> %tmp3, <4 x i32> undef, <4 x i32> zeroinitializer
+        ret <4 x i32> %tmp4
 }
 
 define <2 x float> @vld1dupf(float* %A) nounwind {

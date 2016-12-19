@@ -343,9 +343,8 @@ entry:
 define <8 x i8> @vtrn_mismatched_builvector0(<8 x i8> %tr0, <8 x i8> %tr1,
                                              <4 x i32> %cmp0, <4 x i32> %cmp1,
                                              <4 x i16> %cmp2, <4 x i16> %cmp3) {
-  ; CHECK-LABEL: vtrn_mismatched_builvector0
+  ; CHECK-LABEL: vtrn_mismatched_builvector0:
   ; CHECK: vmovn.i32
-  ; CHECK: vtrn
   ; CHECK: vbsl
   %c0 = icmp ult <4 x i32> %cmp0, %cmp1
   %c1 = icmp ult <4 x i16> %cmp2, %cmp3
@@ -359,10 +358,9 @@ define <8 x i8> @vtrn_mismatched_builvector0(<8 x i8> %tr0, <8 x i8> %tr1,
 ; (from the icmp operation).
 define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
                            <4 x i32> %cmp0, <4 x i32> %cmp1, <4 x i8> *%cmp2_ptr) {
-  ; CHECK-LABEL: vtrn_mismatched_builvector1
+  ; CHECK-LABEL: vtrn_mismatched_builvector1:
   ; We need to extend the 4 x i8 to 4 x i16 in order to perform the vtrn
   ; CHECK: vmovl
-  ; CHECK: vtrn.8
   ; CHECK: vbsl
   %cmp2_load = load <4 x i8>, <4 x i8> * %cmp2_ptr, align 4
   %cmp2 = trunc <4 x i8> %cmp2_load to <4 x i1>
@@ -376,7 +374,7 @@ define <8 x i8> @vtrn_mismatched_builvector1(<8 x i8> %tr0, <8 x i8> %tr1,
 ; full result.
 define void @lower_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
-  ; CHECK-LABEL: lower_twice_no_vtrn
+  ; CHECK-LABEL: lower_twice_no_vtrn:
   ; CHECK: @ BB#0:
   ; CHECK-NEXT: vldr d16, [r1]
   ; CHECK-NEXT: vldr d18, [r0]
@@ -395,7 +393,7 @@ entry:
 ; full result.
 define void @upper_twice_no_vtrn(<4 x i16>* %A, <4 x i16>* %B, <8 x i16>* %C) {
 entry:
-  ; CHECK-LABEL: upper_twice_no_vtrn
+  ; CHECK-LABEL: upper_twice_no_vtrn:
   ; CHECK: @ BB#0:
   ; CHECK-NEXT: vldr d16, [r1]
   ; CHECK-NEXT: vldr d18, [r0]

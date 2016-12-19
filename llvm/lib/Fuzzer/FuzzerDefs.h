@@ -44,6 +44,13 @@
 #define ATTRIBUTE_TARGET_POPCNT
 #endif
 
+
+#ifdef __clang__  // avoid gcc warning.
+#  define ATTRIBUTE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
+#else
+#  define ATTRIBUTE_NO_SANITIZE_MEMORY
+#endif
+
 namespace fuzzer {
 
 template <class T> T Min(T a, T b) { return a < b ? a : b; }

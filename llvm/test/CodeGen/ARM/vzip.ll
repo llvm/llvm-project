@@ -317,21 +317,13 @@ entry:
   ret void
 }
 
-; FIXME: This should generate a vzip
 define <8 x i8> @vdup_zip(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 entry:
   ; CHECK-LABEL: vdup_zip:
-  ; CHECK:      ldrb    r0, [r0]
-  ; CHECK-NEXT: ldrb    r1, [r1]
-  ; CHECK-NEXT: vmov.8  d16[0], r0
-  ; CHECK-NEXT: vmov.8  d16[1], r1
-  ; CHECK-NEXT: vmov.8  d16[2], r0
-  ; CHECK-NEXT: vmov.8  d16[3], r1
-  ; CHECK-NEXT: vmov.8  d16[4], r0
-  ; CHECK-NEXT: vmov.8  d16[5], r1
-  ; CHECK-NEXT: vmov.8  d16[6], r0
-  ; CHECK-NEXT: vmov.8  d16[7], r1
-  ; CHECK-NEXT: vmov    r0, r1, d16
+  ; CHECK: vld1.8
+  ; CHECK-NEXT: vld1.8
+  ; CHECK-NEXT: vzip.8
+  ; CHECK-NEXT: vmov r0, r1
   %0 = load i8, i8* %x, align 1
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
   %lane = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef>

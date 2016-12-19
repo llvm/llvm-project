@@ -12,7 +12,7 @@ int main(int argc, const char *argv[]) {
 
   std::vector<std::thread> threads;
 
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 100; i++) {
     std::packaged_task<int(void)> task(my_task);
     std::future<int> future = task.get_future();
     threads.push_back(std::thread(std::move(task)));

@@ -28,7 +28,7 @@
 name:            promote-load-from-store
 alignment:       2
 exposesReturnsTwice: false
-tracksRegLiveness: false
+tracksRegLiveness: true
 liveins:         
   - { reg: '%x0' }
   - { reg: '%w1' }
@@ -48,7 +48,7 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %w1, %x0
+    liveins: %w1, %x0, %lr
   
     STRWui killed %w1, %x0, 0 :: (store 4 into %ir.dst)
     CFI_INSTRUCTION 0
@@ -76,13 +76,13 @@ body:             |
 
 ...
 # CHECK-LABEL: name:            promote-load-from-store
-# CHECK: STRWui killed %w1
+# CHECK: STRWui %w1
 # CHECK: UBFMWri %w1
 ---
 name:            store-pair
 alignment:       2
 exposesReturnsTwice: false
-tracksRegLiveness: false
+tracksRegLiveness: true
 liveins:         
   - { reg: '%x0' }
   - { reg: '%w1' }
@@ -102,7 +102,7 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    liveins: %w1, %x0
+    liveins: %w1, %x0, %lr
   
     STRWui %w1, %x0, 0 :: (store 4 into %ir.dst01)
     CFI_INSTRUCTION 0

@@ -11,8 +11,11 @@ if (BUILD_CLANG_FORMAT_VS_PLUGIN)
       "${CLANG_SOURCE_DIR}/LICENSE.TXT"
       "${CMAKE_CURRENT_SOURCE_DIR}/ClangFormat/license.txt")
 
+  # Build number added to Clang version to ensure that new VSIX can be upgraded
+  string(TIMESTAMP CLANG_FORMAT_VSIX_BUILD %y%m%d%H%M UTC)
+
   if (NOT CLANG_FORMAT_VS_VERSION)
-    set(CLANG_FORMAT_VS_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+    set(CLANG_FORMAT_VS_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}.${CLANG_FORMAT_VSIX_BUILD}")
   endif()
 
   configure_file("source.extension.vsixmanifest.in"

@@ -417,7 +417,6 @@
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           EnvBlock {
-; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Entries [
 ; EMPTY-NEXT:               cwd
 ; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs
@@ -458,7 +457,6 @@
 ; EMPTY-NEXT:           Section {
 ; EMPTY-NEXT:             SectionNumber: 1
 ; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 4096
 ; EMPTY-NEXT:             Length: 4122
 ; EMPTY-NEXT:             Characteristics [ (0x60000020)
@@ -494,7 +492,6 @@
 ; EMPTY-NEXT:           Section {
 ; EMPTY-NEXT:             SectionNumber: 2
 ; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 12288
 ; EMPTY-NEXT:             Length: 690
 ; EMPTY-NEXT:             Characteristics [ (0x40000040)
@@ -560,7 +557,6 @@
 ; EMPTY-NEXT:           Section {
 ; EMPTY-NEXT:             SectionNumber: 3
 ; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 16384
 ; EMPTY-NEXT:             Length: 4
 ; EMPTY-NEXT:             Characteristics [ (0xC0000040)
@@ -596,7 +592,6 @@
 ; EMPTY-NEXT:           Section {
 ; EMPTY-NEXT:             SectionNumber: 4
 ; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 20480
 ; EMPTY-NEXT:             Length: 8
 ; EMPTY-NEXT:             Characteristics [ (0x42000040)
@@ -1255,7 +1250,6 @@
 ; ALL:         }
 ; ALL:         {
 ; ALL:           EnvBlock {
-; ALL:             Reserved: 0
 ; ALL:             Entries [
 ; ALL:               cwd
 ; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs
@@ -1280,7 +1274,6 @@
 ; ALL:           Section {
 ; ALL:             SectionNumber: 1
 ; ALL:             Alignment: 12
-; ALL:             Reserved: 0
 ; ALL:             Rva: 4096
 ; ALL:             Length: 4122
 ; ALL:             Characteristics [ (0x60000020)
@@ -1308,7 +1301,6 @@
 ; ALL:           Section {
 ; ALL:             SectionNumber: 2
 ; ALL:             Alignment: 12
-; ALL:             Reserved: 0
 ; ALL:             Rva: 12288
 ; ALL:             Length: 690
 ; ALL:             Characteristics [ (0x40000040)
@@ -1358,7 +1350,6 @@
 ; ALL:           Section {
 ; ALL:             SectionNumber: 3
 ; ALL:             Alignment: 12
-; ALL:             Reserved: 0
 ; ALL:             Rva: 16384
 ; ALL:             Length: 4
 ; ALL:             Characteristics [ (0xC0000040)
@@ -1386,7 +1377,6 @@
 ; ALL:           Section {
 ; ALL:             SectionNumber: 4
 ; ALL:             Alignment: 12
-; ALL:             Reserved: 0
 ; ALL:             Rva: 20480
 ; ALL:             Length: 8
 ; ALL:             Characteristics [ (0x42000040)

@@ -9,6 +9,9 @@
 
 #include "lldb/Symbol/ClangASTContext.h"
 
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
+
 // C Includes
 // C++ Includes
 #include <mutex> // std::once
@@ -6739,10 +6742,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
       if (array) {
         CompilerType element_type(getASTContext(), array->getElementType());
         if (element_type.GetCompleteType()) {
-          char element_name[64];
-          ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
-                     static_cast<uint64_t>(idx));
-          child_name.assign(element_name);
+          child_name = llvm::formatv("[{0}]", idx);
           child_byte_size = element_type.GetByteSize(
               exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
           child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
@@ -8883,8 +8883,8 @@ void ClangASTContext::DumpValue(
           std::string base_class_type_name(base_class_qual_type.getAsString());
 
           // Indent and print the base class type name
-          s->Printf("\n%*s%s ", depth + DEPTH_INCREMENT, "",
-                    base_class_type_name.c_str());
+          s->Format("\n{0}{1}", llvm::fmt_repeat(" ", depth + DEPTH_INCREMENT),
+                    base_class_type_name);
 
           clang::TypeInfo base_class_type_info =
               getASTContext()->getTypeInfo(base_class_qual_type);

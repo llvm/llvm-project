@@ -246,6 +246,12 @@ def SI_KILL_TERMINATOR : SPseudoInstSI <
 
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
+// Branch on undef scc. Used to avoid intermediate copy from
+// IMPLICIT_DEF to SCC.
+def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins sopp_brtarget:$simm16)> {
+  let isTerminator = 1;
+  let usesCustomInserter = 1;
+}
 
 def SI_PS_LIVE : PseudoInstSI <
   (outs SReg_64:$dst), (ins),

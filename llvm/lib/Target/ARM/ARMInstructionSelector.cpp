@@ -15,6 +15,7 @@
 #include "ARMRegisterBankInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arm-isel"
@@ -28,8 +29,57 @@ using namespace llvm;
 ARMInstructionSelector::ARMInstructionSelector(const ARMSubtarget &STI,
                                                const ARMRegisterBankInfo &RBI)
     : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()) {}
+      TRI(*STI.getRegisterInfo()), RBI(RBI) {}
 
-bool ARMInstructionSelector::select(llvm::MachineInstr &I) const {
-  return !isPreISelGenericOpcode(I.getOpcode());
+static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                       const RegisterBankInfo &RBI) {
+  unsigned DstReg = I.getOperand(0).getReg();
+  if (TargetRegisterInfo::isPhysicalRegister(DstReg))
+    return true;
+
+  const RegisterBank *RegBank = RBI.getRegBank(DstReg, MRI, TRI);
+  (void)RegBank;
+  assert(RegBank && "Can't get reg bank for virtual register");
+
+  assert(MRI.getType(DstReg).getSizeInBits() ==
+             RBI.getSizeInBits(I.getOperand(1).getReg(), MRI, TRI) &&
+         "Copy with different width?!");
+
+  assert(RegBank->getID() == ARM::GPRRegBankID && "Unsupported reg bank");
+  const TargetRegisterClass *RC = &ARM::GPRRegClass;
+
+  // No need to constrain SrcReg. It will get constrained when
+  // we hit another of its uses or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                 << " operand\n");
+    return false;
+  }
+  return true;
+}
+
+bool ARMInstructionSelector::select(MachineInstr &I) const {
+  assert(I.getParent() && "Instruction should be in a basic block!");
+  assert(I.getParent()->getParent() && "Instruction should be in a function!");
+
+  auto &MBB = *I.getParent();
+  auto &MF = *MBB.getParent();
+  auto &MRI = MF.getRegInfo();
+
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
+    if (I.isCopy())
+      return selectCopy(I, TII, MRI, TRI, RBI);
+
+    return true;
+  }
+
+  if (I.getOpcode() == TargetOpcode::G_ADD) {
+    I.setDesc(TII.get(ARM::ADDrr));
+    AddDefaultCC(AddDefaultPred(MachineInstrBuilder(MF, I)));
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  return false;
 }

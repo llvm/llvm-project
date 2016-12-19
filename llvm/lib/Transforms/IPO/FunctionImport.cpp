@@ -235,36 +235,6 @@ static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
   return selectCallee(Index, CalleeSummaryList->second, Threshold);
 }
 
-/// Mark the global \p GUID as export by module \p ExportModulePath if found in
-/// this module.
-static void exportGlobalInModule(const ModuleSummaryIndex &Index,
-                                 StringRef ExportModulePath,
-                                 GlobalValue::GUID GUID,
-                                 FunctionImporter::ExportSetTy &ExportList) {
-  auto FindGlobalSummaryInModule =
-      [&](GlobalValue::GUID GUID) -> GlobalValueSummary *{
-        auto SummaryList = Index.findGlobalValueSummaryList(GUID);
-        if (SummaryList == Index.end())
-          // This global does not have a summary, it is not part of the ThinLTO
-          // process
-          return nullptr;
-        auto SummaryIter = llvm::find_if(
-            SummaryList->second,
-            [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
-              return Summary->modulePath() == ExportModulePath;
-            });
-        if (SummaryIter == SummaryList->second.end())
-          return nullptr;
-        return SummaryIter->get();
-      };
-
-  auto *Summary = FindGlobalSummaryInModule(GUID);
-  if (!Summary)
-    return;
-  // We found it in the current module, mark as exported
-  ExportList.insert(GUID);
-}
-
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
                             GlobalValue::GUID>;
 
@@ -350,13 +320,16 @@ static void computeImportForFunction(
         // This is the first time this function was exported from its source
         // module, so mark all functions and globals it references as exported
         // to the outside if they are defined in the same source module.
+        // For efficiency, we unconditionally add all the referenced GUIDs
+        // to the ExportList for this module, and will prune out any not
+        // defined in the module later in a single pass.
         for (auto &Edge : ResolvedCalleeSummary->calls()) {
           auto CalleeGUID = Edge.first.getGUID();
-          exportGlobalInModule(Index, ExportModulePath, CalleeGUID, ExportList);
+          ExportList.insert(CalleeGUID);
         }
         for (auto &Ref : ResolvedCalleeSummary->refs()) {
           auto GUID = Ref.getGUID();
-          exportGlobalInModule(Index, ExportModulePath, GUID, ExportList);
+          ExportList.insert(GUID);
         }
       }
     }
@@ -427,6 +400,22 @@ void llvm::ComputeCrossModuleImport(
                  << DefinedGVSummaries.first() << "'\n");
     ComputeImportForModule(DefinedGVSummaries.second, Index, ImportList,
                            &ExportLists);
+  }
+
+  // When computing imports we added all GUIDs referenced by anything
+  // imported from the module to its ExportList. Now we prune each ExportList
+  // of any not defined in that module. This is more efficient than checking
+  // while computing imports because some of the summary lists may be long
+  // due to linkonce (comdat) copies.
+  for (auto &ELI : ExportLists) {
+    const auto &DefinedGVSummaries =
+        ModuleToDefinedGVSummaries.lookup(ELI.first());
+    for (auto EI = ELI.second.begin(); EI != ELI.second.end();) {
+      if (!DefinedGVSummaries.count(*EI))
+        EI = ELI.second.erase(EI);
+      else
+        ++EI;
+    }
   }
 
 #ifndef NDEBUG

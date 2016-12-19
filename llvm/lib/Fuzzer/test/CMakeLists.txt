@@ -89,7 +89,6 @@ set(Tests
   RepeatedBytesTest
   SimpleCmpTest
   SimpleDictionaryTest
-  SimpleFnAdapterTest
   SimpleHashTest
   SimpleTest
   SimpleThreadedTest
@@ -134,7 +133,6 @@ endforeach()
 
 add_executable(LLVMFuzzer-Unittest
   FuzzerUnittest.cpp
-  FuzzerFnAdapterUnittest.cpp
   )
 
 add_executable(LLVMFuzzer-StandaloneInitializeTest

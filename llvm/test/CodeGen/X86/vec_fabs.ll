@@ -10,15 +10,35 @@
 ; 2013.
 
 define <2 x double> @fabs_v2f64(<2 x double> %p) {
-; X32-LABEL: fabs_v2f64:
-; X32:       # BB#0:
-; X32-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    retl
+; X32_AVX-LABEL: fabs_v2f64:
+; X32_AVX:       # BB#0:
+; X32_AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX-NEXT:    retl
 ;
-; X64-LABEL: fabs_v2f64:
-; X64:       # BB#0:
-; X64-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    retq
+; X32_AVX512VL-LABEL: fabs_v2f64:
+; X32_AVX512VL:       # BB#0:
+; X32_AVX512VL-NEXT:    vpandq {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX512VL-NEXT:    retl
+;
+; X32_AVX512VLDQ-LABEL: fabs_v2f64:
+; X32_AVX512VLDQ:       # BB#0:
+; X32_AVX512VLDQ-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX512VLDQ-NEXT:    retl
+;
+; X64_AVX-LABEL: fabs_v2f64:
+; X64_AVX:       # BB#0:
+; X64_AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX-NEXT:    retq
+;
+; X64_AVX512VL-LABEL: fabs_v2f64:
+; X64_AVX512VL:       # BB#0:
+; X64_AVX512VL-NEXT:    vpandq {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512VL-NEXT:    retq
+;
+; X64_AVX512VLDQ-LABEL: fabs_v2f64:
+; X64_AVX512VLDQ:       # BB#0:
+; X64_AVX512VLDQ-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512VLDQ-NEXT:    retq
   %t = call <2 x double> @llvm.fabs.v2f64(<2 x double> %p)
   ret <2 x double> %t
 }
@@ -32,8 +52,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v4f32:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vbroadcastss {{\.LCPI.*}}, %xmm1
-; X32_AVX512VL-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; X32_AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v4f32:
@@ -48,8 +67,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v4f32:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
-; X64_AVX512VL-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; X64_AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v4f32:
@@ -69,8 +87,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v4f64:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vbroadcastsd {{\.LCPI.*}}, %ymm1
-; X32_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X32_AVX512VL-NEXT:    vpandq {{\.LCPI.*}}{1to4}, %ymm0, %ymm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v4f64:
@@ -85,8 +102,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v4f64:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vbroadcastsd {{.*}}(%rip), %ymm1
-; X64_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X64_AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v4f64:
@@ -106,8 +122,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v8f32:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vbroadcastss {{\.LCPI.*}}, %ymm1
-; X32_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X32_AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to8}, %ymm0, %ymm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v8f32:
@@ -122,8 +137,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v8f32:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vbroadcastss {{.*}}(%rip), %ymm1
-; X64_AVX512VL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; X64_AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v8f32:

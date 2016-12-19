@@ -20,10 +20,22 @@ namespace llvm {
 
 class TargetRegisterInfo;
 
+namespace ARM {
+enum {
+  GPRRegBankID = 0, // General purpose registers
+  NumRegisterBanks,
+};
+} // end namespace ARM
+
 /// This class provides the information for the target register banks.
 class ARMRegisterBankInfo final : public RegisterBankInfo {
 public:
   ARMRegisterBankInfo(const TargetRegisterInfo &TRI);
+
+  const RegisterBank &
+  getRegBankFromRegClass(const TargetRegisterClass &RC) const override;
+
+  InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
 };
 } // End llvm namespace.
 #endif

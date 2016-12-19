@@ -13,20 +13,27 @@
 //===----------------------------------------------------------------------===//
 #define DEBUG_TYPE "hexagonmcelfstreamer"
 
-#include "Hexagon.h"
-#include "HexagonMCELFStreamer.h"
-#include "MCTargetDesc/HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonMCELFStreamer.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -148,8 +155,10 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(
 }
 
 namespace llvm {
+
 MCStreamer *createHexagonELFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS, MCCodeEmitter *CE) {
   return new HexagonMCELFStreamer(Context, MAB, OS, CE);
 }
-}
+
+} // end namespace llvm

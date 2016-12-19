@@ -15,6 +15,7 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
@@ -23,7 +24,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -1736,7 +1736,14 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ASSERT")
     return readAssert();
   if (Tok == "ALIGN") {
-    Expr E = readParenExpr();
+    expect("(");
+    Expr E = readExpr();
+    if (consume(",")) {
+      Expr E2 = readExpr();
+      expect(")");
+      return [=](uint64_t Dot) { return alignTo(E(Dot), E2(Dot)); };
+    }
+    expect(")");
     return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
   }
   if (Tok == "CONSTANT") {

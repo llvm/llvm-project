@@ -48,6 +48,7 @@ namespace llvm {
     constexpr bool operator!= (LaneBitmask M) const { return Mask != M.Mask; }
     constexpr bool operator< (LaneBitmask M)  const { return Mask < M.Mask; }
     constexpr bool none() const { return Mask == 0; }
+    constexpr bool any()  const { return Mask != 0; }
     constexpr bool all()  const { return ~Mask == 0; }
 
     constexpr LaneBitmask operator~() const {

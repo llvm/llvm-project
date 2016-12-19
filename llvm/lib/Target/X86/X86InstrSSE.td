@@ -447,9 +447,9 @@ def : Pat<(v4f64  (bitconvert (v8f32  VR256:$src))), (v4f64  VR256:$src)>;
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
     isPseudo = 1, SchedRW = [WriteZero] in {
   def FsFLD0SS : I<0, Pseudo, (outs FR32:$dst), (ins), "",
-                   [(set FR32:$dst, fp32imm0)]>, Requires<[HasSSE1]>;
+                   [(set FR32:$dst, fp32imm0)]>, Requires<[HasSSE1, NoVLX_Or_NoDQI]>;
   def FsFLD0SD : I<0, Pseudo, (outs FR64:$dst), (ins), "",
-                   [(set FR64:$dst, fpimm0)]>, Requires<[HasSSE2]>;
+                   [(set FR64:$dst, fpimm0)]>, Requires<[HasSSE2, NoVLX_Or_NoDQI]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2932,7 +2932,7 @@ let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
             (VANDNPDYrm VR256:$src1, addr:$src2)>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX_Or_NoDQI] in {
   // Use packed logical operations for scalar ops.
   def : Pat<(f64 (X86fand FR64:$src1, FR64:$src2)),
             (COPY_TO_REGCLASS (VANDPDrr

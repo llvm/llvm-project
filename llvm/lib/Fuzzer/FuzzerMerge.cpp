@@ -94,10 +94,11 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
         return false;
       LastSeenStartMarker = kInvalidStartMarker;
       if (ParseCoverage) {
-        while (!ISS1.rdstate()) {
-          ISS1 >> std::hex >> N;
-          Files[CurrentFileIdx].Features.insert(N);
-        }
+        auto &V = Files[CurrentFileIdx].Features;
+        V.clear();
+        while (ISS1 >> std::hex >> N)
+          V.push_back(N);
+        std::sort(V.begin(), V.end());
       }
     } else {
       return false;
@@ -115,7 +116,7 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
 size_t Merger::Merge(std::vector<std::string> *NewFiles) {
   NewFiles->clear();
   assert(NumFilesInFirstCorpus <= Files.size());
-  std::set<size_t> AllFeatures;
+  std::set<uint32_t> AllFeatures;
 
   // What features are in the initial corpus?
   for (size_t i = 0; i < NumFilesInFirstCorpus; i++) {
@@ -127,7 +128,7 @@ size_t Merger::Merge(std::vector<std::string> *NewFiles) {
   // Remove all features that we already know from all other inputs.
   for (size_t i = NumFilesInFirstCorpus; i < Files.size(); i++) {
     auto &Cur = Files[i].Features;
-    std::set<size_t> Tmp;
+    std::vector<uint32_t> Tmp;
     std::set_difference(Cur.begin(), Cur.end(), AllFeatures.begin(),
                         AllFeatures.end(), std::inserter(Tmp, Tmp.begin()));
     Cur.swap(Tmp);

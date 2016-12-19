@@ -35,12 +35,13 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/prepare_binding_Python.py
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Python/modify-python-lldb.py
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/prepare_bindings.py
-          ${framework_arg}
-          "--srcRoot=${LLDB_SOURCE_DIR}"
-          "--targetDir=${LLDB_PYTHON_TARGET_DIR}"
-          "--cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}"
-          "--prefix=${CMAKE_BINARY_DIR}"
-          "--swigExecutable=${SWIG_EXECUTABLE}"
+      ${framework_arg}
+      --srcRoot=${LLDB_SOURCE_DIR}
+      --targetDir=${LLDB_PYTHON_TARGET_DIR}
+      --cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}
+      --prefix=${CMAKE_BINARY_DIR}
+      --swigExecutable=${SWIG_EXECUTABLE}
+  VERBATIM
   COMMENT "Python script building LLDB Python wrapper")
 set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lldb.py PROPERTIES GENERATED 1)

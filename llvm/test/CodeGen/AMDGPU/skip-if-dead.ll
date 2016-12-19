@@ -263,7 +263,7 @@ exit:
 ; CHECK-NEXT: s_endpgm
 
 ; CHECK: [[KILLBB:BB[0-9]+_[0-9]+]]:
-; CHECK-NEXT: s_cbranch_vccz [[PHIBB:BB[0-9]+_[0-9]+]]
+; CHECK-NEXT: s_cbranch_scc0 [[PHIBB:BB[0-9]+_[0-9]+]]
 
 ; CHECK: [[PHIBB]]:
 ; CHECK: v_cmp_eq_f32_e32 vcc, 0, [[PHIREG]]

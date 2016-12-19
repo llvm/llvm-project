@@ -315,7 +315,7 @@ public:
   void appendTo(ContainerT &To) const {
     for (const IndexMaskPair &P : Regs) {
       unsigned Reg = getRegFromSparseIndex(P.Index);
-      if (!P.LaneMask.none())
+      if (P.LaneMask.any())
         To.push_back(RegisterMaskPair(Reg, P.LaneMask));
     }
   }

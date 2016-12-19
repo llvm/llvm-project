@@ -30,6 +30,7 @@ public:
 private:
   std::unique_ptr<utils::IncludeInserter> Inserter;
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  const bool ValuesOnly;
 };
 
 } // namespace modernize

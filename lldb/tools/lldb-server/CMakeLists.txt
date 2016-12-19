@@ -165,7 +165,7 @@ set(LLVM_LINK_COMPONENTS
   target
   )
 
-add_lldb_executable(lldb-server INCLUDE_IN_FRAMEWORK
+add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp
@@ -188,6 +188,3 @@ llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
 target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 
 set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})
-
-install(TARGETS lldb-server
-  RUNTIME DESTINATION bin)

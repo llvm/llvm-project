@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <cstring>
 #include <iostream>
-#include <unistd.h>
 
 static volatile char *SinkPtr;
 

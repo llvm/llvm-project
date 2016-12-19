@@ -876,7 +876,7 @@ void LiveInterval::computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
                                          const SlotIndexes &Indexes) const {
   assert(TargetRegisterInfo::isVirtualRegister(reg));
   LaneBitmask VRegMask = MRI.getMaxLaneMaskForVReg(reg);
-  assert(!(VRegMask & LaneMask).none());
+  assert((VRegMask & LaneMask).any());
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   for (const MachineOperand &MO : MRI.def_operands(reg)) {
     if (!MO.isUndef())
@@ -885,7 +885,7 @@ void LiveInterval::computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
     assert(SubReg != 0 && "Undef should only be set on subreg defs");
     LaneBitmask DefMask = TRI.getSubRegIndexLaneMask(SubReg);
     LaneBitmask UndefMask = VRegMask & ~DefMask;
-    if (!(UndefMask & LaneMask).none()) {
+    if ((UndefMask & LaneMask).any()) {
       const MachineInstr &MI = *MO.getParent();
       bool EarlyClobber = MO.isEarlyClobber();
       SlotIndex Pos = Indexes.getInstructionIndex(MI).getRegSlot(EarlyClobber);

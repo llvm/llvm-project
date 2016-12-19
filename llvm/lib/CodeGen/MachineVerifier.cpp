@@ -482,7 +482,7 @@ void MachineVerifier::report_context(const LiveRange &LR, unsigned VRegUnit,
                                      LaneBitmask LaneMask) const {
   report_context_liverange(LR);
   report_context_vreg_regunit(VRegUnit);
-  if (!LaneMask.none())
+  if (LaneMask.any())
     report_context_lanemask(LaneMask);
 }
 
@@ -1172,7 +1172,7 @@ void MachineVerifier::checkLivenessAtUse(const MachineOperand *MO,
     report("Live range continues after kill flag", MO, MONum);
     report_context_liverange(LR);
     report_context_vreg_regunit(VRegOrUnit);
-    if (!LaneMask.none())
+    if (LaneMask.any())
       report_context_lanemask(LaneMask);
     report_context(UseIdx);
   }
@@ -1187,7 +1187,7 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
       report("Inconsistent valno->def", MO, MONum);
       report_context_liverange(LR);
       report_context_vreg_regunit(VRegOrUnit);
-      if (!LaneMask.none())
+      if (LaneMask.any())
         report_context_lanemask(LaneMask);
       report_context(*VNI);
       report_context(DefIdx);
@@ -1196,7 +1196,7 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
     report("No live segment at def", MO, MONum);
     report_context_liverange(LR);
     report_context_vreg_regunit(VRegOrUnit);
-    if (!LaneMask.none())
+    if (LaneMask.any())
       report_context_lanemask(LaneMask);
     report_context(DefIdx);
   }
@@ -1226,7 +1226,7 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
         report("Live range continues after dead def flag", MO, MONum);
         report_context_liverange(LR);
         report_context_vreg_regunit(VRegOrUnit);
-        if (!LaneMask.none())
+        if (LaneMask.any())
           report_context_lanemask(LaneMask);
       }
     }
@@ -1689,7 +1689,7 @@ void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
             !TRI->hasRegUnit(MOI->getReg(), Reg))
           continue;
       }
-      if (!LaneMask.none() &&
+      if (LaneMask.any() &&
           (TRI->getSubRegIndexLaneMask(MOI->getSubReg()) & LaneMask).none())
         continue;
       hasDef = true;
@@ -1835,7 +1835,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
         if (MOI->isDead())
           hasDeadDef = true;
       }
-      if (!LaneMask.none() && (LaneMask & SLM).none())
+      if (LaneMask.any() && (LaneMask & SLM).none())
         continue;
       if (MOI->readsReg())
         hasRead = true;
@@ -1854,7 +1854,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       if (!hasRead) {
         // When tracking subregister liveness, the main range must start new
         // values on partial register writes, even if there is no read.
-        if (!MRI->shouldTrackSubRegLiveness(Reg) || !LaneMask.none() ||
+        if (!MRI->shouldTrackSubRegLiveness(Reg) || LaneMask.any() ||
             !hasSubRegDef) {
           report("Instruction ending live segment doesn't read the register",
                  MI);
@@ -1941,11 +1941,11 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
   LaneBitmask Mask;
   LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
   for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if (!(Mask & SR.LaneMask).none()) {
+    if ((Mask & SR.LaneMask).any()) {
       report("Lane masks of sub ranges overlap in live interval", MF);
       report_context(LI);
     }
-    if (!(SR.LaneMask & ~MaxMask).none()) {
+    if ((SR.LaneMask & ~MaxMask).any()) {
       report("Subrange lanemask is invalid", MF);
       report_context(LI);
     }
