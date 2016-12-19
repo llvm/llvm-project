@@ -3453,31 +3453,39 @@ static FileID getNullabilityCompletenessCheckFileID(Sema &S,
 
 /// Creates a fix-it to insert a C-style nullability keyword at \p pointerLoc,
 /// taking into account whitespace before and after.
-static FixItHint fixItNullability(Sema &S, SourceLocation PointerLoc,
-                                  NullabilityKind Nullability) {
+static void fixItNullability(Sema &S, DiagnosticBuilder &Diag,
+                             SourceLocation PointerLoc,
+                             NullabilityKind Nullability) {
   assert(PointerLoc.isValid());
+  if (PointerLoc.isMacroID())
+    return;
+
+  SourceLocation FixItLoc = S.getLocForEndOfToken(PointerLoc);
+  if (!FixItLoc.isValid() || FixItLoc == PointerLoc)
+    return;
+
+  const char *NextChar = S.SourceMgr.getCharacterData(FixItLoc);
+  if (!NextChar)
+    return;
 
   SmallString<32> InsertionTextBuf{" "};
   InsertionTextBuf += getNullabilitySpelling(Nullability);
   InsertionTextBuf += " ";
   StringRef InsertionText = InsertionTextBuf.str();
 
-  SourceLocation FixItLoc = S.getLocForEndOfToken(PointerLoc);
-  if (const char *NextChar = S.SourceMgr.getCharacterData(FixItLoc)) {
-    if (isWhitespace(*NextChar)) {
-      InsertionText = InsertionText.drop_back();
-    } else if (NextChar[-1] == '[') {
-      if (NextChar[0] == ']')
-        InsertionText = InsertionText.drop_back().drop_front();
-      else
-        InsertionText = InsertionText.drop_front();
-    } else if (!isIdentifierBody(NextChar[0], /*allow dollar*/true) &&
-               !isIdentifierBody(NextChar[-1], /*allow dollar*/true)) {
+  if (isWhitespace(*NextChar)) {
+    InsertionText = InsertionText.drop_back();
+  } else if (NextChar[-1] == '[') {
+    if (NextChar[0] == ']')
       InsertionText = InsertionText.drop_back().drop_front();
-    }
+    else
+      InsertionText = InsertionText.drop_front();
+  } else if (!isIdentifierBody(NextChar[0], /*allow dollar*/true) &&
+             !isIdentifierBody(NextChar[-1], /*allow dollar*/true)) {
+    InsertionText = InsertionText.drop_back().drop_front();
   }
 
-  return FixItHint::CreateInsertion(FixItLoc, InsertionText);
+  Diag << FixItHint::CreateInsertion(FixItLoc, InsertionText);
 }
 
 static void emitNullabilityConsistencyWarning(Sema &S,
@@ -3492,11 +3500,14 @@ static void emitNullabilityConsistencyWarning(Sema &S,
       << static_cast<unsigned>(PointerKind);
   }
 
+  if (PointerLoc.isMacroID())
+    return;
+
   auto addFixIt = [&](NullabilityKind Nullability) {
-    S.Diag(PointerLoc, diag::note_nullability_fix_it)
-      << static_cast<unsigned>(Nullability)
-      << static_cast<unsigned>(PointerKind)
-      << fixItNullability(S, PointerLoc, Nullability);
+    auto Diag = S.Diag(PointerLoc, diag::note_nullability_fix_it);
+    Diag << static_cast<unsigned>(Nullability);
+    Diag << static_cast<unsigned>(PointerKind);
+    fixItNullability(S, Diag, PointerLoc, Nullability);
   };
   addFixIt(NullabilityKind::Nullable);
   addFixIt(NullabilityKind::NonNull);
@@ -3898,9 +3909,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (pointerLoc.isValid() &&
           complainAboutInferringWithinChunk !=
             PointerWrappingDeclaratorKind::None) {
-        S.Diag(pointerLoc, diag::warn_nullability_inferred_on_nested_type)
-          << static_cast<int>(complainAboutInferringWithinChunk)
-          << fixItNullability(S, pointerLoc, NullabilityKind::NonNull);
+        auto Diag =
+            S.Diag(pointerLoc, diag::warn_nullability_inferred_on_nested_type);
+        Diag << static_cast<int>(complainAboutInferringWithinChunk);
+        fixItNullability(S, Diag, pointerLoc, NullabilityKind::NonNull);
       }
 
       if (inferNullabilityInnerOnly)

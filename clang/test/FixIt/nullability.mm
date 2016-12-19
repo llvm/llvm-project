@@ -16,6 +16,12 @@ extern void* array2[2]; // expected-warning {{inferring '_Nonnull' for pointer t
 extern void *nestedArray[2][3]; // expected-warning {{inferring '_Nonnull' for pointer type within array is deprecated}}
 // CHECK: fix-it:"{{.*}}nullability.mm":{[[@LINE-1]]:14-[[@LINE-1]]:14}:" _Nonnull "
 
+// No fix-its on either the macro definition or instantiation.
+// CHECK-NOT: fix-it:"{{.*}}nullability.mm":{[[@LINE+2]]
+// CHECK-NOT: fix-it:"{{.*}}nullability.mm":{[[@LINE+2]]
+#define PTR(X) X *
+extern PTR(void) array[2]; // expected-warning {{inferring '_Nonnull' for pointer type within array is deprecated}}
+
 
 typedef const void *CFTypeRef;
 
