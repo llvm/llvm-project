@@ -8372,6 +8372,10 @@ void ASTReader::ReadComments() {
       }
     }
   NextCursor:
+    // De-serialized SourceLocations get negative FileIDs for other modules,
+    // potentially invalidating the original order. Sort it again.
+    std::sort(Comments.begin(), Comments.end(),
+              BeforeThanCompare<RawComment>(SourceMgr));
     Context.Comments.addDeserializedComments(Comments);
   }
 }
