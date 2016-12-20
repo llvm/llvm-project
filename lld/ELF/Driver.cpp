@@ -827,7 +827,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
           [](InputSectionBase<ELFT> *S) {
             if (!S->Live)
               return;
-            if (S->Compressed)
+            if (S->isCompressed())
               S->uncompress();
             if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
               MS->splitIntoPieces();
