@@ -42,5 +42,7 @@ X::~X() {
 // CHECK-LABEL: define internal void @___ZN4ZoneD2Ev_block_invoke_
 // CHECK-LABEL: define internal void @___ZN1XC2Ev_block_invoke
 // CHECK-LABEL: define internal void @___ZN1XC2Ev_block_invoke_
+// CHECK-LABEL: define internal void @___ZN1XC1Ev_block_invoke
+// CHECK-LABEL: define internal void @___ZN1XC1Ev_block_invoke_
 // CHECK-LABEL: define internal void @___ZN1XD2Ev_block_invoke
 // CHECK-LABEL: define internal void @___ZN1XD2Ev_block_invoke_

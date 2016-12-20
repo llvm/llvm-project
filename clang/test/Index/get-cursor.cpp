@@ -143,6 +143,8 @@ void test(TestColl coll) {
   }
 }
 
+const int operator""_toint(unsigned long long val) { return int(val); }
+
 // RUN: c-index-test -cursor-at=%s:6:4 %s | FileCheck -check-prefix=CHECK-COMPLETION-1 %s
 // CHECK-COMPLETION-1: CXXConstructor=X:6:3
 // CHECK-COMPLETION-1-NEXT: Completion string: {TypedText X}{LeftParen (}{Placeholder int}{Comma , }{Placeholder int}{RightParen )}
@@ -207,7 +209,7 @@ void test(TestColl coll) {
 // RUN: c-index-test -cursor-at=%s:66:23 %s | FileCheck -check-prefix=CHECK-TEMPLSPEC %s
 // CHECK-TEMPLSPEC: 66:23 ClassDecl=TC:66:23 (Definition) [Specialization of TC:59:7] Extent=[66:1 - 66:31] Spelling=TC ([66:23 - 66:25])
 
-// RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
+// RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -cursor-at=%s:146:15 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
 // CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 (default constructor) Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
 // CHECK-SPELLING: 70:11 CXXDestructor=~A:70:11 (virtual) Extent=[70:3 - 70:15] Spelling=~A ([70:11 - 70:13])
 // CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
@@ -254,6 +256,7 @@ void test(TestColl coll) {
 // CHECK-SPELLING: 129:6 CXXMethod=operator->:129:6 Extent=[129:3 - 129:18] Spelling=operator-> ([129:6 - 129:16])
 // CHECK-SPELLING: 130:6 CXXMethod=operator():130:6 (const) Extent=[130:3 - 130:37] Spelling=operator() ([130:6 - 130:16])
 // CHECK-SPELLING: 132:12 CXXConversion=operator bool:132:12 (const) Extent=[132:3 - 132:33] Spelling=operator bool ([132:12 - 132:25])
+// CHECK-SPELLING: 146:11 FunctionDecl=operator""_toint:146:11 (Definition) Extent=[146:1 - 146:72] Spelling=operator""_toint ([146:11 - 146:27])
 
 // RUN: c-index-test -cursor-at=%s:141:13 -cursor-at=%s:141:18 -cursor-at=%s:142:11 -std=c++11 %s | FileCheck -check-prefix=CHECK-FORRANGE %s
 // CHECK-FORRANGE: 141:13 VarDecl=lv:141:13 (Definition) Extent=[141:8 - 141:17] Spelling=lv ([141:13 - 141:15])
