@@ -45,9 +45,9 @@ public:
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
   InputSectionData(Kind SectionKind, StringRef Name, ArrayRef<uint8_t> Data,
-                   bool Compressed, bool Live)
-      : SectionKind(SectionKind), Live(Live), Assigned(false),
-        Compressed(Compressed), Name(Name), Data(Data) {}
+                   bool Live)
+      : SectionKind(SectionKind), Live(Live), Assigned(false), Name(Name),
+        Data(Data) {}
 
 private:
   unsigned SectionKind : 3;
@@ -57,7 +57,6 @@ public:
 
   unsigned Live : 1;       // for garbage collection
   unsigned Assigned : 1;   // for linker script
-  unsigned Compressed : 1; // true if section data is compressed
   uint32_t Alignment;
   StringRef Name;
   ArrayRef<uint8_t> Data;
@@ -94,8 +93,7 @@ public:
   uint32_t Info;
 
   InputSectionBase()
-      : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false, false),
-        Repl(this) {
+      : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false), Repl(this) {
     NumRelocations = 0;
     AreRelocsRela = false;
   }
@@ -140,6 +138,9 @@ public:
   // section.
   uintX_t getOffset(uintX_t Offset) const;
 
+  // ELF supports ZLIB-compressed section.
+  // Returns true if the section is compressed.
+  bool isCompressed() const;
   void uncompress();
 
   // Returns a source location string. Used to construct an error message.
