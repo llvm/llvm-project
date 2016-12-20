@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_WRITER_H
 #define LLD_ELF_WRITER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <memory>
@@ -48,6 +49,9 @@ struct PhdrEntry {
 
 llvm::StringRef getOutputSectionName(llvm::StringRef Name);
 
+template <class ELFT>
+void allocateHeaders(llvm::MutableArrayRef<PhdrEntry>,
+                     llvm::ArrayRef<OutputSectionBase *>);
 template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
 
 template <class ELFT> uint32_t getMipsEFlags();

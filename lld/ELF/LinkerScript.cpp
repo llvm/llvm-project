@@ -748,19 +748,10 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   }
 
   uintX_t HeaderSize = getHeaderSize();
-  auto FirstPTLoad =
-      std::find_if(Phdrs.begin(), Phdrs.end(),
-                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
-  if (FirstPTLoad == Phdrs.end())
-    return;
-
   // If the linker script doesn't have PHDRS, add ElfHeader and ProgramHeaders
   // now that we know we have space.
-  if (HeaderSize <= MinVA && !hasPhdrsCommands()) {
-    FirstPTLoad->First = Out<ELFT>::ElfHeader;
-    if (!FirstPTLoad->Last)
-      FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
-  }
+  if (HeaderSize <= MinVA && !hasPhdrsCommands())
+    allocateHeaders<ELFT>(Phdrs, *OutputSections);
 
   // ELF and Program headers need to be right before the first section in
   // memory. Set their addresses accordingly.
