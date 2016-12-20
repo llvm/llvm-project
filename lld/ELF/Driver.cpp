@@ -478,16 +478,17 @@ static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
   return SortSectionPolicy::Default;
 }
 
-// Parse the --symbol-ordering-file argument. File has form:
-// symbolName1
-// [...]
-// symbolNameN
-static void parseSymbolOrderingList(MemoryBufferRef MB) {
-  unsigned I = 0;
+static std::vector<StringRef> getLines(MemoryBufferRef MB) {
   SmallVector<StringRef, 0> Arr;
   MB.getBuffer().split(Arr, '\n');
-  for (StringRef S : Arr)
-    Config->SymbolOrderingFile.insert({S.trim(), I++});
+
+  std::vector<StringRef> Ret;
+  for (StringRef S : Arr) {
+    S = S.trim();
+    if (!S.empty())
+      Ret.push_back(S);
+  }
+  return Ret;
 }
 
 // Initializes Config members by the command line options.
@@ -634,7 +635,16 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      parseSymbolOrderingList(*Buffer);
+      Config->SymbolOrderingFile = getLines(*Buffer);
+
+  // If --retain-symbol-file is used, we'll retail only the symbols listed in
+  // the file and discard all others.
+  if (auto *Arg = Args.getLastArg(OPT_retain_symbols_file)) {
+    Config->Discard = DiscardPolicy::RetainFile;
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+      for (StringRef S : getLines(*Buffer))
+        Config->RetainSymbolsFile.insert(S);
+  }
 
   for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
     Config->VersionScriptGlobals.push_back(

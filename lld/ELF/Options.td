@@ -176,6 +176,9 @@ def rpath: S<"rpath">, HelpText<"Add a DT_RUNPATH to the output">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
+def retain_symbols_file: J<"retain-symbols-file=">, MetaVarName<"<file>">,
+  HelpText<"Retain only the symbols listed in the file">;
+
 def script: S<"script">, HelpText<"Read linker script">;
 
 def section_start: S<"section-start">, MetaVarName<"<address>">,
@@ -269,6 +272,7 @@ def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
+def alias_retain_symbols_file: S<"retain-symbols-file">, Alias<retain_symbols_file>;
 def alias_rpath_R: JoinedOrSeparate<["-"], "R">, Alias<rpath>;
 def alias_rpath_rpath: J<"rpath=">, Alias<rpath>;
 def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;

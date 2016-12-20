@@ -48,8 +48,6 @@ struct XRaySledMap {
   size_t Entries;
 };
 
-uint64_t cycleFrequency();
-
 bool patchFunctionEntry(bool Enable, uint32_t FuncId,
                         const XRaySledEntry &Sled);
 bool patchFunctionExit(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled);

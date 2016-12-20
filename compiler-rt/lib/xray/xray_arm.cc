@@ -14,25 +14,11 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_defs.h"
-#include "xray_emulate_tsc.h"
 #include "xray_interface_internal.h"
 #include <atomic>
 #include <cassert>
 
 namespace __xray {
-
-uint64_t cycleFrequency() XRAY_NEVER_INSTRUMENT {
-  // There is no instruction like RDTSCP in user mode on ARM.  ARM's CP15 does
-  //   not have a constant frequency like TSC on x86[_64]; it may go faster or
-  //   slower depending on CPU's turbo or power saving modes.  Furthermore, to
-  //   read from CP15 on ARM a kernel modification or a driver is needed.
-  //   We can not require this from users of compiler-rt.
-  // So on ARM we use clock_gettime(2) which gives the result in nanoseconds.
-  //   To get the measurements per second, we scale this by the number of
-  //   nanoseconds per second, pretending that the TSC frequency is 1GHz and
-  //   one TSC tick is 1 nanosecond.
-  return NanosecondsPerSecond;
-}
 
 // The machine codes for some instructions used in runtime patching.
 enum class PatchOpcodes : uint32_t {
