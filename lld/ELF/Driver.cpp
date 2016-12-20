@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -284,33 +283,12 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
   return Default;
 }
 
-// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
-static bool getColorDiagnostics(opt::InputArgList &Args) {
-  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
-
-  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
-  if (!Arg)
-    return Default;
-  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
-    return false;
-
-  StringRef S = Arg->getValue();
-  if (S == "auto")
-    return Default;
-  if (S == "always")
-    return true;
-  if (S != "never")
-    error("unknown -color-diagnostics value: " + S);
-  return false;
-}
-
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
-  // Read some flags early because error() depends on them.
+  // Interpret this flag early because error() depends on them.
   Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
-  Config->ColorDiagnostics = getColorDiagnostics(Args);
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {

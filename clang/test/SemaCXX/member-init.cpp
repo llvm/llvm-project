@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -verify -std=c++11 -Wall %s
 
 struct Bitfield {
-  int n : 3 = 7; // expected-error {{bitfield member cannot have an in-class initializer}}
+  int n : 3 = 7; // expected-error {{bit-field member cannot have an in-class initializer}}
 };
 
 int a;

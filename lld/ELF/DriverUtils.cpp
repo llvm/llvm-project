@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -50,6 +51,26 @@ static const opt::OptTable::Info OptInfo[] = {
 };
 
 ELFOptTable::ELFOptTable() : OptTable(OptInfo) {}
+
+// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
+static bool getColorDiagnostics(opt::InputArgList &Args) {
+  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
+
+  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
+  if (!Arg)
+    return Default;
+  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+    return false;
+
+  StringRef S = Arg->getValue();
+  if (S == "auto")
+    return Default;
+  if (S == "always")
+    return true;
+  if (S != "never")
+    error("unknown -color-diagnostics value: " + S);
+  return false;
+}
 
 static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_rsp_quoting)) {
@@ -77,11 +98,14 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // --rsp-quoting.
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
-  // Expand response files. '@<filename>' is replaced by the file's contents.
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
   cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), Vec);
-
-  // Parse options and then do error checking.
   Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
+
+  // Interpret -color-diagnostics early so that error messages
+  // for unknown flags are colored.
+  Config->ColorDiagnostics = getColorDiagnostics(Args);
   if (MissingCount)
     error(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
 

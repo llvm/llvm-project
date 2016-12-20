@@ -40,26 +40,6 @@ inline Encoding detectEncoding(StringRef Text) {
   return Encoding_Unknown;
 }
 
-inline unsigned getCodePointCountUTF8(StringRef Text) {
-  unsigned CodePoints = 0;
-  for (size_t i = 0, e = Text.size(); i < e;
-       i += llvm::getNumBytesForUTF8(Text[i])) {
-    ++CodePoints;
-  }
-  return CodePoints;
-}
-
-/// \brief Gets the number of code points in the Text using the specified
-/// Encoding.
-inline unsigned getCodePointCount(StringRef Text, Encoding Encoding) {
-  switch (Encoding) {
-  case Encoding_UTF8:
-    return getCodePointCountUTF8(Text);
-  default:
-    return Text.size();
-  }
-}
-
 /// \brief Returns the number of columns required to display the \p Text on a
 /// generic Unicode-capable terminal. Text is assumed to use the specified
 /// \p Encoding.
