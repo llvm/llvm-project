@@ -135,8 +135,8 @@ struct DOTGraphTraits<ScopDetection *> : public DOTGraphTraits<RegionNode *> {
 
     std::string ErrorMessage = SD->regionIsInvalidBecause(R);
     ErrorMessage = escapeString(ErrorMessage);
-    O.indent(2 * (depth + 1)) << "label = \"" << Location << ErrorMessage
-                              << "\";\n";
+    O.indent(2 * (depth + 1))
+        << "label = \"" << Location << ErrorMessage << "\";\n";
 
     if (SD->isMaxRegionInScop(*R)) {
       O.indent(2 * (depth + 1)) << "style = filled;\n";
