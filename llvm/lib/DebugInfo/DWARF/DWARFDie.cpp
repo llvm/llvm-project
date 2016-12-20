@@ -245,21 +245,30 @@ DWARFDie::getRangesBaseAttribute() const {
   return getAttributeValueAsSectionOffset(DW_AT_GNU_ranges_base);
 }
 
-bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const {
-  if (auto LowPCVal = getAttributeValueAsAddress(DW_AT_low_pc))
-    LowPC = *LowPCVal;
-  else
-    return false;
+Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
+  if (auto FormValue = getAttributeValue(DW_AT_high_pc)) {
+    if (auto Address = FormValue->getAsAddress()) {
+      // High PC is an address.
+      return Address;
+    }
+    if (auto Offset = FormValue->getAsUnsignedConstant()) {
+      // High PC is an offset from LowPC.
+      return LowPC + *Offset;
+    }
+  }
+  return None;
+}
 
-  if (auto HighPCVal = getAttributeValueAsAddress(DW_AT_high_pc)) {
-    // High PC is an address.
-    HighPC = *HighPCVal;
-  } else if (auto Offset = getAttributeValueAsUnsignedConstant(DW_AT_high_pc)) {
-    // High PC is an offset from LowPC.
-    HighPC = LowPC + *Offset;
-  } else
+bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const {
+  auto LowPcAddr = getAttributeValueAsAddress(DW_AT_low_pc);
+  if (!LowPcAddr)
     return false;
-  return true;
+  if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
+    LowPC = *LowPcAddr;
+    HighPC = *HighPcAddr;
+    return true;
+  }
+  return false;
 }
 
 DWARFAddressRangesVector

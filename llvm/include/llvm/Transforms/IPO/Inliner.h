@@ -1,4 +1,4 @@
-//===- InlinerPass.h - Code common to all inliners --------------*- C++ -*-===//
+//===- Inliner.h - Inliner pass and infrastructure --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,19 +6,14 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines a simple policy-based bottom-up inliner.  This file
-// implements all of the boring mechanics of the bottom-up inlining, while the
-// subclass determines WHAT to inline, which is the much more interesting
-// component.
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_INLINERPASS_H
-#define LLVM_TRANSFORMS_IPO_INLINERPASS_H
+#ifndef LLVM_TRANSFORMS_IPO_INLINER_H
+#define LLVM_TRANSFORMS_IPO_INLINER_H
 
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 
@@ -29,13 +24,13 @@ class DataLayout;
 class InlineCost;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
-template <class PtrType, unsigned SmallSize> class SmallPtrSet;
 
 /// This class contains all of the helper code which is used to perform the
-/// inlining operations that do not depend on the policy.
-struct Inliner : public CallGraphSCCPass {
-  explicit Inliner(char &ID);
-  explicit Inliner(char &ID, bool InsertLifetime);
+/// inlining operations that do not depend on the policy. It contains the core
+/// bottom-up inlining infrastructure that specific inliner passes use.
+struct LegacyInlinerBase : public CallGraphSCCPass {
+  explicit LegacyInlinerBase(char &ID);
+  explicit LegacyInlinerBase(char &ID, bool InsertLifetime);
 
   /// For this class, we declare that we require and preserve the call graph.
   /// If the derived class implements this method, it should always explicitly
@@ -80,6 +75,32 @@ protected:
   AssumptionCacheTracker *ACT;
   ProfileSummaryInfo *PSI;
   ImportedFunctionsInliningStatistics ImportedFunctionsStats;
+};
+
+/// The inliner pass for the new pass manager.
+///
+/// This pass wires together the inlining utilities and the inline cost
+/// analysis into a CGSCC pass. It considers every call in every function in
+/// the SCC and tries to inline if profitable. It can be tuned with a number of
+/// parameters to control what cost model is used and what tradeoffs are made
+/// when making the decision.
+///
+/// It should be noted that the legacy inliners do considerably more than this
+/// inliner pass does. They provide logic for manually merging allocas, and
+/// doing considerable DCE including the DCE of dead functions. This pass makes
+/// every attempt to be simpler. DCE of functions requires complex reasoning
+/// about comdat groups, etc. Instead, it is expected that other more focused
+/// passes be composed to achieve the same end result.
+class InlinerPass : public PassInfoMixin<InlinerPass> {
+public:
+  InlinerPass(InlineParams Params = getInlineParams())
+      : Params(std::move(Params)) {}
+
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+
+private:
+  InlineParams Params;
 };
 
 } // End llvm namespace

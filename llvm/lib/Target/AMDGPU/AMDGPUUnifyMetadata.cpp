@@ -100,7 +100,9 @@ namespace {
 
     NamedMD->eraseFromParent();
     NamedMD = M.getOrInsertNamedMetadata(Name);
-    NamedMD->addOperand(MDNode::get(M.getContext(), All));
+    for (const auto &MD : All)
+      NamedMD->addOperand(MDNode::get(M.getContext(), MD));
+
     return true;
   }
 };
@@ -133,10 +135,10 @@ bool AMDGPUUnifyMetadata::runOnModule(Module &M) {
 
   bool Changed = false;
 
-  for (auto &I:Vers)
+  for (auto &I : Vers)
     Changed |= unifyVersionMD(M, I, true);
 
-  for (auto &I:Exts)
+  for (auto &I : Exts)
     Changed |= unifyExtensionMD(M, I);
 
   return Changed;

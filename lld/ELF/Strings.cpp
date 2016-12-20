@@ -39,6 +39,7 @@ BitVector GlobPattern::scan(StringRef &S) {
     size_t End = S.find(']', 1);
     if (End == StringRef::npos) {
       error("invalid glob pattern: " + Original);
+      S = "";
       return BitVector(256, false);
     }
     StringRef Chars = S.substr(1, End - 1);

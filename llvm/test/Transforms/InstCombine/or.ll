@@ -596,7 +596,7 @@ define i32 @test42_commuted_xor(i32 %a, i32 %b) {
   ret i32 %or
 }
 
-; Commute operands of the 'or'.
+; (A & ~B) | (A ^ B) -> A ^ B
 
 define i32 @test43(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test43(
@@ -622,6 +622,9 @@ define i32 @test43_commuted_and(i32 %a, i32 %b) {
   ret i32 %or
 }
 
+; Commute operands of the 'or'.
+; (A ^ B) | (A & ~B) -> A ^ B
+
 define i32 @test44(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test44(
 ; CHECK-NEXT:    [[OR:%.*]] = xor i32 %a, %b
@@ -630,6 +633,18 @@ define i32 @test44(i32 %a, i32 %b) {
   %xor = xor i32 %a, %b
   %neg = xor i32 %b, -1
   %and = and i32 %a, %neg
+  %or = or i32 %xor, %and
+  ret i32 %or
+}
+
+define i32 @test44_commuted_and(i32 %a, i32 %b) {
+; CHECK-LABEL: @test44_commuted_and(
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 %a, %b
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %neg = xor i32 %b, -1
+  %and = and i32 %neg, %a
   %or = or i32 %xor, %and
   ret i32 %or
 }

@@ -14,6 +14,7 @@
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {
+#include "AMDGPUPTNote.h"
 
 class DataLayout;
 class Function;
@@ -24,6 +25,9 @@ class Module;
 class Type;
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
+protected:
+  MCContext &getContext() const { return Streamer.getContext(); }
+
 public:
   AMDGPUTargetStreamer(MCStreamer &S);
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
@@ -42,7 +46,9 @@ public:
 
   virtual void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) = 0;
 
-  virtual void emitRuntimeMetadata(Module &M) = 0;
+  virtual void EmitRuntimeMetadata(Module &M) = 0;
+
+  virtual void EmitRuntimeMetadata(StringRef Metadata) = 0;
 };
 
 class AMDGPUTargetAsmStreamer : public AMDGPUTargetStreamer {
@@ -64,11 +70,17 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void emitRuntimeMetadata(Module &M) override {}
+  void EmitRuntimeMetadata(Module &M) override;
+
+  void EmitRuntimeMetadata(StringRef Metadata) override;
 };
 
 class AMDGPUTargetELFStreamer : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
+
+  void EmitAMDGPUNote(const MCExpr* DescSize,
+                      AMDGPU::PT_NOTE::NoteType Type,
+                      std::function<void(MCELFStreamer &)> EmitDesc);
 
 public:
   AMDGPUTargetELFStreamer(MCStreamer &S);
@@ -90,7 +102,9 @@ public:
 
   void EmitAMDGPUHsaProgramScopeGlobal(StringRef GlobalName) override;
 
-  void emitRuntimeMetadata(Module &M) override;
+  void EmitRuntimeMetadata(Module &M) override;
+
+  void EmitRuntimeMetadata(StringRef Metadata) override;
 };
 
 }

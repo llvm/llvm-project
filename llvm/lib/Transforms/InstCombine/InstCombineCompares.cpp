@@ -3030,37 +3030,90 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   return nullptr;
 }
 
-/// Fold icmp Pred smin(X, Y), X.
-static Instruction *foldICmpWithSMin(ICmpInst &Cmp) {
+/// Fold icmp Pred min|max(X, Y), X.
+static Instruction *foldICmpWithMinMax(ICmpInst &Cmp) {
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Value *Op0 = Cmp.getOperand(0);
   Value *X = Cmp.getOperand(1);
 
-  // TODO: This should be expanded to handle smax/umax/umin.
-
-  // Canonicalize minimum operand to LHS of the icmp.
-  if (match(X, m_c_SMin(m_Specific(Op0), m_Value()))) {
+  // Canonicalize minimum or maximum operand to LHS of the icmp.
+  if (match(X, m_c_SMin(m_Specific(Op0), m_Value())) ||
+      match(X, m_c_SMax(m_Specific(Op0), m_Value())) ||
+      match(X, m_c_UMin(m_Specific(Op0), m_Value())) ||
+      match(X, m_c_UMax(m_Specific(Op0), m_Value()))) {
     std::swap(Op0, X);
     Pred = Cmp.getSwappedPredicate();
   }
 
   Value *Y;
-  if (!match(Op0, m_c_SMin(m_Specific(X), m_Value(Y))))
+  if (match(Op0, m_c_SMin(m_Specific(X), m_Value(Y)))) {
+    // smin(X, Y)  == X --> X s<= Y
+    // smin(X, Y) s>= X --> X s<= Y
+    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SGE)
+      return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
+
+    // smin(X, Y) != X --> X s> Y
+    // smin(X, Y) s< X --> X s> Y
+    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SLT)
+      return new ICmpInst(ICmpInst::ICMP_SGT, X, Y);
+
+    // These cases should be handled in InstSimplify:
+    // smin(X, Y) s<= X --> true
+    // smin(X, Y) s> X --> false
     return nullptr;
+  }
 
-  // smin(X, Y) == X --> X <= Y
-  // smin(X, Y) >= X --> X <= Y
-  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SGE)
-    return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
+  if (match(Op0, m_c_SMax(m_Specific(X), m_Value(Y)))) {
+    // smax(X, Y)  == X --> X s>= Y
+    // smax(X, Y) s<= X --> X s>= Y
+    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLE)
+      return new ICmpInst(ICmpInst::ICMP_SGE, X, Y);
 
-  // smin(X, Y) != X --> X > Y
-  // smin(X, Y) <  X --> X > Y
-  if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SLT)
-    return new ICmpInst(ICmpInst::ICMP_SGT, X, Y);
+    // smax(X, Y) != X --> X s< Y
+    // smax(X, Y) s> X --> X s< Y
+    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SGT)
+      return new ICmpInst(ICmpInst::ICMP_SLT, X, Y);
 
-  // These cases should be handled in InstSimplify:
-  // smin(X, Y) <= X --> true
-  // smin(X, Y) > X --> false
+    // These cases should be handled in InstSimplify:
+    // smax(X, Y) s>= X --> true
+    // smax(X, Y) s< X --> false
+    return nullptr;
+  }
+
+  if (match(Op0, m_c_UMin(m_Specific(X), m_Value(Y)))) {
+    // umin(X, Y)  == X --> X u<= Y
+    // umin(X, Y) u>= X --> X u<= Y
+    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_UGE)
+      return new ICmpInst(ICmpInst::ICMP_ULE, X, Y);
+
+    // umin(X, Y) != X --> X u> Y
+    // umin(X, Y) u< X --> X u> Y
+    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_ULT)
+      return new ICmpInst(ICmpInst::ICMP_UGT, X, Y);
+
+    // These cases should be handled in InstSimplify:
+    // umin(X, Y) u<= X --> true
+    // umin(X, Y) u> X --> false
+    return nullptr;
+  }
+
+  if (match(Op0, m_c_UMax(m_Specific(X), m_Value(Y)))) {
+    // umax(X, Y)  == X --> X u>= Y
+    // umax(X, Y) u<= X --> X u>= Y
+    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_ULE)
+      return new ICmpInst(ICmpInst::ICMP_UGE, X, Y);
+
+    // umax(X, Y) != X --> X u< Y
+    // umax(X, Y) u> X --> X u< Y
+    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_UGT)
+      return new ICmpInst(ICmpInst::ICMP_ULT, X, Y);
+
+    // These cases should be handled in InstSimplify:
+    // umax(X, Y) u>= X --> true
+    // umax(X, Y) u< X --> false
+    return nullptr;
+  }
+
   return nullptr;
 }
 
@@ -4311,7 +4364,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpBinOp(I))
     return Res;
 
-  if (Instruction *Res = foldICmpWithSMin(I))
+  if (Instruction *Res = foldICmpWithMinMax(I))
     return Res;
 
   {

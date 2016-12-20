@@ -25,9 +25,9 @@ target triple = "x86_64-pc-windows-msvc19.0.0"
 !1 = !DIFile(filename: "t.c", directory: "foo")
 !2 = !{}
 !3 = !{!4, !6}
-!4 = distinct !DIGlobalVariable(name: "_OptionsStorage", scope: !0, file: !1, line: 3, type: !5, isLocal: true, isDefinition: true)
+!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "_OptionsStorage", scope: !0, file: !1, line: 3, type: !5, isLocal: true, isDefinition: true))
 !5 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
-!6 = distinct !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 4, type: !5, isLocal: true, isDefinition: true)
+!6 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 4, type: !5, isLocal: true, isDefinition: true))
 
 !35 = !{i32 2, !"CodeView", i32 1}
 !36 = !{i32 2, !"Debug Info Version", i32 3}

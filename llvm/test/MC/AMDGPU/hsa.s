@@ -14,6 +14,8 @@
 // ELF: 0020: 03000000 414D4400 04000700 07000000
 // ELF: 0030: 00000000 00000000 414D4400 414D4447
 // ELF: 0040: 50550000
+// We can't check binary representation of metadata note: it is different on
+// Windows and Linux because of carriage return on Windows
 
 // ELF: Symbol {
 // ELF: Name: amd_kernel_code_t_minimal
@@ -35,9 +37,28 @@
 .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 // ASM: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 
+.amdgpu_runtime_metadata
+    {
+        amd.MDVersion: [ 2, 0 ]
+        amd.Kernels: [
+            { amd.KernelName: amd_kernel_code_t_test_all },
+            { amd.KernelName: amd_kernel_code_t_minimal }
+        ]
+    }
+.end_amdgpu_runtime_metadata
+
+// ASM: .amdgpu_runtime_metadata
+// ASM:     {
+// ASM:         amd.MDVersion: [ 2, 0 ]
+// ASM:         amd.Kernels: [
+// ASM:             { amd.KernelName: amd_kernel_code_t_test_all },
+// ASM:             { amd.KernelName: amd_kernel_code_t_minimal }
+// ASM:         ]
+// ASM:     }
+// ASM: .end_amdgpu_runtime_metadata
+
 .amdgpu_hsa_kernel amd_kernel_code_t_test_all
 .amdgpu_hsa_kernel amd_kernel_code_t_minimal
-
 
 amd_kernel_code_t_test_all:
 ; Test all amd_kernel_code_t members with non-default values.

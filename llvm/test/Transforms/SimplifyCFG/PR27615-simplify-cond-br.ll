@@ -46,13 +46,13 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #4
 !1 = !DIFile(filename: "csmith107.i.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4, !6, !10}
-!4 = !DIGlobalVariable(name: "a", scope: null, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true)
+!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", scope: null, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true))
 !5 = !DIBasicType(name: "int", size: 16, align: 16, encoding: DW_ATE_signed)
-!6 = !DIGlobalVariable(name: "b", scope: null, file: !1, line: 3, type: !7, isLocal: false, isDefinition: true)
+!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b", scope: null, file: !1, line: 3, type: !7, isLocal: false, isDefinition: true))
 !7 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !1, line: 1, baseType: !8)
 !8 = !DIDerivedType(tag: DW_TAG_typedef, name: "__u32_t", file: !1, baseType: !9)
 !9 = !DIBasicType(name: "unsigned long", size: 32, align: 16, encoding: DW_ATE_unsigned)
-!10 = !DIGlobalVariable(name: "c", scope: null, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true)
+!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c", scope: null, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true))
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 16, align: 16)
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 2, !"Debug Info Version", i32 3}

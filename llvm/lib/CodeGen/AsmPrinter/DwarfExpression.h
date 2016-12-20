@@ -215,6 +215,10 @@ public:
   void EmitUnsigned(uint64_t Value) override;
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        unsigned MachineReg) override;
+  DIELoc *finalize() {
+    DwarfExpression::finalize();
+    return &DIE;
+  }
 };
 }
 

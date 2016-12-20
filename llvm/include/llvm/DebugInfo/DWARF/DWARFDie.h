@@ -285,6 +285,18 @@ public:
   /// \returns anm optional absolute section offset value for the attribute.
   Optional<uint64_t> getRangesBaseAttribute() const;
   
+  /// Get the DW_AT_high_pc attribute value as an address.
+  ///
+  /// In DWARF version 4 and later the high PC can be encoded as an offset from
+  /// the DW_AT_low_pc. This function takes care of extracting the value as an
+  /// address or offset and adds it to the low PC if needed and returns the
+  /// value as an optional in case the DIE doesn't have a DW_AT_high_pc
+  /// attribute.
+  ///
+  /// \param LowPC the low PC that might be needed to calculate the high PC.
+  /// \returns an optional address value for the attribute.
+  Optional<uint64_t> getHighPC(uint64_t LowPC) const;
+
   /// Retrieves DW_AT_low_pc and DW_AT_high_pc from CU.
   /// Returns true if both attributes are present.
   bool getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const;

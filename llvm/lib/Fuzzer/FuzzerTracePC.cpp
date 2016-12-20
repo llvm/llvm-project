@@ -20,6 +20,7 @@
 #include "FuzzerTracePC.h"
 #include "FuzzerValueBitMap.h"
 #include <map>
+#include <sanitizer/coverage_interface.h>
 #include <set>
 #include <sstream>
 
@@ -186,6 +187,10 @@ void TracePC::PrintCoverage() {
     for (auto &File : UncoveredFiles)
       Printf("UNCOVERED_FILE: %s\n", File.c_str());
   }
+}
+
+void TracePC::DumpCoverage() {
+  __sanitizer_dump_coverage(PCs, GetNumPCs());
 }
 
 // Value profile.

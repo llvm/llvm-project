@@ -103,12 +103,25 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return Mapping;
   }
 
-  if (Opc == TargetOpcode::G_ADD) {
-    unsigned NumOperands = MI.getNumOperands();
-    ValueMapping *OperandsMapping = &ARM::ValueMappings[0];
-    return InstructionMapping{DefaultMappingID, /*Cost=*/1, OperandsMapping,
-                              NumOperands};
+  using namespace TargetOpcode;
+
+  unsigned NumOperands = MI.getNumOperands();
+  const ValueMapping *OperandsMapping = &ARM::ValueMappings[0];
+
+  switch (Opc) {
+  case G_ADD:
+  case G_LOAD:
+    // FIXME: We're abusing the fact that everything lives in a GPR for now; in
+    // the real world we would use different mappings.
+    OperandsMapping = &ARM::ValueMappings[0];
+    break;
+  case G_FRAME_INDEX:
+    OperandsMapping = getOperandsMapping({&ARM::ValueMappings[0], nullptr});
+    break;
+  default:
+    return InstructionMapping{};
   }
 
-  return InstructionMapping{};
+  return InstructionMapping{DefaultMappingID, /*Cost=*/1, OperandsMapping,
+                            NumOperands};
 }

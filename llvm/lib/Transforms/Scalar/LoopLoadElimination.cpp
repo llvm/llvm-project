@@ -517,6 +517,11 @@ public:
         return false;
       }
 
+      if (!L->isLoopSimplifyForm()) {
+        DEBUG(dbgs() << "Loop is not is loop-simplify form");
+        return false;
+      }
+
       // Point of no-return, start the transformation.  First, version the loop
       // if necessary.
 

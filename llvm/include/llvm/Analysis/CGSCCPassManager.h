@@ -331,7 +331,9 @@ public:
                             InvalidSCCSet, nullptr,   nullptr};
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::RefSCC &InitialRC : CG.postorder_ref_sccs()) {
+    for (auto RCI = CG.postorder_ref_scc_begin(),
+              RCE = CG.postorder_ref_scc_end();
+         RCI != RCE;) {
       assert(RCWorklist.empty() &&
              "Should always start with an empty RefSCC worklist");
       // The postorder_ref_sccs range we are walking is lazily constructed, so
@@ -342,7 +344,10 @@ public:
       // to update as the program is simplified and allows us to have greater
       // cache locality as forming a RefSCC touches all the parts of all the
       // functions within that RefSCC.
-      RCWorklist.insert(&InitialRC);
+      //
+      // We also eagerly increment the iterator to the next position because
+      // the CGSCC passes below may delete the current RefSCC.
+      RCWorklist.insert(&*RCI++);
 
       do {
         LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
@@ -419,6 +424,10 @@ public:
               dbgs() << "Re-running SCC passes after a refinement of the "
                         "current SCC: "
                      << *UR.UpdatedC << "\n";
+
+            // Note that both `C` and `RC` may at this point refer to deleted,
+            // invalid SCC and RefSCCs respectively. But we will short circuit
+            // the processing when we check them in the loop above.
           } while (UR.UpdatedC);
 
         } while (!CWorklist.empty());

@@ -116,7 +116,7 @@ attributes #2 = { nounwind readnone }
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DIGlobalVariable(name: "ld_ptr", scope: !1, file: !2, line: 17, type: !5, isLocal: false, isDefinition: true)
+!0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "ld_ptr", scope: !1, file: !2, line: 17, type: !5, isLocal: false, isDefinition: true))
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 4.0.0 (trunk 281495)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "fp128-g.c", directory: "/disk5/chh/Debug/ld.loop")
 !3 = !{}
