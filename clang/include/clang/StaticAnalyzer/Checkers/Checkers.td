@@ -79,6 +79,13 @@ def LocalizabilityOptIn : Package<"localizability">, InPackage<CocoaOptIn>;
 def MPI : Package<"mpi">, InPackage<OptIn>;
 
 def LLVM : Package<"llvm">;
+
+// The APIModeling package is for checkers that model APIs and don't perform
+// any diagnostics. These checkers are always turned on; this package is
+// intended for API modeling that is not controlled by the the target triple.
+def APIModeling : Package<"apiModeling">, Hidden;
+def GoogleAPIModeling : Package<"google">, InPackage<APIModeling>;
+
 def Debug : Package<"debug">;
 
 def CloneDetectionAlpha : Package<"clone">, InPackage<Alpha>, Hidden;
@@ -642,6 +649,17 @@ def LLVMConventionsChecker : Checker<"Conventions">,
   InPackage<LLVM>,
   HelpText<"Check code for LLVM codebase conventions">,
   DescFile<"LLVMConventionsChecker.cpp">;
+
+
+
+//===----------------------------------------------------------------------===//
+// Checkers modeling Google APIs.
+//===----------------------------------------------------------------------===//
+
+def GTestChecker : Checker<"GTest">,
+  InPackage<GoogleAPIModeling>,
+  HelpText<"Model gtest assertion APIs">,
+  DescFile<"GTestChecker.cpp">;
 
 //===----------------------------------------------------------------------===//
 // Debugging checkers (for analyzer development).

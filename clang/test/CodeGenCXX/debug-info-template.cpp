@@ -25,8 +25,9 @@ struct TC {
 int glb;
 void func();
 
-// CHECK: [[TCI]] = distinct !DIGlobalVariable(name: "tci",
-// CHECK-SAME:              type: ![[TCNESTED:[0-9]+]]
+// CHECK: [[TCI]] = !DIGlobalVariableExpression(var: [[TCIV:.*]])
+// CHECK: [[TCIV]] = distinct !DIGlobalVariable(name: "tci",
+// CHECK-SAME:                                  type: ![[TCNESTED:[0-9]+]]
 // CHECK: ![[TCNESTED]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "nested",
 // CHECK-SAME:             scope: ![[TC:[0-9]+]],
 
@@ -83,8 +84,9 @@ TC
 // CHECK: [[TCARG7_3]] = !DITemplateValueParameter(type: [[INT]], value: i32 3)
   3>::nested tci;
 
-// CHECK: [[TCN]] = distinct !DIGlobalVariable(name: "tcn"
-// CHECK-SAME:              type: ![[TCNT:[0-9]+]]
+// CHECK: [[TCN]] = !DIGlobalVariableExpression(var: [[TCNV:.*]])
+// CHECK: [[TCNV]] = distinct !DIGlobalVariable(name: "tcn"
+// CHECK-SAME:                                  type: ![[TCNT:[0-9]+]]
 TC
 // CHECK: ![[TCNT]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "TC<int, -3, nullptr, nullptr, nullptr, nullptr>"
 // CHECK-SAME:             templateParams: [[TCNARGS:![0-9]*]]
@@ -123,8 +125,9 @@ template <template <typename> class tmpl, int &lvr, int &&rvr>
 struct NN {
 };
 
-// CHECK: [[NN]] = distinct !DIGlobalVariable(name: "nn"
-// CHECK-SAME:              type: ![[NNT:[0-9]+]]
+// CHECK: [[NN]] = !DIGlobalVariableExpression(var: [[NNV:.*]])
+// CHECK: [[NNV]] = distinct !DIGlobalVariable(name: "nn"
+// CHECK-SAME:                                 type: ![[NNT:[0-9]+]]
 
 // FIXME: these parameters should probably be rendered as 'glb' rather than
 // '&glb', since they're references, not pointers.

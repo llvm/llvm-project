@@ -3,6 +3,8 @@
 
 typedef void (^bl_t)(local void *);
 
+// N.B. The check here only exists to set BL_GLOBAL
+// COMMON: @block_G = {{.*}}bitcast ([[BL_GLOBAL:[^@]+@__block_literal_global(\.[0-9]+)?]]
 const bl_t block_G = (bl_t) ^ (local void *a) {};
 
 kernel void device_side_enqueue(global int *a, global int *b, int i) {
@@ -122,28 +124,24 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
                  },
                  4294967296L);
 
-
+  // The full type of these expressions are long (and repeated elsewhere), so we
+  // capture it as part of the regex for convenience and clarity.
+  // COMMON: store void ()* bitcast ([[BL_A:[^@]+@__block_literal_global.[0-9]+]] to void ()*), void ()** %block_A
   void (^const block_A)(void) = ^{
     return;
   };
+
+  // COMMON: store void (i8 addrspace(2)*)* bitcast ([[BL_B:[^@]+@__block_literal_global.[0-9]+]] to void (i8 addrspace(2)*)*), void (i8 addrspace(2)*)** %block_B
   void (^const block_B)(local void *) = ^(local void *a) {
     return;
   };
 
-  // COMMON: [[BL:%[0-9]+]] = load void ()*, void ()** %block_A
-  // COMMON: [[BL_I8:%[0-9]+]] = bitcast void ()* [[BL]] to i8*
-  // COMMON: call i32 @__get_kernel_work_group_size_impl(i8* [[BL_I8]])
+  // COMMON: call i32 @__get_kernel_work_group_size_impl(i8* bitcast ([[BL_A]] to i8*))
   unsigned size = get_kernel_work_group_size(block_A);
-  // COMMON: [[BL:%[0-9]+]] = load void (i8 addrspace(2)*)*, void (i8 addrspace(2)*)** %block_B
-  // COMMON: [[BL_I8:%[0-9]+]] = bitcast void (i8 addrspace(2)*)* [[BL]] to i8*
-  // COMMON: call i32 @__get_kernel_work_group_size_impl(i8* [[BL_I8]])
+  // COMMON: call i32 @__get_kernel_work_group_size_impl(i8* bitcast ([[BL_B]] to i8*))
   size = get_kernel_work_group_size(block_B);
-  // COMMON: [[BL:%[0-9]+]] = load void ()*, void ()** %block_A
-  // COMMON: [[BL_I8:%[0-9]+]] = bitcast void ()* [[BL]] to i8*
-  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(i8* [[BL_I8]])
+  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(i8* bitcast ([[BL_A]] to i8*))
   size = get_kernel_preferred_work_group_size_multiple(block_A);
-  // COMMON: [[BL:%[0-9]+]] = load void (i8 addrspace(2)*)*, void (i8 addrspace(2)*)* addrspace(1)* @block_G
-  // COMMON: [[BL_I8:%[0-9]+]] = bitcast void (i8 addrspace(2)*)* [[BL]] to i8*
-  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(i8* [[BL_I8]])
+  // COMMON: call i32 @__get_kernel_preferred_work_group_multiple_impl(i8* bitcast ([[BL_GLOBAL]] to i8*))
   size = get_kernel_preferred_work_group_size_multiple(block_G);
 }

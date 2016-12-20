@@ -288,14 +288,15 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
   // The new function declaration is only missing an empty exception
   // specification "throw()". If the throw() specification came from a
   // function in a system header that has C linkage, just add an empty
-  // exception specification to the "new" declaration. This is an
-  // egregious workaround for glibc, which adds throw() specifications
-  // to many libc functions as an optimization. Unfortunately, that
-  // optimization isn't permitted by the C++ standard, so we're forced
-  // to work around it here.
+  // exception specification to the "new" declaration. Note that C library
+  // implementations are permitted to add these nothrow exception
+  // specifications.
+  //
+  // Likewise if the old function is a builtin.
   if (MissingEmptyExceptionSpecification && NewProto &&
       (Old->getLocation().isInvalid() ||
-       Context.getSourceManager().isInSystemHeader(Old->getLocation())) &&
+       Context.getSourceManager().isInSystemHeader(Old->getLocation()) ||
+       Old->getBuiltinID()) &&
       Old->isExternC()) {
     New->setType(Context.getFunctionType(
         NewProto->getReturnType(), NewProto->getParamTypes(),
