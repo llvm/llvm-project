@@ -346,6 +346,30 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       defaultEvalCall(Bldr, *I, *Call);
   }
 
+  // If the CFG was contructed without elements for temporary destructors
+  // and the just-called constructor created a temporary object then
+  // stop exploration if the temporary object has a noreturn constructor.
+  // This can lose coverage because the destructor, if it were present
+  // in the CFG, would be called at the end of the full expression or
+  // later (for life-time extended temporaries) -- but avoids infeasible
+  // paths when no-return temporary destructors are used for assertions.
+  const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
+  if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
+      const MemRegion *Target = Call->getCXXThisVal().getAsRegion();
+      if (Target && isa<CXXTempObjectRegion>(Target) &&
+          Call->getDecl()->getParent()->isAnyDestructorNoReturn()) {
+
+      for (ExplodedNode *N : DstEvaluated) {
+        Bldr.generateSink(CE, N, N->getState());
+      }
+
+      // There is no need to run the PostCall and PostStmtchecker
+      // callbacks because we just generated sinks on all nodes in th
+      // frontier.
+      return;
+    }
+ }
+
   ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(DstPostCall, DstEvaluated,
                                              *Call, *this);
