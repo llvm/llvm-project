@@ -163,7 +163,7 @@ def svn_init(svn_root):
     if not os.path.exists(svn_root):
         log('Creating svn staging directory: (%s)' % (svn_root))
         os.makedirs(svn_root)
-        log('This is a one-time initialization, please be patient for a few '
+        log('This is a one-time initialization, please be patient for a few'
             ' minutes...')
         svn(svn_root, 'checkout', '--depth=immediates',
             'https://llvm.org/svn/llvm-project/', '.')

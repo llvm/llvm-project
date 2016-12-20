@@ -1029,6 +1029,15 @@ public:
   bool WasThreadPlanDiscarded(ThreadPlan *plan);
 
   //------------------------------------------------------------------
+  /// Check if we have completed plan to override breakpoint stop reason
+  ///
+  /// @return
+  ///     Returns true if completed plan stack is not empty
+  ///     false otherwise.
+  //------------------------------------------------------------------
+  bool CompletedPlanOverridesBreakpoint();
+                   
+  //------------------------------------------------------------------
   /// Queues a generic thread plan.
   ///
   /// @param[in] plan_sp
@@ -1212,6 +1221,8 @@ public:
   }
 
   void SetStopInfo(const lldb::StopInfoSP &stop_info_sp);
+
+  void ResetStopInfo();
 
   void SetShouldReportStop(Vote vote);
 
