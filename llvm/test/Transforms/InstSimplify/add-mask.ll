@@ -46,7 +46,7 @@ define i1 @test4(i32 %a) {
   %b = load i32, i32* @B
   %b.and = and i32 %b, 1
   %b.cnd = icmp eq i32 %b.and, 1
-  call void @llvm.assume(i1 %b.cnd) [ "affected"(i32 %b.and, i32 %b) ]
+  call void @llvm.assume(i1 %b.cnd)
 
   %rhs = add i32 %a, %b
   %and = and i32 %a, %rhs

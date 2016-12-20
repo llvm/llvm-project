@@ -4383,31 +4383,33 @@ defm VMAXCSDZ : avx512_comutable_binop_s<0x5F, "vmaxsd", f64x_info, X86fmaxc,
                                 SSE_ALU_ITINS_S.d>, XD, VEX_W, EVEX_4V, VEX_LIG,
                                 EVEX_CD8<64, CD8VT1>;
 
-multiclass avx512_fp_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_fp_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                             X86VectorVTInfo _, OpndItins itins,
                             bit IsCommutable> {
-  let ExeDomain = _.ExeDomain in {
+  let ExeDomain = _.ExeDomain, hasSideEffects = 0 in {
   defm rr: AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                   (ins _.RC:$src1, _.RC:$src2), OpcodeStr##_.Suffix,
                   "$src2, $src1", "$src1, $src2",
                   (_.VT (OpNode _.RC:$src1, _.RC:$src2)), itins.rr,
                   IsCommutable>, EVEX_4V;
-  defm rm: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                  (ins _.RC:$src1, _.MemOp:$src2), OpcodeStr##_.Suffix,
-                  "$src2, $src1", "$src1, $src2",
-                  (OpNode _.RC:$src1, (_.LdFrag addr:$src2)), itins.rm>,
-                  EVEX_4V;
-  defm rmb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                   (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr##_.Suffix,
-                   "${src2}"##_.BroadcastStr##", $src1",
-                   "$src1, ${src2}"##_.BroadcastStr,
-                   (OpNode  _.RC:$src1, (_.VT (X86VBroadcast
-                                              (_.ScalarLdFrag addr:$src2)))),
-                   itins.rm>, EVEX_4V, EVEX_B;
+  let mayLoad = 1 in {
+    defm rm: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                    (ins _.RC:$src1, _.MemOp:$src2), OpcodeStr##_.Suffix,
+                    "$src2, $src1", "$src1, $src2",
+                    (OpNode _.RC:$src1, (_.LdFrag addr:$src2)), itins.rm>,
+                    EVEX_4V;
+    defm rmb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                     (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr##_.Suffix,
+                     "${src2}"##_.BroadcastStr##", $src1",
+                     "$src1, ${src2}"##_.BroadcastStr,
+                     (OpNode  _.RC:$src1, (_.VT (X86VBroadcast
+                                                (_.ScalarLdFrag addr:$src2)))),
+                     itins.rm>, EVEX_4V, EVEX_B;
+    }
   }
 }
 
-multiclass avx512_fp_round_packed<bits<8> opc, string OpcodeStr, SDNode OpNodeRnd,
+multiclass avx512_fp_round_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpNodeRnd,
                                   X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain in
   defm rb: AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -4418,7 +4420,7 @@ multiclass avx512_fp_round_packed<bits<8> opc, string OpcodeStr, SDNode OpNodeRn
 }
 
 
-multiclass avx512_fp_sae_packed<bits<8> opc, string OpcodeStr, SDNode OpNodeRnd,
+multiclass avx512_fp_sae_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpNodeRnd,
                                 X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain in
   defm rb: AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -4428,7 +4430,7 @@ multiclass avx512_fp_sae_packed<bits<8> opc, string OpcodeStr, SDNode OpNodeRnd,
                   EVEX_4V, EVEX_B;
 }
 
-multiclass avx512_fp_binop_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_fp_binop_p<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                              Predicate prd, SizeItins itins,
                              bit IsCommutable = 0> {
   let Predicates = [prd] in {
@@ -4493,13 +4495,13 @@ let isCodeGenOnly = 1 in {
   defm VMAXC : avx512_fp_binop_p<0x5F, "vmax", X86fmaxc, HasAVX512,
                                  SSE_ALU_ITINS_P, 1>;
 }
-defm VAND  : avx512_fp_binop_p<0x54, "vand", X86fand, HasDQI,
+defm VAND  : avx512_fp_binop_p<0x54, "vand", null_frag, HasDQI,
                                SSE_ALU_ITINS_P, 1>;
-defm VANDN : avx512_fp_binop_p<0x55, "vandn", X86fandn, HasDQI,
+defm VANDN : avx512_fp_binop_p<0x55, "vandn", null_frag, HasDQI,
                                SSE_ALU_ITINS_P, 0>;
-defm VOR   : avx512_fp_binop_p<0x56, "vor", X86for, HasDQI,
+defm VOR   : avx512_fp_binop_p<0x56, "vor", null_frag, HasDQI,
                                SSE_ALU_ITINS_P, 1>;
-defm VXOR  : avx512_fp_binop_p<0x57, "vxor", X86fxor, HasDQI,
+defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, HasDQI,
                                SSE_ALU_ITINS_P, 1>;
 
 // Patterns catch floating point selects with bitcasted integer logic ops.

@@ -1000,16 +1000,24 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     return false;
 
   if (isBundle()) {
-    // Both instructions are bundles, compare MIs inside the bundle.
+    // We have passed the test above that both instructions have the same
+    // opcode, so we know that both instructions are bundles here. Let's compare
+    // MIs inside the bundle.
+    assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
-    MachineBasicBlock::const_instr_iterator E1 = getParent()->instr_end();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    MachineBasicBlock::const_instr_iterator E2 = Other.getParent()->instr_end();
-    while (++I1 != E1 && I1->isInsideBundle()) {
+    // Loop until we analysed the last intruction inside at least one of the
+    // bundles.
+    while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
+      ++I1;
       ++I2;
-      if (I2 == E2 || !I2->isInsideBundle() || !I1->isIdenticalTo(*I2, Check))
+      if (!I1->isIdenticalTo(*I2, Check))
         return false;
     }
+    // If we've reached the end of just one of the two bundles, but not both,
+    // the instructions are not identical.
+    if (I1->isBundledWithSucc() || I2->isBundledWithSucc())
+      return false;
   }
 
   // Check operands to make sure they match.

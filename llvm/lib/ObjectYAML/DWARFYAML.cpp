@@ -28,6 +28,14 @@ void MappingTraits<DWARFYAML::Data>::mapping(
   IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
   if(!DWARF.ARanges.empty() || !IO.outputting())
     IO.mapOptional("debug_aranges", DWARF.ARanges);
+  if(!DWARF.PubNames.Entries.empty() || !IO.outputting())
+    IO.mapOptional("debug_pubnames", DWARF.PubNames);
+  if(!DWARF.PubTypes.Entries.empty() || !IO.outputting())
+    IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
+  if(!DWARF.GNUPubNames.Entries.empty() || !IO.outputting())
+    IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
+  if(!DWARF.GNUPubTypes.Entries.empty() || !IO.outputting())
+    IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
 }
 
 void MappingTraits<DWARFYAML::Abbrev>::mapping(
@@ -58,6 +66,28 @@ void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
   IO.mapRequired("AddrSize", Range.AddrSize);
   IO.mapRequired("SegSize", Range.SegSize);
   IO.mapRequired("Descriptors", Range.Descriptors);
+}
+
+void MappingTraits<DWARFYAML::PubEntry>::mapping(IO &IO,
+                                                 DWARFYAML::PubEntry &Entry) {
+  IO.mapRequired("DieOffset", Entry.DieOffset);
+  if (reinterpret_cast<DWARFYAML::PubSection *>(IO.getContext())->IsGNUStyle)
+    IO.mapRequired("Descriptor", Entry.Descriptor);
+  IO.mapRequired("Name", Entry.Name);
+}
+
+void MappingTraits<DWARFYAML::PubSection>::mapping(
+    IO &IO, DWARFYAML::PubSection &Section) {
+  auto OldContext = IO.getContext();
+  IO.setContext(&Section);
+
+  IO.mapRequired("Length", Section.Length);
+  IO.mapRequired("Version", Section.Version);
+  IO.mapRequired("UnitOffset", Section.UnitOffset);
+  IO.mapRequired("UnitSize", Section.UnitSize);
+  IO.mapRequired("Entries", Section.Entries);
+
+  IO.setContext(OldContext);
 }
 
 } // namespace llvm::yaml

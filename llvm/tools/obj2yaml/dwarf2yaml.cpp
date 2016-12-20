@@ -67,11 +67,44 @@ void dumpDebugARanges(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
+void dumpPubSection(DWARFContextInMemory &DCtx, DWARFYAML::PubSection &Y,
+                    StringRef Section) {
+  DataExtractor PubSectionData(Section, DCtx.isLittleEndian(), 0);
+  uint32_t Offset = 0;
+  Y.Length = PubSectionData.getU32(&Offset);
+  Y.Version = PubSectionData.getU16(&Offset);
+  Y.UnitOffset = PubSectionData.getU32(&Offset);
+  Y.UnitSize = PubSectionData.getU32(&Offset);
+  while (Offset < Y.Length) {
+    DWARFYAML::PubEntry NewEntry;
+    NewEntry.DieOffset = PubSectionData.getU32(&Offset);
+    if (Y.IsGNUStyle)
+      NewEntry.Descriptor = PubSectionData.getU8(&Offset);
+    NewEntry.Name = PubSectionData.getCStr(&Offset);
+    Y.Entries.push_back(NewEntry);
+  }
+}
+
+void dumpDebugPubSections(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
+  Y.PubNames.IsGNUStyle = false;
+  dumpPubSection(DCtx, Y.PubNames, DCtx.getPubNamesSection());
+
+  Y.PubTypes.IsGNUStyle = false;
+  dumpPubSection(DCtx, Y.PubTypes, DCtx.getPubTypesSection());
+
+  Y.GNUPubNames.IsGNUStyle = true;
+  dumpPubSection(DCtx, Y.GNUPubNames, DCtx.getGnuPubNamesSection());
+
+  Y.GNUPubTypes.IsGNUStyle = true;
+  dumpPubSection(DCtx, Y.GNUPubTypes, DCtx.getGnuPubTypesSection());
+}
+
 std::error_code dwarf2yaml(DWARFContextInMemory &DCtx,
                            DWARFYAML::Data &Y) {
   dumpDebugAbbrev(DCtx, Y);
   dumpDebugStrings(DCtx, Y);
   dumpDebugARanges(DCtx, Y);
+  dumpDebugPubSections(DCtx, Y);
 
   return obj2yaml_error::success;
 }

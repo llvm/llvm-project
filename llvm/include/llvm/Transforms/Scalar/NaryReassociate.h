@@ -81,6 +81,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -94,7 +95,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, DominatorTree *DT_,
+  bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
                ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
                TargetTransformInfo *TTI_);
 
@@ -151,6 +152,7 @@ private:
   // to be an index of GEP.
   bool requiresSignExtension(Value *Index, GetElementPtrInst *GEP);
 
+  AssumptionCache *AC;
   const DataLayout *DL;
   DominatorTree *DT;
   ScalarEvolution *SE;

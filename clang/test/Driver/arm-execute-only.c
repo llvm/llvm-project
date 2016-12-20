@@ -91,8 +91,8 @@
 // RUN:    | FileCheck %s -check-prefix CHECK-EXECUTE-ONLY-LONG-CALLS
 
 //
-// CHECK-NO-EXECUTE-ONLY-NOT: "-arm-execute-only"
-// CHECK-EXECUTE-ONLY: "-arm-execute-only"
+// CHECK-NO-EXECUTE-ONLY-NOT: "-backend-option" "-arm-execute-only"
+// CHECK-EXECUTE-ONLY: "-backend-option" "-arm-execute-only"
 
 // CHECK-EXECUTE-ONLY-NOT-SUPPORTED: error: execute only is not supported for the thumbv6m sub-architecture
 // CHECK-EXECUTE-ONLY-NO-MOVT: error: option '-mexecute-only' cannot be specified with '-mno-movt'

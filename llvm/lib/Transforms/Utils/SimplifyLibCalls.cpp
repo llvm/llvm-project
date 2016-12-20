@@ -461,7 +461,8 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
       unsigned BitWidth = Offset->getType()->getIntegerBitWidth();
       APInt KnownZero(BitWidth, 0);
       APInt KnownOne(BitWidth, 0);
-      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, CI, nullptr);
+      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, nullptr, CI, 
+                       nullptr);
       KnownZero.flipAllBits();
       size_t ArrSize = 
              cast<ArrayType>(GEP->getSourceElementType())->getNumElements();

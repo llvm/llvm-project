@@ -4,6 +4,7 @@
 // RUN: %clang -### -target x86_64-apple-darwin10 --analyze %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN %s
 
 // CHECK-DARWIN: "-analyzer-checker=core"
+// CHECK-DARWIN-SAME: "-analyzer-checker=apiModeling"
 // CHECK-DARWIN-SAME: "-analyzer-checker=unix"
 // CHECK-DARWIN-SAME: "-analyzer-checker=osx"
 // CHECK-DARWIN-SAME: "-analyzer-checker=deadcode"
@@ -21,6 +22,7 @@
 // RUN: %clang -### -target x86_64-unknown-linux --analyze %s 2>&1 | FileCheck --check-prefix=CHECK-LINUX %s
 
 // CHECK-LINUX: "-analyzer-checker=core"
+// CHECK-LINUX-SAME: "-analyzer-checker=apiModeling"
 // CHECK-LINUX-SAME: "-analyzer-checker=unix"
 // CHECK-LINUX-NOT:  "-analyzer-checker=osx"
 // CHECK-LINUX-SAME: "-analyzer-checker=deadcode"
@@ -38,6 +40,7 @@
 // RUN: %clang -### -target x86_64-windows --analyze %s 2>&1 | FileCheck --check-prefix=CHECK-WINDOWS %s
 
 // CHECK-WINDOWS: "-analyzer-checker=core"
+// CHECK-WINDOWS-SAME: "-analyzer-checker=apiModeling"
 // CHECK-WINDOWS-SAME: "-analyzer-checker=unix.API"
 // CHECK-WINDOWS-SAME: "-analyzer-checker=unix.Malloc"
 // CHECK-WINDOWS-SAME: "-analyzer-checker=unix.MallocSizeof"

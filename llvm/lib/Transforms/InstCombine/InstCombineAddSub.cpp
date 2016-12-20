@@ -1035,7 +1035,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyAddInst(LHS, RHS, I.hasNoSignedWrap(),
-                                 I.hasNoUnsignedWrap(), DL, &TLI, &DT))
+                                 I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
    // (A*B)+(A*C) -> A*(B+C) etc
@@ -1154,7 +1154,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   // A+B --> A|B iff A and B have no bits set in common.
-  if (haveNoCommonBitsSet(LHS, RHS, DL, &I, &DT))
+  if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
 
   if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
@@ -1317,7 +1317,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V =
-          SimplifyFAddInst(LHS, RHS, I.getFastMathFlags(), DL, &TLI, &DT))
+          SimplifyFAddInst(LHS, RHS, I.getFastMathFlags(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (isa<Constant>(RHS)) {
@@ -1493,7 +1493,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifySubInst(Op0, Op1, I.hasNoSignedWrap(),
-                                 I.hasNoUnsignedWrap(), DL, &TLI, &DT))
+                                 I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   // (A*B)-(A*C) -> A*(B-C) etc
@@ -1704,7 +1704,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (Value *V =
-          SimplifyFSubInst(Op0, Op1, I.getFastMathFlags(), DL, &TLI, &DT))
+          SimplifyFSubInst(Op0, Op1, I.getFastMathFlags(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   // fsub nsz 0, X ==> fsub nsz -0.0, X

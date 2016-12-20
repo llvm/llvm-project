@@ -46,6 +46,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -203,12 +204,13 @@ static void addBlockAndPredsToSet(BasicBlock *InputBB, BasicBlock *StopBlock,
 
 /// \brief The first part of loop-nestification is to find a PHI node that tells
 /// us how to partition the loops.
-static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT) {
+static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT,
+                                        AssumptionCache *AC) {
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ) {
     PHINode *PN = cast<PHINode>(I);
     ++I;
-    if (Value *V = SimplifyInstruction(PN, DL, nullptr, DT)) {
+    if (Value *V = SimplifyInstruction(PN, DL, nullptr, DT, AC)) {
       // This is a degenerate PHI already, don't modify it!
       PN->replaceAllUsesWith(V);
       PN->eraseFromParent();
@@ -246,7 +248,8 @@ static PHINode *findPHIToPartitionLoops(Loop *L, DominatorTree *DT) {
 ///
 static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
                                 DominatorTree *DT, LoopInfo *LI,
-                                ScalarEvolution *SE, bool PreserveLCSSA) {
+                                ScalarEvolution *SE, bool PreserveLCSSA,
+                                AssumptionCache *AC) {
   // Don't try to separate loops without a preheader.
   if (!Preheader)
     return nullptr;
@@ -255,7 +258,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   BasicBlock *Header = L->getHeader();
   assert(!Header->isEHPad() && "Can't insert backedge to EH pad");
 
-  PHINode *PN = findPHIToPartitionLoops(L, DT);
+  PHINode *PN = findPHIToPartitionLoops(L, DT, AC);
   if (!PN) return nullptr;  // No known way to partition.
 
   // Pull out all predecessors that have varying values in the loop.  This
@@ -498,7 +501,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 /// \brief Simplify one loop and queue further loops for simplification.
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
-                            ScalarEvolution *SE, bool PreserveLCSSA) {
+                            ScalarEvolution *SE, AssumptionCache *AC,
+                            bool PreserveLCSSA) {
   bool Changed = false;
 ReprocessLoop:
 
@@ -592,7 +596,7 @@ ReprocessLoop:
     // common backedge instead.
     if (L->getNumBackEdges() < 8) {
       if (Loop *OuterL =
-              separateNestedLoop(L, Preheader, DT, LI, SE, PreserveLCSSA)) {
+              separateNestedLoop(L, Preheader, DT, LI, SE, PreserveLCSSA, AC)) {
         ++NumNested;
         // Enqueue the outer loop as it should be processed next in our
         // depth-first nest walk.
@@ -624,7 +628,7 @@ ReprocessLoop:
   PHINode *PN;
   for (BasicBlock::iterator I = L->getHeader()->begin();
        (PN = dyn_cast<PHINode>(I++)); )
-    if (Value *V = SimplifyInstruction(PN, DL, nullptr, DT)) {
+    if (Value *V = SimplifyInstruction(PN, DL, nullptr, DT, AC)) {
       if (SE) SE->forgetValue(PN);
       if (!PreserveLCSSA || LI->replacementPreservesLCSSAForm(PN, V)) {
         PN->replaceAllUsesWith(V);
@@ -727,7 +731,8 @@ ReprocessLoop:
 }
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
-                        ScalarEvolution *SE, bool PreserveLCSSA) {
+                        ScalarEvolution *SE, AssumptionCache *AC,
+                        bool PreserveLCSSA) {
   bool Changed = false;
 
   // Worklist maintains our depth-first queue of loops in this nest to process.
@@ -744,7 +749,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               PreserveLCSSA);
+                               AC, PreserveLCSSA);
 
   return Changed;
 }
@@ -759,6 +764,8 @@ namespace {
     bool runOnFunction(Function &F) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<AssumptionCacheTracker>();
+
       // We need loop information to identify the loops...
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addPreserved<DominatorTreeWrapperPass>();
@@ -784,6 +791,7 @@ namespace {
 char LoopSimplify::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
                 "Canonicalize natural loops", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LoopSimplify, "loop-simplify",
@@ -802,6 +810,8 @@ bool LoopSimplify::runOnFunction(Function &F) {
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   ScalarEvolution *SE = SEWP ? &SEWP->getSE() : nullptr;
+  AssumptionCache *AC =
+      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 #ifndef NDEBUG
@@ -816,7 +826,7 @@ bool LoopSimplify::runOnFunction(Function &F) {
 
   // Simplify each loop nest in the function.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= simplifyLoop(*I, DT, LI, SE, PreserveLCSSA);
+    Changed |= simplifyLoop(*I, DT, LI, SE, AC, PreserveLCSSA);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -834,11 +844,12 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   ScalarEvolution *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
+  AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
 
   // FIXME: This pass should verify that the loops on which it's operating
   // are in canonical SSA form, and that the pass itself preserves this form.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= simplifyLoop(*I, DT, LI, SE, true /* PreserveLCSSA */);
+    Changed |= simplifyLoop(*I, DT, LI, SE, AC, true /* PreserveLCSSA */);
 
   // FIXME: We need to invalidate this to avoid PR28400. Is there a better
   // solution?

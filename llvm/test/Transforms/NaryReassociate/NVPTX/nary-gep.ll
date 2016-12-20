@@ -75,10 +75,10 @@ define void @reassociate_gep_assume(float* %a, i32 %i, i32 %j) {
 ; CHECK-LABEL: @reassociate_gep_assume(
   ; assume(j >= 0)
   %cmp = icmp sgt i32 %j, -1
-  call void @llvm.assume(i1 %cmp) [ "affected"(i32 %j) ]
+  call void @llvm.assume(i1 %cmp)
   %1 = add i32 %i, %j
   %cmp2 = icmp sgt i32 %1, -1
-  call void @llvm.assume(i1 %cmp2) [ "affected"(i32 %1) ]
+  call void @llvm.assume(i1 %cmp2)
 
   %idxprom.j = zext i32 %j to i64
   %2 = getelementptr float, float* %a, i64 %idxprom.j

@@ -118,7 +118,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21}
 
-!0 = distinct !DIGlobalVariable(name: "c0", scope: !1, file: !5, line: 19, type: !17, isLocal: false, isDefinition: true)
+!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c0", scope: !1, file: !5, line: 19, type: !17, isLocal: false, isDefinition: true))
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 9ce5220b821054019059c2ac4a9b132c7723832d) (http://llvm.org/git/llvm.git 9a6298be89ce0359b151c0a37af2776a12c69e85)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !10)
 !2 = !DIFile(filename: "test.cpp", directory: "/tmp")
 !3 = !{!4}
@@ -129,7 +129,7 @@ attributes #1 = { nounwind readnone }
 !8 = !DIEnumerator(name: "B", value: 1)
 !9 = !DIEnumerator(name: "C", value: 2)
 !10 = !{!0, !11}
-!11 = distinct !DIGlobalVariable(name: "s", scope: !1, file: !5, line: 21, type: !12, isLocal: false, isDefinition: true, align: 16384)
+!11 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s", scope: !1, file: !5, line: 21, type: !12, isLocal: false, isDefinition: true, align: 16384))
 !12 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !5, line: 1, size: 2048, elements: !13, identifier: "_ZTS1S")
 !13 = !{!14, !16}
 !14 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !12, file: !5, line: 2, baseType: !15, size: 8)

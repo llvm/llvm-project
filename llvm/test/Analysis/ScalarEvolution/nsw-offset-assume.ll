@@ -11,7 +11,7 @@ define void @foo(i32 %no, double* nocapture %d, double* nocapture %q) nounwind {
 entry:
   %n = and i32 %no, 4294967294
   %0 = icmp sgt i32 %n, 0                         ; <i1> [#uses=1]
-  tail call void @llvm.assume(i1 %0) [ "affected"(i32 %n) ]
+  tail call void @llvm.assume(i1 %0)
   br label %bb.nph
 
 bb.nph:                                           ; preds = %entry

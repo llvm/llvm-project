@@ -8,8 +8,9 @@
 
 // !llvm.dbg.cu pulls in globals and their types first.
 // CHECK-NOT: !DIGlobalVariable(name: "c"
-// CHECK: [[X]] = distinct !DIGlobalVariable(name: "x", linkageName: "_ZN6pr96081xE"
-// CHECK-SAME:              type: [[INCARRAYPTR:![0-9]*]]
+// CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:!.*]])
+// CHECK: [[XV]] = distinct !DIGlobalVariable(name: "x", linkageName: "_ZN6pr96081xE"
+// CHECK-SAME:                                type: [[INCARRAYPTR:![0-9]*]]
 // CHECK: [[INCARRAYPTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[INCARRAY:![0-9]+]]
 // CHECK: [[INCARRAY]] = !DICompositeType(tag: DW_TAG_array_type
 // CHECK-NOT:                             line:

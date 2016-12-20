@@ -128,7 +128,7 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !26 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_decl_derived_member.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !11, type: !27, variables: !2)
 !27 = !DISubroutineType(types: !2)
 !28 = !{!29}
-!29 = !DIGlobalVariable(name: "f", line: 8, isLocal: false, isDefinition: true, scope: null, file: !11, type: !4)
+!29 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "f", line: 8, isLocal: false, isDefinition: true, scope: null, file: !11, type: !4))
 !30 = !{i32 2, !"Dwarf Version", i32 4}
 !31 = !{i32 2, !"Debug Info Version", i32 3}
 !32 = !{!"clang version 3.7.0 (trunk 227104) (llvm/trunk 227103)"}

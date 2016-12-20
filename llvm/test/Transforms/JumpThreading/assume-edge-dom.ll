@@ -14,12 +14,12 @@ entry:
 taken:
     %res1 = call i8* @escape()
     %a = icmp eq i8* %res1, null
-    tail call void @llvm.assume(i1 %a) [ "affected"(i8* %res1) ]
+    tail call void @llvm.assume(i1 %a)
     br label %done
 not_taken:
     %res2 = call i8* @escape()
     %b = icmp ne i8* %res2, null
-    tail call void @llvm.assume(i1 %b) [ "affected"(i8* %res2) ]
+    tail call void @llvm.assume(i1 %b)
     br label %done
 
 ; An assume that can be used to simplify this comparison dominates each

@@ -2185,12 +2185,13 @@ void CodeViewDebug::emitDebugInfoForUDTs(
 }
 
 void CodeViewDebug::emitDebugInfoForGlobals() {
-  DenseMap<const DIGlobalVariable *, const GlobalVariable *> GlobalMap;
+  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
+      GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
-    SmallVector<MDNode *, 1> MDs;
-    GV.getMetadata(LLVMContext::MD_dbg, MDs);
-    for (MDNode *MD : MDs)
-      GlobalMap[cast<DIGlobalVariable>(MD)] = &GV;
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (const auto *GVE : GVEs)
+      GlobalMap[GVE] = &GV;
   }
 
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
@@ -2202,14 +2203,15 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     // it if we have at least one global to emit.
     switchToDebugSectionForSymbol(nullptr);
     MCSymbol *EndLabel = nullptr;
-    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G))
+    for (const auto *GVE : CU->getGlobalVariables()) {
+      if (const auto *GV = GlobalMap.lookup(GVE))
         if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
             EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
           }
-          emitDebugInfoForGlobal(G, GV, Asm->getSymbol(GV));
+          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+          emitDebugInfoForGlobal(GVE->getVariable(), GV, Asm->getSymbol(GV));
         }
     }
     if (EndLabel)
@@ -2217,15 +2219,16 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
 
     // Second, emit each global that is in a comdat into its own .debug$S
     // section along with its own symbol substream.
-    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G)) {
+    for (const auto *GVE : CU->getGlobalVariables()) {
+      if (const auto *GV = GlobalMap.lookup(GVE)) {
         if (GV->hasComdat()) {
           MCSymbol *GVSym = Asm->getSymbol(GV);
           OS.AddComment("Symbol subsection for " +
                         Twine(GlobalValue::getRealLinkageName(GV->getName())));
           switchToDebugSectionForSymbol(GVSym);
           EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
-          emitDebugInfoForGlobal(G, GV, GVSym);
+          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+          emitDebugInfoForGlobal(GVE->getVariable(), GV, GVSym);
           endCVSubsection(EndLabel);
         }
       }

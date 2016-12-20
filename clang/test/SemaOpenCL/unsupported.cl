@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 struct {
-  int a : 1; // expected-error {{bitfields are not supported in OpenCL}}
+  int a : 1; // expected-error {{bit-fields are not supported in OpenCL}}
 };
 
 void no_vla(int n) {

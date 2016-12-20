@@ -398,7 +398,7 @@ def err_objc_expected_selector_for_getter_setter : Error<
   "expected selector for Objective-C %select{setter|getter}0">;
 def err_objc_property_requires_field_name : Error<
   "property requires fields to be named">;
-def err_objc_property_bitfield : Error<"property name cannot be a bitfield">;
+def err_objc_property_bitfield : Error<"property name cannot be a bit-field">;
 def err_objc_expected_property_attr : Error<"unknown property attribute %0">;
 def err_objc_properties_require_objc2 : Error<
   "properties are an Objective-C 2 feature">;
@@ -726,7 +726,7 @@ def warn_cxx98_compat_nonstatic_member_init : Warning<
   "in-class initialization of non-static data members is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_bitfield_member_init: Error<
-  "bitfield member cannot have an in-class initializer">;
+  "bit-field member cannot have an in-class initializer">;
 def err_incomplete_array_member_init: Error<
   "array bound cannot be deduced from an in-class initializer">;
 

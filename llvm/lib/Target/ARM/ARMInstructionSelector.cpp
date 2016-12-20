@@ -42,8 +42,16 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   (void)RegBank;
   assert(RegBank && "Can't get reg bank for virtual register");
 
-  assert(MRI.getType(DstReg).getSizeInBits() ==
-             RBI.getSizeInBits(I.getOperand(1).getReg(), MRI, TRI) &&
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  (void)DstSize;
+  unsigned SrcReg = I.getOperand(1).getReg();
+  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  (void)SrcSize;
+  assert((DstSize == SrcSize ||
+          // Copies are a means to setup initial types, the number of
+          // bits may not exactly match.
+          (TargetRegisterInfo::isPhysicalRegister(SrcReg) &&
+           DstSize <= SrcSize)) &&
          "Copy with different width?!");
 
   assert(RegBank->getID() == ARM::GPRRegBankID && "Unsupported reg bank");
@@ -75,11 +83,27 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     return true;
   }
 
-  if (I.getOpcode() == TargetOpcode::G_ADD) {
+  MachineInstrBuilder MIB{MF, I};
+
+  using namespace TargetOpcode;
+  switch (I.getOpcode()) {
+  case G_ADD:
     I.setDesc(TII.get(ARM::ADDrr));
-    AddDefaultCC(AddDefaultPred(MachineInstrBuilder(MF, I)));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    AddDefaultCC(AddDefaultPred(MIB));
+    break;
+  case G_FRAME_INDEX:
+    // Add 0 to the given frame index and hope it will eventually be folded into
+    // the user(s).
+    I.setDesc(TII.get(ARM::ADDri));
+    AddDefaultCC(AddDefaultPred(MIB.addImm(0)));
+    break;
+  case G_LOAD:
+    I.setDesc(TII.get(ARM::LDRi12));
+    AddDefaultPred(MIB.addImm(0));
+    break;
+  default:
+    return false;
   }
 
-  return false;
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }

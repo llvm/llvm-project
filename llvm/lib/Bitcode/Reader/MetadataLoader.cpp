@@ -980,41 +980,55 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel,
       if (Record.size() < 11 || Record.size() > 12)
         return error("Invalid record");
 
-      IsDistinct = Record[0];
+      IsDistinct = Record[0] & 1;
+      unsigned Version = Record[0] >> 1;
 
-      // Upgrade old metadata, which stored a global variable reference or a
-      // ConstantInt here.
-      Metadata *Expr = getMDOrNull(Record[9]);
-      uint32_t AlignInBits = 0;
-      if (Record.size() > 11) {
-        if (Record[11] > (uint64_t)std::numeric_limits<uint32_t>::max())
-          return error("Alignment value is too large");
-        AlignInBits = Record[11];
-      }
-      GlobalVariable *Attach = nullptr;
-      if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(Expr)) {
-        if (auto *GV = dyn_cast<GlobalVariable>(CMD->getValue())) {
-          Attach = GV;
-          Expr = nullptr;
-        } else if (auto *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
-          Expr = DIExpression::get(Context,
-                                   {dwarf::DW_OP_constu, CI->getZExtValue(),
-                                    dwarf::DW_OP_stack_value});
-        } else {
-          Expr = nullptr;
+      if (Version == 1) {
+        MetadataList.assignValue(
+            GET_OR_DISTINCT(DIGlobalVariable,
+                            (Context, getMDOrNull(Record[1]),
+                             getMDString(Record[2]), getMDString(Record[3]),
+                             getMDOrNull(Record[4]), Record[5],
+                             getDITypeRefOrNull(Record[6]), Record[7],
+                             Record[8], getMDOrNull(Record[10]), Record[11])),
+            NextMetadataNo++);
+      } else if (Version == 0) {
+        // Upgrade old metadata, which stored a global variable reference or a
+        // ConstantInt here.
+        Metadata *Expr = getMDOrNull(Record[9]);
+        uint32_t AlignInBits = 0;
+        if (Record.size() > 11) {
+          if (Record[11] > (uint64_t)std::numeric_limits<uint32_t>::max())
+            return error("Alignment value is too large");
+          AlignInBits = Record[11];
         }
-      }
+        GlobalVariable *Attach = nullptr;
+        if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(Expr)) {
+          if (auto *GV = dyn_cast<GlobalVariable>(CMD->getValue())) {
+            Attach = GV;
+            Expr = nullptr;
+          } else if (auto *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
+            Expr = DIExpression::get(Context,
+                                     {dwarf::DW_OP_constu, CI->getZExtValue(),
+                                      dwarf::DW_OP_stack_value});
+          } else {
+            Expr = nullptr;
+          }
+        }
+        DIGlobalVariable *DGV = GET_OR_DISTINCT(
+            DIGlobalVariable,
+            (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
+             getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
+             getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+             getMDOrNull(Record[10]), AlignInBits));
 
-      DIGlobalVariable *DGV = GET_OR_DISTINCT(
-          DIGlobalVariable,
-          (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
-           getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-           getDITypeRefOrNull(Record[6]), Record[7], Record[8], Expr,
-           getMDOrNull(Record[10]), AlignInBits));
-      MetadataList.assignValue(DGV, NextMetadataNo++);
-
-      if (Attach)
-        Attach->addDebugInfo(DGV);
+        auto *DGVE =
+            DIGlobalVariableExpression::getDistinct(Context, DGV, Expr);
+        MetadataList.assignValue(DGVE, NextMetadataNo++);
+        if (Attach)
+          Attach->addDebugInfo(DGVE);
+      } else
+        return error("Invalid record");
 
       break;
     }
@@ -1062,6 +1076,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel,
           GET_OR_DISTINCT(DIExpression,
                           (Context, makeArrayRef(Record).slice(1))),
           NextMetadataNo++);
+      break;
+    }
+    case bitc::METADATA_GLOBAL_VAR_EXPR: {
+      if (Record.size() != 3)
+        return error("Invalid record");
+
+      IsDistinct = Record[0];
+      MetadataList.assignValue(GET_OR_DISTINCT(DIGlobalVariableExpression,
+                                               (Context, getMDOrNull(Record[1]),
+                                                getMDOrNull(Record[2]))),
+                               NextMetadataNo++);
       break;
     }
     case bitc::METADATA_OBJC_PROPERTY: {

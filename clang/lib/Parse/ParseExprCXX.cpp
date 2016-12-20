@@ -902,6 +902,8 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           SourceLocation StartLoc = Tok.getLocation();
           InMessageExpressionRAIIObject MaybeInMessageExpression(*this, true);
           Init = ParseInitializer();
+          if (!Init.isInvalid())
+            Init = Actions.CorrectDelayedTyposInExpr(Init.get());
 
           if (Tok.getLocation() != StartLoc) {
             // Back out the lexing of the token after the initializer.
