@@ -55,15 +55,12 @@ public:
 
   FileID getFileID() const { return ID; }
 
-  StringRef getFileName() const { return FileName; }
-
   ArrayRef<CharSourceRange> getCharRanges() const { return CharRanges; }
 
   const SourceManager &getSourceManager() const { return SM; }
 
 private:
   FileID ID;
-  StringRef FileName;
   SmallVector<CharSourceRange, 8> CharRanges;
   SourceManager &SM;
 

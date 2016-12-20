@@ -16,6 +16,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -250,6 +251,7 @@ public:
   const TargetLibraryInfo &TLI;
   const TargetTransformInfo &TTI;
   DominatorTree &DT;
+  AssumptionCache &AC;
   MemorySSA *MSSA;
   typedef RecyclingAllocator<
       BumpPtrAllocator, ScopedHashTableVal<SimpleValue, Value *>> AllocatorTy;
@@ -312,8 +314,8 @@ public:
 
   /// \brief Set up the EarlyCSE runner for a particular function.
   EarlyCSE(const TargetLibraryInfo &TLI, const TargetTransformInfo &TTI,
-           DominatorTree &DT, MemorySSA *MSSA)
-      : TLI(TLI), TTI(TTI), DT(DT), MSSA(MSSA), CurrentGeneration(0) {}
+           DominatorTree &DT, AssumptionCache &AC, MemorySSA *MSSA)
+      : TLI(TLI), TTI(TTI), DT(DT), AC(AC), MSSA(MSSA), CurrentGeneration(0) {}
 
   bool run();
 
@@ -670,7 +672,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
-    if (Value *V = SimplifyInstruction(Inst, DL, &TLI, &DT)) {
+    if (Value *V = SimplifyInstruction(Inst, DL, &TLI, &DT, &AC)) {
       DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V << '\n');
       bool Killed = false;
       if (!Inst->use_empty()) {
@@ -956,10 +958,11 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(TLI, TTI, DT, MSSA);
+  EarlyCSE CSE(TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1001,15 +1004,17 @@ public:
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(TLI, TTI, DT, MSSA);
+    EarlyCSE CSE(TLI, TTI, DT, AC, MSSA);
 
     return CSE.run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -1031,6 +1036,7 @@ char EarlyCSELegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(EarlyCSELegacyPass, "early-cse", "Early CSE", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(EarlyCSELegacyPass, "early-cse", "Early CSE", false, false)
@@ -1051,6 +1057,7 @@ FunctionPass *llvm::createEarlyCSEPass(bool UseMemorySSA) {
 INITIALIZE_PASS_BEGIN(EarlyCSEMemSSALegacyPass, "early-cse-memssa",
                       "Early CSE w/ MemorySSA", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)

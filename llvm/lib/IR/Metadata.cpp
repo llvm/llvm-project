@@ -1419,9 +1419,15 @@ void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
     // If an offset adjustment was specified we need to modify the DIExpression
     // to prepend the adjustment:
     // !DIExpression(DW_OP_plus, Offset, [original expr])
+    auto *Attachment = MD.second;
     if (Offset != 0 && MD.first == LLVMContext::MD_dbg) {
-      DIGlobalVariable *GV = cast<DIGlobalVariable>(MD.second);
-      DIExpression *E = GV->getExpr();
+      DIGlobalVariable *GV = dyn_cast<DIGlobalVariable>(Attachment);
+      DIExpression *E = nullptr;
+      if (!GV) {
+        auto *GVE = cast<DIGlobalVariableExpression>(Attachment);
+        GV = GVE->getVariable();
+        E = GVE->getExpression();
+      }
       ArrayRef<uint64_t> OrigElements;
       if (E)
         OrigElements = E->getElements();
@@ -1429,9 +1435,10 @@ void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
       Elements[0] = dwarf::DW_OP_plus;
       Elements[1] = Offset;
       std::copy(OrigElements.begin(), OrigElements.end(), Elements.begin() + 2);
-      GV->replaceExpr(DIExpression::get(getContext(), Elements));
+      E = DIExpression::get(getContext(), Elements);
+      Attachment = DIGlobalVariableExpression::get(getContext(), GV, E);
     }
-    addMetadata(MD.first, *MD.second);
+    addMetadata(MD.first, *Attachment);
   }
 }
 
@@ -1452,14 +1459,14 @@ DISubprogram *Function::getSubprogram() const {
   return cast_or_null<DISubprogram>(getMetadata(LLVMContext::MD_dbg));
 }
 
-void GlobalVariable::addDebugInfo(DIGlobalVariable *GV) {
+void GlobalVariable::addDebugInfo(DIGlobalVariableExpression *GV) {
   addMetadata(LLVMContext::MD_dbg, *GV);
 }
 
 void GlobalVariable::getDebugInfo(
-    SmallVectorImpl<DIGlobalVariable *> &GVs) const {
+    SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const {
   SmallVector<MDNode *, 1> MDs;
   getMetadata(LLVMContext::MD_dbg, MDs);
   for (MDNode *MD : MDs)
-    GVs.push_back(cast<DIGlobalVariable>(MD));
+    GVs.push_back(cast<DIGlobalVariableExpression>(MD));
 }

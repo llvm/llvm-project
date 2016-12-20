@@ -4120,6 +4120,8 @@ static SourceLocation getLocationFromExpr(const Expr *E) {
   return E->getLocStart();
 }
 
+extern "C" {
+
 unsigned clang_visitChildren(CXCursor parent,
                              CXCursorVisitor visitor,
                              CXClientData client_data) {
@@ -5382,6 +5384,8 @@ CXSourceLocation clang_getCursorLocation(CXCursor C) {
 
   return cxloc::translateSourceLocation(getCursorContext(C), Loc);
 }
+
+} // end extern "C"
 
 CXCursor cxcursor::getCursor(CXTranslationUnit TU, SourceLocation SLoc) {
   assert(TU);

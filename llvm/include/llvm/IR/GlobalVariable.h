@@ -20,6 +20,7 @@
 #ifndef LLVM_IR_GLOBALVARIABLE_H
 #define LLVM_IR_GLOBALVARIABLE_H
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalObject.h"
@@ -31,10 +32,11 @@
 namespace llvm {
 
 class Constant;
-class DIGlobalVariable;
 class Module;
 
 template <typename ValueSubClass> class SymbolTableListTraits;
+class DIGlobalVariable;
+class DIGlobalVariableExpression;
 
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
@@ -170,8 +172,11 @@ public:
   /// drops not only the reference to the initializer but also to any metadata.
   void dropAllReferences();
 
-  void addDebugInfo(DIGlobalVariable *GV);
-  void getDebugInfo(SmallVectorImpl<DIGlobalVariable *> &GVs) const;
+  /// Attach a DIGlobalVariableExpression.
+  void addDebugInfo(DIGlobalVariableExpression *GV);
+
+  /// Fill the vector with all debug info attachements.
+  void getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *V) {

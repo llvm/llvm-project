@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
@@ -108,6 +109,7 @@ private:
   MemoryDependenceResults *MD;
   DominatorTree *DT;
   const TargetLibraryInfo *TLI;
+  AssumptionCache *AC;
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE;
 
@@ -133,7 +135,7 @@ private:
   typedef SmallVector<gvn::AvailableValueInBlock, 64> AvailValInBlkVect;
   typedef SmallVector<BasicBlock *, 64> UnavailBlkVect;
 
-  bool runImpl(Function &F, DominatorTree &RunDT,
+  bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                MemoryDependenceResults *RunMD, LoopInfo *LI,
                OptimizationRemarkEmitter *ORE);

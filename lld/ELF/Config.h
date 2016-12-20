@@ -10,9 +10,9 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
-#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ELF.h"
 
 #include <vector>
@@ -34,8 +34,8 @@ enum ELFKind {
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
-// For --discard-{all,locals,none}.
-enum class DiscardPolicy { Default, All, Locals, None };
+// For --discard-{all,locals,none} and --retain-symbols-file.
+enum class DiscardPolicy { Default, All, Locals, RetainFile, None };
 
 // For --strip-{all,debug}.
 enum class StripPolicy { None, All, Debug };
@@ -72,7 +72,6 @@ struct VersionDefinition {
 struct Configuration {
   InputFile *FirstElf = nullptr;
   uint8_t OSABI = 0;
-  llvm::DenseMap<llvm::CachedHashStringRef, unsigned> SymbolOrderingFile;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
@@ -84,10 +83,12 @@ struct Configuration {
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
+  llvm::StringSet<> RetainSymbolsFile;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> SearchPaths;
+  std::vector<llvm::StringRef> SymbolOrderingFile;
   std::vector<llvm::StringRef> Undefined;
   std::vector<SymbolVersion> VersionScriptGlobals;
   std::vector<SymbolVersion> VersionScriptLocals;

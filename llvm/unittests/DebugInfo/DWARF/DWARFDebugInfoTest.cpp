@@ -792,4 +792,180 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
   TestReferences<4, AddrType>();
 }
 
+template <uint16_t Version, class AddrType> void TestAddresses() {
+  // Test the DWARF APIs related to accessing the DW_AT_low_pc and
+  // DW_AT_high_pc.
+  const uint8_t AddrSize = sizeof(AddrType);
+  const bool SupportsHighPCAsOffset = Version >= 4;
+  initLLVMIfNeeded();
+  Triple Triple = getHostTripleForAddrSize(AddrSize);
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  if (HandleExpectedError(ExpectedDG))
+    return;
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  dwarfgen::DIE CUDie = CU.getUnitDIE();
+  
+  CUDie.addAttribute(DW_AT_name, DW_FORM_strp, "/tmp/main.c");
+  CUDie.addAttribute(DW_AT_language, DW_FORM_data2, DW_LANG_C);
+  
+  // Create a subprogram DIE with no low or high PC.
+  dwarfgen::DIE SubprogramNoPC = CUDie.addChild(DW_TAG_subprogram);
+  SubprogramNoPC.addAttribute(DW_AT_name, DW_FORM_strp, "no_pc");
+
+  // Create a subprogram DIE with a low PC only.
+  dwarfgen::DIE SubprogramLowPC = CUDie.addChild(DW_TAG_subprogram);
+  SubprogramLowPC.addAttribute(DW_AT_name, DW_FORM_strp, "low_pc");
+  const uint64_t ActualLowPC = 0x1000;
+  const uint64_t ActualHighPC = 0x2000;
+  const uint64_t ActualHighPCOffset = ActualHighPC - ActualLowPC;
+  SubprogramLowPC.addAttribute(DW_AT_low_pc, DW_FORM_addr, ActualLowPC);
+
+  // Create a subprogram DIE with a low and high PC.
+  dwarfgen::DIE SubprogramLowHighPC = CUDie.addChild(DW_TAG_subprogram);
+  SubprogramLowHighPC.addAttribute(DW_AT_name, DW_FORM_strp, "low_high_pc");
+  SubprogramLowHighPC.addAttribute(DW_AT_low_pc, DW_FORM_addr, ActualLowPC);
+  // Encode the high PC as an offset from the low PC if supported.
+  if (SupportsHighPCAsOffset)
+    SubprogramLowHighPC.addAttribute(DW_AT_high_pc, DW_FORM_data4,
+                                     ActualHighPCOffset);
+  else
+    SubprogramLowHighPC.addAttribute(DW_AT_high_pc, DW_FORM_addr, ActualHighPC);
+  
+  StringRef FileBytes = DG->generate();
+  MemoryBufferRef FileBuffer(FileBytes, "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  DWARFContextInMemory DwarfContext(*Obj.get());
+  
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  
+  // Get the compile unit DIE is valid.
+  auto DieDG = U->getUnitDIE(false);
+  EXPECT_TRUE(DieDG.isValid());
+  // DieDG.dump(llvm::outs(), U, UINT32_MAX);
+  
+  uint64_t LowPC, HighPC;
+  Optional<uint64_t> OptU64;
+  // Verify the that our subprogram with no PC value fails appropriately when
+  // asked for any PC values.
+  auto SubprogramDieNoPC = DieDG.getFirstChild();
+  EXPECT_TRUE(SubprogramDieNoPC.isValid());
+  EXPECT_EQ(SubprogramDieNoPC.getTag(), DW_TAG_subprogram);
+  OptU64 = SubprogramDieNoPC.getAttributeValueAsAddress(DW_AT_low_pc);
+  EXPECT_FALSE((bool)OptU64);
+  OptU64 = SubprogramDieNoPC.getAttributeValueAsAddress(DW_AT_high_pc);
+  EXPECT_FALSE((bool)OptU64);
+  EXPECT_FALSE(SubprogramDieNoPC.getLowAndHighPC(LowPC, HighPC));
+  OptU64 = SubprogramDieNoPC.getAttributeValueAsAddress(DW_AT_high_pc);
+  EXPECT_FALSE((bool)OptU64);
+  OptU64 = SubprogramDieNoPC.getAttributeValueAsUnsignedConstant(DW_AT_high_pc);
+  EXPECT_FALSE((bool)OptU64);
+  OptU64 = SubprogramDieNoPC.getHighPC(ActualLowPC);
+  EXPECT_FALSE((bool)OptU64);
+  EXPECT_FALSE(SubprogramDieNoPC.getLowAndHighPC(LowPC, HighPC));
+  
+  
+  // Verify the that our subprogram with only a low PC value succeeds when
+  // we ask for the Low PC, but fails appropriately when asked for the high PC
+  // or both low and high PC values.
+  auto SubprogramDieLowPC = SubprogramDieNoPC.getSibling();
+  EXPECT_TRUE(SubprogramDieLowPC.isValid());
+  EXPECT_EQ(SubprogramDieLowPC.getTag(), DW_TAG_subprogram);
+  OptU64 = SubprogramDieLowPC.getAttributeValueAsAddress(DW_AT_low_pc);
+  EXPECT_TRUE((bool)OptU64);
+  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  OptU64 = SubprogramDieLowPC.getAttributeValueAsAddress(DW_AT_high_pc);
+  EXPECT_FALSE((bool)OptU64);
+  OptU64 = SubprogramDieLowPC.getAttributeValueAsUnsignedConstant(DW_AT_high_pc);
+  EXPECT_FALSE((bool)OptU64);
+  OptU64 = SubprogramDieLowPC.getHighPC(ActualLowPC);
+  EXPECT_FALSE((bool)OptU64);
+  EXPECT_FALSE(SubprogramDieLowPC.getLowAndHighPC(LowPC, HighPC));
+
+  
+  // Verify the that our subprogram with only a low PC value succeeds when
+  // we ask for the Low PC, but fails appropriately when asked for the high PC
+  // or both low and high PC values.
+  auto SubprogramDieLowHighPC = SubprogramDieLowPC.getSibling();
+  EXPECT_TRUE(SubprogramDieLowHighPC.isValid());
+  EXPECT_EQ(SubprogramDieLowHighPC.getTag(), DW_TAG_subprogram);
+  OptU64 = SubprogramDieLowHighPC.getAttributeValueAsAddress(DW_AT_low_pc);
+  EXPECT_TRUE((bool)OptU64);
+  EXPECT_EQ(OptU64.getValue(), ActualLowPC);
+  // Get the high PC as an address. This should succeed if the high PC was
+  // encoded as an address and fail if the high PC was encoded as an offset.
+  OptU64 = SubprogramDieLowHighPC.getAttributeValueAsAddress(DW_AT_high_pc);
+  if (SupportsHighPCAsOffset) {
+    EXPECT_FALSE((bool)OptU64);
+  } else {
+    EXPECT_TRUE((bool)OptU64);
+    EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+  }
+  // Get the high PC as an unsigned constant. This should succeed if the high PC
+  // was encoded as an offset and fail if the high PC was encoded as an address.
+  OptU64 = SubprogramDieLowHighPC.getAttributeValueAsUnsignedConstant(
+      DW_AT_high_pc);
+  if (SupportsHighPCAsOffset) {
+    EXPECT_TRUE((bool)OptU64);
+    EXPECT_EQ(OptU64.getValue(), ActualHighPCOffset);
+  } else {
+    EXPECT_FALSE((bool)OptU64);
+  }
+
+  OptU64 = SubprogramDieLowHighPC.getHighPC(ActualLowPC);
+  EXPECT_TRUE((bool)OptU64);
+  EXPECT_EQ(OptU64.getValue(), ActualHighPC);
+
+  EXPECT_TRUE(SubprogramDieLowHighPC.getLowAndHighPC(LowPC, HighPC));
+  EXPECT_EQ(LowPC, ActualLowPC);
+  EXPECT_EQ(HighPC, ActualHighPC);
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version2Addr4Addresses) {
+  // Test that we can decode address values in DWARF32, version 2, with 4 byte
+  // addresses.
+  typedef uint32_t AddrType;
+  TestAddresses<2, AddrType>();
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version2Addr8Addresses) {
+  // Test that we can decode address values in DWARF32, version 2, with 8 byte
+  // addresses.
+  typedef uint64_t AddrType;
+  TestAddresses<2, AddrType>();
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version3Addr4Addresses) {
+  // Test that we can decode address values in DWARF32, version 3, with 4 byte
+  // addresses.
+  typedef uint32_t AddrType;
+  TestAddresses<3, AddrType>();
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version3Addr8Addresses) {
+  // Test that we can decode address values in DWARF32, version 3, with 8 byte
+  // addresses.
+  typedef uint64_t AddrType;
+  TestAddresses<3, AddrType>();
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version4Addr4Addresses) {
+  // Test that we can decode address values in DWARF32, version 4, with 4 byte
+  // addresses.
+  typedef uint32_t AddrType;
+  TestAddresses<4, AddrType>();
+}
+
+TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
+  // Test that we can decode address values in DWARF32, version 4, with 8 byte
+  // addresses.
+  typedef uint64_t AddrType;
+  TestAddresses<4, AddrType>();
+}
+
+
 } // end anonymous namespace

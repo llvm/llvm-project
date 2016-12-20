@@ -397,7 +397,7 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
   for (unsigned DR : Part) {
     MachineInstr *DefI = MRI->getVRegDef(DR);
     int32_t P = profit(DefI);
-    if (P == std::numeric_limits<int>::max())
+    if (P == std::numeric_limits<int>::min())
       return false;
     TotalP += P;
     // Reduce the profitability of splitting induction registers.
@@ -430,7 +430,7 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
       // Splittable instruction.
       SplitNum++;
       int32_t P = profit(UseI);
-      if (P == std::numeric_limits<int>::max())
+      if (P == std::numeric_limits<int>::min())
         return false;
       TotalP += P;
     }

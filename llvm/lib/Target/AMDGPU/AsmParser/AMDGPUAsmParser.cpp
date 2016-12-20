@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -45,6 +46,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -678,6 +681,7 @@ private:
   bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
   bool ParseDirectiveHSACodeObjectVersion();
   bool ParseDirectiveHSACodeObjectISA();
+  bool ParseDirectiveRuntimeMetadata();
   bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
   bool ParseDirectiveAMDKernelCodeT();
   bool ParseSectionDirectiveHSAText();
@@ -1747,6 +1751,46 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   return false;
 }
 
+bool AMDGPUAsmParser::ParseDirectiveRuntimeMetadata() {
+  std::string Metadata;
+  raw_string_ostream MS(Metadata);
+
+  getLexer().setSkipSpace(false);
+
+  bool FoundEnd = false;
+  while (!getLexer().is(AsmToken::Eof)) {
+    while (getLexer().is(AsmToken::Space)) {
+      MS << ' ';
+      Lex();
+    }
+
+    if (getLexer().is(AsmToken::Identifier)) {
+      StringRef ID = getLexer().getTok().getIdentifier();
+      if (ID == ".end_amdgpu_runtime_metadata") {
+        Lex();
+        FoundEnd = true;
+        break;
+      }
+    }
+
+    MS << Parser.parseStringToEndOfStatement()
+       << getContext().getAsmInfo()->getSeparatorString();
+
+    Parser.eatToEndOfStatement();
+  }
+
+  getLexer().setSkipSpace(true);
+
+  if (getLexer().is(AsmToken::Eof) && !FoundEnd)
+    return TokError("expected directive .end_amdgpu_runtime_metadata not found");
+
+  MS.flush();
+
+  getTargetStreamer().EmitRuntimeMetadata(Metadata);
+
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
                                                amd_kernel_code_t &Header) {
   SmallString<40> ErrStr;
@@ -1852,6 +1896,9 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".hsa_code_object_isa")
     return ParseDirectiveHSACodeObjectISA();
+
+  if (IDVal == ".amdgpu_runtime_metadata")
+    return ParseDirectiveRuntimeMetadata();
 
   if (IDVal == ".amd_kernel_code_t")
     return ParseDirectiveAMDKernelCodeT();

@@ -16,6 +16,7 @@
 #define DEBUG_TYPE "loop-data-prefetch"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -65,10 +66,10 @@ namespace {
 /// Loop prefetch implementation class.
 class LoopDataPrefetch {
 public:
-  LoopDataPrefetch(LoopInfo *LI, ScalarEvolution *SE,
+  LoopDataPrefetch(AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE,
                    const TargetTransformInfo *TTI,
                    OptimizationRemarkEmitter *ORE)
-      : LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
+      : AC(AC), LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
 
   bool run();
 
@@ -97,6 +98,7 @@ private:
     return TTI->getMaxPrefetchIterationsAhead();
   }
 
+  AssumptionCache *AC;
   LoopInfo *LI;
   ScalarEvolution *SE;
   const TargetTransformInfo *TTI;
@@ -112,6 +114,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
@@ -130,6 +133,7 @@ public:
 char LoopDataPrefetchLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopDataPrefetchLegacyPass, "loop-data-prefetch",
                       "Loop Data Prefetch", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
@@ -161,11 +165,12 @@ PreservedAnalyses LoopDataPrefetchPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
   ScalarEvolution *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
   OptimizationRemarkEmitter *ORE =
       &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  LoopDataPrefetch LDP(LI, SE, TTI, ORE);
+  LoopDataPrefetch LDP(AC, LI, SE, TTI, ORE);
   bool Changed = LDP.run();
 
   if (Changed) {
@@ -184,12 +189,14 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
 
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  AssumptionCache *AC =
+      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   OptimizationRemarkEmitter *ORE =
       &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   const TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  LoopDataPrefetch LDP(LI, SE, TTI, ORE);
+  LoopDataPrefetch LDP(AC, LI, SE, TTI, ORE);
   return LDP.run();
 }
 
@@ -218,7 +225,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     return MadeChange;
 
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(L, EphValues);
+  CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
   // Calculate the number of iterations ahead to prefetch
   CodeMetrics Metrics;

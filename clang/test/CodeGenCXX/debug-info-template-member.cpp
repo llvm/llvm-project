@@ -19,8 +19,9 @@ inline int add3(int x) {
 }
 
 // The compile unit pulls in the global variables first.
-// CHECK: [[X]] = distinct !DIGlobalVariable(name: "x",
-// CHECK-SAME:              type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
+// CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:.*]])
+// CHECK: [[XV]] = distinct !DIGlobalVariable(name: "x",
+// CHECK-SAME:                                type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
 
 // CHECK: ![[OUTER_FOO_INNER_ID:[0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "inner"{{.*}}, identifier:
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"

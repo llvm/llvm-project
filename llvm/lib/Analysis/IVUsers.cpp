@@ -14,6 +14,7 @@
 
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/LoopPassManager.h"
@@ -40,7 +41,8 @@ IVUsers IVUsersAnalysis::run(Loop &L, LoopAnalysisManager &AM) {
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function *F = L.getHeader()->getParent();
 
-  return IVUsers(&L, FAM.getCachedResult<LoopAnalysis>(*F),
+  return IVUsers(&L, FAM.getCachedResult<AssumptionAnalysis>(*F),
+                 FAM.getCachedResult<LoopAnalysis>(*F),
                  FAM.getCachedResult<DominatorTreeAnalysis>(*F),
                  FAM.getCachedResult<ScalarEvolutionAnalysis>(*F));
 }
@@ -53,6 +55,7 @@ PreservedAnalyses IVUsersPrinterPass::run(Loop &L, LoopAnalysisManager &AM) {
 char IVUsersWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(IVUsersWrapperPass, "iv-users",
                       "Induction Variable Users", false, true)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
@@ -260,11 +263,12 @@ IVStrideUse &IVUsers::AddUser(Instruction *User, Value *Operand) {
   return IVUses.back();
 }
 
-IVUsers::IVUsers(Loop *L, LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE)
-    : L(L), LI(LI), DT(DT), SE(SE), IVUses() {
+IVUsers::IVUsers(Loop *L, AssumptionCache *AC, LoopInfo *LI, DominatorTree *DT,
+                 ScalarEvolution *SE)
+    : L(L), AC(AC), LI(LI), DT(DT), SE(SE), IVUses() {
   // Collect ephemeral values so that AddUsersIfInteresting skips them.
   EphValues.clear();
-  CodeMetrics::collectEphemeralValues(L, EphValues);
+  CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
   // Find all uses of induction variables in this loop, and categorize
   // them by stride.  Start by finding all of the PHI nodes in the header for
@@ -313,6 +317,7 @@ IVUsersWrapperPass::IVUsersWrapperPass() : LoopPass(ID) {
 }
 
 void IVUsersWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -320,11 +325,13 @@ void IVUsersWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool IVUsersWrapperPass::runOnLoop(Loop *L, LPPassManager &LPM) {
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+      *L->getHeader()->getParent());
   auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
-  IU.reset(new IVUsers(L, LI, DT, SE));
+  IU.reset(new IVUsers(L, AC, LI, DT, SE));
   return false;
 }
 

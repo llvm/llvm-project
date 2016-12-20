@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <functional>
+
+#include "lldb/Core/FastDemangle.h"
 #include "lldb/lldb-private.h"
 
 //#define DEBUG_FAILURES 1
@@ -119,7 +122,9 @@ public:
   /// @param storage_size Number of bytes of space available scratch memory
   /// referenced by storage_ptr
 
-  SymbolDemangler(void *storage_ptr, int storage_size) {
+  SymbolDemangler(void *storage_ptr, size_t storage_size,
+                  std::function<void(const char *)> builtins_hook = nullptr)
+      : m_builtins_hook(builtins_hook) {
     // Use up to 1/8th of the provided space for rewrite ranges
     m_rewrite_ranges_size = (storage_size >> 3) / sizeof(BufferRange);
     m_rewrite_ranges = (BufferRange *)storage_ptr;
@@ -509,6 +514,9 @@ private:
   //                ::= u <source-name>    # vendor extended type
 
   const char *TryParseBuiltinType() {
+    if (m_builtins_hook)
+      m_builtins_hook(m_read_ptr);
+
     switch (*m_read_ptr++) {
     case 'v':
       return "void";
@@ -1150,6 +1158,23 @@ private:
     return RewriteTemplateArg(count + 1);
   }
 
+  // <vector-type>
+  // Dv <dimension number> _ <vector type>
+  bool TryParseVectorType() {
+    const int dimension = TryParseNumber();
+    if (dimension == -1)
+      return false;
+
+    if (*m_read_ptr++ != '_')
+      return false;
+
+    char vec_dimens[32] = {'\0'};
+    ::snprintf(vec_dimens, sizeof vec_dimens - 1, " __vector(%d)", dimension);
+    ParseType();
+    Write(vec_dimens);
+    return true;
+  }
+
   // <type> ::= <builtin-type>
   //        ::= <function-type>
   //        ::= <class-enum-type>
@@ -1191,9 +1216,12 @@ private:
         if (!ParseType())
           return false;
         break;
+      case 'v':
+        if (!TryParseVectorType())
+          return false;
+        break;
       case 'T':
       case 't':
-      case 'v':
       default:
 #ifdef DEBUG_FAILURES
         printf("*** Unsupported type: %.3s\n", failed_type);
@@ -2346,6 +2374,7 @@ private:
   char *m_write_ptr;
   int m_next_template_arg_index;
   int m_next_substitute_index;
+  std::function<void(const char *s)> m_builtins_hook;
 };
 
 } // Anonymous namespace
@@ -2358,9 +2387,10 @@ char *FastDemangle(const char *mangled_name) {
   return demangler.GetDemangledCopy(mangled_name);
 }
 
-char *FastDemangle(const char *mangled_name, long mangled_name_length) {
+char *FastDemangle(const char *mangled_name, size_t mangled_name_length,
+                   std::function<void(const char *s)> builtins_hook) {
   char buffer[16384];
-  SymbolDemangler demangler(buffer, sizeof(buffer));
+  SymbolDemangler demangler(buffer, sizeof(buffer), builtins_hook);
   return demangler.GetDemangledCopy(mangled_name, mangled_name_length);
 }
 } // lldb_private namespace

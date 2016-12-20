@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -34,6 +35,7 @@ using namespace llvm;
 STATISTIC(NumSimplified, "Number of redundant instructions simplified");
 
 static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                             AssumptionCache *AC,
                              const TargetLibraryInfo *TLI) {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   L->getUniqueExitBlocks(ExitBlocks);
@@ -75,7 +77,7 @@ static bool SimplifyLoopInst(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
         // Don't bother simplifying unused instructions.
         if (!I->use_empty()) {
-          Value *V = SimplifyInstruction(I, DL, TLI, DT);
+          Value *V = SimplifyInstruction(I, DL, TLI, DT, AC);
           if (V && LI->replacementPreservesLCSSAForm(I, V)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())
@@ -163,13 +165,17 @@ public:
         getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    AssumptionCache *AC =
+        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+            *L->getHeader()->getParent());
     const TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
-    return SimplifyLoopInst(L, DT, LI, TLI);
+    return SimplifyLoopInst(L, DT, LI, AC, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.setPreservesCFG();
     getLoopAnalysisUsage(AU);
@@ -186,10 +192,11 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L,
   // Use getCachedResult because Loop pass cannot trigger a function analysis.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
   auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
+  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
   const auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(*F);
-  assert((LI && TLI) && "Analyses for Loop Inst Simplify not available");
+  assert((LI && AC && TLI) && "Analyses for Loop Inst Simplify not available");
 
-  if (!SimplifyLoopInst(&L, DT, LI, TLI))
+  if (!SimplifyLoopInst(&L, DT, LI, AC, TLI))
     return PreservedAnalyses::all();
 
   return getLoopPassPreservedAnalyses();
@@ -198,6 +205,7 @@ PreservedAnalyses LoopInstSimplifyPass::run(Loop &L,
 char LoopInstSimplifyLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInstSimplifyLegacyPass, "loop-instsimplify",
                       "Simplify instructions in loops", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopInstSimplifyLegacyPass, "loop-instsimplify",

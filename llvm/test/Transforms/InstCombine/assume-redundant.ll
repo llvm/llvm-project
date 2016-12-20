@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z3fooR1s(%struct.s* nocapture readonly dereferenceable(8) %x) #0 {
 
 ; CHECK-LABEL: @_Z3fooR1s
-; CHECK: call void @llvm.assume(i1 %maskcond) [ "affected"(i64 %maskedptr, i64 %ptrint, double* %{{.*}}) ]
+; CHECK: call void @llvm.assume
 ; CHECK-NOT: call void @llvm.assume
 
 entry:

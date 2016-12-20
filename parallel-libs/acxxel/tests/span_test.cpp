@@ -79,12 +79,12 @@ TEST(Span, ArrayConstruction) {
 }
 
 TEST(Span, StdArrayConstruction) {
-  std::array<int, 3> Array{0, 1, 2};
+  std::array<int, 3> Array{{0, 1, 2}};
   acxxel::Span<int> Span(Array);
   EXPECT_EQ(Span.data(), Array.data());
   EXPECT_EQ(static_cast<size_t>(Span.size()), Array.size());
 
-  std::array<const int, 3> ConstArray{0, 1, 2};
+  std::array<const int, 3> ConstArray{{0, 1, 2}};
   acxxel::Span<const int> ConstSpan(ConstArray);
   EXPECT_EQ(ConstSpan.data(), ConstArray.data());
   EXPECT_EQ(static_cast<size_t>(ConstSpan.size()), ConstArray.size());

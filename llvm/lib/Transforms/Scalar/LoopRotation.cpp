@@ -15,6 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -54,14 +55,15 @@ class LoopRotate {
   const unsigned MaxHeaderSize;
   LoopInfo *LI;
   const TargetTransformInfo *TTI;
+  AssumptionCache *AC;
   DominatorTree *DT;
   ScalarEvolution *SE;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
-             const TargetTransformInfo *TTI, DominatorTree *DT,
-             ScalarEvolution *SE)
-      : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), DT(DT), SE(SE) {
+             const TargetTransformInfo *TTI, AssumptionCache *AC,
+             DominatorTree *DT, ScalarEvolution *SE)
+      : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE) {
   }
   bool processLoop(Loop *L);
 
@@ -214,7 +216,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // duplicate blocks inside it.
   {
     SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(L, EphValues);
+    CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
     CodeMetrics Metrics;
     Metrics.analyzeBasicBlock(OrigHeader, *TTI, EphValues);
@@ -307,7 +309,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // With the operands remapped, see if the instruction constant folds or is
     // otherwise simplifyable.  This commonly occurs because the entry from PHI
     // nodes allows icmps and other instructions to fold.
-    // FIXME: Provide TLI, and DT to SimplifyInstruction.
+    // FIXME: Provide TLI, DT, AC to SimplifyInstruction.
     Value *V = SimplifyInstruction(C, DL);
     if (V && LI->replacementPreservesLCSSAForm(C, V)) {
       // If so, then delete the temporary instruction and stick the folded value
@@ -324,6 +326,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // Otherwise, stick the new instruction into the new block!
       C->setName(Inst->getName());
       C->insertBefore(LoopEntryBranch);
+
+      if (auto *II = dyn_cast<IntrinsicInst>(C))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
     }
   }
 
@@ -624,12 +630,13 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM) {
 
   auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
   const auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
-  assert((LI && TTI) && "Analyses for loop rotation not available");
+  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
+  assert((LI && TTI && AC) && "Analyses for loop rotation not available");
 
   // Optional analyses.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
   auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
-  LoopRotate LR(DefaultRotationThreshold, LI, TTI, DT, SE);
+  LoopRotate LR(DefaultRotationThreshold, LI, TTI, AC, DT, SE);
 
   bool Changed = LR.processLoop(&L);
   if (!Changed)
@@ -654,6 +661,7 @@ public:
 
   // LCSSA form makes instruction renaming easier.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
@@ -665,11 +673,12 @@ public:
 
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     const auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     auto *SE = SEWP ? &SEWP->getSE() : nullptr;
-    LoopRotate LR(MaxHeaderSize, LI, TTI, DT, SE);
+    LoopRotate LR(MaxHeaderSize, LI, TTI, AC, DT, SE);
     return LR.processLoop(L);
   }
 };
@@ -678,6 +687,7 @@ public:
 char LoopRotateLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops", false,

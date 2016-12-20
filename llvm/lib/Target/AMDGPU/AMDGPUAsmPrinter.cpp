@@ -119,7 +119,7 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
                                     "AMD", "AMDGPU");
 
   // Emit runtime metadata.
-  TS->emitRuntimeMetadata(M);
+  TS->EmitRuntimeMetadata(M);
 }
 
 bool AMDGPUAsmPrinter::isBlockOnlyReachableByFallthrough(

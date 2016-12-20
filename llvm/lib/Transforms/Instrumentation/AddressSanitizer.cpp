@@ -1655,7 +1655,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
 
     // Transfer the debug info.  The payload starts at offset zero so we can
     // copy the debug info over as is.
-    SmallVector<DIGlobalVariable *, 1> GVs;
+    SmallVector<DIGlobalVariableExpression *, 1> GVs;
     G->getDebugInfo(GVs);
     for (auto *GV : GVs)
       NewGlobal->addDebugInfo(GV);

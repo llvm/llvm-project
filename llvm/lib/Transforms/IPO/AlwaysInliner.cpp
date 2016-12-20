@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -25,7 +26,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Transforms/IPO/InlinerPass.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -61,14 +63,15 @@ namespace {
 ///
 /// Unlike the \c AlwaysInlinerPass, this uses the more heavyweight \c Inliner
 /// base class to provide several facilities such as array alloca merging.
-class AlwaysInlinerLegacyPass : public Inliner {
+class AlwaysInlinerLegacyPass : public LegacyInlinerBase {
 
 public:
-  AlwaysInlinerLegacyPass() : Inliner(ID, /*InsertLifetime*/ true) {
+  AlwaysInlinerLegacyPass() : LegacyInlinerBase(ID, /*InsertLifetime*/ true) {
     initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  AlwaysInlinerLegacyPass(bool InsertLifetime) : Inliner(ID, InsertLifetime) {
+  AlwaysInlinerLegacyPass(bool InsertLifetime)
+      : LegacyInlinerBase(ID, InsertLifetime) {
     initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -89,6 +92,7 @@ public:
 char AlwaysInlinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
                       "Inliner for always_inline functions", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)

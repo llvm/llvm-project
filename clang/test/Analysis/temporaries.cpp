@@ -413,6 +413,32 @@ namespace destructors {
       value ? DefaultParam(42) : DefaultParam(42);
     }
   }
+#else // !TEMPORARY_DTORS
+
+// Test for fallback logic that conservatively stops exploration after
+// executing a temporary constructor for a class with a no-return destructor
+// when temporary destructors are not enabled in the CFG.
+
+  struct CtorWithNoReturnDtor {
+    CtorWithNoReturnDtor() = default;
+
+    ~CtorWithNoReturnDtor() __attribute__((noreturn));
+  };
+
+  void testDefaultContructorWithNoReturnDtor() {
+    CtorWithNoReturnDtor();
+    clang_analyzer_warnIfReached();  // no-warning
+  }
+
+  void testLifeExtensionWithNoReturnDtor() {
+    const CtorWithNoReturnDtor &c = CtorWithNoReturnDtor();
+
+    // This represents an (expected) loss of coverage, since the destructor
+    // of the lifetime-exended temporary is executed at at the end of
+    // scope.
+    clang_analyzer_warnIfReached();  // no-warning
+  }
+
 #endif // TEMPORARY_DTORS
 }
 

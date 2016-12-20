@@ -71,6 +71,7 @@ class TracePC {
   void PrintModuleInfo();
 
   void PrintCoverage();
+  void DumpCoverage();
 
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n);

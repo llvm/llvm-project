@@ -2297,6 +2297,9 @@ def warn_attribute_pointers_only : Warning<
   "%0 attribute only applies to%select{| constant}1 pointer arguments">,
   InGroup<IgnoredAttributes>;
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
+def err_attribute_integers_only : Error<
+  "%0 attribute argument may only refer to a function parameter of integer "
+  "type">;
 def warn_attribute_return_pointers_only : Warning<
   "%0 attribute only applies to return values that are pointers">,
   InGroup<IgnoredAttributes>;
@@ -2927,7 +2930,7 @@ def warn_impcast_integer_precision_constant : Warning<
   "implicit conversion from %2 to %3 changes value from %0 to %1">,
   InGroup<ConstantConversion>;
 def warn_impcast_bitfield_precision_constant : Warning<
-  "implicit truncation from %2 to bitfield changes value from %0 to %1">,
+  "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
 
 def warn_impcast_literal_float_to_integer : Warning<
@@ -8085,7 +8088,7 @@ def err_opencl_function_variable : Error<
 def err_static_function_scope : Error<
   "variables in function scope cannot be declared static">;
 def err_opencl_bitfields : Error<
-  "bitfields are not supported in OpenCL">;
+  "bit-fields are not supported in OpenCL">;
 def err_opencl_vla : Error<
   "variable length arrays are not supported in OpenCL">;
 def err_bad_kernel_param_type : Error<
@@ -8770,6 +8773,10 @@ def warn_nullability_missing_array : Warning<
   "array parameter is missing a nullability type specifier (_Nonnull, "
   "_Nullable, or _Null_unspecified)">,
   InGroup<NullabilityCompletenessOnArrays>;
+def note_nullability_fix_it : Note<
+  "insert '%select{_Nonnull|_Nullable|_Null_unspecified}0' if the "
+  "%select{pointer|block pointer|member pointer|array parameter}1 "
+  "%select{should never be null|may be null|should not declare nullability}0">;
 
 def warn_nullability_inferred_on_nested_type : Warning<
   "inferring '_Nonnull' for pointer type within %select{array|reference}0 is "

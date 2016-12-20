@@ -2006,7 +2006,7 @@ bool TreePatternNode::canPatternMatch(std::string &Reason,
     // Scan all of the operands of the node and make sure that only the last one
     // is a constant node, unless the RHS also is.
     if (!OnlyOnRHSOfCommutative(getChild(getNumChildren()-1))) {
-      bool Skip = isCommIntrinsic ? 1 : 0; // First operand is intrinsic id.
+      unsigned Skip = isCommIntrinsic ? 1 : 0; // First operand is intrinsic id.
       for (unsigned i = Skip, e = getNumChildren()-1; i != e; ++i)
         if (OnlyOnRHSOfCommutative(getChild(i))) {
           Reason="Immediate value must be on the RHS of commutative operators!";

@@ -26,7 +26,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!12, !13}
 !llvm.ident = !{!14}
 
-!0 = distinct !DIGlobalVariable(name: "myvar_c", scope: !1, file: !2, line: 3, type: !5, isLocal: true, isDefinition: true)
+!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "myvar_c", scope: !1, file: !2, line: 3, type: !5, isLocal: true, isDefinition: true))
 !1 = distinct !DISubprogram(name: "testprog", scope: !2, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !6, variables: !9)
 !2 = !DIFile(filename: "testprog.c", directory: "/w/llvm/bld")
 !3 = !DISubroutineType(types: !4)

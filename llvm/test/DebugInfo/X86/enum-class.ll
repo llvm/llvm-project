@@ -24,9 +24,9 @@
 !14 = !DIEnumerator(name: "C1", value: 1) ; [ DW_TAG_enumerator ]
 !15 = !{}
 !17 = !{!19, !20, !21}
-!19 = !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !4, type: !3)
-!20 = !DIGlobalVariable(name: "b", line: 5, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8)
-!21 = !DIGlobalVariable(name: "c", line: 6, isLocal: false, isDefinition: true, scope: null, file: !4, type: !12)
+!19 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !4, type: !3))
+!20 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b", line: 5, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8))
+!21 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c", line: 6, isLocal: false, isDefinition: true, scope: null, file: !4, type: !12))
 !22 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
 
 ; CHECK: DW_TAG_enumeration_type [{{.*}}]

@@ -32,7 +32,7 @@ entry:
 !12 = !DICompositeType(tag: DW_TAG_class_type, name: "foo", line: 1, size: 8, align: 8, file: !27, elements: !13)
 !13 = !{!11}
 !18 = !{!20}
-!20 = !DIGlobalVariable(name: "x", line: 5, isLocal: true, isDefinition: true, scope: !5, file: !6, type: !21)
+!20 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 5, isLocal: true, isDefinition: true, scope: !5, file: !6, type: !21))
 !21 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !22)
 !22 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !25 = !DILocation(line: 6, column: 1, scope: !26)

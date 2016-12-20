@@ -18,6 +18,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -34,7 +35,7 @@ using namespace llvm;
 STATISTIC(NumSimplified, "Number of redundant instructions removed");
 
 static bool runImpl(Function &F, const DominatorTree *DT,
-                    const TargetLibraryInfo *TLI) {
+                    const TargetLibraryInfo *TLI, AssumptionCache *AC) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   SmallPtrSet<const Instruction *, 8> S1, S2, *ToSimplify = &S1, *Next = &S2;
   bool Changed = false;
@@ -53,7 +54,7 @@ static bool runImpl(Function &F, const DominatorTree *DT,
 
         // Don't waste time simplifying unused instructions.
         if (!I->use_empty()) {
-          if (Value *V = SimplifyInstruction(I, DL, TLI, DT)) {
+          if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I->users())
               Next->insert(cast<Instruction>(U));
@@ -92,6 +93,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
       AU.addRequired<DominatorTreeWrapperPass>();
+      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
     }
 
@@ -104,7 +106,9 @@ namespace {
           &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
       const TargetLibraryInfo *TLI =
           &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-      return runImpl(F, DT, TLI);
+      AssumptionCache *AC =
+          &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+      return runImpl(F, DT, TLI, AC);
     }
   };
 }
@@ -112,6 +116,7 @@ namespace {
 char InstSimplifier::ID = 0;
 INITIALIZE_PASS_BEGIN(InstSimplifier, "instsimplify",
                       "Remove redundant instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(InstSimplifier, "instsimplify",
@@ -127,7 +132,8 @@ PreservedAnalyses InstSimplifierPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  bool Changed = runImpl(F, &DT, &TLI);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  bool Changed = runImpl(F, &DT, &TLI, &AC);
   if (!Changed)
     return PreservedAnalyses::all();
   // FIXME: This should also 'preserve the CFG'.

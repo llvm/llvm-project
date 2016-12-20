@@ -1545,7 +1545,7 @@ bool checkAndConsumeDirectiveWithName(Lexer &Lex, StringRef Name, Token &Tok) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
-                 tok::raw_identifier;
+                 Tok.is(tok::raw_identifier);
   if (Matched)
     Lex.LexFromRawLexer(Tok);
   return Matched;

@@ -24,7 +24,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!38}
 
-!0 = !DIGlobalVariable(name: "ret", line: 7, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !3)
+!0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "ret", line: 7, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !3))
 !1 = !DIFile(filename: "foo.c", directory: "/tmp/")
 !2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !36, enums: !37, retainedTypes: !37, globals: !31, imports:  !37)
 !3 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

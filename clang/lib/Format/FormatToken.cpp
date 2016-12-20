@@ -92,6 +92,14 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
 
   // Find the best ColumnFormat, i.e. the best number of columns to use.
   const ColumnFormat *Format = getColumnFormat(RemainingCodePoints);
+
+  // Formatting with 1 Column isn't really a column layout, so we don't need the
+  // special logic here. We can just avoid bin packing any of the parameters.
+  if (Format && Format->Columns == 1) {
+    State.Stack.back().AvoidBinPacking = true;
+    return 0;
+  }
+
   // If no ColumnFormat can be used, the braced list would generally be
   // bin-packed. Add a severe penalty to this so that column layouts are
   // preferred if possible.
@@ -273,7 +281,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
       continue;
 
     // Ignore layouts that are bound to violate the column limit.
-    if (Format.TotalWidth > Style.ColumnLimit)
+    if (Format.TotalWidth > Style.ColumnLimit && Columns > 1)
       continue;
 
     Formats.push_back(Format);
@@ -287,7 +295,7 @@ CommaSeparatedList::getColumnFormat(unsigned RemainingCharacters) const {
            I = Formats.rbegin(),
            E = Formats.rend();
        I != E; ++I) {
-    if (I->TotalWidth <= RemainingCharacters) {
+    if (I->TotalWidth <= RemainingCharacters || I->Columns == 1) {
       if (BestFormat && I->LineCount > BestFormat->LineCount)
         break;
       BestFormat = &*I;

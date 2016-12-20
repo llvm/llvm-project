@@ -39,6 +39,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 #define LLVM_TRANSFORMS_UTILS_LOOPSIMPLIFY_H
 
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -57,7 +58,7 @@ public:
 /// it into a simplified loop nest with preheaders and single backedges. It will
 /// update \c AliasAnalysis and \c ScalarEvolution analyses if they're non-null.
 bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-                  bool PreserveLCSSA);
+                  AssumptionCache *AC, bool PreserveLCSSA);
 
 } // end namespace llvm
 

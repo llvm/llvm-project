@@ -49,10 +49,32 @@ struct ARange {
   std::vector<ARangeDescriptor> Descriptors;
 };
 
+struct PubEntry {
+  llvm::yaml::Hex32 DieOffset;
+  llvm::yaml::Hex8 Descriptor;
+  StringRef Name;
+};
+
+struct PubSection {
+  PubSection() : IsGNUStyle(false) {}
+
+  uint32_t Length;
+  uint16_t Version;
+  uint32_t UnitOffset;
+  uint32_t UnitSize;
+  bool IsGNUStyle;
+  std::vector<PubEntry> Entries;
+};
+
 struct Data {
   std::vector<Abbrev> AbbrevDecls;
   std::vector<StringRef> DebugStrings;
   std::vector<ARange> ARanges;
+  PubSection PubNames;
+  PubSection PubTypes;
+
+  PubSection GNUPubNames;
+  PubSection GNUPubTypes;
 
   bool isEmpty() const;
 };
@@ -65,6 +87,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AttributeAbbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Abbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::ARangeDescriptor)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::ARange)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::PubEntry)
 
 namespace llvm {
 namespace yaml {
@@ -87,6 +110,14 @@ template <> struct MappingTraits<DWARFYAML::ARangeDescriptor> {
 
 template <> struct MappingTraits<DWARFYAML::ARange> {
   static void mapping(IO &IO, DWARFYAML::ARange &Range);
+};
+
+template <> struct MappingTraits<DWARFYAML::PubEntry> {
+  static void mapping(IO &IO, DWARFYAML::PubEntry &Entry);
+};
+
+template <> struct MappingTraits<DWARFYAML::PubSection> {
+  static void mapping(IO &IO, DWARFYAML::PubSection &Section);
 };
 
 #define HANDLE_DW_TAG(unused, name)                                            \

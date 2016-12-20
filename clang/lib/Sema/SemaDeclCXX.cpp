@@ -9010,8 +9010,23 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
     F.done();
   } else {
     assert(IsInstantiation && "no scope in non-instantiation");
-    assert(CurContext->isRecord() && "scope not record in instantiation");
-    LookupQualifiedName(Previous, CurContext);
+    if (CurContext->isRecord())
+      LookupQualifiedName(Previous, CurContext);
+    else {
+      // No redeclaration check is needed here; in non-member contexts we
+      // diagnosed all possible conflicts with other using-declarations when
+      // building the template:
+      //
+      // For a dependent non-type using declaration, the only valid case is
+      // if we instantiate to a single enumerator. We check for conflicts
+      // between shadow declarations we introduce, and we check in the template
+      // definition for conflicts between a non-type using declaration and any
+      // other declaration, which together covers all cases.
+      //
+      // A dependent typename using declaration will never successfully
+      // instantiate, since it will always name a class member, so we reject
+      // that in the template definition.
+    }
   }
 
   // Check for invalid redeclarations.
@@ -9020,7 +9035,8 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
     return nullptr;
 
   // Check for bad qualifiers.
-  if (CheckUsingDeclQualifier(UsingLoc, SS, NameInfo, IdentLoc))
+  if (CheckUsingDeclQualifier(UsingLoc, HasTypenameKeyword, SS, NameInfo,
+                              IdentLoc))
     return nullptr;
 
   DeclContext *LookupContext = computeDeclContext(SS);
@@ -9231,6 +9247,8 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
                                        const CXXScopeSpec &SS,
                                        SourceLocation NameLoc,
                                        const LookupResult &Prev) {
+  NestedNameSpecifier *Qual = SS.getScopeRep();
+
   // C++03 [namespace.udecl]p8:
   // C++0x [namespace.udecl]p10:
   //   A using-declaration is a declaration and can therefore be used
@@ -9238,10 +9256,28 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
   //   allowed.
   //
   // That's in non-member contexts.
-  if (!CurContext->getRedeclContext()->isRecord())
+  if (!CurContext->getRedeclContext()->isRecord()) {
+    // A dependent qualifier outside a class can only ever resolve to an
+    // enumeration type. Therefore it conflicts with any other non-type
+    // declaration in the same scope.
+    // FIXME: How should we check for dependent type-type conflicts at block
+    // scope?
+    if (Qual->isDependent() && !HasTypenameKeyword) {
+      for (auto *D : Prev) {
+        if (!isa<TypeDecl>(D) && !isa<UsingDecl>(D)) {
+          bool OldCouldBeEnumerator =
+              isa<UnresolvedUsingValueDecl>(D) || isa<EnumConstantDecl>(D);
+          Diag(NameLoc,
+               OldCouldBeEnumerator ? diag::err_redefinition
+                                    : diag::err_redefinition_different_kind)
+              << Prev.getLookupName();
+          Diag(D->getLocation(), diag::note_previous_definition);
+          return true;
+        }
+      }
+    }
     return false;
-
-  NestedNameSpecifier *Qual = SS.getScopeRep();
+  }
 
   for (LookupResult::iterator I = Prev.begin(), E = Prev.end(); I != E; ++I) {
     NamedDecl *D = *I;
@@ -9285,6 +9321,7 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
 /// in the current context is appropriately related to the current
 /// scope.  If an error is found, diagnoses it and returns true.
 bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
+                                   bool HasTypename,
                                    const CXXScopeSpec &SS,
                                    const DeclarationNameInfo &NameInfo,
                                    SourceLocation NameLoc) {
@@ -9295,9 +9332,11 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
     // C++0x [namespace.udecl]p8:
     //   A using-declaration for a class member shall be a member-declaration.
 
-    // If we weren't able to compute a valid scope, it must be a
-    // dependent class scope.
-    if (!NamedContext || NamedContext->getRedeclContext()->isRecord()) {
+    // If we weren't able to compute a valid scope, it might validly be a
+    // dependent class scope or a dependent enumeration unscoped scope. If
+    // we have a 'typename' keyword, the scope must resolve to a class type.
+    if ((HasTypename && !NamedContext) ||
+        (NamedContext && NamedContext->getRedeclContext()->isRecord())) {
       auto *RD = NamedContext
                      ? cast<CXXRecordDecl>(NamedContext->getRedeclContext())
                      : nullptr;
@@ -9357,7 +9396,8 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
         if (getLangOpts().CPlusPlus11) {
           // Convert 'using X::Y;' to 'auto &Y = X::Y;'.
           FixIt = FixItHint::CreateReplacement(
-              UsingLoc, "constexpr auto " + NameInfo.getName().getAsString() + " = ");
+              UsingLoc,
+              "constexpr auto " + NameInfo.getName().getAsString() + " = ");
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
@@ -9367,7 +9407,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
       return true;
     }
 
-    // Otherwise, everything is known to be fine.
+    // Otherwise, this might be valid.
     return false;
   }
 

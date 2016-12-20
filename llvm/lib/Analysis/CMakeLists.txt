@@ -4,6 +4,7 @@ add_llvm_library(LLVMAnalysis
   AliasAnalysisSummary.cpp
   AliasSetTracker.cpp
   Analysis.cpp
+  AssumptionCache.cpp
   BasicAliasAnalysis.cpp
   BlockFrequencyInfo.cpp
   BlockFrequencyInfoImpl.cpp

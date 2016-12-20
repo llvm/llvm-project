@@ -68,6 +68,7 @@ void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlignmentFromAssumptionsPass(PassRegistry&);
 void initializeAlwaysInlinerLegacyPassPass(PassRegistry&);
 void initializeArgPromotionPass(PassRegistry&);
+void initializeAssumptionCacheTrackerPass(PassRegistry &);
 void initializeAtomicExpandPass(PassRegistry&);
 void initializeBBVectorizePass(PassRegistry&);
 void initializeBDCELegacyPassPass(PassRegistry &);

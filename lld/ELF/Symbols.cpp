@@ -15,6 +15,7 @@
 #include "Strings.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Writer.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"

@@ -34,6 +34,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -65,6 +66,7 @@ namespace {
   ///
   struct ArgPromotion : public CallGraphSCCPass {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       getAAResultsAnalysisUsage(AU);
       CallGraphSCCPass::getAnalysisUsage(AU);
@@ -104,6 +106,7 @@ DoPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 char ArgPromotion::ID = 0;
 INITIALIZE_PASS_BEGIN(ArgPromotion, "argpromotion",
                 "Promote 'by reference' arguments to scalars", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(ArgPromotion, "argpromotion",

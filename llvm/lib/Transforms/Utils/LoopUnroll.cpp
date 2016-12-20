@@ -19,6 +19,7 @@
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -213,7 +214,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                       bool PreserveCondBr, bool PreserveOnlyFirst,
                       unsigned TripMultiple, unsigned PeelCount, LoopInfo *LI,
                       ScalarEvolution *SE, DominatorTree *DT,
-                      OptimizationRemarkEmitter *ORE, bool PreserveLCSSA) {
+                      AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
+                      bool PreserveLCSSA) {
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
@@ -510,9 +512,14 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     }
 
     // Remap all instructions in the most recent iteration
-    for (BasicBlock *NewBlock : NewBlocks)
-      for (Instruction &I : *NewBlock)
+    for (BasicBlock *NewBlock : NewBlocks) {
+      for (Instruction &I : *NewBlock) {
         ::remapInstruction(&I, LastValueMap);
+        if (auto *II = dyn_cast<IntrinsicInst>(&I))
+          if (II->getIntrinsicID() == Intrinsic::assume)
+            AC->registerAssumption(II);
+      }
+    }
   }
 
   // Loop over the PHI nodes in the original block, setting incoming values.
@@ -698,7 +705,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       // loops too).
       // TODO: That potentially might be compile-time expensive. We should try
       // to fix the loop-simplified form incrementally.
-      simplifyLoop(OuterL, DT, LI, SE, PreserveLCSSA);
+      simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -716,7 +723,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
     } else {
       // Simplify loops for which we might've broken loop-simplify form.
       for (Loop *SubLoop : LoopsToSimplify)
-        simplifyLoop(SubLoop, DT, LI, SE, PreserveLCSSA);
+        simplifyLoop(SubLoop, DT, LI, SE, AC, PreserveLCSSA);
     }
   }
 
