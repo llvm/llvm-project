@@ -5969,8 +5969,7 @@ bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr &MemOp, unsigned &BaseReg,
 
   Offset = DispMO.getImm();
 
-  return MemOp.getOperand(MemRefBegin + X86::AddrIndexReg).getReg() ==
-         X86::NoRegister;
+  return true;
 }
 
 static unsigned getStoreRegOpcode(unsigned SrcReg,

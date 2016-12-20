@@ -2263,9 +2263,11 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       match(Op1, m_Xor(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateXor(A, B);
 
-  // (A ^ B) | ( A & (~B)) -> (A ^ B)
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-      match(Op1, m_And(m_Specific(A), m_Not(m_Specific(B)))))
+  // Commute the 'or' operands.
+  // (A ^ B) | (A & ~B) -> (A ^ B)
+  // (A ^ B) | (~B & A) -> (A ^ B)
+  if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+      match(Op0, m_Xor(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateXor(A, B);
 
   // (A & C)|(B & D)

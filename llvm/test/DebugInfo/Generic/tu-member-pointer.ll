@@ -22,7 +22,7 @@
 !3 = !{!4}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "Foo", line: 1, flags: DIFlagFwdDecl, file: !1, identifier: "_ZTS3Foo")
 !5 = !{!6}
-!6 = !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !7, type: !8)
+!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !7, type: !8))
 !7 = !DIFile(filename: "foo.cpp", directory: ".")
 !8 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !9, extraData: !4)
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

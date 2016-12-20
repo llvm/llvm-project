@@ -26,7 +26,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Transforms/IPO/InlinerPass.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -62,14 +63,15 @@ namespace {
 ///
 /// Unlike the \c AlwaysInlinerPass, this uses the more heavyweight \c Inliner
 /// base class to provide several facilities such as array alloca merging.
-class AlwaysInlinerLegacyPass : public Inliner {
+class AlwaysInlinerLegacyPass : public LegacyInlinerBase {
 
 public:
-  AlwaysInlinerLegacyPass() : Inliner(ID, /*InsertLifetime*/ true) {
+  AlwaysInlinerLegacyPass() : LegacyInlinerBase(ID, /*InsertLifetime*/ true) {
     initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  AlwaysInlinerLegacyPass(bool InsertLifetime) : Inliner(ID, InsertLifetime) {
+  AlwaysInlinerLegacyPass(bool InsertLifetime)
+      : LegacyInlinerBase(ID, InsertLifetime) {
     initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 

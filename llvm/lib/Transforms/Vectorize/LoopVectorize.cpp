@@ -6089,10 +6089,6 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
     return Factor;
   }
 
-  // Find the trip count.
-  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
-  DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
-
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -6150,7 +6146,10 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
 
   // If we optimize the program for size, avoid creating the tail loop.
   if (OptForSize) {
-    // If we are unable to calculate the trip count then don't try to vectorize.
+    unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
+    DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
+
+    // If we don't know the precise trip count, don't try to vectorize.
     if (TC < 2) {
       ORE->emit(
           createMissedAnalysis("UnknownLoopCountComplexCFG")

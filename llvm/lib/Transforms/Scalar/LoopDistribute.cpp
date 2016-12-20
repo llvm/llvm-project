@@ -606,11 +606,13 @@ public:
     DEBUG(dbgs() << "\nLDist: In \"" << L->getHeader()->getParent()->getName()
                  << "\" checking " << *L << "\n");
 
-    BasicBlock *PH = L->getLoopPreheader();
-    if (!PH)
-      return fail("NoHeader", "no preheader");
     if (!L->getExitBlock())
       return fail("MultipleExitBlocks", "multiple exit blocks");
+    if (!L->isLoopSimplifyForm())
+      return fail("NotLoopSimplifyForm",
+                  "loop is not in loop-simplify form");
+
+    BasicBlock *PH = L->getLoopPreheader();
 
     // LAA will check that we only have a single exiting block.
     LAI = &GetLAA(*L);

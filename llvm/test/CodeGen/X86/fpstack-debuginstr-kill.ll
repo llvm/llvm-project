@@ -64,7 +64,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !20 = !DILocalVariable(name: "value", line: 16, scope: !4, file: !6, type: !14)
 !21 = !{!22, !23}
-!22 = !DIGlobalVariable(name: "g1", line: 5, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14)
-!23 = !DIGlobalVariable(name: "g2", line: 6, isLocal: false, isDefinition: true, scope: null, file: !6, type: !19)
+!22 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "g1", line: 5, isLocal: false, isDefinition: true, scope: null, file: !6, type: !14))
+!23 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "g2", line: 6, isLocal: false, isDefinition: true, scope: null, file: !6, type: !19))
 !24 = !{i32 2, !"Dwarf Version", i32 2}
 !25 = !{i32 2, !"Debug Info Version", i32 3}

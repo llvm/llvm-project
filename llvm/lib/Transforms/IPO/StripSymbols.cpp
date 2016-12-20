@@ -313,20 +313,23 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
   // replace the current list of potentially dead global variables/functions
   // with the live list.
   SmallVector<Metadata *, 64> LiveGlobalVariables;
-  DenseSet<const MDNode *> VisitedSet;
+  DenseSet<DIGlobalVariableExpression *> VisitedSet;
 
-  std::set<DIGlobalVariable *> LiveGVs;
+  std::set<DIGlobalVariableExpression *> LiveGVs;
   for (GlobalVariable &GV : M.globals()) {
-    SmallVector<DIGlobalVariable *, 1> DIs;
-    GV.getDebugInfo(DIs);
-    for (DIGlobalVariable *DI : DIs)
-      LiveGVs.insert(DI);
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (auto *GVE : GVEs)
+      LiveGVs.insert(GVE);
   }
 
   for (DICompileUnit *DIC : F.compile_units()) {
     // Create our live global variable list.
     bool GlobalVariableChange = false;
-    for (DIGlobalVariable *DIG : DIC->getGlobalVariables()) {
+    for (auto *DIG : DIC->getGlobalVariables()) {
+      if (DIG->getExpression() && DIG->getExpression()->isConstant())
+        LiveGVs.insert(DIG);
+
       // Make sure we only visit each global variable only once.
       if (!VisitedSet.insert(DIG).second)
         continue;

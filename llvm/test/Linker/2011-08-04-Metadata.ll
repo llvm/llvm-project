@@ -5,10 +5,12 @@
 ; CHECK: @x = internal global i32 0, align 4, !dbg [[DI1:![0-9]+]]
 ; CHECK: @x.1 = internal global i32 0, align 4, !dbg [[DI2:![0-9]+]]
 
-; CHECK: [[DI1]] = !DIGlobalVariable(name: "x",
-; CHECK-NOT:               linkageName:
-; CHECK: [[DI2]] = !DIGlobalVariable(name: "x",
-; CHECK-NOT:               linkageName:
+; CHECK: [[DI1]] = !DIGlobalVariableExpression(var: [[V1:.*]])
+; CHECK: [[V1]] = !DIGlobalVariable(name: "x",
+; CHECK-NOT:                        linkageName:
+; CHECK: [[DI2]] = !DIGlobalVariableExpression(var: [[V2:.*]])
+; CHECK: [[V2]] = !DIGlobalVariable(name: "x",
+; CHECK-NOT:                        linkageName:
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-macosx10.7.0"
 
@@ -28,7 +30,7 @@ entry:
 !2 = !DIFile(filename: "/tmp/one.c", directory: "/Volumes/Lalgate/Slate/D")
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}
-!5 = !DIGlobalVariable(name: "x", line: 2, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !6)
+!5 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 2, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !6))
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !DILocation(line: 3, column: 14, scope: !8)
 !8 = distinct !DILexicalBlock(line: 3, column: 12, file: !9, scope: !1)
