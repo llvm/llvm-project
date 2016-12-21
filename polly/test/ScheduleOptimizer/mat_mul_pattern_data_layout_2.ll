@@ -20,60 +20,59 @@
 ; CHECK-NEXT:              Stmt_bb9(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
 ; CHECK-NEXT:      // 1st level tiling - Tiles
-; CHECK-NEXT:      for (int c0 = 0; c0 <= 65; c0 += 1)
-; CHECK-NEXT:        for (int c1 = 0; c1 <= 3; c1 += 1) {
-; CHECK-NEXT:          for (int c3 = 16 * c0; c3 <= 16 * c0 + 15; c3 += 1)
-; CHECK-NEXT:            for (int c4 = 256 * c1; c4 <= min(1022, 256 * c1 + 255); c4 += 1)
-; CHECK-NEXT:              CopyStmt_0(0, c3, c4);
-; CHECK-NEXT:          for (int c2 = 0; c2 <= 10; c2 += 1) {
-; CHECK-NEXT:            for (int c3 = 96 * c2; c3 <= 96 * c2 + 95; c3 += 1)
-; CHECK-NEXT:              for (int c5 = 256 * c1; c5 <= min(1022, 256 * c1 + 255); c5 += 1)
-; CHECK-NEXT:                CopyStmt_1(c3, 0, c5);
-; CHECK-NEXT:            // 1st level tiling - Points
-; CHECK-NEXT:            // Register tiling - Tiles
-; CHECK-NEXT:            for (int c3 = 0; c3 <= 1; c3 += 1)
-; CHECK-NEXT:              for (int c4 = 0; c4 <= 23; c4 += 1)
-; CHECK-NEXT:                for (int c5 = 0; c5 <= min(255, -256 * c1 + 1022); c5 += 1) {
-; CHECK-NEXT:                  // Register tiling - Points
-; CHECK-NEXT:                  // 1st level tiling - Tiles
-; CHECK-NEXT:                  // 1st level tiling - Points
-; CHECK-NEXT:                  {
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 1, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 2, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 4, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 5, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 6, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4, 16 * c0 + 8 * c3 + 7, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 1, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 2, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 4, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 5, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 6, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 16 * c0 + 8 * c3 + 7, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 1, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 2, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 4, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 5, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 6, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 16 * c0 + 8 * c3 + 7, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 1, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 2, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 3, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 4, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 5, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 6, 256 * c1 + c5);
-; CHECK-NEXT:                    Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 16 * c0 + 8 * c3 + 7, 256 * c1 + c5);
-; CHECK-NEXT:                  }
+; CHECK-NEXT:      for (int c1 = 0; c1 <= 3; c1 += 1) {
+; CHECK-NEXT:        for (int c3 = 0; c3 <= 1055; c3 += 1)
+; CHECK-NEXT:          for (int c4 = 256 * c1; c4 <= min(1022, 256 * c1 + 255); c4 += 1)
+; CHECK-NEXT:            CopyStmt_0(0, c3, c4);
+; CHECK-NEXT:        for (int c2 = 0; c2 <= 10; c2 += 1) {
+; CHECK-NEXT:          for (int c3 = 96 * c2; c3 <= 96 * c2 + 95; c3 += 1)
+; CHECK-NEXT:            for (int c5 = 256 * c1; c5 <= min(1022, 256 * c1 + 255); c5 += 1)
+; CHECK-NEXT:              CopyStmt_1(c3, 0, c5);
+; CHECK-NEXT:          // 1st level tiling - Points
+; CHECK-NEXT:          // Register tiling - Tiles
+; CHECK-NEXT:          for (int c3 = 0; c3 <= 131; c3 += 1)
+; CHECK-NEXT:            for (int c4 = 0; c4 <= 23; c4 += 1)
+; CHECK-NEXT:              for (int c5 = 0; c5 <= min(255, -256 * c1 + 1022); c5 += 1) {
+; CHECK-NEXT:                // Register tiling - Points
+; CHECK-NEXT:                // 1st level tiling - Tiles
+; CHECK-NEXT:                // 1st level tiling - Points
+; CHECK-NEXT:                {
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 1, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 2, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 4, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 5, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 6, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3 + 7, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 1, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 2, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 4, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 5, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 6, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 1, 8 * c3 + 7, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 1, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 2, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 4, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 5, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 6, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 2, 8 * c3 + 7, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 1, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 2, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 3, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 4, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 5, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 6, 256 * c1 + c5);
+; CHECK-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4 + 3, 8 * c3 + 7, 256 * c1 + c5);
 ; CHECK-NEXT:                }
-; CHECK-NEXT:          }
+; CHECK-NEXT:              }
 ; CHECK-NEXT:        }
+; CHECK-NEXT:      }
 ; CHECK-NEXT:    }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
