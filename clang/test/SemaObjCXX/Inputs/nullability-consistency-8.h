@@ -8,10 +8,14 @@ __attribute__((objc_root_class))
 void func2(mynonnull i);
 
 void func3(int *); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 
 #define CF_RETURNS_NOT_RETAINED __attribute__((cf_returns_not_retained))
 typedef void *CFTypeRef;
-void cf1(CFTypeRef * p CF_RETURNS_NOT_RETAINED); // expected-warning {{pointer is missing a nullability type specifier}}
+void cf1(CFTypeRef * p CF_RETURNS_NOT_RETAINED); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 
 void cf2(CFTypeRef * _Nullable p CF_RETURNS_NOT_RETAINED);
 void cf3(CFTypeRef * _Nonnull p CF_RETURNS_NOT_RETAINED);
@@ -23,5 +27,7 @@ void cf6(CFTypeRef * _Nullable CF_RETURNS_NOT_RETAINED p);
 void cf7(CF_RETURNS_NOT_RETAINED CFTypeRef * _Nonnull p);
 
 typedef CFTypeRef _Nullable *CFTypeRefPtr;
-void cfp1(CFTypeRefPtr p CF_RETURNS_NOT_RETAINED); // expected-warning {{pointer is missing a nullability type specifier}}
+void cfp1(CFTypeRefPtr p CF_RETURNS_NOT_RETAINED); // expected-warning{{pointer is missing a nullability type specifier}}
+// expected-note@-1{{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2{{insert '_Nonnull' if the pointer should never be null}}
 void cfp2(CFTypeRefPtr _Nonnull p CF_RETURNS_NOT_RETAINED);
