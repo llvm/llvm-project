@@ -3312,10 +3312,16 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
   MachineRegisterInfo &MRI,
   SmallVectorImpl<MachineInstr *> &Worklist) const {
   for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
-         E = MRI.use_end(); I != E; ++I) {
+         E = MRI.use_end(); I != E;) {
     MachineInstr &UseMI = *I->getParent();
     if (!canReadVGPR(UseMI, I.getOperandNo())) {
       Worklist.push_back(&UseMI);
+
+      do {
+        ++I;
+      } while (I != E && I->getParent() == &UseMI);
+    } else {
+      ++I;
     }
   }
 }

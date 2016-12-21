@@ -308,19 +308,11 @@ def RetCC_X86_32_HiPE : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[ESI, EBP, EAX, EDX]>>
 ]>;
 
-// X86-32 HiPE return-value convention.
+// X86-32 Vectorcall return-value convention.
 def RetCC_X86_32_VectorCall : CallingConv<[
-  // Vector types are returned in XMM0,XMM1,XMMM2 and XMM3.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+  // Floating Point types are returned in XMM0,XMM1,XMMM2 and XMM3.
+  CCIfType<[f32, f64, f128],
             CCAssignToReg<[XMM0,XMM1,XMM2,XMM3]>>,
-
-  // 256-bit FP vectors
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-            CCAssignToReg<[YMM0,YMM1,YMM2,YMM3]>>,
-
-  // 512-bit FP vectors
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-            CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
   // Return integers in the standard way.
   CCDelegateTo<RetCC_X86Common>
@@ -348,6 +340,16 @@ def RetCC_X86_Win64_C : CallingConv<[
 
   // Otherwise, everything is the same as 'normal' X86-64 C CC.
   CCDelegateTo<RetCC_X86_64_C>
+]>;
+
+// X86-64 vectorcall return-value convention.
+def RetCC_X86_64_Vectorcall : CallingConv<[
+  // Vectorcall calling convention always returns FP values in XMMs.
+  CCIfType<[f32, f64, f128], 
+    CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+
+  // Otherwise, everything is the same as Windows X86-64 C CC.
+  CCDelegateTo<RetCC_X86_Win64_C>
 ]>;
 
 // X86-64 HiPE return-value convention.
@@ -446,6 +448,9 @@ def RetCC_X86_64 : CallingConv<[
   // Handle explicit CC selection
   CCIfCC<"CallingConv::X86_64_Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
+
+  // Handle Vectorcall CC
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_64_Vectorcall>>,
 
   // Handle HHVM calls.
   CCIfCC<"CallingConv::HHVM", CCDelegateTo<RetCC_X86_64_HHVM>>,
@@ -626,18 +631,7 @@ def CC_X86_Win64_C : CallingConv<[
 ]>;
 
 def CC_X86_Win64_VectorCall : CallingConv<[
-  // The first 6 floating point and vector types of 128 bits or less use
-  // XMM0-XMM5.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-           CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5]>>,
-
-  // 256-bit vectors use YMM registers.
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5]>>,
-
-  // 512-bit vectors use ZMM registers.
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5]>>,
+  CCCustom<"CC_X86_64_VectorCall">,
 
   // Delegate to fastcall to handle integer types.
   CCDelegateTo<CC_X86_Win64_C>
@@ -847,25 +841,9 @@ def CC_X86_32_FastCall : CallingConv<[
   CCDelegateTo<CC_X86_32_Common>
 ]>;
 
-def CC_X86_32_VectorCall : CallingConv<[
-  // The first 6 floating point and vector types of 128 bits or less use
-  // XMM0-XMM5.
-  CCIfType<[f32, f64, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
-           CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5]>>,
-
-  // 256-bit vectors use YMM registers.
-  CCIfType<[v32i8, v16i16, v8i32, v4i64, v8f32, v4f64],
-           CCAssignToReg<[YMM0, YMM1, YMM2, YMM3, YMM4, YMM5]>>,
-
-  // 512-bit vectors use ZMM registers.
-  CCIfType<[v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3, ZMM4, ZMM5]>>,
-
-  // Otherwise, pass it indirectly.
-  CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64,
-            v32i8, v16i16, v8i32, v4i64, v8f32, v4f64,
-            v64i8, v32i16, v16i32, v8i64, v16f32, v8f64],
-           CCCustom<"CC_X86_32_VectorCallIndirect">>,
+def CC_X86_Win32_VectorCall : CallingConv<[
+  // Pass floating point in XMMs
+  CCCustom<"CC_X86_32_VectorCall">,
 
   // Delegate to fastcall to handle integer types.
   CCDelegateTo<CC_X86_32_FastCall>
@@ -999,7 +977,7 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_INTR", CCDelegateTo<CC_X86_32_Intr>>,
   CCIfSubtarget<"isTargetMCU()", CCDelegateTo<CC_X86_32_MCU>>,
   CCIfCC<"CallingConv::X86_FastCall", CCDelegateTo<CC_X86_32_FastCall>>,
-  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_32_VectorCall>>,
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win32_VectorCall>>,
   CCIfCC<"CallingConv::X86_ThisCall", CCDelegateTo<CC_X86_32_ThisCall>>,
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_X86_32_FastCC>>,
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_32_GHC>>,

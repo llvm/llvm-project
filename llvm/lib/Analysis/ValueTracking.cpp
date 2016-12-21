@@ -2086,7 +2086,7 @@ unsigned ComputeNumSignBits(const Value *V, unsigned Depth, const Query &Q) {
   // Note that ConstantInt is handled by the general computeKnownBits case
   // below.
 
-  if (Depth == 6)
+  if (Depth == MaxDepth)
     return 1;  // Limit search depth.
 
   const Operator *U = dyn_cast<Operator>(V);
@@ -2545,7 +2545,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   // FIXME: Magic number! At the least, this should be given a name because it's
   // used similarly in CannotBeOrderedLessThanZero(). A better fix may be to
   // expose it as a parameter, so it can be used for testing / experimenting.
-  if (Depth == 6)
+  if (Depth == MaxDepth)
     return false;  // Limit search depth.
 
   const Operator *I = dyn_cast<Operator>(V);
@@ -2592,7 +2592,7 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
   // FIXME: Magic number! At the least, this should be given a name because it's
   // used similarly in CannotBeNegativeZero(). A better fix may be to
   // expose it as a parameter, so it can be used for testing / experimenting.
-  if (Depth == 6)
+  if (Depth == MaxDepth)
     return false;  // Limit search depth.
 
   const Operator *I = dyn_cast<Operator>(V);

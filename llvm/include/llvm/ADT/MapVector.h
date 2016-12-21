@@ -42,7 +42,11 @@ public:
   typedef typename VectorType::reverse_iterator reverse_iterator;
   typedef typename VectorType::const_reverse_iterator const_reverse_iterator;
 
-  ArrayRef<value_type> getArrayRef() const { return Vector; }
+  /// Clear the MapVector and return the underlying vector.
+  VectorType takeVector() {
+    Map.clear();
+    return std::move(Vector);
+  }
 
   size_type size() const { return Vector.size(); }
 

@@ -731,24 +731,17 @@ static cl::opt<std::string>
     SummaryFile("summary-file",
                 cl::desc("The summary file to use for function importing."));
 
-static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
-  if (SummaryFile.empty() && !Index)
-    report_fatal_error("error: -function-import requires -summary-file or "
-                       "file from frontend\n");
-  std::unique_ptr<ModuleSummaryIndex> IndexPtr;
-  if (!SummaryFile.empty()) {
-    if (Index)
-      report_fatal_error("error: -summary-file and index from frontend\n");
-    Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
-        getModuleSummaryIndexForFile(SummaryFile);
-    if (!IndexPtrOrErr) {
-      logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
-                            "Error loading file '" + SummaryFile + "': ");
-      return false;
-    }
-    IndexPtr = std::move(*IndexPtrOrErr);
-    Index = IndexPtr.get();
+static bool doImportingForModule(Module &M) {
+  if (SummaryFile.empty())
+    report_fatal_error("error: -function-import requires -summary-file\n");
+  Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
+      getModuleSummaryIndexForFile(SummaryFile);
+  if (!IndexPtrOrErr) {
+    logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
+                          "Error loading file '" + SummaryFile + "': ");
+    return false;
   }
+  std::unique_ptr<ModuleSummaryIndex> Index = std::move(*IndexPtrOrErr);
 
   // First step is collecting the import list.
   FunctionImporter::ImportMapTy ImportList;
@@ -794,10 +787,6 @@ static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
 namespace {
 /// Pass that performs cross-module function import provided a summary file.
 class FunctionImportLegacyPass : public ModulePass {
-  /// Optional module summary index to use for importing, otherwise
-  /// the summary-file option must be specified.
-  const ModuleSummaryIndex *Index;
-
 public:
   /// Pass identification, replacement for typeid
   static char ID;
@@ -805,21 +794,20 @@ public:
   /// Specify pass name for debug output
   StringRef getPassName() const override { return "Function Importing"; }
 
-  explicit FunctionImportLegacyPass(const ModuleSummaryIndex *Index = nullptr)
-      : ModulePass(ID), Index(Index) {}
+  explicit FunctionImportLegacyPass() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
 
-    return doImportingForModule(M, Index);
+    return doImportingForModule(M);
   }
 };
 } // anonymous namespace
 
 PreservedAnalyses FunctionImportPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  if (!doImportingForModule(M, Index))
+  if (!doImportingForModule(M))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -830,7 +818,7 @@ INITIALIZE_PASS(FunctionImportLegacyPass, "function-import",
                 "Summary Based Function Import", false, false)
 
 namespace llvm {
-Pass *createFunctionImportPass(const ModuleSummaryIndex *Index = nullptr) {
-  return new FunctionImportLegacyPass(Index);
+Pass *createFunctionImportPass() {
+  return new FunctionImportLegacyPass();
 }
 }

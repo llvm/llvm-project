@@ -10,7 +10,7 @@
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
 ; and profile count, with value id matching the subsequent value symbol table.
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[HOT2:.*]] op7=3 op8=[[HOT3:.*]] op9=3 op10=[[COLD:.*]] op11=1 op12=[[NONE1:.*]] op13=2 op14=[[NONE2:.*]] op15=2 op16=[[NONE3:.*]] op17=2/>
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=[[HOT1:.*]] op5=3 op6=[[COLD:.*]] op7=1 op8=[[HOT2:.*]] op9=3 op10=[[NONE1:.*]] op11=2 op12=[[HOT3:.*]] op13=3 op14=[[NONE2:.*]] op15=2 op16=[[NONE3:.*]] op17=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK-LABEL:  <VALUE_SYMTAB
 ; CHECK-NEXT:       <FNENTRY {{.*}} record string = 'hot_function
@@ -31,7 +31,7 @@
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[HOT1:.*]] op6=3 op7=[[HOT2:.*]] op8=3 op9=[[HOT3:.*]] op10=3 op11=[[COLD:.*]] op12=1 op13=[[NONE1:.*]] op14=2 op15=[[NONE2:.*]] op16=2 op17=[[NONE3:.*]] op18=2/>
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op5=[[HOT1:.*]] op6=3 op7=[[COLD:.*]] op8=1 op9=[[HOT2:.*]] op10=3 op11=[[NONE1:.*]] op12=2 op13=[[HOT3:.*]] op14=3 op15=[[NONE2:.*]] op16=2 op17=[[NONE3:.*]] op18=2/>
 ; COMBINED_NEXT:    <COMBINED abbrevid=
 ; COMBINED_NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 

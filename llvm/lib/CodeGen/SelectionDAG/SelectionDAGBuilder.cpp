@@ -7732,8 +7732,19 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         Flags.setZExt();
       if (Args[i].isSExt)
         Flags.setSExt();
-      if (Args[i].isInReg)
+      if (Args[i].isInReg) {
+        // If we are using vectorcall calling convention, a structure that is
+        // passed InReg - is surely an HVA
+        if (CLI.CallConv == CallingConv::X86_VectorCall &&
+            isa<StructType>(FinalType)) {
+          // The first value of a structure is marked
+          if (0 == Value)
+            Flags.setHvaStart();
+          Flags.setHva();
+        }
+        // Set InReg Flag
         Flags.setInReg();
+      }
       if (Args[i].isSRet)
         Flags.setSRet();
       if (Args[i].isSwiftSelf)
@@ -8019,8 +8030,19 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         Flags.setZExt();
       if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
         Flags.setSExt();
-      if (F.getAttributes().hasAttribute(Idx, Attribute::InReg))
+      if (F.getAttributes().hasAttribute(Idx, Attribute::InReg)) {
+        // If we are using vectorcall calling convention, a structure that is
+        // passed InReg - is surely an HVA
+        if (F.getCallingConv() == CallingConv::X86_VectorCall &&
+            isa<StructType>(I->getType())) {
+          // The first value of a structure is marked
+          if (0 == Value)
+            Flags.setHvaStart();
+          Flags.setHva();
+        }
+        // Set InReg Flag
         Flags.setInReg();
+      }
       if (F.getAttributes().hasAttribute(Idx, Attribute::StructRet))
         Flags.setSRet();
       if (F.getAttributes().hasAttribute(Idx, Attribute::SwiftSelf))

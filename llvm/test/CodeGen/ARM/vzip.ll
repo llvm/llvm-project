@@ -332,9 +332,8 @@ define void @vzip_vext_factor(<8 x i16>* %A, <4 x i16>* %B) {
 ; CHECK-LABEL: vzip_vext_factor:
 ; CHECK:       @ BB#0: @ %entry
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vext.16 d16, d16, d17, #3
-; CHECK-NEXT:    vext.16 d17, d16, d16, #1
-; CHECK-NEXT:    vzip.16 d16, d17
+; CHECK-NEXT:    vext.16 d18, d16, d17, #1
+; CHECK-NEXT:    vext.16 d16, d18, d17, #2
 ; CHECK-NEXT:    vext.16 d16, d16, d16, #1
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov pc, lr
