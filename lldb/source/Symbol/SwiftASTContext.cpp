@@ -1694,8 +1694,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           if (!ast_datas.empty()) {
             // We only initialize the compiler invocation with the first
             // AST since it initializes some data that must remain static,
-            // like
-            // the SDK path and the triple for the produced output.
+            // like the SDK path and the triple for the produced output.
             auto ast_data_sp = ast_datas.front();
             llvm::StringRef section_data_ref(
                 (const char *)ast_data_sp->GetBytes(),
@@ -1771,11 +1770,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
             std::string module_path = module_file.GetPath();
 
-            // Add the containing framework to the framework search path.
-            // Don't
-            // do that if this is the
-            // executable module, since it might be buried in some framework
-            // that we don't care about.
+            // Add the containing framework to the framework search path.  Don't
+            // do that if this is the executable module, since it might be
+            // buried in some framework that we don't care about.
             if (use_all_compiler_flags &&
                 target->GetExecutableModulePointer() != module_sp.get()) {
               size_t framework_offset = module_path.rfind(".framework/");
@@ -1867,8 +1864,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       }
 
       // Now fold any extra options we were passed. This has to be done BEFORE
-      // the ClangImporter is made by calling GetClangImporter or these
-      // options
+      // the ClangImporter is made by calling GetClangImporter or these options
       // will be ignored.
 
       if (extra_options) {
@@ -1883,8 +1879,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
       Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-      // This needs to happen once all the import paths are set, or otherwise
-      // no
+      // This needs to happen once all the import paths are set, or otherwise no
       // modules will be found.
       if (!swift_ast_sp->GetClangImporter()) {
         if (log) {
