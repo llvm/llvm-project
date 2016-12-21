@@ -18,6 +18,9 @@ struct D { ~D(); };
 // CHECK: @__dso_handle = external global i8
 // CHECK: @c = global %struct.C zeroinitializer, align 8
 
+// It's okay if we ever implement the IR-generation optimization to remove this.
+// CHECK: @_ZN5test3L3varE = internal constant i8* getelementptr inbounds ([7 x i8], [7 x i8]* 
+
 // PR6205: The casts should not require global initializers
 // CHECK: @_ZN6PR59741cE = external global %"struct.PR5974::C"
 // CHECK: @_ZN6PR59741aE = global %"struct.PR5974::A"* getelementptr inbounds (%"struct.PR5974::C", %"struct.PR5974::C"* @_ZN6PR59741cE, i32 0, i32 0)
@@ -167,6 +170,8 @@ namespace test7 {
   const B &b2 = B();
   const int b3 = B().n;
 
+  // CHECK-NOT: @_ZN5test7L2c1E
+  // CHECK: call void @llvm.memset{{.*}} @_ZN5test7L2c1E
   // CHECK-NOT: @_ZN5test7L2c1E
   // CHECK: @_ZN5test7L2c2E
   // CHECK-NOT: @_ZN5test7L2c3E

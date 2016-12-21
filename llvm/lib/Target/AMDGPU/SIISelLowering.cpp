@@ -1697,9 +1697,32 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
 
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineInstr &MI, MachineBasicBlock *BB) const {
+
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  MachineFunction *MF = BB->getParent();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+
+  if (TII->isMIMG(MI)) {
+      if (!MI.memoperands_empty())
+        return BB;
+    // Add a memoperand for mimg instructions so that they aren't assumed to
+    // be ordered memory instuctions.
+
+    MachinePointerInfo PtrInfo(MFI->getImagePSV());
+    MachineMemOperand::Flags Flags = MachineMemOperand::MODereferenceable;
+    if (MI.mayStore())
+      Flags |= MachineMemOperand::MOStore;
+
+    if (MI.mayLoad())
+      Flags |= MachineMemOperand::MOLoad;
+
+    auto MMO = MF->getMachineMemOperand(PtrInfo, Flags, 0, 0);
+    MI.addMemOperand(*MF, MMO);
+    return BB;
+  }
+
   switch (MI.getOpcode()) {
   case AMDGPU::SI_INIT_M0: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addOperand(MI.getOperand(0));
@@ -1707,10 +1730,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return BB;
   }
   case AMDGPU::GET_GROUPSTATICSIZE: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-
-    MachineFunction *MF = BB->getParent();
-    SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
     DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
       .addOperand(MI.getOperand(0))
@@ -1734,7 +1753,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
     unsigned Dst = MI.getOperand(0).getReg();
     unsigned Src0 = MI.getOperand(1).getReg();
@@ -2632,6 +2650,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  SDLoc DL(Op);
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec: {
@@ -2646,6 +2665,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(Opc, SDLoc(Op), M->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_buffer_load:
+  case Intrinsic::amdgcn_buffer_load_format: {
+    SDValue Ops[] = {
+      Op.getOperand(0), // Chain
+      Op.getOperand(2), // rsrc
+      Op.getOperand(3), // vindex
+      Op.getOperand(4), // offset
+      Op.getOperand(5), // glc
+      Op.getOperand(6)  // slc
+    };
+    MachineFunction &MF = DAG.getMachineFunction();
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+    unsigned Opc = (IntrID == Intrinsic::amdgcn_buffer_load) ?
+        AMDGPUISD::BUFFER_LOAD : AMDGPUISD::BUFFER_LOAD_FORMAT;
+    EVT VT = Op.getValueType();
+    EVT IntVT = VT.changeTypeToInteger();
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(MFI->getBufferPSV()),
+      MachineMemOperand::MOLoad,
+      VT.getStoreSize(), VT.getStoreSize());
+
+    return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops, IntVT, MMO);
   }
   default:
     return SDValue();
@@ -4338,6 +4382,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       default:
         return std::make_pair(0U, nullptr);
       case 32:
+      case 16:
         return std::make_pair(0U, &AMDGPU::SReg_32_XM0RegClass);
       case 64:
         return std::make_pair(0U, &AMDGPU::SGPR_64RegClass);
@@ -4352,6 +4397,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       default:
         return std::make_pair(0U, nullptr);
       case 32:
+      case 16:
         return std::make_pair(0U, &AMDGPU::VGPR_32RegClass);
       case 64:
         return std::make_pair(0U, &AMDGPU::VReg_64RegClass);

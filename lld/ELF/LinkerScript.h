@@ -144,7 +144,7 @@ struct SectionPattern {
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
-      : BaseCommand(InputSectionKind), FilePat({FilePattern}) {}
+      : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
 
   static bool classof(const BaseCommand *C);
 

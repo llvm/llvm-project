@@ -51,7 +51,7 @@
 #include <termios.h>
 #include <time.h>
 #include <wchar.h>
-#if !SANITIZER_MAC
+#if !SANITIZER_MAC && !SANITIZER_FREEBSD
 #include <utmp.h>
 #endif
 
@@ -288,7 +288,7 @@ namespace __sanitizer {
   int shmctl_shm_stat = (int)SHM_STAT;
 #endif
 
-#if !SANITIZER_MAC
+#if !SANITIZER_MAC && !SANITIZER_FREEBSD
   unsigned struct_utmp_sz = sizeof(struct utmp);
 #endif
 #if !SANITIZER_ANDROID

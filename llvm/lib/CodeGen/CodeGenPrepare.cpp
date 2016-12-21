@@ -1948,18 +1948,8 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
     default: break;
     case Intrinsic::objectsize: {
       // Lower all uses of llvm.objectsize.*
-      uint64_t Size;
-      Type *ReturnTy = CI->getType();
-      Constant *RetVal = nullptr;
-      ConstantInt *Op1 = cast<ConstantInt>(II->getArgOperand(1));
-      ObjSizeMode Mode = Op1->isZero() ? ObjSizeMode::Max : ObjSizeMode::Min;
-      if (getObjectSize(II->getArgOperand(0),
-                        Size, *DL, TLInfo, false, Mode)) {
-        RetVal = ConstantInt::get(ReturnTy, Size);
-      } else {
-        RetVal = ConstantInt::get(ReturnTy,
-                                  Mode == ObjSizeMode::Min ? 0 : -1ULL);
-      }
+      ConstantInt *RetVal =
+          lowerObjectSizeCall(II, *DL, TLInfo, /*MustSucceed=*/true);
       // Substituting this can cause recursive simplifications, which can
       // invalidate our iterator.  Use a WeakVH to hold onto it in case this
       // happens.

@@ -46,13 +46,6 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
   return check(File->getObj().getSectionContents(Hdr));
 }
 
-// ELF supports ZLIB-compressed section. Returns true if the section
-// is compressed.
-template <class ELFT>
-static bool isCompressed(typename ELFT::uint Flags, StringRef Name) {
-  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
-}
-
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          uintX_t Flags, uint32_t Type,
@@ -60,7 +53,7 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          uint32_t Info, uintX_t Addralign,
                                          ArrayRef<uint8_t> Data, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionData(SectionKind, Name, Data, isCompressed<ELFT>(Flags, Name),
+    : InputSectionData(SectionKind, Name, Data,
                        !Config->GcSections || !(Flags & SHF_ALLOC)),
       File(File), Flags(Flags), Entsize(Entsize), Type(Type), Link(Link),
       Info(Info), Repl(this) {
@@ -133,6 +126,10 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
+}
+
+template <class ELFT> bool InputSectionBase<ELFT>::isCompressed() const {
+  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
 }
 
 // Returns compressed data and its size when uncompressed.

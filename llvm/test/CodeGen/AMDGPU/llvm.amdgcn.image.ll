@@ -1,5 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefixes=CHECK,VI %s
 
 ;CHECK-LABEL: {{^}}image_load_v4i32:
 ;CHECK: image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm
@@ -144,6 +144,19 @@ main_body:
   ret void
 }
 
+; SI won't merge ds memory operations, because of the signed offset bug, so
+; we only have check lines for VI.
+; VI-LABEL: image_load_mmo
+; VI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
+define amdgpu_ps void @image_load_mmo(float addrspace(3)* %lds, <2 x i32> %c, <8 x i32> inreg %rsrc) {
+  store float 0.0, float addrspace(3)* %lds
+  %tex = call float @llvm.amdgcn.image.load.f32.v2i32.v8i32(<2 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
+  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
+  store float 0.0, float addrspace(3)* %tmp2
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tex, float %tex, float %tex, float %tex)
+  ret void
+}
 
 declare float @llvm.amdgcn.image.load.f32.v2i32.v8i32(<2 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare <2 x float> @llvm.amdgcn.image.load.v2f32.v4i32.v8i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1

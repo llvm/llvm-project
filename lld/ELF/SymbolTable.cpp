@@ -586,7 +586,7 @@ template <class ELFT>
 std::vector<SymbolBody *>
 SymbolTable<ELFT>::findAllByVersion(SymbolVersion Ver) {
   std::vector<SymbolBody *> Res;
-  StringMatcher M({Ver.Name});
+  StringMatcher M(Ver.Name);
 
   if (Ver.IsExternCpp) {
     initDemangledSyms();

@@ -1,4 +1,4 @@
-; RUN: opt -loop-distribute -S -verify-loop-info -verify-dom-info < %s \
+; RUN: opt -loop-distribute -enable-loop-distribute -S -verify-loop-info -verify-dom-info < %s \
 ; RUN:   | FileCheck %s
 
 ; Distributing this loop to avoid the dependence cycle would require to

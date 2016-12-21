@@ -10,10 +10,10 @@ namespace B {
 }
 
 struct X {
-  int x1, x2, y, z; // expected-note {{conflicting}}
+  int x1, x2, y, z; // expected-note 2{{conflicting}}
 };
 struct Y {
-  int x1, x2, y, z; // expected-note {{target}}
+  int x1, x2, y, z; // expected-note 2{{target}}
 };
 struct Z : X, Y {
   using X::x1,
@@ -28,3 +28,8 @@ int X::*px1 = &Z::x1;
 int X::*px2 = &Z::x2;
 int Y::*py = &Z::y;
 int X::*pz = &Z::z;
+
+template<typename ...T> struct Q : T... {
+  using T::z...; // expected-error {{conflicts}}
+};
+Q<X,Y> q; // expected-note {{instantiation of}}
