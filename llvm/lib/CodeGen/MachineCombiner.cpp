@@ -135,7 +135,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    DEBUG(dbgs() << "NEW INSTR "; InstrPtr->dump(); dbgs() << "\n";);
+    DEBUG(dbgs() << "NEW INSTR "; InstrPtr->dump(TII); dbgs() << "\n";);
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
       if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))

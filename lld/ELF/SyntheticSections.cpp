@@ -134,8 +134,13 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
     Create = true;
 
     std::string Filename = toString(Sec->getFile());
-    if (Sec->Data.size() != sizeof(Elf_Mips_ABIFlags)) {
-      error(Filename + ": invalid size of .MIPS.abiflags section");
+    const size_t Size = Sec->Data.size();
+    // Older version of BFD (such as the default FreeBSD linker) concatenate
+    // .MIPS.abiflags instead of merging. To allow for this case (or potential
+    // zero padding) we ignore everything after the first Elf_Mips_ABIFlags
+    if (Size < sizeof(Elf_Mips_ABIFlags)) {
+      error(Filename + ": invalid size of .MIPS.abiflags section: got " +
+            Twine(Size) + " instead of " + Twine(sizeof(Elf_Mips_ABIFlags)));
       return nullptr;
     }
     auto *S = reinterpret_cast<const Elf_Mips_ABIFlags *>(Sec->Data.data());
@@ -1187,7 +1192,7 @@ const OutputSectionBase *
 SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   switch (Sym->kind()) {
   case SymbolBody::DefinedSyntheticKind:
-    return cast<DefinedSynthetic<ELFT>>(Sym)->Section;
+    return cast<DefinedSynthetic>(Sym)->Section;
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(*Sym);
     if (D.Section)

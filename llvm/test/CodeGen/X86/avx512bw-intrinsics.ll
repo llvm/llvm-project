@@ -2010,18 +2010,17 @@ declare void @llvm.x86.avx512.mask.pmovs.wb.mem.512(i8* %ptr, <32 x i16>, i32)
 define void @test_int_x86_avx512_mask_pmovs_wb_mem_512(i8* %ptr, <32 x i16> %x1, i32 %x2) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_pmovs_wb_mem_512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpmovswb %zmm0, (%rdi)
 ; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    vpmovswb %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vpmovswb %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_pmovs_wb_mem_512:
 ; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512F-32-NEXT:    vpmovswb %zmm0, (%ecx)
-; AVX512F-32-NEXT:    kmovd %eax, %k1
-; AVX512F-32-NEXT:    vpmovswb %zmm0, (%ecx) {%k1}
+; AVX512F-32-NEXT:    vpmovswb %zmm0, (%eax)
+; AVX512F-32-NEXT:    vpmovswb %zmm0, (%eax) {%k1}
 ; AVX512F-32-NEXT:    retl
     call void @llvm.x86.avx512.mask.pmovs.wb.mem.512(i8* %ptr, <32 x i16> %x1, i32 -1)
     call void @llvm.x86.avx512.mask.pmovs.wb.mem.512(i8* %ptr, <32 x i16> %x1, i32 %x2)
@@ -2063,18 +2062,17 @@ declare void @llvm.x86.avx512.mask.pmovus.wb.mem.512(i8* %ptr, <32 x i16>, i32)
 define void @test_int_x86_avx512_mask_pmovus_wb_mem_512(i8* %ptr, <32 x i16> %x1, i32 %x2) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_pmovus_wb_mem_512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpmovuswb %zmm0, (%rdi)
 ; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    vpmovuswb %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vpmovuswb %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_pmovus_wb_mem_512:
 ; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512F-32-NEXT:    vpmovuswb %zmm0, (%ecx)
-; AVX512F-32-NEXT:    kmovd %eax, %k1
-; AVX512F-32-NEXT:    vpmovuswb %zmm0, (%ecx) {%k1}
+; AVX512F-32-NEXT:    vpmovuswb %zmm0, (%eax)
+; AVX512F-32-NEXT:    vpmovuswb %zmm0, (%eax) {%k1}
 ; AVX512F-32-NEXT:    retl
     call void @llvm.x86.avx512.mask.pmovus.wb.mem.512(i8* %ptr, <32 x i16> %x1, i32 -1)
     call void @llvm.x86.avx512.mask.pmovus.wb.mem.512(i8* %ptr, <32 x i16> %x1, i32 %x2)

@@ -668,14 +668,15 @@ private:
   Error parseValueSymbolTable(
       uint64_t Offset,
       DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap);
+  std::vector<ValueInfo> makeRefList(ArrayRef<uint64_t> Record);
+  std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
+                                                    bool IsOldProfileFormat,
+                                                    bool HasProfile);
   Error parseEntireSummary(StringRef ModulePath);
   Error parseModuleStringTable();
-  std::pair<GlobalValue::GUID, GlobalValue::GUID>
 
+  std::pair<GlobalValue::GUID, GlobalValue::GUID>
   getGUIDFromValueId(unsigned ValueId);
-  std::pair<GlobalValue::GUID, CalleeInfo::HotnessType>
-  readCallGraphEdge(const SmallVector<uint64_t, 64> &Record, unsigned int &I,
-                    bool IsOldProfileFormat, bool HasProfile);
 };
 
 } // end anonymous namespace
@@ -4792,6 +4793,33 @@ Error ModuleSummaryIndexBitcodeReader::parseModule(StringRef ModulePath) {
   }
 }
 
+std::vector<ValueInfo>
+ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
+  std::vector<ValueInfo> Ret;
+  Ret.reserve(Record.size());
+  for (uint64_t RefValueId : Record)
+    Ret.push_back(getGUIDFromValueId(RefValueId).first);
+  return Ret;
+}
+
+std::vector<FunctionSummary::EdgeTy> ModuleSummaryIndexBitcodeReader::makeCallList(
+    ArrayRef<uint64_t> Record, bool IsOldProfileFormat, bool HasProfile) {
+  std::vector<FunctionSummary::EdgeTy> Ret;
+  Ret.reserve(Record.size());
+  for (unsigned I = 0, E = Record.size(); I != E; ++I) {
+    CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
+    GlobalValue::GUID CalleeGUID = getGUIDFromValueId(Record[I]).first;
+    if (IsOldProfileFormat) {
+      I += 1; // Skip old callsitecount field
+      if (HasProfile)
+        I += 1; // Skip old profilecount field
+    } else if (HasProfile)
+      Hotness = static_cast<CalleeInfo::HotnessType>(Record[++I]);
+    Ret.push_back(FunctionSummary::EdgeTy{CalleeGUID, CalleeInfo{Hotness}});
+  }
+  return Ret;
+}
+
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
@@ -4868,33 +4896,25 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       unsigned InstCount = Record[2];
       unsigned NumRefs = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<FunctionSummary> FS =
-          llvm::make_unique<FunctionSummary>(Flags, InstCount);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
       // module path string table entry with an empty (0) ID to take
       // ownership.
-      FS->setModulePath(TheIndex.addModulePath(ModulePath, 0)->first());
       static int RefListStartIndex = 4;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      for (unsigned I = 4, E = CallGraphEdgeStartIndex; I != E; ++I) {
-        unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
-        FS->addRefEdge(RefGUID);
-      }
+      std::vector<ValueInfo> Refs = makeRefList(
+          ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
-      for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
-           ++I) {
-        CalleeInfo::HotnessType Hotness;
-        GlobalValue::GUID CalleeGUID;
-        std::tie(CalleeGUID, Hotness) =
-            readCallGraphEdge(Record, I, IsOldProfileFormat, HasProfile);
-        FS->addCallGraphEdge(CalleeGUID, CalleeInfo(Hotness));
-      }
+      std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
+          ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
+          IsOldProfileFormat, HasProfile);
+      auto FS = llvm::make_unique<FunctionSummary>(
+          Flags, InstCount, std::move(Refs), std::move(Calls));
       auto GUID = getGUIDFromValueId(ValueID);
+      FS->setModulePath(TheIndex.addModulePath(ModulePath, 0)->first());
       FS->setOriginalName(GUID.second);
       TheIndex.addGlobalValueSummary(GUID.first, std::move(FS));
       break;
@@ -4907,7 +4927,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       uint64_t RawFlags = Record[1];
       unsigned AliaseeID = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
+      auto AS =
+          llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -4931,14 +4952,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<GlobalVarSummary> FS =
-          llvm::make_unique<GlobalVarSummary>(Flags);
+      std::vector<ValueInfo> Refs =
+          makeRefList(ArrayRef<uint64_t>(Record).slice(2));
+      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
       FS->setModulePath(TheIndex.addModulePath(ModulePath, 0)->first());
-      for (unsigned I = 2, E = Record.size(); I != E; ++I) {
-        unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
-        FS->addRefEdge(RefGUID);
-      }
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
       TheIndex.addGlobalValueSummary(GUID.first, std::move(FS));
@@ -4956,30 +4973,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       unsigned InstCount = Record[3];
       unsigned NumRefs = Record[4];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<FunctionSummary> FS =
-          llvm::make_unique<FunctionSummary>(Flags, InstCount);
-      LastSeenSummary = FS.get();
-      FS->setModulePath(ModuleIdMap[ModuleId]);
       static int RefListStartIndex = 5;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      for (unsigned I = RefListStartIndex, E = CallGraphEdgeStartIndex; I != E;
-           ++I) {
-        unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
-        FS->addRefEdge(RefGUID);
-      }
+      std::vector<ValueInfo> Refs = makeRefList(
+          ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
-      for (unsigned I = CallGraphEdgeStartIndex, E = Record.size(); I != E;
-           ++I) {
-        CalleeInfo::HotnessType Hotness;
-        GlobalValue::GUID CalleeGUID;
-        std::tie(CalleeGUID, Hotness) =
-            readCallGraphEdge(Record, I, IsOldProfileFormat, HasProfile);
-        FS->addCallGraphEdge(CalleeGUID, CalleeInfo(Hotness));
-      }
+      std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
+          ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
+          IsOldProfileFormat, HasProfile);
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
+      auto FS = llvm::make_unique<FunctionSummary>(
+          Flags, InstCount, std::move(Refs), std::move(Edges));
+      LastSeenSummary = FS.get();
+      FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
@@ -4993,7 +5001,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       uint64_t RawFlags = Record[2];
       unsigned AliaseeValueId = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
+      auto AS = llvm::make_unique<AliasSummary>(Flags, std::vector<ValueInfo>{});
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
@@ -5015,15 +5023,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       uint64_t ModuleId = Record[1];
       uint64_t RawFlags = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
-      std::unique_ptr<GlobalVarSummary> FS =
-          llvm::make_unique<GlobalVarSummary>(Flags);
+      std::vector<ValueInfo> Refs =
+          makeRefList(ArrayRef<uint64_t>(Record).slice(3));
+      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
-      for (unsigned I = 3, E = Record.size(); I != E; ++I) {
-        unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
-        FS->addRefEdge(RefGUID);
-      }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
@@ -5041,23 +5045,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
     }
   }
   llvm_unreachable("Exit infinite loop");
-}
-
-std::pair<GlobalValue::GUID, CalleeInfo::HotnessType>
-ModuleSummaryIndexBitcodeReader::readCallGraphEdge(
-    const SmallVector<uint64_t, 64> &Record, unsigned int &I,
-    const bool IsOldProfileFormat, const bool HasProfile) {
-
-  auto Hotness = CalleeInfo::HotnessType::Unknown;
-  unsigned CalleeValueId = Record[I];
-  GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
-  if (IsOldProfileFormat) {
-    I += 1; // Skip old callsitecount field
-    if (HasProfile)
-      I += 1; // Skip old profilecount field
-  } else if (HasProfile)
-    Hotness = static_cast<CalleeInfo::HotnessType>(Record[++I]);
-  return {CalleeGUID, Hotness};
 }
 
 // Parse the  module string table block into the Index.

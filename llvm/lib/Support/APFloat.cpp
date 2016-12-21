@@ -4110,13 +4110,15 @@ void DoubleAPFloat::makeNaN(bool SNaN, bool Neg, const APInt *fill) {
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
   if (usesLayout<IEEEFloat>(Semantics)) {
     new (&IEEE) IEEEFloat(std::move(F));
-  } else if (usesLayout<DoubleAPFloat>(Semantics)) {
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(Semantics)) {
     new (&Double)
         DoubleAPFloat(Semantics, APFloat(std::move(F), F.getSemantics()),
                       APFloat(semIEEEdouble));
-  } else {
-    llvm_unreachable("Unexpected semantics");
+    return;
   }
+  llvm_unreachable("Unexpected semantics");
 }
 
 APFloat::opStatus APFloat::convertFromString(StringRef Str, roundingMode RM) {
@@ -4135,24 +4137,24 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
   if (&getSemantics() == &ToSemantics)
     return opOK;
   if (usesLayout<IEEEFloat>(getSemantics()) &&
-      usesLayout<IEEEFloat>(ToSemantics)) {
+      usesLayout<IEEEFloat>(ToSemantics))
     return U.IEEE.convert(ToSemantics, RM, losesInfo);
-  } else if (usesLayout<IEEEFloat>(getSemantics()) &&
-             usesLayout<DoubleAPFloat>(ToSemantics)) {
+  if (usesLayout<IEEEFloat>(getSemantics()) &&
+      usesLayout<DoubleAPFloat>(ToSemantics)) {
     assert(&ToSemantics == &semPPCDoubleDouble);
     auto Ret = U.IEEE.convert(semPPCDoubleDoubleImpl, RM, losesInfo);
-    *this = APFloat(
-        DoubleAPFloat(semPPCDoubleDouble, std::move(*this), APFloat(semIEEEdouble)),
-        ToSemantics);
+    *this = APFloat(DoubleAPFloat(semPPCDoubleDouble, std::move(*this),
+                                  APFloat(semIEEEdouble)),
+                    ToSemantics);
     return Ret;
-  } else if (usesLayout<DoubleAPFloat>(getSemantics()) &&
-             usesLayout<IEEEFloat>(ToSemantics)) {
+  }
+  if (usesLayout<DoubleAPFloat>(getSemantics()) &&
+      usesLayout<IEEEFloat>(ToSemantics)) {
     auto Ret = getIEEE().convert(ToSemantics, RM, losesInfo);
     *this = APFloat(std::move(getIEEE()), ToSemantics);
     return Ret;
-  } else {
-    llvm_unreachable("Unexpected semantics");
   }
+  llvm_unreachable("Unexpected semantics");
 }
 
 APFloat APFloat::getAllOnesValue(unsigned BitWidth, bool isIEEE) {

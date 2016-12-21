@@ -1440,17 +1440,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   switch (II->getIntrinsicID()) {
   default: break;
-  case Intrinsic::objectsize: {
-    uint64_t Size;
-    if (getObjectSize(II->getArgOperand(0), Size, DL, &TLI)) {
-      APInt APSize(II->getType()->getIntegerBitWidth(), Size);
-      // Equality check to be sure that `Size` can fit in a value of type
-      // `II->getType()`
-      if (APSize == Size)
-        return replaceInstUsesWith(CI, ConstantInt::get(II->getType(), APSize));
-    }
+  case Intrinsic::objectsize:
+    if (ConstantInt *N =
+            lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
+      return replaceInstUsesWith(CI, N);
     return nullptr;
-  }
+
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;

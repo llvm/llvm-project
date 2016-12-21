@@ -134,11 +134,10 @@ static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
   if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
     return None;
 
-  const auto *Iter =
-      std::find_if(std::begin(AllocationFnData), std::end(AllocationFnData),
-                   [TLIFn](const std::pair<LibFunc::Func, AllocFnsTy> &P) {
-                     return P.first == TLIFn;
-                   });
+  const auto *Iter = find_if(
+      AllocationFnData, [TLIFn](const std::pair<LibFunc::Func, AllocFnsTy> &P) {
+        return P.first == TLIFn;
+      });
 
   if (Iter == std::end(AllocationFnData))
     return None;
@@ -387,6 +386,36 @@ bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
 
   Size = getSizeWithOverflow(Data).getZExtValue();
   return true;
+}
+
+ConstantInt *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                       const DataLayout &DL,
+                                       const TargetLibraryInfo *TLI,
+                                       bool MustSucceed) {
+  assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
+         "ObjectSize must be a call to llvm.objectsize!");
+
+  bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(1))->isZero();
+  ObjSizeMode Mode;
+  // Unless we have to fold this to something, try to be as accurate as
+  // possible.
+  if (MustSucceed)
+    Mode = MaxVal ? ObjSizeMode::Max : ObjSizeMode::Min;
+  else
+    Mode = ObjSizeMode::Exact;
+
+  // FIXME: Does it make sense to just return a failure value if the size won't
+  // fit in the output and `!MustSucceed`?
+  uint64_t Size;
+  auto *ResultType = cast<IntegerType>(ObjectSize->getType());
+  if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI, false, Mode) &&
+      isUIntN(ResultType->getBitWidth(), Size))
+    return ConstantInt::get(ResultType, Size);
+
+  if (!MustSucceed)
+    return nullptr;
+
+  return ConstantInt::get(ResultType, MaxVal ? -1ULL : 0);
 }
 
 STATISTIC(ObjectVisitorArgument,
