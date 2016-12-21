@@ -1554,11 +1554,9 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
     if (load_addr == LLDB_INVALID_ADDRESS) {
       ModuleSP addr_module_sp(resolved_addr.GetModule());
       if (addr_module_sp && addr_module_sp->GetFileSpec())
-        error.SetErrorStringWithFormat(
-            "%s[0x%" PRIx64 "] can't be resolved, %s in not currently loaded",
-            addr_module_sp->GetFileSpec().GetFilename().AsCString("<Unknown>"),
-            resolved_addr.GetFileAddress(),
-            addr_module_sp->GetFileSpec().GetFilename().AsCString("<Unknonw>"));
+        error.SetErrorStringWithFormatv(
+            "{0:F}[{1:x+}] can't be resolved, {0:F} is not currently loaded",
+            addr_module_sp->GetFileSpec(), resolved_addr.GetFileAddress());
       else
         error.SetErrorStringWithFormat("0x%" PRIx64 " can't be resolved",
                                        resolved_addr.GetFileAddress());

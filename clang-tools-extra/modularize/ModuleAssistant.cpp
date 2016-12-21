@@ -87,17 +87,14 @@ bool Module::output(llvm::raw_fd_ostream &OS, int Indent) {
   }
 
   // Output submodules.
-  for (std::vector<Module *>::iterator I = SubModules.begin(),
-                                       E = SubModules.end();
-       I != E; ++I) {
+  for (auto I = SubModules.begin(), E = SubModules.end(); I != E; ++I) {
     if (!(*I)->output(OS, Indent))
       return false;
   }
 
   // Output header files.
-  for (std::vector<std::string>::iterator I = HeaderFileNames.begin(),
-                                          E = HeaderFileNames.end();
-       I != E; ++I) {
+  for (auto I = HeaderFileNames.begin(), E = HeaderFileNames.end(); I != E;
+       ++I) {
     OS.indent(Indent);
     if (IsProblem || strstr((*I).c_str(), ".inl"))
       OS << "exclude header \"" << *I << "\"\n";
@@ -123,9 +120,7 @@ bool Module::output(llvm::raw_fd_ostream &OS, int Indent) {
 
 // Lookup a sub-module.
 Module *Module::findSubModule(llvm::StringRef SubName) {
-  for (std::vector<Module *>::iterator I = SubModules.begin(),
-                                       E = SubModules.end();
-       I != E; ++I) {
+  for (auto I = SubModules.begin(), E = SubModules.end(); I != E; ++I) {
     if ((*I)->Name == SubName)
       return *I;
   }
@@ -227,7 +222,7 @@ static Module *loadModuleDescriptions(
     DependencyMap &Dependencies, llvm::StringRef HeaderPrefix) {
 
   // Create root module.
-  Module *RootModule = new Module(RootModuleName, false);
+  auto *RootModule = new Module(RootModuleName, false);
 
   llvm::SmallString<256> CurrentDirectory;
   llvm::sys::fs::current_path(CurrentDirectory);

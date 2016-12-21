@@ -9,7 +9,7 @@
 define double @test1(double %A) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    retq

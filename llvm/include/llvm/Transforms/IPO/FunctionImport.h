@@ -71,12 +71,7 @@ private:
 /// The function importing pass
 class FunctionImportPass : public PassInfoMixin<FunctionImportPass> {
 public:
-  FunctionImportPass(const ModuleSummaryIndex *Index = nullptr)
-      : Index(Index) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-private:
-  const ModuleSummaryIndex *Index;
 };
 
 /// Compute all the imports and exports for every module in the Index.

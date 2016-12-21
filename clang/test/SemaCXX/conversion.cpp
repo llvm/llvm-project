@@ -50,7 +50,7 @@ namespace test1 {
 namespace test2 {
   struct A {
     unsigned int x : 2;
-    A() : x(10) {} // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to 2}}
+    A() : x(10) {} // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to 2}}
   };
 }
 

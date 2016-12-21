@@ -8,8 +8,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 
 ; CHECK: name: bar
 ; CHECK: body:
-; CHECK:   bb.0:
-; CHECK:   bb.1:
+; CHECK-NEXT:   bb.1:
 ; CHECK:     successors: %[[GOOD:bb.[0-9]+]]{{.*}}%[[BAD:bb.[0-9]+]]
 ; CHECK:     EH_LABEL
 ; CHECK:     %w0 = COPY

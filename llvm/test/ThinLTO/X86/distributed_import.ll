@@ -11,6 +11,8 @@
 ; RUN: llvm-dis -o - %t2.out | FileCheck %s
 ; CHECK: @G.llvm.0
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 declare i32 @g(...)
 
 define void @f() {

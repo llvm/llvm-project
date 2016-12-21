@@ -1270,9 +1270,8 @@ void ASTContext::setClassScopeSpecializationPattern(FunctionDecl *FD,
 }
 
 NamedDecl *
-ASTContext::getInstantiatedFromUsingDecl(UsingDecl *UUD) {
-  llvm::DenseMap<UsingDecl *, NamedDecl *>::const_iterator Pos
-    = InstantiatedFromUsingDecl.find(UUD);
+ASTContext::getInstantiatedFromUsingDecl(NamedDecl *UUD) {
+  auto Pos = InstantiatedFromUsingDecl.find(UUD);
   if (Pos == InstantiatedFromUsingDecl.end())
     return nullptr;
 
@@ -1280,11 +1279,15 @@ ASTContext::getInstantiatedFromUsingDecl(UsingDecl *UUD) {
 }
 
 void
-ASTContext::setInstantiatedFromUsingDecl(UsingDecl *Inst, NamedDecl *Pattern) {
+ASTContext::setInstantiatedFromUsingDecl(NamedDecl *Inst, NamedDecl *Pattern) {
   assert((isa<UsingDecl>(Pattern) ||
           isa<UnresolvedUsingValueDecl>(Pattern) ||
           isa<UnresolvedUsingTypenameDecl>(Pattern)) && 
          "pattern decl is not a using decl");
+  assert((isa<UsingDecl>(Inst) ||
+          isa<UnresolvedUsingValueDecl>(Inst) ||
+          isa<UnresolvedUsingTypenameDecl>(Inst)) && 
+         "instantiation did not produce a using decl");
   assert(!InstantiatedFromUsingDecl[Inst] && "pattern already exists");
   InstantiatedFromUsingDecl[Inst] = Pattern;
 }
@@ -2380,6 +2383,14 @@ static QualType getFunctionTypeWithExceptionSpec(
   return Context.getFunctionType(
       Proto->getReturnType(), Proto->getParamTypes(),
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
+}
+
+bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
+                                                          QualType U) {
+  return hasSameType(T, U) ||
+         (getLangOpts().CPlusPlus1z &&
+          hasSameType(getFunctionTypeWithExceptionSpec(*this, T, EST_None),
+                      getFunctionTypeWithExceptionSpec(*this, U, EST_None)));
 }
 
 void ASTContext::adjustExceptionSpec(
@@ -8718,8 +8729,8 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
 
   bool Variadic = (TypeStr[0] == '.');
 
-  // We really shouldn't be making a no-proto type here, especially in C++.
-  if (ArgTypes.empty() && Variadic)
+  // We really shouldn't be making a no-proto type here.
+  if (ArgTypes.empty() && Variadic && !getLangOpts().CPlusPlus)
     return getFunctionNoProtoType(ResType, EI);
 
   FunctionProtoType::ExtProtoInfo EPI;

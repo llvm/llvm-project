@@ -174,7 +174,7 @@ entry:
 !126 = distinct !DISubprogram(name: "function<BPLFunctionWriter::<lambda at BPLFunctionWriter2.ii:20:36> >", linkageName: "_ZN8functionIFvvEEC2IZN17BPLFunctionWriter9writeExprEvE3$_0EET_", line: 8, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 8, file: !6, scope: null, type: !23, templateParams: !47, declaration: !22, variables: !1)
 !127 = distinct !DISubprogram(name: "_M_not_empty_function<BPLFunctionWriter::<lambda at BPLFunctionWriter2.ii:20:36> >", linkageName: "_ZN13_Base_manager21_M_not_empty_functionIZN17BPLFunctionWriter9writeExprEvE3$_0EEvRKT_", line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !6, scope: null, type: !117, templateParams: !120, declaration: !116, variables: !1)
 !128 = !{!130}
-!130 = !DIGlobalVariable(name: "__stored_locally", linkageName: "__stored_locally", line: 2, isLocal: true, isDefinition: true, scope: !114, file: !6, type: !131, expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
+!130 = !DIGlobalVariableExpression(var: !163, expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
 !131 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !132)
 !132 = !DIBasicType(tag: DW_TAG_base_type, name: "bool", size: 8, align: 8, encoding: DW_ATE_boolean)
 !133 = !DILocalVariable(name: "this", line: 19, arg: 1, flags: DIFlagArtificial, scope: !5, file: !6, type: !134)
@@ -207,3 +207,4 @@ entry:
 !160 = !DIFile(filename: "BPLFunctionWriter2.ii", directory: "/home/peter/crashdelta")
 !161 = !DIFile(filename: "BPLFunctionWriter.cpp", directory: "/home/peter/crashdelta")
 !162 = !{i32 1, !"Debug Info Version", i32 3}
+!163 = distinct !DIGlobalVariable(name: "__stored_locally", linkageName: "__stored_locally", line: 2, isLocal: true, isDefinition: true, scope: !114, file: !6, type: !131)

@@ -218,9 +218,10 @@ private:
 
 /// \brief Check loop structure and confirms it's good for LoopVersioningLICM.
 bool LoopVersioningLICM::legalLoopStructure() {
-  // Loop must have a preheader, if not return false.
-  if (!CurLoop->getLoopPreheader()) {
-    DEBUG(dbgs() << "    loop preheader is missing\n");
+  // Loop must be in loop simplify form.
+  if (!CurLoop->isLoopSimplifyForm()) {
+    DEBUG(
+        dbgs() << "    loop is not in loop-simplify form.\n");
     return false;
   }
   // Loop should be innermost loop, if not return false.
@@ -254,11 +255,6 @@ bool LoopVersioningLICM::legalLoopStructure() {
   // Loop depth more then LoopDepthThreshold are not allowed
   if (CurLoop->getLoopDepth() > LoopDepthThreshold) {
     DEBUG(dbgs() << "    loop depth is more then threshold\n");
-    return false;
-  }
-  // Loop should have a dedicated exit block, if not return false.
-  if (!CurLoop->hasDedicatedExits()) {
-    DEBUG(dbgs() << "    loop does not has dedicated exit blocks\n");
     return false;
   }
   // We need to be able to compute the loop trip count in order

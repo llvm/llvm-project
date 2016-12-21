@@ -19,6 +19,7 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
@@ -26,7 +27,6 @@
 #include "Threads.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
-#include "lld/Support/Memory.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -500,7 +500,8 @@ void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, uintX_t Addend,
   }
 }
 
-template <class ELFT> bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
+template <class ELFT>
+bool MipsGotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
   Sym.GlobalDynIndex = TlsEntries.size();
@@ -1457,37 +1458,97 @@ template <class ELFT> size_t IpltSection<ELFT>::getSize() const {
 
 template <class ELFT>
 GdbIndexSection<ELFT>::GdbIndexSection()
-    : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index") {}
+    : SyntheticSection<ELFT>(0, SHT_PROGBITS, 1, ".gdb_index"),
+      StringPool(llvm::StringTableBuilder::ELF) {}
 
 template <class ELFT> void GdbIndexSection<ELFT>::parseDebugSections() {
-  std::vector<InputSection<ELFT> *> &IS =
-      static_cast<OutputSection<ELFT> *>(Out<ELFT>::DebugInfo)->Sections;
+  for (InputSectionBase<ELFT> *S : Symtab<ELFT>::X->Sections)
+    if (InputSection<ELFT> *IS = dyn_cast<InputSection<ELFT>>(S))
+      if (IS->OutSec && IS->Name == ".debug_info")
+        readDwarf(IS);
+}
 
-  for (InputSection<ELFT> *I : IS)
-    readDwarf(I);
+// Iterative hash function for symbol's name is described in .gdb_index format
+// specification. Note that we use one for version 5 to 7 here, it is different
+// for version 4.
+static uint32_t hash(StringRef Str) {
+  uint32_t R = 0;
+  for (uint8_t C : Str)
+    R = R * 67 + tolower(C) - 113;
+  return R;
 }
 
 template <class ELFT>
 void GdbIndexSection<ELFT>::readDwarf(InputSection<ELFT> *I) {
-  std::vector<std::pair<uintX_t, uintX_t>> CuList = readCuList(I);
+  GdbIndexBuilder<ELFT> Builder(I);
+  if (ErrorCount)
+    return;
+
+  size_t CuId = CompilationUnits.size();
+  std::vector<std::pair<uintX_t, uintX_t>> CuList = Builder.readCUList();
   CompilationUnits.insert(CompilationUnits.end(), CuList.begin(), CuList.end());
+
+  std::vector<AddressEntry<ELFT>> AddrArea = Builder.readAddressArea(CuId);
+  AddressArea.insert(AddressArea.end(), AddrArea.begin(), AddrArea.end());
+
+  std::vector<std::pair<StringRef, uint8_t>> NamesAndTypes =
+      Builder.readPubNamesAndTypes();
+
+  for (std::pair<StringRef, uint8_t> &Pair : NamesAndTypes) {
+    uint32_t Hash = hash(Pair.first);
+    size_t Offset = StringPool.add(Pair.first);
+
+    bool IsNew;
+    GdbSymbol *Sym;
+    std::tie(IsNew, Sym) = SymbolTable.add(Hash, Offset);
+    if (IsNew) {
+      Sym->CuVectorIndex = CuVectors.size();
+      CuVectors.push_back({{CuId, Pair.second}});
+      continue;
+    }
+
+    std::vector<std::pair<uint32_t, uint8_t>> &CuVec =
+        CuVectors[Sym->CuVectorIndex];
+    CuVec.push_back({CuId, Pair.second});
+  }
 }
 
 template <class ELFT> void GdbIndexSection<ELFT>::finalize() {
+  if (Finalized)
+    return;
+  Finalized = true;
+
   parseDebugSections();
 
   // GdbIndex header consist from version fields
   // and 5 more fields with different kinds of offsets.
   CuTypesOffset = CuListOffset + CompilationUnits.size() * CompilationUnitSize;
+  SymTabOffset = CuTypesOffset + AddressArea.size() * AddressEntrySize;
+
+  ConstantPoolOffset =
+      SymTabOffset + SymbolTable.getCapacity() * SymTabEntrySize;
+
+  for (std::vector<std::pair<uint32_t, uint8_t>> &CuVec : CuVectors) {
+    CuVectorsOffset.push_back(CuVectorsSize);
+    CuVectorsSize += OffsetTypeSize * (CuVec.size() + 1);
+  }
+  StringPoolOffset = ConstantPoolOffset + CuVectorsSize;
+
+  StringPool.finalizeInOrder();
+}
+
+template <class ELFT> size_t GdbIndexSection<ELFT>::getSize() const {
+  const_cast<GdbIndexSection<ELFT> *>(this)->finalize();
+  return StringPoolOffset + StringPool.getSize();
 }
 
 template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
-  write32le(Buf, 7);                  // Write Version
-  write32le(Buf + 4, CuListOffset);   // CU list offset
-  write32le(Buf + 8, CuTypesOffset);  // Types CU list offset
-  write32le(Buf + 12, CuTypesOffset); // Address area offset
-  write32le(Buf + 16, CuTypesOffset); // Symbol table offset
-  write32le(Buf + 20, CuTypesOffset); // Constant pool offset
+  write32le(Buf, 7);                       // Write version.
+  write32le(Buf + 4, CuListOffset);        // CU list offset.
+  write32le(Buf + 8, CuTypesOffset);       // Types CU list offset.
+  write32le(Buf + 12, CuTypesOffset);      // Address area offset.
+  write32le(Buf + 16, SymTabOffset);       // Symbol table offset.
+  write32le(Buf + 20, ConstantPoolOffset); // Constant pool offset.
   Buf += 24;
 
   // Write the CU list.
@@ -1496,6 +1557,43 @@ template <class ELFT> void GdbIndexSection<ELFT>::writeTo(uint8_t *Buf) {
     write64le(Buf + 8, CU.second);
     Buf += 16;
   }
+
+  // Write the address area.
+  for (AddressEntry<ELFT> &E : AddressArea) {
+    uintX_t BaseAddr = E.Section->OutSec->Addr + E.Section->getOffset(0);
+    write64le(Buf, BaseAddr + E.LowAddress);
+    write64le(Buf + 8, BaseAddr + E.HighAddress);
+    write32le(Buf + 16, E.CuIndex);
+    Buf += 20;
+  }
+
+  // Write the symbol table.
+  for (size_t I = 0; I < SymbolTable.getCapacity(); ++I) {
+    GdbSymbol *Sym = SymbolTable.getSymbol(I);
+    if (Sym) {
+      size_t NameOffset =
+          Sym->NameOffset + StringPoolOffset - ConstantPoolOffset;
+      size_t CuVectorOffset = CuVectorsOffset[Sym->CuVectorIndex];
+      write32le(Buf, NameOffset);
+      write32le(Buf + 4, CuVectorOffset);
+    }
+    Buf += 8;
+  }
+
+  // Write the CU vectors into the constant pool.
+  for (std::vector<std::pair<uint32_t, uint8_t>> &CuVec : CuVectors) {
+    write32le(Buf, CuVec.size());
+    Buf += 4;
+    for (std::pair<uint32_t, uint8_t> &P : CuVec) {
+      uint32_t Index = P.first;
+      uint8_t Flags = P.second;
+      Index |= Flags << 24;
+      write32le(Buf, Index);
+      Buf += 4;
+    }
+  }
+
+  StringPool.write(Buf);
 }
 
 template <class ELFT> bool GdbIndexSection<ELFT>::empty() const {
@@ -1744,7 +1842,8 @@ ARMExidxSentinelSection<ELFT>::ARMExidxSentinelSection()
 // This section will have been sorted last in the .ARM.exidx table.
 // This table entry will have the form:
 // | PREL31 upper bound of code that has exception tables | EXIDX_CANTUNWIND |
-template <class ELFT> void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf){
+template <class ELFT>
+void ARMExidxSentinelSection<ELFT>::writeTo(uint8_t *Buf) {
   // Get the InputSection before us, we are by definition last
   auto RI = cast<OutputSection<ELFT>>(this->OutSec)->Sections.rbegin();
   InputSection<ELFT> *LE = *(++RI);

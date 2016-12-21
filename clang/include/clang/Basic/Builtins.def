@@ -702,7 +702,7 @@ BUILTIN(__atomic_is_lock_free, "izvCD*", "n")
 #undef ATOMIC_BUILTIN
 
 // Non-overloaded atomic builtins.
-BUILTIN(__sync_synchronize, "v.", "n")
+BUILTIN(__sync_synchronize, "v", "n")
 // GCC does not support these, they are a Clang extension.
 BUILTIN(__sync_fetch_and_min, "iiD*i", "n")
 BUILTIN(__sync_fetch_and_max, "iiD*i", "n")
@@ -813,7 +813,7 @@ LIBBUILTIN(fprintf, "iP*cC*.",    "fp:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(snprintf, "ic*zcC*.",  "fp:2:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(sprintf, "ic*cC*.",    "fp:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vprintf, "icC*a",      "fP:0:", "stdio.h", ALL_LANGUAGES)
-LIBBUILTIN(vfprintf, "i.",        "fP:1:", "stdio.h", ALL_LANGUAGES)
+LIBBUILTIN(vfprintf, "iP*cC*a",   "fP:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vsnprintf, "ic*zcC*a", "fP:2:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vsprintf, "ic*cC*a",   "fP:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(scanf, "icC*R.",       "fs:0:", "stdio.h", ALL_LANGUAGES)

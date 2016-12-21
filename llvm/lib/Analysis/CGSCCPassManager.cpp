@@ -329,13 +329,17 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
       assert(G.lookupSCC(N) == C && "Changed the SCC when splitting RefSCCs!");
       RC = &C->getOuterRefSCC();
       assert(G.lookupRefSCC(N) == RC && "Failed to update current RefSCC!");
-      for (RefSCC *NewRC : reverse(NewRefSCCs))
-        if (NewRC != RC) {
-          UR.RCWorklist.insert(NewRC);
-          if (DebugLogging)
-            dbgs() << "Enqueuing a new RefSCC in the update worklist: "
-                   << *NewRC << "\n";
-        }
+      assert(NewRefSCCs.front() == RC &&
+             "New current RefSCC not first in the returned list!");
+      for (RefSCC *NewRC : reverse(
+               make_range(std::next(NewRefSCCs.begin()), NewRefSCCs.end()))) {
+        assert(NewRC != RC && "Should not encounter the current RefSCC further "
+                              "in the postorder list of new RefSCCs.");
+        UR.RCWorklist.insert(NewRC);
+        if (DebugLogging)
+          dbgs() << "Enqueuing a new RefSCC in the update worklist: " << *NewRC
+                 << "\n";
+      }
     }
   }
 

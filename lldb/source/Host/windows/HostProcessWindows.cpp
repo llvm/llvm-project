@@ -16,7 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 
-#include <Psapi.h>
+#include <psapi.h>
 
 using namespace lldb_private;
 

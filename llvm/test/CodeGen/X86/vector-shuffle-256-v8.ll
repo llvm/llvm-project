@@ -1223,47 +1223,28 @@ define <8 x i32> @shuffle_v8i32_08084c4c(<8 x i32> %a, <8 x i32> %b) {
 }
 
 define <8 x i32> @shuffle_v8i32_8823cc67(<8 x i32> %a, <8 x i32> %b) {
-; AVX1-LABEL: shuffle_v8i32_8823cc67:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,0],ymm0[2,3],ymm1[4,4],ymm0[6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8i32_8823cc67:
-; AVX2OR512VL:       # BB#0:
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,0,2,3,4,4,6,7]
-; AVX2OR512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_8823cc67:
+; ALL:       # BB#0:
+; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,0],ymm0[2,3],ymm1[4,4],ymm0[6,7]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 8, i32 8, i32 2, i32 3, i32 12, i32 12, i32 6, i32 7>
   ret <8 x i32> %shuffle
 }
 
 define <8 x i32> @shuffle_v8i32_9832dc76(<8 x i32> %a, <8 x i32> %b) {
-; AVX1-LABEL: shuffle_v8i32_9832dc76:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[1,0],ymm0[3,2],ymm1[5,4],ymm0[7,6]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8i32_9832dc76:
-; AVX2OR512VL:       # BB#0:
-; AVX2OR512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_9832dc76:
+; ALL:       # BB#0:
+; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[1,0],ymm0[3,2],ymm1[5,4],ymm0[7,6]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 9, i32 8, i32 3, i32 2, i32 13, i32 12, i32 7, i32 6>
   ret <8 x i32> %shuffle
 }
 
 define <8 x i32> @shuffle_v8i32_9810dc54(<8 x i32> %a, <8 x i32> %b) {
-; AVX1-LABEL: shuffle_v8i32_9810dc54:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[1,0],ymm0[1,0],ymm1[5,4],ymm0[5,4]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8i32_9810dc54:
-; AVX2OR512VL:       # BB#0:
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,1,1,0,4,5,5,4]
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[1,0,2,3,5,4,6,7]
-; AVX2OR512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_9810dc54:
+; ALL:       # BB#0:
+; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[1,0],ymm0[1,0],ymm1[5,4],ymm0[5,4]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 9, i32 8, i32 1, i32 0, i32 13, i32 12, i32 5, i32 4>
   ret <8 x i32> %shuffle
 }
@@ -2434,7 +2415,7 @@ define <8 x i32> @shuffle_v8i32_12305674(<8 x i32> %a, <8 x i32> %b) {
 define <8x float> @concat_v2f32_1(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_1:
 ; ALL:       # BB#0: # %entry
-; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
@@ -2449,7 +2430,7 @@ entry:
 define <8x float> @concat_v2f32_2(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_2:
 ; ALL:       # BB#0: # %entry
-; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
@@ -2462,7 +2443,7 @@ entry:
 define <8x float> @concat_v2f32_3(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_3:
 ; ALL:       # BB#0: # %entry
-; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
@@ -2476,7 +2457,7 @@ entry:
 define <8 x i32> @insert_mem_and_zero_v8i32(i32* %ptr) {
 ; ALL-LABEL: insert_mem_and_zero_v8i32:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    retq
   %a = load i32, i32* %ptr
   %v = insertelement <8 x i32> undef, i32 %a, i32 0

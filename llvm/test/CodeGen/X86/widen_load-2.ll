@@ -195,8 +195,8 @@ define void @add4i16(%i16vec4* nocapture sret %ret, %i16vec4* %ap, %i16vec4* %bp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    paddw %xmm0, %xmm1
 ; X86-NEXT:    movq %xmm1, (%eax)
 ; X86-NEXT:    retl $4

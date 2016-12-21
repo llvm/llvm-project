@@ -89,7 +89,7 @@ define i64 @t4(<2 x double>* %a) {
 ; X32-SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X32-SSE2-NEXT:    movd %xmm1, %eax
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; X32-SSE2-NEXT:    movd %xmm0, %edx
 ; X32-SSE2-NEXT:    retl
 ;

@@ -535,4 +535,3 @@ CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit TU,
 }
 
 } // end: extern "C"
-

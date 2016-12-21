@@ -128,7 +128,7 @@ class TracePcGuardController {
   }
 
   void Dump() {
-    if (!initialized) return;
+    if (!initialized || !common_flags()->coverage) return;
     __sanitizer_dump_coverage(pc_vector.data(), pc_vector.size());
   }
 
@@ -139,7 +139,7 @@ class TracePcGuardController {
 
 static TracePcGuardController pc_guard_controller;
 
-};  // namespace
+}  // namespace
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(  // NOLINT

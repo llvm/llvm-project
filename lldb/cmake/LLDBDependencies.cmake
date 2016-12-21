@@ -91,8 +91,8 @@ set( LLDB_USED_LIBS
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   list(APPEND LLDB_USED_LIBS
     lldbPluginProcessWindowsCommon
-    Ws2_32
-    Rpcrt4
+    ws2_32
+    rpcrt4
     )
 endif ()
 
@@ -161,10 +161,7 @@ if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
     list(APPEND LLDB_SYSTEM_LIBS atomic)
 endif()
 
-# On FreeBSD/NetBSD backtrace() is provided by libexecinfo, not libc.
-if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-  list(APPEND LLDB_SYSTEM_LIBS execinfo)
-endif()
+list(APPEND LLDB_SYSTEM_LIBS ${Backtrace_LIBRARY})
 
 if (NOT LLDB_DISABLE_PYTHON AND NOT LLVM_BUILD_STATIC)
   list(APPEND LLDB_SYSTEM_LIBS ${PYTHON_LIBRARIES})

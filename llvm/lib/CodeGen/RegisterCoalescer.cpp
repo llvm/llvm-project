@@ -815,14 +815,14 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       for (LiveInterval::SubRange &SB : IntB.subranges()) {
         LaneBitmask BMask = SB.LaneMask;
         LaneBitmask Common = BMask & AMask;
-        if (Common == 0)
+        if (Common.none())
           continue;
 
         DEBUG( dbgs() << "\t\tCopy_Merge " << PrintLaneMask(BMask)
                       << " into " << PrintLaneMask(Common) << '\n');
         LaneBitmask BRest = BMask & ~AMask;
         LiveInterval::SubRange *CommonRange;
-        if (BRest != 0) {
+        if (BRest.any()) {
           SB.LaneMask = BRest;
           DEBUG(dbgs() << "\t\tReduce Lane to " << PrintLaneMask(BRest)
                        << '\n');
@@ -841,7 +841,7 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
         addSegmentsWithValNo(*CommonRange, BSubValNo, SA, ASubValNo);
         AMask &= ~BMask;
       }
-      if (AMask != 0) {
+      if (AMask.any()) {
         DEBUG(dbgs() << "\t\tNew Lane " << PrintLaneMask(AMask) << '\n');
         LiveRange *NewRange = IntB.createSubRange(Allocator, AMask);
         VNInfo *BSubValNo = NewRange->getNextValue(CopyIdx, Allocator);
@@ -1061,7 +1061,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
           SR.createDeadDef(DefIndex, Alloc);
         MaxMask &= ~SR.LaneMask;
       }
-      if (MaxMask != 0) {
+      if (MaxMask.any()) {
         LiveInterval::SubRange *SR = DstInt.createSubRange(Alloc, MaxMask);
         SR->createDeadDef(DefIndex, Alloc);
       }
@@ -1154,7 +1154,7 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   if (SrcSubIdx != 0 && SrcLI.hasSubRanges()) {
     LaneBitmask SrcMask = TRI->getSubRegIndexLaneMask(SrcSubIdx);
     for (const LiveInterval::SubRange &SR : SrcLI.subranges()) {
-      if ((SR.LaneMask & SrcMask) == 0)
+      if ((SR.LaneMask & SrcMask).none())
         continue;
       if (SR.liveAt(Idx))
         return false;
@@ -1175,7 +1175,7 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     // The affected subregister segments can be removed.
     LaneBitmask DstMask = TRI->getSubRegIndexLaneMask(DstSubIdx);
     for (LiveInterval::SubRange &SR : DstLI.subranges()) {
-      if ((SR.LaneMask & DstMask) == 0)
+      if ((SR.LaneMask & DstMask).none())
         continue;
 
       VNInfo *SVNI = SR.getVNInfoAt(RegIndex);
@@ -1194,10 +1194,10 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     SlotIndex UseIdx = LIS->getInstructionIndex(MI);
     LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
     bool isLive;
-    if (UseMask != ~0u && DstLI.hasSubRanges()) {
+    if (!UseMask.all() && DstLI.hasSubRanges()) {
       isLive = false;
       for (const LiveInterval::SubRange &SR : DstLI.subranges()) {
-        if ((SR.LaneMask & UseMask) == 0)
+        if ((SR.LaneMask & UseMask).none())
           continue;
         if (SR.liveAt(UseIdx)) {
           isLive = true;
@@ -1232,7 +1232,7 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
     Mask = ~Mask;
   bool IsUndef = true;
   for (const LiveInterval::SubRange &S : Int.subranges()) {
-    if ((S.LaneMask & Mask) == 0)
+    if ((S.LaneMask & Mask).none())
       continue;
     if (S.liveAt(UseIdx)) {
       IsUndef = false;
@@ -1458,7 +1458,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     });
   }
 
-  ShrinkMask = 0;
+  ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
   // Okay, attempt to join these two intervals.  On failure, this returns false.
@@ -1516,10 +1516,10 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx());
 
   // Shrink subregister ranges if necessary.
-  if (ShrinkMask != 0) {
+  if (ShrinkMask.any()) {
     LiveInterval &LI = LIS->getInterval(CP.getDstReg());
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      if ((S.LaneMask & ShrinkMask) == 0)
+      if ((S.LaneMask & ShrinkMask).none())
         continue;
       DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
                    << ")\n");
@@ -1817,11 +1817,11 @@ class JoinVals {
     /// True once Pruned above has been computed.
     bool PrunedComputed;
 
-    Val() : Resolution(CR_Keep), WriteLanes(0), ValidLanes(0),
+    Val() : Resolution(CR_Keep), WriteLanes(), ValidLanes(),
             RedefVNI(nullptr), OtherVNI(nullptr), ErasableImplicitDef(false),
             Pruned(false), PrunedComputed(false) {}
 
-    bool isAnalyzed() const { return WriteLanes != 0; }
+    bool isAnalyzed() const { return WriteLanes.any(); }
   };
 
   /// One entry per value number in LI.
@@ -1938,7 +1938,7 @@ public:
 
 LaneBitmask JoinVals::computeWriteLanes(const MachineInstr *DefMI, bool &Redef)
   const {
-  LaneBitmask L = 0;
+  LaneBitmask L;
   for (const MachineOperand &MO : DefMI->operands()) {
     if (!MO.isReg() || MO.getReg() != Reg || !MO.isDef())
       continue;
@@ -1976,7 +1976,7 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
       for (const LiveInterval::SubRange &S : LI.subranges()) {
         // Transform lanemask to a mask in the joined live interval.
         LaneBitmask SMask = TRI->composeSubRegIndexLaneMask(SubIdx, S.LaneMask);
-        if ((SMask & LaneMask) == 0)
+        if ((SMask & LaneMask).none())
           continue;
         LiveQueryResult LRQ = S.Query(Def);
         ValueIn = LRQ.valueIn();
@@ -2016,7 +2016,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   assert(!V.isAnalyzed() && "Value has already been analyzed!");
   VNInfo *VNI = LR.getValNumInfo(ValNo);
   if (VNI->isUnused()) {
-    V.WriteLanes = ~0u;
+    V.WriteLanes = LaneBitmask::getAll();
     return CR_Keep;
   }
 
@@ -2024,16 +2024,17 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   const MachineInstr *DefMI = nullptr;
   if (VNI->isPHIDef()) {
     // Conservatively assume that all lanes in a PHI are valid.
-    LaneBitmask Lanes = SubRangeJoin ? 1 : TRI->getSubRegIndexLaneMask(SubIdx);
+    LaneBitmask Lanes = SubRangeJoin ? LaneBitmask(1)
+                                     : TRI->getSubRegIndexLaneMask(SubIdx);
     V.ValidLanes = V.WriteLanes = Lanes;
   } else {
     DefMI = Indexes->getInstructionFromIndex(VNI->def);
     assert(DefMI != nullptr);
     if (SubRangeJoin) {
       // We don't care about the lanes when joining subregister ranges.
-      V.WriteLanes = V.ValidLanes = 1;
+      V.WriteLanes = V.ValidLanes = LaneBitmask(1);
       if (DefMI->isImplicitDef()) {
-        V.ValidLanes = 0;
+        V.ValidLanes = LaneBitmask::getNone();
         V.ErasableImplicitDef = true;
       }
     } else {
@@ -2106,7 +2107,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     // predecessor, the PHI itself can't introduce any conflicts.
     if (VNI->isPHIDef())
       return CR_Merge;
-    if (V.ValidLanes & OtherV.ValidLanes)
+    if ((V.ValidLanes & OtherV.ValidLanes).any())
       // Overlapping lanes can't be resolved.
       return CR_Impossible;
     else
@@ -2151,7 +2152,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     // We need the def for the subregister if there is nothing else live at the
     // subrange at this point.
     if (TrackSubRegLiveness
-        && (V.WriteLanes & (OtherV.ValidLanes | OtherV.WriteLanes)) == 0)
+        && (V.WriteLanes & (OtherV.ValidLanes | OtherV.WriteLanes)).none())
       return CR_Replace;
     return CR_Erase;
   }
@@ -2191,7 +2192,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   //
   // Here OtherVNI will map to itself in [1;2), but to VNI in [2;5). CR_Replace
   // handles this complex value mapping.
-  if ((V.WriteLanes & OtherV.ValidLanes) == 0)
+  if ((V.WriteLanes & OtherV.ValidLanes).none())
     return CR_Replace;
 
   // If the other live range is killed by DefMI and the live ranges are still
@@ -2212,7 +2213,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   // possibility that no instructions actually read the clobbered lanes.
   // If we're clobbering all the lanes in OtherVNI, at least one must be read.
   // Otherwise Other.RI wouldn't be live here.
-  if ((TRI->getSubRegIndexLaneMask(Other.SubIdx) & ~V.WriteLanes) == 0)
+  if ((TRI->getSubRegIndexLaneMask(Other.SubIdx) & ~V.WriteLanes).none())
     return CR_Impossible;
 
   // We need to verify that no instructions are reading the clobbered lanes. To
@@ -2260,7 +2261,7 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     Val &OtherV = Other.Vals[V.OtherVNI->id];
     // We cannot erase an IMPLICIT_DEF if we don't have valid values for all
     // its lanes.
-    if ((OtherV.WriteLanes & ~V.ValidLanes) != 0 && TrackSubRegLiveness)
+    if ((OtherV.WriteLanes & ~V.ValidLanes).any() && TrackSubRegLiveness)
       OtherV.ErasableImplicitDef = false;
     OtherV.Pruned = true;
     LLVM_FALLTHROUGH;
@@ -2321,7 +2322,7 @@ taintExtent(unsigned ValNo, LaneBitmask TaintedLanes, JoinVals &Other,
     TaintedLanes &= ~OV.WriteLanes;
     if (!OV.RedefVNI)
       break;
-  } while (TaintedLanes);
+  } while (TaintedLanes.any());
   return true;
 }
 
@@ -2334,8 +2335,8 @@ bool JoinVals::usesLanes(const MachineInstr &MI, unsigned Reg, unsigned SubIdx,
       continue;
     if (!MO.readsReg())
       continue;
-    if (Lanes & TRI->getSubRegIndexLaneMask(
-                  TRI->composeSubRegIndices(SubIdx, MO.getSubReg())))
+    unsigned S = TRI->composeSubRegIndices(SubIdx, MO.getSubReg());
+    if ((Lanes & TRI->getSubRegIndexLaneMask(S)).any())
       return true;
   }
   return false;
@@ -2722,7 +2723,7 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
     // LaneMask of subregisters common to subrange R and ToMerge.
     LaneBitmask Common = RMask & LaneMask;
     // There is nothing to do without common subregs.
-    if (Common == 0)
+    if (Common.none())
       continue;
 
     DEBUG(dbgs() << "\t\tCopy+Merge " << PrintLaneMask(RMask) << " into "
@@ -2731,7 +2732,7 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
     // they have to split into their own subrange.
     LaneBitmask LRest = RMask & ~LaneMask;
     LiveInterval::SubRange *CommonRange;
-    if (LRest != 0) {
+    if (LRest.any()) {
       R.LaneMask = LRest;
       DEBUG(dbgs() << "\t\tReduce Lane to " << PrintLaneMask(LRest) << '\n');
       // Duplicate SubRange for newly merged common stuff.
@@ -2746,7 +2747,7 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
     LaneMask &= ~RMask;
   }
 
-  if (LaneMask != 0) {
+  if (LaneMask.any()) {
     DEBUG(dbgs() << "\t\tNew Lane " << PrintLaneMask(LaneMask) << '\n');
     LI.createSubRangeFrom(Allocator, LaneMask, ToMerge);
   }
@@ -2757,10 +2758,10 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   LiveInterval &RHS = LIS->getInterval(CP.getSrcReg());
   LiveInterval &LHS = LIS->getInterval(CP.getDstReg());
   bool TrackSubRegLiveness = MRI->shouldTrackSubRegLiveness(*CP.getNewRC());
-  JoinVals RHSVals(RHS, CP.getSrcReg(), CP.getSrcIdx(), 0, NewVNInfo, CP, LIS,
-                   TRI, false, TrackSubRegLiveness);
-  JoinVals LHSVals(LHS, CP.getDstReg(), CP.getDstIdx(), 0, NewVNInfo, CP, LIS,
-                   TRI, false, TrackSubRegLiveness);
+  JoinVals RHSVals(RHS, CP.getSrcReg(), CP.getSrcIdx(), LaneBitmask::getNone(),
+                   NewVNInfo, CP, LIS, TRI, false, TrackSubRegLiveness);
+  JoinVals LHSVals(LHS, CP.getDstReg(), CP.getDstIdx(), LaneBitmask::getNone(),
+                   NewVNInfo, CP, LIS, TRI, false, TrackSubRegLiveness);
 
   DEBUG(dbgs() << "\t\tRHS = " << RHS
                << "\n\t\tLHS = " << LHS
@@ -2786,7 +2787,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
       LaneBitmask Mask = DstIdx == 0 ? CP.getNewRC()->getLaneMask()
                                      : TRI->getSubRegIndexLaneMask(DstIdx);
       // LHS must support subregs or we wouldn't be in this codepath.
-      assert(Mask != 0);
+      assert(Mask.any());
       LHS.createSubRangeFrom(Allocator, Mask, LHS);
     } else if (DstIdx != 0) {
       // Transform LHS lanemasks to new register class if necessary.
@@ -3166,7 +3167,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
           // If subranges are still supported, then the same subregs
           // should still be supported.
           for (LiveInterval::SubRange &S : LI.subranges()) {
-            assert((S.LaneMask & ~MaxMask) == 0);
+            assert((S.LaneMask & ~MaxMask).none());
           }
 #endif
         }

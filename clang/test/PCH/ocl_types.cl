@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -include %S/ocl_types.h -fsyntax-only %s -cl-std=CL2.0 -D__OPENCL_VERSION__=200
+// RUN: %clang_cc1 -triple spir-unknown-unknown -include %S/ocl_types.h -fsyntax-only %s -cl-std=CL2.0 -D__OPENCL_VERSION__=200
 
 // Test with pch.
-// RUN: %clang_cc1 -x cl -emit-pch -o %t %S/ocl_types.h -cl-std=CL2.0 -D__OPENCL_VERSION__=200
-// RUN: %clang_cc1 -include-pch %t -fsyntax-only %s -ast-print -cl-std=CL2.0 -D__OPENCL_VERSION__=200
+// RUN: %clang_cc1 -triple spir-unknown-unknown -x cl -emit-pch -o %t %S/ocl_types.h -cl-std=CL2.0 -D__OPENCL_VERSION__=200
+// RUN: %clang_cc1 -triple spir-unknown-unknown -include-pch %t -fsyntax-only %s -ast-print -cl-std=CL2.0 -D__OPENCL_VERSION__=200
 
 void foo1(img1d_t img);
 

@@ -4838,6 +4838,9 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
       Dcl && Dcl->getDeclContext()->isFileContext())
     Dcl->setTopLevelDeclInObjCContainer();
 
+  if (getLangOpts().OpenCL)
+    setCurrentOpenCLExtensionForDecl(Dcl);
+
   return Dcl;
 }
 
@@ -5939,7 +5942,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NR = NR->getPointeeType();
     }
 
-    if (!getOpenCLOptions().cl_khr_fp16) {
+    if (!getOpenCLOptions().isEnabled("cl_khr_fp16")) {
       // OpenCL v1.2 s6.1.1.1: reject declaring variables of the half and
       // half array type (unless the cl_khr_fp16 extension is enabled).
       if (Context.getBaseElementType(R)->isHalfType()) {
@@ -6909,7 +6912,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // OpenCL v1.2 s6.8 - The static qualifier is valid only in program
   // scope.
   if (getLangOpts().OpenCLVersion == 120 &&
-      !getOpenCLOptions().cl_clang_storage_class_specifiers &&
+      !getOpenCLOptions().isEnabled("cl_clang_storage_class_specifiers") &&
       NewVD->isStaticLocal()) {
     Diag(NewVD->getLocation(), diag::err_static_function_scope);
     NewVD->setInvalidDecl();
@@ -7617,7 +7620,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
   // OpenCL extension spec v1.2 s9.5:
   // This extension adds support for half scalar and vector types as built-in
   // types that can be used for arithmetic operations, conversions etc.
-  if (!S.getOpenCLOptions().cl_khr_fp16 && PT->isHalfType())
+  if (!S.getOpenCLOptions().isEnabled("cl_khr_fp16") && PT->isHalfType())
     return InvalidKernelParam;
 
   if (PT->isRecordType())
@@ -7769,6 +7772,28 @@ static void checkIsValidOpenCLKernelParameter(
       return;
     }
   } while (!VisitStack.empty());
+}
+
+/// Find the DeclContext in which a tag is implicitly declared if we see an
+/// elaborated type specifier in the specified context, and lookup finds
+/// nothing.
+static DeclContext *getTagInjectionContext(DeclContext *DC) {
+  while (!DC->isFileContext() && !DC->isFunctionOrMethod())
+    DC = DC->getParent();
+  return DC;
+}
+
+/// Find the Scope in which a tag is implicitly declared if we see an
+/// elaborated type specifier in the specified context, and lookup finds
+/// nothing.
+static Scope *getTagInjectionScope(Scope *S, const LangOptions &LangOpts) {
+  while (S->isClassScope() ||
+         (LangOpts.CPlusPlus &&
+          S->isFunctionPrototypeScope()) ||
+         ((S->getFlags() & Scope::DeclScope) == 0) ||
+         (S->getEntity() && S->getEntity()->isTransparentContext()))
+    S = S->getParent();
+  return S;
 }
 
 NamedDecl*
@@ -8247,15 +8272,37 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     if (!getLangOpts().CPlusPlus) {
-      // In C, find all the non-parameter declarations from the prototype and
-      // move them into the new function decl context as well. Typically they
-      // will have been added to the surrounding context of the prototype.
+      // In C, find all the tag declarations from the prototype and move them
+      // into the function DeclContext. Remove them from the surrounding tag
+      // injection context of the function, which is typically but not always
+      // the TU.
+      DeclContext *PrototypeTagContext =
+          getTagInjectionContext(NewFD->getLexicalDeclContext());
       for (NamedDecl *NonParmDecl : FTI.getDeclsInPrototype()) {
-        DeclContext *OldDC = NonParmDecl->getDeclContext();
-        if (OldDC->containsDecl(NonParmDecl))
-          OldDC->removeDecl(NonParmDecl);
-        NonParmDecl->setDeclContext(NewFD);
-        NewFD->addDecl(NonParmDecl);
+        auto *TD = dyn_cast<TagDecl>(NonParmDecl);
+
+        // We don't want to reparent enumerators. Look at their parent enum
+        // instead.
+        if (!TD) {
+          if (auto *ECD = dyn_cast<EnumConstantDecl>(NonParmDecl))
+            TD = cast<EnumDecl>(ECD->getDeclContext());
+        }
+        if (!TD)
+          continue;
+        DeclContext *TagDC = TD->getLexicalDeclContext();
+        if (!TagDC->containsDecl(TD))
+          continue;
+        TagDC->removeDecl(TD);
+        TD->setDeclContext(NewFD);
+        NewFD->addDecl(TD);
+
+        // Preserve the lexical DeclContext if it is not the surrounding tag
+        // injection context of the FD. In this example, the semantic context of
+        // E will be f and the lexical context will be S, while both the
+        // semantic and lexical contexts of S will be f:
+        //   void f(struct S { enum E { a } f; } s);
+        if (TagDC != PrototypeTagContext)
+          TD->setLexicalDeclContext(TagDC);
       }
     }
   } else if (const FunctionProtoType *FT = R->getAs<FunctionProtoType>()) {
@@ -9032,27 +9079,16 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       ASTContext::GetBuiltinTypeError Error;
       LookupPredefedObjCSuperType(*this, S, NewFD->getIdentifier());
       QualType T = Context.GetBuiltinType(BuiltinID, Error);
-      if (!T.isNull() && !Context.hasSameType(T, NewFD->getType())) {
-        auto WithoutExceptionSpec = [&](QualType T) -> QualType {
-          auto *Proto = T->getAs<FunctionProtoType>();
-          if (!Proto)
-            return T;
-          return Context.getFunctionType(
-              Proto->getReturnType(), Proto->getParamTypes(),
-              Proto->getExtProtoInfo().withExceptionSpec(EST_None));
-        };
-
-        // If the type of the builtin differs only in its exception
-        // specification, that's OK.
-        // FIXME: If the types do differ in this way, it would be better to
-        // retain the 'noexcept' form of the type.
-        if (!getLangOpts().CPlusPlus1z ||
-            !Context.hasSameType(WithoutExceptionSpec(T),
-                                 WithoutExceptionSpec(NewFD->getType())))
-          // The type of this function differs from the type of the builtin,
-          // so forget about the builtin entirely.
-          Context.BuiltinInfo.forgetBuiltin(BuiltinID, Context.Idents);
-      }
+      // If the type of the builtin differs only in its exception
+      // specification, that's OK.
+      // FIXME: If the types do differ in this way, it would be better to
+      // retain the 'noexcept' form of the type.
+      if (!T.isNull() &&
+          !Context.hasSameFunctionTypeIgnoringExceptionSpec(T,
+                                                            NewFD->getType()))
+        // The type of this function differs from the type of the builtin,
+        // so forget about the builtin entirely.
+        Context.BuiltinInfo.forgetBuiltin(BuiltinID, Context.Idents);
     }
 
     // If this function is declared as being extern "C", then check to see if
@@ -12630,28 +12666,6 @@ static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,
     return true;
 
   return false;
-}
-
-/// Find the DeclContext in which a tag is implicitly declared if we see an
-/// elaborated type specifier in the specified context, and lookup finds
-/// nothing.
-static DeclContext *getTagInjectionContext(DeclContext *DC) {
-  while (!DC->isFileContext() && !DC->isFunctionOrMethod())
-    DC = DC->getParent();
-  return DC;
-}
-
-/// Find the Scope in which a tag is implicitly declared if we see an
-/// elaborated type specifier in the specified context, and lookup finds
-/// nothing.
-static Scope *getTagInjectionScope(Scope *S, const LangOptions &LangOpts) {
-  while (S->isClassScope() ||
-         (LangOpts.CPlusPlus &&
-          S->isFunctionPrototypeScope()) ||
-         ((S->getFlags() & Scope::DeclScope) == 0) ||
-         (S->getEntity() && S->getEntity()->isTransparentContext()))
-    S = S->getParent();
-  return S;
 }
 
 /// \brief This is invoked when we see 'struct foo' or 'struct {'.  In the

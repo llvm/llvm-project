@@ -638,7 +638,7 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
 
   bool HotCallsite = false;
   uint64_t TotalWeight;
-  if (CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
+  if (PSI && CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
       PSI->isHotCount(TotalWeight)) {
     HotCallsite = true;
   }
@@ -647,14 +647,14 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // when it would increase the threshold and the caller does not need to
   // minimize its size.
   bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
-                    PSI->isFunctionEntryHot(&Callee);
+                    (PSI && PSI->isFunctionEntryHot(&Callee));
   if (InlineHint && !Caller->optForMinSize())
     Threshold = MaxIfValid(Threshold, Params.HintThreshold);
 
   if (HotCallsite && !Caller->optForMinSize())
     Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
 
-  bool ColdCallee = PSI->isFunctionEntryCold(&Callee);
+  bool ColdCallee = PSI && PSI->isFunctionEntryCold(&Callee);
   // For cold callees, use the ColdThreshold knob if it is available and reduces
   // the threshold.
   if (ColdCallee)

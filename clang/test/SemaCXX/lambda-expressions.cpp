@@ -558,3 +558,18 @@ int func() {
   decltype(a)::D b;
 }
 }
+
+namespace PR30566 {
+int name1; // expected-note {{'name1' declared here}}
+
+struct S1 {
+  template<class T>
+  S1(T t) { s = sizeof(t); }
+  int s;
+};
+
+void foo1() {
+  auto s0 = S1{[name=]() {}}; // expected-error 2 {{expected expression}}
+  auto s1 = S1{[name=name]() {}}; // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
+}
+}

@@ -13,12 +13,12 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Support/Memory.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include <mutex>
@@ -46,13 +46,6 @@ static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
   return check(File->getObj().getSectionContents(Hdr));
 }
 
-// ELF supports ZLIB-compressed section. Returns true if the section
-// is compressed.
-template <class ELFT>
-static bool isCompressed(typename ELFT::uint Flags, StringRef Name) {
-  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
-}
-
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          uintX_t Flags, uint32_t Type,
@@ -60,7 +53,7 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          uint32_t Info, uintX_t Addralign,
                                          ArrayRef<uint8_t> Data, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionData(SectionKind, Name, Data, isCompressed<ELFT>(Flags, Name),
+    : InputSectionData(SectionKind, Name, Data,
                        !Config->GcSections || !(Flags & SHF_ALLOC)),
       File(File), Flags(Flags), Entsize(Entsize), Type(Type), Link(Link),
       Info(Info), Repl(this) {
@@ -133,6 +126,10 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
   }
   llvm_unreachable("invalid section kind");
+}
+
+template <class ELFT> bool InputSectionBase<ELFT>::isCompressed() const {
+  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
 }
 
 // Returns compressed data and its size when uncompressed.
@@ -337,9 +334,9 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 }
 
 template <class ELFT>
-static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
-                                    typename ELFT::uint P,
-                                    const SymbolBody &Body, RelExpr Expr) {
+static typename ELFT::uint
+getRelocTargetVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
+                 const SymbolBody &Body, RelExpr Expr) {
   switch (Expr) {
   case R_HINT:
   case R_TLSDESC_CALL:
@@ -507,7 +504,7 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     uint64_t SymVA = 0;
     if (!Sym.isTls() || Out<ELFT>::TlsPhdr)
       SymVA = SignExtend64<sizeof(uintX_t) * 8>(
-          getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
+          getRelocTargetVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }
@@ -535,29 +532,29 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 
     uintX_t AddrLoc = OutSec->Addr + Offset;
     RelExpr Expr = Rel.Expr;
-    uint64_t SymVA =
-        SignExtend64<Bits>(getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
+    uint64_t TargetVA = SignExtend64<Bits>(
+        getRelocTargetVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
 
     switch (Expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      Target->relaxGot(BufLoc, SymVA);
+      Target->relaxGot(BufLoc, TargetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
-      Target->relaxTlsIeToLe(BufLoc, Type, SymVA);
+      Target->relaxTlsIeToLe(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_LD_TO_LE:
-      Target->relaxTlsLdToLe(BufLoc, Type, SymVA);
+      Target->relaxTlsLdToLe(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_GD_TO_LE:
     case R_RELAX_TLS_GD_TO_LE_NEG:
-      Target->relaxTlsGdToLe(BufLoc, Type, SymVA);
+      Target->relaxTlsGdToLe(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_PAGE_PC:
     case R_RELAX_TLS_GD_TO_IE_END:
-      Target->relaxTlsGdToIe(BufLoc, Type, SymVA);
+      Target->relaxTlsGdToIe(BufLoc, Type, TargetVA);
       break;
     case R_PPC_PLT_OPD:
       // Patch a nop (0x60000000) to a ld.
@@ -565,7 +562,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
         write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
     // fallthrough
     default:
-      Target->relocateOne(BufLoc, Type, SymVA);
+      Target->relocateOne(BufLoc, Type, TargetVA);
       break;
     }
   }

@@ -154,82 +154,121 @@ const char *DWARFDie::getAttributeValueAsString(dwarf::Attribute Attr,
 
 uint64_t DWARFDie::getAttributeValueAsAddress(dwarf::Attribute Attr,
                                               uint64_t FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<uint64_t> Result = FormValue->getAsAddress();
-  return Result.hasValue() ? Result.getValue() : FailValue;
+  if (auto Value = getAttributeValueAsAddress(Attr))
+    return *Value;
+  return FailValue;
+}
+
+Optional<uint64_t>
+DWARFDie::getAttributeValueAsAddress(dwarf::Attribute Attr) const {
+  if (auto FormValue = getAttributeValue(Attr))
+    return FormValue->getAsAddress();
+  return None;
 }
 
 int64_t DWARFDie::getAttributeValueAsSignedConstant(dwarf::Attribute Attr,
                                                     int64_t FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<int64_t> Result = FormValue->getAsSignedConstant();
-  return Result.hasValue() ? Result.getValue() : FailValue;
+  if (auto Value = getAttributeValueAsSignedConstant(Attr))
+    return *Value;
+  return FailValue;
+}
+
+Optional<int64_t>
+DWARFDie::getAttributeValueAsSignedConstant(dwarf::Attribute Attr) const {
+  if (auto FormValue = getAttributeValue(Attr))
+    return FormValue->getAsSignedConstant();
+  return None;
 }
 
 uint64_t
 DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr,
                                               uint64_t FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<uint64_t> Result = FormValue->getAsUnsignedConstant();
-  return Result.hasValue() ? Result.getValue() : FailValue;
+  if (auto Value = getAttributeValueAsUnsignedConstant(Attr))
+    return *Value;
+  return FailValue;
+}
+
+
+Optional<uint64_t>
+DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr) const {
+  if (auto FormValue = getAttributeValue(Attr))
+    return FormValue->getAsUnsignedConstant();
+  return None;
 }
 
 uint64_t DWARFDie::getAttributeValueAsReference(dwarf::Attribute Attr,
                                                 uint64_t FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<uint64_t> Result = FormValue->getAsReference();
-  return Result.hasValue() ? Result.getValue() : FailValue;
+  if (auto Value = getAttributeValueAsReference(Attr))
+    return *Value;
+  return FailValue;
+}
+
+
+Optional<uint64_t>
+DWARFDie::getAttributeValueAsReference(dwarf::Attribute Attr) const {
+  if (auto FormValue = getAttributeValue(Attr))
+    return FormValue->getAsReference();
+  return None;
 }
 
 uint64_t DWARFDie::getAttributeValueAsSectionOffset(dwarf::Attribute Attr,
                                                     uint64_t FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<uint64_t> Result = FormValue->getAsSectionOffset();
-  return Result.hasValue() ? Result.getValue() : FailValue;
+  if (auto Value = getAttributeValueAsSectionOffset(Attr))
+    return *Value;
+  return FailValue;
 }
+
+Optional<uint64_t>
+DWARFDie::getAttributeValueAsSectionOffset(dwarf::Attribute Attr) const {
+  if (auto FormValue = getAttributeValue(Attr))
+    return FormValue->getAsSectionOffset();
+  return None;
+}
+
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
-  uint32_t SpecRef = getAttributeValueAsReference(Attr, -1U);
-  if (SpecRef != -1U) {
-    auto SpecUnit = U->getUnitSection().getUnitForOffset(SpecRef);
+  auto SpecRef = getAttributeValueAsReference(Attr);
+  if (SpecRef) {
+    auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef);
     if (SpecUnit)
-      return SpecUnit->getDIEForOffset(SpecRef);
+      return SpecUnit->getDIEForOffset(*SpecRef);
   }
   return DWARFDie();
 }
 
-uint64_t
-DWARFDie::getRangesBaseAttribute(uint64_t FailValue) const {
-  auto Result = getAttributeValueAsSectionOffset(DW_AT_rnglists_base, -1ULL);
-  if (Result != -1ULL)
+Optional<uint64_t>
+DWARFDie::getRangesBaseAttribute() const {
+  auto Result = getAttributeValueAsSectionOffset(DW_AT_rnglists_base);
+  if (Result)
     return Result;
-  return getAttributeValueAsSectionOffset(DW_AT_GNU_ranges_base, FailValue);
+  return getAttributeValueAsSectionOffset(DW_AT_GNU_ranges_base);
+}
+
+Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
+  if (auto FormValue = getAttributeValue(DW_AT_high_pc)) {
+    if (auto Address = FormValue->getAsAddress()) {
+      // High PC is an address.
+      return Address;
+    }
+    if (auto Offset = FormValue->getAsUnsignedConstant()) {
+      // High PC is an offset from LowPC.
+      return LowPC + *Offset;
+    }
+  }
+  return None;
 }
 
 bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const {
-  LowPC = getAttributeValueAsAddress(DW_AT_low_pc, -1ULL);
-  if (LowPC == -1ULL)
+  auto LowPcAddr = getAttributeValueAsAddress(DW_AT_low_pc);
+  if (!LowPcAddr)
     return false;
-  HighPC = getAttributeValueAsAddress(DW_AT_high_pc, -1ULL);
-  if (HighPC == -1ULL) {
-    // Since DWARF4, DW_AT_high_pc may also be of class constant, in which case
-    // it represents function size.
-    HighPC = getAttributeValueAsUnsignedConstant(DW_AT_high_pc, -1ULL);
-    if (HighPC != -1ULL)
-      HighPC += LowPC;
+  if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
+    LowPC = *LowPcAddr;
+    HighPC = *HighPcAddr;
+    return true;
   }
-  return (HighPC != -1ULL);
+  return false;
 }
 
 DWARFAddressRangesVector
@@ -242,10 +281,10 @@ DWARFDie::getAddressRanges() const {
     return DWARFAddressRangesVector(1, std::make_pair(LowPC, HighPC));
   }
   // Multiple ranges from .debug_ranges section.
-  uint32_t RangesOffset = getAttributeValueAsSectionOffset(DW_AT_ranges, -1U);
-  if (RangesOffset != -1U) {
+  auto RangesOffset = getAttributeValueAsSectionOffset(DW_AT_ranges);
+  if (RangesOffset) {
     DWARFDebugRangeList RangeList;
-    if (U->extractRangeList(RangesOffset, RangeList))
+    if (U->extractRangeList(*RangesOffset, RangeList))
       return RangeList.getAbsoluteRanges(U->getBaseAddress());
   }
   return DWARFAddressRangesVector();

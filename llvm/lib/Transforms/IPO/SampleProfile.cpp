@@ -224,7 +224,7 @@ protected:
   FunctionSamples *Samples;
 
   /// \brief Name of the profile file to load.
-  StringRef Filename;
+  std::string Filename;
 
   /// \brief Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid;
@@ -1315,7 +1315,8 @@ bool SampleProfileLoader::runOnModule(Module &M) {
       clearFunctionData();
       retval |= runOnFunction(F);
     }
-  M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
+  if (M.getProfileSummary() == nullptr)
+    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
   return retval;
 }
 

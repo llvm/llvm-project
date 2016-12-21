@@ -1403,7 +1403,6 @@ protected:
     uint64_t uval64;
     int64_t sval64;
     bool success = false;
-    const size_t num_value_args = command.GetArgumentCount();
     for (auto &entry : command) {
       switch (m_format_options.GetFormat()) {
       case kNumFormats:

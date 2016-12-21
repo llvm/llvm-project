@@ -137,6 +137,7 @@ struct MallocFreeTracer {
 
 static MallocFreeTracer AllocTracer;
 
+ATTRIBUTE_NO_SANITIZE_MEMORY
 void MallocHook(const volatile void *ptr, size_t size) {
   size_t N = AllocTracer.Mallocs++;
   F->HandleMalloc(size);
@@ -146,6 +147,8 @@ void MallocHook(const volatile void *ptr, size_t size) {
       EF->__sanitizer_print_stack_trace();
   }
 }
+
+ATTRIBUTE_NO_SANITIZE_MEMORY
 void FreeHook(const volatile void *ptr) {
   size_t N = AllocTracer.Frees++;
   if (int TraceLevel = AllocTracer.TraceLevel) {
@@ -372,6 +375,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
 void Fuzzer::PrintFinalStats() {
   if (Options.PrintCoverage)
     TPC.PrintCoverage();
+  if (Options.DumpCoverage)
+    TPC.DumpCoverage();
   if (Options.PrintCorpusStats)
     Corpus.PrintStats();
   if (!Options.PrintFinalStats) return;

@@ -2,7 +2,6 @@
 #
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2
 # RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK1 %s
-# REQUIRES: winlib
 
 CHECK1:      Export Table:
 CHECK1:      DLL name: export.test.tmp.dll

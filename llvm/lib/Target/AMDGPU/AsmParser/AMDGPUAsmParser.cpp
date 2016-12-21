@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -45,6 +46,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -155,6 +158,9 @@ public:
     ImmTyHwreg,
     ImmTyOff,
     ImmTySendMsg,
+    ImmTyInterpSlot,
+    ImmTyInterpAttr,
+    ImmTyAttrChan
   };
 
   struct TokOp {
@@ -279,6 +285,9 @@ public:
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySdwaSrc0Sel); }
   bool isSDWASrc1Sel() const { return isImmTy(ImmTySdwaSrc1Sel); }
   bool isSDWADstUnused() const { return isImmTy(ImmTySdwaDstUnused); }
+  bool isInterpSlot() const { return isImmTy(ImmTyInterpSlot); }
+  bool isInterpAttr() const { return isImmTy(ImmTyInterpAttr); }
+  bool isAttrChan() const { return isImmTy(ImmTyAttrChan); }
 
   bool isMod() const {
     return isClampSI() || isOModSI();
@@ -568,6 +577,9 @@ public:
     case ImmTyExpVM: OS << "ExpVM"; break;
     case ImmTyHwreg: OS << "Hwreg"; break;
     case ImmTySendMsg: OS << "SendMsg"; break;
+    case ImmTyInterpSlot: OS << "InterpSlot"; break;
+    case ImmTyInterpAttr: OS << "InterpAttr"; break;
+    case ImmTyAttrChan: OS << "AttrChan"; break;
     }
   }
 
@@ -669,6 +681,7 @@ private:
   bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
   bool ParseDirectiveHSACodeObjectVersion();
   bool ParseDirectiveHSACodeObjectISA();
+  bool ParseDirectiveRuntimeMetadata();
   bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
   bool ParseDirectiveAMDKernelCodeT();
   bool ParseSectionDirectiveHSAText();
@@ -823,6 +836,8 @@ public:
 
   OperandMatchResultTy parseExpTgt(OperandVector &Operands);
   OperandMatchResultTy parseSendMsgOp(OperandVector &Operands);
+  OperandMatchResultTy parseInterpSlot(OperandVector &Operands);
+  OperandMatchResultTy parseInterpAttr(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
 
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
@@ -1736,6 +1751,46 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   return false;
 }
 
+bool AMDGPUAsmParser::ParseDirectiveRuntimeMetadata() {
+  std::string Metadata;
+  raw_string_ostream MS(Metadata);
+
+  getLexer().setSkipSpace(false);
+
+  bool FoundEnd = false;
+  while (!getLexer().is(AsmToken::Eof)) {
+    while (getLexer().is(AsmToken::Space)) {
+      MS << ' ';
+      Lex();
+    }
+
+    if (getLexer().is(AsmToken::Identifier)) {
+      StringRef ID = getLexer().getTok().getIdentifier();
+      if (ID == ".end_amdgpu_runtime_metadata") {
+        Lex();
+        FoundEnd = true;
+        break;
+      }
+    }
+
+    MS << Parser.parseStringToEndOfStatement()
+       << getContext().getAsmInfo()->getSeparatorString();
+
+    Parser.eatToEndOfStatement();
+  }
+
+  getLexer().setSkipSpace(true);
+
+  if (getLexer().is(AsmToken::Eof) && !FoundEnd)
+    return TokError("expected directive .end_amdgpu_runtime_metadata not found");
+
+  MS.flush();
+
+  getTargetStreamer().EmitRuntimeMetadata(Metadata);
+
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
                                                amd_kernel_code_t &Header) {
   SmallString<40> ErrStr;
@@ -1841,6 +1896,9 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".hsa_code_object_isa")
     return ParseDirectiveHSACodeObjectISA();
+
+  if (IDVal == ".amdgpu_runtime_metadata")
+    return ParseDirectiveRuntimeMetadata();
 
   if (IDVal == ".amd_kernel_code_t")
     return ParseDirectiveAMDKernelCodeT();
@@ -2485,6 +2543,67 @@ bool AMDGPUAsmParser::parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &O
     return true;
   Parser.Lex();
   return false;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseInterpSlot(OperandVector &Operands) {
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  StringRef Str = Parser.getTok().getString();
+  int Slot = StringSwitch<int>(Str)
+    .Case("p10", 0)
+    .Case("p20", 1)
+    .Case("p0", 2)
+    .Default(-1);
+
+  SMLoc S = Parser.getTok().getLoc();
+  if (Slot == -1)
+    return MatchOperand_ParseFail;
+
+  Parser.Lex();
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Slot, S,
+                                              AMDGPUOperand::ImmTyInterpSlot));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  StringRef Str = Parser.getTok().getString();
+  if (!Str.startswith("attr"))
+    return MatchOperand_NoMatch;
+
+  StringRef Chan = Str.take_back(2);
+  int AttrChan = StringSwitch<int>(Chan)
+    .Case(".x", 0)
+    .Case(".y", 1)
+    .Case(".z", 2)
+    .Case(".w", 3)
+    .Default(-1);
+  if (AttrChan == -1)
+    return MatchOperand_ParseFail;
+
+  Str = Str.drop_back(2).drop_front(4);
+
+  uint8_t Attr;
+  if (Str.getAsInteger(10, Attr))
+    return MatchOperand_ParseFail;
+
+  SMLoc S = Parser.getTok().getLoc();
+  Parser.Lex();
+  if (Attr > 63) {
+    Error(S, "out of bounds attr");
+    return MatchOperand_Success;
+  }
+
+  SMLoc SChan = SMLoc::getFromPointer(Chan.data());
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Attr, S,
+                                              AMDGPUOperand::ImmTyInterpAttr));
+  Operands.push_back(AMDGPUOperand::CreateImm(this, AttrChan, SChan,
+                                              AMDGPUOperand::ImmTyAttrChan));
+  return MatchOperand_Success;
 }
 
 void AMDGPUAsmParser::errorExpTgt() {
@@ -3423,6 +3542,12 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isSoppBrTarget() ? Match_Success : Match_InvalidOperand;
   case MCK_VReg32OrOff:
     return Operand.isVReg32OrOff() ? Match_Success : Match_InvalidOperand;
+  case MCK_InterpSlot:
+    return Operand.isInterpSlot() ? Match_Success : Match_InvalidOperand;
+  case MCK_Attr:
+    return Operand.isInterpAttr() ? Match_Success : Match_InvalidOperand;
+  case MCK_AttrChan:
+    return Operand.isAttrChan() ? Match_Success : Match_InvalidOperand;
   default:
     return Match_InvalidOperand;
   }

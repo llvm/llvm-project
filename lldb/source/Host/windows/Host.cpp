@@ -29,7 +29,7 @@
 #include "llvm/Support/ConvertUTF.h"
 
 // Windows includes
-#include <TlHelp32.h>
+#include <tlhelp32.h>
 
 using namespace lldb;
 using namespace lldb_private;

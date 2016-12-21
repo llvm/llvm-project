@@ -69,6 +69,9 @@ SVal SimpleSValBuilder::evalCastFromNonLoc(NonLoc val, QualType castTy) {
 
   bool isLocType = Loc::isLocType(castTy);
 
+  if (val.getAs<nonloc::PointerToMember>())
+    return val;
+
   if (Optional<nonloc::LocAsInteger> LI = val.getAs<nonloc::LocAsInteger>()) {
     if (isLocType)
       return LI->getLoc();
@@ -335,6 +338,21 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
     switch (lhs.getSubKind()) {
     default:
       return makeSymExprValNN(state, op, lhs, rhs, resultTy);
+    case nonloc::PointerToMemberKind: {
+      assert(rhs.getSubKind() == nonloc::PointerToMemberKind &&
+             "Both SVals should have pointer-to-member-type");
+      auto LPTM = lhs.castAs<nonloc::PointerToMember>(),
+           RPTM = rhs.castAs<nonloc::PointerToMember>();
+      auto LPTMD = LPTM.getPTMData(), RPTMD = RPTM.getPTMData();
+      switch (op) {
+        case BO_EQ:
+          return makeTruthVal(LPTMD == RPTMD, resultTy);
+        case BO_NE:
+          return makeTruthVal(LPTMD != RPTMD, resultTy);
+        default:
+          return UnknownVal();
+      }
+    }
     case nonloc::LocAsIntegerKind: {
       Loc lhsL = lhs.castAs<nonloc::LocAsInteger>().getLoc();
       switch (rhs.getSubKind()) {
@@ -863,6 +881,23 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
                                   BinaryOperator::Opcode op,
                                   Loc lhs, NonLoc rhs, QualType resultTy) {
+  if (op >= BO_PtrMemD && op <= BO_PtrMemI) {
+    if (auto PTMSV = rhs.getAs<nonloc::PointerToMember>()) {
+      if (PTMSV->isNullMemberPointer())
+        return UndefinedVal();
+      if (const FieldDecl *FD = PTMSV->getDeclAs<FieldDecl>()) {
+        SVal Result = lhs;
+
+        for (const auto &I : *PTMSV)
+          Result = StateMgr.getStoreManager().evalDerivedToBase(
+              Result, I->getType(),I->isVirtual());
+        return state->getLValue(FD, Result);
+      }
+    }
+
+    return rhs;
+  }
+
   assert(!BinaryOperator::isComparisonOp(op) &&
          "arguments to comparison ops must be of the same type");
 

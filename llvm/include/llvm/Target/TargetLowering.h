@@ -407,6 +407,15 @@ public:
     return false;
   }
 
+  /// Return true if the target has a bitwise and-not operation:
+  /// X = ~A & B
+  /// This can be used to simplify select or other instructions.
+  virtual bool hasAndNot(SDValue X) const {
+    // If the target has the more complex version of this operation, assume that
+    // it has this operation too.
+    return hasAndNotCompare(X);
+  }
+
   /// \brief Return true if the target wants to use the optimization that
   /// turns ext(promotableInst1(...(promotableInstN(load)))) into
   /// promotedInst1(...(promotedInstN(ext(load)))).

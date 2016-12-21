@@ -65,6 +65,9 @@ struct Config {
   /// with this triple.
   std::string DefaultTriple;
 
+  /// Sample PGO profile path.
+  std::string SampleProfile;
+
   bool ShouldDiscardValueNames = true;
   DiagnosticHandlerFunction DiagHandler;
 

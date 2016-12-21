@@ -9,6 +9,9 @@
 ; RUN:    -shared %t1.o --start-lib %t2.o --end-lib -o %t3.o
 ; RUN: llvm-dis %t3.o -o - | FileCheck %s
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
 @x = common global i32 0, align 4
 
 ; v1.12 gold honors --start-lib/--end-lib, drops %t2.o and ends up

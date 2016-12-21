@@ -156,10 +156,10 @@ void check_writeback_specifier()
 
 void check_invalid_specifier(FILE* fp, char *buf)
 {
-  printf("%s%lb%d","unix",10,20); // expected-warning {{invalid conversion specifier 'b'}}
+  printf("%s%lb%d","unix",10,20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
   fprintf(fp,"%%%l"); // expected-warning {{incomplete format specifier}}
   sprintf(buf,"%%%%%ld%d%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
-  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}}
+  snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}}
 }
 
 void check_null_char_string(char* b)
@@ -251,7 +251,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%**\n"); // expected-warning{{invalid conversion specifier '*'}}
   printf("%d%d\n", x); // expected-warning{{more '%' conversions than data arguments}}
   printf("%d\n", x, x); // expected-warning{{data argument not used by format string}}
-  printf("%W%d\n", x, x); // expected-warning{{invalid conversion specifier 'W'}}
+  printf("%W%d\n", x, x); // expected-warning{{invalid conversion specifier 'W'}}  expected-warning {{data argument not used by format string}}
   printf("%"); // expected-warning{{incomplete format specifier}}
   printf("%.d", x); // no-warning
   printf("%.", x);  // expected-warning{{incomplete format specifier}}
@@ -270,7 +270,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%.0Lf", (long double) 1.0); // no-warning
   printf("%c\n", "x"); // expected-warning{{format specifies type 'int' but the argument has type 'char *'}}
   printf("%c\n", 1.23); // expected-warning{{format specifies type 'int' but the argument has type 'double'}}
-  printf("Format %d, is %! %f", 1, 2, 4.4); // expected-warning{{invalid conversion specifier '!'}}
+  printf("Format %d, is %! %f", 1, 4.4); // expected-warning{{invalid conversion specifier '!'}}
 }
 
 typedef unsigned char uint8_t;

@@ -204,6 +204,8 @@ public:
                                    const LocationContext *LCtx,
                                    unsigned count);
 
+  DefinedSVal getMemberPointer(const DeclaratorDecl *DD);
+
   DefinedSVal getFunctionPointer(const FunctionDecl *func);
   
   DefinedSVal getBlockPointer(const BlockDecl *block, CanQualType locTy,
@@ -224,6 +226,14 @@ public:
                              const TypedValueRegion *region) {
     return nonloc::LazyCompoundVal(
         BasicVals.getLazyCompoundValData(store, region));
+  }
+
+  NonLoc makePointerToMember(const DeclaratorDecl *DD) {
+    return nonloc::PointerToMember(DD);
+  }
+
+  NonLoc makePointerToMember(const PointerToMemberData *PTMD) {
+    return nonloc::PointerToMember(PTMD);
   }
 
   NonLoc makeZeroArrayIndex() {

@@ -28,6 +28,13 @@ def llc(args, cmd_args, ir):
 
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
+SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
+
+ASM_FUNCTION_X86_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
+    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
+    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section)',
+    flags=(re.M | re.S))
 SCRUB_X86_SHUFFLES_RE = (
     re.compile(
         r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
@@ -35,20 +42,21 @@ SCRUB_X86_SHUFFLES_RE = (
 SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
 SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
 SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
-SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
+
+ASM_FUNCTION_ARM_RE = re.compile(
+        r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
+        r'\s+\.fnstart\n' # .fnstart
+        r'(?P<body>.*?)\n' # (body of the function)
+        r'.Lfunc_end[0-9]+:\n', # .Lfunc_end0:
+        flags=(re.M | re.S))
 
 RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
-ASM_FUNCTION_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
-    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
-    r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section)',
-    flags=(re.M | re.S))
 CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 
-def scrub_asm(asm):
+def scrub_asm_x86(asm):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -68,14 +76,31 @@ def scrub_asm(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_arm(asm):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip kill operands inserted into the asm.
+  asm = SCRUB_KILL_COMMENT_RE.sub('', asm)
+  # Strip trailing whitespace.
+  asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 
 # Build up a dictionary of all the function bodies.
 def build_function_body_dictionary(raw_tool_output, prefixes, func_dict, verbose):
-  for m in ASM_FUNCTION_RE.finditer(raw_tool_output):
+  is_arm = re.compile(r'\n\s+\.syntax unified\n').search(raw_tool_output)
+  function_re = ASM_FUNCTION_ARM_RE if is_arm else ASM_FUNCTION_X86_RE
+  for m in function_re.finditer(raw_tool_output):
     if not m:
       continue
     func = m.group('func')
-    scrubbed_body = scrub_asm(m.group('body'))
+    if is_arm:
+      scrubbed_body = scrub_asm_arm(m.group('body'))
+    else:
+      scrubbed_body = scrub_asm_x86(m.group('body'))
     if func.startswith('stress'):
       # We only use the last line of the function body for stress tests.
       scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])

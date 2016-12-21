@@ -49,16 +49,16 @@ you may need to disable inlining (just use ``-O1``) and tail call elimination
     }
 
     # Compile and link
-    % clang -O1 -g -fsanitize=address -fno-omit-frame-pointer example_UseAfterFree.cc
+    % clang++ -O1 -g -fsanitize=address -fno-omit-frame-pointer example_UseAfterFree.cc
 
 or:
 
 .. code-block:: console
 
     # Compile
-    % clang -O1 -g -fsanitize=address -fno-omit-frame-pointer -c example_UseAfterFree.cc
+    % clang++ -O1 -g -fsanitize=address -fno-omit-frame-pointer -c example_UseAfterFree.cc
     # Link
-    % clang -g -fsanitize=address example_UseAfterFree.o
+    % clang++ -g -fsanitize=address example_UseAfterFree.o
 
 If a bug is detected, the program will print an error message to stderr and
 exit with a non-zero exit code. AddressSanitizer exits on the first detected error.

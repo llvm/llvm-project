@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
 
 void foo() {
 }
@@ -23,7 +23,7 @@ int tmain(T argc, S **argv) {
 #pragma omp target update to(n) if (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(n) if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(n) if(argc)
-#pragma omp target update from(n) if(target update // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target update from(n) if(target update // expected-error {{use of undeclared identifier 'target'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(n) if(target update : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(n) if(target update : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(n) if(target update : argc)
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 #pragma omp target update from(m) if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(m) if (1 0) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(m) if(if(tmain(argc, argv) // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp target update to(m) if(target update // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target update to(m) if(target update // expected-error {{use of undeclared identifier 'target'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(m) if(target update : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(m) if(target update : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(m) if(target update : argc)

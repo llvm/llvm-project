@@ -68,7 +68,6 @@ static void getInclusions(const SrcMgr::SLocEntry &(SourceManager::*Getter)(unsi
 }
 
 
-extern "C" {
 void clang_getInclusions(CXTranslationUnit TU, CXInclusionVisitor CB,
                          CXClientData clientData) {
   if (cxtu::isNotUsableTU(TU)) {
@@ -96,4 +95,3 @@ void clang_getInclusions(CXTranslationUnit TU, CXInclusionVisitor CB,
     getInclusions(&SourceManager::getLocalSLocEntry, n, TU, CB, clientData);
 
 }
-} // end extern C

@@ -19,6 +19,8 @@
 
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 namespace lldb_private {
 
 class Log;
@@ -257,6 +259,11 @@ public:
       __attribute__((format(printf, 2, 3)));
 
   int SetErrorStringWithVarArg(const char *format, va_list args);
+
+  template <typename... Args>
+  void SetErrorStringWithFormatv(const char *format, Args &&... args) {
+    SetErrorString(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
 
   //------------------------------------------------------------------
   /// Test for success condition.

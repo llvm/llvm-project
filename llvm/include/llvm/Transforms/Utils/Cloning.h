@@ -194,9 +194,17 @@ public:
   /// inlined from the callee.  This is only filled in if CG is non-null.
   SmallVector<WeakVH, 8> InlinedCalls;
 
+  /// All of the new call sites inlined into the caller.
+  ///
+  /// 'InlineFunction' fills this in by scanning the inlined instructions, and
+  /// only if CG is null. If CG is non-null, instead the value handle
+  /// `InlinedCalls` above is used.
+  SmallVector<CallSite, 8> InlinedCallSites;
+
   void reset() {
     StaticAllocas.clear();
     InlinedCalls.clear();
+    InlinedCallSites.clear();
   }
 };
 
@@ -210,6 +218,10 @@ public:
 /// exists in the instruction stream.  Similarly this will inline a recursive
 /// function by one level.
 ///
+/// Note that while this routine is allowed to cleanup and optimize the
+/// *inlined* code to minimize the actual inserted code, it must not delete
+/// code in the caller as users of this routine may have pointers to
+/// instructions in the caller that need to remain stable.
 bool InlineFunction(CallInst *C, InlineFunctionInfo &IFI,
                     AAResults *CalleeAAR = nullptr, bool InsertLifetime = true);
 bool InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,

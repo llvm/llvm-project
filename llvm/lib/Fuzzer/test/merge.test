@@ -8,8 +8,8 @@ RUN: echo ..Z... > %tmp/T1/3
 
 # T1 has 3 elements, T2 is empty.
 RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK1
-CHECK1: === Minimizing the initial corpus of 3 units
-CHECK1: === Merge: written 0 units
+CHECK1: MERGE-OUTER: 3 files, 3 in the initial corpus
+CHECK1: MERGE-OUTER: 0 new files with 0 new features added
 
 RUN: echo ...Z.. > %tmp/T2/1
 RUN: echo ....E. > %tmp/T2/2
@@ -20,19 +20,27 @@ RUN: echo ..Z... > %tmp/T2/c
 
 # T1 has 3 elements, T2 has 6 elements, only 3 are new.
 RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK2
-CHECK2: === Minimizing the initial corpus of 3 units
-CHECK2: === Merging extra 6 units
-CHECK2: === Merge: written 3 units
+CHECK2: MERGE-OUTER: 9 files, 3 in the initial corpus
+CHECK2: MERGE-OUTER: 3 new files with 3 new features added
 
 # Now, T1 has 6 units and T2 has no new interesting units.
 RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
-CHECK3: === Minimizing the initial corpus of 6 units
-CHECK3: === Merge: written 0 units
+CHECK3: MERGE-OUTER: 12 files, 6 in the initial corpus
+CHECK3: MERGE-OUTER: 0 new files with 0 new features added
 
 # Check that we respect max_len during the merge and don't crash.
-RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 -max_len=4
+RUN: rm %tmp/T1/??*
+RUN: echo looooooooong > %tmp/T2/looooooooong
+RUN: LLVMFuzzer-FullCoverageSetTest         -merge=1 %tmp/T1 %tmp/T2 -max_len=6 2>&1 | FileCheck %s --check-prefix=MAX_LEN
+MAX_LEN: MERGE-OUTER: 3 new files
 
-# Check that when merge fails we print an error message.
-RUN: echo 'Hi!' > %tmp/T1/HiI
-RUN: not LLVMFuzzer-NullDerefTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=MERGE_FAIL
-MERGE_FAIL: NOTE: merge did not succeed due to a failure on one of the inputs.
+# Check that merge tolerates failures.
+RUN: rm %tmp/T1/??*
+RUN: echo 'FUZZER' > %tmp/T2/FUZZER
+RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=MERGE_WITH_CRASH
+MERGE_WITH_CRASH: MERGE-OUTER: succesfull in 2 attempt(s)
+MERGE_WITH_CRASH: MERGE-OUTER: 3 new files
+
+# Check that we actually limit the size with max_len
+RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2  -max_len=5 2>&1 | FileCheck %s --check-prefix=MERGE_LEN5
+MERGE_LEN5: MERGE-OUTER: succesfull in 1 attempt(s)

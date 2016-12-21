@@ -30,6 +30,7 @@ template<typename KeyT, typename ValueT,
          typename MapType = llvm::DenseMap<KeyT, unsigned>,
          typename VectorType = std::vector<std::pair<KeyT, ValueT> > >
 class MapVector {
+  typedef typename VectorType::value_type value_type;
   typedef typename VectorType::size_type size_type;
 
   MapType Map;
@@ -40,6 +41,12 @@ public:
   typedef typename VectorType::const_iterator const_iterator;
   typedef typename VectorType::reverse_iterator reverse_iterator;
   typedef typename VectorType::const_reverse_iterator const_reverse_iterator;
+
+  /// Clear the MapVector and return the underlying vector.
+  VectorType takeVector() {
+    Map.clear();
+    return std::move(Vector);
+  }
 
   size_type size() const { return Vector.size(); }
 

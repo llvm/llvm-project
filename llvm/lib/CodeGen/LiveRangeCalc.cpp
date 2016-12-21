@@ -79,11 +79,12 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
       for (LiveInterval::SubRange &S : LI.subranges()) {
         // A Mask for subregs common to the existing subrange and current def.
         LaneBitmask Common = S.LaneMask & Mask;
-        if (Common == 0)
+        if (Common.none())
           continue;
         LiveInterval::SubRange *CommonRange;
         // A Mask for subregs covered by the subrange but not the current def.
-        if (LaneBitmask RM = S.LaneMask & ~Mask) {
+        LaneBitmask RM = S.LaneMask & ~Mask;
+        if (RM.any()) {
           // Split the subrange S into two parts: one covered by the current
           // def (CommonRange), and the one not affected by it (updated S).
           S.LaneMask = RM;
@@ -97,7 +98,7 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
         Mask &= ~Common;
       }
       // Create a new SubRange for subregs we did not cover yet.
-      if (Mask != 0) {
+      if (Mask.any()) {
         LiveInterval::SubRange *NewRange = LI.createSubRange(*Alloc, Mask);
         if (MO.isDef())
           createDeadDef(*Indexes, *Alloc, *NewRange, MO);
@@ -126,7 +127,7 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
     constructMainRangeFromSubranges(LI);
   } else {
     resetLiveOutMap();
-    extendToUses(LI, Reg, ~0u);
+    extendToUses(LI, Reg, LaneBitmask::getAll());
   }
 }
 
@@ -143,7 +144,7 @@ void LiveRangeCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
     }
   }
   resetLiveOutMap();
-  extendToUses(MainRange, LI.reg, ~0U, &LI);
+  extendToUses(MainRange, LI.reg, LaneBitmask::getAll(), &LI);
 }
 
 void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
@@ -163,7 +164,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
     LI->computeSubRangeUndefs(Undefs, Mask, *MRI, *Indexes);
 
   // Visit all operands that read Reg. This may include partial defs.
-  bool IsSubRange = (Mask != ~0U);
+  bool IsSubRange = !Mask.all();
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
     // Clear all kill flags. They will be reinserted after register allocation
@@ -183,7 +184,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
       if (MO.isDef())
         SLM = ~SLM;
       // Ignore uses not reading the current (sub)range.
-      if ((SLM & Mask) == 0)
+      if ((SLM & Mask).none())
         continue;
     }
 

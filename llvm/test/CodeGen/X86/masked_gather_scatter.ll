@@ -1041,8 +1041,7 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
 ; KNL_64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; KNL_64-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; KNL_64-NEXT:    vmovq {{.*#+}} xmm2 = xmm2[0],zero
+; KNL_64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,2],zero,zero
 ; KNL_64-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; KNL_64-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4,5,6,7]
 ; KNL_64-NEXT:    vpslld $31, %ymm2, %ymm2
@@ -1053,8 +1052,7 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 ; KNL_32-LABEL: test20:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
-; KNL_32-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; KNL_32-NEXT:    vmovq {{.*#+}} xmm2 = xmm2[0],zero
+; KNL_32-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,2],zero,zero
 ; KNL_32-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4,5,6,7]
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
@@ -1146,8 +1144,7 @@ define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x fl
 ; KNL_64-LABEL: test22:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
-; KNL_64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; KNL_64-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; KNL_64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; KNL_64-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; KNL_64-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
 ; KNL_64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -1161,8 +1158,7 @@ define <2 x float> @test22(float* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x fl
 ; KNL_32-LABEL: test22:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %YMM2<def>
-; KNL_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; KNL_32-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; KNL_32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; KNL_32-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

@@ -10,17 +10,22 @@
 #include "CPlusPlusLanguage.h"
 
 // C Includes
-// C++ Includes
 #include <cctype>
 #include <cstring>
+
+// C++ Includes
 #include <functional>
+#include <memory>
 #include <mutex>
+#include <set>
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
 #include "lldb/Core/ConstString.h"
+#include "lldb/Core/FastDemangle.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/UniqueCStringMap.h"
@@ -438,6 +443,101 @@ CPlusPlusLanguage::FindEquivalentNames(ConstString type_name,
     count = GetEquivalentsMap().FindPartialMatches(type_name, equivalents);
 
   return count;
+}
+
+/// Given a mangled function `mangled`, replace all the primitive function type
+/// arguments of `search` with type `replace`.
+static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
+                                            llvm::StringRef search,
+                                            llvm::StringRef replace) {
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+  const size_t max_len =
+      mangled.size() + mangled.count(search) * replace.size() + 1;
+
+  // Make a temporary buffer to fix up the mangled parameter types and copy the
+  // original there
+  std::string output_buf;
+  output_buf.reserve(max_len);
+  output_buf.insert(0, mangled.str());
+  ptrdiff_t replaced_offset = 0;
+
+  auto swap_parms_hook = [&](const char *parsee) {
+    if (!parsee || !*parsee)
+      return;
+
+    // Check whether we've found a substitutee
+    llvm::StringRef s(parsee);
+    if (s.startswith(search)) {
+      // account for the case where a replacement is of a different length to
+      // the original
+      replaced_offset += replace.size() - search.size();
+
+      ptrdiff_t replace_idx = (mangled.size() - s.size()) + replaced_offset;
+      output_buf.erase(replace_idx, search.size());
+      output_buf.insert(replace_idx, replace.str());
+    }
+  };
+
+  // FastDemangle will call our hook for each instance of a primitive type,
+  // allowing us to perform substitution
+  const char *const demangled =
+      FastDemangle(mangled.str().c_str(), mangled.size(), swap_parms_hook);
+
+  if (log)
+    log->Printf("substituted mangling for %s:{%s} %s:{%s}\n",
+                mangled.str().c_str(), demangled, output_buf.c_str(),
+                FastDemangle(output_buf.c_str()));
+
+  return output_buf == mangled ? ConstString() : ConstString(output_buf);
+}
+
+uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
+    const ConstString mangled_name, std::set<ConstString> &alternates) {
+  const auto start_size = alternates.size();
+  /// Get a basic set of alternative manglings for the given symbol `name`, by
+  /// making a few basic possible substitutions on basic types, storage duration
+  /// and `const`ness for the given symbol. The output parameter `alternates`
+  /// is filled with a best-guess, non-exhaustive set of different manglings
+  /// for the given name.
+
+  // Maybe we're looking for a const symbol but the debug info told us it was
+  // non-const...
+  if (!strncmp(mangled_name.GetCString(), "_ZN", 3) &&
+      strncmp(mangled_name.GetCString(), "_ZNK", 4)) {
+    std::string fixed_scratch("_ZNK");
+    fixed_scratch.append(mangled_name.GetCString() + 3);
+    alternates.insert(ConstString(fixed_scratch));
+  }
+
+  // Maybe we're looking for a static symbol but we thought it was global...
+  if (!strncmp(mangled_name.GetCString(), "_Z", 2) &&
+      strncmp(mangled_name.GetCString(), "_ZL", 3)) {
+    std::string fixed_scratch("_ZL");
+    fixed_scratch.append(mangled_name.GetCString() + 2);
+    alternates.insert(ConstString(fixed_scratch));
+  }
+
+  // `char` is implementation defined as either `signed` or `unsigned`.  As a
+  // result a char parameter has 3 possible manglings: 'c'-char, 'a'-signed
+  // char, 'h'-unsigned char.  If we're looking for symbols with a signed char
+  // parameter, try finding matches which have the general case 'c'.
+  if (ConstString char_fixup =
+          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "a", "c"))
+    alternates.insert(char_fixup);
+
+  // long long parameter mangling 'x', may actually just be a long 'l' argument
+  if (ConstString long_fixup =
+          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "x", "l"))
+    alternates.insert(long_fixup);
+
+  // unsigned long long parameter mangling 'y', may actually just be unsigned
+  // long 'm' argument
+  if (ConstString ulong_fixup =
+          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "y", "m"))
+    alternates.insert(ulong_fixup);
+
+  return alternates.size() - start_size;
 }
 
 static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -931,7 +1031,7 @@ std::unique_ptr<Language::TypeScavenger> CPlusPlusLanguage::GetTypeScavenger() {
       return candidate;
     }
   };
-  
+
   return std::unique_ptr<TypeScavenger>(new CPlusPlusTypeScavenger());
 }
 

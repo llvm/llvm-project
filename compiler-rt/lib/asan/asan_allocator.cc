@@ -227,7 +227,12 @@ struct Allocator {
   static const uptr kMaxAllowedMallocSize =
       FIRST_32_SECOND_64(3UL << 30, 1ULL << 40);
   static const uptr kMaxThreadLocalQuarantine =
-      FIRST_32_SECOND_64(1 << 18, 1 << 20);
+      // It is not advised to go lower than 64Kb, otherwise quarantine batches
+      // pushed from thread local quarantine to global one will create too much
+      // overhead. One quarantine batch size is 8Kb and it  holds up to 1021
+      // chunk, which amounts to 1/8 memory overhead per batch when thread local
+      // quarantine is set to 64Kb.
+      (ASAN_LOW_MEMORY) ? 1 << 16 : FIRST_32_SECOND_64(1 << 18, 1 << 20);
 
   AsanAllocator allocator;
   AsanQuarantine quarantine;

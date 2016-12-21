@@ -56,43 +56,27 @@ set(LIBOMP_CFILES)
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
 if(${STUBS_LIBRARY})
-  set(LIBOMP_CFILES kmp_stub.c)
+  set(LIBOMP_CFILES kmp_stub.cpp)
 else()
-  # Get C files
-  set(LIBOMP_CFILES
-    kmp_alloc.c
-    kmp_atomic.c
-    kmp_csupport.c
-    kmp_debug.c
-    kmp_itt.c
-    kmp_environment.c
-    kmp_error.c
-    kmp_global.c
-    kmp_i18n.c
-    kmp_io.c
-    kmp_runtime.c
-    kmp_settings.c
-    kmp_str.c
-    kmp_tasking.c
-    kmp_taskq.c
-    kmp_threadprivate.c
-    kmp_utility.c
-  )
-  if(WIN32)
-    # Windows specific files
-    libomp_append(LIBOMP_CFILES z_Windows_NT_util.c)
-    libomp_append(LIBOMP_CFILES z_Windows_NT-586_util.c)
-    libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
-  else()
-    # Unix specific files
-    libomp_append(LIBOMP_CFILES z_Linux_util.c)
-    libomp_append(LIBOMP_CFILES kmp_gsupport.c)
-    libomp_append(LIBOMP_ASMFILES z_Linux_asm.s) # Unix assembly file
-  endif()
-  libomp_append(LIBOMP_CFILES thirdparty/ittnotify/ittnotify_static.c LIBOMP_USE_ITT_NOTIFY)
-  libomp_append(LIBOMP_CFILES kmp_debugger.c LIBOMP_USE_DEBUGGER)
   # Get C++ files
   set(LIBOMP_CXXFILES
+    kmp_alloc.cpp
+    kmp_atomic.cpp
+    kmp_csupport.cpp
+    kmp_debug.cpp
+    kmp_itt.cpp
+    kmp_environment.cpp
+    kmp_error.cpp
+    kmp_global.cpp
+    kmp_i18n.cpp
+    kmp_io.cpp
+    kmp_runtime.cpp
+    kmp_settings.cpp
+    kmp_str.cpp
+    kmp_tasking.cpp
+    kmp_taskq.cpp
+    kmp_threadprivate.cpp
+    kmp_utility.cpp
     kmp_barrier.cpp
     kmp_wait_release.cpp
     kmp_affinity.cpp
@@ -100,6 +84,19 @@ else()
     kmp_lock.cpp
     kmp_sched.cpp
   )
+  if(WIN32)
+    # Windows specific files
+    libomp_append(LIBOMP_CXXFILES z_Windows_NT_util.cpp)
+    libomp_append(LIBOMP_CXXFILES z_Windows_NT-586_util.cpp)
+    libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
+  else()
+    # Unix specific files
+    libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
+    libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
+    libomp_append(LIBOMP_ASMFILES z_Linux_asm.s) # Unix assembly file
+  endif()
+  libomp_append(LIBOMP_CFILES thirdparty/ittnotify/ittnotify_static.c LIBOMP_USE_ITT_NOTIFY)
+  libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
   libomp_append(LIBOMP_CXXFILES kmp_stats.cpp LIBOMP_STATS)
   libomp_append(LIBOMP_CXXFILES kmp_stats_timing.cpp LIBOMP_STATS)
   if(${LIBOMP_OMP_VERSION} GREATER 40 OR ${LIBOMP_OMP_VERSION} EQUAL 40)
@@ -108,12 +105,11 @@ else()
   endif()
 endif()
 # Files common to stubs and normal library
-libomp_append(LIBOMP_CFILES kmp_ftn_cdecl.c)
-libomp_append(LIBOMP_CFILES kmp_ftn_extra.c)
-libomp_append(LIBOMP_CFILES kmp_version.c)
-libomp_append(LIBOMP_CFILES ompt-general.c IF_TRUE LIBOMP_OMPT_SUPPORT)
-
-libomp_append(LIBOMP_CFILES tsan_annotations.c IF_TRUE LIBOMP_TSAN_SUPPORT)
+libomp_append(LIBOMP_CXXFILES kmp_ftn_cdecl.cpp)
+libomp_append(LIBOMP_CXXFILES kmp_ftn_extra.cpp)
+libomp_append(LIBOMP_CXXFILES kmp_version.cpp)
+libomp_append(LIBOMP_CXXFILES ompt-general.cpp IF_TRUE LIBOMP_OMPT_SUPPORT)
+libomp_append(LIBOMP_CXXFILES tsan_annotations.cpp IF_TRUE LIBOMP_TSAN_SUPPORT)
 
 set(LIBOMP_SOURCE_FILES ${LIBOMP_CFILES} ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
 # For Windows, there is a resource file (.rc -> .res) that is also compiled
@@ -202,9 +198,9 @@ if(WIN32)
   set_source_files_properties(thirdparty/ittnotify/ittnotify_static.c PROPERTIES COMPILE_DEFINITIONS "UNICODE")
 
   # Create Windows import library
-  # the import library is "re-linked" to include kmp_import.c which prevents
+  # the import library is "re-linked" to include kmp_import.cpp which prevents
   # linking of both Visual Studio OpenMP and newly built OpenMP
-  set_source_files_properties(kmp_import.c PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CFLAGS}")
+  set_source_files_properties(kmp_import.cpp PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CFLAGS}")
   set(LIBOMP_IMP_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_STATIC_LIBRARY_SUFFIX})
   set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_LIB_FILE}${CMAKE_STATIC_LIBRARY_SUFFIX})
   set_target_properties(omp PROPERTIES
@@ -220,8 +216,8 @@ if(WIN32)
     set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
   endif()
   set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
-  # Create new import library that is just the previously created one + kmp_import.c
-  add_library(ompimp STATIC ${LIBOMP_GENERATED_IMP_LIB} kmp_import.c)
+  # Create new import library that is just the previously created one + kmp_import.cpp
+  add_library(ompimp STATIC ${LIBOMP_GENERATED_IMP_LIB} kmp_import.cpp)
   set_target_properties(ompimp PROPERTIES
     PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
     LINKER_LANGUAGE C

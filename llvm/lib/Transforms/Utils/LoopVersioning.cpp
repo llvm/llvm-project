@@ -36,7 +36,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
     : VersionedLoop(L), NonVersionedLoop(nullptr), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
   assert(L->getExitBlock() && "No single exit block");
-  assert(L->getLoopPreheader() && "No preheader");
+  assert(L->isLoopSimplifyForm() && "Loop is not in loop-simplify form");
   if (UseLAIChecks) {
     setAliasChecks(LAI.getRuntimePointerChecking()->getChecks());
     setSCEVChecks(LAI.getPSE().getUnionPredicate());
@@ -278,8 +278,8 @@ public:
     bool Changed = false;
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L);
-      if (LAI.getNumRuntimePointerChecks() ||
-          !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
+      if (L->isLoopSimplifyForm() && (LAI.getNumRuntimePointerChecks() ||
+          !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
         LoopVersioning LVer(LAI, L, LI, DT, SE);
         LVer.versionLoop();
         LVer.annotateLoopWithNoAlias();

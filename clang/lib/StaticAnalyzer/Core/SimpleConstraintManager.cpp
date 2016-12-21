@@ -182,6 +182,12 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
     return isFeasible ? State : nullptr;
   }
 
+  case nonloc::PointerToMemberKind: {
+    bool IsNull = !Cond.castAs<nonloc::PointerToMember>().isNullMemberPointer();
+    bool IsFeasible = IsNull ? Assumption : !Assumption;
+    return IsFeasible ? State : nullptr;
+  }
+
   case nonloc::LocAsIntegerKind:
     return assume(State, Cond.castAs<nonloc::LocAsInteger>().getLoc(),
                   Assumption);

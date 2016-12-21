@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DIE.h"
@@ -216,7 +217,9 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// This is a collection of subprogram MDNodes that are processed to
   /// create DIEs.
-  SmallPtrSet<const MDNode *, 16> ProcessedSPNodes;
+  SetVector<const DISubprogram *, SmallVector<const DISubprogram *, 16>,
+            SmallPtrSet<const DISubprogram *, 16>>
+      ProcessedSPNodes;
 
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn;
@@ -550,12 +553,6 @@ public:
   /// A helper function to check whether the DIE for a given Scope is
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
-
-  // FIXME: Sink these functions down into DwarfFile/Dwarf*Unit.
-
-  SmallPtrSet<const MDNode *, 16> &getProcessedSPNodes() {
-    return ProcessedSPNodes;
-  }
 };
 } // End of namespace llvm
 

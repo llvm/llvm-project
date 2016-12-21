@@ -18,8 +18,8 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "Symbols.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
@@ -586,7 +586,7 @@ template <class ELFT>
 std::vector<SymbolBody *>
 SymbolTable<ELFT>::findAllByVersion(SymbolVersion Ver) {
   std::vector<SymbolBody *> Res;
-  StringMatcher M({Ver.Name});
+  StringMatcher M(Ver.Name);
 
   if (Ver.IsExternCpp) {
     initDemangledSyms();

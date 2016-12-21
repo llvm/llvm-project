@@ -2,12 +2,16 @@
 
 void firstThingInTheFileThatNeedsNullabilityIsAnArray(int ints[]);
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
 
 int *secondThingInTheFileThatNeedsNullabilityIsAPointer;
 #if !ARRAYS_CHECKED
 // expected-warning@-2 {{pointer is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-note@-3 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the pointer should never be null}}
 #endif
 
 int *_Nonnull triggerConsistencyWarnings;
@@ -15,21 +19,35 @@ int *_Nonnull triggerConsistencyWarnings;
 void test(
     int ints[],
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
     void *ptrs[], // expected-warning {{pointer is missing a nullability type specifier}}
+// expected-note@-1 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 {{insert '_Nonnull' if the pointer should never be null}}
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-4 {{array parameter is missing a nullability type specifier}}
+// expected-note@-5 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-6 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
     void **nestedPtrs[]); // expected-warning 2 {{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-4 {{array parameter is missing a nullability type specifier}}
+// expected-note@-5 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-6 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
 
 void testArraysOK(
     int ints[_Nonnull],
     void *ptrs[_Nonnull], // expected-warning {{pointer is missing a nullability type specifier}}
+// expected-note@-1 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 {{insert '_Nonnull' if the pointer should never be null}}
     void **nestedPtrs[_Nonnull]); // expected-warning 2 {{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 void testAllOK(
     int ints[_Nonnull],
     void * _Nullable ptrs[_Nonnull],
@@ -57,7 +75,9 @@ void testVAListWithNullability(
 
 void nestedArrays(int x[5][1]) {}
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
 void nestedArraysOK(int x[_Nonnull 5][1]) {}
 
@@ -72,13 +92,17 @@ typedef int INTS[4];
 void typedefTest(
     INTS x,
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
     INTS _Nonnull x2,
     _Nonnull INTS x3,
     INTS y[2],
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
     INTS y2[_Nonnull 2]);
 
@@ -87,15 +111,23 @@ void typedefTest(
 void testAssumeNonnull(
   int ints[],
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
   void *ptrs[],
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-2 {{array parameter is missing a nullability type specifier}}
+// expected-note@-3 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-4 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
   void **nestedPtrs[]); // expected-warning 2 {{pointer is missing a nullability type specifier}}
+// expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
+// expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}
 #if ARRAYS_CHECKED
-// expected-warning@-2 {{array parameter is missing a nullability type specifier (_Nonnull, _Nullable, or _Null_unspecified)}}
+// expected-warning@-4 {{array parameter is missing a nullability type specifier}}
+// expected-note@-5 {{insert '_Nullable' if the array parameter may be null}}
+// expected-note@-6 {{insert '_Nonnull' if the array parameter should never be null}}
 #endif
 
 void testAssumeNonnullAllOK(

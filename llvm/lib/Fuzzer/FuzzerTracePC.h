@@ -71,6 +71,7 @@ class TracePC {
   void PrintModuleInfo();
 
   void PrintCoverage();
+  void DumpCoverage();
 
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n);
@@ -144,7 +145,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
   }
   if (UseValueProfile)
     ValueProfileMap.ForEach([&](size_t Idx) {
-      if (CB(NumGuards + Idx))
+      if (CB(NumGuards * 8 + Idx))
         Res++;
     });
   return Res;

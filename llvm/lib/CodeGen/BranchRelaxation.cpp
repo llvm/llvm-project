@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -69,8 +70,10 @@ class BranchRelaxation : public MachineFunctionPass {
 
   SmallVector<BasicBlockInfo, 16> BlockInfo;
   std::unique_ptr<RegScavenger> RS;
+  LivePhysRegs LiveRegs;
 
   MachineFunction *MF;
+  const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
 
   bool relaxBranchInstructions();
@@ -252,6 +255,10 @@ MachineBasicBlock *BranchRelaxation::splitBlockBeforeInstr(MachineInstr &MI,
   // All BBOffsets following these blocks must be modified.
   adjustBlockOffsets(*OrigBB);
 
+  // Need to fix live-in lists if we track liveness.
+  if (TRI->trackLivenessAfterRegAlloc(*MF))
+    computeLiveIns(LiveRegs, *TRI, *NewBB);
+
   ++NumSplit;
 
   return NewBB;
@@ -411,8 +418,9 @@ bool BranchRelaxation::relaxBranchInstructions() {
   for (MachineFunction::iterator I = MF->begin(); I != MF->end(); ++I) {
     MachineBasicBlock &MBB = *I;
 
-    auto Last = MBB.rbegin();
-    if (Last == MBB.rend()) // Empty block.
+    // Empty block?
+    MachineBasicBlock::iterator Last = MBB.getLastNonDebugInstr();
+    if (Last == MBB.end())
       continue;
 
     // Expand the unconditional branch first if necessary. If there is a
@@ -473,7 +481,7 @@ bool BranchRelaxation::runOnMachineFunction(MachineFunction &mf) {
   const TargetSubtargetInfo &ST = MF->getSubtarget();
   TII = ST.getInstrInfo();
 
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  TRI = ST.getRegisterInfo();
   if (TRI->trackLivenessAfterRegAlloc(*MF))
     RS.reset(new RegScavenger());
 

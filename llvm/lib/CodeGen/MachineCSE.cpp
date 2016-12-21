@@ -177,8 +177,7 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
   unsigned LookAheadLeft = LookAheadLimit;
   while (LookAheadLeft) {
     // Skip over dbg_value's.
-    while (I != E && I->isDebugValue())
-      ++I;
+    I = skipDebugInstructionsForward(I, E);
 
     if (I == E)
       // Reached end of block, register is obviously dead.

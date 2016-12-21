@@ -24,7 +24,7 @@ void RedundantDeclarationCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
-  const NamedDecl *D = Result.Nodes.getNodeAs<NamedDecl>("Decl");
+  const auto *D = Result.Nodes.getNodeAs<NamedDecl>("Decl");
   const auto *Prev = D->getPreviousDecl();
   if (!Prev)
     return;

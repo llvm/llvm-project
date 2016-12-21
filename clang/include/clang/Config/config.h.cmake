@@ -8,6 +8,9 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
+/* Default linker to use. */
+#define CLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}"
+
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
 

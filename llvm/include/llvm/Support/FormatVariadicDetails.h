@@ -19,83 +19,26 @@ namespace llvm {
 template <typename T, typename Enable = void> struct format_provider {};
 
 namespace detail {
-
-class format_wrapper {
+class format_adapter {
 protected:
-  virtual ~format_wrapper() {}
+  virtual ~format_adapter() {}
 
 public:
-  virtual void format(llvm::raw_ostream &S, StringRef Options) = 0;
+  virtual void format(raw_ostream &S, StringRef Options) = 0;
 };
 
-template <typename T> class member_format_wrapper : public format_wrapper {
+template <typename T> class provider_format_adapter : public format_adapter {
   T Item;
 
 public:
-  explicit member_format_wrapper(T &&Item) : Item(Item) {}
-
-  void format(llvm::raw_ostream &S, StringRef Options) override {
-    Item.format(S, Options);
-  }
-};
-
-template <typename T> class provider_format_wrapper : public format_wrapper {
-  T Item;
-
-public:
-  explicit provider_format_wrapper(T &&Item) : Item(Item) {}
+  explicit provider_format_adapter(T &&Item) : Item(Item) {}
 
   void format(llvm::raw_ostream &S, StringRef Options) override {
     format_provider<typename std::decay<T>::type>::format(Item, S, Options);
   }
 };
 
-template <typename T> class missing_format_wrapper;
-
-// Test if T is a class that contains a member function with the signature:
-//
-// void format(raw_ostream &, StringRef);
-//
-// It is assumed T is a non-reference type.
-template <class T, class Enable = void> class has_FormatMember {
-public:
-  static bool const value = false;
-};
-
-template <class T>
-class has_FormatMember<T,
-                       typename std::enable_if<std::is_class<T>::value &&
-                                               std::is_const<T>::value>::type> {
-  using CleanT = typename std::remove_volatile<T>::type;
-  using Signature_format = void (CleanT::*)(llvm::raw_ostream &S,
-                                            StringRef Options) const;
-
-  template <typename U>
-  static char test2(SameType<Signature_format, &U::format> *);
-
-  template <typename U> static double test2(...);
-
-public:
-  static bool const value = (sizeof(test2<CleanT>(nullptr)) == 1);
-};
-
-template <class T>
-class has_FormatMember<
-    T, typename std::enable_if<std::is_class<T>::value &&
-                               !std::is_const<T>::value>::type> {
-  using CleanT = typename std::remove_cv<T>::type;
-  using Signature_format = void (CleanT::*)(llvm::raw_ostream &S,
-                                            StringRef Options);
-
-  template <typename U>
-  static char test2(SameType<Signature_format, &U::format> *);
-
-  template <typename U> static double test2(...);
-
-public:
-  static bool const value =
-      (sizeof(test2<CleanT>(nullptr)) == 1) || has_FormatMember<const T>::value;
-};
+template <typename T> class missing_format_adapter;
 
 // Test if format_provider<T> is defined on T and contains a member function
 // with the signature:
@@ -122,7 +65,8 @@ template <typename T>
 struct uses_format_member
     : public std::integral_constant<
           bool,
-          has_FormatMember<typename std::remove_reference<T>::type>::value> {};
+          std::is_base_of<format_adapter,
+                          typename std::remove_reference<T>::type>::value> {};
 
 // Simple template that decides whether a type T should use the format_provider
 // based format() invocation.  The member function takes priority, so this test
@@ -144,24 +88,23 @@ struct uses_missing_provider
                                         !uses_format_provider<T>::value> {};
 
 template <typename T>
-typename std::enable_if<uses_format_member<T>::value,
-                        member_format_wrapper<T>>::type
-build_format_wrapper(T &&Item) {
-  return member_format_wrapper<T>(std::forward<T>(Item));
+typename std::enable_if<uses_format_member<T>::value, T>::type
+build_format_adapter(T &&Item) {
+  return std::forward<T>(Item);
 }
 
 template <typename T>
 typename std::enable_if<uses_format_provider<T>::value,
-                        provider_format_wrapper<T>>::type
-build_format_wrapper(T &&Item) {
-  return provider_format_wrapper<T>(std::forward<T>(Item));
+                        provider_format_adapter<T>>::type
+build_format_adapter(T &&Item) {
+  return provider_format_adapter<T>(std::forward<T>(Item));
 }
 
 template <typename T>
 typename std::enable_if<uses_missing_provider<T>::value,
-                        missing_format_wrapper<T>>::type
-build_format_wrapper(T &&Item) {
-  return missing_format_wrapper<T>();
+                        missing_format_adapter<T>>::type
+build_format_adapter(T &&Item) {
+  return missing_format_adapter<T>();
 }
 }
 }

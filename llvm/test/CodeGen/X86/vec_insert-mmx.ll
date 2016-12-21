@@ -29,7 +29,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 define <8 x i8> @t1(i8 zeroext %x) nounwind {
 ; X32-LABEL: t1:
 ; X32:       ## BB#0:
-; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
@@ -65,7 +65,7 @@ define void @t3() {
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl L_g0$non_lazy_ptr, %eax
 ; X32-NEXT:    movl L_g1$non_lazy_ptr, %ecx
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X32-NEXT:    movzwl (%eax), %eax
 ; X32-NEXT:    movd %eax, %xmm1

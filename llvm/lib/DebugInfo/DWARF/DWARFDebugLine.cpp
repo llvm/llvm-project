@@ -678,5 +678,6 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     return false;
   Result.Line = Row.Line;
   Result.Column = Row.Column;
+  Result.Discriminator = Row.Discriminator;
   return true;
 }

@@ -233,7 +233,6 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
 
   TargetMachine *target =
       march->createTargetMachine(TripleStr, CPU, FeatureStr, options, None);
-  M->setDataLayout(target->createDataLayout());
 
   std::unique_ptr<LTOModule> Ret(new LTOModule(std::move(M), Buffer, target));
   Ret->parseSymbols();

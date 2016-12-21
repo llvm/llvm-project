@@ -1,5 +1,9 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-verify < %s 2>&1 | opt -verify -S | FileCheck %s  --check-prefix=STRIP
 
+; STRIP-NOT: tbaa
+; STRIP: @f_0
+; STRIP: Do no strip this
 define void @f_0(i32* %ptr) {
 ; This part checks for the easy syntactic verifier rules.
 
@@ -34,10 +38,10 @@ define void @f_0(i32* %ptr) {
   store i32 4, i32* %ptr, !tbaa !{!3, null, !"40", i64 0}
   store i32 5, i32* %ptr, !tbaa !{!3, !3, !"40", i64 0}
   store i32 6, i32* %ptr, !tbaa !{!3, !2, i32 40, i64 0}
-  store i32 7, i32* %ptr, !tbaa !{!3, !12, i32 40, i64 0}
+  store i32 7, i32* %ptr, !tbaa !{!3, !12, i32 40, i64 0}, !metadata !42
   ret void
 }
-
+!42 = !{!"Do no strip this!"}
 
 define void @f_1(i32* %ptr) {
 ; This part checks for more semantic verifier rules.

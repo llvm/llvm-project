@@ -66,3 +66,17 @@ void yaml2debug_aranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
     ZeroFillBytes(OS, Range.AddrSize * 2);
   }
 }
+
+void yaml2pubsection(raw_ostream &OS, const DWARFYAML::PubSection &Sect) {
+  OS.write(reinterpret_cast<const char *>(&Sect.Length), 4);
+  OS.write(reinterpret_cast<const char *>(&Sect.Version), 2);
+  OS.write(reinterpret_cast<const char *>(&Sect.UnitOffset), 4);
+  OS.write(reinterpret_cast<const char *>(&Sect.UnitSize), 4);
+  for (auto Entry : Sect.Entries) {
+    OS.write(reinterpret_cast<const char *>(&Entry.DieOffset), 4);
+    if (Sect.IsGNUStyle)
+      OS.write(reinterpret_cast<const char *>(&Entry.Descriptor), 4);
+    OS.write(Entry.Name.data(), Entry.Name.size());
+    OS.write('\0');
+  }
+}

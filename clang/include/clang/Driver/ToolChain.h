@@ -105,7 +105,6 @@ private:
 
 protected:
   MultilibSet Multilibs;
-  const char *DefaultLinker = "ld";
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -270,6 +269,11 @@ public:
   /// this tool chain (0=off, 1=on, 2=strong, 3=all).
   virtual unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const {
     return 0;
+  }
+
+  /// GetDefaultLinker - Get the default linker to use.
+  virtual const char *getDefaultLinker() const {
+    return "ld";
   }
 
   /// GetDefaultRuntimeLibType - Get the default runtime library variant to use.

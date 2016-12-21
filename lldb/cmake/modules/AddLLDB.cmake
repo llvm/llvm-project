@@ -17,7 +17,7 @@ function(lldb_link_common_libs name targetkind)
   endif()
 endfunction(lldb_link_common_libs)
 
-macro(add_lldb_library name)
+function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
@@ -49,7 +49,7 @@ macro(add_lldb_library name)
   endif()
 
   #PIC not needed on Win
-  if (NOT MSVC)
+  if (NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   endif()
 
@@ -80,13 +80,22 @@ macro(add_lldb_library name)
           set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR})
         endif()
         install(TARGETS ${name}
+          COMPONENT ${name}
           RUNTIME DESTINATION bin
           LIBRARY DESTINATION ${out_dir}
           ARCHIVE DESTINATION ${out_dir})
       else()
         install(TARGETS ${name}
+          COMPONENT ${name}
           LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
           ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+      endif()
+      if (NOT CMAKE_CONFIGURATION_TYPES)
+        add_custom_target(install-${name}
+                          DEPENDS ${name}
+                          COMMAND "${CMAKE_COMMAND}"
+                                  -DCMAKE_INSTALL_COMPONENT=${name}
+                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
       endif()
     endif()
   endif()
@@ -100,10 +109,10 @@ macro(add_lldb_library name)
   endif()
 
   set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
-endmacro(add_lldb_library)
+endfunction(add_lldb_library)
 
-macro(add_lldb_executable name)
-  cmake_parse_arguments(ARG "INCLUDE_IN_FRAMEWORK" "" "" ${ARGN})
+function(add_lldb_executable name)
+  cmake_parse_arguments(ARG "INCLUDE_IN_FRAMEWORK;GENERATE_INSTALL" "" "" ${ARGN})
   add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES
     FOLDER "lldb executables")
@@ -115,16 +124,35 @@ macro(add_lldb_executable name)
             RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>/Resources
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../../../../${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
-
-      add_llvm_tool_symlink(${name} ${name} ARG_ALWAYS_GENERATE
-                            OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
     else()
       set_target_properties(${name} PROPERTIES
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
     endif()
   endif()
-endmacro(add_lldb_executable)
+
+  if(ARG_GENERATE_INSTALL)
+    install(TARGETS ${name}
+          COMPONENT ${name}
+          RUNTIME DESTINATION bin)
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-${name}
+                        DEPENDS ${name}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${name}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    endif()
+  endif()
+
+  if(ARG_INCLUDE_IN_FRAMEWORK AND LLDB_BUILD_FRAMEWORK)
+    add_llvm_tool_symlink(${name} ${name} ALWAYS_GENERATE SKIP_INSTALL
+                            OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  endif()
+endfunction(add_lldb_executable)
+
+function(add_lldb_tool name)
+  add_lldb_executable(${name} GENERATE_INSTALL ${ARGN})
+endfunction()
 
 # Support appending linker flags to an existing target.
 # This will preserve the existing linker flags on the

@@ -41,8 +41,8 @@ declare i32 @printf(...)
 define double @PR22371(double %x) {
 ; CHECK-LABEL: PR22371:
 ; CHECK:       movsd  16(%esp), %xmm0
-; CHECK-NEXT:  andpd  LCPI1_0, %xmm0
-; CHECK-NEXT:  movlpd  %xmm0, (%esp)
+; CHECK-NEXT:  andps  LCPI1_0, %xmm0
+; CHECK-NEXT:  movlps  %xmm0, (%esp)
   %call = tail call double @fabs(double %x) #0
   ret double %call
 }

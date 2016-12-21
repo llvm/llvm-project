@@ -83,8 +83,7 @@ namespace llvm {
     /// A CompileUnit provides an anchor for all debugging
     /// information generated during this instance of compilation.
     /// \param Lang          Source programming language, eg. dwarf::DW_LANG_C99
-    /// \param File          File name
-    /// \param Dir           Directory
+    /// \param File          File info.
     /// \param Producer      Identify the producer of debugging information
     ///                      and code.  Usually this is a compiler
     ///                      version string.
@@ -101,9 +100,9 @@ namespace llvm {
     /// \param Kind          The kind of debug information to generate.
     /// \param DWOId         The DWOId if this is a split skeleton compile unit.
     DICompileUnit *
-    createCompileUnit(unsigned Lang, StringRef File, StringRef Dir,
-                      StringRef Producer, bool isOptimized, StringRef Flags,
-                      unsigned RV, StringRef SplitName = StringRef(),
+    createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
+                      bool isOptimized, StringRef Flags, unsigned RV,
+                      StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
                       uint64_t DWOId = 0, bool SplitDebugInlining = true);
@@ -450,8 +449,7 @@ namespace llvm {
     /// implicitly uniques the values returned.
     DISubrange *getOrCreateSubrange(int64_t Lo, int64_t Count);
 
-    /// Create a new descriptor for the specified
-    /// variable.
+    /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.
     /// \param Name        Name of the variable.
     /// \param LinkageName Mangled  name of the variable.
@@ -465,20 +463,18 @@ namespace llvm {
     /// \param Decl        Reference to the corresponding declaration.
     /// \param AlignInBits Variable alignment(or 0 if no alignment attr was
     ///                    specified)
-    DIGlobalVariable *createGlobalVariable(DIScope *Context, StringRef Name,
-                                           StringRef LinkageName, DIFile *File,
-                                           unsigned LineNo, DIType *Ty,
-                                           bool isLocalToUnit,
-                                           DIExpression *Expr = nullptr,
-                                           MDNode *Decl = nullptr,
-                                           uint32_t AlignInBits = 0);
+    DIGlobalVariableExpression *createGlobalVariableExpression(
+        DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DIType *Ty, bool isLocalToUnit,
+        DIExpression *Expr = nullptr, MDNode *Decl = nullptr,
+        uint32_t AlignInBits = 0);
 
     /// Identical to createGlobalVariable
     /// except that the resulting DbgNode is temporary and meant to be RAUWed.
     DIGlobalVariable *createTempGlobalVariableFwdDecl(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
-        unsigned LineNo, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
-        MDNode *Decl = nullptr, uint32_t AlignInBits = 0);
+        unsigned LineNo, DIType *Ty, bool isLocalToUnit, MDNode *Decl = nullptr,
+        uint32_t AlignInBits = 0);
 
     /// Create a new descriptor for an auto variable.  This is a local variable
     /// that is not a subprogram parameter.

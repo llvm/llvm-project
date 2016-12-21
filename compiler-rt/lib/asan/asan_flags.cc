@@ -156,7 +156,7 @@ void InitializeFlags() {
     f->quarantine_size_mb = f->quarantine_size >> 20;
   if (f->quarantine_size_mb < 0) {
     const int kDefaultQuarantineSizeMb =
-        (ASAN_LOW_MEMORY) ? 1UL << 6 : 1UL << 8;
+        (ASAN_LOW_MEMORY) ? 1UL << 4 : 1UL << 8;
     f->quarantine_size_mb = kDefaultQuarantineSizeMb;
   }
   if (!f->replace_str && common_flags()->intercept_strlen) {

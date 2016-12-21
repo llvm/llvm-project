@@ -27,11 +27,6 @@ if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
 endif()
 
-# This target will only exist if the user is using a CMake older than 3.7
-if(TARGET lldb_header_symlink)
-  list(APPEND LLDB_TEST_DEPS lldb_header_symlink)
-endif()
-
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
     string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
 endif()

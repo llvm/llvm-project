@@ -2545,7 +2545,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   llvm::Value *Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
       llvm::AttributeSet::get(CGF.getLLVMContext(),
-                              llvm::AttributeSet::FunctionIndex, B));
+                              llvm::AttributeSet::FunctionIndex, B),
+      /*Local=*/true);
   llvm::CallInst *HandlerCall = CGF.EmitNounwindRuntimeCall(Fn, FnArgs);
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();

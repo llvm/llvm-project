@@ -1978,11 +1978,12 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   if (function) {
     Type *function_type = function->GetType();
 
-    const lldb::LanguageType comp_unit_language =
-        function->GetCompileUnit()->GetLanguage();
-    const bool extern_c = Language::LanguageIsC(comp_unit_language) ||
-                          (Language::LanguageIsObjC(comp_unit_language) &&
-                           !Language::LanguageIsCPlusPlus(comp_unit_language));
+    const auto lang = function->GetCompileUnit()->GetLanguage();
+    const auto name = function->GetMangled().GetMangledName().AsCString();
+    const bool extern_c = (Language::LanguageIsC(lang) &&
+                           !CPlusPlusLanguage::IsCPPMangledName(name)) ||
+                          (Language::LanguageIsObjC(lang) &&
+                           !Language::LanguageIsCPlusPlus(lang));
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();

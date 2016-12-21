@@ -17,6 +17,7 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -161,7 +162,7 @@ private:
   unsigned NumRegUnits;                       // Number of regunits.
   const MCPhysReg (*RegUnitRoots)[2];         // Pointer to regunit root table.
   const MCPhysReg *DiffLists;                 // Pointer to the difflists array
-  const unsigned *RegUnitMaskSequences;       // Pointer to lane mask sequences
+  const LaneBitmask *RegUnitMaskSequences;    // Pointer to lane mask sequences
                                               // for register units.
   const char *RegStrings;                     // Pointer to the string table.
   const char *RegClassStrings;                // Pointer to the class strings.
@@ -248,7 +249,7 @@ public:
                           const MCPhysReg (*RURoots)[2],
                           unsigned NRU,
                           const MCPhysReg *DL,
-                          const unsigned *RUMS,
+                          const LaneBitmask *RUMS,
                           const char *Strings,
                           const char *ClassStrings,
                           const uint16_t *SubIndices,
@@ -584,7 +585,7 @@ public:
 /// numerical order.
 class MCRegUnitMaskIterator {
   MCRegUnitIterator RUIter;
-  const unsigned *MaskListIter;
+  const LaneBitmask *MaskListIter;
 public:
   MCRegUnitMaskIterator() {}
   /// Constructs an iterator that traverses the register units and their
@@ -596,7 +597,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,unsigned> operator*() const {
+  std::pair<unsigned,LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 
