@@ -1753,7 +1753,8 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
     }
     WithInit = true;
   }
-  auto *CED = OMPCapturedExprDecl::Create(C, S.CurContext, Id, Ty);
+  auto *CED = OMPCapturedExprDecl::Create(C, S.CurContext, Id, Ty,
+                                          CaptureExpr->getLocStart());
   if (!WithInit)
     CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C, SourceRange()));
   S.CurContext->addHiddenDecl(CED);
@@ -3862,14 +3863,16 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Scope *CurScope = DSA.getCurScope();
   for (unsigned Cnt = 1; Cnt < NestedLoopCount; ++Cnt) {
     if (PreCond.isUsable()) {
-      PreCond = SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_LAnd,
-                                   PreCond.get(), IterSpaces[Cnt].PreCond);
+      PreCond =
+          SemaRef.BuildBinOp(CurScope, PreCond.get()->getExprLoc(), BO_LAnd,
+                             PreCond.get(), IterSpaces[Cnt].PreCond);
     }
     auto N = IterSpaces[Cnt].NumIterations;
+    SourceLocation Loc = N->getExprLoc();
     AllCountsNeedLessThan32Bits &= C.getTypeSize(N->getType()) < 32;
     if (LastIteration32.isUsable())
       LastIteration32 = SemaRef.BuildBinOp(
-          CurScope, SourceLocation(), BO_Mul, LastIteration32.get(),
+          CurScope, Loc, BO_Mul, LastIteration32.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
                                          Sema::AA_Converting,
@@ -3877,7 +3880,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
               .get());
     if (LastIteration64.isUsable())
       LastIteration64 = SemaRef.BuildBinOp(
-          CurScope, SourceLocation(), BO_Mul, LastIteration64.get(),
+          CurScope, Loc, BO_Mul, LastIteration64.get(),
           SemaRef
               .PerformImplicitConversion(N->IgnoreImpCasts(), N->getType(),
                                          Sema::AA_Converting,
@@ -3912,7 +3915,8 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   ExprResult NumIterations = LastIteration;
   {
     LastIteration = SemaRef.BuildBinOp(
-        CurScope, SourceLocation(), BO_Sub, LastIteration.get(),
+        CurScope, LastIteration.get()->getExprLoc(), BO_Sub,
+        LastIteration.get(),
         SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
     if (!LastIteration.isUsable())
       return 0;
@@ -3931,7 +3935,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
     // Prepare SaveRef + 1.
     NumIterations = SemaRef.BuildBinOp(
-        CurScope, SourceLocation(), BO_Add, SaveRef.get(),
+        CurScope, SaveRef.get()->getExprLoc(), BO_Add, SaveRef.get(),
         SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get());
     if (!NumIterations.isUsable())
       return 0;

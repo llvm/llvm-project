@@ -171,6 +171,8 @@ namespace test7 {
   const int b3 = B().n;
 
   // CHECK-NOT: @_ZN5test7L2c1E
+  // CHECK: call void @llvm.memset{{.*}} @_ZN5test7L2c1E
+  // CHECK-NOT: @_ZN5test7L2c1E
   // CHECK: @_ZN5test7L2c2E
   // CHECK-NOT: @_ZN5test7L2c3E
   // CHECK: @_ZN5test7L2c4E

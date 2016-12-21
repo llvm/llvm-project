@@ -560,7 +560,9 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
   //   nested-name-specifier, the name is [...] considered to name the
   //   constructor.
   if (getLangOpts().CPlusPlus11 && Context == Declarator::MemberContext &&
-      Tok.is(tok::identifier) && NextToken().is(tok::semi) &&
+      Tok.is(tok::identifier) &&
+      (NextToken().is(tok::semi) || NextToken().is(tok::comma) ||
+       NextToken().is(tok::ellipsis)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
       !D.SS.getScopeRep()->getAsNamespace() &&
       !D.SS.getScopeRep()->getAsNamespaceAlias()) {
@@ -578,7 +580,10 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
       return true;
   }
 
-  // FIXME: Parse optional ellipsis
+  if (TryConsumeToken(tok::ellipsis, D.EllipsisLoc))
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z ?
+         diag::warn_cxx1z_compat_using_declaration_pack :
+         diag::ext_using_declaration_pack);
 
   return false;
 }
@@ -678,9 +683,9 @@ Parser::ParseUsingDeclaration(unsigned Context,
         D.TypenameLoc = SourceLocation();
       }
 
-      Decl *UD =
-          Actions.ActOnUsingDeclaration(getCurScope(), AS, UsingLoc, D.SS,
-                                        D.Name, Attrs.getList(), D.TypenameLoc);
+      Decl *UD = Actions.ActOnUsingDeclaration(getCurScope(), AS, UsingLoc,
+                                               D.TypenameLoc, D.SS, D.Name,
+                                               D.EllipsisLoc, Attrs.getList());
       if (UD)
         DeclsInGroup.push_back(UD);
     }
@@ -706,62 +711,6 @@ Parser::ParseUsingDeclaration(unsigned Context,
     SkipUntil(tok::semi);
 
   return Actions.BuildDeclaratorGroup(DeclsInGroup, /*MayContainAuto*/false);
-}
-
-Decl *Parser::ParseAliasTemplate(const ParsedTemplateInfo &TemplateInfo,
-                                 SourceLocation &DeclEnd, AccessSpecifier AS,
-                                 ParsedAttributesWithRange &MisplacedAttrs1) {
-  assert(Tok.is(tok::kw_using) && "Not using token");
-  ObjCDeclContextSwitch ObjCDC(*this);
-  
-  // Eat 'using'.
-  SourceLocation UsingLoc = ConsumeToken();
-  if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteUsing(getCurScope());
-    cutOffParsing();
-    return nullptr;
-  }
-
-  // 'using namespace' means this is a using-directive.
-  if (Tok.is(tok::kw_namespace)) {
-    SourceRange R = TemplateInfo.getSourceRange();
-    Diag(UsingLoc, diag::err_templated_using_directive_declaration)
-        << 0 /* directive */ << R;
-    SkipUntil(tok::semi);
-    return nullptr;
-  }
-
-  // Check for misplaced attributes before the identifier.
-  ParsedAttributesWithRange MisplacedAttrs2(AttrFactory);
-  MaybeParseCXX11Attributes(MisplacedAttrs2);
-
-  // FIXME: Just parse an identifier here?
-  UsingDeclarator D;
-  if (ParseUsingDeclarator(Declarator::FileContext, D)) {
-    SkipUntil(tok::semi);
-    return nullptr;
-  }
-
-  ParsedAttributesWithRange Attrs(AttrFactory);
-
-  // If we had any misplaced attributes from earlier, this is where they
-  // should have been written.
-  for (auto *MisplacedAttrs : {&MisplacedAttrs1, &MisplacedAttrs2}) {
-    if (MisplacedAttrs->Range.isValid()) {
-      Diag(MisplacedAttrs->Range.getBegin(), diag::err_attributes_not_allowed)
-        << FixItHint::CreateInsertionFromRange(
-               Tok.getLocation(),
-               CharSourceRange::getTokenRange(MisplacedAttrs->Range))
-        << FixItHint::CreateRemoval(MisplacedAttrs->Range);
-      Attrs.takeAllFrom(*MisplacedAttrs);
-    }
-  }
-
-  MaybeParseGNUAttributes(Attrs);
-  MaybeParseCXX11Attributes(Attrs);
-
-  return ParseAliasDeclarationAfterDeclarator(TemplateInfo, UsingLoc, D,
-                                              DeclEnd, AS, Attrs);
 }
 
 Decl *Parser::ParseAliasDeclarationAfterDeclarator(
@@ -813,6 +762,9 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   else if (D.SS.isNotEmpty())
     Diag(D.SS.getBeginLoc(), diag::err_alias_declaration_not_identifier)
       << FixItHint::CreateRemoval(D.SS.getRange());
+  if (D.EllipsisLoc.isValid())
+    Diag(D.EllipsisLoc, diag::err_alias_declaration_pack_expansion)
+      << FixItHint::CreateRemoval(SourceRange(D.EllipsisLoc));
 
   Decl *DeclFromDeclSpec = nullptr;
   TypeResult TypeAlias =
@@ -2487,8 +2439,9 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       }
 
       return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
-          getCurScope(), AS, /*UsingLoc*/SourceLocation(), SS, Name,
-          /*AttrList*/nullptr, /*TypenameLoc*/SourceLocation())));
+          getCurScope(), AS, /*UsingLoc*/ SourceLocation(),
+          /*TypenameLoc*/ SourceLocation(), SS, Name,
+          /*EllipsisLoc*/ SourceLocation(), /*AttrList*/ nullptr)));
     }
   }
 

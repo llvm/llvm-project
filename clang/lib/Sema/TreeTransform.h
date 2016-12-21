@@ -457,6 +457,10 @@ public:
     return cast_or_null<NamedDecl>(getDerived().TransformDecl(Loc, D));
   }
 
+  /// Transform the set of declarations in an OverloadExpr.
+  bool TransformOverloadExprDecls(OverloadExpr *Old, bool RequiresADL,
+                                  LookupResult &R);
+
   /// \brief Transform the given nested-name-specifier with source-location
   /// information.
   ///
@@ -821,7 +825,7 @@ public:
 
   /// \brief Rebuild an unresolved typename type, given the decl that
   /// the UnresolvedUsingTypenameDecl was transformed to.
-  QualType RebuildUnresolvedUsingType(Decl *D);
+  QualType RebuildUnresolvedUsingType(SourceLocation NameLoc, Decl *D);
 
   /// \brief Build a new typedef type.
   QualType RebuildTypedefType(TypedefNameDecl *Typedef) {
@@ -5161,7 +5165,7 @@ TreeTransform<Derived>::TransformUnresolvedUsingType(TypeLocBuilder &TLB,
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || D != T->getDecl()) {
-    Result = getDerived().RebuildUnresolvedUsingType(D);
+    Result = getDerived().RebuildUnresolvedUsingType(TL.getNameLoc(), D);
     if (Result.isNull())
       return QualType();
   }
@@ -9794,6 +9798,62 @@ TreeTransform<Derived>::TransformCXXPseudoDestructorExpr(
                                                      Destroyed);
 }
 
+template <typename Derived>
+bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
+                                                        bool RequiresADL,
+                                                        LookupResult &R) {
+  // Transform all the decls.
+  bool AllEmptyPacks = true;
+  for (auto *OldD : Old->decls()) {
+    Decl *InstD = getDerived().TransformDecl(Old->getNameLoc(), OldD);
+    if (!InstD) {
+      // Silently ignore these if a UsingShadowDecl instantiated to nothing.
+      // This can happen because of dependent hiding.
+      if (isa<UsingShadowDecl>(OldD))
+        continue;
+      else {
+        R.clear();
+        return true;
+      }
+    }
+
+    // Expand using pack declarations.
+    NamedDecl *SingleDecl = cast<NamedDecl>(InstD);
+    ArrayRef<NamedDecl*> Decls = SingleDecl;
+    if (auto *UPD = dyn_cast<UsingPackDecl>(InstD))
+      Decls = UPD->expansions();
+
+    // Expand using declarations.
+    for (auto *D : Decls) {
+      if (auto *UD = dyn_cast<UsingDecl>(D)) {
+        for (auto *SD : UD->shadows())
+          R.addDecl(SD);
+      } else {
+        R.addDecl(D);
+      }
+    }
+
+    AllEmptyPacks &= Decls.empty();
+  };
+
+  // C++ [temp.res]/8.4.2:
+  //   The program is ill-formed, no diagnostic required, if [...] lookup for
+  //   a name in the template definition found a using-declaration, but the
+  //   lookup in the corresponding scope in the instantiation odoes not find
+  //   any declarations because the using-declaration was a pack expansion and
+  //   the corresponding pack is empty
+  if (AllEmptyPacks && !RequiresADL) {
+    getSema().Diag(Old->getNameLoc(), diag::err_using_pack_expansion_empty)
+        << isa<UnresolvedMemberExpr>(Old) << Old->getNameInfo().getName();
+    return true;
+  }
+
+  // Resolve a kind, but don't do any further analysis.  If it's
+  // ambiguous, the callee needs to deal with it.
+  R.resolveKind();
+  return false;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformUnresolvedLookupExpr(
@@ -9801,37 +9861,9 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
   LookupResult R(SemaRef, Old->getName(), Old->getNameLoc(),
                  Sema::LookupOrdinaryName);
 
-  // Transform all the decls.
-  for (UnresolvedLookupExpr::decls_iterator I = Old->decls_begin(),
-         E = Old->decls_end(); I != E; ++I) {
-    NamedDecl *InstD = static_cast<NamedDecl*>(
-                                 getDerived().TransformDecl(Old->getNameLoc(),
-                                                            *I));
-    if (!InstD) {
-      // Silently ignore these if a UsingShadowDecl instantiated to nothing.
-      // This can happen because of dependent hiding.
-      if (isa<UsingShadowDecl>(*I))
-        continue;
-      else {
-        R.clear();
-        return ExprError();
-      }
-    }
-
-    // Expand using declarations.
-    if (isa<UsingDecl>(InstD)) {
-      UsingDecl *UD = cast<UsingDecl>(InstD);
-      for (auto *I : UD->shadows())
-        R.addDecl(I);
-      continue;
-    }
-
-    R.addDecl(InstD);
-  }
-
-  // Resolve a kind, but don't do any further analysis.  If it's
-  // ambiguous, the callee needs to deal with it.
-  R.resolveKind();
+  // Transform the declaration set.
+  if (TransformOverloadExprDecls(Old, Old->requiresADL(), R))
+    return ExprError();
 
   // Rebuild the nested-name qualifier, if present.
   CXXScopeSpec SS;
@@ -10699,35 +10731,9 @@ TreeTransform<Derived>::TransformUnresolvedMemberExpr(UnresolvedMemberExpr *Old)
   LookupResult R(SemaRef, Old->getMemberNameInfo(),
                  Sema::LookupOrdinaryName);
 
-  // Transform all the decls.
-  for (UnresolvedMemberExpr::decls_iterator I = Old->decls_begin(),
-         E = Old->decls_end(); I != E; ++I) {
-    NamedDecl *InstD = static_cast<NamedDecl*>(
-                                getDerived().TransformDecl(Old->getMemberLoc(),
-                                                           *I));
-    if (!InstD) {
-      // Silently ignore these if a UsingShadowDecl instantiated to nothing.
-      // This can happen because of dependent hiding.
-      if (isa<UsingShadowDecl>(*I))
-        continue;
-      else {
-        R.clear();
-        return ExprError();
-      }
-    }
-
-    // Expand using declarations.
-    if (isa<UsingDecl>(InstD)) {
-      UsingDecl *UD = cast<UsingDecl>(InstD);
-      for (auto *I : UD->shadows())
-        R.addDecl(I);
-      continue;
-    }
-
-    R.addDecl(InstD);
-  }
-
-  R.resolveKind();
+  // Transform the declaration set.
+  if (TransformOverloadExprDecls(Old, /*RequiresADL*/false, R))
+    return ExprError();
 
   // Determine the naming class.
   if (Old->getNamingClass()) {
@@ -11842,21 +11848,48 @@ QualType TreeTransform<Derived>::RebuildFunctionNoProtoType(QualType T) {
 }
 
 template<typename Derived>
-QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(Decl *D) {
+QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(SourceLocation Loc,
+                                                            Decl *D) {
   assert(D && "no decl found");
   if (D->isInvalidDecl()) return QualType();
 
   // FIXME: Doesn't account for ObjCInterfaceDecl!
   TypeDecl *Ty;
-  if (isa<UsingDecl>(D)) {
-    UsingDecl *Using = cast<UsingDecl>(D);
+  if (auto *UPD = dyn_cast<UsingPackDecl>(D)) {
+    // A valid resolved using typename pack expansion decl can have multiple
+    // UsingDecls, but they must each have exactly one type, and it must be
+    // the same type in every case. But we must have at least one expansion!
+    if (UPD->expansions().empty()) {
+      getSema().Diag(Loc, diag::err_using_pack_expansion_empty)
+          << UPD->isCXXClassMember() << UPD;
+      return QualType();
+    }
+
+    // We might still have some unresolved types. Try to pick a resolved type
+    // if we can. The final instantiation will check that the remaining
+    // unresolved types instantiate to the type we pick.
+    QualType FallbackT;
+    QualType T;
+    for (auto *E : UPD->expansions()) {
+      QualType ThisT = RebuildUnresolvedUsingType(Loc, E);
+      if (ThisT.isNull())
+        continue;
+      else if (ThisT->getAs<UnresolvedUsingType>())
+        FallbackT = ThisT;
+      else if (T.isNull())
+        T = ThisT;
+      else
+        assert(getSema().Context.hasSameType(ThisT, T) &&
+               "mismatched resolved types in using pack expansion");
+    }
+    return T.isNull() ? FallbackT : T;
+  } else if (auto *Using = dyn_cast<UsingDecl>(D)) {
     assert(Using->hasTypename() &&
            "UnresolvedUsingTypenameDecl transformed to non-typename using");
 
     // A valid resolved using typename decl points to exactly one type decl.
     assert(++Using->shadow_begin() == Using->shadow_end());
     Ty = cast<TypeDecl>((*Using->shadow_begin())->getTargetDecl());
-
   } else {
     assert(isa<UnresolvedUsingTypenameDecl>(D) &&
            "UnresolvedUsingTypenameDecl transformed to non-using decl");

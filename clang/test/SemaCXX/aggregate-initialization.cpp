@@ -4,8 +4,6 @@
 
 // Verify that using an initializer list for a non-aggregate looks for
 // constructors..
-// Note that due to a (likely) standard bug, this is technically an aggregate,
-// but we do not treat it as one.
 struct NonAggr1 { // expected-note 2 {{candidate constructor}}
   NonAggr1(int, int) { } // expected-note {{candidate constructor}}
 

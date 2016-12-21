@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
 
 void foo() {
 }
@@ -22,7 +22,7 @@ int tmain(T argc, S **argv) {
   #pragma omp parallel if (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(argc)
-  #pragma omp parallel if(parallel // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel if(parallel // expected-error {{use of undeclared identifier 'parallel'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : argc)
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if (1 0) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(if(tmain(argc, argv) // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp parallel if(parallel // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel if(parallel // expected-error {{use of undeclared identifier 'parallel'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel if(parallel : argc)

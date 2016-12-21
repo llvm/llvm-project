@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 struct A {
   virtual ~A();
@@ -314,6 +314,14 @@ namespace PR20256 {
   // CHECK: call void @llvm.memset
   // CHECK: }
 }
+
+// CHECK-LABEL: define {{.*}}@_Z20explicitly_defaultedv
+int explicitly_defaulted() {
+  struct A { A() = default; int n; };
+  // CHECK: call void @llvm.memset
+  A a = A();
+  return a.n;
+} // CHECK-LABEL: }
 
 // CHECK-LABEL: define linkonce_odr void @_ZN8zeroinit2X3IiEC2Ev(%"struct.zeroinit::X3"* %this) unnamed_addr
 // CHECK: call void @llvm.memset.p0i8.i64

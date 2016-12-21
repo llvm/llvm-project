@@ -390,21 +390,18 @@ void Sema::collectUnexpandedParameterPacks(QualType T,
 void Sema::collectUnexpandedParameterPacks(TypeLoc TL,
                    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseTypeLoc(TL);  
-}  
-
-void Sema::collectUnexpandedParameterPacks(CXXScopeSpec &SS,
-                                           SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
-  NestedNameSpecifier *Qualifier = SS.getScopeRep();
-  if (!Qualifier)
-    return;
-  
-  NestedNameSpecifierLoc QualifierLoc(Qualifier, SS.location_data());
-  CollectUnexpandedParameterPacksVisitor(Unexpanded)
-    .TraverseNestedNameSpecifierLoc(QualifierLoc);
 }
 
-void Sema::collectUnexpandedParameterPacks(const DeclarationNameInfo &NameInfo,
-                         SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+void Sema::collectUnexpandedParameterPacks(
+    NestedNameSpecifierLoc NNS,
+    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+  CollectUnexpandedParameterPacksVisitor(Unexpanded)
+      .TraverseNestedNameSpecifierLoc(NNS);
+}
+
+void Sema::collectUnexpandedParameterPacks(
+    const DeclarationNameInfo &NameInfo,
+    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded)
     .TraverseDeclarationNameInfo(NameInfo);
 }

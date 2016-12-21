@@ -47,6 +47,7 @@
 #include <vector>
 
 namespace llvm {
+  class BitstreamCursor;
   class MemoryBuffer;
   class APInt;
   class APSInt;
@@ -88,6 +89,7 @@ class ASTWriter;
 class ASTReader;
 class ASTDeclReader;
 class ASTStmtReader;
+class ASTRecordReader;
 class TypeLocReader;
 struct HeaderFileInfo;
 class VersionTuple;
@@ -2195,35 +2197,46 @@ class ASTRecordReader {
   typedef serialization::ModuleFile ModuleFile;
 
   ASTReader *Reader;
-  const ASTReader::RecordData *Record;
   ModuleFile *F;
+  unsigned Idx = 0;
+  ASTReader::RecordData Record;
 
   typedef ASTReader::RecordData RecordData;
   typedef ASTReader::RecordDataImpl RecordDataImpl;
 
 public:
   /// Construct an ASTRecordReader that uses the default encoding scheme.
-  ASTRecordReader(ASTReader &Reader, const ASTReader::RecordData &Record,
-                  ModuleFile& F)
-      : Reader(&Reader), Record(&Record), F(&F) {}
+  ASTRecordReader(ASTReader &Reader, ModuleFile &F)
+      : Reader(&Reader), F(&F) {}
 
-  /// Construct an ASTRecordReader that uses the same encoding scheme as another
-  /// ASTRecordReader.
-  ASTRecordReader(ASTRecordReader &Parent)
-      : Reader(Parent.Reader), Record(Parent.Record), F(Parent.F) {}
-
-  /// \brief The length of this record.
-  size_t size() const { return Record->size(); }
-  /// \brief An arbitrary index in this record.
-  const uint64_t &operator[](size_t N) { return (*Record)[N]; }
-  /// \brief The last element in this record.
-  const uint64_t &back() const { return Record->back(); }
+  /// \brief Reads a record with id AbbrevID from Cursor, resetting the
+  /// internal state.
+  unsigned readRecord(llvm::BitstreamCursor &Cursor, unsigned AbbrevID);
 
   /// \brief Is this a module file for a module (rather than a PCH or similar).
   bool isModule() const { return F->isModule(); }
 
   /// \brief Retrieve the AST context that this AST reader supplements.
   ASTContext &getContext() { return Reader->getContext(); }
+
+  /// \brief The current position in this record.
+  unsigned getIdx() const { return Idx; }
+  /// \brief The length of this record.
+  size_t size() const { return Record.size(); }
+
+  /// \brief An arbitrary index in this record.
+  const uint64_t &operator[](size_t N) { return Record[N]; }
+  /// \brief The last element in this record.
+  const uint64_t &back() const { return Record.back(); }
+
+  /// \brief Returns the current value in this record, and advances to the
+  /// next value.
+  const uint64_t &readInt() { return Record[Idx++]; }
+  /// \brief Returns the current value in this record, without advancing.
+  const uint64_t &peekInt() { return Record[Idx]; }
+
+  /// \brief Skips the specified number of values.
+  void skipInts(unsigned N) { Idx += N; }
 
   /// \brief Retrieve the global submodule ID its local ID number.
   serialization::SubmoduleID
@@ -2237,22 +2250,21 @@ public:
   }
 
   /// \brief Read the record that describes the lexical contents of a DC.
-  bool ReadLexicalDeclContextStorage(uint64_t Offset, DeclContext *DC) {
+  bool readLexicalDeclContextStorage(uint64_t Offset, DeclContext *DC) {
     return Reader->ReadLexicalDeclContextStorage(*F, F->DeclsCursor, Offset,
                                                  DC);
   }
 
   /// \brief Read the record that describes the visible contents of a DC.
-  bool ReadVisibleDeclContextStorage(uint64_t Offset,
+  bool readVisibleDeclContextStorage(uint64_t Offset,
                                      serialization::DeclID ID) {
     return Reader->ReadVisibleDeclContextStorage(*F, F->DeclsCursor, Offset,
                                                  ID);
   }
 
   void readExceptionSpec(SmallVectorImpl<QualType> &ExceptionStorage,
-                         FunctionProtoType::ExceptionSpecInfo &ESI,
-                         unsigned &Index) {
-    return Reader->readExceptionSpec(*F, ExceptionStorage, ESI, *Record, Index);
+                         FunctionProtoType::ExceptionSpecInfo &ESI) {
+    return Reader->readExceptionSpec(*F, ExceptionStorage, ESI, Record, Idx);
   }
 
   /// \brief Get the global offset corresponding to a local offset.
@@ -2261,38 +2273,38 @@ public:
   }
 
   /// \brief Reads a statement.
-  Stmt *ReadStmt() { return Reader->ReadStmt(*F); }
+  Stmt *readStmt() { return Reader->ReadStmt(*F); }
 
   /// \brief Reads an expression.
-  Expr *ReadExpr() { return Reader->ReadExpr(*F); }
+  Expr *readExpr() { return Reader->ReadExpr(*F); }
 
   /// \brief Reads a sub-statement operand during statement reading.
-  Stmt *ReadSubStmt() { return Reader->ReadSubStmt(); }
+  Stmt *readSubStmt() { return Reader->ReadSubStmt(); }
 
   /// \brief Reads a sub-expression operand during statement reading.
-  Expr *ReadSubExpr() { return Reader->ReadSubExpr(); }
+  Expr *readSubExpr() { return Reader->ReadSubExpr(); }
 
   /// \brief Reads a TemplateArgumentLocInfo appropriate for the
   /// given TemplateArgument kind, advancing Idx.
   TemplateArgumentLocInfo
-  GetTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind, unsigned &Idx) {
-    return Reader->GetTemplateArgumentLocInfo(*F, Kind, *Record, Idx);
+  getTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
+    return Reader->GetTemplateArgumentLocInfo(*F, Kind, Record, Idx);
   }
 
   /// \brief Reads a TemplateArgumentLoc, advancing Idx.
   TemplateArgumentLoc
-  ReadTemplateArgumentLoc(unsigned &Idx) {
-    return Reader->ReadTemplateArgumentLoc(*F, *Record, Idx);
+  readTemplateArgumentLoc() {
+    return Reader->ReadTemplateArgumentLoc(*F, Record, Idx);
   }
 
   const ASTTemplateArgumentListInfo*
-  ReadASTTemplateArgumentListInfo(unsigned &Idx) {
-    return Reader->ReadASTTemplateArgumentListInfo(*F, *Record, Idx);
+  readASTTemplateArgumentListInfo() {
+    return Reader->ReadASTTemplateArgumentListInfo(*F, Record, Idx);
   }
 
   /// \brief Reads a declarator info from the given record, advancing Idx.
-  TypeSourceInfo *GetTypeSourceInfo(unsigned &Idx) {
-    return Reader->GetTypeSourceInfo(*F, *Record, Idx);
+  TypeSourceInfo *getTypeSourceInfo() {
+    return Reader->GetTypeSourceInfo(*F, Record, Idx);
   }
 
   /// \brief Map a local type ID within a given AST file to a global type ID.
@@ -2301,21 +2313,21 @@ public:
   }
 
   /// \brief Read a type from the current position in the record.
-  QualType readType(unsigned &Idx) {
-    return Reader->readType(*F, *Record, Idx);
+  QualType readType() {
+    return Reader->readType(*F, Record, Idx);
   }
 
   /// \brief Reads a declaration ID from the given position in this record.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::DeclID ReadDeclID(unsigned &Idx) {
-    return Reader->ReadDeclID(*F, *Record, Idx);
+  serialization::DeclID readDeclID() {
+    return Reader->ReadDeclID(*F, Record, Idx);
   }
 
   /// \brief Reads a declaration from the given position in a record in the
   /// given module, advancing Idx.
-  Decl *ReadDecl(unsigned &Idx) {
-    return Reader->ReadDecl(*F, *Record, Idx);
+  Decl *readDecl() {
+    return Reader->ReadDecl(*F, Record, Idx);
   }
 
   /// \brief Reads a declaration from the given position in the record,
@@ -2324,136 +2336,134 @@ public:
   /// \returns The declaration read from this location, casted to the given
   /// result type.
   template<typename T>
-  T *ReadDeclAs(unsigned &Idx) {
-    return Reader->ReadDeclAs<T>(*F, *Record, Idx);
+  T *readDeclAs() {
+    return Reader->ReadDeclAs<T>(*F, Record, Idx);
   }
 
-  IdentifierInfo *GetIdentifierInfo(unsigned &Idx) {
-    return Reader->GetIdentifierInfo(*F, *Record, Idx);
+  IdentifierInfo *getIdentifierInfo() {
+    return Reader->GetIdentifierInfo(*F, Record, Idx);
   }
 
   /// \brief Read a selector from the Record, advancing Idx.
-  Selector ReadSelector(unsigned &Idx) {
-    return Reader->ReadSelector(*F, *Record, Idx);
+  Selector readSelector() {
+    return Reader->ReadSelector(*F, Record, Idx);
   }
 
   /// \brief Read a declaration name, advancing Idx.
-  DeclarationName ReadDeclarationName(unsigned &Idx) {
-    return Reader->ReadDeclarationName(*F, *Record, Idx);
+  DeclarationName readDeclarationName() {
+    return Reader->ReadDeclarationName(*F, Record, Idx);
   }
-  void ReadDeclarationNameLoc(DeclarationNameLoc &DNLoc, DeclarationName Name,
-                              unsigned &Idx) {
-    return Reader->ReadDeclarationNameLoc(*F, DNLoc, Name, *Record, Idx);
+  void readDeclarationNameLoc(DeclarationNameLoc &DNLoc, DeclarationName Name) {
+    return Reader->ReadDeclarationNameLoc(*F, DNLoc, Name, Record, Idx);
   }
-  void ReadDeclarationNameInfo(DeclarationNameInfo &NameInfo, unsigned &Idx) {
-    return Reader->ReadDeclarationNameInfo(*F, NameInfo, *Record, Idx);
-  }
-
-  void ReadQualifierInfo(QualifierInfo &Info, unsigned &Idx) {
-    return Reader->ReadQualifierInfo(*F, Info, *Record, Idx);
+  void readDeclarationNameInfo(DeclarationNameInfo &NameInfo) {
+    return Reader->ReadDeclarationNameInfo(*F, NameInfo, Record, Idx);
   }
 
-  NestedNameSpecifier *ReadNestedNameSpecifier(unsigned &Idx) {
-    return Reader->ReadNestedNameSpecifier(*F, *Record, Idx);
+  void readQualifierInfo(QualifierInfo &Info) {
+    return Reader->ReadQualifierInfo(*F, Info, Record, Idx);
   }
 
-  NestedNameSpecifierLoc ReadNestedNameSpecifierLoc(unsigned &Idx) {
-    return Reader->ReadNestedNameSpecifierLoc(*F, *Record, Idx);
+  NestedNameSpecifier *readNestedNameSpecifier() {
+    return Reader->ReadNestedNameSpecifier(*F, Record, Idx);
+  }
+
+  NestedNameSpecifierLoc readNestedNameSpecifierLoc() {
+    return Reader->ReadNestedNameSpecifierLoc(*F, Record, Idx);
   }
 
   /// \brief Read a template name, advancing Idx.
-  TemplateName ReadTemplateName(unsigned &Idx) {
-    return Reader->ReadTemplateName(*F, *Record, Idx);
+  TemplateName readTemplateName() {
+    return Reader->ReadTemplateName(*F, Record, Idx);
   }
 
   /// \brief Read a template argument, advancing Idx.
-  TemplateArgument ReadTemplateArgument(unsigned &Idx,
-                                        bool Canonicalize = false) {
-    return Reader->ReadTemplateArgument(*F, *Record, Idx, Canonicalize);
+  TemplateArgument readTemplateArgument(bool Canonicalize = false) {
+    return Reader->ReadTemplateArgument(*F, Record, Idx, Canonicalize);
   }
 
   /// \brief Read a template parameter list, advancing Idx.
-  TemplateParameterList *ReadTemplateParameterList(unsigned &Idx) {
-    return Reader->ReadTemplateParameterList(*F, *Record, Idx);
+  TemplateParameterList *readTemplateParameterList() {
+    return Reader->ReadTemplateParameterList(*F, Record, Idx);
   }
 
   /// \brief Read a template argument array, advancing Idx.
-  void ReadTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
-                                unsigned &Idx, bool Canonicalize = false) {
-    return Reader->ReadTemplateArgumentList(TemplArgs, *F, *Record, Idx,
+  void readTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
+                                bool Canonicalize = false) {
+    return Reader->ReadTemplateArgumentList(TemplArgs, *F, Record, Idx,
                                             Canonicalize);
   }
 
   /// \brief Read a UnresolvedSet structure, advancing Idx.
-  void ReadUnresolvedSet(LazyASTUnresolvedSet &Set, unsigned &Idx) {
-    return Reader->ReadUnresolvedSet(*F, Set, *Record, Idx);
+  void readUnresolvedSet(LazyASTUnresolvedSet &Set) {
+    return Reader->ReadUnresolvedSet(*F, Set, Record, Idx);
   }
 
   /// \brief Read a C++ base specifier, advancing Idx.
-  CXXBaseSpecifier ReadCXXBaseSpecifier(unsigned &Idx) {
-    return Reader->ReadCXXBaseSpecifier(*F, *Record, Idx);
+  CXXBaseSpecifier readCXXBaseSpecifier() {
+    return Reader->ReadCXXBaseSpecifier(*F, Record, Idx);
   }
 
   /// \brief Read a CXXCtorInitializer array, advancing Idx.
-  CXXCtorInitializer **ReadCXXCtorInitializers(unsigned &Idx) {
-    return Reader->ReadCXXCtorInitializers(*F, *Record, Idx);
+  CXXCtorInitializer **readCXXCtorInitializers() {
+    return Reader->ReadCXXCtorInitializers(*F, Record, Idx);
   }
 
-  CXXTemporary *ReadCXXTemporary(unsigned &Idx) {
-    return Reader->ReadCXXTemporary(*F, *Record, Idx);
+  CXXTemporary *readCXXTemporary() {
+    return Reader->ReadCXXTemporary(*F, Record, Idx);
   }
 
   /// \brief Read a source location, advancing Idx.
-  SourceLocation ReadSourceLocation(unsigned &Idx) {
-    return Reader->ReadSourceLocation(*F, *Record, Idx);
+  SourceLocation readSourceLocation() {
+    return Reader->ReadSourceLocation(*F, Record, Idx);
   }
 
   /// \brief Read a source range, advancing Idx.
-  SourceRange ReadSourceRange(unsigned &Idx) {
-    return Reader->ReadSourceRange(*F, *Record, Idx);
+  SourceRange readSourceRange() {
+    return Reader->ReadSourceRange(*F, Record, Idx);
   }
 
   /// \brief Read an integral value, advancing Idx.
-  llvm::APInt ReadAPInt(unsigned &Idx) {
-    return Reader->ReadAPInt(*Record, Idx);
+  llvm::APInt readAPInt() {
+    return Reader->ReadAPInt(Record, Idx);
   }
 
   /// \brief Read a signed integral value, advancing Idx.
-  llvm::APSInt ReadAPSInt(unsigned &Idx) {
-    return Reader->ReadAPSInt(*Record, Idx);
+  llvm::APSInt readAPSInt() {
+    return Reader->ReadAPSInt(Record, Idx);
   }
 
   /// \brief Read a floating-point value, advancing Idx.
-  llvm::APFloat ReadAPFloat(const llvm::fltSemantics &Sem, unsigned &Idx) {
-    return Reader->ReadAPFloat(*Record, Sem,Idx);
+  llvm::APFloat readAPFloat(const llvm::fltSemantics &Sem) {
+    return Reader->ReadAPFloat(Record, Sem,Idx);
   }
 
   /// \brief Read a string, advancing Idx.
-  std::string ReadString(unsigned &Idx) {
-    return Reader->ReadString(*Record, Idx);
+  std::string readString() {
+    return Reader->ReadString(Record, Idx);
   }
 
   /// \brief Read a path, advancing Idx.
-  std::string ReadPath(unsigned &Idx) {
-    return Reader->ReadPath(*F, *Record, Idx);
+  std::string readPath() {
+    return Reader->ReadPath(*F, Record, Idx);
   }
 
   /// \brief Read a version tuple, advancing Idx.
-  VersionTuple ReadVersionTuple(unsigned &Idx) {
-    return ASTReader::ReadVersionTuple(*Record, Idx);
+  VersionTuple readVersionTuple() {
+    return ASTReader::ReadVersionTuple(Record, Idx);
   }
 
   /// \brief Reads attributes from the current stream position, advancing Idx.
-  void ReadAttributes(AttrVec &Attrs, unsigned &Idx) {
-    return Reader->ReadAttributes(*F, Attrs, *Record, Idx);
+  void readAttributes(AttrVec &Attrs) {
+    return Reader->ReadAttributes(*F, Attrs, Record, Idx);
   }
 
   /// \brief Reads a token out of a record, advancing Idx.
-  Token ReadToken(unsigned &Idx) {
-    return Reader->ReadToken(*F, *Record, Idx);
+  Token readToken() {
+    return Reader->ReadToken(*F, Record, Idx);
   }
 
-  void RecordSwitchCaseID(SwitchCase *SC, unsigned ID) {
+  void recordSwitchCaseID(SwitchCase *SC, unsigned ID) {
     Reader->RecordSwitchCaseID(SC, ID);
   }
 
@@ -2461,7 +2471,6 @@ public:
   SwitchCase *getSwitchCaseWithID(unsigned ID) {
     return Reader->getSwitchCaseWithID(ID);
   }
-
 };
 
 /// \brief Helper class that saves the current stream position and
