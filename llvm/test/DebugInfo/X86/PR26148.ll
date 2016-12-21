@@ -21,8 +21,8 @@
 ;
 ; CHECK: 0x00000025: Beginning address offset: 0x0000000000000004
 ; CHECK:                Ending address offset: 0x0000000000000004
-; CHECK:                 Location description: 10 03 93 04 55 93 04
-; constu 0x00000003, piece 0x00000004, rdi, piece 0x00000004
+; CHECK:                 Location description: 10 03 93 04 55 93 02
+; constu 0x00000003, piece 0x00000004, rdi, piece 0x00000002
 ; CHECK:             Beginning address offset: 0x0000000000000004
 ; CHECK:                Ending address offset: 0x0000000000000014
 ; CHECK:                 Location description: 10 03 93 04 10 00

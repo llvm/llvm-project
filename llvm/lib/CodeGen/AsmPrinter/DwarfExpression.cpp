@@ -46,7 +46,9 @@ void DwarfExpression::AddRegIndirect(int DwarfReg, int Offset, bool Deref) {
 }
 
 void DwarfExpression::AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits) {
-  assert(SizeInBits > 0 && "piece has size zero");
+  if (!SizeInBits)
+    return;
+
   const unsigned SizeOfByte = 8;
   if (OffsetInBits > 0 || SizeInBits % SizeOfByte) {
     EmitOp(dwarf::DW_OP_bit_piece);
@@ -57,6 +59,7 @@ void DwarfExpression::AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits) {
     unsigned ByteSize = SizeInBits / SizeOfByte;
     EmitUnsigned(ByteSize);
   }
+  this->OffsetInBits += SizeInBits;
 }
 
 void DwarfExpression::AddShr(unsigned ShiftBy) {
@@ -82,10 +85,8 @@ bool DwarfExpression::AddMachineRegIndirect(const TargetRegisterInfo &TRI,
   return true;
 }
 
-bool DwarfExpression::AddMachineRegFragment(const TargetRegisterInfo &TRI,
-                                            unsigned MachineReg,
-                                            unsigned FragmentSizeInBits,
-                                            unsigned FragmentOffsetInBits) {
+bool DwarfExpression::AddMachineReg(const TargetRegisterInfo &TRI,
+                                    unsigned MachineReg) {
   if (!TRI.isPhysicalRegister(MachineReg))
     return false;
 
@@ -94,8 +95,6 @@ bool DwarfExpression::AddMachineRegFragment(const TargetRegisterInfo &TRI,
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
     AddReg(Reg);
-    if (FragmentSizeInBits)
-      AddOpPiece(FragmentSizeInBits, FragmentOffsetInBits);
     return true;
   }
 
@@ -108,24 +107,15 @@ bool DwarfExpression::AddMachineRegFragment(const TargetRegisterInfo &TRI,
       unsigned Size = TRI.getSubRegIdxSize(Idx);
       unsigned RegOffset = TRI.getSubRegIdxOffset(Idx);
       AddReg(Reg, "super-register");
-      if (FragmentOffsetInBits == RegOffset) {
-        AddOpPiece(Size, RegOffset);
-      } else {
-        // If this is part of a variable in a sub-register at a non-zero offset,
-        // we need to manually shift the value into place, since the
-        // DW_OP_LLVM_fragment describes the part of the variable, not the
-        // position of the subregister.
-        if (RegOffset)
-          AddShr(RegOffset);
-        AddOpPiece(Size, FragmentOffsetInBits);
-      }
+      // Use a DW_OP_bit_piece to describe the sub-register.
+      setSubRegisterPiece(Size, RegOffset);
       return true;
     }
   }
 
   // Otherwise, attempt to find a covering set of sub-register numbers.
   // For example, Q0 on ARM is a composition of D0+D1.
-  unsigned CurPos = FragmentOffsetInBits;
+  unsigned CurPos = 0;
   // The size of the register in bits, assuming 8 bits per byte.
   unsigned RegSize = TRI.getMinimalPhysRegClass(MachineReg)->getSize() * 8;
   // Keep track of the bits in the register we already emitted, so we
@@ -147,7 +137,10 @@ bool DwarfExpression::AddMachineRegFragment(const TargetRegisterInfo &TRI,
     // its range, emit a DWARF piece for it.
     if (Reg >= 0 && Intersection.any()) {
       AddReg(Reg, "sub-register");
-      AddOpPiece(Size, Offset == CurPos ? 0 : Offset);
+      // Emit a piece for the any gap in the coverage.
+      if (Offset > CurPos)
+        AddOpPiece(Offset - CurPos);
+      AddOpPiece(Size);
       CurPos = Offset + Size;
 
       // Mark it as emitted.
@@ -155,7 +148,7 @@ bool DwarfExpression::AddMachineRegFragment(const TargetRegisterInfo &TRI,
     }
   }
 
-  return CurPos > FragmentOffsetInBits;
+  return CurPos;
 }
 
 void DwarfExpression::AddStackValue() {
@@ -191,35 +184,21 @@ void DwarfExpression::AddUnsignedConstant(const APInt &Value) {
   }
 }
 
-static unsigned getOffsetOrZero(unsigned OffsetInBits,
-                                unsigned FragmentOffsetInBits) {
-  if (OffsetInBits == FragmentOffsetInBits)
-    return 0;
-  assert(OffsetInBits >= FragmentOffsetInBits && "overlapping fragments");
-  return OffsetInBits;
-}
-
 bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
                                               unsigned MachineReg,
                                               unsigned FragmentOffsetInBits) {
   if (!ExprCursor)
-    return AddMachineRegFragment(TRI, MachineReg);
+    return AddMachineReg(TRI, MachineReg);
 
   // Pattern-match combinations for which more efficient representations exist
   // first.
   bool ValidReg = false;
   auto Op = ExprCursor.peek();
   switch (Op->getOp()) {
-  case dwarf::DW_OP_LLVM_fragment: {
-    unsigned OffsetInBits = Op->getArg(0);
-    unsigned SizeInBits = Op->getArg(1);
-    // Piece always comes at the end of the expression.
-    AddMachineRegFragment(TRI, MachineReg, SizeInBits,
-                          getOffsetOrZero(OffsetInBits, FragmentOffsetInBits));
-    ExprCursor.take();
+  default:
+    ValidReg = AddMachineReg(TRI, MachineReg);
     break;
-  }
   case dwarf::DW_OP_plus:
   case dwarf::DW_OP_minus: {
     // [DW_OP_reg,Offset,DW_OP_plus, DW_OP_deref] --> [DW_OP_breg, Offset].
@@ -231,7 +210,7 @@ bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
           TRI, MachineReg, Op->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
       ExprCursor.consume(2);
     } else
-      ValidReg = AddMachineRegFragment(TRI, MachineReg);
+      ValidReg = AddMachineReg(TRI, MachineReg);
     break;
   }
   case dwarf::DW_OP_deref:
@@ -250,10 +229,25 @@ void DwarfExpression::AddExpression(DIExpressionCursor &&ExprCursor,
     auto Op = ExprCursor.take();
     switch (Op->getOp()) {
     case dwarf::DW_OP_LLVM_fragment: {
-      unsigned OffsetInBits = Op->getArg(0);
-      unsigned SizeInBits   = Op->getArg(1);
-      AddOpPiece(SizeInBits,
-                 getOffsetOrZero(OffsetInBits, FragmentOffsetInBits));
+      unsigned SizeInBits = Op->getArg(1);
+      unsigned FragmentOffset = Op->getArg(0);
+      // The fragment offset must have already been adjusted by emitting an
+      // empty DW_OP_piece / DW_OP_bit_piece before we emitted the base
+      // location.
+      assert(OffsetInBits >= FragmentOffset && "fragment offset not added?");
+
+      // If \a AddMachineReg already emitted DW_OP_piece operations to represent
+      // a super-register by splicing together sub-registers, subtract the size
+      // of the pieces that was already emitted.
+      SizeInBits -= OffsetInBits - FragmentOffset;
+
+      // If \a AddMachineReg requested a DW_OP_bit_piece to stencil out a
+      // sub-register that is smaller than the current fragment's size, use it.
+      if (SubRegisterSizeInBits)
+        SizeInBits = std::min<unsigned>(SizeInBits, SubRegisterSizeInBits);
+      
+      AddOpPiece(SizeInBits, SubRegisterOffsetInBits);
+      setSubRegisterPiece(0, 0);
       break;
     }
     case dwarf::DW_OP_plus:
@@ -280,4 +274,21 @@ void DwarfExpression::AddExpression(DIExpressionCursor &&ExprCursor,
       llvm_unreachable("unhandled opcode found in expression");
     }
   }
+}
+
+void DwarfExpression::finalize() {
+  if (SubRegisterSizeInBits)
+    AddOpPiece(SubRegisterSizeInBits, SubRegisterOffsetInBits);
+}
+
+void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
+  if (!Expr || !Expr->isFragment())
+    return;
+
+  uint64_t FragmentOffset = Expr->getFragmentOffsetInBits();
+  assert(FragmentOffset >= OffsetInBits &&
+         "overlapping or duplicate fragments");
+  if (FragmentOffset > OffsetInBits)
+    AddOpPiece(FragmentOffset - OffsetInBits);
+  OffsetInBits = FragmentOffset;
 }
