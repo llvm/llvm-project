@@ -8716,10 +8716,6 @@ def warn_nullability_missing_array : Warning<
   "array parameter is missing a nullability type specifier (_Nonnull, "
   "_Nullable, or _Null_unspecified)">,
   InGroup<NullabilityCompletenessOnArrays>;
-def note_nullability_fix_it : Note<
-  "insert '%select{_Nonnull|_Nullable|_Null_unspecified}0' if the "
-  "%select{pointer|block pointer|member pointer|array parameter}1 "
-  "%select{should never be null|may be null|should not declare nullability}0">;
 
 def warn_nullability_inferred_on_nested_type : Warning<
   "inferring '_Nonnull' for pointer type within %select{array|reference}0 is "
