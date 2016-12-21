@@ -157,6 +157,10 @@ private:
   // TypeLocs of CXXCtorInitializer. Types of CXXCtorInitializers do not need to
   // be fixed.
   llvm::SmallVector<TypeLoc, 8> BaseCtorInitializerTypeLocs;
+  // Since a DeclRefExpr for a function call can be matched twice (one as
+  // CallExpr and one as DeclRefExpr), we record all DeclRefExpr's that have
+  // been processed so that we don't handle them twice.
+  llvm::SmallPtrSet<const clang::DeclRefExpr*, 16> ProcessedFuncRefs;
 };
 
 } // namespace change_namespace

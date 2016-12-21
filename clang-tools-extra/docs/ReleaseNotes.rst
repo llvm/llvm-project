@@ -108,6 +108,12 @@ Improvements to clang-tidy
 
 - The modernize-use-default check has been renamed to `modernize-use-equals-default
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-default.html>`_.
+  
+- New `modernize-use-default-member-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-default-member-init.html>`_ check
+
+  Converts a default constructor's member initializers into default member initializers.
+  Removes member initializers that are the same as a default member initializer.
 
 - New `modernize-use-equals-delete
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html>`_ check
