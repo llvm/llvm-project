@@ -714,17 +714,21 @@ CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
   DR.InMemory = -1;
   DR.DataOffset = Offset;
   assert(DR.DataOffset == Offset && "truncation");
+  DR.IsSubfield = 0;
   DR.StructOffset = 0;
   DR.CVRegister = CVRegister;
   return DR;
 }
 
 CodeViewDebug::LocalVarDefRange
-CodeViewDebug::createDefRangeReg(uint16_t CVRegister) {
+CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
+                                     int Offset, bool IsSubfield,
+                                     uint16_t StructOffset) {
   LocalVarDefRange DR;
-  DR.InMemory = 0;
-  DR.DataOffset = 0;
-  DR.StructOffset = 0;
+  DR.InMemory = InMemory;
+  DR.DataOffset = Offset;
+  DR.IsSubfield = IsSubfield;
+  DR.StructOffset = StructOffset;
   DR.CVRegister = CVRegister;
   return DR;
 }
@@ -805,10 +809,16 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MachineInstr *DVInst = Range.first;
       assert(DVInst->isDebugValue() && "Invalid History entry");
       const DIExpression *DIExpr = DVInst->getDebugExpression();
+      bool IsSubfield = false;
+      unsigned StructOffset = 0;
 
-      // Bail if there is a complex DWARF expression for now.
-      if (DIExpr && DIExpr->getNumElements() > 0)
-        continue;
+      // Handle fragments.
+      if (DIExpr && DIExpr->isFragment()) {
+        IsSubfield = true;
+        StructOffset = DIExpr->getFragmentOffsetInBits() / 8;
+      } else if (DIExpr && DIExpr->getNumElements() > 0) {
+        continue; // Ignore unrecognized exprs.
+      }
 
       // Bail if operand 0 is not a valid register. This means the variable is a
       // simple constant, or is described by a complex expression.
@@ -820,19 +830,20 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
         continue;
 
       // Handle the two cases we can handle: indirect in memory and in register.
-      bool IsIndirect = DVInst->getOperand(1).isImm();
-      unsigned CVReg = TRI->getCodeViewRegNum(DVInst->getOperand(0).getReg());
+      unsigned CVReg = TRI->getCodeViewRegNum(Reg);
+      bool InMemory = DVInst->getOperand(1).isImm();
+      int Offset = InMemory ? DVInst->getOperand(1).getImm() : 0;
       {
-        LocalVarDefRange DefRange;
-        if (IsIndirect) {
-          int64_t Offset = DVInst->getOperand(1).getImm();
-          DefRange = createDefRangeMem(CVReg, Offset);
-        } else {
-          DefRange = createDefRangeReg(CVReg);
-        }
+        LocalVarDefRange DR;
+        DR.CVRegister = CVReg;
+        DR.InMemory = InMemory;
+        DR.DataOffset = Offset;
+        DR.IsSubfield = IsSubfield;
+        DR.StructOffset = StructOffset;
+
         if (Var.DefRanges.empty() ||
-            Var.DefRanges.back().isDifferentLocation(DefRange)) {
-          Var.DefRanges.emplace_back(std::move(DefRange));
+            Var.DefRanges.back().isDifferentLocation(DR)) {
+          Var.DefRanges.emplace_back(std::move(DR));
         }
       }
 
@@ -840,8 +851,14 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
       const MCSymbol *End = getLabelAfterInsn(Range.second);
       if (!End) {
-        if (std::next(I) != E)
-          End = getLabelBeforeInsn(std::next(I)->first);
+        // This range is valid until the next overlapping bitpiece. In the
+        // common case, ranges will not be bitpieces, so they will overlap.
+        auto J = std::next(I);
+        while (J != E &&
+               !fragmentsOverlap(DIExpr, J->first->getDebugExpression()))
+          ++J;
+        if (J != E)
+          End = getLabelBeforeInsn(J->first);
         else
           End = Asm->getFunctionEnd();
       }
@@ -1893,13 +1910,15 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   SmallString<20> BytePrefix;
   for (const LocalVarDefRange &DefRange : Var.DefRanges) {
     BytePrefix.clear();
-    // FIXME: Handle bitpieces.
-    if (DefRange.StructOffset != 0)
-      continue;
-
     if (DefRange.InMemory) {
-      DefRangeRegisterRelSym Sym(DefRange.CVRegister, 0, DefRange.DataOffset, 0,
-                                 0, 0, ArrayRef<LocalVariableAddrGap>());
+      uint16_t RegRelFlags = 0;
+      if (DefRange.IsSubfield) {
+        RegRelFlags = DefRangeRegisterRelSym::IsSubfieldFlag |
+                      (DefRange.StructOffset
+                       << DefRangeRegisterRelSym::OffsetInParentShift);
+      }
+      DefRangeRegisterRelSym Sym(DefRange.CVRegister, RegRelFlags,
+                                 DefRange.DataOffset, None);
       ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER_REL);
       BytePrefix +=
           StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
@@ -1908,15 +1927,26 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
                     sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
-      // Unclear what matters here.
-      DefRangeRegisterSym Sym(DefRange.CVRegister, 0, 0, 0, 0,
-                              ArrayRef<LocalVariableAddrGap>());
-      ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
-      BytePrefix +=
-          StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
-      BytePrefix +=
-          StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                    sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+      if (DefRange.IsSubfield) {
+        // Unclear what matters here.
+        DefRangeSubfieldRegisterSym Sym(DefRange.CVRegister, 0,
+                                        DefRange.StructOffset, None);
+        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_SUBFIELD_REGISTER);
+        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
+                                sizeof(SymKind));
+        BytePrefix +=
+            StringRef(reinterpret_cast<const char *>(&Sym.Header),
+                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+      } else {
+        // Unclear what matters here.
+        DefRangeRegisterSym Sym(DefRange.CVRegister, 0, None);
+        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
+        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
+                                sizeof(SymKind));
+        BytePrefix +=
+            StringRef(reinterpret_cast<const char *>(&Sym.Header),
+                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+      }
     }
     OS.EmitCVDefRangeDirective(DefRange.Ranges, BytePrefix);
   }

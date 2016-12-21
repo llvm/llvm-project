@@ -26,8 +26,8 @@ entry:
   ; CHECK-SAME:                      metadata ![[C]], metadata ![[IMG:.*]])
   ret void, !dbg !18
 }
-; CHECK: ![[REAL]] = !DIExpression(DW_OP_bit_piece, 0, 64)
-; CHECK: ![[IMG]] = !DIExpression(DW_OP_bit_piece, 64, 64)
+; CHECK: ![[REAL]] = !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+; CHECK: ![[IMG]] = !DIExpression(DW_OP_LLVM_fragment, 64, 64)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
