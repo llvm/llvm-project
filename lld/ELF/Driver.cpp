@@ -770,7 +770,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Use default entry point name if no name was given via the command
   // line nor linker scripts. For some reason, MIPS entry point name is
   // different from others.
-  Config->WarnMissingEntry = (!Config->Entry.empty() || !Config->Shared);
+  Config->WarnMissingEntry =
+      (!Config->Entry.empty() || (!Config->Shared && !Config->Relocatable));
   if (Config->Entry.empty() && !Config->Relocatable)
     Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
 

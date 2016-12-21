@@ -94,15 +94,6 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   StackID cur_frame_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
   if (cur_frame_id == m_stack_id) {
-    // Set plan Complete when we reach next instruction
-    uint64_t pc = m_thread.GetRegisterContext()->GetPC(0);
-    uint32_t max_opcode_size = m_thread.CalculateTarget()
-        ->GetArchitecture().GetMaximumOpcodeByteSize();
-    bool next_instruction_reached = (pc > m_instruction_addr) &&
-        (pc <= m_instruction_addr + max_opcode_size);
-    if (next_instruction_reached) {
-      SetPlanComplete();
-    }
     return (m_thread.GetRegisterContext()->GetPC(0) != m_instruction_addr);
   } else if (cur_frame_id < m_stack_id) {
     // If the current frame is younger than the start frame and we are stepping

@@ -461,16 +461,6 @@ bool ThreadPlanStepRange::IsPlanStale() {
     // One tricky bit here is that some stubs don't push a frame, so we should.
     // check that we are in the same symbol.
     if (!InRange()) {
-      // Set plan Complete when we reach next instruction just after the range
-      lldb::addr_t addr = m_thread.GetRegisterContext()->GetPC() - 1;
-      size_t num_ranges = m_address_ranges.size();
-      for (size_t i = 0; i < num_ranges; i++) {
-        bool in_range = m_address_ranges[i].ContainsLoadAddress(
-            addr, m_thread.CalculateTarget().get());
-        if (in_range) {
-          SetPlanComplete();
-        }
-      }
       return true;
     }
   }

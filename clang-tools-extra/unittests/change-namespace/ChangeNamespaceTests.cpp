@@ -575,6 +575,47 @@ TEST_F(ChangeNamespaceTest, FixFunctionNameSpecifiers) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FixOverloadedOperatorFunctionNameSpecifiers) {
+  std::string Code =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  int x;\n"
+      "  bool operator==(const A &RHS) const { return x == RHS.x; }\n"
+      "};\n"
+      "bool operator<(const A &LHS, const A &RHS) { return LHS.x == RHS.x; }\n"
+      "namespace nb {\n"
+      "bool f() {\n"
+      "  A x, y;\n"
+      "  auto f = operator<;\n"
+      "  return (x == y) && (x < y) && (operator<(x, y));\n"
+      "}\n"
+      "}  // namespace nb\n"
+      "}  // namespace na\n";
+  std::string Expected =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  int x;\n"
+      "  bool operator==(const A &RHS) const { return x == RHS.x; }\n"
+      "};\n"
+      "bool operator<(const A &LHS, const A &RHS) { return LHS.x == RHS.x; }\n"
+      "\n"
+      "}  // namespace na\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "bool f() {\n"
+      "  ::na::A x, y;\n"
+      "  auto f = ::na::operator<;\n"
+      // FIXME: function calls to overloaded operators are not fixed now even if
+      // they are referenced by qualified names.
+      "  return (x == y) && (x < y) && (operator<(x,y));\n"
+      "}\n"
+      "}  // namespace y\n"
+      "}  // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, FixNonCallingFunctionReferences) {
   std::string Code = "namespace na {\n"
                      "class A {\n"

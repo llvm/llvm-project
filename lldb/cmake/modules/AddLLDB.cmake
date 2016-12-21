@@ -117,7 +117,6 @@ function(add_lldb_executable name)
   set_target_properties(${name} PROPERTIES
     FOLDER "lldb executables")
 
-  set(install_dir bin)
   if(LLDB_BUILD_FRAMEWORK)
     if(ARG_INCLUDE_IN_FRAMEWORK)
       string(REGEX REPLACE "[^/]+" ".." _dots ${LLDB_FRAMEWORK_INSTALL_DIR})
@@ -129,18 +128,19 @@ function(add_lldb_executable name)
       set_target_properties(${name} PROPERTIES
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
-      if(ARG_GENERATE_INSTALL)
-        install(TARGETS ${name}
-              COMPONENT ${name}
-              RUNTIME DESTINATION ${install_dir})
-        if (NOT CMAKE_CONFIGURATION_TYPES)
-          add_custom_target(install-${name}
-                            DEPENDS ${name}
-                            COMMAND "${CMAKE_COMMAND}"
-                                    -DCMAKE_INSTALL_COMPONENT=${name}
-                                    -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-        endif()
-      endif()
+    endif()
+  endif()
+
+  if(ARG_GENERATE_INSTALL)
+    install(TARGETS ${name}
+          COMPONENT ${name}
+          RUNTIME DESTINATION bin)
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-${name}
+                        DEPENDS ${name}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${name}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     endif()
   endif()
 

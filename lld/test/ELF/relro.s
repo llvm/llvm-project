@@ -19,8 +19,8 @@
 // CHECK-NEXT: GNU_RELRO
 // CHECK: Section to Segment mapping:
 
-// FULLRELRO:  05     .dynamic .got .got.plt {{$}}
-// PARTRELRO:  05     .dynamic .got {{$}}
+// FULLRELRO:  05     .openbsd.randomdata .dynamic .got .got.plt {{$}}
+// PARTRELRO:  05     .openbsd.randomdata .dynamic .got {{$}}
 
 
 // NORELRO-NOT: GNU_RELRO
@@ -36,3 +36,6 @@ _start:
 .zero 4
 .section .foo,"aw"
 .section .bss,"",@nobits
+
+.section .openbsd.randomdata, "aw"
+.quad 0

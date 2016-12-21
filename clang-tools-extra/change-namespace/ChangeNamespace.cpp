@@ -481,6 +481,11 @@ void ChangeNamespaceTool::run(
                    llvm::cast<NamedDecl>(Var), VarRef);
   } else if (const auto *FuncRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
+    // If this reference has been processed as a function call, we do not
+    // process it again.
+    if (ProcessedFuncRefs.count(FuncRef))
+      return;
+    ProcessedFuncRefs.insert(FuncRef);
     const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func_decl");
     assert(Func);
     const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
@@ -490,8 +495,16 @@ void ChangeNamespaceTool::run(
   } else {
     const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
     assert(Call != nullptr && "Expecting callback for CallExpr.");
+    const auto *CalleeFuncRef =
+        llvm::cast<DeclRefExpr>(Call->getCallee()->IgnoreImplicit());
+    ProcessedFuncRefs.insert(CalleeFuncRef);
     const FunctionDecl *Func = Call->getDirectCallee();
     assert(Func != nullptr);
+    // FIXME: ignore overloaded operators. This would miss cases where operators
+    // are called by qualified names (i.e. "ns::operator <"). Ignore such
+    // cases for now.
+    if (Func->isOverloadedOperator())
+      return;
     // Ignore out-of-line static methods since they will be handled by nested
     // name specifiers.
     if (Func->getCanonicalDecl()->getStorageClass() ==
