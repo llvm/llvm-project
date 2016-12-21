@@ -47,9 +47,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     /// Offset of variable data in memory.
     int DataOffset : 31;
 
-    /// Offset of the data into the user level struct. If zero, no splitting
-    /// occurred.
-    uint16_t StructOffset;
+    /// Non-zero if this is a piece of an aggregate.
+    uint16_t IsSubfield : 1;
+
+    /// Offset into aggregate.
+    uint16_t StructOffset : 15;
 
     /// Register containing the data or the register base of the memory
     /// location containing the data.
@@ -59,14 +61,18 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     /// ranges.
     bool isDifferentLocation(LocalVarDefRange &O) {
       return InMemory != O.InMemory || DataOffset != O.DataOffset ||
-             StructOffset != O.StructOffset || CVRegister != O.CVRegister;
+             IsSubfield != O.IsSubfield || StructOffset != O.StructOffset ||
+             CVRegister != O.CVRegister;
     }
 
     SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1> Ranges;
   };
 
   static LocalVarDefRange createDefRangeMem(uint16_t CVRegister, int Offset);
-  static LocalVarDefRange createDefRangeReg(uint16_t CVRegister);
+  static LocalVarDefRange createDefRangeGeneral(uint16_t CVRegister,
+                                                bool InMemory, int Offset,
+                                                bool IsSubfield,
+                                                uint16_t StructOffset);
 
   /// Similar to DbgVariable in DwarfDebug, but not dwarf-specific.
   struct LocalVariable {

@@ -14,7 +14,7 @@ entry:
   %v2 = alloca i64, align 8
   store i32 %hs, i32* %hs.addr, align 4
 ; CHECK: call void @llvm.dbg.value(metadata i32 %hs, i64 0, metadata !{{[0-9]+}}, metadata ![[EXPR:[0-9]+]])
-; CHECK: ![[EXPR]] = !DIExpression(DW_OP_bit_piece, 0
+; CHECK: ![[EXPR]] = !DIExpression(DW_OP_LLVM_fragment, 0
   call void @llvm.dbg.declare(metadata i64* %v1, metadata !9, metadata !12), !dbg !13
   %0 = load i32, i32* %hs.addr, align 4
   %conv = sext i32 %0 to i64
