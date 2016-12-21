@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -34,7 +36,7 @@ using namespace llvm;
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
-static void findRefEdges(const User *CurUser, DenseSet<const Value *> &RefEdges,
+static void findRefEdges(const User *CurUser, SetVector<ValueInfo> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited) {
   SmallVector<const User *, 32> Worklist;
   Worklist.push_back(CurUser);
@@ -53,12 +55,12 @@ static void findRefEdges(const User *CurUser, DenseSet<const Value *> &RefEdges,
         continue;
       if (isa<BlockAddress>(Operand))
         continue;
-      if (isa<GlobalValue>(Operand)) {
+      if (auto *GV = dyn_cast<GlobalValue>(Operand)) {
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
         // specially by WriteFunction and are added to a separate list.
         if (!(CS && CS.isCallee(&OI)))
-          RefEdges.insert(Operand);
+          RefEdges.insert(GV);
         continue;
       }
       Worklist.push_back(Operand);
@@ -88,9 +90,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   unsigned NumInsts = 0;
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
-  DenseMap<const Value *, CalleeInfo> CallGraphEdges;
-  DenseMap<GlobalValue::GUID, CalleeInfo> IndirectCallEdges;
-  DenseSet<const Value *> RefEdges;
+  MapVector<ValueInfo, CalleeInfo> CallGraphEdges;
+  SetVector<ValueInfo> RefEdges;
   ICallPromotionAnalysis ICallAnalysis;
 
   bool HasInlineAsmMaybeReferencingInternal = false;
@@ -130,16 +131,14 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // We should have named any anonymous globals
         assert(CalledFunction->hasName());
         auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
+        auto Hotness = ScaledCount ? getHotness(ScaledCount.getValue(), PSI)
+                                   : CalleeInfo::HotnessType::Unknown;
+
         // Use the original CalledValue, in case it was an alias. We want
         // to record the call edge to the alias in that case. Eventually
         // an alias summary will be created to associate the alias and
         // aliasee.
-        auto *CalleeId =
-            M.getValueSymbolTable().lookup(CalledValue->getName());
-
-        auto Hotness = ScaledCount ? getHotness(ScaledCount.getValue(), PSI)
-                                   : CalleeInfo::HotnessType::Unknown;
-        CallGraphEdges[CalleeId].updateHotness(Hotness);
+        CallGraphEdges[cast<GlobalValue>(CalledValue)].updateHotness(Hotness);
       } else {
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
@@ -154,17 +153,14 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, NumVals, TotalCount, NumCandidates);
         for (auto &Candidate : CandidateProfileData)
-          IndirectCallEdges[Candidate.Value].updateHotness(
+          CallGraphEdges[Candidate.Value].updateHotness(
               getHotness(Candidate.Count, PSI));
       }
     }
 
   GlobalValueSummary::GVFlags Flags(F);
-  std::unique_ptr<FunctionSummary> FuncSummary =
-      llvm::make_unique<FunctionSummary>(Flags, NumInsts);
-  FuncSummary->addCallGraphEdges(CallGraphEdges);
-  FuncSummary->addCallGraphEdges(IndirectCallEdges);
-  FuncSummary->addRefEdges(RefEdges);
+  auto FuncSummary = llvm::make_unique<FunctionSummary>(
+      Flags, NumInsts, RefEdges.takeVector(), CallGraphEdges.takeVector());
   if (HasInlineAsmMaybeReferencingInternal)
     FuncSummary->setHasInlineAsmMaybeReferencingInternal();
   Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
@@ -172,20 +168,19 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
 
 static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    const GlobalVariable &V) {
-  DenseSet<const Value *> RefEdges;
+  SetVector<ValueInfo> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   findRefEdges(&V, RefEdges, Visited);
   GlobalValueSummary::GVFlags Flags(V);
-  std::unique_ptr<GlobalVarSummary> GVarSummary =
-      llvm::make_unique<GlobalVarSummary>(Flags);
-  GVarSummary->addRefEdges(RefEdges);
+  auto GVarSummary =
+      llvm::make_unique<GlobalVarSummary>(Flags, RefEdges.takeVector());
   Index.addGlobalValueSummary(V.getName(), std::move(GVarSummary));
 }
 
 static void computeAliasSummary(ModuleSummaryIndex &Index,
                                 const GlobalAlias &A) {
   GlobalValueSummary::GVFlags Flags(A);
-  std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
+  auto AS = llvm::make_unique<AliasSummary>(Flags, ArrayRef<ValueInfo>{});
   auto *Aliasee = A.getBaseObject();
   auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
   assert(AliaseeSummary && "Alias expects aliasee summary to be parsed");
@@ -283,12 +278,15 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           // Create the appropriate summary type.
           if (isa<Function>(GV)) {
             std::unique_ptr<FunctionSummary> Summary =
-                llvm::make_unique<FunctionSummary>(GVFlags, 0);
+                llvm::make_unique<FunctionSummary>(
+                    GVFlags, 0, ArrayRef<ValueInfo>{},
+                    ArrayRef<FunctionSummary::EdgeTy>{});
             Summary->setNoRename();
             Index.addGlobalValueSummary(Name, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =
-                llvm::make_unique<GlobalVarSummary>(GVFlags);
+                llvm::make_unique<GlobalVarSummary>(GVFlags,
+                                                    ArrayRef<ValueInfo>{});
             Summary->setNoRename();
             Index.addGlobalValueSummary(Name, std::move(Summary));
           }

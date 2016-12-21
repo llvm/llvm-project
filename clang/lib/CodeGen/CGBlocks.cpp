@@ -686,8 +686,6 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
   // If the block has no captures, we won't have a pre-computed
   // layout for it.
   if (!blockExpr->getBlockDecl()->hasCaptures()) {
-    if (llvm::Constant *Block = CGM.getAddrOfGlobalBlockIfEmitted(blockExpr))
-      return Block;
     CGBlockInfo blockInfo(blockExpr->getBlockDecl(), CurFn->getName());
     computeBlockInfo(CGM, this, blockInfo);
     blockInfo.BlockExpression = blockExpr;
@@ -1049,19 +1047,9 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
   return addr;
 }
 
-void CodeGenModule::setAddrOfGlobalBlock(const BlockExpr *BE,
-                                         llvm::Constant *Addr) {
-  bool Ok = EmittedGlobalBlocks.insert(std::make_pair(BE, Addr)).second;
-  (void)Ok;
-  assert(Ok && "Trying to replace an already-existing global block!");
-}
-
 llvm::Constant *
 CodeGenModule::GetAddrOfGlobalBlock(const BlockExpr *BE,
                                     StringRef Name) {
-  if (llvm::Constant *Block = getAddrOfGlobalBlockIfEmitted(BE))
-    return Block;
-
   CGBlockInfo blockInfo(BE->getBlockDecl(), Name);
   blockInfo.BlockExpression = BE;
 
@@ -1086,11 +1074,6 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
                                         const CGBlockInfo &blockInfo,
                                         llvm::Constant *blockFn) {
   assert(blockInfo.CanBeGlobal);
-  // Callers should detect this case on their own: calling this function
-  // generally requires computing layout information, which is a waste of time
-  // if we've already emitted this block.
-  assert(!CGM.getAddrOfGlobalBlockIfEmitted(blockInfo.BlockExpression) &&
-         "Refusing to re-emit a global block.");
 
   // Generate the constants for the block literal initializer.
   ConstantInitBuilder builder(CGM);
@@ -1120,12 +1103,9 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
                                  /*constant*/ true);
 
   // Return a constant of the appropriately-casted type.
-  llvm::Type *RequiredType =
+  llvm::Type *requiredType =
     CGM.getTypes().ConvertType(blockInfo.getBlockExpr()->getType());
-  llvm::Constant *Result =
-      llvm::ConstantExpr::getBitCast(literal, RequiredType);
-  CGM.setAddrOfGlobalBlock(blockInfo.BlockExpression, Result);
-  return Result;
+  return llvm::ConstantExpr::getBitCast(literal, requiredType);
 }
 
 void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,

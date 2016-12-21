@@ -1692,29 +1692,30 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
   }
 }
 
-LLVM_DUMP_METHOD void MachineInstr::dump() const {
+LLVM_DUMP_METHOD void MachineInstr::dump(const TargetInstrInfo *TII) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "  " << *this;
+  dbgs() << "  ";
+  print(dbgs(), false /* SkipOpers */, TII);
 #endif
 }
 
-void MachineInstr::print(raw_ostream &OS, bool SkipOpers) const {
+void MachineInstr::print(raw_ostream &OS, bool SkipOpers,
+                         const TargetInstrInfo *TII) const {
   const Module *M = nullptr;
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
       M = MF->getFunction()->getParent();
 
   ModuleSlotTracker MST(M);
-  print(OS, MST, SkipOpers);
+  print(OS, MST, SkipOpers, TII);
 }
 
 void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                         bool SkipOpers) const {
+                         bool SkipOpers, const TargetInstrInfo *TII) const {
   // We can be a bit tidier if we know the MachineFunction.
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
 
   if (const MachineBasicBlock *MBB = getParent()) {
@@ -1722,7 +1723,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (MF) {
       MRI = &MF->getRegInfo();
       TRI = MF->getSubtarget().getRegisterInfo();
-      TII = MF->getSubtarget().getInstrInfo();
+      if (!TII)
+        TII = MF->getSubtarget().getInstrInfo();
       IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
     }
   }

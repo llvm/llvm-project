@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
 
 void foo() {
 }
@@ -46,7 +46,7 @@ int tmain(T argc, S **argv) {
 #pragma omp teams distribute parallel for simd if(argc)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd if(parallel // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams distribute parallel for simd if(parallel // expected-error {{use of undeclared identifier 'parallel'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd if(parallel : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for simd if(if(tmain(argc, argv) // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd if(parallel // expected-warning {{missing ':' after directive name modifier - ignoring}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams distribute parallel for simd if(parallel // expected-error {{use of undeclared identifier 'parallel'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd if(parallel : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}

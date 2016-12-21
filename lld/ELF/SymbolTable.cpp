@@ -406,7 +406,7 @@ Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
   int Cmp = compareDefinedNonCommon<ELFT>(S, WasInserted, STB_GLOBAL,
                                           /*IsAbsolute*/ false, /*Value*/ 0);
   if (Cmp > 0)
-    replaceBody<DefinedSynthetic<ELFT>>(S, N, Value, Section);
+    replaceBody<DefinedSynthetic>(S, N, Value, Section);
   else if (Cmp == 0)
     reportDuplicate(S->body(), nullptr);
   return S;
@@ -586,7 +586,7 @@ template <class ELFT>
 std::vector<SymbolBody *>
 SymbolTable<ELFT>::findAllByVersion(SymbolVersion Ver) {
   std::vector<SymbolBody *> Res;
-  StringMatcher M({Ver.Name});
+  StringMatcher M(Ver.Name);
 
   if (Ver.IsExternCpp) {
     initDemangledSyms();

@@ -785,8 +785,8 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 ///        the matrix multiplication pattern.
 ///
 /// Create an access relation of the following form:
-/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [O5 + K * OI, OJ],
-/// where K is @p Coeff, I is @p FirstDim, J is @p SecondDim.
+/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [OI, O5, OJ]
+/// where I is @p FirstDim, J is @p SecondDim.
 ///
 /// It can be used, for example, to create relations that helps to consequently
 /// access elements of operands of a matrix multiplication after creation of
@@ -804,25 +804,17 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 /// @param MapOldIndVar The relation, which maps original induction variables
 ///                     to the ones, which are produced by schedule
 ///                     transformations.
-/// @param Coeff The coefficient that is used to define the specified access
-///              relation.
 /// @param FirstDim, SecondDim The input dimensions that are used to define
 ///        the specified access relation.
 /// @return The specified access relation.
 __isl_give isl_map *getMatMulAccRel(__isl_take isl_map *MapOldIndVar,
-                                    unsigned Coeff, unsigned FirstDim,
-                                    unsigned SecondDim) {
+                                    unsigned FirstDim, unsigned SecondDim) {
   auto *Ctx = isl_map_get_ctx(MapOldIndVar);
-  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 2);
-  auto *AccessRel = isl_map_universe(isl_space_copy(AccessRelSpace));
-  auto *ConstrSpace = isl_local_space_from_space(AccessRelSpace);
-  auto *Constr = isl_constraint_alloc_equality(ConstrSpace);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 0, -1);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_in, 5, 1);
-  Constr =
-      isl_constraint_set_coefficient_si(Constr, isl_dim_in, FirstDim, Coeff);
-  AccessRel = isl_map_add_constraint(AccessRel, Constr);
-  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 1);
+  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 3);
+  auto *AccessRel = isl_map_universe(AccessRelSpace);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, FirstDim, isl_dim_out, 0);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, 5, isl_dim_out, 1);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 2);
   return isl_map_apply_range(MapOldIndVar, AccessRel);
 }
 
@@ -869,12 +861,13 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
   Node = isl_schedule_node_parent(Node);
   Node = isl_schedule_node_child(isl_schedule_node_band_split(Node, 2), 0);
-  auto *AccRel =
-      getMatMulAccRel(isl_map_copy(MapOldIndVar), MacroParams.Kc, 3, 7);
-  unsigned FirstDimSize = MacroParams.Nc * MacroParams.Kc / MicroParams.Nr;
-  unsigned SecondDimSize = MicroParams.Nr;
+  auto *AccRel = getMatMulAccRel(isl_map_copy(MapOldIndVar), 3, 7);
+  unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
+  unsigned SecondDimSize = MacroParams.Kc;
+  unsigned ThirdDimSize = MicroParams.Nr;
   auto *SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessB->getElementType(), "Packed_B", {FirstDimSize, SecondDimSize});
+      MemAccessB->getElementType(), "Packed_B",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
   auto *OldAcc = MemAccessB->getAccessRelation();
   MemAccessB->setNewAccessRelation(AccRel);
@@ -898,11 +891,12 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   // Create a copy statement that corresponds to the memory access
   // to the matrix A, the first operand of the matrix multiplication.
   Node = isl_schedule_node_child(Node, 0);
-  AccRel = getMatMulAccRel(MapOldIndVar, MacroParams.Kc, 4, 6);
-  FirstDimSize = MacroParams.Mc * MacroParams.Kc / MicroParams.Mr;
-  SecondDimSize = MicroParams.Mr;
+  AccRel = getMatMulAccRel(MapOldIndVar, 4, 6);
+  FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  ThirdDimSize = MicroParams.Mr;
   SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessA->getElementType(), "Packed_A", {FirstDimSize, SecondDimSize});
+      MemAccessA->getElementType(), "Packed_A",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
   OldAcc = MemAccessA->getAccessRelation();
   MemAccessA->setNewAccessRelation(AccRel);

@@ -220,21 +220,19 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 // don't belong to any input files or sections. Thus, its constructor
 // takes an output section to calculate output VA, etc.
 // If Section is null, this symbol is relative to the image base.
-template <class ELFT> class DefinedSynthetic : public Defined {
+class DefinedSynthetic : public Defined {
 public:
-  typedef typename ELFT::uint uintX_t;
-  DefinedSynthetic(StringRef N, uintX_t Value,
-                   const OutputSectionBase *Section);
+  DefinedSynthetic(StringRef Name, uint64_t Value,
+                   const OutputSectionBase *Section)
+      : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
+                llvm::ELF::STV_HIDDEN, 0 /* Type */),
+        Value(Value), Section(Section) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
   }
 
-  // Special value designates that the symbol 'points'
-  // to the end of the section.
-  static const uintX_t SectionEnd = uintX_t(-1);
-
-  uintX_t Value;
+  uint64_t Value;
   const OutputSectionBase *Section;
 };
 
@@ -417,9 +415,9 @@ struct Symbol {
   // assume that the size and alignment of ELF64LE symbols is sufficient for any
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
-      DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
-      DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
-      SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject> Body;
+      DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
+      Undefined, SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }
   const SymbolBody *body() const { return const_cast<Symbol *>(this)->body(); }

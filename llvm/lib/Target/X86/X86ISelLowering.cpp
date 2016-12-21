@@ -17,6 +17,7 @@
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
 #include "X86InstrBuilder.h"
+#include "X86IntrinsicsInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
 #include "X86TargetMachine.h"
@@ -53,10 +54,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOptions.h"
-#include "X86IntrinsicsInfo.h"
+#include <algorithm>
 #include <bitset>
-#include <numeric>
 #include <cctype>
+#include <numeric>
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
@@ -2781,6 +2782,13 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
   return makeArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
 }
 
+static bool isSortedByValueNo(const SmallVectorImpl<CCValAssign> &ArgLocs) {
+  return std::is_sorted(ArgLocs.begin(), ArgLocs.end(),
+                        [](const CCValAssign &A, const CCValAssign &B) -> bool {
+                          return A.getValNo() < B.getValNo();
+                        });
+}
+
 SDValue X86TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -2815,11 +2823,22 @@ SDValue X86TargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
-  // Allocate shadow area for Win64
+  // Allocate shadow area for Win64.
   if (IsWin64)
     CCInfo.AllocateStack(32, 8);
 
-  CCInfo.AnalyzeFormalArguments(Ins, CC_X86);
+  CCInfo.AnalyzeArguments(Ins, CC_X86);
+
+  // In vectorcall calling convention a second pass is required for the HVA
+  // types.
+  if (CallingConv::X86_VectorCall == CallConv) {
+    CCInfo.AnalyzeArgumentsSecondPass(Ins, CC_X86);
+  }
+
+  // The next loop assumes that the locations are in the same order of the
+  // input arguments.
+  if (!isSortedByValueNo(ArgLocs))
+    llvm_unreachable("Argument Location list must be sorted before lowering");
 
   SDValue ArgValue;
   for (unsigned I = 0, InsIndex = 0, E = ArgLocs.size(); I != E;
@@ -3263,11 +3282,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
-  // Allocate shadow area for Win64
+  // Allocate shadow area for Win64.
   if (IsWin64)
     CCInfo.AllocateStack(32, 8);
 
-  CCInfo.AnalyzeCallOperands(Outs, CC_X86);
+  CCInfo.AnalyzeArguments(Outs, CC_X86);
+
+  // In vectorcall calling convention a second pass is required for the HVA
+  // types.
+  if (CallingConv::X86_VectorCall == CallConv) {
+    CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
+  }
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
@@ -3321,6 +3346,11 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
   SDValue StackPtr;
+
+  // The next loop assumes that the locations are in the same order of the
+  // input arguments.
+  if (!isSortedByValueNo(ArgLocs))
+    llvm_unreachable("Argument Location list must be sorted before lowering");
 
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
   // of tail call optimization arguments are handle later.
@@ -19535,6 +19565,33 @@ static SDValue MarkEHGuard(SDValue Op, SelectionDAG &DAG) {
   return Chain;
 }
 
+/// Emit Truncating Store with signed or unsigned saturation.
+static SDValue
+EmitTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl, SDValue Val,
+                SDValue Ptr, EVT MemVT, MachineMemOperand *MMO,
+                SelectionDAG &DAG) {
+
+  SDVTList VTs = DAG.getVTList(MVT::Other);
+  SDValue Undef = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Ops[] = { Chain, Val, Ptr, Undef };
+  return SignedSat ?
+    DAG.getTargetMemSDNode<TruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
+    DAG.getTargetMemSDNode<TruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+}
+
+/// Emit Masked Truncating Store with signed or unsigned saturation.
+static SDValue
+EmitMaskedTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl,
+                      SDValue Val, SDValue Ptr, SDValue Mask, EVT MemVT,
+                      MachineMemOperand *MMO, SelectionDAG &DAG) {
+
+  SDVTList VTs = DAG.getVTList(MVT::Other);
+  SDValue Ops[] = { Chain, Ptr, Mask, Val };
+  return SignedSat ?
+    DAG.getTargetMemSDNode<MaskedTruncSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO) :
+    DAG.getTargetMemSDNode<MaskedTruncUSStoreSDNode>(VTs, Ops, Dl, MemVT, MMO);
+}
+
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
@@ -19693,18 +19750,39 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     MemIntrinsicSDNode *MemIntr = dyn_cast<MemIntrinsicSDNode>(Op);
     assert(MemIntr && "Expected MemIntrinsicSDNode!");
 
-    EVT VT  = MemIntr->getMemoryVT();
+    EVT MemVT  = MemIntr->getMemoryVT();
 
-    if (isAllOnesConstant(Mask)) // return just a truncate store
-      return DAG.getTruncStore(Chain, dl, DataToTruncate, Addr, VT,
-                               MemIntr->getMemOperand());
+    uint16_t TruncationOp = IntrData->Opc0;
+    switch (TruncationOp) {
+    case X86ISD::VTRUNC: {
+      if (isAllOnesConstant(Mask)) // return just a truncate store
+        return DAG.getTruncStore(Chain, dl, DataToTruncate, Addr, MemVT,
+                                 MemIntr->getMemOperand());
 
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-    SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
+      SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
-    return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, VMask, VT,
-                              MemIntr->getMemOperand(), true /* truncating */);
+      return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, VMask, MemVT,
+                                MemIntr->getMemOperand(), true /* truncating */);
+    }
+    case X86ISD::VTRUNCUS:
+    case X86ISD::VTRUNCS: {
+      bool IsSigned = (TruncationOp == X86ISD::VTRUNCS);
+      if (isAllOnesConstant(Mask))
+        return EmitTruncSStore(IsSigned, Chain, dl, DataToTruncate, Addr, MemVT,
+                               MemIntr->getMemOperand(), DAG);
+
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
+      SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+
+      return EmitMaskedTruncSStore(IsSigned, Chain, dl, DataToTruncate, Addr,
+                                   VMask, MemVT, MemIntr->getMemOperand(), DAG);
+    }
+    default:
+      llvm_unreachable("Unsupported truncstore intrinsic");
+    }
   }
+
   case EXPAND_FROM_MEM: {
     SDValue Mask = Op.getOperand(4);
     SDValue PassThru = Op.getOperand(3);
@@ -23440,6 +23518,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VTRUNC:             return "X86ISD::VTRUNC";
   case X86ISD::VTRUNCS:            return "X86ISD::VTRUNCS";
   case X86ISD::VTRUNCUS:           return "X86ISD::VTRUNCUS";
+  case X86ISD::VTRUNCSTORES:       return "X86ISD::VTRUNCSTORES";
+  case X86ISD::VTRUNCSTOREUS:      return "X86ISD::VTRUNCSTOREUS";
+  case X86ISD::VMTRUNCSTORES:      return "X86ISD::VMTRUNCSTORES";
+  case X86ISD::VMTRUNCSTOREUS:     return "X86ISD::VMTRUNCSTOREUS";
   case X86ISD::VINSERT:            return "X86ISD::VINSERT";
   case X86ISD::VFPEXT:             return "X86ISD::VFPEXT";
   case X86ISD::VFPEXT_RND:         return "X86ISD::VFPEXT_RND";
@@ -26459,6 +26541,10 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   MVT MaskVT = FloatDomain ? MVT::getFloatingPointVT(MaskEltSizeInBits)
                            : MVT::getIntegerVT(MaskEltSizeInBits);
   MaskVT = MVT::getVectorVT(MaskVT, NumMaskElts);
+
+  // Only allow legal mask types.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(MaskVT))
+    return false;
 
   // Attempt to match the mask against known shuffle patterns.
   MVT ShuffleSrcVT, ShuffleVT;

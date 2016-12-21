@@ -500,7 +500,7 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
     return true;
   StringRef S = Sec->getName();
   return S == ".data.rel.ro" || S == ".ctors" || S == ".dtors" || S == ".jcr" ||
-         S == ".eh_frame";
+         S == ".eh_frame" || S == ".openbsd.randomdata";
 }
 
 template <class ELFT>
@@ -1089,9 +1089,9 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End, OutputSectionBase *OS) {
     // These symbols resolve to the image base if the section does not exist.
+    // A special value -1 indicates end of the section.
     addOptionalSynthetic<ELFT>(Start, OS, 0);
-    addOptionalSynthetic<ELFT>(End, OS,
-                               OS ? DefinedSynthetic<ELFT>::SectionEnd : 0);
+    addOptionalSynthetic<ELFT>(End, OS, OS ? -1 : 0);
   };
 
   Define("__preinit_array_start", "__preinit_array_end",
@@ -1114,8 +1114,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase *Sec) {
   if (!isValidCIdentifier(S))
     return;
   addOptionalSynthetic<ELFT>(Saver.save("__start_" + S), Sec, 0, STV_DEFAULT);
-  addOptionalSynthetic<ELFT>(Saver.save("__stop_" + S), Sec,
-                             DefinedSynthetic<ELFT>::SectionEnd, STV_DEFAULT);
+  addOptionalSynthetic<ELFT>(Saver.save("__stop_" + S), Sec, -1, STV_DEFAULT);
 }
 
 template <class ELFT>
@@ -1695,34 +1694,6 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   uint8_t *Start = Buffer->getBufferStart();
   uint8_t *End = Start + FileSize;
   In<ELFT>::BuildId->writeBuildId({Start, End});
-}
-
-template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
-  for (InputSectionData *D : Symtab<ELFT>::X->Sections) {
-    auto *IS = dyn_cast_or_null<InputSection<ELFT>>(D);
-    if (!IS || !IS->OutSec)
-      continue;
-
-    uint8_t *ISLoc = cast<OutputSection<ELFT>>(IS->OutSec)->Loc + IS->OutSecOff;
-    if (ISLoc <= Loc && ISLoc + IS->getSize() > Loc)
-      return IS->getLocation(Loc - ISLoc) + ": ";
-  }
-  return "";
-}
-
-std::string elf::getErrorLocation(uint8_t *Loc) {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return getErrorLoc<ELF32LE>(Loc);
-  case ELF32BEKind:
-    return getErrorLoc<ELF32BE>(Loc);
-  case ELF64LEKind:
-    return getErrorLoc<ELF64LE>(Loc);
-  case ELF64BEKind:
-    return getErrorLoc<ELF64BE>(Loc);
-  default:
-    llvm_unreachable("unknown ELF type");
-  }
 }
 
 template void elf::writeResult<ELF32LE>();

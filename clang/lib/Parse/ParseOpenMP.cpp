@@ -1461,15 +1461,19 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind) {
   } else {
     assert(Kind == OMPC_if);
     KLoc.push_back(Tok.getLocation());
+    TentativeParsingAction TPA(*this);
     Arg.push_back(ParseOpenMPDirectiveKind(*this));
     if (Arg.back() != OMPD_unknown) {
       ConsumeToken();
-      if (Tok.is(tok::colon))
+      if (Tok.is(tok::colon) && getLangOpts().OpenMP > 40) {
+        TPA.Commit();
         DelimLoc = ConsumeToken();
-      else
-        Diag(Tok, diag::warn_pragma_expected_colon)
-            << "directive name modifier";
-    }
+      } else {
+        TPA.Revert();
+        Arg.back() = OMPD_unknown;
+      }
+    } else
+      TPA.Revert();
   }
 
   bool NeedAnExpression = (Kind == OMPC_schedule && DelimLoc.isValid()) ||

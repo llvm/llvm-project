@@ -78,8 +78,7 @@ template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
 
   // If we already know section then we can calculate symbol value immediately.
   if (Sec)
-    cast<DefinedSynthetic<ELFT>>(Cmd->Sym)->Value =
-        Cmd->Expression(0) - Sec->Addr;
+    cast<DefinedSynthetic>(Cmd->Sym)->Value = Cmd->Expression(0) - Sec->Addr;
 }
 
 static bool isUnderSysroot(StringRef Path) {
@@ -395,7 +394,7 @@ static void assignSectionSymbol(SymbolAssignment *Cmd,
   if (!Cmd->Sym)
     return;
 
-  if (auto *Body = dyn_cast<DefinedSynthetic<ELFT>>(Cmd->Sym)) {
+  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
     Body->Section = Cmd->Expression.Section();
     Body->Value = Cmd->Expression(Value) - Body->Section->Addr;
     return;
@@ -933,7 +932,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
 
   if (auto *DR = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
     return DR->Section ? DR->Section->OutSec : nullptr;
-  if (auto *DS = dyn_cast_or_null<DefinedSynthetic<ELFT>>(Sym))
+  if (auto *DS = dyn_cast_or_null<DefinedSynthetic>(Sym))
     return DS->Section;
 
   return nullptr;
@@ -1030,7 +1029,6 @@ private:
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
-  std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 
 void ScriptParser::readDynamicList() {
@@ -1173,15 +1171,20 @@ void ScriptParser::readGroup() {
 }
 
 void ScriptParser::readInclude() {
-  StringRef Tok = next();
-  auto MBOrErr = MemoryBuffer::getFile(unquote(Tok));
+  StringRef Tok = unquote(next());
+  // https://sourceware.org/binutils/docs/ld/File-Commands.html:
+  // The file will be searched for in the current directory, and in any
+  // directory specified with the -L option.
+  auto MBOrErr = MemoryBuffer::getFile(Tok);
+  if (!MBOrErr)
+    if (Optional<std::string> Path = findFromSearchPaths(Tok))
+      MBOrErr = MemoryBuffer::getFile(*Path);
   if (!MBOrErr) {
     setError("cannot open " + Tok);
     return;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  tokenize(MB->getMemBufferRef());
-  OwningMBs.push_back(std::move(MB));
+  tokenize({Saver.save(MB->getBuffer()), unquote(Tok)});
 }
 
 void ScriptParser::readOutput() {

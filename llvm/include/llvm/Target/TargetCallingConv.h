@@ -51,6 +51,15 @@ namespace ISD {
     static const uint64_t SwiftSelfOffs  = 14;
     static const uint64_t SwiftError     = 1ULL<<15; ///< Swift error parameter
     static const uint64_t SwiftErrorOffs = 15;
+    static const uint64_t Hva            = 1ULL << 16; ///< HVA field for
+                                                       ///< vectorcall
+    static const uint64_t HvaOffs        = 16;
+    static const uint64_t HvaStart       = 1ULL << 17; ///< HVA structure start
+                                                       ///< for vectorcall
+    static const uint64_t HvaStartOffs   = 17;
+    static const uint64_t SecArgPass     = 1ULL << 18; ///< Second argument
+                                                       ///< pass for vectorcall
+    static const uint64_t SecArgPassOffs = 18;
     static const uint64_t OrigAlign      = 0x1FULL<<27;
     static const uint64_t OrigAlignOffs  = 27;
     static const uint64_t ByValSize      = 0x3fffffffULL<<32; ///< Struct size
@@ -90,6 +99,15 @@ namespace ISD {
 
     bool isSwiftError() const { return Flags & SwiftError; }
     void setSwiftError() { Flags |= One << SwiftErrorOffs; }
+
+    bool isHva() const { return Flags & Hva; }
+    void setHva() { Flags |= One << HvaOffs; }
+
+    bool isHvaStart() const { return Flags & HvaStart; }
+    void setHvaStart() { Flags |= One << HvaStartOffs; }
+
+    bool isSecArgPass() const { return Flags & SecArgPass; }
+    void setSecArgPass() { Flags |= One << SecArgPassOffs; }
 
     bool isNest()      const { return Flags & Nest; }
     void setNest()     { Flags |= One << NestOffs; }

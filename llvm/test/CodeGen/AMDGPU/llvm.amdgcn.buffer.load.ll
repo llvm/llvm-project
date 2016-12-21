@@ -112,6 +112,20 @@ main_body:
   ret <4 x float> %data
 }
 
+; SI won't merge ds memory operations, because of the signed offset bug, so
+; we only have check lines for VI.
+; CHECK-LABEL: buffer_load_mmo:
+; VI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
+define amdgpu_ps float @buffer_load_mmo(<4 x i32> inreg %rsrc, float addrspace(3)* %lds) {
+entry:
+  store float 0.0, float addrspace(3)* %lds
+  %val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 0, i32 0, i1 0, i1 0)
+  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
+  store float 0.0, float addrspace(3)* %tmp2
+  ret float %val
+}
+
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #0
 declare <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32>, i32, i32, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0

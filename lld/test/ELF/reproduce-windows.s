@@ -6,7 +6,7 @@
 # RUN: llvm-mc %s -o %t.dir/build/foo.o -filetype=obj -triple=x86_64-pc-linux
 # RUN: cd %t.dir
 # RUN: ld.lld build/foo.o --reproduce repro
-# RUN: cpio -t < repro.cpio | FileCheck %s
+# RUN: cpio -it < repro.cpio | FileCheck %s
 
 # CHECK: repro/response.txt
 # CHECK: repro/{{.*}}/build/foo.o

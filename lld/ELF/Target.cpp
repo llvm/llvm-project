@@ -29,6 +29,7 @@
 #include "InputFiles.h"
 #include "Memory.h"
 #include "OutputSections.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Thunks.h"
@@ -53,6 +54,34 @@ static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
 
 std::string toString(uint32_t Type) {
   return getELFRelocationTypeName(Config->EMachine, Type);
+}
+
+template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
+  for (InputSectionData *D : Symtab<ELFT>::X->Sections) {
+    auto *IS = dyn_cast_or_null<InputSection<ELFT>>(D);
+    if (!IS || !IS->OutSec)
+      continue;
+
+    uint8_t *ISLoc = cast<OutputSection<ELFT>>(IS->OutSec)->Loc + IS->OutSecOff;
+    if (ISLoc <= Loc && Loc < ISLoc + IS->getSize())
+      return IS->getLocation(Loc - ISLoc) + ": ";
+  }
+  return "";
+}
+
+static std::string getErrorLocation(uint8_t *Loc) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return getErrorLoc<ELF32LE>(Loc);
+  case ELF32BEKind:
+    return getErrorLoc<ELF32BE>(Loc);
+  case ELF64LEKind:
+    return getErrorLoc<ELF64LE>(Loc);
+  case ELF64BEKind:
+    return getErrorLoc<ELF64BE>(Loc);
+  default:
+    llvm_unreachable("unknown ELF type");
+  }
 }
 
 template <unsigned N>
@@ -841,7 +870,7 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1010,7 +1039,7 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32be(Loc, Val & 0x3FFFFFC);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1188,7 +1217,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   }
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1439,7 +1468,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32AArch64Imm(Loc, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1549,7 +1578,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32le(Loc, Val >> 32);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1859,7 +1888,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                   (Val & 0x00ff));           // imm8
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -2307,7 +2336,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     applyMipsPcReloc<E, 32, 0>(Loc, Type, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 

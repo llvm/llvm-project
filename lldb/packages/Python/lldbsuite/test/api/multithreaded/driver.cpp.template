@@ -6,6 +6,9 @@
 #include <iterator>
 #include <string>
 #include <vector>
+#if !defined(_MSC_VER)
+  #include <signal.h>
+#endif
 
 %include_SB_APIs%
 
@@ -17,6 +20,13 @@ using namespace lldb;
 void test(SBDebugger &dbg, std::vector<string> args);
 
 int main(int argc, char** argv) {
+
+// Ignore SIGPIPE.  The lldb driver does this as well,
+// because we seem to get spurious SIGPIPES on some
+// Unixen that take the driver down.
+#if !defined(_MSC_VER)
+  signal(SIGPIPE, SIG_IGN);
+#endif
   int code = 0;
 
   SBDebugger::Initialize();

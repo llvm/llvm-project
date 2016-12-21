@@ -206,44 +206,6 @@ to enforce the provided alignment assumption.
   }];
 }
 
-def AllocSizeDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``alloc_size`` attribute can be placed on functions that return pointers in
-order to hint to the compiler how many bytes of memory will be available at the
-returned poiner. ``alloc_size`` takes one or two arguments.
-
-- ``alloc_size(N)`` implies that argument number N equals the number of
-  available bytes at the returned pointer.
-- ``alloc_size(N, M)`` implies that the product of argument number N and
-  argument number M equals the number of available bytes at the returned
-  pointer.
-
-Argument numbers are 1-based.
-
-An example of how to use ``alloc_size``
-
-.. code-block:: c
-
-  void *my_malloc(int a) __attribute__((alloc_size(1)));
-  void *my_calloc(int a, int b) __attribute__((alloc_size(1, 2)));
-
-  int main() {
-    void *const p = my_malloc(100);
-    assert(__builtin_object_size(p, 0) == 100);
-    void *const a = my_calloc(20, 5);
-    assert(__builtin_object_size(a, 0) == 100);
-  }
-
-.. Note:: This attribute works differently in clang than it does in GCC.
-  Specifically, clang will only trace ``const`` pointers (as above); we give up
-  on pointers that are not marked as ``const``. In the vast majority of cases,
-  this is unimportant, because LLVM has support for the ``alloc_size``
-  attribute. However, this may cause mildly unintuitive behavior when used with
-  other attributes, such as ``enable_if``.
-  }];
-}
-
 def EnableIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

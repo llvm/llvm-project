@@ -2194,6 +2194,22 @@ reverse) is O(1) worst case.  Testing and setting bits within 128 bits (depends
 on size) of the current bit is also O(1).  As a general statement,
 testing/setting bits in a SparseBitVector is O(distance away from last set bit).
 
+.. _debugging:
+
+Debugging
+=========
+
+A handful of `GDB pretty printers
+<https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html>`__ are
+provided for some of the core LLVM libraries. To use them, execute the
+following (or add it to your ``~/.gdbinit``)::
+
+  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
+
+It also might be handy to enable the `print pretty
+<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
+avoid data structures being printed as a big block of text.
+
 .. _common:
 
 Helpful Hints for Common Operations

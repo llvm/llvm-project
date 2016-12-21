@@ -23,6 +23,8 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+
 using namespace llvm;
 
 CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
@@ -62,6 +64,22 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT,
 void CCState::MarkAllocated(unsigned Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
     UsedRegs[*AI/32] |= 1 << (*AI&31);
+}
+
+bool CCState::IsShadowAllocatedReg(unsigned Reg) const {
+  if (!isAllocated(Reg))
+    return false;
+
+  for (auto const &ValAssign : Locs) {
+    if (ValAssign.isRegLoc()) {
+      for (MCRegAliasIterator AI(ValAssign.getLocReg(), &TRI, true);
+           AI.isValid(); ++AI) {
+        if (*AI == Reg)
+          return false;
+      }
+    }
+  }
+  return true;
 }
 
 /// Analyze an array of argument values,

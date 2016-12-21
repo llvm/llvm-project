@@ -246,28 +246,6 @@ static bool checkUInt32Argument(Sema &S, const AttributeList &Attr,
   return true;
 }
 
-/// \brief Wrapper around checkUInt32Argument, with an extra check to be sure
-/// that the result will fit into a regular (signed) int. All args have the same
-/// purpose as they do in checkUInt32Argument.
-static bool checkPositiveIntArgument(Sema &S, const AttributeList &Attr,
-                                     const Expr *Expr, int &Val,
-                                     unsigned Idx = UINT_MAX) {
-  uint32_t UVal;
-  if (!checkUInt32Argument(S, Attr, Expr, UVal, Idx))
-    return false;
-
-  if (UVal > std::numeric_limits<int>::max()) {
-    llvm::APSInt I(32); // for toString
-    I = UVal;
-    S.Diag(Expr->getExprLoc(), diag::err_ice_too_large)
-        << I.toString(10, false) << 32 << /* Unsigned */ 0;
-    return false;
-  }
-
-  Val = UVal;
-  return true;
-}
-
 /// \brief Diagnose mutually exclusive attributes when present on a given
 /// declaration. Returns true if diagnosed.
 template <typename AttrTy>
@@ -752,69 +730,6 @@ static void handleAssertExclusiveLockAttr(Sema &S, Decl *D,
                                      Attr.getAttributeSpellingListIndex()));
 }
 
-/// \brief Checks to be sure that the given parameter number is inbounds, and is
-/// an some integral type. Will emit appropriate diagnostics if this returns
-/// false.
-///
-/// FuncParamNo is expected to be from the user, so is base-1. AttrArgNo is used
-/// to actually retrieve the argument, so it's base-0.
-static bool checkParamIsIntegerType(Sema &S, const FunctionDecl *FD,
-                                    const AttributeList &Attr,
-                                    unsigned FuncParamNo, unsigned AttrArgNo) {
-  assert(Attr.isArgExpr(AttrArgNo) && "Expected expression argument");
-  uint64_t Idx;
-  if (!checkFunctionOrMethodParameterIndex(S, FD, Attr, FuncParamNo,
-                                           Attr.getArgAsExpr(AttrArgNo), Idx))
-    return false;
-
-  const ParmVarDecl *Param = FD->getParamDecl(Idx);
-  if (!Param->getType()->isIntegerType() && !Param->getType()->isCharType()) {
-    SourceLocation SrcLoc = Attr.getArgAsExpr(AttrArgNo)->getLocStart();
-    S.Diag(SrcLoc, diag::err_attribute_integers_only)
-        << Attr.getName() << Param->getSourceRange();
-    return false;
-  }
-  return true;
-}
-
-static void handleAllocSizeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (!checkAttributeAtLeastNumArgs(S, Attr, 1) ||
-      !checkAttributeAtMostNumArgs(S, Attr, 2))
-    return;
-
-  const auto *FD = cast<FunctionDecl>(D);
-  if (!FD->getReturnType()->isPointerType()) {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_return_pointers_only)
-        << Attr.getName();
-    return;
-  }
-
-  const Expr *SizeExpr = Attr.getArgAsExpr(0);
-  int SizeArgNo;
-  // Paramater indices are 1-indexed, hence Index=1
-  if (!checkPositiveIntArgument(S, Attr, SizeExpr, SizeArgNo, /*Index=*/1))
-    return;
-
-  if (!checkParamIsIntegerType(S, FD, Attr, SizeArgNo, /*AttrArgNo=*/0))
-    return;
-
-  // Args are 1-indexed, so 0 implies that the arg was not present
-  int NumberArgNo = 0;
-  if (Attr.getNumArgs() == 2) {
-    const Expr *NumberExpr = Attr.getArgAsExpr(1);
-    // Paramater indices are 1-based, hence Index=2
-    if (!checkPositiveIntArgument(S, Attr, NumberExpr, NumberArgNo,
-                                  /*Index=*/2))
-      return;
-
-    if (!checkParamIsIntegerType(S, FD, Attr, NumberArgNo, /*AttrArgNo=*/1))
-      return;
-  }
-
-  D->addAttr(::new (S.Context) AllocSizeAttr(
-      Attr.getRange(), S.Context, SizeArgNo, NumberArgNo,
-      Attr.getAttributeSpellingListIndex()));
-}
 
 static bool checkTryLockFunAttrCommon(Sema &S, Decl *D,
                                       const AttributeList &Attr,
@@ -5636,9 +5551,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_AlignValue:
     handleAlignValueAttr(S, D, Attr);
-    break;
-  case AttributeList::AT_AllocSize:
-    handleAllocSizeAttr(S, D, Attr);
     break;
   case AttributeList::AT_AlwaysInline:
     handleAlwaysInlineAttr(S, D, Attr);

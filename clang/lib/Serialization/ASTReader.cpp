@@ -5866,17 +5866,27 @@ void ASTReader::readExceptionSpec(ModuleFile &ModuleFile,
 }
 
 class clang::TypeLocReader : public TypeLocVisitor<TypeLocReader> {
-  ASTRecordReader Reader;
+  ModuleFile *F;
+  ASTReader *Reader;
+  const ASTReader::RecordData &Record;
   unsigned &Idx;
 
   SourceLocation ReadSourceLocation() {
-    return Reader.ReadSourceLocation(Idx);
+    return Reader->ReadSourceLocation(*F, Record, Idx);
+  }
+
+  TypeSourceInfo *GetTypeSourceInfo() {
+    return Reader->GetTypeSourceInfo(*F, Record, Idx);
+  }
+
+  NestedNameSpecifierLoc ReadNestedNameSpecifierLoc() {
+    return Reader->ReadNestedNameSpecifierLoc(*F, Record, Idx);
   }
 
 public:
-  TypeLocReader(ASTReader &Reader, ModuleFile &F,
+  TypeLocReader(ModuleFile &F, ASTReader &Reader,
                 const ASTReader::RecordData &Record, unsigned &Idx)
-      : Reader(Reader, Record, F), Idx(Idx) {}
+      : F(&F), Reader(&Reader), Record(Record), Idx(Idx) {}
 
   // We want compile-time assurance that we've enumerated all of
   // these, so unfortunately we have to declare them first, then
@@ -5897,10 +5907,10 @@ void TypeLocReader::VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
 void TypeLocReader::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   TL.setBuiltinLoc(ReadSourceLocation());
   if (TL.needsExtraLocalData()) {
-    TL.setWrittenTypeSpec(static_cast<DeclSpec::TST>(Reader[Idx++]));
-    TL.setWrittenSignSpec(static_cast<DeclSpec::TSS>(Reader[Idx++]));
-    TL.setWrittenWidthSpec(static_cast<DeclSpec::TSW>(Reader[Idx++]));
-    TL.setModeAttr(Reader[Idx++]);
+    TL.setWrittenTypeSpec(static_cast<DeclSpec::TST>(Record[Idx++]));
+    TL.setWrittenSignSpec(static_cast<DeclSpec::TSS>(Record[Idx++]));
+    TL.setWrittenWidthSpec(static_cast<DeclSpec::TSW>(Record[Idx++]));
+    TL.setModeAttr(Record[Idx++]);
   }
 }
 
@@ -5934,14 +5944,14 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(ReadSourceLocation());
-  TL.setClassTInfo(Reader.GetTypeSourceInfo(Idx));
+  TL.setClassTInfo(GetTypeSourceInfo());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
   TL.setLBracketLoc(ReadSourceLocation());
   TL.setRBracketLoc(ReadSourceLocation());
-  if (Reader[Idx++])
-    TL.setSizeExpr(Reader.ReadExpr());
+  if (Record[Idx++])
+    TL.setSizeExpr(Reader->ReadExpr(*F));
   else
     TL.setSizeExpr(nullptr);
 }
@@ -5982,7 +5992,7 @@ void TypeLocReader::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
   TL.setRParenLoc(ReadSourceLocation());
   TL.setLocalRangeEnd(ReadSourceLocation());
   for (unsigned i = 0, e = TL.getNumParams(); i != e; ++i) {
-    TL.setParam(i, Reader.ReadDeclAs<ParmVarDecl>(Idx));
+    TL.setParam(i, Reader->ReadDeclAs<ParmVarDecl>(*F, Record, Idx));
   }
 }
 
@@ -6008,7 +6018,7 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
   TL.setTypeofLoc(ReadSourceLocation());
   TL.setLParenLoc(ReadSourceLocation());
   TL.setRParenLoc(ReadSourceLocation());
-  TL.setUnderlyingTInfo(Reader.GetTypeSourceInfo(Idx));
+  TL.setUnderlyingTInfo(GetTypeSourceInfo());
 }
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation());
@@ -6018,7 +6028,7 @@ void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation());
   TL.setLParenLoc(ReadSourceLocation());
   TL.setRParenLoc(ReadSourceLocation());
-  TL.setUnderlyingTInfo(Reader.GetTypeSourceInfo(Idx));
+  TL.setUnderlyingTInfo(GetTypeSourceInfo());
 }
 
 void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
@@ -6042,8 +6052,8 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
     TL.setAttrOperandParensRange(range);
   }
   if (TL.hasAttrExprOperand()) {
-    if (Reader[Idx++])
-      TL.setAttrExprOperand(Reader.ReadExpr());
+    if (Record[Idx++])
+      TL.setAttrExprOperand(Reader->ReadExpr(*F));
     else
       TL.setAttrExprOperand(nullptr);
   } else if (TL.hasAttrEnumOperand())
@@ -6069,9 +6079,10 @@ void TypeLocReader::VisitTemplateSpecializationTypeLoc(
   TL.setLAngleLoc(ReadSourceLocation());
   TL.setRAngleLoc(ReadSourceLocation());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    TL.setArgLocInfo(i,
-        Reader.GetTemplateArgumentLocInfo(TL.getTypePtr()->getArg(i).getKind(),
-                                          Idx));
+    TL.setArgLocInfo(
+        i,
+        Reader->GetTemplateArgumentLocInfo(
+            *F, TL.getTypePtr()->getArg(i).getKind(), Record, Idx));
 }
 void TypeLocReader::VisitParenTypeLoc(ParenTypeLoc TL) {
   TL.setLParenLoc(ReadSourceLocation());
@@ -6080,7 +6091,7 @@ void TypeLocReader::VisitParenTypeLoc(ParenTypeLoc TL) {
 
 void TypeLocReader::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation());
-  TL.setQualifierLoc(Reader.ReadNestedNameSpecifierLoc(Idx));
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
@@ -6089,22 +6100,23 @@ void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
 
 void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation());
-  TL.setQualifierLoc(Reader.ReadNestedNameSpecifierLoc(Idx));
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setNameLoc(ReadSourceLocation());
 }
 
 void TypeLocReader::VisitDependentTemplateSpecializationTypeLoc(
        DependentTemplateSpecializationTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation());
-  TL.setQualifierLoc(Reader.ReadNestedNameSpecifierLoc(Idx));
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setTemplateKeywordLoc(ReadSourceLocation());
   TL.setTemplateNameLoc(ReadSourceLocation());
   TL.setLAngleLoc(ReadSourceLocation());
   TL.setRAngleLoc(ReadSourceLocation());
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    TL.setArgLocInfo(I,
-        Reader.GetTemplateArgumentLocInfo(TL.getTypePtr()->getArg(I).getKind(),
-                                          Idx));
+    TL.setArgLocInfo(
+        I,
+        Reader->GetTemplateArgumentLocInfo(
+            *F, TL.getTypePtr()->getArg(I).getKind(), Record, Idx));
 }
 
 void TypeLocReader::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -6125,11 +6137,11 @@ void TypeLocReader::VisitObjCTypeParamTypeLoc(ObjCTypeParamTypeLoc TL) {
 }
 
 void TypeLocReader::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
-  TL.setHasBaseTypeAsWritten(Reader[Idx++]);
+  TL.setHasBaseTypeAsWritten(Record[Idx++]);
   TL.setTypeArgsLAngleLoc(ReadSourceLocation());
   TL.setTypeArgsRAngleLoc(ReadSourceLocation());
   for (unsigned i = 0, e = TL.getNumTypeArgs(); i != e; ++i)
-    TL.setTypeArgTInfo(i, Reader.GetTypeSourceInfo(Idx));
+    TL.setTypeArgTInfo(i, GetTypeSourceInfo());
   TL.setProtocolLAngleLoc(ReadSourceLocation());
   TL.setProtocolRAngleLoc(ReadSourceLocation());
   for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i)
@@ -6150,15 +6162,15 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation());
 }
 
-TypeSourceInfo *ASTReader::GetTypeSourceInfo(ModuleFile &F,
-                                             const RecordData &Record,
-                                             unsigned &Idx) {
+TypeSourceInfo *
+ASTReader::GetTypeSourceInfo(ModuleFile &F, const ASTReader::RecordData &Record,
+                             unsigned &Idx) {
   QualType InfoTy = readType(F, Record, Idx);
   if (InfoTy.isNull())
     return nullptr;
 
   TypeSourceInfo *TInfo = getContext().CreateTypeSourceInfo(InfoTy);
-  TypeLocReader TLR(*this, F, Record, Idx);
+  TypeLocReader TLR(F, *this, Record, Idx);
   for (TypeLoc TL = TInfo->getTypeLoc(); !TL.isNull(); TL = TL.getNextTypeLoc())
     TLR.Visit(TL);
   return TInfo;
@@ -8938,4 +8950,11 @@ ASTReader::~ASTReader() {
 
 IdentifierResolver &ASTReader::getIdResolver() {
   return SemaObj ? SemaObj->IdResolver : DummyIdResolver;
+}
+
+unsigned ASTRecordReader::readRecord(llvm::BitstreamCursor &Cursor,
+                                     unsigned AbbrevID) {
+  Idx = 0;
+  Record.clear();
+  return Cursor.readRecord(AbbrevID, Record);
 }

@@ -981,7 +981,7 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
         Match = *I;
         return Ovl_Match;
       }
-    } else if (isa<UsingDecl>(OldD)) {
+    } else if (isa<UsingDecl>(OldD) || isa<UsingPackDecl>(OldD)) {
       // We can overload with these, which can show up when doing
       // redeclaration checks for UsingDecls.
       assert(Old.getLookupKind() == LookupUsingDeclName);
@@ -11419,6 +11419,12 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     return ExprError();
 
   assert(!R.empty() && "lookup results empty despite recovery");
+
+  // If recovery created an ambiguity, just bail out.
+  if (R.isAmbiguous()) {
+    R.suppressDiagnostics();
+    return ExprError();
+  }
 
   // Build an implicit member call if appropriate.  Just drop the
   // casts and such from the call, we don't really care.
