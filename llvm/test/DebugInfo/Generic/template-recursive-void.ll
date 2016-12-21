@@ -29,7 +29,7 @@
 !1 = !DIFile(filename: "debug-info-template-recursive.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "filters", line: 10, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6)
+!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "filters", line: 10, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6))
 !5 = !DIFile(filename: "debug-info-template-recursive.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !6 = !DICompositeType(tag: DW_TAG_class_type, name: "bar", line: 9, size: 8, align: 8, file: !1, elements: !7)
 !7 = !{!8, !31}

@@ -820,7 +820,8 @@ void MCStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
                                       unsigned MaxBytesToEmit) {}
 void MCStreamer::EmitCodeAlignment(unsigned ByteAlignment,
                                    unsigned MaxBytesToEmit) {}
-void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value) {}
+void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
+                                   SMLoc Loc) {}
 void MCStreamer::EmitBundleAlignMode(unsigned AlignPow2) {}
 void MCStreamer::EmitBundleLock(bool AlignToEnd) {}
 void MCStreamer::FinishImpl() {}

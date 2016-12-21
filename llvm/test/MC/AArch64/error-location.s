@@ -34,16 +34,6 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid fixup for 32-bit load/store instruction
   ldr w0, [x1, :gottprel_lo12:undef]
 
-// CHECK: <unknown>:0: error: expression could not be evaluated
-  .set v1, -undef
-
-  .comm common, 4
-// CHECK: <unknown>:0: error: Common symbol 'common' cannot be used in assignment expr
-  .set v3, common
-
-// CHECK: <unknown>:0: error: symbol 'undef' could not be evaluated in a subtraction expression
-  .set v2, a-undef
-
 
 
 w:

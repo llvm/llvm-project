@@ -1440,17 +1440,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   switch (II->getIntrinsicID()) {
   default: break;
-  case Intrinsic::objectsize: {
-    uint64_t Size;
-    if (getObjectSize(II->getArgOperand(0), Size, DL, &TLI)) {
-      APInt APSize(II->getType()->getIntegerBitWidth(), Size);
-      // Equality check to be sure that `Size` can fit in a value of type
-      // `II->getType()`
-      if (APSize == Size)
-        return replaceInstUsesWith(CI, ConstantInt::get(II->getType(), APSize));
-    }
+  case Intrinsic::objectsize:
+    if (ConstantInt *N =
+            lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
+      return replaceInstUsesWith(CI, N);
     return nullptr;
-  }
+
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
@@ -1783,6 +1778,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx512_mask_sub_sd_round:
   case Intrinsic::x86_avx512_mask_max_sd_round:
   case Intrinsic::x86_avx512_mask_min_sd_round:
+  case Intrinsic::x86_avx512_mask_vfmadd_ss:
+  case Intrinsic::x86_avx512_mask_vfmadd_sd:
+  case Intrinsic::x86_avx512_maskz_vfmadd_ss:
+  case Intrinsic::x86_avx512_maskz_vfmadd_sd:
+  case Intrinsic::x86_avx512_mask3_vfmadd_ss:
+  case Intrinsic::x86_avx512_mask3_vfmadd_sd:
+  case Intrinsic::x86_avx512_mask3_vfmsub_ss:
+  case Intrinsic::x86_avx512_mask3_vfmsub_sd:
+  case Intrinsic::x86_avx512_mask3_vfnmsub_ss:
+  case Intrinsic::x86_avx512_mask3_vfnmsub_sd:
   case Intrinsic::x86_fma_vfmadd_ss:
   case Intrinsic::x86_fma_vfmsub_ss:
   case Intrinsic::x86_fma_vfnmadd_ss:

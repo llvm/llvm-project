@@ -39,7 +39,7 @@
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !8)
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{!10}
-!10 = !DIGlobalVariable(name: "f", line: 6, isLocal: false, isDefinition: true, scope: null, file: !11, type: !4)
+!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "f", line: 6, isLocal: false, isDefinition: true, scope: null, file: !11, type: !4))
 !11 = !DIFile(filename: "simple.cpp", directory: "/tmp/dbginfo")
 !12 = !{i32 2, !"Dwarf Version", i32 4}
 !13 = !{i32 1, !"Debug Info Version", i32 3}

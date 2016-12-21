@@ -190,7 +190,8 @@ namespace llvm {
       MEMCPY,
 
       // Vector load N-element structure to all lanes:
-      VLD2DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      VLD2DUP,
       VLD3DUP,
       VLD4DUP,
 
@@ -202,6 +203,7 @@ namespace llvm {
       VLD2LN_UPD,
       VLD3LN_UPD,
       VLD4LN_UPD,
+      VLD1DUP_UPD,
       VLD2DUP_UPD,
       VLD3DUP_UPD,
       VLD4DUP_UPD,
@@ -429,6 +431,10 @@ namespace llvm {
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
+    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
+    /// with this index.
+    bool isExtractSubvectorCheap(EVT ResVT, unsigned Index) const override;
+
     /// \brief Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
@@ -489,6 +495,9 @@ namespace llvm {
     bool hasStandaloneRem(EVT VT) const override {
       return HasStandaloneRem;
     }
+
+    CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
+    CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

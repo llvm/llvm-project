@@ -22,7 +22,7 @@ entry:
 !2 = !DIFile(filename: "/tmp/two.c", directory: "/Volumes/Lalgate/Slate/D")
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}
-!5 = !DIGlobalVariable(name: "x", line: 1, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !6)
+!5 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 1, isLocal: true, isDefinition: true, scope: !0, file: !2, type: !6))
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !DILocation(line: 2, column: 14, scope: !8)
 !8 = distinct !DILexicalBlock(line: 2, column: 12, file: !9, scope: !1)

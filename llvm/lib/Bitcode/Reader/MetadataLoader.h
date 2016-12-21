@@ -36,12 +36,14 @@ class Type;
 class MetadataLoader {
   class MetadataLoaderImpl;
   std::unique_ptr<MetadataLoaderImpl> Pimpl;
+  /// True if metadata is being parsed for a module being ThinLTO imported.
+  bool IsImporting = false;
   Error parseMetadata(bool ModuleLevel);
 
 public:
   ~MetadataLoader();
   MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
-                 BitcodeReaderValueList &ValueList,
+                 BitcodeReaderValueList &ValueList, bool IsImporting,
                  std::function<Type *(unsigned)> getTypeByID);
   MetadataLoader &operator=(MetadataLoader &&);
   MetadataLoader(MetadataLoader &&);
@@ -51,6 +53,12 @@ public:
 
   // Parse a function metadata block
   Error parseFunctionMetadata() { return parseMetadata(false); }
+
+  /// Set the mode to strip TBAA metadata on load.
+  void setStripTBAA(bool StripTBAA = true);
+
+  /// Return true if the Loader is stripping TBAA metadata.
+  bool isStrippingTBAA();
 
   // Return true there are remaining unresolved forward references.
   bool hasFwdRefs() const;

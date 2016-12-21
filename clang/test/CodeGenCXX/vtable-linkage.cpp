@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -o %t
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -std=c++03 -o %t.03
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -std=c++11 -o %t.11
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -disable-llvm-optzns -O3 -emit-llvm -o %t.opt
 // RUN: FileCheck %s < %t
+// RUN: FileCheck %s < %t.03
+// RUN: FileCheck %s < %t.11
 // RUN: FileCheck --check-prefix=CHECK-OPT %s < %t.opt
 
 namespace {
@@ -32,6 +36,11 @@ struct D {
 void D::f() { }
 
 static struct : D { } e;
+
+// Force 'e' to be constructed and therefore have a vtable defined.
+void use_e() {
+  e.f();
+}
 
 // The destructor is the key function.
 template<typename T>

@@ -134,15 +134,28 @@ private:
   /// a micro-kernel. The micro-kernel is a loop around a rank-1
   /// (i.e., outer product) update.
   ///
-  /// For a detailed description please see:
-  /// Analytical Modeling is Enough for High Performance BLIS
+  /// For a detailed description please see [1].
+  ///
+  /// The order of the loops defines the data reused in the BLIS implementation
+  /// of gemm ([1]). In particular, elements of the matrix B, the second
+  /// operand of matrix multiplication, are reused between iterations of the
+  /// innermost loop. To keep the reused data in cache, only elements of matrix
+  /// A, the first operand of matrix multiplication, should be evicted during
+  /// an iteration of the innermost loop. To provide such a cache replacement
+  /// policy, elements of the matrix A can, in particular, be loaded first and,
+  /// consequently, be least-recently-used.
+  ///
+  /// In our case matrices are stored in row-major order instead of
+  /// column-major order used in the BLIS implementation ([1]). It affects only
+  /// on the form of the BLIS micro kernel and the computation of its
+  /// parameters. In particular, reused elements of the matrix B are
+  /// successively multiplied by specific elements of the matrix A.
+  ///
+  /// Refs.:
+  /// [1] - Analytical Modeling is Enough for High Performance BLIS
   /// Tze Meng Low, Francisco D Igual, Tyler M Smith, Enrique S Quintana-Orti
   /// Technical Report, 2014
   /// http://www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf
-  ///
-  /// In our case matrices are stored in row-major order, which is taken into
-  /// account during the creation of the BLIS kernels and the computation
-  /// of their parameters.
   ///
   /// @see ScheduleTreeOptimizer::createMicroKernel
   /// @see ScheduleTreeOptimizer::createMacroKernel

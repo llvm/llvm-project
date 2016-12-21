@@ -160,7 +160,8 @@ class LiveRangeCalc {
   /// all uses must be jointly dominated by the definitions from @p LR
   /// together with definitions of other lanes where @p LR becomes undefined
   /// (via <def,read-undef> operands).
-  /// If @p LR is a main range, the @p LaneMask should be set to ~0.
+  /// If @p LR is a main range, the @p LaneMask should be set to ~0, i.e.
+  /// LaneBitmask::getAll().
   void extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask LaneMask,
                     LiveInterval *LI = nullptr);
 
@@ -215,7 +216,7 @@ public:
   /// All uses must be jointly dominated by existing liveness.  PHI-defs are
   /// inserted as needed to preserve SSA form.
   void extendToUses(LiveRange &LR, unsigned PhysReg) {
-    extendToUses(LR, PhysReg, ~0u);
+    extendToUses(LR, PhysReg, LaneBitmask::getAll());
   }
 
   /// Calculates liveness for the register specified in live interval @p LI.

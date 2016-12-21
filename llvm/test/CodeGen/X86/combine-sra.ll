@@ -161,15 +161,13 @@ define <4 x i32> @combine_vec_ashr_ashr2(<4 x i32> %x) {
 define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-LABEL: combine_vec_ashr_trunc_and:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,2]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm2
 ; SSE-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    psrad %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    movaps %xmm1, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm2
 ; SSE-NEXT:    movdqa %xmm0, %xmm4
 ; SSE-NEXT:    psrad %xmm2, %xmm4
@@ -203,19 +201,18 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_ashr_trunc_lshr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    psrlq $32, %xmm0
 ; SSE-NEXT:    psrlq $32, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    psrad $2, %xmm0
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    psrad $3, %xmm2
-; SSE-NEXT:    psrad $1, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE-NEXT:    psrlq $32, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    psrad $2, %xmm1
+; SSE-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    psrad $3, %xmm0
+; SSE-NEXT:    psrad $1, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_ashr_trunc_lshr:
@@ -237,17 +234,19 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_ashr_trunc_ashr:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,0,2]
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    psrad $2, %xmm0
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    psrad $3, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[0,2]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    psrad $2, %xmm1
+; SSE-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    psrad $3, %xmm0
 ; SSE-NEXT:    psrad $1, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_ashr_trunc_ashr:

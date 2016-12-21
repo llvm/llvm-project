@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fcxx-exceptions -fexceptions -o - %s | FileCheck --check-prefix=CHECK-EH %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fcxx-exceptions -fexceptions -std=c++03 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-03 %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -O1 -fcxx-exceptions -fexceptions -std=c++11 -o - %s | FileCheck --check-prefixes=CHECK-EH,CHECK-EH-11 %s
 
 // Test code generation for the named return value optimization.
 class X {
@@ -91,16 +92,18 @@ X test2(bool B) {
   // -> %eh.cleanup
 
   // %lpad1: landing pad for return copy ctors, EH cleanup for 'y'
-  // CHECK-EH: invoke {{.*}} @_ZN1XD1Ev
+  // CHECK-EH-03: invoke {{.*}} @_ZN1XD1Ev
   // -> %eh.cleanup, %terminate.lpad
+  // CHECK-EH-11: call   {{.*}} @_ZN1XD1Ev
 
   // %if.end: returning 'y'
   // CHECK-EH: invoke {{.*}} @_ZN1XC1ERKS_
   // -> %cleanup, %lpad1
 
   // %cleanup: normal cleanup for 'y'
-  // CHECK-EH: invoke {{.*}} @_ZN1XD1Ev
+  // CHECK-EH-03: invoke {{.*}} @_ZN1XD1Ev
   // -> %invoke.cont11, %lpad
+  // CHECK-EH-11: call   {{.*}} @_ZN1XD1Ev
 
   // %invoke.cont11: normal cleanup for 'x'
   // CHECK-EH:      call void @llvm.lifetime.end
@@ -109,19 +112,20 @@ X test2(bool B) {
   // CHECK-EH-NEXT: ret void
 
   // %eh.cleanup:  EH cleanup for 'x'
-  // CHECK-EH: invoke {{.*}} @_ZN1XD1Ev
+  // CHECK-EH-03: invoke {{.*}} @_ZN1XD1Ev
   // -> %invoke.cont17, %terminate.lpad
+  // CHECK-EH-11: call   {{.*}} @_ZN1XD1Ev
 
   // %invoke.cont17: rethrow block for %eh.cleanup.
   // This really should be elsewhere in the function.
   // CHECK-EH:      resume { i8*, i32 }
 
   // %terminate.lpad: terminate landing pad.
-  // CHECK-EH:      [[T0:%.*]] = landingpad { i8*, i32 }
-  // CHECK-EH-NEXT:   catch i8* null
-  // CHECK-EH-NEXT: [[T1:%.*]] = extractvalue { i8*, i32 } [[T0]], 0
-  // CHECK-EH-NEXT: call void @__clang_call_terminate(i8* [[T1]]) [[NR_NUW:#[0-9]+]]
-  // CHECK-EH-NEXT: unreachable
+  // CHECK-EH-03:      [[T0:%.*]] = landingpad { i8*, i32 }
+  // CHECK-EH-03-NEXT:   catch i8* null
+  // CHECK-EH-03-NEXT: [[T1:%.*]] = extractvalue { i8*, i32 } [[T0]], 0
+  // CHECK-EH-03-NEXT: call void @__clang_call_terminate(i8* [[T1]]) [[NR_NUW:#[0-9]+]]
+  // CHECK-EH-03-NEXT: unreachable
 
 }
 
@@ -217,4 +221,4 @@ Y<int> test9() {
 // CHECK-LABEL: define linkonce_odr void @_ZN1YIiE1fEv
 // CHECK: tail call {{.*}} @_ZN1YIiEC1Ev
 
-// CHECK-EH: attributes [[NR_NUW]] = { noreturn nounwind }
+// CHECK-EH-03: attributes [[NR_NUW]] = { noreturn nounwind }

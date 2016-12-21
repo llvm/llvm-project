@@ -779,11 +779,11 @@ define double @oge_y(double %x)  {
 ; STRICT-LABEL: oge_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm1, %xmm2
+; STRICT-NEXT:    movaps %xmm1, %xmm2
 ; STRICT-NEXT:    cmplesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    andps %xmm2, %xmm0
+; STRICT-NEXT:    andnps %xmm1, %xmm2
+; STRICT-NEXT:    orps %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: oge_y:
@@ -800,12 +800,12 @@ define double @ole_y(double %x)  {
 ; STRICT-LABEL: ole_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm0, %xmm1
 ; STRICT-NEXT:    cmplesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm0
-; STRICT-NEXT:    andnpd %xmm2, %xmm1
-; STRICT-NEXT:    orpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm0
+; STRICT-NEXT:    andnps %xmm2, %xmm1
+; STRICT-NEXT:    orps %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole_y:
@@ -822,12 +822,12 @@ define double @oge_inverse_y(double %x)  {
 ; STRICT-LABEL: oge_inverse_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm2, %xmm1
 ; STRICT-NEXT:    cmplesd %xmm0, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm2
+; STRICT-NEXT:    andnps %xmm0, %xmm1
+; STRICT-NEXT:    orps %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: oge_inverse_y:
@@ -851,12 +851,12 @@ define double @ole_inverse_y(double %x)  {
 ; STRICT-LABEL: ole_inverse_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm0, %xmm1
 ; STRICT-NEXT:    cmplesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm2
+; STRICT-NEXT:    andnps %xmm0, %xmm1
+; STRICT-NEXT:    orps %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: ole_inverse_y:
@@ -880,12 +880,12 @@ define double @ugt_y(double %x)  {
 ; STRICT-LABEL: ugt_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm0, %xmm1
 ; STRICT-NEXT:    cmpnlesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm0
-; STRICT-NEXT:    andnpd %xmm2, %xmm1
-; STRICT-NEXT:    orpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm0
+; STRICT-NEXT:    andnps %xmm2, %xmm1
+; STRICT-NEXT:    orps %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt_y:
@@ -902,11 +902,11 @@ define double @ult_y(double %x)  {
 ; STRICT-LABEL: ult_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm1, %xmm2
+; STRICT-NEXT:    movaps %xmm1, %xmm2
 ; STRICT-NEXT:    cmpnlesd %xmm0, %xmm2
-; STRICT-NEXT:    andpd %xmm2, %xmm0
-; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm2, %xmm0
+; STRICT-NEXT:    andps %xmm2, %xmm0
+; STRICT-NEXT:    andnps %xmm1, %xmm2
+; STRICT-NEXT:    orps %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ult_y:
@@ -923,12 +923,12 @@ define double @ugt_inverse_y(double %x)  {
 ; STRICT-LABEL: ugt_inverse_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
+; STRICT-NEXT:    movaps %xmm0, %xmm1
 ; STRICT-NEXT:    cmpnlesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm2
+; STRICT-NEXT:    andnps %xmm0, %xmm1
+; STRICT-NEXT:    orps %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: ugt_inverse_y:
@@ -952,12 +952,12 @@ define double @ult_inverse_y(double %x)  {
 ; STRICT-LABEL: ult_inverse_y:
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm2, %xmm1
 ; STRICT-NEXT:    cmpnlesd %xmm0, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm2
-; STRICT-NEXT:    andnpd %xmm0, %xmm1
-; STRICT-NEXT:    orpd %xmm2, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    andps %xmm1, %xmm2
+; STRICT-NEXT:    andnps %xmm0, %xmm1
+; STRICT-NEXT:    orps %xmm2, %xmm1
+; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: ult_inverse_y:

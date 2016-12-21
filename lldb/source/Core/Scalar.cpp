@@ -403,11 +403,11 @@ Scalar &Scalar::operator=(long double v) {
   m_type = e_long_double;
   if (m_ieee_quad)
     m_float = llvm::APFloat(
-        llvm::APFloat::IEEEquad,
+        llvm::APFloat::IEEEquad(),
         llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((type128 *)&v)->x));
   else
     m_float = llvm::APFloat(
-        llvm::APFloat::x87DoubleExtended,
+        llvm::APFloat::x87DoubleExtended(),
         llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((type128 *)&v)->x));
   return *this;
 }
@@ -509,9 +509,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -569,9 +569,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -625,9 +625,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -677,9 +677,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -725,9 +725,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -769,9 +769,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -813,9 +813,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -853,9 +853,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -893,9 +893,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -929,9 +929,9 @@ bool Scalar::Promote(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -962,9 +962,9 @@ bool Scalar::Promote(Scalar::Type type) {
     case e_long_double:
       if (m_ieee_quad)
         m_float =
-            llvm::APFloat(llvm::APFloat::IEEEquad, m_float.bitcastToAPInt());
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                                 m_float.bitcastToAPInt());
       success = true;
       break;
@@ -992,9 +992,9 @@ bool Scalar::Promote(Scalar::Type type) {
     case e_long_double:
       if (m_ieee_quad)
         m_float =
-            llvm::APFloat(llvm::APFloat::IEEEquad, m_float.bitcastToAPInt());
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                                 m_float.bitcastToAPInt());
       success = true;
       break;
@@ -1176,9 +1176,9 @@ bool Scalar::Cast(Scalar::Type type) {
 
     case e_long_double:
       if (m_ieee_quad)
-        m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -1212,9 +1212,9 @@ bool Scalar::Cast(Scalar::Type type) {
     case e_long_double:
       if (m_ieee_quad)
         m_float =
-            llvm::APFloat(llvm::APFloat::IEEEquad, m_float.bitcastToAPInt());
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                                 m_float.bitcastToAPInt());
       success = true;
       break;
@@ -1249,9 +1249,9 @@ bool Scalar::Cast(Scalar::Type type) {
     case e_long_double:
       if (m_ieee_quad)
         m_float =
-            llvm::APFloat(llvm::APFloat::IEEEquad, m_float.bitcastToAPInt());
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
       else
-        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                                 m_float.bitcastToAPInt());
       success = true;
       break;
@@ -2579,7 +2579,7 @@ Error Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     } else if (byte_size == sizeof(long double)) {
       if (::sscanf(value_str, "%Lf", &l_val) == 1) {
         m_float =
-            llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+            llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                           llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
                                       ((type128 *)&l_val)->x));
         m_type = e_long_double;

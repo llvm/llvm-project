@@ -9,8 +9,8 @@ define void @test0(<1 x i64>* %x) {
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X32-NEXT:    movq %xmm0, (%eax)
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    movlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test0:

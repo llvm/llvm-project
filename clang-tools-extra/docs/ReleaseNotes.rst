@@ -67,6 +67,11 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- The UseCERTSemantics option for the `misc-move-constructor-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-constructor-init.html>`_ check
+  has been removed as it duplicated the `modernize-pass-by-value
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-pass-by-value.html>`_ check.
+
 - New `misc-move-forwarding-reference
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-forwarding-reference.html>`_ check
 
@@ -91,12 +96,24 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
   now handle calls to the smart pointer's ``reset()`` method.
 
+- The `modernize-pass-by-value
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-pass-by-value.html>`_ check
+  now has a ValuesOnly option to only warn about parameters that are passed by
+  value but not moved.
+
 - The `modernize-use-auto
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-auto.html>`_ check
-  now warns about variable declarations that are initialized with a cast.
+  now warns about variable declarations that are initialized with a cast, or by
+  calling a templated function that behaves as a cast.
 
 - The modernize-use-default check has been renamed to `modernize-use-equals-default
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-default.html>`_.
+  
+- New `modernize-use-default-member-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-default-member-init.html>`_ check
+
+  Converts a default constructor's member initializers into default member initializers.
+  Removes member initializers that are the same as a default member initializer.
 
 - New `modernize-use-equals-delete
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html>`_ check

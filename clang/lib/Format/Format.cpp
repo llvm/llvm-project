@@ -655,10 +655,12 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
   MozillaStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   MozillaStyle.AlwaysBreakAfterReturnType =
-      FormatStyle::RTBS_TopLevelDefinitions;
+      FormatStyle::RTBS_TopLevel;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.AlwaysBreakTemplateDeclarations = true;
+  MozillaStyle.BinPackParameters = false;
+  MozillaStyle.BinPackArguments = false;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializersBeforeComma = true;
   MozillaStyle.ConstructorInitializerIndentWidth = 2;
@@ -1543,7 +1545,7 @@ bool checkAndConsumeDirectiveWithName(Lexer &Lex, StringRef Name, Token &Tok) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
-                 tok::raw_identifier;
+                 Tok.is(tok::raw_identifier);
   if (Matched)
     Lex.LexFromRawLexer(Tok);
   return Matched;

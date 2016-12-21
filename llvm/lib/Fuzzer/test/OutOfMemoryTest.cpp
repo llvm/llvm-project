@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstring>
 #include <iostream>
-#include <unistd.h>
+#include <thread>
 
 static volatile char *SinkPtr;
 
@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
           char *p = new char[kSize];
           memset(p, 0, kSize);
           SinkPtr = p;
-          sleep(1);
+          std::this_thread::sleep_for(std::chrono::seconds(1));
         }
       }
     }

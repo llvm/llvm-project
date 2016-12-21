@@ -236,13 +236,11 @@ define void @signum64c(<4 x double>*) {
 ; AVX1-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
 ; AVX1-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,2]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
@@ -256,9 +254,7 @@ define void @signum64c(<4 x double>*) {
 ; AVX2-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -272,9 +268,7 @@ define void @signum64c(<4 x double>*) {
 ; AVX512F-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    vpsubd %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,2]
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX512F-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX512F-NEXT:    retq

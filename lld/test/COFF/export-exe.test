@@ -1,4 +1,3 @@
-# REQUIRES: winlib
 # RUN: lld-link /entry:main /out:%t.exe /subsystem:windows \
 # RUN:   %p/Inputs/ret42.obj /export:main
 # RUN: llvm-objdump -p %t.exe | FileCheck %s

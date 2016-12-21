@@ -2091,7 +2091,7 @@ template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::remove(const value_type& __x)
 {
-    list<_Tp, _Alloc> __deleted_nodes; // collect the nodes we're removing
+    list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
     for (const_iterator __i = begin(), __e = end(); __i != __e;)
     {
         if (*__i == __x)

@@ -1146,9 +1146,11 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
                                  diag::err_abstract_type_in_decl,
                                  AbstractSynthesizedIvarType)) {
         Diag(property->getLocation(), diag::note_property_declare);
+        // An abstract type is as bad as an incomplete type.
+        CompleteTypeErr = true;
+      }
+      if (CompleteTypeErr)
         Ivar->setInvalidDecl();
-      } else if (CompleteTypeErr)
-          Ivar->setInvalidDecl();
       ClassImpDecl->addDecl(Ivar);
       IDecl->makeDeclVisibleInContext(Ivar);
 

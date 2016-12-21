@@ -21,7 +21,7 @@
 !1 = !DIFile(filename: "simple.c", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "f", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6)
+!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "f", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6))
 !5 = !DIFile(filename: "simple.c", directory: "/tmp/dbginfo")
 !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", line: 1, align: 8, file: !1, elements: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}

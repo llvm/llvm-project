@@ -72,14 +72,11 @@ The status of major ABI-impacting C++ features:
 .. _/vm: http://msdn.microsoft.com/en-us/library/yad46a6z.aspx
 .. _pointer to a member of a virtual base class: http://llvm.org/PR15713
 
-* Debug info: :partial:`Minimal`.  Clang emits both CodeView line tables
-  (similar to what MSVC emits when given the ``/Z7`` flag) and DWARF debug
-  information into the object file.
-  Microsoft's link.exe will transform the CodeView line tables into a PDB,
-  enabling stack traces in all modern Windows debuggers.  Clang does not emit
-  any CodeView-compatible type info or description of variable layout.
-  Binaries linked with either binutils' ld or LLVM's lld should be usable with
-  GDB however sophisticated C++ expressions are likely to fail.
+* Debug info: :good:`Mostly complete`.  Clang emits relatively complete CodeView
+  debug information if ``/Z7`` or ``/Zi`` is passed. Microsoft's link.exe will
+  transform the CodeView debug information into a PDB that works in Windows
+  debuggers and other tools that consume PDB files like ETW. Work to teach lld
+  about CodeView and PDBs is ongoing.
 
 * RTTI: :good:`Complete`.  Generation of RTTI data structures has been
   finished, along with support for the ``/GR`` flag.

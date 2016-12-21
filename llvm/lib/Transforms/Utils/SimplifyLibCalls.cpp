@@ -900,7 +900,7 @@ static Value *valueHasFloatPrecision(Value *Val) {
   if (ConstantFP *Const = dyn_cast<ConstantFP>(Val)) {
     APFloat F = Const->getValueAPF();
     bool losesInfo;
-    (void)F.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven,
+    (void)F.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
                     &losesInfo);
     if (!losesInfo)
       return ConstantFP::get(Const->getContext(), F);
@@ -1129,7 +1129,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert V to something which could be converted to double.
     bool ignored;
-    V.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &ignored);
+    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
     
     // TODO: Should the new instructions propagate the 'fast' flag of the pow()?
     Value *FMul = getPow(InnerChain, V.convertToDouble(), B);
@@ -1467,6 +1467,12 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilder<> &B) {
   Value *Sin, *Cos, *SinCos;
   insertSinCosCall(B, CI->getCalledFunction(), Arg, IsFloat, Sin, Cos, SinCos);
 
+  auto replaceTrigInsts = [this](SmallVectorImpl<CallInst *> &Calls,
+                                 Value *Res) {
+    for (CallInst *C : Calls)
+      replaceAllUsesWith(C, Res);
+  };
+
   replaceTrigInsts(SinCalls, Sin);
   replaceTrigInsts(CosCalls, Cos);
   replaceTrigInsts(SinCosCalls, SinCos);
@@ -1511,38 +1517,34 @@ void LibCallSimplifier::classifyArgUse(
   }
 }
 
-void LibCallSimplifier::replaceTrigInsts(SmallVectorImpl<CallInst *> &Calls,
-                                         Value *Res) {
-  for (CallInst *C : Calls)
-    replaceAllUsesWith(C, Res);
-}
-
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
 
 Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  Value *Op = CI->getArgOperand(0);
-
-  // Constant fold.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
-    if (CI->isZero()) // ffs(0) -> 0.
-      return B.getInt32(0);
-    // ffs(c) -> cttz(c)+1
-    return B.getInt32(CI->getValue().countTrailingZeros() + 1);
-  }
-
   // ffs(x) -> x != 0 ? (i32)llvm.cttz(x)+1 : 0
+  Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Value *F =
-      Intrinsic::getDeclaration(Callee->getParent(), Intrinsic::cttz, ArgType);
+  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                       Intrinsic::cttz, ArgType);
   Value *V = B.CreateCall(F, {Op, B.getTrue()}, "cttz");
   V = B.CreateAdd(V, ConstantInt::get(V->getType(), 1));
   V = B.CreateIntCast(V, B.getInt32Ty(), false);
 
   Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
   return B.CreateSelect(Cond, V, B.getInt32(0));
+}
+
+Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilder<> &B) {
+  // fls(x) -> (i32)(sizeInBits(x) - llvm.ctlz(x, false))
+  Value *Op = CI->getArgOperand(0);
+  Type *ArgType = Op->getType();
+  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                       Intrinsic::ctlz, ArgType);
+  Value *V = B.CreateCall(F, {Op, B.getFalse()}, "ctlz");
+  V = B.CreateSub(ConstantInt::get(V->getType(), ArgType->getIntegerBitWidth()),
+                  V);
+  return B.CreateIntCast(V, CI->getType(), false);
 }
 
 Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilder<> &B) {
@@ -2081,6 +2083,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     case LibFunc::ffsl:
     case LibFunc::ffsll:
       return optimizeFFS(CI, Builder);
+    case LibFunc::fls:
+    case LibFunc::flsl:
+    case LibFunc::flsll:
+      return optimizeFls(CI, Builder);
     case LibFunc::abs:
     case LibFunc::labs:
     case LibFunc::llabs:

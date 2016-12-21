@@ -862,6 +862,13 @@ namespace __sanitizer {
   extern int shmctl_shm_stat;
 #endif
 
+#if !SANITIZER_MAC && !SANITIZER_FREEBSD
+  extern unsigned struct_utmp_sz;
+#endif
+#if !SANITIZER_ANDROID
+  extern unsigned struct_utmpx_sz;
+#endif
+
   extern int map_fixed;
 
   // ioctl arguments

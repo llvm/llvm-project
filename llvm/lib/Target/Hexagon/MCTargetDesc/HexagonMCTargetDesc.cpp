@@ -11,22 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonMCTargetDesc.h"
 #include "Hexagon.h"
-#include "HexagonMCAsmInfo.h"
-#include "HexagonMCELFStreamer.h"
+#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
+#include "MCTargetDesc/HexagonMCAsmInfo.h"
+#include "MCTargetDesc/HexagonMCELFStreamer.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <cassert>
+#include <cstdint>
+#include <new>
+#include <string>
 
 using namespace llvm;
 
@@ -58,7 +65,6 @@ static cl::opt<bool> HexagonV55ArchVariant("mv55", cl::Hidden, cl::init(false),
 
 static cl::opt<bool> HexagonV60ArchVariant("mv60", cl::Hidden, cl::init(false),
   cl::desc("Build for Hexagon V60"));
-
 
 static StringRef DefaultArch = "hexagonv60";
 
@@ -108,12 +114,14 @@ createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 }
 
 namespace {
+
 class HexagonTargetAsmStreamer : public HexagonTargetStreamer {
 public:
   HexagonTargetAsmStreamer(MCStreamer &S,
                            formatted_raw_ostream &, bool,
                            MCInstPrinter &)
       : HexagonTargetStreamer(S) {}
+
   void prettyPrintAsm(MCInstPrinter &InstPrinter, raw_ostream &OS,
                       const MCInst &Inst, const MCSubtargetInfo &STI) override {
     assert(HexagonMCInstrInfo::isBundle(Inst));
@@ -145,14 +153,9 @@ public:
     OS << "\t}" << PacketBundle.second;
   }
 };
-}
 
-namespace {
 class HexagonTargetELFStreamer : public HexagonTargetStreamer {
 public:
-  MCELFStreamer &getStreamer() {
-    return static_cast<MCELFStreamer &>(Streamer);
-  }
   HexagonTargetELFStreamer(MCStreamer &S, MCSubtargetInfo const &STI)
       : HexagonTargetStreamer(S) {
     auto Bits = STI.getFeatureBits();
@@ -167,6 +170,11 @@ public:
       Flags = ELF::EF_HEXAGON_MACH_V4;
     getStreamer().getAssembler().setELFHeaderEFlags(Flags);
   }
+
+  MCELFStreamer &getStreamer() {
+    return static_cast<MCELFStreamer &>(Streamer);
+  }
+
   void EmitCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                               unsigned ByteAlignment,
                               unsigned AccessSize) override {
@@ -175,6 +183,7 @@ public:
     HexagonELFStreamer.HexagonMCEmitCommonSymbol(Symbol, Size, ByteAlignment,
                                                  AccessSize);
   }
+
   void EmitLocalCommonSymbolSorted(MCSymbol *Symbol, uint64_t Size,
                                    unsigned ByteAlignment,
                                    unsigned AccessSize) override {
@@ -184,7 +193,8 @@ public:
         Symbol, Size, ByteAlignment, AccessSize);
   }
 };
-}
+
+} // end anonymous namespace
 
 static MCAsmInfo *createHexagonMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT) {

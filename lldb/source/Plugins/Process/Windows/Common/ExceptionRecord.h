@@ -12,7 +12,7 @@
 
 #include "lldb/Host/windows/windows.h"
 #include "lldb/lldb-forward.h"
-#include <DbgHelp.h>
+#include <dbghelp.h>
 
 #include <memory>
 #include <vector>

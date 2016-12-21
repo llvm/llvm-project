@@ -89,16 +89,24 @@ public:
       else // Parent->getMagic() == MachO::FAT_MAGIC_64
         return Header64.reserved;
     }
-    std::string getArchTypeName() const {
+    std::string getArchFlagName() const {
+      const char *McpuDefault, *ArchFlag;
       if (Parent->getMagic() == MachO::FAT_MAGIC) {
         Triple T =
-            MachOObjectFile::getArchTriple(Header.cputype, Header.cpusubtype);
-        return T.getArchName();
+            MachOObjectFile::getArchTriple(Header.cputype, Header.cpusubtype,
+                                           &McpuDefault, &ArchFlag);
       } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
         Triple T =
             MachOObjectFile::getArchTriple(Header64.cputype,
-                                           Header64.cpusubtype);
-        return T.getArchName();
+                                           Header64.cpusubtype,
+                                           &McpuDefault, &ArchFlag);
+      }
+      if (ArchFlag) {
+        std::string ArchFlagName(ArchFlag);
+        return ArchFlagName;
+      } else {
+        std::string ArchFlagName("");
+        return ArchFlagName;
       }
     }
 

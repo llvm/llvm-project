@@ -10,16 +10,6 @@
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Host/windows/windows.h"
 
-namespace {
-#if defined(__MINGW32__)
-// Taken from WinNT.h
-typedef struct _RTL_SRWLOCK { PVOID Ptr; } RTL_SRWLOCK, *PRTL_SRWLOCK;
-
-// Taken from WinBase.h
-typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
-#endif
-}
-
 static PSRWLOCK GetLock(lldb::rwlock_t lock) {
   return static_cast<PSRWLOCK>(lock);
 }

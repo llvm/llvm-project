@@ -5,6 +5,8 @@
 ; RUN: llvm-dis %t2 -o - | FileCheck %s
 ; CHECK-NOT: subprograms
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}

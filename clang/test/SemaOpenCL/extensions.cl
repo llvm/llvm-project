@@ -22,8 +22,6 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64 -cl-ext=+cl_khr_fp16 -cl-ext=-cl_khr_fp64 -DNOFP64
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64,-cl_khr_fp64,+cl_khr_fp16 -DNOFP64
 
-
-
 #ifdef FP64
 // expected-no-diagnostics
 #endif
@@ -34,6 +32,14 @@ void f1(double da) { // expected-error {{type 'double' requires cl_khr_fp64 exte
   (void) 1.0; // expected-warning {{double precision constant requires cl_khr_fp64}}
 }
 #endif
+
+int isnan(float x) {
+    return __builtin_isnan(x);
+}
+
+int isfinite(float x) {
+    return __builtin_isfinite(x);
+}
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #ifdef NOFP64

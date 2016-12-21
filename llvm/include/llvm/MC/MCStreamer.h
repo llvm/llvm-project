@@ -684,7 +684,8 @@ public:
   /// \param Offset - The offset to reach. This may be an expression, but the
   /// expression must be associated with the current section.
   /// \param Value - The value to use when filling bytes.
-  virtual void emitValueToOffset(const MCExpr *Offset, unsigned char Value = 0);
+  virtual void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
+                                 SMLoc Loc);
 
   /// @}
 

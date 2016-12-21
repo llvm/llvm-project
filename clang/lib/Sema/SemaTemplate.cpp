@@ -429,7 +429,12 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
   bool MightBeCxx11UnevalField =
       getLangOpts().CPlusPlus11 && isUnevaluatedContext();
 
-  if (!MightBeCxx11UnevalField && !isAddressOfOperand &&
+  // Check if the nested name specifier is an enum type.
+  bool IsEnum = false;
+  if (NestedNameSpecifier *NNS = SS.getScopeRep())
+    IsEnum = dyn_cast_or_null<EnumType>(NNS->getAsType());
+
+  if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
       isa<CXXMethodDecl>(DC) && cast<CXXMethodDecl>(DC)->isInstance()) {
     QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType(Context);
 

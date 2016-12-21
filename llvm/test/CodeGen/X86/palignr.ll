@@ -41,9 +41,7 @@ define <4 x i32> @test3(<4 x i32> %A, <4 x i32> %B) nounwind {
 ;
 ; CHECK-YONAH-LABEL: test3:
 ; CHECK-YONAH:       # BB#0:
-; CHECK-YONAH-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
-; CHECK-YONAH-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,2,2,3]
-; CHECK-YONAH-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-YONAH-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,2],xmm1[2,0]
 ; CHECK-YONAH-NEXT:    retl
   %C = shufflevector <4 x i32> %A, <4 x i32> %B, <4 x i32> < i32 1, i32 2, i32 undef, i32 4 >
 	ret <4 x i32> %C

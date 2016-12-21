@@ -38,8 +38,6 @@ static bool isASTUnitSourceLocation(const CXSourceLocation &L) {
 // Basic construction and comparison of CXSourceLocations and CXSourceRanges.
 //===----------------------------------------------------------------------===//
 
-extern "C" {
-  
 CXSourceLocation clang_getNullLocation() {
   CXSourceLocation Result = { { nullptr, nullptr }, 0 };
   return Result;
@@ -110,14 +108,10 @@ CXSourceLocation clang_getRangeEnd(CXSourceRange range) {
   return Result;
 }
 
-} // end extern "C"
-
 //===----------------------------------------------------------------------===//
 //  Getting CXSourceLocations and CXSourceRanges from a translation unit.
 //===----------------------------------------------------------------------===//
 
-extern "C" {
-  
 CXSourceLocation clang_getLocation(CXTranslationUnit TU,
                                    CXFile file,
                                    unsigned line,
@@ -174,8 +168,6 @@ CXSourceLocation clang_getLocationForOffset(CXTranslationUnit TU,
   return cxloc::translateSourceLocation(CXXUnit->getASTContext(), SLoc);
 }
 
-} // end extern "C"
-
 //===----------------------------------------------------------------------===//
 // Routines for expanding and manipulating CXSourceLocations, regardless
 // of their origin.
@@ -204,8 +196,6 @@ static void createNullLocation(CXString *filename, unsigned *line,
   if (offset)
     *offset = 0;
 }
-
-extern "C" {
 
 int clang_Location_isInSystemHeader(CXSourceLocation location) {
   const SourceLocation Loc =
@@ -382,5 +372,3 @@ void clang_getFileLocation(CXSourceLocation location,
   if (offset)
     *offset = FileOffset;
 }
-
-} // end extern "C"

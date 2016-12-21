@@ -91,6 +91,8 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     MCOp = GetSymbolRef(MO, GetJTISymbol(MO.getIndex()));
     break;
   case MachineOperand::MO_ConstantPoolIndex:
+    if (Subtarget->genExecuteOnly())
+      llvm_unreachable("execute-only should not generate constant pools");
     MCOp = GetSymbolRef(MO, GetCPISymbol(MO.getIndex()));
     break;
   case MachineOperand::MO_BlockAddress:
@@ -99,7 +101,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_FPImmediate: {
     APFloat Val = MO.getFPImm()->getValueAPF();
     bool ignored;
-    Val.convert(APFloat::IEEEdouble, APFloat::rmTowardZero, &ignored);
+    Val.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
     MCOp = MCOperand::createFPImm(Val.convertToDouble());
     break;
   }

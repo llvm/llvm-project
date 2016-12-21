@@ -56,8 +56,8 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
   <Type Name="llvm::SmallString&lt;*&gt;">
-    <DisplayString>{BeginX,s}</DisplayString>
-    <StringView>BeginX,s</StringView>
+    <DisplayString>{(const char*)BeginX,[(char*)EndX - (char*)BeginX] na}</DisplayString>
+    <StringView>(const char*)BeginX,[(char*)EndX - (char*)BeginX]</StringView>
     <Expand>
       <Item Name="[size]">(char*)EndX - (char*)BeginX</Item>
       <Item Name="[capacity]">(char*)CapacityX - (char*)BeginX</Item>

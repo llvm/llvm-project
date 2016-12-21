@@ -592,7 +592,10 @@ namespace clang {
     ovl_fail_enable_if,
 
     /// This candidate was not viable because its address could not be taken.
-    ovl_fail_addr_not_available
+    ovl_fail_addr_not_available,
+
+    /// This candidate was not viable because its OpenCL extension is disabled.
+    ovl_fail_ext_disabled,
   };
 
   /// OverloadCandidate - A single candidate in an overload set (C++ 13.3).

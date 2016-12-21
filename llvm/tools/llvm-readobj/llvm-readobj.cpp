@@ -186,6 +186,10 @@ namespace opts {
   cl::opt<bool> MipsOptions("mips-options",
                             cl::desc("Display the MIPS .MIPS.options section"));
 
+  // -amdgpu-runtime-metadata
+  cl::opt<bool> AMDGPURuntimeMD("amdgpu-runtime-metadata",
+                                cl::desc("Display AMDGPU runtime metadata"));
+
   // -coff-imports
   cl::opt<bool>
   COFFImports("coff-imports", cl::desc("Display the PE/COFF import table"));
@@ -415,6 +419,9 @@ static void dumpObject(const ObjectFile *Obj) {
       if (opts::MipsOptions)
         Dumper->printMipsOptions();
     }
+    if (Obj->getArch() == llvm::Triple::amdgcn)
+      if (opts::AMDGPURuntimeMD)
+        Dumper->printAMDGPURuntimeMD();
     if (opts::SectionGroups)
       Dumper->printGroupSections();
     if (opts::HashHistogram)

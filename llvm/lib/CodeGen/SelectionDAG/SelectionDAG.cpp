@@ -2727,6 +2727,13 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
 }
 
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
+  EVT OpVT = Val.getValueType();
+  unsigned BitWidth = OpVT.getScalarSizeInBits();
+
+  // Is the constant a known power of 2?
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Val))
+    return Const->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+
   // A left-shift of a constant one will have exactly one bit set because
   // shifting the bit off the end is undefined.
   if (Val.getOpcode() == ISD::SHL) {
@@ -2743,12 +2750,19 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
       return true;
   }
 
+  // Are all operands of a build vector constant powers of two?
+  if (Val.getOpcode() == ISD::BUILD_VECTOR)
+    if (llvm::all_of(Val->ops(), [this, BitWidth](SDValue E) {
+          if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(E))
+            return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
+          return false;
+        }))
+      return true;
+
   // More could be done here, though the above checks are enough
   // to handle some common cases.
 
   // Fall back to computeKnownBits to catch other known cases.
-  EVT OpVT = Val.getValueType();
-  unsigned BitWidth = OpVT.getScalarSizeInBits();
   APInt KnownZero, KnownOne;
   computeKnownBits(Val, KnownZero, KnownOne);
   return (KnownZero.countPopulation() == BitWidth - 1) &&
@@ -3191,13 +3205,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     case ISD::BITCAST:
       if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
-        return getConstantFP(APFloat(APFloat::IEEEhalf, Val), DL, VT);
+        return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
       if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
-        return getConstantFP(APFloat(APFloat::IEEEsingle, Val), DL, VT);
+        return getConstantFP(APFloat(APFloat::IEEEsingle(), Val), DL, VT);
       if (VT == MVT::f64 && C->getValueType(0) == MVT::i64)
-        return getConstantFP(APFloat(APFloat::IEEEdouble, Val), DL, VT);
+        return getConstantFP(APFloat(APFloat::IEEEdouble(), Val), DL, VT);
       if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
-        return getConstantFP(APFloat(APFloat::IEEEquad, Val), DL, VT);
+        return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
       break;
     case ISD::BSWAP:
       return getConstant(Val.byteSwap(), DL, VT, C->isTargetOpcode(),
@@ -6145,14 +6159,14 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
   return New;
 }
 
-/// UpdadeSDLocOnMergedSDNode - If the opt level is -O0 then it throws away
+/// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
 /// This will make the debugger working better at -O0, were there is a higher
 /// probability having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
-SDNode *SelectionDAG::UpdadeSDLocOnMergedSDNode(SDNode *N, const SDLoc &OLoc) {
+SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {
   DebugLoc NLoc = N->getDebugLoc();
   if (NLoc && OptLevel == CodeGenOpt::None && OLoc.getDebugLoc() != NLoc) {
     N->setDebugLoc(DebugLoc());
@@ -6186,7 +6200,7 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opc, VTs, Ops);
     if (SDNode *ON = FindNodeOrInsertPos(ID, SDLoc(N), IP))
-      return UpdadeSDLocOnMergedSDNode(ON, SDLoc(N));
+      return UpdateSDLocOnMergeSDNode(ON, SDLoc(N));
   }
 
   if (!RemoveNodeFromCSEMaps(N))
@@ -6338,7 +6352,7 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
     AddNodeIDNode(ID, ~Opcode, VTs, Ops);
     IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      return cast<MachineSDNode>(UpdadeSDLocOnMergedSDNode(E, DL));
+      return cast<MachineSDNode>(UpdateSDLocOnMergeSDNode(E, DL));
     }
   }
 

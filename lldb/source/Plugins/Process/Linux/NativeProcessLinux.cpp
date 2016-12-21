@@ -58,7 +58,6 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
-#include "lldb/Host/linux/Personality.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 

@@ -590,6 +590,7 @@ class ScopedReport {
   void operator = (const ScopedReport&);
 };
 
+ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset);
 

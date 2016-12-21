@@ -76,6 +76,11 @@ ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
+/// EnableExecuteOnly - Enables the generation of execute-only code on supported
+/// targets
+static cl::opt<bool>
+EnableExecuteOnly("arm-execute-only");
+
 ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
                                                         StringRef FS) {
   ARMSubtarget &STI = initializeSubtargetDependencies(CPU, FS);
@@ -89,8 +94,9 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle)
     : ARMGenSubtargetInfo(TT, CPU, FS), UseMulOps(UseFusedMulOps),
-      CPUString(CPU), IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options),
-      TM(TM), FrameLowering(initializeFrameLowering(CPU, FS)),
+      GenExecuteOnly(EnableExecuteOnly), CPUString(CPU), IsLittle(IsLittle),
+      TargetTriple(TT), Options(TM.Options), TM(TM),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only()
@@ -168,6 +174,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // FIXME: This used enable V6T2 support implicitly for Thumb2 mode.
   // Assert this for now to make the change obvious.
   assert(hasV6T2Ops() || !hasThumb2());
+
+  // Execute only support requires movt support
+  if (genExecuteOnly())
+    assert(hasV8MBaselineOps() && !NoMovt && "Cannot generate execute-only code for this target");
 
   // Keep a pointer to static instruction cost data for the specified CPU.
   SchedModel = getSchedModelForCPU(CPUString);
@@ -353,7 +363,7 @@ bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
   // immediates as it is inherently position independent, and may be out of
   // range otherwise.
   return !NoMovt && hasV8MBaselineOps() &&
-         (isTargetWindows() || !MF.getFunction()->optForMinSize());
+         (isTargetWindows() || !MF.getFunction()->optForMinSize() || genExecuteOnly());
 }
 
 bool ARMSubtarget::useFastISel() const {

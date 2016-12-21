@@ -11,8 +11,12 @@
 // RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s
 // RUN: %sancovcc  -covered-functions -strip_path_prefix=TestCases/ *.sancov %t 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-SANCOV %s
+// RUN: %env_tool_opts=coverage=0 %t 2>&1 | FileCheck --check-prefix=CHECK-NOCOV %s
 // RUN: rm -rf $DIR
-
+// Make some room to stabilize line numbers
+//
+//
+//
 #include <stdio.h>
 
 int foo() {
@@ -31,5 +35,7 @@ int main() {
 // CHECK-NEXT: foo
 // CHECK-NEXT: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard.{{.*}}.sancov 2 PCs written
 //
-// CHECK-SANCOV: sanitizer_coverage_trace_pc_guard.cc:18 foo
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard.cc:23 main
+// CHECK-SANCOV: sanitizer_coverage_trace_pc_guard.cc:22 foo
+// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard.cc:27 main
+//
+// CHECK-NOCOV-NOT: SanitizerCoverage

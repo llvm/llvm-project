@@ -25,22 +25,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallSet.h"
-#include "Hexagon.h"
+#include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/PassSupport.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include <algorithm>
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <map>
+#include <set>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -70,12 +85,16 @@ static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::init(false),
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
 namespace llvm {
+
   FunctionPass *createHexagonHardwareLoops();
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
-}
+
+} // end namespace llvm
 
 namespace {
+
   class CountValue;
+
   struct HexagonHardwareLoops : public MachineFunctionPass {
     MachineLoopInfo            *MLI;
     MachineRegisterInfo        *MRI;
@@ -145,7 +164,6 @@ namespace {
       static bool isUnsigned(Kind Cmp) {
         return (Cmp & U);
       }
-
     };
 
     /// \brief Find the register that contains the loop controlling
@@ -296,6 +314,7 @@ namespace {
       CV_Register,
       CV_Immediate
     };
+
   private:
     CountValueType Kind;
     union Values {
@@ -316,6 +335,7 @@ namespace {
         Contents.ImmVal = v;
       }
     }
+
     bool isReg() const { return Kind == CV_Register; }
     bool isImm() const { return Kind == CV_Immediate; }
 
@@ -337,8 +357,8 @@ namespace {
       if (isImm()) { OS << Contents.ImmVal; }
     }
   };
-} // end anonymous namespace
 
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(HexagonHardwareLoops, "hwloops",
                       "Hexagon Hardware Loops", false, false)
@@ -585,7 +605,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   // the fall through can go to the header.
   assert (TB && "Exit block without a branch?");
   if (ExitingBlock != Latch && (TB == Latch || FB == Latch)) {
-    MachineBasicBlock *LTB = 0, *LFB = 0;
+    MachineBasicBlock *LTB = nullptr, *LFB = nullptr;
     SmallVector<MachineOperand,2> LCond;
     bool NotAnalyzed = TII->analyzeBranch(*Latch, LTB, LFB, LCond, false);
     if (NotAnalyzed)
@@ -1173,9 +1193,9 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   // Determine the loop start.
   MachineBasicBlock *TopBlock = L->getTopBlock();
   MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
-  MachineBasicBlock *LoopStart = 0;
+  MachineBasicBlock *LoopStart = nullptr;
   if (ExitingBlock !=  L->getLoopLatch()) {
-    MachineBasicBlock *TB = 0, *FB = 0;
+    MachineBasicBlock *TB = nullptr, *FB = nullptr;
     SmallVector<MachineOperand, 2> Cond;
 
     if (TII->analyzeBranch(*ExitingBlock, TB, FB, Cond, false))
@@ -1415,12 +1435,13 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
     if (!TII->analyzeCompare(*MI, CmpReg1, CmpReg2, CmpMask, CmpValue))
       continue;
 
-    MachineBasicBlock *TBB = 0, *FBB = 0;
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 2> Cond;
     if (TII->analyzeBranch(*MI->getParent(), TBB, FBB, Cond, false))
       continue;
 
-    Comparison::Kind Cmp = getComparisonKind(MI->getOpcode(), 0, 0, 0);
+    Comparison::Kind Cmp =
+        getComparisonKind(MI->getOpcode(), nullptr, nullptr, 0);
     if (Cmp == 0)
       continue;
     if (TII->predOpcodeHasNot(Cond) ^ (TBB != MBB))
@@ -1616,7 +1637,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
     return false;
 
   if (ExitingBlock != Latch && (TB == Latch || FB == Latch)) {
-    MachineBasicBlock *LTB = 0, *LFB = 0;
+    MachineBasicBlock *LTB = nullptr, *LFB = nullptr;
     SmallVector<MachineOperand,2> LCond;
     bool NotAnalyzed = TII->analyzeBranch(*Latch, LTB, LFB, LCond, false);
     if (NotAnalyzed)
@@ -1754,7 +1775,8 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 
       // It is not valid to do this transformation on an unsigned comparison
       // because it may underflow.
-      Comparison::Kind Cmp = getComparisonKind(PredDef->getOpcode(), 0, 0, 0);
+      Comparison::Kind Cmp =
+          getComparisonKind(PredDef->getOpcode(), nullptr, nullptr, 0);
       if (!Cmp || Comparison::isUnsigned(Cmp))
         return false;
 
@@ -1887,7 +1909,6 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       PN->addOperand(MachineOperand::CreateReg(NewPR, false));
       PN->addOperand(MachineOperand::CreateMBB(NewPH));
     }
-
   } else {
     assert(Header->pred_size() == 2);
 

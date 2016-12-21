@@ -1050,7 +1050,7 @@ namespace {
     APSInt IntReal, IntImag;
     APFloat FloatReal, FloatImag;
 
-    ComplexValue() : FloatReal(APFloat::Bogus), FloatImag(APFloat::Bogus) {}
+    ComplexValue() : FloatReal(APFloat::Bogus()), FloatImag(APFloat::Bogus()) {}
 
     void makeComplexFloat() { IsInt = false; }
     bool isComplexFloat() const { return !IsInt; }
@@ -4451,8 +4451,11 @@ public:
       }
 
       // Don't call function pointers which have been cast to some other type.
-      if (!Info.Ctx.hasSameType(CalleeType->getPointeeType(), FD->getType()))
+      // Per DR (no number yet), the caller and callee can differ in noexcept.
+      if (!Info.Ctx.hasSameFunctionTypeIgnoringExceptionSpec(
+              CalleeType->getPointeeType(), FD->getType())) {
         return Error(E);
+      }
     } else
       return Error(E);
 
@@ -6068,7 +6071,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (EltTy->isRealFloatingType()) {
       const llvm::fltSemantics &Sem = Info.Ctx.getFloatTypeSemantics(EltTy);
       unsigned FloatEltSize = EltSize;
-      if (&Sem == &APFloat::x87DoubleExtended)
+      if (&Sem == &APFloat::x87DoubleExtended())
         FloatEltSize = 80;
       for (unsigned i = 0; i < NElts; i++) {
         llvm::APInt Elt;

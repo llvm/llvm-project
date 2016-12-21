@@ -498,7 +498,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
         OS << ", ";
       First = false;
       printReg(LI.PhysReg, OS, TRI);
-      if (LI.LaneMask != ~0u)
+      if (!LI.LaneMask.all())
         OS << ":0x" << PrintLaneMask(LI.LaneMask);
     }
     OS << "\n";
@@ -959,6 +959,9 @@ void MIPrinter::print(const MachineMemOperand &Op) {
       OS << "call-entry $";
       printLLVMNameWithoutPrefix(
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
+      break;
+    case PseudoSourceValue::TargetCustom:
+      llvm_unreachable("TargetCustom pseudo source values are not supported");
       break;
     }
   }

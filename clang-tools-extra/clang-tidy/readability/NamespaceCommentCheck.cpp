@@ -57,7 +57,7 @@ static std::string getNamespaceComment(const NamespaceDecl *ND,
 }
 
 void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
-  const NamespaceDecl *ND = Result.Nodes.getNodeAs<NamespaceDecl>("namespace");
+  const auto *ND = Result.Nodes.getNodeAs<NamespaceDecl>("namespace");
   const SourceManager &Sources = *Result.SourceManager;
 
   if (!locationsInSameFile(Sources, ND->getLocStart(), ND->getRBraceLoc()))

@@ -109,22 +109,20 @@ static DIScope *getNonCompileUnitScope(DIScope *N) {
 }
 
 DICompileUnit *DIBuilder::createCompileUnit(
-    unsigned Lang, StringRef Filename, StringRef Directory, StringRef Producer,
-    bool isOptimized, StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
+    unsigned Lang, DIFile *File, StringRef Producer, bool isOptimized,
+    StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
     DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId,
     bool SplitDebugInlining) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
-  assert(!Filename.empty() &&
-         "Unable to create compile unit without filename");
 
   assert(!CUNode && "Can only make one compile unit per DIBuilder instance");
   CUNode = DICompileUnit::getDistinct(
-      VMContext, Lang, DIFile::get(VMContext, Filename, Directory), Producer,
-      isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr, nullptr,
-      nullptr, nullptr, nullptr, DWOId, SplitDebugInlining);
+      VMContext, Lang, File, Producer, isOptimized, Flags, RunTimeVer,
+      SplitName, Kind, nullptr, nullptr, nullptr, nullptr, nullptr, DWOId,
+      SplitDebugInlining);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
@@ -534,29 +532,30 @@ static void checkGlobalVariableScope(DIScope *Context) {
 #endif
 }
 
-DIGlobalVariable *DIBuilder::createGlobalVariable(
+DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit,
-    DIExpression *Expr, MDNode *Decl, uint32_t AlignInBits) {
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
+    MDNode *Decl, uint32_t AlignInBits) {
   checkGlobalVariableScope(Context);
 
-  auto *N = DIGlobalVariable::getDistinct(
+  auto *GV = DIGlobalVariable::getDistinct(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-      LineNumber, Ty, isLocalToUnit, true, Expr,
-      cast_or_null<DIDerivedType>(Decl), AlignInBits);
+      LineNumber, Ty, isLocalToUnit, true, cast_or_null<DIDerivedType>(Decl),
+      AlignInBits);
+  auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
   AllGVs.push_back(N);
   return N;
 }
 
 DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit,
-    DIExpression *Expr, MDNode *Decl, uint32_t AlignInBits) {
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, MDNode *Decl,
+    uint32_t AlignInBits) {
   checkGlobalVariableScope(Context);
 
   return DIGlobalVariable::getTemporary(
              VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-             LineNumber, Ty, isLocalToUnit, false, Expr,
+             LineNumber, Ty, isLocalToUnit, false,
              cast_or_null<DIDerivedType>(Decl), AlignInBits)
       .release();
 }

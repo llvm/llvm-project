@@ -25,6 +25,7 @@ class MIMG_Helper <dag outs, dag ins, string asm,
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
   let AsmMatchConverter = "cvtMIMG";
+  let usesCustomInserter = 1;
 }
 
 class MIMG_NoSampler_Helper <bits<7> op, string asm,

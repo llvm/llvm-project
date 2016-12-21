@@ -137,7 +137,6 @@ namespace llvm {
                        MachineBasicBlock* PredBB,
                        unsigned MinCommonTailLength);
     void setCommonTailEdgeWeights(MachineBasicBlock &TailMBB);
-    void computeLiveIns(MachineBasicBlock &MBB);
     void ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
                                  MachineBasicBlock *NewDest);
     MachineBasicBlock *SplitMBBAt(MachineBasicBlock &CurMBB,

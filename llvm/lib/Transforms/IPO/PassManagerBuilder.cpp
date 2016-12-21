@@ -155,7 +155,6 @@ PassManagerBuilder::PassManagerBuilder() {
     SizeLevel = 0;
     LibraryInfo = nullptr;
     Inliner = nullptr;
-    ModuleSummary = nullptr;
     DisableUnitAtATime = false;
     DisableUnrollLoops = false;
     BBVectorize = RunBBVectorization;
@@ -383,6 +382,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
 
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
+  if (!PGOSampleUse.empty()) {
+    MPM.add(createPruneEHPass());
+    MPM.add(createSampleProfileLoaderPass(PGOSampleUse));
+  }
+
   // Allow forcing function attributes as a debugging and tuning aid.
   MPM.add(createForceFunctionAttrsLegacyPass());
 
@@ -557,7 +561,7 @@ void PassManagerBuilder::populateModulePassManager(
   // into separate loop that would otherwise inhibit vectorization.  This is
   // currently only performed for loops marked with the metadata
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
-  MPM.add(createLoopDistributePass(/*ProcessAllLoopsByDefault=*/false));
+  MPM.add(createLoopDistributePass());
 
   MPM.add(createLoopVectorizePass(DisableUnrollLoops, LoopVectorize));
 
@@ -664,9 +668,6 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
   // Provide AliasAnalysis services for optimizations.
   addInitialAliasAnalysisPasses(PM);
-
-  if (ModuleSummary)
-    PM.add(createFunctionImportPass(ModuleSummary));
 
   // Allow forcing function attributes as a debugging and tuning aid.
   PM.add(createForceFunctionAttrsLegacyPass());
@@ -826,9 +827,6 @@ void PassManagerBuilder::populateThinLTOPassManager(
 
   if (VerifyInput)
     PM.add(createVerifierPass());
-
-  if (ModuleSummary)
-    PM.add(createFunctionImportPass(ModuleSummary));
 
   populateModulePassManager(PM);
 

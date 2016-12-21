@@ -31,7 +31,7 @@ target triple = "x86_64-apple-macosx"
 !1 = !DIFile(filename: "bitfield.c", directory: "/Volumes/Data/llvm")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true)
+!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "s", scope: !0, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true))
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PackedBits", file: !1, line: 3, size: 40, elements: !6)
 !6 = !{!7, !9, !13}
 

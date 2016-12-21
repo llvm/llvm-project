@@ -24,5 +24,21 @@ using namespace llvm;
 #endif
 
 ARMLegalizerInfo::ARMLegalizerInfo() {
+  using namespace TargetOpcode;
+
+  const LLT p0 = LLT::pointer(0, 32);
+
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  setAction({G_FRAME_INDEX, p0}, Legal);
+
+  setAction({G_LOAD, s32}, Legal);
+  setAction({G_LOAD, 1, p0}, Legal);
+
+  for (auto Ty : {s8, s16, s32})
+    setAction({G_ADD, Ty}, Legal);
+
   computeTables();
 }

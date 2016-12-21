@@ -496,14 +496,14 @@ private:
   llvm::DIGlobalVariable *
   getGlobalVariableForwardDeclaration(const VarDecl *VD);
 
-  /// \brief Return a global variable that represents one of the
-  /// collection of global variables created for an anonmyous union.
+  /// Return a global variable that represents one of the collection of global
+  /// variables created for an anonmyous union.
   ///
   /// Recursively collect all of the member fields of a global
   /// anonymous decl and create static variables for them. The first
   /// time this is called it needs to be on a union and then from
   /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariable *
+  llvm::DIGlobalVariableExpression *
   CollectAnonRecordDecls(const RecordDecl *RD, llvm::DIFile *Unit,
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);

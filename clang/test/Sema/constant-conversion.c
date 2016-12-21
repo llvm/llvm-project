@@ -11,7 +11,7 @@ void test_6792488(void) {
 void test_7809123(void) {
   struct { int i5 : 5; } a;
 
-  a.i5 = 36; // expected-warning {{implicit truncation from 'int' to bitfield changes value from 36 to 4}}
+  a.i5 = 36; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 36 to 4}}
 }
 
 void test() {
@@ -31,11 +31,11 @@ void test3() {
     int bar : 2;
   };
 
-  struct A a = { 0, 10 };            // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to -2}}
-  struct A b[] = { 0, 10, 0, 0 };    // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to -2}}
-  struct A c[] = {{10, 0}};          // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to 2}}
-  struct A d = (struct A) { 10, 0 }; // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to 2}}
-  struct A e = { .foo = 10 };        // expected-warning {{implicit truncation from 'int' to bitfield changes value from 10 to 2}}
+  struct A a = { 0, 10 };            // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to -2}}
+  struct A b[] = { 0, 10, 0, 0 };    // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to -2}}
+  struct A c[] = {{10, 0}};          // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to 2}}
+  struct A d = (struct A) { 10, 0 }; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to 2}}
+  struct A e = { .foo = 10 };        // expected-warning {{implicit truncation from 'int' to bit-field changes value from 10 to 2}}
 }
 
 void test4() {
@@ -43,7 +43,7 @@ void test4() {
     char c : 2;
   } a;
 
-  a.c = 0x101; // expected-warning {{implicit truncation from 'int' to bitfield changes value from 257 to 1}}
+  a.c = 0x101; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 257 to 1}}
 }
 
 void test5() {
@@ -52,7 +52,7 @@ void test5() {
   } a;
 
   // Don't warn about this implicit conversion to bool, or at least
-  // don't warn about it just because it's a bitfield.
+  // don't warn about it just because it's a bit-field.
   a.b = 100;
 }
 
@@ -71,7 +71,7 @@ void test7() {
 
 	f.twoBits1 = ~0; // no-warning
 	f.twoBits1 = ~1; // no-warning
-	f.twoBits2 = ~2; // expected-warning {{implicit truncation from 'int' to bitfield changes value from -3 to 1}}
+	f.twoBits2 = ~2; // expected-warning {{implicit truncation from 'int' to bit-field changes value from -3 to 1}}
 	f.twoBits1 &= ~1; // no-warning
 	f.twoBits2 &= ~2; // no-warning
 }
@@ -79,7 +79,7 @@ void test7() {
 void test8() {
   enum E { A, B, C };
   struct { enum E x : 1; } f;
-  f.x = C; // expected-warning {{implicit truncation from 'int' to bitfield changes value from 2 to 0}}
+  f.x = C; // expected-warning {{implicit truncation from 'int' to bit-field changes value from 2 to 0}}
 }
 
 void test9() {
@@ -128,6 +128,6 @@ void test10() {
   s.a = ~0U;
   s.a = ~(1<<A);
 
-  s.a = -9;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from -9 to 7}}
-  s.a = 16;  // expected-warning{{implicit truncation from 'int' to bitfield changes value from 16 to 0}}
+  s.a = -9;  // expected-warning{{implicit truncation from 'int' to bit-field changes value from -9 to 7}}
+  s.a = 16;  // expected-warning{{implicit truncation from 'int' to bit-field changes value from 16 to 0}}
 }

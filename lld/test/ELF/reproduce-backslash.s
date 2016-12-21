@@ -4,6 +4,6 @@
 # legal for a filename to contain backslashes.
 # RUN: llvm-mc %s -o foo\\.o -filetype=obj -triple=x86_64-pc-linux
 # RUN: ld.lld foo\\.o --reproduce repro
-# RUN: cpio -t < repro.cpio | FileCheck %s
+# RUN: cpio -it < repro.cpio | FileCheck %s
 
 # CHECK: repro/{{.*}}/foo\.o

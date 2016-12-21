@@ -3439,6 +3439,65 @@ public:
   }
 };
 
+/// This represents '#pragma omp target teams' directive.
+///
+/// \code
+/// #pragma omp target teams if(a>0)
+/// \endcode
+/// In this example directive '#pragma omp target teams' has clause 'if' with
+/// condition 'a>0'.
+///
+class OMPTargetTeamsDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param NumClauses Number of clauses.
+  ///
+  OMPTargetTeamsDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                          unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPTargetTeamsDirectiveClass,
+                               OMPD_target_teams, StartLoc, EndLoc, NumClauses,
+                               1) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param NumClauses Number of clauses.
+  ///
+  explicit OMPTargetTeamsDirective(unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPTargetTeamsDirectiveClass,
+                               OMPD_target_teams, SourceLocation(),
+                               SourceLocation(), NumClauses, 1) {}
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  ///
+  static OMPTargetTeamsDirective *Create(const ASTContext &C,
+                                         SourceLocation StartLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<OMPClause *> Clauses,
+                                         Stmt *AssociatedStmt);
+
+  /// Creates an empty directive with the place for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPTargetTeamsDirective *CreateEmpty(const ASTContext &C,
+                                              unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPTargetTeamsDirectiveClass;
+  }
+};
+
 } // end namespace clang
 
 #endif

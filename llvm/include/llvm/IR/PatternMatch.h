@@ -1349,6 +1349,35 @@ m_c_Xor(const LHS &L, const RHS &R) {
   return m_CombineOr(m_Xor(L, R), m_Xor(R, L));
 }
 
+/// Matches an SMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>,
+                        MaxMin_match<ICmpInst, RHS, LHS, smin_pred_ty>>
+m_c_SMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_SMin(L, R), m_SMin(R, L));
+}
+/// Matches an SMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
+                        MaxMin_match<ICmpInst, RHS, LHS, smax_pred_ty>>
+m_c_SMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_SMax(L, R), m_SMax(R, L));
+}
+/// Matches a UMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>,
+                        MaxMin_match<ICmpInst, RHS, LHS, umin_pred_ty>>
+m_c_UMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_UMin(L, R), m_UMin(R, L));
+}
+/// Matches a UMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
+                        MaxMin_match<ICmpInst, RHS, LHS, umax_pred_ty>>
+m_c_UMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_UMax(L, R), m_UMax(R, L));
+}
+
 } // end namespace PatternMatch
 } // end namespace llvm
 

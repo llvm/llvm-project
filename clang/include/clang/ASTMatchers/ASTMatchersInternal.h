@@ -1421,18 +1421,18 @@ private:
 template <>
 inline bool ValueEqualsMatcher<FloatingLiteral, double>::matchesNode(
     const FloatingLiteral &Node) const {
-  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle)
+  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle())
     return Node.getValue().convertToFloat() == ExpectedValue;
-  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble)
+  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble())
     return Node.getValue().convertToDouble() == ExpectedValue;
   return false;
 }
 template <>
 inline bool ValueEqualsMatcher<FloatingLiteral, float>::matchesNode(
     const FloatingLiteral &Node) const {
-  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle)
+  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEsingle())
     return Node.getValue().convertToFloat() == ExpectedValue;
-  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble)
+  if ((&Node.getSemantics()) == &llvm::APFloat::IEEEdouble())
     return Node.getValue().convertToDouble() == ExpectedValue;
   return false;
 }

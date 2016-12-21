@@ -19,12 +19,11 @@ define void @pull_bitcast(<4 x i8>* %pA, <4 x i8>* %pB) {
 define <4 x i32> @multi_use_swizzle(<4 x i32>* %pA, <4 x i32>* %pB) {
 ; CHECK-LABEL: multi_use_swizzle:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,1,1,2]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = mem[1,1,2,3]
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,3,2,2]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,1,0,2]
-; CHECK-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[1,2]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,2,2]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,1,0,2]
+; CHECK-NEXT:    vxorps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %A = load <4 x i32>, <4 x i32>* %pA
   %B = load <4 x i32>, <4 x i32>* %pB

@@ -107,10 +107,8 @@ define <4 x i32> @combine_vec_shl_known_zero1(<4 x i32> %x) {
 define <4 x i32> @combine_vec_shl_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-LABEL: combine_vec_shl_trunc_and:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,2]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    pslld $23, %xmm1
 ; SSE-NEXT:    paddd {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    cvttps2dq %xmm1, %xmm1

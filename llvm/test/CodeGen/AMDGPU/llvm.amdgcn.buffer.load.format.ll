@@ -32,10 +32,10 @@ main_body:
 ;SICI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 offen
 ;VI-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 61 offset:4095
 ;VI-DAG: s_movk_i32 [[OFS1:s[0-9]+]], 0x7fff
-;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS1]] offset:4093
+;VI-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS1]] offset:4093
 ;SICI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 offen
-;VI: s_mov_b32 [[OFS2:s[0-9]+]], 0x8fff
-;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS2]] offset:1
+;VI-DAG: s_mov_b32 [[OFS2:s[0-9]+]], 0x8fff
+;VI-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS2]] offset:1
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:

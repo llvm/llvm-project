@@ -2072,35 +2072,39 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
                       (DefRange.StructOffset
                        << DefRangeRegisterRelSym::OffsetInParentShift);
       }
-      DefRangeRegisterRelSym Sym(DefRange.CVRegister, RegRelFlags,
-                                 DefRange.DataOffset, None);
+      DefRangeRegisterRelSym Sym(S_DEFRANGE_REGISTER_REL);
+      Sym.Hdr.Register = DefRange.CVRegister;
+      Sym.Hdr.Flags = RegRelFlags;
+      Sym.Hdr.BasePointerOffset = DefRange.DataOffset;
       ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER_REL);
       BytePrefix +=
           StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
       BytePrefix +=
-          StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                    sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+          StringRef(reinterpret_cast<const char *>(&Sym.Hdr), sizeof(Sym.Hdr));
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
       if (DefRange.IsSubfield) {
         // Unclear what matters here.
-        DefRangeSubfieldRegisterSym Sym(DefRange.CVRegister, 0,
-                                        DefRange.StructOffset, None);
+        DefRangeSubfieldRegisterSym Sym(S_DEFRANGE_SUBFIELD_REGISTER);
+        Sym.Hdr.Register = DefRange.CVRegister;
+        Sym.Hdr.MayHaveNoName = 0;
+        Sym.Hdr.OffsetInParent = DefRange.StructOffset;
+
         ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_SUBFIELD_REGISTER);
         BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
                                 sizeof(SymKind));
-        BytePrefix +=
-            StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+        BytePrefix += StringRef(reinterpret_cast<const char *>(&Sym.Hdr),
+                                sizeof(Sym.Hdr));
       } else {
         // Unclear what matters here.
-        DefRangeRegisterSym Sym(DefRange.CVRegister, 0, None);
+        DefRangeRegisterSym Sym(S_DEFRANGE_REGISTER);
+        Sym.Hdr.Register = DefRange.CVRegister;
+        Sym.Hdr.MayHaveNoName = 0;
         ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
         BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
                                 sizeof(SymKind));
-        BytePrefix +=
-            StringRef(reinterpret_cast<const char *>(&Sym.Header),
-                      sizeof(Sym.Header) - sizeof(LocalVariableAddrRange));
+        BytePrefix += StringRef(reinterpret_cast<const char *>(&Sym.Hdr),
+                                sizeof(Sym.Hdr));
       }
     }
     OS.EmitCVDefRangeDirective(DefRange.Ranges, BytePrefix);
@@ -2181,12 +2185,13 @@ void CodeViewDebug::emitDebugInfoForUDTs(
 }
 
 void CodeViewDebug::emitDebugInfoForGlobals() {
-  DenseMap<const DIGlobalVariable *, const GlobalVariable *> GlobalMap;
+  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
+      GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
-    SmallVector<MDNode *, 1> MDs;
-    GV.getMetadata(LLVMContext::MD_dbg, MDs);
-    for (MDNode *MD : MDs)
-      GlobalMap[cast<DIGlobalVariable>(MD)] = &GV;
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (const auto *GVE : GVEs)
+      GlobalMap[GVE] = &GV;
   }
 
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
@@ -2198,14 +2203,15 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     // it if we have at least one global to emit.
     switchToDebugSectionForSymbol(nullptr);
     MCSymbol *EndLabel = nullptr;
-    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G))
+    for (const auto *GVE : CU->getGlobalVariables()) {
+      if (const auto *GV = GlobalMap.lookup(GVE))
         if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
             EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
           }
-          emitDebugInfoForGlobal(G, GV, Asm->getSymbol(GV));
+          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+          emitDebugInfoForGlobal(GVE->getVariable(), GV, Asm->getSymbol(GV));
         }
     }
     if (EndLabel)
@@ -2213,15 +2219,16 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
 
     // Second, emit each global that is in a comdat into its own .debug$S
     // section along with its own symbol substream.
-    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(G)) {
+    for (const auto *GVE : CU->getGlobalVariables()) {
+      if (const auto *GV = GlobalMap.lookup(GVE)) {
         if (GV->hasComdat()) {
           MCSymbol *GVSym = Asm->getSymbol(GV);
           OS.AddComment("Symbol subsection for " +
                         Twine(GlobalValue::getRealLinkageName(GV->getName())));
           switchToDebugSectionForSymbol(GVSym);
           EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
-          emitDebugInfoForGlobal(G, GV, GVSym);
+          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+          emitDebugInfoForGlobal(GVE->getVariable(), GV, GVSym);
           endCVSubsection(EndLabel);
         }
       }

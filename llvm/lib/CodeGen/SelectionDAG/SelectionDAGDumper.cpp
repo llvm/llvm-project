@@ -425,9 +425,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   } else if (const ConstantSDNode *CSDN = dyn_cast<ConstantSDNode>(this)) {
     OS << '<' << CSDN->getAPIntValue() << '>';
   } else if (const ConstantFPSDNode *CSDN = dyn_cast<ConstantFPSDNode>(this)) {
-    if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEsingle)
+    if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEsingle())
       OS << '<' << CSDN->getValueAPF().convertToFloat() << '>';
-    else if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEdouble)
+    else if (&CSDN->getValueAPF().getSemantics()==&APFloat::IEEEdouble())
       OS << '<' << CSDN->getValueAPF().convertToDouble() << '>';
     else {
       OS << "<APFloat(";

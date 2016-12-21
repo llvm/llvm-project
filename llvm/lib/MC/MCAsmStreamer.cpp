@@ -209,7 +209,8 @@ public:
                          unsigned MaxBytesToEmit = 0) override;
 
   void emitValueToOffset(const MCExpr *Offset,
-                         unsigned char Value = 0) override;
+                         unsigned char Value,
+                         SMLoc Loc) override;
 
   void EmitFileDirective(StringRef Filename) override;
   unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
@@ -1011,7 +1012,8 @@ void MCAsmStreamer::EmitCodeAlignment(unsigned ByteAlignment,
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
-                                      unsigned char Value) {
+                                      unsigned char Value,
+                                      SMLoc Loc) {
   // FIXME: Verify that Offset is associated with the current section.
   OS << ".org ";
   Offset->print(OS, MAI);

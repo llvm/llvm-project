@@ -1001,12 +1001,12 @@ define <2 x i64> @insert_reg_and_zero_v2i64(i64 %a) {
 define <2 x i64> @insert_mem_and_zero_v2i64(i64* %ptr) {
 ; SSE-LABEL: insert_mem_and_zero_v2i64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_mem_and_zero_v2i64:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %a = load i64, i64* %ptr
   %v = insertelement <2 x i64> undef, i64 %a, i32 0

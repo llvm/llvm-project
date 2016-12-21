@@ -547,6 +547,19 @@ public:
   void loadTopLevelSystemModules();
 
 private:
+
+  /// \brief Lookup a module with the given module name and search-name.
+  ///
+  /// \param ModuleName The name of the module we're looking for.
+  ///
+  /// \param SearchName The "search-name" to derive filesystem paths from
+  /// when looking for the module map; this is usually equal to ModuleName,
+  /// but for compatibility with some buggy frameworks, additional attempts
+  /// may be made to find the module under a related-but-different search-name.
+  ///
+  /// \returns The module named ModuleName.
+  Module *lookupModule(StringRef ModuleName, StringRef SearchName);
+
   /// \brief Retrieve a module with the given name, which may be part of the
   /// given framework.
   ///

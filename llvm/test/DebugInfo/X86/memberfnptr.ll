@@ -35,7 +35,7 @@ declare void @_ZN1A3fooEv(%struct.A*)
 !8 = !{null, !9}
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !4)
 !10 = !{!11}
-!11 = !DIGlobalVariable(name: "p", line: 5, isLocal: false, isDefinition: true, scope: null, file: !12, type: !13)
+!11 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "p", line: 5, isLocal: false, isDefinition: true, scope: null, file: !12, type: !13))
 !12 = !DIFile(filename: "memberfnptr.cpp", directory: "")
 !13 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, size: 64, baseType: !7, extraData: !4)
 !14 = !{i32 2, !"Dwarf Version", i32 2}

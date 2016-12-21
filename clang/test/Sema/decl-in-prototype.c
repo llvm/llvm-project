@@ -52,3 +52,44 @@ void enum_in_fun_in_fun(void (*fp)(enum { AA, BB } e)) { // expected-warning {{w
   SA(1, AA == 5);
   SA(2, BB == 0);
 }
+
+void f7() {
+  extern void ext(struct S { enum E7 { a, b } o; } p); // expected-warning 2 {{will not be visible}}
+  ext(a); // expected-error {{use of undeclared identifier}}
+}
+
+int f8(struct S { enum E8 { a, b } o; } p) { // expected-warning 2 {{will not be visible}}
+  struct S o;
+  enum E8 x;
+  return a + b;
+}
+// expected-note@+1 {{forward declaration}}
+struct S o; // expected-error {{'struct S' that is never completed}}
+// expected-note@+1 {{forward declaration}}
+enum E8 x = a + b; // expected-error 2 {{undeclared identifier}} expected-error {{incomplete type 'enum E8'}}
+
+int f9(struct { enum e { a = 1 } b; } c) { // expected-warning {{will not be visible}}
+  return a;
+}
+
+int f10(
+  struct S { // expected-warning {{will not be visible}}
+    enum E10 { a, b, c } f; // expected-warning {{will not be visible}}
+  } e) {
+  return a == b;
+}
+
+int f11(
+  struct S { // expected-warning {{will not be visible}}
+    enum E11 { // expected-warning {{will not be visible}}
+      a, b, c
+    } // expected-warning {{expected ';' at end of declaration list}}
+  } // expected-error {{expected member name or ';'}}
+  e);
+
+void f12() {
+  extern int ext12(
+      struct S12 { } e // expected-warning {{will not be visible}}
+      );
+  struct S12 o; // expected-error {{incomplete type}} expected-note {{forward declaration}}
+}

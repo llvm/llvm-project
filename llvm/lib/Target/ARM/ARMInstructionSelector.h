@@ -32,6 +32,7 @@ public:
 private:
   const ARMBaseInstrInfo &TII;
   const ARMBaseRegisterInfo &TRI;
+  const ARMRegisterBankInfo &RBI;
 };
 
 } // End llvm namespace.

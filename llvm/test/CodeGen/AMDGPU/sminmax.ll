@@ -32,6 +32,20 @@ define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind 
   ret void
 }
 
+; GCN-LABEL: {{^}}v_abs_i32_repeat_user:
+; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
+; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[NEG]], [[SRC]]
+; GCN: v_mul_lo_i32 v{{[0-9]+}}, [[MAX]], [[MAX]]
+define void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
+  %val = load i32, i32 addrspace(1)* %src, align 4
+  %neg = sub i32 0, %val
+  %cond = icmp sgt i32 %val, %neg
+  %res = select i1 %cond, i32 %val, i32 %neg
+  %mul = mul i32 %res, %res
+  store i32 %mul, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}s_abs_v2i32:
 ; GCN: s_abs_i32
 ; GCN: s_abs_i32

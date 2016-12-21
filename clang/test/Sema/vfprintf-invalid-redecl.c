@@ -3,4 +3,4 @@
 
 // The following declaration is not compatible with vfprintf(), but make
 // sure this isn't an error: autoconf expects this to build.
-char vfprintf(); // expected-warning {{incompatible redeclaration of library function 'vfprintf'}} expected-note {{'vfprintf' is a builtin}}
+char vfprintf(); // expected-warning {{declaration of built-in function 'vfprintf'}}

@@ -8532,14 +8532,18 @@ void Sema::PushUsingDirective(Scope *S, UsingDirectiveDecl *UDir) {
 
 Decl *Sema::ActOnUsingDeclaration(Scope *S,
                                   AccessSpecifier AS,
-                                  bool HasUsingKeyword,
                                   SourceLocation UsingLoc,
+                                  SourceLocation TypenameLoc,
                                   CXXScopeSpec &SS,
                                   UnqualifiedId &Name,
-                                  AttributeList *AttrList,
-                                  bool HasTypenameKeyword,
-                                  SourceLocation TypenameLoc) {
+                                  SourceLocation EllipsisLoc,
+                                  AttributeList *AttrList) {
   assert(S->getFlags() & Scope::DeclScope && "Invalid Scope.");
+
+  if (SS.isEmpty()) {
+    Diag(Name.getLocStart(), diag::err_using_requires_qualname);
+    return nullptr;
+  }
 
   switch (Name.getKind()) {
   case UnqualifiedId::IK_ImplicitSelfParam:
@@ -8579,21 +8583,30 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S,
     return nullptr;
 
   // Warn about access declarations.
-  if (!HasUsingKeyword) {
+  if (UsingLoc.isInvalid()) {
     Diag(Name.getLocStart(),
          getLangOpts().CPlusPlus11 ? diag::err_access_decl
                                    : diag::warn_access_decl_deprecated)
       << FixItHint::CreateInsertion(SS.getRange().getBegin(), "using ");
   }
 
-  if (DiagnoseUnexpandedParameterPack(SS, UPPC_UsingDeclaration) ||
-      DiagnoseUnexpandedParameterPack(TargetNameInfo, UPPC_UsingDeclaration))
-    return nullptr;
+  if (EllipsisLoc.isInvalid()) {
+    if (DiagnoseUnexpandedParameterPack(SS, UPPC_UsingDeclaration) ||
+        DiagnoseUnexpandedParameterPack(TargetNameInfo, UPPC_UsingDeclaration))
+      return nullptr;
+  } else {
+    if (!SS.getScopeRep()->containsUnexpandedParameterPack() &&
+        !TargetNameInfo.containsUnexpandedParameterPack()) {
+      Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
+        << SourceRange(SS.getBeginLoc(), TargetNameInfo.getEndLoc());
+      EllipsisLoc = SourceLocation();
+    }
+  }
 
-  NamedDecl *UD = BuildUsingDeclaration(S, AS, UsingLoc, SS,
-                                        TargetNameInfo, AttrList,
-                                        /* IsInstantiation */ false,
-                                        HasTypenameKeyword, TypenameLoc);
+  NamedDecl *UD =
+      BuildUsingDeclaration(S, AS, UsingLoc, TypenameLoc.isValid(), TypenameLoc,
+                            SS, TargetNameInfo, EllipsisLoc, AttrList,
+                            /*IsInstantiation*/false);
   if (UD)
     PushOnScopeChains(UD, S, /*AddToContext*/ false);
 
@@ -8656,6 +8669,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
              diag::err_using_decl_nested_name_specifier_is_current_class)
           << Using->getQualifierLoc().getSourceRange();
         Diag(Orig->getLocation(), diag::note_using_decl_target);
+        Using->setInvalidDecl();
         return true;
       }
 
@@ -8665,6 +8679,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
         << cast<CXXRecordDecl>(CurContext)
         << Using->getQualifierLoc().getSourceRange();
       Diag(Orig->getLocation(), diag::note_using_decl_target);
+      Using->setInvalidDecl();
       return true;
     }
   }
@@ -8688,7 +8703,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
     // We can have UsingDecls in our Previous results because we use the same
     // LookupResult for checking whether the UsingDecl itself is a valid
     // redeclaration.
-    if (isa<UsingDecl>(D))
+    if (isa<UsingDecl>(D) || isa<UsingPackDecl>(D))
       continue;
 
     if (IsEquivalentForUsingDecl(Context, D, Target)) {
@@ -8734,6 +8749,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
 
     Diag(Target->getLocation(), diag::note_using_decl_target);
     Diag(OldDecl->getLocation(), diag::note_using_decl_conflict);
+    Using->setInvalidDecl();
     return true;
   }
 
@@ -8746,6 +8762,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
     Diag(Using->getLocation(), diag::err_using_decl_conflict);
     Diag(Target->getLocation(), diag::note_using_decl_target);
     Diag(Tag->getLocation(), diag::note_using_decl_conflict);
+    Using->setInvalidDecl();
     return true;
   }
 
@@ -8755,6 +8772,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
   Diag(Using->getLocation(), diag::err_using_decl_conflict);
   Diag(Target->getLocation(), diag::note_using_decl_target);
   Diag(NonTag->getLocation(), diag::note_using_decl_conflict);
+  Using->setInvalidDecl();
   return true;
 }
 
@@ -8962,22 +8980,18 @@ private:
 ///   the lookup differently for these declarations.
 NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
                                        SourceLocation UsingLoc,
+                                       bool HasTypenameKeyword,
+                                       SourceLocation TypenameLoc,
                                        CXXScopeSpec &SS,
                                        DeclarationNameInfo NameInfo,
+                                       SourceLocation EllipsisLoc,
                                        AttributeList *AttrList,
-                                       bool IsInstantiation,
-                                       bool HasTypenameKeyword,
-                                       SourceLocation TypenameLoc) {
+                                       bool IsInstantiation) {
   assert(!SS.isInvalid() && "Invalid CXXScopeSpec.");
   SourceLocation IdentLoc = NameInfo.getLoc();
   assert(IdentLoc.isValid() && "Invalid TargetName location.");
 
   // FIXME: We ignore attributes for now.
-
-  if (SS.isEmpty()) {
-    Diag(IdentLoc, diag::err_using_requires_qualname);
-    return nullptr;
-  }
 
   // For an inheriting constructor declaration, the name of the using
   // declaration is the name of a constructor in this class, not in the
@@ -9012,8 +9026,23 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
     F.done();
   } else {
     assert(IsInstantiation && "no scope in non-instantiation");
-    assert(CurContext->isRecord() && "scope not record in instantiation");
-    LookupQualifiedName(Previous, CurContext);
+    if (CurContext->isRecord())
+      LookupQualifiedName(Previous, CurContext);
+    else {
+      // No redeclaration check is needed here; in non-member contexts we
+      // diagnosed all possible conflicts with other using-declarations when
+      // building the template:
+      //
+      // For a dependent non-type using declaration, the only valid case is
+      // if we instantiate to a single enumerator. We check for conflicts
+      // between shadow declarations we introduce, and we check in the template
+      // definition for conflicts between a non-type using declaration and any
+      // other declaration, which together covers all cases.
+      //
+      // A dependent typename using declaration will never successfully
+      // instantiate, since it will always name a class member, so we reject
+      // that in the template definition.
+    }
   }
 
   // Check for invalid redeclarations.
@@ -9022,22 +9051,24 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
     return nullptr;
 
   // Check for bad qualifiers.
-  if (CheckUsingDeclQualifier(UsingLoc, SS, NameInfo, IdentLoc))
+  if (CheckUsingDeclQualifier(UsingLoc, HasTypenameKeyword, SS, NameInfo,
+                              IdentLoc))
     return nullptr;
 
   DeclContext *LookupContext = computeDeclContext(SS);
   NamedDecl *D;
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
-  if (!LookupContext) {
+  if (!LookupContext || EllipsisLoc.isValid()) {
     if (HasTypenameKeyword) {
       // FIXME: not all declaration name kinds are legal here
       D = UnresolvedUsingTypenameDecl::Create(Context, CurContext,
                                               UsingLoc, TypenameLoc,
                                               QualifierLoc,
-                                              IdentLoc, NameInfo.getName());
+                                              IdentLoc, NameInfo.getName(),
+                                              EllipsisLoc);
     } else {
       D = UnresolvedUsingValueDecl::Create(Context, CurContext, UsingLoc, 
-                                           QualifierLoc, NameInfo);
+                                           QualifierLoc, NameInfo, EllipsisLoc);
     }
     D->setAccess(AS);
     CurContext->addDecl(D);
@@ -9197,6 +9228,19 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
   return UD;
 }
 
+NamedDecl *Sema::BuildUsingPackDecl(NamedDecl *InstantiatedFrom,
+                                    ArrayRef<NamedDecl *> Expansions) {
+  assert(isa<UnresolvedUsingValueDecl>(InstantiatedFrom) ||
+         isa<UnresolvedUsingTypenameDecl>(InstantiatedFrom) ||
+         isa<UsingPackDecl>(InstantiatedFrom));
+
+  auto *UPD =
+      UsingPackDecl::Create(Context, CurContext, InstantiatedFrom, Expansions);
+  UPD->setAccess(InstantiatedFrom->getAccess());
+  CurContext->addDecl(UPD);
+  return UPD;
+}
+
 /// Additional checks for a using declaration referring to a constructor name.
 bool Sema::CheckInheritingConstructorUsingDecl(UsingDecl *UD) {
   assert(!UD->hasTypename() && "expecting a constructor name");
@@ -9233,6 +9277,8 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
                                        const CXXScopeSpec &SS,
                                        SourceLocation NameLoc,
                                        const LookupResult &Prev) {
+  NestedNameSpecifier *Qual = SS.getScopeRep();
+
   // C++03 [namespace.udecl]p8:
   // C++0x [namespace.udecl]p10:
   //   A using-declaration is a declaration and can therefore be used
@@ -9240,10 +9286,28 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
   //   allowed.
   //
   // That's in non-member contexts.
-  if (!CurContext->getRedeclContext()->isRecord())
+  if (!CurContext->getRedeclContext()->isRecord()) {
+    // A dependent qualifier outside a class can only ever resolve to an
+    // enumeration type. Therefore it conflicts with any other non-type
+    // declaration in the same scope.
+    // FIXME: How should we check for dependent type-type conflicts at block
+    // scope?
+    if (Qual->isDependent() && !HasTypenameKeyword) {
+      for (auto *D : Prev) {
+        if (!isa<TypeDecl>(D) && !isa<UsingDecl>(D) && !isa<UsingPackDecl>(D)) {
+          bool OldCouldBeEnumerator =
+              isa<UnresolvedUsingValueDecl>(D) || isa<EnumConstantDecl>(D);
+          Diag(NameLoc,
+               OldCouldBeEnumerator ? diag::err_redefinition
+                                    : diag::err_redefinition_different_kind)
+              << Prev.getLookupName();
+          Diag(D->getLocation(), diag::note_previous_definition);
+          return true;
+        }
+      }
+    }
     return false;
-
-  NestedNameSpecifier *Qual = SS.getScopeRep();
+  }
 
   for (LookupResult::iterator I = Prev.begin(), E = Prev.end(); I != E; ++I) {
     NamedDecl *D = *I;
@@ -9287,6 +9351,7 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
 /// in the current context is appropriately related to the current
 /// scope.  If an error is found, diagnoses it and returns true.
 bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
+                                   bool HasTypename,
                                    const CXXScopeSpec &SS,
                                    const DeclarationNameInfo &NameInfo,
                                    SourceLocation NameLoc) {
@@ -9297,9 +9362,11 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
     // C++0x [namespace.udecl]p8:
     //   A using-declaration for a class member shall be a member-declaration.
 
-    // If we weren't able to compute a valid scope, it must be a
-    // dependent class scope.
-    if (!NamedContext || NamedContext->getRedeclContext()->isRecord()) {
+    // If we weren't able to compute a valid scope, it might validly be a
+    // dependent class scope or a dependent enumeration unscoped scope. If
+    // we have a 'typename' keyword, the scope must resolve to a class type.
+    if ((HasTypename && !NamedContext) ||
+        (NamedContext && NamedContext->getRedeclContext()->isRecord())) {
       auto *RD = NamedContext
                      ? cast<CXXRecordDecl>(NamedContext->getRedeclContext())
                      : nullptr;
@@ -9359,7 +9426,8 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
         if (getLangOpts().CPlusPlus11) {
           // Convert 'using X::Y;' to 'auto &Y = X::Y;'.
           FixIt = FixItHint::CreateReplacement(
-              UsingLoc, "constexpr auto " + NameInfo.getName().getAsString() + " = ");
+              UsingLoc,
+              "constexpr auto " + NameInfo.getName().getAsString() + " = ");
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
@@ -9369,7 +9437,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
       return true;
     }
 
-    // Otherwise, everything is known to be fine.
+    // Otherwise, this might be valid.
     return false;
   }
 

@@ -1,5 +1,5 @@
 /*
- * kmp_sched.c -- static scheduling -- iteration initialization
+ * kmp_sched.cpp -- static scheduling -- iteration initialization
  */
 
 

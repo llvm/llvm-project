@@ -51,7 +51,7 @@ attributes #2 = { nounwind }
 
 ; CHECK-NEG-NOT: !DI{{Basic|Composite|Derived}}Type
 
-!0 = distinct !DIGlobalVariable(name: "b", scope: !1, file: !2, line: 5, type: !5, isLocal: false, isDefinition: true)
+!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b", scope: !1, file: !2, line: 5, type: !5, isLocal: false, isDefinition: true))
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 (trunk 282583) (llvm/trunk 282611)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "t.cpp", directory: "/")
 !3 = !{}

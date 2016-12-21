@@ -34,7 +34,7 @@ using namespace llvm;
 void RegScavenger::setRegUsed(unsigned Reg, LaneBitmask LaneMask) {
   for (MCRegUnitMaskIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
     LaneBitmask UnitMask = (*RUI).second;
-    if (UnitMask == 0 || (LaneMask & UnitMask) != 0)
+    if (UnitMask.none() || (LaneMask & UnitMask).any())
       RegUnitsAvailable.reset((*RUI).first);
   }
 }

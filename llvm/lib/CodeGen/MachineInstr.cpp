@@ -401,7 +401,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     } else if (getFPImm()->getType()->isHalfTy()) {
       APFloat APF = getFPImm()->getValueAPF();
       bool Unused;
-      APF.convert(APFloat::IEEEsingle, APFloat::rmNearestTiesToEven, &Unused);
+      APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &Unused);
       OS << "half " << APF.convertToFloat();
     } else {
       OS << getFPImm()->getValueAPF().convertToDouble();
@@ -1000,16 +1000,24 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     return false;
 
   if (isBundle()) {
-    // Both instructions are bundles, compare MIs inside the bundle.
+    // We have passed the test above that both instructions have the same
+    // opcode, so we know that both instructions are bundles here. Let's compare
+    // MIs inside the bundle.
+    assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
-    MachineBasicBlock::const_instr_iterator E1 = getParent()->instr_end();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    MachineBasicBlock::const_instr_iterator E2 = Other.getParent()->instr_end();
-    while (++I1 != E1 && I1->isInsideBundle()) {
+    // Loop until we analysed the last intruction inside at least one of the
+    // bundles.
+    while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
+      ++I1;
       ++I2;
-      if (I2 == E2 || !I2->isInsideBundle() || !I1->isIdenticalTo(*I2, Check))
+      if (!I1->isIdenticalTo(*I2, Check))
         return false;
     }
+    // If we've reached the end of just one of the two bundles, but not both,
+    // the instructions are not identical.
+    if (I1->isBundledWithSucc() || I2->isBundledWithSucc())
+      return false;
   }
 
   // Check operands to make sure they match.
@@ -1684,29 +1692,30 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
   }
 }
 
-LLVM_DUMP_METHOD void MachineInstr::dump() const {
+LLVM_DUMP_METHOD void MachineInstr::dump(const TargetInstrInfo *TII) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "  " << *this;
+  dbgs() << "  ";
+  print(dbgs(), false /* SkipOpers */, TII);
 #endif
 }
 
-void MachineInstr::print(raw_ostream &OS, bool SkipOpers) const {
+void MachineInstr::print(raw_ostream &OS, bool SkipOpers,
+                         const TargetInstrInfo *TII) const {
   const Module *M = nullptr;
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
       M = MF->getFunction()->getParent();
 
   ModuleSlotTracker MST(M);
-  print(OS, MST, SkipOpers);
+  print(OS, MST, SkipOpers, TII);
 }
 
 void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                         bool SkipOpers) const {
+                         bool SkipOpers, const TargetInstrInfo *TII) const {
   // We can be a bit tidier if we know the MachineFunction.
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
 
   if (const MachineBasicBlock *MBB = getParent()) {
@@ -1714,7 +1723,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (MF) {
       MRI = &MF->getRegInfo();
       TRI = MF->getSubtarget().getRegisterInfo();
-      TII = MF->getSubtarget().getInstrInfo();
+      if (!TII)
+        TII = MF->getSubtarget().getInstrInfo();
       IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
     }
   }

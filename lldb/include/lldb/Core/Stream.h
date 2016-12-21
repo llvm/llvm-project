@@ -19,6 +19,8 @@
 #include "lldb/Core/Flags.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
@@ -484,6 +486,10 @@ public:
   size_t Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   size_t PrintfVarArg(const char *format, va_list args);
+
+  template <typename... Args> void Format(const char *format, Args &&... args) {
+    PutCString(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
 
   //------------------------------------------------------------------
   /// Output a quoted C string value to the stream.

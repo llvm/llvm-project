@@ -41,8 +41,6 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 set(ASAN_DYNAMIC_LINK_FLAGS)
 
 if(ANDROID)
-  list(APPEND ASAN_COMMON_DEFINITIONS
-    ASAN_LOW_MEMORY=1)
 # On Android, -z global does not do what it is documented to do.
 # On Android, -z global moves the library ahead in the lookup order,
 # placing it right after the LD_PRELOADs. This is used to compensate for the fact

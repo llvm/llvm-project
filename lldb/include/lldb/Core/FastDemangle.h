@@ -10,11 +10,17 @@
 #ifndef liblldb_FastDemangle_h_
 #define liblldb_FastDemangle_h_
 
+#include <cstddef>
+
+#include <functional>
+
 namespace lldb_private {
 
 char *FastDemangle(const char *mangled_name);
 
-char *FastDemangle(const char *mangled_name, long mangled_name_length);
+char *
+FastDemangle(const char *mangled_name, size_t mangled_name_length,
+             std::function<void(const char *s)> primitive_type_hook = nullptr);
 }
 
 #endif

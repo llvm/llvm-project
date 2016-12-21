@@ -144,13 +144,15 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
 void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
   for (const auto &LI : MBB.liveins()) {
     MCSubRegIndexIterator S(LI.PhysReg, TRI);
-    if (LI.LaneMask == ~0u || (LI.LaneMask != 0 && !S.isValid())) {
+    if (LI.LaneMask.all() || (LI.LaneMask.any() && !S.isValid())) {
       addReg(LI.PhysReg);
       continue;
     }
-    for (; S.isValid(); ++S)
-      if (LI.LaneMask & TRI->getSubRegIndexLaneMask(S.getSubRegIndex()))
+    for (; S.isValid(); ++S) {
+      unsigned SI = S.getSubRegIndex();
+      if ((LI.LaneMask & TRI->getSubRegIndexLaneMask(SI)).any())
         addReg(S.getSubReg());
+    }
   }
 }
 
@@ -194,4 +196,27 @@ void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
   if (MFI.isCalleeSavedInfoValid())
     addPristines(*this, MF, MFI, *TRI);
   addBlockLiveIns(MBB);
+}
+
+void llvm::computeLiveIns(LivePhysRegs &LiveRegs, const TargetRegisterInfo &TRI,
+                          MachineBasicBlock &MBB) {
+  assert(MBB.livein_empty());
+  LiveRegs.init(TRI);
+  LiveRegs.addLiveOutsNoPristines(MBB);
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend()))
+    LiveRegs.stepBackward(MI);
+
+  for (unsigned Reg : LiveRegs) {
+    // Skip the register if we are about to add one of its super registers.
+    bool ContainsSuperReg = false;
+    for (MCSuperRegIterator SReg(Reg, &TRI); SReg.isValid(); ++SReg) {
+      if (LiveRegs.contains(*SReg)) {
+        ContainsSuperReg = true;
+        break;
+      }
+    }
+    if (ContainsSuperReg)
+      continue;
+    MBB.addLiveIn(Reg);
+  }
 }

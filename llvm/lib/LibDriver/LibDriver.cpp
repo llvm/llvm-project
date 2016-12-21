@@ -143,6 +143,15 @@ int llvm::libDriverMain(llvm::ArrayRef<const char*> ArgsArr) {
       });
       return 1;
     }
+    sys::fs::file_magic Magic =
+        sys::fs::identify_magic(MOrErr->Buf->getBuffer());
+    if (Magic != sys::fs::file_magic::coff_object &&
+        Magic != sys::fs::file_magic::bitcode &&
+        Magic != sys::fs::file_magic::windows_resource) {
+      llvm::errs() << Arg->getValue()
+                   << ": not a COFF object, bitcode or resource file\n";
+      return 1;
+    }
     Members.emplace_back(std::move(*MOrErr));
   }
 

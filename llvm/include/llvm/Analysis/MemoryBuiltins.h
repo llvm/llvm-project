@@ -141,6 +141,16 @@ bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
                    const TargetLibraryInfo *TLI, bool RoundToAlign = false,
                    ObjSizeMode Mode = ObjSizeMode::Exact);
 
+/// Try to turn a call to @llvm.objectsize into an integer value of the given
+/// Type. Returns null on failure.
+/// If MustSucceed is true, this function will not return null, and may return
+/// conservative values governed by the second argument of the call to
+/// objectsize.
+ConstantInt *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                 const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI,
+                                 bool MustSucceed);
+
 typedef std::pair<APInt, APInt> SizeOffsetType;
 
 /// \brief Evaluate the size and offset of an object pointed to by a Value*

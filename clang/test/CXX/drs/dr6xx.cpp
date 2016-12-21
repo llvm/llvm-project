@@ -353,3 +353,66 @@ namespace dr639 { // dr639: yes
     void((i = 0) + (i = 0)); // expected-warning {{unsequenced}}
   }
 }
+
+namespace dr692 { // dr692: no
+  namespace temp_func_order_example2 {
+    template <typename T, typename U> struct A {};
+    template <typename T, typename U> void f(U, A<U, T> *p = 0); // expected-note {{candidate}}
+    template <typename U> int &f(U, A<U, U> *p = 0); // expected-note {{candidate}}
+    template <typename T> void g(T, T = T());
+    template <typename T, typename... U> void g(T, U...); // expected-error 0-1{{C++11}}
+    void h() {
+      int &r = f<int>(42, (A<int, int> *)0);
+      f<int>(42); // expected-error {{ambiguous}}
+      // FIXME: We should reject this due to ambiguity between the pack and the
+      // default argument. Only parameters with arguments are considered during
+      // partial ordering of function templates.
+      g(42);
+    }
+  }
+
+  namespace temp_func_order_example3 {
+    template <typename T, typename... U> void f(T, U...); // expected-error 0-1{{C++11}}
+    template <typename T> void f(T);
+    template <typename T, typename... U> int &g(T *, U...); // expected-error 0-1{{C++11}}
+    template <typename T> void g(T);
+    void h(int i) {
+      // This is made ambiguous by dr692, but made valid again by dr1395.
+      f(&i);
+      int &r = g(&i);
+    }
+  }
+
+  namespace temp_deduct_partial_example {
+    template <typename... Args> char &f(Args... args); // expected-error 0-1{{C++11}}
+    template <typename T1, typename... Args> short &f(T1 a1, Args... args); // expected-error 0-1{{C++11}}
+    template <typename T1, typename T2> int &f(T1 a1, T2 a2);
+    void g() {
+      char &a = f();
+      short &b = f(1, 2, 3);
+      int &c = f(1, 2);
+    }
+  }
+
+  namespace temp_deduct_type_example1 {
+    template <class T1, class ...Z> class S; // expected-error 0-1{{C++11}}
+    template <class T1, class ...Z> class S<T1, const Z&...>; // expected-error 0-1{{C++11}}
+    template <class T1, class T2> class S<T1, const T2&> {};
+    S<int, const int&> s;
+
+    // FIXME: This should select the first partial specialization. Deduction of
+    // the second from the first should succeed, because we should ignore the
+    // trailing pack in A with no corresponding P.
+    template<class T, class... U> struct A; // expected-error 0-1{{C++11}}
+    template<class T1, class T2, class... U> struct A<T1,T2*,U...>; // expected-note {{matches}} expected-error 0-1{{C++11}}
+    template<class T1, class T2> struct A<T1,T2> {}; // expected-note {{matches}}
+    template struct A<int, int*>; // expected-error {{ambiguous}}
+  }
+
+  namespace temp_deduct_type_example3 {
+    // FIXME: This should select the first template, as in the case above.
+    template<class T, class... U> void f(T*, U...){} // expected-note {{candidate}} expected-error 0-1{{C++11}}
+    template<class T> void f(T){} // expected-note {{candidate}}
+    template void f(int*); // expected-error {{ambiguous}}
+  }
+}

@@ -3381,7 +3381,9 @@ def t2B   : T2I<(outs), (ins thumb_br_target:$target), IIC_Br,
 }
 
 let Size = 4, isNotDuplicable = 1, isIndirectBranch = 1 in {
-def t2BR_JT : t2PseudoInst<(outs),
+
+// available in both v8-M.Baseline and Thumb2 targets
+def t2BR_JT : t2basePseudoInst<(outs),
           (ins GPR:$target, GPR:$index, i32imm:$jt),
            0, IIC_Br,
           [(ARMbr2jt GPR:$target, GPR:$index, tjumptable:$jt)]>,

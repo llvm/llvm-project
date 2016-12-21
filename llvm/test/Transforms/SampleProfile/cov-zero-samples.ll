@@ -98,7 +98,7 @@ declare i32 @printf(i8*, ...)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!7}
 !11 = !{!12}
-!12 = !DIGlobalVariable(name: "N", scope: !0, file: !1, line: 3, type: !13, isLocal: false, isDefinition: true)
+!12 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "N", scope: !0, file: !1, line: 3, type: !13, isLocal: false, isDefinition: true))
 !13 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !14)
 !14 = !DIBasicType(name: "long long int", size: 64, align: 64, encoding: DW_ATE_signed)
 !15 = !{i32 2, !"Dwarf Version", i32 4}

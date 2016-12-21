@@ -289,7 +289,6 @@ def getAltVSXFMAOpcode : InstrMapping {
 
 include "PPCRegisterInfo.td"
 include "PPCSchedule.td"
-include "PPCInstrInfo.td"
 
 //===----------------------------------------------------------------------===//
 // PowerPC processors supported.
@@ -418,8 +417,7 @@ def : ProcessorModel<"pwr6x", G5Model,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.Power7FeatureList>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.Power8FeatureList>;
-// FIXME: Same as P8 until the POWER9 scheduling info is available
-def : ProcessorModel<"pwr9", P8Model, ProcessorFeatures.Power9FeatureList>;
+def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9FeatureList>; 
 def : Processor<"ppc", G3Itineraries, [Directive32, FeatureHardFloat,
                                        FeatureMFTB]>;
 def : Processor<"ppc32", G3Itineraries, [Directive32, FeatureHardFloat,

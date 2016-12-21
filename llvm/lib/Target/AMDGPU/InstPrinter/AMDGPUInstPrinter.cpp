@@ -749,6 +749,20 @@ void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
   }
 }
 
+void AMDGPUInstPrinter::printInterpAttr(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Attr = MI->getOperand(OpNum).getImm();
+  O << "attr" << Attr;
+}
+
+void AMDGPUInstPrinter::printInterpAttrChan(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Chan = MI->getOperand(OpNum).getImm();
+  O << '.' << "xyzw"[Chan & 0x3];
+}
+
 void AMDGPUInstPrinter::printVGPRIndexMode(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {

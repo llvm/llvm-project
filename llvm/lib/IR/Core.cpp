@@ -983,7 +983,7 @@ double LLVMConstRealGetDouble(LLVMValueRef ConstantVal, LLVMBool *LosesInfo) {
 
   bool APFLosesInfo;
   APFloat APF = cFP->getValueAPF();
-  APF.convert(APFloat::IEEEdouble, APFloat::rmNearestTiesToEven, &APFLosesInfo);
+  APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &APFLosesInfo);
   *LosesInfo = APFLosesInfo;
   return APF.convertToDouble();
 }

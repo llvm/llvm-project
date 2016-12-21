@@ -278,22 +278,29 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Org: {
     const MCOrgFragment &OF = cast<MCOrgFragment>(F);
     MCValue Value;
-    if (!OF.getOffset().evaluateAsValue(Value, Layout))
-      report_fatal_error("expected assembly-time absolute expression");
+    if (!OF.getOffset().evaluateAsValue(Value, Layout)) {
+      getContext().reportError(OF.getLoc(),
+                               "expected assembly-time absolute expression");
+        return 0;
+    }
 
-    // FIXME: We need a way to communicate this error.
     uint64_t FragmentOffset = Layout.getFragmentOffset(&OF);
     int64_t TargetLocation = Value.getConstant();
     if (const MCSymbolRefExpr *A = Value.getSymA()) {
       uint64_t Val;
-      if (!Layout.getSymbolOffset(A->getSymbol(), Val))
-        report_fatal_error("expected absolute expression");
+      if (!Layout.getSymbolOffset(A->getSymbol(), Val)) {
+        getContext().reportError(OF.getLoc(), "expected absolute expression");
+        return 0;
+      }
       TargetLocation += Val;
     }
     int64_t Size = TargetLocation - FragmentOffset;
-    if (Size < 0 || Size >= 0x40000000)
-      report_fatal_error("invalid .org offset '" + Twine(TargetLocation) +
-                         "' (at offset '" + Twine(FragmentOffset) + "')");
+    if (Size < 0 || Size >= 0x40000000) {
+      getContext().reportError(
+          OF.getLoc(), "invalid .org offset '" + Twine(TargetLocation) +
+                           "' (at offset '" + Twine(FragmentOffset) + "')");
+      return 0;
+    }
     return Size;
   }
 
@@ -660,7 +667,8 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 
   // Layout until everything fits.
   while (layoutOnce(Layout))
-    continue;
+    if (getContext().hadError())
+      return;
 
   DEBUG_WITH_TYPE("mc-dump", {
       llvm::errs() << "assembler backend - post-relaxation\n--\n";
@@ -912,7 +920,9 @@ bool MCAssembler::layoutOnce(MCAsmLayout &Layout) {
 void MCAssembler::finishLayout(MCAsmLayout &Layout) {
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    Layout.getFragmentOffset(&*Layout.getSectionOrder()[i]->rbegin());
+    MCSection &Section = *Layout.getSectionOrder()[i];
+    Layout.getFragmentOffset(&*Section.rbegin());
+    computeFragmentSize(Layout, *Section.rbegin());
   }
   getBackend().finishLayout(*this, Layout);
 }

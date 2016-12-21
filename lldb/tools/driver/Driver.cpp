@@ -1208,13 +1208,13 @@ void sigcont_handler(int signo) {
 }
 
 int
-#ifdef WIN32
+#ifdef _MSC_VER
 wmain(int argc, wchar_t const *wargv[])
 #else
 main(int argc, char const *argv[])
 #endif
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
   // Convert wide arguments to UTF-8
   std::vector<std::string> argvStrings(argc);
   std::vector<const char *> argvPointers(argc);

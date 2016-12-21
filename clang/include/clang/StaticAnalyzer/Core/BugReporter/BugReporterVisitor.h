@@ -245,6 +245,7 @@ public:
                                               const ExplodedNode *N);
 
   bool patternMatch(const Expr *Ex,
+                    const Expr *ParentEx,
                     raw_ostream &Out,
                     BugReporterContext &BRC,
                     BugReport &R,
