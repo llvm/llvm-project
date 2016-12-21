@@ -170,7 +170,7 @@ namespace lldb_private {
 //  event it didn't directly handle
 //  it can designate itself a "Master" plan by responding true to IsMasterPlan,
 //  and then if it wants not to be
-//  discarded, it can return false to OkayToDiscard, and it and all its dependent
+//  discarded, it can return true to OkayToDiscard, and it and all its dependent
 //  plans will be preserved when
 //  we resume execution.
 //
@@ -207,7 +207,7 @@ namespace lldb_private {
 //
 //  If a plan says responds "true" to ShouldStop, then it is asked if it's job
 //  is complete by calling
-//  MischiefManaged.  If that returns true, the plan is popped from the plan
+//  MischiefManaged.  If that returns true, the thread is popped from the plan
 //  stack and added to the
 //  Completed Plan Stack.  Then the next plan in the stack is asked if it
 //  ShouldStop, and  it returns "true",

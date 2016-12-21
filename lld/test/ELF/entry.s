@@ -23,6 +23,9 @@
 # WARN4: cannot find entry symbol _start; not setting start address
 # NOENTRY: Entry: 0x0
 
+# RUN: ld.lld -v -r %t1 -o %t2 2>&1 | FileCheck -check-prefix=WARN5 %s
+# WARN5-NOT: warning: cannot find entry symbol
+
 # RUN: ld.lld %t1 -o %t2 -e entry
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=SYM %s
 # SYM: Entry: 0x201008
