@@ -2444,9 +2444,10 @@ private:
     CXXScopeSpec SS;
     SourceLocation TemplateKWLoc;
     UnqualifiedId Name;
+    SourceLocation EllipsisLoc;
 
     void clear() {
-      TypenameLoc = TemplateKWLoc = SourceLocation();
+      TypenameLoc = TemplateKWLoc = EllipsisLoc = SourceLocation();
       SS.clear();
       Name.clear();
     }
@@ -2458,9 +2459,6 @@ private:
                                        SourceLocation UsingLoc,
                                        SourceLocation &DeclEnd,
                                        AccessSpecifier AS = AS_none);
-  Decl *ParseAliasTemplate(const ParsedTemplateInfo &TemplateInfo,
-                           SourceLocation &DeclEnd, AccessSpecifier AS,
-                           ParsedAttributesWithRange &MisplacedAttrs1);
   Decl *ParseAliasDeclarationAfterDeclarator(
       const ParsedTemplateInfo &TemplateInfo, SourceLocation UsingLoc,
       UsingDeclarator &D, SourceLocation &DeclEnd, AccessSpecifier AS,
