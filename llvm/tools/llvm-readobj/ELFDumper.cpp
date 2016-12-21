@@ -129,6 +129,8 @@ public:
   void printMipsReginfo() override;
   void printMipsOptions() override;
 
+  void printAMDGPURuntimeMD() override;
+
   void printStackMap() const override;
 
   void printHashHistogram() override;
@@ -1065,6 +1067,10 @@ static const EnumEntry<unsigned> ElfAMDGPUSectionFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_READONLY),
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_CODE),
   LLVM_READOBJ_ENUM_ENT(ELF, SHF_AMDGPU_HSA_AGENT)
+};
+
+static const EnumEntry<unsigned> ElfARMSectionFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, SHF_ARM_PURECODE)
 };
 
 static const EnumEntry<unsigned> ElfHexagonSectionFlags[] = {
@@ -2339,6 +2345,36 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
   }
 }
 
+template <class ELFT> void ELFDumper<ELFT>::printAMDGPURuntimeMD() {
+  const Elf_Shdr *Shdr = findSectionByName(*Obj, ".note");
+  if (!Shdr) {
+    W.startLine() << "There is no .note section in the file.\n";
+    return;
+  }
+  ArrayRef<uint8_t> Sec = unwrapOrError(Obj->getSectionContents(Shdr));
+
+  const uint32_t RuntimeMDNoteType = 7;
+  for (auto I = reinterpret_cast<const Elf_Word *>(&Sec[0]),
+       E = I + Sec.size()/4; I != E;) {
+    uint32_t NameSZ = I[0];
+    uint32_t DescSZ = I[1];
+    uint32_t Type = I[2];
+    I += 3;
+
+    StringRef Name;
+    if (NameSZ) {
+      Name = StringRef(reinterpret_cast<const char *>(I), NameSZ - 1);
+      I += alignTo<4>(NameSZ)/4;
+    }
+
+    if (Name == "AMD" && Type == RuntimeMDNoteType) {
+      StringRef Desc(reinterpret_cast<const char *>(I), DescSZ);
+      W.printString(Desc);
+    }
+    I += alignTo<4>(DescSZ)/4;
+  }
+}
+
 template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   const Elf_Shdr *StackMapSection = nullptr;
   for (const auto &Sec : unwrapOrError(Obj->sections())) {
@@ -3563,6 +3599,10 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
     case EM_AMDGPU:
       SectionFlags.insert(SectionFlags.end(), std::begin(ElfAMDGPUSectionFlags),
                           std::end(ElfAMDGPUSectionFlags));
+      break;
+    case EM_ARM:
+      SectionFlags.insert(SectionFlags.end(), std::begin(ElfARMSectionFlags),
+                          std::end(ElfARMSectionFlags));
       break;
     case EM_HEXAGON:
       SectionFlags.insert(SectionFlags.end(),

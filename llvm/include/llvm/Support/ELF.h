@@ -804,6 +804,9 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
+  // Make code section unreadable when in execute-only mode
+  SHF_ARM_PURECODE = 0x20000000,
+
   SHF_AMDGPU_HSA_GLOBAL = 0x00100000,
   SHF_AMDGPU_HSA_READONLY = 0x00200000,
   SHF_AMDGPU_HSA_CODE = 0x00400000,

@@ -39,4 +39,4 @@ body:             |
 ...
 
 # CHECK: bb.0
-# CHECK-NEXT: RET %lr
+# CHECK-NEXT: RET undef %lr

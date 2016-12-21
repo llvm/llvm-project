@@ -538,8 +538,10 @@ permuteBandNodeDimensions(__isl_take isl_schedule_node *Node, unsigned FirstDim,
 
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMicroKernel(
     __isl_take isl_schedule_node *Node, MicroKernelParamsTy MicroKernelParams) {
-  return applyRegisterTiling(Node, {MicroKernelParams.Mr, MicroKernelParams.Nr},
-                             1);
+  applyRegisterTiling(Node, {MicroKernelParams.Mr, MicroKernelParams.Nr}, 1);
+  Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
+  Node = permuteBandNodeDimensions(Node, 0, 1);
+  return isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
 }
 
 __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
@@ -553,6 +555,7 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
       {MacroKernelParams.Mc, MacroKernelParams.Nc, MacroKernelParams.Kc}, 1);
   Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
   Node = permuteBandNodeDimensions(Node, 1, 2);
+  Node = permuteBandNodeDimensions(Node, 0, 2);
   return isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
 }
 
@@ -607,20 +610,15 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
         CacheLevelSizes[0] > 0 && CacheLevelSizes[1] > 0 &&
         CacheLevelAssociativity[0] > 2 && CacheLevelAssociativity[1] > 2))
     return {1, 1, 1};
-  int Cbr = floor(
+  int Car = floor(
       (CacheLevelAssociativity[0] - 1) /
-      (1 + static_cast<double>(MicroKernelParams.Mr) / MicroKernelParams.Nr));
-  int Kc = (Cbr * CacheLevelSizes[0]) /
-           (MicroKernelParams.Nr * CacheLevelAssociativity[0] * 8);
-  double Cac = static_cast<double>(MicroKernelParams.Mr * Kc * 8 *
-                                   CacheLevelAssociativity[1]) /
+      (1 + static_cast<double>(MicroKernelParams.Nr) / MicroKernelParams.Mr));
+  int Kc = (Car * CacheLevelSizes[0]) /
+           (MicroKernelParams.Mr * CacheLevelAssociativity[0] * 8);
+  double Cac = static_cast<double>(Kc * 8 * CacheLevelAssociativity[1]) /
                CacheLevelSizes[1];
-  double Cbc = static_cast<double>(MicroKernelParams.Nr * Kc * 8 *
-                                   CacheLevelAssociativity[1]) /
-               CacheLevelSizes[1];
-  int Mc = floor(MicroKernelParams.Mr / Cac);
-  int Nc =
-      floor((MicroKernelParams.Nr * (CacheLevelAssociativity[1] - 2)) / Cbc);
+  int Mc = floor((CacheLevelAssociativity[1] - 2) / Cac);
+  int Nc = floor(1 / Cac);
   return {Mc, Nc, Kc};
 }
 
@@ -787,8 +785,8 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 ///        the matrix multiplication pattern.
 ///
 /// Create an access relation of the following form:
-/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [O5 + K * OI, OJ],
-/// where K is @p Coeff, I is @p FirstDim, J is @p SecondDim.
+/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [OI, O5, OJ]
+/// where I is @p FirstDim, J is @p SecondDim.
 ///
 /// It can be used, for example, to create relations that helps to consequently
 /// access elements of operands of a matrix multiplication after creation of
@@ -806,25 +804,17 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 /// @param MapOldIndVar The relation, which maps original induction variables
 ///                     to the ones, which are produced by schedule
 ///                     transformations.
-/// @param Coeff The coefficient that is used to define the specified access
-///              relation.
 /// @param FirstDim, SecondDim The input dimensions that are used to define
 ///        the specified access relation.
 /// @return The specified access relation.
 __isl_give isl_map *getMatMulAccRel(__isl_take isl_map *MapOldIndVar,
-                                    unsigned Coeff, unsigned FirstDim,
-                                    unsigned SecondDim) {
+                                    unsigned FirstDim, unsigned SecondDim) {
   auto *Ctx = isl_map_get_ctx(MapOldIndVar);
-  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 2);
-  auto *AccessRel = isl_map_universe(isl_space_copy(AccessRelSpace));
-  auto *ConstrSpace = isl_local_space_from_space(AccessRelSpace);
-  auto *Constr = isl_constraint_alloc_equality(ConstrSpace);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 0, -1);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_in, 5, 1);
-  Constr =
-      isl_constraint_set_coefficient_si(Constr, isl_dim_in, FirstDim, Coeff);
-  AccessRel = isl_map_add_constraint(AccessRel, Constr);
-  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 1);
+  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 3);
+  auto *AccessRel = isl_map_universe(AccessRelSpace);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, FirstDim, isl_dim_out, 0);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, 5, isl_dim_out, 1);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 2);
   return isl_map_apply_range(MapOldIndVar, AccessRel);
 }
 
@@ -853,6 +843,8 @@ createExtensionNode(__isl_take isl_schedule_node *Node,
 static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
     __isl_take isl_schedule_node *Node, __isl_take isl_map *MapOldIndVar,
     MicroKernelParamsTy MicroParams, MacroKernelParamsTy MacroParams) {
+  // Check whether memory accesses of the SCoP statement correspond to
+  // the matrix multiplication pattern and if this is true, obtain them.
   auto InputDimsId = isl_map_get_tuple_id(MapOldIndVar, isl_dim_in);
   auto *Stmt = static_cast<ScopStmt *>(isl_id_get_user(InputDimsId));
   isl_id_free(InputDimsId);
@@ -862,41 +854,62 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
     isl_map_free(MapOldIndVar);
     return Node;
   }
+
+  // Create a copy statement that corresponds to the memory access to the
+  // matrix B, the second operand of the matrix multiplication.
   Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
   Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
   Node = isl_schedule_node_parent(Node);
   Node = isl_schedule_node_child(isl_schedule_node_band_split(Node, 2), 0);
-  auto *AccRel =
-      getMatMulAccRel(isl_map_copy(MapOldIndVar), MacroParams.Kc, 3, 6);
-  unsigned FirstDimSize = MacroParams.Mc * MacroParams.Kc / MicroParams.Mr;
-  unsigned SecondDimSize = MicroParams.Mr;
+  auto *AccRel = getMatMulAccRel(isl_map_copy(MapOldIndVar), 3, 7);
+  unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
+  unsigned SecondDimSize = MacroParams.Kc;
+  unsigned ThirdDimSize = MicroParams.Nr;
   auto *SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessA->getElementType(), "Packed_A", {FirstDimSize, SecondDimSize});
+      MemAccessB->getElementType(), "Packed_B",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
-  auto *OldAcc = MemAccessA->getAccessRelation();
-  MemAccessA->setNewAccessRelation(AccRel);
+  auto *OldAcc = MemAccessB->getAccessRelation();
+  MemAccessB->setNewAccessRelation(AccRel);
   auto *ExtMap =
-      getMatMulExt(Stmt->getIslCtx(), MacroParams.Mc, 0, MacroParams.Kc);
-  ExtMap = isl_map_project_out(ExtMap, isl_dim_in, 1, 1);
+      getMatMulExt(Stmt->getIslCtx(), 0, MacroParams.Nc, MacroParams.Kc);
+  isl_map_move_dims(ExtMap, isl_dim_out, 0, isl_dim_in, 0, 1);
+  isl_map_move_dims(ExtMap, isl_dim_in, 2, isl_dim_out, 0, 1);
+  ExtMap = isl_map_project_out(ExtMap, isl_dim_in, 2, 1);
   auto *Domain = Stmt->getDomain();
+
+  // Restrict the domains of the copy statements to only execute when also its
+  // originating statement is executed.
+  auto *DomainId = isl_set_get_tuple_id(Domain);
   auto *NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc, MemAccessA->getAccessRelation(), isl_set_copy(Domain));
+      OldAcc, MemAccessB->getAccessRelation(), isl_set_copy(Domain));
+  ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, isl_id_copy(DomainId));
+  ExtMap = isl_map_intersect_range(ExtMap, isl_set_copy(Domain));
   ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
+
+  // Create a copy statement that corresponds to the memory access
+  // to the matrix A, the first operand of the matrix multiplication.
   Node = isl_schedule_node_child(Node, 0);
-  AccRel = getMatMulAccRel(MapOldIndVar, MacroParams.Kc, 4, 7);
-  FirstDimSize = MacroParams.Nc * MacroParams.Kc / MicroParams.Nr;
-  SecondDimSize = MicroParams.Nr;
+  AccRel = getMatMulAccRel(MapOldIndVar, 4, 6);
+  FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  ThirdDimSize = MicroParams.Mr;
   SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessB->getElementType(), "Packed_B", {FirstDimSize, SecondDimSize});
+      MemAccessA->getElementType(), "Packed_A",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
-  OldAcc = MemAccessB->getAccessRelation();
-  MemAccessB->setNewAccessRelation(AccRel);
-  ExtMap = getMatMulExt(Stmt->getIslCtx(), 0, MacroParams.Nc, MacroParams.Kc);
-  isl_map_move_dims(ExtMap, isl_dim_out, 0, isl_dim_in, 1, 1);
+  OldAcc = MemAccessA->getAccessRelation();
+  MemAccessA->setNewAccessRelation(AccRel);
+  ExtMap = getMatMulExt(Stmt->getIslCtx(), MacroParams.Mc, 0, MacroParams.Kc);
+  isl_map_move_dims(ExtMap, isl_dim_out, 0, isl_dim_in, 0, 1);
   isl_map_move_dims(ExtMap, isl_dim_in, 2, isl_dim_out, 0, 1);
   NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc, MemAccessB->getAccessRelation(), Domain);
+      OldAcc, MemAccessA->getAccessRelation(), isl_set_copy(Domain));
+
+  // Restrict the domains of the copy statements to only execute when also its
+  // originating statement is executed.
+  ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, DomainId);
+  ExtMap = isl_map_intersect_range(ExtMap, Domain);
   ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, NewStmt->getDomainId());
   Node = createExtensionNode(Node, ExtMap);
   Node = isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);

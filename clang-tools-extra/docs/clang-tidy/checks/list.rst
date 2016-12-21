@@ -110,6 +110,7 @@ Clang-Tidy Checks
    modernize-shrink-to-fit
    modernize-use-auto
    modernize-use-bool-literals
+   modernize-use-default-member-init
    modernize-use-emplace
    modernize-use-equals-default
    modernize-use-equals-delete

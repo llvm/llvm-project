@@ -176,6 +176,9 @@ def rpath: S<"rpath">, HelpText<"Add a DT_RUNPATH to the output">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
+def retain_symbols_file: J<"retain-symbols-file=">, MetaVarName<"<file>">,
+  HelpText<"Retain only the symbols listed in the file">;
+
 def script: S<"script">, HelpText<"Read linker script">;
 
 def section_start: S<"section-start">, MetaVarName<"<address>">,
@@ -269,12 +272,14 @@ def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
+def alias_retain_symbols_file: S<"retain-symbols-file">, Alias<retain_symbols_file>;
 def alias_rpath_R: JoinedOrSeparate<["-"], "R">, Alias<rpath>;
 def alias_rpath_rpath: J<"rpath=">, Alias<rpath>;
 def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;
 def alias_shared_Bshareable: F<"Bshareable">, Alias<shared>;
 def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname: S<"soname">, Alias<soname>;
+def alias_sort_section: J<"sort-section=">, Alias<sort_section>;
 def alias_script: J<"script=">, Alias<script>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
@@ -283,6 +288,8 @@ def alias_Tdata: J<"Tdata=">, Alias<Tdata>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
 def alias_Ttext: J<"Ttext=">, Alias<Ttext>;
+def alias_Ttext_segment: S<"Ttext-segment">, Alias<Ttext>;
+def alias_Ttext_segment_eq: J<"Ttext-segment=">, Alias<Ttext>;
 def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;

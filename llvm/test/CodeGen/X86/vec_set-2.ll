@@ -16,7 +16,7 @@ define <4 x float> @test1(float %a) nounwind {
 define <2 x i64> @test(i32 %a) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retl
   %tmp = insertelement <4 x i32> zeroinitializer, i32 %a, i32 0
   %tmp6 = insertelement <4 x i32> %tmp, i32 0, i32 1

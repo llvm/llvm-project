@@ -10,7 +10,8 @@
 ; RUN:     -pass-remarks-with-hotness < %s 2>&1 | \
 ; RUN:     FileCheck -check-prefix=HOTNESS -check-prefix=BOTH %s
 
-; RUN: opt -S -passes=loop-vectorize -pass-remarks-missed=loop-vectorize < %s 2>&1 | \
+; RUN: opt -S -passes=loop-vectorize \
+; RUN:     -pass-remarks-missed=loop-vectorize < %s 2>&1 | \
 ; RUN:     FileCheck -check-prefix=NO_HOTNESS -check-prefix=BOTH %s
 
 

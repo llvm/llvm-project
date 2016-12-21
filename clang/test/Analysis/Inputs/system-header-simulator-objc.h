@@ -17,7 +17,11 @@ typedef unsigned long NSUInteger;
 typedef unsigned short unichar;
 typedef UInt16 UniChar;
 
-#define NULL ((void *)0)
+#ifndef NULL
+#define __DARWIN_NULL ((void *)0)
+#define NULL __DARWIN_NULL
+#endif
+
 #define nil ((id)0)
 
 enum {
@@ -54,6 +58,7 @@ typedef struct _NSZone NSZone;
 - (oneway void)release;
 - (id)autorelease;
 - (id)init;
+@property (readonly, copy) NSString *description;
 @end  @protocol NSCopying  - (id)copyWithZone:(NSZone *)zone;
 @end  @protocol NSMutableCopying  - (id)mutableCopyWithZone:(NSZone *)zone;
 @end  @protocol NSCoding  - (void)encodeWithCoder:(NSCoder *)aCoder;

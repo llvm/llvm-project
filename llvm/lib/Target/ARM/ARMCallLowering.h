@@ -22,6 +22,7 @@
 namespace llvm {
 
 class ARMTargetLowering;
+class MachineInstrBuilder;
 
 class ARMCallLowering : public CallLowering {
 public:
@@ -32,6 +33,10 @@ public:
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
+
+private:
+  bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
+                      unsigned VReg, MachineInstrBuilder &Ret) const;
 };
 } // End of namespace llvm
 #endif

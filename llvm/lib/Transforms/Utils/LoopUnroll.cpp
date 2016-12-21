@@ -178,14 +178,14 @@ static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
 /// branch instruction. However, if the trip count (and multiple) are not known,
 /// loop unrolling will mostly produce more code that is no faster.
 ///
-/// TripCount is generally defined as the number of times the loop header
-/// executes. UnrollLoop relaxes the definition to permit early exits: here
-/// TripCount is the iteration on which control exits LatchBlock if no early
-/// exits were taken. Note that UnrollLoop assumes that the loop counter test
-/// terminates LatchBlock in order to remove unnecesssary instances of the
-/// test. In other words, control may exit the loop prior to TripCount
-/// iterations via an early branch, but control may not exit the loop from the
-/// LatchBlock's terminator prior to TripCount iterations.
+/// TripCount is the upper bound of the iteration on which control exits
+/// LatchBlock. Control may exit the loop prior to TripCount iterations either
+/// via an early branch in other loop block or via LatchBlock terminator. This
+/// is relaxed from the general definition of trip count which is the number of
+/// times the loop header executes. Note that UnrollLoop assumes that the loop
+/// counter test is in LatchBlock in order to remove unnecesssary instances of
+/// the test.  If control can exit the loop from the LatchBlock's terminator
+/// prior to TripCount iterations, flag PreserveCondBr needs to be set.
 ///
 /// PreserveCondBr indicates whether the conditional branch of the LatchBlock
 /// needs to be preserved.  It is needed when we use trip count upper bound to

@@ -140,14 +140,9 @@ define i32 @test12(i32 %x, i32 %y) {
   ret i32 %and
 }
 
-; FIXME: We miss the fold because the pattern matching is inadequate.
-
 define i32 @test12_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test12_commuted(
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEG]], %y
-; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, %x
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, %y
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %neg = xor i32 %x, -1
@@ -183,15 +178,9 @@ define i32 @test14(i32 %x, i32 %y) {
   ret i32 %xor
 }
 
-; FIXME: We miss the fold because the pattern matching is inadequate.
-
 define i32 @test14_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14_commuted(
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 %y, -1
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOTY]], %x
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOTX]], %y
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -216,15 +205,9 @@ define i32 @test15(i32 %x, i32 %y) {
   ret i32 %xor
 }
 
-; FIXME: We miss the fold because the pattern matching is inadequate.
-
 define i32 @test15_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15_commuted(
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 %y, -1
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 %x, -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOTY]], %x
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOTX]], %y
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1

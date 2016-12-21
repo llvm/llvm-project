@@ -18,8 +18,8 @@ define void @bad_cast() {
 define void @bad_insert(i32 %t) {
 ; CHECK-LABEL: bad_insert:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovdqa %ymm0, (%eax)
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovaps %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
   %v2 = insertelement <8 x i32> zeroinitializer, i32 %t, i32 0

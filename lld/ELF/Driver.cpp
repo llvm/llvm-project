@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -21,11 +22,9 @@
 #include "Writer.h"
 #include "lld/Config/Version.h"
 #include "lld/Driver/Driver.h"
-#include "lld/Support/Memory.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -41,6 +40,10 @@ using namespace lld::elf;
 
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
+
+BumpPtrAllocator elf::BAlloc;
+StringSaver elf::Saver{BAlloc};
+std::vector<SpecificAllocBase *> elf::SpecificAllocBase::Instances;
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
@@ -280,33 +283,12 @@ static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
   return Default;
 }
 
-// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
-static bool getColorDiagnostics(opt::InputArgList &Args) {
-  bool Default = (ErrorOS == &errs() && Process::StandardErrHasColors());
-
-  auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_no_color_diagnostics);
-  if (!Arg)
-    return Default;
-  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
-    return false;
-
-  StringRef S = Arg->getValue();
-  if (S == "auto")
-    return Default;
-  if (S == "always")
-    return true;
-  if (S != "never")
-    error("unknown -color-diagnostics value: " + S);
-  return false;
-}
-
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
-  // Read some flags early because error() depends on them.
+  // Interpret this flag early because error() depends on them.
   Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
-  Config->ColorDiagnostics = getColorDiagnostics(Args);
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {
@@ -474,16 +456,17 @@ static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
   return SortSectionPolicy::Default;
 }
 
-// Parse the --symbol-ordering-file argument. File has form:
-// symbolName1
-// [...]
-// symbolNameN
-static void parseSymbolOrderingList(MemoryBufferRef MB) {
-  unsigned I = 0;
+static std::vector<StringRef> getLines(MemoryBufferRef MB) {
   SmallVector<StringRef, 0> Arr;
   MB.getBuffer().split(Arr, '\n');
-  for (StringRef S : Arr)
-    Config->SymbolOrderingFile.insert({CachedHashStringRef(S.trim()), I++});
+
+  std::vector<StringRef> Ret;
+  for (StringRef S : Arr) {
+    S = S.trim();
+    if (!S.empty())
+      Ret.push_back(S);
+  }
+  return Ret;
 }
 
 // Initializes Config members by the command line options.
@@ -630,7 +613,16 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      parseSymbolOrderingList(*Buffer);
+      Config->SymbolOrderingFile = getLines(*Buffer);
+
+  // If --retain-symbol-file is used, we'll retail only the symbols listed in
+  // the file and discard all others.
+  if (auto *Arg = Args.getLastArg(OPT_retain_symbols_file)) {
+    Config->Discard = DiscardPolicy::RetainFile;
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+      for (StringRef S : getLines(*Buffer))
+        Config->RetainSymbolsFile.insert(S);
+  }
 
   for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
     Config->VersionScriptGlobals.push_back(
@@ -778,7 +770,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Use default entry point name if no name was given via the command
   // line nor linker scripts. For some reason, MIPS entry point name is
   // different from others.
-  Config->WarnMissingEntry = (!Config->Entry.empty() || !Config->Shared);
+  Config->WarnMissingEntry =
+      (!Config->Entry.empty() || (!Config->Shared && !Config->Relocatable));
   if (Config->Entry.empty() && !Config->Relocatable)
     Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
 
@@ -835,7 +828,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
           [](InputSectionBase<ELFT> *S) {
             if (!S->Live)
               return;
-            if (S->Compressed)
+            if (S->isCompressed())
               S->uncompress();
             if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
               MS->splitIntoPieces();

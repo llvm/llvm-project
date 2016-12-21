@@ -11,12 +11,12 @@
 #include "Config.h"
 #include "EhFrame.h"
 #include "LinkerScript.h"
+#include "Memory.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
-#include "lld/Support/Memory.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -153,7 +153,7 @@ template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
 
 template <class ELFT>
 void OutputSection<ELFT>::sort(
-    std::function<unsigned(InputSection<ELFT> *S)> Order) {
+    std::function<int(InputSection<ELFT> *S)> Order) {
   typedef std::pair<unsigned, InputSection<ELFT> *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 

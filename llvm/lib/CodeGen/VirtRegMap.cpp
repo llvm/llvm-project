@@ -266,7 +266,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
     SlotIndex MBBBegin = MBBI->first;
     // Advance all subrange iterators so that their end position is just
     // behind MBBBegin (or the iterator is at the end).
-    LaneBitmask LaneMask = 0;
+    LaneBitmask LaneMask;
     for (auto &RangeIterPair : SubRanges) {
       const LiveInterval::SubRange *SR = RangeIterPair.first;
       LiveInterval::const_iterator &SRI = RangeIterPair.second;
@@ -277,7 +277,7 @@ void VirtRegRewriter::addLiveInsForSubRanges(const LiveInterval &LI,
       if (SRI->start <= MBBBegin)
         LaneMask |= SR->LaneMask;
     }
-    if (LaneMask == 0)
+    if (LaneMask.none())
       continue;
     MachineBasicBlock *MBB = MBBI->second;
     MBB->addLiveIn(PhysReg, LaneMask);
@@ -342,7 +342,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
   // See if any of the relevant subregister liveranges is defined at this point.
   for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if ((SR.LaneMask & UseMask) != 0 && SR.liveAt(BaseIndex))
+    if ((SR.LaneMask & UseMask).any() && SR.liveAt(BaseIndex))
       return false;
   }
   return true;

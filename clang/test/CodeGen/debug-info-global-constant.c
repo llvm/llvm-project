@@ -5,8 +5,8 @@
 // exactly once.
 
 // CHECK: @i = internal constant i32 1, align 4, !dbg ![[I:[0-9]+]]
-// CHECK: ![[I]] = distinct !DIGlobalVariable(name: "i",
-// CHECK-SAME:                                expr: ![[EXPR:[0-9]+]]
+// CHECK: ![[I]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: ![[EXPR:[0-9]+]])
+// CHECK: ![[VAR]] = distinct !DIGlobalVariable(name: "i",
 // CHECK: !DICompileUnit({{.*}}globals: ![[GLOBALS:[0-9]+]])
 // CHECK: ![[GLOBALS]] = !{![[I]]}
 // CHECK: ![[EXPR]] = !DIExpression(DW_OP_constu, 1, DW_OP_stack_value)

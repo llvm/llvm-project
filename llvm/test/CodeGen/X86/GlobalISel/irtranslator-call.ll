@@ -24,9 +24,7 @@ define void @test_void_return() {
 ; CHECK-NEXT:   hasVAStart:      false
 ; CHECK-NEXT:   hasMustTailInVarArgFunc: false
 ; CHECK-NEXT: body:
-; CHECK-NEXT:   bb.0:
-; CHECK-NEXT:     successors: %bb.1(0x80000000)
-; CHECK:        bb.1:
+; CHECK-NEXT:   bb.1:
 ; CHECK-NEXT:     RET 0
 entry:
   ret void

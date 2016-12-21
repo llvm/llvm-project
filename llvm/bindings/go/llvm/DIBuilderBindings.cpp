@@ -40,8 +40,8 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(LLVMDIBuilderRef Dref,
                                                int Optimized, const char *Flags,
                                                unsigned RuntimeVersion) {
   DIBuilder *D = unwrap(Dref);
-  return wrap(D->createCompileUnit(Lang, File, Dir, Producer, Optimized, Flags,
-                                   RuntimeVersion));
+  return wrap(D->createCompileUnit(Lang, D->createFile(File, Dir), Producer,
+                                   Optimized, Flags, RuntimeVersion));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateFile(LLVMDIBuilderRef Dref, const char *File,

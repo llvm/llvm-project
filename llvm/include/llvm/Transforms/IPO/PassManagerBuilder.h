@@ -124,9 +124,6 @@ public:
   /// added to the per-module passes.
   Pass *Inliner;
 
-  /// The module summary index to use for function importing.
-  const ModuleSummaryIndex *ModuleSummary;
-
   bool DisableTailCalls;
   bool DisableUnitAtATime;
   bool DisableUnrollLoops;
@@ -149,6 +146,8 @@ public:
   std::string PGOInstrGen;
   /// Path of the profile data file.
   std::string PGOInstrUse;
+  /// Path of the sample Profile data file.
+  std::string PGOSampleUse;
 
 private:
   /// ExtensionList - This is list of all of the extensions that are registered.

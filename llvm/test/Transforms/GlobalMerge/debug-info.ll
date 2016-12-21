@@ -14,12 +14,14 @@ define void @use1() {
   ret void
 }
 
-; CHECK: [[A]] = distinct !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true)
-; CHECK: [[B]] = distinct !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true, expr: [[EXPR:![0-9]+]])
+; CHECK: [[A]] = !DIGlobalVariableExpression(var: [[AVAR:![0-9]+]])
+; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true)
+; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: [[EXPR:![0-9]+]])
+; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true)
 ; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus, 4)
 
 !llvm.module.flags = !{!2, !3}
-!0 = distinct !DIGlobalVariable(name: "a")
-!1 = distinct !DIGlobalVariable(name: "b")
+!0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a"))
+!1 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b"))
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

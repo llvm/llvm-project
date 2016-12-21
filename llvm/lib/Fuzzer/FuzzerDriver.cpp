@@ -15,6 +15,7 @@
 #include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
+#include "FuzzerTracePC.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -432,6 +433,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
+  Options.DumpCoverage = Flags.dump_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
@@ -493,17 +495,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.merge) {
     if (Options.MaxLen == 0)
       F->SetMaxInputLen(kMaxSaneLen);
-    F->Merge(*Inputs);
-    exit(0);
-  }
-
-  if (Flags.experimental_merge) {
-    if (Options.MaxLen == 0)
-      F->SetMaxInputLen(kMaxSaneLen);
-    if (Flags.merge_control_file)
-      F->CrashResistantMergeInternalStep(Flags.merge_control_file);
-    else
-      F->CrashResistantMerge(Args, *Inputs);
+    if (TPC.UsingTracePcGuard()) {
+      if (Flags.merge_control_file)
+        F->CrashResistantMergeInternalStep(Flags.merge_control_file);
+      else
+        F->CrashResistantMerge(Args, *Inputs);
+    } else {
+      F->Merge(*Inputs);
+    }
     exit(0);
   }
 

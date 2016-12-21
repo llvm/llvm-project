@@ -2027,12 +2027,9 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
-          uint64_t Size;
-          if (!getObjectSize(II->getArgOperand(0), Size, DL, &TLI)) {
-            ConstantInt *CI = cast<ConstantInt>(II->getArgOperand(1));
-            Size = CI->isZero() ? -1ULL : 0;
-          }
-          replaceInstUsesWith(*I, ConstantInt::get(I->getType(), Size));
+          ConstantInt *Result = lowerObjectSizeCall(II, DL, &TLI,
+                                                    /*MustSucceed=*/true);
+          replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
         }

@@ -79,7 +79,7 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
       unsigned Unit = (*Units).first;
       LaneBitmask Mask = (*Units).second;
       for (LiveInterval::SubRange &S : VRegInterval.subranges()) {
-        if (S.LaneMask & Mask) {
+        if ((S.LaneMask & Mask).any()) {
           if (Func(Unit, S))
             return true;
           break;

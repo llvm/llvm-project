@@ -75,6 +75,16 @@ Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes) {
   return Error::success();
 }
 
+Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes) {
+  ArrayRef<uint8_t> BytesRef(Bytes);
+  if (auto EC = mapByteVectorTail(BytesRef))
+    return EC;
+  if (!isWriting())
+    Bytes.assign(BytesRef.begin(), BytesRef.end());
+
+  return Error::success();
+}
+
 Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd) {
   if (isWriting()) {
     if (auto EC = Writer->writeInteger(TypeInd.getIndex()))
@@ -156,6 +166,27 @@ Error CodeViewRecordIO::mapGuid(StringRef &Guid) {
   } else {
     if (auto EC = Reader->readFixedString(Guid, 16))
       return EC;
+  }
+  return Error::success();
+}
+
+Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
+  if (isWriting()) {
+    for (auto V : Value) {
+      if (auto EC = mapStringZ(V))
+        return EC;
+    }
+    if (auto EC = Writer->writeInteger(uint8_t(0)))
+      return EC;
+  } else {
+    StringRef S;
+    if (auto EC = mapStringZ(S))
+      return EC;
+    while (!S.empty()) {
+      Value.push_back(S);
+      if (auto EC = mapStringZ(S))
+        return EC;
+    };
   }
   return Error::success();
 }

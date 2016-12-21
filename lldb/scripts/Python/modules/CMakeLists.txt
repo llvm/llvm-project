@@ -6,6 +6,6 @@ if (CXX_SUPPORTS_NO_MACRO_REDEFINED)
 endif ()
 
 # build the Python readline suppression module only on Linux
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" OR "${CMAKE_SYSTEM_NAME}" STREQUAL "GNU" OR "${CMAKE_SYSTEM_NAME}" STREQUAL "kFreeBSD")
    add_subdirectory(readline)
 endif()

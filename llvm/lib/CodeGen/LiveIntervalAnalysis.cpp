@@ -514,7 +514,7 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg) {
     unsigned SubReg = MO.getSubReg();
     if (SubReg != 0) {
       LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
-      if ((LaneMask & SR.LaneMask) == 0)
+      if ((LaneMask & SR.LaneMask).none())
         continue;
     }
     // We only need to visit each instruction once.
@@ -718,7 +718,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         LaneBitmask DefinedLanesMask;
         if (!SRs.empty()) {
           // Compute a mask of lanes that are defined.
-          DefinedLanesMask = 0;
+          DefinedLanesMask = LaneBitmask::getNone();
           for (auto &SRP : SRs) {
             const LiveInterval::SubRange &SR = *SRP.first;
             LiveRange::const_iterator &I = SRP.second;
@@ -731,7 +731,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
             DefinedLanesMask |= SR.LaneMask;
           }
         } else
-          DefinedLanesMask = ~0u;
+          DefinedLanesMask = LaneBitmask::getAll();
 
         bool IsFullWrite = false;
         for (const MachineOperand &MO : MI->operands()) {
@@ -740,7 +740,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
           if (MO.isUse()) {
             // Reading any undefined lanes?
             LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
-            if ((UseMask & ~DefinedLanesMask) != 0)
+            if ((UseMask & ~DefinedLanesMask).any())
               goto CancelKill;
           } else if (MO.getSubReg() == 0) {
             // Writing to the full register?
@@ -951,12 +951,12 @@ public:
           LaneBitmask LaneMask = SubReg ? TRI.getSubRegIndexLaneMask(SubReg)
                                         : MRI.getMaxLaneMaskForVReg(Reg);
           for (LiveInterval::SubRange &S : LI.subranges()) {
-            if ((S.LaneMask & LaneMask) == 0)
+            if ((S.LaneMask & LaneMask).none())
               continue;
             updateRange(S, Reg, S.LaneMask);
           }
         }
-        updateRange(LI, Reg, 0);
+        updateRange(LI, Reg, LaneBitmask::getNone());
         continue;
       }
 
@@ -964,7 +964,7 @@ public:
       // precomputed live range.
       for (MCRegUnitIterator Units(Reg, &TRI); Units.isValid(); ++Units)
         if (LiveRange *LR = getRegUnitLI(*Units))
-          updateRange(*LR, *Units, 0);
+          updateRange(*LR, *Units, LaneBitmask::getNone());
     }
     if (hasRegMask)
       updateRegMaskSlots();
@@ -980,7 +980,7 @@ private:
       dbgs() << "     ";
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
         dbgs() << PrintReg(Reg);
-        if (LaneMask != 0)
+        if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
       } else {
         dbgs() << PrintRegUnit(Reg, &TRI);
@@ -1314,8 +1314,8 @@ private:
         if (MO.isUndef())
           continue;
         unsigned SubReg = MO.getSubReg();
-        if (SubReg != 0 && LaneMask != 0
-            && (TRI.getSubRegIndexLaneMask(SubReg) & LaneMask) == 0)
+        if (SubReg != 0 && LaneMask.any()
+            && (TRI.getSubRegIndexLaneMask(SubReg) & LaneMask).none())
           continue;
 
         const MachineInstr &MI = *MO.getParent();
@@ -1422,7 +1422,7 @@ void LiveIntervals::repairOldRegInRange(const MachineBasicBlock::iterator Begin,
 
       unsigned SubReg = MO.getSubReg();
       LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
-      if ((Mask & LaneMask) == 0)
+      if ((Mask & LaneMask).none())
         continue;
 
       if (MO.isDef()) {

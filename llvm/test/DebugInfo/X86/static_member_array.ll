@@ -48,12 +48,12 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!17, !18, !19}
 !llvm.ident = !{!20}
 
-!0 = distinct !DIGlobalVariable(name: "fully_specified", linkageName: "_ZN1A15fully_specifiedE", scope: !1, file: !2, line: 7, type: !7, isLocal: false, isDefinition: true, declaration: !13)
+!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "fully_specified", linkageName: "_ZN1A15fully_specifiedE", scope: !1, file: !2, line: 7, type: !7, isLocal: false, isDefinition: true, declaration: !13))
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 (trunk 286129) (llvm/trunk 286128)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
 !2 = !DIFile(filename: "static_member_array.cpp", directory: "/Volumes/Data/radar/28706946")
 !3 = !{}
 !4 = !{!0, !5}
-!5 = distinct !DIGlobalVariable(name: "smem", linkageName: "_ZN1A4smemE", scope: !1, file: !2, line: 8, type: !6, isLocal: false, isDefinition: true, declaration: !10)
+!5 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "smem", linkageName: "_ZN1A4smemE", scope: !1, file: !2, line: 8, type: !6, isLocal: false, isDefinition: true, declaration: !10))
 !6 = !DICompositeType(tag: DW_TAG_array_type, baseType: !7, size: 128, elements: !8)
 !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !8 = !{!9}

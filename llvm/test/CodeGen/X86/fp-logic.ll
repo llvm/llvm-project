@@ -231,7 +231,7 @@ define double @f7_double(double %x) {
 ; CHECK-LABEL: f7_double:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    andpd %xmm1, %xmm0
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64

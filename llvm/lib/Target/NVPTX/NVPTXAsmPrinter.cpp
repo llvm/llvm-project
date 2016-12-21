@@ -555,6 +555,10 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   unsigned mincta;
   if (llvm::getMinCTASm(F, mincta))
     O << ".minnctapersm " << mincta << "\n";
+
+  unsigned maxnreg;
+  if (llvm::getMaxNReg(F, maxnreg))
+    O << ".maxnreg " << maxnreg << "\n";
 }
 
 std::string

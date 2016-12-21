@@ -26,7 +26,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!8, !9, !10}
 !llvm.ident = !{!11}
 
-!0 = distinct !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !1, file: !2, line: 1, type: !4, isLocal: false, isDefinition: true)
+!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !1, file: !2, line: 1, type: !4, isLocal: false, isDefinition: true))
 !1 = !DINamespace(name: "inlined", scope: !3, file: !2, line: 1, exportSymbols: true)
 !2 = !DIFile(filename: "namespace.cpp", directory: "/")
 !3 = !DINamespace(name: "normal", scope: null, file: !2, line: 1)

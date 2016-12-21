@@ -18,7 +18,7 @@
 
 #include "Config.h"
 #include "Error.h"
-#include "lld/Support/Memory.h"
+#include "Memory.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/StringSaver.h"

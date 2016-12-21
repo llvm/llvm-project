@@ -20,8 +20,6 @@
 using namespace clang;
 using namespace clang::cxcursor;
 
-extern "C" {
-
 unsigned clang_isVirtualBase(CXCursor C) {
   if (C.kind != CXCursor_CXXBaseSpecifier)
     return 0;
@@ -123,5 +121,3 @@ CXCursor clang_getSpecializedCursorTemplate(CXCursor C) {
   
   return MakeCXCursor(Template, getCursorTU(C));
 }
-  
-} // end extern "C"

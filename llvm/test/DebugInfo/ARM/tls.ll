@@ -26,7 +26,7 @@
 !1 = !DIFile(filename: "tls.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6)
+!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6))
 !5 = !DIFile(filename: "tls.c", directory: "/tmp")
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !{i32 2, !"Dwarf Version", i32 4}

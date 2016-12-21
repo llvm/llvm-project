@@ -2000,15 +2000,23 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 
   if (Left.isOneOf(tok::plus, tok::comma) && Left.Previous &&
       Left.Previous->isLabelString() &&
-      (Left.NextOperator || Left.OperatorIndex != 1))
+      (Left.NextOperator || Left.OperatorIndex != 0))
     return 100;
+  if (Right.is(tok::plus) && Left.isLabelString() &&
+      (Right.NextOperator || Right.OperatorIndex != 0))
+    return 25;
   if (Left.is(tok::comma))
     return 1;
-  if (Right.isOneOf(tok::lessless, tok::plus) && Left.isLabelString() &&
+  if (Right.is(tok::lessless) && Left.isLabelString() &&
       (Right.NextOperator || Right.OperatorIndex != 1))
     return 25;
-  if (Right.is(tok::lessless))
-    return 1; // Breaking at a << is really cheap.
+  if (Right.is(tok::lessless)) {
+    // Breaking at a << is really cheap.
+    if (!Left.is(tok::r_paren) || Right.OperatorIndex > 0)
+      // Slightly prefer to break before the first one in log-like statements.
+      return 2;
+    return 1;
+  }
   if (Left.is(TT_ConditionalExpr))
     return prec::Conditional;
   prec::Level Level = Left.getPrecedence();

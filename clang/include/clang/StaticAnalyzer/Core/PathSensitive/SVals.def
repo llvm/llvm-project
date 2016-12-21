@@ -66,6 +66,7 @@ ABSTRACT_SVAL(DefinedOrUnknownSVal, SVal)
       NONLOC_SVAL(LazyCompoundVal, NonLoc)
       NONLOC_SVAL(LocAsInteger, NonLoc)
       NONLOC_SVAL(SymbolVal, NonLoc)
+      NONLOC_SVAL(PointerToMember, NonLoc)
 
 #undef NONLOC_SVAL
 #undef LOC_SVAL

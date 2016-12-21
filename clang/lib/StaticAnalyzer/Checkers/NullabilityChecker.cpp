@@ -610,9 +610,9 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
 
     SmallString<256> SBuf;
     llvm::raw_svector_ostream OS(SBuf);
-    OS << "Null is returned from a " << C.getDeclDescription(D) <<
+    OS << (RetExpr->getType()->isObjCObjectPointerType() ? "nil" : "Null");
+    OS << " returned from a " << C.getDeclDescription(D) <<
           " that is expected to return a non-null value";
-
     reportBugIfInvariantHolds(OS.str(),
                               ErrorKind::NilReturnedToNonnull, N, nullptr, C,
                               RetExpr);
@@ -707,9 +707,11 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
       ExplodedNode *N = C.generateErrorNode(State);
       if (!N)
         return;
+
       SmallString<256> SBuf;
       llvm::raw_svector_ostream OS(SBuf);
-      OS << "Null passed to a callee that requires a non-null " << ParamIdx
+      OS << (Param->getType()->isObjCObjectPointerType() ? "nil" : "Null");
+      OS << " passed to a callee that requires a non-null " << ParamIdx
          << llvm::getOrdinalSuffix(ParamIdx) << " parameter";
       reportBugIfInvariantHolds(OS.str(), ErrorKind::NilPassedToNonnull, N,
                                 nullptr, C,
@@ -1128,8 +1130,11 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     if (ValueExpr)
       ValueStmt = ValueExpr;
 
-    reportBugIfInvariantHolds("Null is assigned to a pointer which is "
-                              "expected to have non-null value",
+    SmallString<256> SBuf;
+    llvm::raw_svector_ostream OS(SBuf);
+    OS << (LocType->isObjCObjectPointerType() ? "nil" : "Null");
+    OS << " assigned to a pointer which is expected to have non-null value";
+    reportBugIfInvariantHolds(OS.str(),
                               ErrorKind::NilAssignedToNonnull, N, nullptr, C,
                               ValueStmt);
     return;

@@ -278,7 +278,7 @@ public:
     unsigned SparseIndex = getSparseIndexFromReg(Reg);
     RegSet::const_iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
-      return 0;
+      return LaneBitmask::getNone();
     return I->LaneMask;
   }
 
@@ -288,11 +288,11 @@ public:
     unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
     auto InsertRes = Regs.insert(IndexMaskPair(SparseIndex, Pair.LaneMask));
     if (!InsertRes.second) {
-      unsigned PrevMask = InsertRes.first->LaneMask;
+      LaneBitmask PrevMask = InsertRes.first->LaneMask;
       InsertRes.first->LaneMask |= Pair.LaneMask;
       return PrevMask;
     }
-    return 0;
+    return LaneBitmask::getNone();
   }
 
   /// Clears the \p Pair.LaneMask lanes of \p Pair.Reg (mark them as dead).
@@ -301,8 +301,8 @@ public:
     unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
     RegSet::iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
-      return 0;
-    unsigned PrevMask = I->LaneMask;
+      return LaneBitmask::getNone();
+    LaneBitmask PrevMask = I->LaneMask;
     I->LaneMask &= ~Pair.LaneMask;
     return PrevMask;
   }
@@ -315,7 +315,7 @@ public:
   void appendTo(ContainerT &To) const {
     for (const IndexMaskPair &P : Regs) {
       unsigned Reg = getRegFromSparseIndex(P.Index);
-      if (P.LaneMask != 0)
+      if (P.LaneMask.any())
         To.push_back(RegisterMaskPair(Reg, P.LaneMask));
     }
   }

@@ -57,9 +57,9 @@ void saxpy(float A, std::array<float, N> &X, const std::array<float, N> &Y) {
 
 int main() {
   float A = 2.f;
-  std::array<float, 3> X = {0.f, 1.f, 2.f};
-  std::array<float, 3> Y = {3.f, 4.f, 5.f};
-  std::array<float, 3> Expected = {3.f, 6.f, 9.f};
+  std::array<float, 3> X{{0.f, 1.f, 2.f}};
+  std::array<float, 3> Y{{3.f, 4.f, 5.f}};
+  std::array<float, 3> Expected{{3.f, 6.f, 9.f}};
   saxpy(A, X, Y);
   for (int I = 0; I < 3; ++I)
     if (X[I] != Expected[I]) {

@@ -16,7 +16,7 @@ define <8 x i16> @test2(<4 x i16>* %v) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retl
   %v9 = load <4 x i16>, <4 x i16> * %v, align 8

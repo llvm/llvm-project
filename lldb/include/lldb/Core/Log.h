@@ -25,6 +25,8 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 //----------------------------------------------------------------------
 // Logging Options
 //----------------------------------------------------------------------
@@ -43,7 +45,7 @@
 //----------------------------------------------------------------------
 namespace lldb_private {
 
-class Log {
+class Log final {
 public:
   //------------------------------------------------------------------
   // Callback definitions for abstracted plug-in log access.
@@ -102,42 +104,32 @@ public:
 
   Log(const lldb::StreamSP &stream_sp);
 
-  virtual ~Log();
+  ~Log();
 
-  virtual void PutCString(const char *cstr);
-  virtual void PutString(llvm::StringRef str);
+  void PutCString(const char *cstr);
+  void PutString(llvm::StringRef str);
+
+  template <typename... Args> void Format(const char *fmt, Args &&... args) {
+    PutString(llvm::formatv(fmt, std::forward<Args>(args)...).str());
+  }
 
   // CLEANUP: Add llvm::raw_ostream &Stream() function.
-  virtual void Printf(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  virtual void VAPrintf(const char *format, va_list args);
+  void VAPrintf(const char *format, va_list args);
 
-  virtual void LogIf(uint32_t mask, const char *fmt, ...)
+  void LogIf(uint32_t mask, const char *fmt, ...)
       __attribute__((format(printf, 3, 4)));
 
-  virtual void Debug(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+  void Debug(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  virtual void DebugVerbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+  void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  virtual void Error(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+  void VAError(const char *format, va_list args);
 
-  virtual void VAError(const char *format, va_list args);
+  void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  virtual void FatalError(int err, const char *fmt, ...)
-      __attribute__((format(printf, 3, 4)));
-
-  virtual void Verbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
-
-  virtual void Warning(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
-
-  virtual void WarningVerbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+  void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   Flags &GetOptions();
 

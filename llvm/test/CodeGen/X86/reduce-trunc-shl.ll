@@ -5,11 +5,10 @@
 define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
 ; SSE2-LABEL: trunc_shl_7_v4i32_v4i64:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = mem[0,2,2,3]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    pslld $7, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rdi)
+; SSE2-NEXT:    movaps (%rsi), %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; SSE2-NEXT:    pslld $7, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_7_v4i32_v4i64:

@@ -243,7 +243,7 @@ endif()
 
 # Use the Unicode (UTF-16) APIs by default on Win32
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	add_definitions( /D _UNICODE /D UNICODE )
+    add_definitions( -D_UNICODE -DUNICODE )
 endif()
 
 set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -275,6 +275,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
+    COMPONENT lldb_headers
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
@@ -415,3 +416,5 @@ endif()
 if(LLDB_USE_BUILTIN_DEMANGLER)
     add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
 endif()
+
+find_package(Backtrace)

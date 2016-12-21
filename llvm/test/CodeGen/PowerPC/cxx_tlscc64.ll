@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s --enable-shrink-wrap=false -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
+; RUN: llc -relocation-model=static -verify-machineinstrs < %s --enable-shrink-wrap=false -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1

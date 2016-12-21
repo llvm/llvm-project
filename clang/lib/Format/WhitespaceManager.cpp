@@ -42,11 +42,6 @@ WhitespaceManager::Change::Change(
       TokenLength(0), PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
       StartOfBlockComment(nullptr), IndentationOffset(0) {}
 
-void WhitespaceManager::reset() {
-  Changes.clear();
-  Replaces.clear();
-}
-
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned IndentLevel, unsigned Spaces,
                                           unsigned StartOfTokenColumn,

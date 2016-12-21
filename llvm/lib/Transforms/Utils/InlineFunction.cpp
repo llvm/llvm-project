@@ -1644,8 +1644,16 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
 
     // Update the callgraph if requested.
-    if (IFI.CG)
+    if (IFI.CG) {
       UpdateCallGraphAfterInlining(CS, FirstNewBlock, VMap, IFI);
+    } else {
+      // Otherwise just collect the raw call sites that were inlined.
+      for (BasicBlock &NewBB :
+           make_range(FirstNewBlock->getIterator(), Caller->end()))
+        for (Instruction &I : NewBB)
+          if (auto CS = CallSite(&I))
+            IFI.InlinedCallSites.push_back(CS);
+    }
 
     // For 'nodebug' functions, the associated DISubprogram is always null.
     // Conservatively avoid propagating the callsite debug location to

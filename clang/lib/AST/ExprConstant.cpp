@@ -4451,8 +4451,11 @@ public:
       }
 
       // Don't call function pointers which have been cast to some other type.
-      if (!Info.Ctx.hasSameType(CalleeType->getPointeeType(), FD->getType()))
+      // Per DR (no number yet), the caller and callee can differ in noexcept.
+      if (!Info.Ctx.hasSameFunctionTypeIgnoringExceptionSpec(
+              CalleeType->getPointeeType(), FD->getType())) {
         return Error(E);
+      }
     } else
       return Error(E);
 

@@ -4090,8 +4090,8 @@ declare void @llvm.x86.avx512.mask.pmovs.wb.mem.128(i8* %ptr, <8 x i16>, i8)
 define void @test_int_x86_avx512_mask_pmovs_wb_mem_128(i8* %ptr, <8 x i16> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_wb_mem_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovswb %xmm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x08,0x20,0x07]
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vpmovswb %xmm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x08,0x20,0x07]
 ; CHECK-NEXT:    vpmovswb %xmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7e,0x09,0x20,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     call void @llvm.x86.avx512.mask.pmovs.wb.mem.128(i8* %ptr, <8 x i16> %x1, i8 -1)
@@ -4124,8 +4124,8 @@ declare void @llvm.x86.avx512.mask.pmovus.wb.mem.128(i8* %ptr, <8 x i16>, i8)
 define void @test_int_x86_avx512_mask_pmovus_wb_mem_128(i8* %ptr, <8 x i16> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_wb_mem_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovuswb %xmm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x08,0x10,0x07]
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vpmovuswb %xmm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x08,0x10,0x07]
 ; CHECK-NEXT:    vpmovuswb %xmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7e,0x09,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     call void @llvm.x86.avx512.mask.pmovus.wb.mem.128(i8* %ptr, <8 x i16> %x1, i8 -1)
@@ -4192,8 +4192,8 @@ declare void @llvm.x86.avx512.mask.pmovs.wb.mem.256(i8* %ptr, <16 x i16>, i16)
 define void @test_int_x86_avx512_mask_pmovs_wb_mem_256(i8* %ptr, <16 x i16> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_wb_mem_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovswb %ymm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x28,0x20,0x07]
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vpmovswb %ymm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x28,0x20,0x07]
 ; CHECK-NEXT:    vpmovswb %ymm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7e,0x29,0x20,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     call void @llvm.x86.avx512.mask.pmovs.wb.mem.256(i8* %ptr, <16 x i16> %x1, i16 -1)
@@ -4226,8 +4226,8 @@ declare void @llvm.x86.avx512.mask.pmovus.wb.mem.256(i8* %ptr, <16 x i16>, i16)
 define void @test_int_x86_avx512_mask_pmovus_wb_mem_256(i8* %ptr, <16 x i16> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_wb_mem_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovuswb %ymm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x28,0x10,0x07]
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vpmovuswb %ymm0, (%rdi) ## encoding: [0x62,0xf2,0x7e,0x28,0x10,0x07]
 ; CHECK-NEXT:    vpmovuswb %ymm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7e,0x29,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     call void @llvm.x86.avx512.mask.pmovus.wb.mem.256(i8* %ptr, <16 x i16> %x1, i16 -1)

@@ -46,7 +46,7 @@ entry:
 ; X64-LABEL: TestFPExtF64_F128:
 ; X64:       movsd      vf64(%rip), %xmm0
 ; X64-NEXT:  callq      __extenddftf2
-; X64-NEXT:  movapd     %xmm0, vf128(%rip)
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
 ; X64:       ret
 }
 

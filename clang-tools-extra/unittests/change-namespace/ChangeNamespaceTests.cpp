@@ -575,6 +575,47 @@ TEST_F(ChangeNamespaceTest, FixFunctionNameSpecifiers) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FixOverloadedOperatorFunctionNameSpecifiers) {
+  std::string Code =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  int x;\n"
+      "  bool operator==(const A &RHS) const { return x == RHS.x; }\n"
+      "};\n"
+      "bool operator<(const A &LHS, const A &RHS) { return LHS.x == RHS.x; }\n"
+      "namespace nb {\n"
+      "bool f() {\n"
+      "  A x, y;\n"
+      "  auto f = operator<;\n"
+      "  return (x == y) && (x < y) && (operator<(x, y));\n"
+      "}\n"
+      "}  // namespace nb\n"
+      "}  // namespace na\n";
+  std::string Expected =
+      "namespace na {\n"
+      "class A {\n"
+      "public:\n"
+      "  int x;\n"
+      "  bool operator==(const A &RHS) const { return x == RHS.x; }\n"
+      "};\n"
+      "bool operator<(const A &LHS, const A &RHS) { return LHS.x == RHS.x; }\n"
+      "\n"
+      "}  // namespace na\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "bool f() {\n"
+      "  ::na::A x, y;\n"
+      "  auto f = ::na::operator<;\n"
+      // FIXME: function calls to overloaded operators are not fixed now even if
+      // they are referenced by qualified names.
+      "  return (x == y) && (x < y) && (operator<(x,y));\n"
+      "}\n"
+      "}  // namespace y\n"
+      "}  // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 TEST_F(ChangeNamespaceTest, FixNonCallingFunctionReferences) {
   std::string Code = "namespace na {\n"
                      "class A {\n"
@@ -1314,6 +1355,100 @@ TEST_F(ChangeNamespaceTest, KeepGlobalSpecifier) {
                          "};\n"
                          "} // namespace y\n"
                          "} // namespace x\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, UsingAliasInTemplate) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace some_ns {\n"
+                     "template <typename T, typename S>\n"
+                     "class G {};\n"
+                     "} // namespace some_ns\n"
+                     "namespace na {\n"
+                     "template<typename P>\n"
+                     "using GG = some_ns::G<int, P>;\n"
+                     "} // namespace na\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  GG<float> g;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace some_ns {\n"
+                         "template <typename T, typename S>\n"
+                         "class G {};\n"
+                         "} // namespace some_ns\n"
+                         "namespace na {\n"
+                         "template<typename P>\n"
+                         "using GG = some_ns::G<int, P>;\n"
+                         "} // namespace na\n"
+                         "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "void f() {\n"
+                         "  GG<float> g;\n"
+                         "}\n"
+                         "} // namespace nc\n\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, TemplateUsingAliasInBaseClass) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace some_ns {\n"
+                     "template <typename T, typename S>\n"
+                     "class G {};\n"
+                     "} // namespace some_ns\n"
+                     "namespace na {\n"
+                     "class Base {\n"
+                     "public:\n"
+                     "  template<typename P>\n"
+                     "  using GG = some_ns::G<int, P>;\n"
+                     "\n"
+                     "  struct Nested {};\n"
+                     "};\n"
+                     "class Derived : public Base {};\n"
+                     "} // namespace na\n"
+                     "namespace na {\n"
+                     "namespace nb {\n"
+                     "void f() {\n"
+                     "  Derived::GG<float> g;\n"
+                     "  const Derived::GG<int> gg;\n"
+                     "  const Derived::GG<int>* gg_ptr;\n"
+                     "  struct Derived::Nested nested;\n"
+                     "  const struct Derived::Nested *nested_ptr;\n"
+                     "}\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace some_ns {\n"
+                         "template <typename T, typename S>\n"
+                         "class G {};\n"
+                         "} // namespace some_ns\n"
+                         "namespace na {\n"
+                         "class Base {\n"
+                         "public:\n"
+                         "  template<typename P>\n"
+                         "  using GG = some_ns::G<int, P>;\n"
+                         "\n"
+                         "  struct Nested {};\n"
+                         "};\n"
+                         "class Derived : public Base {};\n"
+                         "} // namespace na\n"
+                         "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "void f() {\n"
+                         "  Derived::GG<float> g;\n"
+                         "  const Derived::GG<int> gg;\n"
+                         "  const Derived::GG<int>* gg_ptr;\n"
+                         "  struct Derived::Nested nested;\n"
+                         "  const struct Derived::Nested *nested_ptr;\n"
+                         "}\n"
+                         "} // namespace nc\n\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 

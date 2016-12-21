@@ -144,7 +144,7 @@ struct SectionPattern {
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
-      : BaseCommand(InputSectionKind), FilePat({FilePattern}) {}
+      : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
 
   static bool classof(const BaseCommand *C);
 
@@ -233,7 +233,7 @@ public:
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry<ELFT>> createPhdrs();
+  std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
   uint32_t getFiller(StringRef Name);
@@ -242,7 +242,7 @@ public:
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
-  void assignAddresses(std::vector<PhdrEntry<ELFT>> &Phdrs);
+  void assignAddresses(std::vector<PhdrEntry> &Phdrs);
   bool hasPhdrsCommands();
   uint64_t getHeaderSize() override;
   uint64_t getSymbolValue(StringRef S) override;

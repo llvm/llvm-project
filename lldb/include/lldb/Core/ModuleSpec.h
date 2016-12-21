@@ -240,7 +240,7 @@ public:
     if (m_object_mod_time != llvm::sys::TimePoint<>()) {
       if (dumped_something)
         strm.PutCString(", ");
-      strm.Printf("object_mod_time = 0x%" PRIx64,
+      strm.Format("object_mod_time = {0:x+}",
                   uint64_t(llvm::sys::toTimeT(m_object_mod_time)));
     }
   }

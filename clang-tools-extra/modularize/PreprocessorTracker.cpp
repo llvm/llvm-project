@@ -558,9 +558,7 @@ public:
   // Check for the presence of a header inclusion path handle entry.
   // Return false if not found.
   bool haveInclusionPathHandle(InclusionPathHandle H) {
-    for (std::vector<InclusionPathHandle>::iterator
-             I = InclusionPathHandles.begin(),
-             E = InclusionPathHandles.end();
+    for (auto I = InclusionPathHandles.begin(), E = InclusionPathHandles.end();
          I != E; ++I) {
       if (*I == H)
         return true;
@@ -608,9 +606,8 @@ public:
   MacroExpansionInstance *
   findMacroExpansionInstance(StringHandle MacroExpanded,
                              PPItemKey &DefinitionLocation) {
-    for (std::vector<MacroExpansionInstance>::iterator
-             I = MacroExpansionInstances.begin(),
-             E = MacroExpansionInstances.end();
+    for (auto I = MacroExpansionInstances.begin(),
+              E = MacroExpansionInstances.end();
          I != E; ++I) {
       if ((I->MacroExpanded == MacroExpanded) &&
           (I->DefinitionLocation == DefinitionLocation)) {
@@ -659,9 +656,7 @@ public:
   // Check for the presence of a header inclusion path handle entry.
   // Return false if not found.
   bool haveInclusionPathHandle(InclusionPathHandle H) {
-    for (std::vector<InclusionPathHandle>::iterator
-             I = InclusionPathHandles.begin(),
-             E = InclusionPathHandles.end();
+    for (auto I = InclusionPathHandles.begin(), E = InclusionPathHandles.end();
          I != E; ++I) {
       if (*I == H)
         return true;
@@ -701,9 +696,8 @@ public:
   // Find a matching condition expansion instance.
   ConditionalExpansionInstance *
   findConditionalExpansionInstance(clang::PPCallbacks::ConditionValueKind ConditionValue) {
-    for (std::vector<ConditionalExpansionInstance>::iterator
-             I = ConditionalExpansionInstances.begin(),
-             E = ConditionalExpansionInstances.end();
+    for (auto I = ConditionalExpansionInstances.begin(),
+              E = ConditionalExpansionInstances.end();
          I != E; ++I) {
       if (I->ConditionValue == ConditionValue) {
         return &*I; // Found.
@@ -954,9 +948,8 @@ public:
   HeaderHandle findHeaderHandle(llvm::StringRef HeaderPath) const {
     std::string CanonicalPath = getCanonicalPath(HeaderPath);
     HeaderHandle H = 0;
-    for (std::vector<StringHandle>::const_iterator I = HeaderPaths.begin(),
-                                                   E = HeaderPaths.end();
-         I != E; ++I, ++H) {
+    for (auto I = HeaderPaths.begin(), E = HeaderPaths.end(); I != E;
+         ++I, ++H) {
       if (**I == CanonicalPath)
         return H;
     }
@@ -1004,9 +997,7 @@ public:
 
   // Check for presence of header handle in the header stack.
   bool isHeaderHandleInStack(HeaderHandle H) const {
-    for (std::vector<HeaderHandle>::const_iterator I = HeaderStack.begin(),
-                                                   E = HeaderStack.end();
-         I != E; ++I) {
+    for (auto I = HeaderStack.begin(), E = HeaderStack.end(); I != E; ++I) {
       if (*I == H)
         return true;
     }
@@ -1018,10 +1009,8 @@ public:
   InclusionPathHandle
   findInclusionPathHandle(const std::vector<HeaderHandle> &Path) const {
     InclusionPathHandle H = 0;
-    for (std::vector<HeaderInclusionPath>::const_iterator
-             I = InclusionPaths.begin(),
-             E = InclusionPaths.end();
-         I != E; ++I, ++H) {
+    for (auto I = InclusionPaths.begin(), E = InclusionPaths.end(); I != E;
+         ++I, ++H) {
       if (I->Path == Path)
         return H;
     }
@@ -1065,7 +1054,7 @@ public:
     StringHandle MacroName = addString(II->getName());
     PPItemKey InstanceKey(PP, MacroName, H, InstanceLoc);
     PPItemKey DefinitionKey(PP, MacroName, H, DefinitionLoc);
-    MacroExpansionMapIter I = MacroExpansions.find(InstanceKey);
+    auto I = MacroExpansions.find(InstanceKey);
     // If existing instance of expansion not found, add one.
     if (I == MacroExpansions.end()) {
       std::string InstanceSourceLine =
@@ -1113,7 +1102,7 @@ public:
       return;
     StringHandle ConditionUnexpandedHandle(addString(ConditionUnexpanded));
     PPItemKey InstanceKey(PP, ConditionUnexpandedHandle, H, InstanceLoc);
-    ConditionalExpansionMapIter I = ConditionalExpansions.find(InstanceKey);
+    auto I = ConditionalExpansions.find(InstanceKey);
     // If existing instance of condition not found, add one.
     if (I == ConditionalExpansions.end()) {
       std::string InstanceSourceLine =
@@ -1144,9 +1133,8 @@ public:
   bool reportInconsistentMacros(llvm::raw_ostream &OS) override {
     bool ReturnValue = false;
     // Walk all the macro expansion trackers in the map.
-    for (MacroExpansionMapIter I = MacroExpansions.begin(),
-                               E = MacroExpansions.end();
-         I != E; ++I) {
+    for (auto I = MacroExpansions.begin(), E = MacroExpansions.end(); I != E;
+         ++I) {
       const PPItemKey &ItemKey = I->first;
       MacroExpansionTracker &MacroExpTracker = I->second;
       // If no mismatch (only one instance value) continue.
@@ -1162,21 +1150,19 @@ public:
          << "' has different values in this header, depending on how it was "
             "included.\n";
       // Walk all the instances.
-      for (std::vector<MacroExpansionInstance>::iterator
-               IMT = MacroExpTracker.MacroExpansionInstances.begin(),
-               EMT = MacroExpTracker.MacroExpansionInstances.end();
+      for (auto IMT = MacroExpTracker.MacroExpansionInstances.begin(),
+                EMT = MacroExpTracker.MacroExpansionInstances.end();
            IMT != EMT; ++IMT) {
         MacroExpansionInstance &MacroInfo = *IMT;
         OS << "  '" << *MacroExpTracker.MacroUnexpanded << "' expanded to: '"
            << *MacroInfo.MacroExpanded
            << "' with respect to these inclusion paths:\n";
         // Walk all the inclusion path hierarchies.
-        for (std::vector<InclusionPathHandle>::iterator
-                 IIP = MacroInfo.InclusionPathHandles.begin(),
-                 EIP = MacroInfo.InclusionPathHandles.end();
+        for (auto IIP = MacroInfo.InclusionPathHandles.begin(),
+                  EIP = MacroInfo.InclusionPathHandles.end();
              IIP != EIP; ++IIP) {
           const std::vector<HeaderHandle> &ip = getInclusionPath(*IIP);
-          int Count = (int)ip.size();
+          auto Count = (int)ip.size();
           for (int Index = 0; Index < Count; ++Index) {
             HeaderHandle H = ip[Index];
             OS << std::string((Index * 2) + 4, ' ') << *getHeaderFilePath(H)
@@ -1205,8 +1191,8 @@ public:
   bool reportInconsistentConditionals(llvm::raw_ostream &OS) override {
     bool ReturnValue = false;
     // Walk all the conditional trackers in the map.
-    for (ConditionalExpansionMapIter I = ConditionalExpansions.begin(),
-                                     E = ConditionalExpansions.end();
+    for (auto I = ConditionalExpansions.begin(),
+              E = ConditionalExpansions.end();
          I != E; ++I) {
       const PPItemKey &ItemKey = I->first;
       ConditionalTracker &CondTracker = I->second;
@@ -1225,21 +1211,19 @@ public:
          << "' has different values in this header, depending on how it was "
             "included.\n";
       // Walk all the instances.
-      for (std::vector<ConditionalExpansionInstance>::iterator
-               IMT = CondTracker.ConditionalExpansionInstances.begin(),
-               EMT = CondTracker.ConditionalExpansionInstances.end();
+      for (auto IMT = CondTracker.ConditionalExpansionInstances.begin(),
+                EMT = CondTracker.ConditionalExpansionInstances.end();
            IMT != EMT; ++IMT) {
         ConditionalExpansionInstance &MacroInfo = *IMT;
         OS << "  '" << *CondTracker.ConditionUnexpanded << "' expanded to: '"
            << ConditionValueKindStrings[MacroInfo.ConditionValue]
            << "' with respect to these inclusion paths:\n";
         // Walk all the inclusion path hierarchies.
-        for (std::vector<InclusionPathHandle>::iterator
-                 IIP = MacroInfo.InclusionPathHandles.begin(),
-                 EIP = MacroInfo.InclusionPathHandles.end();
+        for (auto IIP = MacroInfo.InclusionPathHandles.begin(),
+                  EIP = MacroInfo.InclusionPathHandles.end();
              IIP != EIP; ++IIP) {
           const std::vector<HeaderHandle> &ip = getInclusionPath(*IIP);
-          int Count = (int)ip.size();
+          auto Count = (int)ip.size();
           for (int Index = 0; Index < Count; ++Index) {
             HeaderHandle H = ip[Index];
             OS << std::string((Index * 2) + 4, ' ') << *getHeaderFilePath(H)

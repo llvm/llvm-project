@@ -1,11 +1,16 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-optzns > %t
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-optzns -std=c++03 > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
-// RUN: FileCheck --check-prefix=CHECK4 --input-file=%t %s
-// RUN: FileCheck --check-prefix=CHECK5 --input-file=%t %s
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -O1 -disable-llvm-optzns -std=c++11 > %t2
-// RUN: FileCheck --check-prefix=CHECK6 --input-file=%t2 %s
+// RUN: FileCheck --check-prefixes=CHECK4,CHECK4v03 --input-file=%t %s
+// RUN: FileCheck --check-prefixes=CHECK5,CHECK5v03 --input-file=%t %s
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-optzns -std=c++11 > %t2
+// RUN: FileCheck --check-prefix=CHECK1    --input-file=%t2 %s
+// RUN: FileCheck --check-prefix=CHECK2v11 --input-file=%t2 %s
+// RUN: FileCheck --check-prefix=CHECK3    --input-file=%t2 %s
+// RUN: FileCheck --check-prefixes=CHECK4,CHECK4v11 --input-file=%t2 %s
+// RUN: FileCheck --check-prefixes=CHECK5,CHECK5v11 --input-file=%t2 %s
+// RUN: FileCheck --check-prefix=CHECK6    --input-file=%t2 %s
 // REQUIRES: asserts
 
 struct A {
@@ -98,6 +103,12 @@ namespace test0 {
 // CHECK2: invoke void @_ZN5test04BaseD2Ev
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 
+// In C++11, the destructors are often known not to throw.
+// CHECK2v11-LABEL: @_ZN5test01AD1Ev = alias {{.*}} @_ZN5test01AD2Ev
+// CHECK2v11-LABEL: define void @_ZN5test01AD2Ev(%"struct.test0::A"* %this) unnamed_addr
+// CHECK2v11: call void @_ZN5test06MemberD1Ev
+// CHECK2v11: call void @_ZN5test04BaseD2Ev
+
   struct B : Base, virtual VBase {
     Member M;
     ~B();
@@ -111,6 +122,10 @@ namespace test0 {
 // CHECK2: invoke void @_ZN5test04BaseD2Ev
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 
+// CHECK2v11-LABEL: define void @_ZN5test01BD2Ev(%"struct.test0::B"* %this, i8** %vtt) unnamed_addr
+// CHECK2v11: call void @_ZN5test06MemberD1Ev
+// CHECK2v11: call void @_ZN5test04BaseD2Ev
+
 // CHECK2-LABEL: define void @_ZN5test01BD1Ev(%"struct.test0::B"* %this) unnamed_addr
 // CHECK2: invoke void @_ZN5test06MemberD1Ev
 // CHECK2:   unwind label [[MEM_UNWIND:%[a-zA-Z0-9.]+]]
@@ -118,6 +133,11 @@ namespace test0 {
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 // CHECK2: invoke void @_ZN5test05VBaseD2Ev
 // CHECK2:   unwind label [[VBASE_UNWIND:%[a-zA-Z0-9.]+]]
+
+// CHECK2v11-LABEL: define void @_ZN5test01BD1Ev(%"struct.test0::B"* %this) unnamed_addr
+// CHECK2v11: call void @_ZN5test06MemberD1Ev
+// CHECK2v11: call void @_ZN5test04BaseD2Ev
+// CHECK2v11: call void @_ZN5test05VBaseD2Ev
 }
 
 // Test base-class aliasing.
@@ -189,19 +209,22 @@ namespace test3 {
   }
 
   // CHECK4-LABEL: define internal void @_ZN5test312_GLOBAL__N_11CD2Ev(%"struct.test3::(anonymous namespace)::C"* %this) unnamed_addr
-  // CHECK4: invoke void @_ZN5test31BD2Ev(
+  // CHECK4v03: invoke void @_ZN5test31BD2Ev(
+  // CHECK4v11: call   void @_ZN5test31BD2Ev(
   // CHECK4: call void @_ZN5test31AD2Ev(
   // CHECK4: ret void
 
   // CHECK4-LABEL: define internal void @_ZN5test312_GLOBAL__N_11DD0Ev(%"struct.test3::(anonymous namespace)::D"* %this) unnamed_addr
-  // CHECK4-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
-  // CHECK4: invoke void {{.*}} @_ZN5test312_GLOBAL__N_11CD2Ev
+  // CHECK4v03-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+  // CHECK4v03: invoke void {{.*}} @_ZN5test312_GLOBAL__N_11CD2Ev
+  // CHECK4v11: call   void {{.*}} @_ZN5test312_GLOBAL__N_11CD2Ev
   // CHECK4: call void @_ZdlPv({{.*}}) [[NUW:#[0-9]+]]
   // CHECK4: ret void
-  // CHECK4: landingpad { i8*, i32 }
-  // CHECK4-NEXT: cleanup
-  // CHECK4: call void @_ZdlPv({{.*}}) [[NUW]]
-  // CHECK4: resume { i8*, i32 }
+  // CHECK4v03: landingpad { i8*, i32 }
+  // CHECK4v03-NEXT: cleanup
+  // CHECK4v03: call void @_ZdlPv({{.*}}) [[NUW]]
+  // CHECK4v03: resume { i8*, i32 }
+  // CHECK4v11-NOT: landingpad
 
   // CHECK4-LABEL: define internal void @_ZThn8_N5test312_GLOBAL__N_11DD1Ev(
   // CHECK4: getelementptr inbounds i8, i8* {{.*}}, i64 -8
@@ -214,14 +237,15 @@ namespace test3 {
   // CHECK4: ret void
 
   // CHECK4-LABEL: define internal void @_ZN5test312_GLOBAL__N_11CD0Ev(%"struct.test3::(anonymous namespace)::C"* %this) unnamed_addr
-  // CHECK4-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
-  // CHECK4: invoke void @_ZN5test312_GLOBAL__N_11CD2Ev(
+  // CHECK4v03-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+  // CHECK4v03: invoke void @_ZN5test312_GLOBAL__N_11CD2Ev(
+  // CHECK4v11: call   void @_ZN5test312_GLOBAL__N_11CD2Ev(
   // CHECK4: call void @_ZdlPv({{.*}}) [[NUW]]
   // CHECK4: ret void
-  // CHECK4: landingpad { i8*, i32 }
-  // CHECK4-NEXT: cleanup
-  // CHECK4: call void @_ZdlPv({{.*}}) [[NUW]]
-  // CHECK4: resume { i8*, i32 }
+  // CHECK4v03: landingpad { i8*, i32 }
+  // CHECK4v03-NEXT: cleanup
+  // CHECK4v03: call void @_ZdlPv({{.*}}) [[NUW]]
+  // CHECK4v03: resume { i8*, i32 }
 
   // CHECK4-LABEL: define internal void @_ZThn8_N5test312_GLOBAL__N_11CD1Ev(
   // CHECK4: getelementptr inbounds i8, i8* {{.*}}, i64 -8
@@ -282,8 +306,8 @@ namespace test5 {
 
   // CHECK5-LABEL: define void @_ZN5test53fooEv()
   // CHECK5:      [[ELEMS:%.*]] = alloca [5 x [[A:%.*]]], align
-  // CHECK5-NEXT: [[EXN:%.*]] = alloca i8*
-  // CHECK5-NEXT: [[SEL:%.*]] = alloca i32
+  // CHECK5v03-NEXT: [[EXN:%.*]] = alloca i8*
+  // CHECK5v03-NEXT: [[SEL:%.*]] = alloca i32
   // CHECK5-NEXT: [[PELEMS:%.*]] = bitcast [5 x [[A]]]* [[ELEMS]] to i8*
   // CHECK5-NEXT: call void @llvm.lifetime.start(i64 5, i8* [[PELEMS]])
   // CHECK5-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [5 x [[A]]], [5 x [[A]]]* [[ELEMS]], i32 0, i32 0
@@ -291,19 +315,22 @@ namespace test5 {
   // CHECK5-NEXT: br label
   // CHECK5:      [[POST:%.*]] = phi [[A]]* [ [[END]], {{%.*}} ], [ [[ELT:%.*]], {{%.*}} ]
   // CHECK5-NEXT: [[ELT]] = getelementptr inbounds [[A]], [[A]]* [[POST]], i64 -1
-  // CHECK5-NEXT: invoke void @_ZN5test51AD1Ev([[A]]* [[ELT]])
+  // CHECK5v03-NEXT: invoke void @_ZN5test51AD1Ev([[A]]* [[ELT]])
+  // CHECK5v11-NEXT: call   void @_ZN5test51AD1Ev([[A]]* [[ELT]])
   // CHECK5:      [[T0:%.*]] = icmp eq [[A]]* [[ELT]], [[BEGIN]]
   // CHECK5-NEXT: br i1 [[T0]],
   // CHECK5:      call void @llvm.lifetime.end
   // CHECK5-NEXT: ret void
   // lpad
-  // CHECK5:      [[EMPTY:%.*]] = icmp eq [[A]]* [[BEGIN]], [[ELT]]
-  // CHECK5-NEXT: br i1 [[EMPTY]]
-  // CHECK5:      [[AFTER:%.*]] = phi [[A]]* [ [[ELT]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
-  // CHECK5-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], [[A]]* [[AFTER]], i64 -1
-  // CHECK5-NEXT: invoke void @_ZN5test51AD1Ev([[A]]* [[CUR]])
-  // CHECK5:      [[DONE:%.*]] = icmp eq [[A]]* [[CUR]], [[BEGIN]]
-  // CHECK5-NEXT: br i1 [[DONE]],
+  // CHECK5v03:      [[EMPTY:%.*]] = icmp eq [[A]]* [[BEGIN]], [[ELT]]
+  // CHECK5v03-NEXT: br i1 [[EMPTY]]
+  // CHECK5v03:      [[AFTER:%.*]] = phi [[A]]* [ [[ELT]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
+  // CHECK5v03-NEXT: [[CUR:%.*]] = getelementptr inbounds [[A]], [[A]]* [[AFTER]], i64 -1
+  // CHECK5v03-NEXT: invoke void @_ZN5test51AD1Ev([[A]]* [[CUR]])
+  // CHECK5v03:      [[DONE:%.*]] = icmp eq [[A]]* [[CUR]], [[BEGIN]]
+  // CHECK5v03-NEXT: br i1 [[DONE]],
+  // CHECK5v11-NOT: landingpad
+  // CHECK5v11:   }
   void foo() {
     A elems[5];
   }
@@ -334,25 +361,34 @@ namespace test6 {
   C::~C() { opaque(); }
   // CHECK5-LABEL: define void @_ZN5test61CD2Ev(%"struct.test6::C"* %this, i8** %vtt) unnamed_addr
   // CHECK5:   invoke void @_ZN5test66opaqueEv
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61BILj1EED2Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61BILj1EED2Ev
+  // CHECK5v11:   call   void @_ZN5test61AD1Ev
+  // CHECK5v11:   call   void @_ZN5test61AD1Ev
+  // CHECK5v11:   call   void @_ZN5test61AD1Ev
+  // CHECK5v11:   call   void @_ZN5test61BILj1EED2Ev
   // CHECK5:   call void @_ZN5test61BILj0EED2Ev
   // CHECK5:   ret void
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61AD1Ev
-  // CHECK5:   invoke void @_ZN5test61BILj1EED2Ev
-  // CHECK5:   invoke void @_ZN5test61BILj0EED2Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61AD1Ev
+  // CHECK5v03:   invoke void @_ZN5test61BILj1EED2Ev
+  // CHECK5v03:   invoke void @_ZN5test61BILj0EED2Ev
 
   // CHECK5-LABEL: define void @_ZN5test61CD1Ev(%"struct.test6::C"* %this) unnamed_addr
-  // CHECK5:   invoke void @_ZN5test61CD2Ev
-  // CHECK5:   invoke void @_ZN5test61BILj3EED2Ev
-  // CHECK5:   call void @_ZN5test61BILj2EED2Ev
-  // CHECK5:   ret void
-  // CHECK5:   invoke void @_ZN5test61BILj3EED2Ev
-  // CHECK5:   invoke void @_ZN5test61BILj2EED2Ev
+  // CHECK5v03:   invoke void @_ZN5test61CD2Ev
+  // CHECK5v03:   invoke void @_ZN5test61BILj3EED2Ev
+  // CHECK5v03:   call void @_ZN5test61BILj2EED2Ev
+  // CHECK5v03:   ret void
+  // CHECK5v03:   invoke void @_ZN5test61BILj3EED2Ev
+  // CHECK5v03:   invoke void @_ZN5test61BILj2EED2Ev
+
+  // CHECK5v11:   call void @_ZN5test61CD2Ev
+  // CHECK5v11:   call void @_ZN5test61BILj3EED2Ev
+  // CHECK5v11:   call void @_ZN5test61BILj2EED2Ev
+  // CHECK5v11:   ret void
 }
 
 // PR 9197
@@ -369,7 +405,8 @@ namespace test7 {
 
   // Verify that this doesn't get emitted as an alias
   // CHECK5-LABEL: define void @_ZN5test71BD2Ev(
-  // CHECK5:   invoke void @_ZN5test71DD1Ev(
+  // CHECK5v03:   invoke void @_ZN5test71DD1Ev(
+  // CHECK5v11:   call   void @_ZN5test71DD1Ev(
   // CHECK5:   call void @_ZN5test71AD2Ev(
   B::~B() {}
 }
@@ -394,7 +431,8 @@ namespace test8 {
   // CHECK5:      call void @_ZN5test81AC1Ev([[A]]* [[X]])
   // CHECK5-NEXT: br label
   // CHECK5:      invoke void @_ZN5test81AC1Ev([[A]]* [[Y]])
-  // CHECK5:      invoke void @_ZN5test81AD1Ev([[A]]* [[Y]])
+  // CHECK5v03:   invoke void @_ZN5test81AD1Ev([[A]]* [[Y]])
+  // CHECK5v11:   call   void @_ZN5test81AD1Ev([[A]]* [[Y]])
   // CHECK5-NOT:  switch
   // CHECK5:      invoke void @_ZN5test83dieEv()
   // CHECK5:      unreachable

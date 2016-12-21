@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; Test that bar and bar2 are both inlined throughout and removed.
 @A = weak global i32 0		; <i32*> [#uses=1]
 @B = weak global i32 0		; <i32*> [#uses=1]

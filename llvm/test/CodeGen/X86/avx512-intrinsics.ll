@@ -2912,8 +2912,8 @@ declare void @llvm.x86.avx512.mask.pmovs.qb.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovs_qb_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_qb_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovsqb %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovsqb %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovsqb %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovs.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -2946,8 +2946,8 @@ declare void @llvm.x86.avx512.mask.pmovus.qb.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovus_qb_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_qb_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovusqb %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovusqb %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovusqb %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovus.qb.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -3014,8 +3014,8 @@ declare void @llvm.x86.avx512.mask.pmovs.qw.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovs_qw_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_qw_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovsqw %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovsqw %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovsqw %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovs.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -3048,8 +3048,8 @@ declare void @llvm.x86.avx512.mask.pmovus.qw.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovus_qw_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_qw_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovusqw %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovusqw %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovusqw %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovus.qw.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -3116,8 +3116,8 @@ declare void @llvm.x86.avx512.mask.pmovs.qd.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovs_qd_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_qd_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovsqd %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovsqd %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovsqd %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovs.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -3150,8 +3150,8 @@ declare void @llvm.x86.avx512.mask.pmovus.qd.mem.512(i8* %ptr, <8 x i64>, i8)
 define void @test_int_x86_avx512_mask_pmovus_qd_mem_512(i8* %ptr, <8 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_qd_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovusqd %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovusqd %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovusqd %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovus.qd.mem.512(i8* %ptr, <8 x i64> %x1, i8 -1)
@@ -3218,8 +3218,8 @@ declare void @llvm.x86.avx512.mask.pmovs.db.mem.512(i8* %ptr, <16 x i32>, i16)
 define void @test_int_x86_avx512_mask_pmovs_db_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_db_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovsdb %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovsdb %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovsdb %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovs.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
@@ -3252,8 +3252,8 @@ declare void @llvm.x86.avx512.mask.pmovus.db.mem.512(i8* %ptr, <16 x i32>, i16)
 define void @test_int_x86_avx512_mask_pmovus_db_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_db_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovusdb %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovusdb %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovusdb %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovus.db.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
@@ -3320,8 +3320,8 @@ declare void @llvm.x86.avx512.mask.pmovs.dw.mem.512(i8* %ptr, <16 x i32>, i16)
 define void @test_int_x86_avx512_mask_pmovs_dw_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovs_dw_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovsdw %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovsdw %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovsdw %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovs.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)
@@ -3354,8 +3354,8 @@ declare void @llvm.x86.avx512.mask.pmovus.dw.mem.512(i8* %ptr, <16 x i32>, i16)
 define void @test_int_x86_avx512_mask_pmovus_dw_mem_512(i8* %ptr, <16 x i32> %x1, i16 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovus_dw_mem_512:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpmovusdw %zmm0, (%rdi)
 ; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vpmovusdw %zmm0, (%rdi)
 ; CHECK-NEXT:    vpmovusdw %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
     call void @llvm.x86.avx512.mask.pmovus.dw.mem.512(i8* %ptr, <16 x i32> %x1, i16 -1)

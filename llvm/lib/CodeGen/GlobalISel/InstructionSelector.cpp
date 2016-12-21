@@ -43,6 +43,11 @@ bool InstructionSelector::constrainSelectedInstRegOperands(
     if (TRI.isPhysicalRegister(MO.getReg()))
       continue;
 
+    // Register operands with a value of 0 (e.g. predicate operands) don't need
+    // to be constrained.
+    if (MO.getReg() == 0)
+      continue;
+
     const TargetRegisterClass *RC = TII.getRegClass(I.getDesc(), OpI, &TRI, MF);
     assert(RC && "Selected inst should have regclass operand");
 

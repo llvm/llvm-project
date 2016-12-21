@@ -12,24 +12,30 @@
 
 #define DEBUG_TYPE "opt-addr-mode"
 
-#include "HexagonTargetMachine.h"
+#include "HexagonInstrInfo.h"
+#include "HexagonSubtarget.h"
+#include "MCTargetDesc/HexagonBaseInfo.h"
 #include "RDFGraph.h"
 #include "RDFLiveness.h"
-
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <map>
 
 static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "
@@ -39,28 +45,36 @@ using namespace llvm;
 using namespace rdf;
 
 namespace llvm {
+
   FunctionPass *createHexagonOptAddrMode();
   void initializeHexagonOptAddrModePass(PassRegistry &);
-}
+
+} // end namespace llvm
 
 namespace {
+
 class HexagonOptAddrMode : public MachineFunctionPass {
 public:
   static char ID;
+
   HexagonOptAddrMode()
-      : MachineFunctionPass(ID), HII(0), MDT(0), DFG(0), LV(0) {
+      : MachineFunctionPass(ID), HII(nullptr), MDT(nullptr), DFG(nullptr),
+        LV(nullptr) {
     PassRegistry &R = *PassRegistry::getPassRegistry();
     initializeHexagonOptAddrModePass(R);
   }
+
   StringRef getPassName() const override {
     return "Optimize addressing mode of load/store";
   }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTree>();
     AU.addRequired<MachineDominanceFrontier>();
     AU.setPreservesAll();
   }
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
@@ -93,7 +107,8 @@ private:
   bool changeAddAsl(NodeAddr<UseNode *> AddAslUN, MachineInstr *AddAslMI,
                     const MachineOperand &ImmOp, unsigned ImmOpNum);
 };
-}
+
+} // end anonymous namespace
 
 char HexagonOptAddrMode::ID = 0;
 
@@ -233,7 +248,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
         const Liveness::RefMap &phiUse = LV->getRealUses(id);
         DEBUG(dbgs() << "\t\t\t\tphi real Uses"
                      << Print<Liveness::RefMap>(phiUse, *DFG) << "\n");
-        if (phiUse.size() > 0) {
+        if (!phiUse.empty()) {
           for (auto I : phiUse) {
             if (DR.Reg != I.first)
               continue;

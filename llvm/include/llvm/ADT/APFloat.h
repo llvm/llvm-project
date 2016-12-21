@@ -671,41 +671,49 @@ class APFloat : public APFloatBase {
     Storage(const fltSemantics &Semantics, ArgTypes &&... Args) {
       if (usesLayout<IEEEFloat>(Semantics)) {
         new (&IEEE) IEEEFloat(Semantics, std::forward<ArgTypes>(Args)...);
-      } else if (usesLayout<DoubleAPFloat>(Semantics)) {
-        new (&Double) DoubleAPFloat(Semantics, std::forward<ArgTypes>(Args)...);
-      } else {
-        llvm_unreachable("Unexpected semantics");
+        return;
       }
+      if (usesLayout<DoubleAPFloat>(Semantics)) {
+        new (&Double) DoubleAPFloat(Semantics, std::forward<ArgTypes>(Args)...);
+        return;
+      }
+      llvm_unreachable("Unexpected semantics");
     }
 
     ~Storage() {
       if (usesLayout<IEEEFloat>(*semantics)) {
         IEEE.~IEEEFloat();
-      } else if (usesLayout<DoubleAPFloat>(*semantics)) {
-        Double.~DoubleAPFloat();
-      } else {
-        llvm_unreachable("Unexpected semantics");
+        return;
       }
+      if (usesLayout<DoubleAPFloat>(*semantics)) {
+        Double.~DoubleAPFloat();
+        return;
+      }
+      llvm_unreachable("Unexpected semantics");
     }
 
     Storage(const Storage &RHS) {
       if (usesLayout<IEEEFloat>(*RHS.semantics)) {
         new (this) IEEEFloat(RHS.IEEE);
-      } else if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(RHS.Double);
-      } else {
-        llvm_unreachable("Unexpected semantics");
+        return;
       }
+      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+        new (this) DoubleAPFloat(RHS.Double);
+        return;
+      }
+      llvm_unreachable("Unexpected semantics");
     }
 
     Storage(Storage &&RHS) {
       if (usesLayout<IEEEFloat>(*RHS.semantics)) {
         new (this) IEEEFloat(std::move(RHS.IEEE));
-      } else if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(std::move(RHS.Double));
-      } else {
-        llvm_unreachable("Unexpected semantics");
+        return;
       }
+      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+        new (this) DoubleAPFloat(std::move(RHS.Double));
+        return;
+      }
+      llvm_unreachable("Unexpected semantics");
     }
 
     Storage &operator=(const Storage &RHS) {
@@ -747,35 +755,29 @@ class APFloat : public APFloatBase {
   }
 
   IEEEFloat &getIEEE() {
-    if (usesLayout<IEEEFloat>(*U.semantics)) {
+    if (usesLayout<IEEEFloat>(*U.semantics))
       return U.IEEE;
-    } else if (usesLayout<DoubleAPFloat>(*U.semantics)) {
+    if (usesLayout<DoubleAPFloat>(*U.semantics))
       return U.Double.getFirst().U.IEEE;
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
 
   const IEEEFloat &getIEEE() const {
-    if (usesLayout<IEEEFloat>(*U.semantics)) {
+    if (usesLayout<IEEEFloat>(*U.semantics))
       return U.IEEE;
-    } else if (usesLayout<DoubleAPFloat>(*U.semantics)) {
+    if (usesLayout<DoubleAPFloat>(*U.semantics))
       return U.Double.getFirst().U.IEEE;
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
 
   void makeZero(bool Neg) { getIEEE().makeZero(Neg); }
 
   void makeInf(bool Neg) {
-    if (usesLayout<IEEEFloat>(*U.semantics)) {
+    if (usesLayout<IEEEFloat>(*U.semantics))
       return U.IEEE.makeInf(Neg);
-    } else if (usesLayout<DoubleAPFloat>(*U.semantics)) {
+    if (usesLayout<DoubleAPFloat>(*U.semantics))
       return U.Double.makeInf(Neg);
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
 
   void makeNaN(bool SNaN, bool Neg, const APInt *fill) {
@@ -803,13 +805,11 @@ class APFloat : public APFloatBase {
 
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics());
-    if (usesLayout<IEEEFloat>(getSemantics())) {
+    if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
-    } else if (usesLayout<DoubleAPFloat>(getSemantics())) {
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.compareAbsoluteValue(RHS.U.Double);
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
 
 public:
@@ -828,13 +828,11 @@ public:
   ~APFloat() = default;
 
   bool needsCleanup() const {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
+    if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.needsCleanup();
-    } else if (usesLayout<DoubleAPFloat>(getSemantics())) {
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.needsCleanup();
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
 
   /// Factory for Positive and Negative Zero.
@@ -925,22 +923,18 @@ public:
   void Profile(FoldingSetNodeID &NID) const { getIEEE().Profile(NID); }
 
   opStatus add(const APFloat &RHS, roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
+    if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.add(RHS.U.IEEE, RM);
-    } else if (usesLayout<DoubleAPFloat>(getSemantics())) {
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.add(RHS.U.Double, RM);
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
   opStatus subtract(const APFloat &RHS, roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
+    if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.subtract(RHS.U.IEEE, RM);
-    } else if (usesLayout<DoubleAPFloat>(getSemantics())) {
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.subtract(RHS.U.Double, RM);
-    } else {
-      llvm_unreachable("Unexpected semantics");
-    }
+    llvm_unreachable("Unexpected semantics");
   }
   opStatus multiply(const APFloat &RHS, roundingMode RM) {
     return getIEEE().multiply(RHS.getIEEE(), RM);

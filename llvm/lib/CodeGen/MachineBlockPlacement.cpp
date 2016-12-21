@@ -324,6 +324,14 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// between basic blocks.
   DenseMap<MachineBasicBlock *, BlockChain *> BlockToChain;
 
+#ifndef NDEBUG
+  /// The set of basic blocks that have terminators that cannot be fully
+  /// analyzed.  These basic blocks cannot be re-ordered safely by
+  /// MachineBlockPlacement, and we must preserve physical layout of these
+  /// blocks and their successors through the pass.
+  SmallPtrSet<MachineBasicBlock *, 4> BlocksWithUnanalyzableExits;
+#endif
+
   /// Decrease the UnscheduledPredecessors count for all blocks in chain, and
   /// if the count goes to 0, add them to the appropriate work list.
   void markChainSuccessors(BlockChain &Chain, MachineBasicBlock *LoopHeaderBB,
@@ -1589,6 +1597,9 @@ void MachineBlockPlacement::buildCFGChains() {
                    << getBlockName(BB) << " -> " << getBlockName(NextBB)
                    << "\n");
       Chain->merge(NextBB, nullptr);
+#ifndef NDEBUG
+      BlocksWithUnanalyzableExits.insert(&*BB);
+#endif
       FI = NextFI;
       BB = NextBB;
     }
@@ -1660,6 +1671,19 @@ void MachineBlockPlacement::buildCFGChains() {
     // boiler plate.
     Cond.clear();
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
+
+#ifndef NDEBUG
+    if (!BlocksWithUnanalyzableExits.count(PrevBB)) {
+      // Given the exact block placement we chose, we may actually not _need_ to
+      // be able to edit PrevBB's terminator sequence, but not being _able_ to
+      // do that at this point is a bug.
+      assert((!TII->analyzeBranch(*PrevBB, TBB, FBB, Cond) ||
+              !PrevBB->canFallThrough()) &&
+             "Unexpected block with un-analyzable fallthrough!");
+      Cond.clear();
+      TBB = FBB = nullptr;
+    }
+#endif
 
     // The "PrevBB" is not yet updated to reflect current code layout, so,
     //   o. it may fall-through to a block without explicit "goto" instruction

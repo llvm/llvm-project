@@ -5,11 +5,6 @@ CHECK: {
 CHECK-NEXT:  "covered-points" : ["4e132b", "4e1472", "4e1520", "4e1553", "4e1586"],
 CHECK-NEXT:  "binary-hash" : "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
 CHECK-NEXT:  "point-symbol-info" : {
-CHECK-NEXT:    "test/tools/sancov/Inputs/foo.cpp" : {
-CHECK-NEXT:      "foo()" : {
-CHECK-NEXT:        "4e178c" : "5:0"
-CHECK-NEXT:     }
-CHECK-NEXT:   },
 CHECK-NEXT:   "test/tools/sancov/Inputs/test.cpp" : {
 CHECK-NEXT:     "bar(std::string)" : {
 CHECK-NEXT:       "4e132b" : "12:0"

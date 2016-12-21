@@ -91,7 +91,8 @@ void ModuleDebugInfoPrinter::print(raw_ostream &O, const Module *M) const {
     O << '\n';
   }
 
-  for (const DIGlobalVariable *GV : Finder.global_variables()) {
+  for (auto GVU : Finder.global_variables()) {
+    const auto *GV = GVU->getVariable();
     O << "Global variable: " << GV->getName();
     printFile(O, GV->getFilename(), GV->getDirectory(), GV->getLine());
     if (!GV->getLinkageName().empty())

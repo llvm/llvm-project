@@ -50,6 +50,9 @@ static bool isInSmallSection(uint64_t Size) {
 // section.
 bool LanaiTargetObjectFile::isGlobalInSmallSection(
     const GlobalObject *GO, const TargetMachine &TM) const {
+  if (GO == nullptr)
+    return false;
+
   // We first check the case where global is a declaration, because finding
   // section kind using getKindForGlobal() is only allowed for global
   // definitions.
@@ -72,11 +75,20 @@ bool LanaiTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
 // section. This method does all the work, except for checking the section
 // kind.
 bool LanaiTargetObjectFile::isGlobalInSmallSectionImpl(
-    const GlobalObject *GO, const TargetMachine & /*TM*/) const {
+    const GlobalObject *GO, const TargetMachine &TM) const {
   // Only global variables, not functions.
   const auto *GVA = dyn_cast<GlobalVariable>(GO);
   if (!GVA)
     return false;
+
+  // Global values placed in sections starting with .ldata do not fit in
+  // 21-bits, so always use large memory access for them. FIXME: This is a
+  // workaround for a tool limitation.
+  if (GVA->getSection().startswith(".ldata"))
+    return false;
+
+  if (TM.getCodeModel() == CodeModel::Small)
+    return true;
 
   if (GVA->hasLocalLinkage())
     return false;

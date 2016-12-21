@@ -138,20 +138,6 @@ void Log::Debug(const char *format, ...) {
 }
 
 //----------------------------------------------------------------------
-// Print debug strings if and only if the global debug option is set to
-// a non-zero value.
-//----------------------------------------------------------------------
-void Log::DebugVerbose(const char *format, ...) {
-  if (!GetOptions().AllSet(LLDB_LOG_OPTION_DEBUG | LLDB_LOG_OPTION_VERBOSE))
-    return;
-
-  va_list args;
-  va_start(args, format);
-  VAPrintf(format, args);
-  va_end(args);
-}
-
-//----------------------------------------------------------------------
 // Log only if all of the bits are set
 //----------------------------------------------------------------------
 void Log::LogIf(uint32_t bits, const char *format, ...) {
@@ -186,24 +172,6 @@ void Log::VAError(const char *format, va_list args) {
 }
 
 //----------------------------------------------------------------------
-// Printing of errors that ARE fatal. Exit with ERR exit code
-// immediately.
-//----------------------------------------------------------------------
-void Log::FatalError(int err, const char *format, ...) {
-  char *arg_msg = nullptr;
-  va_list args;
-  va_start(args, format);
-  ::vasprintf(&arg_msg, format, args);
-  va_end(args);
-
-  if (arg_msg != nullptr) {
-    Printf("error: %s", arg_msg);
-    ::free(arg_msg);
-  }
-  ::exit(err);
-}
-
-//----------------------------------------------------------------------
 // Printing of warnings that are not fatal only if verbose mode is
 // enabled.
 //----------------------------------------------------------------------
@@ -215,27 +183,6 @@ void Log::Verbose(const char *format, ...) {
   va_start(args, format);
   VAPrintf(format, args);
   va_end(args);
-}
-
-//----------------------------------------------------------------------
-// Printing of warnings that are not fatal only if verbose mode is
-// enabled.
-//----------------------------------------------------------------------
-void Log::WarningVerbose(const char *format, ...) {
-  if (!m_options.Test(LLDB_LOG_OPTION_VERBOSE))
-    return;
-
-  char *arg_msg = nullptr;
-  va_list args;
-  va_start(args, format);
-  ::vasprintf(&arg_msg, format, args);
-  va_end(args);
-
-  if (arg_msg == nullptr)
-    return;
-
-  Printf("warning: %s", arg_msg);
-  free(arg_msg);
 }
 
 //----------------------------------------------------------------------

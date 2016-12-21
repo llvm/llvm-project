@@ -36,23 +36,6 @@ class VirtRegMap;
 class raw_ostream;
 class LiveRegMatrix;
 
-/// A bitmask representing the covering of a register with sub-registers.
-///
-/// This is typically used to track liveness at sub-register granularity.
-/// Lane masks for sub-register indices are similar to register units for
-/// physical registers. The individual bits in a lane mask can't be assigned
-/// any specific meaning. They can be used to check if two sub-register
-/// indices overlap.
-///
-/// Iff the target has a register such that:
-///
-///   getSubReg(Reg, A) overlaps getSubReg(Reg, B)
-///
-/// then:
-///
-///   (getSubRegIndexLaneMask(A) & getSubRegIndexLaneMask(B)) != 0
-typedef unsigned LaneBitmask;
-
 class TargetRegisterClass {
 public:
   typedef const MCPhysReg* iterator;
@@ -269,7 +252,7 @@ private:
   const LaneBitmask *SubRegIndexLaneMasks;
 
   regclass_iterator RegClassBegin, RegClassEnd;   // List of regclasses
-  unsigned CoveringLanes;
+  LaneBitmask CoveringLanes;
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
@@ -277,7 +260,7 @@ protected:
                      regclass_iterator RegClassEnd,
                      const char *const *SRINames,
                      const LaneBitmask *SRILaneMasks,
-                     unsigned CoveringLanes);
+                     LaneBitmask CoveringLanes);
   virtual ~TargetRegisterInfo();
 public:
 
@@ -1140,9 +1123,6 @@ Printable PrintRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 /// \brief Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
 Printable PrintVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
-
-/// Create Printable object to print LaneBitmasks on a \ref raw_ostream.
-Printable PrintLaneMask(LaneBitmask LaneMask);
 
 } // End llvm namespace
 

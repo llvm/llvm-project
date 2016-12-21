@@ -252,8 +252,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; KNL-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; KNL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
@@ -283,8 +282,7 @@ define void @test14(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; KNL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; KNL-NEXT:    vmovq {{.*#+}} xmm1 = xmm1[0],zero
+; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; KNL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm2, %zmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1

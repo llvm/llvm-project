@@ -58,6 +58,56 @@ private:
   Queue &OutQueue;
 };
 
+class RPCFoo {};
+
+namespace llvm {
+namespace orc {
+namespace rpc {
+
+  template <>
+  class RPCTypeName<RPCFoo> {
+  public:
+    static const char* getName() { return "RPCFoo"; }
+  };
+
+  template <>
+  class SerializationTraits<QueueChannel, RPCFoo, RPCFoo> {
+  public:
+    static Error serialize(QueueChannel&, const RPCFoo&) {
+      return Error::success();
+    }
+
+    static Error deserialize(QueueChannel&, RPCFoo&) {
+      return Error::success();
+    }
+  };
+
+} // end namespace rpc
+} // end namespace orc
+} // end namespace llvm
+
+class RPCBar {};
+
+namespace llvm {
+namespace orc {
+namespace rpc {
+
+  template <>
+  class SerializationTraits<QueueChannel, RPCFoo, RPCBar> {
+  public:
+    static Error serialize(QueueChannel&, const RPCBar&) {
+      return Error::success();
+    }
+
+    static Error deserialize(QueueChannel&, RPCBar&) {
+      return Error::success();
+    }
+};
+
+} // end namespace rpc
+} // end namespace orc
+} // end namespace llvm
+
 class DummyRPCAPI {
 public:
 
@@ -79,6 +129,12 @@ public:
   public:
     static const char* getName() { return "AllTheTypes"; }
   };
+
+  class CustomType : public Function<CustomType, RPCFoo(RPCFoo)> {
+  public:
+    static const char* getName() { return "CustomType"; }
+  };
+
 };
 
 class DummyRPCEndpoint : public DummyRPCAPI,
@@ -240,6 +296,92 @@ TEST(DummyRPC, TestSerialization) {
     // Poke the client to process the result of the AllTheTypes call.
     auto Err = Client.handleOne();
     EXPECT_FALSE(!!Err) << "Client failed to handle response from AllTheTypes";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestCustomType) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::CustomType>(
+          [](RPCFoo F) {});
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the CustomType call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to RPCFoo(RPCFoo)";
+      }
+  });
+
+  {
+    // Make an async call.
+    auto Err = Client.callAsync<DummyRPCAPI::CustomType>(
+        [](Expected<RPCFoo> FOrErr) {
+          EXPECT_TRUE(!!FOrErr)
+            << "Async RPCFoo(RPCFoo) response handler failed";
+          return Error::success();
+        }, RPCFoo());
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for RPCFoo(RPCFoo)";
+  }
+
+  {
+    // Poke the client to process the result of the RPCFoo() call.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err)
+      << "Client failed to handle response from RPCFoo(RPCFoo)";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestWithAltCustomType) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::CustomType>(
+          [](RPCBar F) {});
+
+      {
+        // Poke the server to handle the negotiate call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to negotiate";
+      }
+
+      {
+        // Poke the server to handle the CustomType call.
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to RPCFoo(RPCFoo)";
+      }
+  });
+
+  {
+    // Make an async call.
+    auto Err = Client.callAsync<DummyRPCAPI::CustomType>(
+        [](Expected<RPCBar> FOrErr) {
+          EXPECT_TRUE(!!FOrErr)
+            << "Async RPCFoo(RPCFoo) response handler failed";
+          return Error::success();
+        }, RPCBar());
+    EXPECT_FALSE(!!Err) << "Client.callAsync failed for RPCFoo(RPCFoo)";
+  }
+
+  {
+    // Poke the client to process the result of the RPCFoo() call.
+    auto Err = Client.handleOne();
+    EXPECT_FALSE(!!Err)
+      << "Client failed to handle response from RPCFoo(RPCFoo)";
   }
 
   ServerThread.join();
