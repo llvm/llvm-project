@@ -25,11 +25,8 @@ namespace CodeGen {
 
 class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
 public:
-  class EntryFunctionState {
-  public:
-    llvm::BasicBlock *ExitBB;
-
-    EntryFunctionState() : ExitBB(nullptr){};
+  struct EntryFunctionState {
+    llvm::BasicBlock *ExitBB = nullptr;
   };
 
   class WorkerFunctionState {

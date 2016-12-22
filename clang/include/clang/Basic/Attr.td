@@ -786,8 +786,7 @@ def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
 
 def AllocSize : InheritableAttr {
   let Spellings = [GCC<"alloc_size">];
-  let Subjects = SubjectList<[HasFunctionProto], WarnDiag,
-                             "ExpectedFunctionWithProtoType">;
+  let Subjects = SubjectList<[Function]>;
   let Args = [IntArgument<"ElemSizeParam">, IntArgument<"NumElemsParam", 1>];
   let TemplateDependent = 1;
   let Documentation = [AllocSizeDocs];

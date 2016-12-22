@@ -256,7 +256,7 @@ static bool checkPositiveIntArgument(Sema &S, const AttributeList &Attr,
   if (!checkUInt32Argument(S, Attr, Expr, UVal, Idx))
     return false;
 
-  if (UVal > std::numeric_limits<int>::max()) {
+  if (UVal > (uint32_t)std::numeric_limits<int>::max()) {
     llvm::APSInt I(32); // for toString
     I = UVal;
     S.Diag(Expr->getExprLoc(), diag::err_ice_too_large)

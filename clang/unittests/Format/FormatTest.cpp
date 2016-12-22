@@ -5220,6 +5220,10 @@ TEST_F(FormatTest, KeepStringLabelValuePairsOnALine) {
   verifyFormat("string v = StrCat(\"aaaaaaaaaaaa: \" +\n"
                "                  (aaaaaaa + aaaaa));",
                getLLVMStyleWithColumns(40));
+  verifyFormat(
+      "string v = StrCat(\"aaaaaaaaaaaaaaaaaaaaaaaaaaa: \",\n"
+      "                  SomeFunction(aaaaaaaaaaaa, aaaaaaaa.aaaaaaa),\n"
+      "                  bbbbbbbbbbbbbbbbbbbbbbb);");
 }
 
 TEST_F(FormatTest, UnderstandsEquals) {
