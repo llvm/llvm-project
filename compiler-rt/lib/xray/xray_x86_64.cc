@@ -3,7 +3,9 @@
 #include "xray_interface_internal.h"
 #include <atomic>
 #include <cstdint>
+#include <errno.h>
 #include <fcntl.h>
+#include <iterator>
 #include <limits>
 #include <tuple>
 #include <unistd.h>
