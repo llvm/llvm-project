@@ -43,15 +43,15 @@ class TestUnitTests(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.XCTest_source = "XCTest.c"
-        self.XCTest_source_spec = lldb.SBFileSpec(self.XCTest_source)
+        self.xctest_source = "xctest.c"
+        self.xctest_source_spec = lldb.SBFileSpec(self.xctest_source)
 
     def buildAll(self):
         execute_command("make everything")
 
     def do_test(self):
         """Test that XCTest-based unit tests work"""
-        exe_name = "XCTest"
+        exe_name = "xctest"
         exe = os.path.join(os.getcwd(), exe_name)
 
         def cleanup():
@@ -64,7 +64,7 @@ class TestUnitTests(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.XCTest_source_spec)
+            'Set breakpoint here', self.xctest_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())

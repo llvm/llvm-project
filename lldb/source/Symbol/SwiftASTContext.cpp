@@ -1676,10 +1676,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
       // If we're debugging a testsuite, then treat the main test bundle as the
       // executable.
-      static ConstString s_XCTest("XCTest");
-
       if (exe_module_sp &&
-          exe_module_sp->GetFileSpec().GetFilename() == s_XCTest) {
+          PlatformDarwin::IsUnitTestExecutable(*exe_module_sp)) {
         ModuleSP unit_test_module =
             PlatformDarwin::GetUnitTestModule(target->GetImages());
 
@@ -1695,8 +1693,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           auto ast_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
           if (!ast_datas.empty()) {
             // We only initialize the compiler invocation with the first
-            // AST since it initializes some data that must remain static, like
-            // the SDK path and the triple for the produced output.
+            // AST since it initializes some data that must remain static,
+            // like the SDK path and the triple for the produced output.
             auto ast_data_sp = ast_datas.front();
             llvm::StringRef section_data_ref(
                 (const char *)ast_data_sp->GetBytes(),
@@ -1773,9 +1771,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             std::string module_path = module_file.GetPath();
 
             // Add the containing framework to the framework search path.  Don't
-            // do that if this is the
-            // executable module, since it might be buried in some framework
-            // that we don't care about.
+            // do that if this is the executable module, since it might be
+            // buried in some framework that we don't care about.
             if (use_all_compiler_flags &&
                 target->GetExecutableModulePointer() != module_sp.get()) {
               size_t framework_offset = module_path.rfind(".framework/");
@@ -1861,8 +1858,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             framework_search_paths.GetFileSpecAtIndex(fi).GetPath().c_str());
       }
 
-      for (size_t mi = 0, me = module_search_paths.GetSize(); mi != me;
-           ++mi) {
+      for (size_t mi = 0, me = module_search_paths.GetSize(); mi != me; ++mi) {
         swift_ast_sp->AddModuleSearchPath(
             module_search_paths.GetFileSpecAtIndex(mi).GetPath().c_str());
       }

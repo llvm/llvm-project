@@ -1870,6 +1870,13 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
   return FileSpec();
 }
 
+bool PlatformDarwin::IsUnitTestExecutable(lldb_private::Module &module) {
+  static ConstString s_xctest("xctest");
+  static ConstString s_XCTRunner("XCTRunner");
+  ConstString executable_name = module.GetFileSpec().GetFilename();
+  return (executable_name == s_xctest || executable_name == s_XCTRunner);
+}
+
 lldb::ModuleSP
 PlatformDarwin::GetUnitTestModule(lldb_private::ModuleList &modules) {
   ConstString test_bundle_executable;
