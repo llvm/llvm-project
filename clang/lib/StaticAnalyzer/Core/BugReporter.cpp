@@ -21,6 +21,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -3285,6 +3286,19 @@ struct FRIEC_WLItem {
 };
 }
 
+static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
+  ProgramPoint P = N->getLocation();
+  if (auto BEP = P.getAs<BlockEntrance>())
+    return BEP->getBlock();
+
+  // Find the node's current statement in the CFG.
+  if (const Stmt *S = PathDiagnosticLocation::getStmt(N))
+    return N->getLocationContext()->getAnalysisDeclContext()
+                                  ->getCFGStmtMap()->getBlock(S);
+
+  return nullptr;
+}
+
 static BugReport *
 FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
@@ -3332,6 +3346,18 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
         exampleReport = &*I;
       continue;
     }
+
+    // See if we are in a no-return CFG block. If so, treat this similarly
+    // to being post-dominated by a sink. This works better when the analysis
+    // is incomplete and we have never reached a no-return function
+    // we're post-dominated by.
+    // This is not quite enough to handle the incomplete analysis case.
+    // We may be post-dominated in subsequent blocks, or even
+    // inter-procedurally. However, it is not clear if more complicated
+    // cases are generally worth suppressing.
+    if (const CFGBlock *B = findBlockForNode(errorNode))
+      if (B->hasNoReturnElement())
+        continue;
 
     // At this point we know that 'N' is not a sink and it has at least one
     // successor.  Use a DFS worklist to find a non-sink end-of-path node.

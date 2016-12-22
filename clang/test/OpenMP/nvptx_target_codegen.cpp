@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -verify -fopenmp -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -25,7 +26,7 @@ int foo(int n) {
   double cn[5][n];
   TT<long long, char> d;
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l86}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l87}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -53,7 +54,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+foo.+l86]]()
+  // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+foo.+l87]]()
   // CHECK: [[NTID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK: [[WS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
   // CHECK: [[A:%.+]] = sub i32 [[WS]], 1
@@ -68,7 +69,7 @@ int foo(int n) {
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T1]]_worker()
+  // CHECK: {{call|invoke}} void [[T1]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
@@ -92,7 +93,7 @@ int foo(int n) {
   {
   }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l157}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l158}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -120,7 +121,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T3:@__omp_offloading_.+foo.+l157]](i[[SZ:32|64]] [[ARG1:%.+]])
+  // CHECK: define {{.*}}void [[T3:@__omp_offloading_.+foo.+l158]](i[[SZ:32|64]] [[ARG1:%[^)]+]])
   // CHECK: [[AA_ADDR:%.+]] = alloca i[[SZ]],
   // CHECK: store i[[SZ]] [[ARG1]], i[[SZ]]* [[AA_ADDR]],
   // CHECK: [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i16*
@@ -138,7 +139,7 @@ int foo(int n) {
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T3]]_worker()
+  // CHECK: {{call|invoke}} void [[T3]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
@@ -159,7 +160,7 @@ int foo(int n) {
     aa += 1;
   }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l260}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+foo.+l261}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -187,7 +188,7 @@ int foo(int n) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T4:@__omp_offloading_.+foo.+l260]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T4:@__omp_offloading_.+foo.+l261]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:    [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:    [[LOCAL_B:%.+]] = alloca [10 x float]*
@@ -232,7 +233,7 @@ int foo(int n) {
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T4]]_worker()
+  // CHECK: {{call|invoke}} void [[T4]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
@@ -337,7 +338,7 @@ int bar(int n){
   return a;
 }
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+static.+l297}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+static.+l298}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -365,7 +366,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T5:@__omp_offloading_.+static.+l297]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T5:@__omp_offloading_.+static.+l298]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:  [[LOCAL_AA:%.+]] = alloca i[[SZ]]
@@ -395,7 +396,7 @@ int bar(int n){
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T5]]_worker()
+  // CHECK: {{call|invoke}} void [[T5]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
@@ -419,7 +420,7 @@ int bar(int n){
 
 
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+S1.+l315}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+S1.+l316}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -447,7 +448,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T6:@__omp_offloading_.+S1.+l315]](
+  // CHECK: define {{.*}}void [[T6:@__omp_offloading_.+S1.+l316]](
   // Create local storage for each capture.
   // CHECK:       [[LOCAL_THIS:%.+]] = alloca [[S1:%struct.*]]*
   // CHECK:       [[LOCAL_B:%.+]] = alloca i[[SZ]]
@@ -479,7 +480,7 @@ int bar(int n){
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T6]]_worker()
+  // CHECK: {{call|invoke}} void [[T6]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
@@ -502,7 +503,7 @@ int bar(int n){
 
 
 
-  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l280}}_worker()
+  // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l281}}_worker()
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
@@ -530,7 +531,7 @@ int bar(int n){
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define {{.*}}void [[T7:@__omp_offloading_.+template.+l280]](i[[SZ]]
+  // CHECK: define {{.*}}void [[T7:@__omp_offloading_.+template.+l281]](i[[SZ]]
   // Create local storage for each capture.
   // CHECK:  [[LOCAL_A:%.+]] = alloca i[[SZ]]
   // CHECK:  [[LOCAL_AA:%.+]] = alloca i[[SZ]]
@@ -557,7 +558,7 @@ int bar(int n){
   // CHECK: br i1 [[IS_WORKER]], label {{%?}}[[WORKER:.+]], label {{%?}}[[MASTER:.+]]
   //
   // CHECK: [[WORKER]]
-  // CHECK: call void [[T7]]_worker()
+  // CHECK: {{call|invoke}} void [[T7]]_worker()
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[MASTER]]
