@@ -1,0 +1,4 @@
+framework module APrivate {
+  header "aprivate.h"
+  export *
+}
