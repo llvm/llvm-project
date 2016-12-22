@@ -1418,3 +1418,4 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
 }  // end namespace clang
 
 #endif
+
