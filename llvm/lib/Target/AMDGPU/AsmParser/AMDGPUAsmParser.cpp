@@ -1567,8 +1567,8 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       getForcedEncodingSize() != 64)
     return Match_PreferE32;
 
-  if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa ||
-      Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa) {
+  if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa_vi ||
+      Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa_vi) {
     // v_mac_f32/16 allow only dst_sel == DWORD;
     auto OpNum =
         AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::dst_sel);
@@ -3445,8 +3445,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
 
-  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa) {
-    // V_NOP_sdwa has no optional sdwa arguments
+  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_vi) {
+    // V_NOP_sdwa_vi has no optional sdwa arguments
     switch (BasicInstType) {
     case SIInstrFlags::VOP1:
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstSel, 6);
@@ -3473,8 +3473,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 
   // special case v_mac_{f16, f32}:
   // it has src2 register operand that is tied to dst operand
-  if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa ||
-      Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa)  {
+  if (Inst.getOpcode() == AMDGPU::V_MAC_F32_sdwa_vi ||
+      Inst.getOpcode() == AMDGPU::V_MAC_F16_sdwa_vi)  {
     auto it = Inst.begin();
     std::advance(
         it, AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::src2));

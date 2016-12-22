@@ -19,8 +19,8 @@ declare i32 @llvm.r600.read.tidig.x() #0
 
 define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
-  %a = load <2 x i32>, <2 x i32> addrspace(1) * %in
-  %b = load <2 x i32>, <2 x i32> addrspace(1) * %b_ptr
+  %a = load <2 x i32>, <2 x i32> addrspace(1)* %in
+  %b = load <2 x i32>, <2 x i32> addrspace(1)* %b_ptr
   %result = shl <2 x i32> %a, %b
   store <2 x i32> %result, <2 x i32> addrspace(1)* %out
   ret void
@@ -46,52 +46,102 @@ define void @shl_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in
 
 define void @shl_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
-  %a = load <4 x i32>, <4 x i32> addrspace(1) * %in
-  %b = load <4 x i32>, <4 x i32> addrspace(1) * %b_ptr
+  %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
+  %b = load <4 x i32>, <4 x i32> addrspace(1)* %b_ptr
   %result = shl <4 x i32> %a, %b
   store <4 x i32> %result, <4 x i32> addrspace(1)* %out
   ret void
 }
 
-;VI: {{^}}shl_i16:
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
+; GCN-LABEL: {{^}}shl_i16:
+; SI: v_lshlrev_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define void @shl_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %b_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
-  %a = load i16, i16 addrspace(1) * %in
-  %b = load i16, i16 addrspace(1) * %b_ptr
+  %a = load i16, i16 addrspace(1)* %in
+  %b = load i16, i16 addrspace(1)* %b_ptr
   %result = shl i16 %a, %b
   store i16 %result, i16 addrspace(1)* %out
   ret void
 }
 
+; GCN-LABEL: {{^}}shl_i16_v_s:
+; VI: v_lshlrev_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
 
-;VI: {{^}}shl_v2i16:
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
+; VI: v_lshlrev_b16_e64 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+define void @shl_i16_v_s(i16 addrspace(1)* %out, i16 addrspace(1)* %in, i16 %b) {
+  %a = load i16, i16 addrspace(1)* %in
+  %result = shl i16 %a, %b
+  store i16 %result, i16 addrspace(1)* %out
+  ret void
+}
 
+; GCN-LABEL: {{^}}shl_i16_v_compute_s:
+; SI: v_lshlrev_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+
+; VI: v_lshlrev_b16_e64 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
+define void @shl_i16_v_compute_s(i16 addrspace(1)* %out, i16 addrspace(1)* %in, i16 %b) {
+  %a = load i16, i16 addrspace(1)* %in
+  %b.add = add i16 %b, 3
+  %result = shl i16 %a, %b.add
+  store i16 %result, i16 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}shl_i16_computed_amount:
+; VI: v_add_u16_e32 [[ADD:v[0-9]+]], 3, v{{[0-9]+}}
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, [[ADD]], v{{[0-9]+}}
+define void @shl_i16_computed_amount(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i32 %tid
+  %gep.out = getelementptr inbounds i16, i16 addrspace(1)* %out, i32 %tid
+  %b_ptr = getelementptr i16, i16 addrspace(1)* %gep, i16 1
+  %a = load volatile i16, i16 addrspace(1)* %in
+  %b = load volatile i16, i16 addrspace(1)* %b_ptr
+  %b.add = add i16 %b, 3
+  %result = shl i16 %a, %b.add
+  store i16 %result, i16 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}shl_i16_i_s:
+; GCN: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 12
+define void @shl_i16_i_s(i16 addrspace(1)* %out, i16 zeroext %a) {
+  %result = shl i16 %a, 12
+  store i16 %result, i16 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}shl_v2i16:
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define void @shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
-  %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %in, i16 1
-  %a = load <2 x i16>, <2 x i16> addrspace(1) * %in
-  %b = load <2 x i16>, <2 x i16> addrspace(1) * %b_ptr
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
+  %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %gep, i16 1
+  %a = load <2 x i16>, <2 x i16> addrspace(1)* %in
+  %b = load <2 x i16>, <2 x i16> addrspace(1)* %b_ptr
   %result = shl <2 x i16> %a, %b
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out
   ret void
 }
 
-
-;VI: {{^}}shl_v4i16:
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
-;VI: v_lshlrev_b16_e32 v{{[0-9]+, [0-9]+, [0-9]+}}
-
+; GCN-LABEL: {{^}}shl_v4i16:
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_lshlrev_b16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
-  %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %in, i16 1
-  %a = load <4 x i16>, <4 x i16> addrspace(1) * %in
-  %b = load <4 x i16>, <4 x i16> addrspace(1) * %b_ptr
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i32 %tid
+  %gep.out = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %out, i32 %tid
+  %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %gep, i16 1
+  %a = load <4 x i16>, <4 x i16> addrspace(1)* %gep
+  %b = load <4 x i16>, <4 x i16> addrspace(1)* %b_ptr
   %result = shl <4 x i16> %a, %b
-  store <4 x i16> %result, <4 x i16> addrspace(1)* %out
+  store <4 x i16> %result, <4 x i16> addrspace(1)* %gep.out
   ret void
 }
 
@@ -107,16 +157,13 @@ define void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in
 ;EG-DAG: CNDE_INT {{\*? *}}[[RESLO:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW]}}
 ;EG-DAG: CNDE_INT {{\*? *}}[[RESHI:T[0-9]+\.[XYZW]]], {{T[0-9]+\.[XYZW], .*}}, 0.0
 
-;SI: {{^}}shl_i64:
-;SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
-
-;VI: {{^}}shl_i64:
-;VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
-
+; GCN-LABEL: {{^}}shl_i64:
+; SI: v_lshl_b64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v[0-9]+}}
+; VI: v_lshlrev_b64 {{v\[[0-9]+:[0-9]+\], v[0-9]+, v\[[0-9]+:[0-9]+\]}}
 define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %b_ptr = getelementptr i64, i64 addrspace(1)* %in, i64 1
-  %a = load i64, i64 addrspace(1) * %in
-  %b = load i64, i64 addrspace(1) * %b_ptr
+  %a = load i64, i64 addrspace(1)* %in
+  %b = load i64, i64 addrspace(1)* %b_ptr
   %result = shl i64 %a, %b
   store i64 %result, i64 addrspace(1)* %out
   ret void
@@ -154,8 +201,8 @@ define void @shl_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 
 define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i64>, <2 x i64> addrspace(1)* %in, i64 1
-  %a = load <2 x i64>, <2 x i64> addrspace(1) * %in
-  %b = load <2 x i64>, <2 x i64> addrspace(1) * %b_ptr
+  %a = load <2 x i64>, <2 x i64> addrspace(1)* %in
+  %b = load <2 x i64>, <2 x i64> addrspace(1)* %b_ptr
   %result = shl <2 x i64> %a, %b
   store <2 x i64> %result, <2 x i64> addrspace(1)* %out
   ret void
@@ -217,8 +264,8 @@ define void @shl_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> addrspace(1)* %in
 
 define void @shl_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i64>, <4 x i64> addrspace(1)* %in, i64 1
-  %a = load <4 x i64>, <4 x i64> addrspace(1) * %in
-  %b = load <4 x i64>, <4 x i64> addrspace(1) * %b_ptr
+  %a = load <4 x i64>, <4 x i64> addrspace(1)* %in
+  %b = load <4 x i64>, <4 x i64> addrspace(1)* %b_ptr
   %result = shl <4 x i64> %a, %b
   store <4 x i64> %result, <4 x i64> addrspace(1)* %out
   ret void

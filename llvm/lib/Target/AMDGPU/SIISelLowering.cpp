@@ -117,6 +117,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i1, Promote);
   setOperationAction(ISD::SETCC, MVT::v2i1, Expand);
   setOperationAction(ISD::SETCC, MVT::v4i1, Expand);
+  AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
   setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
@@ -235,9 +236,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::UMIN, MVT::i16, Legal);
     setOperationAction(ISD::UMAX, MVT::i16, Legal);
-
-    setOperationAction(ISD::SETCC, MVT::i16, Promote);
-    AddPromotedToType(ISD::SETCC, MVT::i16, MVT::i32);
 
     setOperationAction(ISD::SIGN_EXTEND, MVT::i16, Promote);
     AddPromotedToType(ISD::SIGN_EXTEND, MVT::i16, MVT::i32);
@@ -1813,8 +1811,10 @@ EVT SITargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
   return EVT::getVectorVT(Ctx, MVT::i1, VT.getVectorNumElements());
 }
 
-MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT) const {
-  return MVT::i32;
+MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT VT) const {
+  // TODO: Should i16 be used always if legal? For now it would force VALU
+  // shifts.
+  return (VT == MVT::i16) ? MVT::i16 : MVT::i32;
 }
 
 // Answering this is somewhat tricky and depends on the specific device which

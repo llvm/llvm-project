@@ -103,24 +103,23 @@ static Iter getNextMachineInstrInBB(Iter Position) {
 
 // Find the next real instruction from the current position, looking through
 // basic block boundaries.
-static Iter getNextMachineInstr(Iter Position) {
-  if (std::next(Position) == Position->getParent()->end()) {
-    const MachineBasicBlock * MBB = (&*Position)->getParent();
-    for (auto *Succ : MBB->successors()) {
-      if (MBB->isLayoutSuccessor(Succ)) {
-        Iter I = Succ->begin();
-        Iter Next = getNextMachineInstrInBB(I);
-        if (Next == Succ->end()) {
-          return getNextMachineInstr(I);
-        } else {
-          return I;
-        }
-      }
+static Iter getNextMachineInstr(Iter Position, MachineBasicBlock *Parent) {
+  if (Position == Parent->end()) {
+    MachineBasicBlock *Succ = Parent->getNextNode();
+    if (Succ != nullptr && Parent->isSuccessor(Succ)) {
+      Position = Succ->begin();
+      Parent = Succ;
+    } else {
+      llvm_unreachable(
+          "Should have identified the end of the function earlier!");
     }
-    llvm_unreachable("Should have identified the end of the function earlier!");
   }
 
-  return getNextMachineInstrInBB(Position);
+  Iter Instr = getNextMachineInstrInBB(Position);
+  if (Instr == Parent->end()) {
+    return getNextMachineInstr(Instr, Parent);
+  }
+  return Instr;
 }
 
 bool MipsHazardSchedule::runOnMachineFunction(MachineFunction &MF) {
@@ -146,13 +145,7 @@ bool MipsHazardSchedule::runOnMachineFunction(MachineFunction &MF) {
       bool LastInstInFunction =
           std::next(I) == FI->end() && std::next(FI) == MF.end();
       if (!LastInstInFunction) {
-        if (std::next(I) != FI->end()) {
-          // Start looking from the next instruction in the basic block.
-          Inst = getNextMachineInstr(std::next(I));
-        } else {
-          // Next instruction in the physical successor basic block.
-          Inst = getNextMachineInstr(I);
-        }
+        Inst = getNextMachineInstr(std::next(I), &*FI);
       }
 
       if (LastInstInFunction || !TII->SafeInForbiddenSlot(*Inst)) {

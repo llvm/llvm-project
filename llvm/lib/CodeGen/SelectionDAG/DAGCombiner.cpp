@@ -12435,8 +12435,15 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
       Hi.getOperand(0).getValueSizeInBits() > HalfValBitSize)
     return SDValue();
 
-  if (!TLI.isMultiStoresCheaperThanBitsMerge(Lo.getOperand(0),
-                                             Hi.getOperand(0)))
+  // Use the EVT of low and high parts before bitcast as the input
+  // of target query.
+  EVT LowTy = (Lo.getOperand(0).getOpcode() == ISD::BITCAST)
+                  ? Lo.getOperand(0).getValueType()
+                  : Lo.getValueType();
+  EVT HighTy = (Hi.getOperand(0).getOpcode() == ISD::BITCAST)
+                   ? Hi.getOperand(0).getValueType()
+                   : Hi.getValueType();
+  if (!TLI.isMultiStoresCheaperThanBitsMerge(LowTy, HighTy))
     return SDValue();
 
   // Start to split store.
