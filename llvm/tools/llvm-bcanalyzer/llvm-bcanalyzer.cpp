@@ -311,6 +311,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, COMBINED_ALIAS)
       STRINGIFY_CODE(FS, COMBINED_ORIGINAL_NAME)
       STRINGIFY_CODE(FS, VERSION)
+      STRINGIFY_CODE(FS, TYPE_TESTS)
     }
   case bitc::METADATA_ATTACHMENT_ID:
     switch(CodeID) {

@@ -158,35 +158,6 @@ Optional<uint64_t> DWARFUnit::getDWOId() {
   return getUnitDIE().getAttributeValueAsUnsignedConstant(DW_AT_GNU_dwo_id);
 }
 
-void DWARFUnit::setDIERelations() {
-  if (DieArray.size() <= 1)
-    return;
-
-  std::vector<DWARFDebugInfoEntry *> ParentChain;
-  DWARFDebugInfoEntry *SiblingChain = nullptr;
-  for (auto &DIE : DieArray) {
-    if (SiblingChain) {
-      SiblingChain->setSibling(&DIE);
-    }
-    if (const DWARFAbbreviationDeclaration *AbbrDecl =
-            DIE.getAbbreviationDeclarationPtr()) {
-      // Normal DIE.
-      if (AbbrDecl->hasChildren()) {
-        ParentChain.push_back(&DIE);
-        SiblingChain = nullptr;
-      } else {
-        SiblingChain = &DIE;
-      }
-    } else {
-      // NULL entry terminates the sibling chain.
-      SiblingChain = ParentChain.back();
-      ParentChain.pop_back();
-    }
-  }
-  assert(SiblingChain == nullptr || SiblingChain == &DieArray[0]);
-  assert(ParentChain.empty());
-}
-
 void DWARFUnit::extractDIEsToVector(
     bool AppendCUDie, bool AppendNonCUDies,
     std::vector<DWARFDebugInfoEntry> &Dies) const {
@@ -202,7 +173,8 @@ void DWARFUnit::extractDIEsToVector(
   uint32_t Depth = 0;
   bool IsCUDie = true;
 
-  while (DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset)) {
+  while (DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
+                         Depth)) {
     if (IsCUDie) {
       if (AppendCUDie)
         Dies.push_back(DIE);
@@ -266,7 +238,6 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
   }
 
-  setDIERelations();
   return DieArray.size();
 }
 
@@ -407,6 +378,44 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
     return Context.getCUIndex();
   assert(Kind == DW_SECT_TYPES);
   return Context.getTUIndex();
+}
+
+DWARFDie DWARFUnit::getParent(const DWARFDebugInfoEntry *Die) {
+  if (!Die)
+    return DWARFDie();
+  const uint32_t Depth = Die->getDepth();
+  // Unit DIEs always have a depth of zero and never have parents.
+  if (Depth == 0)
+    return DWARFDie();
+  // Depth of 1 always means parent is the compile/type unit.
+  if (Depth == 1)
+    return getUnitDIE();
+  // Look for previous DIE with a depth that is one less than the Die's depth.
+  const uint32_t ParentDepth = Depth - 1;
+  for (uint32_t I = getDIEIndex(Die) - 1; I > 0; --I) {
+    if (DieArray[I].getDepth() == ParentDepth)
+      return DWARFDie(this, &DieArray[I]);
+  }
+  return DWARFDie();
+}
+
+DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
+  if (!Die)
+    return DWARFDie();
+  uint32_t Depth = Die->getDepth();
+  // Unit DIEs always have a depth of zero and never have siblings.
+  if (Depth == 0)
+    return DWARFDie();
+  // NULL DIEs don't have siblings.
+  if (Die->getAbbreviationDeclarationPtr() == nullptr)
+    return DWARFDie();
+  
+  // Find the next DIE whose depth is the same as the Die's depth.
+  for (size_t I=getDIEIndex(Die)+1, EndIdx = DieArray.size(); I<EndIdx; ++I) {
+    if (DieArray[I].getDepth() == Depth)
+      return DWARFDie(this, &DieArray[I]);
+  }
+  return DWARFDie();
 }
 
 } // end namespace llvm

@@ -165,35 +165,64 @@ public:
   /// additional analyses.
   void registerLoopAnalyses(LoopAnalysisManager &LAM);
 
-  /// \brief Add a per-module default optimization pipeline to a pass manager.
+  /// Construct the core LLVM function canonicalization and simplification
+  /// pipeline.
+  ///
+  /// This is a long pipeline and uses most of the per-function optimization
+  /// passes in LLVM to canonicalize and simplify the IR. It is suitable to run
+  /// repeatedly over the IR and is not expected to destroy important
+  /// information about the semantics of the IR.
+  ///
+  /// Note that \p Level cannot be `O0` here. The pipelines produced are
+  /// only intended for use when attempting to optimize code. If frontends
+  /// require some transformations for semantic reasons, they should explicitly
+  /// build them.
+  FunctionPassManager
+  buildFunctionSimplificationPipeline(OptimizationLevel Level,
+                                      bool DebugLogging = false);
+
+  /// Build a per-module default optimization pipeline.
   ///
   /// This provides a good default optimization pipeline for per-module
   /// optimization and code generation without any link-time optimization. It
   /// typically correspond to frontend "-O[123]" options for optimization
   /// levels \c O1, \c O2 and \c O3 resp.
-  void addPerModuleDefaultPipeline(ModulePassManager &MPM,
-                                   OptimizationLevel Level,
-                                   bool DebugLogging = false);
+  ///
+  /// Note that \p Level cannot be `O0` here. The pipelines produced are
+  /// only intended for use when attempting to optimize code. If frontends
+  /// require some transformations for semantic reasons, they should explicitly
+  /// build them.
+  ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
+                                                  bool DebugLogging = false);
 
-  /// \brief Add a pre-link, LTO-targeting default optimization pipeline to
-  /// a pass manager.
+  /// Build a pre-link, LTO-targeting default optimization pipeline to a pass
+  /// manager.
   ///
   /// This adds the pre-link optimizations tuned to work well with a later LTO
   /// run. It works to minimize the IR which needs to be analyzed without
   /// making irreversible decisions which could be made better during the LTO
   /// run.
-  void addLTOPreLinkDefaultPipeline(ModulePassManager &MPM,
-                                    OptimizationLevel Level,
-                                    bool DebugLogging = false);
+  ///
+  /// Note that \p Level cannot be `O0` here. The pipelines produced are
+  /// only intended for use when attempting to optimize code. If frontends
+  /// require some transformations for semantic reasons, they should explicitly
+  /// build them.
+  ModulePassManager buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
+                                                   bool DebugLogging = false);
 
-  /// \brief Add an LTO default optimization pipeline to a pass manager.
+  /// Build an LTO default optimization pipeline to a pass manager.
   ///
   /// This provides a good default optimization pipeline for link-time
   /// optimization and code generation. It is particularly tuned to fit well
   /// when IR coming into the LTO phase was first run through \c
   /// addPreLinkLTODefaultPipeline, and the two coordinate closely.
-  void addLTODefaultPipeline(ModulePassManager &MPM, OptimizationLevel Level,
-                             bool DebugLogging = false);
+  ///
+  /// Note that \p Level cannot be `O0` here. The pipelines produced are
+  /// only intended for use when attempting to optimize code. If frontends
+  /// require some transformations for semantic reasons, they should explicitly
+  /// build them.
+  ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
+                                            bool DebugLogging = false);
 
   /// \brief Parse a textual pass pipeline description into a \c ModulePassManager.
   ///

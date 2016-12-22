@@ -601,22 +601,14 @@ bool DIExpression::isValid() const {
   return true;
 }
 
-bool DIExpression::isFragment() const {
-  assert(isValid() && "Expected valid expression");
-  if (unsigned N = getNumElements())
-    if (N >= 3)
-      return getElement(N - 3) == dwarf::DW_OP_LLVM_fragment;
-  return false;
-}
-
-uint64_t DIExpression::getFragmentOffsetInBits() const {
-  assert(isFragment() && "Expected fragment");
-  return getElement(getNumElements() - 2);
-}
-
-uint64_t DIExpression::getFragmentSizeInBits() const {
-  assert(isFragment() && "Expected fragment");
-  return getElement(getNumElements() - 1);
+Optional<DIExpression::FragmentInfo>
+DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
+  for (auto I = Start; I != End; ++I)
+    if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
+      DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
+      return Info;
+    }
+  return None;
 }
 
 bool DIExpression::isConstant() const {

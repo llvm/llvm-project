@@ -4847,6 +4847,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
+  std::vector<GlobalValue::GUID> PendingTypeTests;
 
   while (true) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
@@ -4912,7 +4913,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Calls));
+          Flags, InstCount, std::move(Refs), std::move(Calls),
+          std::move(PendingTypeTests));
+      PendingTypeTests.clear();
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setModulePath(TheIndex.addModulePath(ModulePath, 0)->first());
       FS->setOriginalName(GUID.second);
@@ -4985,7 +4988,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
           IsOldProfileFormat, HasProfile);
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Edges));
+          Flags, InstCount, std::move(Refs), std::move(Edges),
+          std::move(PendingTypeTests));
+      PendingTypeTests.clear();
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
@@ -5041,6 +5046,13 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       LastSeenSummary->setOriginalName(OriginalName);
       // Reset the LastSeenSummary
       LastSeenSummary = nullptr;
+      break;
+    }
+    case bitc::FS_TYPE_TESTS: {
+      assert(PendingTypeTests.empty());
+      PendingTypeTests.insert(PendingTypeTests.end(), Record.begin(),
+                              Record.end());
+      break;
     }
     }
   }

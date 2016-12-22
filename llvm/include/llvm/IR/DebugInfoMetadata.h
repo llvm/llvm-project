@@ -1973,15 +1973,6 @@ public:
     return Elements[I];
   }
 
-  /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const;
-
-  /// Return the offset of this fragment in bits.
-  uint64_t getFragmentOffsetInBits() const;
-
-  /// Return the size of this fragment in bits.
-  uint64_t getFragmentSizeInBits() const;
-
   /// Determine whether this represents a standalone constant value.
   bool isConstant() const;
 
@@ -2085,6 +2076,24 @@ public:
   bool startsWithDeref() const {
     return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
   }
+
+  /// Holds the characteristics of one fragment of a larger variable.
+  struct FragmentInfo {
+    uint64_t SizeInBits;
+    uint64_t OffsetInBits;
+  };
+
+  /// Retrieve the details of this fragment expression.
+  static Optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
+						expr_op_iterator End);
+
+  /// Retrieve the details of this fragment expression.
+  Optional<FragmentInfo> getFragmentInfo() const {
+    return getFragmentInfo(expr_op_begin(), expr_op_end());
+  }
+
+  /// Return whether this is a piece of an aggregate variable.
+  bool isFragment() const { return getFragmentInfo().hasValue(); }
 };
 
 /// Global variables.

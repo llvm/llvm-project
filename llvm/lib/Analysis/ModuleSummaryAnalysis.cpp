@@ -22,6 +22,7 @@
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
@@ -92,6 +93,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo> CallGraphEdges;
   SetVector<ValueInfo> RefEdges;
+  SetVector<GlobalValue::GUID> TypeTests;
   ICallPromotionAnalysis ICallAnalysis;
 
   bool HasInlineAsmMaybeReferencingInternal = false;
@@ -123,11 +125,29 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         assert(!CalledFunction && "Expected null called function in callsite for alias");
         CalledFunction = dyn_cast<Function>(GA->getBaseObject());
       }
-      // Check if this is a direct call to a known function.
+      // Check if this is a direct call to a known function or a known
+      // intrinsic, or an indirect call with profile data.
       if (CalledFunction) {
-        // Skip intrinsics.
-        if (CalledFunction->isIntrinsic())
-          continue;
+        if (CalledFunction->isIntrinsic()) {
+          if (CalledFunction->getIntrinsicID() != Intrinsic::type_test)
+            continue;
+          // Produce a summary from type.test intrinsics. We only summarize
+          // type.test intrinsics that are used other than by an llvm.assume
+          // intrinsic. Intrinsics that are assumed are relevant only to the
+          // devirtualization pass, not the type test lowering pass.
+          bool HasNonAssumeUses = llvm::any_of(CI->uses(), [](const Use &CIU) {
+            auto *AssumeCI = dyn_cast<CallInst>(CIU.getUser());
+            if (!AssumeCI)
+              return true;
+            Function *F = AssumeCI->getCalledFunction();
+            return !F || F->getIntrinsicID() != Intrinsic::assume;
+          });
+          if (HasNonAssumeUses) {
+            auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(1));
+            if (auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata()))
+              TypeTests.insert(GlobalValue::getGUID(TypeId->getString()));
+          }
+        }
         // We should have named any anonymous globals
         assert(CalledFunction->hasName());
         auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
@@ -160,7 +180,8 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
 
   GlobalValueSummary::GVFlags Flags(F);
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
-      Flags, NumInsts, RefEdges.takeVector(), CallGraphEdges.takeVector());
+      Flags, NumInsts, RefEdges.takeVector(), CallGraphEdges.takeVector(),
+      TypeTests.takeVector());
   if (HasInlineAsmMaybeReferencingInternal)
     FuncSummary->setHasInlineAsmMaybeReferencingInternal();
   Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
@@ -280,7 +301,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
             std::unique_ptr<FunctionSummary> Summary =
                 llvm::make_unique<FunctionSummary>(
                     GVFlags, 0, ArrayRef<ValueInfo>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{});
+                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    ArrayRef<GlobalValue::GUID>{});
             Summary->setNoRename();
             Index.addGlobalValueSummary(Name, std::move(Summary));
           } else {

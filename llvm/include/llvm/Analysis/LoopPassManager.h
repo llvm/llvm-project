@@ -16,7 +16,11 @@
 #define LLVM_ANALYSIS_LOOPPASSMANAGER_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -82,6 +86,14 @@ public:
         AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     // Get the loop structure for this function
     LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+
+    // Also precompute all of the function analyses used by loop passes.
+    // FIXME: These should be handed into the loop passes when the loop pass
+    // management layer is reworked to follow the design of CGSCC.
+    (void)AM.getResult<AAManager>(F);
+    (void)AM.getResult<DominatorTreeAnalysis>(F);
+    (void)AM.getResult<ScalarEvolutionAnalysis>(F);
+    (void)AM.getResult<TargetLibraryAnalysis>(F);
 
     PreservedAnalyses PA = PreservedAnalyses::all();
 

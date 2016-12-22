@@ -69,7 +69,8 @@ if(CMAKE_CROSSCOMPILING)
     COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
     DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
     WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-    COMMENT "Building native llvm-config...")
+    COMMENT "Building native llvm-config..."
+    USES_TERMINAL)
   add_custom_target(${project}NativeLLVMConfig DEPENDS ${${project}_LLVM_CONFIG_EXE})
   add_dependencies(${project}NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
 

@@ -7,24 +7,25 @@
 ;
 ; v4si a
 
-@a = common global <4 x i32> zeroinitializer, align 16, !dbg !5
+source_filename = "test/DebugInfo/X86/vector.ll"
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!13}
+@a = common global <4 x i32> zeroinitializer, align 16, !dbg !0
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 171825) (llvm/trunk 171822)", isOptimized: false, emissionKind: FullDebug, file: !12, enums: !1, retainedTypes: !1, globals: !3, imports:  !1)
-!1 = !{}
-!3 = !{!5}
-!5 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", line: 3, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7))
-!6 = !DIFile(filename: "foo.c", directory: "/Users/echristo")
-!7 = !DIDerivedType(tag: DW_TAG_typedef, name: "v4si", line: 1, file: !12, baseType: !8)
-!8 = !DICompositeType(tag: DW_TAG_array_type, size: 128, align: 128, flags: DIFlagVector, baseType: !9, elements: !10)
-!9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = !{!11}
-!11 = !DISubrange(count: 4)
-!12 = !DIFile(filename: "foo.c", directory: "/Users/echristo")
+!llvm.dbg.cu = !{!8}
+!llvm.module.flags = !{!11}
 
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "foo.c", directory: "/Users/echristo")
+!3 = !DIDerivedType(tag: DW_TAG_typedef, name: "v4si", file: !2, line: 1, baseType: !4)
+!4 = !DICompositeType(tag: DW_TAG_array_type, baseType: !5, size: 128, align: 128, flags: DIFlagVector, elements: !6)
+!5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!6 = !{!7}
+!7 = !DISubrange(count: 4)
+!8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang version 3.3 (trunk 171825) (llvm/trunk 171822)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, retainedTypes: !9, globals: !10, imports: !9)
+!9 = !{}
 ; Check that we get an array type with a vector attribute.
 ; CHECK: DW_TAG_array_type
 ; CHECK-NEXT: DW_AT_GNU_vector
-!13 = !{i32 1, !"Debug Info Version", i32 3}
+!10 = !{!0}
+!11 = !{i32 1, !"Debug Info Version", i32 3}

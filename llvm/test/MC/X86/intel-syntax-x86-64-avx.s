@@ -159,3 +159,59 @@
 // CHECK: vcvttpd2dq xmm0, ymmword ptr [rax]
 // CHECK: encoding: [0xc5,0xfd,0xe6,0x00]
           vcvttpd2dqy xmm0, ymmword ptr [rax]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmm3
+// CHECK: encoding: [0xc5,0xe9,0xf5,0xcb]
+          vpmaddwd xmm1, xmm2, xmm3
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rcx]
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x09]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rcx]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rsp - 4]
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x4c,0x24,0xfc]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rsp - 4]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rsp + 4]
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x4c,0x24,0x04]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rsp + 4]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 + 268435456]
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 + 268435456]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 - 536870912]
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 - 536870912]
+
+// CHECK: vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 - 536870910]
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpmaddwd xmm1, xmm2, xmmword ptr [rcx + 8*r14 - 536870910]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymm3
+// CHECK: encoding: [0xc5,0xed,0xf5,0xcb]
+          vpmaddwd ymm1, ymm2, ymm3
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rcx]
+// CHECK: encoding: [0xc5,0xed,0xf5,0x09]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rcx]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rsp - 4]
+// CHECK: encoding: [0xc5,0xed,0xf5,0x4c,0x24,0xfc]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rsp - 4]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rsp + 4]
+// CHECK: encoding: [0xc5,0xed,0xf5,0x4c,0x24,0x04]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rsp + 4]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 + 268435456]
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 + 268435456]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870912]
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870912]
+
+// CHECK: vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870910]
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpmaddwd ymm1, ymm2, ymmword ptr [rcx + 8*r14 - 536870910]

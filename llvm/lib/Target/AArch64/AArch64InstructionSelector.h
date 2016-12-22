@@ -32,6 +32,10 @@ public:
   virtual bool select(MachineInstr &I) const override;
 
 private:
+  /// tblgen-erated 'select' implementation, used as the initial selector for
+  /// the patterns that don't require complex C++.
+  bool selectImpl(MachineInstr &I) const;
+
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;

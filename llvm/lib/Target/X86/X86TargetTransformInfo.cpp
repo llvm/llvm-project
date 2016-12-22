@@ -551,11 +551,11 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,     MVT::v4i64,    4 },
     { ISD::ADD,     MVT::v4i64,    4 },
     // A v4i64 multiply is custom lowered as two split v2i64 vectors that then
-    // are lowered as a series of long multiplies(3), shifts(4) and adds(2)
+    // are lowered as a series of long multiplies(3), shifts(3) and adds(2)
     // Because we believe v4i64 to be a legal type, we must also include the
-    // split factor of two in the cost table. Therefore, the cost here is 18
-    // instead of 9.
-    { ISD::MUL,     MVT::v4i64,    18 },
+    // split factor of two in the cost table. Therefore, the cost here is 16
+    // instead of 8.
+    { ISD::MUL,     MVT::v4i64,    16 },
   };
 
   // Look for AVX1 lowering tricks.
@@ -569,10 +569,10 @@ int X86TTIImpl::getArithmeticInstrCost(
   // Custom lowering of vectors.
   static const CostTblEntry CustomLowered[] = {
     // A v2i64/v4i64 and multiply is custom lowered as a series of long
-    // multiplies(3), shifts(4) and adds(2).
-    { ISD::MUL,     MVT::v2i64,    9 },
-    { ISD::MUL,     MVT::v4i64,    9 },
-    { ISD::MUL,     MVT::v8i64,    9 }
+    // multiplies(3), shifts(3) and adds(2).
+    { ISD::MUL,     MVT::v2i64,    8 },
+    { ISD::MUL,     MVT::v4i64,    8 },
+    { ISD::MUL,     MVT::v8i64,    8 }
   };
   if (const auto *Entry = CostTableLookup(CustomLowered, ISD, LT.second))
     return LT.first * Entry->Cost;

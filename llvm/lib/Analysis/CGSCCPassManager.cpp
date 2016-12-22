@@ -25,8 +25,6 @@ template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
 template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                          LazyCallGraph::SCC, LazyCallGraph &>;
-template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
-                                         LazyCallGraph::SCC, LazyCallGraph &>;
 template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph

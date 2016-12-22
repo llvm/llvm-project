@@ -742,13 +742,16 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
     if ((i == 1 ||
          !isa<StructType>(GetElementPtrInst::getIndexedType(
              SrcElemTy, Ops.slice(1, i - 1)))) &&
-        Ops[i]->getType() != (i == 1 ? IntPtrTy : IntPtrScalarTy)) {
+        Ops[i]->getType()->getScalarType() != IntPtrScalarTy) {
       Any = true;
+      Type *NewType = Ops[i]->getType()->isVectorTy()
+                          ? IntPtrTy
+                          : IntPtrTy->getScalarType();
       NewIdxs.push_back(ConstantExpr::getCast(CastInst::getCastOpcode(Ops[i],
                                                                       true,
-                                                                      IntPtrTy,
+                                                                      NewType,
                                                                       true),
-                                              Ops[i], IntPtrTy));
+                                              Ops[i], NewType));
     } else
       NewIdxs.push_back(Ops[i]);
   }
