@@ -128,11 +128,11 @@ class ModuleDependencyCollector : public DependencyCollector {
   llvm::StringMap<std::string> SymLinkMap;
 
   bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
-  std::error_code copyToRoot(StringRef Src);
+  std::error_code copyToRoot(StringRef Src, StringRef Dst = "");
 public:
   StringRef getDest() { return DestDir; }
   bool insertSeen(StringRef Filename) { return Seen.insert(Filename).second; }
-  void addFile(StringRef Filename);
+  void addFile(StringRef Filename, StringRef FileDst = "");
   void addFileMapping(StringRef VPath, StringRef RPath) {
     VFSWriter.addFileMapping(VPath, RPath);
   }
