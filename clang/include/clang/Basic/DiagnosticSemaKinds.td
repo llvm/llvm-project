@@ -2299,6 +2299,9 @@ def warn_attribute_pointers_only : Warning<
   "%0 attribute only applies to%select{| constant}1 pointer arguments">,
   InGroup<IgnoredAttributes>;
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
+def err_attribute_integers_only : Error<
+  "%0 attribute argument may only refer to a function parameter of integer "
+  "type">;
 def warn_attribute_return_pointers_only : Warning<
   "%0 attribute only applies to return values that are pointers">,
   InGroup<IgnoredAttributes>;
@@ -3383,18 +3386,18 @@ def note_ovl_candidate : Note<"candidate "
     "is the implicit copy assignment operator|"
     "is the implicit move assignment operator|"
     "inherited constructor|"
-    "inherited constructor }0%1"
-    "%select{| has different class%diff{ (expected $ but has $)|}3,4"
-    "| has different number of parameters (expected %3 but has %4)"
-    "| has type mismatch at %ordinal3 parameter"
-    "%diff{ (expected $ but has $)|}4,5"
-    "| has different return type%diff{ ($ expected but has $)|}3,4"
+    "inherited constructor }0%2"
+    "%select{| has different class%diff{ (expected $ but has $)|}4,5"
+    "| has different number of parameters (expected %4 but has %5)"
+    "| has type mismatch at %ordinal4 parameter"
+    "%diff{ (expected $ but has $)|}5,6"
+    "| has different return type%diff{ ($ expected but has $)|}4,5"
     "| has different qualifiers (expected "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}3 but found "
+    "|volatile and restrict|const, volatile, and restrict}4 but found "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}4)"
-    "| has different exception specification}2">;
+    "|volatile and restrict|const, volatile, and restrict}5)"
+    "| has different exception specification}3">;
 
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
@@ -4141,7 +4144,7 @@ def err_function_template_spec_ambiguous : Error<
     "function template; explicitly specify%select{| additional}1 template "
     "arguments to identify a particular function template">;
 def note_function_template_spec_matched : Note<
-    "function template matches specialization %0">;
+    "function template %q0 matches specialization %1">;
 def err_function_template_partial_spec : Error<
     "function template partial specialization is not allowed">;
 
@@ -4279,7 +4282,7 @@ def err_explicit_instantiation_member_function_not_instantiated : Error<
 def err_explicit_instantiation_ambiguous : Error<
   "partial ordering for explicit instantiation of %0 is ambiguous">;
 def note_explicit_instantiation_candidate : Note<
-  "explicit instantiation candidate function template here %0">;
+  "explicit instantiation candidate function %q0 template here %1">;
 def err_explicit_instantiation_inline : Error<
   "explicit instantiation cannot be 'inline'">;
 def warn_explicit_instantiation_inline_0x : Warning<

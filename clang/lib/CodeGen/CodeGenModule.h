@@ -455,6 +455,10 @@ private:
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
 
+  /// Map of the global blocks we've emitted, so that we don't have to re-emit
+  /// them if the constexpr evaluator gets aggressive.
+  llvm::DenseMap<const BlockExpr *, llvm::Constant *> EmittedGlobalBlocks;
+
   /// @name Cache for Blocks Runtime Globals
   /// @{
 
@@ -776,6 +780,16 @@ public:
 
   /// Gets the address of a block which requires no captures.
   llvm::Constant *GetAddrOfGlobalBlock(const BlockExpr *BE, StringRef Name);
+
+  /// Returns the address of a block which requires no caputres, or null if
+  /// we've yet to emit the block for BE.
+  llvm::Constant *getAddrOfGlobalBlockIfEmitted(const BlockExpr *BE) {
+    return EmittedGlobalBlocks.lookup(BE);
+  }
+
+  /// Notes that BE's global block is available via Addr. Asserts that BE
+  /// isn't already emitted.
+  void setAddrOfGlobalBlock(const BlockExpr *BE, llvm::Constant *Addr);
   
   /// Return a pointer to a constant CFString object for the given string.
   ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);

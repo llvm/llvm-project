@@ -51,7 +51,7 @@
 # RSP2-NEXT: -soname="foo bar"
 # RSP2-NEXT: -soname="foo bar"
 
-# RUN: cpio -t < repro2.cpio | FileCheck %s
+# RUN: cpio -it < repro2.cpio | FileCheck %s
 # CHECK:      repro2/response.txt
 # CHECK-NEXT: repro2/version.txt
 # CHECK-NEXT: repro2/{{.*}}/dyn

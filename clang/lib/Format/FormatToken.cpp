@@ -77,6 +77,9 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   if (State.NextToken == nullptr || !State.NextToken->Previous)
     return 0;
 
+  if (Formats.size() == 1)
+    return 0; // Handled by formatFromToken
+
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
       State.NextToken->Previous->getPreviousNonComment();
@@ -92,13 +95,6 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
 
   // Find the best ColumnFormat, i.e. the best number of columns to use.
   const ColumnFormat *Format = getColumnFormat(RemainingCodePoints);
-
-  // Formatting with 1 Column isn't really a column layout, so we don't need the
-  // special logic here. We can just avoid bin packing any of the parameters.
-  if (Format && Format->Columns == 1) {
-    State.Stack.back().AvoidBinPacking = true;
-    return 0;
-  }
 
   // If no ColumnFormat can be used, the braced list would generally be
   // bin-packed. Add a severe penalty to this so that column layouts are
@@ -137,7 +133,9 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
 unsigned CommaSeparatedList::formatFromToken(LineState &State,
                                              ContinuationIndenter *Indenter,
                                              bool DryRun) {
-  if (HasNestedBracedList)
+  // Formatting with 1 Column isn't really a column layout, so we don't need the
+  // special logic here. We can just avoid bin packing any of the parameters.
+  if (Formats.size() == 1 || HasNestedBracedList)
     State.Stack.back().AvoidBinPacking = true;
   return 0;
 }

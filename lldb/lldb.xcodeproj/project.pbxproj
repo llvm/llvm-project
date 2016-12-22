@@ -8997,6 +8997,7 @@
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
+					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",

@@ -6816,7 +6816,7 @@ InitializationSequence::Perform(Sema &S,
       CurInit = CurInitExprRes;
 
       if (Step->Kind == SK_ConversionSequenceNoNarrowing &&
-          S.getLangOpts().CPlusPlus && !CurInit.get()->isValueDependent())
+          S.getLangOpts().CPlusPlus)
         DiagnoseNarrowingInInitList(S, *Step->ICS, SourceType, Entity.getType(),
                                     CurInit.get());
 
@@ -8070,6 +8070,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   switch (SCS->getNarrowingKind(S.Context, PostInit, ConstantValue,
                                 ConstantType)) {
   case NK_Not_Narrowing:
+  case NK_Dependent_Narrowing:
     // No narrowing occurred.
     return;
 

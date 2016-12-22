@@ -5060,13 +5060,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   }
 
   if (getLangOpts().CPlusPlus1z) {
-    // FIXME: We can do some limited checking for a value-dependent but not
-    // type-dependent argument.
-    if (Arg->isValueDependent()) {
-      Converted = TemplateArgument(Arg);
-      return Arg;
-    }
-
     // C++1z [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
@@ -5075,6 +5068,13 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
         Arg, ParamType, Value, CCEK_TemplateArg);
     if (ArgResult.isInvalid())
       return ExprError();
+
+    // For a value-dependent argument, CheckConvertedConstantExpression is
+    // permitted (and expected) to be unable to determine a value.
+    if (ArgResult.get()->isValueDependent()) {
+      Converted = TemplateArgument(Arg);
+      return Arg;
+    }
 
     QualType CanonParamType = Context.getCanonicalType(ParamType);
 

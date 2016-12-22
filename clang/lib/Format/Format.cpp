@@ -1917,7 +1917,11 @@ FormatStyle getStyle(StringRef StyleName, StringRef FileName,
   // Look for .clang-format/_clang-format file in the file's parent directories.
   SmallString<128> UnsuitableConfigFiles;
   SmallString<128> Path(FileName);
-  llvm::sys::fs::make_absolute(Path);
+  if (std::error_code EC = FS->makeAbsolute(Path)) {
+    llvm::errs() << EC.message() << "\n";
+    return Style;
+  }
+
   for (StringRef Directory = Path; !Directory.empty();
        Directory = llvm::sys::path::parent_path(Directory)) {
 
