@@ -372,7 +372,7 @@ public:
 
   /// \brief Return true if it is cheaper to split the store of a merged int val
   /// from a pair of smaller values into multiple stores.
-  virtual bool isMultiStoresCheaperThanBitsMerge(SDValue Lo, SDValue Hi) const {
+  virtual bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const {
     return false;
   }
 

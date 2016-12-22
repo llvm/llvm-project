@@ -21,6 +21,15 @@ class VOP1e <bits<8> op, VOPProfile P> : Enc32 {
   let Inst{31-25} = 0x3f; //encoding
 }
 
+class VOP1_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
+  bits<8> vdst;
+  
+  let Inst{8-0}   = 0xf9; // sdwa
+  let Inst{16-9}  = op;
+  let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
+  let Inst{31-25} = 0x3f; // encoding
+}
+
 class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   InstSI <P.Outs32, P.Ins32, "", pattern>,
   VOP <opName>,
@@ -56,6 +65,9 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
+  let Constraints     = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
+
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
@@ -63,6 +75,11 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily> :
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
+}
+
+class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
+  VOP_SDWA_Pseudo <OpName, P, pattern> {
+  let AsmMatchConverter = "cvtSdwaVOP1";
 }
 
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
@@ -76,6 +93,7 @@ multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag> {
   def _e32 : VOP1_Pseudo <opName, P>;
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
+  def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,7 +230,6 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, VSrc_b32:$src0);
   let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
-
   let InsDPP = (ins Src0RC32:$vdst, Src0RC32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsSDWA = (ins Src0RC32:$vdst, Int32InputMods:$src0_modifiers, VCSrc_b32:$src0,
@@ -420,27 +437,14 @@ defm V_EXP_LEGACY_F32    : VOP1_Real_ci <0x46>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOP1_SDWA <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
-  VOP_SDWA <ps.OpName, P> {
-  let Defs = ps.Defs;
-  let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
-  let hasSideEffects = ps.hasSideEffects;
-  let AsmMatchConverter = "cvtSdwaVOP1";
-
-  bits<8> vdst;
-  let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = op;
-  let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
-  let Inst{31-25} = 0x3f; // encoding
-}
-
 class VOP1_DPP <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
   VOP_DPP <ps.OpName, P> {
   let Defs = ps.Defs;
   let Uses = ps.Uses;
   let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
+  let Constraints = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
 
   bits<8> vdst;
   let Inst{8-0}   = 0xfa; // dpp
@@ -459,9 +463,12 @@ multiclass VOP1_Real_vi <bits<10> op> {
       VOP3e_vi <!add(0x140, op), !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
   }
 
-  // for now left sdwa/dpp only for asm/dasm
+  def _sdwa_vi :
+    VOP_SDWA_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP1_SDWAe <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
+
+  // For now left dpp only for asm/dasm
   // TODO: add corresponding pseudo
-  def _sdwa : VOP1_SDWA<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
   def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
 }
 

@@ -191,6 +191,12 @@ public:
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
+  // \brief Provide an ordered list of schedule DAG mutations for the machine
+  // pipeliner.
+  virtual void getSMSMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  }
+
   // For use with PostRAScheduling: get the minimum optimization level needed
   // to enable post-RA scheduling.
   virtual CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const {

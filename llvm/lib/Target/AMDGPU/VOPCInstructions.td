@@ -21,6 +21,19 @@ class VOPCe <bits<8> op> : Enc32 {
   let Inst{31-25} = 0x3e;
 }
 
+class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
+  bits<8> src1;
+
+  let Inst{8-0}   = 0xf9; // sdwa
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{24-17} = op;
+  let Inst{31-25} = 0x3e; // encoding
+
+  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
+  let Inst{42-40} = SDWA.DWORD;
+  let Inst{44-43} = SDWA.UNUSED_PRESERVE;
+}
+
 //===----------------------------------------------------------------------===//
 // VOPC classes
 //===----------------------------------------------------------------------===//
@@ -71,12 +84,20 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
+  let Constraints     = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
+
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
   let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
+}
+
+class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
+  VOP_SDWA_Pseudo <OpName, P, pattern> {
+  let AsmMatchConverter = "cvtSdwaVOPC";
 }
 
 // This class is used only with VOPC instructions. Use $sdst for out operand
@@ -128,6 +149,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCompare = 1;
     let isCommutable = 1;
   }
+
   def _e64 : VOP3_Pseudo<opName, P,
     !if(P.HasModifiers,
       [(set i1:$sdst,
@@ -142,11 +164,21 @@ multiclass VOPC_Pseudos <string opName,
     let isCompare = 1;
     let isCommutable = 1;
   }
+
+  def _sdwa : VOPC_SDWA_Pseudo <opName, P>,
+              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)> {
+    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
+    let SchedRW = P.Schedule;
+    let isConvergent = DefExec;
+    let isCompare = 1;
+    let isCommutable = 1;
+  }
 }
 
 def VOPC_I1_F16_F16 : VOPC_Profile<[Write32Bit], f16>;
 def VOPC_I1_F32_F32 : VOPC_Profile<[Write32Bit], f32>;
 def VOPC_I1_F64_F64 : VOPC_Profile<[WriteDoubleAdd], f64>;
+def VOPC_I1_I16_I16 : VOPC_Profile<[Write32Bit], i16>;
 def VOPC_I1_I32_I32 : VOPC_Profile<[Write32Bit], i32>;
 def VOPC_I1_I64_I64 : VOPC_Profile<[Write64Bit], i64>;
 
@@ -158,6 +190,9 @@ multiclass VOPC_F32 <string opName, PatLeaf cond = COND_NULL, string revOp = opN
 
 multiclass VOPC_F64 <string opName, PatLeaf cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F64_F64, cond, revOp, 0>;
+
+multiclass VOPC_I16 <string opName, PatLeaf cond = COND_NULL, string revOp = opName> :
+  VOPC_Pseudos <opName, VOPC_I1_I16_I16, cond, revOp, 0>;
 
 multiclass VOPC_I32 <string opName, PatLeaf cond = COND_NULL, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
@@ -173,6 +208,9 @@ multiclass VOPCX_F32 <string opName, string revOp = opName> :
 
 multiclass VOPCX_F64 <string opName, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_F64_F64, COND_NULL, revOp, 1>;
+
+multiclass VOPCX_I16 <string opName, string revOp = opName> :
+  VOPC_Pseudos <opName, VOPC_I1_I16_I16, COND_NULL, revOp, 1>;
 
 multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, COND_NULL, revOp, 1>;
@@ -325,7 +363,7 @@ defm V_CMPSX_TRU_F64 : VOPCX_F64 <"v_cmpsx_tru_f64">;
 
 } // End SubtargetPredicate = isSICI
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = Has16BitInsts in {
 
 defm V_CMP_F_F16    : VOPC_F16 <"v_cmp_f_f16">;
 defm V_CMP_LT_F16   : VOPC_F16 <"v_cmp_lt_f16", COND_OLT, "v_cmp_gt_f16">;
@@ -361,7 +399,43 @@ defm V_CMPX_NEQ_F16 : VOPCX_F16 <"v_cmpx_neq_f16">;
 defm V_CMPX_NLT_F16 : VOPCX_F16 <"v_cmpx_nlt_f16">;
 defm V_CMPX_TRU_F16 : VOPCX_F16 <"v_cmpx_tru_f16">;
 
-} // End SubtargetPredicate = isVI
+defm V_CMP_F_I16 : VOPC_I16 <"v_cmp_f_i16">;
+defm V_CMP_LT_I16 : VOPC_I16 <"v_cmp_lt_i16", COND_SLT, "v_cmp_gt_i16">;
+defm V_CMP_EQ_I16 : VOPC_I16 <"v_cmp_eq_i16">;
+defm V_CMP_LE_I16 : VOPC_I16 <"v_cmp_le_i16", COND_SLE, "v_cmp_ge_i16">;
+defm V_CMP_GT_I16 : VOPC_I16 <"v_cmp_gt_i16", COND_SGT>;
+defm V_CMP_NE_I16 : VOPC_I16 <"v_cmp_ne_i16">;
+defm V_CMP_GE_I16 : VOPC_I16 <"v_cmp_ge_i16", COND_SGE>;
+defm V_CMP_T_I16 : VOPC_I16 <"v_cmp_t_i16">;
+
+defm V_CMP_F_U16 : VOPC_I16 <"v_cmp_f_u16">;
+defm V_CMP_LT_U16 : VOPC_I16 <"v_cmp_lt_u16", COND_ULT, "v_cmp_gt_u16">;
+defm V_CMP_EQ_U16 : VOPC_I16 <"v_cmp_eq_u16", COND_EQ>;
+defm V_CMP_LE_U16 : VOPC_I16 <"v_cmp_le_u16", COND_ULE, "v_cmp_ge_u16">;
+defm V_CMP_GT_U16 : VOPC_I16 <"v_cmp_gt_u16", COND_UGT>;
+defm V_CMP_NE_U16 : VOPC_I16 <"v_cmp_ne_u16", COND_NE>;
+defm V_CMP_GE_U16 : VOPC_I16 <"v_cmp_ge_u16", COND_UGE>;
+defm V_CMP_T_U16 : VOPC_I16 <"v_cmp_t_u16">;
+
+defm V_CMPX_F_I16 : VOPCX_I16 <"v_cmpx_f_i16">;
+defm V_CMPX_LT_I16 : VOPCX_I16 <"v_cmpx_lt_i16", "v_cmpx_gt_i16">;
+defm V_CMPX_EQ_I16 : VOPCX_I16 <"v_cmpx_eq_i16">;
+defm V_CMPX_LE_I16 : VOPCX_I16 <"v_cmpx_le_i16", "v_cmpx_ge_i16">;
+defm V_CMPX_GT_I16 : VOPCX_I16 <"v_cmpx_gt_i16">;
+defm V_CMPX_NE_I16 : VOPCX_I16 <"v_cmpx_ne_i16">;
+defm V_CMPX_GE_I16 : VOPCX_I16 <"v_cmpx_ge_i16">;
+defm V_CMPX_T_I16 : VOPCX_I16 <"v_cmpx_t_i16">;
+defm V_CMPX_F_U16 : VOPCX_I16 <"v_cmpx_f_u16">;
+
+defm V_CMPX_LT_U16 : VOPCX_I16 <"v_cmpx_lt_u16", "v_cmpx_gt_u16">;
+defm V_CMPX_EQ_U16 : VOPCX_I16 <"v_cmpx_eq_u16">;
+defm V_CMPX_LE_U16 : VOPCX_I16 <"v_cmpx_le_u16", "v_cmpx_ge_u16">;
+defm V_CMPX_GT_U16 : VOPCX_I16 <"v_cmpx_gt_u16">;
+defm V_CMPX_NE_U16 : VOPCX_I16 <"v_cmpx_ne_u16">;
+defm V_CMPX_GE_U16 : VOPCX_I16 <"v_cmpx_ge_u16">;
+defm V_CMPX_T_U16 : VOPCX_I16 <"v_cmpx_t_u16">;
+
+} // End SubtargetPredicate = Has16BitInsts
 
 defm V_CMP_F_I32 : VOPC_I32 <"v_cmp_f_i32">;
 defm V_CMP_LT_I32 : VOPC_I32 <"v_cmp_lt_i32", COND_SLT, "v_cmp_gt_i32">;
@@ -468,9 +542,16 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec> {
     let SchedRW = p.Schedule;
     let isConvergent = DefExec;
   }
+
   def _e64 : VOP3_Pseudo<opName, p, getVOPCClassPat64<p>.ret> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = p.Schedule;
+  }
+
+  def _sdwa : VOPC_SDWA_Pseudo <opName, p> {
+    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
+    let SchedRW = p.Schedule;
+    let isConvergent = DefExec;
   }
 }
 
@@ -819,25 +900,6 @@ defm V_CMPX_CLASS_F64 : VOPC_Real_si <0xb8>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOPC_SDWA<bits<8> op, VOPC_Pseudo ps, VOPProfile P = ps.Pfl> :
-  VOP_SDWA <ps.OpName, P> {
-  let Defs = ps.Defs;
-  let hasSideEffects = ps.hasSideEffects;
-  let AsmMatchConverter = "cvtSdwaVOPC";
-  let isCompare = ps.isCompare;
-  let isCommutable = ps.isCommutable;
-
-  bits<8> src1;
-  let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
-  let Inst{24-17} = op;
-  let Inst{31-25} = 0x3e; // encoding
-
-  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
-  let Inst{42-40} = SDWA_DWORD;
-  let Inst{44-43} = SDWA_UNUSED_PRESERVE;
-}
-
 multiclass VOPC_Real_vi <bits<10> op> {
   let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
     def _e32_vi :
@@ -854,9 +916,9 @@ multiclass VOPC_Real_vi <bits<10> op> {
     }
   }
 
-  // for now left sdwa only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _sdwa : VOPC_SDWA<op{7-0}, !cast<VOPC_Pseudo>(NAME#"_e32")>;
+  def _sdwa_vi :
+    VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_vi")> {
@@ -972,6 +1034,42 @@ defm V_CMPX_NLE_F64   : VOPC_Real_vi <0x7c>;
 defm V_CMPX_NEQ_F64   : VOPC_Real_vi <0x7d>;
 defm V_CMPX_NLT_F64   : VOPC_Real_vi <0x7e>;
 defm V_CMPX_TRU_F64   : VOPC_Real_vi <0x7f>;
+
+defm V_CMP_F_I16      : VOPC_Real_vi <0xa0>;
+defm V_CMP_LT_I16     : VOPC_Real_vi <0xa1>;
+defm V_CMP_EQ_I16     : VOPC_Real_vi <0xa2>;
+defm V_CMP_LE_I16     : VOPC_Real_vi <0xa3>;
+defm V_CMP_GT_I16     : VOPC_Real_vi <0xa4>;
+defm V_CMP_NE_I16     : VOPC_Real_vi <0xa5>;
+defm V_CMP_GE_I16     : VOPC_Real_vi <0xa6>;
+defm V_CMP_T_I16      : VOPC_Real_vi <0xa7>;
+
+defm V_CMP_F_U16      : VOPC_Real_vi <0xa8>;
+defm V_CMP_LT_U16     : VOPC_Real_vi <0xa9>;
+defm V_CMP_EQ_U16     : VOPC_Real_vi <0xaa>;
+defm V_CMP_LE_U16     : VOPC_Real_vi <0xab>;
+defm V_CMP_GT_U16     : VOPC_Real_vi <0xac>;
+defm V_CMP_NE_U16     : VOPC_Real_vi <0xad>;
+defm V_CMP_GE_U16     : VOPC_Real_vi <0xae>;
+defm V_CMP_T_U16      : VOPC_Real_vi <0xaf>;
+
+defm V_CMPX_F_I16 : VOPC_Real_vi <0xb0>;
+defm V_CMPX_LT_I16 : VOPC_Real_vi <0xb1>;
+defm V_CMPX_EQ_I16 : VOPC_Real_vi <0xb2>;
+defm V_CMPX_LE_I16 : VOPC_Real_vi <0xb3>;
+defm V_CMPX_GT_I16 : VOPC_Real_vi <0xb4>;
+defm V_CMPX_NE_I16 : VOPC_Real_vi <0xb5>;
+defm V_CMPX_GE_I16 : VOPC_Real_vi <0xb6>;
+defm V_CMPX_T_I16 : VOPC_Real_vi <0xb7>;
+
+defm V_CMPX_F_U16 : VOPC_Real_vi <0xb8>;
+defm V_CMPX_LT_U16 : VOPC_Real_vi <0xb9>;
+defm V_CMPX_EQ_U16 : VOPC_Real_vi <0xba>;
+defm V_CMPX_LE_U16 : VOPC_Real_vi <0xbb>;
+defm V_CMPX_GT_U16 : VOPC_Real_vi <0xbc>;
+defm V_CMPX_NE_U16 : VOPC_Real_vi <0xbd>;
+defm V_CMPX_GE_U16 : VOPC_Real_vi <0xbe>;
+defm V_CMPX_T_U16 : VOPC_Real_vi <0xbf>;
 
 defm V_CMP_F_I32      : VOPC_Real_vi <0xc0>;
 defm V_CMP_LT_I32     : VOPC_Real_vi <0xc1>;
