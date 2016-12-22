@@ -3,9 +3,70 @@
 #include "xray_interface_internal.h"
 #include <atomic>
 #include <cstdint>
+#include <fcntl.h>
 #include <limits>
+#include <tuple>
+#include <unistd.h>
 
 namespace __xray {
+
+static std::pair<ssize_t, bool>
+retryingReadSome(int Fd, char *Begin, char *End) XRAY_NEVER_INSTRUMENT {
+  auto BytesToRead = std::distance(Begin, End);
+  ssize_t BytesRead;
+  ssize_t TotalBytesRead = 0;
+  while (BytesToRead && (BytesRead = read(Fd, Begin, BytesToRead))) {
+    if (BytesRead == -1) {
+      if (errno == EINTR)
+        continue;
+      Report("Read error; errno = %d\n", errno);
+      return std::make_pair(TotalBytesRead, false);
+    }
+
+    TotalBytesRead += BytesRead;
+    BytesToRead -= BytesRead;
+    Begin += BytesRead;
+  }
+  return std::make_pair(TotalBytesRead, true);
+}
+
+static bool readValueFromFile(const char *Filename,
+                              long long *Value) XRAY_NEVER_INSTRUMENT {
+  int Fd = open(Filename, O_RDONLY | O_CLOEXEC);
+  if (Fd == -1)
+    return false;
+  static constexpr size_t BufSize = 256;
+  char Line[BufSize] = {};
+  ssize_t BytesRead;
+  bool Success;
+  std::tie(BytesRead, Success) = retryingReadSome(Fd, Line, Line + BufSize);
+  if (!Success)
+    return false;
+  close(Fd);
+  char *End = nullptr;
+  long long Tmp = internal_simple_strtoll(Line, &End, 10);
+  bool Result = false;
+  if (Line[0] != '\0' && (*End == '\n' || *End == '\0')) {
+    *Value = Tmp;
+    Result = true;
+  }
+  return Result;
+}
+
+uint64_t cycleFrequency() XRAY_NEVER_INSTRUMENT {
+  long long CPUFrequency = -1;
+  if (readValueFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz",
+                        &CPUFrequency)) {
+    CPUFrequency *= 1000;
+  } else if (readValueFromFile(
+      "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+      &CPUFrequency)) {
+    CPUFrequency *= 1000;
+  } else {
+    Report("Unable to determine CPU frequency for TSC accounting.\n");
+  }
+  return CPUFrequency == -1 ? 0 : static_cast<uint64_t>(CPUFrequency);
+}
 
 static constexpr uint8_t CallOpCode = 0xe8;
 static constexpr uint16_t MovR10Seq = 0xba41;
