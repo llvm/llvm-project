@@ -72,6 +72,11 @@ public:
   }
   /// Determine whether there are any operations left in this expression.
   operator bool() const { return Start != End; }
+
+  /// Retrieve the fragment information, if any.
+  Optional<DIExpression::FragmentInfo> getFragmentInfo() const {
+    return DIExpression::getFragmentInfo(Start, End);
+  }
 };
 
 /// Base class containing the logic for constructing DWARF expressions
@@ -145,6 +150,10 @@ public:
   /// Emit a partial DWARF register operation.
   ///
   /// \param MachineReg           The register number.
+  /// \param MaxSize              If the register must be composed from
+  ///                             sub-registers this is an upper bound
+  ///                             for how many bits the emitted DW_OP_piece
+  ///                             may cover.
   ///
   /// If size and offset is zero an operation for the entire register is
   /// emitted: Some targets do not provide a DWARF register number for every
@@ -153,7 +162,8 @@ public:
   /// multiple subregisters that alias the register.
   ///
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg);
+  bool AddMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                     unsigned MaxSize = ~1U);
 
   /// Emit a signed constant.
   void AddSignedConstant(int64_t Value);

@@ -86,7 +86,7 @@ bool DwarfExpression::AddMachineRegIndirect(const TargetRegisterInfo &TRI,
 }
 
 bool DwarfExpression::AddMachineReg(const TargetRegisterInfo &TRI,
-                                    unsigned MachineReg) {
+                                    unsigned MachineReg, unsigned MaxSize) {
   if (!TRI.isPhysicalRegister(MachineReg))
     return false;
 
@@ -137,10 +137,12 @@ bool DwarfExpression::AddMachineReg(const TargetRegisterInfo &TRI,
     // its range, emit a DWARF piece for it.
     if (Reg >= 0 && Intersection.any()) {
       AddReg(Reg, "sub-register");
+      if (Offset >= MaxSize)
+	break;
       // Emit a piece for the any gap in the coverage.
       if (Offset > CurPos)
         AddOpPiece(Offset - CurPos);
-      AddOpPiece(Size);
+      AddOpPiece(std::min<unsigned>(Size, MaxSize - Offset));
       CurPos = Offset + Size;
 
       // Mark it as emitted.
@@ -196,9 +198,12 @@ bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
   bool ValidReg = false;
   auto Op = ExprCursor.peek();
   switch (Op->getOp()) {
-  default:
-    ValidReg = AddMachineReg(TRI, MachineReg);
+  default: {
+    auto Fragment = ExprCursor.getFragmentInfo();
+    ValidReg = AddMachineReg(TRI, MachineReg,
+			     Fragment ? Fragment->SizeInBits : ~1U);
     break;
+  }
   case dwarf::DW_OP_plus:
   case dwarf::DW_OP_minus: {
     // [DW_OP_reg,Offset,DW_OP_plus, DW_OP_deref] --> [DW_OP_breg, Offset].
