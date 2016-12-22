@@ -140,6 +140,12 @@ class DWARFUnit {
 
   const DWARFUnitIndex::Entry *IndexEntry;
 
+  uint32_t getDIEIndex(const DWARFDebugInfoEntry *Die) {
+    auto First = DieArray.data();
+    assert(Die >= First && Die < First + DieArray.size());
+    return Die - First;
+  }
+
 protected:
   virtual bool extractImpl(DataExtractor debug_info, uint32_t *offset_ptr);
   /// Size in bytes of the unit header.
@@ -251,18 +257,17 @@ public:
   /// method on a DIE that isn't accessible by following
   /// children/sibling links starting from this unit's getUnitDIE().
   uint32_t getDIEIndex(const DWARFDie &D) {
-    auto DIE = D.getDebugInfoEntry();
-    assert(!DieArray.empty() && DIE >= &DieArray[0] &&
-           DIE < &DieArray[0] + DieArray.size());
-    return DIE - &DieArray[0];
+    return getDIEIndex(D.getDebugInfoEntry());
   }
 
   /// \brief Return the DIE object at the given index.
   DWARFDie getDIEAtIndex(unsigned Index) {
-    if (Index < DieArray.size())
-      return DWARFDie(this, &DieArray[Index]);
-    return DWARFDie();
+    assert(Index < DieArray.size());
+    return DWARFDie(this, &DieArray[Index]);
   }
+
+  DWARFDie getParent(const DWARFDebugInfoEntry *Die);
+  DWARFDie getSibling(const DWARFDebugInfoEntry *Die);
 
   /// \brief Return the DIE object for a given offset inside the
   /// unit's DIE vector.
@@ -298,10 +303,6 @@ private:
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
                            std::vector<DWARFDebugInfoEntry> &DIEs) const;
-  /// setDIERelations - We read in all of the DIE entries into our flat list
-  /// of DIE entries and now we need to go back through all of them and set the
-  /// parent, sibling and child pointers for quick DIE navigation.
-  void setDIERelations();
   /// clearDIEs - Clear parsed DIEs to keep memory usage low.
   void clearDIEs(bool KeepCUDie);
 

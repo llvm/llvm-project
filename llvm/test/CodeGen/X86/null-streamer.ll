@@ -3,7 +3,9 @@
 ; RUN: llc -filetype=null -o %t -march=x86 %s
 ; RUN: llc -filetype=null -o %t -mtriple=i686-cygwin %s
 
-define void @f0()  {
+source_filename = "test/CodeGen/X86/null-streamer.ll"
+
+define void @f0() {
   ret void
 }
 
@@ -12,16 +14,15 @@ define void @f1() {
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!11, !13}
+!llvm.module.flags = !{!7, !8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: " ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !9, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: " ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "file.c", directory: "")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 2, file: !1, scope: !1, type: !6, variables: !2)
-!6 = !DISubroutineType(types: !7)
-!7 = !{!8}
-!8 = !DIBasicType(tag: DW_TAG_base_type, size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = !{!10}
-!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", linkageName: "_ZL1i", line: 1, isLocal: true, isDefinition: true, scope: null, file: !1, type: !8))
-!11 = !{i32 2, !"Dwarf Version", i32 3}
-!13 = !{i32 1, !"Debug Info Version", i32 3}
+!3 = !{!4}
+!4 = !DIGlobalVariableExpression(var: !5)
+!5 = !DIGlobalVariable(name: "i", linkageName: "_ZL1i", scope: null, file: !1, line: 1, type: !6, isLocal: true, isDefinition: true)
+!6 = !DIBasicType(size: 32, align: 32, encoding: DW_ATE_signed)
+!7 = !{i32 2, !"Dwarf Version", i32 3}
+!8 = !{i32 1, !"Debug Info Version", i32 3}
+

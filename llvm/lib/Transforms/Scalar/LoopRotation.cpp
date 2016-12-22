@@ -622,7 +622,8 @@ bool LoopRotate::processLoop(Loop *L) {
   return MadeChange;
 }
 
-LoopRotatePass::LoopRotatePass() {}
+LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication)
+    : EnableHeaderDuplication(EnableHeaderDuplication) {}
 
 PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
@@ -636,7 +637,8 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM) {
   // Optional analyses.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
   auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
-  LoopRotate LR(DefaultRotationThreshold, LI, TTI, AC, DT, SE);
+  int Threshold = EnableHeaderDuplication ? DefaultRotationThreshold : 0;
+  LoopRotate LR(Threshold, LI, TTI, AC, DT, SE);
 
   bool Changed = LR.processLoop(&L);
   if (!Changed)

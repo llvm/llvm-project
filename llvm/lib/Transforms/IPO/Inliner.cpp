@@ -790,7 +790,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
   // Setup the data structure used to plumb customization into the
   // `InlineFunction` routine.
-  InlineFunctionInfo IFI(/*cg=*/nullptr);
+  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
 
   auto GetInlineCost = [&](CallSite CS) {
     Function &Callee = *CS.getCalledFunction();

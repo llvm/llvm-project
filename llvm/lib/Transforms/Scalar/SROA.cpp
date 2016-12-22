@@ -4026,13 +4026,13 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       if (Fragment.Size < AllocaSize || Expr->isFragment()) {
         // If this alloca is already a scalar replacement of a larger aggregate,
         // Fragment.Offset describes the offset inside the scalar.
-        uint64_t Offset =
-            Expr->isFragment() ? Expr->getFragmentOffsetInBits() : 0;
+        auto ExprFragment = Expr->getFragmentInfo();
+        uint64_t Offset = ExprFragment ? ExprFragment->OffsetInBits : 0;
         uint64_t Start = Offset + Fragment.Offset;
         uint64_t Size = Fragment.Size;
-        if (Expr->isFragment()) {
+        if (ExprFragment) {
           uint64_t AbsEnd =
-              Expr->getFragmentOffsetInBits() + Expr->getFragmentSizeInBits();
+	    ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
           if (Start >= AbsEnd)
             // No need to describe a SROAed padding.
             continue;

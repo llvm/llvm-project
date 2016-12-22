@@ -50,6 +50,7 @@ PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PA.preserve<ScalarEvolutionAnalysis>();
   // TODO: What we really want to do here is preserve an AA category, but that
   // concept doesn't exist yet.
+  PA.preserve<AAManager>();
   PA.preserve<BasicAA>();
   PA.preserve<GlobalsAA>();
   PA.preserve<SCEVAA>();

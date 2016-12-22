@@ -1022,6 +1022,11 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 def : BFEPattern <V_BFE_U32, S_MOV_B32>;
 
 def : Pat<
+  (fcanonicalize f16:$src),
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), 0, $src, 0, 0)
+>;
+
+def : Pat<
   (fcanonicalize f32:$src),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), 0, $src, 0, 0)
 >;

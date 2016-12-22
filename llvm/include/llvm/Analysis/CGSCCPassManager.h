@@ -489,11 +489,6 @@ private:
   static AnalysisKey Key;
 };
 
-// Ensure the \c FunctionAnalysisManagerCGSCCProxy is provided as an extern
-// template.
-extern template class InnerAnalysisManagerProxy<
-    FunctionAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
-
 extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.
 typedef OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>

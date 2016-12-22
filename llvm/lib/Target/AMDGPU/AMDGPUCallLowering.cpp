@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/AMDGPU/AMDGPUCallLowering.cpp - Call lowering ---===//
+//===-- llvm/lib/Target/AMDGPU/AMDGPUCallLowering.cpp - Call lowering -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //

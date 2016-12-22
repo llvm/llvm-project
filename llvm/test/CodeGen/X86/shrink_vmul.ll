@@ -457,16 +457,15 @@ define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readon
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,1,3]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    psrlq $32, %xmm2
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-NEXT:    psrlq $32, %xmm3
 ; CHECK-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-NEXT:    paddq %xmm2, %xmm3
 ; CHECK-NEXT:    psllq $32, %xmm3
-; CHECK-NEXT:    psrlq $32, %xmm1
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm1
-; CHECK-NEXT:    psllq $32, %xmm1
 ; CHECK-NEXT:    paddq %xmm3, %xmm1
-; CHECK-NEXT:    paddq %xmm2, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    movq %xmm0, (%rax,%rdx,4)
 ; CHECK-NEXT:    retq

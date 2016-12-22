@@ -4344,7 +4344,8 @@ void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
     return;
 
   // Nothing to do if this isn't a bit piece expression.
-  if (!E->isFragment())
+  auto Fragment = E->getFragmentInfo();
+  if (!Fragment)
     return;
 
   // The frontend helps out GDB by emitting the members of local anonymous
@@ -4362,8 +4363,8 @@ void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
   if (!VarSize)
     return;
 
-  unsigned FragSize = E->getFragmentSizeInBits();
-  unsigned FragOffset = E->getFragmentOffsetInBits();
+  unsigned FragSize = Fragment->SizeInBits;
+  unsigned FragOffset = Fragment->OffsetInBits;
   AssertDI(FragSize + FragOffset <= VarSize,
          "fragment is larger than or outside of variable", &I, V, E);
   AssertDI(FragSize != VarSize, "fragment covers entire variable", &I, V, E);

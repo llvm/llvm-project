@@ -299,7 +299,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
-    setOperationAction(ISD::FDIV, MVT::f16, Promote);
+    setOperationAction(ISD::FDIV, MVT::f16, Custom);
 
     // F16 - VOP3 Actions.
     setOperationAction(ISD::FMA, MVT::f16, Legal);
@@ -1847,6 +1847,8 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
     return Subtarget->hasFP32Denormals() && Subtarget->hasFastFMAF32();
   case MVT::f64:
     return true;
+  case MVT::f16:
+    return Subtarget->has16BitInsts() && Subtarget->hasFP16Denormals();
   default:
     break;
   }
@@ -2925,16 +2927,18 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   bool Unsafe = DAG.getTarget().Options.UnsafeFPMath;
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
-    if ((Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals()))) {
-
+    if (Unsafe || (VT == MVT::f32 && !Subtarget->hasFP32Denormals()) ||
+        VT == MVT::f16) {
       if (CLHS->isExactlyValue(1.0)) {
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
         // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
         // use it as long as we aren't trying to use denormals.
+        //
+        // v_rcp_f16 and v_rsq_f16 DO support denormals.
 
         // 1.0 / sqrt(x) -> rsq(x)
-        //
+
         // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
         // error seems really high at 2^29 ULP.
         if (RHS.getOpcode() == ISD::FSQRT)
@@ -3006,6 +3010,26 @@ static SDValue getFPTernOp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &SL,
 
   return DAG.getNode(Opcode, SL, VTList, GlueChain.getValue(1), A, B, C,
                      GlueChain.getValue(2));
+}
+
+SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
+  if (SDValue FastLowered = lowerFastUnsafeFDIV(Op, DAG))
+    return FastLowered;
+
+  SDLoc SL(Op);
+  SDValue Src0 = Op.getOperand(0);
+  SDValue Src1 = Op.getOperand(1);
+
+  SDValue CvtSrc0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
+  SDValue CvtSrc1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
+
+  SDValue RcpSrc1 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, CvtSrc1);
+  SDValue Quot = DAG.getNode(ISD::FMUL, SL, MVT::f32, CvtSrc0, RcpSrc1);
+
+  SDValue FPRoundFlag = DAG.getTargetConstant(0, SL, MVT::i32);
+  SDValue BestQuot = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot, FPRoundFlag);
+
+  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, BestQuot, Src1, Src0);
 }
 
 // Faster 2.5 ULP division that does not support denormals.
@@ -3200,6 +3224,9 @@ SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT == MVT::f64)
     return LowerFDIV64(Op, DAG);
+
+  if (VT == MVT::f16)
+    return LowerFDIV16(Op, DAG);
 
   llvm_unreachable("Unexpected type for fdiv");
 }
@@ -3425,6 +3452,27 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset);
 }
 
+SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  SDValue Ptr = N->getBasePtr();
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+
+  // TODO: We could also do this for multiplies.
+  unsigned AS = N->getAddressSpace();
+  if (Ptr.getOpcode() == ISD::SHL && AS != AMDGPUAS::PRIVATE_ADDRESS) {
+    SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(), AS, DCI);
+    if (NewPtr) {
+      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+
+      NewOps[N->getOpcode() == ISD::STORE ? 2 : 1] = NewPtr;
+      return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+    }
+  }
+
+  return SDValue();
+}
+
 static bool bitOpWithConstantIsReducible(unsigned Opc, uint32_t Val) {
   return (Opc == ISD::AND && (Val == 0 || Val == 0xffffffff)) ||
          (Opc == ISD::OR && (Val == 0xffffffff || Val == 0)) ||
@@ -3648,6 +3696,9 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
     if (VT == MVT::f64 && !Subtarget->hasFP64Denormals())
       return DAG.getConstantFP(0.0, SDLoc(N), VT);
+
+    if (VT == MVT::f16 && !Subtarget->hasFP16Denormals())
+      return DAG.getConstantFP(0.0, SDLoc(N), VT);
   }
 
   if (C.isNaN()) {
@@ -3820,6 +3871,119 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
+unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
+                                          const SDNode *N0,
+                                          const SDNode *N1) const {
+  EVT VT = N0->getValueType(0);
+
+  // Only do this if we are not trying to support denormals. v_mad_f32 does not
+  // support denormals ever.
+  if ((VT == MVT::f32 && !Subtarget->hasFP32Denormals()) ||
+      (VT == MVT::f16 && !Subtarget->hasFP16Denormals()))
+    return ISD::FMAD;
+
+  const TargetOptions &Options = DAG.getTarget().Options;
+  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
+       Options.UnsafeFPMath ||
+       (cast<BinaryWithFlagsSDNode>(N0)->Flags.hasUnsafeAlgebra() &&
+        cast<BinaryWithFlagsSDNode>(N1)->Flags.hasUnsafeAlgebra())) &&
+      isFMAFasterThanFMulAndFAdd(VT)) {
+    return ISD::FMA;
+  }
+
+  return 0;
+}
+
+SDValue SITargetLowering::performFAddCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  assert(!VT.isVector());
+
+  SDLoc SL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // These should really be instruction patterns, but writing patterns with
+  // source modiifiers is a pain.
+
+  // fadd (fadd (a, a), b) -> mad 2.0, a, b
+  if (LHS.getOpcode() == ISD::FADD) {
+    SDValue A = LHS.getOperand(0);
+    if (A == LHS.getOperand(1)) {
+      unsigned FusedOp = getFusedOpcode(DAG, N, LHS.getNode());
+      if (FusedOp != 0) {
+        const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
+        return DAG.getNode(FusedOp, SL, VT, A, Two, RHS);
+      }
+    }
+  }
+
+  // fadd (b, fadd (a, a)) -> mad 2.0, a, b
+  if (RHS.getOpcode() == ISD::FADD) {
+    SDValue A = RHS.getOperand(0);
+    if (A == RHS.getOperand(1)) {
+      unsigned FusedOp = getFusedOpcode(DAG, N, RHS.getNode());
+      if (FusedOp != 0) {
+        const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
+        return DAG.getNode(FusedOp, SL, VT, A, Two, LHS);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue SITargetLowering::performFSubCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+  assert(!VT.isVector());
+
+  // Try to get the fneg to fold into the source modifier. This undoes generic
+  // DAG combines and folds them into the mad.
+  //
+  // Only do this if we are not trying to support denormals. v_mad_f32 does
+  // not support denormals ever.
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (LHS.getOpcode() == ISD::FADD) {
+    // (fsub (fadd a, a), c) -> mad 2.0, a, (fneg c)
+    SDValue A = LHS.getOperand(0);
+    if (A == LHS.getOperand(1)) {
+      unsigned FusedOp = getFusedOpcode(DAG, N, LHS.getNode());
+      if (FusedOp != 0){
+        const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
+        SDValue NegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+
+        return DAG.getNode(FusedOp, SL, VT, A, Two, NegRHS);
+      }
+    }
+  }
+
+  if (RHS.getOpcode() == ISD::FADD) {
+    // (fsub c, (fadd a, a)) -> mad -2.0, a, c
+
+    SDValue A = RHS.getOperand(0);
+    if (A == RHS.getOperand(1)) {
+      unsigned FusedOp = getFusedOpcode(DAG, N, RHS.getNode());
+      if (FusedOp != 0){
+        const SDValue NegTwo = DAG.getConstantFP(-2.0, SL, VT);
+        return DAG.getNode(FusedOp, SL, VT, A, NegTwo, LHS);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -3852,14 +4016,59 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
+                                                     DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  unsigned Offset = N->getOpcode() - AMDGPUISD::CVT_F32_UBYTE0;
+
+  SDValue Src = N->getOperand(0);
+  SDValue Srl = N->getOperand(0);
+  if (Srl.getOpcode() == ISD::ZERO_EXTEND)
+    Srl = Srl.getOperand(0);
+
+  // TODO: Handle (or x, (srl y, 8)) pattern when known bits are zero.
+  if (Srl.getOpcode() == ISD::SRL) {
+    // cvt_f32_ubyte0 (srl x, 16) -> cvt_f32_ubyte2 x
+    // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
+    // cvt_f32_ubyte0 (srl x, 8) -> cvt_f32_ubyte1 x
+
+    if (const ConstantSDNode *C =
+        dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
+      Srl = DAG.getZExtOrTrunc(Srl.getOperand(0), SDLoc(Srl.getOperand(0)),
+                               EVT(MVT::i32));
+
+      unsigned SrcOffset = C->getZExtValue() + 8 * Offset;
+      if (SrcOffset < 32 && SrcOffset % 8 == 0) {
+        return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + SrcOffset / 8, SL,
+                           MVT::f32, Srl);
+      }
+    }
+  }
+
+  APInt Demanded = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
+
+  APInt KnownZero, KnownOne;
+  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                        !DCI.isBeforeLegalizeOps());
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLO.ShrinkDemandedConstant(Src, Demanded) ||
+      TLI.SimplifyDemandedBits(Src, Demanded, KnownZero, KnownOne, TLO)) {
+    DCI.CommitTargetLoweringOpt(TLO);
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-
   switch (N->getOpcode()) {
   default:
     return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
+  case ISD::FADD:
+    return performFAddCombine(N, DCI);
+  case ISD::FSUB:
+    return performFSubCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::FMAXNUM:
@@ -3874,134 +4083,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
         N->getValueType(0) != MVT::f64 &&
         getTargetMachine().getOptLevel() > CodeGenOpt::None)
       return performMinMaxCombine(N, DCI);
-    break;
-  }
-
-  case AMDGPUISD::CVT_F32_UBYTE0:
-  case AMDGPUISD::CVT_F32_UBYTE1:
-  case AMDGPUISD::CVT_F32_UBYTE2:
-  case AMDGPUISD::CVT_F32_UBYTE3: {
-    unsigned Offset = N->getOpcode() - AMDGPUISD::CVT_F32_UBYTE0;
-
-    SDValue Src = N->getOperand(0);
-    SDValue Srl = N->getOperand(0);
-    if (Srl.getOpcode() == ISD::ZERO_EXTEND)
-      Srl = Srl.getOperand(0);
-
-    // TODO: Handle (or x, (srl y, 8)) pattern when known bits are zero.
-    if (Srl.getOpcode() == ISD::SRL) {
-      // cvt_f32_ubyte0 (srl x, 16) -> cvt_f32_ubyte2 x
-      // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
-      // cvt_f32_ubyte0 (srl x, 8) -> cvt_f32_ubyte1 x
-
-      if (const ConstantSDNode *C =
-              dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
-        Srl = DAG.getZExtOrTrunc(Srl.getOperand(0), SDLoc(Srl.getOperand(0)),
-                                 EVT(MVT::i32));
-
-        unsigned SrcOffset = C->getZExtValue() + 8 * Offset;
-        if (SrcOffset < 32 && SrcOffset % 8 == 0) {
-          return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + SrcOffset / 8, DL,
-                             MVT::f32, Srl);
-        }
-      }
-    }
-
-    APInt Demanded = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
-
-    APInt KnownZero, KnownOne;
-    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                          !DCI.isBeforeLegalizeOps());
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (TLO.ShrinkDemandedConstant(Src, Demanded) ||
-        TLI.SimplifyDemandedBits(Src, Demanded, KnownZero, KnownOne, TLO)) {
-      DCI.CommitTargetLoweringOpt(TLO);
-    }
-
-    break;
-  }
-  case ISD::SINT_TO_FP:
-  case ISD::UINT_TO_FP: {
-    return performUCharToFloatCombine(N, DCI);
-  }
-  case ISD::FADD: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-      break;
-
-    EVT VT = N->getValueType(0);
-    if (VT != MVT::f32)
-      break;
-
-    // Only do this if we are not trying to support denormals. v_mad_f32 does
-    // not support denormals ever.
-    if (Subtarget->hasFP32Denormals())
-      break;
-
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-
-    // These should really be instruction patterns, but writing patterns with
-    // source modiifiers is a pain.
-
-    // fadd (fadd (a, a), b) -> mad 2.0, a, b
-    if (LHS.getOpcode() == ISD::FADD) {
-      SDValue A = LHS.getOperand(0);
-      if (A == LHS.getOperand(1)) {
-        const SDValue Two = DAG.getConstantFP(2.0, DL, MVT::f32);
-        return DAG.getNode(ISD::FMAD, DL, VT, Two, A, RHS);
-      }
-    }
-
-    // fadd (b, fadd (a, a)) -> mad 2.0, a, b
-    if (RHS.getOpcode() == ISD::FADD) {
-      SDValue A = RHS.getOperand(0);
-      if (A == RHS.getOperand(1)) {
-        const SDValue Two = DAG.getConstantFP(2.0, DL, MVT::f32);
-        return DAG.getNode(ISD::FMAD, DL, VT, Two, A, LHS);
-      }
-    }
-
-    return SDValue();
-  }
-  case ISD::FSUB: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-      break;
-
-    EVT VT = N->getValueType(0);
-
-    // Try to get the fneg to fold into the source modifier. This undoes generic
-    // DAG combines and folds them into the mad.
-    //
-    // Only do this if we are not trying to support denormals. v_mad_f32 does
-    // not support denormals ever.
-    if (VT == MVT::f32 && !Subtarget->hasFP32Denormals()) {
-      SDValue LHS = N->getOperand(0);
-      SDValue RHS = N->getOperand(1);
-      if (LHS.getOpcode() == ISD::FADD) {
-        // (fsub (fadd a, a), c) -> mad 2.0, a, (fneg c)
-
-        SDValue A = LHS.getOperand(0);
-        if (A == LHS.getOperand(1)) {
-          const SDValue Two = DAG.getConstantFP(2.0, DL, MVT::f32);
-          SDValue NegRHS = DAG.getNode(ISD::FNEG, DL, VT, RHS);
-
-          return DAG.getNode(ISD::FMAD, DL, VT, Two, A, NegRHS);
-        }
-      }
-
-      if (RHS.getOpcode() == ISD::FADD) {
-        // (fsub c, (fadd a, a)) -> mad -2.0, a, c
-
-        SDValue A = RHS.getOperand(0);
-        if (A == RHS.getOperand(1)) {
-          const SDValue NegTwo = DAG.getConstantFP(-2.0, DL, MVT::f32);
-          return DAG.getNode(ISD::FMAD, DL, VT, NegTwo, A, LHS);
-        }
-      }
-
-      return SDValue();
-    }
-
     break;
   }
   case ISD::LOAD:
@@ -4025,22 +4106,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::ATOMIC_DEC: { // TODO: Target mem intrinsics.
     if (DCI.isBeforeLegalize())
       break;
-
-    MemSDNode *MemNode = cast<MemSDNode>(N);
-    SDValue Ptr = MemNode->getBasePtr();
-
-    // TODO: We could also do this for multiplies.
-    unsigned AS = MemNode->getAddressSpace();
-    if (Ptr.getOpcode() == ISD::SHL && AS != AMDGPUAS::PRIVATE_ADDRESS) {
-      SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(), AS, DCI);
-      if (NewPtr) {
-        SmallVector<SDValue, 8> NewOps(MemNode->op_begin(), MemNode->op_end());
-
-        NewOps[N->getOpcode() == ISD::STORE ? 2 : 1] = NewPtr;
-        return SDValue(DAG.UpdateNodeOperands(MemNode, NewOps), 0);
-      }
-    }
-    break;
+    return performMemSDNodeCombine(cast<MemSDNode>(N), DCI);
   }
   case ISD::AND:
     return performAndCombine(N, DCI);
@@ -4064,6 +4130,14 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
       return Src;
     break;
   }
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    return performUCharToFloatCombine(N, DCI);
+  case AMDGPUISD::CVT_F32_UBYTE0:
+  case AMDGPUISD::CVT_F32_UBYTE1:
+  case AMDGPUISD::CVT_F32_UBYTE2:
+  case AMDGPUISD::CVT_F32_UBYTE3:
+    return performCvtF32UByteNCombine(N, DCI);
   }
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }

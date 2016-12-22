@@ -40,6 +40,9 @@ public:
   
   bool isValid() const { return U && Die; }
   explicit operator bool() const { return isValid(); }
+  bool operator ==(const DWARFDie &RHS) const {
+    return Die == RHS.Die && U == RHS.U;
+  }
   const DWARFDebugInfoEntry *getDebugInfoEntry() const { return Die; }
   DWARFUnit *getDwarfUnit() const { return U; }
 
@@ -82,23 +85,26 @@ public:
   /// Returns true if DIE represents a subprogram or an inlined subroutine.
   bool isSubroutineDIE() const;
 
-
-  /// Get the silbing of this DIE object.
+  /// Get the parent of this DIE object.
+  ///
+  /// \returns a valid DWARFDie instance if this object has a parent or an
+  /// invalid DWARFDie instance if it doesn't.
+  DWARFDie getParent() const;
+  
+  /// Get the sibling of this DIE object.
   ///
   /// \returns a valid DWARFDie instance if this object has a sibling or an
   /// invalid DWARFDie instance if it doesn't.
-  DWARFDie getSibling() const {
-    assert(isValid() && "must check validity prior to calling");
-    return DWARFDie(U, Die->getSibling());
-  }
+  DWARFDie getSibling() const;
   
   /// Get the first child of this DIE object.
   ///
   /// \returns a valid DWARFDie instance if this object has children or an
   /// invalid DWARFDie instance if it doesn't.
   DWARFDie getFirstChild() const {
-    assert(isValid() && "must check validity prior to calling");
-    return DWARFDie(U, Die->getFirstChild());
+    if (isValid() && Die->hasChildren())
+      return DWARFDie(U, Die + 1);
+    return DWARFDie();
   }
   
   /// Dump the DIE and all of its attributes to the supplied stream.

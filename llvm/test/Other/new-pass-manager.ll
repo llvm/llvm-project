@@ -20,8 +20,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS
 ; CHECK-CGSCC-PASS: Starting llvm::Module pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}}>
-; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}}>
+; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}},{{.*}}Module>
+; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
@@ -329,27 +329,95 @@
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O0>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O0
+; CHECK-O0: Starting llvm::Module pass manager run
+; CHECK-O0-NEXT: Finished llvm::Module pass manager run
+
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O1>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O2>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<Os>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Os
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<Oz>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Oz
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto-pre-link<O2>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-O2
-; CHECK-O2: Starting llvm::Module pass manager run
-; CHECK-O2: Running pass: SimplifyCFGPass
-; CHECK-O2: Running pass: SROA
-; CHECK-O2: Running pass: EarlyCSEPass
-; CHECK-O2: Running pass: LowerExpectIntrinsicPass
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2
+; CHECK-O: Starting llvm::Module pass manager run
+; CHECK-O: Starting llvm::Module pass manager run
+; CHECK-O: Running pass: ForceFunctionAttrsPass
+; CHECK-O: Running pass: InferFunctionAttrsPass
+; CHECK-O: Starting llvm::Function pass manager run.
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: SROA
+; CHECK-O: Running pass: EarlyCSEPass
+; CHECK-O: Running pass: LowerExpectIntrinsicPass
+; CHECK-O: Running pass: GVNHoistPass
+; CHECK-O: Finished llvm::Function pass manager run.
+; CHECK-O: Running pass: IPSCCPPass
+; CHECK-O: Running pass: GlobalOptPass
+; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PromotePass>
+; CHECK-O: Running pass: DeadArgumentEliminationPass
+; CHECK-O: Starting llvm::Function pass manager run.
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Finished llvm::Function pass manager run.
+; CHECK-O: Starting CGSCC pass manager run.
+; CHECK-O: Starting llvm::Function pass manager run.
+; CHECK-O: Running pass: SROA
+; CHECK-O: Running pass: EarlyCSEPass
+; CHECK-O: Running pass: SpeculativeExecutionPass
+; CHECK-O: Running pass: JumpThreadingPass
+; CHECK-O: Running pass: CorrelatedValuePropagationPass
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O1: Running pass: LibCallsShrinkWrapPass
+; CHECK-O2: Running pass: LibCallsShrinkWrapPass
+; CHECK-Os-NOT: Running pass: LibCallsShrinkWrapPass
+; CHECK-Oz-NOT: Running pass: LibCallsShrinkWrapPass
+; CHECK-O: Running pass: TailCallElimPass
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: ReassociatePass
+; CHECK-O: Starting llvm::Loop pass manager run.
+; CHECK-O: Running pass: LoopRotatePass
+; CHECK-O: Running pass: LICMPass
+; CHECK-O: Finished llvm::Loop pass manager run.
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Starting llvm::Loop pass manager run.
+; CHECK-O: Finished llvm::Loop pass manager run.
+; CHECK-O: Running pass: MemCpyOptPass
+; CHECK-O: Running pass: SCCPPass
+; CHECK-O: Running pass: BDCEPass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Running pass: JumpThreadingPass
+; CHECK-O: Running pass: CorrelatedValuePropagationPass
+; CHECK-O: Running pass: DSEPass
+; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass>
+; CHECK-O: Running pass: ADCEPass
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Finished llvm::Function pass manager run.
+; CHECK-O: Finished CGSCC pass manager run.
+; CHECK-O: Running pass: EliminateAvailableExternallyPass
+; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
+; CHECK-O: Starting llvm::Function pass manager run.
+; CHECK-O: Running pass: Float2IntPass
+; CHECK-O: Running pass: LoopDistributePass
+; CHECK-O: Running pass: LoopVectorizePass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Running pass: SLPVectorizerPass
+; CHECK-O: Running pass: SimplifyCFGPass
+; CHECK-O: Running pass: InstCombinePass
+; CHECK-O: Running pass: AlignmentFromAssumptionsPass
+; CHECK-O: Finished llvm::Function pass manager run.
+; CHECK-O: Running pass: GlobalDCEPass
+; CHECK-O: Running pass: ConstantMergePass
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto<O2>' %s 2>&1 \
@@ -379,8 +447,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-CGSCC-PASS
 ; CHECK-REPEAT-CGSCC-PASS: Starting llvm::Module pass manager run
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}}>
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}}>
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}},{{.*}}Module>
+; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Starting CGSCC pass manager run
@@ -428,6 +496,10 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run

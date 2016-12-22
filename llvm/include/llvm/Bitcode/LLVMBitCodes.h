@@ -213,6 +213,8 @@ enum GlobalValueSummarySymtabCodes {
   FS_COMBINED_ORIGINAL_NAME = 9,
   // VERSION of the summary, bumped when adding flags for instance.
   FS_VERSION = 10,
+  // The list of llvm.type.test type identifiers used by the following function.
+  FS_TYPE_TESTS = 11,
 };
 
 enum MetadataCodes {

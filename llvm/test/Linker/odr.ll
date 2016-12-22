@@ -3,16 +3,20 @@
 ; RUN: llvm-as %p/Inputs/odr.ll -o %t2.bc
 ; Check that we can link it
 ; RUN: llvm-link %t1.bc %t2.bc -o %t
-@bar = global i64 0, align 8, !dbg !6
+source_filename = "test/Linker/odr.ll"
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!7}
+@bar = global i64 0, align 8, !dbg !0
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, retainedTypes: !2, globals: !5)
-!1 = !DIFile(filename: "a", directory: "")
-!2 = !{!3}
-!3 = distinct !DICompositeType(tag: DW_TAG_class_type, scope: !4, file: !1, identifier: "zed")
-!4 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
-!5 = !{!6}
-!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true))
-!7 = !{i32 2, !"Debug Info Version", i32 3}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!8}
+
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "c", scope: null, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, retainedTypes: !4, globals: !7)
+!3 = !DIFile(filename: "a", directory: "")
+!4 = !{!5}
+!5 = distinct !DICompositeType(tag: DW_TAG_class_type, scope: !6, file: !3, identifier: "zed")
+!6 = distinct !DISubprogram(name: "b", scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !2)
+!7 = !{!0}
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+

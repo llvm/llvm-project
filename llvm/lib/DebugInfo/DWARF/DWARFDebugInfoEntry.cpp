@@ -26,13 +26,13 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
                                              uint32_t *OffsetPtr) {
   DataExtractor DebugInfoData = U.getDebugInfoExtractor();
   const uint32_t UEndOffset = U.getNextUnitOffset();
-  return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset);
+  return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset, 0);
 }
-bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
-                                             uint32_t *OffsetPtr,
-                                             const DataExtractor &DebugInfoData,
-                                             uint32_t UEndOffset) {
+bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint32_t *OffsetPtr,
+                                      const DataExtractor &DebugInfoData,
+                                      uint32_t UEndOffset, uint32_t D) {
   Offset = *OffsetPtr;
+  Depth = D;
   if (Offset >= UEndOffset || !DebugInfoData.isValidOffset(Offset))
     return false;
   uint64_t AbbrCode = DebugInfoData.getULEB128(OffsetPtr);

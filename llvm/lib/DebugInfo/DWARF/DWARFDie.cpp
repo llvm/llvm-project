@@ -428,3 +428,14 @@ void DWARFDie::getInlinedChainForAddress(
   std::reverse(InlinedChain.begin(), InlinedChain.end());
 }
 
+DWARFDie DWARFDie::getParent() const {
+  if (isValid())
+    return U->getParent(Die);
+  return DWARFDie();
+}
+
+DWARFDie DWARFDie::getSibling() const {
+  if (isValid())
+    return U->getSibling(Die);
+  return DWARFDie();
+}

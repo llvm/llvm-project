@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopPassManager.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -16,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 
@@ -146,6 +150,12 @@ TEST_F(LoopPassManagerTest, Basic) {
   // We need DominatorTreeAnalysis for LoopAnalysis.
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return LoopAnalysis(); });
+  // We also allow loop passes to assume a set of other analyses and so need
+  // those.
+  FAM.registerPass([&] { return AAManager(); });
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return ScalarEvolutionAnalysis(); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
   LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
 

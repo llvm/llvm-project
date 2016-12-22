@@ -408,6 +408,8 @@ static void operator<<(JSONWriter &W,
 
     for (const auto &P : PointsByFn) {
       std::string FunctionName = P.first;
+      std::set<std::string> WrittenIds;
+
       ByFn->key(FunctionName);
 
       // Output <point_id> : "<line>:<col>".
@@ -416,7 +418,10 @@ static void operator<<(JSONWriter &W,
         for (const auto &Loc : Point->Locs) {
           if (Loc.FileName != FileName || Loc.FunctionName != FunctionName)
             continue;
+          if (WrittenIds.find(Point->Id) != WrittenIds.end())
+            continue;
 
+          WrittenIds.insert(Point->Id);
           ById->key(Point->Id);
           W << (utostr(Loc.Line) + ":" + utostr(Loc.Column));
         }
@@ -1079,8 +1084,7 @@ merge(const std::vector<std::unique_ptr<SymbolizedCoverage>> &Coverages) {
     std::string Prefix;
     if (Coverages.size() > 1) {
       // prefix is not needed when there's only one file.
-      Prefix =
-          (Coverage.BinaryHash.size() ? Coverage.BinaryHash : utostr(I)) + ":";
+      Prefix = utostr(I);
     }
 
     for (const auto &Id : Coverage.CoveredIds) {

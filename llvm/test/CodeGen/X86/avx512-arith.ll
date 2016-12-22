@@ -90,41 +90,38 @@ entry:
 define <8 x i64> @imulq512(<8 x i64> %y, <8 x i64> %x) {
 ; AVX512F-LABEL: imulq512:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; AVX512F-NEXT:    vpmuludq %zmm0, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpsrlq $32, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
-; AVX512F-NEXT:    vpsllq $32, %zmm3, %zmm3
-; AVX512F-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512F-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX512F-NEXT:    vpsllq $32, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
-; AVX512F-NEXT:    vpsllq $32, %zmm0, %zmm0
-; AVX512F-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
-; AVX512F-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512F-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: imulq512:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpmuludq %zmm0, %zmm2, %zmm2
 ; AVX512VL-NEXT:    vpsrlq $32, %zmm0, %zmm3
 ; AVX512VL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
-; AVX512VL-NEXT:    vpsllq $32, %zmm3, %zmm3
-; AVX512VL-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX512VL-NEXT:    vpsllq $32, %zmm2, %zmm2
 ; AVX512VL-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vpsllq $32, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
-; AVX512VL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: imulq512:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpmuludq %zmm0, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpsrlq $32, %zmm0, %zmm3
 ; AVX512BW-NEXT:    vpmuludq %zmm3, %zmm1, %zmm3
-; AVX512BW-NEXT:    vpsllq $32, %zmm3, %zmm3
-; AVX512BW-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX512BW-NEXT:    vpsllq $32, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpsllq $32, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
-; AVX512BW-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: imulq512:
@@ -143,41 +140,38 @@ define <8 x i64> @imulq512(<8 x i64> %y, <8 x i64> %x) {
 define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 ; AVX512F-LABEL: imulq256:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpmuludq %ymm0, %ymm1, %ymm2
+; AVX512F-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX512F-NEXT:    vpmuludq %ymm0, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm3
 ; AVX512F-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
-; AVX512F-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX512F-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vpsllq $32, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX512F-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: imulq256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmuludq %ymm0, %ymm1, %ymm2
+; AVX512VL-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX512VL-NEXT:    vpmuludq %ymm0, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpsrlq $32, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
-; AVX512VL-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; AVX512VL-NEXT:    vpsllq $32, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX512VL-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: imulq256:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpmuludq %ymm0, %ymm1, %ymm2
+; AVX512BW-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX512BW-NEXT:    vpmuludq %ymm0, %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpsrlq $32, %ymm0, %ymm3
 ; AVX512BW-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
-; AVX512BW-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX512BW-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX512BW-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; AVX512BW-NEXT:    vpsllq $32, %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpmuludq %ymm0, %ymm1, %ymm0
-; AVX512BW-NEXT:    vpsllq $32, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
-; AVX512BW-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512BW-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: imulq256:
@@ -199,41 +193,38 @@ define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ; AVX512F-LABEL: imulq128:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vpmuludq %xmm0, %xmm1, %xmm2
+; AVX512F-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX512F-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; AVX512F-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; AVX512F-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX512F-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; AVX512F-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX512F-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; AVX512F-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512F-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
-; AVX512F-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: imulq128:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmuludq %xmm0, %xmm1, %xmm2
+; AVX512VL-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX512VL-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; AVX512VL-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX512VL-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX512VL-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: imulq128:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vpmuludq %xmm0, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpsrlq $32, %xmm1, %xmm2
+; AVX512BW-NEXT:    vpmuludq %xmm0, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm3
 ; AVX512BW-NEXT:    vpmuludq %xmm3, %xmm1, %xmm3
-; AVX512BW-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX512BW-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX512BW-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vpmuludq %xmm0, %xmm1, %xmm0
-; AVX512BW-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
-; AVX512BW-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512BW-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: imulq128:

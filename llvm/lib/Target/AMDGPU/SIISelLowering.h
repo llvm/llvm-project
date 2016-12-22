@@ -37,6 +37,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFDIV16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV64(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
@@ -68,6 +69,8 @@ class SITargetLowering final : public AMDGPUTargetLowering {
                                unsigned AS,
                                DAGCombinerInfo &DCI) const;
 
+  SDValue performMemSDNodeCombine(MemSDNode *N, DAGCombinerInfo &DCI) const;
+
   SDValue splitBinaryBitConstantOp(DAGCombinerInfo &DCI, const SDLoc &SL,
                                    unsigned Opc, SDValue LHS,
                                    const ConstantSDNode *CRHS) const;
@@ -80,7 +83,12 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 
   SDValue performMinMaxCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  unsigned getFusedOpcode(const SelectionDAG &DAG,
+                          const SDNode *N0, const SDNode *N1) const;
+  SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSetCCCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performCvtF32UByteNCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   bool isLegalFlatAddressingMode(const AddrMode &AM) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
