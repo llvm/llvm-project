@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus -analyzer-store=region -verify %s
+// RUN: %clang_cc1 -std=c++11 -analyze -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus -analyzer-store=region -verify %s
 // expected-no-diagnostics
 #include "Inputs/qt-simulator.h"
 
@@ -12,4 +12,10 @@ void send(QObject *obj)
   QCoreApplication::postEvent(obj, e3);
   QEvent *e4 = new QEvent(QEvent::None);
   QApplication::postEvent(obj, e4);
+}
+
+void connect(QObject *obj) {
+  obj->connectImpl(nullptr, nullptr, nullptr, nullptr,
+                   new QtPrivate::QSlotObjectBase(), (Qt::ConnectionType)0,
+                   nullptr, nullptr);
 }
