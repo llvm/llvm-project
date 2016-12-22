@@ -109,19 +109,57 @@ namespace {
     return getAsBaseOrMember(E).getInt();
   }
 
+  /// Given a CallExpr, try to get the alloc_size attribute. May return null.
+  static const AllocSizeAttr *getAllocSizeAttr(const CallExpr *CE) {
+    const FunctionDecl *Callee = CE->getDirectCallee();
+    return Callee ? Callee->getAttr<AllocSizeAttr>() : nullptr;
+  }
+
+  /// Attempts to unwrap a CallExpr (with an alloc_size attribute) from an Expr.
+  /// This will look through a single cast.
+  ///
+  /// Returns null if we couldn't unwrap a function with alloc_size.
+  static const CallExpr *tryUnwrapAllocSizeCall(const Expr *E) {
+    if (!E->getType()->isPointerType())
+      return nullptr;
+
+    E = E->IgnoreParens();
+    // If we're doing a variable assignment from e.g. malloc(N), there will
+    // probably be a cast of some kind. Ignore it.
+    if (const auto *Cast = dyn_cast<CastExpr>(E))
+      E = Cast->getSubExpr()->IgnoreParens();
+
+    if (const auto *CE = dyn_cast<CallExpr>(E))
+      return getAllocSizeAttr(CE) ? CE : nullptr;
+    return nullptr;
+  }
+
+  /// Determines whether or not the given Base contains a call to a function
+  /// with the alloc_size attribute.
+  static bool isBaseAnAllocSizeCall(APValue::LValueBase Base) {
+    const auto *E = Base.dyn_cast<const Expr *>();
+    return E && E->getType()->isPointerType() && tryUnwrapAllocSizeCall(E);
+  }
+
+  /// Determines if an LValue with the given LValueBase will have an unsized
+  /// array in its designator.
   /// Find the path length and type of the most-derived subobject in the given
   /// path, and find the size of the containing array, if any.
-  static
-  unsigned findMostDerivedSubobject(ASTContext &Ctx, QualType Base,
-                                    ArrayRef<APValue::LValuePathEntry> Path,
-                                    uint64_t &ArraySize, QualType &Type,
-                                    bool &IsArray) {
+  static unsigned
+  findMostDerivedSubobject(ASTContext &Ctx, APValue::LValueBase Base,
+                           ArrayRef<APValue::LValuePathEntry> Path,
+                           uint64_t &ArraySize, QualType &Type, bool &IsArray) {
+    // This only accepts LValueBases from APValues, and APValues don't support
+    // arrays that lack size info.
+    assert(!isBaseAnAllocSizeCall(Base) &&
+           "Unsized arrays shouldn't appear here");
     unsigned MostDerivedLength = 0;
-    Type = Base;
+    Type = getType(Base);
+
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
       if (Type->isArrayType()) {
         const ConstantArrayType *CAT =
-          cast<ConstantArrayType>(Ctx.getAsArrayType(Type));
+            cast<ConstantArrayType>(Ctx.getAsArrayType(Type));
         Type = CAT->getElementType();
         ArraySize = CAT->getSize().getZExtValue();
         MostDerivedLength = I + 1;
@@ -162,17 +200,23 @@ namespace {
     /// Is this a pointer one past the end of an object?
     unsigned IsOnePastTheEnd : 1;
 
+    /// Indicator of whether the first entry is an unsized array.
+    unsigned FirstEntryIsAnUnsizedArray : 1;
+
     /// Indicator of whether the most-derived object is an array element.
     unsigned MostDerivedIsArrayElement : 1;
 
     /// The length of the path to the most-derived object of which this is a
     /// subobject.
-    unsigned MostDerivedPathLength : 29;
+    unsigned MostDerivedPathLength : 28;
 
     /// The size of the array of which the most-derived object is an element.
     /// This will always be 0 if the most-derived object is not an array
     /// element. 0 is not an indicator of whether or not the most-derived object
     /// is an array, however, because 0-length arrays are allowed.
+    ///
+    /// If the current array is an unsized array, the value of this is
+    /// undefined.
     uint64_t MostDerivedArraySize;
 
     /// The type of the most derived object referred to by this address.
@@ -187,23 +231,24 @@ namespace {
 
     explicit SubobjectDesignator(QualType T)
         : Invalid(false), IsOnePastTheEnd(false),
-          MostDerivedIsArrayElement(false), MostDerivedPathLength(0),
-          MostDerivedArraySize(0), MostDerivedType(T) {}
+          FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
+          MostDerivedPathLength(0), MostDerivedArraySize(0),
+          MostDerivedType(T) {}
 
     SubobjectDesignator(ASTContext &Ctx, const APValue &V)
         : Invalid(!V.isLValue() || !V.hasLValuePath()), IsOnePastTheEnd(false),
-          MostDerivedIsArrayElement(false), MostDerivedPathLength(0),
-          MostDerivedArraySize(0) {
+          FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
+          MostDerivedPathLength(0), MostDerivedArraySize(0) {
+      assert(V.isLValue() && "Non-LValue used to make an LValue designator?");
       if (!Invalid) {
         IsOnePastTheEnd = V.isLValueOnePastTheEnd();
         ArrayRef<PathEntry> VEntries = V.getLValuePath();
         Entries.insert(Entries.end(), VEntries.begin(), VEntries.end());
         if (V.getLValueBase()) {
           bool IsArray = false;
-          MostDerivedPathLength =
-              findMostDerivedSubobject(Ctx, getType(V.getLValueBase()),
-                                       V.getLValuePath(), MostDerivedArraySize,
-                                       MostDerivedType, IsArray);
+          MostDerivedPathLength = findMostDerivedSubobject(
+              Ctx, V.getLValueBase(), V.getLValuePath(), MostDerivedArraySize,
+              MostDerivedType, IsArray);
           MostDerivedIsArrayElement = IsArray;
         }
       }
@@ -214,12 +259,26 @@ namespace {
       Entries.clear();
     }
 
+    /// Determine whether the most derived subobject is an array without a
+    /// known bound.
+    bool isMostDerivedAnUnsizedArray() const {
+      assert(!Invalid && "Calling this makes no sense on invalid designators");
+      return Entries.size() == 1 && FirstEntryIsAnUnsizedArray;
+    }
+
+    /// Determine what the most derived array's size is. Results in an assertion
+    /// failure if the most derived array lacks a size.
+    uint64_t getMostDerivedArraySize() const {
+      assert(!isMostDerivedAnUnsizedArray() && "Unsized array has no size");
+      return MostDerivedArraySize;
+    }
+
     /// Determine whether this is a one-past-the-end pointer.
     bool isOnePastTheEnd() const {
       assert(!Invalid);
       if (IsOnePastTheEnd)
         return true;
-      if (MostDerivedIsArrayElement &&
+      if (!isMostDerivedAnUnsizedArray() && MostDerivedIsArrayElement &&
           Entries[MostDerivedPathLength - 1].ArrayIndex == MostDerivedArraySize)
         return true;
       return false;
@@ -245,6 +304,21 @@ namespace {
       MostDerivedType = CAT->getElementType();
       MostDerivedIsArrayElement = true;
       MostDerivedArraySize = CAT->getSize().getZExtValue();
+      MostDerivedPathLength = Entries.size();
+    }
+    /// Update this designator to refer to the first element within the array of
+    /// elements of type T. This is an array of unknown size.
+    void addUnsizedArrayUnchecked(QualType ElemTy) {
+      PathEntry Entry;
+      Entry.ArrayIndex = 0;
+      Entries.push_back(Entry);
+
+      MostDerivedType = ElemTy;
+      MostDerivedIsArrayElement = true;
+      // The value in MostDerivedArraySize is undefined in this case. So, set it
+      // to an arbitrary value that's likely to loudly break things if it's
+      // used.
+      MostDerivedArraySize = std::numeric_limits<uint64_t>::max() / 2;
       MostDerivedPathLength = Entries.size();
     }
     /// Update this designator to refer to the given base or member of this
@@ -280,10 +354,16 @@ namespace {
     /// Add N to the address of this subobject.
     void adjustIndex(EvalInfo &Info, const Expr *E, uint64_t N) {
       if (Invalid) return;
+      if (isMostDerivedAnUnsizedArray()) {
+        // Can't verify -- trust that the user is doing the right thing (or if
+        // not, trust that the caller will catch the bad behavior).
+        Entries.back().ArrayIndex += N;
+        return;
+      }
       if (MostDerivedPathLength == Entries.size() &&
           MostDerivedIsArrayElement) {
         Entries.back().ArrayIndex += N;
-        if (Entries.back().ArrayIndex > MostDerivedArraySize) {
+        if (Entries.back().ArrayIndex > getMostDerivedArraySize()) {
           diagnosePointerArithmetic(Info, E, Entries.back().ArrayIndex);
           setInvalid();
         }
@@ -524,9 +604,15 @@ namespace {
       /// gets a chance to look at it.
       EM_PotentialConstantExpressionUnevaluated,
 
-      /// Evaluate as a constant expression. Continue evaluating if we find a
-      /// MemberExpr with a base that can't be evaluated.
-      EM_DesignatorFold,
+      /// Evaluate as a constant expression. Continue evaluating if either:
+      /// - We find a MemberExpr with a base that can't be evaluated.
+      /// - We find a variable initialized with a call to a function that has
+      ///   the alloc_size attribute on it.
+      /// In either case, the LValue returned shall have an invalid base; in the
+      /// former, the base will be the invalid MemberExpr, in the latter, the
+      /// base will be either the alloc_size CallExpr or a CastExpr wrapping
+      /// said CallExpr.
+      EM_OffsetFold,
     } EvalMode;
 
     /// Are we checking whether the expression is a potential constant
@@ -628,7 +714,7 @@ namespace {
           case EM_PotentialConstantExpression:
           case EM_ConstantExpressionUnevaluated:
           case EM_PotentialConstantExpressionUnevaluated:
-          case EM_DesignatorFold:
+          case EM_OffsetFold:
             HasActiveDiagnostic = false;
             return OptionalDiagnostic();
           }
@@ -720,7 +806,7 @@ namespace {
       case EM_ConstantExpression:
       case EM_ConstantExpressionUnevaluated:
       case EM_ConstantFold:
-      case EM_DesignatorFold:
+      case EM_OffsetFold:
         return false;
       }
       llvm_unreachable("Missed EvalMode case");
@@ -739,7 +825,7 @@ namespace {
       case EM_EvaluateForOverflow:
       case EM_IgnoreSideEffects:
       case EM_ConstantFold:
-      case EM_DesignatorFold:
+      case EM_OffsetFold:
         return true;
 
       case EM_PotentialConstantExpression:
@@ -775,7 +861,7 @@ namespace {
       case EM_ConstantExpressionUnevaluated:
       case EM_ConstantFold:
       case EM_IgnoreSideEffects:
-      case EM_DesignatorFold:
+      case EM_OffsetFold:
         return false;
       }
       llvm_unreachable("Missed EvalMode case");
@@ -805,7 +891,7 @@ namespace {
     }
 
     bool allowInvalidBaseExpr() const {
-      return EvalMode == EM_DesignatorFold;
+      return EvalMode == EM_OffsetFold;
     }
 
     class ArrayInitLoopIndex {
@@ -856,11 +942,10 @@ namespace {
   struct FoldOffsetRAII {
     EvalInfo &Info;
     EvalInfo::EvaluationMode OldMode;
-    explicit FoldOffsetRAII(EvalInfo &Info, bool Subobject)
+    explicit FoldOffsetRAII(EvalInfo &Info)
         : Info(Info), OldMode(Info.EvalMode) {
       if (!Info.checkingPotentialConstantExpression())
-        Info.EvalMode = Subobject ? EvalInfo::EM_DesignatorFold
-                                  : EvalInfo::EM_ConstantFold;
+        Info.EvalMode = EvalInfo::EM_OffsetFold;
     }
 
     ~FoldOffsetRAII() { Info.EvalMode = OldMode; }
@@ -966,10 +1051,12 @@ bool SubobjectDesignator::checkSubobject(EvalInfo &Info, const Expr *E,
 
 void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
                                                     const Expr *E, uint64_t N) {
+  // If we're complaining, we must be able to statically determine the size of
+  // the most derived array.
   if (MostDerivedPathLength == Entries.size() && MostDerivedIsArrayElement)
     Info.CCEDiag(E, diag::note_constexpr_array_index)
       << static_cast<int>(N) << /*array*/ 0
-      << static_cast<unsigned>(MostDerivedArraySize);
+      << static_cast<unsigned>(getMostDerivedArraySize());
   else
     Info.CCEDiag(E, diag::note_constexpr_array_index)
       << static_cast<int>(N) << /*non-array*/ 1;
@@ -1102,12 +1189,16 @@ namespace {
       if (Designator.Invalid)
         V = APValue(Base, Offset, APValue::NoLValuePath(), CallIndex,
                     IsNullPtr);
-      else
+      else {
+        assert(!InvalidBase && "APValues can't handle invalid LValue bases");
+        assert(!Designator.FirstEntryIsAnUnsizedArray &&
+               "Unsized array with a valid base?");
         V = APValue(Base, Offset, Designator.Entries,
                     Designator.IsOnePastTheEnd, CallIndex, IsNullPtr);
+      }
     }
     void setFrom(ASTContext &Ctx, const APValue &V) {
-      assert(V.isLValue());
+      assert(V.isLValue() && "Setting LValue from a non-LValue?");
       Base = V.getLValueBase();
       Offset = V.getLValueOffset();
       InvalidBase = false;
@@ -1118,6 +1209,15 @@ namespace {
 
     void set(APValue::LValueBase B, unsigned I = 0, bool BInvalid = false,
              bool IsNullPtr_ = false, uint64_t Offset_ = 0) {
+#ifndef NDEBUG
+      // We only allow a few types of invalid bases. Enforce that here.
+      if (BInvalid) {
+        const auto *E = B.get<const Expr *>();
+        assert((isa<MemberExpr>(E) || tryUnwrapAllocSizeCall(E)) &&
+               "Unexpected type of invalid base");
+      }
+#endif
+
       Base = B;
       Offset = CharUnits::fromQuantity(Offset_);
       InvalidBase = BInvalid;
@@ -1156,6 +1256,13 @@ namespace {
                  const Decl *D, bool Virtual = false) {
       if (checkSubobject(Info, E, isa<FieldDecl>(D) ? CSK_Field : CSK_Base))
         Designator.addDeclUnchecked(D, Virtual);
+    }
+    void addUnsizedArray(EvalInfo &Info, QualType ElemTy) {
+      assert(Designator.Entries.empty() && getType(Base)->isPointerType());
+      assert(isBaseAnAllocSizeCall(Base) &&
+             "Only alloc_size bases can have unsized arrays");
+      Designator.FirstEntryIsAnUnsizedArray = true;
+      Designator.addUnsizedArrayUnchecked(ElemTy);
     }
     void addArray(EvalInfo &Info, const Expr *E, const ConstantArrayType *CAT) {
       if (checkSubobject(Info, E, CSK_ArrayToPointer))
@@ -2796,7 +2903,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         // All the remaining cases only permit reading.
         Info.FFDiag(E, diag::note_constexpr_modify_global);
         return CompleteObject();
-      } else if (VD->isConstexpr()) {
+      } else if (VD->isConstexpr() || BaseType.isConstQualified()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
         // In OpenCL if a variable is in constant address space it is a const value.
@@ -5079,6 +5186,105 @@ bool LValueExprEvaluator::VisitBinAssign(const BinaryOperator *E) {
 // Pointer Evaluation
 //===----------------------------------------------------------------------===//
 
+/// \brief Attempts to compute the number of bytes available at the pointer
+/// returned by a function with the alloc_size attribute. Returns true if we
+/// were successful. Places an unsigned number into `Result`.
+///
+/// This expects the given CallExpr to be a call to a function with an
+/// alloc_size attribute.
+static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
+                                            const CallExpr *Call,
+                                            llvm::APInt &Result) {
+  const AllocSizeAttr *AllocSize = getAllocSizeAttr(Call);
+
+  // alloc_size args are 1-indexed, 0 means not present.
+  assert(AllocSize && AllocSize->getElemSizeParam() != 0);
+  unsigned SizeArgNo = AllocSize->getElemSizeParam() - 1;
+  unsigned BitsInSizeT = Ctx.getTypeSize(Ctx.getSizeType());
+  if (Call->getNumArgs() <= SizeArgNo)
+    return false;
+
+  auto EvaluateAsSizeT = [&](const Expr *E, APSInt &Into) {
+    if (!E->EvaluateAsInt(Into, Ctx, Expr::SE_AllowSideEffects))
+      return false;
+    if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
+      return false;
+    Into = Into.zextOrSelf(BitsInSizeT);
+    return true;
+  };
+
+  APSInt SizeOfElem;
+  if (!EvaluateAsSizeT(Call->getArg(SizeArgNo), SizeOfElem))
+    return false;
+
+  if (!AllocSize->getNumElemsParam()) {
+    Result = std::move(SizeOfElem);
+    return true;
+  }
+
+  APSInt NumberOfElems;
+  // Argument numbers start at 1
+  unsigned NumArgNo = AllocSize->getNumElemsParam() - 1;
+  if (!EvaluateAsSizeT(Call->getArg(NumArgNo), NumberOfElems))
+    return false;
+
+  bool Overflow;
+  llvm::APInt BytesAvailable = SizeOfElem.umul_ov(NumberOfElems, Overflow);
+  if (Overflow)
+    return false;
+
+  Result = std::move(BytesAvailable);
+  return true;
+}
+
+/// \brief Convenience function. LVal's base must be a call to an alloc_size
+/// function.
+static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
+                                            const LValue &LVal,
+                                            llvm::APInt &Result) {
+  assert(isBaseAnAllocSizeCall(LVal.getLValueBase()) &&
+         "Can't get the size of a non alloc_size function");
+  const auto *Base = LVal.getLValueBase().get<const Expr *>();
+  const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
+  return getBytesReturnedByAllocSizeCall(Ctx, CE, Result);
+}
+
+/// \brief Attempts to evaluate the given LValueBase as the result of a call to
+/// a function with the alloc_size attribute. If it was possible to do so, this
+/// function will return true, make Result's Base point to said function call,
+/// and mark Result's Base as invalid.
+static bool evaluateLValueAsAllocSize(EvalInfo &Info, APValue::LValueBase Base,
+                                      LValue &Result) {
+  if (!Info.allowInvalidBaseExpr() || Base.isNull())
+    return false;
+
+  // Because we do no form of static analysis, we only support const variables.
+  //
+  // Additionally, we can't support parameters, nor can we support static
+  // variables (in the latter case, use-before-assign isn't UB; in the former,
+  // we have no clue what they'll be assigned to).
+  const auto *VD =
+      dyn_cast_or_null<VarDecl>(Base.dyn_cast<const ValueDecl *>());
+  if (!VD || !VD->isLocalVarDecl() || !VD->getType().isConstQualified())
+    return false;
+
+  const Expr *Init = VD->getAnyInitializer();
+  if (!Init)
+    return false;
+
+  const Expr *E = Init->IgnoreParens();
+  if (!tryUnwrapAllocSizeCall(E))
+    return false;
+
+  // Store E instead of E unwrapped so that the type of the LValue's base is
+  // what the user wanted.
+  Result.setInvalid(E);
+
+  QualType Pointee = E->getType()->castAs<PointerType>()->getPointeeType();
+  Result.addUnsizedArray(Info, Pointee);
+  return true;
+}
+
 namespace {
 class PointerExprEvaluator
   : public ExprEvaluatorBase<PointerExprEvaluator> {
@@ -5088,6 +5294,8 @@ class PointerExprEvaluator
     Result.set(E);
     return true;
   }
+
+  bool visitNonBuiltinCallExpr(const CallExpr *E);
 public:
 
   PointerExprEvaluator(EvalInfo &info, LValue &Result)
@@ -5270,6 +5478,19 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
 
   case CK_FunctionToPointerDecay:
     return EvaluateLValue(SubExpr, Result, Info);
+
+  case CK_LValueToRValue: {
+    LValue LVal;
+    if (!EvaluateLValue(E->getSubExpr(), LVal, Info))
+      return false;
+
+    APValue RVal;
+    // Note, we use the subexpression's type in order to retain cv-qualifiers.
+    if (!handleLValueToRValueConversion(Info, E, E->getSubExpr()->getType(),
+                                        LVal, RVal))
+      return evaluateLValueAsAllocSize(Info, LVal.Base, Result);
+    return Success(RVal, E);
+  }
   }
 
   return ExprEvaluatorBaseTy::VisitCastExpr(E);
@@ -5307,6 +5528,20 @@ static CharUnits GetAlignOfExpr(EvalInfo &Info, const Expr *E) {
   return GetAlignOfType(Info, E->getType());
 }
 
+// To be clear: this happily visits unsupported builtins. Better name welcomed.
+bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
+  if (ExprEvaluatorBaseTy::VisitCallExpr(E))
+    return true;
+
+  if (!(Info.allowInvalidBaseExpr() && getAllocSizeAttr(E)))
+    return false;
+
+  Result.setInvalid(E);
+  QualType PointeeTy = E->getType()->castAs<PointerType>()->getPointeeType();
+  Result.addUnsizedArray(Info, PointeeTy);
+  return true;
+}
+
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (IsStringLiteralCall(E))
     return Success(E);
@@ -5314,7 +5549,7 @@ bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (unsigned BuiltinOp = E->getBuiltinCallee())
     return VisitBuiltinCallExpr(E, BuiltinOp);
 
-  return ExprEvaluatorBaseTy::VisitCallExpr(E);
+  return visitNonBuiltinCallExpr(E);
 }
 
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
@@ -5473,7 +5708,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   default:
-    return ExprEvaluatorBaseTy::VisitCallExpr(E);
+    return visitNonBuiltinCallExpr(E);
   }
 }
 
@@ -6512,8 +6747,6 @@ public:
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
 
-private:
-  bool TryEvaluateBuiltinObjectSize(const CallExpr *E, unsigned Type);
   // FIXME: Missing: array subscript of vector, member of vector
 };
 } // end anonymous namespace
@@ -6785,7 +7018,7 @@ static QualType getObjectType(APValue::LValueBase B) {
 }
 
 /// A more selective version of E->IgnoreParenCasts for
-/// TryEvaluateBuiltinObjectSize. This ignores some casts/parens that serve only
+/// tryEvaluateBuiltinObjectSize. This ignores some casts/parens that serve only
 /// to change the type of E.
 /// Ex. For E = `(short*)((char*)(&foo))`, returns `&foo`
 ///
@@ -6852,165 +7085,132 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
     }
   }
 
+  unsigned I = 0;
   QualType BaseType = getType(Base);
-  for (int I = 0, E = LVal.Designator.Entries.size(); I != E; ++I) {
+  if (LVal.Designator.FirstEntryIsAnUnsizedArray) {
+    assert(isBaseAnAllocSizeCall(Base) &&
+           "Unsized array in non-alloc_size call?");
+    // If this is an alloc_size base, we should ignore the initial array index
+    ++I;
+    BaseType = BaseType->castAs<PointerType>()->getPointeeType();
+  }
+
+  for (unsigned E = LVal.Designator.Entries.size(); I != E; ++I) {
+    const auto &Entry = LVal.Designator.Entries[I];
     if (BaseType->isArrayType()) {
       // Because __builtin_object_size treats arrays as objects, we can ignore
       // the index iff this is the last array in the Designator.
       if (I + 1 == E)
         return true;
-      auto *CAT = cast<ConstantArrayType>(Ctx.getAsArrayType(BaseType));
-      uint64_t Index = LVal.Designator.Entries[I].ArrayIndex;
+      const auto *CAT = cast<ConstantArrayType>(Ctx.getAsArrayType(BaseType));
+      uint64_t Index = Entry.ArrayIndex;
       if (Index + 1 != CAT->getSize())
         return false;
       BaseType = CAT->getElementType();
     } else if (BaseType->isAnyComplexType()) {
-      auto *CT = BaseType->castAs<ComplexType>();
-      uint64_t Index = LVal.Designator.Entries[I].ArrayIndex;
+      const auto *CT = BaseType->castAs<ComplexType>();
+      uint64_t Index = Entry.ArrayIndex;
       if (Index != 1)
         return false;
       BaseType = CT->getElementType();
-    } else if (auto *FD = getAsField(LVal.Designator.Entries[I])) {
+    } else if (auto *FD = getAsField(Entry)) {
       bool Invalid;
       if (!IsLastOrInvalidFieldDecl(FD, Invalid))
         return Invalid;
       BaseType = FD->getType();
     } else {
-      assert(getAsBaseClass(LVal.Designator.Entries[I]) != nullptr &&
-             "Expecting cast to a base class");
+      assert(getAsBaseClass(Entry) && "Expecting cast to a base class");
       return false;
     }
   }
   return true;
 }
 
-/// Tests to see if the LValue has a designator (that isn't necessarily valid).
+/// Tests to see if the LValue has a user-specified designator (that isn't
+/// necessarily valid). Note that this always returns 'true' if the LValue has
+/// an unsized array as its first designator entry, because there's currently no
+/// way to tell if the user typed *foo or foo[0].
 static bool refersToCompleteObject(const LValue &LVal) {
-  if (LVal.Designator.Invalid || !LVal.Designator.Entries.empty())
+  if (LVal.Designator.Invalid)
     return false;
+
+  if (!LVal.Designator.Entries.empty())
+    return LVal.Designator.isMostDerivedAnUnsizedArray();
 
   if (!LVal.InvalidBase)
     return true;
 
-  auto *E = LVal.Base.dyn_cast<const Expr *>();
-  (void)E;
-  assert(E != nullptr && isa<MemberExpr>(E));
-  return false;
+  // If `E` is a MemberExpr, then the first part of the designator is hiding in
+  // the LValueBase.
+  const auto *E = LVal.Base.dyn_cast<const Expr *>();
+  return !E || !isa<MemberExpr>(E);
 }
 
-/// Tries to evaluate the __builtin_object_size for @p E. If successful, returns
-/// true and stores the result in @p Size.
+/// Attempts to detect a user writing into a piece of memory that's impossible
+/// to figure out the size of by just using types.
+static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const LValue &LVal) {
+  const SubobjectDesignator &Designator = LVal.Designator;
+  // Notes:
+  // - Users can only write off of the end when we have an invalid base. Invalid
+  //   bases imply we don't know where the memory came from.
+  // - We used to be a bit more aggressive here; we'd only be conservative if
+  //   the array at the end was flexible, or if it had 0 or 1 elements. This
+  //   broke some common standard library extensions (PR30346), but was
+  //   otherwise seemingly fine. It may be useful to reintroduce this behavior
+  //   with some sort of whitelist. OTOH, it seems that GCC is always
+  //   conservative with the last element in structs (if it's an array), so our
+  //   current behavior is more compatible than a whitelisting approach would
+  //   be.
+  return LVal.InvalidBase &&
+         Designator.Entries.size() == Designator.MostDerivedPathLength &&
+         Designator.MostDerivedIsArrayElement &&
+         isDesignatorAtObjectEnd(Ctx, LVal);
+}
+
+/// Converts the given APInt to CharUnits, assuming the APInt is unsigned.
+/// Fails if the conversion would cause loss of precision.
+static bool convertUnsignedAPIntToCharUnits(const llvm::APInt &Int,
+                                            CharUnits &Result) {
+  auto CharUnitsMax = std::numeric_limits<CharUnits::QuantityType>::max();
+  if (Int.ugt(CharUnitsMax))
+    return false;
+  Result = CharUnits::fromQuantity(Int.getZExtValue());
+  return true;
+}
+
+/// Helper for tryEvaluateBuiltinObjectSize -- Given an LValue, this will
+/// determine how many bytes exist from the beginning of the object to either
+/// the end of the current subobject, or the end of the object itself, depending
+/// on what the LValue looks like + the value of Type.
 ///
-/// If @p WasError is non-null, this will report whether the failure to evaluate
-/// is to be treated as an Error in IntExprEvaluator.
-static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
-                                         EvalInfo &Info, uint64_t &Size,
-                                         bool *WasError = nullptr) {
-  if (WasError != nullptr)
-    *WasError = false;
+/// If this returns false, the value of Result is undefined.
+static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
+                               unsigned Type, const LValue &LVal,
+                               CharUnits &EndOffset) {
+  bool DetermineForCompleteObject = refersToCompleteObject(LVal);
 
-  auto Error = [&](const Expr *E) {
-    if (WasError != nullptr)
-      *WasError = true;
-    return false;
-  };
-
-  auto Success = [&](uint64_t S, const Expr *E) {
-    Size = S;
-    return true;
-  };
-
-  // Determine the denoted object.
-  LValue Base;
-  {
-    // The operand of __builtin_object_size is never evaluated for side-effects.
-    // If there are any, but we can determine the pointed-to object anyway, then
-    // ignore the side-effects.
-    SpeculativeEvaluationRAII SpeculativeEval(Info);
-    FoldOffsetRAII Fold(Info, Type & 1);
-
-    if (E->isGLValue()) {
-      // It's possible for us to be given GLValues if we're called via
-      // Expr::tryEvaluateObjectSize.
-      APValue RVal;
-      if (!EvaluateAsRValue(Info, E, RVal))
-        return false;
-      Base.setFrom(Info.Ctx, RVal);
-    } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), Base, Info))
+  // We want to evaluate the size of the entire object. This is a valid fallback
+  // for when Type=1 and the designator is invalid, because we're asked for an
+  // upper-bound.
+  if (!(Type & 1) || LVal.Designator.Invalid || DetermineForCompleteObject) {
+    // Type=3 wants a lower bound, so we can't fall back to this.
+    if (Type == 3 && !DetermineForCompleteObject)
       return false;
+
+    llvm::APInt APEndOffset;
+    if (isBaseAnAllocSizeCall(LVal.getLValueBase()) &&
+        getBytesReturnedByAllocSizeCall(Info.Ctx, LVal, APEndOffset))
+      return convertUnsignedAPIntToCharUnits(APEndOffset, EndOffset);
+
+    if (LVal.InvalidBase)
+      return false;
+
+    QualType BaseTy = getObjectType(LVal.getLValueBase());
+    return !BaseTy.isNull() && HandleSizeof(Info, ExprLoc, BaseTy, EndOffset);
   }
 
-  CharUnits BaseOffset = Base.getLValueOffset();
-  // If we point to before the start of the object, there are no accessible
-  // bytes.
-  if (BaseOffset.isNegative())
-    return Success(0, E);
-
-  // In the case where we're not dealing with a subobject, we discard the
-  // subobject bit.
-  bool SubobjectOnly = (Type & 1) != 0 && !refersToCompleteObject(Base);
-
-  // If Type & 1 is 0, we need to be able to statically guarantee that the bytes
-  // exist. If we can't verify the base, then we can't do that.
-  //
-  // As a special case, we produce a valid object size for an unknown object
-  // with a known designator if Type & 1 is 1. For instance:
-  //
-  //   extern struct X { char buff[32]; int a, b, c; } *p;
-  //   int a = __builtin_object_size(p->buff + 4, 3); // returns 28
-  //   int b = __builtin_object_size(p->buff + 4, 2); // returns 0, not 40
-  //
-  // This matches GCC's behavior.
-  if (Base.InvalidBase && !SubobjectOnly)
-    return Error(E);
-
-  // If we're not examining only the subobject, then we reset to a complete
-  // object designator
-  //
-  // If Type is 1 and we've lost track of the subobject, just find the complete
-  // object instead. (If Type is 3, that's not correct behavior and we should
-  // return 0 instead.)
-  LValue End = Base;
-  if (!SubobjectOnly || (End.Designator.Invalid && Type == 1)) {
-    QualType T = getObjectType(End.getLValueBase());
-    if (T.isNull())
-      End.Designator.setInvalid();
-    else {
-      End.Designator = SubobjectDesignator(T);
-      End.Offset = CharUnits::Zero();
-    }
-  }
-
-  // If it is not possible to determine which objects ptr points to at compile
-  // time, __builtin_object_size should return (size_t) -1 for type 0 or 1
-  // and (size_t) 0 for type 2 or 3.
-  if (End.Designator.Invalid)
-    return false;
-
-  // According to the GCC documentation, we want the size of the subobject
-  // denoted by the pointer. But that's not quite right -- what we actually
-  // want is the size of the immediately-enclosing array, if there is one.
-  int64_t AmountToAdd = 1;
-  if (End.Designator.MostDerivedIsArrayElement &&
-      End.Designator.Entries.size() == End.Designator.MostDerivedPathLength) {
-    // We got a pointer to an array. Step to its end.
-    AmountToAdd = End.Designator.MostDerivedArraySize -
-                  End.Designator.Entries.back().ArrayIndex;
-  } else if (End.Designator.isOnePastTheEnd()) {
-    // We're already pointing at the end of the object.
-    AmountToAdd = 0;
-  }
-
-  QualType PointeeType = End.Designator.MostDerivedType;
-  assert(!PointeeType.isNull());
-  if (PointeeType->isIncompleteType() || PointeeType->isFunctionType())
-    return Error(E);
-
-  if (!HandleLValueArrayAdjustment(Info, E, End, End.Designator.MostDerivedType,
-                                   AmountToAdd))
-    return false;
-
-  auto EndOffset = End.getLValueOffset();
+  // We want to evaluate the size of a subobject.
+  const SubobjectDesignator &Designator = LVal.Designator;
 
   // The following is a moderately common idiom in C:
   //
@@ -7018,39 +7218,88 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
   // struct Foo *F = (struct Foo *)malloc(sizeof(struct Foo) + strlen(Bar));
   // strcpy(&F->c[0], Bar);
   //
-  // So, if we see that we're examining an array at the end of a struct with an
-  // unknown base, we give up instead of breaking code that behaves this way.
-  // Note that we only do this when Type=1, because Type=3 is a lower bound, so
-  // answering conservatively is fine.
-  //
-  // We used to be a bit more aggressive here; we'd only be conservative if the
-  // array at the end was flexible, or if it had 0 or 1 elements. This broke
-  // some common standard library extensions (PR30346), but was otherwise
-  // seemingly fine. It may be useful to reintroduce this behavior with some
-  // sort of whitelist. OTOH, it seems that GCC is always conservative with the
-  // last element in structs (if it's an array), so our current behavior is more
-  // compatible than a whitelisting approach would be.
-  if (End.InvalidBase && SubobjectOnly && Type == 1 &&
-      End.Designator.Entries.size() == End.Designator.MostDerivedPathLength &&
-      End.Designator.MostDerivedIsArrayElement &&
-      isDesignatorAtObjectEnd(Info.Ctx, End))
+  // In order to not break too much legacy code, we need to support it.
+  if (isUserWritingOffTheEnd(Info.Ctx, LVal)) {
+    // If we can resolve this to an alloc_size call, we can hand that back,
+    // because we know for certain how many bytes there are to write to.
+    llvm::APInt APEndOffset;
+    if (isBaseAnAllocSizeCall(LVal.getLValueBase()) &&
+        getBytesReturnedByAllocSizeCall(Info.Ctx, LVal, APEndOffset))
+      return convertUnsignedAPIntToCharUnits(APEndOffset, EndOffset);
+
+    // If we cannot determine the size of the initial allocation, then we can't
+    // given an accurate upper-bound. However, we are still able to give
+    // conservative lower-bounds for Type=3.
+    if (Type == 1)
+      return false;
+  }
+
+  CharUnits BytesPerElem;
+  if (!HandleSizeof(Info, ExprLoc, Designator.MostDerivedType, BytesPerElem))
     return false;
 
-  if (BaseOffset > EndOffset)
-    return Success(0, E);
+  // According to the GCC documentation, we want the size of the subobject
+  // denoted by the pointer. But that's not quite right -- what we actually
+  // want is the size of the immediately-enclosing array, if there is one.
+  int64_t ElemsRemaining;
+  if (Designator.MostDerivedIsArrayElement &&
+      Designator.Entries.size() == Designator.MostDerivedPathLength) {
+    uint64_t ArraySize = Designator.getMostDerivedArraySize();
+    uint64_t ArrayIndex = Designator.Entries.back().ArrayIndex;
+    ElemsRemaining = ArraySize <= ArrayIndex ? 0 : ArraySize - ArrayIndex;
+  } else {
+    ElemsRemaining = Designator.isOnePastTheEnd() ? 0 : 1;
+  }
 
-  return Success((EndOffset - BaseOffset).getQuantity(), E);
+  EndOffset = LVal.getLValueOffset() + BytesPerElem * ElemsRemaining;
+  return true;
 }
 
-bool IntExprEvaluator::TryEvaluateBuiltinObjectSize(const CallExpr *E,
-                                                    unsigned Type) {
-  uint64_t Size;
-  bool WasError;
-  if (::tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size, &WasError))
-    return Success(Size, E);
-  if (WasError)
-    return Error(E);
-  return false;
+/// \brief Tries to evaluate the __builtin_object_size for @p E. If successful,
+/// returns true and stores the result in @p Size.
+///
+/// If @p WasError is non-null, this will report whether the failure to evaluate
+/// is to be treated as an Error in IntExprEvaluator.
+static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
+                                         EvalInfo &Info, uint64_t &Size) {
+  // Determine the denoted object.
+  LValue LVal;
+  {
+    // The operand of __builtin_object_size is never evaluated for side-effects.
+    // If there are any, but we can determine the pointed-to object anyway, then
+    // ignore the side-effects.
+    SpeculativeEvaluationRAII SpeculativeEval(Info);
+    FoldOffsetRAII Fold(Info);
+
+    if (E->isGLValue()) {
+      // It's possible for us to be given GLValues if we're called via
+      // Expr::tryEvaluateObjectSize.
+      APValue RVal;
+      if (!EvaluateAsRValue(Info, E, RVal))
+        return false;
+      LVal.setFrom(Info.Ctx, RVal);
+    } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), LVal, Info))
+      return false;
+  }
+
+  // If we point to before the start of the object, there are no accessible
+  // bytes.
+  if (LVal.getLValueOffset().isNegative()) {
+    Size = 0;
+    return true;
+  }
+
+  CharUnits EndOffset;
+  if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
+    return false;
+
+  // If we've fallen outside of the end offset, just pretend there's nothing to
+  // write to/read from.
+  if (EndOffset <= LVal.getLValueOffset())
+    Size = 0;
+  else
+    Size = (EndOffset - LVal.getLValueOffset()).getQuantity();
+  return true;
 }
 
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
@@ -7072,8 +7321,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
-    if (TryEvaluateBuiltinObjectSize(E, Type))
-      return true;
+    uint64_t Size;
+    if (tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, Size))
+      return Success(Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
       return Success((Type & 2) ? 0 : -1, E);
@@ -7086,7 +7336,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case EvalInfo::EM_ConstantFold:
     case EvalInfo::EM_EvaluateForOverflow:
     case EvalInfo::EM_IgnoreSideEffects:
-    case EvalInfo::EM_DesignatorFold:
+    case EvalInfo::EM_OffsetFold:
       // Leave it to IR generation.
       return Error(E);
     case EvalInfo::EM_ConstantExpressionUnevaluated:
@@ -10189,5 +10439,5 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
-  return ::tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+  return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }

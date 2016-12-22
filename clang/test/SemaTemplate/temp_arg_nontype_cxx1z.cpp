@@ -122,13 +122,13 @@ namespace DeduceDifferentType {
   int a_exp = a<3>(A<3>());
 
   template<decltype(nullptr)> struct B {};
-  template<int *P> int b(B<P>); // expected-note {{does not have the same type}} expected-note {{not implicitly convertible}}
+  template<int *P> int b(B<P>); // expected-error {{value of type 'int *' is not implicitly convertible to 'decltype(nullptr)'}}
   int b_imp = b(B<nullptr>()); // expected-error {{no matching function}}
   int b_exp = b<nullptr>(B<nullptr>()); // expected-error {{no matching function}}
 
   struct X { constexpr operator int() { return 0; } } x;
   template<X &> struct C {};
-  template<int N> int c(C<N>); // expected-note {{does not have the same type}} expected-note {{not implicitly convertible}}
+  template<int N> int c(C<N>); // expected-error {{value of type 'int' is not implicitly convertible to 'DeduceDifferentType::X &'}}
   int c_imp = c(C<x>()); // expected-error {{no matching function}}
   int c_exp = c<x>(C<x>()); // expected-error {{no matching function}}
 

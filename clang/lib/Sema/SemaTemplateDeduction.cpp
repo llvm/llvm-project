@@ -4588,12 +4588,12 @@ UnresolvedSetIterator Sema::getMostSpecialized(
     // FIXME: Can we order the candidates in some sane way?
     for (UnresolvedSetIterator I = SpecBegin; I != SpecEnd; ++I) {
       PartialDiagnostic PD = CandidateDiag;
-      PD << getTemplateArgumentBindingsText(
-          cast<FunctionDecl>(*I)->getPrimaryTemplate()->getTemplateParameters(),
-                    *cast<FunctionDecl>(*I)->getTemplateSpecializationArgs());
+      const auto *FD = cast<FunctionDecl>(*I);
+      PD << FD << getTemplateArgumentBindingsText(
+                      FD->getPrimaryTemplate()->getTemplateParameters(),
+                      *FD->getTemplateSpecializationArgs());
       if (!TargetType.isNull())
-        HandleFunctionTypeMismatch(PD, cast<FunctionDecl>(*I)->getType(),
-                                   TargetType);
+        HandleFunctionTypeMismatch(PD, FD->getType(), TargetType);
       Diag((*I)->getLocation(), PD);
     }
   }

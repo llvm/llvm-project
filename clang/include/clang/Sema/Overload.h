@@ -121,7 +121,11 @@ namespace clang {
 
     /// A narrowing conversion, because a non-constant-expression variable might
     /// have got narrowed.
-    NK_Variable_Narrowing
+    NK_Variable_Narrowing,
+
+    /// Cannot tell whether this is a narrowing conversion because the
+    /// expression is value-dependent.
+    NK_Dependent_Narrowing,
   };
 
   /// StandardConversionSequence - represents a standard conversion
