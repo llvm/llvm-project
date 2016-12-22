@@ -285,7 +285,7 @@ void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
   if (!Expr || !Expr->isFragment())
     return;
 
-  uint64_t FragmentOffset = Expr->getFragmentOffsetInBits();
+  uint64_t FragmentOffset = Expr->getFragmentInfo()->OffsetInBits;
   assert(FragmentOffset >= OffsetInBits &&
          "overlapping or duplicate fragments");
   if (FragmentOffset > OffsetInBits)
