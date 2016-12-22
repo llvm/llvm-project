@@ -561,6 +561,8 @@ StringMap<std::vector<SymbolBody *>> &SymbolTable<ELFT>::getDemangledSyms() {
     DemangledSyms.emplace();
     for (Symbol *Sym : SymVector) {
       SymbolBody *B = Sym->body();
+      if (B->isUndefined())
+        continue;
       if (Optional<std::string> S = demangle(B->getName()))
         (*DemangledSyms)[*S].push_back(B);
       else
@@ -574,7 +576,10 @@ template <class ELFT>
 std::vector<SymbolBody *> SymbolTable<ELFT>::findByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp)
     return getDemangledSyms().lookup(Ver.Name);
-  return {find(Ver.Name)};
+  if (SymbolBody *B = find(Ver.Name))
+    if (!B->isUndefined())
+      return {B};
+  return {};
 }
 
 template <class ELFT>
@@ -586,16 +591,13 @@ SymbolTable<ELFT>::findAllByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp) {
     for (auto &P : getDemangledSyms())
       if (M.match(P.first()))
-        for (SymbolBody *Body : P.second)
-          if (!Body->isUndefined())
-            Res.push_back(Body);
+        Res.insert(Res.end(), P.second.begin(), P.second.end());
     return Res;
   }
 
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    StringRef Name = B->getName();
-    if (!B->isUndefined() && M.match(Name))
+    if (!B->isUndefined() && M.match(B->getName()))
       Res.push_back(B);
   }
   return Res;
@@ -614,8 +616,7 @@ template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
       continue;
     }
     for (SymbolBody *B : findByVersion(Ver))
-      if (B)
-        B->symbol()->VersionId = VER_NDX_GLOBAL;
+      B->symbol()->VersionId = VER_NDX_GLOBAL;
   }
 }
 
@@ -629,16 +630,15 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
 
   // Get a list of symbols which we need to assign the version to.
   std::vector<SymbolBody *> Syms = findByVersion(Ver);
+  if (Syms.empty()) {
+    if (Config->NoUndefinedVersion)
+      error("version script assignment of '" + VersionName + "' to symbol '" +
+            Ver.Name + "' failed: symbol not defined");
+    return;
+  }
 
   // Assign the version.
   for (SymbolBody *B : Syms) {
-    if (!B || B->isUndefined()) {
-      if (Config->NoUndefinedVersion)
-        error("version script assignment of '" + VersionName + "' to symbol '" +
-              Ver.Name + "' failed: symbol not defined");
-      continue;
-    }
-
     Symbol *Sym = B->symbol();
     if (Sym->InVersionScript)
       warn("duplicate symbol '" + Ver.Name + "' in version script");

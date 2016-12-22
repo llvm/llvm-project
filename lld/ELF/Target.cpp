@@ -799,7 +799,7 @@ void X86_64TargetInfo<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
     memcpy(Inst, "\x48\xc7", 2);
     *RegSlot = 0xc0 | Reg;
   } else {
-    fatal(getErrorLocation(Loc - 3) +
+    error(getErrorLocation(Loc - 3) +
           "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
   }
 

@@ -31,18 +31,18 @@ DerivedWithMemberVariables ReturnsDerived();
 void positivesWithMemberVariables() {
   DerivedWithMemberVariables b;
   Base a{b};
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}}*sizeof(char) bytes of state [cppcoreguidelines-slicing]
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}} bytes of state [cppcoreguidelines-slicing]
   a = b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}}*sizeof(char) bytes of state
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}} bytes of state
   TakesBaseByValue(b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}}*sizeof(char) bytes of state
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}} bytes of state
 
   TwiceDerivedWithNoMemberVariables c;
   a = c;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'TwiceDerivedWithNoMemberVariables' to 'Base' discards {{[0-9]*}}*sizeof(char) bytes of state
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'TwiceDerivedWithNoMemberVariables' to 'Base' discards {{[0-9]*}} bytes of state
 
   a = ReturnsDerived();
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}}*sizeof(char) bytes of state
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: slicing object from type 'DerivedWithMemberVariables' to 'Base' discards {{[0-9]*}} bytes of state
 }
 
 void positivesWithOverride() {

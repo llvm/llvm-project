@@ -38,7 +38,7 @@
 # RUN:       }" > %t2.script
 # RUN: not ld.lld -o %t2 --script %t2.script %t 2>&1 \
 # RUN:  | FileCheck -check-prefix=ERR %s
-# ERR: symbol not found: symbol
+# ERR: {{.*}}.script:1: symbol not found: symbol
 
 .global _start
 _start:
