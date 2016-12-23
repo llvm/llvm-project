@@ -38,6 +38,7 @@ struct A {
 
   explicit A(void *x) {}
   explicit A(void *x, void *y) {}
+  explicit operator bool() const { return true; }
 
   explicit A(const A& a) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor should not be declared explicit [google-explicit-constructor]
@@ -61,6 +62,10 @@ struct B {
   B(std::initializer_list<int> list1) {}
   B(const std::initializer_list<unsigned> &list2) {}
   B(std::initializer_list<unsigned> &&list3) {}
+
+  operator bool() const { return true; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'operator bool' must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor]
+  // CHECK-FIXES: {{^  }}explicit operator bool() const { return true; }
 
   explicit B(::std::initializer_list<double> list4) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initializer-list constructor should not be declared explicit [google-explicit-constructor]

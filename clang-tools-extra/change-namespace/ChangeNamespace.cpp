@@ -306,6 +306,11 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                         IsVisibleInNewNs)
                          .bind("using_namespace"),
                      this);
+  // Match namespace alias declarations.
+  Finder->addMatcher(namespaceAliasDecl(isExpansionInFileMatching(FilePattern),
+                                        IsVisibleInNewNs)
+                         .bind("namespace_alias"),
+                     this);
 
   // Match old namespace blocks.
   Finder->addMatcher(
@@ -429,6 +434,10 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<UsingDirectiveDecl>(
                      "using_namespace")) {
     UsingNamespaceDecls.insert(UsingNamespace);
+  } else if (const auto *NamespaceAlias =
+                 Result.Nodes.getNodeAs<NamespaceAliasDecl>(
+                     "namespace_alias")) {
+    NamespaceAliasDecls.insert(NamespaceAlias);
   } else if (const auto *NsDecl =
                  Result.Nodes.getNodeAs<NamespaceDecl>("old_ns")) {
     moveOldNamespace(Result, NsDecl);
@@ -685,6 +694,38 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       FromDeclNameRef = FromDeclNameRef.drop_front(2);
       if (FromDeclNameRef.size() < ReplaceName.size())
         ReplaceName = FromDeclNameRef;
+    }
+  }
+  // Checks if there is any namespace alias declarations that can shorten the
+  // qualified name.
+  for (const auto *NamespaceAlias : NamespaceAliasDecls) {
+    if (!isDeclVisibleAtLocation(*Result.SourceManager, NamespaceAlias, DeclCtx,
+                                 Start))
+      continue;
+    StringRef FromDeclNameRef = FromDeclName;
+    if (FromDeclNameRef.consume_front(
+            NamespaceAlias->getNamespace()->getQualifiedNameAsString() +
+            "::")) {
+      std::string AliasName = NamespaceAlias->getNameAsString();
+      std::string AliasQualifiedName =
+          NamespaceAlias->getQualifiedNameAsString();
+      // We only consider namespace aliases define in the global namepspace or
+      // in namespaces that are directly visible from the reference, i.e.
+      // ancestor of the `OldNs`. Note that declarations in ancestor namespaces
+      // but not visible in the new namespace is filtered out by
+      // "IsVisibleInNewNs" matcher.
+      if (AliasQualifiedName != AliasName) {
+        // The alias is defined in some namespace.
+        assert(StringRef(AliasQualifiedName).endswith("::" + AliasName));
+        llvm::StringRef AliasNs =
+            StringRef(AliasQualifiedName).drop_back(AliasName.size() + 2);
+        if (!llvm::StringRef(OldNs).startswith(AliasNs))
+          continue;
+      }
+      std::string NameWithAliasNamespace =
+          (AliasName + "::" + FromDeclNameRef).str();
+      if (NameWithAliasNamespace.size() < ReplaceName.size())
+        ReplaceName = NameWithAliasNamespace;
     }
   }
   // Checks if there is any using shadow declarations that can shorten the
