@@ -79,6 +79,24 @@
     ret i32 200
   }
 
+  ;; Positive test
+  define i32 @imp_null_check_with_bitwise_op_4(i32* %x, i32 %val) {
+  entry:
+    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+
+  is_null:
+    ret i32 42
+
+  not_null:
+    br i1 undef, label %ret_100, label %ret_200
+
+  ret_100:
+    ret i32 100
+
+  ret_200:
+    ret i32 200
+  }
+
   declare void @f() readonly
 
   define i32 @no_hoist_across_call(i32* %ptr) {
@@ -275,6 +293,49 @@ body:             |
 
     %rdi  = MOV64ri 5000
     %rdi = AND64rm killed %rdi, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+    CMP64rr killed %rdi, killed %rsi, implicit-def %eflags
+    JE_1 %bb.4.ret_100, implicit %eflags
+
+  bb.2.ret_200:
+    %eax = MOV32ri 200
+    RET 0, %eax
+
+  bb.3.is_null:
+    %eax = MOV32ri 42
+    RET 0, %eax
+
+  bb.4.ret_100:
+    %eax = MOV32ri 100
+    RET 0, %eax
+
+...
+---
+name:            imp_null_check_with_bitwise_op_4
+# CHECK-LABEL: name:            imp_null_check_with_bitwise_op_4
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '%rdi' }
+  - { reg: '%rsi' }
+# CHECK:  bb.0.entry:
+# CHECK:  %rbx = MOV64rr %rdx
+# CHECK-NEXT:  %rdi = FAULTING_LOAD_OP %bb.3.is_null, 260, killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+
+body:             |
+  bb.0.entry:
+    successors: %bb.3.is_null, %bb.1.not_null
+    liveins: %rsi, %rdi, %rdx
+
+    TEST64rr %rdi, %rdi, implicit-def %eflags
+    JE_1 %bb.3.is_null, implicit %eflags
+
+  bb.1.not_null:
+    successors: %bb.4.ret_100, %bb.2.ret_200
+    liveins: %rsi, %rdi, %rdx
+
+    %rbx  = MOV64rr %rdx
+    %rdi = AND64rm killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+    %rdx = MOV64ri 0
     CMP64rr killed %rdi, killed %rsi, implicit-def %eflags
     JE_1 %bb.4.ret_100, implicit %eflags
 

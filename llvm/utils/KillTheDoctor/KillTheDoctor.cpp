@@ -52,9 +52,9 @@
 #include <system_error>
 
 // These includes must be last.
-#include <Windows.h>
-#include <WinError.h>
-#include <Dbghelp.h>
+#include <windows.h>
+#include <winerror.h>
+#include <dbghelp.h>
 #include <psapi.h>
 
 using namespace llvm;

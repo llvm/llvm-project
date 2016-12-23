@@ -51,9 +51,22 @@ ASM_FUNCTION_ARM_RE = re.compile(
         flags=(re.M | re.S))
 
 RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
+TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
+TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
 CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
+
+ASM_FUNCTION_PPC_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'\.Lfunc_begin[0-9]+:\n'
+    r'[ \t]+.cfi_startproc\n'
+    r'(?:\.Lfunc_[gl]ep[0-9]+:\n(?:[ \t]+.*?\n)*)*'
+    r'(?P<body>.*?)\n'
+    # This list is incomplete
+    r'(?:^[ \t]*(?:\.long[ \t]+[^\n]+|\.quad[ \t]+[^\n]+)\n)*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
 
 
 def scrub_asm_x86(asm):
@@ -76,7 +89,7 @@ def scrub_asm_x86(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_arm(asm):
+def scrub_asm_arm_eabi(asm):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -88,19 +101,42 @@ def scrub_asm_arm(asm):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_powerpc64le(asm):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 
 # Build up a dictionary of all the function bodies.
-def build_function_body_dictionary(raw_tool_output, prefixes, func_dict, verbose):
-  is_arm = re.compile(r'\n\s+\.syntax unified\n').search(raw_tool_output)
-  function_re = ASM_FUNCTION_ARM_RE if is_arm else ASM_FUNCTION_X86_RE
+def build_function_body_dictionary(raw_tool_output, triple, prefixes, func_dict,
+                                   verbose):
+  target_handlers = {
+      'x86_64': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'arm-eabi': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
+      'powerpc64le': (scrub_asm_powerpc64le, ASM_FUNCTION_PPC_RE),
+  }
+  handlers = None
+  for prefix, s in target_handlers.items():
+    if triple.startswith(prefix):
+      handlers = s
+      break
+  else:
+    raise KeyError('Triple %r is not supported' % (triple))
+
+  scrubber, function_re = handlers
   for m in function_re.finditer(raw_tool_output):
     if not m:
       continue
     func = m.group('func')
-    if is_arm:
-      scrubbed_body = scrub_asm_arm(m.group('body'))
-    else:
-      scrubbed_body = scrub_asm_x86(m.group('body'))
+    scrubbed_body = scrubber(m.group('body'))
     if func.startswith('stress'):
       # We only use the last line of the function body for stress tests.
       scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])
@@ -120,9 +156,10 @@ def build_function_body_dictionary(raw_tool_output, prefixes, func_dict, verbose
       func_dict[prefix][func] = scrubbed_body
 
 
-def add_checks(output_lines, prefix_list, func_dict, func_name):
+def add_checks(output_lines, run_list, func_dict, func_name):
   printed_prefixes = []
-  for checkprefixes, _ in prefix_list:
+  for p in run_list:
+    checkprefixes = p[0]
     for checkprefix in checkprefixes:
       if checkprefix in printed_prefixes:
         break
@@ -178,6 +215,13 @@ def main():
     with open(test) as f:
       input_lines = [l.rstrip() for l in f]
 
+    triple_in_ir = None
+    for l in input_lines:
+      m = TRIPLE_IR_RE.match(l)
+      if m:
+        triple_in_ir = m.groups()[0]
+        break
+
     run_lines = [m.group(1)
                  for m in [RUN_LINE_RE.match(l) for l in input_lines] if m]
     if args.verbose:
@@ -185,10 +229,16 @@ def main():
       for l in run_lines:
         print >>sys.stderr, '  RUN: ' + l
 
-    prefix_list = []
+    run_list = []
     for l in run_lines:
       commands = [cmd.strip() for cmd in l.split('|', 1)]
       llc_cmd = commands[0]
+
+      triple_in_cmd = None
+      m = TRIPLE_ARG_RE.search(llc_cmd)
+      if m:
+        triple_in_cmd = m.groups()[0]
+
       filecheck_cmd = ''
       if len(commands) > 1:
         filecheck_cmd = commands[1]
@@ -210,24 +260,29 @@ def main():
 
       # FIXME: We should use multiple check prefixes to common check lines. For
       # now, we just ignore all but the last.
-      prefix_list.append((check_prefixes, llc_cmd_args))
+      run_list.append((check_prefixes, llc_cmd_args, triple_in_cmd))
 
     func_dict = {}
-    for prefixes, _ in prefix_list:
+    for p in run_list:
+      prefixes = p[0]
       for prefix in prefixes:
         func_dict.update({prefix: dict()})
-    for prefixes, llc_args in prefix_list:
+    for prefixes, llc_args, triple_in_cmd in run_list:
       if args.verbose:
         print >>sys.stderr, 'Extracted LLC cmd: llc ' + llc_args
         print >>sys.stderr, 'Extracted FileCheck prefixes: ' + str(prefixes)
 
       raw_tool_output = llc(args, llc_args, test)
-      build_function_body_dictionary(raw_tool_output, prefixes, func_dict, args.verbose)
+      if not (triple_in_cmd or triple_in_ir):
+        print >>sys.stderr, "Cannot find a triple. Assume 'x86'"
+
+      build_function_body_dictionary(raw_tool_output,
+          triple_in_cmd or triple_in_ir or 'x86', prefixes, func_dict, args.verbose)
 
     is_in_function = False
     is_in_function_start = False
     func_name = None
-    prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
+    prefix_set = set([prefix for p in run_list for prefix in p[0]])
     if args.verbose:
       print >>sys.stderr, 'Rewriting FileCheck prefixes: %s' % (prefix_set,)
     output_lines = []
@@ -244,7 +299,7 @@ def main():
             continue
 
         # Print out the various check lines here.
-        output_lines = add_checks(output_lines, prefix_list, func_dict, func_name)
+        output_lines = add_checks(output_lines, run_list, func_dict, func_name)
         is_in_function_start = False
 
       if is_in_function:

@@ -454,6 +454,9 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
     if (NOT C_WCOMMENT_ALLOWS_LINE_WRAP)
       append("-Wno-comment" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     endif()
+
+    # Enable -Wstring-conversion to catch misuse of string literals.
+    add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
   endif (LLVM_ENABLE_WARNINGS)
   append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)

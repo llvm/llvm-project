@@ -122,7 +122,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
-    OwningMBs.push_back(std::move(MB));
+    make<std::unique_ptr<MemoryBuffer>>(std::move(MB));
 
   return V;
 }
@@ -180,7 +180,7 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
-  OwningMBs.push_back(std::move(MB)); // take MB ownership
+  make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
 
   if (Cpio)
     Cpio->append(relativeToRoot(Path), MBRef.getBuffer());

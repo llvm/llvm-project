@@ -224,12 +224,11 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
     return MRI.constrainRegClass(Reg, &RC);
 
   const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
-  assert(RB && "Generic register does not have a register bank");
-
   // Otherwise, all we can do is ensure the bank covers the class, and set it.
-  if (!RB->covers(RC))
+  if (RB && !RB->covers(RC))
     return nullptr;
 
+  // If nothing was set or the class is simply compatible, set it.
   MRI.setRegClass(Reg, &RC);
   return &RC;
 }

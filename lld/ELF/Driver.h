@@ -49,7 +49,6 @@ private:
   bool InBinary = false;
 
   std::vector<InputFile *> Files;
-  std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 
 // Parses command line options.
