@@ -36,8 +36,6 @@ class Type;
 class MetadataLoader {
   class MetadataLoaderImpl;
   std::unique_ptr<MetadataLoaderImpl> Pimpl;
-  /// True if metadata is being parsed for a module being ThinLTO imported.
-  bool IsImporting = false;
   Error parseMetadata(bool ModuleLevel);
 
 public:

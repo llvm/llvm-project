@@ -1023,7 +1023,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
             return;
           }
 
-          // The gvreg must have a size and it must not have a SubIdx.
+          // The gvreg must have a type and it must not have a SubIdx.
           LLT Ty = MRI->getType(Reg);
           if (!Ty.isValid()) {
             report("Generic virtual register must have a valid type", MO,
@@ -1056,6 +1056,21 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
                    MONum);
             return;
           }
+
+          // If this is a target specific instruction and this operand
+          // has register class constraint, the virtual register must
+          // comply to it.
+          if (!isPreISelGenericOpcode(MCID.getOpcode()) &&
+              TII->getRegClass(MCID, MONum, TRI, *MF)) {
+            report("Virtual register does not match instruction constraint", MO,
+                   MONum);
+            errs() << "Expect register class "
+                   << TRI->getRegClassName(
+                          TII->getRegClass(MCID, MONum, TRI, *MF))
+                   << " but got nothing\n";
+            return;
+          }
+
           break;
         }
         if (SubIdx) {

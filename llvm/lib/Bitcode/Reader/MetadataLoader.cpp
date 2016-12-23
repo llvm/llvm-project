@@ -97,10 +97,18 @@ namespace {
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
-  unsigned NumFwdRefs;
-  bool AnyFwdRefs;
-  unsigned MinFwdRef;
-  unsigned MaxFwdRef;
+  /// Keep track of the current number of ForwardReference in the list.
+  unsigned NumFwdRefs = 0;
+  /// Maintain the range [min-max] that needs to be inspected to resolve cycles.
+  /// This is the range of Metadata that have involved forward reference during
+  /// loading and that needs to be inspected to resolve cycles. It is purely an
+  /// optimization to avoid spending time resolving cycles outside of this
+  /// range, i.e. where there hasn't been any forward reference.
+  unsigned MinFwdRef = 0;
+  unsigned MaxFwdRef = 0;
+  /// Set to true if there was any FwdRef encountered. This is used to track if
+  /// we need to resolve cycles after loading metadatas.
+  bool AnyFwdRefs = false;
 
   /// Array of metadata references.
   ///
@@ -119,8 +127,7 @@ class BitcodeReaderMetadataList {
   LLVMContext &Context;
 
 public:
-  BitcodeReaderMetadataList(LLVMContext &C)
-      : NumFwdRefs(0), AnyFwdRefs(false), Context(C) {}
+  BitcodeReaderMetadataList(LLVMContext &C) : Context(C) {}
 
   // vector compatibility methods
   unsigned size() const { return MetadataPtrs.size(); }
@@ -288,6 +295,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
 
   // Make sure we return early again until there's another forward ref.
   AnyFwdRefs = false;
+  MinFwdRef = 0;
+  MaxFwdRef = 0;
 }
 
 void BitcodeReaderMetadataList::addTypeRef(MDString &UUID,
@@ -365,8 +374,14 @@ DistinctMDOperandPlaceholder &PlaceholderQueue::getPlaceholderOp(unsigned ID) {
 
 void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
   while (!PHs.empty()) {
-    PHs.front().replaceUseWith(
-        MetadataList.getMetadataFwdRef(PHs.front().getID()));
+    auto *MD = MetadataList.getMetadataFwdRef(PHs.front().getID());
+#ifndef NDEBUG
+    if (auto MDN = dyn_cast<MDNode>(MD)) {
+      assert(MDN->isResolved() &&
+             "Flushing Placeholder while cycles aren't resolved");
+    }
+#endif
+    PHs.front().replaceUseWith(MD);
     PHs.pop_front();
   }
 }
@@ -391,6 +406,9 @@ class MetadataLoader::MetadataLoaderImpl {
   bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
 
+  /// True if metadata is being parsed for a module being ThinLTO imported.
+  bool IsImporting = false;
+
   Error parseMetadataStrings(ArrayRef<uint64_t> Record, StringRef Blob,
                              unsigned &NextMetadataNo);
   Error parseGlobalObjectAttachment(GlobalObject &GO,
@@ -400,12 +418,13 @@ class MetadataLoader::MetadataLoaderImpl {
 public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
-                     std::function<Type *(unsigned)> getTypeByID)
+                     std::function<Type *(unsigned)> getTypeByID,
+                     bool IsImporting)
       : MetadataList(TheModule.getContext()), ValueList(ValueList),
         Stream(Stream), Context(TheModule.getContext()), TheModule(TheModule),
-        getTypeByID(getTypeByID) {}
+        getTypeByID(getTypeByID), IsImporting(IsImporting) {}
 
-  Error parseMetadata(bool ModuleLevel, bool IsImporting);
+  Error parseMetadata(bool ModuleLevel);
 
   bool hasFwdRefs() const { return MetadataList.hasFwdRefs(); }
   Metadata *getMetadataFwdRef(unsigned Idx) {
@@ -441,8 +460,7 @@ Error error(const Twine &Message) {
 
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
-Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel,
-                                                        bool IsImporting) {
+Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 
@@ -1349,7 +1367,7 @@ MetadataLoader &MetadataLoader::operator=(MetadataLoader &&RHS) {
   return *this;
 }
 MetadataLoader::MetadataLoader(MetadataLoader &&RHS)
-    : Pimpl(std::move(RHS.Pimpl)), IsImporting(RHS.IsImporting) {}
+    : Pimpl(std::move(RHS.Pimpl)) {}
 
 MetadataLoader::~MetadataLoader() = default;
 MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
@@ -1357,11 +1375,10 @@ MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                bool IsImporting,
                                std::function<Type *(unsigned)> getTypeByID)
     : Pimpl(llvm::make_unique<MetadataLoaderImpl>(Stream, TheModule, ValueList,
-                                                  getTypeByID)),
-      IsImporting(IsImporting) {}
+                                                  getTypeByID, IsImporting)) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {
-  return Pimpl->parseMetadata(ModuleLevel, IsImporting);
+  return Pimpl->parseMetadata(ModuleLevel);
 }
 
 bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }

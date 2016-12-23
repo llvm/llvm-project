@@ -11,6 +11,7 @@
 #define LLVM_LIB_DEBUGINFO_DWARFUNIT_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
@@ -127,6 +128,8 @@ class DWARFUnit {
   uint64_t BaseAddr;
   // The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
+  typedef iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>
+      die_iterator_range;
 
   class DWOHolder {
     object::OwningBinary<object::ObjectFile> DWOFile;
@@ -291,6 +294,11 @@ public:
       if (const auto *Contrib = IndexEntry->getOffset(DW_SECT_LINE))
         return Contrib->Offset;
     return 0;
+  }
+
+  die_iterator_range dies() {
+    extractDIEsIfNeeded(false);
+    return die_iterator_range(DieArray.begin(), DieArray.end());
   }
 
 private:

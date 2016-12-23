@@ -8,6 +8,6 @@ registers:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK: [[@LINE+1]]:10: unexpected size on physical register
-    %edi(32) = G_ADD i32 %edi, %edi
+    ; CHECK: [[@LINE+1]]:10: unexpected type on physical register
+    %edi(s32) = G_ADD i32 %edi, %edi
 ...

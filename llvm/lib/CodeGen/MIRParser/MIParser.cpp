@@ -1026,12 +1026,9 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       }
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a size with GlobalISel.
+    // Virtual registers may have a tpe with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
-      return error("unexpected size on physical register");
-    if (RegInfo->Kind != VRegInfo::GENERIC &&
-        RegInfo->Kind != VRegInfo::REGBANK)
-      return error("unexpected size on non-generic virtual register");
+      return error("unexpected type on physical register");
 
     LLT Ty;
     if (parseLowLevelType(Token.location(), Ty))
@@ -1045,12 +1042,12 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
     MRI.setType(Reg, Ty);
   } else if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-    // Generic virtual registers must have a size.
-    // If we end up here this means the size hasn't been specified and
+    // Generic virtual registers must have a type.
+    // If we end up here this means the type hasn't been specified and
     // this is bad!
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
-      return error("generic virtual registers must have a size");
+      return error("generic virtual registers must have a type");
   }
   Dest = MachineOperand::CreateReg(
       Reg, Flags & RegState::Define, Flags & RegState::Implicit,

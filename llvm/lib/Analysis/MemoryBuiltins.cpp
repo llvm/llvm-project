@@ -109,25 +109,6 @@ static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
   if (!Callee)
     return None;
 
-  // If it has allocsize, we can skip checking if it's a known function.
-  //
-  // MallocLike is chosen here because allocsize makes no guarantees about the
-  // nullness of the result of the function, nor does it deal with strings, nor
-  // does it require that the memory returned is zeroed out.
-  const AllocType AllocSizeAllocTy = MallocLike;
-  if ((AllocTy & AllocSizeAllocTy) == AllocSizeAllocTy &&
-      Callee->hasFnAttribute(Attribute::AllocSize)) {
-    Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);
-    std::pair<unsigned, Optional<unsigned>> Args = Attr.getAllocSizeArgs();
-
-    AllocFnsTy Result;
-    Result.AllocTy = AllocSizeAllocTy;
-    Result.NumParams = Callee->getNumOperands();
-    Result.FstParam = Args.first;
-    Result.SndParam = Args.second.getValueOr(-1);
-    return Result;
-  }
-
   // Make sure that the function is available.
   StringRef FnName = Callee->getName();
   LibFunc::Func TLIFn;
@@ -161,6 +142,32 @@ static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
        FTy->getParamType(SndParam)->isIntegerTy(64)))
     return *FnData;
   return None;
+}
+
+static Optional<AllocFnsTy> getAllocationSize(const Value *V,
+                                              const TargetLibraryInfo *TLI) {
+  // Prefer to use existing information over allocsize. This will give us an
+  // accurate AllocTy.
+  if (Optional<AllocFnsTy> Data =
+          getAllocationData(V, AnyAlloc, TLI, /*LookThroughBitCast=*/false))
+    return Data;
+
+  // FIXME: Not calling getCalledFunction twice would be nice.
+  const Function *Callee = getCalledFunction(V, /*LookThroughBitCast=*/false);
+  if (!Callee || !Callee->hasFnAttribute(Attribute::AllocSize))
+    return None;
+
+  Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);
+  std::pair<unsigned, Optional<unsigned>> Args = Attr.getAllocSizeArgs();
+
+  AllocFnsTy Result;
+  // Because allocsize only tells us how many bytes are allocated, we're not
+  // really allowed to assume anything, so we use MallocLike.
+  Result.AllocTy = MallocLike;
+  Result.NumParams = Callee->getNumOperands();
+  Result.FstParam = Args.first;
+  Result.SndParam = Args.second.getValueOr(-1);
+  return Result;
 }
 
 static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
@@ -505,8 +512,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
-  Optional<AllocFnsTy> FnData =
-      getAllocationData(CS.getInstruction(), AnyAlloc, TLI);
+  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
   if (!FnData)
     return unknown();
 
@@ -765,8 +771,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 }
 
 SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
-  Optional<AllocFnsTy> FnData =
-      getAllocationData(CS.getInstruction(), AnyAlloc, TLI);
+  Optional<AllocFnsTy> FnData = getAllocationSize(CS.getInstruction(), TLI);
   if (!FnData)
     return unknown();
 

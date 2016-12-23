@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MachO.h"
 
 #include <string.h> // For memcpy, memset and strnlen.
@@ -100,6 +101,10 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.setContext(&Object);
   }
   IO.mapTag("!mach-o", true);
+  IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
+                 sys::IsLittleEndianHost);
+  Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
+
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("LoadCommands", Object.LoadCommands);
   if(!Object.LinkEdit.isEmpty() || !IO.outputting())

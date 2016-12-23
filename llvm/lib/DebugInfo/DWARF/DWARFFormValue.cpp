@@ -661,3 +661,15 @@ Optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
   return makeArrayRef(Value.data, Value.uval);
 }
 
+Optional<uint64_t> DWARFFormValue::getAsCStringOffset() const {
+  if (!isFormClass(FC_String) && Form == DW_FORM_string)
+    return None;
+  return Value.uval;
+}
+
+Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
+  if (!isFormClass(FC_Reference))
+    return None;
+  return Value.uval;
+}
+

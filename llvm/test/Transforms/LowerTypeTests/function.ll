@@ -1,5 +1,7 @@
-; RUN: opt -S -lowertypetests -mtriple=i686-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,NATIVE %s
-; RUN: opt -S -lowertypetests -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=i686-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=i686-pc-win32 < %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=x86_64-pc-win32 < %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=arm-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=thumb-unknown-linux-gnu < %s | FileCheck --check-prefixes=THUMB,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
@@ -9,61 +11,18 @@
 
 target datalayout = "e-p:64:64"
 
-; X86:      module asm ".globl f"
-; X86-NEXT: module asm ".type f, function"
-; X86-NEXT: module asm "f = .cfi.jumptable + 0"
-; X86-NEXT: module asm ".size f, 8"
-; X86-NEXT: module asm ".type g, function"
-; X86-NEXT: module asm "g = .cfi.jumptable + 8"
-; X86-NEXT: module asm ".size g, 8"
-; X86-NEXT: module asm ".section .text.cfi, \22ax\22, %progbits"
-; X86-NEXT: module asm ".balign 8"
-; X86-NEXT: module asm ".cfi.jumptable:"
-; X86-NEXT: module asm "jmp f.cfi@plt"
-; X86-NEXT: module asm "int3"
-; X86-NEXT: module asm "int3"
-; X86-NEXT: module asm "int3"
-; X86-NEXT: module asm "jmp g.cfi@plt"
-; X86-NEXT: module asm "int3"
-; X86-NEXT: module asm "int3"
-; X86-NEXT: module asm "int3"
 
-; ARM:      module asm ".globl f"
-; ARM-NEXT: module asm ".type f, function"
-; ARM-NEXT: module asm "f = .cfi.jumptable + 0"
-; ARM-NEXT: module asm ".size f, 4"
-; ARM-NEXT: module asm ".type g, function"
-; ARM-NEXT: module asm "g = .cfi.jumptable + 4"
-; ARM-NEXT: module asm ".size g, 4"
-; ARM-NEXT: module asm ".section .text.cfi, \22ax\22, %progbits"
-; ARM-NEXT: module asm ".balign 4"
-; ARM-NEXT: module asm ".cfi.jumptable:"
-; ARM-NEXT: module asm "b f.cfi"
-; ARM-NEXT: module asm "b g.cfi"
-
-; THUMB:      module asm ".globl f"
-; THUMB-NEXT: module asm ".type f, function"
-; THUMB-NEXT: module asm ".thumb_set f, .cfi.jumptable + 0"
-; THUMB-NEXT: module asm ".size f, 4"
-; THUMB-NEXT: module asm ".type g, function"
-; THUMB-NEXT: module asm ".thumb_set g, .cfi.jumptable + 4"
-; THUMB-NEXT: module asm ".size g, 4"
-; THUMB-NEXT: module asm ".section .text.cfi, \22ax\22, %progbits"
-; THUMB-NEXT: module asm ".balign 4"
-; THUMB-NEXT: module asm ".thumb_func"
-; THUMB-NEXT: module asm ".cfi.jumptable:"
-; THUMB-NEXT: module asm "b.w f.cfi"
-; THUMB-NEXT: module asm "b.w g.cfi"
-
-
-; X86: @.cfi.jumptable = external hidden constant [2 x [8 x i8]]
-; ARM: @.cfi.jumptable = external hidden constant [2 x [4 x i8]]
-; THUMB: @.cfi.jumptable = external hidden constant [2 x [4 x i8]]
-
-; WASM32: private constant [0 x i8] zeroinitializer
+; NATIVE: @0 = private unnamed_addr constant [2 x void (...)*] [void (...)* bitcast (void ()* @f to void (...)*), void (...)* bitcast (void ()* @g to void (...)*)], align 16
 @0 = private unnamed_addr constant [2 x void (...)*] [void (...)* bitcast (void ()* @f to void (...)*), void (...)* bitcast (void ()* @g to void (...)*)], align 16
 
-; NATIVE: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @f.cfi to i8*), i8* bitcast (void ()* @g.cfi to i8*)], section "llvm.metadata"
+; NATIVE: private constant [0 x i8] zeroinitializer
+; WASM32: private constant [0 x i8] zeroinitializer
+
+; NATIVE: @f = alias void (), void ()* @[[JT:.*]]
+
+; X86: @g = internal alias void (), bitcast ([8 x i8]* getelementptr inbounds ([2 x [8 x i8]], [2 x [8 x i8]]* bitcast (void ()* @[[JT]] to [2 x [8 x i8]]*), i64 0, i64 1) to void ()*)
+; ARM: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
+; THUMB: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
 
 ; NATIVE: define internal void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
@@ -82,16 +41,38 @@ define internal void @g() !type !0 {
 declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 
 define i1 @foo(i8* %p) {
-  ; X86: sub i64 {{.*}}, ptrtoint ([2 x [8 x i8]]* @.cfi.jumptable to i64)
-  ; ARM: sub i64 {{.*}}, ptrtoint ([2 x [4 x i8]]* @.cfi.jumptable to i64)
+  ; NATIVE: sub i64 {{.*}}, ptrtoint (void ()* @[[JT]] to i64)
   ; WASM32: sub i64 {{.*}}, 1
   ; WASM32: icmp ult i64 {{.*}}, 2
   %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
   ret i1 %x
 }
 
-; NATIVE: declare void @f()
-; NATIVE: declare hidden void @g()
+; X86-LINUX:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 8 {
+; X86-WIN32:   define private void @[[JT]]() section ".text.cfi" align 8 {
+; ARM:   define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
+; THUMB: define private void @[[JT]]() #[[ATTR:.*]] section ".text.cfi" align 4 {
+
+; X86:      jmp ${0:c}@plt
+; X86-SAME: int3
+; X86-SAME: int3
+; X86-SAME: int3
+; X86-SAME: jmp ${1:c}@plt
+; X86-SAME: int3
+; X86-SAME: int3
+; X86-SAME: int3
+
+; ARM:      b $0
+; ARM-SAME: b $1
+
+; THUMB:      b.w $0
+; THUMB-SAME: b.w $1
+
+; NATIVE-SAME: "s,s"(void ()* @f.cfi, void ()* @g.cfi)
+
+; X86-LINUX: attributes #[[ATTR]] = { {{.*}}naked
+; ARM: attributes #[[ATTR]] = { {{.*}}naked
+; THUMB: attributes #[[ATTR]] = { {{.*}}naked{{.*}}"target-cpu"="cortex-a8"
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

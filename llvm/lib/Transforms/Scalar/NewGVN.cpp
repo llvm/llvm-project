@@ -1487,7 +1487,7 @@ void NewGVN::convertDenseToDFSOrdered(CongruenceClass::MemberSet &Dense,
     BasicBlock *BB = getBlockForValue(D);
     // Constants are handled prior to ever calling this function, so
     // we should only be left with instructions as members.
-    assert(BB || "Should have figured out a basic block for value");
+    assert(BB && "Should have figured out a basic block for value");
     ValueDFS VD;
 
     std::pair<int, int> DFSPair = DFSDomMap[BB];
