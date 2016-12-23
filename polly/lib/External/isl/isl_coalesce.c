@@ -3,7 +3,7 @@
  * Copyright 2010      INRIA Saclay
  * Copyright 2012-2013 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
- * Copyright 2016      Sven Verdoolaege
+ * Copyright 2016      INRIA Paris
  *
  * Use of this software is governed by the MIT license
  *
@@ -14,6 +14,8 @@
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  * and Inria Paris - Rocquencourt, Domaine de Voluceau - Rocquencourt,
  * B.P. 105 - 78153 Le Chesnay, France
+ * and Centre de Recherche Inria de Paris, 2 rue Simone Iff - Voie DQ12,
+ * CS 42112, 75589 Paris Cedex 12, France
  */
 
 #include <isl_ctx_private.h>
@@ -2364,6 +2366,7 @@ static enum isl_change coalesce_with_expanded_divs(
 	init_status(info_i);
 	bmap = isl_basic_map_copy(bmap);
 	bmap = isl_basic_map_expand_divs(bmap, isl_mat_copy(div), exp);
+	bmap = isl_basic_map_mark_final(bmap);
 
 	if (!bmap)
 		goto error;

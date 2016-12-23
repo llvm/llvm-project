@@ -201,6 +201,7 @@ int isl_tab_detect_implicit_equalities(struct isl_tab *tab) WARN_UNUSED;
 __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 	__isl_take isl_basic_map *bmap);
 int isl_tab_detect_redundant(struct isl_tab *tab) WARN_UNUSED;
+isl_stat isl_tab_restore_redundant(struct isl_tab *tab);
 #define ISL_TAB_SAVE_DUAL	(1 << 0)
 enum isl_lp_result isl_tab_min(struct isl_tab *tab,
 	isl_int *f, isl_int denom, isl_int *opt, isl_int *opt_denom,

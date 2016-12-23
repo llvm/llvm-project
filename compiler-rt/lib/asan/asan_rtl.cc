@@ -410,6 +410,8 @@ static void PrintAddressSpaceLayout() {
   Printf("redzone=%zu\n", (uptr)flags()->redzone);
   Printf("max_redzone=%zu\n", (uptr)flags()->max_redzone);
   Printf("quarantine_size_mb=%zuM\n", (uptr)flags()->quarantine_size_mb);
+  Printf("thread_local_quarantine_size_kb=%zuK\n",
+         (uptr)flags()->thread_local_quarantine_size_kb);
   Printf("malloc_context_size=%zu\n",
          (uptr)common_flags()->malloc_context_size);
 

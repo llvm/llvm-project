@@ -33,6 +33,7 @@ struct AsanChunk;
 
 struct AllocatorOptions {
   u32 quarantine_size_mb;
+  u32 thread_local_quarantine_size_kb;
   u16 min_redzone;
   u16 max_redzone;
   u8 may_return_null;

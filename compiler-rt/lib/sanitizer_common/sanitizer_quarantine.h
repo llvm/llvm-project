@@ -56,6 +56,7 @@ class Quarantine {
   }
 
   uptr GetSize() const { return atomic_load(&max_size_, memory_order_acquire); }
+  uptr GetCacheSize() const { return max_cache_size_; }
 
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
     c->Enqueue(cb, ptr, size);
