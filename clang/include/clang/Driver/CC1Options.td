@@ -160,13 +160,13 @@ def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
   HelpText<"Disable implicit builtin knowledge of math functions">;
 }
 
-def disable_llvm_optzns : Flag<["-"], "disable-llvm-optzns">,
-  HelpText<"Don't run LLVM optimization passes">;
 def disable_llvm_verifier : Flag<["-"], "disable-llvm-verifier">,
   HelpText<"Don't run the LLVM IR verifier pass">;
 def disable_llvm_passes : Flag<["-"], "disable-llvm-passes">,
   HelpText<"Use together with -emit-llvm to get pristine LLVM IR from the "
            "frontend by not running any LLVM passes at all">;
+def disable_llvm_optzns : Flag<["-"], "disable-llvm-optzns">,
+  Alias<disable_llvm_passes>;
 def disable_red_zone : Flag<["-"], "disable-red-zone">,
   HelpText<"Do not emit code that uses the red zone.">;
 def dwarf_column_info : Flag<["-"], "dwarf-column-info">,

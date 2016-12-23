@@ -757,6 +757,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
       FnTy, llvm::GlobalValue::InternalLinkage,
       IsCombiner ? ".omp_combiner." : ".omp_initializer.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(/*D=*/nullptr, Fn, FnInfo);
+  Fn->removeFnAttr(llvm::Attribute::NoInline);
   Fn->addFnAttr(llvm::Attribute::AlwaysInline);
   CodeGenFunction CGF(CGM);
   // Map "T omp_in;" variable to "*omp_in_parm" value in all expressions.
@@ -3472,6 +3473,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       ".omp_task_privates_map.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(/*D=*/nullptr, TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
+  TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
   TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
   CodeGenFunction CGF(CGM);
   CGF.disableDebugInfo();

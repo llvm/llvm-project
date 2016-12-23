@@ -16,4 +16,4 @@ void test10_foo(test10_F3 p1)
   p1(0.0);
 }
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

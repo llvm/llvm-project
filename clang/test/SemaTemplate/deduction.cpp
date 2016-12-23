@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1z
 
 // Template argument deduction with template template parameters.
 template<typename T, template<T> class A> 
@@ -266,10 +267,72 @@ int main() {
 } // end ns2 
 }
 
+namespace multiple_deduction_different_type {
+  template<typename T, T v> struct X {};
+  template<template<typename T, T> class X, typename T, typename U, int N>
+    void f(X<T, N>, X<U, N>) {} // expected-note 2{{values of conflicting types}}
+  template<template<typename T, T> class X, typename T, typename U, const int *N>
+    void g(X<T, N>, X<U, N>) {} // expected-note 0-2{{values of conflicting types}}
+  int n;
+  void h() {
+    f(X<int, 1+1>(), X<unsigned int, 3-1>()); // expected-error {{no matching function}}
+    f(X<unsigned int, 1+1>(), X<int, 3-1>()); // expected-error {{no matching function}}
+#if __cplusplus > 201402L
+    g(X<const int*, &n>(), X<int*, &n + 1 - 1>()); // expected-error {{no matching function}}
+    g(X<int*, &n>(), X<const int*, &n + 1 - 1>()); // expected-error {{no matching function}}
+#endif
+  }
+
+  template<template<typename T, T> class X, typename T, typename U, T N>
+    void x(X<T, N>, int(*)[N], X<U, N>) {} // expected-note 1+{{candidate}}
+  template<template<typename T, T> class X, typename T, typename U, T N>
+    void x(int(*)[N], X<T, N>, X<U, N>) {} // expected-note 1+{{candidate}}
+  int arr[3];
+  void y() {
+    x(X<int, 3>(), &arr, X<int, 3>());
+    x(&arr, X<int, 3>(), X<int, 3>());
+
+    x(X<int, 3>(), &arr, X<char, 3>()); // expected-error {{no matching function}}
+    x(&arr, X<int, 3>(), X<char, 3>()); // expected-error {{no matching function}}
+
+    x(X<char, 3>(), &arr, X<char, 3>());
+    x(&arr, X<char, 3>(), X<char, 3>());
+  }
+}
+
 namespace nullptr_deduction {
+  using nullptr_t = decltype(nullptr);
+
   template<typename T, T v> struct X {};
   template<typename T, T v> void f(X<T, v>) {
     static_assert(!v, "");
   }
-  void g() { f(X<int*, nullptr>()); }
+  void g() {
+    f(X<int*, nullptr>());
+    f(X<nullptr_t, nullptr>());
+  }
+
+  template<template<typename T, T> class X, typename T, typename U, int *P>
+    void f1(X<T, P>, X<U, P>) {} // expected-note 2{{values of conflicting types}}
+  void h() {
+    f1(X<int*, nullptr>(), X<nullptr_t, nullptr>()); // expected-error {{no matching function}}
+    f1(X<nullptr_t, nullptr>(), X<int*, nullptr>()); // expected-error {{no matching function}}
+  }
+
+  template<template<typename T, T> class X, typename T, typename U, nullptr_t P>
+    void f2(X<T, P>, X<U, P>) {} // expected-note 2{{values of conflicting types}}
+  void i() {
+    f2(X<int*, nullptr>(), X<nullptr_t, nullptr>()); // expected-error {{no matching function}}
+    f2(X<nullptr_t, nullptr>(), X<int*, nullptr>()); // expected-error {{no matching function}}
+  }
+}
+
+namespace member_pointer {
+  struct A { void f(int); };
+  template<typename T, void (A::*F)(T)> struct B;
+  template<typename T> struct C;
+  template<typename T, void (A::*F)(T)> struct C<B<T, F>> {
+    C() { A a; T t; (a.*F)(t); }
+  };
+  C<B<int, &A::f>> c;
 }

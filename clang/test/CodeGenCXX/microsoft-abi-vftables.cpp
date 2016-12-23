@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -fms-extensions -emit-llvm -o - -O1 -disable-llvm-optzns | FileCheck %s -check-prefix=NO-RTTI
-// RUN: %clang_cc1 %s -triple=i386-pc-win32 -fms-extensions -emit-llvm -o - -O1 -disable-llvm-optzns | FileCheck %s -check-prefix=RTTI
+// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -fms-extensions -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck %s -check-prefix=NO-RTTI
+// RUN: %clang_cc1 %s -triple=i386-pc-win32 -fms-extensions -emit-llvm -o - -O1 -disable-llvm-passes | FileCheck %s -check-prefix=RTTI
 
 // RTTI-DAG: $"\01??_7S@@6B@" = comdat largest
 // RTTI-DAG: $"\01??_7V@@6B@" = comdat largest

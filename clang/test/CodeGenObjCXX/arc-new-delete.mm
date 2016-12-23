@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=UNOPT
-// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -O -disable-llvm-optzns | FileCheck %s -check-prefix=CHECK -check-prefix=OPT
+// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -O -disable-llvm-passes | FileCheck %s -check-prefix=CHECK -check-prefix=OPT
 
 typedef __strong id strong_id;
 typedef __weak id weak_id;

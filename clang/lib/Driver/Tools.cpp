@@ -4221,7 +4221,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Add flags implied by -fembed-bitcode.
     Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
     // Disable all llvm IR level optimizations.
-    CmdArgs.push_back("-disable-llvm-optzns");
+    CmdArgs.push_back("-disable-llvm-passes");
   }
   if (C.getDriver().embedBitcodeMarkerOnly())
     CmdArgs.push_back("-fembed-bitcode=marker");
@@ -6421,8 +6421,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     // We translate this by hand to the -cc1 argument, since nightly test uses
     // it and developers have been trained to spell it with -mllvm.
-    if (StringRef(A->getValue(0)) == "-disable-llvm-optzns") {
-      CmdArgs.push_back("-disable-llvm-optzns");
+    if (StringRef(A->getValue(0)) == "-disable-llvm-passes") {
+      CmdArgs.push_back("-disable-llvm-passes");
     } else
       A->render(Args, CmdArgs);
   }

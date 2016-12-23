@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c -emit-llvm %s -triple %itanium_abi_triple -o - -femit-all-decls -disable-llvm-optzns | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-optzns
-// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-optzns | FileCheck --check-prefix=CHECK-LOAD %s
+// RUN: %clang_cc1 -verify -fopenmp -x c -emit-llvm %s -triple %itanium_abi_triple -o - -femit-all-decls -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -emit-pch -o %t %s -femit-all-decls -disable-llvm-passes
+// RUN: %clang_cc1 -fopenmp -x c -triple %itanium_abi_triple -include-pch %t -verify %s -emit-llvm -o - -femit-all-decls -disable-llvm-passes | FileCheck --check-prefix=CHECK-LOAD %s
 // expected-no-diagnostics
 
 #ifndef HEADER

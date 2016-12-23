@@ -176,4 +176,4 @@ struct TVC : VX
 template <typename T>
 TVC<T>::~TVC() {}
 
-// CHECK: attributes [[ATTRGRP]] = { nounwind{{.*}} }
+// CHECK: attributes [[ATTRGRP]] = { noinline nounwind{{.*}} }

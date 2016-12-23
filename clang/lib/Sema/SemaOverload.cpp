@@ -9593,9 +9593,25 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     int which = 0;
     if (isa<TemplateTypeParmDecl>(ParamD))
       which = 0;
-    else if (isa<NonTypeTemplateParmDecl>(ParamD))
+    else if (isa<NonTypeTemplateParmDecl>(ParamD)) {
+      // Deduction might have failed because we deduced arguments of two
+      // different types for a non-type template parameter.
+      // FIXME: Use a different TDK value for this.
+      QualType T1 =
+          DeductionFailure.getFirstArg()->getNonTypeTemplateArgumentType();
+      QualType T2 =
+          DeductionFailure.getSecondArg()->getNonTypeTemplateArgumentType();
+      if (!S.Context.hasSameType(T1, T2)) {
+        S.Diag(Templated->getLocation(),
+               diag::note_ovl_candidate_inconsistent_deduction_types)
+          << ParamD->getDeclName() << *DeductionFailure.getFirstArg() << T1
+          << *DeductionFailure.getSecondArg() << T2;
+        MaybeEmitInheritedConstructorNote(S, Found);
+        return;
+      }
+
       which = 1;
-    else {
+    } else {
       which = 2;
     }
 

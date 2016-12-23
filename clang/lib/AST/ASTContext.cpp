@@ -3872,6 +3872,44 @@ ASTContext::getDependentTemplateSpecializationType(
   return QualType(T, 0);
 }
 
+void
+ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
+                                    SmallVectorImpl<TemplateArgument> &Args) {
+  Args.reserve(Args.size() + Params->size());
+
+  for (NamedDecl *Param : *Params) {
+    TemplateArgument Arg;
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      QualType ArgType = getTypeDeclType(TTP);
+      if (TTP->isParameterPack())
+        ArgType = getPackExpansionType(ArgType, None);
+
+      Arg = TemplateArgument(ArgType);
+    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      Expr *E = new (*this) DeclRefExpr(
+          NTTP, /*enclosing*/false,
+          NTTP->getType().getNonLValueExprType(*this),
+          Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
+
+      if (NTTP->isParameterPack())
+        E = new (*this) PackExpansionExpr(DependentTy, E, NTTP->getLocation(),
+                                          None);
+      Arg = TemplateArgument(E);
+    } else {
+      auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+      if (TTP->isParameterPack())
+        Arg = TemplateArgument(TemplateName(TTP), Optional<unsigned>());
+      else
+        Arg = TemplateArgument(TemplateName(TTP));
+    }
+
+    if (Param->isTemplateParameterPack())
+      Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+
+    Args.push_back(Arg);
+  }
+}
+
 QualType ASTContext::getPackExpansionType(QualType Pattern,
                                           Optional<unsigned> NumExpansions) {
   llvm::FoldingSetNodeID ID;

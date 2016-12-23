@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o %t
-// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -O2 -disable-llvm-optzns -emit-llvm -o %t.opt
+// RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -O2 -disable-llvm-passes -emit-llvm -o %t.opt
 // RUN: FileCheck --check-prefix=CHECK-TEST1 %s < %t
 // RUN: FileCheck --check-prefix=CHECK-TEST2 %s < %t
 // RUN: FileCheck --check-prefix=CHECK-TEST5 %s < %t
