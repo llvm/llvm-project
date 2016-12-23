@@ -372,6 +372,7 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOrTeamsOutlinedFunction(
         CGOpenMPRuntime::emitParallelOrTeamsOutlinedFunction(
             D, ThreadIDVar, InnermostKind, CodeGen);
     OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
+    OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
     OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
   } else
     llvm_unreachable("parallel directive is not yet supported for nvptx "

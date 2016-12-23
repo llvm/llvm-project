@@ -121,7 +121,7 @@ void j() {
 }
 
 // CHECK: attributes [[NONE]] = { {{.*}} }
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
 // CHECK: attributes [[NUW2]] = { nounwind{{.*}} }
 
 

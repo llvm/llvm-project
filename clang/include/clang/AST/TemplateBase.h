@@ -301,6 +301,10 @@ public:
     Integer.Type = T.getAsOpaquePtr();
   }
 
+  /// \brief If this is a non-type template argument, get its type. Otherwise,
+  /// returns a null QualType.
+  QualType getNonTypeTemplateArgumentType() const;
+
   /// \brief Retrieve the template argument as an expression.
   Expr *getAsExpr() const {
     assert(getKind() == Expression && "Unexpected kind");

@@ -3411,6 +3411,10 @@ def note_ovl_candidate_incomplete_deduction : Note<"candidate template ignored: 
 def note_ovl_candidate_inconsistent_deduction : Note<
     "candidate template ignored: deduced conflicting %select{types|values|"
     "templates}0 for parameter %1%diff{ ($ vs. $)|}2,3">;
+def note_ovl_candidate_inconsistent_deduction_types : Note<
+    "candidate template ignored: deduced values %diff{"
+    "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
+    "%1 and %3 of conflicting types for parameter %0}2,4">;
 def note_ovl_candidate_explicit_arg_mismatch_named : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0">;
@@ -3908,7 +3912,7 @@ def err_non_type_template_parm_type_deduction_failure : Error<
   "non-type template parameter %0 with type %1 has incompatible initializer of type %2">;
 def err_deduced_non_type_template_arg_type_mismatch : Error<
   "deduced non-type template argument does not have the same type as the "
-  "its corresponding template parameter%diff{ ($ vs $)|}0,1">;
+  "corresponding template parameter%diff{ ($ vs $)|}0,1">;
 def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<

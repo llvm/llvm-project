@@ -2,8 +2,8 @@
 
 // RUN: %clang_cc1 -triple i686-pc-win32 -emit-llvm %s -o - | FileCheck -check-prefix=NOINLINE %s
 // RUN: %clang_cc1 -triple i686-pc-win32 -O3 -fno-inline-functions -emit-llvm %s -o - | FileCheck -check-prefix=NOINLINE %s
-// RUN: %clang_cc1 -triple i686-pc-win32 -finline-hint-functions -emit-llvm %s -o - | FileCheck -check-prefix=HINT %s
-// RUN: %clang_cc1 -triple i686-pc-win32 -finline-functions -emit-llvm %s -o - | FileCheck -check-prefix=INLINE %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O3 -finline-hint-functions -emit-llvm %s -o - | FileCheck -check-prefix=HINT %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O3 -finline-functions -emit-llvm %s -o - | FileCheck -check-prefix=INLINE %s
 
 inline int inline_hint(int a, int b) { return(a+b); }
 

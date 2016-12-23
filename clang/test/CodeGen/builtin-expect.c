@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O1 -disable-llvm-optzns | FileCheck %s --check-prefix=ALL --check-prefix=O1
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O1 -disable-llvm-passes | FileCheck %s --check-prefix=ALL --check-prefix=O1
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O0 | FileCheck %s --check-prefix=ALL --check-prefix=O0
 
 // In all tests, make sure that no expect is generated if optimizations are off.

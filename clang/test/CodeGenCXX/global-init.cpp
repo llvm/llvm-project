@@ -204,8 +204,8 @@ namespace test7 {
 // rdar://problem/8090834: this should be nounwind
 // CHECK-NOEXC: define internal void @_GLOBAL__sub_I_global_init.cpp() [[NUW:#[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 
-// CHECK-NOEXC: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK-NOEXC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
 // PR21811: attach the appropriate attribute to the global init function
 // CHECK-FP: define internal void @_GLOBAL__sub_I_global_init.cpp() [[NUX:#[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
-// CHECK-FP: attributes [[NUX]] = { nounwind {{.*}}"no-frame-pointer-elim-non-leaf"{{.*}} }
+// CHECK-FP: attributes [[NUX]] = { noinline nounwind {{.*}}"no-frame-pointer-elim-non-leaf"{{.*}} }

@@ -31,4 +31,4 @@ public:
 // TSAN: initialize{{.*}}) [[ATTR:#[0-9]+]]
 // TSAN: dealloc{{.*}}) [[ATTR:#[0-9]+]]
 // TSAN: cxx_destruct{{.*}}) [[ATTR:#[0-9]+]]
-// TSAN: attributes [[ATTR]] = { nounwind {{.*}} "sanitize_thread_no_checking_at_run_time" {{.*}} }
+// TSAN: attributes [[ATTR]] = { noinline nounwind {{.*}} "sanitize_thread_no_checking_at_run_time" {{.*}} }
