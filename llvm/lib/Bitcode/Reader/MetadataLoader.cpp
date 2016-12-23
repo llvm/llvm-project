@@ -573,40 +573,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         return error("Invalid record");
       NMD->addOperand(MD);
     }
-    case bitc::METADATA_GENERIC_DEBUG: {
-      if (Record.size() < 4)
-        return error("Invalid record");
-
-      IsDistinct = Record[0];
-      unsigned Tag = Record[1];
-      unsigned Version = Record[2];
-
-      if (Tag >= 1u << 16 || Version != 0)
-        return error("Invalid record");
-
-      // Deprecated internal hack to support serializing MDModule.
-      // This node has since been deleted.
-      // Upgrading this node is not officially supported.  This code
-      // may be removed in the future.
-      if (Tag == dwarf::DW_TAG_module) {
-        if (Record.size() != 6)
-          return error("Invalid record");
-
-        MetadataList.assignValue(
-            GET_OR_DISTINCT(DIModule, (Context, getMDOrNull(Record[4]),
-                                       getMDString(Record[5]), nullptr, nullptr,
-                                       nullptr)),
-            NextMetadataNo++);
-        break;
-      }
-
-      auto *Header = getMDString(Record[3]);
-      SmallVector<Metadata *, 8> DwarfOps;
-      for (unsigned I = 4, E = Record.size(); I != E; ++I)
-        DwarfOps.push_back(getMDOrNull(Record[I]));
-      MetadataList.assignValue(
-          GET_OR_DISTINCT(GenericDINode, (Context, Tag, Header, DwarfOps)),
-          NextMetadataNo++);
     break;
   }
   case bitc::METADATA_OLD_FN_NODE: {
@@ -712,6 +678,22 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     if (Tag >= 1u << 16 || Version != 0)
       return error("Invalid record");
+
+    // Deprecated internal hack to support serializing MDModule.
+    // This node has since been deleted.
+    // Upgrading this node is not officially supported.  This code
+    // may be removed in the future.
+    if (Tag == dwarf::DW_TAG_module) {
+      if (Record.size() != 6)
+        return error("Invalid record");
+
+      MetadataList.assignValue(
+          GET_OR_DISTINCT(DIModule, (Context, getMDOrNull(Record[4]),
+                                     getMDString(Record[5]), nullptr, nullptr,
+                                     nullptr)),
+          NextMetadataNo++);
+      break;
+    }
 
     auto *Header = getMDString(Record[3]);
     SmallVector<Metadata *, 8> DwarfOps;
