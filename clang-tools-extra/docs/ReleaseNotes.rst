@@ -183,6 +183,10 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-string-cstr.html>`_ check
   now warns about redundant calls to data() too.
 
+- The `google-explicit-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-explicit-constructor.html>`_ check
+  now warns about conversion operators not marked explicit.
+
 Fixed bugs:
 
 - `modernize-make-unique

@@ -70,7 +70,11 @@ operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC
     if (static_cast<size_t>(alignment) < sizeof(void*))
       alignment = std::align_val_t(sizeof(void*));
     void* p;
+#if defined(_WIN32)
+    while ((p = _aligned_malloc(size, static_cast<size_t>(alignment))) == nullptr)
+#else
     while (::posix_memalign(&p, static_cast<size_t>(alignment), size) != 0)
+#endif
     {
         // If posix_memalign fails and there is a new_handler,
         // call it to try free up memory.

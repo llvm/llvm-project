@@ -127,8 +127,8 @@ static cl::opt<int> LatencyVectorFma(
              "instructions."),
     cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::opt<int> ThrougputVectorFma(
-    "polly-target-througput-vector-fma",
+static cl::opt<int> ThroughputVectorFma(
+    "polly-target-throughput-vector-fma",
     cl::desc("A throughput of the processor floating-point arithmetic units "
              "expressed in the number of vector fused multiply-add "
              "instructions per clock cycle."),
@@ -586,8 +586,8 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
   if (Nvec == 0)
     Nvec = 2;
   int Nr =
-      ceil(sqrt(Nvec * LatencyVectorFma * ThrougputVectorFma) / Nvec) * Nvec;
-  int Mr = ceil(Nvec * LatencyVectorFma * ThrougputVectorFma / Nr);
+      ceil(sqrt(Nvec * LatencyVectorFma * ThroughputVectorFma) / Nvec) * Nvec;
+  int Mr = ceil(Nvec * LatencyVectorFma * ThroughputVectorFma / Nr);
   return {Mr, Nr};
 }
 
