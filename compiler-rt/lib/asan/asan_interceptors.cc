@@ -81,6 +81,51 @@ struct AsanInterceptorContext {
     }                                                                   \
   } while (0)
 
+// memcpy is called during __asan_init() from the internals of printf(...).
+// We do not treat memcpy with to==from as a bug.
+// See http://llvm.org/bugs/show_bug.cgi?id=11763.
+#define ASAN_MEMCPY_IMPL(ctx, to, from, size)                           \
+  do {                                                                  \
+    if (UNLIKELY(!asan_inited)) return internal_memcpy(to, from, size); \
+    if (asan_init_is_running) {                                         \
+      return REAL(memcpy)(to, from, size);                              \
+    }                                                                   \
+    ENSURE_ASAN_INITED();                                               \
+    if (flags()->replace_intrin) {                                      \
+      if (to != from) {                                                 \
+        CHECK_RANGES_OVERLAP("memcpy", to, size, from, size);           \
+      }                                                                 \
+      ASAN_READ_RANGE(ctx, from, size);                                 \
+      ASAN_WRITE_RANGE(ctx, to, size);                                  \
+    }                                                                   \
+    return REAL(memcpy)(to, from, size);                                \
+  } while (0)
+
+// memset is called inside Printf.
+#define ASAN_MEMSET_IMPL(ctx, block, c, size)                           \
+  do {                                                                  \
+    if (UNLIKELY(!asan_inited)) return internal_memset(block, c, size); \
+    if (asan_init_is_running) {                                         \
+      return REAL(memset)(block, c, size);                              \
+    }                                                                   \
+    ENSURE_ASAN_INITED();                                               \
+    if (flags()->replace_intrin) {                                      \
+      ASAN_WRITE_RANGE(ctx, block, size);                               \
+    }                                                                   \
+    return REAL(memset)(block, c, size);                                \
+  } while (0)
+
+#define ASAN_MEMMOVE_IMPL(ctx, to, from, size)                           \
+  do {                                                                   \
+    if (UNLIKELY(!asan_inited)) return internal_memmove(to, from, size); \
+    ENSURE_ASAN_INITED();                                                \
+    if (flags()->replace_intrin) {                                       \
+      ASAN_READ_RANGE(ctx, from, size);                                  \
+      ASAN_WRITE_RANGE(ctx, to, size);                                   \
+    }                                                                    \
+    return internal_memmove(to, from, size);                             \
+  } while (0)
+
 #define ASAN_READ_RANGE(ctx, offset, size) \
   ACCESS_MEMORY_RANGE(ctx, offset, size, false)
 #define ASAN_WRITE_RANGE(ctx, offset, size) \
@@ -198,10 +243,46 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   } else {                                                                     \
     *begin = *end = 0;                                                         \
   }
-// Asan needs custom handling of these:
-#undef SANITIZER_INTERCEPT_MEMSET
-#undef SANITIZER_INTERCEPT_MEMMOVE
-#undef SANITIZER_INTERCEPT_MEMCPY
+
+#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
+  do {                                                       \
+    ASAN_INTERCEPTOR_ENTER(ctx, memmove);                    \
+    ASAN_MEMMOVE_IMPL(ctx, to, from, size);                  \
+  } while (false)
+
+// At least on 10.7 and 10.8 both memcpy() and memmove() are being replaced
+// with WRAP(memcpy). As a result, false positives are reported for
+// memmove() calls. If we just disable error reporting with
+// ASAN_OPTIONS=replace_intrin=0, memmove() is still replaced with
+// internal_memcpy(), which may lead to crashes, see
+// http://llvm.org/bugs/show_bug.cgi?id=16362.
+#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
+  do {                                                      \
+    ASAN_INTERCEPTOR_ENTER(ctx, memcpy);                    \
+    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {        \
+      ASAN_MEMCPY_IMPL(ctx, to, from, size);                \
+    } else {                                                \
+      ASAN_MEMMOVE_IMPL(ctx, to, from, size);               \
+    }                                                       \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
+  do {                                                      \
+    ASAN_INTERCEPTOR_ENTER(ctx, memset);                    \
+    ASAN_MEMSET_IMPL(ctx, block, c, size);                  \
+  } while (false)
+
+// In asan, REAL(memmove) is not used, but it is used in msan.
+#define COMMON_INTERCEPT_FUNCTION_MEMCPY()           \
+  do {                                               \
+    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) { \
+      ASAN_INTERCEPT_FUNC(memcpy);                   \
+    } else {                                         \
+      ASSIGN_REAL(memcpy, memmove);                  \
+    }                                                \
+    CHECK(REAL(memcpy));                             \
+  } while (false)
+
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 // Syscall interceptors don't have contexts, we don't support suppressions
@@ -389,88 +470,16 @@ INTERCEPTOR(void, __cxa_throw, void *a, void *b, void *c) {
 }
 #endif
 
-// memcpy is called during __asan_init() from the internals of printf(...).
-// We do not treat memcpy with to==from as a bug.
-// See http://llvm.org/bugs/show_bug.cgi?id=11763.
-#define ASAN_MEMCPY_IMPL(ctx, to, from, size) do {                             \
-    if (UNLIKELY(!asan_inited)) return internal_memcpy(to, from, size);        \
-    if (asan_init_is_running) {                                                \
-      return REAL(memcpy)(to, from, size);                                     \
-    }                                                                          \
-    ENSURE_ASAN_INITED();                                                      \
-    if (flags()->replace_intrin) {                                             \
-      if (to != from) {                                                        \
-        CHECK_RANGES_OVERLAP("memcpy", to, size, from, size);                  \
-      }                                                                        \
-      ASAN_READ_RANGE(ctx, from, size);                                        \
-      ASAN_WRITE_RANGE(ctx, to, size);                                         \
-    }                                                                          \
-    return REAL(memcpy)(to, from, size);                                       \
-  } while (0)
-
-
 void *__asan_memcpy(void *to, const void *from, uptr size) {
   ASAN_MEMCPY_IMPL(nullptr, to, from, size);
 }
-
-// memset is called inside Printf.
-#define ASAN_MEMSET_IMPL(ctx, block, c, size) do {                             \
-    if (UNLIKELY(!asan_inited)) return internal_memset(block, c, size);        \
-    if (asan_init_is_running) {                                                \
-      return REAL(memset)(block, c, size);                                     \
-    }                                                                          \
-    ENSURE_ASAN_INITED();                                                      \
-    if (flags()->replace_intrin) {                                             \
-      ASAN_WRITE_RANGE(ctx, block, size);                                      \
-    }                                                                          \
-    return REAL(memset)(block, c, size);                                       \
-  } while (0)
 
 void *__asan_memset(void *block, int c, uptr size) {
   ASAN_MEMSET_IMPL(nullptr, block, c, size);
 }
 
-#define ASAN_MEMMOVE_IMPL(ctx, to, from, size) do {                            \
-    if (UNLIKELY(!asan_inited))                                                \
-      return internal_memmove(to, from, size);                                 \
-    ENSURE_ASAN_INITED();                                                      \
-    if (flags()->replace_intrin) {                                             \
-      ASAN_READ_RANGE(ctx, from, size);                                        \
-      ASAN_WRITE_RANGE(ctx, to, size);                                         \
-    }                                                                          \
-    return internal_memmove(to, from, size);                                   \
-  } while (0)
-
 void *__asan_memmove(void *to, const void *from, uptr size) {
   ASAN_MEMMOVE_IMPL(nullptr, to, from, size);
-}
-
-INTERCEPTOR(void*, memmove, void *to, const void *from, uptr size) {
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, memmove);
-  ASAN_MEMMOVE_IMPL(ctx, to, from, size);
-}
-
-INTERCEPTOR(void*, memcpy, void *to, const void *from, uptr size) {
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, memcpy);
-  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
-    ASAN_MEMCPY_IMPL(ctx, to, from, size);
-  } else {
-    // At least on 10.7 and 10.8 both memcpy() and memmove() are being replaced
-    // with WRAP(memcpy). As a result, false positives are reported for
-    // memmove() calls. If we just disable error reporting with
-    // ASAN_OPTIONS=replace_intrin=0, memmove() is still replaced with
-    // internal_memcpy(), which may lead to crashes, see
-    // http://llvm.org/bugs/show_bug.cgi?id=16362.
-    ASAN_MEMMOVE_IMPL(ctx, to, from, size);
-  }
-}
-
-INTERCEPTOR(void*, memset, void *block, int c, uptr size) {
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, memset);
-  ASAN_MEMSET_IMPL(ctx, block, c, size);
 }
 
 #if ASAN_INTERCEPT_INDEX
@@ -723,17 +732,6 @@ void InitializeAsanInterceptors() {
   CHECK(!was_called_once);
   was_called_once = true;
   InitializeCommonInterceptors();
-
-  // Intercept mem* functions.
-  ASAN_INTERCEPT_FUNC(memmove);
-  ASAN_INTERCEPT_FUNC(memset);
-  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
-    // In asan, REAL(memmove) is not used, but it is used in msan.
-    ASAN_INTERCEPT_FUNC(memcpy);
-  } else {
-    ASSIGN_REAL(memcpy, memmove);
-  }
-  CHECK(REAL(memcpy));
 
   // Intercept str* functions.
   ASAN_INTERCEPT_FUNC(strcat);  // NOLINT

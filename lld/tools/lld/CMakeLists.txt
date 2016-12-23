@@ -1,4 +1,4 @@
-add_llvm_executable(lld
+add_lld_tool(lld
   lld.cpp
   )
 
@@ -17,8 +17,5 @@ if(NOT LLD_SYMLINKS_TO_CREATE)
 endif()
 
 foreach(link ${LLD_SYMLINKS_TO_CREATE})
-  add_llvm_tool_symlink(${link} lld ALWAYS_GENERATE)
-  # Always generate install targets
-  llvm_install_symlink(${link} lld ALWAYS_GENERATE)
+  add_lld_symlink(${link} lld)
 endforeach()
-

@@ -159,6 +159,16 @@ void InitializeFlags() {
         (ASAN_LOW_MEMORY) ? 1UL << 4 : 1UL << 8;
     f->quarantine_size_mb = kDefaultQuarantineSizeMb;
   }
+  if (f->thread_local_quarantine_size_kb < 0) {
+    const u32 kDefaultThreadLocalQuarantineSizeKb =
+        // It is not advised to go lower than 64Kb, otherwise quarantine batches
+        // pushed from thread local quarantine to global one will create too
+        // much overhead. One quarantine batch size is 8Kb and it  holds up to
+        // 1021 chunk, which amounts to 1/8 memory overhead per batch when
+        // thread local quarantine is set to 64Kb.
+        (ASAN_LOW_MEMORY) ? 1 << 6 : FIRST_32_SECOND_64(1 << 8, 1 << 10);
+    f->thread_local_quarantine_size_kb = kDefaultThreadLocalQuarantineSizeKb;
+  }
   if (!f->replace_str && common_flags()->intercept_strlen) {
     Report("WARNING: strlen interceptor is enabled even though replace_str=0. "
            "Use intercept_strlen=0 to disable it.");

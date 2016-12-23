@@ -106,6 +106,8 @@ endif()
 
 list (APPEND CMAKE_MODULE_PATH "${LLD_SOURCE_DIR}/cmake/modules")
 
+include(AddLLD)
+
 option(LLD_USE_VTUNE
        "Enable VTune user task tracking."
        OFF)
@@ -118,6 +120,8 @@ if (LLD_USE_VTUNE)
   endif()
 endif()
 
+option(LLD_BUILD_TOOLS
+  "Build the lld tools. If OFF, just generate build targets." ON)
 
 if (MSVC)
   add_definitions(-wd4530) # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
@@ -137,12 +141,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".svn" EXCLUDE
     )
 endif()
-
-macro(add_lld_library name)
-  add_llvm_library(${name} ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
-endmacro(add_lld_library)
-
 
 add_subdirectory(lib)
 add_subdirectory(tools/lld)

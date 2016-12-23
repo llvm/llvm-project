@@ -207,6 +207,7 @@ QuarantineCache *GetQuarantineCache(AsanThreadLocalMallocStorage *ms) {
 
 void AllocatorOptions::SetFrom(const Flags *f, const CommonFlags *cf) {
   quarantine_size_mb = f->quarantine_size_mb;
+  thread_local_quarantine_size_kb = f->thread_local_quarantine_size_kb;
   min_redzone = f->redzone;
   max_redzone = f->max_redzone;
   may_return_null = cf->allocator_may_return_null;
@@ -216,6 +217,7 @@ void AllocatorOptions::SetFrom(const Flags *f, const CommonFlags *cf) {
 
 void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
   f->quarantine_size_mb = quarantine_size_mb;
+  f->thread_local_quarantine_size_kb = thread_local_quarantine_size_kb;
   f->redzone = min_redzone;
   f->max_redzone = max_redzone;
   cf->allocator_may_return_null = may_return_null;
@@ -226,13 +228,6 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
 struct Allocator {
   static const uptr kMaxAllowedMallocSize =
       FIRST_32_SECOND_64(3UL << 30, 1ULL << 40);
-  static const uptr kMaxThreadLocalQuarantine =
-      // It is not advised to go lower than 64Kb, otherwise quarantine batches
-      // pushed from thread local quarantine to global one will create too much
-      // overhead. One quarantine batch size is 8Kb and it  holds up to 1021
-      // chunk, which amounts to 1/8 memory overhead per batch when thread local
-      // quarantine is set to 64Kb.
-      (ASAN_LOW_MEMORY) ? 1 << 16 : FIRST_32_SECOND_64(1 << 18, 1 << 20);
 
   AsanAllocator allocator;
   AsanQuarantine quarantine;
@@ -261,7 +256,7 @@ struct Allocator {
   void SharedInitCode(const AllocatorOptions &options) {
     CheckOptions(options);
     quarantine.Init((uptr)options.quarantine_size_mb << 20,
-                    kMaxThreadLocalQuarantine);
+                    (uptr)options.thread_local_quarantine_size_kb << 10);
     atomic_store(&alloc_dealloc_mismatch, options.alloc_dealloc_mismatch,
                  memory_order_release);
     atomic_store(&min_redzone, options.min_redzone, memory_order_release);
@@ -315,6 +310,7 @@ struct Allocator {
 
   void GetOptions(AllocatorOptions *options) const {
     options->quarantine_size_mb = quarantine.GetSize() >> 20;
+    options->thread_local_quarantine_size_kb = quarantine.GetCacheSize() >> 10;
     options->min_redzone = atomic_load(&min_redzone, memory_order_acquire);
     options->max_redzone = atomic_load(&max_redzone, memory_order_acquire);
     options->may_return_null = allocator.MayReturnNull();

@@ -3378,6 +3378,29 @@ static int ununrestrict(struct isl_tab *tab, struct isl_tab_var *var)
 	return 0;
 }
 
+/* Unmark the last redundant row in "tab" as being redundant.
+ * This undoes part of the modifications performed by isl_tab_mark_redundant.
+ * In particular, remove the redundant mark and make
+ * sure the sample value respects the constraint again.
+ * A variable that is marked non-negative by isl_tab_mark_redundant
+ * is covered by a separate undo record.
+ */
+static isl_stat restore_last_redundant(struct isl_tab *tab)
+{
+	struct isl_tab_var *var;
+
+	if (tab->n_redundant < 1)
+		isl_die(isl_tab_get_ctx(tab), isl_error_internal,
+			"no redundant rows", return isl_stat_error);
+
+	var = isl_tab_var_from_row(tab, tab->n_redundant - 1);
+	var->is_redundant = 0;
+	tab->n_redundant--;
+	restore_row(tab, var);
+
+	return isl_stat_ok;
+}
+
 static int perform_undo_var(struct isl_tab *tab, struct isl_tab_undo *undo) WARN_UNUSED;
 static int perform_undo_var(struct isl_tab *tab, struct isl_tab_undo *undo)
 {
@@ -3387,10 +3410,10 @@ static int perform_undo_var(struct isl_tab *tab, struct isl_tab_undo *undo)
 		var->is_nonneg = 0;
 		break;
 	case isl_tab_undo_redundant:
-		var->is_redundant = 0;
-		tab->n_redundant--;
-		restore_row(tab, isl_tab_var_from_row(tab, tab->n_redundant));
-		break;
+		if (!var->is_row || var->index != tab->n_redundant - 1)
+			isl_die(isl_tab_get_ctx(tab), isl_error_internal,
+				"not undoing last redundant row", return -1);
+		return restore_last_redundant(tab);
 	case isl_tab_undo_freeze:
 		var->frozen = 0;
 		break;
@@ -3427,6 +3450,36 @@ static int perform_undo_var(struct isl_tab *tab, struct isl_tab_undo *undo)
 	}
 
 	return 0;
+}
+
+/* Restore all rows that have been marked redundant by isl_tab_mark_redundant
+ * and that have been preserved in the tableau.
+ * Note that isl_tab_mark_redundant may also have marked some variables
+ * as being non-negative before marking them redundant.  These need
+ * to be removed as well as otherwise some constraints could end up
+ * getting marked redundant with respect to the variable.
+ */
+isl_stat isl_tab_restore_redundant(struct isl_tab *tab)
+{
+	if (!tab)
+		return isl_stat_error;
+
+	if (tab->need_undo)
+		isl_die(isl_tab_get_ctx(tab), isl_error_invalid,
+			"manually restoring redundant constraints "
+			"interferes with undo history",
+			return isl_stat_error);
+
+	while (tab->n_redundant > 0) {
+		if (tab->row_var[tab->n_redundant - 1] >= 0) {
+			struct isl_tab_var *var;
+
+			var = isl_tab_var_from_row(tab, tab->n_redundant - 1);
+			var->is_nonneg = 0;
+		}
+		restore_last_redundant(tab);
+	}
+	return isl_stat_ok;
 }
 
 /* Undo the addition of an integer division to the basic map representation
