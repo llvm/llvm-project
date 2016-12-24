@@ -349,7 +349,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   if (!InvariantGroupMD)
     return MemDepResult::getUnknown();
 
-  MemDepResult Result = MemDepResult::getUnknown();
   SmallSet<Value *, 14> Seen;
   // Queue to process all pointers that are equivalent to load operand.
   SmallVector<Value *, 8> LoadOperandsQueue;
@@ -384,7 +383,7 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
         return MemDepResult::getDef(U);
     }
   }
-  return Result;
+  return MemDepResult::getUnknown();
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(

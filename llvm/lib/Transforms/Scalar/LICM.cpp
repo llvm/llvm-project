@@ -124,8 +124,15 @@ struct LegacyLICMPass : public LoopPass {
   }
 
   bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
+    if (skipLoop(L)) {
+      // If we have run LICM on a previous loop but now we are skipping
+      // (because we've hit the opt-bisect limit), we need to clear the
+      // loop alias information.
+      for (auto &LTAS : LICM.getLoopToAliasSetMap())
+        delete LTAS.second;
+      LICM.getLoopToAliasSetMap().clear();
       return false;
+    }
 
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     return LICM.runOnLoop(L,
