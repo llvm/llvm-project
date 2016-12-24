@@ -94,8 +94,8 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-def atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
-def atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
+defm atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
+defm atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1

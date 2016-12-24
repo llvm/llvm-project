@@ -166,7 +166,7 @@ namespace opts {
   // -arm-attributes, -a
   cl::opt<bool> ARMAttributes("arm-attributes",
                               cl::desc("Display the ARM attributes section"));
-  cl::alias ARMAttributesShort("-a", cl::desc("Alias for --arm-attributes"),
+  cl::alias ARMAttributesShort("a", cl::desc("Alias for --arm-attributes"),
                                cl::aliasopt(ARMAttributes));
 
   // -mips-plt-got

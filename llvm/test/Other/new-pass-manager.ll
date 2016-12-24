@@ -312,6 +312,17 @@
 ; CHECK-AA: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<aa>' -aa-pipeline='default' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-AA-DEFAULT
+; CHECK-AA-DEFAULT: Starting llvm::Module pass manager run
+; CHECK-AA-DEFAULT: Running pass: RequireAnalysisPass
+; CHECK-AA-DEFAULT: Running analysis: AAManager
+; CHECK-AA-DEFAULT: Running analysis: BasicAA
+; CHECK-AA-DEFAULT: Running analysis: ScopedNoAliasAA
+; CHECK-AA-DEFAULT: Running analysis: TypeBasedAA
+; CHECK-AA-DEFAULT: Finished llvm::Module pass manager run
+
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<memdep>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MEMDEP
 ; CHECK-MEMDEP: Starting llvm::Module pass manager run

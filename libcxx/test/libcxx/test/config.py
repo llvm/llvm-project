@@ -646,6 +646,7 @@ class Configuration(object):
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
         if enable_warnings:
+            self.cxx.useWarnings(True)
             self.cxx.warning_flags += [
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
                 '-Wall', '-Wextra', '-Werror'
@@ -662,6 +663,7 @@ class Configuration(object):
             self.cxx.addWarningFlagIfSupported('-Wsign-compare')
             self.cxx.addWarningFlagIfSupported('-Wunused-variable')
             self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
+            self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
             # FIXME: Enable the two warnings below.
             self.cxx.addWarningFlagIfSupported('-Wno-conversion')
             self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')

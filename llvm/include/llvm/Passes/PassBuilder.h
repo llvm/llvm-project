@@ -224,6 +224,10 @@ public:
   ModulePassManager buildLTODefaultPipeline(OptimizationLevel Level,
                                             bool DebugLogging = false);
 
+  /// Build the default `AAManager` with the default alias analysis pipeline
+  /// registered.
+  AAManager buildDefaultAAPipeline();
+
   /// \brief Parse a textual pass pipeline description into a \c ModulePassManager.
   ///
   /// The format of the textual pass pipeline description looks something like:
