@@ -531,7 +531,7 @@ private:
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    void __move_assign_alloc(__forward_list_base& __x, false_type) _NOEXCEPT
+    void __move_assign_alloc(__forward_list_base&, false_type) _NOEXCEPT
         {}
     _LIBCPP_INLINE_VISIBILITY
     void __move_assign_alloc(__forward_list_base& __x, true_type)
@@ -1426,7 +1426,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
 template <class _Tp, class _Alloc>
 void
 forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
-                                        forward_list& __x,
+                                        forward_list& /*__other*/,
                                         const_iterator __i)
 {
     const_iterator __lm1 = _VSTD::next(__i);
@@ -1441,7 +1441,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
 template <class _Tp, class _Alloc>
 void
 forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
-                                        forward_list& __x,
+                                        forward_list& /*__other*/,
                                         const_iterator __f, const_iterator __l)
 {
     if (__f != __l && __p != __f)

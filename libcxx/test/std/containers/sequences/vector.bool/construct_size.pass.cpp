@@ -31,6 +31,9 @@ test2(typename C::size_type n,
     assert(c.get_allocator() == a);
     for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
         assert(*i == typename C::value_type());
+#else
+  ((void)n);
+  ((void)a);
 #endif
 }
 

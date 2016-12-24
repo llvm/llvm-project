@@ -501,9 +501,10 @@ void WhitespaceManager::storeReplacement(SourceRange Range,
       SourceMgr, CharSourceRange::getCharRange(Range), Text));
   // FIXME: better error handling. For now, just print an error message in the
   // release version.
-  if (Err)
+  if (Err) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-  assert(!Err);
+    assert(false);
+  }
 }
 
 void WhitespaceManager::appendNewlineText(std::string &Text,

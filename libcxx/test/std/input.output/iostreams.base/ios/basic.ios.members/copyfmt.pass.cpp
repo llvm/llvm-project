@@ -168,9 +168,6 @@ int main()
     catch (std::ios_base::failure&)
     {
     }
-#else
-    ios1.copyfmt(ios2);
-#endif
     assert(ios1.rdstate() == std::ios::eofbit);
     assert(ios1.rdbuf() == &sb1);
     assert(ios1.flags() == (std::ios::showpoint | std::ios::uppercase));
@@ -193,4 +190,5 @@ int main()
     assert(ios1.pword(1) == &d2);
     assert(ios1.tie() == (std::ostream*)2);
     assert(ios1.fill() == '2');
+#endif
 }

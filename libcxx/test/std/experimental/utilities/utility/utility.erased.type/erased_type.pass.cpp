@@ -13,5 +13,6 @@
 
 int main()
 {
-    std::experimental::erased_type e;
+  std::experimental::erased_type e;
+  ((void)e);
 }

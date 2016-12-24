@@ -821,30 +821,40 @@ private:
     // We call annotatations only for the default Allocator because other allocators
     // may not meet the AddressSanitizer alignment constraints.
     // See the documentation for __sanitizer_annotate_contiguous_container for more details.
-    void __annotate_contiguous_container
-    (const void *__beg, const void *__end, const void *__old_mid, const void *__new_mid) const
-    {
 #ifndef _LIBCPP_HAS_NO_ASAN
+    void __annotate_contiguous_container(const void *__beg, const void *__end,
+                                         const void *__old_mid,
+                                         const void *__new_mid) const
+    {
+
       if (__beg && is_same<allocator_type, __default_allocator_type>::value)
         __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
-#endif
     }
-
-    void __annotate_new(size_type __current_size) const
-    {
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    void __annotate_contiguous_container(const void*, const void*, const void*,
+                                         const void*) const {}
+#endif
+    _LIBCPP_INLINE_VISIBILITY
+    void __annotate_new(size_type __current_size) const {
       __annotate_contiguous_container(data(), data() + capacity(),
                                       data() + capacity(), data() + __current_size);
     }
-    void __annotate_delete() const
-    {
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __annotate_delete() const {
       __annotate_contiguous_container(data(), data() + capacity(),
                                       data() + size(), data() + capacity());
     }
+
+    _LIBCPP_INLINE_VISIBILITY
     void __annotate_increase(size_type __n) const
     {
       __annotate_contiguous_container(data(), data() + capacity(),
                                       data() + size(), data() + size() + __n);
     }
+
+    _LIBCPP_INLINE_VISIBILITY
     void __annotate_shrink(size_type __old_size) const
     {
       __annotate_contiguous_container(data(), data() + capacity(),
@@ -869,8 +879,9 @@ private:
     };
 #else
     struct __RAII_IncreaseAnnotator {
-      inline __RAII_IncreaseAnnotator(const vector &, size_type __n = 1) {}
-      inline void __done() {}
+      _LIBCPP_INLINE_VISIBILITY
+      __RAII_IncreaseAnnotator(const vector &, size_type = 1) {}
+      _LIBCPP_INLINE_VISIBILITY void __done() {}
     };
 #endif
 
@@ -2914,7 +2925,9 @@ typename enable_if
 vector<bool, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
 {
     clear();
-    difference_type __n = _VSTD::distance(__first, __last);
+    difference_type __ns = _VSTD::distance(__first, __last);
+    _LIBCPP_ASSERT(__ns >= 0, "invalid range specified");
+    const size_t __n = static_cast<size_type>(__ns);
     if (__n)
     {
         if (__n > capacity())

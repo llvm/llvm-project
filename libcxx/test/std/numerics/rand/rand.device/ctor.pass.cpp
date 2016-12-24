@@ -49,6 +49,8 @@ void check_random_device_invalid(const std::string &token) {
     LIBCPP_ASSERT(false);
   } catch (const std::system_error&) {
   }
+#else
+  ((void)token);
 #endif
 }
 

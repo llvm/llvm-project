@@ -423,8 +423,7 @@ void Sema::PrintInstantiationStack() {
         if (isa<ClassTemplateSpecializationDecl>(Record))
           DiagID = diag::note_template_class_instantiation_here;
         Diags.Report(Active->PointOfInstantiation, DiagID)
-          << Context.getTypeDeclType(Record)
-          << Active->InstantiationRange;
+          << Record << Active->InstantiationRange;
       } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {
         unsigned DiagID;
         if (Function->getPrimaryTemplate())
@@ -485,20 +484,9 @@ void Sema::PrintInstantiationStack() {
       break;
     }
 
-    case ActiveTemplateInstantiation::DeducedTemplateArgumentSubstitution:
-      if (ClassTemplatePartialSpecializationDecl *PartialSpec =
-            dyn_cast<ClassTemplatePartialSpecializationDecl>(Active->Entity)) {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_partial_spec_deduct_instantiation_here)
-          << Context.getTypeDeclType(PartialSpec)
-          << getTemplateArgumentBindingsText(
-                                         PartialSpec->getTemplateParameters(), 
-                                             Active->TemplateArgs, 
-                                             Active->NumTemplateArgs)
-          << Active->InstantiationRange;
-      } else {
-        FunctionTemplateDecl *FnTmpl
-          = cast<FunctionTemplateDecl>(Active->Entity);
+    case ActiveTemplateInstantiation::DeducedTemplateArgumentSubstitution: {
+      if (FunctionTemplateDecl *FnTmpl =
+              dyn_cast<FunctionTemplateDecl>(Active->Entity)) {
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_function_template_deduction_instantiation_here)
           << FnTmpl
@@ -506,8 +494,29 @@ void Sema::PrintInstantiationStack() {
                                              Active->TemplateArgs, 
                                              Active->NumTemplateArgs)
           << Active->InstantiationRange;
+      } else {
+        bool IsVar = isa<VarTemplateDecl>(Active->Entity) ||
+                     isa<VarTemplateSpecializationDecl>(Active->Entity);
+        TemplateParameterList *Params;
+        if (auto *D = dyn_cast<ClassTemplatePartialSpecializationDecl>(
+                       Active->Entity)) {
+          Params = D->getTemplateParameters();
+        } else if (auto *D = dyn_cast<VarTemplatePartialSpecializationDecl>(
+                       Active->Entity)) {
+          Params = D->getTemplateParameters();
+        } else {
+          llvm_unreachable("unexpected template kind");
+        }
+
+        Diags.Report(Active->PointOfInstantiation,
+                     diag::note_deduced_template_arg_substitution_here)
+          << IsVar << cast<NamedDecl>(Active->Entity)
+          << getTemplateArgumentBindingsText(Params, Active->TemplateArgs, 
+                                             Active->NumTemplateArgs)
+          << Active->InstantiationRange;
       }
       break;
+    }
 
     case ActiveTemplateInstantiation::DefaultFunctionArgumentInstantiation: {
       ParmVarDecl *Param = cast<ParmVarDecl>(Active->Entity);

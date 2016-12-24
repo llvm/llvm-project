@@ -53,6 +53,7 @@ TEST_CASE(test_error_reporting)
                 && err.code() == ec;
         }
 #else
+        ((void)f); ((void)opts); ((void)ec);
         return true;
 #endif
     };
@@ -116,7 +117,7 @@ TEST_CASE(basic_permissions_test)
         permissions(TC.p, TC.set_perms, ec);
         TEST_CHECK(!ec);
         auto pp = status(TC.p).permissions();
-        TEST_CHECK(status(TC.p).permissions() == TC.expected);
+        TEST_CHECK(pp == TC.expected);
     }
 }
 

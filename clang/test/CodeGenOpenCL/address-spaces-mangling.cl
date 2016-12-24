@@ -31,14 +31,14 @@ void f(global int *arg) { }
 
 __attribute__((overloadable))
 void f(local int *arg) { }
-// ASMANG: @_Z1fPU3AS2i
+// ASMANG: @_Z1fPU3AS3i
 // NOASMANG: @_Z1fPU7CLlocali
-// OCL-20-DAG: @_Z1fPU3AS2i
-// OCL-12-DAG: @_Z1fPU3AS2i
+// OCL-20-DAG: @_Z1fPU3AS3i
+// OCL-12-DAG: @_Z1fPU3AS3i
 
 __attribute__((overloadable))
 void f(constant int *arg) { }
-// ASMANG: @_Z1fPU3AS3i
+// ASMANG: @_Z1fPU3AS2i
 // NOASMANG: @_Z1fPU10CLconstanti
-// OCL-20-DAG: @_Z1fPU3AS3i
-// OCL-12-DAG: @_Z1fPU3AS3i
+// OCL-20-DAG: @_Z1fPU3AS2i
+// OCL-12-DAG: @_Z1fPU3AS2i

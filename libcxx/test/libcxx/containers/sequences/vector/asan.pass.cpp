@@ -38,7 +38,8 @@ int main()
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c(std::begin(t), std::end(t));
         c.reserve(2*c.size());
-        T foo = c[c.size()];    // bad, but not caught by ASAN
+        volatile T foo = c[c.size()];    // bad, but not caught by ASAN
+        ((void)foo);
     }
 #endif
 
@@ -64,6 +65,7 @@ int main()
         assert(!__sanitizer_verify_contiguous_container( c.data(), c.data() + 1, c.data() + c.capacity()));
         volatile T foo = c[c.size()]; // should trigger ASAN. Use volatile to prevent being optimized away.
         assert(false);          // if we got here, ASAN didn't trigger
+        ((void)foo);
     }
 }
 #else

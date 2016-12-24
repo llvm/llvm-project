@@ -3781,6 +3781,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
                                              ConvertType(E->getType()));
     return MakeAddrLValue(V, E->getType(), LV.getAlignmentSource());
   }
+  case CK_ZeroToOCLQueue:
+    llvm_unreachable("NULL to OpenCL queue lvalue cast is not valid");
   case CK_ZeroToOCLEvent:
     llvm_unreachable("NULL to OpenCL event lvalue cast is not valid");
   }

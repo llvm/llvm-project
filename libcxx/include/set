@@ -1023,7 +1023,7 @@ public:
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, value_type&& __v)
-        {return __tree_.__insert_multi(_VSTD::move(__v));}
+        {return __tree_.__insert_multi(__p, _VSTD::move(__v));}
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY

@@ -60,6 +60,8 @@ void func2(std::packaged_task<double(int, char)> p)
     {
         assert(e.code() == make_error_code(std::future_errc::promise_already_satisfied));
     }
+#else
+    ((void)p);
 #endif
 }
 
@@ -74,6 +76,8 @@ void func3(std::packaged_task<double(int, char)> p)
     {
         assert(e.code() == make_error_code(std::future_errc::no_state));
     }
+#else
+    ((void)p);
 #endif
 }
 

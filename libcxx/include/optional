@@ -1080,7 +1080,7 @@ operator<=(const optional<_Tp>& __x, nullopt_t) noexcept
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
 bool
-operator<=(nullopt_t, const optional<_Tp>& __x) noexcept
+operator<=(nullopt_t, const optional<_Tp>&) noexcept
 {
     return true;
 }
@@ -1096,7 +1096,7 @@ operator>(const optional<_Tp>& __x, nullopt_t) noexcept
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
 bool
-operator>(nullopt_t, const optional<_Tp>& __x) noexcept
+operator>(nullopt_t, const optional<_Tp>&) noexcept
 {
     return false;
 }

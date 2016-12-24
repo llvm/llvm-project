@@ -283,7 +283,7 @@ namespace spec_vs_expl_inst {
     template <typename STRING_TYPE> class BasicStringPiece {};
     template class BasicStringPiece<int>;  // expected-note {{explicit instantiation definition is here}} expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;  // expected-error {{explicit instantiation declaration (with 'extern') follows explicit instantiation definition (without 'extern')}}
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::IDS_WithDefinedTemplate::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace DIS_WithDefinedTemplate {
@@ -313,14 +313,14 @@ namespace spec_vs_expl_inst {
     template <typename STRING_TYPE> class BasicStringPiece;
     template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}} expected-note {{previous}}
     template class BasicStringPiece<int>; // expected-warning {{has no effect}}
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SIS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace SDS {
     template <typename STRING_TYPE> class BasicStringPiece;
     template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SDS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
   namespace SDIS {
@@ -328,7 +328,7 @@ namespace spec_vs_expl_inst {
     template <> class BasicStringPiece<int> { };  // expected-note {{previous definition is here}}
     extern template class BasicStringPiece<int>;
     template class BasicStringPiece<int>;
-    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'spec_vs_expl_inst::SDIS::BasicStringPiece<int>'}}
+    template <> class BasicStringPiece<int> { };  // expected-error {{redefinition of 'BasicStringPiece<int>'}}
   }
 
 }

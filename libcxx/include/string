@@ -2220,7 +2220,7 @@ bool __ptr_in_range (const _Tp* __p, const _Tp* __first, const _Tp* __last)
 }
 
 template <class _Tp1, class _Tp2>
-bool __ptr_in_range (const _Tp1* __p, const _Tp2* __first, const _Tp2* __last)
+bool __ptr_in_range (const _Tp1*, const _Tp2*, const _Tp2*)
 {
     return false;
 }

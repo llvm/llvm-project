@@ -5945,6 +5945,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                        options::OPT_fno_inline_functions))
     InlineArg->render(Args, CmdArgs);
 
+  Args.AddLastArg(CmdArgs, options::OPT_fexperimental_new_pass_manager,
+                  options::OPT_fno_experimental_new_pass_manager);
+
   ObjCRuntime objcRuntime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
 
   // -fobjc-dispatch-method is only relevant with the nonfragile-abi, and

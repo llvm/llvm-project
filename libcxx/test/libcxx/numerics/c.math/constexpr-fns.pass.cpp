@@ -23,11 +23,10 @@
 
 #include <cmath>
 
-constexpr bool a = std::__libcpp_isnan(0.);
-constexpr bool b = std::__libcpp_isinf(0.0);
-constexpr bool c = std::__libcpp_isfinite(0.0);
+static_assert(std::__libcpp_isnan(0.) == false, "");
+static_assert(std::__libcpp_isinf(0.0) == false, "");
+static_assert(std::__libcpp_isfinite(0.0) == true, "");
 
 int main()
 {
-  return 0;
 }

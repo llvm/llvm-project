@@ -1800,6 +1800,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              From->EvaluateKnownConstInt(S.getASTContext()) == 0) {
     SCS.Second = ICK_Zero_Event_Conversion;
     FromType = ToType;
+  } else if (ToType->isQueueT() &&
+             From->isIntegerConstantExpr(S.getASTContext()) &&
+             (From->EvaluateKnownConstInt(S.getASTContext()) == 0)) {
+    SCS.Second = ICK_Zero_Queue_Conversion;
+    FromType = ToType;
   } else {
     // No second conversion required.
     SCS.Second = ICK_Identity;
@@ -5177,6 +5182,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Function_Conversion:
   case ICK_Integral_Promotion:
   case ICK_Integral_Conversion: // Narrowing conversions are checked elsewhere.
+  case ICK_Zero_Queue_Conversion:
     return true;
 
   case ICK_Boolean_Conversion:

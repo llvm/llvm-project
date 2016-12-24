@@ -101,9 +101,9 @@ double try7(bool v) {
   double g = get(0);
   double h = get(0);
   for (counter = 100; counter; --counter)
-    a += get(1) + b+c+d+e+f+g;
+    a += get(1) + b+c+d+e+f+g+h;
   if (v) throw 10;
-  return get(0)+a+b+c+d+e+f+g;
+  return get(0)+a+b+c+d+e+f+g+h;
 }
 
 double try8(bool v) {
@@ -117,9 +117,9 @@ double try8(bool v) {
   double h = get(0);
   double i = get(0);
   for (counter = 100; counter; --counter)
-    a += get(1) + b+c+d+e+f+g+i;
+    a += get(1) + b+c+d+e+f+g+h+i;
   if (v) throw 10;
-  return get(0)+a+b+c+d+e+f+g+i;
+  return get(0)+a+b+c+d+e+f+g+h+i;
 }
 
 

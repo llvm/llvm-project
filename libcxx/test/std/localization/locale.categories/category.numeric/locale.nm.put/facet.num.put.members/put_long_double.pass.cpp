@@ -26226,25 +26226,25 @@ int main()
     std::locale lg(lc, new my_numpunct);
     const my_facet f(1);
     {
-        long double v = -INFINITY;
+        long double v = -INFINITY; ((void)v);
     }
     {
-        long double v = std::nan("");
+        long double v = std::nan(""); ((void)v);
     }
 
     {
-        long double v = +0.;
+        long double v = +0.; ((void)v);
     }
     {
-        long double v = -INFINITY;
+        long double v = -INFINITY; ((void)v);
     }
     {
-        long double v = std::nan("");
+        long double v = std::nan(""); ((void)v);
     }
     {
-        long double v = -INFINITY;
+        long double v = -INFINITY; ((void)v);
     }
     {
-        long double v = std::nan("");
+        long double v = std::nan(""); ((void)v);
     }
 }

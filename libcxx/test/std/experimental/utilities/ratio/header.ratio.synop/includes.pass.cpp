@@ -18,4 +18,5 @@
 int main()
 {
   std::ratio<100> x;
+  ((void)x);
 }

@@ -245,8 +245,8 @@ public:
     iterator erase(const_iterator pos)                      { return l_.erase(pos); }
     iterator erase(const_iterator pos, const_iterator last) { return l_.erase(pos, last); }
 
-    void resize(size_type sz)                      { l_.resize(); }
-    void resize(size_type sz, const value_type& c) { l_.resize(c); }
+    void resize(size_type)                      { l_.resize(); }
+    void resize(size_type, const value_type& c) { l_.resize(c); }
 
     void swap(nasty_list &nl)
 #if TEST_STD_VER > 14

@@ -3932,7 +3932,8 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow()
             streamsize __nmemb = _VSTD::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),
                                  static_cast<streamsize>(__extbufend_ - __extbufnext_));
             codecvt_base::result __r;
-            state_type __svs = __st_;
+            // FIXME: Do we ever need to restore the state here?
+            //state_type __svs = __st_;
             streamsize __nr = __bufptr_->sgetn(const_cast<char*>(__extbufnext_), __nmemb);
             if (__nr != 0)
             {

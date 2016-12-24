@@ -83,6 +83,7 @@ namespace clang {
     ICK_TransparentUnionConversion, ///< Transparent Union Conversions
     ICK_Writeback_Conversion,  ///< Objective-C ARC writeback conversion
     ICK_Zero_Event_Conversion, ///< Zero constant to event (OpenCL1.2 6.12.10)
+    ICK_Zero_Queue_Conversion, ///< Zero constant to queue
     ICK_C_Only_Conversion,     ///< Conversions allowed in C, but not C++
     ICK_Incompatible_Pointer_Conversion, ///< C-only conversion between pointers
                                          ///  with incompatible types

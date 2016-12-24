@@ -1754,7 +1754,9 @@ _BidirectionalIterator2
 copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
               _BidirectionalIterator2 __result)
 {
-    return _VSTD::__copy_backward(__unwrap_iter(__first), __unwrap_iter(__last), __unwrap_iter(__result));
+    return _VSTD::__copy_backward(__unwrap_iter(__first),
+                                  __unwrap_iter(__last),
+                                  __unwrap_iter(__result));
 }
 
 // copy_if
@@ -4895,7 +4897,8 @@ push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 
 template <class _Compare, class _RandomAccessIterator>
 void
-__sift_down(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
+__sift_down(_RandomAccessIterator __first, _RandomAccessIterator /*__last*/,
+            _Compare __comp,
             typename iterator_traits<_RandomAccessIterator>::difference_type __len,
             _RandomAccessIterator __start)
 {

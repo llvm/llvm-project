@@ -105,8 +105,8 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
 
 static Sema::TemplateDeductionResult
 DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
-                        const TemplateArgument *Params, unsigned NumParams,
-                        const TemplateArgument *Args, unsigned NumArgs,
+                        ArrayRef<TemplateArgument> Params,
+                        ArrayRef<TemplateArgument> Args,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                         bool NumberOfArgumentsMustMatch);
@@ -520,9 +520,9 @@ DeduceTemplateArguments(Sema &S,
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be
     // filled in by default arguments.
-    return DeduceTemplateArguments(S, TemplateParams, Param->getArgs(),
-                                   Param->getNumArgs(), SpecArg->getArgs(),
-                                   SpecArg->getNumArgs(), Info, Deduced,
+    return DeduceTemplateArguments(S, TemplateParams,
+                                   Param->template_arguments(),
+                                   SpecArg->template_arguments(), Info, Deduced,
                                    /*NumberOfArgumentsMustMatch=*/false);
   }
 
@@ -554,10 +554,9 @@ DeduceTemplateArguments(Sema &S,
     return Result;
 
   // Perform template argument deduction for the template arguments.
-  return DeduceTemplateArguments(
-      S, TemplateParams, Param->getArgs(), Param->getNumArgs(),
-      SpecArg->getTemplateArgs().data(), SpecArg->getTemplateArgs().size(),
-      Info, Deduced, /*NumberOfArgumentsMustMatch=*/true);
+  return DeduceTemplateArguments(S, TemplateParams, Param->template_arguments(),
+                                 SpecArg->getTemplateArgs().asArray(), Info,
+                                 Deduced, /*NumberOfArgumentsMustMatch=*/true);
 }
 
 /// \brief Determines whether the given type is an opaque type that
@@ -1864,45 +1863,34 @@ DeduceTemplateArguments(Sema &S,
 ///
 /// \returns true if there is another template argument (which will be at
 /// \c Args[ArgIdx]), false otherwise.
-static bool hasTemplateArgumentForDeduction(const TemplateArgument *&Args,
-                                            unsigned &ArgIdx,
-                                            unsigned &NumArgs) {
-  if (ArgIdx == NumArgs)
+static bool hasTemplateArgumentForDeduction(ArrayRef<TemplateArgument> &Args,
+                                            unsigned &ArgIdx) {
+  if (ArgIdx == Args.size())
     return false;
 
   const TemplateArgument &Arg = Args[ArgIdx];
   if (Arg.getKind() != TemplateArgument::Pack)
     return true;
 
-  assert(ArgIdx == NumArgs - 1 && "Pack not at the end of argument list?");
-  Args = Arg.pack_begin();
-  NumArgs = Arg.pack_size();
+  assert(ArgIdx == Args.size() - 1 && "Pack not at the end of argument list?");
+  Args = Arg.pack_elements();
   ArgIdx = 0;
-  return ArgIdx < NumArgs;
+  return ArgIdx < Args.size();
 }
 
 /// \brief Determine whether the given set of template arguments has a pack
 /// expansion that is not the last template argument.
-static bool hasPackExpansionBeforeEnd(const TemplateArgument *Args,
-                                      unsigned NumArgs) {
-  unsigned ArgIdx = 0;
-  while (ArgIdx < NumArgs) {
-    const TemplateArgument &Arg = Args[ArgIdx];
-
-    // Unwrap argument packs.
-    if (Args[ArgIdx].getKind() == TemplateArgument::Pack) {
-      Args = Arg.pack_begin();
-      NumArgs = Arg.pack_size();
-      ArgIdx = 0;
-      continue;
-    }
-
-    ++ArgIdx;
-    if (ArgIdx == NumArgs)
-      return false;
-
-    if (Arg.isPackExpansion())
+static bool hasPackExpansionBeforeEnd(ArrayRef<TemplateArgument> Args) {
+  bool FoundPackExpansion = false;
+  for (const auto &A : Args) {
+    if (FoundPackExpansion)
       return true;
+
+    if (A.getKind() == TemplateArgument::Pack)
+      return hasPackExpansionBeforeEnd(A.pack_elements());
+
+    if (A.isPackExpansion())
+      FoundPackExpansion = true;
   }
 
   return false;
@@ -1910,8 +1898,8 @@ static bool hasPackExpansionBeforeEnd(const TemplateArgument *Args,
 
 static Sema::TemplateDeductionResult
 DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
-                        const TemplateArgument *Params, unsigned NumParams,
-                        const TemplateArgument *Args, unsigned NumArgs,
+                        ArrayRef<TemplateArgument> Params,
+                        ArrayRef<TemplateArgument> Args,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                         bool NumberOfArgumentsMustMatch) {
@@ -1919,7 +1907,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   //   If the template argument list of P contains a pack expansion that is not
   //   the last template argument, the entire template argument list is a
   //   non-deduced context.
-  if (hasPackExpansionBeforeEnd(Params, NumParams))
+  if (hasPackExpansionBeforeEnd(Params))
     return Sema::TDK_Success;
 
   // C++0x [temp.deduct.type]p9:
@@ -1927,13 +1915,12 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   //   respective template argument list P is compared with the corresponding
   //   argument Ai of the corresponding template argument list of A.
   unsigned ArgIdx = 0, ParamIdx = 0;
-  for (; hasTemplateArgumentForDeduction(Params, ParamIdx, NumParams);
-       ++ParamIdx) {
+  for (; hasTemplateArgumentForDeduction(Params, ParamIdx); ++ParamIdx) {
     if (!Params[ParamIdx].isPackExpansion()) {
       // The simple case: deduce template arguments by matching Pi and Ai.
 
       // Check whether we have enough arguments.
-      if (!hasTemplateArgumentForDeduction(Args, ArgIdx, NumArgs))
+      if (!hasTemplateArgumentForDeduction(Args, ArgIdx))
         return NumberOfArgumentsMustMatch ? Sema::TDK_TooFewArguments
                                           : Sema::TDK_Success;
 
@@ -1975,7 +1962,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     // expanded by this pack expansion (the outer index) and for each
     // template argument (the inner SmallVectors).
     bool HasAnyArguments = false;
-    for (; hasTemplateArgumentForDeduction(Args, ArgIdx, NumArgs); ++ArgIdx) {
+    for (; hasTemplateArgumentForDeduction(Args, ArgIdx); ++ArgIdx) {
       HasAnyArguments = true;
 
       // Deduce template arguments from the pattern.
@@ -2003,10 +1990,8 @@ DeduceTemplateArguments(Sema &S,
                         const TemplateArgumentList &ArgList,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
-  return DeduceTemplateArguments(S, TemplateParams,
-                                 ParamList.data(), ParamList.size(),
-                                 ArgList.data(), ArgList.size(),
-                                 Info, Deduced, false);
+  return DeduceTemplateArguments(S, TemplateParams, ParamList.asArray(),
+                                 ArgList.asArray(), Info, Deduced, false);
 }
 
 /// \brief Determine whether two template arguments are the same.
@@ -4958,7 +4943,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     //   not the last template argument, the entire template argument list is a
     //   non-deduced context.
     if (OnlyDeduced &&
-        hasPackExpansionBeforeEnd(Spec->getArgs(), Spec->getNumArgs()))
+        hasPackExpansionBeforeEnd(Spec->template_arguments()))
       break;
 
     for (unsigned I = 0, N = Spec->getNumArgs(); I != N; ++I)
@@ -5133,7 +5118,7 @@ Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
   //   the last template argument, the entire template argument list is a
   //   non-deduced context.
   if (OnlyDeduced &&
-      hasPackExpansionBeforeEnd(TemplateArgs.data(), TemplateArgs.size()))
+      hasPackExpansionBeforeEnd(TemplateArgs.asArray()))
     return;
 
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)

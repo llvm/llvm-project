@@ -330,8 +330,8 @@ public:
 
   /// \brief Iterator range referencing all of the elements of a template
   /// argument pack.
-  llvm::iterator_range<pack_iterator> pack_elements() const {
-    return llvm::make_range(pack_begin(), pack_end());
+  ArrayRef<TemplateArgument> pack_elements() const {
+    return llvm::makeArrayRef(pack_begin(), pack_end());
   }
 
   /// \brief The number of template arguments in the given template argument
@@ -594,6 +594,10 @@ public:
   /// \brief Retrieve the template arguments
   const TemplateArgumentLoc *getTemplateArgs() const {
     return getTrailingObjects<TemplateArgumentLoc>();
+  }
+
+  llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
+    return llvm::makeArrayRef(getTemplateArgs(), NumTemplateArgs);
   }
 
   const TemplateArgumentLoc &operator[](unsigned I) const {
