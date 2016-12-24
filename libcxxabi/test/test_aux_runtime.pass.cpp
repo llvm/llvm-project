@@ -28,8 +28,8 @@ bool bad_typeid_test () {
     class B { virtual void g() {}}; 
     
     B *bp = NULL;
-    try {bool b = typeid(*bp) == typeid (A); }
-    catch ( const std::bad_typeid &bc ) { return true; }
+    try {bool b = typeid(*bp) == typeid (A); ((void)b); }
+    catch ( const std::bad_typeid &) { return true; }
     return false;
     }
     
@@ -44,12 +44,12 @@ bool bad_cast_test () {
 
     D d;
     B *bp = (B*)&d;     // cast needed to break protection
-    try { D &dr = dynamic_cast<D&> (*bp); }
-    catch ( const std::bad_cast &bc ) { return true; }
+    try { D &dr = dynamic_cast<D&> (*bp); ((void)dr); }
+    catch ( const std::bad_cast & ) { return true; }
     return false;
     }
     
-int main ( int argc, char *argv [] ) {
+int main ( ) {
     int ret_val = 0;
     
     if ( !bad_typeid_test ()) {

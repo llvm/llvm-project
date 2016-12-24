@@ -165,7 +165,7 @@ void exhaustion_test3 () {
     }
 
     
-int main ( int argc, char *argv [] ) {
+int main () {
     print_free_list ();
 
     char *p = (char *) fallback_malloc ( 1024 );    // too big!

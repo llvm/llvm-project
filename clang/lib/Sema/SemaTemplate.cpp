@@ -6639,8 +6639,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
       TUK = TUK_Declaration;
     } else if (Def) {
       SourceRange Range(TemplateNameLoc, RAngleLoc);
-      Diag(TemplateNameLoc, diag::err_redefinition)
-        << Context.getTypeDeclType(Specialization) << Range;
+      Diag(TemplateNameLoc, diag::err_redefinition) << Specialization << Range;
       Diag(Def->getLocation(), diag::note_previous_definition);
       Specialization->setInvalidDecl();
       return true;

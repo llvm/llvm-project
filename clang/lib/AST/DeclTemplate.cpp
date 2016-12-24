@@ -725,9 +725,16 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
     raw_ostream &OS, const PrintingPolicy &Policy, bool Qualified) const {
   NamedDecl::getNameForDiagnostic(OS, Policy, Qualified);
 
-  const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.asArray(), Policy);
+  auto *PS = dyn_cast<ClassTemplatePartialSpecializationDecl>(this);
+  if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
+          PS ? PS->getTemplateArgsAsWritten() : nullptr) {
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, ArgsAsWritten->arguments(), Policy);
+  } else {
+    const TemplateArgumentList &TemplateArgs = getTemplateArgs();
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy);
+  }
 }
 
 ClassTemplateDecl *
@@ -1057,9 +1064,16 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
     raw_ostream &OS, const PrintingPolicy &Policy, bool Qualified) const {
   NamedDecl::getNameForDiagnostic(OS, Policy, Qualified);
 
-  const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.asArray(), Policy);
+  auto *PS = dyn_cast<VarTemplatePartialSpecializationDecl>(this);
+  if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
+          PS ? PS->getTemplateArgsAsWritten() : nullptr) {
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, ArgsAsWritten->arguments(), Policy);
+  } else {
+    const TemplateArgumentList &TemplateArgs = getTemplateArgs();
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy);
+  }
 }
 
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {

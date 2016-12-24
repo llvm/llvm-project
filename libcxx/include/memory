@@ -1605,7 +1605,7 @@ struct _LIBCPP_TYPE_VIS_ONLY allocator_traits
              is_trivially_move_constructible<_Tp>::value,
             void
         >::type
-        __construct_forward(allocator_type& __a, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+        __construct_forward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
         {
             ptrdiff_t _Np = __end1 - __begin1;
             if (_Np > 0)
@@ -1635,7 +1635,7 @@ struct _LIBCPP_TYPE_VIS_ONLY allocator_traits
              is_trivially_move_constructible<_Tp>::value,
             void
         >::type
-        __construct_range_forward(allocator_type& __a, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+        __construct_range_forward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
         {
             typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
@@ -1669,7 +1669,7 @@ struct _LIBCPP_TYPE_VIS_ONLY allocator_traits
              is_trivially_move_constructible<_Tp>::value,
             void
         >::type
-        __construct_backward(allocator_type& __a, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
+        __construct_backward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
         {
             ptrdiff_t _Np = __end1 - __begin1;
             __end2 -= _Np;
@@ -2109,7 +2109,7 @@ public:
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
         _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t __pc,
+        __libcpp_compressed_pair_imp(piecewise_construct_t,
                                      tuple<_Args1...> __first_args,
                                      tuple<_Args2...> __second_args,
                                      __tuple_indices<_I1...>,
@@ -2164,7 +2164,7 @@ public:
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
         _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t __pc,
+        __libcpp_compressed_pair_imp(piecewise_construct_t,
                                      tuple<_Args1...> __first_args,
                                      tuple<_Args2...> __second_args,
                                      __tuple_indices<_I1...>,
@@ -2220,7 +2220,7 @@ public:
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
         _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t __pc,
+        __libcpp_compressed_pair_imp(piecewise_construct_t,
                                      tuple<_Args1...> __first_args,
                                      tuple<_Args2...> __second_args,
                                      __tuple_indices<_I1...>,
@@ -2274,7 +2274,7 @@ public:
 
     template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
         _LIBCPP_INLINE_VISIBILITY
-        __libcpp_compressed_pair_imp(piecewise_construct_t __pc,
+        __libcpp_compressed_pair_imp(piecewise_construct_t,
                                      tuple<_Args1...> __first_args,
                                      tuple<_Args2...> __second_args,
                                      __tuple_indices<_I1...>,

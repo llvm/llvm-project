@@ -14,7 +14,7 @@
 #include <unwind.h>
 
 extern "C" _Unwind_Reason_Code
-trace_function(struct _Unwind_Context* context, void* ntraced) {
+trace_function(struct _Unwind_Context*, void* ntraced) {
   (*reinterpret_cast<size_t*>(ntraced))++;
   // We should never have a call stack this deep...
   assert(*reinterpret_cast<size_t*>(ntraced) < 20);

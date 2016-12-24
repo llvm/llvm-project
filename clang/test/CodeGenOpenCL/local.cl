@@ -3,7 +3,7 @@
 void func(local int*);
 
 __kernel void foo(void) {
-  // CHECK: @foo.i = internal addrspace(2) global i32 undef
+  // CHECK: @foo.i = internal addrspace(3) global i32 undef
   __local int i;
   func(&i);
 }

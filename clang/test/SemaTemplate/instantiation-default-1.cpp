@@ -36,7 +36,7 @@ typedef int& int_ref_t;
 Def2<int_ref_t> *d2; // expected-note{{in instantiation of default argument for 'Def2<int &>' required here}}
 
 
-template<> struct Def1<const int, const int> { }; // expected-error{{redefinition of 'Def1<const int>'}}
+template<> struct Def1<const int> { }; // expected-error{{redefinition of 'Def1<const int, const int>'}}
 
 template<typename T, typename T2 = T&> struct Def3;
 

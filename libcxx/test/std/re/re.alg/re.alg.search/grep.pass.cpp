@@ -37,6 +37,8 @@ extern "C" void LLVMFuzzerTestOneInput(const char *data)
         }
         catch (std::regex_error &) {}
     }
+#else
+    ((void)data);
 #endif
 }
 

@@ -24,7 +24,7 @@ template <> struct hash<X>
 {
   typedef X first_argument_type;
 
-  size_t operator()(const first_argument_type& x1) const
+  size_t operator()(const first_argument_type&) const
   {
     return 99;
   }

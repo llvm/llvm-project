@@ -72,7 +72,7 @@ std::unique_ptr<int> f4(std::unique_ptr<int>&& p)
 void f5(int j)
 {
     std::this_thread::sleep_for(ms(200));
-    TEST_THROW(j);
+    TEST_THROW(j); ((void)j);
 }
 
 template <class Ret, class CheckLamdba, class ...Args>

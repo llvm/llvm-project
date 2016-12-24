@@ -28,4 +28,5 @@ int main()
     C::iterator i = c.end();
     T j = *i;
     assert(false);
+    ((void)j);
 }

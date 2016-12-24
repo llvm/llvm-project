@@ -659,13 +659,11 @@ class Configuration(object):
             # These warnings should be enabled in order to support the MSVC
             # team using the test suite; They enable the warnings below and
             # expect the test suite to be clean.
-            # FIXME: Re-enable this after fixing remaining occurrences.
-            self.cxx.addWarningFlagIfSupported('-Wno-sign-compare')
+            self.cxx.addWarningFlagIfSupported('-Wsign-compare')
+            self.cxx.addWarningFlagIfSupported('-Wunused-variable')
+            self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
             # FIXME: Enable the two warnings below.
-            self.cxx.addWarningFlagIfSupported('-Wno-unused-variable')
-            self.cxx.addWarningFlagIfSupported('-Wno-unused-parameter')
-            # TODO(EricWF) Remove the unused warnings once the test suite
-            # compiles clean with them.
+            self.cxx.addWarningFlagIfSupported('-Wno-conversion')
             self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
             std = self.get_lit_conf('std', None)
             if std in ['c++98', 'c++03']:

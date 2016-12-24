@@ -844,7 +844,7 @@ imag(const complex<_Tp>& __c)
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
-imag(_Tp __re)
+imag(_Tp)
 {
     return 0;
 }

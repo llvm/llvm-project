@@ -20,20 +20,21 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -114,6 +115,9 @@ public:
 
   void EmitAssembly(BackendAction Action,
                     std::unique_ptr<raw_pwrite_stream> OS);
+
+  void EmitAssemblyWithNewPassManager(BackendAction Action,
+                                      std::unique_ptr<raw_pwrite_stream> OS);
 };
 
 // We need this wrapper to access LangOpts and CGOpts from extension functions
@@ -709,6 +713,134 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   }
 }
 
+static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
+  switch (Opts.OptimizationLevel) {
+  default:
+    llvm_unreachable("Invalid optimization level!");
+
+  case 1:
+    return PassBuilder::O1;
+
+  case 2:
+    switch (Opts.OptimizeSize) {
+    default:
+      llvm_unreachable("Invalide optimization level for size!");
+
+    case 0:
+      return PassBuilder::O2;
+
+    case 1:
+      return PassBuilder::Os;
+
+    case 2:
+      return PassBuilder::Oz;
+    }
+
+  case 3:
+    return PassBuilder::O3;
+  }
+}
+
+/// A clean version of `EmitAssembly` that uses the new pass manager.
+///
+/// Not all features are currently supported in this system, but where
+/// necessary it falls back to the legacy pass manager to at least provide
+/// basic functionality.
+///
+/// This API is planned to have its functionality finished and then to replace
+/// `EmitAssembly` at some point in the future when the default switches.
+void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS) {
+  TimeRegion Region(llvm::TimePassesIsEnabled ? &CodeGenerationTime : nullptr);
+  setCommandLineOpts();
+
+  // The new pass manager always makes a target machine available to passes
+  // during construction.
+  CreateTargetMachine(/*MustCreateTM*/ true);
+  if (!TM)
+    // This will already be diagnosed, just bail.
+    return;
+  TheModule->setDataLayout(TM->createDataLayout());
+
+  PassBuilder PB(TM.get());
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  // Register the AA manager first so that our version is the one used.
+  FAM.registerPass([&] { return PB.buildDefaultAAPipeline(); });
+
+  // Register all the basic analyses with the managers.
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  if (CodeGenOpts.OptimizationLevel == 0) {
+    // Build a minimal pipeline based on the semantics required by Clang, which
+    // is just that always inlining occurs.
+    MPM.addPass(AlwaysInlinerPass());
+  } else {
+    // Otherwise, use the default pass pipeline. We also have to map our
+    // optimization levels into one of the distinct levels used to configure
+    // the pipeline.
+    PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
+
+    MPM = PB.buildPerModuleDefaultPipeline(Level);
+  }
+
+  // FIXME: We still use the legacy pass manager to do code generation. We
+  // create that pass manager here and use it as needed below.
+  legacy::PassManager CodeGenPasses;
+  bool NeedCodeGen = false;
+
+  // Append any output we need to the pass manager.
+  switch (Action) {
+  case Backend_EmitNothing:
+    break;
+
+  case Backend_EmitBC:
+    MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
+                                  CodeGenOpts.EmitSummaryIndex,
+                                  CodeGenOpts.EmitSummaryIndex));
+    break;
+
+  case Backend_EmitLL:
+    MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists));
+    break;
+
+  case Backend_EmitAssembly:
+  case Backend_EmitMCNull:
+  case Backend_EmitObj:
+    NeedCodeGen = true;
+    CodeGenPasses.add(
+        createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
+    if (!AddEmitPasses(CodeGenPasses, Action, *OS))
+      // FIXME: Should we handle this error differently?
+      return;
+    break;
+  }
+
+  // Before executing passes, print the final values of the LLVM options.
+  cl::PrintOptionValues();
+
+  // Now that we have all of the passes ready, run them.
+  {
+    PrettyStackTraceString CrashInfo("Optimizer");
+    MPM.run(*TheModule, MAM);
+  }
+
+  // Now if needed, run the legacy PM for codegen.
+  if (NeedCodeGen) {
+    PrettyStackTraceString CrashInfo("Code generation");
+    CodeGenPasses.run(*TheModule);
+  }
+}
+
 static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
                               std::unique_ptr<raw_pwrite_stream> OS) {
   // If we are performing a ThinLTO importing compile, load the function index
@@ -801,7 +933,10 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
 
   EmitAssemblyHelper AsmHelper(Diags, CGOpts, TOpts, LOpts, M);
 
-  AsmHelper.EmitAssembly(Action, std::move(OS));
+  if (CGOpts.ExperimentalNewPassManager)
+    AsmHelper.EmitAssemblyWithNewPassManager(Action, std::move(OS));
+  else
+    AsmHelper.EmitAssembly(Action, std::move(OS));
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.

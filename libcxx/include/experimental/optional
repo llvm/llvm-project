@@ -721,7 +721,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr
 bool
-operator<=(nullopt_t, const optional<_Tp>& __x) noexcept
+operator<=(nullopt_t, const optional<_Tp>&) noexcept
 {
     return true;
 }
@@ -739,7 +739,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr
 bool
-operator>(nullopt_t, const optional<_Tp>& __x) noexcept
+operator>(nullopt_t, const optional<_Tp>&) noexcept
 {
     return false;
 }

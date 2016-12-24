@@ -6790,7 +6790,7 @@ public:
       /// We are substituting template argument determined as part of
       /// template argument deduction for either a class template
       /// partial specialization or a function template. The
-      /// Entity is either a ClassTemplatePartialSpecializationDecl or
+      /// Entity is either a {Class|Var}TemplatePartialSpecializationDecl or
       /// a FunctionTemplateDecl.
       DeducedTemplateArgumentSubstitution,
 

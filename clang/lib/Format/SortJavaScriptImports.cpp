@@ -197,9 +197,10 @@ public:
         ReferencesText));
     // FIXME: better error handling. For now, just print error message and skip
     // the replacement for the release version.
-    if (Err)
+    if (Err) {
       llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-    assert(!Err);
+      assert(false);
+    }
 
     return Result;
   }

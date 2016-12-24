@@ -1647,7 +1647,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x)
         {
             basic_string<_CharT, _Traits> __str;
             const ctype<_CharT>& __ct = use_facet<ctype<_CharT> >(__is.getloc());
-            streamsize __c = 0;
+            size_t __c = 0;
             ios_base::iostate __err = ios_base::goodbit;
             _CharT __zero = __ct.widen('0');
             _CharT __one = __ct.widen('1');

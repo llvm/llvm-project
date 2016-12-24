@@ -844,7 +844,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
       return;
 
   HeaderList.push_back(KH);
-  Mod->Headers[headerRoleToKind(Role)].push_back(std::move(Header));
+  Mod->Headers[headerRoleToKind(Role)].push_back(Header);
 
   bool isCompilingModuleHeader =
       LangOpts.isCompilingModule() && Mod->getTopLevelModule() == SourceModule;

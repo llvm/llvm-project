@@ -655,7 +655,7 @@ private:
         }
 
     _LIBCPP_INLINE_VISIBILITY
-    void __copy_assign_alloc(const __list_imp& __c, false_type)
+    void __copy_assign_alloc(const __list_imp&, false_type)
         {}
 
     _LIBCPP_INLINE_VISIBILITY
@@ -666,7 +666,7 @@ private:
         }
 
     _LIBCPP_INLINE_VISIBILITY
-    void __move_assign_alloc(__list_imp& __c, false_type)
+    void __move_assign_alloc(__list_imp&, false_type)
         _NOEXCEPT
         {}
 };
@@ -2336,14 +2336,14 @@ list<_Tp, _Alloc>::__decrementable(const const_iterator* __i) const
 
 template <class _Tp, class _Alloc>
 bool
-list<_Tp, _Alloc>::__addable(const const_iterator* __i, ptrdiff_t __n) const
+list<_Tp, _Alloc>::__addable(const const_iterator*, ptrdiff_t) const
 {
     return false;
 }
 
 template <class _Tp, class _Alloc>
 bool
-list<_Tp, _Alloc>::__subscriptable(const const_iterator* __i, ptrdiff_t __n) const
+list<_Tp, _Alloc>::__subscriptable(const const_iterator*, ptrdiff_t) const
 {
     return false;
 }

@@ -922,6 +922,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::insert(const_iterator, const value_type&) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__p);
 #endif
         return insert(__x).first;
     }
@@ -946,6 +948,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::insert(const_iterator, const value_type&) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__p);
 #endif
         return __table_.__insert_unique(_VSTD::move(__x)).first;
     }
@@ -965,6 +969,8 @@ public:
             _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
                 "unordered_map::insert(const_iterator, value_type&&) called with an iterator not"
                 " referring to this unordered_map");
+#else
+          ((void)__p);
 #endif
             return insert(_VSTD::forward<_Pp>(__x)).first;
         }
@@ -982,6 +988,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+          ((void)__p);
 #endif
         return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
     }
@@ -1015,8 +1023,10 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__h);
 #endif
-            return try_emplace(__k, _VSTD::forward<_Args>(__args)...).first;
+        return try_emplace(__k, _VSTD::forward<_Args>(__args)...).first;
     }
 
     template <class... _Args>
@@ -1027,6 +1037,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__h);
 #endif
         return try_emplace(_VSTD::move(__k), _VSTD::forward<_Args>(__args)...).first;
     }
@@ -1057,15 +1069,17 @@ public:
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
-        iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v)
+        iterator insert_or_assign(const_iterator, const key_type& __k, _Vp&& __v)
      {
+          // FIXME: Add debug mode checking for the iterator input
           return insert_or_assign(__k, _VSTD::forward<_Vp>(__v)).first;
      }
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
-        iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v)
+        iterator insert_or_assign(const_iterator, key_type&& __k, _Vp&& __v)
      {
+        // FIXME: Add debug mode checking for the iterator input
         return insert_or_assign(_VSTD::move(__k), _VSTD::forward<_Vp>(__v)).first;
      }
 #endif

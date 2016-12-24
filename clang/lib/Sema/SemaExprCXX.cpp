@@ -3878,6 +3878,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_Zero_Queue_Conversion:
+    From = ImpCastExprToType(From, ToType,
+                             CK_ZeroToOCLQueue,
+                             From->getValueKind()).get();
+    break;
+
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:

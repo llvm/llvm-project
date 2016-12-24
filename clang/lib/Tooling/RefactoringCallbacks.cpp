@@ -45,9 +45,10 @@ void ReplaceStmtWithText::run(
         CharSourceRange::getTokenRange(FromMatch->getSourceRange()), ToText));
     // FIXME: better error handling. For now, just print error message in the
     // release version.
-    if (Err)
+    if (Err) {
       llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-    assert(!Err);
+      assert(false);
+    }
   }
 }
 
@@ -63,9 +64,10 @@ void ReplaceStmtWithStmt::run(
         replaceStmtWithStmt(*Result.SourceManager, *FromMatch, *ToMatch));
     // FIXME: better error handling. For now, just print error message in the
     // release version.
-    if (Err)
+    if (Err) {
       llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-    assert(!Err);
+      assert(false);
+    }
   }
 }
 
@@ -82,9 +84,10 @@ void ReplaceIfStmtWithItsBody::run(
           Replace.add(replaceStmtWithStmt(*Result.SourceManager, *Node, *Body));
       // FIXME: better error handling. For now, just print error message in the
       // release version.
-      if (Err)
+      if (Err) {
         llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-      assert(!Err);
+        assert(false);
+      }
     } else if (!PickTrueBranch) {
       // If we want to use the 'else'-branch, but it doesn't exist, delete
       // the whole 'if'.
@@ -92,9 +95,10 @@ void ReplaceIfStmtWithItsBody::run(
           Replace.add(replaceStmtWithText(*Result.SourceManager, *Node, ""));
       // FIXME: better error handling. For now, just print error message in the
       // release version.
-      if (Err)
+      if (Err) {
         llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-      assert(!Err);
+        assert(false);
+      }
     }
   }
 }

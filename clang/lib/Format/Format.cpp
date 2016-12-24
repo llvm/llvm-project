@@ -844,9 +844,10 @@ private:
               Env.getSourceManager(), Start, Length, ReplacementText));
           // FIXME: handle error. For now, print error message and skip the
           // replacement for release version.
-          if (Err)
+          if (Err) {
             llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-          assert(!Err);
+            assert(false);
+          }
         };
         Replace(Start, 1, IsSingle ? "'" : "\"");
         Replace(FormatTok->Tok.getEndLoc().getLocWithOffset(-1), 1,
@@ -1193,9 +1194,10 @@ private:
           Fixes.add(tooling::Replacement(Env.getSourceManager(), SR, ""));
       // FIXME: better error handling. for now just print error message and skip
       // for the release version.
-      if (Err)
+      if (Err) {
         llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-      assert(!Err && "Fixes must not conflict!");
+        assert(false && "Fixes must not conflict!");
+      }
       Idx = End + 1;
     }
 
@@ -1327,9 +1329,10 @@ static void sortCppIncludes(const FormatStyle &Style,
       FileName, Includes.front().Offset, IncludesBlockSize, result));
   // FIXME: better error handling. For now, just skip the replacement for the
   // release version.
-  if (Err)
+  if (Err) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-  assert(!Err);
+    assert(false);
+  }
 }
 
 namespace {

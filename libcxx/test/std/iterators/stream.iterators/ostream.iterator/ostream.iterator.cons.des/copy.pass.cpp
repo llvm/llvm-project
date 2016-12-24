@@ -23,4 +23,5 @@ int main()
     std::ostream_iterator<int> i(outf);
     std::ostream_iterator<int> j = i;
     assert(outf.good());
+    ((void)j);
 }

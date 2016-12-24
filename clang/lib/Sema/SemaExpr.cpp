@@ -9635,6 +9635,18 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     return ResultTy;
   }
 
+  if (getLangOpts().OpenCLVersion >= 200) {
+    if (LHSIsNull && RHSType->isQueueT()) {
+      LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
+      return ResultTy;
+    }
+
+    if (LHSType->isQueueT() && RHSIsNull) {
+      RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
+      return ResultTy;
+    }
+  }
+
   return InvalidOperands(Loc, LHS, RHS);
 }
 

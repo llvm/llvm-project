@@ -30,6 +30,7 @@ int main() {
     const char* expect = TestCases[i].expect;
 #ifdef TEST_HAS_NO_DEMANGLE
     assert(demangle(raw) == raw);
+    ((void)expect);
 #else
     assert(demangle(raw) == expect);
 #endif
