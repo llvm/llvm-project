@@ -863,21 +863,28 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
         }
       }
 
-      llvm::SmallString<64> Name("<unnamed-type-");
+      llvm::SmallString<64> Name;
       if (DeclaratorDecl *DD =
               Context.getASTContext().getDeclaratorForUnnamedTagDecl(TD)) {
         // Anonymous types without a name for linkage purposes have their
         // declarator mangled in if they have one.
+        Name += "<unnamed-type-";
         Name += DD->getName();
       } else if (TypedefNameDecl *TND =
                      Context.getASTContext().getTypedefNameForUnnamedTagDecl(
                          TD)) {
         // Anonymous types without a name for linkage purposes have their
         // associate typedef mangled in if they have one.
+        Name += "<unnamed-type-";
         Name += TND->getName();
+      } else if (auto *ED = dyn_cast<EnumDecl>(TD)) {
+        auto EnumeratorI = ED->enumerator_begin();
+        assert(EnumeratorI != ED->enumerator_end());
+        Name += "<unnamed-enum-";
+        Name += EnumeratorI->getName();
       } else {
         // Otherwise, number the types using a $S prefix.
-        Name += "$S";
+        Name += "<unnamed-type-$S";
         Name += llvm::utostr(Context.getAnonymousStructId(TD) + 1);
       }
       Name += ">";

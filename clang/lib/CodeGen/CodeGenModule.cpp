@@ -2300,29 +2300,30 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
 llvm::Constant *
 CodeGenModule::GetAddrOfGlobal(GlobalDecl GD,
                                ForDefinition_t IsForDefinition) {
-  if (isa<CXXConstructorDecl>(GD.getDecl()))
-    return getAddrOfCXXStructor(cast<CXXConstructorDecl>(GD.getDecl()),
+  const Decl *D = GD.getDecl();
+  if (isa<CXXConstructorDecl>(D))
+    return getAddrOfCXXStructor(cast<CXXConstructorDecl>(D),
                                 getFromCtorType(GD.getCtorType()),
                                 /*FnInfo=*/nullptr, /*FnType=*/nullptr,
                                 /*DontDefer=*/false, IsForDefinition);
-  else if (isa<CXXDestructorDecl>(GD.getDecl()))
-    return getAddrOfCXXStructor(cast<CXXDestructorDecl>(GD.getDecl()),
+  else if (isa<CXXDestructorDecl>(D))
+    return getAddrOfCXXStructor(cast<CXXDestructorDecl>(D),
                                 getFromDtorType(GD.getDtorType()),
                                 /*FnInfo=*/nullptr, /*FnType=*/nullptr,
                                 /*DontDefer=*/false, IsForDefinition);
-  else if (isa<CXXMethodDecl>(GD.getDecl())) {
+  else if (isa<CXXMethodDecl>(D)) {
     auto FInfo = &getTypes().arrangeCXXMethodDeclaration(
-        cast<CXXMethodDecl>(GD.getDecl()));
+        cast<CXXMethodDecl>(D));
     auto Ty = getTypes().GetFunctionType(*FInfo);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
-  } else if (isa<FunctionDecl>(GD.getDecl())) {
+  } else if (isa<FunctionDecl>(D)) {
     const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
     llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
     return GetAddrOfFunction(GD, Ty, /*ForVTable=*/false, /*DontDefer=*/false,
                              IsForDefinition);
   } else
-    return GetAddrOfGlobalVar(cast<VarDecl>(GD.getDecl()), /*Ty=*/nullptr,
+    return GetAddrOfGlobalVar(cast<VarDecl>(D), /*Ty=*/nullptr,
                               IsForDefinition);
 }
 

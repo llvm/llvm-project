@@ -175,14 +175,33 @@ namespace Auto {
 
     // pointers
     template<auto v>    class B { };
-    template<auto* p>   class B<p> { };
+    template<auto* p>   class B<p> { }; // expected-note {{matches}}
     template<auto** pp> class B<pp> { };
-    template<auto* p0>   int &f(B<p0> b);
-    template<auto** pp0> float &f(B<pp0> b);
+    template<auto* p0>   int &f(B<p0> b); // expected-note {{candidate}}
+    template<auto** pp0> float &f(B<pp0> b); // expected-note {{candidate}}
 
     int a, *b = &a;
     int &r = f(B<&a>());
     float &s = f(B<&b>());
+
+    // pointers to members
+    template<typename T, auto *T::*p> struct B<p> {};
+    template<typename T, auto **T::*p> struct B<p> {};
+    template<typename T, auto *T::*p0>   char &f(B<p0> b); // expected-note {{candidate}}
+    template<typename T, auto **T::*pp0> short &f(B<pp0> b); // expected-note {{candidate}}
+
+    struct X { int n; int *p; int **pp; typedef int a, b; };
+    auto t = f(B<&X::n>()); // expected-error {{no match}}
+    char &u = f(B<&X::p>());
+    short &v = f(B<&X::pp>());
+
+    // A case where we need to do auto-deduction, and check whether the
+    // resulting dependent types match during partial ordering. These
+    // templates are not ordered due to the mismatching function parameter.
+    template<typename T, auto *(*f)(T, typename T::a)> struct B<f> {}; // expected-note {{matches}}
+    template<typename T, auto **(*f)(T, typename T::b)> struct B<f> {}; // expected-note {{matches}}
+    int **g(X, int);
+    B<&g> bg; // expected-error {{ambiguous}}
   }
 
   namespace Chained {

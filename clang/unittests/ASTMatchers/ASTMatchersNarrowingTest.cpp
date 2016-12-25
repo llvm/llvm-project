@@ -1404,6 +1404,16 @@ TEST(Member, BitFields) {
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
 }
 
+TEST(Member, InClassInitializer) {
+  EXPECT_TRUE(
+      matches("class C { int a = 2; int b; };",
+              fieldDecl(hasInClassInitializer(integerLiteral(equals(2))),
+                        hasName("a"))));
+  EXPECT_TRUE(
+      notMatches("class C { int a = 2; int b; };",
+                 fieldDecl(hasInClassInitializer(anything()), hasName("b"))));
+}
+
 TEST(Member, UnderstandsAccess) {
   EXPECT_TRUE(matches(
     "struct A { int i; };", fieldDecl(isPublic(), hasName("i"))));
