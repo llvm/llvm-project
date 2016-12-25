@@ -364,3 +364,13 @@ namespace PR17696 {
 
   b<&a::i> c; // okay
 }
+
+namespace partial_order_different_types {
+  // These are unordered because the type of the final argument doesn't match.
+  // FIXME: The second partial specialization should actually be rejected
+  // because it's not more specialized than the primary template.
+  template<int, int, typename T, typename, T> struct A;
+  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {}; // expected-note {{matches}}
+  template<typename T, typename U, U V> struct A<0, 0, T, U, V> {}; // expected-note {{matches}}
+  A<0, 0, int, int, 0> a; // expected-error {{ambiguous partial specializations}}
+}

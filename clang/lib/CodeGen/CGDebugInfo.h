@@ -442,6 +442,10 @@ private:
   /// Remap a given path with the current debug prefix map
   std::string remapDIPath(StringRef) const;
 
+  /// Compute the file checksum debug info for input file ID.
+  llvm::DIFile::ChecksumKind computeChecksum(FileID FID,
+                                             SmallString<32> &Checksum) const;
+
   /// Get the file debug info descriptor for the input location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
 

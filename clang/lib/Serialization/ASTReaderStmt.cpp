@@ -2850,6 +2850,11 @@ void ASTStmtReader::VisitOMPTargetTeamsDirective(OMPTargetTeamsDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
+void ASTStmtReader::VisitOMPTargetTeamsDistributeDirective(
+    OMPTargetTeamsDistributeDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -3574,7 +3579,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
-    case STMT_OMP_TEAMS_DISTRIBUTE_DIRECTIVE: {
+     case STMT_OMP_TEAMS_DISTRIBUTE_DIRECTIVE: {
       auto NumClauses = Record[ASTStmtReader::NumStmtFields];
       auto CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTeamsDistributeDirective::CreateEmpty(Context, NumClauses,
@@ -3611,7 +3616,15 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
     }
- 
+
+    case STMT_OMP_TARGET_TEAMS_DISTRIBUTE_DIRECTIVE: {
+      auto NumClauses = Record[ASTStmtReader::NumStmtFields];
+      auto CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTargetTeamsDistributeDirective::CreateEmpty(Context, NumClauses,
+                                                         CollapsedNum, Empty);
+      break;
+    }
+
     case EXPR_CXX_OPERATOR_CALL:
       S = new (Context) CXXOperatorCallExpr(Context, Empty);
       break;

@@ -4092,18 +4092,22 @@ public:
 /// \brief Represents a C++11 auto or C++14 decltype(auto) type.
 ///
 /// These types are usually a placeholder for a deduced type. However, before
-/// the initializer is attached, or if the initializer is type-dependent, there
-/// is no deduced type and an auto type is canonical. In the latter case, it is
-/// also a dependent type.
+/// the initializer is attached, or (usually) if the initializer is
+/// type-dependent, there is no deduced type and an auto type is canonical. In
+/// the latter case, it is also a dependent type.
 class AutoType : public Type, public llvm::FoldingSetNode {
   AutoType(QualType DeducedType, AutoTypeKeyword Keyword, bool IsDependent)
     : Type(Auto, DeducedType.isNull() ? QualType(this, 0) : DeducedType,
            /*Dependent=*/IsDependent, /*InstantiationDependent=*/IsDependent,
-           /*VariablyModified=*/false,
-           /*ContainsParameterPack=*/DeducedType.isNull()
-               ? false : DeducedType->containsUnexpandedParameterPack()) {
-    assert((DeducedType.isNull() || !IsDependent) &&
-           "auto deduced to dependent type");
+           /*VariablyModified=*/false, /*ContainsParameterPack=*/false) {
+    if (!DeducedType.isNull()) {
+      if (DeducedType->isDependentType())
+        setDependent();
+      if (DeducedType->isInstantiationDependentType())
+        setInstantiationDependent();
+      if (DeducedType->containsUnexpandedParameterPack())
+        setContainsUnexpandedParameterPack();
+    }
     AutoTypeBits.Keyword = (unsigned)Keyword;
   }
 

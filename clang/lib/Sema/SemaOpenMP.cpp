@@ -1698,7 +1698,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
   case OMPD_teams_distribute_parallel_for_simd:
-  case OMPD_teams_distribute_parallel_for: {
+  case OMPD_teams_distribute_parallel_for:
+  case OMPD_target_teams_distribute: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
@@ -2424,6 +2425,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_target_teams:
     Res = ActOnOpenMPTargetTeamsDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
+    AllowedNameModifiers.push_back(OMPD_target);
+    break;
+  case OMPD_target_teams_distribute:
+    Res = ActOnOpenMPTargetTeamsDistributeDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_declare_target:
@@ -6283,6 +6289,40 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
                                          AStmt);
 }
 
+StmtResult Sema::ActOnOpenMPTargetTeamsDistributeDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' with number of loops, it will
+  // define the nested loops number.
+  auto NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_teams_distribute,
+      getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target teams distribute loop exprs were not built");
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetTeamsDistributeDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                              SourceLocation StartLoc,
                                              SourceLocation LParenLoc,
@@ -7303,7 +7343,8 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // A list item cannot appear in both a map clause and a data-sharing
     // attribute clause on the same construct
     if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
-        CurrDir == OMPD_target_teams) {
+        CurrDir == OMPD_target_teams ||
+        CurrDir == OMPD_target_teams_distribute) {
       OpenMPClauseKind ConflictKind;
       if (DSAStack->checkMappableExprComponentListsForDecl(
               VD, /*CurrentRegionOnly=*/true,
@@ -7561,7 +7602,8 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
       if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
-          CurrDir == OMPD_target_teams) {
+          CurrDir == OMPD_target_teams ||
+          CurrDir == OMPD_target_teams_distribute) {
         OpenMPClauseKind ConflictKind;
         if (DSAStack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
@@ -10077,7 +10119,8 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if ((DKind == OMPD_target || DKind == OMPD_target_teams) && VD) {
+      if ((DKind == OMPD_target || DKind == OMPD_target_teams ||
+           DKind == OMPD_target_teams) && VD) {
         auto DVar = DSAS->getTopDSA(VD, false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
