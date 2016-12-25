@@ -233,7 +233,7 @@ enum MetadataCodes {
   METADATA_SUBRANGE = 13,        // [distinct, count, lo]
   METADATA_ENUMERATOR = 14,      // [distinct, value, name]
   METADATA_BASIC_TYPE = 15,      // [distinct, tag, name, size, align, enc]
-  METADATA_FILE = 16,            // [distinct, filename, directory]
+  METADATA_FILE = 16,            // [distinct, filename, directory, checksumkind, checksum]
   METADATA_DERIVED_TYPE = 17,    // [distinct, ...]
   METADATA_COMPOSITE_TYPE = 18,  // [distinct, ...]
   METADATA_SUBROUTINE_TYPE = 19, // [distinct, flags, types, cc]

@@ -808,6 +808,12 @@ lltok::Kind LLLexer::LexIdentifier() {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DIFlag;
   }
+
+  if (Keyword.startswith("CSK_")) {
+    StrVal.assign(Keyword.begin(), Keyword.end());
+    return lltok::ChecksumKind;
+  }
+
   if (Keyword == "NoDebug" || Keyword == "FullDebug" ||
       Keyword == "LineTablesOnly") {
     StrVal.assign(Keyword.begin(), Keyword.end());

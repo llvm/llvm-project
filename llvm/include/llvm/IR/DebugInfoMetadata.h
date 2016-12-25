@@ -470,38 +470,62 @@ class DIFile : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  DIFile(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops)
-      : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops) {}
+public:
+  enum ChecksumKind {
+    CSK_None,
+    CSK_MD5,
+    CSK_SHA1,
+    CSK_Last = CSK_SHA1 // Should be last enumeration.
+  };
+
+private:
+  ChecksumKind CSKind;
+
+  DIFile(LLVMContext &C, StorageType Storage, ChecksumKind CSK,
+         ArrayRef<Metadata *> Ops)
+      : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
+        CSKind(CSK) {}
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
-                         StringRef Directory, StorageType Storage,
-                         bool ShouldCreate = true) {
+                         StringRef Directory, ChecksumKind CSK, StringRef CS,
+                         StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, getCanonicalMDString(Context, Filename),
-                   getCanonicalMDString(Context, Directory), Storage,
-                   ShouldCreate);
+                   getCanonicalMDString(Context, Directory), CSK,
+                   getCanonicalMDString(Context, CS), Storage, ShouldCreate);
   }
   static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
-                         MDString *Directory, StorageType Storage,
-                         bool ShouldCreate = true);
+                         MDString *Directory, ChecksumKind CSK, MDString *CS,
+                         StorageType Storage, bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
-    return getTemporary(getContext(), getFilename(), getDirectory());
+    return getTemporary(getContext(), getFilename(), getDirectory(),
+                        getChecksumKind(), getChecksum());
   }
 
 public:
-  DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory),
-                    (Filename, Directory))
-  DEFINE_MDNODE_GET(DIFile, (MDString * Filename, MDString *Directory),
-                    (Filename, Directory))
+  DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory,
+                             ChecksumKind CSK = CSK_None,
+                             StringRef CS = StringRef()),
+                    (Filename, Directory, CSK, CS))
+  DEFINE_MDNODE_GET(DIFile, (MDString *Filename, MDString *Directory,
+                             ChecksumKind CSK = CSK_None,
+                             MDString *CS = nullptr),
+                    (Filename, Directory, CSK, CS))
 
   TempDIFile clone() const { return cloneImpl(); }
 
   StringRef getFilename() const { return getStringOperand(0); }
   StringRef getDirectory() const { return getStringOperand(1); }
+  StringRef getChecksum() const { return getStringOperand(2); }
+  ChecksumKind getChecksumKind() const { return CSKind; }
+  StringRef getChecksumKindAsString() const;
 
   MDString *getRawFilename() const { return getOperandAs<MDString>(0); }
   MDString *getRawDirectory() const { return getOperandAs<MDString>(1); }
+  MDString *getRawChecksum() const { return getOperandAs<MDString>(2); }
+
+  static ChecksumKind getChecksumKind(StringRef CSKindStr);
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIFileKind;

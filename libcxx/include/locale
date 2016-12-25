@@ -779,6 +779,7 @@ long double __do_strtod<long double>(const char* __a, char** __p2) {
 }
 
 template <class _Tp>
+_LIBCPP_HIDDEN
 _Tp
 __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
 {

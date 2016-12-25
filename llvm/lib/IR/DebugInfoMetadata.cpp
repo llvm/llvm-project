@@ -347,14 +347,34 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
+static const char *ChecksumKindName[DIFile::CSK_Last + 1] = {
+  "CSK_None",
+  "CSK_MD5",
+  "CSK_SHA1"
+};
+
+DIFile::ChecksumKind DIFile::getChecksumKind(StringRef CSKindStr) {
+  return StringSwitch<DIFile::ChecksumKind>(CSKindStr)
+      .Case("CSK_MD5", DIFile::CSK_MD5)
+      .Case("CSK_SHA1", DIFile::CSK_SHA1)
+      .Default(DIFile::CSK_None);
+}
+
+StringRef DIFile::getChecksumKindAsString() const {
+  assert(CSKind <= DIFile::CSK_Last && "Invalid checksum kind");
+  return ChecksumKindName[CSKind];
+}
+
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
-                        MDString *Directory, StorageType Storage,
+                        MDString *Directory, DIFile::ChecksumKind CSKind,
+                        MDString *Checksum, StorageType Storage,
                         bool ShouldCreate) {
   assert(isCanonical(Filename) && "Expected canonical MDString");
   assert(isCanonical(Directory) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory));
-  Metadata *Ops[] = {Filename, Directory};
-  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIFile, Ops);
+  assert(isCanonical(Checksum) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory, CSKind, Checksum));
+  Metadata *Ops[] = {Filename, Directory, Checksum};
+  DEFINE_GETIMPL_STORE(DIFile, (CSKind), Ops);
 }
 
 DICompileUnit *DICompileUnit::getImpl(
