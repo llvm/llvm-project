@@ -19,6 +19,20 @@
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
 
+// These are not available in older macOS SDKs.
+#ifndef CPU_SUBTYPE_X86_64_H
+#define CPU_SUBTYPE_X86_64_H  ((cpu_subtype_t)8)   /* Haswell */
+#endif
+#ifndef CPU_SUBTYPE_ARM_V7S
+#define CPU_SUBTYPE_ARM_V7S   ((cpu_subtype_t)11)  /* Swift */
+#endif
+#ifndef CPU_SUBTYPE_ARM_V7K
+#define CPU_SUBTYPE_ARM_V7K   ((cpu_subtype_t)12)
+#endif
+#ifndef CPU_TYPE_ARM64
+#define CPU_TYPE_ARM64        (CPU_TYPE_ARM | CPU_ARCH_ABI64)
+#endif
+
 namespace __sanitizer {
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
