@@ -937,9 +937,6 @@
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__114error_categoryD1Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__114error_categoryD2Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__get_classnameEPKcb'}
-{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__num_get_floatIdEET_PKcS3_Rj'}
-{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__num_get_floatIeEET_PKcS3_Rj'}
-{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__num_get_floatIfEET_PKcS3_Rj'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__thread_struct25notify_all_at_thread_exitEPNS_18condition_variableEPNS_5mutexE'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__thread_struct27__make_ready_at_thread_exitEPNS_17__assoc_sub_stateE'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__115__thread_structC1Ev'}

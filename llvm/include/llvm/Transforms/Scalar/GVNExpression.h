@@ -189,13 +189,8 @@ public:
       return false;
 
     const auto &OE = cast<BasicExpression>(Other);
-    if (getType() != OE.getType())
-      return false;
-    if (NumOperands != OE.NumOperands)
-      return false;
-    if (!std::equal(ops_begin(), ops_end(), OE.ops_begin()))
-      return false;
-    return true;
+    return getType() == OE.getType() && NumOperands == OE.NumOperands &&
+      std::equal(ops_begin(), ops_end(), OE.ops_begin());
   }
 
   virtual hash_code getHashValue() const override {
@@ -399,11 +394,8 @@ public:
     if (!this->BasicExpression::equals(Other))
       return false;
     const AggregateValueExpression &OE = cast<AggregateValueExpression>(Other);
-    if (NumIntOperands != OE.NumIntOperands)
-      return false;
-    if (!std::equal(int_ops_begin(), int_ops_end(), OE.int_ops_begin()))
-      return false;
-    return true;
+    return NumIntOperands == OE.NumIntOperands &&
+      std::equal(int_ops_begin(), int_ops_end(), OE.int_ops_begin());
   }
 
   virtual hash_code getHashValue() const override {
@@ -446,9 +438,7 @@ public:
     if (!this->BasicExpression::equals(Other))
       return false;
     const PHIExpression &OE = cast<PHIExpression>(Other);
-    if (BB != OE.BB)
-      return false;
-    return true;
+    return BB == OE.BB;
   }
 
   virtual hash_code getHashValue() const override {
@@ -485,9 +475,7 @@ public:
   void setVariableValue(Value *V) { VariableValue = V; }
   virtual bool equals(const Expression &Other) const override {
     const VariableExpression &OC = cast<VariableExpression>(Other);
-    if (VariableValue != OC.VariableValue)
-      return false;
-    return true;
+    return VariableValue == OC.VariableValue;
   }
 
   virtual hash_code getHashValue() const override {

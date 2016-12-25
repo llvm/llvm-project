@@ -1045,7 +1045,7 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
       }
     }
     markUsersTouched(V);
-    if (Instruction *I = dyn_cast<Instruction>(V))
+    if (auto *I = dyn_cast<Instruction>(V))
       if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
         markMemoryUsersTouched(MA);
   }

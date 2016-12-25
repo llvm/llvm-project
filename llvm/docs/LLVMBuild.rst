@@ -321,4 +321,3 @@ the properties which are associated with that component.
    ``BuildTool`` components currently use the exact same properties as
    ``Tool`` components, the type distinction is only used to differentiate
    what the tool is built for.
-

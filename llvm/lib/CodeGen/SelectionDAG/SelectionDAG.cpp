@@ -2087,7 +2087,10 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       if (M < 0) {
         // For UNDEF elements, we don't know anything about the common state of
         // the shuffle result.
-        KnownZero = KnownOne = APInt(BitWidth, 0);
+        KnownOne.clearAllBits();
+        KnownZero.clearAllBits();
+        DemandedLHS.clearAllBits();
+        DemandedRHS.clearAllBits();
         break;
       }
 
@@ -2103,6 +2106,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
       KnownOne &= KnownOne2;
       KnownZero &= KnownZero2;
     }
+    // If we don't know any bits, early out.
+    if (!KnownOne && !KnownZero)
+      break;
     if (!!DemandedRHS) {
       SDValue RHS = Op.getOperand(1);
       computeKnownBits(RHS, KnownZero2, KnownOne2, DemandedRHS, Depth + 1);
@@ -2126,6 +2132,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
         KnownOne &= KnownOne2;
         KnownZero &= KnownZero2;
       }
+      // If we don't know any bits, early out.
+      if (!KnownOne && !KnownZero)
+        break;
     }
     break;
   }
@@ -2207,6 +2216,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
           unsigned Offset = (i % SubScale) * BitWidth;
           KnownOne &= KnownOne2.lshr(Offset).trunc(BitWidth);
           KnownZero &= KnownZero2.lshr(Offset).trunc(BitWidth);
+          // If we don't know any bits, early out.
+          if (!KnownOne && !KnownZero)
+            break;
         }
     }
     break;
@@ -2290,6 +2302,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   }
   case ISD::SELECT:
     computeKnownBits(Op.getOperand(2), KnownZero, KnownOne, Depth+1);
+    // If we don't know any bits, early out.
+    if (!KnownOne && !KnownZero)
+      break;
     computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, Depth+1);
 
     // Only known if known in both the LHS and RHS.
@@ -2298,6 +2313,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     break;
   case ISD::SELECT_CC:
     computeKnownBits(Op.getOperand(3), KnownZero, KnownOne, Depth+1);
+    // If we don't know any bits, early out.
+    if (!KnownOne && !KnownZero)
+      break;
     computeKnownBits(Op.getOperand(2), KnownZero2, KnownOne2, Depth+1);
 
     // Only known if known in both the LHS and RHS.
@@ -2691,15 +2709,15 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX: {
-    APInt Op0Zero, Op0One;
-    APInt Op1Zero, Op1One;
-    computeKnownBits(Op.getOperand(0), Op0Zero, Op0One, DemandedElts,
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                      Depth + 1);
-    computeKnownBits(Op.getOperand(1), Op1Zero, Op1One, DemandedElts,
+    // If we don't know any bits, early out.
+    if (!KnownOne && !KnownZero)
+      break;
+    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
                      Depth + 1);
-
-    KnownZero = Op0Zero & Op1Zero;
-    KnownOne = Op0One & Op1One;
+    KnownZero &= KnownZero2;
+    KnownOne &= KnownOne2;
     break;
   }
   case ISD::FrameIndex:

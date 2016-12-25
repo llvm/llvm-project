@@ -1515,6 +1515,8 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
   Record.push_back(N->isDistinct());
   Record.push_back(VE.getMetadataOrNullID(N->getRawFilename()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawDirectory()));
+  Record.push_back(N->getChecksumKind());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawChecksum()));
 
   Stream.EmitRecord(bitc::METADATA_FILE, Record, Abbrev);
   Record.clear();

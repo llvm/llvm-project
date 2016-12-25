@@ -1628,7 +1628,7 @@ static void unlinkAsync(StringRef Path) {
   if (!Config->Threads || !sys::fs::exists(Config->OutputFile))
     return;
 
-  // First, rename Path to avoid race condition. We cannot remomve
+  // First, rename Path to avoid race condition. We cannot remove
   // Path from a different thread because we are now going to create
   // Path as a new file. If we do that in a different thread, the new
   // thread can remove the new file.

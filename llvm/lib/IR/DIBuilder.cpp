@@ -174,8 +174,9 @@ DIImportedEntity *DIBuilder::createImportedDeclaration(DIScope *Context,
                                 Context, Decl, Line, Name, AllImportedModules);
 }
 
-DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory) {
-  return DIFile::get(VMContext, Filename, Directory);
+DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
+                              DIFile::ChecksumKind CSKind, StringRef Checksum) {
+  return DIFile::get(VMContext, Filename, Directory, CSKind, Checksum);
 }
 
 DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val) {

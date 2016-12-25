@@ -97,24 +97,19 @@ namespace {
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
-  /// Keep track of the current number of ForwardReference in the list.
-  unsigned NumFwdRefs = 0;
-  /// Maintain the range [min-max] that needs to be inspected to resolve cycles.
-  /// This is the range of Metadata that have involved forward reference during
-  /// loading and that needs to be inspected to resolve cycles. It is purely an
-  /// optimization to avoid spending time resolving cycles outside of this
-  /// range, i.e. where there hasn't been any forward reference.
-  unsigned MinFwdRef = 0;
-  unsigned MaxFwdRef = 0;
-  /// Set to true if there was any FwdRef encountered. This is used to track if
-  /// we need to resolve cycles after loading metadatas.
-  bool AnyFwdRefs = false;
-
   /// Array of metadata references.
   ///
   /// Don't use std::vector here.  Some versions of libc++ copy (instead of
   /// move) on resize, and TrackingMDRef is very expensive to copy.
   SmallVector<TrackingMDRef, 1> MetadataPtrs;
+
+  /// The set of indices in MetadataPtrs above of forward references that were
+  /// generated.
+  SmallDenseSet<unsigned, 1> ForwardReference;
+
+  /// The set of indices in MetadataPtrs above of Metadata that need to be
+  /// resolved.
+  SmallDenseSet<unsigned, 1> UnresolvedNodes;
 
   /// Structures for resolving old type refs.
   struct {
@@ -151,7 +146,8 @@ public:
 
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
-    assert(!AnyFwdRefs && "Unexpected forward refs");
+    assert(ForwardReference.empty() && "Unexpected forward refs");
+    assert(UnresolvedNodes.empty() && "Unexpected unresolved node");
     MetadataPtrs.resize(N);
   }
 
@@ -168,7 +164,7 @@ public:
   MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
-  bool hasFwdRefs() const { return AnyFwdRefs; }
+  bool hasFwdRefs() const { return !ForwardReference.empty(); }
 
   /// Upgrade a type that had an MDString reference.
   void addTypeRef(MDString &UUID, DICompositeType &CT);
@@ -184,6 +180,10 @@ private:
 };
 
 void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
+  if (auto *MDN = dyn_cast<MDNode>(MD))
+    if (!MDN->isResolved())
+      UnresolvedNodes.insert(Idx);
+
   if (Idx == size()) {
     push_back(MD);
     return;
@@ -201,7 +201,7 @@ void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
   // If there was a forward reference to this value, replace it.
   TempMDTuple PrevMD(cast<MDTuple>(OldMD.get()));
   PrevMD->replaceAllUsesWith(MD);
-  --NumFwdRefs;
+  ForwardReference.erase(Idx);
 }
 
 Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
@@ -212,14 +212,7 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
     return MD;
 
   // Track forward refs to be resolved later.
-  if (AnyFwdRefs) {
-    MinFwdRef = std::min(MinFwdRef, Idx);
-    MaxFwdRef = std::max(MaxFwdRef, Idx);
-  } else {
-    AnyFwdRefs = true;
-    MinFwdRef = MaxFwdRef = Idx;
-  }
-  ++NumFwdRefs;
+  ForwardReference.insert(Idx);
 
   // Create and return a placeholder, which will later be RAUW'd.
   Metadata *MD = MDNode::getTemporary(Context, None).release();
@@ -240,11 +233,9 @@ MDNode *BitcodeReaderMetadataList::getMDNodeFwdRefOrNull(unsigned Idx) {
 }
 
 void BitcodeReaderMetadataList::tryToResolveCycles() {
-  if (NumFwdRefs)
+  if (!ForwardReference.empty())
     // Still forward references... can't resolve cycles.
     return;
-
-  bool DidReplaceTypeRefs = false;
 
   // Give up on finding a full definition for any forward decls that remain.
   for (const auto &Ref : OldTypeRefs.FwdDecls)
@@ -253,17 +244,14 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to
   // OldTypeRefs.Unknown.
-  for (const auto &Array : OldTypeRefs.Arrays) {
-    DidReplaceTypeRefs = true;
+  for (const auto &Array : OldTypeRefs.Arrays)
     Array.second->replaceAllUsesWith(resolveTypeRefArray(Array.first.get()));
-  }
   OldTypeRefs.Arrays.clear();
 
   // Replace old string-based type refs with the resolved node, if possible.
   // If we haven't seen the node, leave it to the verifier to complain about
   // the invalid string reference.
   for (const auto &Ref : OldTypeRefs.Unknown) {
-    DidReplaceTypeRefs = true;
     if (DICompositeType *CT = OldTypeRefs.Final.lookup(Ref.first))
       Ref.second->replaceAllUsesWith(CT);
     else
@@ -271,19 +259,12 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
   }
   OldTypeRefs.Unknown.clear();
 
-  // Make sure all the upgraded types are resolved.
-  if (DidReplaceTypeRefs) {
-    AnyFwdRefs = true;
-    MinFwdRef = 0;
-    MaxFwdRef = MetadataPtrs.size() - 1;
-  }
-
-  if (!AnyFwdRefs)
+  if (UnresolvedNodes.empty())
     // Nothing to do.
     return;
 
   // Resolve any cycles.
-  for (unsigned I = MinFwdRef, E = MaxFwdRef + 1; I != E; ++I) {
+  for (unsigned I : UnresolvedNodes) {
     auto &MD = MetadataPtrs[I];
     auto *N = dyn_cast_or_null<MDNode>(MD);
     if (!N)
@@ -293,10 +274,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     N->resolveCycles();
   }
 
-  // Make sure we return early again until there's another forward ref.
-  AnyFwdRefs = false;
-  MinFwdRef = 0;
-  MaxFwdRef = 0;
+  // Make sure we return early again until there's another unresolved ref.
+  UnresolvedNodes.clear();
 }
 
 void BitcodeReaderMetadataList::addTypeRef(MDString &UUID,
@@ -374,12 +353,12 @@ DistinctMDOperandPlaceholder &PlaceholderQueue::getPlaceholderOp(unsigned ID) {
 
 void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
   while (!PHs.empty()) {
-    auto *MD = MetadataList.getMetadataFwdRef(PHs.front().getID());
+    auto *MD = MetadataList.lookup(PHs.front().getID());
+    assert(MD && "Flushing placeholder on unassigned MD");
 #ifndef NDEBUG
-    if (auto MDN = dyn_cast<MDNode>(MD)) {
+    if (auto *MDN = dyn_cast<MDNode>(MD))
       assert(MDN->isResolved() &&
              "Flushing Placeholder while cycles aren't resolved");
-    }
 #endif
     PHs.front().replaceUseWith(MD);
     PHs.pop_front();
@@ -852,13 +831,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_FILE: {
-    if (Record.size() != 3)
+    if (Record.size() != 3 && Record.size() != 5)
       return error("Invalid record");
 
     IsDistinct = Record[0];
     MetadataList.assignValue(
         GET_OR_DISTINCT(
-            DIFile, (Context, getMDString(Record[1]), getMDString(Record[2]))),
+            DIFile,
+            (Context, getMDString(Record[1]), getMDString(Record[2]),
+             Record.size() == 3 ? DIFile::CSK_None
+                                : static_cast<DIFile::ChecksumKind>(Record[3]),
+             Record.size() == 3 ? nullptr : getMDString(Record[4]))),
         NextMetadataNo++);
     break;
   }
