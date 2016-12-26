@@ -578,6 +578,15 @@ public:
                                           MemoryAccess *Definition,
                                           MemoryAccess *InsertPt);
 
+  // \brief Splice \p What to just before \p Where.
+  //
+  // In order to be efficient, the following conditions must be met:
+  //   - \p Where  dominates \p What,
+  //   - All memory accesses in [\p Where, \p What) are no-alias with \p What.
+  //
+  // TODO: relax the MemoryDef requirement on Where.
+  void spliceMemoryAccessAbove(MemoryDef *Where, MemoryUseOrDef *What);
+
   /// \brief Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.
   /// This should be called when a memory instruction that has a MemoryAccess

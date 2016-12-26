@@ -39,6 +39,8 @@ public:
       return "Remote indirect stubs owner does not exist";
     case OrcErrorCode::RemoteIndirectStubsOwnerIdAlreadyInUse:
       return "Remote indirect stubs owner Id already in use";
+    case OrcErrorCode::RPCResponseAbandoned:
+      return "RPC response abandoned";
     case OrcErrorCode::UnexpectedRPCCall:
       return "Unexpected RPC call";
     case OrcErrorCode::UnexpectedRPCResponse:

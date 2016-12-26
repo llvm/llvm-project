@@ -83,14 +83,13 @@ template <typename DerivedFunc, typename RetT, typename... ArgTs>
 std::string Function<DerivedFunc, RetT(ArgTs...)>::Name;
 
 /// Provides a typedef for a tuple containing the decayed argument types.
-template <typename T>
-class FunctionArgsTuple;
+template <typename T> class FunctionArgsTuple;
 
 template <typename RetT, typename... ArgTs>
 class FunctionArgsTuple<RetT(ArgTs...)> {
 public:
   using Type = std::tuple<typename std::decay<
-                 typename std::remove_reference<ArgTs>::type>::type...>;
+      typename std::remove_reference<ArgTs>::type>::type...>;
 };
 
 /// Allocates RPC function ids during autonegotiation.
@@ -365,9 +364,27 @@ public:
   // Call the given handler with the given arguments.
   template <typename HandlerT>
   static typename WrappedHandlerReturn<RetT>::Type
-  runHandler(HandlerT &Handler, ArgStorage &Args) {
-    return runHandlerHelper<RetT>(Handler, Args,
-                                  llvm::index_sequence_for<ArgTs...>());
+  unpackAndRun(HandlerT &Handler, ArgStorage &Args) {
+    return unpackAndRunHelper(Handler, Args,
+                              llvm::index_sequence_for<ArgTs...>());
+  }
+
+  // Call the given handler with the given arguments.
+  template <typename HandlerT>
+  static typename std::enable_if<
+      std::is_void<typename HandlerTraits<HandlerT>::ReturnType>::value,
+      Error>::type
+  run(HandlerT &Handler, ArgTs &&... Args) {
+    Handler(std::move(Args)...);
+    return Error::success();
+  }
+
+  template <typename HandlerT>
+  static typename std::enable_if<
+      !std::is_void<typename HandlerTraits<HandlerT>::ReturnType>::value,
+      typename HandlerTraits<HandlerT>::ReturnType>::type
+  run(HandlerT &Handler, ArgTs... Args) {
+    return Handler(std::move(Args)...);
   }
 
   // Serialize arguments to the channel.
@@ -384,30 +401,19 @@ public:
   }
 
 private:
-  // For non-void user handlers: unwrap the args tuple and call the handler,
-  // returning the result.
-  template <typename RetTAlt, typename HandlerT, size_t... Indexes>
-  static typename std::enable_if<!std::is_void<RetTAlt>::value, RetT>::type
-  runHandlerHelper(HandlerT &Handler, ArgStorage &Args,
-                   llvm::index_sequence<Indexes...>) {
-    return Handler(std::move(std::get<Indexes>(Args))...);
-  }
-
-  // For void user handlers: unwrap the args tuple and call the handler, then
-  // return Error::success().
-  template <typename RetTAlt, typename HandlerT, size_t... Indexes>
-  static typename std::enable_if<std::is_void<RetTAlt>::value, Error>::type
-  runHandlerHelper(HandlerT &Handler, ArgStorage &Args,
-                   llvm::index_sequence<Indexes...>) {
-    Handler(std::move(std::get<Indexes>(Args))...);
-    return Error::success();
-  }
-
   template <typename ChannelT, typename... CArgTs, size_t... Indexes>
   static Error deserializeArgsHelper(ChannelT &C, std::tuple<CArgTs...> &Args,
                                      llvm::index_sequence<Indexes...> _) {
     return SequenceSerialization<ChannelT, ArgTs...>::deserialize(
         C, std::get<Indexes>(Args)...);
+  }
+
+  template <typename HandlerT, size_t... Indexes>
+  static typename WrappedHandlerReturn<
+      typename HandlerTraits<HandlerT>::ReturnType>::Type
+  unpackAndRunHelper(HandlerT &Handler, ArgStorage &Args,
+                     llvm::index_sequence<Indexes...>) {
+    return run(Handler, std::move(std::get<Indexes>(Args))...);
   }
 };
 
@@ -423,17 +429,29 @@ class HandlerTraits<RetT (Class::*)(ArgTs...) const>
     : public HandlerTraits<RetT(ArgTs...)> {};
 
 // Utility to peel the Expected wrapper off a response handler error type.
-template <typename HandlerT> class UnwrapResponseHandlerArg;
+template <typename HandlerT> class ResponseHandlerArg;
 
-template <typename ArgT> class UnwrapResponseHandlerArg<Error(Expected<ArgT>)> {
+template <typename ArgT> class ResponseHandlerArg<Error(Expected<ArgT>)> {
 public:
-  using ArgType = ArgT;
+  using ArgType = Expected<ArgT>;
+  using UnwrappedArgType = ArgT;
 };
 
 template <typename ArgT>
-class UnwrapResponseHandlerArg<ErrorSuccess(Expected<ArgT>)> {
+class ResponseHandlerArg<ErrorSuccess(Expected<ArgT>)> {
 public:
-  using ArgType = ArgT;
+  using ArgType = Expected<ArgT>;
+  using UnwrappedArgType = ArgT;
+};
+
+template <> class ResponseHandlerArg<Error(Error)> {
+public:
+  using ArgType = Error;
+};
+
+template <> class ResponseHandlerArg<ErrorSuccess(Error)> {
+public:
+  using ArgType = Error;
 };
 
 // ResponseHandler represents a handler for a not-yet-received function call
@@ -453,8 +471,7 @@ public:
 
   // Create an error instance representing an abandoned response.
   static Error createAbandonedResponseError() {
-    return make_error<StringError>("RPC function call failed to return",
-                                   inconvertibleErrorCode());
+    return orcError(OrcErrorCode::RPCResponseAbandoned);
   }
 };
 
@@ -467,12 +484,12 @@ public:
   // Handle the result by deserializing it from the channel then passing it
   // to the user defined handler.
   Error handleResponse(ChannelT &C) override {
-    using ArgType = typename UnwrapResponseHandlerArg<
-        typename HandlerTraits<HandlerT>::Type>::ArgType;
-    ArgType Result;
+    using UnwrappedArgType = typename ResponseHandlerArg<
+        typename HandlerTraits<HandlerT>::Type>::UnwrappedArgType;
+    UnwrappedArgType Result;
     if (auto Err =
-            SerializationTraits<ChannelT, FuncRetT, ArgType>::deserialize(
-                C, Result))
+            SerializationTraits<ChannelT, FuncRetT,
+                                UnwrappedArgType>::deserialize(C, Result))
       return Err;
     if (auto Err = C.endReceiveMessage())
       return Err;
@@ -601,35 +618,35 @@ private:
 
 // Checks that predicate P holds for each corresponding pair of type arguments
 // from T1 and T2 tuple.
-template <template<class, class> class P, typename T1Tuple,
-          typename T2Tuple>
+template <template <class, class> class P, typename T1Tuple, typename T2Tuple>
 class RPCArgTypeCheckHelper;
 
-template <template<class, class> class P>
+template <template <class, class> class P>
 class RPCArgTypeCheckHelper<P, std::tuple<>, std::tuple<>> {
 public:
   static const bool value = true;
 };
 
-template <template<class, class> class P, typename T, typename... Ts,
+template <template <class, class> class P, typename T, typename... Ts,
           typename U, typename... Us>
 class RPCArgTypeCheckHelper<P, std::tuple<T, Ts...>, std::tuple<U, Us...>> {
 public:
   static const bool value =
-    P<T, U>::value &&
-    RPCArgTypeCheckHelper<P, std::tuple<Ts...>, std::tuple<Us...>>::value;
+      P<T, U>::value &&
+      RPCArgTypeCheckHelper<P, std::tuple<Ts...>, std::tuple<Us...>>::value;
 };
 
-template <template<class, class> class P, typename T1Sig, typename T2Sig>
+template <template <class, class> class P, typename T1Sig, typename T2Sig>
 class RPCArgTypeCheck {
 public:
-
   using T1Tuple = typename FunctionArgsTuple<T1Sig>::Type;
   using T2Tuple = typename FunctionArgsTuple<T2Sig>::Type;
 
-  static_assert(std::tuple_size<T1Tuple>::value >= std::tuple_size<T2Tuple>::value,
+  static_assert(std::tuple_size<T1Tuple>::value >=
+                    std::tuple_size<T2Tuple>::value,
                 "Too many arguments to RPC call");
-  static_assert(std::tuple_size<T1Tuple>::value <= std::tuple_size<T2Tuple>::value,
+  static_assert(std::tuple_size<T1Tuple>::value <=
+                    std::tuple_size<T2Tuple>::value,
                 "Too few arguments to RPC call");
 
   static const bool value = RPCArgTypeCheckHelper<P, T1Tuple, T2Tuple>::value;
@@ -643,14 +660,12 @@ private:
   template <typename T>
   static std::true_type
   check(typename std::enable_if<
-                   std::is_same<
-                     decltype(T::serialize(std::declval<ChannelT&>(),
-                                           std::declval<const ConcreteT&>())),
+        std::is_same<decltype(T::serialize(std::declval<ChannelT &>(),
+                                           std::declval<const ConcreteT &>())),
                      Error>::value,
-                   void*>::type);
+        void *>::type);
 
-  template <typename>
-  static std::false_type check(...);
+  template <typename> static std::false_type check(...);
 
 public:
   static const bool value = decltype(check<S>(0))::value;
@@ -664,14 +679,12 @@ private:
   template <typename T>
   static std::true_type
   check(typename std::enable_if<
-                   std::is_same<
-                     decltype(T::deserialize(std::declval<ChannelT&>(),
-                                             std::declval<ConcreteT&>())),
+        std::is_same<decltype(T::deserialize(std::declval<ChannelT &>(),
+                                             std::declval<ConcreteT &>())),
                      Error>::value,
-                   void*>::type);
+        void *>::type);
 
-  template <typename>
-  static std::false_type check(...);
+  template <typename> static std::false_type check(...);
 
 public:
   static const bool value = decltype(check<S>(0))::value;
@@ -691,7 +704,6 @@ template <typename ImplT, typename ChannelT, typename FunctionIdT,
           typename SequenceNumberT>
 class RPCBase {
 protected:
-
   class OrcRPCInvalid : public Function<OrcRPCInvalid, void()> {
   public:
     static const char *getName() { return "__orc_rpc$invalid"; }
@@ -724,7 +736,7 @@ protected:
   // deserializers.
   template <typename WireT, typename ConcreteT>
   class CanDeserializeCheck
-    : detail::CanDeserialize<ChannelT, WireT, ConcreteT> {
+      : detail::CanDeserialize<ChannelT, WireT, ConcreteT> {
   public:
     using detail::CanDeserialize<ChannelT, WireT, ConcreteT>::value;
 
@@ -759,10 +771,9 @@ public:
   Error appendCallAsync(HandlerT Handler, const ArgTs &... Args) {
 
     static_assert(
-      detail::RPCArgTypeCheck<CanSerializeCheck, typename Func::Type,
-                              void(ArgTs...)>
-        ::value,
-      "");
+        detail::RPCArgTypeCheck<CanSerializeCheck, typename Func::Type,
+                                void(ArgTs...)>::value,
+        "");
 
     // Look up the function ID.
     FunctionIdT FnId;
@@ -808,6 +819,8 @@ public:
 
     return Error::success();
   }
+
+  Error sendAppendedCalls() { return C.send(); };
 
   template <typename Func, typename HandlerT, typename... ArgTs>
   Error callAsync(HandlerT Handler, const ArgTs &... Args) {
@@ -860,12 +873,10 @@ protected:
   template <typename Func, typename HandlerT>
   void addHandlerImpl(HandlerT Handler, LaunchPolicy Launch) {
 
-    static_assert(
-      detail::RPCArgTypeCheck<CanDeserializeCheck,
-                              typename Func::Type,
-                              typename detail::HandlerTraits<HandlerT>::Type>
-        ::value,
-      "");
+    static_assert(detail::RPCArgTypeCheck<
+                      CanDeserializeCheck, typename Func::Type,
+                      typename detail::HandlerTraits<HandlerT>::Type>::value,
+                  "");
 
     FunctionIdT NewFnId = FnIdAllocator.template allocate<Func>();
     LocalFunctionIds[Func::getPrototype()] = NewFnId;
@@ -975,8 +986,8 @@ protected:
                         SeqNo]() mutable -> Error {
         using HTraits = detail::HandlerTraits<HandlerT>;
         using FuncReturn = typename Func::ReturnType;
-        return detail::respond<FuncReturn>(Channel, ResponseId, SeqNo,
-                                           HTraits::runHandler(Handler, *Args));
+        return detail::respond<FuncReturn>(
+            Channel, ResponseId, SeqNo, HTraits::unpackAndRun(Handler, *Args));
       };
 
       // If there is an explicit launch policy then use it to launch the
@@ -1245,6 +1256,80 @@ public:
 
     return Result;
   }
+};
+
+/// \brief Allows a set of asynchrounous calls to be dispatched, and then
+///        waited on as a group.
+template <typename RPCClass> class ParallelCallGroup {
+public:
+
+  /// \brief Construct a parallel call group for the given RPC.
+  ParallelCallGroup(RPCClass &RPC) : RPC(RPC), NumOutstandingCalls(0) {}
+
+  ParallelCallGroup(const ParallelCallGroup &) = delete;
+  ParallelCallGroup &operator=(const ParallelCallGroup &) = delete;
+
+  /// \brief Make as asynchronous call.
+  ///
+  /// Does not issue a send call to the RPC's channel. The channel may use this
+  /// to batch up subsequent calls. A send will automatically be sent when wait
+  /// is called.
+  template <typename Func, typename HandlerT, typename... ArgTs>
+  Error appendCall(HandlerT Handler, const ArgTs &... Args) {
+    // Increment the count of outstanding calls. This has to happen before
+    // we invoke the call, as the handler may (depending on scheduling)
+    // be run immediately on another thread, and we don't want the decrement
+    // in the wrapped handler below to run before the increment.
+    {
+      std::unique_lock<std::mutex> Lock(M);
+      ++NumOutstandingCalls;
+    }
+
+    // Wrap the user handler in a lambda that will decrement the
+    // outstanding calls count, then poke the condition variable.
+    using ArgType = typename detail::ResponseHandlerArg<
+        typename detail::HandlerTraits<HandlerT>::Type>::ArgType;
+    // FIXME: Move handler into wrapped handler once we have C++14.
+    auto WrappedHandler = [this, Handler](ArgType Arg) {
+      auto Err = Handler(std::move(Arg));
+      std::unique_lock<std::mutex> Lock(M);
+      --NumOutstandingCalls;
+      CV.notify_all();
+      return Err;
+    };
+
+    return RPC.template appendCallAsync<Func>(std::move(WrappedHandler),
+                                              Args...);
+  }
+
+  /// \brief Make an asynchronous call.
+  ///
+  /// The same as appendCall, but also calls send on the channel immediately.
+  /// Prefer appendCall if you are about to issue a "wait" call shortly, as
+  /// this may allow the channel to better batch the calls.
+  template <typename Func, typename HandlerT, typename... ArgTs>
+  Error call(HandlerT Handler, const ArgTs &... Args) {
+    if (auto Err = appendCall(std::move(Handler), Args...))
+      return Err;
+    return RPC.sendAppendedCalls();
+  }
+
+  /// \brief Blocks until all calls have been completed and their return value
+  ///        handlers run.
+  Error wait() {
+    if (auto Err = RPC.sendAppendedCalls())
+      return Err;
+    std::unique_lock<std::mutex> Lock(M);
+    while (NumOutstandingCalls > 0)
+      CV.wait(Lock);
+    return Error::success();
+  }
+
+private:
+  RPCClass &RPC;
+  std::mutex M;
+  std::condition_variable CV;
+  uint32_t NumOutstandingCalls;
 };
 
 } // end namespace rpc

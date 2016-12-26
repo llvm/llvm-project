@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
+#include <list>
 #include <vector>
 
 using namespace llvm;
@@ -252,5 +253,27 @@ TEST(STLExtrasTest, CountAdaptor) {
   EXPECT_EQ(2, count(v, 2));
   EXPECT_EQ(1, count(v, 3));
   EXPECT_EQ(1, count(v, 4));
+}
+
+TEST(STLExtrasTest, ConcatRange) {
+  std::vector<int> Expected = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<int> Test;
+
+  std::vector<int> V1234 = {1, 2, 3, 4};
+  std::list<int> L56 = {5, 6};
+  SmallVector<int, 2> SV78 = {7, 8};
+
+  // Use concat across different sized ranges of different types with different
+  // iterators.
+  for (int &i : concat<int>(V1234, L56, SV78))
+    Test.push_back(i);
+  EXPECT_EQ(Expected, Test);
+
+  // Use concat between a temporary, an L-value, and an R-value to make sure
+  // complex lifetimes work well.
+  Test.clear();
+  for (int &i : concat<int>(std::vector<int>(V1234), L56, std::move(SV78)))
+    Test.push_back(i);
+  EXPECT_EQ(Expected, Test);
 }
 }

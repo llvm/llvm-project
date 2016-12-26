@@ -18490,6 +18490,15 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
 
 static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
+  // Helper to detect if the operand is CUR_DIRECTION rounding mode.
+  auto isRoundModeCurDirection = [](SDValue Rnd) {
+    if (!isa<ConstantSDNode>(Rnd))
+      return false;
+
+    unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
+    return Round == X86::STATIC_ROUNDING::CUR_DIRECTION;
+  };
+
   SDLoc dl(Op);
   unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   MVT VT = Op.getSimpleValueType();
@@ -18535,8 +18544,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
-        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+        if (!isRoundModeCurDirection(Rnd)) {
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src, Rnd),
@@ -18591,8 +18599,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(5);
-        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
-        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+        if (!isRoundModeCurDirection(Rnd)) {
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src1, Src2, Rnd),
@@ -18677,8 +18684,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(6);
-        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
-        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+        if (!isRoundModeCurDirection(Rnd)) {
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src1, Src2, Src3, Rnd),
@@ -18747,8 +18753,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(5);
-        if (cast<ConstantSDNode>(Rnd)->getZExtValue() !=
-            X86::STATIC_ROUNDING::CUR_DIRECTION)
+        if (!isRoundModeCurDirection(Rnd))
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                                   dl, Op.getValueType(),
                                                   Src1, Src2, Src3, Rnd),
@@ -18815,8 +18820,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
       if (IntrWithRoundingModeOpcode != 0) {
         SDValue Rnd = Op.getOperand(4);
-        unsigned Round = cast<ConstantSDNode>(Rnd)->getZExtValue();
-        if (Round != X86::STATIC_ROUNDING::CUR_DIRECTION) {
+        if (!isRoundModeCurDirection(Rnd)) {
           return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
                                       dl, Op.getValueType(),
                                       Src, Rnd),
@@ -18882,8 +18886,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
         // (IntrData->Opc1 != 0), then we check the rounding mode operand.
         if (IntrData->Opc1 != 0) {
           SDValue Rnd = Op.getOperand(5);
-          if (cast<ConstantSDNode>(Rnd)->getZExtValue() !=
-              X86::STATIC_ROUNDING::CUR_DIRECTION)
+          if (!isRoundModeCurDirection(Rnd))
             Cmp = DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
                               Op.getOperand(2), CC, Rnd);
         }
@@ -18915,8 +18918,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue Cmp;
       if (IntrData->Opc1 != 0) {
         SDValue Rnd = Op.getOperand(5);
-        if (cast<ConstantSDNode>(Rnd)->getZExtValue() !=
-            X86::STATIC_ROUNDING::CUR_DIRECTION)
+        if (!isRoundModeCurDirection(Rnd))
           Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::i1, Src1, Src2, CC, Rnd);
       }
       //default rounding mode
@@ -18975,8 +18977,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       SDValue Sae = Op.getOperand(4);
 
       SDValue FCmp;
-      if (cast<ConstantSDNode>(Sae)->getZExtValue() ==
-          X86::STATIC_ROUNDING::CUR_DIRECTION)
+      if (isRoundModeCurDirection(Sae))
         FCmp = DAG.getNode(X86ISD::FSETCCM, dl, MVT::i1, LHS, RHS,
                                   DAG.getConstant(CondVal, dl, MVT::i8));
       else

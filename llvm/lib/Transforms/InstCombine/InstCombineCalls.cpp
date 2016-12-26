@@ -902,10 +902,11 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   auto *VecTy = cast<VectorType>(II.getType());
   auto *MaskEltTy = Type::getInt32Ty(II.getContext());
   unsigned Size = VecTy->getNumElements();
-  assert(Size == 8 && "Unexpected shuffle mask size");
+  assert((Size == 4 || Size == 8 || Size == 16 || Size == 32 || Size == 64) &&
+         "Unexpected shuffle mask size");
 
   // Construct a shuffle mask from constant integers or UNDEFs.
-  Constant *Indexes[8] = {nullptr};
+  Constant *Indexes[64] = {nullptr};
 
   for (unsigned I = 0; I < Size; ++I) {
     Constant *COp = V->getAggregateElement(I);
@@ -917,8 +918,8 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
       continue;
     }
 
-    APInt Index = cast<ConstantInt>(COp)->getValue();
-    Index = Index.zextOrTrunc(32).getLoBits(3);
+    uint32_t Index = cast<ConstantInt>(COp)->getZExtValue();
+    Index &= Size - 1;
     Indexes[I] = ConstantInt::get(MaskEltTy, Index);
   }
 
@@ -1031,6 +1032,29 @@ static Value *simplifyX86vpcom(const IntrinsicInst &II,
       return Builder.CreateSExtOrTrunc(Cmp, VecTy);
   }
   return nullptr;
+}
+
+// Emit a select instruction and appropriate bitcasts to help simplify
+// masked intrinsics.
+static Value *emitX86MaskSelect(Value *Mask, Value *Op0, Value *Op1,
+                                InstCombiner::BuilderTy &Builder) {
+  auto *MaskTy = VectorType::get(Builder.getInt1Ty(),
+                         cast<IntegerType>(Mask->getType())->getBitWidth());
+  Mask = Builder.CreateBitCast(Mask, MaskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  unsigned VWidth = Op0->getType()->getVectorNumElements();
+  if (VWidth < 8) {
+    uint32_t Indices[4];
+    for (unsigned i = 0; i != VWidth; ++i)
+      Indices[i] = i;
+    Mask = Builder.CreateShuffleVector(Mask, Mask,
+                                       makeArrayRef(Indices, VWidth),
+                                       "extract");
+  }
+
+  return Builder.CreateSelect(Mask, Op0, Op1);
 }
 
 static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
@@ -1765,17 +1789,63 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
-  // X86 scalar intrinsics simplified with SimplifyDemandedVectorElts.
   case Intrinsic::x86_avx512_mask_add_ss_round:
   case Intrinsic::x86_avx512_mask_div_ss_round:
   case Intrinsic::x86_avx512_mask_mul_ss_round:
   case Intrinsic::x86_avx512_mask_sub_ss_round:
-  case Intrinsic::x86_avx512_mask_max_ss_round:
-  case Intrinsic::x86_avx512_mask_min_ss_round:
   case Intrinsic::x86_avx512_mask_add_sd_round:
   case Intrinsic::x86_avx512_mask_div_sd_round:
   case Intrinsic::x86_avx512_mask_mul_sd_round:
   case Intrinsic::x86_avx512_mask_sub_sd_round:
+    // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
+    // IR operations.
+    if (auto *R = dyn_cast<ConstantInt>(II->getArgOperand(4))) {
+      if (R->getValue() == 4) {
+        // Only do this if the mask bit is 1 so that we don't need a select.
+        // TODO: Improve this to handle masking cases. Isel doesn't fold
+        // the mask correctly right now.
+        if (auto *M = dyn_cast<ConstantInt>(II->getArgOperand(3))) {
+          if (M->getValue()[0]) {
+            // Extract the element as scalars.
+            Value *Arg0 = II->getArgOperand(0);
+            Value *Arg1 = II->getArgOperand(1);
+            Value *LHS = Builder->CreateExtractElement(Arg0, (uint64_t)0);
+            Value *RHS = Builder->CreateExtractElement(Arg1, (uint64_t)0);
+
+            Value *V;
+            switch (II->getIntrinsicID()) {
+            default: llvm_unreachable("Case stmts out of sync!");
+            case Intrinsic::x86_avx512_mask_add_ss_round:
+            case Intrinsic::x86_avx512_mask_add_sd_round:
+              V = Builder->CreateFAdd(LHS, RHS);
+              break;
+            case Intrinsic::x86_avx512_mask_sub_ss_round:
+            case Intrinsic::x86_avx512_mask_sub_sd_round:
+              V = Builder->CreateFSub(LHS, RHS);
+              break;
+            case Intrinsic::x86_avx512_mask_mul_ss_round:
+            case Intrinsic::x86_avx512_mask_mul_sd_round:
+              V = Builder->CreateFMul(LHS, RHS);
+              break;
+            case Intrinsic::x86_avx512_mask_div_ss_round:
+            case Intrinsic::x86_avx512_mask_div_sd_round:
+              V = Builder->CreateFDiv(LHS, RHS);
+              break;
+            }
+
+            // Insert the result back into the original argument 0.
+            V = Builder->CreateInsertElement(Arg0, V, (uint64_t)0);
+
+            return replaceInstUsesWith(*II, V);
+          }
+        }
+      }
+    }
+    LLVM_FALLTHROUGH;
+
+  // X86 scalar intrinsics simplified with SimplifyDemandedVectorElts.
+  case Intrinsic::x86_avx512_mask_max_ss_round:
+  case Intrinsic::x86_avx512_mask_min_ss_round:
   case Intrinsic::x86_avx512_mask_max_sd_round:
   case Intrinsic::x86_avx512_mask_min_sd_round:
   case Intrinsic::x86_avx512_mask_vfmadd_ss:
@@ -2119,6 +2189,28 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_permps:
     if (Value *V = simplifyX86vpermv(*II, *Builder))
       return replaceInstUsesWith(*II, V);
+    break;
+
+  case Intrinsic::x86_avx512_mask_permvar_df_256:
+  case Intrinsic::x86_avx512_mask_permvar_df_512:
+  case Intrinsic::x86_avx512_mask_permvar_di_256:
+  case Intrinsic::x86_avx512_mask_permvar_di_512:
+  case Intrinsic::x86_avx512_mask_permvar_hi_128:
+  case Intrinsic::x86_avx512_mask_permvar_hi_256:
+  case Intrinsic::x86_avx512_mask_permvar_hi_512:
+  case Intrinsic::x86_avx512_mask_permvar_qi_128:
+  case Intrinsic::x86_avx512_mask_permvar_qi_256:
+  case Intrinsic::x86_avx512_mask_permvar_qi_512:
+  case Intrinsic::x86_avx512_mask_permvar_sf_256:
+  case Intrinsic::x86_avx512_mask_permvar_sf_512:
+  case Intrinsic::x86_avx512_mask_permvar_si_256:
+  case Intrinsic::x86_avx512_mask_permvar_si_512:
+    if (Value *V = simplifyX86vpermv(*II, *Builder)) {
+      // We simplified the permuting, now create a select for the masking.
+      V = emitX86MaskSelect(II->getArgOperand(3), V, II->getArgOperand(2),
+                            *Builder);
+      return replaceInstUsesWith(*II, V);
+    }
     break;
 
   case Intrinsic::x86_avx_vperm2f128_pd_256:
