@@ -154,24 +154,24 @@ public:
   unsigned getNumOperands() const { return NumOperands; }
 
   typedef Value **op_iterator;
-  typedef Value *const *const_ops_iterator;
-  op_iterator ops_begin() { return Operands; }
-  op_iterator ops_end() { return Operands + NumOperands; }
-  const_ops_iterator ops_begin() const { return Operands; }
-  const_ops_iterator ops_end() const { return Operands + NumOperands; }
+  typedef Value *const *const_op_iterator;
+  op_iterator op_begin() { return Operands; }
+  op_iterator op_end() { return Operands + NumOperands; }
+  const_op_iterator op_begin() const { return Operands; }
+  const_op_iterator op_end() const { return Operands + NumOperands; }
   iterator_range<op_iterator> operands() {
-    return iterator_range<op_iterator>(ops_begin(), ops_end());
+    return iterator_range<op_iterator>(op_begin(), op_end());
   }
-  iterator_range<const_ops_iterator> operands() const {
-    return iterator_range<const_ops_iterator>(ops_begin(), ops_end());
+  iterator_range<const_op_iterator> operands() const {
+    return iterator_range<const_op_iterator>(op_begin(), op_end());
   }
 
-  void ops_push_back(Value *Arg) {
+  void op_push_back(Value *Arg) {
     assert(NumOperands < MaxOperands && "Tried to add too many operands");
     assert(Operands && "Operandss not allocated before pushing");
     Operands[NumOperands++] = Arg;
   }
-  bool ops_empty() const { return getNumOperands() == 0; }
+  bool op_empty() const { return getNumOperands() == 0; }
 
   void allocateOperands(RecyclerType &Recycler, BumpPtrAllocator &Allocator) {
     assert(!Operands && "Operands already allocated");
@@ -190,12 +190,12 @@ public:
 
     const auto &OE = cast<BasicExpression>(Other);
     return getType() == OE.getType() && NumOperands == OE.NumOperands &&
-      std::equal(ops_begin(), ops_end(), OE.ops_begin());
+      std::equal(op_begin(), op_end(), OE.op_begin());
   }
 
   virtual hash_code getHashValue() const override {
     return hash_combine(getExpressionType(), getOpcode(), ValueType,
-                        hash_combine_range(ops_begin(), ops_end()));
+                        hash_combine_range(op_begin(), op_end()));
   }
 
   //
@@ -291,7 +291,7 @@ public:
 
   virtual hash_code getHashValue() const override {
     return hash_combine(getOpcode(), getType(), DefiningAccess,
-                        hash_combine_range(ops_begin(), ops_end()));
+                        hash_combine_range(op_begin(), op_end()));
   }
 
   //
@@ -331,7 +331,7 @@ public:
 
   virtual hash_code getHashValue() const override {
     return hash_combine(getOpcode(), getType(), DefiningAccess,
-                        hash_combine_range(ops_begin(), ops_end()));
+                        hash_combine_range(op_begin(), op_end()));
   }
 
   //
@@ -370,15 +370,15 @@ public:
   typedef unsigned *int_arg_iterator;
   typedef const unsigned *const_int_arg_iterator;
 
-  int_arg_iterator int_ops_begin() { return IntOperands; }
-  int_arg_iterator int_ops_end() { return IntOperands + NumIntOperands; }
-  const_int_arg_iterator int_ops_begin() const { return IntOperands; }
-  const_int_arg_iterator int_ops_end() const {
+  int_arg_iterator int_op_begin() { return IntOperands; }
+  int_arg_iterator int_op_end() { return IntOperands + NumIntOperands; }
+  const_int_arg_iterator int_op_begin() const { return IntOperands; }
+  const_int_arg_iterator int_op_end() const {
     return IntOperands + NumIntOperands;
   }
-  unsigned int_ops_size() const { return NumIntOperands; }
-  bool int_ops_empty() const { return NumIntOperands == 0; }
-  void int_ops_push_back(unsigned IntOperand) {
+  unsigned int_op_size() const { return NumIntOperands; }
+  bool int_op_empty() const { return NumIntOperands == 0; }
+  void int_op_push_back(unsigned IntOperand) {
     assert(NumIntOperands < MaxIntOperands &&
            "Tried to add too many int operands");
     assert(IntOperands && "Operands not allocated before pushing");
@@ -395,12 +395,12 @@ public:
       return false;
     const AggregateValueExpression &OE = cast<AggregateValueExpression>(Other);
     return NumIntOperands == OE.NumIntOperands &&
-      std::equal(int_ops_begin(), int_ops_end(), OE.int_ops_begin());
+      std::equal(int_op_begin(), int_op_end(), OE.int_op_begin());
   }
 
   virtual hash_code getHashValue() const override {
     return hash_combine(this->BasicExpression::getHashValue(),
-                        hash_combine_range(int_ops_begin(), int_ops_end()));
+                        hash_combine_range(int_op_begin(), int_op_end()));
   }
 
   //
@@ -411,7 +411,7 @@ public:
       OS << "ExpressionTypeAggregateValue, ";
     this->BasicExpression::printInternal(OS, false);
     OS << ", intoperands = {";
-    for (unsigned i = 0, e = int_ops_size(); i != e; ++i) {
+    for (unsigned i = 0, e = int_op_size(); i != e; ++i) {
       OS << "[" << i << "] = " << IntOperands[i] << "  ";
     }
     OS << "}";

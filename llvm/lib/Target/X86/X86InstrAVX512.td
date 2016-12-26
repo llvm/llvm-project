@@ -3001,24 +3001,24 @@ def : Pat<(v16i32 (vselect (xor VK16:$mask, (v16i1 immAllOnesV)),
 
 let Predicates = [HasVLX, NoBWI] in {
   // 128-bit load/store without BWI.
-  def : Pat<(alignedstore (v8i16 VR128:$src), addr:$dst),
-            (VMOVDQA32Z128mr addr:$dst, VR128:$src)>;
-  def : Pat<(alignedstore (v16i8 VR128:$src), addr:$dst),
-            (VMOVDQA32Z128mr addr:$dst, VR128:$src)>;
-  def : Pat<(store (v8i16 VR128:$src), addr:$dst),
-            (VMOVDQU32Z128mr addr:$dst, VR128:$src)>;
-  def : Pat<(store (v16i8 VR128:$src), addr:$dst),
-            (VMOVDQU32Z128mr addr:$dst, VR128:$src)>;
+  def : Pat<(alignedstore (v8i16 VR128X:$src), addr:$dst),
+            (VMOVDQA32Z128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(alignedstore (v16i8 VR128X:$src), addr:$dst),
+            (VMOVDQA32Z128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(store (v8i16 VR128X:$src), addr:$dst),
+            (VMOVDQU32Z128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(store (v16i8 VR128X:$src), addr:$dst),
+            (VMOVDQU32Z128mr addr:$dst, VR128X:$src)>;
 
   // 256-bit load/store without BWI.
-  def : Pat<(alignedstore256 (v16i16 VR256:$src), addr:$dst),
-            (VMOVDQA32Z256mr addr:$dst, VR256:$src)>;
-  def : Pat<(alignedstore256 (v32i8 VR256:$src), addr:$dst),
-            (VMOVDQA32Z256mr addr:$dst, VR256:$src)>;
-  def : Pat<(store (v16i16 VR256:$src), addr:$dst),
-            (VMOVDQU32Z256mr addr:$dst, VR256:$src)>;
-  def : Pat<(store (v32i8 VR256:$src), addr:$dst),
-            (VMOVDQU32Z256mr addr:$dst, VR256:$src)>;
+  def : Pat<(alignedstore256 (v16i16 VR256X:$src), addr:$dst),
+            (VMOVDQA32Z256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(alignedstore256 (v32i8 VR256X:$src), addr:$dst),
+            (VMOVDQA32Z256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(store (v16i16 VR256X:$src), addr:$dst),
+            (VMOVDQU32Z256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(store (v32i8 VR256X:$src), addr:$dst),
+            (VMOVDQU32Z256mr addr:$dst, VR256X:$src)>;
 }
 
 let Predicates = [HasVLX] in {
@@ -6618,16 +6618,16 @@ let Predicates = [HasAVX512, HasVLX] in {
   let AddedComplexity = 15 in {
     def : Pat<(X86vzmovl (v2i64 (bitconvert
                                 (v4i32 (X86cvtp2Int (v2f64 VR128X:$src)))))),
-              (VCVTPD2DQZ128rr VR128:$src)>;
+              (VCVTPD2DQZ128rr VR128X:$src)>;
     def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
                                  (v4i32 (X86cvtp2UInt (v2f64 VR128X:$src)))))))),
-              (VCVTPD2UDQZ128rr VR128:$src)>;
+              (VCVTPD2UDQZ128rr VR128X:$src)>;
     def : Pat<(X86vzmovl (v2i64 (bitconvert
                                 (v4i32 (X86cvttp2si (v2f64 VR128X:$src)))))),
-              (VCVTTPD2DQZ128rr VR128:$src)>;
+              (VCVTTPD2DQZ128rr VR128X:$src)>;
     def : Pat<(v4i32 (bitconvert (X86vzmovl (v2i64 (bitconvert
                                  (v4i32 (X86cvttp2ui (v2f64 VR128X:$src)))))))),
-              (VCVTTPD2UDQZ128rr VR128:$src)>;
+              (VCVTTPD2UDQZ128rr VR128X:$src)>;
   }
 }
 
@@ -6642,10 +6642,10 @@ let Predicates = [HasDQI, HasVLX] in {
   let AddedComplexity = 15 in {
     def : Pat<(X86vzmovl (v2f64 (bitconvert
                                 (v4f32 (X86VSintToFP (v2i64 VR128X:$src)))))),
-              (VCVTQQ2PSZ128rr VR128:$src)>;
+              (VCVTQQ2PSZ128rr VR128X:$src)>;
     def : Pat<(X86vzmovl (v2f64 (bitconvert
                                 (v4f32 (X86VUintToFP (v2i64 VR128X:$src)))))),
-              (VCVTUQQ2PSZ128rr VR128:$src)>;
+              (VCVTUQQ2PSZ128rr VR128X:$src)>;
   }
 }
 
@@ -8552,33 +8552,42 @@ multiclass avx512_unary_rm_vl_all<bits<8> opc_b, bits<8> opc_w,
 
 defm VPABS : avx512_unary_rm_vl_all<0x1C, 0x1D, 0x1E, 0x1F, "vpabs", X86Abs>;
 
+def avx512_v16i1sextv16i8 : PatLeaf<(v16i8 (X86pcmpgt (bc_v16i8 (v4i32 immAllZerosV)),
+                                                      VR128X:$src))>;
+def avx512_v8i1sextv8i16 : PatLeaf<(v8i16 (X86vsrai VR128X:$src, (i8 15)))>;
+def avx512_v4i1sextv4i32  : PatLeaf<(v4i32 (X86vsrai VR128X:$src, (i8 31)))>;
+def avx512_v32i1sextv32i8 : PatLeaf<(v32i8 (X86pcmpgt (bc_v32i8 (v8i32 immAllZerosV)),
+                                                      VR256X:$src))>;
+def avx512_v16i1sextv16i16: PatLeaf<(v16i16 (X86vsrai VR256X:$src, (i8 15)))>;
+def avx512_v8i1sextv8i32  : PatLeaf<(v8i32 (X86vsrai VR256X:$src, (i8 31)))>;
+
 let Predicates = [HasBWI, HasVLX] in {
   def : Pat<(xor
-            (bc_v2i64 (v16i1sextv16i8)),
-            (bc_v2i64 (add (v16i8 VR128:$src), (v16i1sextv16i8)))),
-            (VPABSBZ128rr VR128:$src)>;
+            (bc_v2i64 (avx512_v16i1sextv16i8)),
+            (bc_v2i64 (add (v16i8 VR128X:$src), (avx512_v16i1sextv16i8)))),
+            (VPABSBZ128rr VR128X:$src)>;
   def : Pat<(xor
-            (bc_v2i64 (v8i1sextv8i16)),
-            (bc_v2i64 (add (v8i16 VR128:$src), (v8i1sextv8i16)))),
-            (VPABSWZ128rr VR128:$src)>;
+            (bc_v2i64 (avx512_v8i1sextv8i16)),
+            (bc_v2i64 (add (v8i16 VR128X:$src), (avx512_v8i1sextv8i16)))),
+            (VPABSWZ128rr VR128X:$src)>;
   def : Pat<(xor
-            (bc_v4i64 (v32i1sextv32i8)),
-            (bc_v4i64 (add (v32i8 VR256:$src), (v32i1sextv32i8)))),
-            (VPABSBZ256rr VR256:$src)>;
+            (bc_v4i64 (avx512_v32i1sextv32i8)),
+            (bc_v4i64 (add (v32i8 VR256X:$src), (avx512_v32i1sextv32i8)))),
+            (VPABSBZ256rr VR256X:$src)>;
   def : Pat<(xor
-            (bc_v4i64 (v16i1sextv16i16)),
-            (bc_v4i64 (add (v16i16 VR256:$src), (v16i1sextv16i16)))),
-            (VPABSWZ256rr VR256:$src)>;
+            (bc_v4i64 (avx512_v16i1sextv16i16)),
+            (bc_v4i64 (add (v16i16 VR256X:$src), (avx512_v16i1sextv16i16)))),
+            (VPABSWZ256rr VR256X:$src)>;
 }
 let Predicates = [HasAVX512, HasVLX] in {
   def : Pat<(xor
-            (bc_v2i64 (v4i1sextv4i32)),
-            (bc_v2i64 (add (v4i32 VR128:$src), (v4i1sextv4i32)))),
-            (VPABSDZ128rr VR128:$src)>;
+            (bc_v2i64 (avx512_v4i1sextv4i32)),
+            (bc_v2i64 (add (v4i32 VR128X:$src), (avx512_v4i1sextv4i32)))),
+            (VPABSDZ128rr VR128X:$src)>;
   def : Pat<(xor
-            (bc_v4i64 (v8i1sextv8i32)),
-            (bc_v4i64 (add (v8i32 VR256:$src), (v8i1sextv8i32)))),
-            (VPABSDZ256rr VR256:$src)>;
+            (bc_v4i64 (avx512_v8i1sextv8i32)),
+            (bc_v4i64 (add (v8i32 VR256X:$src), (avx512_v8i1sextv8i32)))),
+            (VPABSDZ256rr VR256X:$src)>;
 }
 
 let Predicates = [HasAVX512] in {
@@ -9086,27 +9095,27 @@ defm VFIXUPIMMPD : avx512_fixupimm_packed_all<avx512vl_f64_info>,
 multiclass AVX512_scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
   let Predicates = [HasAVX512] in {
     // extracted scalar math op with insert via movss
-    def : Pat<(v4f32 (X86Movss (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
-          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
-          FR32:$src))))),
+    def : Pat<(v4f32 (X86Movss (v4f32 VR128X:$dst), (v4f32 (scalar_to_vector
+          (Op (f32 (extractelt (v4f32 VR128X:$dst), (iPTR 0))),
+          FR32X:$src))))),
       (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst,
-          (COPY_TO_REGCLASS FR32:$src, VR128))>;
+          (COPY_TO_REGCLASS FR32X:$src, VR128X))>;
 
     // extracted scalar math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
-          (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
-          FR32:$src))), (i8 1))),
+    def : Pat<(v4f32 (X86Blendi (v4f32 VR128X:$dst), (v4f32 (scalar_to_vector
+          (Op (f32 (extractelt (v4f32 VR128X:$dst), (iPTR 0))),
+          FR32X:$src))), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst,
-          (COPY_TO_REGCLASS FR32:$src, VR128))>;
+          (COPY_TO_REGCLASS FR32X:$src, VR128X))>;
 
     // vector math op with insert via movss
-    def : Pat<(v4f32 (X86Movss (v4f32 VR128:$dst),
-          (Op (v4f32 VR128:$dst), (v4f32 VR128:$src)))),
+    def : Pat<(v4f32 (X86Movss (v4f32 VR128X:$dst),
+          (Op (v4f32 VR128X:$dst), (v4f32 VR128X:$src)))),
       (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst, v4f32:$src)>;
 
     // vector math op with insert via blend
-    def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst),
-          (Op (v4f32 VR128:$dst), (v4f32 VR128:$src)), (i8 1))),
+    def : Pat<(v4f32 (X86Blendi (v4f32 VR128X:$dst),
+          (Op (v4f32 VR128X:$dst), (v4f32 VR128X:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst, v4f32:$src)>;
   }
 }
@@ -9119,27 +9128,27 @@ defm : AVX512_scalar_math_f32_patterns<fdiv, "DIV">;
 multiclass AVX512_scalar_math_f64_patterns<SDNode Op, string OpcPrefix> {
   let Predicates = [HasAVX512] in {
     // extracted scalar math op with insert via movsd
-    def : Pat<(v2f64 (X86Movsd (v2f64 VR128:$dst), (v2f64 (scalar_to_vector
-          (Op (f64 (extractelt (v2f64 VR128:$dst), (iPTR 0))),
-          FR64:$src))))),
+    def : Pat<(v2f64 (X86Movsd (v2f64 VR128X:$dst), (v2f64 (scalar_to_vector
+          (Op (f64 (extractelt (v2f64 VR128X:$dst), (iPTR 0))),
+          FR64X:$src))))),
       (!cast<I>("V"#OpcPrefix#SDZrr_Int) v2f64:$dst,
-          (COPY_TO_REGCLASS FR64:$src, VR128))>;
+          (COPY_TO_REGCLASS FR64X:$src, VR128X))>;
 
     // extracted scalar math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst), (v2f64 (scalar_to_vector
-          (Op (f64 (extractelt (v2f64 VR128:$dst), (iPTR 0))),
-          FR64:$src))), (i8 1))),
+    def : Pat<(v2f64 (X86Blendi (v2f64 VR128X:$dst), (v2f64 (scalar_to_vector
+          (Op (f64 (extractelt (v2f64 VR128X:$dst), (iPTR 0))),
+          FR64X:$src))), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SDZrr_Int) v2f64:$dst,
-          (COPY_TO_REGCLASS FR64:$src, VR128))>;
+          (COPY_TO_REGCLASS FR64X:$src, VR128X))>;
 
     // vector math op with insert via movsd
-    def : Pat<(v2f64 (X86Movsd (v2f64 VR128:$dst),
-          (Op (v2f64 VR128:$dst), (v2f64 VR128:$src)))),
+    def : Pat<(v2f64 (X86Movsd (v2f64 VR128X:$dst),
+          (Op (v2f64 VR128X:$dst), (v2f64 VR128X:$src)))),
       (!cast<I>("V"#OpcPrefix#SDZrr_Int) v2f64:$dst, v2f64:$src)>;
 
     // vector math op with insert via blend
-    def : Pat<(v2f64 (X86Blendi (v2f64 VR128:$dst),
-          (Op (v2f64 VR128:$dst), (v2f64 VR128:$src)), (i8 1))),
+    def : Pat<(v2f64 (X86Blendi (v2f64 VR128X:$dst),
+          (Op (v2f64 VR128X:$dst), (v2f64 VR128X:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SDZrr_Int) v2f64:$dst, v2f64:$src)>;
   }
 }

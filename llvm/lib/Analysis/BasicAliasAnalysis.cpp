@@ -776,6 +776,31 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
       return MRI_NoModRef;
   }
 
+  // The semantics of memcpy intrinsics forbid overlap between their respective
+  // operands, i.e., source and destination of any given memcpy must no-alias.
+  // If Loc must-aliases either one of these two locations, then it necessarily
+  // no-aliases the other.
+  if (auto *Inst = dyn_cast<MemCpyInst>(CS.getInstruction())) {
+    AliasResult SrcAA, DestAA;
+
+    if ((SrcAA = getBestAAResults().alias(MemoryLocation::getForSource(Inst),
+                                          Loc)) == MustAlias)
+      // Loc is exactly the memcpy source thus disjoint from memcpy dest.
+      return MRI_Ref;
+    if ((DestAA = getBestAAResults().alias(MemoryLocation::getForDest(Inst),
+                                           Loc)) == MustAlias)
+      // The converse case.
+      return MRI_Mod;
+
+    // It's also possible for Loc to alias both src and dest, or neither.
+    ModRefInfo rv = MRI_NoModRef;
+    if (SrcAA != NoAlias)
+      rv = static_cast<ModRefInfo>(rv | MRI_Ref);
+    if (DestAA != NoAlias)
+      rv = static_cast<ModRefInfo>(rv | MRI_Mod);
+    return rv;
+  }
+
   // While the assume intrinsic is marked as arbitrarily writing so that
   // proper control dependencies will be maintained, it never aliases any
   // particular memory location.
