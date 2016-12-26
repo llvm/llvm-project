@@ -3859,6 +3859,17 @@ ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
                                     options::OPT_fpic, options::OPT_fno_pic,
                                     options::OPT_fPIE, options::OPT_fno_PIE,
                                     options::OPT_fpie, options::OPT_fno_pie);
+  if (Triple.isOSWindows() && LastPICArg &&
+      LastPICArg ==
+          Args.getLastArg(options::OPT_fPIC, options::OPT_fpic,
+                          options::OPT_fPIE, options::OPT_fpie)) {
+    ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+        << LastPICArg->getSpelling() << Triple.str();
+    if (Triple.getArch() == llvm::Triple::x86_64)
+      return std::make_tuple(llvm::Reloc::PIC_, 2U, false);
+    return std::make_tuple(llvm::Reloc::Static, 0U, false);
+  }
+
   // Check whether the tool chain trumps the PIC-ness decision. If the PIC-ness
   // is forced, then neither PIC nor PIE flags will have no effect.
   if (!ToolChain.isPICDefaultForced()) {

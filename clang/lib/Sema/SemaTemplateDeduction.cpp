@@ -2037,7 +2037,7 @@ static bool isSameTemplateArg(ASTContext &Context,
                     Y.getAsTemplateOrTemplatePattern()).getAsVoidPointer();
 
     case TemplateArgument::Integral:
-      return X.getAsIntegral() == Y.getAsIntegral();
+      return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
 
     case TemplateArgument::Expression: {
       llvm::FoldingSetNodeID XID, YID;

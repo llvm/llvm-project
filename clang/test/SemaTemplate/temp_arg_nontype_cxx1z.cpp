@@ -250,6 +250,23 @@ namespace Auto {
   }
 
   namespace Decomposition {
+    // Types of deduced non-type template arguments must match exactly, so
+    // partial ordering fails in both directions here.
+    template<auto> struct Any;
+    template<int N> struct Any<N> { typedef int Int; }; // expected-note 3{{match}}
+    template<short N> struct Any<N> { typedef int Short; }; // expected-note 3{{match}}
+    Any<0>::Int is_int; // expected-error {{ambiguous}}
+    Any<(short)0>::Short is_short; // expected-error {{ambiguous}}
+    Any<(char)0>::Short is_char; // expected-error {{ambiguous}}
+
+    template<int, auto> struct NestedAny;
+    template<auto N> struct NestedAny<0, N>; // expected-note 3{{match}}
+    template<int N> struct NestedAny<0, N> { typedef int Int; }; // expected-note 3{{match}}
+    template<short N> struct NestedAny<0, N> { typedef int Short; }; // expected-note 3{{match}}
+    NestedAny<0, 0>::Int nested_int; // expected-error {{ambiguous}}
+    NestedAny<0, (short)0>::Short nested_short; // expected-error {{ambiguous}}
+    NestedAny<0, (char)0>::Short nested_char; // expected-error {{ambiguous}}
+
     double foo(int, bool);
     template<auto& f> struct fn_result_type;
 
