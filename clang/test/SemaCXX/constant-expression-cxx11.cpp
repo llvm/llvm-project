@@ -1195,7 +1195,7 @@ struct S {
   int j : f(0); // expected-error {{constant expression}} expected-note {{in call to 'f(0)'}}
   int k : g(0); // expected-error {{constant expression}} expected-note {{temporary created here}} expected-note {{in call to 'g(0)'}}
   int l : n3; // expected-error {{constant expression}} expected-note {{read of non-const variable}}
-  int m : t.n; // expected-warning{{width of bit-field 'm' (42 bits)}}
+  int m : t.n; // expected-warning{{width of bit-field 'm' (42 bits)}} expected-warning{{expression is not an integral constant expression}} expected-note{{read of non-constexpr variable 't' is not allowed}}
 };
 
 }

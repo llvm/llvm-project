@@ -115,18 +115,18 @@ _mm_hsub_ps(__m128 __a, __m128 __b)
 
 /// \brief Moves and duplicates high-order (odd-indexed) values from a 128-bit
 ///    vector of [4 x float] to float values stored in a 128-bit vector of
-///    [4 x float].
-///    Bits [127:96] of the source are written to bits [127:96] and [95:64] of
-///    the destination.
-///    Bits [63:32] of the source are written to bits [63:32] and [31:0] of the
-///    destination.
+///    [4 x float]. 
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMOVSHDUP </c> instruction.
 ///
 /// \param __a
-///    A 128-bit vector of [4 x float].
+///    A 128-bit vector of [4 x float]. \n
+///    Bits [127:96] of the source are written to bits [127:96] and [95:64] of
+///    the destination. \n
+///    Bits [63:32] of the source are written to bits [63:32] and [31:0] of the
+///    destination.
 /// \returns A 128-bit vector of [4 x float] containing the moved and duplicated
 ///    values.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -135,20 +135,19 @@ _mm_movehdup_ps(__m128 __a)
   return __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 1, 1, 3, 3);
 }
 
-/// \brief Duplicates low-order (even-indexed) values from a 128-bit
-///    vector of [4 x float] to float values stored in a 128-bit vector of
-///    [4 x float].
-///    Bits [95:64] of the source are written to bits [127:96] and [95:64] of
-///    the destination.
-///    Bits [31:0] of the source are written to bits [63:32] and [31:0] of the
-///    destination.
+/// \brief Duplicates low-order (even-indexed) values from a 128-bit vector of
+///    [4 x float] to float values stored in a 128-bit vector of [4 x float]. 
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMOVSLDUP </c> instruction.
 ///
 /// \param __a
-///    A 128-bit vector of [4 x float].
+///    A 128-bit vector of [4 x float] \n
+///    Bits [95:64] of the source are written to bits [127:96] and [95:64] of
+///    the destination. \n
+///    Bits [31:0] of the source are written to bits [63:32] and [31:0] of the
+///    destination.
 /// \returns A 128-bit vector of [4 x float] containing the moved and duplicated
 ///    values.
 static __inline__ __m128 __DEFAULT_FN_ATTRS

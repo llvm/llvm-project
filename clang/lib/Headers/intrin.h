@@ -1010,40 +1010,33 @@ __readgsqword(unsigned long __offset) {
 #if defined(__i386__) || defined(__x86_64__)
 static __inline__ void __DEFAULT_FN_ATTRS
 __movsb(unsigned char *__dst, unsigned char const *__src, size_t __n) {
-  __asm__("rep movsb" : : "D"(__dst), "S"(__src), "c"(__n)
-                        : "%edi", "%esi", "%ecx");
+  __asm__("rep movsb" : : "D"(__dst), "S"(__src), "c"(__n));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __movsd(unsigned long *__dst, unsigned long const *__src, size_t __n) {
-  __asm__("rep movsl" : : "D"(__dst), "S"(__src), "c"(__n)
-                        : "%edi", "%esi", "%ecx");
+  __asm__("rep movsl" : : "D"(__dst), "S"(__src), "c"(__n));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __movsw(unsigned short *__dst, unsigned short const *__src, size_t __n) {
-  __asm__("rep movsw" : : "D"(__dst), "S"(__src), "c"(__n)
-                        : "%edi", "%esi", "%ecx");
+  __asm__("rep movsw" : : "D"(__dst), "S"(__src), "c"(__n));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __stosd(unsigned long *__dst, unsigned long __x, size_t __n) {
-  __asm__("rep stosl" : : "D"(__dst), "a"(__x), "c"(__n)
-                        : "%edi", "%ecx");
+  __asm__("rep stosl" : : "D"(__dst), "a"(__x), "c"(__n));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __stosw(unsigned short *__dst, unsigned short __x, size_t __n) {
-  __asm__("rep stosw" : : "D"(__dst), "a"(__x), "c"(__n)
-                        : "%edi", "%ecx");
+  __asm__("rep stosw" : : "D"(__dst), "a"(__x), "c"(__n));
 }
 #endif
 #ifdef __x86_64__
 static __inline__ void __DEFAULT_FN_ATTRS
 __movsq(unsigned long long *__dst, unsigned long long const *__src, size_t __n) {
-  __asm__("rep movsq" : : "D"(__dst), "S"(__src), "c"(__n)
-                        : "%edi", "%esi", "%ecx");
+  __asm__("rep movsq" : : "D"(__dst), "S"(__src), "c"(__n));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __stosq(unsigned __int64 *__dst, unsigned __int64 __x, size_t __n) {
-  __asm__("rep stosq" : : "D"(__dst), "a"(__x), "c"(__n)
-                        : "%edi", "%ecx");
+  __asm__("rep stosq" : : "D"(__dst), "a"(__x), "c"(__n));
 }
 #endif
 

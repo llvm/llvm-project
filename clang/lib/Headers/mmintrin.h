@@ -211,16 +211,16 @@ _mm_packs_pu16(__m64 __m1, __m64 __m2)
 /// This intrinsic corresponds to the <c> PUNPCKHBW </c> instruction.
 ///
 /// \param __m1
-///    A 64-bit integer vector of [8 x i8].
-///    Bits [39:32] are written to bits [7:0] of the result.
-///    Bits [47:40] are written to bits [23:16] of the result.
-///    Bits [55:48] are written to bits [39:32] of the result.
+///    A 64-bit integer vector of [8 x i8]. \n 
+///    Bits [39:32] are written to bits [7:0] of the result. \n
+///    Bits [47:40] are written to bits [23:16] of the result. \n
+///    Bits [55:48] are written to bits [39:32] of the result. \n
 ///    Bits [63:56] are written to bits [55:48] of the result.
 /// \param __m2
 ///    A 64-bit integer vector of [8 x i8].
-///    Bits [39:32] are written to bits [15:8] of the result.
-///    Bits [47:40] are written to bits [31:24] of the result.
-///    Bits [55:48] are written to bits [47:40] of the result.
+///    Bits [39:32] are written to bits [15:8] of the result. \n
+///    Bits [47:40] are written to bits [31:24] of the result. \n
+///    Bits [55:48] are written to bits [47:40] of the result. \n
 ///    Bits [63:56] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
@@ -239,11 +239,11 @@ _mm_unpackhi_pi8(__m64 __m1, __m64 __m2)
 ///
 /// \param __m1
 ///    A 64-bit integer vector of [4 x i16].
-///    Bits [47:32] are written to bits [15:0] of the result.
+///    Bits [47:32] are written to bits [15:0] of the result. \n
 ///    Bits [63:48] are written to bits [47:32] of the result.
 /// \param __m2
 ///    A 64-bit integer vector of [4 x i16].
-///    Bits [47:32] are written to bits [31:16] of the result.
+///    Bits [47:32] are written to bits [31:16] of the result. \n
 ///    Bits [63:48] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.
@@ -283,15 +283,15 @@ _mm_unpackhi_pi32(__m64 __m1, __m64 __m2)
 ///
 /// \param __m1
 ///    A 64-bit integer vector of [8 x i8].
-///    Bits [7:0] are written to bits [7:0] of the result.
-///    Bits [15:8] are written to bits [23:16] of the result.
-///    Bits [23:16] are written to bits [39:32] of the result.
+///    Bits [7:0] are written to bits [7:0] of the result. \n
+///    Bits [15:8] are written to bits [23:16] of the result. \n
+///    Bits [23:16] are written to bits [39:32] of the result. \n
 ///    Bits [31:24] are written to bits [55:48] of the result.
 /// \param __m2
 ///    A 64-bit integer vector of [8 x i8].
-///    Bits [7:0] are written to bits [15:8] of the result.
-///    Bits [15:8] are written to bits [31:24] of the result.
-///    Bits [23:16] are written to bits [47:40] of the result.
+///    Bits [7:0] are written to bits [15:8] of the result. \n
+///    Bits [15:8] are written to bits [31:24] of the result. \n
+///    Bits [23:16] are written to bits [47:40] of the result. \n
 ///    Bits [31:24] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
@@ -310,11 +310,11 @@ _mm_unpacklo_pi8(__m64 __m1, __m64 __m2)
 ///
 /// \param __m1
 ///    A 64-bit integer vector of [4 x i16].
-///    Bits [15:0] are written to bits [15:0] of the result.
+///    Bits [15:0] are written to bits [15:0] of the result. \n
 ///    Bits [31:16] are written to bits [47:32] of the result.
 /// \param __m2
 ///    A 64-bit integer vector of [4 x i16].
-///    Bits [15:0] are written to bits [31:16] of the result.
+///    Bits [15:0] are written to bits [31:16] of the result. \n
 ///    Bits [31:16] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.

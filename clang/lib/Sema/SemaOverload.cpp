@@ -5382,7 +5382,7 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
 
   APValue V;
   auto R = ::CheckConvertedConstantExpression(*this, From, T, V, CCE, true);
-  if (!R.isInvalid())
+  if (!R.isInvalid() && !R.get()->isValueDependent())
     Value = V.getInt();
   return R;
 }

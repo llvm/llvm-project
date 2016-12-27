@@ -42,12 +42,11 @@
 ///    A 128-bit vector of [2 x i64] containing one of the source operands.
 /// \param __I
 ///    An immediate value specifying which 64-bit values to select from the
-///    operands.
-///    Bit 0 is used to select a value from operand \a __X, and bit 4 is used
-///    to select a value from operand \a __Y:
-///    Bit[0]=0 indicates that bits[63:0] of operand \a __X are used.
-///    Bit[0]=1 indicates that bits[127:64] of operand \a __X are used.
-///    Bit[4]=0 indicates that bits[63:0] of operand \a __Y are used.
+///    operands. Bit 0 is used to select a value from operand \a __X, and bit
+///    4 is used to select a value from operand \a __Y: \n
+///    Bit[0]=0 indicates that bits[63:0] of operand \a __X are used. \n
+///    Bit[0]=1 indicates that bits[127:64] of operand \a __X are used. \n
+///    Bit[4]=0 indicates that bits[63:0] of operand \a __Y are used. \n
 ///    Bit[4]=1 indicates that bits[127:64] of operand \a __Y are used.
 /// \returns The 128-bit integer vector containing the result of the carry-less
 ///    multiplication of the selected 64-bit values.

@@ -6738,9 +6738,15 @@ public:
                                   ClassTemplatePartialSpecializationDecl *PS2,
                                   SourceLocation Loc);
 
+  bool isMoreSpecializedThanPrimary(ClassTemplatePartialSpecializationDecl *T,
+                                    sema::TemplateDeductionInfo &Info);
+
   VarTemplatePartialSpecializationDecl *getMoreSpecializedPartialSpecialization(
       VarTemplatePartialSpecializationDecl *PS1,
       VarTemplatePartialSpecializationDecl *PS2, SourceLocation Loc);
+
+  bool isMoreSpecializedThanPrimary(VarTemplatePartialSpecializationDecl *T,
+                                    sema::TemplateDeductionInfo &Info);
 
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced,
@@ -6793,7 +6799,7 @@ public:
       /// template argument deduction for either a class template
       /// partial specialization or a function template. The
       /// Entity is either a {Class|Var}TemplatePartialSpecializationDecl or
-      /// a FunctionTemplateDecl.
+      /// a TemplateDecl.
       DeducedTemplateArgumentSubstitution,
 
       /// We are substituting prior template arguments into a new
@@ -7011,6 +7017,14 @@ public:
                           FunctionTemplateDecl *FunctionTemplate,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           ActiveTemplateInstantiation::InstantiationKind Kind,
+                          sema::TemplateDeductionInfo &DeductionInfo,
+                          SourceRange InstantiationRange = SourceRange());
+
+    /// \brief Note that we are instantiating as part of template
+    /// argument deduction for a class template declaration.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          TemplateDecl *Template,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &DeductionInfo,
                           SourceRange InstantiationRange = SourceRange());
 

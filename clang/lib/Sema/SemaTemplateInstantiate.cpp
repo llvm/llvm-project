@@ -279,6 +279,17 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
+    TemplateDecl *Template,
+    ArrayRef<TemplateArgument> TemplateArgs,
+    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef,
+          ActiveTemplateInstantiation::DeducedTemplateArgumentSubstitution,
+          PointOfInstantiation, InstantiationRange, Template, nullptr,
+          TemplateArgs, &DeductionInfo) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
     ClassTemplatePartialSpecializationDecl *PartialSpec,
     ArrayRef<TemplateArgument> TemplateArgs,
     sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
@@ -497,8 +508,12 @@ void Sema::PrintInstantiationStack() {
       } else {
         bool IsVar = isa<VarTemplateDecl>(Active->Entity) ||
                      isa<VarTemplateSpecializationDecl>(Active->Entity);
+        bool IsTemplate = false;
         TemplateParameterList *Params;
-        if (auto *D = dyn_cast<ClassTemplatePartialSpecializationDecl>(
+        if (auto *D = dyn_cast<TemplateDecl>(Active->Entity)) {
+          IsTemplate = true;
+          Params = D->getTemplateParameters();
+        } else if (auto *D = dyn_cast<ClassTemplatePartialSpecializationDecl>(
                        Active->Entity)) {
           Params = D->getTemplateParameters();
         } else if (auto *D = dyn_cast<VarTemplatePartialSpecializationDecl>(
@@ -510,7 +525,7 @@ void Sema::PrintInstantiationStack() {
 
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_deduced_template_arg_substitution_here)
-          << IsVar << cast<NamedDecl>(Active->Entity)
+          << IsVar << IsTemplate << cast<NamedDecl>(Active->Entity)
           << getTemplateArgumentBindingsText(Params, Active->TemplateArgs, 
                                              Active->NumTemplateArgs)
           << Active->InstantiationRange;

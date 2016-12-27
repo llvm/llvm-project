@@ -367,10 +367,44 @@ namespace PR17696 {
 
 namespace partial_order_different_types {
   // These are unordered because the type of the final argument doesn't match.
-  // FIXME: The second partial specialization should actually be rejected
-  // because it's not more specialized than the primary template.
-  template<int, int, typename T, typename, T> struct A;
+  template<int, int, typename T, typename, T> struct A; // expected-note {{here}}
   template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {}; // expected-note {{matches}}
   template<typename T, typename U, U V> struct A<0, 0, T, U, V> {}; // expected-note {{matches}}
+  // expected-error@-1 {{not more specialized than the primary}}
+  // expected-note@-2 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('U' vs 'type-parameter-0-0')}}
   A<0, 0, int, int, 0> a; // expected-error {{ambiguous partial specializations}}
+}
+
+namespace partial_order_references {
+  // FIXME: The standard does not appear to consider the second specialization
+  // to be more more specialized than the first! The problem is that deducing
+  // an 'int&' parameter from an argument 'R' results in a type mismatch,
+  // because the parameter has a reference type and the argument is an
+  // expression and thus does not have reference type. We resolve this by
+  // matching the type of an expression corresponding to the parameter rather
+  // than matching the parameter itself.
+  template <int, int, int &> struct A {};
+  template <int N, int &R> struct A<N, 0, R> {};
+  template <int &R> struct A<0, 0, R> {};
+  int N;
+  A<0, 0, N> a;
+
+  template<int, int &R> struct B; // expected-note 2{{template}}
+  template<const int &R> struct B<0, R> {};
+  // expected-error@-1 {{not more specialized than the primary}}
+  // expected-note@-2 {{'const int' vs 'int &'}}
+  B<0, N> b; // expected-error {{undefined}}
+
+  template<int, const int &R> struct C; // expected-note 2{{template}}
+  template<int &R> struct C<0, R> {};
+  // expected-error@-1 {{not more specialized than the primary}}
+  // expected-note@-2 {{'int' vs 'const int &'}}
+  C<0, N> c; // expected-error {{undefined}}
+
+  template<int, const int &R> struct D; // expected-note 2{{template}}
+  template<int N> struct D<0, N> {};
+  // expected-error@-1 {{not more specialized than the primary}}
+  // expected-note@-2 {{'int' vs 'const int &'}}
+  extern const int K = 5;
+  D<0, K> d; // expected-error {{undefined}}
 }

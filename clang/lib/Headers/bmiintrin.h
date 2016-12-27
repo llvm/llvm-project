@@ -295,8 +295,8 @@ __tzcnt_u32(unsigned int __X)
 ///
 /// \param __X
 ///    An unsigned 32-bit integer whose trailing zeros are to be counted.
-/// \returns An 32-bit integer containing the number of trailing zero
-///    bits in the operand.
+/// \returns An 32-bit integer containing the number of trailing zero bits in
+///    the operand.
 static __inline__ int __RELAXED_FN_ATTRS
 _mm_tzcnt_32(unsigned int __X)
 {
@@ -532,8 +532,8 @@ __tzcnt_u64(unsigned long long __X)
 ///
 /// \param __X
 ///    An unsigned 64-bit integer whose trailing zeros are to be counted.
-/// \returns An 64-bit integer containing the number of trailing zero
-///    bits in the operand.
+/// \returns An 64-bit integer containing the number of trailing zero bits in
+///    the operand.
 static __inline__ long long __RELAXED_FN_ATTRS
 _mm_tzcnt_64(unsigned long long __X)
 {
