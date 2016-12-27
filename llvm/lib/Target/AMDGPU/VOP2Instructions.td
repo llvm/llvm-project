@@ -134,6 +134,9 @@ multiclass VOP2bInst <string opName,
     let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
       def _e32 : VOP2_Pseudo <opName, P>,
                  Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+      
+      def _sdwa : VOP2_SDWA_Pseudo <opName, P>,
+              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)>;
     }
     def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
@@ -214,6 +217,8 @@ def VOP_MAC_F32 : VOP_MAC <f32> {
 def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped]> {
   let Asm32 = "$vdst, vcc, $src0, $src1";
   let Asm64 = "$vdst, $sdst, $src0, $src1";
+  let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
+  let AsmDPP = "$vdst, vcc, $src0, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
 }
@@ -229,12 +234,25 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
   let Src0RC32 = VCSrc_b32;
   let Asm32 = "$vdst, vcc, $src0, $src1, vcc";
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2";
+  let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers, vcc $clamp $dst_sel $dst_unused $src0_sel $src1_sel";
+  let AsmDPP = "$vdst, vcc, $src0, $src1, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
 
   // Suppress src2 implied by type since the 32-bit encoding uses an
   // implicit VCC use.
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
+
+  let InsSDWA = (ins Src0Mod:$src0_modifiers, Src0SDWA:$src0,
+                     Src1Mod:$src1_modifiers, Src1SDWA:$src1,
+                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     src0_sel:$src0_sel, src1_sel:$src1_sel);
+
+  let InsDPP = (ins Src0Mod:$src0_modifiers, Src0DPP:$src0,
+                    Src1Mod:$src1_modifiers, Src1DPP:$src1,
+                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+  let HasExt = 1;
 }
 
 // Read in from vcc or arbitrary SGPR
@@ -617,7 +635,7 @@ multiclass VOP2_Real_e64_vi <bits<10> op> {
     VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
 }
 
-multiclass VOP2be_Real_e32e64_vi <bits<6> op> : VOP2_Real_e32_vi<op> {
+multiclass Base_VOP2be_Real_e32e64_vi <bits<6> op> : VOP2_Real_e32_vi<op> {
   def _e64_vi :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
     VOP3be_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
@@ -633,6 +651,13 @@ multiclass VOP2_SDWA_Real <bits<6> op> {
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP2_SDWAe <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
+}
+
+multiclass VOP2be_Real_e32e64_vi <bits<6> op> :
+  Base_VOP2be_Real_e32e64_vi<op>, VOP2_SDWA_Real<op> {
+  // For now left dpp only for asm/dasm
+  // TODO: add corresponding pseudo
+  def _dpp : VOP2_DPP<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
 }
 
 multiclass VOP2_Real_e32e64_vi <bits<6> op> :

@@ -29,6 +29,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -60,13 +61,26 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M, ModuleAnalysisManager &) {
       InlinedFunctions.push_back(&F);
     }
 
-  // Now try to delete all the functions we inlined.
-  for (Function *InlinedF : InlinedFunctions) {
-    InlinedF->removeDeadConstantUsers();
-    // FIXME: We should use some utility to handle cases where we can
-    // completely remove the comdat.
-    if (InlinedF->isDefTriviallyDead() && !InlinedF->hasComdat())
-      M.getFunctionList().erase(InlinedF);
+  // Remove any live functions.
+  erase_if(InlinedFunctions, [&](Function *F) {
+    F->removeDeadConstantUsers();
+    return !F->isDefTriviallyDead();
+  });
+
+  // Delete the non-comdat ones from the module and also from our vector.
+  auto NonComdatBegin = partition(
+      InlinedFunctions, [&](Function *F) { return F->hasComdat(); });
+  for (Function *F : make_range(NonComdatBegin, InlinedFunctions.end()))
+    M.getFunctionList().erase(F);
+  InlinedFunctions.erase(NonComdatBegin, InlinedFunctions.end());
+
+  if (!InlinedFunctions.empty()) {
+    // Now we just have the comdat functions. Filter out the ones whose comdats
+    // are not actually dead.
+    filterDeadComdatFunctions(M, InlinedFunctions);
+    // The remaining functions are actually dead.
+    for (Function *F : InlinedFunctions)
+      M.getFunctionList().erase(F);
   }
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();

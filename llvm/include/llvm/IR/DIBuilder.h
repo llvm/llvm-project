@@ -108,10 +108,10 @@ namespace llvm {
                       uint64_t DWOId = 0, bool SplitDebugInlining = true);
 
     /// Create a file descriptor to hold debugging information for a file.
-    /// \param File     File name.
-    /// \param Dir      Directory.
-    /// \param CSKind   Checksum kind (e.g. CSK_None, CSK_MD5, CSK_SHA1, etc.).
-    /// \param Checksum Checksum data.
+    /// \param Filename  File name.
+    /// \param Directory Directory.
+    /// \param CSKind    Checksum kind (e.g. CSK_None, CSK_MD5, CSK_SHA1, etc.).
+    /// \param Checksum  Checksum data.
     DIFile *createFile(StringRef Filename, StringRef Directory,
                        DIFile::ChecksumKind CSKind = DIFile::CSK_None,
                        StringRef Checksum = StringRef());

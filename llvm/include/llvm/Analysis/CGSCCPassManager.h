@@ -436,8 +436,8 @@ public:
 
     // By definition we preserve the call garph, all SCC analyses, and the
     // analysis proxies by handling them above and in any nested pass managers.
+    PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();
     PA.preserve<LazyCallGraphAnalysis>();
-    PA.preserve<AllAnalysesOn<LazyCallGraph::SCC>>();
     PA.preserve<CGSCCAnalysisManagerModuleProxy>();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
@@ -585,7 +585,7 @@ public:
     // Functions. This precludes *any* invalidation of function analyses by the
     // proxy, but that's OK because we've taken care to invalidate analyses in
     // the function analysis manager incrementally above.
-    PA.preserve<AllAnalysesOn<Function>>();
+    PA.preserveSet<AllAnalysesOn<Function>>();
     PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
 
     // We've also ensured that we updated the call graph along the way.

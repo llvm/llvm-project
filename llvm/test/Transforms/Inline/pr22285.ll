@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline),globaldce' -S | FileCheck %s
 
 $f1 = comdat any
 ; CHECK-NOT: $f1 = comdat any

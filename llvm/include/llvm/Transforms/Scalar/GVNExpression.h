@@ -68,8 +68,7 @@ public:
     // Compare the expression type for anything but load and store.
     // For load and store we set the opcode to zero.
     // This is needed for load coercion.
-    if (getExpressionType() != ET_Load &&
-        getExpressionType() != ET_Store &&
+    if (getExpressionType() != ET_Load && getExpressionType() != ET_Store &&
         getExpressionType() != Other.getExpressionType())
       return false;
 
@@ -190,7 +189,7 @@ public:
 
     const auto &OE = cast<BasicExpression>(Other);
     return getType() == OE.getType() && NumOperands == OE.NumOperands &&
-      std::equal(op_begin(), op_end(), OE.op_begin());
+           std::equal(op_begin(), op_end(), OE.op_begin());
   }
 
   virtual hash_code getHashValue() const override {
@@ -215,6 +214,24 @@ public:
     OS << "} ";
   }
 };
+class op_inserter
+    : public std::iterator<std::output_iterator_tag, void, void, void, void> {
+private:
+  typedef BasicExpression Container;
+  Container *BE;
+
+public:
+  explicit op_inserter(BasicExpression &E) : BE(&E) {}
+  explicit op_inserter(BasicExpression *E) : BE(E) {}
+
+  op_inserter &operator=(Value *val) {
+    BE->op_push_back(val);
+    return *this;
+  }
+  op_inserter &operator*() { return *this; }
+  op_inserter &operator++() { return *this; }
+  op_inserter &operator++(int) { return *this; }
+};
 
 class CallExpression final : public BasicExpression {
 private:
@@ -227,8 +244,7 @@ public:
   }
 
   CallExpression(unsigned NumOperands, CallInst *C, MemoryAccess *DA)
-      : BasicExpression(NumOperands, ET_Call), Call(C),
-        DefiningAccess(DA) {}
+      : BasicExpression(NumOperands, ET_Call), Call(C), DefiningAccess(DA) {}
   void operator=(const CallExpression &) = delete;
   CallExpression(const CallExpression &) = delete;
   CallExpression() = delete;
@@ -269,8 +285,8 @@ public:
 
   LoadExpression(unsigned NumOperands, LoadInst *L, MemoryAccess *DA)
       : LoadExpression(ET_Load, NumOperands, L, DA) {}
-  LoadExpression(enum ExpressionType EType, unsigned NumOperands,
-                 LoadInst *L, MemoryAccess *DA)
+  LoadExpression(enum ExpressionType EType, unsigned NumOperands, LoadInst *L,
+                 MemoryAccess *DA)
       : BasicExpression(NumOperands, EType), Load(L), DefiningAccess(DA) {
     Alignment = L ? L->getAlignment() : 0;
   }
@@ -317,8 +333,7 @@ public:
   }
 
   StoreExpression(unsigned NumOperands, StoreInst *S, MemoryAccess *DA)
-      : BasicExpression(NumOperands, ET_Store), Store(S),
-        DefiningAccess(DA) {}
+      : BasicExpression(NumOperands, ET_Store), Store(S), DefiningAccess(DA) {}
   void operator=(const StoreExpression &) = delete;
   StoreExpression(const StoreExpression &) = delete;
   StoreExpression() = delete;
@@ -356,8 +371,7 @@ public:
     return EB->getExpressionType() == ET_AggregateValue;
   }
 
-  AggregateValueExpression(unsigned NumOperands,
-                           unsigned NumIntOperands)
+  AggregateValueExpression(unsigned NumOperands, unsigned NumIntOperands)
       : BasicExpression(NumOperands, ET_AggregateValue),
         MaxIntOperands(NumIntOperands), NumIntOperands(0),
         IntOperands(nullptr) {}
@@ -395,7 +409,7 @@ public:
       return false;
     const AggregateValueExpression &OE = cast<AggregateValueExpression>(Other);
     return NumIntOperands == OE.NumIntOperands &&
-      std::equal(int_op_begin(), int_op_end(), OE.int_op_begin());
+           std::equal(int_op_begin(), int_op_end(), OE.int_op_begin());
   }
 
   virtual hash_code getHashValue() const override {
@@ -416,6 +430,23 @@ public:
     }
     OS << "}";
   }
+};
+class int_op_inserter
+    : public std::iterator<std::output_iterator_tag, void, void, void, void> {
+private:
+  typedef AggregateValueExpression Container;
+  Container *AVE;
+
+public:
+  explicit int_op_inserter(AggregateValueExpression &E) : AVE(&E) {}
+  explicit int_op_inserter(AggregateValueExpression *E) : AVE(E) {}
+  int_op_inserter &operator=(unsigned int val) {
+    AVE->int_op_push_back(val);
+    return *this;
+  }
+  int_op_inserter &operator*() { return *this; }
+  int_op_inserter &operator++() { return *this; }
+  int_op_inserter &operator++(int) { return *this; }
 };
 
 class PHIExpression final : public BasicExpression {
@@ -465,8 +496,7 @@ public:
     return EB->getExpressionType() == ET_Variable;
   }
 
-  VariableExpression(Value *V)
-      : Expression(ET_Variable), VariableValue(V) {}
+  VariableExpression(Value *V) : Expression(ET_Variable), VariableValue(V) {}
   void operator=(const VariableExpression &) = delete;
   VariableExpression(const VariableExpression &) = delete;
   VariableExpression() = delete;
@@ -503,8 +533,7 @@ public:
     return EB->getExpressionType() == ET_Constant;
   }
 
-  ConstantExpression()
-      : Expression(ET_Constant), ConstantValue(NULL) {}
+  ConstantExpression() : Expression(ET_Constant), ConstantValue(NULL) {}
   ConstantExpression(Constant *constantValue)
       : Expression(ET_Constant), ConstantValue(constantValue) {}
   void operator=(const ConstantExpression &) = delete;

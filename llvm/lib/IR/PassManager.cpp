@@ -29,6 +29,10 @@ template <>
 bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv) {
+  // If literally everything is preserved, we're done.
+  if (PA.areAllPreserved())
+    return false; // This is still a valid proxy.
+
   // If this proxy isn't marked as preserved, then even if the result remains
   // valid, the key itself may no longer be valid, so we clear everything.
   //
@@ -37,18 +41,54 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
   // Specifically, any FAM-cached results for those functions need to have been
   // forcibly cleared. When preserved, this proxy will only invalidate results
   // cached on functions *still in the module* at the end of the module pass.
-  if (!PA.preserved(FunctionAnalysisManagerModuleProxy::ID())) {
+  auto PAC = PA.getChecker<FunctionAnalysisManagerModuleProxy>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Module>>()) {
     InnerAM->clear();
     return true;
   }
 
-  // Otherwise propagate the invalidation event to all the remaining IR units.
-  for (Function &F : M)
-    InnerAM->invalidate(F, PA);
+  // Directly check if the relevant set is preserved.
+  bool AreFunctionAnalysesPreserved =
+      PA.allAnalysesInSetPreserved<AllAnalysesOn<Function>>();
+
+  // Now walk all the functions to see if any inner analysis invalidation is
+  // necessary.
+  for (Function &F : M) {
+    Optional<PreservedAnalyses> FunctionPA;
+
+    // Check to see whether the preserved set needs to be pruned based on
+    // module-level analysis invalidation that triggers deferred invalidation
+    // registered with the outer analysis manager proxy for this function.
+    if (auto *OuterProxy =
+            InnerAM->getCachedResult<ModuleAnalysisManagerFunctionProxy>(F))
+      for (const auto &OuterInvalidationPair :
+           OuterProxy->getOuterInvalidations()) {
+        AnalysisKey *OuterAnalysisID = OuterInvalidationPair.first;
+        const auto &InnerAnalysisIDs = OuterInvalidationPair.second;
+        if (Inv.invalidate(OuterAnalysisID, M, PA)) {
+          if (!FunctionPA)
+            FunctionPA = PA;
+          for (AnalysisKey *InnerAnalysisID : InnerAnalysisIDs)
+            FunctionPA->abandon(InnerAnalysisID);
+        }
+      }
+
+    // Check if we needed a custom PA set, and if so we'll need to run the
+    // inner invalidation.
+    if (FunctionPA) {
+      InnerAM->invalidate(F, *FunctionPA);
+      continue;
+    }
+
+    // Otherwise we only need to do invalidation if the original PA set didn't
+    // preserve all function analyses.
+    if (!AreFunctionAnalysesPreserved)
+      InnerAM->invalidate(F, PA);
+  }
 
   // Return false to indicate that this result is still a valid proxy.
   return false;
 }
 }
 
-AnalysisKey PreservedAnalyses::AllAnalysesKey;
+AnalysisSetKey PreservedAnalyses::AllAnalysesKey;

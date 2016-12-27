@@ -77,8 +77,12 @@ static const std::pair<LibFunc::Func, AllocFnsTy> AllocationFnData[] = {
   // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 
+static Function *getCalledFunction(const Value *V, bool LookThroughBitCast,
+                                   bool &IsNoBuiltin) {
+  // Don't care about intrinsics in this case.
+  if (isa<IntrinsicInst>(V))
+    return nullptr;
 
-static Function *getCalledFunction(const Value *V, bool LookThroughBitCast) {
   if (LookThroughBitCast)
     V = V->stripPointerCasts();
 
@@ -86,8 +90,7 @@ static Function *getCalledFunction(const Value *V, bool LookThroughBitCast) {
   if (!CS.getInstruction())
     return nullptr;
 
-  if (CS.isNoBuiltin())
-    return nullptr;
+  IsNoBuiltin = CS.isNoBuiltin();
 
   Function *Callee = CS.getCalledFunction();
   if (!Callee || !Callee->isDeclaration())
@@ -98,17 +101,9 @@ static Function *getCalledFunction(const Value *V, bool LookThroughBitCast) {
 /// Returns the allocation data for the given value if it's either a call to a
 /// known allocation function, or a call to a function with the allocsize
 /// attribute.
-static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
-                                              const TargetLibraryInfo *TLI,
-                                              bool LookThroughBitCast = false) {
-  // Skip intrinsics
-  if (isa<IntrinsicInst>(V))
-    return None;
-
-  const Function *Callee = getCalledFunction(V, LookThroughBitCast);
-  if (!Callee)
-    return None;
-
+static Optional<AllocFnsTy>
+getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
+                             const TargetLibraryInfo *TLI) {
   // Make sure that the function is available.
   StringRef FnName = Callee->getName();
   LibFunc::Func TLIFn;
@@ -144,20 +139,36 @@ static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
   return None;
 }
 
+static Optional<AllocFnsTy> getAllocationData(const Value *V, AllocType AllocTy,
+                                              const TargetLibraryInfo *TLI,
+                                              bool LookThroughBitCast = false) {
+  bool IsNoBuiltinCall;
+  if (const Function *Callee =
+          getCalledFunction(V, LookThroughBitCast, IsNoBuiltinCall))
+    if (!IsNoBuiltinCall)
+      return getAllocationDataForFunction(Callee, AllocTy, TLI);
+  return None;
+}
+
 static Optional<AllocFnsTy> getAllocationSize(const Value *V,
                                               const TargetLibraryInfo *TLI) {
-  // Prefer to use existing information over allocsize. This will give us an
-  // accurate AllocTy.
-  if (Optional<AllocFnsTy> Data =
-          getAllocationData(V, AnyAlloc, TLI, /*LookThroughBitCast=*/false))
-    return Data;
-
-  // FIXME: Not calling getCalledFunction twice would be nice.
-  const Function *Callee = getCalledFunction(V, /*LookThroughBitCast=*/false);
-  if (!Callee || !Callee->hasFnAttribute(Attribute::AllocSize))
+  bool IsNoBuiltinCall;
+  const Function *Callee =
+      getCalledFunction(V, /*LookThroughBitCast=*/false, IsNoBuiltinCall);
+  if (!Callee)
     return None;
 
+  // Prefer to use existing information over allocsize. This will give us an
+  // accurate AllocTy.
+  if (!IsNoBuiltinCall)
+    if (Optional<AllocFnsTy> Data =
+            getAllocationDataForFunction(Callee, AnyAlloc, TLI))
+      return Data;
+
   Attribute Attr = Callee->getFnAttribute(Attribute::AllocSize);
+  if (Attr == Attribute())
+    return None;
+
   std::pair<unsigned, Optional<unsigned>> Args = Attr.getAllocSizeArgs();
 
   AllocFnsTy Result;

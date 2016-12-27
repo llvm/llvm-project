@@ -1431,6 +1431,8 @@ bool llvm::canConstantFoldCallTo(const Function *F) {
            Name == "log10f";
   case 'p':
     return Name == "pow" || Name == "powf";
+  case 'r':
+    return Name == "round" || Name == "roundf";
   case 's':
     return Name == "sin" || Name == "sinh" || Name == "sqrt" ||
            Name == "sinf" || Name == "sinhf" || Name == "sqrtf";
@@ -1695,6 +1697,10 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
           }
         }
         break;
+      case 'r':
+        if ((Name == "round" && TLI->has(LibFunc::round)) ||
+            (Name == "roundf" && TLI->has(LibFunc::roundf)))
+          return ConstantFoldFP(round, V, Ty);
       case 's':
         if ((Name == "sin" && TLI->has(LibFunc::sin)) ||
             (Name == "sinf" && TLI->has(LibFunc::sinf)))

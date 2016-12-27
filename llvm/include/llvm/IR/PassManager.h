@@ -41,6 +41,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerInternal.h"
@@ -62,15 +63,48 @@ namespace llvm {
 /// the analysis in the pass management infrastructure.
 struct alignas(8) AnalysisKey {};
 
-/// \brief An abstract set of preserved analyses following a transformation pass
-/// run.
+/// A special type used to provide an address that identifies a set of related
+/// analyses.
 ///
-/// When a transformation pass is run, it can return a set of analyses whose
-/// results were preserved by that transformation. The default set is "none",
-/// and preserving analyses must be done explicitly.
+/// These sets are primarily used below to mark sets of analyses as preserved.
+/// An example would be analyses depending only on the CFG of a function.
+/// A transformation can mark that it is preserving the CFG of a function and
+/// then analyses can check for this rather than each transform having to fully
+/// enumerate every analysis preserved.
+struct alignas(8) AnalysisSetKey {};
+
+/// Class for tracking what analyses are preserved after a transformation pass
+/// runs over some unit of IR.
 ///
-/// There is also an explicit all state which can be used (for example) when
-/// the IR is not mutated at all.
+/// Transformation passes build and return these objects when run over the IR
+/// to communicate which analyses remain valid afterward. For most passes this
+/// is fairly simple: if they don't change anything all analyses are preserved,
+/// otherwise only a short list of analyses that have been explicitly updated
+/// are preserved.
+///
+/// This class also provides the ability to mark abstract *sets* of analyses as
+/// preserved. These sets allow passes to indicate that they preserve broad
+/// aspects of the IR (such as its CFG) and analyses to opt in to that being
+/// sufficient without the passes having to fully enumerate such analyses.
+///
+/// Finally, this class can represent "abandoning" an analysis, which marks it
+/// as not-preserved even if it would be covered by some abstract set of
+/// analyses.
+///
+/// Given a `PreservedAnalyses` object, an analysis will typically want to
+/// figure out whether it is preserved. In the example below, MyAnalysisType is
+/// preserved if it's not abandoned, and (a) it's explicitly marked as
+/// preserved, (b), the set AllAnalysesOn<MyIRUnit> is preserved, or (c) both
+/// AnalysisSetA and AnalysisSetB are preserved.
+///
+/// ```
+///   auto PAC = PA.getChecker<MyAnalysisType>();
+///   if (PAC.preserved() || PAC.preservedSet<AllAnalysesOn<MyIRUnit>>() ||
+///       (PAC.preservedSet<AnalysisSetA>() &&
+///        PAC.preservedSet<AnalysisSetB>())) {
+///     // The analysis has been successfully preserved ...
+///   }
+/// ```
 class PreservedAnalyses {
 public:
   /// \brief Convenience factory function for the empty preserved set.
@@ -79,17 +113,55 @@ public:
   /// \brief Construct a special preserved set that preserves all passes.
   static PreservedAnalyses all() {
     PreservedAnalyses PA;
-    PA.PreservedAnalysisIDs.insert(&AllAnalysesKey);
+    PA.PreservedIDs.insert(&AllAnalysesKey);
     return PA;
   }
 
-  /// \brief Mark a particular pass as preserved, adding it to the set.
-  template <typename PassT> void preserve() { preserve(PassT::ID()); }
+  /// Mark an analysis as preserved.
+  template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
 
-  /// \brief Mark an abstract ID as preserved, adding it to the set.
+  /// Mark an analysis as preserved using its ID.
   void preserve(AnalysisKey *ID) {
+    // Clear this ID from the explicit not-preserved set if present.
+    NotPreservedAnalysisIDs.erase(ID);
+
+    // If we're not already preserving all analyses (other than those in
+    // NotPreservedAnalysisIDs).
     if (!areAllPreserved())
-      PreservedAnalysisIDs.insert(ID);
+      PreservedIDs.insert(ID);
+  }
+
+  /// Mark an analysis set as preserved.
+  template <typename AnalysisSetT> void preserveSet() {
+    preserveSet(AnalysisSetT::ID());
+  }
+
+  /// Mark an analysis set as preserved using its ID.
+  void preserveSet(AnalysisSetKey *ID) {
+    // If we're not already in the saturated 'all' state, add this set.
+    if (!areAllPreserved())
+      PreservedIDs.insert(ID);
+  }
+
+  /// Mark an analysis as abandoned.
+  ///
+  /// An abandoned analysis is not preserved, even if it is nominally covered
+  /// by some other set or was previously explicitly marked as preserved.
+  ///
+  /// Note that you can only abandon a specific analysis, not a *set* of
+  /// analyses.
+  template <typename AnalysisT> void abandon() { abandon(AnalysisT::ID()); }
+
+  /// Mark an analysis as abandoned using its ID.
+  ///
+  /// An abandoned analysis is not preserved, even if it is nominally covered
+  /// by some other set or was previously explicitly marked as preserved.
+  ///
+  /// Note that you can only abandon a specific analysis, not a *set* of
+  /// analyses.
+  void abandon(AnalysisKey *ID) {
+    PreservedIDs.erase(ID);
+    NotPreservedAnalysisIDs.insert(ID);
   }
 
   /// \brief Intersect this set with another in place.
@@ -100,12 +172,18 @@ public:
     if (Arg.areAllPreserved())
       return;
     if (areAllPreserved()) {
-      PreservedAnalysisIDs = Arg.PreservedAnalysisIDs;
+      *this = Arg;
       return;
     }
-    for (auto ID : PreservedAnalysisIDs)
-      if (!Arg.PreservedAnalysisIDs.count(ID))
-        PreservedAnalysisIDs.erase(ID);
+    // The intersection requires the *union* of the explicitly not-preserved
+    // IDs and the *intersection* of the preserved IDs.
+    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+      PreservedIDs.erase(ID);
+      NotPreservedAnalysisIDs.insert(ID);
+    }
+    for (auto ID : PreservedIDs)
+      if (!Arg.PreservedIDs.count(ID))
+        PreservedIDs.erase(ID);
   }
 
   /// \brief Intersect this set with a temporary other set in place.
@@ -116,49 +194,111 @@ public:
     if (Arg.areAllPreserved())
       return;
     if (areAllPreserved()) {
-      PreservedAnalysisIDs = std::move(Arg.PreservedAnalysisIDs);
+      *this = std::move(Arg);
       return;
     }
-    for (auto ID : PreservedAnalysisIDs)
-      if (!Arg.PreservedAnalysisIDs.count(ID))
-        PreservedAnalysisIDs.erase(ID);
+    // The intersection requires the *union* of the explicitly not-preserved
+    // IDs and the *intersection* of the preserved IDs.
+    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+      PreservedIDs.erase(ID);
+      NotPreservedAnalysisIDs.insert(ID);
+    }
+    for (auto ID : PreservedIDs)
+      if (!Arg.PreservedIDs.count(ID))
+        PreservedIDs.erase(ID);
   }
 
-  /// \brief Query whether a pass is marked as preserved by this set.
-  template <typename PassT> bool preserved() const {
-    return preserved(PassT::ID());
-  }
+  /// A checker object that makes it easy to query for whether an analysis or
+  /// some set covering it is preserved.
+  class PreservedAnalysisChecker {
+    friend class PreservedAnalyses;
 
-  /// \brief Query whether an abstract pass ID is marked as preserved by this
-  /// set.
-  bool preserved(AnalysisKey *ID) const {
-    return PreservedAnalysisIDs.count(&AllAnalysesKey) ||
-           PreservedAnalysisIDs.count(ID);
-  }
+    const PreservedAnalyses &PA;
+    AnalysisKey *const ID;
+    const bool IsAbandoned;
 
-  /// \brief Query whether all of the analyses in the set are preserved.
-  bool preserved(const PreservedAnalyses& Arg) {
-    if (Arg.areAllPreserved())
-      return areAllPreserved();
-    for (auto ID : Arg.PreservedAnalysisIDs)
-      if (!preserved(ID))
-        return false;
-    return true;
-  }
+    /// A PreservedAnalysisChecker is tied to a particular Analysis because
+    /// `preserved()` and `preservedSet()` both return false if the Analysis
+    /// was abandoned.
+    PreservedAnalysisChecker(const PreservedAnalyses &PA, AnalysisKey *ID)
+        : PA(PA), ID(ID), IsAbandoned(PA.NotPreservedAnalysisIDs.count(ID)) {}
 
-  /// \brief Test whether all passes are preserved.
+  public:
+    /// Returns true if the checker's analysis was not abandoned and the
+    /// analysis is either is explicitly preserved or all analyses are
+    /// preserved.
+    bool preserved() {
+      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
+                              PA.PreservedIDs.count(ID));
+    }
+
+    /// Returns true if the checker's analysis was not abandoned and either the
+    /// provided set type is either explicitly preserved or all analyses are
+    /// preserved.
+    template <typename AnalysisSetT> bool preservedSet() {
+      AnalysisSetKey *SetID = AnalysisSetT::ID();
+      return !IsAbandoned && (PA.PreservedIDs.count(&AllAnalysesKey) ||
+                              PA.PreservedIDs.count(SetID));
+    }
+  };
+
+  /// Build a checker for this `PreservedAnalyses` and the specified analysis
+  /// type.
   ///
-  /// This is used primarily to optimize for the case of no changes which will
-  /// common in many scenarios.
+  /// You can use the returned object to query whether an analysis was
+  /// preserved. See the example in the comment on `PreservedAnalysis`.
+  template <typename AnalysisT> PreservedAnalysisChecker getChecker() const {
+    return PreservedAnalysisChecker(*this, AnalysisT::ID());
+  }
+
+  /// Build a checker for this `PreservedAnalyses` and the specified analysis
+  /// ID.
+  ///
+  /// You can use the returned object to query whether an analysis was
+  /// preserved. See the example in the comment on `PreservedAnalysis`.
+  PreservedAnalysisChecker getChecker(AnalysisKey *ID) const {
+    return PreservedAnalysisChecker(*this, ID);
+  }
+
+  /// Test whether all analyses are preserved (and none are abandoned).
+  ///
+  /// This lets analyses optimize for the common case where a transformation
+  /// made no changes to the IR.
   bool areAllPreserved() const {
-    return PreservedAnalysisIDs.count(&AllAnalysesKey);
+    return NotPreservedAnalysisIDs.empty() &&
+           PreservedIDs.count(&AllAnalysesKey);
+  }
+
+  /// Directly test whether a set of analyses is preserved.
+  ///
+  /// This is only true when no analyses have been explicitly abandoned.
+  template <typename AnalysisSetT> bool allAnalysesInSetPreserved() const {
+    return allAnalysesInSetPreserved(AnalysisSetT::ID());
+  }
+
+  /// Directly test whether a set of analyses is preserved.
+  ///
+  /// This is only true when no analyses have been explicitly abandoned.
+  bool allAnalysesInSetPreserved(AnalysisSetKey *SetID) const {
+    return NotPreservedAnalysisIDs.empty() &&
+           (PreservedIDs.count(&AllAnalysesKey) || PreservedIDs.count(SetID));
   }
 
 private:
-  // A special key used to indicate all analyses.
-  static AnalysisKey AllAnalysesKey;
+  /// A special key used to indicate all analyses.
+  static AnalysisSetKey AllAnalysesKey;
 
-  SmallPtrSet<AnalysisKey *, 2> PreservedAnalysisIDs;
+  /// The IDs of analyses and analysis sets that are preserved.
+  SmallPtrSet<void *, 2> PreservedIDs;
+
+  /// The IDs of explicitly not-preserved analyses.
+  ///
+  /// If an analysis in this set is covered by a set in `PreservedIDs`, we
+  /// consider it not-preserved. That is, `NotPreservedAnalysisIDs` always
+  /// "wins" over analysis sets in `PreservedIDs`.
+  ///
+  /// Also, a given ID should never occur both here and in `PreservedIDs`.
+  SmallPtrSet<AnalysisKey *, 2> NotPreservedAnalysisIDs;
 };
 
 // Forward declare the analysis manager template.
@@ -220,13 +360,13 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
 template <typename IRUnitT>
 class AllAnalysesOn {
 public:
-  static AnalysisKey *ID() { return &SetKey; }
+  static AnalysisSetKey *ID() { return &SetKey; }
 
 private:
-  static AnalysisKey SetKey;
+  static AnalysisSetKey SetKey;
 };
 
-template <typename IRUnitT> AnalysisKey AllAnalysesOn<IRUnitT>::SetKey;
+template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
 
 extern template class AllAnalysesOn<Module>;
 extern template class AllAnalysesOn<Function>;
@@ -300,7 +440,7 @@ public:
     // current unit of IR. Therefore, the remaining analysis results in the
     // AnalysisManager are preserved. We mark this with a set so that we don't
     // need to inspect each one individually.
-    PA.preserve<AllAnalysesOn<IRUnitT>>();
+    PA.preserveSet<AllAnalysesOn<IRUnitT>>();
 
     if (DebugLogging)
       dbgs() << "Finished " << getTypeName<IRUnitT>() << " pass manager run.\n";
@@ -399,8 +539,29 @@ public:
     /// any dependecies on it will become invalid as a result.
     template <typename PassT>
     bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA) {
-      AnalysisKey *ID = PassT::ID();
+      typedef detail::AnalysisResultModel<IRUnitT, PassT,
+                                          typename PassT::Result,
+                                          PreservedAnalyses, Invalidator>
+          ResultModelT;
+      return invalidateImpl<ResultModelT>(PassT::ID(), IR, PA);
+    }
 
+    /// A type-erased variant of the above invalidate method with the same core
+    /// API other than passing an analysis ID rather than an analysis type
+    /// parameter.
+    ///
+    /// This is sadly less efficient than the above routine, which leverages
+    /// the type parameter to avoid the type erasure overhead.
+    bool invalidate(AnalysisKey *ID, IRUnitT &IR, const PreservedAnalyses &PA) {
+      return invalidateImpl<>(ID, IR, PA);
+    }
+
+  private:
+    friend class AnalysisManager;
+
+    template <typename ResultT = ResultConceptT>
+    bool invalidateImpl(AnalysisKey *ID, IRUnitT &IR,
+                        const PreservedAnalyses &PA) {
       // If we've already visited this pass, return true if it was invalidated
       // and false otherwise.
       auto IMapI = IsResultInvalidated.find(ID);
@@ -414,27 +575,20 @@ public:
              "manager's cache is always an error, likely due to a stale result "
              "handle!");
 
-      typedef detail::AnalysisResultModel<IRUnitT, PassT,
-                                          typename PassT::Result,
-                                          PreservedAnalyses, Invalidator>
-          ResultModelT;
-      auto &ResultModel = static_cast<ResultModelT &>(*RI->second->second);
+      auto &Result = static_cast<ResultT &>(*RI->second->second);
 
       // Insert into the map whether the result should be invalidated and
       // return that. Note that we cannot re-use IMapI and must do a fresh
       // insert here as calling the invalidate routine could (recursively)
       // insert things into the map making any iterator or reference invalid.
       bool Inserted;
-      std::tie(IMapI, Inserted) = IsResultInvalidated.insert(
-          {ID, ResultModel.invalidate(IR, PA, *this)});
+      std::tie(IMapI, Inserted) =
+          IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, *this)});
       (void)Inserted;
       assert(Inserted && "Should not have already inserted this ID, likely "
                          "indicates a dependency cycle!");
       return IMapI->second;
     }
-
-  private:
-    friend class AnalysisManager;
 
     Invalidator(SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated,
                 const AnalysisResultMapT &Results)
@@ -576,8 +730,8 @@ public:
   /// Walk through all of the analyses pertaining to this unit of IR and
   /// invalidate them unless they are preserved by the PreservedAnalyses set.
   void invalidate(IRUnitT &IR, const PreservedAnalyses &PA) {
-    // Short circuit for common cases of all analyses being preserved.
-    if (PA.areAllPreserved() || PA.preserved<AllAnalysesOn<IRUnitT>>())
+    // We're done if all analyses on this IR unit are preserved.
+    if (PA.allAnalysesInSetPreserved<AllAnalysesOn<IRUnitT>>())
       return;
 
     if (DebugLogging)
@@ -857,9 +1011,13 @@ extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
 /// cannot request a module analysis to actually run. Instead, the user must
 /// rely on the \c getCachedResult API.
 ///
-/// This proxy *doesn't* manage the invalidation in any way. That is handled by
-/// the recursive return path of each layer of the pass manager and the
-/// returned PreservedAnalysis set.
+/// The invalidation provided by this proxy involves tracking when an
+/// invalidation event in the outer analysis manager needs to trigger an
+/// invalidation of a particular analysis on this IR unit.
+///
+/// Because outer analyses aren't invalidated while these IR units are being
+/// precessed, we have to register and handle these as deferred invalidation
+/// events.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class OuterAnalysisManagerProxy
     : public AnalysisInfoMixin<
@@ -879,8 +1037,38 @@ public:
       return false;
     }
 
+    /// Register a deferred invalidation event for when the outer analysis
+    /// manager processes its invalidations.
+    template <typename OuterAnalysisT, typename InvalidatedAnalysisT>
+    void registerOuterAnalysisInvalidation() {
+      AnalysisKey *OuterID = OuterAnalysisT::ID();
+      AnalysisKey *InvalidatedID = InvalidatedAnalysisT::ID();
+
+      auto &InvalidatedIDList = OuterAnalysisInvalidationMap[OuterID];
+      // Note, this is a linear scan. If we end up with large numbers of
+      // analyses that all trigger invalidation on the same outer analysis,
+      // this entire system should be changed to some other deterministic
+      // data structure such as a `SetVector` of a pair of pointers.
+      auto InvalidatedIt = std::find(InvalidatedIDList.begin(),
+                                     InvalidatedIDList.end(), InvalidatedID);
+      if (InvalidatedIt == InvalidatedIDList.end())
+        InvalidatedIDList.push_back(InvalidatedID);
+    }
+
+    /// Access the map from outer analyses to deferred invalidation requiring
+    /// analyses.
+    const SmallDenseMap<AnalysisKey *, TinyPtrVector<AnalysisKey *>, 2> &
+    getOuterInvalidations() const {
+      return OuterAnalysisInvalidationMap;
+    }
+
   private:
     const AnalysisManagerT *AM;
+
+    /// A map from an outer analysis ID to the set of this IR-unit's analyses
+    /// which need to be invalidated.
+    SmallDenseMap<AnalysisKey *, TinyPtrVector<AnalysisKey *>, 2>
+        OuterAnalysisInvalidationMap;
   };
 
   OuterAnalysisManagerProxy(const AnalysisManagerT &AM) : AM(&AM) {}
@@ -967,7 +1155,7 @@ public:
     // Function units. This precludes *any* invalidation of function analyses
     // by the proxy, but that's OK because we've taken care to invalidate
     // analyses in the function analysis manager incrementally above.
-    PA.preserve<AllAnalysesOn<Function>>();
+    PA.preserveSet<AllAnalysesOn<Function>>();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }
@@ -1030,11 +1218,9 @@ struct InvalidateAnalysisPass
   /// context requires.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
   PreservedAnalyses run(IRUnitT &Arg, AnalysisManagerT &AM, ExtraArgTs &&...) {
-    // We have to directly invalidate the analysis result as we can't
-    // enumerate all other analyses and use the preserved set to control it.
-    AM.template invalidate<AnalysisT>(Arg);
-
-    return PreservedAnalyses::all();
+    auto PA = PreservedAnalyses::all();
+    PA.abandon<AnalysisT>();
+    return PA;
   }
 };
 

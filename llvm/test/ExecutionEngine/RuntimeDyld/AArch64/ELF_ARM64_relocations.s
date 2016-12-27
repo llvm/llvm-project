@@ -14,6 +14,9 @@ g:
         movk    x0, #:abs_g1_nc:f
 # R_AARCH64_MOVW_UABS_G0_NC
         movk    x0, #:abs_g0_nc:f
+a:
+# R_AARCH64_ADD_ABS_LO12_NC
+        add x0, x0, :lo12:f
         ret
         .Lfunc_end0:
         .size   g, .Lfunc_end0-g
@@ -31,3 +34,7 @@ k:
 # rtdyld-check: *{4}(g + 8) = 0xf2b13560
 # rtdyld-check: *{4}(g + 12) = 0xf299bde0
 # rtdyld-check: *{8}k = f
+
+## f & 0xFFF = 0xdef (bits 11:0 of f)
+## 0xdef << 10 = 0x37bc00
+# rtdyld-check: *{4}(a) = 0x9137bc00

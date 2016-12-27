@@ -16,6 +16,7 @@ declare double @fmod(double, double) readnone nounwind
 declare double @log(double) readnone nounwind
 declare double @log10(double) readnone nounwind
 declare double @pow(double, double) readnone nounwind
+declare double @round(double) readnone nounwind
 declare double @sin(double) readnone nounwind
 declare double @sinh(double) readnone nounwind
 declare double @sqrt(double) readnone nounwind
@@ -37,6 +38,7 @@ declare float @fmodf(float, float) readnone nounwind
 declare float @logf(float) readnone nounwind
 declare float @log10f(float) readnone nounwind
 declare float @powf(float, float) readnone nounwind
+declare float @roundf(float) readnone nounwind
 declare float @sinf(float) readnone nounwind
 declare float @sinhf(float) readnone nounwind
 declare float @sqrtf(float) readnone nounwind
@@ -102,6 +104,9 @@ define double @T() {
   %14 = call double @pow(double 3.000000e+00, double 4.000000e+00)
   store double %14, double* %slot
 ; FNOBUILTIN: call
+  %round_val = call double @round(double 3.000000e+00)
+  store double %round_val, double* %slot
+; FNOBUILTIN: call
   %15 = call double @sinh(double 3.000000e+00)
   store double %15, double* %slot
 ; FNOBUILTIN: call
@@ -152,6 +157,9 @@ define double @T() {
 ; FNOBUILTIN: call
   %31 = call float @powf(float 3.000000e+00, float 4.000000e+00)
   store float %31, float* %slotf
+; FNOBUILTIN: call
+  %roundf_val = call float @roundf(float 3.000000e+00)
+  store float %roundf_val, float* %slotf
 ; FNOBUILTIN: call
   %32 = call float @sinf(float 3.000000e+00)
   store float %32, float* %slotf

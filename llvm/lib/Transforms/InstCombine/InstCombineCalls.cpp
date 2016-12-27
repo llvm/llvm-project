@@ -1789,6 +1789,50 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::x86_avx512_mask_add_ps_512:
+  case Intrinsic::x86_avx512_mask_div_ps_512:
+  case Intrinsic::x86_avx512_mask_mul_ps_512:
+  case Intrinsic::x86_avx512_mask_sub_ps_512:
+  case Intrinsic::x86_avx512_mask_add_pd_512:
+  case Intrinsic::x86_avx512_mask_div_pd_512:
+  case Intrinsic::x86_avx512_mask_mul_pd_512:
+  case Intrinsic::x86_avx512_mask_sub_pd_512:
+    // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
+    // IR operations.
+    if (auto *R = dyn_cast<ConstantInt>(II->getArgOperand(4))) {
+      if (R->getValue() == 4) {
+        Value *Arg0 = II->getArgOperand(0);
+        Value *Arg1 = II->getArgOperand(1);
+
+        Value *V;
+        switch (II->getIntrinsicID()) {
+        default: llvm_unreachable("Case stmts out of sync!");
+        case Intrinsic::x86_avx512_mask_add_ps_512:
+        case Intrinsic::x86_avx512_mask_add_pd_512:
+          V = Builder->CreateFAdd(Arg0, Arg1);
+          break;
+        case Intrinsic::x86_avx512_mask_sub_ps_512:
+        case Intrinsic::x86_avx512_mask_sub_pd_512:
+          V = Builder->CreateFSub(Arg0, Arg1);
+          break;
+        case Intrinsic::x86_avx512_mask_mul_ps_512:
+        case Intrinsic::x86_avx512_mask_mul_pd_512:
+          V = Builder->CreateFMul(Arg0, Arg1);
+          break;
+        case Intrinsic::x86_avx512_mask_div_ps_512:
+        case Intrinsic::x86_avx512_mask_div_pd_512:
+          V = Builder->CreateFDiv(Arg0, Arg1);
+          break;
+        }
+
+        // Create a select for the masking.
+        V = emitX86MaskSelect(II->getArgOperand(3), V, II->getArgOperand(2),
+                              *Builder);
+        return replaceInstUsesWith(*II, V);
+      }
+    }
+    break;
+
   case Intrinsic::x86_avx512_mask_add_ss_round:
   case Intrinsic::x86_avx512_mask_div_ss_round:
   case Intrinsic::x86_avx512_mask_mul_ss_round:
@@ -1801,44 +1845,49 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // IR operations.
     if (auto *R = dyn_cast<ConstantInt>(II->getArgOperand(4))) {
       if (R->getValue() == 4) {
-        // Only do this if the mask bit is 1 so that we don't need a select.
-        // TODO: Improve this to handle masking cases. Isel doesn't fold
-        // the mask correctly right now.
-        if (auto *M = dyn_cast<ConstantInt>(II->getArgOperand(3))) {
-          if (M->getValue()[0]) {
-            // Extract the element as scalars.
-            Value *Arg0 = II->getArgOperand(0);
-            Value *Arg1 = II->getArgOperand(1);
-            Value *LHS = Builder->CreateExtractElement(Arg0, (uint64_t)0);
-            Value *RHS = Builder->CreateExtractElement(Arg1, (uint64_t)0);
+        // Extract the element as scalars.
+        Value *Arg0 = II->getArgOperand(0);
+        Value *Arg1 = II->getArgOperand(1);
+        Value *LHS = Builder->CreateExtractElement(Arg0, (uint64_t)0);
+        Value *RHS = Builder->CreateExtractElement(Arg1, (uint64_t)0);
 
-            Value *V;
-            switch (II->getIntrinsicID()) {
-            default: llvm_unreachable("Case stmts out of sync!");
-            case Intrinsic::x86_avx512_mask_add_ss_round:
-            case Intrinsic::x86_avx512_mask_add_sd_round:
-              V = Builder->CreateFAdd(LHS, RHS);
-              break;
-            case Intrinsic::x86_avx512_mask_sub_ss_round:
-            case Intrinsic::x86_avx512_mask_sub_sd_round:
-              V = Builder->CreateFSub(LHS, RHS);
-              break;
-            case Intrinsic::x86_avx512_mask_mul_ss_round:
-            case Intrinsic::x86_avx512_mask_mul_sd_round:
-              V = Builder->CreateFMul(LHS, RHS);
-              break;
-            case Intrinsic::x86_avx512_mask_div_ss_round:
-            case Intrinsic::x86_avx512_mask_div_sd_round:
-              V = Builder->CreateFDiv(LHS, RHS);
-              break;
-            }
-
-            // Insert the result back into the original argument 0.
-            V = Builder->CreateInsertElement(Arg0, V, (uint64_t)0);
-
-            return replaceInstUsesWith(*II, V);
-          }
+        Value *V;
+        switch (II->getIntrinsicID()) {
+        default: llvm_unreachable("Case stmts out of sync!");
+        case Intrinsic::x86_avx512_mask_add_ss_round:
+        case Intrinsic::x86_avx512_mask_add_sd_round:
+          V = Builder->CreateFAdd(LHS, RHS);
+          break;
+        case Intrinsic::x86_avx512_mask_sub_ss_round:
+        case Intrinsic::x86_avx512_mask_sub_sd_round:
+          V = Builder->CreateFSub(LHS, RHS);
+          break;
+        case Intrinsic::x86_avx512_mask_mul_ss_round:
+        case Intrinsic::x86_avx512_mask_mul_sd_round:
+          V = Builder->CreateFMul(LHS, RHS);
+          break;
+        case Intrinsic::x86_avx512_mask_div_ss_round:
+        case Intrinsic::x86_avx512_mask_div_sd_round:
+          V = Builder->CreateFDiv(LHS, RHS);
+          break;
         }
+
+        // Handle the masking aspect of the intrinsic.
+        // Cast the mask to an i1 vector and then extract the lowest element.
+        Value *Mask = II->getArgOperand(3);
+        auto *MaskTy = VectorType::get(Builder->getInt1Ty(),
+                             cast<IntegerType>(Mask->getType())->getBitWidth());
+        Mask = Builder->CreateBitCast(Mask, MaskTy);
+        Mask = Builder->CreateExtractElement(Mask, (uint64_t)0);
+        // Extract the lowest element from the passthru operand.
+        Value *Passthru = Builder->CreateExtractElement(II->getArgOperand(2),
+                                                        (uint64_t)0);
+        V = Builder->CreateSelect(Mask, V, Passthru);
+
+        // Insert the result back into the original argument 0.
+        V = Builder->CreateInsertElement(Arg0, V, (uint64_t)0);
+
+        return replaceInstUsesWith(*II, V);
       }
     }
     LLVM_FALLTHROUGH;
@@ -1995,6 +2044,23 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Value *V = simplifyX86varShift(*II, *Builder))
       return replaceInstUsesWith(*II, V);
     break;
+
+  case Intrinsic::x86_sse2_pmulu_dq:
+  case Intrinsic::x86_sse41_pmuldq:
+  case Intrinsic::x86_avx2_pmul_dq:
+  case Intrinsic::x86_avx2_pmulu_dq:
+  case Intrinsic::x86_avx512_pmul_dq_512:
+  case Intrinsic::x86_avx512_pmulu_dq_512: {
+    unsigned VWidth = II->getType()->getVectorNumElements();
+    APInt UndefElts(VWidth, 0);
+    APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+    if (Value *V = SimplifyDemandedVectorElts(II, DemandedElts, UndefElts)) {
+      if (V != II)
+        return replaceInstUsesWith(*II, V);
+      return II;
+    }
+    break;
+  }
 
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))

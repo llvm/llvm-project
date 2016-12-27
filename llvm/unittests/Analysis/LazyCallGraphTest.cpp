@@ -2016,4 +2016,35 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   EXPECT_EQ(&AC, &RC[4]);
 }
 
+// Test for IR containing constants using blockaddress constant expressions.
+// These are truly unique constructs: constant expressions with non-constant
+// operands.
+TEST(LazyCallGraphTest, HandleBlockAddress) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @f() {\n"
+                             "entry:\n"
+                             "  ret void\n"
+                             "bb:\n"
+                             "  unreachable\n"
+                             "}\n"
+                             "define void @g(i8** %ptr) {\n"
+                             "entry:\n"
+                             "  store i8* blockaddress(@f, %bb), i8** %ptr\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG(*M);
+
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &FRC = *I++;
+  LazyCallGraph::RefSCC &GRC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  LazyCallGraph::Node &F = *CG.lookup(lookupFunction(*M, "f"));
+  LazyCallGraph::Node &G = *CG.lookup(lookupFunction(*M, "g"));
+  EXPECT_EQ(&FRC, CG.lookupRefSCC(F));
+  EXPECT_EQ(&GRC, CG.lookupRefSCC(G));
+  EXPECT_TRUE(GRC.isParentOf(FRC));
+}
+
 }

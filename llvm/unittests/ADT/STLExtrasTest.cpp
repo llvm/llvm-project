@@ -276,4 +276,36 @@ TEST(STLExtrasTest, ConcatRange) {
     Test.push_back(i);
   EXPECT_EQ(Expected, Test);
 }
+
+TEST(STLExtrasTest, PartitionAdaptor) {
+  std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  auto I = partition(V, [](int i) { return i % 2 == 0; });
+  ASSERT_EQ(V.begin() + 4, I);
+
+  // Sort the two halves as partition may have messed with the order.
+  std::sort(V.begin(), I);
+  std::sort(I, V.end());
+
+  EXPECT_EQ(2, V[0]);
+  EXPECT_EQ(4, V[1]);
+  EXPECT_EQ(6, V[2]);
+  EXPECT_EQ(8, V[3]);
+  EXPECT_EQ(1, V[4]);
+  EXPECT_EQ(3, V[5]);
+  EXPECT_EQ(5, V[6]);
+  EXPECT_EQ(7, V[7]);
+}
+
+TEST(STLExtrasTest, EraseIf) {
+  std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  erase_if(V, [](int i) { return i % 2 == 0; });
+  EXPECT_EQ(4u, V.size());
+  EXPECT_EQ(1, V[0]);
+  EXPECT_EQ(3, V[1]);
+  EXPECT_EQ(5, V[2]);
+  EXPECT_EQ(7, V[3]);
+}
+
 }
