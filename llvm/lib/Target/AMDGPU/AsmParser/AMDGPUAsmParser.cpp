@@ -3309,7 +3309,11 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+    if (Op.isReg() && Op.Reg.RegNo == AMDGPU::VCC) {
+      // VOP2b (v_add_u32, v_sub_u32 ...) sdwa use "vcc" token.
+      // Skip it.
+      continue;
+    } if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isDPPCtrl()) {
       Op.addImmOperands(Inst, 1);
@@ -3428,10 +3432,12 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-    if (BasicInstType == SIInstrFlags::VOPC &&
+    if ((BasicInstType == SIInstrFlags::VOPC || 
+         BasicInstType == SIInstrFlags::VOP2)&&
         Op.isReg() &&
         Op.Reg.RegNo == AMDGPU::VCC) {
-      // VOPC sdwa use "vcc" token as dst. Skip it.
+      // VOPC and VOP2b (v_add_u32, v_sub_u32 ...) sdwa use "vcc" token as dst.
+      // Skip it.
       continue;
     } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithInputModsOperands(Inst, 2);

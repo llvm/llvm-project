@@ -63,6 +63,24 @@ const unsigned MaxNumPhiBBsValueReachabilityCheck = 20;
 // depth otherwise the algorithm in aliasGEP will assert.
 static const unsigned MaxLookupSearchDepth = 6;
 
+bool BasicAAResult::invalidate(Function &F, const PreservedAnalyses &PA,
+                               FunctionAnalysisManager::Invalidator &Inv) {
+  if (PA.areAllPreserved())
+    return false; // Nothing to do, everything is still valid.
+
+  // We don't care if this analysis itself is preserved, it has no state. But
+  // we need to check that the analyses it depends on have been. Note that we
+  // may be created without handles to some analyses and in that case don't
+  // depend on them.
+  if (Inv.invalidate<AssumptionAnalysis>(F, PA) ||
+      (DT && Inv.invalidate<DominatorTreeAnalysis>(F, PA)) ||
+      (LI && Inv.invalidate<LoopAnalysis>(F, PA)))
+    return true;
+
+  // Otherwise this analysis result remains valid.
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Useful predicates
 //===----------------------------------------------------------------------===//

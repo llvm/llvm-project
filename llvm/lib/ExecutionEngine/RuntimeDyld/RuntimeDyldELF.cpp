@@ -453,6 +453,15 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
     support::ulittle32_t::ref{TargetPtr} = TargetValue;
     break;
   }
+  case ELF::R_AARCH64_ADD_ABS_LO12_NC: {
+    // Operation: S + A
+    uint64_t Result = Value + Addend;
+
+    // Immediate goes in bits 21:10 of LD/ST instruction, taken
+    // from bits 11:0 of X
+    *TargetPtr |= ((Result & 0xfff) << 10);
+    break;
+  }
   case ELF::R_AARCH64_LDST32_ABS_LO12_NC: {
     // Operation: S + A
     uint64_t Result = Value + Addend;

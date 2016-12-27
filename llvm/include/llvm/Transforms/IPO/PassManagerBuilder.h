@@ -132,6 +132,7 @@ public:
   bool LoopVectorize;
   bool RerollLoops;
   bool LoadCombine;
+  bool NewGVN;
   bool DisableGVNLoadPRE;
   bool VerifyInput;
   bool VerifyOutput;

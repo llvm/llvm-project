@@ -49,7 +49,7 @@
 ; CHECK-MODULE-PRINT: Running pass: VerifierPass
 ; CHECK-MODULE-PRINT: Running pass: PrintModulePass
 ; CHECK-MODULE-PRINT: ModuleID
-; CHECK-MODULE-PRINT: define void @foo(i1 %x)
+; CHECK-MODULE-PRINT: define void @foo(i1 %x, i8* %p1, i8* %p2)
 ; CHECK-MODULE-PRINT: Running pass: VerifierPass
 ; CHECK-MODULE-PRINT: Finished llvm::Module pass manager run
 
@@ -58,7 +58,7 @@
 ; CHECK-MODULE-VERIFY: Starting llvm::Module pass manager run
 ; CHECK-MODULE-VERIFY: Running pass: PrintModulePass
 ; CHECK-MODULE-VERIFY: ModuleID
-; CHECK-MODULE-VERIFY: define void @foo(i1 %x)
+; CHECK-MODULE-VERIFY: define void @foo(i1 %x, i8* %p1, i8* %p2)
 ; CHECK-MODULE-VERIFY: Running pass: VerifierPass
 ; CHECK-MODULE-VERIFY: Finished llvm::Module pass manager run
 
@@ -71,7 +71,7 @@
 ; CHECK-FUNCTION-PRINT: Starting llvm::Function pass manager run
 ; CHECK-FUNCTION-PRINT: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-PRINT-NOT: ModuleID
-; CHECK-FUNCTION-PRINT: define void @foo(i1 %x)
+; CHECK-FUNCTION-PRINT: define void @foo(i1 %x, i8* %p1, i8* %p2)
 ; CHECK-FUNCTION-PRINT: Finished llvm::Function pass manager run
 ; CHECK-FUNCTION-PRINT: Running pass: VerifierPass
 ; CHECK-FUNCTION-PRINT: Finished llvm::Module pass manager run
@@ -82,17 +82,19 @@
 ; CHECK-FUNCTION-VERIFY: Starting llvm::Function pass manager run
 ; CHECK-FUNCTION-VERIFY: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-VERIFY-NOT: ModuleID
-; CHECK-FUNCTION-VERIFY: define void @foo(i1 %x)
+; CHECK-FUNCTION-VERIFY: define void @foo(i1 %x, i8* %p1, i8* %p2)
 ; CHECK-FUNCTION-VERIFY: Running pass: VerifierPass
 ; CHECK-FUNCTION-VERIFY: Finished llvm::Function pass manager run
 ; CHECK-FUNCTION-VERIFY: Finished llvm::Module pass manager run
 
 ; RUN: opt -S -o - -passes='no-op-module,no-op-module' %s \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NOOP
-; CHECK-NOOP: define void @foo(i1 %x) {
+; CHECK-NOOP: define void @foo(i1 %x, i8* %p1, i8* %p2) {
 ; CHECK-NOOP: entry:
+; CHECK-NOOP:   store i8 42, i8* %p1
 ; CHECK-NOOP:   br i1 %x, label %loop, label %exit
 ; CHECK-NOOP: loop:
+; CHECK-NOOP:   %tmp1 = load i8, i8* %p2
 ; CHECK-NOOP:   br label %loop
 ; CHECK-NOOP: exit:
 ; CHECK-NOOP:   ret void
@@ -323,6 +325,43 @@
 ; CHECK-AA-DEFAULT: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<aa>,invalidate<domtree>,aa-eval' -aa-pipeline='basic-aa' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-AA-FUNCTION-INVALIDATE
+; CHECK-AA-FUNCTION-INVALIDATE: Starting llvm::Function pass manager run
+; CHECK-AA-FUNCTION-INVALIDATE: Running pass: RequireAnalysisPass
+; CHECK-AA-FUNCTION-INVALIDATE: Running analysis: AAManager
+; CHECK-AA-FUNCTION-INVALIDATE: Running analysis: BasicAA
+; CHECK-AA-FUNCTION-INVALIDATE: Running pass: InvalidateAnalysisPass
+; CHECK-AA-FUNCTION-INVALIDATE: Invalidating analysis: DominatorTreeAnalysis
+; CHECK-AA-FUNCTION-INVALIDATE: Invalidating analysis: BasicAA
+; CHECK-AA-FUNCTION-INVALIDATE: Invalidating analysis: AAManager
+; CHECK-AA-FUNCTION-INVALIDATE: Running pass: AAEvaluator
+; CHECK-AA-FUNCTION-INVALIDATE: Running analysis: AAManager
+; CHECK-AA-FUNCTION-INVALIDATE: Running analysis: BasicAA
+; CHECK-AA-FUNCTION-INVALIDATE: Finished llvm::Function pass manager run
+
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<globals-aa>,function(require<aa>),invalidate<globals-aa>,require<globals-aa>,function(aa-eval)' -aa-pipeline='globals-aa' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-AA-MODULE-INVALIDATE
+; CHECK-AA-MODULE-INVALIDATE: Starting llvm::Module pass manager run
+; CHECK-AA-MODULE-INVALIDATE: Running pass: RequireAnalysisPass
+; CHECK-AA-MODULE-INVALIDATE: Running analysis: GlobalsAA
+; CHECK-AA-MODULE-INVALIDATE: Starting llvm::Function pass manager run
+; CHECK-AA-MODULE-INVALIDATE: Running pass: RequireAnalysisPass
+; CHECK-AA-MODULE-INVALIDATE: Running analysis: AAManager
+; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Function pass manager run
+; CHECK-AA-MODULE-INVALIDATE: Running pass: InvalidateAnalysisPass
+; CHECK-AA-MODULE-INVALIDATE: Invalidating analysis: AAManager
+; CHECK-AA-MODULE-INVALIDATE: Invalidating analysis: GlobalsAA
+; CHECK-AA-MODULE-INVALIDATE: Running pass: RequireAnalysisPass
+; CHECK-AA-MODULE-INVALIDATE: Running analysis: GlobalsAA
+; CHECK-AA-MODULE-INVALIDATE: Starting llvm::Function pass manager run
+; CHECK-AA-MODULE-INVALIDATE: Running pass: AAEvaluator
+; CHECK-AA-MODULE-INVALIDATE: Running analysis: AAManager
+; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Function pass manager run
+; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Module pass manager run
+
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<memdep>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MEMDEP
 ; CHECK-MEMDEP: Starting llvm::Module pass manager run
@@ -395,8 +434,6 @@
 ; CHECK-O: Running pass: SimplifyCFGPass
 ; CHECK-O: Running pass: ReassociatePass
 ; CHECK-O: Starting llvm::Loop pass manager run.
-; CHECK-O: Running pass: LoopRotatePass
-; CHECK-O: Running pass: LICMPass
 ; CHECK-O: Finished llvm::Loop pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass
 ; CHECK-O: Running pass: InstCombinePass
@@ -409,7 +446,6 @@
 ; CHECK-O: Running pass: JumpThreadingPass
 ; CHECK-O: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O: Running pass: DSEPass
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<{{.*}}LICMPass>
 ; CHECK-O: Running pass: ADCEPass
 ; CHECK-O: Running pass: SimplifyCFGPass
 ; CHECK-O: Running pass: InstCombinePass
@@ -526,11 +562,13 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Module pass manager run
 
-define void @foo(i1 %x) {
+define void @foo(i1 %x, i8* %p1, i8* %p2) {
 entry:
+  store i8 42, i8* %p1
   br i1 %x, label %loop, label %exit
 
 loop:
+  %tmp1 = load i8, i8* %p2
   br label %loop
 
 exit:

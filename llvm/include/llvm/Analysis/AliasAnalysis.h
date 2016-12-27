@@ -197,6 +197,20 @@ public:
     AAs.emplace_back(new Model<AAResultT>(AAResult, *this));
   }
 
+  /// Register a function analysis ID that the results aggregation depends on.
+  ///
+  /// This is used in the new pass manager to implement the invalidation logic
+  /// where we must invalidate the results aggregation if any of our component
+  /// analyses become invalid.
+  void addAADependencyID(AnalysisKey *ID) { AADeps.push_back(ID); }
+
+  /// Handle invalidation events in the new pass manager.
+  ///
+  /// The aggregation is invalidated if any of the underlying analyses is
+  /// invalidated.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
+
   //===--------------------------------------------------------------------===//
   /// \name Alias Queries
   /// @{
@@ -609,6 +623,8 @@ private:
   const TargetLibraryInfo &TLI;
 
   std::vector<std::unique_ptr<Concept>> AAs;
+
+  std::vector<AnalysisKey *> AADeps;
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
@@ -922,15 +938,19 @@ private:
                                       FunctionAnalysisManager &AM,
                                       AAResults &AAResults) {
     AAResults.addAAResult(AM.template getResult<AnalysisT>(F));
+    AAResults.addAADependencyID(AnalysisT::ID());
   }
 
   template <typename AnalysisT>
   static void getModuleAAResultImpl(Function &F, FunctionAnalysisManager &AM,
                                     AAResults &AAResults) {
-    auto &MAM =
-        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
-    if (auto *R = MAM.template getCachedResult<AnalysisT>(*F.getParent()))
+    auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    auto &MAM = MAMProxy.getManager();
+    if (auto *R = MAM.template getCachedResult<AnalysisT>(*F.getParent())) {
       AAResults.addAAResult(*R);
+      MAMProxy
+          .template registerOuterAnalysisInvalidation<AnalysisT, AAManager>();
+    }
   }
 };
 

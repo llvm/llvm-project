@@ -278,3 +278,30 @@ entry:
   ret void
 ; CHECK: ret void
 }
+
+; The 'inner13*' and 'outer13' functions test that we do remove functions
+; which are part of a comdat group where all of the members are removed during
+; always inlining.
+$comdat13 = comdat any
+
+define linkonce void @inner13a() alwaysinline comdat($comdat13) {
+; CHECK-NOT: @inner13a(
+  ret void
+}
+
+define linkonce void @inner13b() alwaysinline comdat($comdat13) {
+; CHECK-NOT: @inner13b(
+  ret void
+}
+
+define void @outer13() {
+; CHECK-LABEL: @outer13(
+entry:
+  call void @inner13a()
+  call void @inner13b()
+; CHECK-NOT: call void @inner13a
+; CHECK-NOT: call void @inner13b
+
+  ret void
+; CHECK: ret void
+}

@@ -33,7 +33,8 @@ bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
   // the module may have changed. We therefore can't call
   // InnerAM->invalidate(), because any pointers to Functions it has may be
   // stale.
-  if (!PA.preserved(LoopAnalysisManagerFunctionProxy::ID()))
+  auto PAC = PA.getChecker<LoopAnalysisManagerFunctionProxy>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Loop>>())
     InnerAM->clear();
 
   // FIXME: Proper suppor for invalidation isn't yet implemented for the LPM.

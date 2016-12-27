@@ -1644,16 +1644,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
 
     // Update the callgraph if requested.
-    if (IFI.CG) {
+    if (IFI.CG)
       UpdateCallGraphAfterInlining(CS, FirstNewBlock, VMap, IFI);
-    } else {
-      // Otherwise just collect the raw call sites that were inlined.
-      for (BasicBlock &NewBB :
-           make_range(FirstNewBlock->getIterator(), Caller->end()))
-        for (Instruction &I : NewBB)
-          if (auto CS = CallSite(&I))
-            IFI.InlinedCallSites.push_back(CS);
-    }
 
     // For 'nodebug' functions, the associated DISubprogram is always null.
     // Conservatively avoid propagating the callsite debug location to
@@ -2016,6 +2008,20 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     // Leave behind the normal returns so we can merge control flow.
     std::swap(Returns, NormalReturns);
+  }
+
+  // Now that all of the transforms on the inlined code have taken place but
+  // before we splice the inlined code into the CFG and lose track of which
+  // blocks were actually inlined, collect the call sites. We only do this if
+  // call graph updates weren't requested, as those provide value handle based
+  // tracking of inlined call sites instead.
+  if (InlinedFunctionInfo.ContainsCalls && !IFI.CG) {
+    // Otherwise just collect the raw call sites that were inlined.
+    for (BasicBlock &NewBB :
+         make_range(FirstNewBlock->getIterator(), Caller->end()))
+      for (Instruction &I : NewBB)
+        if (auto CS = CallSite(&I))
+          IFI.InlinedCallSites.push_back(CS);
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a

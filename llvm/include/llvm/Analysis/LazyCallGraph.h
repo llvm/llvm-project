@@ -44,6 +44,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -970,6 +971,15 @@ public:
       if (Function *F = dyn_cast<Function>(C)) {
         if (!F->isDeclaration())
           Callback(*F);
+        continue;
+      }
+
+      if (BlockAddress *BA = dyn_cast<BlockAddress>(C)) {
+        // The blockaddress constant expression is a weird special case, we
+        // can't generically walk its operands the way we do for all other
+        // constants.
+        if (Visited.insert(BA->getFunction()).second)
+          Worklist.push_back(BA->getFunction());
         continue;
       }
 

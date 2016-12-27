@@ -808,6 +808,25 @@ OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate P) {
   return std::transform(std::begin(Range), std::end(Range), d_first, P);
 }
 
+/// Provide wrappers to std::partition which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename UnaryPredicate>
+auto partition(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
+  return std::partition(std::begin(Range), std::end(Range), P);
+}
+
+/// Provide a container algorithm similar to C++ Library Fundamentals v2's
+/// `erase_if` which is equivalent to:
+///
+///   C.erase(remove_if(C, pred), C.end());
+///
+/// This version works for any container with an erase method call accepting
+/// two iterators.
+template <typename Container, typename UnaryPredicate>
+void erase_if(Container &C, UnaryPredicate P) {
+  C.erase(remove_if(C, P), C.end());
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

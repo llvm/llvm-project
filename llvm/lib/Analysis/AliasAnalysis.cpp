@@ -53,7 +53,8 @@ using namespace llvm;
 static cl::opt<bool> DisableBasicAA("disable-basicaa", cl::Hidden,
                                     cl::init(false));
 
-AAResults::AAResults(AAResults &&Arg) : TLI(Arg.TLI), AAs(std::move(Arg.AAs)) {
+AAResults::AAResults(AAResults &&Arg)
+    : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {
   for (auto &AA : AAs)
     AA->setAAResults(this);
 }
@@ -67,6 +68,25 @@ AAResults::~AAResults() {
   for (auto &AA : AAs)
     AA->setAAResults(nullptr);
 #endif
+}
+
+bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv) {
+  if (PA.areAllPreserved())
+    return false; // Nothing to do, everything is still valid.
+
+  // Check if the AA manager itself has been invalidated.
+  auto PAC = PA.getChecker<AAManager>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    return true; // The manager needs to be blown away, clear everything.
+
+  // Check all of the dependencies registered.
+  for (AnalysisKey *ID : AADeps)
+    if (Inv.invalidate(ID, F, PA))
+      return true;
+
+  // Everything we depend on is still fine, so are we. Nothing to invalidate.
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

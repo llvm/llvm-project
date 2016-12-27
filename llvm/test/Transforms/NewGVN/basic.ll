@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt < %s -newgvn -S | FileCheck %s
 
 define i32 @main() {
@@ -12,5 +11,7 @@ block2:
 
 ; CHECK: define i32 @main() {
 ; CHECK-NEXT: block1:
+; CHECK-NEXT:   br label %block2
+; CHECK: block2:
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: }

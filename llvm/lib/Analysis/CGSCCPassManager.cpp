@@ -76,7 +76,7 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
   // SCC. Therefore, the remaining analysis results in the AnalysisManager are
   // preserved. We mark this with a set so that we don't need to inspect each
   // one individually.
-  PA.preserve<AllAnalysesOn<LazyCallGraph::SCC>>();
+  PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();
 
   if (DebugLogging)
     dbgs() << "Finished CGSCC pass manager run.\n";
@@ -87,6 +87,10 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
 bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv) {
+  // If literally everything is preserved, we're done.
+  if (PA.areAllPreserved())
+    return false; // This is still a valid proxy.
+
   // If this proxy or the call graph is going to be invalidated, we also need
   // to clear all the keys coming from that analysis.
   //
@@ -94,8 +98,9 @@ bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
   // that proxy isn't preserved we can't preserve this proxy either. We rely on
   // it to handle module -> function analysis invalidation in the face of
   // structural changes and so if it's unavailable we conservatively clear the
-  // entire SCC layer as well rather than trying to do invaliadtion ourselves.
-  if (!PA.preserved<CGSCCAnalysisManagerModuleProxy>() ||
+  // entire SCC layer as well rather than trying to do invalidation ourselves.
+  auto PAC = PA.getChecker<CGSCCAnalysisManagerModuleProxy>();
+  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Module>>()) ||
       Inv.invalidate<LazyCallGraphAnalysis>(M, PA) ||
       Inv.invalidate<FunctionAnalysisManagerModuleProxy>(M, PA)) {
     InnerAM->clear();
@@ -106,10 +111,45 @@ bool CGSCCAnalysisManagerModuleProxy::Result::invalidate(
     return true;
   }
 
+  // Directly check if the relevant set is preserved so we can short circuit
+  // invalidating SCCs below.
+  bool AreSCCAnalysesPreserved =
+      PA.allAnalysesInSetPreserved<AllAnalysesOn<LazyCallGraph::SCC>>();
+
   // Ok, we have a graph, so we can propagate the invalidation down into it.
   for (auto &RC : G->postorder_ref_sccs())
-    for (auto &C : RC)
-      InnerAM->invalidate(C, PA);
+    for (auto &C : RC) {
+      Optional<PreservedAnalyses> InnerPA;
+
+      // Check to see whether the preserved set needs to be adjusted based on
+      // module-level analysis invalidation triggering deferred invalidation
+      // for this SCC.
+      if (auto *OuterProxy =
+              InnerAM->getCachedResult<ModuleAnalysisManagerCGSCCProxy>(C))
+        for (const auto &OuterInvalidationPair :
+             OuterProxy->getOuterInvalidations()) {
+          AnalysisKey *OuterAnalysisID = OuterInvalidationPair.first;
+          const auto &InnerAnalysisIDs = OuterInvalidationPair.second;
+          if (Inv.invalidate(OuterAnalysisID, M, PA)) {
+            if (!InnerPA)
+              InnerPA = PA;
+            for (AnalysisKey *InnerAnalysisID : InnerAnalysisIDs)
+              InnerPA->abandon(InnerAnalysisID);
+          }
+        }
+
+      // Check if we needed a custom PA set. If so we'll need to run the inner
+      // invalidation.
+      if (InnerPA) {
+        InnerAM->invalidate(C, *InnerPA);
+        continue;
+      }
+
+      // Otherwise we only need to do invalidation if the original PA set didn't
+      // preserve all SCC analyses.
+      if (!AreSCCAnalysesPreserved)
+        InnerAM->invalidate(C, PA);
+    }
 
   // Return false to indicate that this result is still a valid proxy.
   return false;

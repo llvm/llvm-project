@@ -111,8 +111,8 @@ public:
     // post-order.
     for (auto *L : reverse(Loops)) {
       PreservedAnalyses PassPA = Pass.run(*L, LAM);
-      assert(PassPA.preserved(getLoopPassPreservedAnalyses()) &&
-             "Loop passes must preserve all relevant analyses");
+      // FIXME: We should verify the set of analyses relevant to Loop passes
+      // are preserved.
 
       // We know that the loop pass couldn't have invalidated any other loop's
       // analyses (that's the contract of a loop pass), so directly handle the
@@ -128,7 +128,7 @@ public:
     // Loops. This precludes *any* invalidation of loop analyses by the proxy,
     // but that's OK because we've taken care to invalidate analyses in the
     // loop analysis manager incrementally above.
-    PA.preserve<AllAnalysesOn<Loop>>();
+    PA.preserveSet<AllAnalysesOn<Loop>>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
     return PA;
   }

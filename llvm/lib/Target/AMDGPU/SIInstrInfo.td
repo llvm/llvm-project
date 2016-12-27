@@ -857,11 +857,11 @@ class getInsSDWA <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
                     src0_sel:$src0_sel),
             !if(!eq(NumSrcArgs, 2),
                !if(!eq(DstVT.Size, 1),
-                  // VOPC_SDWA with float modifiers
+                  // VOPC_SDWA with modifiers
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                        Src1Mod:$src1_modifiers, Src1RC:$src1,
                        clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
-                  // VOP2_SDWA or VOPC_SDWA with float modifiers
+                  // VOP2_SDWA or VOPC_SDWA with modifiers
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                        Src1Mod:$src1_modifiers, Src1RC:$src1,
                        clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,

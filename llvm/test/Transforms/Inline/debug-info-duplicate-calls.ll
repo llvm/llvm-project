@@ -1,4 +1,5 @@
 ; RUN: opt < %s -always-inline -S | FileCheck %s
+; RUN: opt -passes='always-inline' -S < %s | FileCheck %s
 
 ; Original input generated from clang -emit-llvm -S -c -mllvm -disable-llvm-optzns
 ;

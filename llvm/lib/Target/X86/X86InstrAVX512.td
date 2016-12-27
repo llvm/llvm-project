@@ -9117,6 +9117,17 @@ multiclass AVX512_scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
     def : Pat<(v4f32 (X86Blendi (v4f32 VR128X:$dst),
           (Op (v4f32 VR128X:$dst), (v4f32 VR128X:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SSZrr_Int) v4f32:$dst, v4f32:$src)>;
+
+    // extracted masked scalar math op with insert via movss
+    def : Pat<(X86Movss (v4f32 VR128X:$src1),
+               (scalar_to_vector
+                (X86selects VK1WM:$mask,
+                            (Op (f32 (extractelt (v4f32 VR128X:$src1), (iPTR 0))),
+                                FR32X:$src2),
+                            FR32X:$src0))),
+      (!cast<I>("V"#OpcPrefix#SSZrr_Intk) (COPY_TO_REGCLASS FR32X:$src0, VR128X),
+          VK1WM:$mask, v4f32:$src1,
+          (COPY_TO_REGCLASS FR32X:$src2, VR128X))>;
   }
 }
 
@@ -9150,6 +9161,17 @@ multiclass AVX512_scalar_math_f64_patterns<SDNode Op, string OpcPrefix> {
     def : Pat<(v2f64 (X86Blendi (v2f64 VR128X:$dst),
           (Op (v2f64 VR128X:$dst), (v2f64 VR128X:$src)), (i8 1))),
       (!cast<I>("V"#OpcPrefix#SDZrr_Int) v2f64:$dst, v2f64:$src)>;
+
+    // extracted masked scalar math op with insert via movss
+    def : Pat<(X86Movsd (v2f64 VR128X:$src1),
+               (scalar_to_vector
+                (X86selects VK1WM:$mask,
+                            (Op (f64 (extractelt (v2f64 VR128X:$src1), (iPTR 0))),
+                                FR64X:$src2),
+                            FR64X:$src0))),
+      (!cast<I>("V"#OpcPrefix#SDZrr_Intk) (COPY_TO_REGCLASS FR64X:$src0, VR128X),
+          VK1WM:$mask, v2f64:$src1,
+          (COPY_TO_REGCLASS FR64X:$src2, VR128X))>;
   }
 }
 
