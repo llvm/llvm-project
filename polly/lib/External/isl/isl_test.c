@@ -1870,6 +1870,14 @@ struct {
 	       "[x, y] : 0 <= x <= 10 and 1 <= y <= 10 }" },
 	{ 1, "{ [a] : a <= 8 and "
 			"(a mod 10 = 7 or a mod 10 = 8 or a mod 10 = 9) }" },
+	{ 1, "{ [x, y] : 2y = -x and x <= 0 or "
+			"x <= -1 and 2y <= -x - 1 and 2y >= x - 1 }" },
+	{ 0, "{ [x, y] : 2y = -x and x <= 0 or "
+			"x <= -2 and 2y <= -x - 1 and 2y >= x - 1 }" },
+	{ 1, "{ [a] : (a <= 0 and 3*floor((a)/3) = a) or "
+			"(a < 0 and 3*floor((a)/3) < a) }" },
+	{ 1, "{ [a] : (a <= 0 and 3*floor((a)/3) = a) or "
+			"(a < -1 and 3*floor((a)/3) < a) }" },
 };
 
 /* A specialized coalescing test case that would result
