@@ -62,7 +62,7 @@ template<> Type asm_read<Type>(Type *ptr) {        \
     __asm__("rep " Movs " \n\t"                                                \
             :                                                                  \
             : "D"(dst), "S"(src), "c"(size)                                    \
-            : "rsi", "rdi", "rcx", "memory");                                  \
+            : "memory");                                  \
   }
 
 DECLARE_ASM_WRITE(U8, "8", "movq", "r");
@@ -104,7 +104,7 @@ template<> Type asm_read<Type>(Type *ptr) {        \
     __asm__("rep " Movs " \n\t"                                                \
             :                                                                  \
             : "D"(dst), "S"(src), "c"(size)                                    \
-            : "esi", "edi", "ecx", "memory");                                  \
+            : "memory");                                  \
   }
 
 } // End of anonymous namespace

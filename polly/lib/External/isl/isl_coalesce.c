@@ -131,6 +131,19 @@ static int any(int *con, unsigned len, int status)
 	return 0;
 }
 
+/* Return the first position of "status" in the list "con" of length "len".
+ * Return -1 if there is no such entry.
+ */
+static int find(int *con, unsigned len, int status)
+{
+	int i;
+
+	for (i = 0; i < len ; ++i)
+		if (con[i] == status)
+			return i;
+	return -1;
+}
+
 static int count(int *con, unsigned len, int status)
 {
 	int i;
@@ -639,10 +652,8 @@ static enum isl_change is_adj_ineq_extension(int i, int j,
 	if (isl_tab_extend_cons(info[i].tab, 1 + info[j].bmap->n_ineq) < 0)
 		return isl_change_error;
 
-	for (k = 0; k < info[i].bmap->n_ineq; ++k)
-		if (info[i].ineq[k] == STATUS_ADJ_INEQ)
-			break;
-	if (k >= info[i].bmap->n_ineq)
+	k = find(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ);
+	if (k < 0)
 		isl_die(isl_basic_map_get_ctx(info[i].bmap), isl_error_internal,
 			"info[i].ineq should have exactly one STATUS_ADJ_INEQ",
 			return isl_change_error);
@@ -856,11 +867,14 @@ static __isl_give isl_vec *try_tightening(struct isl_coalesce_info *info,
 /* Tighten the (non-redundant) constraints on the facet represented
  * by info->tab.
  * In particular, on input, info->tab represents the result
- * of replacing constraint k of info->bmap, i.e., f_k >= 0,
- * by the adjacent equality, i.e., f_k + 1 = 0.
+ * of relaxing the "n" inequality constraints of info->bmap in "relaxed"
+ * by one, i.e., replacing f_i >= 0 by f_i + 1 >= 0, and then
+ * replacing the one at index "l" by the corresponding equality,
+ * i.e., f_k + 1 = 0, with k = relaxed[l].
  *
  * Compute a variable compression from the equality constraint f_k + 1 = 0
- * and use it to tighten the other constraints of info->bmap,
+ * and use it to tighten the other constraints of info->bmap
+ * (that is, all constraints that have not been relaxed),
  * updating info->tab (and leaving info->bmap untouched).
  * The compression handles essentially two cases, one where a variable
  * is assigned a fixed value and can therefore be eliminated, and one
@@ -888,15 +902,17 @@ static __isl_give isl_vec *try_tightening(struct isl_coalesce_info *info,
  * the fusion detection should not exploit them.
  */
 static isl_stat tighten_on_relaxed_facet(struct isl_coalesce_info *info,
-	int k)
+	int n, int *relaxed, int l)
 {
 	unsigned total;
 	isl_ctx *ctx;
 	isl_vec *v = NULL;
 	isl_mat *T;
 	int i;
+	int k;
 	int *affected;
 
+	k = relaxed[l];
 	ctx = isl_basic_map_get_ctx(info->bmap);
 	total = isl_basic_map_total_dim(info->bmap);
 	isl_int_add_ui(info->bmap->ineq[k][0], info->bmap->ineq[k][0], 1);
@@ -918,7 +934,7 @@ static isl_stat tighten_on_relaxed_facet(struct isl_coalesce_info *info,
 		affected[i] = not_unique_unit_row(T, 1 + i);
 
 	for (i = 0; i < info->bmap->n_ineq; ++i) {
-		if (i == k)
+		if (any(relaxed, n, i))
 			continue;
 		if (info->ineq[i] == STATUS_REDUNDANT)
 			continue;
@@ -944,81 +960,113 @@ error:
 	return isl_stat_error;
 }
 
-/* Basic map "i" has an inequality "k" that is adjacent to some equality
- * of basic map "j".  All the other inequalities are valid for "j".
- * Check if basic map "j" forms an extension of basic map "i".
- *
- * In particular, we relax constraint "k", compute the corresponding
- * facet and check whether it is included in the other basic map.
- * Before testing for inclusion, the constraints on the facet
- * are tightened to increase the chance of an inclusion being detected.
- * If the facet is included, we know that relaxing the constraint extends
- * the basic map with exactly the other basic map (we already know that this
- * other basic map is included in the extension, because there
- * were no "cut" inequalities in "i") and we can replace the
- * two basic maps by this extension.
+/* Replace the basic maps "i" and "j" by an extension of "i"
+ * along the "n" inequality constraints in "relax" by one.
+ * The tableau info[i].tab has already been extended.
+ * Extend info[i].bmap accordingly by relaxing all constraints in "relax"
+ * by one.
  * Each integer division that does not have exactly the same
  * definition in "i" and "j" is marked unknown and the basic map
  * is scheduled to be simplified in an attempt to recover
  * the integer division definition.
- * Place this extension in the position that is the smallest of i and j.
+ * Place the extension in the position that is the smallest of i and j.
+ */
+static enum isl_change extend(int i, int j, int n, int *relax,
+	struct isl_coalesce_info *info)
+{
+	int l;
+	unsigned total;
+
+	info[i].bmap = isl_basic_map_cow(info[i].bmap);
+	if (!info[i].bmap)
+		return isl_change_error;
+	total = isl_basic_map_total_dim(info[i].bmap);
+	for (l = 0; l < info[i].bmap->n_div; ++l)
+		if (!isl_seq_eq(info[i].bmap->div[l],
+				info[j].bmap->div[l], 1 + 1 + total)) {
+			isl_int_set_si(info[i].bmap->div[l][0], 0);
+			info[i].simplify = 1;
+		}
+	for (l = 0; l < n; ++l)
+		isl_int_add_ui(info[i].bmap->ineq[relax[l]][0],
+				info[i].bmap->ineq[relax[l]][0], 1);
+	ISL_F_SET(info[i].bmap, ISL_BASIC_MAP_FINAL);
+	drop(&info[j]);
+	if (j < i)
+		exchange(&info[i], &info[j]);
+	return isl_change_fuse;
+}
+
+/* Basic map "i" has "n" inequality constraints (collected in "relax")
+ * that are such that they include basic map "j" if they are relaxed
+ * by one.  All the other inequalities are valid for "j".
+ * Check if basic map "j" forms an extension of basic map "i".
+ *
+ * In particular, relax the constraints in "relax", compute the corresponding
+ * facets one by one and check whether each of these is included
+ * in the other basic map.
+ * Before testing for inclusion, the constraints on each facet
+ * are tightened to increase the chance of an inclusion being detected.
+ * (Adding the valid constraints of "j" to the tableau of "i", as is done
+ * in is_adj_ineq_extension, may further increase those chances, but this
+ * is not currently done.)
+ * If each facet is included, we know that relaxing the constraints extends
+ * the basic map with exactly the other basic map (we already know that this
+ * other basic map is included in the extension, because all other
+ * inequality constraints are valid of "j") and we can replace the
+ * two basic maps by this extension.
  *        ____			  _____
  *       /    || 		 /     |
  *      /     ||  		/      |
  *      \     ||   	=>	\      |
  *       \    ||		 \     |
  *        \___||		  \____|
+ *
+ *
+ *	 \			|\
+ *	|\\			| \
+ *	| \\			|  \
+ *	|  |		=>	|  /
+ *	| /			| /
+ *	|/			|/
  */
-static enum isl_change is_adj_eq_extension(int i, int j, int k,
+static enum isl_change is_relaxed_extension(int i, int j, int n, int *relax,
 	struct isl_coalesce_info *info)
 {
-	int change = isl_change_none;
+	int l;
 	int super;
 	struct isl_tab_undo *snap, *snap2;
 	unsigned n_eq = info[i].bmap->n_eq;
 
-	if (isl_tab_is_equality(info[i].tab, n_eq + k))
-		return isl_change_none;
+	for (l = 0; l < n; ++l)
+		if (isl_tab_is_equality(info[i].tab, n_eq + relax[l]))
+			return isl_change_none;
 
 	snap = isl_tab_snap(info[i].tab);
-	if (isl_tab_relax(info[i].tab, n_eq + k) < 0)
-		return isl_change_error;
+	for (l = 0; l < n; ++l)
+		if (isl_tab_relax(info[i].tab, n_eq + relax[l]) < 0)
+			return isl_change_error;
 	snap2 = isl_tab_snap(info[i].tab);
-	if (isl_tab_select_facet(info[i].tab, n_eq + k) < 0)
-		return isl_change_error;
-	if (tighten_on_relaxed_facet(&info[i], k) < 0)
-		return isl_change_error;
-	super = contains(&info[j], info[i].tab);
-	if (super < 0)
-		return isl_change_error;
-	if (super) {
-		int l;
-		unsigned total;
-
+	for (l = 0; l < n; ++l) {
 		if (isl_tab_rollback(info[i].tab, snap2) < 0)
 			return isl_change_error;
-		info[i].bmap = isl_basic_map_cow(info[i].bmap);
-		if (!info[i].bmap)
+		if (isl_tab_select_facet(info[i].tab, n_eq + relax[l]) < 0)
 			return isl_change_error;
-		total = isl_basic_map_total_dim(info[i].bmap);
-		for (l = 0; l < info[i].bmap->n_div; ++l)
-			if (!isl_seq_eq(info[i].bmap->div[l],
-					info[j].bmap->div[l], 1 + 1 + total)) {
-				isl_int_set_si(info[i].bmap->div[l][0], 0);
-				info[i].simplify = 1;
-			}
-		isl_int_add_ui(info[i].bmap->ineq[k][0],
-				info[i].bmap->ineq[k][0], 1);
-		ISL_F_SET(info[i].bmap, ISL_BASIC_MAP_FINAL);
-		drop(&info[j]);
-		if (j < i)
-			exchange(&info[i], &info[j]);
-		change = isl_change_fuse;
-	} else
+		if (tighten_on_relaxed_facet(&info[i], n, relax, l) < 0)
+			return isl_change_error;
+		super = contains(&info[j], info[i].tab);
+		if (super < 0)
+			return isl_change_error;
+		if (super)
+			continue;
 		if (isl_tab_rollback(info[i].tab, snap) < 0)
 			return isl_change_error;
+		return isl_change_none;
+	}
 
-	return change;
+	if (isl_tab_rollback(info[i].tab, snap2) < 0)
+		return isl_change_error;
+	return extend(i, j, n, relax, info);
 }
 
 /* Data structure that keeps track of the wrapping constraints
@@ -1690,6 +1738,88 @@ static enum isl_change check_wrap(int i, int j, struct isl_coalesce_info *info)
 	return change;
 }
 
+/* Check if all inequality constraints of "i" that cut "j" cease
+ * to be cut constraints if they are relaxed by one.
+ * If so, collect the cut constraints in "list".
+ * The caller is responsible for allocating "list".
+ */
+static isl_bool all_cut_by_one(int i, int j, struct isl_coalesce_info *info,
+	int *list)
+{
+	int l, n;
+
+	n = 0;
+	for (l = 0; l < info[i].bmap->n_ineq; ++l) {
+		enum isl_ineq_type type;
+
+		if (info[i].ineq[l] != STATUS_CUT)
+			continue;
+		type = type_of_relaxed(info[j].tab, info[i].bmap->ineq[l]);
+		if (type == isl_ineq_error)
+			return isl_bool_error;
+		if (type != isl_ineq_redundant)
+			return isl_bool_false;
+		list[n++] = l;
+	}
+
+	return isl_bool_true;
+}
+
+/* Given two basic maps such that "j" has at least one equality constraint
+ * that is adjacent to an inequality constraint of "i" and such that "i" has
+ * exactly one inequality constraint that is adjacent to an equality
+ * constraint of "j", check whether "i" can be extended to include "j" or
+ * whether "j" can be wrapped into "i".
+ * All remaining constraints of "i" and "j" are assumed to be valid
+ * or cut constraints of the other basic map.
+ * However, none of the equality constraints of "i" are cut constraints.
+ *
+ * If "i" has any "cut" inequality constraints, then check if relaxing
+ * each of them by one is sufficient for them to become valid.
+ * If so, check if the inequality constraint adjacent to an equality
+ * constraint of "j" along with all these cut constraints
+ * can be relaxed by one to contain exactly "j".
+ * Otherwise, or if this fails, check if "j" can be wrapped into "i".
+ */
+static enum isl_change check_single_adj_eq(int i, int j,
+	struct isl_coalesce_info *info)
+{
+	enum isl_change change = isl_change_none;
+	int k;
+	int n_cut;
+	int *relax;
+	isl_ctx *ctx;
+	isl_bool try_relax;
+
+	n_cut = count(info[i].ineq, info[i].bmap->n_ineq, STATUS_CUT);
+
+	k = find(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_EQ);
+
+	if (n_cut > 0) {
+		ctx = isl_basic_map_get_ctx(info[i].bmap);
+		relax = isl_calloc_array(ctx, int, 1 + n_cut);
+		if (!relax)
+			return isl_change_error;
+		relax[0] = k;
+		try_relax = all_cut_by_one(i, j, info, relax + 1);
+		if (try_relax < 0)
+			change = isl_change_error;
+	} else {
+		try_relax = isl_bool_true;
+		relax = &k;
+	}
+	if (try_relax && change == isl_change_none)
+		change = is_relaxed_extension(i, j, 1 + n_cut, relax, info);
+	if (n_cut > 0)
+		free(relax);
+	if (change != isl_change_none)
+		return change;
+
+	change = can_wrap_in_facet(i, j, k, info, n_cut > 0);
+
+	return change;
+}
+
 /* At least one of the basic maps has an equality that is adjacent
  * to inequality.  Make sure that only one of the basic maps has
  * such an equality and that the other basic map has exactly one
@@ -1697,21 +1827,12 @@ static enum isl_change check_wrap(int i, int j, struct isl_coalesce_info *info)
  * If the other basic map does not have such an inequality, then
  * check if all its constraints are either valid or cut constraints
  * and, if so, try wrapping in the first map into the second.
- *
- * We call the basic map that has the inequality "i" and the basic
- * map that has the equality "j".
- * If "i" has any "cut" (in)equality, then relaxing the inequality
- * by one would not result in a basic map that contains the other
- * basic map.  However, it may still be possible to wrap in the other
- * basic map.
+ * Otherwise, try to extend one basic map with the other or
+ * wrap one basic map in the other.
  */
 static enum isl_change check_adj_eq(int i, int j,
 	struct isl_coalesce_info *info)
 {
-	enum isl_change change = isl_change_none;
-	int k;
-	int any_cut;
-
 	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_INEQ) &&
 	    any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_ADJ_INEQ))
 		/* ADJ EQ TOO MANY */
@@ -1729,26 +1850,13 @@ static enum isl_change check_adj_eq(int i, int j,
 	}
 	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_CUT))
 		return isl_change_none;
-	any_cut = any(info[i].ineq, info[i].bmap->n_ineq, STATUS_CUT);
 	if (any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_EQ) ||
 	    any(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ) ||
 	    any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_INEQ))
 		/* ADJ EQ TOO MANY */
 		return isl_change_none;
 
-	for (k = 0; k < info[i].bmap->n_ineq; ++k)
-		if (info[i].ineq[k] == STATUS_ADJ_EQ)
-			break;
-
-	if (!any_cut) {
-		change = is_adj_eq_extension(i, j, k, info);
-		if (change != isl_change_none)
-			return change;
-	}
-
-	change = can_wrap_in_facet(i, j, k, info, any_cut);
-
-	return change;
+	return check_single_adj_eq(i, j, info);
 }
 
 /* The two basic maps lie on adjacent hyperplanes.  In particular,
@@ -1786,9 +1894,7 @@ static enum isl_change check_eq_adj_eq(int i, int j,
 	if (count(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_EQ) != 1)
 		detect_equalities = 1;
 
-	for (k = 0; k < 2 * info[i].bmap->n_eq ; ++k)
-		if (info[i].eq[k] == STATUS_ADJ_EQ)
-			break;
+	k = find(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_EQ);
 
 	set_i = set_from_updated_bmap(info[i].bmap, info[i].tab);
 	set_j = set_from_updated_bmap(info[j].bmap, info[j].tab);
