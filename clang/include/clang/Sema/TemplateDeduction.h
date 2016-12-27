@@ -79,6 +79,11 @@ public:
     assert(HasSFINAEDiagnostic);
     PD.first = SuppressedDiagnostics.front().first;
     PD.second.swap(SuppressedDiagnostics.front().second);
+    clearSFINAEDiagnostic();
+  }
+
+  /// \brief Discard any SFINAE diagnostics.
+  void clearSFINAEDiagnostic() {
     SuppressedDiagnostics.clear();
     HasSFINAEDiagnostic = false;
   }

@@ -2625,6 +2625,36 @@ makeTemplateArgumentListInfo(Sema &S, TemplateIdAnnotation &TemplateId) {
   return TemplateArgs;
 }
 
+template<typename PartialSpecDecl>
+static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
+  if (Partial->getDeclContext()->isDependentContext())
+    return;
+
+  // FIXME: Get the TDK from deduction in order to provide better diagnostics
+  // for non-substitution-failure issues?
+  TemplateDeductionInfo Info(Partial->getLocation());
+  if (S.isMoreSpecializedThanPrimary(Partial, Info))
+    return;
+
+  auto *Template = Partial->getSpecializedTemplate();
+  S.Diag(Partial->getLocation(),
+         diag::err_partial_spec_not_more_specialized_than_primary)
+      << /*variable template*/isa<VarTemplateDecl>(Template);
+
+  if (Info.hasSFINAEDiagnostic()) {
+    PartialDiagnosticAt Diag = {SourceLocation(),
+                                PartialDiagnostic::NullDiagnostic()};
+    Info.takeSFINAEDiagnostic(Diag);
+    SmallString<128> SFINAEArgString;
+    Diag.second.EmitToString(S.getDiagnostics(), SFINAEArgString);
+    S.Diag(Diag.first,
+           diag::note_partial_spec_not_more_specialized_than_primary)
+      << SFINAEArgString;
+  }
+
+  S.Diag(Template->getLocation(), diag::note_template_decl_here);
+}
+
 DeclResult Sema::ActOnVarTemplateSpecialization(
     Scope *S, Declarator &D, TypeSourceInfo *DI, SourceLocation TemplateKWLoc,
     TemplateParameterList *TemplateParams, StorageClass SC,
@@ -2749,6 +2779,11 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     // template specialization, make a note of that.
     if (PrevPartial && PrevPartial->getInstantiatedFromMember())
       PrevPartial->setMemberSpecialization();
+
+    // C++1z [temp.class.spec]p8: (DR1495)
+    //   - The specialization shall be more specialized than the primary
+    //     template (14.5.5.2).
+    checkMoreSpecializedThanPrimary(*this, Partial);
 
     // Check that all of the template parameters of the variable template
     // partial specialization are deducible from the template
@@ -5041,17 +5076,22 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
          "non-type template parameter type cannot be qualified");
 
   if (CTAK == CTAK_Deduced &&
-      !Context.hasSameUnqualifiedType(ParamType, Arg->getType())) {
-    // C++ [temp.deduct.type]p17:
-    //   If, in the declaration of a function template with a non-type
-    //   template-parameter, the non-type template-parameter is used
-    //   in an expression in the function parameter-list and, if the
-    //   corresponding template-argument is deduced, the
-    //   template-argument type shall match the type of the
-    //   template-parameter exactly, except that a template-argument
-    //   deduced from an array bound may be of any integral type.
+      !Context.hasSameType(ParamType.getNonLValueExprType(Context),
+                           Arg->getType())) {
+    // C++ [temp.deduct.type]p17: (DR1770)
+    //   If P has a form that contains <i>, and if the type of i differs from
+    //   the type of the corresponding template parameter of the template named
+    //   by the enclosing simple-template-id, deduction fails.
+    //
+    // Note that CTAK will be CTAK_DeducedFromArrayBound if the form was [i]
+    // rather than <i>.
+    //
+    // FIXME: We interpret the 'i' here as referring to the expression
+    // denoting the non-type template parameter rather than the parameter
+    // itself, and so strip off references before comparing types. It's
+    // not clear how this is supposed to work for references.
     Diag(StartLoc, diag::err_deduced_non_type_template_arg_type_mismatch)
-      << Arg->getType().getUnqualifiedType()
+      << Arg->getType()
       << ParamType.getUnqualifiedType();
     Diag(Param->getLocation(), diag::note_template_param_here);
     return ExprError();
@@ -5078,8 +5118,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // For a value-dependent argument, CheckConvertedConstantExpression is
     // permitted (and expected) to be unable to determine a value.
     if (ArgResult.get()->isValueDependent()) {
-      Converted = TemplateArgument(Arg);
-      return Arg;
+      Converted = TemplateArgument(ArgResult.get());
+      return ArgResult;
     }
 
     QualType CanonParamType = Context.getCanonicalType(ParamType);
@@ -5186,14 +5226,6 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     //      conversions (4.7) are applied.
 
     if (getLangOpts().CPlusPlus11) {
-      // We can't check arbitrary value-dependent arguments.
-      // FIXME: If there's no viable conversion to the template parameter type,
-      // we should be able to diagnose that prior to instantiation.
-      if (Arg->isValueDependent()) {
-        Converted = TemplateArgument(Arg);
-        return Arg;
-      }
-
       // C++ [temp.arg.nontype]p1:
       //   A template-argument for a non-type, non-template template-parameter
       //   shall be one of:
@@ -5207,6 +5239,12 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                          CCEK_TemplateArg);
       if (ArgResult.isInvalid())
         return ExprError();
+
+      // We can't check arbitrary value-dependent arguments.
+      if (ArgResult.get()->isValueDependent()) {
+        Converted = TemplateArgument(ArgResult.get());
+        return ArgResult;
+      }
 
       // Widen the argument value to sizeof(parameter type). This is almost
       // always a no-op, except when the parameter type is bool. In
@@ -6499,6 +6537,9 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
       //
       //   -- The argument list of the specialization shall not be identical
       //      to the implicit argument list of the primary template.
+      //
+      // This rule has since been removed, because it's redundant given DR1495,
+      // but we keep it because it produces better diagnostics and recovery.
       Diag(TemplateNameLoc, diag::err_partial_spec_args_match_primary_template)
         << /*class template*/0 << (TUK == TUK_Definition)
         << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
@@ -6540,6 +6581,11 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     // template specialization, make a note of that.
     if (PrevPartial && PrevPartial->getInstantiatedFromMember())
       PrevPartial->setMemberSpecialization();
+
+    // C++1z [temp.class.spec]p8: (DR1495)
+    //   - The specialization shall be more specialized than the primary
+    //     template (14.5.5.2).
+    checkMoreSpecializedThanPrimary(*this, Partial);
 
     // Check that all of the template parameters of the class template
     // partial specialization are deducible from the template

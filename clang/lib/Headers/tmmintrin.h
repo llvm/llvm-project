@@ -580,11 +580,11 @@ _mm_mulhrs_pi16(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 128-bit integer vector containing control bytes corresponding to
 ///    positions in the destination:
-///    Bit 7:
-///    1: Clear the corresponding byte in the destination.
+///    Bit 7: \n
+///    1: Clear the corresponding byte in the destination. \n
 ///    0: Copy the selected source byte to the corresponding byte in the
-///    destination.
-///    Bits [6:4] Reserved.
+///    destination. \n
+///    Bits [6:4] Reserved.  \n
 ///    Bits [3:0] select the source byte to be copied.
 /// \returns A 128-bit integer vector containing the copied or cleared values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -606,10 +606,10 @@ _mm_shuffle_epi8(__m128i __a, __m128i __b)
 /// \param __b
 ///    A 64-bit integer vector containing control bytes corresponding to
 ///    positions in the destination:
-///    Bit 7:
-///    1: Clear the corresponding byte in the destination.
+///    Bit 7: \n
+///    1: Clear the corresponding byte in the destination. \n
 ///    0: Copy the selected source byte to the corresponding byte in the
-///    destination.
+///    destination. \n
 ///    Bits [3:0] select the source byte to be copied.
 /// \returns A 64-bit integer vector containing the copied or cleared values.
 static __inline__ __m64 __DEFAULT_FN_ATTRS

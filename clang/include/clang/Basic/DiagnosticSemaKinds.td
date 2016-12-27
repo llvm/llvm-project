@@ -4111,6 +4111,10 @@ def err_partial_spec_args_match_primary_template : Error<
     "%select{class|variable}0 template partial specialization does not "
     "specialize any template argument; to %select{declare|define}1 the "
     "primary template, remove the template argument list">; 
+def err_partial_spec_not_more_specialized_than_primary : Error<
+    "%select{class|variable}0 template partial specialization is not "
+    "more specialized than the primary template">; 
+def note_partial_spec_not_more_specialized_than_primary : Note<"%0">;
 def warn_partial_specs_not_deducible : Warning<
     "%select{class|variable}0 template partial specialization contains "
     "%select{a template parameter|template parameters}1 that cannot be "
@@ -4215,7 +4219,7 @@ def note_function_template_deduction_instantiation_here : Note<
   "%1">;
 def note_deduced_template_arg_substitution_here : Note<
   "during template argument deduction for %select{class|variable}0 template "
-  "partial specialization %1 %2">;
+  "%select{partial specialization |}1%2 %3">;
 def note_prior_template_arg_substitution : Note<
   "while substituting prior template arguments into %select{non-type|template}0"
   " template parameter%1 %2">;
@@ -7136,6 +7140,10 @@ let CategoryName = "Inline Assembly Issue" in {
   def note_asm_input_duplicate_first : Note<
     "constraint '%0' is already present here">;
 }
+
+  def error_inoutput_conflict_with_clobber : Error<
+    "asm-specifier for input or output variable conflicts with asm"
+    " clobber list">;
 
 let CategoryName = "Semantic Issue" in {
 

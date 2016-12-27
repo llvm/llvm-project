@@ -2789,6 +2789,40 @@ public:
   const char *getClobbers() const override {
     return "~{dirflag},~{fpsr},~{flags}";
   }
+
+  StringRef getConstraintRegister(const StringRef &Constraint,
+                                  const StringRef &Expression) const override {
+    StringRef::iterator I, E;
+    for (I = Constraint.begin(), E = Constraint.end(); I != E; ++I) {
+      if (isalpha(*I))
+        break;
+    }
+    if (I == E)
+      return "";
+    switch (*I) {
+    // For the register constraints, return the matching register name
+    case 'a':
+      return "ax";
+    case 'b':
+      return "bx";
+    case 'c':
+      return "cx";
+    case 'd':
+      return "dx";
+    case 'S':
+      return "si";
+    case 'D':
+      return "di";
+    // In case the constraint is 'r' we need to return Expression
+    case 'r':
+      return Expression;
+    default:
+      // Default value if there is no constraint for the register
+      return "";
+    }
+    return "";
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
   static void setSSELevel(llvm::StringMap<bool> &Features, X86SSEEnum Level,

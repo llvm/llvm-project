@@ -2903,7 +2903,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         // All the remaining cases only permit reading.
         Info.FFDiag(E, diag::note_constexpr_modify_global);
         return CompleteObject();
-      } else if (VD->isConstexpr() || BaseType.isConstQualified()) {
+      } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
         // In OpenCL if a variable is in constant address space it is a const value.
@@ -2928,6 +2928,9 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         } else {
           Info.CCEDiag(E);
         }
+      } else if (BaseType.isConstQualified() && VD->hasDefinition(Info.Ctx)) {
+        Info.CCEDiag(E, diag::note_constexpr_ltor_non_constexpr) << VD;
+        // Keep evaluating to see what we can do.
       } else {
         // FIXME: Allow folding of values of any literal type in all languages.
         if (Info.checkingPotentialConstantExpression() &&

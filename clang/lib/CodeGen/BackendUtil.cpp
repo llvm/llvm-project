@@ -780,17 +780,20 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM;
-  if (CodeGenOpts.OptimizationLevel == 0) {
-    // Build a minimal pipeline based on the semantics required by Clang, which
-    // is just that always inlining occurs.
-    MPM.addPass(AlwaysInlinerPass());
-  } else {
-    // Otherwise, use the default pass pipeline. We also have to map our
-    // optimization levels into one of the distinct levels used to configure
-    // the pipeline.
-    PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
 
-    MPM = PB.buildPerModuleDefaultPipeline(Level);
+  if (!CodeGenOpts.DisableLLVMPasses) {
+    if (CodeGenOpts.OptimizationLevel == 0) {
+      // Build a minimal pipeline based on the semantics required by Clang,
+      // which is just that always inlining occurs.
+      MPM.addPass(AlwaysInlinerPass());
+    } else {
+      // Otherwise, use the default pass pipeline. We also have to map our
+      // optimization levels into one of the distinct levels used to configure
+      // the pipeline.
+      PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
+
+      MPM = PB.buildPerModuleDefaultPipeline(Level);
+    }
   }
 
   // FIXME: We still use the legacy pass manager to do code generation. We

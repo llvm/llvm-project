@@ -28,6 +28,16 @@ void clobbers() {
   asm ("nop" : : : "204"); // expected-error {{unknown register name '204' in asm}}
   asm ("nop" : : : "-1"); // expected-error {{unknown register name '-1' in asm}}
   asm ("nop" : : : "+1"); // expected-error {{unknown register name '+1' in asm}}
+  register void *clobber_conflict asm ("%rcx");
+  register void *no_clobber_conflict asm ("%rax");
+  int a,b,c;
+  asm ("nop" : "=r" (no_clobber_conflict) : "r" (clobber_conflict) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=r" (clobber_conflict) : "r" (no_clobber_conflict) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=r" (clobber_conflict) : "r" (clobber_conflict) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=c" (a) : "r" (no_clobber_conflict) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=r" (no_clobber_conflict) : "c" (c) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=r" (clobber_conflict) : "c" (c) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
+  asm ("nop" : "=a" (a) : "b" (b) : "%rcx", "%rbx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}} 
 }
 
 // rdar://6094010
