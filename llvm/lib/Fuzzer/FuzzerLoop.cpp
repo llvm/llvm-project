@@ -702,6 +702,19 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   }
 }
 
+static size_t ComputeMutationLen(size_t MaxInputSize, size_t MaxMutationLen,
+                                 Random &Rand) {
+  assert(MaxInputSize <= MaxMutationLen);
+  if (MaxInputSize == MaxMutationLen) return MaxMutationLen;
+  size_t Result = MaxInputSize;
+  size_t R = Rand.Rand();
+  if ((R % (1U << 7)) == 0)
+    Result++;
+  if ((R % (1U << 15)) == 0)
+    Result += 10 + Result / 2;
+  return Min(Result, MaxMutationLen);
+}
+
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
@@ -715,13 +728,19 @@ void Fuzzer::MutateAndTestOne() {
 
   assert(MaxMutationLen > 0);
 
+  size_t CurrentMaxMutationLen =
+      Options.ExperimentalLenControl
+          ? ComputeMutationLen(Corpus.MaxInputSize(), MaxMutationLen,
+                               MD.GetRand())
+          : MaxMutationLen;
+
   for (int i = 0; i < Options.MutateDepth; i++) {
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
     size_t NewSize = 0;
-    NewSize = MD.Mutate(CurrentUnitData, Size, MaxMutationLen);
+    NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
-    assert(NewSize <= MaxMutationLen && "Mutator return overisized unit");
+    assert(NewSize <= CurrentMaxMutationLen && "Mutator return overisized unit");
     Size = NewSize;
     if (i == 0)
       StartTraceRecording();

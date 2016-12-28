@@ -2406,17 +2406,19 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
       return MatchOperand_ParseFail;
     }
 
-    // "extend" type operatoins don't need an immediate, #0 is implicit.
+    // "extend" type operations don't need an immediate, #0 is implicit.
     SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
     Operands.push_back(
         AArch64Operand::CreateShiftExtend(ShOp, 0, false, S, E, getContext()));
     return MatchOperand_Success;
   }
 
-  // Make sure we do actually have a number or a parenthesized expression.
+  // Make sure we do actually have a number, identifier or a parenthesized
+  // expression.
   SMLoc E = Parser.getTok().getLoc();
   if (!Parser.getTok().is(AsmToken::Integer) &&
-      !Parser.getTok().is(AsmToken::LParen)) {
+      !Parser.getTok().is(AsmToken::LParen) &&
+      !Parser.getTok().is(AsmToken::Identifier)) {
     Error(E, "expected integer shift amount");
     return MatchOperand_ParseFail;
   }

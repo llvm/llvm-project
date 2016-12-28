@@ -229,9 +229,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   if (NewSCCRange.begin() == NewSCCRange.end())
     return C;
 
-  // Invalidate the analyses of the current SCC and add it to the worklist since
-  // it has changed its shape.
-  AM.invalidate(*C, PreservedAnalyses::none());
+  // Add the current SCC to the worklist as its shape has changed.
   UR.CWorklist.insert(C);
   if (DebugLogging)
     dbgs() << "Enqueuing the existing SCC in the worklist:" << *C << "\n";
@@ -343,9 +341,24 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
       dbgs() << "Deleting internal " << (IsCall ? "call" : "ref")
              << " edge from '" << N << "' to '" << TargetN << "'\n";
 
-    if (IsCall)
-      C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G, N,
-                                 C, AM, UR, DebugLogging);
+    if (IsCall) {
+      if (C != &TargetC) {
+        // For separate SCCs this is trivial.
+        RC->switchTrivialInternalEdgeToRef(N, TargetN);
+      } else {
+        // Otherwise we may end up re-structuring the call graph. First,
+        // invalidate any SCC analyses. We have to do this before we split
+        // functions into new SCCs and lose track of where their analyses are
+        // cached.
+        // FIXME: We should accept a more precise preserved set here. For
+        // example, it might be possible to preserve some function analyses
+        // even as the SCC structure is changed.
+        AM.invalidate(*C, PreservedAnalyses::none());
+        // Now update the call graph.
+        C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G,
+                                   N, C, AM, UR, DebugLogging);
+      }
+    }
 
     auto NewRefSCCs = RC->removeInternalRefEdge(N, TargetN);
     if (!NewRefSCCs.empty()) {
@@ -401,10 +414,24 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
       continue;
     }
 
-    // Otherwise we are switching an internal call edge to a ref edge. This
-    // may split up some SCCs.
-    C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G, N, C,
-                               AM, UR, DebugLogging);
+    // We are switching an internal call edge to a ref edge. This may split up
+    // some SCCs.
+    if (C != &TargetC) {
+      // For separate SCCs this is trivial.
+      RC->switchTrivialInternalEdgeToRef(N, TargetN);
+      continue;
+    }
+
+    // Otherwise we may end up re-structuring the call graph. First, invalidate
+    // any SCC analyses. We have to do this before we split functions into new
+    // SCCs and lose track of where their analyses are cached.
+    // FIXME: We should accept a more precise preserved set here. For example,
+    // it might be possible to preserve some function analyses even as the SCC
+    // structure is changed.
+    AM.invalidate(*C, PreservedAnalyses::none());
+    // Now update the call graph.
+    C = incorporateNewSCCRange(RC->switchInternalEdgeToRef(N, TargetN), G,
+                               N, C, AM, UR, DebugLogging);
   }
 
   // Now promote ref edges into call edges.

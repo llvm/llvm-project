@@ -1504,7 +1504,29 @@ template <class ELFT> void ELFDumper<ELFT>::printNotes() {
 #define LLVM_READOBJ_TYPE_CASE(name) \
   case DT_##name: return #name
 
-static const char *getTypeString(uint64_t Type) {
+static const char *getTypeString(unsigned Arch, uint64_t Type) {
+  switch (Arch) {
+  case EM_HEXAGON:
+    switch (Type) {
+    LLVM_READOBJ_TYPE_CASE(HEXAGON_SYMSZ);
+    LLVM_READOBJ_TYPE_CASE(HEXAGON_VER);
+    LLVM_READOBJ_TYPE_CASE(HEXAGON_PLT);
+    }
+  case EM_MIPS:
+    switch (Type) {
+    LLVM_READOBJ_TYPE_CASE(MIPS_RLD_MAP_REL);
+    LLVM_READOBJ_TYPE_CASE(MIPS_RLD_VERSION);
+    LLVM_READOBJ_TYPE_CASE(MIPS_FLAGS);
+    LLVM_READOBJ_TYPE_CASE(MIPS_BASE_ADDRESS);
+    LLVM_READOBJ_TYPE_CASE(MIPS_LOCAL_GOTNO);
+    LLVM_READOBJ_TYPE_CASE(MIPS_SYMTABNO);
+    LLVM_READOBJ_TYPE_CASE(MIPS_UNREFEXTNO);
+    LLVM_READOBJ_TYPE_CASE(MIPS_GOTSYM);
+    LLVM_READOBJ_TYPE_CASE(MIPS_RLD_MAP);
+    LLVM_READOBJ_TYPE_CASE(MIPS_PLTGOT);
+    LLVM_READOBJ_TYPE_CASE(MIPS_OPTIONS);
+    }
+  }
   switch (Type) {
   LLVM_READOBJ_TYPE_CASE(BIND_NOW);
   LLVM_READOBJ_TYPE_CASE(DEBUG);
@@ -1550,17 +1572,6 @@ static const char *getTypeString(uint64_t Type) {
   LLVM_READOBJ_TYPE_CASE(GNU_HASH);
   LLVM_READOBJ_TYPE_CASE(TLSDESC_PLT);
   LLVM_READOBJ_TYPE_CASE(TLSDESC_GOT);
-  LLVM_READOBJ_TYPE_CASE(MIPS_RLD_VERSION);
-  LLVM_READOBJ_TYPE_CASE(MIPS_RLD_MAP_REL);
-  LLVM_READOBJ_TYPE_CASE(MIPS_FLAGS);
-  LLVM_READOBJ_TYPE_CASE(MIPS_BASE_ADDRESS);
-  LLVM_READOBJ_TYPE_CASE(MIPS_LOCAL_GOTNO);
-  LLVM_READOBJ_TYPE_CASE(MIPS_SYMTABNO);
-  LLVM_READOBJ_TYPE_CASE(MIPS_UNREFEXTNO);
-  LLVM_READOBJ_TYPE_CASE(MIPS_GOTSYM);
-  LLVM_READOBJ_TYPE_CASE(MIPS_RLD_MAP);
-  LLVM_READOBJ_TYPE_CASE(MIPS_PLTGOT);
-  LLVM_READOBJ_TYPE_CASE(MIPS_OPTIONS);
   LLVM_READOBJ_TYPE_CASE(AUXILIARY);
   default: return "unknown";
   }
@@ -1793,7 +1804,7 @@ void ELFDumper<ELFT>::printDynamicTable() {
     uintX_t Tag = Entry.getTag();
     ++I;
     W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, opts::Output != opts::GNU) << " "
-                  << format("%-21s", getTypeString(Tag));
+                  << format("%-21s", getTypeString(Obj->getHeader()->e_machine, Tag));
     printValue(Tag, Entry.getVal());
     OS << "\n";
   }

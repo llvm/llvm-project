@@ -121,16 +121,13 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
 /// module.
 bool LLParser::ValidateEndOfModule() {
   // Handle any function attribute group forward references.
-  for (std::map<Value*, std::vector<unsigned> >::iterator
-         I = ForwardRefAttrGroups.begin(), E = ForwardRefAttrGroups.end();
-         I != E; ++I) {
-    Value *V = I->first;
-    std::vector<unsigned> &Vec = I->second;
+  for (const auto &RAG : ForwardRefAttrGroups) {
+    Value *V = RAG.first;
+    const std::vector<unsigned> &Attrs = RAG.second;
     AttrBuilder B;
 
-    for (std::vector<unsigned>::iterator VI = Vec.begin(), VE = Vec.end();
-         VI != VE; ++VI)
-      B.merge(NumberedAttrBuilders[*VI]);
+    for (const auto &Attr : Attrs)
+      B.merge(NumberedAttrBuilders[Attr]);
 
     if (Function *Fn = dyn_cast<Function>(V)) {
       AttributeSet AS = Fn->getAttributes();

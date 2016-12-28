@@ -14,6 +14,7 @@
 #include <string>
 using namespace llvm;
 
+#ifndef NDEBUG
 TEST(DebugTest, Basic) {
   std::string s1, s2;
   raw_string_ostream os1(s1), os2(s2);
@@ -30,3 +31,4 @@ TEST(DebugTest, Basic) {
   DEBUG_WITH_TYPE("B", os2 << "B");
   EXPECT_EQ("A", os2.str());
 }
+#endif

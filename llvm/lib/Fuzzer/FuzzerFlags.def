@@ -17,6 +17,7 @@ FUZZER_FLAG_INT(runs, -1,
 FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
     "If 0, libFuzzer tries to guess a good value based on the corpus "
     "and reports it. ")
+FUZZER_FLAG_INT(experimental_len_control, 0, "experimental flag")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")

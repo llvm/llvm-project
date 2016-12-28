@@ -28,8 +28,8 @@ define void @fpext_frommem(<2 x float>* %in, <2 x double>* %out) {
 ; X32-AVX512VL:       # BB#0: # %entry
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %xmm0 # encoding: [0x62,0xf1,0x7c,0x08,0x5a,0x01]
-; X32-AVX512VL-NEXT:    vmovups %xmm0, (%eax) # encoding: [0x62,0xf1,0x7c,0x08,0x11,0x00]
+; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5a,0x01]
+; X32-AVX512VL-NEXT:    vmovups %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x00]
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: fpext_frommem:
@@ -46,8 +46,8 @@ define void @fpext_frommem(<2 x float>* %in, <2 x double>* %out) {
 ;
 ; X64-AVX512VL-LABEL: fpext_frommem:
 ; X64-AVX512VL:       # BB#0: # %entry
-; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7c,0x08,0x5a,0x07]
-; X64-AVX512VL-NEXT:    vmovups %xmm0, (%rsi) # encoding: [0x62,0xf1,0x7c,0x08,0x11,0x06]
+; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5a,0x07]
+; X64-AVX512VL-NEXT:    vmovups %xmm0, (%rsi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x06]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <2 x float>, <2 x float>* %in, align 8
@@ -80,8 +80,8 @@ define void @fpext_frommem4(<4 x float>* %in, <4 x double>* %out) {
 ; X32-AVX512VL:       # BB#0: # %entry
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %ymm0 # encoding: [0x62,0xf1,0x7c,0x28,0x5a,0x01]
-; X32-AVX512VL-NEXT:    vmovups %ymm0, (%eax) # encoding: [0x62,0xf1,0x7c,0x28,0x11,0x00]
+; X32-AVX512VL-NEXT:    vcvtps2pd (%ecx), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5a,0x01]
+; X32-AVX512VL-NEXT:    vmovups %ymm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x00]
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: fpext_frommem4:
@@ -101,8 +101,8 @@ define void @fpext_frommem4(<4 x float>* %in, <4 x double>* %out) {
 ;
 ; X64-AVX512VL-LABEL: fpext_frommem4:
 ; X64-AVX512VL:       # BB#0: # %entry
-; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %ymm0 # encoding: [0x62,0xf1,0x7c,0x28,0x5a,0x07]
-; X64-AVX512VL-NEXT:    vmovups %ymm0, (%rsi) # encoding: [0x62,0xf1,0x7c,0x28,0x11,0x06]
+; X64-AVX512VL-NEXT:    vcvtps2pd (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5a,0x07]
+; X64-AVX512VL-NEXT:    vmovups %ymm0, (%rsi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x06]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x float>, <4 x float>* %in
@@ -195,9 +195,9 @@ define <2 x double> @fpext_fromconst() {
 ;
 ; X32-AVX512VL-LABEL: fpext_fromconst:
 ; X32-AVX512VL:       # BB#0: # %entry
-; X32-AVX512VL-NEXT:    vmovaps {{.*#+}} xmm0 = [1.000000e+00,-2.000000e+00]
-; X32-AVX512VL-NEXT:    # encoding: [0x62,0xf1,0x7c,0x08,0x28,0x05,A,A,A,A]
-; X32-AVX512VL-NEXT:    # fixup A - offset: 6, value: {{\.LCPI.*}}, kind: FK_Data_4
+; X32-AVX512VL-NEXT:    vmovaps {{\.LCPI.*}}, %xmm0 # EVEX TO VEX Compression xmm0 = [1.000000e+00,-2.000000e+00]
+; X32-AVX512VL-NEXT:    # encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; X32-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}, kind: FK_Data_4
 ; X32-AVX512VL-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: fpext_fromconst:
@@ -216,9 +216,9 @@ define <2 x double> @fpext_fromconst() {
 ;
 ; X64-AVX512VL-LABEL: fpext_fromconst:
 ; X64-AVX512VL:       # BB#0: # %entry
-; X64-AVX512VL-NEXT:    vmovaps {{.*#+}} xmm0 = [1.000000e+00,-2.000000e+00]
-; X64-AVX512VL-NEXT:    # encoding: [0x62,0xf1,0x7c,0x08,0x28,0x05,A,A,A,A]
-; X64-AVX512VL-NEXT:    # fixup A - offset: 6, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
+; X64-AVX512VL-NEXT:    vmovaps {{.*}}(%rip), %xmm0 # EVEX TO VEX Compression xmm0 = [1.000000e+00,-2.000000e+00]
+; X64-AVX512VL-NEXT:    # encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; X64-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
 entry:
   %0  = insertelement <2 x float> undef, float 1.0, i32 0

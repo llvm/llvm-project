@@ -1,4 +1,5 @@
-; RUN: llc < %s -mattr=+neon | not grep fldmfdd
+; RUN: llc -mtriple thumbv7---elf -mattr=+neon -filetype asm -o - %s | FileCheck %s
+
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:32"
 target triple = "thumbv7-elf"
 
@@ -12,16 +13,19 @@ declare <2 x i32> @llvm.arm.neon.vpadd.v2i32(<2 x i32>, <2 x i32>) nounwind read
 
 define void @_ZN6squish10ClusterFit9Compress3EPv(%quuz* %this, i8* %block) {
 entry:
-  %0 = lshr <4 x i32> zeroinitializer, <i32 31, i32 31, i32 31, i32 31> ; <<4 x i32>> [#uses=1]
-  %1 = shufflevector <4 x i32> %0, <4 x i32> undef, <2 x i32> <i32 2, i32 3> ; <<2 x i32>> [#uses=1]
-  %2 = call <2 x i32> @llvm.arm.neon.vpadd.v2i32(<2 x i32> undef, <2 x i32> %1) nounwind ; <<2 x i32>> [#uses=1]
-  %3 = extractelement <2 x i32> %2, i32 0         ; <i32> [#uses=1]
-  %not..i = icmp eq i32 %3, undef                 ; <i1> [#uses=1]
+  %0 = lshr <4 x i32> zeroinitializer, <i32 31, i32 31, i32 31, i32 31>
+  %1 = shufflevector <4 x i32> %0, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %2 = call <2 x i32> @llvm.arm.neon.vpadd.v2i32(<2 x i32> undef, <2 x i32> %1) nounwind
+  %3 = extractelement <2 x i32> %2, i32 0
+  %not..i = icmp eq i32 %3, undef
   br i1 %not..i, label %return, label %bb221
 
-bb221:                                            ; preds = %bb221, %entry
+bb221:
   br label %bb221
 
-return:                                           ; preds = %entry
+return:
   ret void
 }
+
+; CHECK-NOT: fldmfdd
+

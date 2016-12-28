@@ -156,8 +156,7 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
 /// \brief The core instruction combiner logic.
 ///
 /// This class provides both the logic to recursively visit instructions and
-/// combine them, as well as the pass infrastructure for running this as part
-/// of the LLVM pass pipeline.
+/// combine them.
 class LLVM_LIBRARY_VISIBILITY InstCombiner
     : public InstVisitor<InstCombiner, Instruction *> {
   // FIXME: These members shouldn't be public.

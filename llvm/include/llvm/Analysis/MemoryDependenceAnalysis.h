@@ -350,6 +350,10 @@ public:
                           DominatorTree &DT)
       : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
 
+  /// Handle invalidation in the new PM.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
+
   /// Some methods limit the number of instructions they will examine.
   /// The return value of this method is the default limit that will be
   /// used if no limit is explicitly passed in.

@@ -2468,7 +2468,7 @@ define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
 ; AVX512VL-NEXT:    movq %rcx, %rsi
 ; AVX512VL-NEXT:    callq __fixtfdi
 ; AVX512VL-NEXT:    vmovq %rax, %xmm0
-; AVX512VL-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
+; AVX512VL-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512VL-NEXT:    movq %rbx, %rdi
 ; AVX512VL-NEXT:    movq %r14, %rsi
 ; AVX512VL-NEXT:    callq __fixtfdi
@@ -2516,7 +2516,7 @@ define <4 x i32> @fptosi_2f128_to_4i32(<2 x fp128> %a) nounwind {
 ; AVX512VLDQ-NEXT:    movq %rcx, %rsi
 ; AVX512VLDQ-NEXT:    callq __fixtfdi
 ; AVX512VLDQ-NEXT:    vmovq %rax, %xmm0
-; AVX512VLDQ-NEXT:    vmovdqa64 %xmm0, (%rsp) # 16-byte Spill
+; AVX512VLDQ-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512VLDQ-NEXT:    movq %rbx, %rdi
 ; AVX512VLDQ-NEXT:    movq %r14, %rsi
 ; AVX512VLDQ-NEXT:    callq __fixtfdi

@@ -544,7 +544,7 @@ define <64 x i8> @test16(i64 %x) {
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
 ; SKX-NEXT:    vpsllq $40, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm1
-; SKX-NEXT:    vmovdqu8 {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; SKX-NEXT:    vmovdqu {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SKX-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
@@ -612,7 +612,7 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
 ; SKX-NEXT:    vpsllq $40, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm1
-; SKX-NEXT:    vmovdqu8 {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; SKX-NEXT:    vmovdqu {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SKX-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0

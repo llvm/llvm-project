@@ -886,16 +886,18 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       continue;
     Changed = true;
 
-    // Add all the inlined callees' edges to the caller. These are by
-    // definition trivial edges as we already had a transitive call edge to the
-    // callee.
+    // Add all the inlined callees' edges as ref edges to the caller. These are
+    // by definition trivial edges as we always have *some* transitive ref edge
+    // chain. While in some cases these edges are direct calls inside the
+    // callee, they have to be modeled in the inliner as reference edges as
+    // there may be a reference edge anywhere along the chain from the current
+    // caller to the callee that causes the whole thing to appear like
+    // a (transitive) reference edge that will require promotion to a call edge
+    // below.
     for (Function *InlinedCallee : InlinedCallees) {
       LazyCallGraph::Node &CalleeN = *CG.lookup(*InlinedCallee);
       for (LazyCallGraph::Edge &E : CalleeN)
-        if (E.isCall())
-          RC->insertTrivialCallEdge(N, *E.getNode());
-        else
-          RC->insertTrivialRefEdge(N, *E.getNode());
+        RC->insertTrivialRefEdge(N, *E.getNode());
     }
     InlinedCallees.clear();
 
