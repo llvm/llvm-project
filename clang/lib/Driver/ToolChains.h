@@ -232,8 +232,8 @@ public:
 
   bool IsUnwindTablesDefault() const override;
   bool isPICDefault() const override;
-  bool isPIEDefault() const override { return false; }
-  bool isPICDefaultForced() const override { return false; }
+  bool isPIEDefault() const override;
+  bool isPICDefaultForced() const override;
   bool IsIntegratedAssemblerDefault() const override;
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
@@ -1136,9 +1136,9 @@ public:
 
   bool IsIntegratedAssemblerDefault() const override;
   bool IsUnwindTablesDefault() const override;
-  bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
-  bool isPICDefaultForced() const override { return false; }
+  bool isPICDefault() const override;
+  bool isPIEDefault() const override;
+  bool isPICDefaultForced() const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,

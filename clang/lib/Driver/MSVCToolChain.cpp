@@ -82,6 +82,18 @@ bool MSVCToolChain::IsUnwindTablesDefault() const {
   return getArch() == llvm::Triple::x86_64;
 }
 
+bool MSVCToolChain::isPICDefault() const {
+  return getArch() == llvm::Triple::x86_64;
+}
+
+bool MSVCToolChain::isPIEDefault() const {
+  return false;
+}
+
+bool MSVCToolChain::isPICDefaultForced() const {
+  return getArch() == llvm::Triple::x86_64;
+}
+
 #ifdef USE_WIN32
 static bool readFullStringValue(HKEY hkey, const char *valueName,
                                 std::string &value) {

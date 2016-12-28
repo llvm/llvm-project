@@ -26,8 +26,11 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
     return;
   Finder->addMatcher(cxxConstructorDecl(unless(isInstantiated())).bind("ctor"),
                      this);
-  Finder->addMatcher(cxxConversionDecl(unless(isExplicit())).bind("conversion"),
-                     this);
+  Finder->addMatcher(
+      cxxConversionDecl(unless(isExplicit()), // Already marked explicit.
+                        unless(isImplicit())) // Compiler-generated.
+          .bind("conversion"),
+      this);
 }
 
 // Looks for the token matching the predicate and returns the range of the found

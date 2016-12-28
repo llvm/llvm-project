@@ -80,6 +80,10 @@ struct B {
   // CHECK-FIXES: {{^  }}B(::std::initializer_list<char> &&list6) {}
 };
 
+struct StructWithFnPointer {
+  void (*f)();
+} struct_with_fn_pointer = {[] {}};
+
 using namespace std;
 
 struct C {

@@ -48,7 +48,7 @@
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
-// Don't use a nullptr_t simulation type in C++03 and use theh C++11 nullptr
+// Don't use a nullptr_t simulation type in C++03 instead using C++11 nullptr
 // provided under the alternate keyword __nullptr, which changes the mangling
 // of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
 #define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
