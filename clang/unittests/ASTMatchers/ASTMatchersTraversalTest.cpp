@@ -688,7 +688,7 @@ TEST(TemplateTypeParmDecl, VarTemplatePartialSpecializationDecl) {
       "};\n"
       "template<typename U>\n"
       "template<typename U2>\n"
-      "int Struct<U>::field<char> = 123;\n";
+      "int Struct<U>::field<U2*> = 123;\n";
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T"))));
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T2"))));
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("U"))));
@@ -703,7 +703,7 @@ TEST(TemplateTypeParmDecl, ClassTemplatePartialSpecializationDecl) {
       "};\n"
       "template<typename U>\n"
       "template<typename U2>\n"
-      "struct Class<U>::Struct<int> {};\n";
+      "struct Class<U>::Struct<U2*> {};\n";
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T"))));
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("T2"))));
   EXPECT_TRUE(matches(input, templateTypeParmDecl(hasName("U"))));

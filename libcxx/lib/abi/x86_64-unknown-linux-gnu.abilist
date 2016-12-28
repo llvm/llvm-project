@@ -252,6 +252,7 @@
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__121__basic_string_commonILb1EE20__throw_out_of_rangeEv'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__123__match_any_but_newlineIcE6__execERNS_7__stateIcEE'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__123__match_any_but_newlineIwE6__execERNS_7__stateIwEE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__124__libcpp_debug_exception4whatEv'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__15ctypeIcE10do_tolowerEPcPKc'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__15ctypeIcE10do_tolowerEc'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNKSt3__15ctypeIcE10do_toupperEPcPKc'}
@@ -1136,6 +1137,16 @@
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__121recursive_timed_mutexD1Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__121recursive_timed_mutexD2Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__121undeclare_no_pointersEPcm'}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZNSt3__123__libcpp_debug_functionE', 'size': 8}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC1ERKNS_19__libcpp_debug_infoE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC1ERKS0_'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC1Ev'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC2ERKNS_19__libcpp_debug_infoE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC2ERKS0_'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionC2Ev'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionD0Ev'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionD1Ev'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__124__libcpp_debug_exceptionD2Ev'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__125__num_get_signed_integralIlEET_PKcS3_Rji'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__125__num_get_signed_integralIxEET_PKcS3_Rji'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE'}
@@ -1154,10 +1165,13 @@
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__num_get_unsigned_integralIjEET_PKcS3_Rji'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__num_get_unsigned_integralImEET_PKcS3_Rji'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__num_get_unsigned_integralItEET_PKcS3_Rji'}
 {'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__127__num_get_unsigned_integralIyEET_PKcS3_Rji'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE'}
+{'is_defined': True, 'type': 'FUNC', 'name': '_ZNSt3__129__libcpp_throw_debug_functionERKNS_19__libcpp_debug_infoE'}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZNSt3__13cinE', 'size': 168}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZNSt3__14cerrE', 'size': 160}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZNSt3__14clogE', 'size': 160}
@@ -1554,6 +1568,7 @@
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__120__codecvt_utf8_utf16IwEE', 'size': 24}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__120__time_get_c_storageIcEE', 'size': 16}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__120__time_get_c_storageIwEE', 'size': 16}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__124__libcpp_debug_exceptionE', 'size': 24}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__15ctypeIcEE', 'size': 56}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__15ctypeIwEE', 'size': 56}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTINSt3__16locale5facetE', 'size': 24}
@@ -1679,6 +1694,7 @@
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IwEE', 'size': 34}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__120__time_get_c_storageIcEE', 'size': 34}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__120__time_get_c_storageIwEE', 'size': 34}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__124__libcpp_debug_exceptionE', 'size': 35}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__15ctypeIcEE', 'size': 18}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__15ctypeIwEE', 'size': 18}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTSNSt3__16locale5facetE', 'size': 22}
@@ -1790,6 +1806,7 @@
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 96}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96}
+{'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__124__libcpp_debug_exceptionE', 'size': 40}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__15ctypeIcEE', 'size': 104}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__15ctypeIwEE', 'size': 136}
 {'is_defined': True, 'type': 'OBJECT', 'name': '_ZTVNSt3__16locale5facetE', 'size': 40}

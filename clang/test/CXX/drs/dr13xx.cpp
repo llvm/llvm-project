@@ -3,6 +3,34 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+namespace dr1315 { // dr1315: partial
+  template <int I, int J> struct A {};
+  template <int I> // expected-note {{non-deducible template parameter 'I'}}
+    struct A<I + 5, I * 2> {}; // expected-error {{contains a template parameter that cannot be deduced}}
+  template <int I> struct A<I, I> {};
+
+  template <int I, int J, int K> struct B;
+  template <int I, int K> struct B<I, I * 2, K> {}; // expected-note {{matches}}
+  B<1, 2, 3> b1;
+
+  // Multiple declarations with the same dependent expression are equivalent
+  // for partial ordering purposes.
+  template <int I> struct B<I, I * 2, 2> { typedef int type; };
+  B<1, 2, 2>::type b2;
+
+  // Multiple declarations with differing dependent expressions are unordered.
+  template <int I, int K> struct B<I, I + 1, K> {}; // expected-note {{matches}}
+  B<1, 2, 4> b3; // expected-error {{ambiguous}}
+
+  // FIXME: Under dr1315, this is perhaps valid, but that is not clear: this
+  // fails the "more specialized than the primary template" test because the
+  // dependent type of T::value is not the same as 'int'.
+  // A core issue will be opened to decide what is supposed to happen here.
+  template <typename T, int I> struct C;
+  template <typename T> struct C<T, T::value>;
+  // expected-error@-1 {{type of specialized non-type template argument depends on a template parameter of the partial specialization}}
+}
+
 namespace dr1330 { // dr1330: 4.0 c++11
   // exception-specifications are parsed in a context where the class is complete.
   struct A {

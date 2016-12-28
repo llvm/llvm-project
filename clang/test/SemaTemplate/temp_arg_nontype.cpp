@@ -408,3 +408,29 @@ namespace partial_order_references {
   extern const int K = 5;
   D<0, K> d; // expected-error {{undefined}}
 }
+
+namespace dependent_nested_partial_specialization {
+  template<typename> using X = int; // expected-warning {{C++11}}
+  template<typename T> using Y = T*; // expected-warning {{C++11}}
+  int n;
+
+  template<template<typename> class X> struct A {
+    template<typename T, X<T> N> struct B; // expected-note 2{{here}}
+    template<typename T> struct B<T, 0> {}; // expected-error {{specializes a template parameter with dependent type 'Y<T>'}}
+  };
+  A<X>::B<int, 0> ax;
+  A<Y>::B<int, &n> ay; // expected-error {{undefined}} expected-note {{instantiation of}}
+
+  template<template<typename> class X> struct C {
+    template<typename T, int N, int M> struct D; // expected-note {{here}}
+    template<typename T, X<T> N> struct D<T*, N, N + 1> {}; // expected-error {{type of specialized non-type template argument depends on}}
+  };
+  C<X>::D<int*, 0, 1> cx;
+  C<Y>::D<int*, 0, 1> cy; // expected-error {{undefined}} expected-note {{instantiation of}}
+
+  template<typename T> struct E {
+    template<typename U, U V> struct F; // expected-note {{template}}
+    template<typename W, T V> struct F<W, V> {}; // expected-error {{not more specialized than the primary}} expected-note {{does not have the same type}}
+  };
+  E<int>::F<int, 0> e1; // expected-note {{instantiation of}}
+}

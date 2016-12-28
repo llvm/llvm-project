@@ -626,9 +626,9 @@ protected:
 
     void swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT;
+        _NOEXCEPT_DEBUG;
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
@@ -669,6 +669,13 @@ private:
     void __move_assign_alloc(__list_imp&, false_type)
         _NOEXCEPT
         {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __invalidate_all_iterators() {
+#if _LIBCPP_DEBUG_LEVEL >= 2
+      __get_db()->__invalidate_all(this);
+#endif
+    }
 };
 
 // Unlink nodes [__f, __l]
@@ -724,21 +731,7 @@ __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT
             __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
             __node_alloc_traits::deallocate(__na, __np, 1);
         }
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __c_node* __c = __get_db()->__find_c_and_lock(this);
-        for (__i_node** __p = __c->end_; __p != __c->beg_; )
-        {
-            --__p;
-            const_iterator* __i = static_cast<const_iterator*>((*__p)->__i_);
-            if (__i->__ptr_ != __l)
-            {
-                (*__p)->__c_ = nullptr;
-                if (--__c->end_ != __p)
-                    memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
-            }
-        }
-        __get_db()->unlock();
-#endif
+        __invalidate_all_iterators();
     }
 }
 
@@ -746,9 +739,9 @@ template <class _Tp, class _Alloc>
 void
 __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT
+        _NOEXCEPT_DEBUG
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
@@ -1002,9 +995,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT
+        _NOEXCEPT_DEBUG
 #else
-        _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value ||
+        _NOEXCEPT_DEBUG_(!__node_alloc_traits::propagate_on_container_swap::value ||
                    __is_nothrow_swappable<__node_allocator>::value)
 #endif
         {base::swap(__c);}
@@ -1361,6 +1354,9 @@ list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
         insert(__e, __f, __l);
     else
         erase(__i, __e);
+#if _LIBCPP_DEBUG_LEVEL >= 2
+      __get_db()->__invalidate_all(this);
+#endif
 }
 
 template <class _Tp, class _Alloc>
@@ -1375,6 +1371,9 @@ list<_Tp, _Alloc>::assign(size_type __n, const value_type& __x)
         insert(__e, __n, __x);
     else
         erase(__i, __e);
+#if _LIBCPP_DEBUG_LEVEL >= 2
+      __get_db()->__invalidate_all(this);
+#endif
 }
 
 template <class _Tp, class _Alloc>
@@ -1788,6 +1787,9 @@ list<_Tp, _Alloc>::erase(const_iterator __f, const_iterator __l)
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__f) == this,
+        "list::erase(iterator, iterator) called with an iterator not"
+        " referring to this list");
+   _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__l) == this,
         "list::erase(iterator, iterator) called with an iterator not"
         " referring to this list");
 #endif

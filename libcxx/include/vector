@@ -738,9 +738,9 @@ public:
 
     void swap(vector&)
 #if _LIBCPP_STD_VER >= 14
-        _NOEXCEPT;
+        _NOEXCEPT_DEBUG;
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
@@ -757,6 +757,7 @@ public:
 
 private:
     _LIBCPP_INLINE_VISIBILITY void __invalidate_all_iterators();
+    _LIBCPP_INLINE_VISIBILITY void __invalidate_iterators_past(pointer __new_last);
     void allocate(size_type __n);
     void deallocate() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY size_type __recommend(size_type __new_size) const;
@@ -786,21 +787,7 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void __destruct_at_end(pointer __new_last) _NOEXCEPT
     {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __c_node* __c = __get_db()->__find_c_and_lock(this);
-        for (__i_node** __p = __c->end_; __p != __c->beg_; )
-        {
-            --__p;
-            const_iterator* __i = static_cast<const_iterator*>((*__p)->__i_);
-            if (__i->base() > __new_last)
-            {
-                (*__p)->__c_ = nullptr;
-                if (--__c->end_ != __p)
-                    memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
-            }
-        }
-        __get_db()->unlock();
-#endif
+        __invalidate_iterators_past(__new_last);
         size_type __old_size = size();
         __base::__destruct_at_end(__new_last);
         __annotate_shrink(__old_size);
@@ -1415,6 +1402,7 @@ vector<_Tp, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __las
         allocate(__recommend(__new_size));
         __construct_at_end(__first, __last, __new_size);
     }
+    __invalidate_all_iterators();
 }
 
 template <class _Tp, class _Allocator>
@@ -1436,6 +1424,7 @@ vector<_Tp, _Allocator>::assign(size_type __n, const_reference __u)
         allocate(__recommend(static_cast<size_type>(__n)));
         __construct_at_end(__n, __u);
     }
+    __invalidate_all_iterators();
 }
 
 template <class _Tp, class _Allocator>
@@ -1679,8 +1668,9 @@ vector<_Tp, _Allocator>::erase(const_iterator __position)
         "vector::erase(iterator) called with a non-dereferenceable iterator");
     difference_type __ps = __position - cbegin();
     pointer __p = this->__begin_ + __ps;
-    iterator __r = __make_iter(__p);
     this->__destruct_at_end(_VSTD::move(__p + 1, this->__end_, __p));
+    this->__invalidate_iterators_past(__p-1);
+    iterator __r = __make_iter(__p);
     return __r;
 }
 
@@ -1692,12 +1682,17 @@ vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
         "vector::erase(iterator,  iterator) called with an iterator not"
         " referring to this vector");
+    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
+        "vector::erase(iterator,  iterator) called with an iterator not"
+        " referring to this vector");
 #endif
     _LIBCPP_ASSERT(__first <= __last, "vector::erase(first, last) called with invalid range");
     pointer __p = this->__begin_ + (__first - begin());
-    iterator __r = __make_iter(__p);
-    if (__first != __last)
+    if (__first != __last) {
         this->__destruct_at_end(_VSTD::move(__p + (__last - __first), this->__end_, __p));
+        this->__invalidate_iterators_past(__p - 1);
+    }
+    iterator __r = __make_iter(__p);
     return __r;
 }
 
@@ -2018,9 +2013,9 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::swap(vector& __x)
 #if _LIBCPP_STD_VER >= 14
-    _NOEXCEPT
+    _NOEXCEPT_DEBUG
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+    _NOEXCEPT_DEBUG_(!__alloc_traits::propagate_on_container_swap::value ||
                 __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
@@ -2101,6 +2096,28 @@ vector<_Tp, _Allocator>::__invalidate_all_iterators()
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__invalidate_all(this);
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
+}
+
+
+template <class _Tp, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+vector<_Tp, _Allocator>::__invalidate_iterators_past(pointer __new_last) {
+#if _LIBCPP_DEBUG_LEVEL >= 2
+  __c_node* __c = __get_db()->__find_c_and_lock(this);
+  for (__i_node** __p = __c->end_; __p != __c->beg_; ) {
+    --__p;
+    const_iterator* __i = static_cast<const_iterator*>((*__p)->__i_);
+    if (__i->base() > __new_last) {
+      (*__p)->__c_ = nullptr;
+      if (--__c->end_ != __p)
+        memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+    }
+  }
+  __get_db()->unlock();
+#else
+  ((void)__new_last);
+#endif
 }
 
 // vector<bool>
@@ -2367,7 +2384,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT;
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
     static void swap(reference __x, reference __y) _NOEXCEPT { _VSTD::swap(__x, __y); }
@@ -2898,6 +2915,7 @@ vector<bool, _Allocator>::assign(size_type __n, const value_type& __x)
         }
         _VSTD::fill_n(begin(), __n, __x);
     }
+  __invalidate_all_iterators();
 }
 
 template <class _Allocator>
@@ -3159,7 +3177,7 @@ vector<bool, _Allocator>::swap(vector& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                 __is_nothrow_swappable<allocator_type>::value)
 #endif
 {

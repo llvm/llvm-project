@@ -122,6 +122,7 @@ int main(int argc, char **argv) {
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
+// CHECK-NOT:              size:
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS1D"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"

@@ -455,6 +455,10 @@ private:
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
 
+  /// Map used to be sure we don't emit the same CompoundLiteral twice.
+  llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
+      EmittedCompoundLiterals;
+
   /// Map of the global blocks we've emitted, so that we don't have to re-emit
   /// them if the constexpr evaluator gets aggressive.
   llvm::DenseMap<const BlockExpr *, llvm::Constant *> EmittedGlobalBlocks;
@@ -823,6 +827,16 @@ public:
   /// Returns a pointer to a constant global variable for the given file-scope
   /// compound literal expression.
   ConstantAddress GetAddrOfConstantCompoundLiteral(const CompoundLiteralExpr*E);
+
+  /// If it's been emitted already, returns the GlobalVariable corresponding to
+  /// a compound literal. Otherwise, returns null.
+  llvm::GlobalVariable *
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *E);
+
+  /// Notes that CLE's GlobalVariable is GV. Asserts that CLE isn't already
+  /// emitted.
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *CLE,
+                                        llvm::GlobalVariable *GV);
 
   /// \brief Returns a pointer to a global variable representing a temporary
   /// with static or thread storage duration.

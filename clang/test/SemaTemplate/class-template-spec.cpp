@@ -137,12 +137,16 @@ namespace PR18009 {
   A<int>::S<8, sizeof(int)> a; // ok
 
   template <typename T> struct B {
-    template <int N, int M> struct S; // expected-note {{declared here}}
-    template <int N> struct S<N, sizeof(T) +
-        N // expected-error {{non-type template argument depends on a template parameter of the partial specialization}}
-        > {};
+    template <int N, int M> struct S;
+    template <int N> struct S<N, sizeof(T) + N> {}; // ok (dr1315)
   };
-  B<int>::S<8, sizeof(int) + 8> s; // expected-error {{undefined}}
+  B<int>::S<8, sizeof(int) + 8> b;
+
+  template <typename T> struct C {
+    template <int N, int M> struct S;
+    template <int N> struct S<N, N ? **(T(*)[N])0 : 0> {}; // expected-error {{depends on a template parameter of the partial specialization}}
+  };
+  C<int> c; // expected-note {{in instantiation of}}
 
   template<int A> struct outer {
     template<int B, int C> struct inner {};
@@ -222,9 +226,9 @@ namespace DefaultArgVsPartialSpec {
   // Check that the diagnostic points at the partial specialization, not just at
   // the default argument.
   template<typename T, int N =
-      sizeof(T) // expected-note {{template parameter is used in default argument declared here}}
+      sizeof(T) // ok (dr1315)
   > struct X {};
-  template<typename T> struct X<T> {}; // expected-error {{non-type template argument depends on a template parameter of the partial specialization}}
+  template<typename T> struct X<T> {};
 
   template<typename T,
       T N = 0 // expected-note {{template parameter is declared here}}
