@@ -317,6 +317,8 @@ int isl_tab_save_samples(struct isl_tab *tab) WARN_UNUSED;
 
 struct isl_tab *isl_tab_detect_equalities(struct isl_tab *tab,
 	struct isl_tab *tab_cone) WARN_UNUSED;
+isl_bool isl_tab_is_constant(struct isl_tab *tab, int var, isl_int *value);
+isl_stat isl_tab_detect_constants(struct isl_tab *tab);
 
 int isl_tab_push_callback(struct isl_tab *tab,
 	struct isl_tab_callback *callback) WARN_UNUSED;

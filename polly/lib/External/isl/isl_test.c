@@ -1878,6 +1878,19 @@ struct {
 			"(a < 0 and 3*floor((a)/3) < a) }" },
 	{ 1, "{ [a] : (a <= 0 and 3*floor((a)/3) = a) or "
 			"(a < -1 and 3*floor((a)/3) < a) }" },
+	{ 1, "{ [a, b] : a <= 1024 and b >= 0 and "
+		"((-31 - a + b <= 32*floor((-1 - a)/32) <= -33 + b and "
+		  "32*floor((-1 - a)/32) <= -16 + b + 16*floor((-1 - a)/16))"
+		"or (2 <= a <= 15 and b < a)) }" },
+	{ 1, "{ [a] : a > 0 and ((16*floor((a)/16) < a and "
+			"32*floor((a)/32) < a) or a <= 15) }" },
+	{ 1, "{ [a, b, c, d] : (-a + d) mod 64 = 0 and a <= 8 and b <= 1 and "
+			"10 - a <= c <= 3 and d >= 5 and 9 - 64b <= d <= 70;"
+	    "[a, b = 1, c, d] : (-a + d) mod 64 = 0 and a <= 8 and c >= 4 and "
+			"10 - a <= c <= 5 and 5 <= d <= 73 - c }" },
+	{ 1, "[n, m] -> { S_0[i] : (-n + i) mod 3 = 0 and m >= 3 + n and "
+			    "i >= n and 3*floor((2 + n + 2m)/3) <= n + 3m - i; "
+			 "S_0[n] : n <= m <= 2 + n }" },
 };
 
 /* A specialized coalescing test case that would result
