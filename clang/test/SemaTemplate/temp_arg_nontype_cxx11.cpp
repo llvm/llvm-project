@@ -34,5 +34,5 @@ namespace check_conversion_early {
   template<X &x> struct A<x> {}; // expected-error {{not implicitly convertible}}
 
   struct Y { constexpr operator int() const { return 0; } };
-  template<Y &y> struct A<y> {}; // expected-error {{depends on a template parameter of the partial specialization}}
+  template<Y &y> struct A<y> {}; // expected-error {{cannot be deduced}} expected-note {{'y'}}
 }

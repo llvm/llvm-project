@@ -1099,7 +1099,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void swap(unordered_map& __u)
         _NOEXCEPT_(__is_nothrow_swappable<__table>::value)
-        {__table_.swap(__u.__table_);}
+        { __table_.swap(__u.__table_);}
 
     _LIBCPP_INLINE_VISIBILITY
     hasher hash_function() const

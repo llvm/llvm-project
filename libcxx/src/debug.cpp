@@ -7,15 +7,78 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_DEBUG 1
 #include "__config"
 #include "__debug"
 #include "functional"
 #include "algorithm"
+#include "string"
+#include "cstdio"
 #include "__hash_table"
 #include "mutex"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+static std::string make_what_str(__libcpp_debug_info const& info) {
+  string msg = info.__file_;
+  msg += ":" + to_string(info.__line_) + ": _LIBCPP_ASSERT '";
+  msg += info.__pred_;
+  msg += "' failed. ";
+  msg += info.__msg_;
+  return msg;
+}
+
+_LIBCPP_SAFE_STATIC __libcpp_debug_function_type
+    __libcpp_debug_function = __libcpp_abort_debug_function;
+
+bool __libcpp_set_debug_function(__libcpp_debug_function_type __func) {
+  __libcpp_debug_function = __func;
+  return true;
+}
+
+_LIBCPP_NORETURN void __libcpp_abort_debug_function(__libcpp_debug_info const& info) {
+  std::fprintf(stderr, "%s\n", make_what_str(info).c_str());
+  std::abort();
+}
+
+_LIBCPP_NORETURN void __libcpp_throw_debug_function(__libcpp_debug_info const& info) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+  throw __libcpp_debug_exception(info);
+#else
+  __libcpp_abort_debug_function(info);
+#endif
+}
+
+struct __libcpp_debug_exception::__libcpp_debug_exception_imp {
+  __libcpp_debug_info __info_;
+  std::string __what_str_;
+};
+
+__libcpp_debug_exception::__libcpp_debug_exception() _NOEXCEPT
+    : __imp_(nullptr) {
+}
+
+__libcpp_debug_exception::__libcpp_debug_exception(
+    __libcpp_debug_info const& info) : __imp_(new __libcpp_debug_exception_imp)
+{
+  __imp_->__info_ = info;
+  __imp_->__what_str_ = make_what_str(info);
+}
+__libcpp_debug_exception::__libcpp_debug_exception(
+    __libcpp_debug_exception const& other) : __imp_(nullptr) {
+  if (other.__imp_)
+    __imp_ = new __libcpp_debug_exception_imp(*other.__imp_);
+}
+
+__libcpp_debug_exception::~__libcpp_debug_exception() _NOEXCEPT {
+  if (__imp_)
+    delete __imp_;
+}
+
+const char* __libcpp_debug_exception::what() const _NOEXCEPT {
+  if (__imp_)
+    return __imp_->__what_str_.c_str();
+  return "__libcpp_debug_exception";
+}
 
 _LIBCPP_FUNC_VIS
 __libcpp_db*

@@ -262,6 +262,7 @@
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__121__basic_string_commonILb1EE20__throw_out_of_rangeEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__123__match_any_but_newlineIcE6__execERNS_7__stateIcEE'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__123__match_any_but_newlineIwE6__execERNS_7__stateIwEE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__124__libcpp_debug_exception4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__15ctypeIcE10do_tolowerEPcPKc'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__15ctypeIcE10do_tolowerEc'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt3__15ctypeIcE10do_toupperEPcPKc'}
@@ -1212,6 +1213,16 @@
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121recursive_timed_mutexD1Ev'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121recursive_timed_mutexD2Ev'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121undeclare_no_pointersEPcm'}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__123__libcpp_debug_functionE', 'size': 0}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC1ERKNS_19__libcpp_debug_infoE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC1ERKS0_'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC1Ev'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC2ERKNS_19__libcpp_debug_infoE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC2ERKS0_'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionC2Ev'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionD0Ev'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionD1Ev'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__124__libcpp_debug_exceptionD2Ev'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_'}
@@ -1228,6 +1239,9 @@
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__129__libcpp_throw_debug_functionERKNS_19__libcpp_debug_infoE'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__13cinE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__14cerrE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__14clogE', 'size': 0}
@@ -1651,6 +1665,7 @@
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__120__codecvt_utf8_utf16IwEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__120__time_get_c_storageIcEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__120__time_get_c_storageIwEE', 'size': 0}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__124__libcpp_debug_exceptionE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__15ctypeIcEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__15ctypeIwEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTINSt3__16locale5facetE', 'size': 0}
@@ -2182,6 +2197,7 @@
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 0}
+{'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__124__libcpp_debug_exceptionE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__15ctypeIcEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__15ctypeIwEE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVNSt3__16locale5facetE', 'size': 0}

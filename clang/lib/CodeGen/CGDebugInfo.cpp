@@ -775,12 +775,6 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   uint64_t Size = 0;
   uint32_t Align = 0;
 
-  const RecordDecl *D = RD->getDefinition();
-  if (D && D->isCompleteDefinition()) {
-    Size = CGM.getContext().getTypeSize(Ty);
-    Align = getDeclAlignIfRequired(D, CGM.getContext());
-  }
-
   // Create the type.
   SmallString<256> FullName = getUniqueTagTypeName(Ty, CGM, TheCU);
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(

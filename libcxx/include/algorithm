@@ -1681,6 +1681,20 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
     return __i.base();
 }
 
+#else
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if
+<
+    is_trivially_copy_assignable<_Tp>::value,
+    __wrap_iter<_Tp*>
+>::type
+__unwrap_iter(__wrap_iter<_Tp*> __i)
+{
+    return __i;
+}
+
 #endif  // _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _InputIterator, class _OutputIterator>

@@ -307,3 +307,24 @@ namespace Auto {
     static_assert(nth_element_v<2, value_list<'a', 27U, false>> == false, "value mismatch");
   }
 }
+
+namespace Nested {
+  template<typename T> struct A {
+    template<auto X> struct B;
+    template<auto *P> struct B<P>;
+    template<auto **P> struct B<P> { using pointee = decltype(+**P); };
+    template<auto (*P)(T)> struct B<P> { using param = T; };
+    template<typename U, auto (*P)(T, U)> struct B<P> { using param2 = U; };
+  };
+
+  using Int = int;
+
+  int *n;
+  using Int = A<int>::B<&n>::pointee;
+
+  void f(int);
+  using Int = A<int>::B<&f>::param;
+
+  void g(int, int);
+  using Int = A<int>::B<&g>::param2;
+}

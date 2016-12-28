@@ -1023,15 +1023,16 @@ public:
     switch (E->getStmtClass()) {
     default: break;
     case Expr::CompoundLiteralExprClass: {
-      // Note that due to the nature of compound literals, this is guaranteed
-      // to be the only use of the variable, so we just generate it here.
       CompoundLiteralExpr *CLE = cast<CompoundLiteralExpr>(E);
+      CharUnits Align = CGM.getContext().getTypeAlignInChars(E->getType());
+      if (llvm::GlobalVariable *Addr =
+              CGM.getAddrOfConstantCompoundLiteralIfEmitted(CLE))
+        return ConstantAddress(Addr, Align);
+
       llvm::Constant* C = CGM.EmitConstantExpr(CLE->getInitializer(),
                                                CLE->getType(), CGF);
       // FIXME: "Leaked" on failure.
       if (!C) return ConstantAddress::invalid();
-
-      CharUnits Align = CGM.getContext().getTypeAlignInChars(E->getType());
 
       auto GV = new llvm::GlobalVariable(CGM.getModule(), C->getType(),
                                      E->getType().isConstant(CGM.getContext()),
@@ -1040,6 +1041,7 @@ public:
                                      llvm::GlobalVariable::NotThreadLocal,
                           CGM.getContext().getTargetAddressSpace(E->getType()));
       GV->setAlignment(Align.getQuantity());
+      CGM.setAddrOfConstantCompoundLiteral(CLE, GV);
       return ConstantAddress(GV, Align);
     }
     case Expr::StringLiteralClass:
@@ -1490,6 +1492,18 @@ CodeGenModule::EmitConstantValueForMemory(const APValue &Value,
     C = llvm::ConstantExpr::getZExt(C, BoolTy);
   }
   return C;
+}
+
+llvm::GlobalVariable *CodeGenModule::getAddrOfConstantCompoundLiteralIfEmitted(
+    const CompoundLiteralExpr *E) {
+  return EmittedCompoundLiterals.lookup(E);
+}
+
+void CodeGenModule::setAddrOfConstantCompoundLiteral(
+    const CompoundLiteralExpr *CLE, llvm::GlobalVariable *GV) {
+  bool Ok = EmittedCompoundLiterals.insert(std::make_pair(CLE, GV)).second;
+  (void)Ok;
+  assert(Ok && "CLE has already been emitted!");
 }
 
 ConstantAddress

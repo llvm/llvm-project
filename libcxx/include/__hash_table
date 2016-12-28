@@ -1181,7 +1181,7 @@ public:
 
     void swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-        _NOEXCEPT_(
+        _NOEXCEPT_DEBUG_(
             __is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value
             && (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value
                   || __is_nothrow_swappable<__pointer_allocator>::value)
@@ -1189,7 +1189,7 @@ public:
                   || __is_nothrow_swappable<__node_allocator>::value)
             );
 #else
-     _NOEXCEPT_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value);
+     _NOEXCEPT_DEBUG_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value);
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2408,15 +2408,15 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT
     --size();
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __c_node* __c = __get_db()->__find_c_and_lock(this);
-    for (__i_node** __p = __c->end_; __p != __c->beg_; )
+    for (__i_node** __dp = __c->end_; __dp != __c->beg_; )
     {
-        --__p;
-        iterator* __i = static_cast<iterator*>((*__p)->__i_);
+        --__dp;
+        iterator* __i = static_cast<iterator*>((*__dp)->__i_);
         if (__i->__node_ == __cn)
         {
-            (*__p)->__c_ = nullptr;
-            if (--__c->end_ != __p)
-                memmove(__p, __p+1, (__c->end_ - __p)*sizeof(__i_node*));
+            (*__dp)->__c_ = nullptr;
+            if (--__c->end_ != __dp)
+                memmove(__dp, __dp+1, (__c->end_ - __dp)*sizeof(__i_node*));
         }
     }
     __get_db()->unlock();
@@ -2524,7 +2524,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
 #if _LIBCPP_STD_VER <= 11
-    _NOEXCEPT_(
+    _NOEXCEPT_DEBUG_(
         __is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value
         && (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value
               || __is_nothrow_swappable<__pointer_allocator>::value)
@@ -2532,9 +2532,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
               || __is_nothrow_swappable<__node_allocator>::value)
             )
 #else
-  _NOEXCEPT_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value)
+  _NOEXCEPT_DEBUG_(__is_nothrow_swappable<hasher>::value && __is_nothrow_swappable<key_equal>::value)
 #endif
 {
+    _LIBCPP_ASSERT(__node_traits::propagate_on_container_swap::value ||
+                   this->__node_alloc() == __u.__node_alloc(),
+                   "list::swap: Either propagate_on_container_swap must be true"
+                   " or the allocators must compare equal");
     {
     __node_pointer_pointer __npp = __bucket_list_.release();
     __bucket_list_.reset(__u.__bucket_list_.release());

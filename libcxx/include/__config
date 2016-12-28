@@ -651,6 +651,17 @@ namespace std {
 #  define _NOEXCEPT_(x)
 #endif
 
+#if defined(_LIBCPP_DEBUG_USE_EXCEPTIONS)
+# if !defined(_LIBCPP_DEBUG)
+#   error cannot use _LIBCPP_DEBUG_USE_EXCEPTIONS unless _LIBCPP_DEBUG is defined
+# endif
+# define _NOEXCEPT_DEBUG noexcept(false)
+# define _NOEXCEPT_DEBUG_(x) noexcept(false)
+#else
+# define _NOEXCEPT_DEBUG _NOEXCEPT
+# define _NOEXCEPT_DEBUG_(x) _NOEXCEPT_(x)
+#endif
+
 #ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef unsigned short char16_t;
 typedef unsigned int   char32_t;
