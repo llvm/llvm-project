@@ -863,11 +863,23 @@ static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
-  // FIXME: We could simply import the modules mentioned in the combined index
-  // here.
+  // We can simply import the values mentioned in the combined index, since
+  // we should only invoke this using the individual indexes written out
+  // via a WriteIndexesThinBackend.
   FunctionImporter::ImportMapTy ImportList;
-  ComputeCrossModuleImportForModule(M->getModuleIdentifier(), *CombinedIndex,
-                                    ImportList);
+  for (auto &GlobalList : *CombinedIndex) {
+    auto GUID = GlobalList.first;
+    assert(GlobalList.second.size() == 1 &&
+           "Expected individual combined index to have one summary per GUID");
+    auto &Summary = GlobalList.second[0];
+    // Skip the summaries for the importing module. These are included to
+    // e.g. record required linkage changes.
+    if (Summary->modulePath() == M->getModuleIdentifier())
+      continue;
+    // Doesn't matter what value we plug in to the map, just needs an entry
+    // to provoke importing by thinBackend.
+    ImportList[Summary->modulePath()][GUID] = 1;
+  }
 
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> OwnedImports;
   MapVector<llvm::StringRef, llvm::BitcodeModule> ModuleMap;
