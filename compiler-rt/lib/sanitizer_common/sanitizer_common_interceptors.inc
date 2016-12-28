@@ -70,6 +70,19 @@
 #define iconv __bsd_iconv
 #endif
 
+// Platform-specific options.
+#if SANITIZER_MAC
+namespace __sanitizer {
+bool PlatformHasDifferentMemcpyAndMemmove();
+}
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE \
+  (__sanitizer::PlatformHasDifferentMemcpyAndMemmove())
+#elif SANITIZER_WINDOWS64
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
+#else
+#define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE true
+#endif  // SANITIZER_MAC
+
 #ifndef COMMON_INTERCEPTOR_INITIALIZE_RANGE
 #define COMMON_INTERCEPTOR_INITIALIZE_RANGE(p, size) {}
 #endif
@@ -192,11 +205,6 @@
   }
 #endif
 
-// On OS X, calling internal_memcpy here will cause memory corruptions,
-// because memcpy and memmove are actually aliases of the same
-// implementation.  We need to use internal_memmove here.
-// N.B.: If we switch this to internal_ we'll have to use internal_memmove
-// due to memcpy being an alias of memmove on OS X.
 #ifndef COMMON_INTERCEPTOR_MEMCPY_IMPL
 #define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size) \
   {                                                         \
@@ -210,10 +218,6 @@
     }                                                       \
     return REAL(memcpy)(dst, src, size);                    \
   }
-#endif
-
-#ifndef COMMON_INTERCEPT_FUNCTION_MEMCPY
-#define COMMON_INTERCEPT_FUNCTION_MEMCPY() {}
 #endif
 
 struct FileMetadata {
@@ -641,11 +645,29 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
 
 #if SANITIZER_INTERCEPT_MEMCPY
 INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
+  // On OS X, calling internal_memcpy here will cause memory corruptions,
+  // because memcpy and memmove are actually aliases of the same
+  // implementation.  We need to use internal_memmove here.
+  // N.B.: If we switch this to internal_ we'll have to use internal_memmove
+  // due to memcpy being an alias of memmove on OS X.
   void *ctx;
-  COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
+  if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
+    COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
+  } else {
+    COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
+  }
 }
 
-#define INIT_MEMCPY COMMON_INTERCEPT_FUNCTION_MEMCPY()
+#define INIT_MEMCPY                                  \
+  do {                                               \
+    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) { \
+      COMMON_INTERCEPT_FUNCTION(memcpy);             \
+    } else {                                         \
+      ASSIGN_REAL(memcpy, memmove);                  \
+    }                                                \
+    CHECK(REAL(memcpy));                             \
+  } while (false)
+
 #else
 #define INIT_MEMCPY
 #endif

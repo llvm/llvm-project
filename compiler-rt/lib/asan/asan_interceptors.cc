@@ -250,37 +250,16 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     ASAN_MEMMOVE_IMPL(ctx, to, from, size);                  \
   } while (false)
 
-// At least on 10.7 and 10.8 both memcpy() and memmove() are being replaced
-// with WRAP(memcpy). As a result, false positives are reported for
-// memmove() calls. If we just disable error reporting with
-// ASAN_OPTIONS=replace_intrin=0, memmove() is still replaced with
-// internal_memcpy(), which may lead to crashes, see
-// http://llvm.org/bugs/show_bug.cgi?id=16362.
 #define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
   do {                                                      \
     ASAN_INTERCEPTOR_ENTER(ctx, memcpy);                    \
-    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {        \
-      ASAN_MEMCPY_IMPL(ctx, to, from, size);                \
-    } else {                                                \
-      ASAN_MEMMOVE_IMPL(ctx, to, from, size);               \
-    }                                                       \
+    ASAN_MEMCPY_IMPL(ctx, to, from, size);                  \
   } while (false)
 
 #define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
   do {                                                      \
     ASAN_INTERCEPTOR_ENTER(ctx, memset);                    \
     ASAN_MEMSET_IMPL(ctx, block, c, size);                  \
-  } while (false)
-
-// In asan, REAL(memmove) is not used, but it is used in msan.
-#define COMMON_INTERCEPT_FUNCTION_MEMCPY()           \
-  do {                                               \
-    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) { \
-      ASAN_INTERCEPT_FUNC(memcpy);                   \
-    } else {                                         \
-      ASSIGN_REAL(memcpy, memmove);                  \
-    }                                                \
-    CHECK(REAL(memcpy));                             \
   } while (false)
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
