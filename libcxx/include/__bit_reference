@@ -163,7 +163,7 @@ __find_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type 
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    static const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
     {
@@ -199,7 +199,7 @@ __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
     {
@@ -251,7 +251,7 @@ __count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
     typedef typename _It::difference_type difference_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    const int __bits_per_word = _It::__bits_per_word;
     difference_type __r = 0;
     // do first partial word
     if (__first.__ctz_ != 0)
@@ -282,7 +282,7 @@ __count_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_typ
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
     typedef typename _It::difference_type difference_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    const int __bits_per_word = _It::__bits_per_word;
     difference_type __r = 0;
     // do first partial word
     if (__first.__ctz_ != 0)
@@ -324,7 +324,7 @@ __fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, false> _It;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
     {
@@ -354,7 +354,7 @@ __fill_n_true(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, false> _It;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
     {
@@ -412,7 +412,7 @@ __copy_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsCon
     typedef __bit_iterator<_Cp, _IsConst> _In;
     typedef  typename _In::difference_type difference_type;
     typedef typename _In::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _In::__bits_per_word;
+    const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -461,7 +461,7 @@ __copy_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsC
     typedef __bit_iterator<_Cp, _IsConst> _In;
     typedef  typename _In::difference_type difference_type;
     typedef typename _In::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _In::__bits_per_word;
+    static const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -551,7 +551,7 @@ __copy_backward_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_C
     typedef __bit_iterator<_Cp, _IsConst> _In;
     typedef  typename _In::difference_type difference_type;
     typedef typename _In::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _In::__bits_per_word;
+    const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -600,7 +600,7 @@ __copy_backward_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<
     typedef __bit_iterator<_Cp, _IsConst> _In;
     typedef  typename _In::difference_type difference_type;
     typedef typename _In::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _In::__bits_per_word;
+    const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -718,7 +718,7 @@ __swap_ranges_aligned(__bit_iterator<__C1, false> __first, __bit_iterator<__C1, 
     typedef __bit_iterator<__C1, false> _I1;
     typedef  typename _I1::difference_type difference_type;
     typedef typename _I1::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _I1::__bits_per_word;
+    const int __bits_per_word = _I1::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -768,7 +768,7 @@ __swap_ranges_unaligned(__bit_iterator<__C1, false> __first, __bit_iterator<__C1
     typedef __bit_iterator<__C1, false> _I1;
     typedef  typename _I1::difference_type difference_type;
     typedef typename _I1::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _I1::__bits_per_word;
+    const int __bits_per_word = _I1::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
     {
@@ -959,7 +959,7 @@ __equal_unaligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> 
     typedef __bit_iterator<_Cp, _IC1> _It;
     typedef  typename _It::difference_type difference_type;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    static const int __bits_per_word = _It::__bits_per_word;
     difference_type __n = __last1 - __first1;
     if (__n > 0)
     {
@@ -1041,7 +1041,7 @@ __equal_aligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __
     typedef __bit_iterator<_Cp, _IC1> _It;
     typedef  typename _It::difference_type difference_type;
     typedef typename _It::__storage_type __storage_type;
-    static const unsigned __bits_per_word = _It::__bits_per_word;
+    static const int __bits_per_word = _It::__bits_per_word;
     difference_type __n = __last1 - __first1;
     if (__n > 0)
     {

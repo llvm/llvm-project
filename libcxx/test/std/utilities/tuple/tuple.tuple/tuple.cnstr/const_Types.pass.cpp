@@ -82,6 +82,7 @@ int main()
     {
         // check that the literal '0' can implicitly initialize a stored pointer.
         std::tuple<int*> t = 0;
+        assert(std::get<0>(t) == nullptr);
     }
     {
         std::tuple<int> t(2);

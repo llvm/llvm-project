@@ -371,7 +371,7 @@ struct CopyInsertable {
 
 
   template <class ...Args>
-  CopyInsertable(Args&&... args) {
+  CopyInsertable(Args&&...) {
     assert(false);
   }
 

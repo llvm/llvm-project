@@ -25,4 +25,5 @@ int main() {
 
   P p1(2);
   P p2(std::move(p1));
+  assert(*p2 == 2);
 }

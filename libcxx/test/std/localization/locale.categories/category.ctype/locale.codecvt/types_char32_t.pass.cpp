@@ -27,7 +27,6 @@
 
 int main()
 {
-//#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     typedef std::codecvt<char32_t, char, std::mbstate_t> F;
     static_assert((std::is_base_of<std::locale::facet, F>::value), "");
     static_assert((std::is_base_of<std::codecvt_base, F>::value), "");
@@ -38,5 +37,5 @@ int main()
     assert(std::has_facet<F>(l));
     const F& f = std::use_facet<F>(l);
     (void)F::id;
-//#endif
+    ((void)f);
 }

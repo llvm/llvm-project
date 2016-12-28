@@ -18,7 +18,6 @@
 
 int main()
 {
-    char s1[] = {1, 2, 3};
     char s2[3] = {0};
     assert(std::char_traits<char>::assign(s2, 3, char(5)) == s2);
     assert(s2[0] == char(5));

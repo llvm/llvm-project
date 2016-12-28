@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -6,25 +7,24 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Test that the default debug handler aborts the program.
 
-// <list>
+#define _LIBCPP_DEBUG 0
 
-// Call back() on empty const container.
-
-#define _LIBCPP_DEBUG 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-
-#include <list>
-#include <cassert>
-#include <iterator>
-#include <exception>
+#include <csignal>
 #include <cstdlib>
+#include <__debug>
+
+void signal_handler(int signal)
+{
+    if (signal == SIGABRT)
+      std::_Exit(EXIT_SUCCESS);
+    std::_Exit(EXIT_FAILURE);
+}
 
 int main()
 {
-    typedef int T;
-    typedef std::list<T> C;
-    const C c;
-    assert(c.back() == 0);
-    assert(false);
+  if (std::signal(SIGABRT, signal_handler) != SIG_ERR)
+    _LIBCPP_ASSERT(false, "foo");
+  return EXIT_FAILURE;
 }

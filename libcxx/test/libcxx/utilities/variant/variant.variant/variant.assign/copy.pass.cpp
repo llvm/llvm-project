@@ -11,7 +11,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // Clang 3.8 doesn't generate constexpr special members correctly.
-// XFAIL: clang-3.8, apple-clang-7
+// XFAIL: clang-3.8, apple-clang-7, apple-clang-8
 
 // <variant>
 

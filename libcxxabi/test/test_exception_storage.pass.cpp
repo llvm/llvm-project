@@ -42,7 +42,7 @@ size_t                 thread_globals [ NUMTHREADS ] = { 0 };
 __libcxxabi_thread_t   threads        [ NUMTHREADS ];
 #endif
 
-int main ( int argc, char *argv [] ) {
+int main () {
     int retVal = 0;
 
 #ifndef _LIBCXXABI_HAS_NO_THREADS

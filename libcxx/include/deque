@@ -2735,7 +2735,7 @@ deque<_Tp, _Allocator>::erase(const_iterator __f)
     difference_type __pos = __f - __b;
     iterator __p = __b + __pos;
     allocator_type& __a = __base::__alloc();
-    if (__pos <= (__base::size() - 1) / 2)
+    if (static_cast<size_t>(__pos) <= (__base::size() - 1) / 2)
     {   // erase from front
         _VSTD::move_backward(__b, __p, _VSTD::next(__p));
         __alloc_traits::destroy(__a, _VSTD::addressof(*__b));
@@ -2773,7 +2773,7 @@ deque<_Tp, _Allocator>::erase(const_iterator __f, const_iterator __l)
     if (__n > 0)
     {
         allocator_type& __a = __base::__alloc();
-        if (__pos <= (__base::size() - __n) / 2)
+        if (static_cast<size_t>(__pos) <= (__base::size() - __n) / 2)
         {   // erase from front
             iterator __i = _VSTD::move_backward(__b, __p, __p + __n);
             for (; __b != __i; ++__b)

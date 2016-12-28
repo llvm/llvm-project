@@ -54,10 +54,12 @@ unsigned count_equal::count = 0;
 
 template <typename Iter1, typename Iter2>
 void do_search(Iter1 b1, Iter1 e1, Iter2 b2, Iter2 e2, Iter1 result, unsigned max_count) {
+    count_equal::count = 0;
     std::experimental::boyer_moore_searcher<Iter2,
                  MyHash<typename std::remove_cv<typename std::iterator_traits<Iter2>::value_type>::type>,
                  count_equal>
           s{b2, e2};
+    assert(count_equal::count <= max_count);
     assert(result == std::experimental::search(b1, e1, s));
 }
 
@@ -78,7 +80,10 @@ test()
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia+sa-3), Iter2(ia+sa), Iter1(ia+sa-3), 3*sa);
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia),      Iter2(ia+sa), Iter1(ia),      sa*sa);
     do_search(Iter1(ia), Iter1(ia+sa-1), Iter2(ia),      Iter2(ia+sa), Iter1(ia+sa-1), (sa-1)*sa);
-    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa);
+
+    // FIXME: The max_count for this search should be 'sa'
+    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),     sa * 2);
+
     int ib[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]);
     int ic[] = {1};
@@ -93,6 +98,7 @@ test()
     const unsigned sh = sizeof(ih)/sizeof(ih[0]);
     int ii[] = {1, 1, 2};
     do_search(Iter1(ih), Iter1(ih+sh), Iter2(ii), Iter2(ii+3), Iter1(ih+3),  sh*3);
+
 }
 
 template <class Iter1, class Iter2>
@@ -112,7 +118,10 @@ test2()
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia+sa-3), Iter2(ia+sa), Iter1(ia+sa-3), 3*sa);
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia),      Iter2(ia+sa), Iter1(ia),      sa*sa);
     do_search(Iter1(ia), Iter1(ia+sa-1), Iter2(ia),      Iter2(ia+sa), Iter1(ia+sa-1), (sa-1)*sa);
-    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa);
+
+    // FIXME: The max_count for this search should be 'sa'
+    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa * 2);
+
     char ib[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]);
     char ic[] = {1};

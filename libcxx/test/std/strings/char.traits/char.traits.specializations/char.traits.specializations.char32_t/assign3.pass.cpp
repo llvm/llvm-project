@@ -19,7 +19,6 @@
 int main()
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-    char32_t s1[] = {1, 2, 3};
     char32_t s2[3] = {0};
     assert(std::char_traits<char32_t>::assign(s2, 3, char32_t(5)) == s2);
     assert(s2[0] == char32_t(5));

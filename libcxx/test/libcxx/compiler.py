@@ -147,9 +147,6 @@ class CXXCompiler(object):
         cmd += flags
         return cmd
 
-    def _getWarningFlags(self):
-        return self.warning_flags if self.use_warnings else []
-
     def preprocessCmd(self, source_files, out=None, flags=[]):
         return self._basicCmd(source_files, out, flags=flags,
                              mode=self.CM_PreProcess,
@@ -277,22 +274,21 @@ class CXXCompiler(object):
         another error is triggered during compilation.
         """
         assert isinstance(flag, str)
+        assert flag.startswith('-W')
         if not flag.startswith('-Wno-'):
-            if self.hasCompileFlag(flag):
-                self.warning_flags += [flag]
-                return True
-            return False
+            return self.hasCompileFlag(flag)
         flags = ['-Werror', flag]
         old_use_warnings = self.use_warnings
         self.useWarnings(False)
         cmd = self.compileCmd('-', os.devnull, flags)
-        self.useWarnings(True)
+        self.useWarnings(old_use_warnings)
         # Remove '-v' because it will cause the command line invocation
         # to be printed as part of the error output.
         # TODO(EricWF): Are there other flags we need to worry about?
         if '-v' in cmd:
             cmd.remove('-v')
         out, err, rc = lit.util.executeCommand(cmd, input='#error\n')
+
         assert rc != 0
         if flag in err:
             return False
@@ -300,6 +296,7 @@ class CXXCompiler(object):
 
     def addWarningFlagIfSupported(self, flag):
         if self.hasWarningFlag(flag):
+            assert flag not in self.warning_flags
             self.warning_flags += [flag]
             return True
         return False

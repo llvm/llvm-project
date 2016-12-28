@@ -1,10 +1,5 @@
 This is meant to be a general place to list things that should be done "someday"
 
-
-ABI Related Tasks
-=================
-* Explicitly manage and verify symbols exported from the dylib.
-
 CXX Runtime Library Tasks
 =========================
 * Fix that CMake always link to /usr/lib/libc++abi.dylib on OS X.
@@ -19,7 +14,6 @@ Atomic Related Tasks
 
 Test Suite Tasks
 ================
-* Move all libc++ specific tests from test/std into test/libcxx.
 * Improve the quality and portability of the locale test data.
 * Convert failure tests to use Clang Verify.
 
@@ -29,6 +23,4 @@ Misc Tasks
 * run clang-tidy on libc++
 * Document the "conditionally-supported" bits of libc++
 * Look at basic_string's move assignment operator, re LWG 2063 and POCMA
-* libc++ is missing try_emplace
 * Put a static_assert in std::allocator to deny const/volatile types (LWG 2447)
-

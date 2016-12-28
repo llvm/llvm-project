@@ -154,6 +154,9 @@ private:
   // Records all using namespace declarations, which can be used to shorten
   // namespace specifiers.
   llvm::SmallPtrSet<const UsingDirectiveDecl *, 8> UsingNamespaceDecls;
+  // Records all namespace alias declarations, which can be used to shorten
+  // namespace specifiers.
+  llvm::SmallPtrSet<const NamespaceAliasDecl *, 8> NamespaceAliasDecls;
   // TypeLocs of CXXCtorInitializer. Types of CXXCtorInitializers do not need to
   // be fixed.
   llvm::SmallVector<TypeLoc, 8> BaseCtorInitializerTypeLocs;

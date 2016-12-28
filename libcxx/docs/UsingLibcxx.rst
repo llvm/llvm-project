@@ -133,17 +133,7 @@ or disable extended libc++ behavior, including enabling "debug mode" or
 thread safety annotations.
 
 **_LIBCPP_DEBUG**:
-  This macro is used to enable assertions and other debugging checks within
-  libc++. All debugging checks are disabled by default.
-
-  **Values**: ``0``, ``1``
-
-  Defining ``_LIBCPP_DEBUG`` to ``0`` or greater enables most of libc++'s
-  assertions. Defining ``_LIBCPP_DEBUG`` to ``1`` enables "iterator debugging"
-  which provides additional assertions about the validity of iterators used by
-  the program.
-
-  Note that this option has no effect on libc++'s ABI
+  See :ref:`using-debug-mode` for more information.
 
 **_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
   This macro is used to enable -Wthread-safety annotations on libc++'s

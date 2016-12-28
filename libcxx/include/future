@@ -520,6 +520,7 @@ void __throw_future_error(future_errc _Ev)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw future_error(make_error_code(_Ev));
 #else
+    ((void)_Ev);
     _VSTD::abort();
 #endif
 }

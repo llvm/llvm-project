@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -6,26 +7,24 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// UNSUPPORTED: libcpp-no-exceptions
 
-// <list>
-
-// Dereference non-dereferenceable iterator.
+// Test that defining _LIBCPP_DEBUG_USE_EXCEPTIONS causes _LIBCPP_ASSERT
+// to throw on failure.
 
 #define _LIBCPP_DEBUG 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+#define _LIBCPP_DEBUG_USE_EXCEPTIONS
 
-#include <list>
-#include <cassert>
-#include <iterator>
-#include <exception>
 #include <cstdlib>
+#include <exception>
+#include <type_traits>
+#include <__debug>
+#include <cassert>
 
 int main()
 {
-    typedef int T;
-    typedef std::list<T> C;
-    C c(1);
-    C::iterator i = c.end();
-    T j = *i;
+  try {
+    _LIBCPP_ASSERT(false, "foo");
     assert(false);
+  } catch (...) {}
 }

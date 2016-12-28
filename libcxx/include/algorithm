@@ -1681,6 +1681,20 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
     return __i.base();
 }
 
+#else
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if
+<
+    is_trivially_copy_assignable<_Tp>::value,
+    __wrap_iter<_Tp*>
+>::type
+__unwrap_iter(__wrap_iter<_Tp*> __i)
+{
+    return __i;
+}
+
 #endif  // _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _InputIterator, class _OutputIterator>
@@ -1754,7 +1768,9 @@ _BidirectionalIterator2
 copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
               _BidirectionalIterator2 __result)
 {
-    return _VSTD::__copy_backward(__unwrap_iter(__first), __unwrap_iter(__last), __unwrap_iter(__result));
+    return _VSTD::__copy_backward(__unwrap_iter(__first),
+                                  __unwrap_iter(__last),
+                                  __unwrap_iter(__result));
 }
 
 // copy_if
@@ -4895,7 +4911,8 @@ push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 
 template <class _Compare, class _RandomAccessIterator>
 void
-__sift_down(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
+__sift_down(_RandomAccessIterator __first, _RandomAccessIterator /*__last*/,
+            _Compare __comp,
             typename iterator_traits<_RandomAccessIterator>::difference_type __len,
             _RandomAccessIterator __start)
 {

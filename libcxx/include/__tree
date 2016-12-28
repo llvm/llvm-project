@@ -1428,7 +1428,7 @@ private:
         __node_alloc() = __t.__node_alloc();
         }
     _LIBCPP_INLINE_VISIBILITY
-    void __copy_assign_alloc(const __tree& __t, false_type) {}
+    void __copy_assign_alloc(const __tree&, false_type) {}
 
     void __move_assign(__tree& __t, false_type);
     void __move_assign(__tree& __t, true_type)
@@ -1448,7 +1448,7 @@ private:
         _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value)
         {__node_alloc() = _VSTD::move(__t.__node_alloc());}
     _LIBCPP_INLINE_VISIBILITY
-    void __move_assign_alloc(__tree& __t, false_type) _NOEXCEPT {}
+    void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
     __node_pointer __detach();
     static __node_pointer __detach(__node_pointer);

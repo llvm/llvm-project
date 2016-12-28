@@ -1184,8 +1184,9 @@ void ScriptParser::readInclude() {
     setError("cannot open " + Tok);
     return;
   }
-  std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  tokenize({Saver.save(MB->getBuffer()), unquote(Tok)});
+  MemoryBufferRef MBRef = (*MBOrErr)->getMemBufferRef();
+  make<std::unique_ptr<MemoryBuffer>>(std::move(*MBOrErr)); // take MB ownership
+  tokenize(MBRef);
 }
 
 void ScriptParser::readOutput() {

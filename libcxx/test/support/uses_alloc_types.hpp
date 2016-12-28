@@ -281,7 +281,7 @@ public:
         : Base(&makeArgumentID<UsesAllocatorV1 &&>()) {}
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV1(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
+    UsesAllocatorV1(Args&&...) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>
@@ -290,10 +290,10 @@ public:
     { }
 
     // BLOWS UP: Uses Allocator Last Ctor
-    template <class _First, class ...Args, EnableIfB<sizeof...(Args) == Arity> _Dummy = false>
-    constexpr UsesAllocatorV1(_First&& __first, Args&&... args)
+    template <class First, class ...Args, EnableIfB<sizeof...(Args) == Arity> Dummy = false>
+    constexpr UsesAllocatorV1(First&&, Args&&...)
     {
-        static_assert(!std::is_same<_First, _First>::value, "");
+        static_assert(!std::is_same<First, First>::value, "");
     }
 };
 
@@ -315,7 +315,7 @@ public:
 
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV2(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
+    UsesAllocatorV2(Args&&...) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Last Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity + 1> = false>
@@ -341,7 +341,7 @@ public:
 
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    UsesAllocatorV3(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
+    UsesAllocatorV3(Args&&...) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>
@@ -372,7 +372,7 @@ public:
         : Base(&makeArgumentID<NotUsesAllocator &&>()) {}
     // Non-Uses Allocator Ctor
     template <class ...Args, EnableIfB<sizeof...(Args) == Arity> = false>
-    NotUsesAllocator(Args&&... args) : Base(&makeArgumentID<Args&&...>()) {}
+    NotUsesAllocator(Args&&...) : Base(&makeArgumentID<Args&&...>()) {}
 
     // Uses Allocator Arg Ctor
     template <class ...Args>

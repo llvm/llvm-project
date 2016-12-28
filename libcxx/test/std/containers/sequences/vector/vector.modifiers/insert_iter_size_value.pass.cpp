@@ -11,13 +11,11 @@
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <vector>
 #include <cassert>
 #include <cstddef>
+
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
@@ -84,14 +82,6 @@ int main()
         for (++j; j < 105; ++j)
             assert(v[j] == 0);
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::vector<int> c1(100);
-        std::vector<int> c2;
-        std::vector<int>::iterator i = c1.insert(c2.cbegin() + 10, 5, 1);
-        assert(false);
-    }
-#endif
 #if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v(100);
@@ -121,13 +111,5 @@ int main()
         for (++j; j < 105; ++j)
             assert(v[j] == 0);
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::vector<int, min_allocator<int>> c1(100);
-        std::vector<int, min_allocator<int>> c2;
-        std::vector<int, min_allocator<int>>::iterator i = c1.insert(c2.cbegin() + 10, 5, 1);
-        assert(false);
-    }
-#endif
 #endif
 }
