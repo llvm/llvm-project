@@ -452,7 +452,7 @@ define <2 x i64> @test_abs_ge_v2i64(<2 x i64> %a) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsraq $63, %xmm0, %xmm1
 ; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxorq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %tmp1neg = sub <2 x i64> zeroinitializer, %a
   %b = icmp sge <2 x i64> %a, zeroinitializer
@@ -501,7 +501,7 @@ define <4 x i64> @test_abs_gt_v4i64(<4 x i64> %a) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsraq $63, %ymm0, %ymm1
 ; AVX512-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpxorq %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %tmp1neg = sub <4 x i64> zeroinitializer, %a
   %b = icmp sgt <4 x i64> %a, <i64 -1, i64 -1, i64 -1, i64 -1>

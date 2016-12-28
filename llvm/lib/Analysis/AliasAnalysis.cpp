@@ -72,9 +72,6 @@ AAResults::~AAResults() {
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
-  if (PA.areAllPreserved())
-    return false; // Nothing to do, everything is still valid.
-
   // Check if the AA manager itself has been invalidated.
   auto PAC = PA.getChecker<AAManager>();
   if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())

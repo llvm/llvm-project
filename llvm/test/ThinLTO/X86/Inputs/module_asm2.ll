@@ -5,8 +5,12 @@ define i32 @main({ i64, { i64, i8* }* } %unnamed) #0 {
   %1 = call i32 @func1() #1
   %2 = call i32 @func2() #1
   %3 = call i32 @func3() #1
+  %4 = call i32 @callglobalfunc() #1
+  %5 = call i32 @callweakfunc() #1
   ret i32 %1
 }
 declare i32 @func1() #1
 declare i32 @func2() #1
 declare i32 @func3() #1
+declare i32 @callglobalfunc() #1
+declare i32 @callweakfunc() #1

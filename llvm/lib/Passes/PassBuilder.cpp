@@ -490,7 +490,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // rather than on each loop in an inside-out manner, and so they are actually
   // function passes.
   OptimizePM.addPass(LoopDistributePass());
+#if 0
+  // FIXME: LoopVectorize relies on "requiring" LCSSA which isn't supported in
+  // the new PM.
   OptimizePM.addPass(LoopVectorizePass());
+#endif
   // FIXME: Need to port Loop Load Elimination and add it here.
   OptimizePM.addPass(InstCombinePass());
 

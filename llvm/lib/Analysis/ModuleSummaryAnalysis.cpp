@@ -284,7 +284,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
         Triple(M.getTargetTriple()), M.getModuleInlineAsm(),
         [&M, &Index](StringRef Name, object::BasicSymbolRef::Flags Flags) {
           // Symbols not marked as Weak or Global are local definitions.
-          if (Flags & (object::BasicSymbolRef::SF_Weak ||
+          if (Flags & (object::BasicSymbolRef::SF_Weak |
                        object::BasicSymbolRef::SF_Global))
             return;
           GlobalValue *GV = M.getNamedValue(Name);

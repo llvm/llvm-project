@@ -661,6 +661,49 @@ raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods) {
 // AsmParser
 //===----------------------------------------------------------------------===//
 
+// Holds info related to the current kernel, e.g. count of SGPRs used.
+// Kernel scope begins at .amdgpu_hsa_kernel directive, ends at next
+// .amdgpu_hsa_kernel or at EOF.
+class KernelScopeInfo {
+  int SgprIndexUnusedMin;
+  int VgprIndexUnusedMin;
+  MCContext *Ctx;
+
+  void usesSgprAt(int i) {
+    if (i >= SgprIndexUnusedMin) {
+      SgprIndexUnusedMin = ++i;
+      if (Ctx) {
+        MCSymbol * const Sym = Ctx->getOrCreateSymbol(Twine(".kernel.sgpr_count"));
+        Sym->setVariableValue(MCConstantExpr::create(SgprIndexUnusedMin, *Ctx));
+      }
+    }
+  }
+  void usesVgprAt(int i) {
+    if (i >= VgprIndexUnusedMin) {
+      VgprIndexUnusedMin = ++i;
+      if (Ctx) {
+        MCSymbol * const Sym = Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
+        Sym->setVariableValue(MCConstantExpr::create(VgprIndexUnusedMin, *Ctx));
+      }
+    }
+  }
+public:
+  KernelScopeInfo() : SgprIndexUnusedMin(-1), VgprIndexUnusedMin(-1), Ctx(nullptr)
+  {}
+  void initialize(MCContext &Context) {
+    Ctx = &Context;
+    usesSgprAt(SgprIndexUnusedMin = -1);
+    usesVgprAt(VgprIndexUnusedMin = -1);
+  }
+  void usesRegister(RegisterKind RegKind, unsigned DwordRegIndex, unsigned RegWidth) {
+    switch (RegKind) {
+      case IS_SGPR: usesSgprAt(DwordRegIndex + RegWidth - 1); break;
+      case IS_VGPR: usesVgprAt(DwordRegIndex + RegWidth - 1); break;
+      default: break;
+    }
+  }
+};
+
 class AMDGPUAsmParser : public MCTargetAsmParser {
   const MCInstrInfo &MII;
   MCAsmParser &Parser;
@@ -668,6 +711,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   unsigned ForcedEncodingSize;
   bool ForcedDPP;
   bool ForcedSDWA;
+  KernelScopeInfo KernelScope;
 
   /// @name Auto-generated Match Functions
   /// {
@@ -693,7 +737,7 @@ private:
   bool ParseSectionDirectiveHSADataGlobalProgram();
   bool ParseSectionDirectiveHSARodataReadonlyAgent();
   bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, RegisterKind RegKind, unsigned Reg1, unsigned RegNum);
-  bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth);
+  bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth, unsigned *DwordRegIndex);
   void cvtMubufImpl(MCInst &Inst, const OperandVector &Operands, bool IsAtomic, bool IsAtomicReturn);
 
 public:
@@ -731,6 +775,7 @@ public:
       Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_stepping"));
       Sym->setVariableValue(MCConstantExpr::create(Isa.Stepping, Ctx));
     }
+    KernelScope.initialize(getContext());
   }
 
   bool isSI() const {
@@ -1240,8 +1285,9 @@ bool AMDGPUAsmParser::AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, R
   }
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth)
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth, unsigned *DwordRegIndex)
 {
+  if (DwordRegIndex) { *DwordRegIndex = 0; }
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   if (getLexer().is(AsmToken::Identifier)) {
     StringRef RegName = Parser.getTok().getString();
@@ -1301,7 +1347,7 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, 
   } else if (getLexer().is(AsmToken::LBrac)) {
     // List of consecutive registers: [s0,s1,s2,s3]
     Parser.Lex();
-    if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
+    if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, nullptr))
       return false;
     if (RegWidth != 1)
       return false;
@@ -1313,7 +1359,7 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, 
       } else if (getLexer().is(AsmToken::RBrac)) {
         Parser.Lex();
         break;
-      } else if (ParseAMDGPURegister(RegKind1, Reg1, RegNum1, RegWidth1)) {
+      } else if (ParseAMDGPURegister(RegKind1, Reg1, RegNum1, RegWidth1, nullptr)) {
         if (RegWidth1 != 1) {
           return false;
         }
@@ -1341,11 +1387,12 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, 
   {
     unsigned Size = 1;
     if (RegKind == IS_SGPR || RegKind == IS_TTMP) {
-      // SGPR and TTMP registers must be are aligned. Max required alignment is 4 dwords.
+      // SGPR and TTMP registers must be aligned. Max required alignment is 4 dwords.
       Size = std::min(RegWidth, 4u);
     }
     if (RegNum % Size != 0)
       return false;
+    if (DwordRegIndex) { *DwordRegIndex = RegNum; }
     RegNum = RegNum / Size;
     int RCID = getRegClass(RegKind, RegWidth);
     if (RCID == -1)
@@ -1371,11 +1418,12 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
   SMLoc StartLoc = Tok.getLoc();
   SMLoc EndLoc = Tok.getEndLoc();
   RegisterKind RegKind;
-  unsigned Reg, RegNum, RegWidth;
+  unsigned Reg, RegNum, RegWidth, DwordRegIndex;
 
-  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth)) {
+  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, &DwordRegIndex)) {
     return nullptr;
   }
+  KernelScope.usesRegister(RegKind, DwordRegIndex, RegWidth);
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc, false);
 }
 
@@ -1842,6 +1890,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
   getTargetStreamer().EmitAMDGPUSymbolType(KernelName,
                                            ELF::STT_AMDGPU_HSA_KERNEL);
   Lex();
+  KernelScope.initialize(getContext());
   return false;
 }
 

@@ -80,7 +80,7 @@ define <4 x i32> @test_store_4xi32(<4 x i32>* nocapture %addr, <4 x i32> %value,
 ; SKX32-LABEL: test_store_4xi32:
 ; SKX32:       # BB#0:
 ; SKX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX32-NEXT:    vmovdqu64 %xmm0, (%rdi)
+; SKX32-NEXT:    vmovdqu %xmm0, (%rdi)
 ; SKX32-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
   store <4 x i32> %foo, <4 x i32>* %addr, align 1
@@ -123,7 +123,7 @@ define <4 x i32> @test_store_4xi32_aligned(<4 x i32>* nocapture %addr, <4 x i32>
 ; SKX32-LABEL: test_store_4xi32_aligned:
 ; SKX32:       # BB#0:
 ; SKX32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; SKX32-NEXT:    vmovdqa64 %xmm0, (%rdi)
+; SKX32-NEXT:    vmovdqa %xmm0, (%rdi)
 ; SKX32-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
   store <4 x i32> %foo, <4 x i32>* %addr, align 16

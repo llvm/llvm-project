@@ -771,11 +771,11 @@ const Expression *NewGVN::performSymbolicCallEvaluation(Instruction *I,
   CallInst *CI = cast<CallInst>(I);
   if (AA->doesNotAccessMemory(CI))
     return createCallExpression(CI, nullptr, B);
-  else if (AA->onlyReadsMemory(CI)) {
+  if (AA->onlyReadsMemory(CI)) {
     MemoryAccess *DefiningAccess = MSSAWalker->getClobberingMemoryAccess(CI);
     return createCallExpression(CI, lookupMemoryAccessEquiv(DefiningAccess), B);
-  } else
-    return nullptr;
+  }
+  return nullptr;
 }
 
 // Update the memory access equivalence table to say that From is equal to To,

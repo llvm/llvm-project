@@ -262,7 +262,11 @@ public:
   ///
   /// If the comment includes embedded \n's, they will each get the comment
   /// prefix as appropriate.  The added comment should not end with a \n.
-  virtual void AddComment(const Twine &T) {}
+  /// By default, each comment is terminated with an end of line, i.e. the
+  /// EOL param is set to true by default. If one prefers not to end the 
+  /// comment with a new line then the EOL param should be passed 
+  /// with a false value.
+  virtual void AddComment(const Twine &T, bool EOL = true) {}
 
   /// \brief Return a raw_ostream that comments can be written to. Unlike
   /// AddComment, you are required to terminate comments with \n if you use this

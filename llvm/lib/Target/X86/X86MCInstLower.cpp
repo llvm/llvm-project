@@ -16,6 +16,7 @@
 #include "X86RegisterInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
 #include "InstPrinter/X86ATTInstPrinter.h"
+#include "InstPrinter/X86InstComments.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/ADT/Optional.h"
@@ -1289,6 +1290,13 @@ static std::string getShuffleComment(const MachineInstr *MI,
 void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI = MF->getSubtarget<X86Subtarget>().getRegisterInfo();
+
+  // Add a comment about EVEX-2-VEX compression for AVX-512 instrs that
+  // are compressed from EVEX encoding to VEX encoding.
+  if (TM.Options.MCOptions.ShowMCEncoding) {
+    if (MI->getAsmPrinterFlags() & AC_EVEX_2_VEX)
+      OutStreamer->AddComment("EVEX TO VEX Compression ", false);
+  }
 
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:

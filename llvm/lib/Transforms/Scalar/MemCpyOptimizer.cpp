@@ -489,7 +489,8 @@ static unsigned findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
 // It will lift the store and its argument + that anything that
 // may alias with these.
 // The method returns true if it was successful.
-static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P) {
+static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
+                   const LoadInst *LI) {
   // If the store alias this position, early bail out.
   MemoryLocation StoreLoc = MemoryLocation::get(SI);
   if (AA.getModRefInfo(P, StoreLoc) != MRI_NoModRef)
@@ -506,11 +507,12 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P) {
   SmallVector<Instruction*, 8> ToLift;
 
   // Memory locations of lifted instructions.
-  SmallVector<MemoryLocation, 8> MemLocs;
-  MemLocs.push_back(StoreLoc);
+  SmallVector<MemoryLocation, 8> MemLocs{StoreLoc};
 
   // Lifted callsites.
   SmallVector<ImmutableCallSite, 8> CallSites;
+
+  const MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
   for (auto I = --SI->getIterator(), E = P->getIterator(); I != E; --I) {
     auto *C = &*I;
@@ -535,7 +537,11 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P) {
       continue;
 
     if (MayAlias) {
-      if (auto CS = ImmutableCallSite(C)) {
+      // Since LI is implicitly moved downwards past the lifted instructions,
+      // none of them may modify its source.
+      if (AA.getModRefInfo(C, LoadLoc) & MRI_Mod)
+        return false;
+      else if (auto CS = ImmutableCallSite(C)) {
         // If we can't lift this before P, it's game over.
         if (AA.getModRefInfo(P, CS) != MRI_NoModRef)
           return false;
@@ -610,7 +616,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // position if nothing alias the store memory after this and the store
         // destination is not in the range.
         if (P && P != SI) {
-          if (!moveUp(AA, SI, P))
+          if (!moveUp(AA, SI, P, LI))
             P = nullptr;
         }
 

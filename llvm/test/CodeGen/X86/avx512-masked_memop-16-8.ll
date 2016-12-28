@@ -21,7 +21,7 @@ define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x 
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %ymm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 %ymm1, %ymm0
+; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %res = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* %addr, i32 4, <32 x i1>%mask, <32 x i8> %val)
   ret <32 x i8> %res

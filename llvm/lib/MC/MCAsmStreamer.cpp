@@ -100,7 +100,7 @@ public:
   /// file if applicable as a QoI issue to make the output of the compiler
   /// more readable.  This only affects the MCAsmStreamer, and only when
   /// verbose assembly output is enabled.
-  void AddComment(const Twine &T) override;
+  void AddComment(const Twine &T, bool EOL = true) override;
 
   /// AddEncodingComment - Add a comment showing the encoding of an instruction.
   void AddEncodingComment(const MCInst &Inst, const MCSubtargetInfo &);
@@ -301,12 +301,14 @@ public:
 /// file if applicable as a QoI issue to make the output of the compiler
 /// more readable.  This only affects the MCAsmStreamer, and only when
 /// verbose assembly output is enabled.
-void MCAsmStreamer::AddComment(const Twine &T) {
+/// By deafult EOL is set to true so that each comment goes on its own line.
+void MCAsmStreamer::AddComment(const Twine &T, bool EOL) {
   if (!IsVerboseAsm) return;
 
   T.toVector(CommentToEmit);
-  // Each comment goes on its own line.
-  CommentToEmit.push_back('\n');
+ 
+  if (EOL)
+    CommentToEmit.push_back('\n'); // Place comment in a new line.
 }
 
 void MCAsmStreamer::EmitCommentsAndEOL() {

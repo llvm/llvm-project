@@ -1140,7 +1140,7 @@ define void @isel_crash_16b(i8* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovaps %xmm0, (%esp)
 ; X32-AVX512VL-NEXT:    vpbroadcastb (%eax), %xmm1
 ; X32-AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %xmm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    addl $60, %esp
 ; X32-AVX512VL-NEXT:    retl
 ;
@@ -1152,7 +1152,7 @@ define void @isel_crash_16b(i8* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovd %eax, %xmm1
 ; X64-AVX512VL-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa32 %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX512VL-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    retq
 eintry:
   %__a.addr.i = alloca <2 x i64>, align 16
@@ -1234,7 +1234,7 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovaps %ymm0, (%esp)
 ; X32-AVX512VL-NEXT:    vpbroadcastb (%eax), %ymm1
 ; X32-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
 ; X32-AVX512VL-NEXT:    retl
@@ -1257,7 +1257,7 @@ define void @isel_crash_32b(i8* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovd %eax, %xmm1
 ; X64-AVX512VL-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; X64-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa32 %ymm1, {{[0-9]+}}(%rsp)
+; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
 ; X64-AVX512VL-NEXT:    retq
@@ -1312,7 +1312,7 @@ define void @isel_crash_8w(i16* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovaps %xmm0, (%esp)
 ; X32-AVX512VL-NEXT:    vpbroadcastw (%eax), %xmm1
 ; X32-AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %xmm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    addl $60, %esp
 ; X32-AVX512VL-NEXT:    retl
 ;
@@ -1324,7 +1324,7 @@ define void @isel_crash_8w(i16* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovd %eax, %xmm1
 ; X64-AVX512VL-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; X64-AVX512VL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa32 %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX512VL-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    retq
 entry:
   %__a.addr.i = alloca <2 x i64>, align 16
@@ -1406,7 +1406,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vmovaps %ymm0, (%esp)
 ; X32-AVX512VL-NEXT:    vpbroadcastw (%eax), %ymm1
 ; X32-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
 ; X32-AVX512VL-NEXT:    retl
@@ -1429,7 +1429,7 @@ define void @isel_crash_16w(i16* %cV_R.addr) {
 ; X64-AVX512VL-NEXT:    vmovd %eax, %xmm1
 ; X64-AVX512VL-NEXT:    vpbroadcastw %xmm1, %ymm1
 ; X64-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
-; X64-AVX512VL-NEXT:    vmovdqa32 %ymm1, {{[0-9]+}}(%rsp)
+; X64-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX512VL-NEXT:    movq %rbp, %rsp
 ; X64-AVX512VL-NEXT:    popq %rbp
 ; X64-AVX512VL-NEXT:    retq
@@ -1650,7 +1650,7 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
 ; X32-AVX512VL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
 ; X32-AVX512VL-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %xmm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    addl $60, %esp
 ; X32-AVX512VL-NEXT:    retl
 ;
@@ -1754,7 +1754,7 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-AVX512VL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
 ; X32-AVX512VL-NEXT:    vinserti32x4 $1, %xmm1, %ymm1, %ymm1
 ; X32-AVX512VL-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX512VL-NEXT:    vmovdqa32 %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX512VL-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX512VL-NEXT:    movl %ebp, %esp
 ; X32-AVX512VL-NEXT:    popl %ebp
 ; X32-AVX512VL-NEXT:    retl

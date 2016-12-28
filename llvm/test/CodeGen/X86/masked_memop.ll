@@ -27,7 +27,7 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ;
 ; SKX-LABEL: test6:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovupd (%rdi), %xmm1 {%k1}
 ; SKX-NEXT:    vmovapd %xmm1, %xmm0
@@ -56,7 +56,7 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ;
 ; SKX-LABEL: test7:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm1 {%k1}
 ; SKX-NEXT:    vmovaps %xmm1, %xmm0
@@ -93,10 +93,10 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ;
 ; SKX-LABEL: test8:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovdqa64 %xmm1, %xmm0
+; SKX-NEXT:    vmovdqa %xmm1, %xmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1>%mask, <4 x i32>%dst)
@@ -127,7 +127,7 @@ define void @test9(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ;
 ; SKX-LABEL: test9:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
@@ -169,7 +169,7 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ;
 ; SKX-LABEL: test10:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vmovapd (%rdi), %ymm1 {%k1}
 ; SKX-NEXT:    vmovapd %ymm1, %ymm0
@@ -209,7 +209,7 @@ define <4 x double> @test10b(<4 x i32> %trigger, <4 x double>* %addr, <4 x doubl
 ;
 ; SKX-LABEL: test10b:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
 ; SKX-NEXT:    vmovapd (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -252,7 +252,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ;
 ; SKX-LABEL: test11a:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %ymm2, %ymm2, %ymm2
+; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vmovaps (%rdi), %ymm1 {%k1}
 ; SKX-NEXT:    vmovaps %ymm1, %ymm0
@@ -302,7 +302,7 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %ymm1 {%k1}
-; SKX-NEXT:    vmovdqa64 %ymm1, %ymm0
+; SKX-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX-NEXT:    retq
   %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1>%mask, <8 x i32>%dst)
   ret <8 x i32> %res
@@ -425,7 +425,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ;
 ; SKX-LABEL: test12:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %ymm2, %ymm2, %ymm2
+; SKX-NEXT:    vpxor %ymm2, %ymm2, %ymm2
 ; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
@@ -464,7 +464,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ;
 ; SKX-LABEL: test14:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $14, %k0, %k0
@@ -509,7 +509,7 @@ define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ;
 ; SKX-LABEL: test15:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vpmovqd %xmm1, (%rdi) {%k1}
@@ -552,7 +552,7 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ;
 ; SKX-LABEL: test16:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $14, %k0, %k0
@@ -604,7 +604,7 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ;
 ; SKX-LABEL: test17:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $14, %k0, %k0
@@ -648,7 +648,7 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ;
 ; SKX-LABEL: test18:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $14, %k0, %k0
