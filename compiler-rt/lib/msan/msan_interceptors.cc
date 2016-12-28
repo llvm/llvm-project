@@ -1291,7 +1291,6 @@ int OnExit() {
   } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
-#define COMMON_INTERCEPT_FUNCTION_MEMCPY() MSAN_INTERCEPT_FUNC(memcpy)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
   MSAN_INTERCEPT_FUNC_VER(name, ver)
 #define COMMON_INTERCEPTOR_UNPOISON_PARAM(count)  \

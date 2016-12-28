@@ -73,7 +73,7 @@ int trigger() {
   p |= pp;
   
   enum X x = Z;
-  p = x | ZZ;
+  p = x | Z;
   return 0;
 }
 
