@@ -295,32 +295,27 @@ void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2) {
 
 __attribute__((visibility("default")))
 void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
-  // Updates the value profile based on the relative position of Val and Cases.
-  // We want to handle one random case at every call (handling all is slow).
-  // Since none of the arguments contain any random bits we use a thread-local
-  // counter to choose the random case to handle.
-  static thread_local size_t Counter;
-  Counter++;
   uint64_t N = Cases[0];
+  uint64_t ValSizeInBits = Cases[1];
   uint64_t *Vals = Cases + 2;
+  // Skip the most common and the most boring case.
+  if (Vals[N - 1]  < 256 && Val < 256)
+    return;
   char *PC = (char*)__builtin_return_address(0);
-  // We need a random number < N using Counter as a seed. But w/o DIV.
-  // * find a power of two >= N
-  // * mask Counter with this power of two.
-  // * maybe subtract N.
-  size_t Nlog = sizeof(long) * 8 - __builtin_clzl((long)N);
-  size_t PowerOfTwoGeN = 1U << Nlog;
-  assert(PowerOfTwoGeN >= N);
-  size_t Idx = Counter & (PowerOfTwoGeN - 1);
-  if (Idx >= N)
-    Idx -= N;
-  assert(Idx < N);
-  uint64_t TwoIn32 = 1ULL << 32;
-  if ((Val | Vals[Idx]) < TwoIn32)
-    fuzzer::TPC.HandleCmp(PC + Idx, static_cast<uint32_t>(Val),
-                          static_cast<uint32_t>(Vals[Idx]));
+  size_t i;
+  uint64_t Token = 0;
+  for (i = 0; i < N; i++) {
+    Token = Val ^ Vals[i];
+    if (Val < Vals[i])
+      break;
+  }
+
+  if (ValSizeInBits == 16)
+    fuzzer::TPC.HandleCmp(PC + i, static_cast<uint16_t>(Token), (uint16_t)(0));
+  else if (ValSizeInBits == 32)
+    fuzzer::TPC.HandleCmp(PC + i, static_cast<uint32_t>(Token), (uint32_t)(0));
   else
-    fuzzer::TPC.HandleCmp(PC + Idx, Val, Vals[Idx]);
+    fuzzer::TPC.HandleCmp(PC + i, Token, (uint64_t)(0));
 }
 
 __attribute__((visibility("default")))

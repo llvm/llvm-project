@@ -112,6 +112,11 @@ public:
         &Out[ByteNo], NewWord, BitNo & 7);
   }
 
+  void BackpatchWord64(uint64_t BitNo, uint64_t Val) {
+    BackpatchWord(BitNo, (uint32_t)Val);
+    BackpatchWord(BitNo + 32, (uint32_t)(Val >> 32));
+  }
+
   void Emit(uint32_t Val, unsigned NumBits) {
     assert(NumBits && NumBits <= 32 && "Invalid value size!");
     assert((Val & ~(~0U >> (32-NumBits))) == 0 && "High bits set!");
@@ -129,15 +134,6 @@ public:
     else
       CurValue = 0;
     CurBit = (CurBit+NumBits) & 31;
-  }
-
-  void Emit64(uint64_t Val, unsigned NumBits) {
-    if (NumBits <= 32)
-      Emit((uint32_t)Val, NumBits);
-    else {
-      Emit((uint32_t)Val, 32);
-      Emit((uint32_t)(Val >> 32), NumBits-32);
-    }
   }
 
   void FlushToWord() {

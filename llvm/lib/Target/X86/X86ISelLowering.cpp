@@ -1926,8 +1926,18 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
 
+  // On Win64, we want to use both label differences and a separate section.
+  if (Subtarget.isTargetWin64())
+    return MachineJumpTableInfo::EK_LabelDifference32;
+
   // Otherwise, use the normal jump table encoding heuristics.
   return TargetLowering::getJumpTableEncoding();
+}
+
+bool X86TargetLowering::isJumpTableRelative() const {
+  if (Subtarget.isTargetWin64())
+    return true;
+  return TargetLowering::isJumpTableRelative();
 }
 
 bool X86TargetLowering::useSoftFloat() const {
@@ -1948,11 +1958,19 @@ X86TargetLowering::LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
 /// Returns relocation base for the given PIC jumptable.
 SDValue X86TargetLowering::getPICJumpTableRelocBase(SDValue Table,
                                                     SelectionDAG &DAG) const {
+  // COFF doesn't have relocations to take the difference between two arbitrary
+  // symbols. The assembler, however, can resolve a fixup between the function
+  // entry and a basic block label, so use the function entry as the base.
+  if (Subtarget.isTargetWin64())
+    return DAG.getGlobalAddress(DAG.getMachineFunction().getFunction(), SDLoc(),
+                                getPointerTy(DAG.getDataLayout()));
+
   if (!Subtarget.is64Bit())
     // This doesn't have SDLoc associated with it, but is not really the
     // same as a Register.
     return DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                        getPointerTy(DAG.getDataLayout()));
+
   return Table;
 }
 
@@ -1961,6 +1979,13 @@ SDValue X86TargetLowering::getPICJumpTableRelocBase(SDValue Table,
 const MCExpr *X86TargetLowering::
 getPICJumpTableRelocBaseExpr(const MachineFunction *MF, unsigned JTI,
                              MCContext &Ctx) const {
+  // COFF doesn't have relocations to take the difference between two arbitrary
+  // symbols. The assembler, however, can resolve a fixup between the function
+  // entry and a basic block label, so use the function entry as the base.
+  if (Subtarget.isTargetWin64())
+    return MCSymbolRefExpr::create(
+        getTargetMachine().getSymbol(MF->getFunction()), Ctx);
+
   // X86-64 uses RIP relative addressing based on the jump table label.
   if (Subtarget.isPICStyleRIPRel())
     return TargetLowering::getPICJumpTableRelocBaseExpr(MF, JTI, Ctx);

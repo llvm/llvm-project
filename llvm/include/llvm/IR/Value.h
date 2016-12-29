@@ -245,8 +245,9 @@ private:
 public:
   /// \brief Return a constant reference to the value's name.
   ///
-  /// This is cheap and guaranteed to return the same reference as long as the
-  /// value is not modified.
+  /// This guaranteed to return the same reference as long as the value is not
+  /// modified.  If the value has a name, this does a hashtable lookup, so it's
+  /// not free.
   StringRef getName() const;
 
   /// \brief Change the name of the value.

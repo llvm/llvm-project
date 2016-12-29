@@ -208,8 +208,10 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
   }
 
   // Mark 'Sym' as starting our funclet.
-  if (shouldEmitMoves || shouldEmitPersonality)
+  if (shouldEmitMoves || shouldEmitPersonality) {
+    CurrentFuncletTextSection = Asm->OutStreamer->getCurrentSectionOnly();
     Asm->OutStreamer->EmitWinCFIStartProc(Sym);
+  }
 
   if (shouldEmitPersonality) {
     const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
@@ -243,10 +245,6 @@ void WinException::endFunclet() {
     if (F->hasPersonalityFn())
       Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
 
-    // The .seh_handlerdata directive implicitly switches section, push the
-    // current section so that we may return to it.
-    Asm->OutStreamer->PushSection();
-
     // Emit an UNWIND_INFO struct describing the prologue.
     Asm->OutStreamer->EmitWinEHHandlerData();
 
@@ -265,11 +263,10 @@ void WinException::endFunclet() {
       emitCSpecificHandlerTable(MF);
     }
 
-    // Switch back to the previous section now that we are done writing to
-    // .xdata.
-    Asm->OutStreamer->PopSection();
-
-    // Emit a .seh_endproc directive to mark the end of the function.
+    // Switch back to the funclet start .text section now that we are done
+    // writing to .xdata, and emit an .seh_endproc directive to mark the end of
+    // the function.
+    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->EmitWinCFIEndProc();
   }
 

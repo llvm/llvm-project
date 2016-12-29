@@ -592,6 +592,15 @@ static Optional<int> parseRepeatPassName(StringRef Name) {
   return Count;
 }
 
+static Optional<int> parseDevirtPassName(StringRef Name) {
+  if (!Name.consume_front("devirt<") || !Name.consume_back(">"))
+    return None;
+  int Count;
+  if (Name.getAsInteger(0, Count) || Count <= 0)
+    return None;
+  return Count;
+}
+
 static bool isModulePassName(StringRef Name) {
   // Manually handle aliases for pre-configured pipeline fragments.
   if (Name.startswith("default") || Name.startswith("lto"))
@@ -629,6 +638,8 @@ static bool isCGSCCPassName(StringRef Name) {
 
   // Explicitly handle custom-parsed pass names.
   if (parseRepeatPassName(Name))
+    return true;
+  if (parseDevirtPassName(Name))
     return true;
 
 #define CGSCC_PASS(NAME, CREATE_PASS)                                          \
@@ -871,6 +882,15 @@ bool PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
                                   DebugLogging))
         return false;
       CGPM.addPass(createRepeatedPass(*Count, std::move(NestedCGPM)));
+      return true;
+    }
+    if (auto MaxRepetitions = parseDevirtPassName(Name)) {
+      CGSCCPassManager NestedCGPM(DebugLogging);
+      if (!parseCGSCCPassPipeline(NestedCGPM, InnerPipeline, VerifyEachPass,
+                                  DebugLogging))
+        return false;
+      CGPM.addPass(createDevirtSCCRepeatedPass(std::move(NestedCGPM),
+                                               *MaxRepetitions, DebugLogging));
       return true;
     }
     // Normal passes can't have pipelines.

@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-bcanalyzer -dump | FileCheck %s
+; RUN: llvm-as < %s -bitcode-mdindex-threshold=0 | llvm-bcanalyzer -dump | FileCheck %s
 ; Test that metadata only used by a single function is serialized in that
 ; function instead of in the global pool.
 ;
@@ -18,6 +18,9 @@
 
 ; Each node gets a new number.  Bottom-up traversal of nodes.
 !named = !{!6}
+
+; Before the records we emit an offset to the index for the block
+; CHECK-NEXT:   <INDEX_OFFSET
 
 ; CHECK-NEXT:   <NODE op0=1/>
 !4 = !{!"named"}

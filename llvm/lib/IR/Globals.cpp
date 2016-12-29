@@ -30,6 +30,13 @@ using namespace llvm;
 //                            GlobalValue Class
 //===----------------------------------------------------------------------===//
 
+// GlobalValue should be a Constant, plus a type, a module, some flags, and an
+// intrinsic ID. Add an assert to prevent people from accidentally growing
+// GlobalValue while adding flags.
+static_assert(sizeof(GlobalValue) ==
+                  sizeof(Constant) + 2 * sizeof(void *) + 2 * sizeof(unsigned),
+              "unexpected GlobalValue size growth");
+
 bool GlobalValue::isMaterializable() const {
   if (const Function *F = dyn_cast<Function>(this))
     return F->isMaterializable();

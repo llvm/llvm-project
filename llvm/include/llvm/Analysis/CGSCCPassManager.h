@@ -91,7 +91,10 @@
 
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 
@@ -606,6 +609,185 @@ CGSCCToFunctionPassAdaptor<FunctionPassT>
 createCGSCCToFunctionPassAdaptor(FunctionPassT Pass, bool DebugLogging = false) {
   return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass),
                                                    DebugLogging);
+}
+
+/// A helper that repeats an SCC pass each time an indirect call is refined to
+/// a direct call by that pass.
+///
+/// While the CGSCC pass manager works to re-visit SCCs and RefSCCs as they
+/// change shape, we may also want to repeat an SCC pass if it simply refines
+/// an indirect call to a direct call, even if doing so does not alter the
+/// shape of the graph. Note that this only pertains to direct calls to
+/// functions where IPO across the SCC may be able to compute more precise
+/// results. For intrinsics, we assume scalar optimizations already can fully
+/// reason about them.
+///
+/// This repetition has the potential to be very large however, as each one
+/// might refine a single call site. As a consequence, in practice we use an
+/// upper bound on the number of repetitions to limit things.
+template <typename PassT>
+class DevirtSCCRepeatedPass
+    : public PassInfoMixin<DevirtSCCRepeatedPass<PassT>> {
+public:
+  explicit DevirtSCCRepeatedPass(PassT Pass, int MaxIterations,
+                                 bool DebugLogging = false)
+      : Pass(std::move(Pass)), MaxIterations(MaxIterations),
+        DebugLogging(DebugLogging) {}
+
+  /// Runs the wrapped pass up to \c MaxIterations on the SCC, iterating
+  /// whenever an indirect call is refined.
+  PreservedAnalyses run(LazyCallGraph::SCC &InitialC, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR) {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+
+    // The SCC may be refined while we are running passes over it, so set up
+    // a pointer that we can update.
+    LazyCallGraph::SCC *C = &InitialC;
+
+    // Collect value handles for all of the indirect call sites.
+    SmallVector<WeakVH, 8> CallHandles;
+
+    // Struct to track the counts of direct and indirect calls in each function
+    // of the SCC.
+    struct CallCount {
+      int Direct;
+      int Indirect;
+    };
+
+    // Put value handles on all of the indirect calls and return the number of
+    // direct calls for each function in the SCC.
+    auto ScanSCC = [](LazyCallGraph::SCC &C,
+                      SmallVectorImpl<WeakVH> &CallHandles) {
+      assert(CallHandles.empty() && "Must start with a clear set of handles.");
+
+      SmallVector<CallCount, 4> CallCounts;
+      for (LazyCallGraph::Node &N : C) {
+        CallCounts.push_back({0, 0});
+        CallCount &Count = CallCounts.back();
+        for (Instruction &I : instructions(N.getFunction()))
+          if (auto CS = CallSite(&I)) {
+            if (CS.getCalledFunction()) {
+              ++Count.Direct;
+            } else {
+              ++Count.Indirect;
+              CallHandles.push_back(WeakVH(&I));
+            }
+          }
+      }
+
+      return CallCounts;
+    };
+
+    // Populate the initial call handles and get the initial call counts.
+    auto CallCounts = ScanSCC(*C, CallHandles);
+
+    for (int Iteration = 0;; ++Iteration) {
+      PreservedAnalyses PassPA = Pass.run(*C, AM, CG, UR);
+
+      // If the SCC structure has changed, bail immediately and let the outer
+      // CGSCC layer handle any iteration to reflect the refined structure.
+      if (UR.UpdatedC && UR.UpdatedC != C) {
+        PA.intersect(std::move(PassPA));
+        break;
+      }
+
+      // Check that we didn't miss any update scenario.
+      assert(!UR.InvalidatedSCCs.count(C) && "Processing an invalid SCC!");
+      assert(C->begin() != C->end() && "Cannot have an empty SCC!");
+      assert((int)CallCounts.size() == C->size() &&
+             "Cannot have changed the size of the SCC!");
+
+      // Check whether any of the handles were devirtualized.
+      auto IsDevirtualizedHandle = [&](WeakVH &CallH) {
+        if (!CallH)
+          return false;
+        auto CS = CallSite(CallH);
+        if (!CS)
+          return false;
+
+        // If the call is still indirect, leave it alone.
+        Function *F = CS.getCalledFunction();
+        if (!F)
+          return false;
+
+        if (DebugLogging)
+          dbgs() << "Found devirutalized call from "
+                 << CS.getParent()->getParent()->getName() << " to "
+                 << F->getName() << "\n";
+
+        // We now have a direct call where previously we had an indirect call,
+        // so iterate to process this devirtualization site.
+        return true;
+      };
+      bool Devirt = any_of(CallHandles, IsDevirtualizedHandle);
+
+      // Rescan to build up a new set of handles and count how many direct
+      // calls remain. If we decide to iterate, this also sets up the input to
+      // the next iteration.
+      CallHandles.clear();
+      auto NewCallCounts = ScanSCC(*C, CallHandles);
+
+      // If we haven't found an explicit devirtualization already see if we
+      // have decreased the number of indirect calls and increased the number
+      // of direct calls for any function in the SCC. This can be fooled by all
+      // manner of transformations such as DCE and other things, but seems to
+      // work well in practice.
+      if (!Devirt)
+        for (int i = 0, Size = C->size(); i < Size; ++i)
+          if (CallCounts[i].Indirect > NewCallCounts[i].Indirect &&
+              CallCounts[i].Direct < NewCallCounts[i].Direct) {
+            Devirt = true;
+            break;
+          }
+
+      if (!Devirt) {
+        PA.intersect(std::move(PassPA));
+        break;
+      }
+
+      // Otherwise, if we've already hit our max, we're done.
+      if (Iteration >= MaxIterations) {
+        if (DebugLogging)
+          dbgs() << "Found another devirtualization after hitting the max "
+                    "number of repetitions ("
+                 << MaxIterations << ") on SCC: " << *C << "\n";
+        PA.intersect(std::move(PassPA));
+        break;
+      }
+
+      if (DebugLogging)
+        dbgs() << "Repeating an SCC pass after finding a devirtualization in: "
+               << *C << "\n";
+
+      // Move over the new call counts in preparation for iterating.
+      CallCounts = std::move(NewCallCounts);
+
+      // Update the analysis manager with each run and intersect the total set
+      // of preserved analyses so we're ready to iterate.
+      AM.invalidate(*C, PassPA);
+      PA.intersect(std::move(PassPA));
+    }
+
+    // Note that we don't add any preserved entries here unlike a more normal
+    // "pass manager" because we only handle invalidation *between* iterations,
+    // not after the last iteration.
+    return PA;
+  }
+
+private:
+  PassT Pass;
+  int MaxIterations;
+  bool DebugLogging;
+};
+
+/// \brief A function to deduce a function pass type and wrap it in the
+/// templated adaptor.
+template <typename PassT>
+DevirtSCCRepeatedPass<PassT>
+createDevirtSCCRepeatedPass(PassT Pass, int MaxIterations,
+                            bool DebugLogging = false) {
+  return DevirtSCCRepeatedPass<PassT>(std::move(Pass), MaxIterations,
+                                      DebugLogging);
 }
 }
 

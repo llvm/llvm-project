@@ -1021,8 +1021,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
   }
   case Instruction::ShuffleVector: {
     ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
-    uint64_t LHSVWidth =
-      cast<VectorType>(Shuffle->getOperand(0)->getType())->getNumElements();
+    unsigned LHSVWidth =
+      Shuffle->getOperand(0)->getType()->getVectorNumElements();
     APInt LeftDemanded(LHSVWidth, 0), RightDemanded(LHSVWidth, 0);
     for (unsigned i = 0; i < VWidth; i++) {
       if (DemandedElts[i]) {
@@ -1090,7 +1090,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       Constant *Value = nullptr;
       unsigned Idx = -1u;
 
-      // Find constant vector wigth the single element in shuffle (LHS or RHS).
+      // Find constant vector with the single element in shuffle (LHS or RHS).
       if (LHSIdx < LHSVWidth && RHSUniform) {
         if (auto *CV = dyn_cast<ConstantVector>(Shuffle->getOperand(0))) {
           Op = Shuffle->getOperand(1);
@@ -1261,8 +1261,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       // pass them through like other scalar intrinsics. So we shouldn't just
       // use Arg0 if DemandedElts[0] is clear like we do for other intrinsics.
       // Instead we should return a zero vector.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return ConstantAggregateZero::get(II->getType());
+      }
 
       // Only the lower element is used.
       DemandedElts = 1;
@@ -1284,8 +1286,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return II->getArgOperand(0);
+      }
       // TODO: If only low elt lower SQRT to FSQRT (with rounding/exceptions
       // checks).
       break;
@@ -1304,8 +1308,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return II->getArgOperand(0);
+      }
 
       // Only lower element is used for operand 1.
       DemandedElts = 1;
@@ -1333,8 +1339,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return II->getArgOperand(0);
+      }
 
       // Only lower element is used for operand 1.
       DemandedElts = 1;
@@ -1381,8 +1389,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(0, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg0.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return II->getArgOperand(0);
+      }
 
       // Only lower element is used for operand 1 and 2.
       DemandedElts = 1;
@@ -1412,8 +1422,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       if (TmpV) { II->setArgOperand(2, TmpV); MadeChange = true; }
 
       // If lowest element of a scalar op isn't used then use Arg2.
-      if (!DemandedElts[0])
+      if (!DemandedElts[0]) {
+        Worklist.Add(II);
         return II->getArgOperand(2);
+      }
 
       // Only lower element is used for operand 0 and 1.
       DemandedElts = 1;
