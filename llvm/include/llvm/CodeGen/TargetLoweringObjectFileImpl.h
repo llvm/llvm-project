@@ -156,6 +156,9 @@ public:
   MCSection *getSectionForJumpTable(const Function &F,
                                     const TargetMachine &TM) const override;
 
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
+
   /// Emit Obj-C garbage collection and linker options. Only linker option
   /// emission is implemented for COFF.
   void emitModuleFlags(MCStreamer &Streamer,

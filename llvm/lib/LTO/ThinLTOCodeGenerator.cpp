@@ -200,13 +200,14 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
     report_fatal_error("importFunctions failed");
 }
 
-static void optimizeModule(Module &TheModule, TargetMachine &TM) {
+static void optimizeModule(Module &TheModule, TargetMachine &TM,
+                           unsigned OptLevel) {
   // Populate the PassManager
   PassManagerBuilder PMB;
   PMB.LibraryInfo = new TargetLibraryInfoImpl(TM.getTargetTriple());
   PMB.Inliner = createFunctionInliningPass();
   // FIXME: should get it from the bitcode?
-  PMB.OptLevel = 3;
+  PMB.OptLevel = OptLevel;
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
   PMB.VerifyInput = true;
@@ -383,7 +384,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
                      const GVSummaryMapTy &DefinedGlobals,
                      const ThinLTOCodeGenerator::CachingOptions &CacheOptions,
                      bool DisableCodeGen, StringRef SaveTempsDir,
-                     unsigned count) {
+                     unsigned OptLevel, unsigned count) {
 
   // "Benchmark"-like optimization: single-source case
   bool SingleModule = (ModuleMap.size() == 1);
@@ -415,7 +416,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
     saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
   }
 
-  optimizeModule(TheModule, TM);
+  optimizeModule(TheModule, TM, OptLevel);
 
   saveTempBitcode(TheModule, SaveTempsDir, count, ".4.opt.bc");
 
@@ -534,6 +535,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   SubtargetFeatures Features(MAttr);
   Features.getDefaultSubtargetFeatures(TheTriple);
   std::string FeatureStr = Features.getString();
+
   return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
       TheTriple.str(), MCpu, FeatureStr, Options, RelocModel,
       CodeModel::Default, CGOptLevel));
@@ -726,7 +728,7 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
   initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
 
   // Optimize now
-  optimizeModule(TheModule, *TMBuilder.create());
+  optimizeModule(TheModule, *TMBuilder.create(), OptLevel);
 }
 
 /**
@@ -947,7 +949,7 @@ void ThinLTOCodeGenerator::run() {
             *TheModule, *Index, ModuleMap, *TMBuilder.create(), ImportList,
             ExportList, GUIDPreservedSymbols,
             ModuleToDefinedGVSummaries[ModuleIdentifier], CacheOptions,
-            DisableCodeGen, SaveTempsDir, count);
+            DisableCodeGen, SaveTempsDir, OptLevel, count);
 
         // Commit to the cache (if enabled)
         CacheEntry.write(*OutputBuffer);
