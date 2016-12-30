@@ -334,7 +334,7 @@ public:
 // Path "pieces" for path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
 
-class PathDiagnosticPiece : public RefCountedBaseVPTR {
+class PathDiagnosticPiece : public RefCountedBase<PathDiagnosticPiece> {
 public:
   enum Kind { ControlFlow, Event, Macro, Call, Note };
   enum DisplayHint { Above, Below };
@@ -366,7 +366,7 @@ protected:
   PathDiagnosticPiece(Kind k, DisplayHint hint = Below);
 
 public:
-  ~PathDiagnosticPiece() override;
+  virtual ~PathDiagnosticPiece();
 
   StringRef getString() const { return str; }
 

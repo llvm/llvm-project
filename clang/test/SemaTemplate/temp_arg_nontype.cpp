@@ -434,3 +434,20 @@ namespace dependent_nested_partial_specialization {
   };
   E<int>::F<int, 0> e1; // expected-note {{instantiation of}}
 }
+
+namespace nondependent_default_arg_ordering {
+  int n, m;
+  template<typename A, A B = &n> struct X {};
+  template<typename A> void f(X<A>); // expected-note {{candidate}}
+  template<typename A> void f(X<A, &m>); // expected-note {{candidate}}
+  template<typename A, A B> void f(X<A, B>); // expected-note 2{{candidate}}
+  template<template<typename U, U> class T, typename A, int *B> void f(T<A, B>); // expected-note 2{{candidate}}
+  void g() {
+    // FIXME: The first and second function templates above should be
+    // considered more specialized than the last two, but during partial
+    // ordering we fail to check that we actually deduced template arguments
+    // that make the deduced A identical to A.
+    X<int *, &n> x; f(x); // expected-error {{ambiguous}}
+    X<int *, &m> y; f(y); // expected-error {{ambiguous}}
+  }
+}
