@@ -380,8 +380,6 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
     Sema &S, TemplateParameterList *TemplateParams,
     NonTypeTemplateParmDecl *NTTP, Expr *Value, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
-  assert((Value->isTypeDependent() || Value->isValueDependent()) &&
-         "Expression template argument must be type- or value-dependent.");
   return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
                                        DeducedTemplateArgument(Value),
                                        Value->getType(), Info, Deduced);
@@ -4362,6 +4360,10 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
   for (; ArgIdx != NumArgs; ++ArgIdx)
     if (Deduced[ArgIdx].isNull())
       break;
+
+  // FIXME: We fail to implement [temp.deduct.type]p1 along this path. We need
+  // to substitute the deduced arguments back into the template and check that
+  // we get the right type.
 
   if (ArgIdx == NumArgs) {
     // All template arguments were deduced. FT1 is at least as specialized
