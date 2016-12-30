@@ -40,8 +40,7 @@ entry:
   ; CHECK:      in      [[TMPREG:r[0-9]+]], 4
   ; CHECK-NEXT: ori     [[TMPREG]], 32
 
-  ; This next line is unnecessary, but we CodeGen it anyway. We should probably optimize this out (PR31344).
-  ; CHECK-NEXT: ori     {{r[0-9]+}}, 0
+  ; CHECK-NOT: ori     {{r[0-9]+}}, 0
 
   ; CHECK-NEXT: out     4, [[TMPREG]]
   ; CHECK-NEXT: ret
@@ -65,8 +64,7 @@ entry:
   ; CHECK:      in      [[TMPREG:r[0-9]+]], 5
   ; CHECK-NEXT: ori     [[TMPREG]], 32
 
-  ; This next line is unnecessary, but we CodeGen it anyway. We should probably optimize this out (PR31344).
-  ; CHECK-NEXT: ori     {{r[0-9]+}}, 0
+  ; CHECK-NOT: ori     {{r[0-9]+}}, 0
 
   ; CHECK-NEXT: out     5, [[TMPREG]]
   ; CHECK-NEXT: ret

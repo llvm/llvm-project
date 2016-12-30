@@ -764,6 +764,7 @@ void Fuzzer::ResetCoverage() {
 }
 
 void Fuzzer::Loop() {
+  TPC.InitializePrintNewPCs();
   system_clock::time_point LastCorpusReload = system_clock::now();
   if (Options.DoCrossOver)
     MD.SetCorpus(&Corpus);

@@ -722,6 +722,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// }
 
 private:
+  bool ParseAsAbsoluteExpression(uint32_t &Ret);
   bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
   bool ParseDirectiveHSACodeObjectVersion();
   bool ParseDirectiveHSACodeObjectISA();
@@ -1708,23 +1709,30 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
+bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
+  int64_t Tmp = -1;
+  if (getLexer().isNot(AsmToken::Integer) && getLexer().isNot(AsmToken::Identifier)) {
+    return true;
+  }
+  if (getParser().parseAbsoluteExpression(Tmp)) {
+    return true;
+  }
+  Ret = static_cast<uint32_t>(Tmp);
+  return false;
+}
+
+
 bool AMDGPUAsmParser::ParseDirectiveMajorMinor(uint32_t &Major,
                                                uint32_t &Minor) {
-  if (getLexer().isNot(AsmToken::Integer))
+  if (ParseAsAbsoluteExpression(Major))
     return TokError("invalid major version");
-
-  Major = getLexer().getTok().getIntVal();
-  Lex();
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("minor version number required, comma expected");
   Lex();
 
-  if (getLexer().isNot(AsmToken::Integer))
+  if (ParseAsAbsoluteExpression(Minor))
     return TokError("invalid minor version");
-
-  Minor = getLexer().getTok().getIntVal();
-  Lex();
 
   return false;
 }
@@ -1765,11 +1773,8 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
     return TokError("stepping version number required, comma expected");
   Lex();
 
-  if (getLexer().isNot(AsmToken::Integer))
+  if (ParseAsAbsoluteExpression(Stepping))
     return TokError("invalid stepping version");
-
-  Stepping = getLexer().getTok().getIntVal();
-  Lex();
 
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("vendor name required, comma expected");

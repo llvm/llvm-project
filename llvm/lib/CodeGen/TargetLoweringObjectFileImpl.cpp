@@ -1055,13 +1055,6 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
                                      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
-bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
-    bool UsesLabelDifference, const Function &F) const {
-  // We can always create relative relocations, so use another section
-  // that can be marked non-executable.
-  return false;
-}
-
 void TargetLoweringObjectFileCOFF::emitModuleFlags(
     MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
     const TargetMachine &TM) const {

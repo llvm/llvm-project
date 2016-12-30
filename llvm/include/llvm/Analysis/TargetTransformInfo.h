@@ -243,13 +243,17 @@ public:
     /// profitable. Set this to UINT_MAX to disable the loop body cost
     /// restriction.
     unsigned Threshold;
-    /// If complete unrolling will reduce the cost of the loop below its
-    /// expected dynamic cost while rolled by this percentage, apply a discount
-    /// (below) to its unrolled cost.
-    unsigned PercentDynamicCostSavedThreshold;
-    /// The discount applied to the unrolled cost when the *dynamic* cost
-    /// savings of unrolling exceed the \c PercentDynamicCostSavedThreshold.
-    unsigned DynamicCostSavingsDiscount;
+    /// If complete unrolling will reduce the cost of the loop, we will boost
+    /// the Threshold by a certain percent to allow more aggressive complete
+    /// unrolling. This value provides the maximum boost percentage that we
+    /// can apply to Threshold (The value should be no less than 100).
+    /// BoostedThreshold = Threshold * min(RolledCost / UnrolledCost,
+    ///                                    MaxPercentThresholdBoost / 100)
+    /// E.g. if complete unrolling reduces the loop execution time by 50%
+    /// then we boost the threshold by the factor of 2x. If unrolling is not
+    /// expected to reduce the running time, then we do not increase the
+    /// threshold.
+    unsigned MaxPercentThresholdBoost;
     /// The cost threshold for the unrolled loop when optimizing for size (set
     /// to UINT_MAX to disable).
     unsigned OptSizeThreshold;

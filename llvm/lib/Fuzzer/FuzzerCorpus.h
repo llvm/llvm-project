@@ -17,6 +17,7 @@
 #include "FuzzerRandom.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
+#include <algorithm>
 #include <numeric>
 #include <random>
 #include <unordered_set>

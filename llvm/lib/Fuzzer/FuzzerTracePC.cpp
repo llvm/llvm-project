@@ -79,14 +79,19 @@ static bool IsInterestingCoverageFile(std::string &File) {
   return true;
 }
 
+void TracePC::InitializePrintNewPCs() {
+  assert(!PrintedPCs);
+  PrintedPCs = new std::set<uintptr_t>;
+  for (size_t i = 1; i < GetNumPCs(); i++)
+    if (PCs[i])
+      PrintedPCs->insert(PCs[i]);
+}
+
 void TracePC::PrintNewPCs() {
-  if (DoPrintNewPCs) {
-    if (!PrintedPCs)
-      PrintedPCs = new std::set<uintptr_t>;
-    for (size_t i = 1; i < GetNumPCs(); i++)
-      if (PCs[i] && PrintedPCs->insert(PCs[i]).second)
-        PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs[i]);
-  }
+  assert(PrintedPCs);
+  for (size_t i = 1; i < GetNumPCs(); i++)
+    if (PCs[i] && PrintedPCs->insert(PCs[i]).second)
+      PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs[i]);
 }
 
 void TracePC::PrintCoverage() {
