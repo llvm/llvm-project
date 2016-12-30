@@ -49,8 +49,7 @@ Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
 
 /// ConstantFoldConstant - Attempt to fold the constant using the
 /// specified DataLayout.
-/// If successful, the constant result is result is returned, if not,
-/// null is returned.
+/// If successful, the constant result is returned, if not, null is returned.
 Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
                                const TargetLibraryInfo *TLI = nullptr);
 

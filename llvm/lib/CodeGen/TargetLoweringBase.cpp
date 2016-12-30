@@ -361,6 +361,11 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::MEMCPY] = "memcpy";
   Names[RTLIB::MEMMOVE] = "memmove";
   Names[RTLIB::MEMSET] = "memset";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_1] = "__llvm_memcpy_element_atomic_1";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_2] = "__llvm_memcpy_element_atomic_2";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_4] = "__llvm_memcpy_element_atomic_4";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_8] = "__llvm_memcpy_element_atomic_8";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_16] = "__llvm_memcpy_element_atomic_16";
   Names[RTLIB::UNWIND_RESUME] = "_Unwind_Resume";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_1] = "__sync_val_compare_and_swap_1";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_2] = "__sync_val_compare_and_swap_2";
@@ -761,6 +766,24 @@ RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
 #undef OP_TO_LIBCALL
 
   return UNKNOWN_LIBCALL;
+}
+
+RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_ATOMIC(uint64_t ElementSize) {
+  switch (ElementSize) {
+  case 1:
+    return MEMCPY_ELEMENT_ATOMIC_1;
+  case 2:
+    return MEMCPY_ELEMENT_ATOMIC_2;
+  case 4:
+    return MEMCPY_ELEMENT_ATOMIC_4;
+  case 8:
+    return MEMCPY_ELEMENT_ATOMIC_8;
+  case 16:
+    return MEMCPY_ELEMENT_ATOMIC_16;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+
 }
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.

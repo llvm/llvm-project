@@ -1,5 +1,7 @@
-; RUN: llc < %s -relocation-model static | FileCheck %s --check-prefix=CHECK --check-prefix=STATIC
-; RUN: llc < %s -relocation-model pic | FileCheck %s --check-prefix=CHECK --check-prefix=PIC
+; RUN: llc < %s -relocation-model static | FileCheck %s
+
+; FIXME: Remove '-relocation-model static' when it is no longer necessary to
+; trigger the separate .rdata section.
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.24215"
@@ -39,17 +41,7 @@ declare void @g(i32)
 ; CHECK: .text
 ; CHECK: f:
 ; CHECK: .seh_proc f
-
-; STATIC: movslq .LJTI0_0(,%{{.*}},4), %[[target:[^ ]*]]
-; STATIC: leaq f(%[[target]]), %[[target]]
-; STATIC: jmpq *%[[target]]
-
-; PIC: leaq .LJTI0_0(%rip), %[[jt:[^ ]*]]
-; PIC: movslq (%[[jt]],%{{.*}},4), %[[offset:[^ ]*]]
-; PIC: leaq f(%rip), %[[base:[^ ]*]]
-; PIC: addq %[[offset]], %[[base]]
-; PIC: jmpq *%[[base]]
-
+; CHECK: jmpq    *.LJTI0_0
 ; CHECK: .LBB0_{{.*}}: # %sw.bb
 ; CHECK: .LBB0_{{.*}}: # %sw.bb1
 ; CHECK: .LBB0_{{.*}}: # %sw.bb2
@@ -57,10 +49,10 @@ declare void @g(i32)
 ; CHECK: callq g
 ; CHECK: jmp g # TAILCALL
 ; CHECK: .section        .rdata,"dr"
-; CHECK: .long .LBB0_{{.*}}-f
-; CHECK: .long .LBB0_{{.*}}-f
-; CHECK: .long .LBB0_{{.*}}-f
-; CHECK: .long .LBB0_{{.*}}-f
+; CHECK: .quad .LBB0_
+; CHECK: .quad .LBB0_
+; CHECK: .quad .LBB0_
+; CHECK: .quad .LBB0_
 ; CHECK: .seh_handlerdata
 
 ; It's important that we switch back to .text here, not .rdata.

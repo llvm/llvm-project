@@ -250,24 +250,47 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AliasAnalysis *AA,
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
-  if (!DisablePromotion && (Preheader || L->hasDedicatedExits())) {
+  // Don't sink stores from loops without dedicated block exits. Exits
+  // containing indirect branches are not transformed by loop simplify,
+  // make sure we catch that. An additional load may be generated in the
+  // preheader for SSA updater, so also avoid sinking when no preheader
+  // is available.
+  if (!DisablePromotion && Preheader && L->hasDedicatedExits()) {
+    // Figure out the loop exits and their insertion points
     SmallVector<BasicBlock *, 8> ExitBlocks;
-    SmallVector<Instruction *, 8> InsertPts;
-    PredIteratorCache PIC;
+    L->getUniqueExitBlocks(ExitBlocks);
 
-    // Loop over all of the alias sets in the tracker object.
-    for (AliasSet &AS : *CurAST)
-      Changed |= promoteLoopAccessesToScalars(
-          AS, ExitBlocks, InsertPts, PIC, LI, DT, TLI, L, CurAST, &SafetyInfo);
+    // We can't insert into a catchswitch.
+    bool HasCatchSwitch = llvm::any_of(ExitBlocks, [](BasicBlock *Exit) {
+      return isa<CatchSwitchInst>(Exit->getTerminator());
+    });
 
-    // Once we have promoted values across the loop body we have to recursively
-    // reform LCSSA as any nested loop may now have values defined within the
-    // loop used in the outer loop.
-    // FIXME: This is really heavy handed. It would be a bit better to use an
-    // SSAUpdater strategy during promotion that was LCSSA aware and reformed
-    // it as it went.
-    if (Changed) {
-      formLCSSARecursively(*L, *DT, LI, SE);
+    if (!HasCatchSwitch) {
+      SmallVector<Instruction *, 8> InsertPts;
+      InsertPts.reserve(ExitBlocks.size());
+      for (BasicBlock *ExitBlock : ExitBlocks)
+        InsertPts.push_back(&*ExitBlock->getFirstInsertionPt());
+
+      PredIteratorCache PIC;
+
+      bool Promoted = false;
+
+      // Loop over all of the alias sets in the tracker object.
+      for (AliasSet &AS : *CurAST)
+        Promoted |=
+            promoteLoopAccessesToScalars(AS, ExitBlocks, InsertPts, PIC, LI, DT,
+                                         TLI, L, CurAST, &SafetyInfo);
+
+      // Once we have promoted values across the loop body we have to
+      // recursively reform LCSSA as any nested loop may now have values defined
+      // within the loop used in the outer loop.
+      // FIXME: This is really heavy handed. It would be a bit better to use an
+      // SSAUpdater strategy during promotion that was LCSSA aware and reformed
+      // it as it went.
+      if (Promoted)
+        formLCSSARecursively(*L, *DT, LI, SE);
+
+      Changed |= Promoted;
     }
   }
 
@@ -881,23 +904,24 @@ bool llvm::promoteLoopAccessesToScalars(
   // is not safe, because *P may only be valid to access if 'c' is true.
   //
   // The safety property divides into two parts:
-  // 1) The memory may not be dereferenceable on entry to the loop.  In this
+  // p1) The memory may not be dereferenceable on entry to the loop.  In this
   //    case, we can't insert the required load in the preheader.
-  // 2) The memory model does not allow us to insert a store along any dynamic
+  // p2) The memory model does not allow us to insert a store along any dynamic
   //    path which did not originally have one.
   //
-  // It is safe to promote P if all uses are direct load/stores and if at
-  // least one is guaranteed to be executed.
-  bool GuaranteedToExecute = false;
-
-  // It is also safe to promote P if we can prove that speculating a load into
-  // the preheader is safe (i.e. proving dereferenceability on all
-  // paths through the loop), and that the memory can be proven thread local
-  // (so that the memory model requirement doesn't apply.)  We first establish
-  // the former, and then run a capture analysis below to establish the later.
-  // We can use any access within the alias set to prove dereferenceability
+  // If at least one store is guaranteed to execute, both properties are
+  // satisfied, and promotion is legal.
+  // This, however, is not a necessary condition. Even if no store/load is
+  // guaranteed to execute, we can still establish these properties:
+  // (p1) by proving that hoisting the load into the preheader is
+  // safe (i.e. proving dereferenceability on all paths through the loop). We
+  // can use any access within the alias set to prove dereferenceability,
   // since they're all must alias.
-  bool CanSpeculateLoad = false;
+  // (p2) by proving the memory is thread-local, so the memory model
+  // requirement does not apply, and stores are safe to insert.
+
+  bool DereferenceableInPH = false;
+  bool SafeToInsertStore = false;
 
   SmallVector<Instruction *, 64> LoopUses;
   SmallPtrSet<Value *, 4> PointerMustAliases;
@@ -906,15 +930,6 @@ bool llvm::promoteLoopAccessesToScalars(
   // us to prove better alignment.
   unsigned Alignment = 1;
   AAMDNodes AATags;
-  bool HasDedicatedExits = CurLoop->hasDedicatedExits();
-
-  // Don't sink stores from loops without dedicated block exits. Exits
-  // containing indirect branches are not transformed by loop simplify,
-  // make sure we catch that. An additional load may be generated in the
-  // preheader for SSA updater, so also avoid sinking when no preheader
-  // is available.
-  if (!HasDedicatedExits || !Preheader)
-    return false;
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
@@ -931,7 +946,6 @@ bool llvm::promoteLoopAccessesToScalars(
   // Check that all of the pointers in the alias set have the same type.  We
   // cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
-  bool Changed = false;
   for (const auto &ASI : AS) {
     Value *ASIV = ASI.getValue();
     PointerMustAliases.insert(ASIV);
@@ -940,7 +954,7 @@ bool llvm::promoteLoopAccessesToScalars(
     // cannot (yet) promote a memory location that is loaded and stored in
     // different sizes.
     if (SomePtr->getType() != ASIV->getType())
-      return Changed;
+      return false;
 
     for (User *U : ASIV->users()) {
       // Ignore instructions that are outside the loop.
@@ -953,10 +967,10 @@ bool llvm::promoteLoopAccessesToScalars(
       if (const LoadInst *Load = dyn_cast<LoadInst>(UI)) {
         assert(!Load->isVolatile() && "AST broken");
         if (!Load->isSimple())
-          return Changed;
+          return false;
 
-        if (!GuaranteedToExecute && !CanSpeculateLoad)
-          CanSpeculateLoad = isSafeToExecuteUnconditionally(
+        if (!DereferenceableInPH)
+          DereferenceableInPH = isSafeToExecuteUnconditionally(
               *Load, DT, CurLoop, SafetyInfo, Preheader->getTerminator());
       } else if (const StoreInst *Store = dyn_cast<StoreInst>(UI)) {
         // Stores *of* the pointer are not interesting, only stores *to* the
@@ -965,35 +979,36 @@ bool llvm::promoteLoopAccessesToScalars(
           continue;
         assert(!Store->isVolatile() && "AST broken");
         if (!Store->isSimple())
-          return Changed;
+          return false;
 
-        // Note that we only check GuaranteedToExecute inside the store case
-        // so that we do not introduce stores where they did not exist before
-        // (which would break the LLVM concurrency model).
-
-        // If the alignment of this instruction allows us to specify a more
-        // restrictive (and performant) alignment and if we are sure this
-        // instruction will be executed, update the alignment.
-        // Larger is better, with the exception of 0 being the best alignment.
+        // If the store is guaranteed to execute, both properties are satisfied.
+        // We may want to check if a store is guaranteed to execute even if we
+        // already know that promotion is safe, since it may have higher
+        // alignment than any other guaranteed stores, in which case we can
+        // raise the alignment on the promoted store.
         unsigned InstAlignment = Store->getAlignment();
-        if ((InstAlignment > Alignment || InstAlignment == 0) &&
-            Alignment != 0) {
+        if (!InstAlignment)
+          InstAlignment =
+              MDL.getABITypeAlignment(Store->getValueOperand()->getType());
+
+        if (!DereferenceableInPH || !SafeToInsertStore ||
+            (InstAlignment > Alignment)) {
           if (isGuaranteedToExecute(*UI, DT, CurLoop, SafetyInfo)) {
-            GuaranteedToExecute = true;
-            Alignment = InstAlignment;
+            DereferenceableInPH = true;
+            SafeToInsertStore = true;
+            Alignment = std::max(Alignment, InstAlignment);
           }
-        } else if (!GuaranteedToExecute) {
-          GuaranteedToExecute =
-              isGuaranteedToExecute(*UI, DT, CurLoop, SafetyInfo);
         }
 
-        if (!GuaranteedToExecute && !CanSpeculateLoad) {
-          CanSpeculateLoad = isDereferenceableAndAlignedPointer(
+        // If the store is not guaranteed to execute, we may still get
+        // deref info through it.
+        if (!DereferenceableInPH) {
+          DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getAlignment(), MDL,
               Preheader->getTerminator(), DT);
         }
       } else
-        return Changed; // Not a load or store.
+        return false; // Not a load or store.
 
       // Merge the AA tags.
       if (LoopUses.empty()) {
@@ -1007,38 +1022,29 @@ bool llvm::promoteLoopAccessesToScalars(
     }
   }
 
-  // Check legality per comment above. Otherwise, we can't promote.
-  bool PromotionIsLegal = GuaranteedToExecute;
-  if (!PromotionIsLegal && CanSpeculateLoad) {
-    // If this is a thread local location, then we can insert stores along
-    // paths which originally didn't have them without violating the memory
-    // model.
+
+  // If we couldn't prove we can hoist the load, bail.
+  if (!DereferenceableInPH)
+    return false;
+
+  // We know we can hoist the load, but don't have a guaranteed store.
+  // Check whether the location is thread-local. If it is, then we can insert
+  // stores along paths which originally didn't have them without violating the
+  // memory model.
+  if (!SafeToInsertStore) {
     Value *Object = GetUnderlyingObject(SomePtr, MDL);
-    PromotionIsLegal =
-        isAllocLikeFn(Object, TLI) && !PointerMayBeCaptured(Object, true, true);
-  }
-  if (!PromotionIsLegal)
-    return Changed;
-
-  // Figure out the loop exits and their insertion points, if this is the
-  // first promotion.
-  if (ExitBlocks.empty()) {
-    CurLoop->getUniqueExitBlocks(ExitBlocks);
-    InsertPts.clear();
-    InsertPts.reserve(ExitBlocks.size());
-    for (BasicBlock *ExitBlock : ExitBlocks)
-      InsertPts.push_back(&*ExitBlock->getFirstInsertionPt());
+    SafeToInsertStore =
+        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
+        !PointerMayBeCaptured(Object, true, true);
   }
 
-  // Can't insert into a catchswitch.
-  for (BasicBlock *ExitBlock : ExitBlocks)
-    if (isa<CatchSwitchInst>(ExitBlock->getTerminator()))
-      return Changed;
+  // If we've still failed to prove we can sink the store, give up.
+  if (!SafeToInsertStore)
+    return false;
 
   // Otherwise, this is safe to promote, lets do it!
   DEBUG(dbgs() << "LICM: Promoting value stored to in loop: " << *SomePtr
                << '\n');
-  Changed = true;
   ++NumPromoted;
 
   // Grab a debug location for the inserted loads/stores; given that the
@@ -1071,7 +1077,7 @@ bool llvm::promoteLoopAccessesToScalars(
   if (PreheaderLoad->use_empty())
     PreheaderLoad->eraseFromParent();
 
-  return Changed;
+  return true;
 }
 
 /// Returns an owning pointer to an alias set which incorporates aliasing info

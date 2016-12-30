@@ -12661,3 +12661,79 @@ Stack Map Intrinsics
 LLVM provides experimental intrinsics to support runtime patching
 mechanisms commonly desired in dynamic language JITs. These intrinsics
 are described in :doc:`StackMaps`.
+
+Element Wise Atomic Memory Intrinsics
+-------------------------------------
+
+These intrinsics are similar to the standard library memory intrinsics except
+that they perform memory transfer as a sequence of atomic memory accesses.
+
+.. _int_memcpy_element_atomic:
+
+'``llvm.memcpy.element.atomic``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.memcpy.element.atomic`` on
+any integer bit width and for different address spaces. Not all targets
+support all bit widths however.
+
+::
+
+      declare void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* <dest>, i8* <src>,
+                                              i64 <num_elements>, i32 <element_size>)
+
+Overview:
+"""""""""
+
+The '``llvm.memcpy.element.atomic.*``' intrinsic performs copy of a block of 
+memory from the source location to the destination location as a sequence of
+unordered atomic memory accesses where each access is a multiple of
+``element_size`` bytes wide and aligned at an element size boundary. For example
+each element is accessed atomically in source and destination buffers.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the destination, the second is a
+pointer to the source. The third argument is an integer argument
+specifying the number of elements to copy, the fourth argument is size of
+the single element in bytes.
+
+``element_size`` should be a power of two, greater than zero and less than
+a target-specific atomic access size limit.
+
+For each of the input pointers ``align`` parameter attribute must be specified.
+It must be a power of two and greater than or equal to the ``element_size``.
+Caller guarantees that both the source and destination pointers are aligned to
+that boundary.
+
+Semantics:
+""""""""""
+
+The '``llvm.memcpy.element.atomic.*``' intrinsic copies
+'``num_elements`` * ``element_size``' bytes of memory from the source location to
+the destination location. These locations are not allowed to overlap. Memory copy
+is performed as a sequence of unordered atomic memory accesses where each access
+is guaranteed to be a multiple of ``element_size`` bytes wide and aligned at an
+element size boundary.
+
+The order of the copy is unspecified. The same value may be read from the source
+buffer many times, but only one write is issued to the destination buffer per
+element. It is well defined to have concurrent reads and writes to both source
+and destination provided those reads and writes are at least unordered atomic.
+
+This intrinsic does not provide any additional ordering guarantees over those
+provided by a set of unordered loads from the source location and stores to the
+destination.
+
+Lowering:
+"""""""""
+
+In the most general case call to the '``llvm.memcpy.element.atomic.*``' is lowered
+to a call to the symbol ``__llvm_memcpy_element_atomic_*``. Where '*' is replaced
+with an actual element size.
+
+Optimizer is allowed to inline memory copy when it's profitable to do so.

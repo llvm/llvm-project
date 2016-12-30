@@ -222,8 +222,15 @@ def main():
         triple_in_ir = m.groups()[0]
         break
 
-    run_lines = [m.group(1)
+    raw_lines = [m.group(1)
                  for m in [RUN_LINE_RE.match(l) for l in input_lines] if m]
+    run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
+    for l in raw_lines[1:]:
+      if run_lines[-1].endswith("\\"):
+        run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
+      else:
+        run_lines.append(l)
+
     if args.verbose:
       print >>sys.stderr, 'Found %d RUN lines:' % (len(run_lines),)
       for l in run_lines:

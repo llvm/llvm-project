@@ -74,6 +74,7 @@ private:
   bool expandArith(unsigned OpLo, unsigned OpHi, Block &MBB, BlockIt MBBI);
   bool expandLogic(unsigned Op, Block &MBB, BlockIt MBBI);
   bool expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI);
+  bool isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const;
 
   template<typename Func>
   bool expandAtomic(Block &MBB, BlockIt MBBI, Func f);
@@ -200,6 +201,16 @@ expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
 }
 
 bool AVRExpandPseudo::
+  isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const {
+
+  // ORI Rd, 0x0 is redundant.
+  if (Op == AVR::ORIRdK && ImmVal == 0x0)
+    return true;
+
+  return false;
+}
+
+bool AVRExpandPseudo::
 expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned DstLoReg, DstHiReg;
@@ -212,21 +223,25 @@ expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   unsigned Hi8 = (Imm >> 8) & 0xff;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  auto MIBLO = buildMI(MBB, MBBI, Op)
-    .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstLoReg, getKillRegState(SrcIsKill))
-    .addImm(Lo8);
+  if (!isLogicImmOpRedundant(Op, Lo8)) {
+    auto MIBLO = buildMI(MBB, MBBI, Op)
+      .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstLoReg, getKillRegState(SrcIsKill))
+      .addImm(Lo8);
 
-  // SREG is always implicitly dead
-  MIBLO->getOperand(3).setIsDead();
+    // SREG is always implicitly dead
+    MIBLO->getOperand(3).setIsDead();
+  }
 
-  auto MIBHI = buildMI(MBB, MBBI, Op)
-    .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstHiReg, getKillRegState(SrcIsKill))
-    .addImm(Hi8);
+  if (!isLogicImmOpRedundant(Op, Hi8)) {
+    auto MIBHI = buildMI(MBB, MBBI, Op)
+      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstHiReg, getKillRegState(SrcIsKill))
+      .addImm(Hi8);
 
-  if (ImpIsDead)
-    MIBHI->getOperand(3).setIsDead();
+    if (ImpIsDead)
+      MIBHI->getOperand(3).setIsDead();
+  }
 
   MI.eraseFromParent();
   return true;

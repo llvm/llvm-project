@@ -975,9 +975,8 @@ bool NewGVN::isOnlyReachableViaThisEdge(const BasicBlockEdge &E) const {
 
 void NewGVN::markUsersTouched(Value *V) {
   // Now mark the users as touched.
-  for (auto &U : V->uses()) {
-    auto *User = dyn_cast<Instruction>(U.getUser());
-    assert(User && "Use of value not within an instruction?");
+  for (auto *User : V->users()) {
+    assert(isa<Instruction>(User) && "Use of value not within an instruction?");
     TouchedInstructions.set(InstrDFS[User]);
   }
 }
@@ -987,7 +986,7 @@ void NewGVN::markMemoryUsersTouched(MemoryAccess *MA) {
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(U))
       TouchedInstructions.set(InstrDFS[MUD->getMemoryInst()]);
     else
-      TouchedInstructions.set(InstrDFS[MA]);
+      TouchedInstructions.set(InstrDFS[U]);
   }
 }
 
@@ -1004,10 +1003,14 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
 
   CongruenceClass *EClass;
   // Expressions we can't symbolize are always in their own unique
-  // congruence class.
+  // congruence class.  FIXME: This is hard to perfect. Long term, we should try
+  // to create expressions for everything. We should add UnknownExpression(Inst)
+  // or something to avoid wasting time creating real ones.  Then the existing
+  // logic will just work.
   if (E == nullptr) {
     // We may have already made a unique class.
-    if (VClass->Members.size() != 1 || VClass->RepLeader != V) {
+    // Test whether we are still in the initial class, or we have found a class
+    if (VClass == InitialClass || VClass->RepLeader != V) {
       CongruenceClass *NewClass = createCongruenceClass(V, nullptr);
       // We should always be adding the member in the below code.
       EClass = NewClass;
@@ -1352,7 +1355,9 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
 
   // Count number of instructions for sizing of hash tables, and come
   // up with a global dfs numbering for instructions.
-  unsigned ICount = 0;
+  unsigned ICount = 1;
+  // Add an empty instruction to account for the fact that we start at 1
+  DFSToInstr.emplace_back(nullptr);
   // Note: We want RPO traversal of the blocks, which is not quite the same as
   // dominator tree order, particularly with regard whether backedges get
   // visited first or second, given a block with multiple successors.
@@ -1399,12 +1404,12 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
     }
   }
 
-  TouchedInstructions.resize(ICount + 1);
+  TouchedInstructions.resize(ICount);
   DominatedInstRange.reserve(F.size());
   // Ensure we don't end up resizing the expressionToClass map, as
   // that can be quite expensive. At most, we have one expression per
   // instruction.
-  ExpressionToClass.reserve(ICount + 1);
+  ExpressionToClass.reserve(ICount);
 
   // Initialize the touched instructions to include the entry block.
   const auto &InstRange = BlockInstRange.lookup(&F.getEntryBlock());
@@ -1419,6 +1424,8 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
     // Walk through all the instructions in all the blocks in RPO.
     for (int InstrNum = TouchedInstructions.find_first(); InstrNum != -1;
          InstrNum = TouchedInstructions.find_next(InstrNum)) {
+      assert(InstrNum != 0 && "Bit 0 should never be set, something touched an "
+                              "instruction not in the lookup table");
       Value *V = DFSToInstr[InstrNum];
       BasicBlock *CurrBlock = nullptr;
 
@@ -1914,8 +1921,11 @@ bool NewGVN::eliminateInstructions(Function &F) {
             continue;
           Value *Result = EliminationStack.back();
 
-          // Don't replace our existing users with ourselves.
-          if (MemberUse->get() == Result)
+          // Don't replace our existing users with ourselves, and don't replace
+          // phi node arguments with the result of the same phi node.
+          // IE tmp = phi(tmp11, undef); tmp11 = foo -> tmp = phi(tmp, undef)
+          if (MemberUse->get() == Result ||
+              (isa<PHINode>(Result) && MemberUse->getUser() == Result))
             continue;
 
           DEBUG(dbgs() << "Found replacement " << *Result << " for "

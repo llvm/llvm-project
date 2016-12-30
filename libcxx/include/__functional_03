@@ -642,6 +642,8 @@ template<class _Rp>
 void
 function<_Rp()>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -916,6 +918,8 @@ template<class _Rp, class _A0>
 void
 function<_Rp(_A0)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -1190,6 +1194,8 @@ template<class _Rp, class _A0, class _A1>
 void
 function<_Rp(_A0, _A1)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -1464,6 +1470,8 @@ template<class _Rp, class _A0, class _A1, class _A2>
 void
 function<_Rp(_A0, _A1, _A2)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
