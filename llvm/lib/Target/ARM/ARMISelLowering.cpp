@@ -1369,7 +1369,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
   case ARMISD::PRELOAD:       return "ARMISD::PRELOAD";
 
-  case ARMISD::WIN__CHKSTK:   return "ARMISD:::WIN__CHKSTK";
+  case ARMISD::WIN__CHKSTK:   return "ARMISD::WIN__CHKSTK";
   case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
 
   case ARMISD::VCEQ:          return "ARMISD::VCEQ";

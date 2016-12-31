@@ -1038,13 +1038,20 @@ static Value *simplifyX86vpcom(const IntrinsicInst &II,
 // masked intrinsics.
 static Value *emitX86MaskSelect(Value *Mask, Value *Op0, Value *Op1,
                                 InstCombiner::BuilderTy &Builder) {
+  unsigned VWidth = Op0->getType()->getVectorNumElements();
+
+  // If the mask is all ones we don't need the select. But we need to check
+  // only the bit thats will be used in case VWidth is less than 8.
+  if (auto *C = dyn_cast<ConstantInt>(Mask))
+    if (C->getValue().zextOrTrunc(VWidth).isAllOnesValue())
+      return Op0;
+
   auto *MaskTy = VectorType::get(Builder.getInt1Ty(),
                          cast<IntegerType>(Mask->getType())->getBitWidth());
   Mask = Builder.CreateBitCast(Mask, MaskTy);
 
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
-  unsigned VWidth = Op0->getType()->getVectorNumElements();
   if (VWidth < 8) {
     uint32_t Indices[4];
     for (unsigned i = 0; i != VWidth; ++i)
@@ -1768,6 +1775,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_sse2_ucomile_sd:
   case Intrinsic::x86_sse2_ucomilt_sd:
   case Intrinsic::x86_sse2_ucomineq_sd:
+  case Intrinsic::x86_avx512_vcomi_ss:
+  case Intrinsic::x86_avx512_vcomi_sd:
   case Intrinsic::x86_avx512_mask_cmp_ss:
   case Intrinsic::x86_avx512_mask_cmp_sd: {
     // These intrinsics only demand the 0th element of their input vectors. If
@@ -1873,16 +1882,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         }
 
         // Handle the masking aspect of the intrinsic.
-        // Cast the mask to an i1 vector and then extract the lowest element.
         Value *Mask = II->getArgOperand(3);
-        auto *MaskTy = VectorType::get(Builder->getInt1Ty(),
+        auto *C = dyn_cast<ConstantInt>(Mask);
+        // We don't need a select if we know the mask bit is a 1.
+        if (!C || !C->getValue()[0]) {
+          // Cast the mask to an i1 vector and then extract the lowest element.
+          auto *MaskTy = VectorType::get(Builder->getInt1Ty(),
                              cast<IntegerType>(Mask->getType())->getBitWidth());
-        Mask = Builder->CreateBitCast(Mask, MaskTy);
-        Mask = Builder->CreateExtractElement(Mask, (uint64_t)0);
-        // Extract the lowest element from the passthru operand.
-        Value *Passthru = Builder->CreateExtractElement(II->getArgOperand(2),
-                                                        (uint64_t)0);
-        V = Builder->CreateSelect(Mask, V, Passthru);
+          Mask = Builder->CreateBitCast(Mask, MaskTy);
+          Mask = Builder->CreateExtractElement(Mask, (uint64_t)0);
+          // Extract the lowest element from the passthru operand.
+          Value *Passthru = Builder->CreateExtractElement(II->getArgOperand(2),
+                                                          (uint64_t)0);
+          V = Builder->CreateSelect(Mask, V, Passthru);
+        }
 
         // Insert the result back into the original argument 0.
         V = Builder->CreateInsertElement(Arg0, V, (uint64_t)0);

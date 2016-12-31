@@ -462,8 +462,7 @@ void LazyValueInfoCache::eraseValue(Value *V) {
   SmallVector<AssertingVH<BasicBlock>, 4> ToErase;
   for (auto &I : OverDefinedCache) {
     SmallPtrSetImpl<Value *> &ValueSet = I.second;
-    if (ValueSet.count(V))
-      ValueSet.erase(V);
+    ValueSet.erase(V);
     if (ValueSet.empty())
       ToErase.push_back(I.first);
   }
@@ -525,23 +524,25 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
     // Skip blocks only accessible through NewSucc.
     if (ToUpdate == NewSucc) continue;
 
+    // If a value was marked overdefined in OldSucc, and is here too...
+    auto OI = OverDefinedCache.find(ToUpdate);
+    if (OI == OverDefinedCache.end())
+      continue;
+    SmallPtrSetImpl<Value *> &ValueSet = OI->second;
+
     bool changed = false;
     for (Value *V : ValsToClear) {
-      // If a value was marked overdefined in OldSucc, and is here too...
-      auto OI = OverDefinedCache.find(ToUpdate);
-      if (OI == OverDefinedCache.end())
+      if (!ValueSet.erase(V))
         continue;
-      SmallPtrSetImpl<Value *> &ValueSet = OI->second;
-      if (!ValueSet.count(V))
-        continue;
-
-      ValueSet.erase(V);
-      if (ValueSet.empty())
-        OverDefinedCache.erase(OI);
 
       // If we removed anything, then we potentially need to update
       // blocks successors too.
       changed = true;
+
+      if (ValueSet.empty()) {
+        OverDefinedCache.erase(OI);
+        break;
+      }
     }
 
     if (!changed) continue;

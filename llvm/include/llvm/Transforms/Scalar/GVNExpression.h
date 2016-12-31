@@ -24,6 +24,7 @@
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/MemorySSA.h"
 #include <algorithm>
 
 namespace llvm {
@@ -318,7 +319,7 @@ public:
       OS << "ExpressionTypeLoad, ";
     this->BasicExpression::printInternal(OS, false);
     OS << " represents Load at " << Load;
-    OS << " with DefiningAccess " << DefiningAccess;
+    OS << " with DefiningAccess " << *DefiningAccess;
   }
 };
 
@@ -357,6 +358,7 @@ public:
       OS << "ExpressionTypeStore, ";
     this->BasicExpression::printInternal(OS, false);
     OS << " represents Store at " << Store;
+    OS << " with DefiningAccess " << *DefiningAccess;
   }
 };
 

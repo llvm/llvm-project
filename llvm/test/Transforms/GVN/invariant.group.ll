@@ -319,6 +319,31 @@ entry:
     ret i8 %d
 }
 
+; This test checks if invariant.group understands gep with zeros
+; CHECK-LABEL: define void @testGEP0() {
+define void @testGEP0() {
+  %a = alloca %struct.A, align 8
+  %1 = bitcast %struct.A* %a to i8*
+  %2 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTV1A, i64 0, i64 2) to i32 (...)**), i32 (...)*** %2, align 8, !invariant.group !0
+; CHECK: call void @_ZN1A3fooEv(%struct.A* nonnull dereferenceable(8) %a)
+  call void @_ZN1A3fooEv(%struct.A* nonnull dereferenceable(8) %a) ; This call may change vptr
+  %3 = load i8, i8* @unknownPtr, align 4
+  %4 = icmp eq i8 %3, 0
+  br i1 %4, label %_Z1gR1A.exit, label %5
+
+; This should be devirtualized by invariant.group
+  %6 = bitcast %struct.A* %a to void (%struct.A*)***
+  %7 = load void (%struct.A*)**, void (%struct.A*)*** %6, align 8, !invariant.group !0
+  %8 = load void (%struct.A*)*, void (%struct.A*)** %7, align 8
+; CHECK: call void @_ZN1A3fooEv(%struct.A* nonnull %a)
+  call void %8(%struct.A* nonnull %a)
+  br label %_Z1gR1A.exit
+
+_Z1gR1A.exit:                                     ; preds = %0, %5
+  ret void
+}
+
 declare void @foo(i8*)
 declare void @bar(i8)
 declare i8* @getPointer(i8*)

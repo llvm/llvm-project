@@ -339,43 +339,62 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
 MemDepResult
 MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
                                                             BasicBlock *BB) {
+
+  auto *InvariantGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group);
+  if (!InvariantGroupMD)
+    return MemDepResult::getUnknown();
+
   Value *LoadOperand = LI->getPointerOperand();
   // It's is not safe to walk the use list of global value, because function
   // passes aren't allowed to look outside their functions.
   if (isa<GlobalValue>(LoadOperand))
     return MemDepResult::getUnknown();
 
-  auto *InvariantGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group);
-  if (!InvariantGroupMD)
-    return MemDepResult::getUnknown();
-
-  SmallSet<Value *, 14> Seen;
   // Queue to process all pointers that are equivalent to load operand.
-  SmallVector<Value *, 8> LoadOperandsQueue;
-  LoadOperandsQueue.push_back(LoadOperand);
-  Seen.insert(LoadOperand);
+  SmallVector<const Value *, 8> LoadOperandsQueue;
+  SmallSet<const Value *, 14> SeenValues;
+  auto TryInsertToQueue = [&](Value *V) {
+    if (SeenValues.insert(V).second)
+      LoadOperandsQueue.push_back(V);
+  };
+
+  TryInsertToQueue(LoadOperand);
   while (!LoadOperandsQueue.empty()) {
-    Value *Ptr = LoadOperandsQueue.pop_back_val();
+    const Value *Ptr = LoadOperandsQueue.pop_back_val();
+    assert(Ptr);
     if (isa<GlobalValue>(Ptr))
       continue;
 
-    if (auto *BCI = dyn_cast<BitCastInst>(Ptr)) {
-      if (Seen.insert(BCI->getOperand(0)).second) {
-        LoadOperandsQueue.push_back(BCI->getOperand(0));
-      }
-    }
+    // Value comes from bitcast: Ptr = bitcast x. Insert x.
+    if (auto *BCI = dyn_cast<BitCastInst>(Ptr))
+      TryInsertToQueue(BCI->getOperand(0));
+    // Gep with zeros is equivalent to bitcast.
+    // FIXME: we are not sure if some bitcast should be canonicalized to gep 0
+    // or gep 0 to bitcast because of SROA, so there are 2 forms. When typeless
+    // pointers will be upstream then both cases will be gone (and this BFS
+    // also won't be needed).
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+      if (GEP->hasAllZeroIndices())
+        TryInsertToQueue(GEP->getOperand(0));
 
-    for (Use &Us : Ptr->uses()) {
+    for (const Use &Us : Ptr->uses()) {
       auto *U = dyn_cast<Instruction>(Us.getUser());
       if (!U || U == LI || !DT.dominates(U, LI))
         continue;
 
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        if (Seen.insert(BCI).second) {
-          LoadOperandsQueue.push_back(BCI);
-        }
+      // Bitcast or gep with zeros are using Ptr. Add to queue to check it's
+      // users.      U = bitcast Ptr
+      if (isa<BitCastInst>(U)) {
+        TryInsertToQueue(U);
         continue;
       }
+      // U = getelementptr Ptr, 0, 0...
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
+        if (GEP->hasAllZeroIndices()) {
+          TryInsertToQueue(U);
+          continue;
+        }
+
       // If we hit load/store with the same invariant.group metadata (and the
       // same pointer operand) we can assume that value pointed by pointer
       // operand didn't change.

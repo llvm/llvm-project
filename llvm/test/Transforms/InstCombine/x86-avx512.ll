@@ -2753,3 +2753,41 @@ define <8 x double> @test_div_pd_mask_round(<8 x double> %a, <8 x double> %b, <8
   %1 = tail call <8 x double> @llvm.x86.avx512.mask.div.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask, i32 8)
   ret <8 x double> %1
 }
+
+declare i32 @llvm.x86.avx512.vcomi.ss(<4 x float>, <4 x float>, i32, i32)
+
+define i32 @test_comi_ss_0(float %a, float %b) {
+; CHECK-LABEL: @test_comi_ss_0(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float %a, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> undef, float %b, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.avx512.vcomi.ss(<4 x float> [[TMP1]], <4 x float> [[TMP2]], i32 0, i32 4)
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = insertelement <4 x float> undef, float %a, i32 0
+  %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1
+  %3 = insertelement <4 x float> %2, float 2.000000e+00, i32 2
+  %4 = insertelement <4 x float> %3, float 3.000000e+00, i32 3
+  %5 = insertelement <4 x float> undef, float %b, i32 0
+  %6 = insertelement <4 x float> %5, float 4.000000e+00, i32 1
+  %7 = insertelement <4 x float> %6, float 5.000000e+00, i32 2
+  %8 = insertelement <4 x float> %7, float 6.000000e+00, i32 3
+  %9 = tail call i32 @llvm.x86.avx512.vcomi.ss(<4 x float> %4, <4 x float> %8, i32 0, i32 4)
+  ret i32 %9
+}
+
+declare i32 @llvm.x86.avx512.vcomi.sd(<2 x double>, <2 x double>, i32, i32)
+
+define i32 @test_comi_sd_0(double %a, double %b) {
+; CHECK-LABEL: @test_comi_sd_0(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %a, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double %b, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.x86.avx512.vcomi.sd(<2 x double> [[TMP1]], <2 x double> [[TMP2]], i32 0, i32 4)
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = insertelement <2 x double> undef, double %a, i32 0
+  %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
+  %3 = insertelement <2 x double> undef, double %b, i32 0
+  %4 = insertelement <2 x double> %3, double 2.000000e+00, i32 1
+  %5 = tail call i32 @llvm.x86.avx512.vcomi.sd(<2 x double> %2, <2 x double> %4, i32 0, i32 4)
+  ret i32 %5
+}

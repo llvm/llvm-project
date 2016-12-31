@@ -4904,7 +4904,8 @@ The existence of the ``invariant.group`` metadata on the instruction tells
 the optimizer that every ``load`` and ``store`` to the same pointer operand 
 within the same invariant group can be assumed to load or store the same  
 value (but see the ``llvm.invariant.group.barrier`` intrinsic which affects 
-when two pointers are considered the same).
+when two pointers are considered the same). Pointers returned by bitcast or
+getelementptr with only zero indices are considered the same.
 
 Examples:
 

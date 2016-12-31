@@ -1281,7 +1281,7 @@ void NewGVN::updateProcessedCount(Value *V) {
   } else {
     ProcessedCount[V] += 1;
     assert(ProcessedCount[V] < 100 &&
-           "Seem to have processed the same Value a lot\n");
+           "Seem to have processed the same Value a lot");
   }
 #endif
 }

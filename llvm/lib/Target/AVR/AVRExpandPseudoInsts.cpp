@@ -203,6 +203,10 @@ expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
 bool AVRExpandPseudo::
   isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const {
 
+  // ANDI Rd, 0xff is redundant.
+  if (Op == AVR::ANDIRdK && ImmVal == 0xff)
+    return true;
+
   // ORI Rd, 0x0 is redundant.
   if (Op == AVR::ORIRdK && ImmVal == 0x0)
     return true;
