@@ -263,7 +263,7 @@ struct ModuleInfoHeader {
 /// is abstracted here for the purposes of non-Windows platforms that don't have
 /// the GUID structure defined.
 struct PDB_UniqueId {
-  char Guid[16];
+  uint8_t Guid[16];
 };
 
 // The header preceeding the global TPI stream.
