@@ -1097,9 +1097,8 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
 static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
   if (!PreserveAlignmentAssumptions || !IFI.GetAssumptionCache)
     return;
-  AssumptionCache *AC = IFI.GetAssumptionCache
-                            ? &(*IFI.GetAssumptionCache)(*CS.getCaller())
-                            : nullptr;
+
+  AssumptionCache *AC = &(*IFI.GetAssumptionCache)(*CS.getCaller());
   auto &DL = CS.getCaller()->getParent()->getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
@@ -1127,8 +1126,7 @@ static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
 
       CallInst *NewAssumption = IRBuilder<>(CS.getInstruction())
                                     .CreateAlignmentAssumption(DL, Arg, Align);
-      if (AC)
-        AC->registerAssumption(NewAssumption);
+      AC->registerAssumption(NewAssumption);
     }
   }
 }

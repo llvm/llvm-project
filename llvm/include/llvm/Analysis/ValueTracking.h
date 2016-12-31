@@ -308,12 +308,12 @@ template <typename T> class ArrayRef;
   bool isKnownNonNull(const Value *V);
 
   /// Return true if this pointer couldn't possibly be null. If the context
-  /// instruction is specified, perform context-sensitive analysis and return
-  /// true if the pointer couldn't possibly be null at the specified
-  /// instruction.
+  /// instruction and dominator tree are specified, perform context-sensitive
+  /// analysis and return true if the pointer couldn't possibly be null at the
+  /// specified instruction.
   bool isKnownNonNullAt(const Value *V,
                         const Instruction *CtxI = nullptr,
-                        const DominatorTree *DT  = nullptr);
+                        const DominatorTree *DT = nullptr);
 
   /// Return true if it is valid to use the assumptions provided by an
   /// assume intrinsic, I, at the point in the control-flow identified by the
