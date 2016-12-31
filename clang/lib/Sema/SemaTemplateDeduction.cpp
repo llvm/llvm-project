@@ -1898,11 +1898,11 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
         return NumberOfArgumentsMustMatch ? Sema::TDK_TooFewArguments
                                           : Sema::TDK_Success;
 
-      if (Args[ArgIdx].isPackExpansion()) {
-        // FIXME: We follow the logic of C++0x [temp.deduct.type]p22 here,
-        // but applied to pack expansions that are template arguments.
+      // C++1z [temp.deduct.type]p9:
+      //   During partial ordering, if Ai was originally a pack expansion [and]
+      //   Pi is not a pack expansion, template argument deduction fails.
+      if (Args[ArgIdx].isPackExpansion())
         return Sema::TDK_MiscellaneousDeductionFailure;
-      }
 
       // Perform deduction for this Pi/Ai pair.
       if (Sema::TemplateDeductionResult Result
@@ -1965,7 +1965,8 @@ DeduceTemplateArguments(Sema &S,
                         TemplateDeductionInfo &Info,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
   return DeduceTemplateArguments(S, TemplateParams, ParamList.asArray(),
-                                 ArgList.asArray(), Info, Deduced, false);
+                                 ArgList.asArray(), Info, Deduced,
+                                 /*NumberOfArgumentsMustMatch*/false);
 }
 
 /// \brief Determine whether two template arguments are the same.
@@ -4581,13 +4582,13 @@ UnresolvedSetIterator Sema::getMostSpecialized(
 /// Determine whether one partial specialization, P1, is at least as
 /// specialized than another, P2.
 ///
-/// \tparam PartialSpecializationDecl The kind of P2, which must be a
-/// {Class,Var}Template{PartialSpecialization,}Decl.
+/// \tparam TemplateLikeDecl The kind of P2, which must be a
+/// TemplateDecl or {Class,Var}TemplatePartialSpecializationDecl.
 /// \param T1 The injected-class-name of P1 (faked for a variable template).
 /// \param T2 The injected-class-name of P2 (faked for a variable template).
-template<typename PartialSpecializationDecl>
+template<typename TemplateLikeDecl>
 static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
-                                     PartialSpecializationDecl *P2,
+                                     TemplateLikeDecl *P2,
                                      TemplateDeductionInfo &Info) {
   // C++ [temp.class.order]p1:
   //   For two class template partial specializations, the first is at least as
@@ -4727,6 +4728,72 @@ bool Sema::isMoreSpecializedThanPrimary(
     return false;
   }
   return true;
+}
+
+bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
+     TemplateParameterList *P, TemplateDecl *AArg, SourceLocation Loc) {
+  // C++1z [temp.arg.template]p4: (DR 150)
+  //   A template template-parameter P is at least as specialized as a
+  //   template template-argument A if, given the following rewrite to two
+  //   function templates...
+
+  // Rather than synthesize function templates, we merely perform the
+  // equivalent partial ordering by performing deduction directly on
+  // the template parameter lists of the template template parameters.
+  //
+  //   Given an invented class template X with the template parameter list of
+  //   A (including default arguments):
+  TemplateName X = Context.getCanonicalTemplateName(TemplateName(AArg));
+  TemplateParameterList *A = AArg->getTemplateParameters();
+
+  //    - Each function template has a single function parameter whose type is
+  //      a specialization of X with template arguments corresponding to the
+  //      template parameters from the respective function template
+  SmallVector<TemplateArgument, 8> AArgs;
+  Context.getInjectedTemplateArgs(A, AArgs);
+
+  // Check P's arguments against A's parameter list. This will fill in default
+  // template arguments as needed. AArgs are already correct by construction.
+  // We can't just use CheckTemplateIdType because that will expand alias
+  // templates.
+  SmallVector<TemplateArgument, 4> PArgs;
+  {
+    SFINAETrap Trap(*this);
+
+    Context.getInjectedTemplateArgs(P, PArgs);
+    TemplateArgumentListInfo PArgList(P->getLAngleLoc(), P->getRAngleLoc());
+    for (unsigned I = 0, N = P->size(); I != N; ++I) {
+      // Unwrap packs that getInjectedTemplateArgs wrapped around pack
+      // expansions, to form an "as written" argument list.
+      TemplateArgument Arg = PArgs[I];
+      if (Arg.getKind() == TemplateArgument::Pack) {
+        assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion());
+        Arg = *Arg.pack_begin();
+      }
+      PArgList.addArgument(getTrivialTemplateArgumentLoc(
+          Arg, QualType(), P->getParam(I)->getLocation()));
+    }
+    PArgs.clear();
+
+    // C++1z [temp.arg.template]p3:
+    //   If the rewrite produces an invalid type, then P is not at least as
+    //   specialized as A.
+    if (CheckTemplateArgumentList(AArg, Loc, PArgList, false, PArgs) ||
+        Trap.hasErrorOccurred())
+      return false;
+  }
+
+  QualType AType = Context.getTemplateSpecializationType(X, AArgs);
+  QualType PType = Context.getTemplateSpecializationType(X, PArgs);
+
+  SmallVector<DeducedTemplateArgument, 4> Deduced;
+  Deduced.resize(A->size());
+
+  //   ... the function template corresponding to P is at least as specialized
+  //   as the function template corresponding to A according to the partial
+  //   ordering rules for function templates.
+  TemplateDeductionInfo Info(Loc, A->getDepth());
+  return isAtLeastAsSpecializedAs(*this, PType, AType, AArg, Info);
 }
 
 static void

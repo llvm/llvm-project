@@ -5586,6 +5586,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   return Arg;
 }
 
+static void DiagnoseTemplateParameterListArityMismatch(
+    Sema &S, TemplateParameterList *New, TemplateParameterList *Old,
+    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc);
+
 /// \brief Check a template argument against its corresponding
 /// template template parameter.
 ///
@@ -5601,6 +5605,9 @@ bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
     assert(Name.isDependent() && "Non-dependent template isn't a declaration?");
     return false;
   }
+
+  if (Template->isInvalidDecl())
+    return true;
 
   // C++0x [temp.arg.template]p1:
   //   A template-argument for a template template-parameter shall be
@@ -5628,6 +5635,25 @@ bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
   TemplateParameterList *Params = Param->getTemplateParameters();
   if (Param->isExpandedParameterPack())
     Params = Param->getExpansionTemplateParameters(ArgumentPackIndex);
+
+  // C++1z [temp.arg.template]p3: (DR 150)
+  //   A template-argument matches a template template-parameter P when P
+  //   is at least as specialized as the template-argument A.
+  if (getLangOpts().RelaxedTemplateTemplateArgs) {
+    // Quick check for the common case:
+    //   If P contains a parameter pack, then A [...] matches P if each of A's
+    //   template parameters matches the corresponding template parameter in
+    //   the template-parameter-list of P.
+    if (TemplateParameterListsAreEqual(
+            Template->getTemplateParameters(), Params, false,
+            TPL_TemplateTemplateArgumentMatch, Arg.getLocation()))
+      return false;
+
+    if (isTemplateTemplateParameterAtLeastAsSpecializedAs(Params, Template,
+                                                          Arg.getLocation()))
+      return false;
+    // FIXME: Produce better diagnostics for deduction failures.
+  }
 
   return !TemplateParameterListsAreEqual(Template->getTemplateParameters(),
                                          Params,
@@ -5840,7 +5866,7 @@ static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
     return false;
   }
 
-  // Check that both are parameter packs are neither are parameter packs.
+  // Check that both are parameter packs or neither are parameter packs.
   // However, if we are matching a template template argument to a
   // template template parameter, the template template parameter can have
   // a parameter pack where the template template argument does not.

@@ -6760,6 +6760,9 @@ public:
   bool isMoreSpecializedThanPrimary(VarTemplatePartialSpecializationDecl *T,
                                     sema::TemplateDeductionInfo &Info);
 
+  bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
+      TemplateParameterList *P, TemplateDecl *AArg, SourceLocation Loc);
+
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced,
                                   unsigned Depth,
