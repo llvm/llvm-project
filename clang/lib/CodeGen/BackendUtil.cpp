@@ -504,21 +504,14 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 
   // Keep this synced with the equivalent code in tools/driver/cc1as_main.cpp.
   llvm::Optional<llvm::Reloc::Model> RM;
-  if (CodeGenOpts.RelocationModel == "static") {
-    RM = llvm::Reloc::Static;
-  } else if (CodeGenOpts.RelocationModel == "pic") {
-    RM = llvm::Reloc::PIC_;
-  } else if (CodeGenOpts.RelocationModel == "ropi") {
-    RM = llvm::Reloc::ROPI;
-  } else if (CodeGenOpts.RelocationModel == "rwpi") {
-    RM = llvm::Reloc::RWPI;
-  } else if (CodeGenOpts.RelocationModel == "ropi-rwpi") {
-    RM = llvm::Reloc::ROPI_RWPI;
-  } else {
-    assert(CodeGenOpts.RelocationModel == "dynamic-no-pic" &&
-           "Invalid PIC model!");
-    RM = llvm::Reloc::DynamicNoPIC;
-  }
+  RM = llvm::StringSwitch<llvm::Reloc::Model>(CodeGenOpts.RelocationModel)
+           .Case("static", llvm::Reloc::Static)
+           .Case("pic", llvm::Reloc::PIC_)
+           .Case("ropi", llvm::Reloc::ROPI)
+           .Case("rwpi", llvm::Reloc::RWPI)
+           .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+           .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC);
+  assert(RM.hasValue() && "invalid PIC model!");
 
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
   switch (CodeGenOpts.OptimizationLevel) {

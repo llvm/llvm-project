@@ -80,6 +80,11 @@ Improvements to clang-tidy
 
 - `misc-pointer-and-integral-operation` check was removed.
 
+- New `misc-string-compare
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-compare.html>`_ check
+
+  Warns about using ``compare`` to test for string equality or inequality.
+
 - New `misc-use-after-move
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-use-after-move.html>`_ check
 
