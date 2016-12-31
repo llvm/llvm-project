@@ -733,7 +733,7 @@ as the draft C++1z standard evolves.
     <tr>
       <td>Matching template template parameters to compatible arguments</td>
       <td><a href="http://wg21.link/p0522r0">P0522R0</a></td>
-      <td class="none" align="center">No <a href="#p0522">(12)</a></td>
+      <td class="partial" align="center">Partial <a href="#p0522">(12)</a></td>
     </tr>
     <tr>
       <td>Removing deprecated dynamic exception specifications</td>
@@ -763,8 +763,12 @@ left to right in the callee. As a result, function parameters in calls to
 functions using expression syntax are no longer guaranteed to be destroyed in
 reverse construction order in that ABI.
 </span><br>
-<span id="p0522">(12): This is the resolution to a Defect Report, so will be
-applied to all language versions.
+<span id="p0522">(12): Despite being the the resolution to a Defect Report, this
+feature is disabled by default in all language versions, and can be enabled
+explicitly with the flag <tt>-frelaxed-template-template-args</tt>. The change
+to the standard lacks a corresponding change for template partial ordering,
+resulting in ambiguity errors for reasonable and previously-valid code. This
+issue is expected to be rectified soon.
 </span>
 </p>
 </details>
