@@ -727,7 +727,8 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
-#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__)
+#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
+    (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
 #   define _LIBCPP_EXPLICIT explicit
 #else
 #   define _LIBCPP_EXPLICIT
@@ -917,7 +918,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 
-// Thread-unsafe functions such as strtok(), mbtowc() and localtime()
+// Thread-unsafe functions such as strtok() and localtime()
 // are not available.
 #ifdef __CloudABI__
 #define _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS

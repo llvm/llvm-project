@@ -103,7 +103,7 @@ you can :ref:`bind <astmatchers-bind>` the node they represent to ids for later
 processing.
 
 ``VariadicDynCastAllOfMatchers`` are callable classes that model variadic
-template functions in C++03.  They take an aribtrary number of
+template functions in C++03.  They take an arbitrary number of
 ``Matcher<Derived>`` and return a ``Matcher<Base>``.
 
 ``AST_MATCHER_P(Type, Name, ParamType, Param)``

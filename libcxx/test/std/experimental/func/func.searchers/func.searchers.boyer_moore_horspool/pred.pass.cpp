@@ -73,8 +73,7 @@ test()
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia+sa-3), Iter2(ia+sa), Iter1(ia+sa-3), 3*sa);
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia),      Iter2(ia+sa), Iter1(ia),      sa*sa);
     do_search(Iter1(ia), Iter1(ia+sa-1), Iter2(ia),      Iter2(ia+sa), Iter1(ia+sa-1), (sa-1)*sa);
-    // FIXME: The max_count for this search should be 'sa'
-    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa*2);
+    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa);
     int ib[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]);
     int ic[] = {1};
@@ -108,8 +107,7 @@ test2()
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia+sa-3), Iter2(ia+sa), Iter1(ia+sa-3), 3*sa);
     do_search(Iter1(ia), Iter1(ia+sa),   Iter2(ia),      Iter2(ia+sa), Iter1(ia),      sa*sa);
     do_search(Iter1(ia), Iter1(ia+sa-1), Iter2(ia),      Iter2(ia+sa), Iter1(ia+sa-1), (sa-1)*sa);
-    // FIXME: The max_count for this search should be 'sa'
-    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa*2);
+    do_search(Iter1(ia), Iter1(ia+1),    Iter2(ia),      Iter2(ia+sa), Iter1(ia+1),    sa);
     char ib[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]);
     char ic[] = {1};

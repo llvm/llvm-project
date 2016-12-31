@@ -3244,11 +3244,8 @@ DeduceFromInitializerList(Sema &S, TemplateParameterList *TemplateParams,
             getDeducedParameterFromExpr(Info, ArrTy->getSizeExpr())) {
       // We can perform template argument deduction for the given non-type
       // template parameter.
-      assert(NTTP->getDepth() == 0 &&
-             "Cannot deduce non-type template argument at depth > 0");
       llvm::APInt Size(S.Context.getIntWidth(NTTP->getType()),
                        ILE->getNumInits());
-
       Result = DeduceNonTypeTemplateArgument(
           S, TemplateParams, NTTP, llvm::APSInt(Size), NTTP->getType(),
           /*ArrayBound=*/true, Info, Deduced);
