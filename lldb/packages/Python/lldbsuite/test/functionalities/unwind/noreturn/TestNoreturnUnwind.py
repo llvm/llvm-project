@@ -18,6 +18,7 @@ class NoreturnUnwind(TestBase):
 
     @skipIfWindows  # clang-cl does not support gcc style attributes.
     @expectedFailureAndroid(bugnumber="llvm.org/pr31192", archs=["x86_64"])
+    @expectedFailureAll(bugnumber="llvm.org/pr31192", oslist=['linux'], compiler="gcc", archs=['arm'])
     def test(self):
         """Test that we can backtrace correctly with 'noreturn' functions on the stack"""
         self.build()

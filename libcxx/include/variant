@@ -216,7 +216,7 @@ namespace std { // explicitly not using versioning namespace
 
 class _LIBCPP_EXCEPTION_ABI bad_variant_access : public exception {
 public:
-  _LIBCPP_FUNC_VIS virtual const char* what() const _NOEXCEPT;
+  virtual const char* what() const _NOEXCEPT;
 };
 
 } // namespace std

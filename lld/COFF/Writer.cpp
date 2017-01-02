@@ -828,7 +828,10 @@ void Writer::writeBuildId() {
 
   assert(BuildId->DI->Signature.CVSignature == OMF::Signature::PDB70 &&
          "only PDB 7.0 is supported");
-  memcpy(BuildId->DI->PDB70.Signature, Res, 16);
+  assert(sizeof(Res) == sizeof(BuildId->DI->PDB70.Signature) &&
+         "signature size mismatch");
+  memcpy(BuildId->DI->PDB70.Signature, Res,
+         sizeof(codeview::PDB70DebugInfo::Signature));
   // TODO(compnerd) track the Age
   BuildId->DI->PDB70.Age = 1;
 }

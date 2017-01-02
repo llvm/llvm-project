@@ -1870,6 +1870,8 @@ template<class _Rp, class ..._ArgTypes>
 void
 function<_Rp(_ArgTypes...)>::swap(function& __f) _NOEXCEPT
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if ((void *)__f_ == &__buf_ && (void *)__f.__f_ == &__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;

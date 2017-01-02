@@ -280,10 +280,62 @@ __isl_give isl_id *isl_local_space_get_dim_id(__isl_keep isl_local_space *ls,
 	return ls ? isl_space_get_dim_id(ls->dim, type, pos) : NULL;
 }
 
+/* Return the argument of the integer division at position "pos" in "ls".
+ * All local variables in "ls" are known to have a (complete) explicit
+ * representation.
+ */
+static __isl_give isl_aff *extract_div(__isl_keep isl_local_space *ls, int pos)
+{
+	isl_aff *aff;
+
+	aff = isl_aff_alloc(isl_local_space_copy(ls));
+	if (!aff)
+		return NULL;
+	isl_seq_cpy(aff->v->el, ls->div->row[pos], aff->v->size);
+	return aff;
+}
+
+/* Return the argument of the integer division at position "pos" in "ls".
+ * The integer division at that position is known to have a complete
+ * explicit representation, but some of the others do not.
+ * Remove them first because the domain of an isl_aff
+ * is not allowed to have unknown local variables.
+ */
+static __isl_give isl_aff *drop_unknown_divs_and_extract_div(
+	__isl_keep isl_local_space *ls, int pos)
+{
+	int i, n;
+	isl_bool unknown;
+	isl_aff *aff;
+
+	ls = isl_local_space_copy(ls);
+	n = isl_local_space_dim(ls, isl_dim_div);
+	for (i = n - 1; i >= 0; --i) {
+		unknown = isl_local_space_div_is_marked_unknown(ls, i);
+		if (unknown < 0)
+			ls = isl_local_space_free(ls);
+		else if (!unknown)
+			continue;
+		ls = isl_local_space_drop_dims(ls, isl_dim_div, i, 1);
+		if (pos > i)
+			--pos;
+	}
+	aff = extract_div(ls, pos);
+	isl_local_space_free(ls);
+	return aff;
+}
+
+/* Return the argument of the integer division at position "pos" in "ls".
+ * The integer division is assumed to have a complete explicit
+ * representation.  If some of the other integer divisions
+ * do not have an explicit representation, then they need
+ * to be removed first because the domain of an isl_aff
+ * is not allowed to have unknown local variables.
+ */
 __isl_give isl_aff *isl_local_space_get_div(__isl_keep isl_local_space *ls,
 	int pos)
 {
-	isl_aff *aff;
+	isl_bool known;
 
 	if (!ls)
 		return NULL;
@@ -292,18 +344,23 @@ __isl_give isl_aff *isl_local_space_get_div(__isl_keep isl_local_space *ls,
 		isl_die(isl_local_space_get_ctx(ls), isl_error_invalid,
 			"index out of bounds", return NULL);
 
-	if (isl_int_is_zero(ls->div->row[pos][0]))
+	known = isl_local_space_div_is_known(ls, pos);
+	if (known < 0)
+		return NULL;
+	if (!known)
 		isl_die(isl_local_space_get_ctx(ls), isl_error_invalid,
 			"expression of div unknown", return NULL);
 	if (!isl_local_space_is_set(ls))
 		isl_die(isl_local_space_get_ctx(ls), isl_error_invalid,
 			"cannot represent divs of map spaces", return NULL);
 
-	aff = isl_aff_alloc(isl_local_space_copy(ls));
-	if (!aff)
+	known = isl_local_space_divs_known(ls);
+	if (known < 0)
 		return NULL;
-	isl_seq_cpy(aff->v->el, ls->div->row[pos], aff->v->size);
-	return aff;
+	if (known)
+		return extract_div(ls, pos);
+	else
+		return drop_unknown_divs_and_extract_div(ls, pos);
 }
 
 __isl_give isl_space *isl_local_space_get_space(__isl_keep isl_local_space *ls)
@@ -725,7 +782,22 @@ error:
 	return NULL;
 }
 
-/* Does "ls" have an explicit representation for div "div"?
+/* Is the local variable "div" of "ls" marked as not having
+ * an explicit representation?
+ * Note that even if this variable is not marked in this way and therefore
+ * does have an explicit representation, this representation may still
+ * depend (indirectly) on other local variables that do not
+ * have an explicit representation.
+ */
+isl_bool isl_local_space_div_is_marked_unknown(__isl_keep isl_local_space *ls,
+	int div)
+{
+	if (!ls)
+		return isl_bool_error;
+	return isl_local_div_is_marked_unknown(ls->div, div);
+}
+
+/* Does "ls" have a complete explicit representation for div "div"?
  */
 isl_bool isl_local_space_div_is_known(__isl_keep isl_local_space *ls, int div)
 {
@@ -744,9 +816,9 @@ isl_bool isl_local_space_divs_known(__isl_keep isl_local_space *ls)
 		return isl_bool_error;
 
 	for (i = 0; i < ls->div->n_row; ++i) {
-		isl_bool known = isl_local_space_div_is_known(ls, i);
-		if (known < 0 || !known)
-			return known;
+		isl_bool unknown = isl_local_space_div_is_marked_unknown(ls, i);
+		if (unknown < 0 || unknown)
+			return isl_bool_not(unknown);
 	}
 
 	return isl_bool_true;

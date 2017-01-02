@@ -538,19 +538,59 @@ __str_find(const _CharT *__p, _SizeT __sz,
     return static_cast<_SizeT>(__r - __p);
 }
 
+template <class _CharT, class _Traits>
+inline _LIBCPP_CONSTEXPR_AFTER_CXX11 const _CharT *
+__search_substring(const _CharT *__first1, const _CharT *__last1,
+                   const _CharT *__first2, const _CharT *__last2) {
+  // Take advantage of knowing source and pattern lengths.
+  // Stop short when source is smaller than pattern.
+  const ptrdiff_t __len2 = __last2 - __first2;
+  if (__len2 == 0)
+    return __first1;
+
+  ptrdiff_t __len1 = __last1 - __first1;
+  if (__len1 < __len2)
+    return __last1;
+
+  // First element of __first2 is loop invariant.
+  _CharT __f2 = *__first2;
+  while (true) {
+    __len1 = __last1 - __first1;
+    // Check whether __first1 still has at least __len2 bytes.
+    if (__len1 < __len2)
+      return __last1;
+
+    // Find __f2 the first byte matching in __first1.
+    __first1 = _Traits::find(__first1, __len1 - __len2 + 1, __f2);
+    if (__first1 == 0)
+      return __last1;
+
+    // It is faster to compare from the first byte of __first1 even if we
+    // already know that it matches the first byte of __first2: this is because
+    // __first2 is most likely aligned, as it is user's "pattern" string, and
+    // __first1 + 1 is most likely not aligned, as the match is in the middle of
+    // the string.
+    if (_Traits::compare(__first1, __first2, __len2) == 0)
+      return __first1;
+
+    ++__first1;
+  }
+}
+
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find(const _CharT *__p, _SizeT __sz, 
        const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
-    if (__pos > __sz || __sz - __pos < __n)
+    if (__pos > __sz)
         return __npos;
-    if (__n == 0)
+
+    if (__n == 0) // There is nothing to search, just return __pos.
         return __pos;
-    const _CharT* __r = 
-        _VSTD::__search(__p + __pos, __p + __sz,
-                        __s, __s + __n, _Traits::eq,
-                        random_access_iterator_tag(), random_access_iterator_tag()).first;
+
+    const _CharT *__r = __search_substring<_CharT, _Traits>(
+        __p + __pos, __p + __sz, __s, __s + __n);
+
     if (__r == __p + __sz)
         return __npos;
     return static_cast<_SizeT>(__r - __p);

@@ -10,7 +10,6 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
@@ -63,10 +62,8 @@ public:
     llvm::sys::path::append(inputs_folder, "Inputs");
 
     m_pdb_test_exe = inputs_folder;
-    m_dwarf_test_exe = inputs_folder;
     m_types_test_exe = inputs_folder;
     llvm::sys::path::append(m_pdb_test_exe, "test-pdb.exe");
-    llvm::sys::path::append(m_dwarf_test_exe, "test-dwarf.exe");
     llvm::sys::path::append(m_types_test_exe, "test-pdb-types.exe");
   }
 
@@ -84,7 +81,6 @@ public:
 
 protected:
   llvm::SmallString<128> m_pdb_test_exe;
-  llvm::SmallString<128> m_dwarf_test_exe;
   llvm::SmallString<128> m_types_test_exe;
 
   bool FileSpecMatchesAsBaseOrFull(const FileSpec &left,
@@ -154,29 +150,7 @@ protected:
   }
 };
 
-#if HAVE_DIA_SDK
-#define REQUIRES_DIA_SDK(TestName) TestName
-#else
-#define REQUIRES_DIA_SDK(TestName) DISABLED_##TestName
-#endif
-
-TEST_F(SymbolFilePDBTests, TestAbilitiesForDWARF) {
-  // Test that when we have Dwarf debug info, SymbolFileDWARF is used.
-  FileSpec fspec(m_dwarf_test_exe.c_str(), false);
-  ArchSpec aspec("i686-pc-windows");
-  lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
-
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
-  EXPECT_NE(nullptr, symfile);
-  EXPECT_EQ(symfile->GetPluginName(), SymbolFileDWARF::GetPluginNameStatic());
-
-  uint32_t expected_abilities = SymbolFile::kAllAbilities;
-  EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
-}
-
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestAbilitiesForPDB)) {
+TEST_F(SymbolFilePDBTests, TestAbilitiesForPDB) {
   // Test that when we have PDB debug info, SymbolFilePDB is used.
   FileSpec fspec(m_pdb_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
@@ -193,7 +167,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestAbilitiesForPDB)) {
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextBasename)) {
+TEST_F(SymbolFilePDBTests, TestResolveSymbolContextBasename) {
   // Test that attempting to call ResolveSymbolContext with only a basename
   // finds all full paths
   // with the same basename
@@ -213,7 +187,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextBasename)) {
   EXPECT_TRUE(ContainsCompileUnit(sc_list, header_spec));
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextFullPath)) {
+TEST_F(SymbolFilePDBTests, TestResolveSymbolContextFullPath) {
   // Test that attempting to call ResolveSymbolContext with a full path only
   // finds the one source
   // file that matches the full path.
@@ -236,7 +210,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextFullPath)) {
 }
 
 TEST_F(SymbolFilePDBTests,
-       REQUIRES_DIA_SDK(TestLookupOfHeaderFileWithInlines)) {
+       TestLookupOfHeaderFileWithInlines) {
   // Test that when looking up a header file via ResolveSymbolContext (i.e. a
   // file that was not by itself
   // compiled, but only contributes to the combined code of other source files),
@@ -264,8 +238,7 @@ TEST_F(SymbolFilePDBTests,
   }
 }
 
-TEST_F(SymbolFilePDBTests,
-       REQUIRES_DIA_SDK(TestLookupOfHeaderFileWithNoInlines)) {
+TEST_F(SymbolFilePDBTests, TestLookupOfHeaderFileWithNoInlines) {
   // Test that when looking up a header file via ResolveSymbolContext (i.e. a
   // file that was not by itself
   // compiled, but only contributes to the combined code of other source files),
@@ -289,7 +262,7 @@ TEST_F(SymbolFilePDBTests,
   }
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchAll)) {
+TEST_F(SymbolFilePDBTests, TestLineTablesMatchAll) {
   // Test that when calling ResolveSymbolContext with a line number of 0, all
   // line entries from
   // the specified files are returned.
@@ -338,7 +311,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchAll)) {
   VerifyLineEntry(module, sc, header2, *lt, 7, 0x401089);
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchSpecific)) {
+TEST_F(SymbolFilePDBTests, TestLineTablesMatchSpecific) {
   // Test that when calling ResolveSymbolContext with a specific line number,
   // only line entries
   // which match the requested line are returned.
@@ -390,7 +363,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchSpecific)) {
   VerifyLineEntry(module, sc, header1, *lt, 9, 0x401090);
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestSimpleClassTypes)) {
+TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -413,7 +386,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestSimpleClassTypes)) {
             udt_type->GetByteSize());
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes)) {
+TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -436,7 +409,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes)) {
             udt_type->GetByteSize());
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestClassInNamespace)) {
+TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -459,7 +432,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestClassInNamespace)) {
             udt_type->GetByteSize());
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestEnumTypes)) {
+TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -492,21 +465,21 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestEnumTypes)) {
   }
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestArrayTypes)) {
+TEST_F(SymbolFilePDBTests, TestArrayTypes) {
   // In order to get this test working, we need to support lookup by symbol
   // name.  Because array
   // types themselves do not have names, only the symbols have names (i.e. the
   // name of the array).
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestFunctionTypes)) {
+TEST_F(SymbolFilePDBTests, TestFunctionTypes) {
   // In order to get this test working, we need to support lookup by symbol
   // name.  Because array
   // types themselves do not have names, only the symbols have names (i.e. the
   // name of the array).
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestTypedefs)) {
+TEST_F(SymbolFilePDBTests, TestTypedefs) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -540,7 +513,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestTypedefs)) {
   }
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestRegexNameMatch)) {
+TEST_F(SymbolFilePDBTests, TestRegexNameMatch) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -557,7 +530,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestRegexNameMatch)) {
   EXPECT_EQ(num_results, results.GetSize());
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestMaxMatches)) {
+TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
@@ -584,7 +557,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestMaxMatches)) {
   }
 }
 
-TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNullName)) {
+TEST_F(SymbolFilePDBTests, TestNullName) {
   FileSpec fspec(m_types_test_exe.c_str(), false);
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);

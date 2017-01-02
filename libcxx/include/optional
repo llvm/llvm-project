@@ -167,7 +167,6 @@ public:
     bad_optional_access() : logic_error("bad optional access") {}
 
     // Get the key function ~bad_optional_access() into the dylib
-    _LIBCPP_FUNC_VIS
     virtual ~bad_optional_access() _NOEXCEPT;
 };
 

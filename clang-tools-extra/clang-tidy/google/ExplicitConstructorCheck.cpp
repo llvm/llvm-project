@@ -27,8 +27,10 @@ void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(cxxConstructorDecl(unless(isInstantiated())).bind("ctor"),
                      this);
   Finder->addMatcher(
-      cxxConversionDecl(unless(isExplicit()), // Already marked explicit.
-                        unless(isImplicit())) // Compiler-generated.
+      cxxConversionDecl(unless(anyOf(isExplicit(), // Already marked explicit.
+                                     isImplicit(), // Compiler-generated.
+                                     isInstantiated())))
+
           .bind("conversion"),
       this);
 }
@@ -87,6 +89,10 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Conversion =
       Result.Nodes.getNodeAs<CXXConversionDecl>("conversion")) {
     SourceLocation Loc = Conversion->getLocation();
+    // Ignore all macros until we learn to ignore specific ones (e.g. used in
+    // gmock to define matchers).
+    if (Loc.isMacroID())
+      return;
     diag(Loc, WarningMessage)
         << Conversion << FixItHint::CreateInsertion(Loc, "explicit ");
     return;

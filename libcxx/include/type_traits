@@ -443,7 +443,8 @@ inline _LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
 _Tp*
 addressof(_Tp& __x) _NOEXCEPT
 {
-    return (_Tp*)&reinterpret_cast<const volatile char&>(__x);
+  return reinterpret_cast<_Tp *>(
+      const_cast<char *>(&reinterpret_cast<const volatile char &>(__x)));
 }
 
 #endif // _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF

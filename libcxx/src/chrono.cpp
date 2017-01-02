@@ -12,14 +12,23 @@
 #include "system_error"  // __throw_system_error
 #include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRA_LEAN
+#include <Windows.h>
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#include <winapifamily.h>
+#endif
+#else
 #if !defined(CLOCK_REALTIME)
 #include <sys/time.h>        // for gettimeofday and timeval
 #endif
+#endif
 
-#if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK) && !defined(CLOCK_MONOTONIC)
+#if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 #if __APPLE__
 #include <mach/mach_time.h>  // mach_absolute_time, mach_timebase_info_data_t
-#else
+#elif !defined(_WIN32) && !defined(CLOCK_MONOTONIC)
 #error "Monotonic clock not implemented"
 #endif
 #endif
@@ -36,6 +45,32 @@ const bool system_clock::is_steady;
 system_clock::time_point
 system_clock::now() _NOEXCEPT
 {
+#if defined(_WIN32)
+  // FILETIME is in 100ns units
+  using filetime_duration =
+      _VSTD::chrono::duration<__int64,
+                              _VSTD::ratio_multiply<_VSTD::ratio<100, 1>,
+                                                    nanoseconds::period>>;
+
+  // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.
+  static _LIBCPP_CONSTEXPR const filetime_duration
+      nt_to_unix_epoch{11644473600};
+
+  FILETIME ft;
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  GetSystemTimePreciseAsFileTime(&ft);
+#else
+  GetSystemTimeAsFileTime(&ft);
+#endif
+#else
+  GetSystemTimeAsFileTime(&ft);
+#endif
+
+  filetime_duration d{(static_cast<__int64>(ft.dwHighDateTime) << 32) |
+                       static_cast<__int64>(ft.dwLowDateTime)};
+  return time_point(duration_cast<duration>(d - nt_to_unix_epoch));
+#else
 #ifdef CLOCK_REALTIME
     struct timespec tp;
     if (0 != clock_gettime(CLOCK_REALTIME, &tp))
@@ -46,6 +81,7 @@ system_clock::now() _NOEXCEPT
     gettimeofday(&tv, 0);
     return time_point(seconds(tv.tv_sec) + microseconds(tv.tv_usec));
 #endif  // CLOCK_REALTIME
+#endif
 }
 
 time_t
@@ -69,18 +105,7 @@ system_clock::from_time_t(time_t t) _NOEXCEPT
 
 const bool steady_clock::is_steady;
 
-#ifdef CLOCK_MONOTONIC
-
-steady_clock::time_point
-steady_clock::now() _NOEXCEPT
-{
-    struct timespec tp;
-    if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
-        __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
-    return time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
-}
-
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
 
 //   mach_absolute_time() * MachInfo.numer / MachInfo.denom is the number of
 //   nanoseconds since the computer booted up.  MachInfo.numer and MachInfo.denom
@@ -132,6 +157,32 @@ steady_clock::now() _NOEXCEPT
 {
     static FP fp = init_steady_clock();
     return time_point(duration(fp()));
+}
+
+#elif defined(_WIN32)
+
+steady_clock::time_point
+steady_clock::now() _NOEXCEPT
+{
+  static LARGE_INTEGER freq;
+  static BOOL initialized = FALSE;
+  if (!initialized)
+    initialized = QueryPerformanceFrequency(&freq); // always succceeds
+
+  LARGE_INTEGER counter;
+  QueryPerformanceCounter(&counter);
+  return time_point(duration(counter.QuadPart * nano::den / freq.QuadPart));
+}
+
+#elif defined(CLOCK_MONOTONIC)
+
+steady_clock::time_point
+steady_clock::now() _NOEXCEPT
+{
+    struct timespec tp;
+    if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
+        __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
+    return time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
 #else

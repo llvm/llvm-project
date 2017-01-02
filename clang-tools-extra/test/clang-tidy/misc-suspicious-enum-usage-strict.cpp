@@ -64,7 +64,7 @@ int trigger() {
   // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: enum values are from different enum types
   if (P + Q == R)
     return 1;
-  else if ((Q | R) == T)
+  else if ((S | R) == T)
     return 1;
   else
     int k = ZZ | Z;

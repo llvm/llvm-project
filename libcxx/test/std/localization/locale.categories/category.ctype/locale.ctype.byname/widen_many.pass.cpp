@@ -17,8 +17,6 @@
 
 // I doubt this test is portable
 
-// XFAIL: linux
-
 #include <locale>
 #include <string>
 #include <vector>
@@ -31,8 +29,9 @@ int main()
     {
         std::locale l(LOCALE_en_US_UTF_8);
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F(LOCALE_en_US_UTF_8));
+            F const& f = std::use_facet<F>(ll);
             std::string in(" A\x07.a1\x85");
             std::vector<wchar_t> v(in.size());
 
@@ -49,8 +48,9 @@ int main()
     {
         std::locale l("C");
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F("C"));
+            const F& f = std::use_facet<F>(ll);
             std::string in(" A\x07.a1\x85");
             std::vector<wchar_t> v(in.size());
 
@@ -61,7 +61,11 @@ int main()
             assert(v[3] == L'.');
             assert(v[4] == L'a');
             assert(v[5] == L'1');
-            assert(v[6] == wchar_t(133));
+#ifdef __APPLE__
+            assert(v[6] == L'\x85');
+#else
+            assert(v[6] == wchar_t(-1));
+#endif
         }
     }
 }
