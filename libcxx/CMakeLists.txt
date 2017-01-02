@@ -354,8 +354,10 @@ if (LIBCXX_HAS_MUSL_LIBC)
 endif()
 add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
 mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
-if (NOT MSVC AND NOT ${SUPPORTS_DIALECT_NAME})
-  message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+if(NOT ${SUPPORTS_DIALECT_NAME})
+  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+  endif()
 endif()
 
 # On all systems the system c++ standard library headers need to be excluded.
@@ -515,13 +517,17 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
 endif()
 
 if (LIBCXX_NEEDS_SITE_CONFIG)
-  configure_file(
-    include/__config_site.in
-    ${LIBCXX_BINARY_DIR}/__config_site
-    @ONLY)
+  configure_file("include/__config_site.in"
+                 "${LIBCXX_BINARY_DIR}/__config_site"
+                 @ONLY)
+
   # Provide the config definitions by included the generated __config_site
   # file at compile time.
-  add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    add_compile_flags("/FI\"${LIBCXX_BINARY_DIR}/__config_site\"")
+  else()
+    add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  endif()
 endif()
 
 #===============================================================================

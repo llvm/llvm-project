@@ -29,7 +29,7 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (LIBCXX_NEEDS_SITE_CONFIG)
     set(UNIX_CAT cat)
-    if (WIN32)
+    if("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
       set(UNIX_CAT type)
     endif()
     # Generate and install a custom __config header. The new header is created
