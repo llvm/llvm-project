@@ -12,19 +12,19 @@
 
 ; CHECK-LABEL: 'test_vXf64'
 define void @test_vXf64(<2 x double> %src128, <4 x double> %src256, <8 x double> %src512) {
-  ; SSE: Unknown cost {{.*}} %V128 = shufflevector
-  ; AVX: Unknown cost {{.*}} %V128 = shufflevector
-  ; AVX512: Unknown cost {{.*}} %V128 = shufflevector
+  ; SSE: cost of 1 {{.*}} %V128 = shufflevector
+  ; AVX: cost of 1 {{.*}} %V128 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V128 = shufflevector
   %V128 = shufflevector <2 x double> %src128, <2 x double> undef, <2 x i32> zeroinitializer
 
-  ; SSE: Unknown cost {{.*}} %V256 = shufflevector
-  ; AVX: Unknown cost {{.*}} %V256 = shufflevector
-  ; AVX512: Unknown cost {{.*}} %V256 = shufflevector
+  ; SSE: cost of 1 {{.*}} %V256 = shufflevector
+  ; AVX: cost of 1 {{.*}} %V256 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V256 = shufflevector
   %V256 = shufflevector <4 x double> %src256, <4 x double> undef, <4 x i32> zeroinitializer
 
-  ; SSE: Unknown cost {{.*}} %V512 = shufflevector
-  ; AVX: Unknown cost {{.*}} %V512 = shufflevector
-  ; AVX512: Unknown cost {{.*}} %V512 = shufflevector
+  ; SSE: cost of 1 {{.*}} %V512 = shufflevector
+  ; AVX: cost of 1 {{.*}} %V512 = shufflevector
+  ; AVX512: cost of 1 {{.*}} %V512 = shufflevector
   %V512 = shufflevector <8 x double> %src512, <8 x double> undef, <8 x i32> zeroinitializer
 
   ret void

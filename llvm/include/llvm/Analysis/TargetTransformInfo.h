@@ -467,7 +467,11 @@ public:
     SK_Reverse,         ///< Reverse the order of the vector.
     SK_Alternate,       ///< Choose alternate elements from vector.
     SK_InsertSubvector, ///< InsertSubvector. Index indicates start offset.
-    SK_ExtractSubvector ///< ExtractSubvector Index indicates start offset.
+    SK_ExtractSubvector,///< ExtractSubvector Index indicates start offset.
+    SK_PermuteTwoSrc,   ///< Merge elements from two source vectors into one
+                        ///< with any shuffle mask.
+    SK_PermuteSingleSrc ///< Shuffle elements of single source vector with any
+                        ///< shuffle mask.
   };
 
   /// \brief Additional information about an operand's possible values.

@@ -495,7 +495,8 @@ void DIELabel::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   AP->EmitLabelReference(Label, SizeOf(AP, Form),
                          Form == dwarf::DW_FORM_strp ||
                              Form == dwarf::DW_FORM_sec_offset ||
-                             Form == dwarf::DW_FORM_ref_addr);
+                             Form == dwarf::DW_FORM_ref_addr ||
+                             Form == dwarf::DW_FORM_data4);
 }
 
 /// SizeOf - Determine size of label value in bytes.
@@ -642,7 +643,7 @@ void DIEEntry::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
       MCSection *Section = Unit->getSection();
       if (Section) {
         const MCSymbol *SectionSym = Section->getBeginSymbol();
-        AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form));
+        AP->EmitLabelPlusOffset(SectionSym, Addr, SizeOf(AP, Form), true);
         return;
       }
     }

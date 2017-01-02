@@ -1,10 +1,22 @@
-; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s | FileCheck %s
-; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-linux-gnu -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,ELF-ASM %s
+; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-linux-gnu -o %t-2 -dwarf-version 2
+; RUN: llvm-dwarfdump %t-2 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-linux-gnu -o %t-4 -dwarf-version 2
+; RUN: llvm-dwarfdump %t-4 | FileCheck %s -check-prefix=CHECK-DWARF
 
-; RUN: llc -filetype=asm -O0 -mtriple=x86_64-apple-darwin < %s | FileCheck --check-prefix=DARWIN-ASM %s
-; RUN: llc -filetype=obj %s -mtriple=x86_64-apple-darwin -o %t2
-; RUN: llvm-dwarfdump %t2 | FileCheck %s -check-prefix=DARWIN-DWARF
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-apple-darwin < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,DARWIN-ASM2 %s
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-apple-darwin < %s -dwarf-version 4 | FileCheck -check-prefixes=CHECK,DARWIN-ASM4 %s
+; RUN: llc -filetype=obj %s -mtriple=x86_64-apple-darwin -o %t2-2 -dwarf-version 2
+; RUN: llvm-dwarfdump %t2-2 | FileCheck %s -check-prefix=CHECK-DWARF
+; RUN: llc -filetype=obj %s -mtriple=x86_64-apple-darwin -o %t2-4 -dwarf-version 4
+; RUN: llvm-dwarfdump %t2-4 | FileCheck %s -check-prefix=CHECK-DWARF
+
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-pc-win32 < %s -dwarf-version 2 | FileCheck -check-prefixes=CHECK,COFF-ASM %s
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-pc-win32 < %s -dwarf-version 4 | FileCheck -check-prefixes=CHECK,COFF-ASM %s
+; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-pc-win32 -o %t3-2 -dwarf-version 2
+; RUN: llvm-dwarfdump %t3-2 | FileCheck %s -check-prefix=CHECK-DWARF2
+; RUN: llc -filetype=obj -O0 %s -mtriple=x86_64-pc-win32 -o %t3-4 -dwarf-version 4
+; RUN: llvm-dwarfdump %t3-4 | FileCheck %s -check-prefix=CHECK-DWARF
 
 ; Testing case generated from:
 ; clang++ tu1.cpp tu2.cpp -g -emit-llvm -c
@@ -22,7 +34,10 @@
 ; Make sure we use relocation for ref_addr on non-darwin platforms.
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_variable
-; CHECK: .long [[TYPE:.*]] # DW_AT_type
+; ELF-ASM: .long [[TYPE:.*]] # DW_AT_type
+; DARWIN-ASM2: .long [[TYPE:.*]] ## DW_AT_type
+; DARWIN-ASM4: .long [[TYPE:.*]] ## DW_AT_type
+; COFF-ASM: .long [[TYPE:.*]] # DW_AT_type
 ; CHECK: DW_TAG_structure_type
 ; CHECK: cu_begin1
 ; CHECK: DW_TAG_compile_unit
@@ -30,13 +45,13 @@
 ; This variable's type is in the 1st CU.
 ; CHECK: DW_TAG_variable
 ; Make sure this is relocatable.
-; CHECK: .quad .Lsection_info+[[TYPE]] # DW_AT_type
+; and test that we don't create the labels to emit a correct COFF relocation
+; ELF-ASM: .quad .Lsection_info+[[TYPE]] # DW_AT_type
+; COFF-ASM: .secrel32 .Lsection_info+[[TYPE]] # DW_AT_type
+; DARWIN-ASM2: .quad [[TYPE]] ## DW_AT_type
+; DARWIN-ASM4: .long [[TYPE]] ## DW_AT_type
 ; CHECK-NOT: DW_TAG_structure_type
 ; CHECK: .section
-
-; test that we don't create useless labels
-; DARWIN-ASM: .long [[TYPE:.*]] ## DW_AT_type
-; DARWIN-ASM: .quad [[TYPE]] ## DW_AT_type
 
 ; CHECK-DWARF: DW_TAG_compile_unit
 ; CHECK-DWARF: 0x[[ADDR:.*]]: DW_TAG_structure_type
@@ -44,11 +59,10 @@
 ; CHECK-DWARF: DW_TAG_variable
 ; CHECK-DWARF: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[ADDR]])
 
-; DARWIN-DWARF: DW_TAG_compile_unit
-; DARWIN-DWARF: 0x[[ADDR:.*]]: DW_TAG_structure_type
-; DARWIN-DWARF: DW_TAG_compile_unit
-; DARWIN-DWARF: DW_TAG_variable
-; DARWIN-DWARF: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[ADDR]])
+; CHECK-DWARF2: DW_TAG_compile_unit
+; CHECK-DWARF2: DW_TAG_variable
+; CHECK-DWARF2: DW_AT_type [DW_FORM_ref4] {{.*}} => {[[ADDR:.*]]})
+; CHECK-DWARF2: [[ADDR]]: DW_TAG_structure_type
 
 source_filename = "test/DebugInfo/X86/ref_addr_relocation.ll"
 

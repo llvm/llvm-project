@@ -195,11 +195,20 @@ void MCWinCOFFStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
   DF->getContents().resize(DF->getContents().size() + 2, 0);
 }
 
-void MCWinCOFFStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol) {
+void MCWinCOFFStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol,
+                                         uint64_t Offset) {
   MCDataFragment *DF = getOrCreateDataFragment();
-  const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_4);
+  // Create Symbol A for the relocation relative reference.
+  const MCExpr *MCE = MCSymbolRefExpr::create(Symbol, getContext());
+  // Add the constant offset, if given.
+  if (Offset)
+    MCE = MCBinaryExpr::createAdd(
+        MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  // Build the secrel32 relocation.
+  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_SecRel_4);
+  // Record the relocation.
   DF->getFixups().push_back(Fixup);
+  // Emit 4 bytes (zeros) to the object file.
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
