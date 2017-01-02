@@ -60,8 +60,9 @@ private:
     return Cost;
   }
 
-  /// Estimate the cost overhead of SK_Alternate shuffle.
-  unsigned getAltShuffleOverhead(Type *Ty) {
+  /// Estimate a cost of shuffle as a sequence of extract and insert
+  /// operations.
+  unsigned getPermuteShuffleOverhead(Type *Ty) {
     assert(Ty->isVectorTy() && "Can only shuffle vectors");
     unsigned Cost = 0;
     // Shuffle cost is equal to the cost of extracting element from its argument
@@ -351,8 +352,9 @@ public:
 
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp) {
-    if (Kind == TTI::SK_Alternate) {
-      return getAltShuffleOverhead(Tp);
+    if (Kind == TTI::SK_Alternate || Kind == TTI::SK_PermuteTwoSrc ||
+        Kind == TTI::SK_PermuteSingleSrc) {
+      return getPermuteShuffleOverhead(Tp);
     }
     return 1;
   }

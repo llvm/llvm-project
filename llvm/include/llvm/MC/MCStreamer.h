@@ -475,7 +475,7 @@ public:
   /// \brief Emits a COFF section relative relocation.
   ///
   /// \param Symbol - Symbol the section relative relocation should point to.
-  virtual void EmitCOFFSecRel32(MCSymbol const *Symbol);
+  virtual void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset);
 
   /// \brief Emit an ELF .size directive.
   ///

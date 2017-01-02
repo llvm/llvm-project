@@ -801,7 +801,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function type index");
     OS.EmitIntValue(getFuncIdForSubprogram(GV->getSubprogram()).getIndex(), 4);
     OS.AddComment("Function section relative address");
-    OS.EmitCOFFSecRel32(Fn);
+    OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
     OS.AddComment("Function section index");
     OS.EmitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
@@ -2279,7 +2279,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Type");
   OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
   OS.AddComment("DataOffset");
-  OS.EmitCOFFSecRel32(GVSym);
+  OS.EmitCOFFSecRel32(GVSym, /*Offset=*/0);
   OS.AddComment("Segment");
   OS.EmitCOFFSectionIndex(GVSym);
   OS.AddComment("Name");

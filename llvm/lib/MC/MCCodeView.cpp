@@ -200,7 +200,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   OS.EmitIntValue(unsigned(ModuleSubstreamKind::Lines), 4);
   OS.emitAbsoluteSymbolDiff(LineEnd, LineBegin, 4);
   OS.EmitLabel(LineBegin);
-  OS.EmitCOFFSecRel32(FuncBegin);
+  OS.EmitCOFFSecRel32(FuncBegin, /*Offset=*/0);
   OS.EmitCOFFSectionIndex(FuncBegin);
 
   // Actual line info.
