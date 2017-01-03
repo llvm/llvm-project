@@ -30,7 +30,7 @@ define <8 x i32> @test_cmp_b_256(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xc9,0x01]
 ; CHECK-NEXT:    vpinsrd $2, %r10d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xca,0x02]
 ; CHECK-NEXT:    vpinsrd $3, %esi, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x22,0xce,0x03]
-; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %ymm1, %ymm0 ## encoding: [0x62,0xf3,0x75,0x28,0x38,0xc0,0x01]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x75,0x38,0xc0,0x01]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res0 = call i32 @llvm.x86.avx512.mask.cmp.b.256(<32 x i8> %a0, <32 x i8> %a1, i32 0, i32 -1)
   %vec0 = insertelement <8 x i32> undef, i32 %res0, i32 0
@@ -79,7 +79,7 @@ define <8 x i32> @test_mask_cmp_b_256(<32 x i8> %a0, <32 x i8> %a1, i32 %mask) {
 ; CHECK-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xc9,0x01]
 ; CHECK-NEXT:    vpinsrd $2, %r10d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xca,0x02]
 ; CHECK-NEXT:    vpinsrd $3, %esi, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x22,0xce,0x03]
-; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %ymm1, %ymm0 ## encoding: [0x62,0xf3,0x75,0x28,0x38,0xc0,0x01]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x75,0x38,0xc0,0x01]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res0 = call i32 @llvm.x86.avx512.mask.cmp.b.256(<32 x i8> %a0, <32 x i8> %a1, i32 0, i32 %mask)
   %vec0 = insertelement <8 x i32> undef, i32 %res0, i32 0
@@ -129,7 +129,7 @@ define <8 x i32> @test_ucmp_b_256(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xc9,0x01]
 ; CHECK-NEXT:    vpinsrd $2, %r10d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xca,0x02]
 ; CHECK-NEXT:    vpinsrd $3, %esi, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x22,0xce,0x03]
-; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %ymm1, %ymm0 ## encoding: [0x62,0xf3,0x75,0x28,0x38,0xc0,0x01]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x75,0x38,0xc0,0x01]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res0 = call i32 @llvm.x86.avx512.mask.ucmp.b.256(<32 x i8> %a0, <32 x i8> %a1, i32 0, i32 -1)
   %vec0 = insertelement <8 x i32> undef, i32 %res0, i32 0
@@ -178,7 +178,7 @@ define <8 x i32> @test_mask_ucmp_b_256(<32 x i8> %a0, <32 x i8> %a1, i32 %mask) 
 ; CHECK-NEXT:    vpinsrd $1, %r9d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xc9,0x01]
 ; CHECK-NEXT:    vpinsrd $2, %r10d, %xmm1, %xmm1 ## encoding: [0xc4,0xc3,0x71,0x22,0xca,0x02]
 ; CHECK-NEXT:    vpinsrd $3, %esi, %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x22,0xce,0x03]
-; CHECK-NEXT:    vinserti32x4 $1, %xmm0, %ymm1, %ymm0 ## encoding: [0x62,0xf3,0x75,0x28,0x38,0xc0,0x01]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x75,0x38,0xc0,0x01]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res0 = call i32 @llvm.x86.avx512.mask.ucmp.b.256(<32 x i8> %a0, <32 x i8> %a1, i32 0, i32 %mask)
   %vec0 = insertelement <8 x i32> undef, i32 %res0, i32 0

@@ -481,9 +481,9 @@ private:
   bool processNode(DomTreeNode *Node);
 
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
-    if (LoadInst *LI = dyn_cast<LoadInst>(Inst))
+    if (auto *LI = dyn_cast<LoadInst>(Inst))
       return LI;
-    else if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
+    if (auto *SI = dyn_cast<StoreInst>(Inst))
       return SI->getValueOperand();
     assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
     return TTI.getOrCreateResultFromMemIntrinsic(cast<IntrinsicInst>(Inst),

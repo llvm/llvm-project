@@ -2542,9 +2542,6 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegZero();
 
-  // FIXME: Magic number! At the least, this should be given a name because it's
-  // used similarly in CannotBeOrderedLessThanZero(). A better fix may be to
-  // expose it as a parameter, so it can be used for testing / experimenting.
   if (Depth == MaxDepth)
     return false;  // Limit search depth.
 
@@ -2589,9 +2586,6 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegative() || CFP->getValueAPF().isZero();
 
-  // FIXME: Magic number! At the least, this should be given a name because it's
-  // used similarly in CannotBeNegativeZero(). A better fix may be to
-  // expose it as a parameter, so it can be used for testing / experimenting.
   if (Depth == MaxDepth)
     return false;  // Limit search depth.
 

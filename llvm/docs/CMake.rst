@@ -368,6 +368,10 @@ LLVM-specific variables
   Enable building with zlib to support compression/uncompression in LLVM tools.
   Defaults to ON.
 
+**LLVM_ENABLE_DIA_SDK**:BOOL
+  Enable building with MSVC DIA SDK for PDB debugging support. Available
+  only with MSVC. Defaults to ON.
+
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,

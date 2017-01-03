@@ -1581,6 +1581,50 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
   }
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd: {
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
+
+    // Canonicalize constants into the RHS.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      II->setArgOperand(0, Src1);
+      II->setArgOperand(1, Src0);
+      std::swap(Src0, Src1);
+    }
+
+    Value *LHS = nullptr;
+    Value *RHS = nullptr;
+
+    // fma fneg(x), fneg(y), z -> fma x, y, z
+    if (match(Src0, m_FNeg(m_Value(LHS))) &&
+        match(Src1, m_FNeg(m_Value(RHS)))) {
+      CallInst *NewCall = Builder->CreateCall(II->getCalledFunction(),
+                                              {LHS, RHS, II->getArgOperand(2)});
+      NewCall->takeName(II);
+      NewCall->copyFastMathFlags(II);
+      return replaceInstUsesWith(*II, NewCall);
+    }
+
+    // fma fabs(x), fabs(x), z -> fma x, x, z
+    if (match(Src0, m_Intrinsic<Intrinsic::fabs>(m_Value(LHS))) &&
+        match(Src1, m_Intrinsic<Intrinsic::fabs>(m_Value(RHS))) && LHS == RHS) {
+      CallInst *NewCall = Builder->CreateCall(II->getCalledFunction(),
+                                              {LHS, LHS, II->getArgOperand(2)});
+      NewCall->takeName(II);
+      NewCall->copyFastMathFlags(II);
+      return replaceInstUsesWith(*II, NewCall);
+    }
+
+    // fma x, 1, z -> fadd x, z
+    if (match(Src1, m_FPOne())) {
+      Instruction *RI = BinaryOperator::CreateFAdd(Src0, II->getArgOperand(2));
+      RI->copyFastMathFlags(II);
+      return RI;
+    }
+
+    break;
+  }
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.

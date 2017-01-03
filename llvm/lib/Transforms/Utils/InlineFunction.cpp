@@ -760,7 +760,7 @@ static void PropagateParallelLoopAccessMetadata(CallSite CS,
 
 /// When inlining a function that contains noalias scope metadata,
 /// this metadata needs to be cloned so that the inlined blocks
-/// have different "unqiue scopes" at every call site. Were this not done, then
+/// have different "unique scopes" at every call site. Were this not done, then
 /// aliasing scopes from a function inlined into a caller multiple times could
 /// not be differentiated (and this would lead to miscompiles because the
 /// non-aliasing property communicated by the metadata could have

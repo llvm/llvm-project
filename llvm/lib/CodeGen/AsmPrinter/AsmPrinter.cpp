@@ -37,6 +37,8 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
@@ -2609,6 +2611,61 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
 AsmPrinterHandler::~AsmPrinterHandler() {}
 
 void AsmPrinterHandler::markFunctionEnd() {}
+
+// In the binary's "xray_instr_map" section, an array of these function entries
+// describes each instrumentation point.  When XRay patches your code, the index
+// into this table will be given to your handler as a patch point identifier.
+void AsmPrinter::XRayFunctionEntry::emit(int Bytes, MCStreamer *Out,
+                                         const MCSymbol *CurrentFnSym) const {
+  Out->EmitSymbolValue(Sled, Bytes);
+  Out->EmitSymbolValue(CurrentFnSym, Bytes);
+  auto Kind8 = static_cast<uint8_t>(Kind);
+  Out->EmitBytes(StringRef(reinterpret_cast<const char *>(&Kind8), 1));
+  Out->EmitBytes(
+      StringRef(reinterpret_cast<const char *>(&AlwaysInstrument), 1));
+  Out->EmitZeros(2 * Bytes - 2);  // Pad the previous two entries
+}
+
+void AsmPrinter::emitXRayTable() {
+  if (Sleds.empty())
+    return;
+
+  auto PrevSection = OutStreamer->getCurrentSectionOnly();
+  auto Fn = MF->getFunction();
+  MCSection *Section = nullptr;
+  if (MF->getSubtarget().getTargetTriple().isOSBinFormatELF()) {
+    if (Fn->hasComdat()) {
+      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+                                         Fn->getComdat()->getName());
+    } else {
+      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
+                                         ELF::SHF_ALLOC);
+    }
+  } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
+    Section = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
+                                         SectionKind::getReadOnlyWithRel());
+  } else {
+    llvm_unreachable("Unsupported target");
+  }
+
+  // Before we switch over, we force a reference to a label inside the
+  // xray_instr_map section. Since this function is always called just
+  // before the function's end, we assume that this is happening after
+  // the last return instruction.
+
+  auto WordSizeBytes = TM.getPointerSize();
+  MCSymbol *Tmp = OutContext.createTempSymbol("xray_synthetic_", true);
+  OutStreamer->EmitCodeAlignment(16);
+  OutStreamer->EmitSymbolValue(Tmp, WordSizeBytes, false);
+  OutStreamer->SwitchSection(Section);
+  OutStreamer->EmitLabel(Tmp);
+  for (const auto &Sled : Sleds)
+    Sled.emit(WordSizeBytes, OutStreamer.get(), CurrentFnSym);
+
+  OutStreamer->SwitchSection(PrevSection);
+  Sleds.clear();
+}
 
 void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
   SledKind Kind) {

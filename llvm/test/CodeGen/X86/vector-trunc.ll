@@ -643,7 +643,7 @@ define void @trunc32i16_32i8(<32 x i16> %a) {
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512VL-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512VL-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512VL-NEXT:    retq
 ;
@@ -701,7 +701,7 @@ define <8 x i32> @trunc2x4i64_8i32(<4 x i64> %a, <4 x i64> %b) {
 ; AVX512VL:       # BB#0: # %entry
 ; AVX512VL-NEXT:    vpmovqd %ymm0, %xmm0
 ; AVX512VL-NEXT:    vpmovqd %ymm1, %xmm1
-; AVX512VL-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: trunc2x4i64_8i32:
@@ -717,7 +717,7 @@ define <8 x i32> @trunc2x4i64_8i32(<4 x i64> %a, <4 x i64> %b) {
 ; AVX512BWVL:       # BB#0: # %entry
 ; AVX512BWVL-NEXT:    vpmovqd %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vpmovqd %ymm1, %xmm1
-; AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    retq
 entry:
   %0 = trunc <4 x i64> %a to <4 x i32>

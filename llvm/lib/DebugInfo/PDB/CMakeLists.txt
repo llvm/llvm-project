@@ -3,7 +3,7 @@ macro(add_pdb_impl_folder group)
   source_group(${group} FILES ${ARGN})
 endmacro()
 
-if(HAVE_DIA_SDK)
+if(LLVM_ENABLE_DIA_SDK)
   include_directories(${MSVC_DIA_SDK_DIR}/include)
   set(LIBPDB_LINK_FOLDERS "${MSVC_DIA_SDK_DIR}\\lib")
   if (CMAKE_SIZEOF_VOID_P EQUAL 8)
