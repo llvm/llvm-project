@@ -1401,7 +1401,7 @@ void run() {
   f(1, integral_constant<bool, true>{});
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'f'
-// CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'integral_constant<[...], true>' to 'integral_constant<[...], false>' for 2nd argument
+// CHECK-ELIDE-NOTREE: note: candidate function [with T = int] not viable: no known conversion from 'integral_constant<[...], true>' to 'integral_constant<[...], false>' for 2nd argument
 }
 
 namespace ZeroArgs {

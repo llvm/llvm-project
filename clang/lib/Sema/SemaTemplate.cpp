@@ -4245,7 +4245,7 @@ namespace {
     UnnamedLocalNoLinkageFinder(Sema &S, SourceRange SR) : S(S), SR(SR) { }
 
     bool Visit(QualType T) {
-      return inherited::Visit(T.getTypePtr());
+      return T.isNull() ? false : inherited::Visit(T.getTypePtr());
     }
 
 #define TYPE(Class, Parent) \
@@ -4498,17 +4498,7 @@ bool Sema::CheckTemplateArgument(TemplateTypeParmDecl *Param,
   //
   // C++11 allows these, and even in C++03 we allow them as an extension with
   // a warning.
-  bool NeedsCheck;
-  if (LangOpts.CPlusPlus11)
-    NeedsCheck =
-        !Diags.isIgnored(diag::warn_cxx98_compat_template_arg_unnamed_type,
-                         SR.getBegin()) ||
-        !Diags.isIgnored(diag::warn_cxx98_compat_template_arg_local_type,
-                         SR.getBegin());
-  else
-    NeedsCheck = Arg->hasUnnamedOrLocalType();
-
-  if (NeedsCheck) {
+  if (LangOpts.CPlusPlus11 || Arg->hasUnnamedOrLocalType()) {
     UnnamedLocalNoLinkageFinder Finder(*this, SR);
     (void)Finder.Visit(Context.getCanonicalType(Arg));
   }

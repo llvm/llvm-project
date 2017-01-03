@@ -2849,13 +2849,14 @@ CheckOriginalCallArgDeduction(Sema &S, Sema::OriginalCallArg OriginalArg,
 ///
 /// \param OriginalCallArgs If non-NULL, the original call arguments against
 /// which the deduced argument types should be compared.
-Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
-    FunctionTemplateDecl *FunctionTemplate,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    unsigned NumExplicitlySpecified, FunctionDecl *&Specialization,
-    TemplateDeductionInfo &Info,
-    SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
-    bool PartialOverloading, llvm::function_ref<bool()> CheckNonDependent) {
+Sema::TemplateDeductionResult
+Sema::FinishTemplateArgumentDeduction(FunctionTemplateDecl *FunctionTemplate,
+                       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+                                      unsigned NumExplicitlySpecified,
+                                      FunctionDecl *&Specialization,
+                                      TemplateDeductionInfo &Info,
+        SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
+                                      bool PartialOverloading) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
   SFINAETrap Trap(*this);
@@ -2881,18 +2882,6 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
           CurrentInstantiationScope, NumExplicitlySpecified,
           PartialOverloading))
     return Result;
-
-  // C++ [temp.deduct.call]p10: [DR1391]
-  //   If deduction succeeds for all parameters that contain
-  //   template-parameters that participate in template argument deduction,
-  //   and all template arguments are explicitly specified, deduced, or
-  //   obtained from default template arguments, remaining parameters are then
-  //   compared with the corresponding arguments. For each remaining parameter
-  //   P with a type that was non-dependent before substitution of any
-  //   explicitly-specified template arguments, if the corresponding argument
-  //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
-    return TDK_NonDependentConversionFailure;
 
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *DeducedArgumentList
@@ -3318,17 +3307,12 @@ DeduceTemplateArgumentByListElement(Sema &S,
 /// \param Info the argument will be updated to provide additional information
 /// about template argument deduction.
 ///
-/// \param CheckNonDependent A callback to invoke to check conversions for
-/// non-dependent parameters, between deduction and substitution, per DR1391.
-/// If this returns true, substitution will be skipped and we return
-/// TDK_NonDependentConversionFailure.
-///
 /// \returns the result of template argument deduction.
 Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
     FunctionTemplateDecl *FunctionTemplate,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     FunctionDecl *&Specialization, TemplateDeductionInfo &Info,
-    bool PartialOverloading, llvm::function_ref<bool()> CheckNonDependent) {
+    bool PartialOverloading) {
   if (FunctionTemplate->isInvalidDecl())
     return TDK_Invalid;
 
@@ -3512,7 +3496,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
   return FinishTemplateArgumentDeduction(FunctionTemplate, Deduced,
                                          NumExplicitlySpecified, Specialization,
                                          Info, &OriginalCallArgs,
-                                         PartialOverloading, CheckNonDependent);
+                                         PartialOverloading);
 }
 
 QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
