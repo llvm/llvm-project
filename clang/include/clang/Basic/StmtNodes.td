@@ -243,3 +243,4 @@ def OMPTeamsDistributeParallelForDirective : DStmt<OMPLoopDirective>;
 def OMPTargetTeamsDirective : DStmt<OMPExecutableDirective>;
 def OMPTargetTeamsDistributeDirective : DStmt<OMPLoopDirective>;
 def OMPTargetTeamsDistributeParallelForDirective : DStmt<OMPLoopDirective>;
+def OMPTargetTeamsDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;

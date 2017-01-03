@@ -348,3 +348,17 @@ namespace deduction_substitution_failure {
   template<typename T> int B<T, typename Fail<T>::error> {}; // expected-note {{instantiation of}}
   int bi = B<char, char>; // expected-note {{during template argument deduction for variable template partial specialization 'B<T, typename Fail<T>::error>' [with T = char]}}
 }
+
+namespace deduction_after_explicit_pack {
+  template<typename ...T, typename U> int *f(T ...t, int &r, U *u) { // expected-note {{couldn't infer template argument 'U'}}
+    return u;
+  }
+  template<typename U, typename ...T> int *g(T ...t, int &r, U *u) {
+    return u;
+  }
+  void h(float a, double b, int c) {
+    // FIXME: Under DR1388, this appears to be valid.
+    f<float&, double&>(a, b, c, &c); // expected-error {{no matching}}
+    g<int, float&, double&>(a, b, c, &c); // ok
+  }
+}
