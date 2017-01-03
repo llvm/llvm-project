@@ -21,7 +21,7 @@
 
 int main()
 {
-    (void)std::tuple_size<std::tuple<> &>::value; // expected-error {{no member named 'value'}}
-    (void)std::tuple_size<int>::value; // expected-error {{no member named 'value'}}
-    (void)std::tuple_size<std::tuple<>*>::value; // expected-error {{no member named 'value'}}
+    (void)std::tuple_size<std::tuple<> &>::value; // expected-error {{implicit instantiation of undefined template}}
+    (void)std::tuple_size<int>::value; // expected-error {{implicit instantiation of undefined template}}
+    (void)std::tuple_size<std::tuple<>*>::value; // expected-error {{implicit instantiation of undefined template}}
 }

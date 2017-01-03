@@ -604,7 +604,7 @@ class Configuration(object):
                         self.cxx.link_flags += ['-lc++abi']
         elif cxx_abi == 'libcxxrt':
             self.cxx.link_flags += ['-lcxxrt']
-        elif cxx_abi == 'none':
+        elif cxx_abi == 'none' or cxx_abi == 'default':
             pass
         else:
             self.lit_config.fatal(

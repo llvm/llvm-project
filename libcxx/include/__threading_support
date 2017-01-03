@@ -31,8 +31,11 @@
     __libcpp_has_include(<__external_threading>)
 #include <__external_threading>
 #else
+
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 #include <pthread.h>
 #include <sched.h>
+#endif
 
 #if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 #define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
@@ -42,200 +45,229 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 // Mutex
 typedef pthread_mutex_t __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 
-_LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_recursive_mutex_init(__libcpp_mutex_t* __m);
-_LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_mutex_lock(__libcpp_mutex_t* __m);
-_LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_mutex_trylock(__libcpp_mutex_t* __m);
-_LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_mutex_unlock(__libcpp_mutex_t* __m);
-_LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_mutex_destroy(__libcpp_mutex_t* __m);
-
-// Condition variable
+// Condition Variable
 typedef pthread_cond_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER PTHREAD_COND_INITIALIZER
+
+// THread ID
+typedef pthread_t __libcpp_thread_id;
+
+// Thread
+typedef pthread_t __libcpp_thread_t;
+
+// Thrad Local Storage
+typedef pthread_key_t __libcpp_tls_key;
+#endif
+
+// Mutex
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_recursive_mutex_init(__libcpp_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_mutex_lock(__libcpp_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_mutex_unlock(__libcpp_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_mutex_destroy(__libcpp_mutex_t *__m);
+
+// Condition variable
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_signal(__libcpp_condvar_t* __cv);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, timespec* __ts);
+int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
+                               timespec *__ts);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv);
 
-// Thread id
-typedef pthread_t __libcpp_thread_id;
+// Thread ID
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2);
 
 // Thread
-typedef pthread_t __libcpp_thread_t;
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_thread_create(__libcpp_thread_t* __t, void* (*__func)(void*), void* __arg);
+int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
+                           void *__arg);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 __libcpp_thread_id __libcpp_thread_get_current_id();
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-__libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t);
+__libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t *__t);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_thread_join(__libcpp_thread_t* __t);
+int __libcpp_thread_join(__libcpp_thread_t *__t);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_thread_detach(__libcpp_thread_t* __t);
+int __libcpp_thread_detach(__libcpp_thread_t *__t);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 void __libcpp_thread_yield();
 
 // Thread local storage
-typedef pthread_key_t __libcpp_tls_key;
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_tls_create(__libcpp_tls_key* __key, void (*__at_exit)(void*));
+int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *));
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-void* __libcpp_tls_get(__libcpp_tls_key __key);
+void *__libcpp_tls_get(__libcpp_tls_key __key);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
-void __libcpp_tls_set(__libcpp_tls_key __key, void* __p);
+void __libcpp_tls_set(__libcpp_tls_key __key, void *__p);
 
-#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || defined(_LIBCPP_BUILDING_EXTERNAL_THREADS)
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
-int __libcpp_recursive_mutex_init(__libcpp_mutex_t* __m)
+int __libcpp_recursive_mutex_init(__libcpp_mutex_t *__m)
 {
-    pthread_mutexattr_t attr;
-    int __ec = pthread_mutexattr_init(&attr);
-    if (__ec) return __ec;
-    __ec = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    if (__ec)
-    {
-        pthread_mutexattr_destroy(&attr);
-        return __ec;
-    }
-    __ec = pthread_mutex_init(__m, &attr);
-    if (__ec)
-    {
-        pthread_mutexattr_destroy(&attr);
-        return __ec;
-    }
-    __ec = pthread_mutexattr_destroy(&attr);
-    if (__ec)
-    {
-        pthread_mutex_destroy(__m);
-        return __ec;
-    }
-    return 0;
+  pthread_mutexattr_t attr;
+  int __ec = pthread_mutexattr_init(&attr);
+  if (__ec)
+    return __ec;
+  __ec = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  if (__ec) {
+    pthread_mutexattr_destroy(&attr);
+    return __ec;
+  }
+  __ec = pthread_mutex_init(__m, &attr);
+  if (__ec) {
+    pthread_mutexattr_destroy(&attr);
+    return __ec;
+  }
+  __ec = pthread_mutexattr_destroy(&attr);
+  if (__ec) {
+    pthread_mutex_destroy(__m);
+    return __ec;
+  }
+  return 0;
 }
 
-int __libcpp_mutex_lock(__libcpp_mutex_t* __m)
+int __libcpp_mutex_lock(__libcpp_mutex_t *__m)
 {
-    return pthread_mutex_lock(__m);
+  return pthread_mutex_lock(__m);
 }
 
-int __libcpp_mutex_trylock(__libcpp_mutex_t* __m)
+int __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
 {
-    return pthread_mutex_trylock(__m);
+  return pthread_mutex_trylock(__m);
 }
 
-int __libcpp_mutex_unlock(__libcpp_mutex_t* __m)
+int __libcpp_mutex_unlock(__libcpp_mutex_t *__m)
 {
-    return pthread_mutex_unlock(__m);
+  return pthread_mutex_unlock(__m);
 }
 
-int __libcpp_mutex_destroy(__libcpp_mutex_t* __m)
+int __libcpp_mutex_destroy(__libcpp_mutex_t *__m)
 {
-    return pthread_mutex_destroy(__m);
+  return pthread_mutex_destroy(__m);
 }
 
-// Condition variable
-int __libcpp_condvar_signal(__libcpp_condvar_t* __cv)
+// Condition Variable
+int __libcpp_condvar_signal(__libcpp_condvar_t *__cv)
 {
-    return pthread_cond_signal(__cv);
+  return pthread_cond_signal(__cv);
 }
 
-int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv)
+int __libcpp_condvar_broadcast(__libcpp_condvar_t *__cv)
 {
-    return pthread_cond_broadcast(__cv);
+  return pthread_cond_broadcast(__cv);
 }
 
-int __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m)
+int __libcpp_condvar_wait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m)
 {
-    return pthread_cond_wait(__cv, __m);
+  return pthread_cond_wait(__cv, __m);
 }
 
-int __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, timespec* __ts)
+int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
+                               timespec *__ts)
 {
-    return pthread_cond_timedwait(__cv, __m, __ts);
+  return pthread_cond_timedwait(__cv, __m, __ts);
 }
 
-int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv)
+int __libcpp_condvar_destroy(__libcpp_condvar_t *__cv)
 {
-    return pthread_cond_destroy(__cv);
+  return pthread_cond_destroy(__cv);
 }
 
 // Returns non-zero if the thread ids are equal, otherwise 0
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2)
 {
-    return pthread_equal(t1, t2) != 0;
+  return pthread_equal(t1, t2) != 0;
 }
 
 // Returns non-zero if t1 < t2, otherwise 0
 bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 {
-    return t1 < t2;
+  return t1 < t2;
 }
 
 // Thread
-int __libcpp_thread_create(__libcpp_thread_t* __t, void* (*__func)(void*), void* __arg)
+int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
+                           void *__arg)
 {
-    return pthread_create(__t, 0, __func, __arg);
+  return pthread_create(__t, 0, __func, __arg);
 }
 
 __libcpp_thread_id __libcpp_thread_get_current_id()
 {
-    return pthread_self();
+  return pthread_self();
 }
 
-__libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t)
+__libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t *__t)
 {
-    return *__t;
+  return *__t;
 }
 
-int __libcpp_thread_join(__libcpp_thread_t* __t)
+int __libcpp_thread_join(__libcpp_thread_t *__t)
 {
-    return pthread_join(*__t, 0);
+  return pthread_join(*__t, 0);
 }
 
-int __libcpp_thread_detach(__libcpp_thread_t* __t)
+int __libcpp_thread_detach(__libcpp_thread_t *__t)
 {
-    return pthread_detach(*__t);
+  return pthread_detach(*__t);
 }
 
 void __libcpp_thread_yield()
 {
-    sched_yield();
+  sched_yield();
 }
 
 // Thread local storage
-int __libcpp_tls_create(__libcpp_tls_key* __key, void (*__at_exit)(void*))
+int __libcpp_tls_create(__libcpp_tls_key *__key, void (*__at_exit)(void *))
 {
-    return pthread_key_create(__key, __at_exit);
+  return pthread_key_create(__key, __at_exit);
 }
 
-void* __libcpp_tls_get(__libcpp_tls_key __key)
+void *__libcpp_tls_get(__libcpp_tls_key __key)
 {
-    return pthread_getspecific(__key);
+  return pthread_getspecific(__key);
 }
 
-void __libcpp_tls_set(__libcpp_tls_key __key, void* __p)
+void __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 {
-    pthread_setspecific(__key, __p);
+  pthread_setspecific(__key, __p);
 }
 
-#endif // _LIBCPP_HAS_THREAD_API_PTHREAD || _LIBCPP_BUILDING_EXTERNAL_THREADS
+#endif // _LIBCPP_HAS_THREAD_API_PTHREAD
 
 _LIBCPP_END_NAMESPACE_STD
 

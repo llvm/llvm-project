@@ -53,8 +53,7 @@ system_clock::now() _NOEXCEPT
                                                     nanoseconds::period>>;
 
   // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.
-  static _LIBCPP_CONSTEXPR const filetime_duration
-      nt_to_unix_epoch{11644473600};
+  static _LIBCPP_CONSTEXPR const seconds nt_to_unix_epoch{11644473600};
 
   FILETIME ft;
 #if _WIN32_WINNT >= _WIN32_WINNT_WIN8
