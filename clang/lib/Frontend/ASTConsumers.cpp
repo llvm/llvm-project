@@ -518,6 +518,10 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "<empty>\n";
       break;
     }
+    case Decl::AccessSpec: {
+      Out << "<access specifier>\n";
+      break;
+    }
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");
