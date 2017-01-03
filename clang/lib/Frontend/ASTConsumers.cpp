@@ -526,6 +526,10 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "<var template> " << *cast<VarTemplateDecl>(I) << "\n";
       break;
     }
+    case Decl::StaticAssert: {
+      Out << "<static assert>\n";
+      break;
+    }
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");

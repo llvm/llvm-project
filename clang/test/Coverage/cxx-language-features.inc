@@ -63,3 +63,5 @@ private:
 
 // Variable template
 template <typename T> T varTemplate = 0;
+
+static_assert(true, "");
