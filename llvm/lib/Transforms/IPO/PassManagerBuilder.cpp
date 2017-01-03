@@ -67,10 +67,6 @@ static cl::opt<bool>
 RunLoopRerolling("reroll-loops", cl::Hidden,
                  cl::desc("Run the loop rerolling pass"));
 
-static cl::opt<bool>
-RunFloat2Int("float-to-int", cl::Hidden, cl::init(true),
-             cl::desc("Run the float2int (float demotion) pass"));
-
 static cl::opt<bool> RunLoadCombine("combine-loads", cl::init(false),
                                     cl::Hidden,
                                     cl::desc("Run the load combining pass"));
@@ -554,8 +550,7 @@ void PassManagerBuilder::populateModulePassManager(
     // correct in the face of IR changes).
     MPM.add(createGlobalsAAWrapperPass());
 
-  if (RunFloat2Int)
-    MPM.add(createFloat2IntPass());
+  MPM.add(createFloat2IntPass());
 
   addExtensionsToPM(EP_VectorizerStart, MPM);
 

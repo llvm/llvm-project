@@ -14,7 +14,7 @@
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
-#if HAVE_DIA_SDK
+#if LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #endif
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
@@ -30,7 +30,7 @@ Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
   if (Type == PDB_ReaderType::Raw)
     return RawSession::createFromPdb(Path, Session);
 
-#if HAVE_DIA_SDK
+#if LLVM_ENABLE_DIA_SDK
   return DIASession::createFromPdb(Path, Session);
 #else
   return llvm::make_error<GenericError>("DIA is not installed on the system");
@@ -43,7 +43,7 @@ Error llvm::pdb::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
   if (Type == PDB_ReaderType::Raw)
     return RawSession::createFromExe(Path, Session);
 
-#if HAVE_DIA_SDK
+#if LLVM_ENABLE_DIA_SDK
   return DIASession::createFromExe(Path, Session);
 #else
   return llvm::make_error<GenericError>("DIA is not installed on the system");

@@ -208,6 +208,8 @@ public:
     SledKind Kind;
     bool AlwaysInstrument;
     const class Function *Fn;
+
+    void emit(int, MCStreamer *, const MCSymbol *) const;
   };
 
   // All the sleds to be emitted.
@@ -215,6 +217,9 @@ public:
 
   // Helper function to record a given XRay sled.
   void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);
+
+  /// Emit a table with all XRay instrumentation points.
+  void emitXRayTable();
 
   //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.

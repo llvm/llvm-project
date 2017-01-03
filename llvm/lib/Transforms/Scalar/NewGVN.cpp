@@ -262,6 +262,7 @@ private:
   const VariableExpression *createVariableExpression(Value *);
   const ConstantExpression *createConstantExpression(Constant *);
   const Expression *createVariableOrConstant(Value *V, const BasicBlock *B);
+  const UnknownExpression *createUnknownExpression(Instruction *);
   const StoreExpression *createStoreExpression(StoreInst *, MemoryAccess *,
                                                const BasicBlock *);
   LoadExpression *createLoadExpression(Type *, Value *, LoadInst *,
@@ -341,6 +342,7 @@ private:
   void cleanupTables();
   std::pair<unsigned, unsigned> assignDFSNumbers(BasicBlock *, unsigned);
   void updateProcessedCount(Value *V);
+  void verifyMemoryCongruency();
 };
 
 char NewGVN::ID = 0;
@@ -639,6 +641,12 @@ const ConstantExpression *NewGVN::createConstantExpression(Constant *C) {
   return E;
 }
 
+const UnknownExpression *NewGVN::createUnknownExpression(Instruction *I) {
+  auto *E = new (ExpressionAllocator) UnknownExpression(I);
+  E->setOpcode(I->getOpcode());
+  return E;
+}
+
 const CallExpression *NewGVN::createCallExpression(CallInst *CI,
                                                    MemoryAccess *HV,
                                                    const BasicBlock *B) {
@@ -703,22 +711,24 @@ const StoreExpression *NewGVN::createStoreExpression(StoreInst *SI,
 
 const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I,
                                                          const BasicBlock *B) {
+  // Unlike loads, we never try to eliminate stores, so we do not check if they
+  // are simple and avoid value numbering them.
   auto *SI = cast<StoreInst>(I);
-  // If this store's memorydef stores the same value as the last store, the
-  // memory accesses are equivalent.
-  // Get the expression, if any, for the RHS of the MemoryDef.
   MemoryAccess *StoreAccess = MSSA->getMemoryAccess(SI);
-  MemoryAccess *StoreRHS = lookupMemoryAccessEquiv(
-      cast<MemoryDef>(StoreAccess)->getDefiningAccess());
-  const Expression *OldStore = createStoreExpression(SI, StoreRHS, B);
-  // See if this store expression already has a value, and it's the same as our
-  // current store.
-  CongruenceClass *CC = ExpressionToClass.lookup(OldStore);
-  if (CC &&
-      CC->RepLeader == lookupOperandLeader(SI->getValueOperand(), SI, B)) {
-    setMemoryAccessEquivTo(StoreAccess, StoreRHS);
-    return OldStore;
+  // See if we are defined by a previous store expression, it already has a
+  // value, and it's the same value as our current store. FIXME: Right now, we
+  // only do this for simple stores, we should expand to cover memcpys, etc.
+  if (SI->isSimple()) {
+    // Get the expression, if any, for the RHS of the MemoryDef.
+    MemoryAccess *StoreRHS = lookupMemoryAccessEquiv(
+        cast<MemoryDef>(StoreAccess)->getDefiningAccess());
+    const Expression *OldStore = createStoreExpression(SI, StoreRHS, B);
+    CongruenceClass *CC = ExpressionToClass.lookup(OldStore);
+    if (CC && CC->DefiningExpr && isa<StoreExpression>(CC->DefiningExpr) &&
+        CC->RepLeader == lookupOperandLeader(SI->getValueOperand(), SI, B))
+      return createStoreExpression(SI, StoreRHS, B);
   }
+
   return createStoreExpression(SI, StoreAccess, B);
 }
 
@@ -727,7 +737,7 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I,
   auto *LI = cast<LoadInst>(I);
 
   // We can eliminate in favor of non-simple loads, but we won't be able to
-  // eliminate them.
+  // eliminate the loads themselves.
   if (!LI->isSimple())
     return nullptr;
 
@@ -769,24 +779,30 @@ const Expression *NewGVN::performSymbolicCallEvaluation(Instruction *I,
 // Update the memory access equivalence table to say that From is equal to To,
 // and return true if this is different from what already existed in the table.
 bool NewGVN::setMemoryAccessEquivTo(MemoryAccess *From, MemoryAccess *To) {
-  auto LookupResult = MemoryAccessEquiv.insert({From, nullptr});
+  DEBUG(dbgs() << "Setting " << *From << " equivalent to ");
+  if (!To)
+    DEBUG(dbgs() << "itself");
+  else
+    DEBUG(dbgs() << *To);
+  DEBUG(dbgs() << "\n");
+  auto LookupResult = MemoryAccessEquiv.find(From);
   bool Changed = false;
   // If it's already in the table, see if the value changed.
-  if (LookupResult.second) {
-    if (To && LookupResult.first->second != To) {
+  if (LookupResult != MemoryAccessEquiv.end()) {
+    if (To && LookupResult->second != To) {
       // It wasn't equivalent before, and now it is.
-      LookupResult.first->second = To;
+      LookupResult->second = To;
       Changed = true;
     } else if (!To) {
       // It used to be equivalent to something, and now it's not.
-      MemoryAccessEquiv.erase(LookupResult.first);
+      MemoryAccessEquiv.erase(LookupResult);
       Changed = true;
     }
-  } else if (To) {
-    // It wasn't in the table, but is equivalent to something.
-    LookupResult.first->second = To;
-    Changed = true;
+  } else {
+    assert(!To &&
+           "Memory equivalence should never change from nothing to something");
   }
+
   return Changed;
 }
 // Evaluate PHI nodes symbolically, and create an expression result.
@@ -1002,24 +1018,7 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
   assert(!VClass->Dead && "Found a dead class");
 
   CongruenceClass *EClass;
-  // Expressions we can't symbolize are always in their own unique
-  // congruence class.  FIXME: This is hard to perfect. Long term, we should try
-  // to create expressions for everything. We should add UnknownExpression(Inst)
-  // or something to avoid wasting time creating real ones.  Then the existing
-  // logic will just work.
-  if (E == nullptr) {
-    // We may have already made a unique class.
-    // Test whether we are still in the initial class, or we have found a class
-    if (VClass == InitialClass || VClass->RepLeader != V) {
-      CongruenceClass *NewClass = createCongruenceClass(V, nullptr);
-      // We should always be adding the member in the below code.
-      EClass = NewClass;
-      DEBUG(dbgs() << "Created new congruence class for " << *V
-                   << " due to nullptr expression\n");
-    } else {
-      EClass = VClass;
-    }
-  } else if (const auto *VE = dyn_cast<VariableExpression>(E)) {
+  if (const auto *VE = dyn_cast<VariableExpression>(E)) {
     EClass = ValueToClass[VE->getVariableValue()];
   } else {
     auto lookupResult = ExpressionToClass.insert({E, nullptr});
@@ -1043,10 +1042,15 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
       EClass = NewClass;
       DEBUG(dbgs() << "Created new congruence class for " << *V
                    << " using expression " << *E << " at " << NewClass->ID
-                   << "\n");
+                   << " and leader " << *(NewClass->RepLeader) << "\n");
       DEBUG(dbgs() << "Hash value was " << E->getHashValue() << "\n");
     } else {
       EClass = lookupResult.first->second;
+      if (isa<ConstantExpression>(E))
+        assert(isa<Constant>(EClass->RepLeader) &&
+               "Any class with a constant expression should have a "
+               "constant leader");
+
       assert(EClass && "Somehow don't have an eclass");
 
       assert(!EClass->Dead && "We accidentally looked up a dead class");
@@ -1082,10 +1086,25 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
         }
       }
     }
+
     markUsersTouched(V);
-    if (auto *I = dyn_cast<Instruction>(V))
-      if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (MemoryAccess *MA = MSSA->getMemoryAccess(I)) {
+        // If this is a MemoryDef, we need to update the equivalence table. If
+        // we determined the expression is congruent to a different memory
+        // state, use that different memory state.  If we determined it didn't,
+        // we update that as well.  Right now, we only support store
+        // expressions.
+        if (!isa<MemoryUse>(MA) && isa<StoreExpression>(E) &&
+            EClass->Members.size() != 1) {
+          auto *DefAccess = cast<StoreExpression>(E)->getDefiningAccess();
+          setMemoryAccessEquivTo(MA, DefAccess != MA ? DefAccess : nullptr);
+        } else {
+          setMemoryAccessEquivTo(MA, nullptr);
+        }
         markMemoryUsersTouched(MA);
+      }
+    }
   }
 }
 
@@ -1108,6 +1127,9 @@ void NewGVN::updateReachableEdge(BasicBlock *From, BasicBlock *To) {
       // impact predicates. Otherwise, only mark the phi nodes as touched, as
       // they are the only thing that depend on new edges. Anything using their
       // values will get propagated to if necessary.
+      if (MemoryAccess *MemPhi = MSSA->getMemoryAccess(To))
+        TouchedInstructions.set(InstrDFS[MemPhi]);
+
       auto BI = To->begin();
       while (isa<PHINode>(BI)) {
         TouchedInstructions.set(InstrDFS[&*BI]);
@@ -1198,6 +1220,11 @@ void NewGVN::processOutgoingEdges(TerminatorInst *TI, BasicBlock *B) {
       BasicBlock *TargetBlock = TI->getSuccessor(i);
       updateReachableEdge(B, TargetBlock);
     }
+
+    // This also may be a memory defining terminator, in which case, set it
+    // equivalent to nothing.
+    if (MemoryAccess *MA = MSSA->getMemoryAccess(TI))
+      setMemoryAccessEquivTo(MA, nullptr);
   }
 }
 
@@ -1211,11 +1238,25 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
   // Initialize all other instructions to be in INITIAL class.
   CongruenceClass::MemberSet InitialValues;
   InitialClass = createCongruenceClass(nullptr, nullptr);
-  for (auto &B : F)
+  for (auto &B : F) {
+    if (auto *MP = MSSA->getMemoryAccess(&B))
+      MemoryAccessEquiv.insert({MP, MSSA->getLiveOnEntryDef()});
+
     for (auto &I : B) {
       InitialValues.insert(&I);
       ValueToClass[&I] = InitialClass;
+      // All memory accesses are equivalent to live on entry to start. They must
+      // be initialized to something so that initial changes are noticed. For
+      // the maximal answer, we initialize them all to be the same as
+      // liveOnEntry.  Note that to save time, we only initialize the
+      // MemoryDef's for stores and all MemoryPhis to be equal.  Right now, no
+      // other expression can generate a memory equivalence.  If we start
+      // handling memcpy/etc, we can expand this.
+      if (isa<StoreInst>(&I))
+        MemoryAccessEquiv.insert(
+            {MSSA->getMemoryAccess(&I), MSSA->getLiveOnEntryDef()});
     }
+  }
   InitialClass->Members.swap(InitialValues);
 
   // Initialize arguments to be in their own unique congruence classes
@@ -1333,10 +1374,79 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
     return;
   }
   if (!I->isTerminator()) {
-    const Expression *Symbolized = performSymbolicEvaluation(I, I->getParent());
+    const auto *Symbolized = performSymbolicEvaluation(I, I->getParent());
+    // If we couldn't come up with a symbolic expression, use the unknown
+    // expression
+    if (Symbolized == nullptr)
+      Symbolized = createUnknownExpression(I);
     performCongruenceFinding(I, Symbolized);
   } else {
+    // Handle terminators that return values. All of them produce values we
+    // don't currently understand.
+    if (!I->getType()->isVoidTy()) {
+      auto *Symbolized = createUnknownExpression(I);
+      performCongruenceFinding(I, Symbolized);
+    }
     processOutgoingEdges(dyn_cast<TerminatorInst>(I), I->getParent());
+  }
+}
+
+// Verify the that the memory equivalence table makes sense relative to the
+// congruence classes.
+void NewGVN::verifyMemoryCongruency() {
+  // Anything equivalent in the memory access table should be in the same
+  // congruence class.
+
+  // Filter out the unreachable and trivially dead entries, because they may
+  // never have been updated if the instructions were not processed.
+  auto ReachableAccessPred =
+      [&](const std::pair<const MemoryAccess *, MemoryAccess *> Pair) {
+        bool Result = ReachableBlocks.count(Pair.first->getBlock());
+        if (!Result)
+          return false;
+        if (auto *MemDef = dyn_cast<MemoryDef>(Pair.first))
+          return !isInstructionTriviallyDead(MemDef->getMemoryInst());
+        return true;
+      };
+
+  auto Filtered = make_filter_range(MemoryAccessEquiv, ReachableAccessPred);
+  for (auto KV : Filtered) {
+    assert(KV.first != KV.second &&
+           "We added a useless equivalence to the memory equivalence table");
+    // Unreachable instructions may not have changed because we never process
+    // them.
+    if (!ReachableBlocks.count(KV.first->getBlock()))
+      continue;
+    if (auto *FirstMUD = dyn_cast<MemoryUseOrDef>(KV.first)) {
+      auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second);
+      if (FirstMUD && SecondMUD)
+        assert(
+            ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
+                ValueToClass.lookup(SecondMUD->getMemoryInst()) &&
+            "The instructions for these memory operations should have been in "
+            "the same congruence class");
+    } else if (auto *FirstMP = dyn_cast<MemoryPhi>(KV.first)) {
+
+      // We can only sanely verify that MemoryDefs in the operand list all have
+      // the same class.
+      auto ReachableOperandPred = [&](const Use &U) {
+        return ReachableBlocks.count(FirstMP->getIncomingBlock(U)) &&
+               isa<MemoryDef>(U);
+
+      };
+      // All arguments should in the same class, ignoring unreachable arguments
+      auto FilteredPhiArgs =
+          make_filter_range(FirstMP->operands(), ReachableOperandPred);
+      SmallVector<const CongruenceClass *, 16> PhiOpClasses;
+      std::transform(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
+                     std::back_inserter(PhiOpClasses), [&](const Use &U) {
+                       const MemoryDef *MD = cast<MemoryDef>(U);
+                       return ValueToClass.lookup(MD->getMemoryInst());
+                     });
+      assert(std::equal(PhiOpClasses.begin(), PhiOpClasses.end(),
+                        PhiOpClasses.begin()) &&
+             "All MemoryPhi arguments should be in the same class");
+    }
   }
 }
 
@@ -1468,6 +1578,9 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
     }
   }
 
+#ifndef NDEBUG
+  verifyMemoryCongruency();
+#endif
   Changed |= eliminateInstructions(F);
 
   // Delete all instructions marked for deletion.
@@ -1946,7 +2059,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
     // Cleanup the congruence class.
     SmallPtrSet<Value *, 4> MembersLeft;
-    for (Value * Member : CC->Members) {
+    for (Value *Member : CC->Members) {
       if (Member->getType()->isVoidTy()) {
         MembersLeft.insert(Member);
         continue;

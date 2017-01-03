@@ -1009,7 +1009,7 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ;
 ; SKX-LABEL: one_mask_bit_set3:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vextracti32x4 $1, %ymm0, %xmm0
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vmovq %xmm0, 16(%rdi)
 ; SKX-NEXT:    retq
   call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %val, <4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
@@ -1026,17 +1026,11 @@ define void @one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: one_mask_bit_set4:
-; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vmovhpd %xmm0, 24(%rdi)
-; AVX512F-NEXT:    retq
-;
-; SKX-LABEL: one_mask_bit_set4:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
-; SKX-NEXT:    vmovhpd %xmm0, 24(%rdi)
-; SKX-NEXT:    retq
+; AVX512-LABEL: one_mask_bit_set4:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovhpd %xmm0, 24(%rdi)
+; AVX512-NEXT:    retq
   call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
@@ -1109,19 +1103,12 @@ define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: load_one_mask_bit_set3:
-; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; SKX-LABEL: load_one_mask_bit_set3:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vextracti32x4 $1, %ymm0, %xmm1
-; SKX-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
-; SKX-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: load_one_mask_bit_set3:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x i64> %val)
   ret <4 x i64> %res
 }
@@ -1136,19 +1123,12 @@ define <4 x double> @load_one_mask_bit_set4(<4 x double>* %addr, <4 x double> %v
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: load_one_mask_bit_set4:
-; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; SKX-LABEL: load_one_mask_bit_set4:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vextractf32x4 $1, %ymm0, %xmm1
-; SKX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; SKX-NEXT:    vinsertf32x4 $1, %xmm1, %ymm0, %ymm0
-; SKX-NEXT:    retq
+; AVX512-LABEL: load_one_mask_bit_set4:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>, <4 x double> %val)
   ret <4 x double> %res
 }

@@ -43,5 +43,5 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ;CHECK: !1 = !{!"branch_weights", i32 900, i32 101}
 ;CHECK: !2 = !{!"branch_weights", i32 540, i32 360}
 ;CHECK: !3 = !{!"branch_weights", i32 162, i32 378}
-;CHECK: !4 = !{!"branch_weights", i32 560, i32 162}
+;CHECK: !4 = !{!"branch_weights", i32 1399, i32 162}
 

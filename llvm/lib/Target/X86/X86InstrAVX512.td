@@ -650,33 +650,6 @@ multiclass vextract_for_size<int Opcode,
                                 From.ZSuffix # "rrkz")
                 To.KRCWM:$mask, From.RC:$src1,
                 (EXTRACT_get_vextract_imm To.RC:$ext))>;
-
-  // Intrinsic call with masking.
-  def : Pat<(!cast<Intrinsic>("int_x86_avx512_mask_vextract" # To.EltTypeName #
-                              "x" # To.NumElts # "_" # From.Size)
-                From.RC:$src1, (iPTR imm:$idx), To.RC:$src0, To.MRC:$mask),
-            (!cast<Instruction>(NAME # To.EltSize # "x" # To.NumElts #
-                                From.ZSuffix # "rrk")
-                To.RC:$src0,
-                (COPY_TO_REGCLASS To.MRC:$mask, To.KRCWM),
-                From.RC:$src1, imm:$idx)>;
-
-  // Intrinsic call with zero-masking.
-  def : Pat<(!cast<Intrinsic>("int_x86_avx512_mask_vextract" # To.EltTypeName #
-                              "x" # To.NumElts # "_" # From.Size)
-                From.RC:$src1, (iPTR imm:$idx), To.ImmAllZerosV, To.MRC:$mask),
-            (!cast<Instruction>(NAME # To.EltSize # "x" # To.NumElts #
-                                From.ZSuffix # "rrkz")
-                (COPY_TO_REGCLASS To.MRC:$mask, To.KRCWM),
-                From.RC:$src1, imm:$idx)>;
-
-  // Intrinsic call without masking.
-  def : Pat<(!cast<Intrinsic>("int_x86_avx512_mask_vextract" # To.EltTypeName #
-                              "x" # To.NumElts # "_" # From.Size)
-                From.RC:$src1, (iPTR imm:$idx), To.ImmAllZerosV, (i8 -1)),
-            (!cast<Instruction>(NAME # To.EltSize # "x" # To.NumElts #
-                                From.ZSuffix # "rr")
-                From.RC:$src1, imm:$idx)>;
 }
 
 // Codegen pattern for the alternative types

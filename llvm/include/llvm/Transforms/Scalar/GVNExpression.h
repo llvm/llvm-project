@@ -36,6 +36,7 @@ enum ExpressionType {
   ET_Base,
   ET_Constant,
   ET_Variable,
+  ET_Unknown,
   ET_BasicStart,
   ET_Basic,
   ET_Call,
@@ -562,6 +563,40 @@ public:
       OS << "ExpressionTypeConstant, ";
     this->Expression::printInternal(OS, false);
     OS << " constant = " << *ConstantValue;
+  }
+};
+
+class UnknownExpression final : public Expression {
+private:
+  Instruction *Inst;
+
+public:
+  static bool classof(const Expression *EB) {
+    return EB->getExpressionType() == ET_Unknown;
+  }
+
+  UnknownExpression(Instruction *I) : Expression(ET_Unknown), Inst(I) {}
+  void operator=(const UnknownExpression &) = delete;
+  UnknownExpression(const UnknownExpression &) = delete;
+  UnknownExpression() = delete;
+
+  Instruction *getInstruction() const { return Inst; }
+  void setInstruction(Instruction *I) { Inst = I; }
+  virtual bool equals(const Expression &Other) const override {
+    const auto &OU = cast<UnknownExpression>(Other);
+    return Inst == OU.Inst;
+  }
+  virtual hash_code getHashValue() const override {
+    return hash_combine(getExpressionType(), Inst);
+  }
+  //
+  // Debugging support
+  //
+  virtual void printInternal(raw_ostream &OS, bool PrintEType) const override {
+    if (PrintEType)
+      OS << "ExpressionTypeUnknown, ";
+    this->Expression::printInternal(OS, false);
+    OS << " inst = " << *Inst;
   }
 };
 }

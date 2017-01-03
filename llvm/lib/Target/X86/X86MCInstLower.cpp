@@ -1115,56 +1115,6 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI, X86MCInstLo
   OutStreamer->EmitInstruction(TC, getSubtargetInfo());
 }
 
-void X86AsmPrinter::EmitXRayTable() {
-  if (Sleds.empty())
-    return;
-  
-  auto PrevSection = OutStreamer->getCurrentSectionOnly();
-  auto Fn = MF->getFunction();
-  MCSection *Section = nullptr;
-  if (Subtarget->isTargetELF()) {
-    if (Fn->hasComdat()) {
-      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
-                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
-                                         Fn->getComdat()->getName());
-    } else {
-      Section = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
-                                         ELF::SHF_ALLOC);
-    }
-  } else if (Subtarget->isTargetMachO()) {
-    Section = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
-                                         SectionKind::getReadOnlyWithRel());
-  } else {
-    llvm_unreachable("Unsupported target");
-  }
-
-  // Before we switch over, we force a reference to a label inside the
-  // xray_instr_map section. Since EmitXRayTable() is always called just
-  // before the function's end, we assume that this is happening after the
-  // last return instruction.
-  //
-  // We then align the reference to 16 byte boundaries, which we determined
-  // experimentally to be beneficial to avoid causing decoder stalls.
-  MCSymbol *Tmp = OutContext.createTempSymbol("xray_synthetic_", true);
-  OutStreamer->EmitCodeAlignment(16);
-  OutStreamer->EmitSymbolValue(Tmp, 8, false);
-  OutStreamer->SwitchSection(Section);
-  OutStreamer->EmitLabel(Tmp);
-  for (const auto &Sled : Sleds) {
-    OutStreamer->EmitSymbolValue(Sled.Sled, 8);
-    OutStreamer->EmitSymbolValue(CurrentFnSym, 8);
-    auto Kind = static_cast<uint8_t>(Sled.Kind);
-    OutStreamer->EmitBytes(
-        StringRef(reinterpret_cast<const char *>(&Kind), 1));
-    OutStreamer->EmitBytes(
-        StringRef(reinterpret_cast<const char *>(&Sled.AlwaysInstrument), 1));
-    OutStreamer->EmitZeros(14);
-  }
-  OutStreamer->SwitchSection(PrevSection);
-
-  Sleds.clear();
-}
-
 // Returns instruction preceding MBBI in MachineFunction.
 // If MBBI is the first instruction of the first basic block, returns null.
 static MachineBasicBlock::const_iterator

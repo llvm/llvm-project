@@ -36,7 +36,7 @@ config.llvm_use_intel_jitevents = "@LLVM_USE_INTEL_JITEVENTS@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = "@HAVE_LIBZ@"
 config.have_libxar = "@HAVE_LIBXAR@"
-config.have_dia_sdk = @HAVE_DIA_SDK@
+config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = "@LLVM_ENABLE_FFI@"
 config.test_examples = "@ENABLE_EXAMPLES@"
 

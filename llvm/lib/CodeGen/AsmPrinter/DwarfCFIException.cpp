@@ -39,7 +39,7 @@
 using namespace llvm;
 
 DwarfCFIExceptionBase::DwarfCFIExceptionBase(AsmPrinter *A)
-    : EHStreamer(A), shouldEmitCFI(false) {}
+    : EHStreamer(A), shouldEmitCFI(false), hasEmittedCFISections(false) {}
 
 void DwarfCFIExceptionBase::markFunctionEnd() {
   endFragment();
@@ -59,7 +59,7 @@ void DwarfCFIExceptionBase::endFragment() {
 DwarfCFIException::DwarfCFIException(AsmPrinter *A)
     : DwarfCFIExceptionBase(A), shouldEmitPersonality(false),
       forceEmitPersonality(false), shouldEmitLSDA(false),
-      shouldEmitMoves(false), moveTypeModule(AsmPrinter::CFI_M_None) {}
+      shouldEmitMoves(false) {}
 
 DwarfCFIException::~DwarfCFIException() {}
 
@@ -69,9 +69,6 @@ void DwarfCFIException::endModule() {
   // SjLj uses this pass and it doesn't need this info.
   if (!Asm->MAI->usesCFIForEH())
     return;
-
-  if (moveTypeModule == AsmPrinter::CFI_M_Debug)
-    Asm->OutStreamer->EmitCFISections(false, true);
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
@@ -102,10 +99,6 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
 
   // See if we need frame move info.
   AsmPrinter::CFIMoveType MoveType = Asm->needsCFIMoves();
-  if (MoveType == AsmPrinter::CFI_M_EH ||
-      (MoveType == AsmPrinter::CFI_M_Debug &&
-       moveTypeModule == AsmPrinter::CFI_M_None))
-    moveTypeModule = MoveType;
 
   shouldEmitMoves = MoveType != AsmPrinter::CFI_M_None;
 
@@ -142,6 +135,12 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
                                       ExceptionSymbolProvider ESP) {
   if (!shouldEmitCFI)
     return;
+
+  if (!hasEmittedCFISections) {
+    if (Asm->needsCFIMoves() == AsmPrinter::CFI_M_Debug)
+      Asm->OutStreamer->EmitCFISections(false, true);
+    hasEmittedCFISections = true;
+  }
 
   Asm->OutStreamer->EmitCFIStartProc(/*IsSimple=*/false);
 

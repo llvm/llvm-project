@@ -614,6 +614,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 
     static const CostTblEntry AVX512BWShuffleTbl[] = {
       { ISD::VECTOR_SHUFFLE, MVT::v32i16, 1 }, // vpermw
+      { ISD::VECTOR_SHUFFLE, MVT::v16i16, 1 }, // vpermw
       { ISD::VECTOR_SHUFFLE, MVT::v64i8,  6 }  // vextracti64x4 + 2*vperm2i128
                                                // + 2*pshufb + vinserti64x4
     };
