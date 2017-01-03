@@ -25,3 +25,11 @@ enum E1 { EC1 };
 template <E1 v> class C1 {};
 template <E1 v> C1<v> f1() { return C1<v>(); }
 void f2() { f1<EC1>(); }
+
+// Friend declarations
+struct FriendlyStruct {
+  friend bool operator==(FriendlyStruct, FriendlyStruct) { return true; }
+  friend struct FriendedStruct;
+};
+
+struct FriendedStruct { };
