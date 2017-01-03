@@ -493,6 +493,10 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "<using shadow> " << *cast<UsingShadowDecl>(I) << "\n";
       break;
     }
+    case Decl::Empty: {
+      Out << "<empty>\n";
+      break;
+    }
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");
