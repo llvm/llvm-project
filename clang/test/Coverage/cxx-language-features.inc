@@ -44,3 +44,14 @@ namespace user {
 
 // Empty declaration
 ;
+
+// Template specialization declarations
+template<typename T> class ClassTemplateSpecialization;
+
+template<>
+class ClassTemplateSpecialization<bool> { };
+
+template<typename T, bool> struct ClassTemplatePartialSpecialization;
+
+template<typename T>
+struct ClassTemplatePartialSpecialization<T, true> { };
