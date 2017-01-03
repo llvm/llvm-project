@@ -102,9 +102,14 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   setup_abi_lib("-DLIBCXXRT"
     "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
     )
-elseif (NOT "${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "none")
+elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "none")
+  list(APPEND LIBCXX_COMPILE_FLAGS "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
+elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default")
+  # Nothing TODO
+else()
   message(FATAL_ERROR
-    "Currently libstdc++, libsupc++, libcxxabi, libcxxrt and none are "
-    "supported for c++ abi."
+    "Unsupported c++ abi: '${LIBCXX_CXX_ABI_LIBNAME}'. \
+     Currently libstdc++, libsupc++, libcxxabi, libcxxrt, default and none are
+     supported for c++ abi."
     )
 endif ()

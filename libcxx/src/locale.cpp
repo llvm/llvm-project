@@ -24,6 +24,9 @@
 #endif
 #include "clocale"
 #include "cstring"
+#if defined(_LIBCPP_MSVCRT)
+#define _CTYPE_DISABLE_MACROS
+#endif
 #include "cwctype"
 #include "__sso_allocator"
 #if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
@@ -1108,9 +1111,13 @@ ctype<char>::classic_table()  _NOEXCEPT
 #elif __sun__
     return __ctype_mask;
 #elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
+#if _VC_CRT_MAJOR_VERSION < 14
+    // This is assumed to be safe, which is a nonsense assumption because we're
+    // going to end up dereferencing it later...
     return _ctype+1; // internal ctype mask table defined in msvcrt.dll
-// This is assumed to be safe, which is a nonsense assumption because we're
-// going to end up dereferencing it later...
+#else
+    return __pctype_func();
+#endif
 #elif defined(__EMSCRIPTEN__)
     return *__ctype_b_loc();
 #elif defined(_NEWLIB_VERSION)

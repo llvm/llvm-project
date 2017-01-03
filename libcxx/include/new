@@ -162,7 +162,7 @@ _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 
 }  // std
 
-#if !__has_feature(cxx_noexcept)
+#if defined(_LIBCPP_CXX03_LANG)
 #define _THROW_BAD_ALLOC throw(std::bad_alloc)
 #else
 #define _THROW_BAD_ALLOC

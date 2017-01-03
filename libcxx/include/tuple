@@ -84,7 +84,7 @@ template <class T, class Tuple>
   constexpr T make_from_tuple(Tuple&& t); // C++17
 
 // 20.4.1.4, tuple helper classes:
-template <class T> class tuple_size;
+template <class T> class tuple_size; // undefined
 template <class... T> class tuple_size<tuple<T...>>;
 template <class T>
  constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17

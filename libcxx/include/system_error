@@ -384,7 +384,8 @@ class _LIBCPP_TYPE_VIS error_category
 public:
     virtual ~error_category() _NOEXCEPT;
 
-#ifdef _LIBCPP_BUILDING_SYSTEM_ERROR
+#if defined(_LIBCPP_BUILDING_SYSTEM_ERROR) && \
+    defined(_LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR)
     error_category() _NOEXCEPT;
 #else
     _LIBCPP_ALWAYS_INLINE

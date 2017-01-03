@@ -53,6 +53,10 @@
 // of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
 #define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
 #elif _LIBCPP_ABI_VERSION == 1
+#if !defined(_WIN32)
+// Enable compiling a definition of error_category() into the libc++ dylib.
+#define _LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR
+#endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #if defined(__FreeBSD__)
@@ -727,7 +731,7 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
-#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
+#if __has_extension(cxx_explicit_conversions) || defined(__IBMCPP__) || \
     (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
 #   define _LIBCPP_EXPLICIT explicit
 #else

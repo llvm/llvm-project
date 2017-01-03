@@ -34,7 +34,7 @@ add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}"
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-               LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
+               LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"))
   set(LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY ON)
 endif()
 
@@ -161,6 +161,28 @@ split_list(LIBCXX_LINK_FLAGS)
 
 # Add a object library that contains the compiled source files.
 add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+if(WIN32 AND NOT MINGW)
+  target_compile_definitions(cxx_objects
+                             PRIVATE
+                               # Ignore the -MSC_VER mismatch, as we may build
+                               # with a different compatibility version.
+                               _ALLOW_MSC_VER_MISMATCH
+                               # Don't check the msvcprt iterator debug levels
+                               # as we will define the iterator types; libc++
+                               # uses a different macro to identify the debug
+                               # level.
+                               _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
+                               # We are building the c++ runtime, don't pull in
+                               # msvcprt.
+                               _CRTBLD
+                               # Don't warn on the use of "deprecated"
+                               # "insecure" functions which are standards
+                               # specified.
+                               _CRT_SECURE_NO_WARNINGS
+                               # Use the ISO conforming behaviour for conversion
+                               # in printf, scanf.
+                               _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+endif()
 
 set_target_properties(cxx_objects
   PROPERTIES
@@ -181,6 +203,13 @@ if (LIBCXX_ENABLE_SHARED)
       SOVERSION     "${LIBCXX_ABI_VERSION}"
   )
   list(APPEND LIBCXX_TARGETS "cxx_shared")
+  if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
+    # Since we most likely do not have a mt.exe replacement, disable the
+    # manifest bundling.  This allows a normal cmake invocation to pass which
+    # will attempt to use the manifest tool to generate the bundled manifest
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  endif()
 endif()
 
 # Build the static library.

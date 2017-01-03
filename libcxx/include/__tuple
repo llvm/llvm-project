@@ -22,19 +22,32 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY tuple_size {};
+template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY tuple_size;
+
+struct __empty_tuple_size_base {};
+
+template <class _Tp, class = void>
+struct __tuple_size_base_type {
+  typedef __empty_tuple_size_base type;
+};
+
+template <class _Tp>
+struct __tuple_size_base_type<_Tp, typename __void_t<decltype(tuple_size<_Tp>::value)>::type>
+{
+  typedef integral_constant<size_t, tuple_size<_Tp>::value> type;
+};
 
 template <class _Tp>
 class _LIBCPP_TYPE_VIS_ONLY tuple_size<const _Tp>
-    : public tuple_size<_Tp> {};
+    : public __tuple_size_base_type<_Tp>::type {};
 
 template <class _Tp>
 class _LIBCPP_TYPE_VIS_ONLY tuple_size<volatile _Tp>
-    : public tuple_size<_Tp> {};
+    : public __tuple_size_base_type<_Tp>::type {};
 
 template <class _Tp>
 class _LIBCPP_TYPE_VIS_ONLY tuple_size<const volatile _Tp>
-    : public tuple_size<_Tp> {};
+    : public __tuple_size_base_type<_Tp>::type {};
 
 template <size_t _Ip, class _Tp> class _LIBCPP_TYPE_VIS_ONLY tuple_element;
 

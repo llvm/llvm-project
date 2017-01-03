@@ -546,7 +546,26 @@ diagnostic messages.
 The ``check_clang_tidy.py`` script provides an easy way to test both
 diagnostic messages and fix-its. It filters out ``CHECK`` lines from the test
 file, runs :program:`clang-tidy` and verifies messages and fixes with two
-separate `FileCheck`_ invocations. To use the script, put a .cpp file with the
+separate `FileCheck`_ invocations: once with FileCheck's directive
+prefix set to ``CHECK-MESSAGES``, validating the diagnostic messages,
+and once with the directive prefix set to ``CHECK-FIXES``, running
+against the fixed code (i.e., the code after generated fixits are
+applied). In particular, ``CHECK-FIXES:`` can be used to check
+that code was not modified by fixits, by checking that it is present
+unchanged in the fixed code.  The full set of `FileCheck`_ directives
+is available (e.g., ``CHECK-MESSAGES-SAME:``, ``CHECK-MESSAGES-NOT:``), though
+typically the basic ``CHECK`` forms (``CHECK-MESSAGES`` and ``CHECK-FIXES``)
+are sufficient for clang-tidy tests.  Note that the `FileCheck`_
+documentation mostly assumes the default prefix (``CHECK``), and hence
+describes the directive as ``CHECK:``, ``CHECK-SAME:``, ``CHECK-NOT:``, etc.
+Replace ``CHECK`` by either ``CHECK-FIXES`` or ``CHECK-MESSAGES`` for
+clang-tidy tests.
+
+An additional check enabled by ``check_clang_tidy.py`` ensures that
+if `CHECK-MESSAGES:` is used in a file then every warning or error
+must have an associated CHECK in that file.
+
+To use the ``check_clang_tidy.py`` script, put a .cpp file with the
 appropriate ``RUN`` line in the ``test/clang-tidy`` directory. Use
 ``CHECK-MESSAGES:`` and ``CHECK-FIXES:`` lines to write checks against
 diagnostic messages and fixed code.

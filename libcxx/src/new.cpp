@@ -13,7 +13,8 @@
 
 #include "new"
 
-#if defined(__APPLE__) && !defined(LIBCXXRT)
+#if defined(__APPLE__) && !defined(LIBCXXRT) && \
+    !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
     #include <cxxabi.h>
 
     #ifndef _LIBCPPABI_VERSION
@@ -26,7 +27,8 @@
     #if defined(LIBCXXRT) || defined(LIBCXX_BUILDING_LIBCXXABI)
         #include <cxxabi.h>
     #endif  // defined(LIBCXX_BUILDING_LIBCXXABI)
-    #if !defined(_LIBCPPABI_VERSION) && !defined(__GLIBCXX__)
+    #if defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY) || \
+        (!defined(_LIBCPPABI_VERSION) && !defined(__GLIBCXX__))
         static std::new_handler __new_handler;
     #endif  // _LIBCPPABI_VERSION
 #endif

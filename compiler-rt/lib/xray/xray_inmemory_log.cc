@@ -112,14 +112,23 @@ static int __xray_OpenLogFile() XRAY_NEVER_INSTRUMENT {
   // Open a temporary file once for the log.
   static char TmpFilename[256] = {};
   static char TmpWildcardPattern[] = "XXXXXX";
-  auto E = internal_strncat(TmpFilename, flags()->xray_logfile_base,
-                            sizeof(TmpFilename) - 10);
-  if (static_cast<size_t>((E + 6) - TmpFilename) > (sizeof(TmpFilename) - 1)) {
-    Report("XRay log file base too long: %s\n", flags()->xray_logfile_base);
+  auto Argv = GetArgv();
+  const char *Progname = Argv[0] == nullptr ? "(unknown)" : Argv[0];
+  const char *LastSlash = internal_strrchr(Progname, '/');
+
+  if (LastSlash != nullptr)
+    Progname = LastSlash + 1;
+
+  const int HalfLength = sizeof(TmpFilename) / 2 - sizeof(TmpWildcardPattern);
+  int NeededLength = internal_snprintf(TmpFilename, sizeof(TmpFilename),
+                                       "%.*s%.*s.%s",
+                                       HalfLength, flags()->xray_logfile_base,
+                                       HalfLength, Progname,
+                                       TmpWildcardPattern);
+  if (NeededLength > int(sizeof(TmpFilename))) {
+    Report("XRay log file name too long (%d): %s\n", NeededLength, TmpFilename);
     return -1;
   }
-  internal_strncat(TmpFilename, TmpWildcardPattern,
-                   sizeof(TmpWildcardPattern) - 1);
   int Fd = mkstemp(TmpFilename);
   if (Fd == -1) {
     Report("XRay: Failed opening temporary file '%s'; not logging events.\n",
