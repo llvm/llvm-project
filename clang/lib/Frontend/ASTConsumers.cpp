@@ -370,6 +370,26 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     break;
   }
 
+  case Decl::ClassTemplateSpecialization: {
+    const auto *CTSD = cast<ClassTemplateSpecializationDecl>(DC);
+    if (CTSD->isCompleteDefinition())
+      Out << "[class template specialization] ";
+    else
+      Out << "<class template specialization> ";
+    Out << *CTSD;
+    break;
+  }
+
+  case Decl::ClassTemplatePartialSpecialization: {
+    const auto *CTPSD = cast<ClassTemplatePartialSpecializationDecl>(DC);
+    if (CTPSD->isCompleteDefinition())
+      Out << "[class template partial specialization] ";
+    else
+      Out << "<class template partial specialization> ";
+    Out << *CTPSD;
+    break;
+  }
+
   default:
     llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
@@ -400,7 +420,8 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     case Decl::CXXConstructor:
     case Decl::CXXDestructor:
     case Decl::CXXConversion:
-    {
+    case Decl::ClassTemplateSpecialization:
+    case Decl::ClassTemplatePartialSpecialization: {
       DeclContext* DC = cast<DeclContext>(I);
       PrintDeclContext(DC, Indentation+2);
       break;
