@@ -55,3 +55,8 @@ template<typename T, bool> struct ClassTemplatePartialSpecialization;
 
 template<typename T>
 struct ClassTemplatePartialSpecialization<T, true> { };
+
+// Access specifier
+struct AccessSpec {
+private:
+};
