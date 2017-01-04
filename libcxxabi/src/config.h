@@ -42,6 +42,7 @@
 
 // Try and deduce a threading api if one has not been explicitly set.
 #if !defined(_LIBCXXABI_HAS_NO_THREADS) && \
+    !defined(_LIBCXXABI_HAS_THREAD_API_EXTERNAL) && \
     !defined(_LIBCXXABI_USE_THREAD_API_PTHREAD)
   #if defined(_POSIX_THREADS) && _POSIX_THREADS >= 0
     #define _LIBCXXABI_USE_THREAD_API_PTHREAD

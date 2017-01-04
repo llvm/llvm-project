@@ -10,7 +10,7 @@
 #ifndef _LIBCPP_CONFIG_ELAST
 #define _LIBCPP_CONFIG_ELAST
 
-#if defined(_WIN32)
+#if defined(_LIBCPP_MSCVRT)
 #include <stdlib.h>
 #else
 #include <errno.h>
@@ -28,7 +28,7 @@
 // No _LIBCPP_ELAST needed on Apple
 #elif defined(__sun__)
 #define _LIBCPP_ELAST ESTALE
-#elif defined(_WIN32)
+#elif defined(_LIBCPP_MSCVRT)
 #define _LIBCPP_ELAST _sys_nerr
 #else
 // Warn here so that the person doing the libcxx port has an easier time:

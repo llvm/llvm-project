@@ -579,10 +579,6 @@ class Configuration(object):
                 self.cxx.link_flags += [abs_path]
             else:
                 self.cxx.link_flags += ['-lc++']
-        # This needs to come after -lc++ as we want its unresolved thread-api symbols
-        # to be picked up from this one.
-        if self.get_lit_bool('libcxx_external_thread_api', default=False):
-            self.cxx.link_flags += ['-lc++external_threads']
 
     def configure_link_flags_abi_library(self):
         cxx_abi = self.get_lit_conf('cxx_abi', 'libcxxabi')
@@ -611,6 +607,8 @@ class Configuration(object):
                 'C++ ABI setting %s unsupported for tests' % cxx_abi)
 
     def configure_extra_library_flags(self):
+        if self.get_lit_bool('cxx_ext_threads', default=False):
+            self.cxx.link_flags += ['-lc++external_threads']
         self.target_info.add_cxx_link_flags(self.cxx.link_flags)
 
     def configure_color_diagnostics(self):

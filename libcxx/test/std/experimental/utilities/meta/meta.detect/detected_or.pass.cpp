@@ -19,7 +19,7 @@ namespace ex = std::experimental;
 
 template <typename T>
   using hasFoo = typename T::Foo;
-  
+
 struct yesFoo {
     using Foo = int;
 };

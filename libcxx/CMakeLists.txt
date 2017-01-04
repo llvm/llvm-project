@@ -221,14 +221,21 @@ if(LIBCXX_ENABLE_THREADS AND NOT LIBCXX_ENABLE_MONOTONIC_CLOCK)
                       " when LIBCXX_ENABLE_THREADS is also set to OFF.")
 endif()
 
-if(LIBCXX_HAS_PTHREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if(NOT LIBCXX_ENABLE_THREADS)
+  if(LIBCXX_HAS_PTHREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
+  if(LIBCXX_HAS_EXTERNAL_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
 endif()
 
-if(LIBCXX_HAS_EXTERNAL_THREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if(LIBCXX_HAS_PTHREAD_API AND LIBCXX_HAS_EXTERNAL_THREAD_API)
+  message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                      "and LIBCXX_HAS_PTHREAD_API cannot be both"
+                      "set to ON at the same time.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE

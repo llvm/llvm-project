@@ -154,11 +154,13 @@
 # define _LIBCPP_HAS_QUICK_EXIT
 #endif  // __NetBSD__
 
-#ifdef _WIN32
+#if defined(_WIN32)
+#  define _LIBCPP_WIN32API      1
 #  define _LIBCPP_LITTLE_ENDIAN 1
 #  define _LIBCPP_BIG_ENDIAN    0
+#  define _LIBCPP_SHORT_WCHAR   1
 // Compiler intrinsics (MSVC)
-#if defined(_MSC_VER) && _MSC_VER >= 1400
+#  if defined(_MSC_VER) && _MSC_VER >= 1400
 #    define _LIBCPP_HAS_IS_BASE_OF
 #  endif
 #  if defined(_MSC_VER) && !defined(__clang__)
@@ -167,11 +169,14 @@
 #    define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 #    define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
 #  endif
-#  // If mingw not explicitly detected, assume using MS C runtime only.
+// If mingw not explicitly detected, assume using MS C runtime only.
 #  ifndef __MINGW32__
 #    define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
 #  endif
-#endif  // _WIN32
+#  if (defined(_M_AMD64) || defined(__x86_64__)) || (defined(_M_ARM) || defined(__arm__))
+#    define _LIBCPP_HAS_BITSCAN64
+#  endif
+#endif // defined(_WIN32)
 
 #ifdef __sun__
 # include <sys/isa_defs.h>
@@ -195,7 +200,7 @@
   // including accesses to the special files under /dev. C++11's
   // std::random_device is instead exposed through a NaCl syscall.
 # define _LIBCPP_USING_NACL_RANDOM
-#elif defined(_WIN32)
+#elif defined(_LIBCPP_WIN32API)
 # define _LIBCPP_USING_WIN32_RANDOM
 #else
 # define _LIBCPP_USING_DEV_RANDOM
@@ -520,8 +525,15 @@ namespace std {
 
 #endif // __clang__ || __GNUC__ || _MSC_VER || __IBMCPP__
 
+#if defined(__ELF__)
+#define _LIBCPP_OBJECT_FORMAT_ELF   1
+#elif defined(__MACH__)
+#define _LIBCPP_OBJECT_FORMAT_MACHO 1
+#else
+#define _LIBCPP_OBJECT_FORMAT_COFF  1
+#endif
 
-#ifdef _WIN32
+#if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 #if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 # define _LIBCPP_DLL_VIS
 # define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
@@ -546,6 +558,7 @@ namespace std {
 #define _LIBCPP_TYPE_VIS_ONLY
 #define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
+
 #if defined(_LIBCPP_MSVC)
 # define _LIBCPP_INLINE_VISIBILITY __forceinline
 # define _LIBCPP_ALWAYS_INLINE     __forceinline
@@ -555,7 +568,7 @@ namespace std {
 # define _LIBCPP_ALWAYS_INLINE     __attribute__ ((__always_inline__))
 # define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__ ((__always_inline__))
 #endif
-#endif // _WIN32
+#endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #ifndef _LIBCPP_HIDDEN
 #if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
@@ -778,14 +791,14 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_NONUNIQUE_RTTI_BIT (1ULL << 63)
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_WIN32) || \
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT) ||   \
     defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
-#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
+#if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_CATOPEN 1
 #endif
 #endif
@@ -959,7 +972,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_OFF_T_FUNCTIONS)
-#if defined(_WIN32) || defined(_NEWLIB_VERSION)
+#if defined(_LIBCPP_MSVCRT) || defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_NO_OFF_T_FUNCTIONS
 #endif
 #endif

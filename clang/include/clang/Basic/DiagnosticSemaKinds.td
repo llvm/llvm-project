@@ -3989,6 +3989,8 @@ def ext_ms_deref_template_argument: ExtWarn<
 def ext_ms_delayed_template_argument: ExtWarn<
   "using the undeclared type %0 as a default template argument is a "
   "Microsoft extension">, InGroup<MicrosoftTemplate>;
+def err_template_arg_deduced_incomplete_pack : Error<
+  "deduced incomplete pack %0 for template parameter %1">;
 
 // C++ template specialization
 def err_template_spec_unknown_kind : Error<
