@@ -33,3 +33,11 @@ struct FriendlyStruct {
 };
 
 struct FriendedStruct { };
+
+// Using declaration
+namespace provider {
+  void foo();
+}
+namespace user {
+  using provider::foo;
+}
