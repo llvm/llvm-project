@@ -478,6 +478,13 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "<omp threadprivate> " << '"' << I << "\"\n";
       break;
     }
+    case Decl::Friend: {
+      Out << "<friend>";
+      if (const NamedDecl *ND = cast<FriendDecl>(I)->getFriendDecl())
+        Out << ' ' << *ND;
+      Out << "\n";
+      break;
+    }
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");
