@@ -41,3 +41,6 @@ namespace provider {
 namespace user {
   using provider::foo;
 }
+
+// Empty declaration
+;
