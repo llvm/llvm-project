@@ -522,6 +522,10 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "<access specifier>\n";
       break;
     }
+    case Decl::VarTemplate: {
+      Out << "<var template> " << *cast<VarTemplateDecl>(I) << "\n";
+      break;
+    }
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");

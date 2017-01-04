@@ -60,3 +60,6 @@ struct ClassTemplatePartialSpecialization<T, true> { };
 struct AccessSpec {
 private:
 };
+
+// Variable template
+template <typename T> T varTemplate = 0;
