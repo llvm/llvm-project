@@ -28,8 +28,9 @@ if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
 
-#if LIBCXX_CXX_ABI_LIBRARY_PATH is defined we want to add it to the search path.
-add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
+# If LIBCXX_CXX_ABI_LIBRARY_PATH is defined we want to add it to the search path.
+add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH
+                  "${CMAKE_LIBRARY_PATH_FLAG}${LIBCXX_CXX_ABI_LIBRARY_PATH}")
 
 add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
@@ -231,7 +232,8 @@ if (LIBCXX_ENABLE_STATIC)
     if (TARGET ${LIBCXX_CXX_ABI_LIBRARY})
       set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
     else()
-      set(MERGE_ARCHIVES_ABI_TARGET "lib${LIBCXX_CXX_ABI_LIBRARY}.a")
+      set(MERGE_ARCHIVES_ABI_TARGET
+          "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")
     endif()
     add_custom_command(TARGET cxx_static POST_BUILD
     COMMAND

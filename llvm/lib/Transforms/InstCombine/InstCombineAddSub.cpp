@@ -1057,6 +1057,18 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       // add(zext(xor i16 X, -32768), -32768) --> sext X
       return CastInst::Create(Instruction::SExt, X, LHS->getType());
     }
+
+    if (Val->isNegative() &&
+        match(LHS, m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C)))) &&
+        Val->sge(-C->sext(Val->getBitWidth()))) {
+      // (add (zext (add nuw X, C)), Val) -> (zext (add nuw X, C+Val))
+      return CastInst::Create(
+          Instruction::ZExt,
+          Builder->CreateNUWAdd(
+              X, Constant::getIntegerValue(X->getType(),
+                                           *C + Val->trunc(C->getBitWidth()))),
+          I.getType());
+    }
   }
 
   // FIXME: Use the match above instead of dyn_cast to allow these transforms

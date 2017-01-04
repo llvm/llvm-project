@@ -209,6 +209,15 @@ struct DocumentListTraits {
   // static T::value_type& element(IO &io, T &seq, size_t index);
 };
 
+/// This class should be specialized by any type that needs to be converted
+/// to/from a YAML mapping in the case where the names of the keys are not known
+/// in advance, e.g. a string map.
+template <typename T>
+struct CustomMappingTraits {
+  // static void inputOne(IO &io, StringRef key, T &elem);
+  // static void output(IO &io, T &elem);
+};
+
 // Only used for better diagnostics of missing traits
 template <typename T>
 struct MissingTrait;
@@ -358,6 +367,23 @@ public:
   static bool const value =  (sizeof(test<SequenceTraits<T>>(nullptr)) == 1);
 };
 
+// Test if CustomMappingTraits<T> is defined on type T.
+template <class T>
+struct has_CustomMappingTraits
+{
+  typedef void (*Signature_input)(IO &io, StringRef key, T &v);
+
+  template <typename U>
+  static char test(SameType<Signature_input, &U::inputOne>*);
+
+  template <typename U>
+  static double test(...);
+
+public:
+  static bool const value =
+      (sizeof(test<CustomMappingTraits<T>>(nullptr)) == 1);
+};
+
 // has_FlowTraits<int> will cause an error with some compilers because
 // it subclasses int.  Using this wrapper only instantiates the
 // real has_FlowTraits only if the template type is a class.
@@ -493,6 +519,7 @@ struct missingTraits
                                         !has_BlockScalarTraits<T>::value &&
                                         !has_MappingTraits<T, Context>::value &&
                                         !has_SequenceTraits<T>::value &&
+                                        !has_CustomMappingTraits<T>::value &&
                                         !has_DocumentListTraits<T>::value> {};
 
 template <typename T, typename Context>
@@ -531,6 +558,7 @@ public:
   virtual void endMapping() = 0;
   virtual bool preflightKey(const char*, bool, bool, bool &, void *&) = 0;
   virtual void postflightKey(void*) = 0;
+  virtual std::vector<StringRef> keys() = 0;
 
   virtual void beginFlowMapping() = 0;
   virtual void endFlowMapping() = 0;
@@ -819,6 +847,21 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
 }
 
 template <typename T>
+typename std::enable_if<has_CustomMappingTraits<T>::value, void>::type
+yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
+  if ( io.outputting() ) {
+    io.beginMapping();
+    CustomMappingTraits<T>::output(io, Val);
+    io.endMapping();
+  } else {
+    io.beginMapping();
+    for (StringRef key : io.keys())
+      CustomMappingTraits<T>::inputOne(io, key, Val);
+    io.endMapping();
+  }
+}
+
+template <typename T>
 typename std::enable_if<missingTraits<T, EmptyContext>::value, void>::type
 yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   char missing_yaml_trait_for_type[sizeof(MissingTrait<T>)];
@@ -1074,6 +1117,7 @@ private:
   void endMapping() override;
   bool preflightKey(const char *, bool, bool, bool &, void *&) override;
   void postflightKey(void *) override;
+  std::vector<StringRef> keys() override;
   void beginFlowMapping() override;
   void endFlowMapping() override;
   unsigned beginSequence() override;
@@ -1157,7 +1201,7 @@ private:
     bool isValidKey(StringRef key);
 
     NameToNode                        Mapping;
-    llvm::SmallVector<const char*, 6> ValidKeys;
+    llvm::SmallVector<std::string, 6> ValidKeys;
   };
 
   class SequenceHNode : public HNode {
@@ -1215,6 +1259,7 @@ public:
   void endMapping() override;
   bool preflightKey(const char *key, bool, bool, bool &, void *&) override;
   void postflightKey(void *) override;
+  std::vector<StringRef> keys() override;
   void beginFlowMapping() override;
   void endFlowMapping() override;
   unsigned beginSequence() override;
@@ -1384,6 +1429,17 @@ operator>>(Input &In, T &Val) {
   return In;
 }
 
+// Define non-member operator>> so that Input can stream in a string map.
+template <typename T>
+inline
+typename std::enable_if<has_CustomMappingTraits<T>::value, Input &>::type
+operator>>(Input &In, T &Val) {
+  EmptyContext Ctx;
+  if (In.setCurrentDocument())
+    yamlize(In, Val, true, Ctx);
+  return In;
+}
+
 // Provide better error message about types missing a trait specialization
 template <typename T>
 inline typename std::enable_if<missingTraits<T, EmptyContext>::value,
@@ -1457,6 +1513,21 @@ operator<<(Output &Out, T &Val) {
   return Out;
 }
 
+// Define non-member operator<< so that Output can stream out a string map.
+template <typename T>
+inline
+typename std::enable_if<has_CustomMappingTraits<T>::value, Output &>::type
+operator<<(Output &Out, T &Val) {
+  EmptyContext Ctx;
+  Out.beginDocuments();
+  if (Out.preflightDocument(0)) {
+    yamlize(Out, Val, true, Ctx);
+    Out.postflightDocument();
+  }
+  Out.endDocuments();
+  return Out;
+}
+
 // Provide better error message about types missing a trait specialization
 template <typename T>
 inline typename std::enable_if<missingTraits<T, EmptyContext>::value,
@@ -1473,6 +1544,18 @@ template <typename T> struct SequenceTraitsImpl {
     if (index >= seq.size())
       seq.resize(index + 1);
     return seq[index];
+  }
+};
+
+/// Implementation of CustomMappingTraits for std::map<std::string, T>.
+template <typename T> struct StdMapStringCustomMappingTraitsImpl {
+  typedef std::map<std::string, T> map_type;
+  static void inputOne(IO &io, StringRef key, map_type &v) {
+    io.mapRequired(key.str().c_str(), v[key]);
+  }
+  static void output(IO &io, map_type &v) {
+    for (auto &p : v)
+      io.mapRequired(p.first.c_str(), p.second);
   }
 };
 
@@ -1527,6 +1610,17 @@ template <typename T> struct SequenceTraitsImpl {
   template <>                                                                  \
   struct DocumentListTraits<std::vector<_type>>                                \
       : public SequenceTraitsImpl<std::vector<_type>> {};                      \
+  }                                                                            \
+  }
+
+/// Utility for declaring that std::map<std::string, _type> should be considered
+/// a YAML map.
+#define LLVM_YAML_IS_STRING_MAP(_type)                                         \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
+  template <>                                                                  \
+  struct CustomMappingTraits<std::map<std::string, _type>>                     \
+      : public StdMapStringCustomMappingTraitsImpl<_type> {};                  \
   }                                                                            \
   }
 

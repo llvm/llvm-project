@@ -984,10 +984,11 @@ TEST(DWARFDebugInfo, TestRelations) {
   enum class Tag: uint16_t  {
     A = dwarf::DW_TAG_lo_user,
     B,
-    B1,
-    B2,
     C,
-    C1
+    C1,
+    C2,
+    D,
+    D1
   };
 
   // Scope to allow us to re-use the same DIE names
@@ -996,18 +997,20 @@ TEST(DWARFDebugInfo, TestRelations) {
     //
     // CU
     //   A
-    //   B
-    //     B1
-    //     B2
-    //   C
-    //     C1
+    //     B
+    //     C
+    //       C1
+    //       C2
+    //     D
+    //       D1
     dwarfgen::DIE CUDie = CU.getUnitDIE();
-    CUDie.addChild((dwarf::Tag)Tag::A);
-    dwarfgen::DIE B = CUDie.addChild((dwarf::Tag)Tag::B);
-    dwarfgen::DIE C = CUDie.addChild((dwarf::Tag)Tag::C);
-    B.addChild((dwarf::Tag)Tag::B1);
-    B.addChild((dwarf::Tag)Tag::B2);
+    dwarfgen::DIE A = CUDie.addChild((dwarf::Tag)Tag::A);
+    A.addChild((dwarf::Tag)Tag::B);
+    dwarfgen::DIE C = A.addChild((dwarf::Tag)Tag::C);
+    dwarfgen::DIE D = A.addChild((dwarf::Tag)Tag::D);
     C.addChild((dwarf::Tag)Tag::C1);
+    C.addChild((dwarf::Tag)Tag::C2);
+    D.addChild((dwarf::Tag)Tag::D1);
   }
 
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
@@ -1023,7 +1026,7 @@ TEST(DWARFDebugInfo, TestRelations) {
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
   EXPECT_TRUE(CUDie.isValid());
-  // DieDG.dump(llvm::outs(), U, UINT32_MAX);
+  // CUDie.dump(llvm::outs(), UINT32_MAX);
   
   // The compile unit doesn't have a parent or a sibling.
   auto ParentDie = CUDie.getParent();
@@ -1033,9 +1036,10 @@ TEST(DWARFDebugInfo, TestRelations) {
   
   // Get the children of the compile unit
   auto A = CUDie.getFirstChild();
-  auto B = A.getSibling();
+  auto B = A.getFirstChild();
   auto C = B.getSibling();
-  auto Null = C.getSibling();
+  auto D = C.getSibling();
+  auto Null = D.getSibling();
   
   // Verify NULL Die is NULL and has no children or siblings
   EXPECT_TRUE(Null.isNULL());
@@ -1046,31 +1050,44 @@ TEST(DWARFDebugInfo, TestRelations) {
   EXPECT_EQ(A.getTag(), (dwarf::Tag)Tag::A);
   EXPECT_EQ(B.getTag(), (dwarf::Tag)Tag::B);
   EXPECT_EQ(C.getTag(), (dwarf::Tag)Tag::C);
+  EXPECT_EQ(D.getTag(), (dwarf::Tag)Tag::D);
 
   // Verify who has children
-  EXPECT_FALSE(A.hasChildren());
-  EXPECT_TRUE(B.hasChildren());
+  EXPECT_TRUE(A.hasChildren());
+  EXPECT_FALSE(B.hasChildren());
+  EXPECT_TRUE(C.hasChildren());
+  EXPECT_TRUE(D.hasChildren());
 
   // Make sure the parent of all the children of the compile unit are the
   // compile unit.
   EXPECT_EQ(A.getParent(), CUDie);
-  EXPECT_EQ(B.getParent(), CUDie);
-  EXPECT_EQ(Null.getParent(), CUDie);
+  
+  // Make sure the parent of all the children of A are the A.
+  // B is the first child in A, so we need to verify we can get the previous
+  // DIE as the parent.
+  EXPECT_EQ(B.getParent(), A);
+  // C is the second child in A, so we need to make sure we can backup across
+  // other DIE (B) at the same level to get the correct parent.
+  EXPECT_EQ(C.getParent(), A);
+  // D is the third child of A. We need to verify we can backup across other DIE
+  // (B and C) including DIE that have children (D) to get the correct parent.
+  EXPECT_EQ(D.getParent(), A);
 
-  EXPECT_FALSE(A.getFirstChild().isValid());
+  // Verify that a DIE with no children returns an invalid DWARFDie.
+  EXPECT_FALSE(B.getFirstChild().isValid());
 
   // Verify the children of the B DIE
-  auto B1 = B.getFirstChild();
-  auto B2 = B1.getSibling();
-  EXPECT_TRUE(B2.getSibling().isNULL());
+  auto C1 = C.getFirstChild();
+  auto C2 = C1.getSibling();
+  EXPECT_TRUE(C2.getSibling().isNULL());
   
   // Verify all children of the B DIE correctly valid or invalid.
-  EXPECT_EQ(B1.getTag(), (dwarf::Tag)Tag::B1);
-  EXPECT_EQ(B2.getTag(), (dwarf::Tag)Tag::B2);
+  EXPECT_EQ(C1.getTag(), (dwarf::Tag)Tag::C1);
+  EXPECT_EQ(C2.getTag(), (dwarf::Tag)Tag::C2);
 
   // Make sure the parent of all the children of the B are the B.
-  EXPECT_EQ(B1.getParent(), B);
-  EXPECT_EQ(B2.getParent(), B);
+  EXPECT_EQ(C1.getParent(), C);
+  EXPECT_EQ(C2.getParent(), C);
 }
 
 TEST(DWARFDebugInfo, TestDWARFDie) {

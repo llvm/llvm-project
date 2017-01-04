@@ -71,34 +71,32 @@ define <2 x double> @mask_uitofp_2i64_2f64(<2 x i64> %a) nounwind {
 define <4 x float> @mask_sitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X32-SSE-LABEL: mask_sitofp_4i64_4f32:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm1
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: mask_sitofp_4i64_4f32:
 ; X32-AVX:       # BB#0:
-; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X32-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-AVX-NEXT:    vzeroupper
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mask_sitofp_4i64_4f32:
 ; X64-SSE:       # BB#0:
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mask_sitofp_4i64_4f32:
 ; X64-AVX:       # BB#0:
-; X64-AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
@@ -110,34 +108,32 @@ define <4 x float> @mask_sitofp_4i64_4f32(<4 x i64> %a) nounwind {
 define <4 x float> @mask_uitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X32-SSE-LABEL: mask_uitofp_4i64_4f32:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm1
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: mask_uitofp_4i64_4f32:
 ; X32-AVX:       # BB#0:
-; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X32-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-AVX-NEXT:    vzeroupper
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: mask_uitofp_4i64_4f32:
 ; X64-SSE:       # BB#0:
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mask_uitofp_4i64_4f32:
 ; X64-AVX:       # BB#0:
-; X64-AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
