@@ -87,13 +87,22 @@ if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
 endif()
 
 # ABI Library options ---------------------------------------------------------
-set(LIBCXX_CXX_ABI "${LIBCXX_CXX_ABI}" CACHE STRING
-    "Specify C++ ABI library to use." FORCE)
-set(CXXABIS none libcxxabi libcxxrt libstdc++ libsupc++)
+set(LIBCXX_CXX_ABI "default" CACHE STRING
+    "Specify C++ ABI library to use.")
+set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
+# FIXME: This is a temporary hack to force LLVM buildbots to store
+# the fixed cache entry instead of the previous cache entry. This is needed
+# because some LLVM buildbots don't clear their cache. It will be removed
+# once all LLVM bots have been run.
+if (LIBCXX_CXX_ABI STREQUAL "")
+  set(LIBCXX_CXX_ABI "default" CACHE STRING
+      "Specify the C++ ABI library to use." FORCE)
+endif()
+
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
-if (NOT LIBCXX_CXX_ABI)
+if (LIBCXX_CXX_ABI STREQUAL "default")
   find_path(
     LIBCXX_LIBCXXABI_INCLUDES_INTERNAL
     cxxabi.h
@@ -107,7 +116,7 @@ if (NOT LIBCXX_CXX_ABI)
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
   else()
-    set(LIBCXX_CXX_ABI_LIBNAME "none")
+    set(LIBCXX_CXX_ABI_LIBNAME "default")
   endif()
 else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")
@@ -125,6 +134,7 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_ENABLE_STATIC_ABI_LIBRARY
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"
+      AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"
       AND PYTHONINTERP_FOUND
       AND LIBCXX_ENABLE_SHARED)
     set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
@@ -211,14 +221,21 @@ if(LIBCXX_ENABLE_THREADS AND NOT LIBCXX_ENABLE_MONOTONIC_CLOCK)
                       " when LIBCXX_ENABLE_THREADS is also set to OFF.")
 endif()
 
-if(LIBCXX_HAS_PTHREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if(NOT LIBCXX_ENABLE_THREADS)
+  if(LIBCXX_HAS_PTHREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
+  if(LIBCXX_HAS_EXTERNAL_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
 endif()
 
-if(LIBCXX_HAS_EXTERNAL_THREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if(LIBCXX_HAS_PTHREAD_API AND LIBCXX_HAS_EXTERNAL_THREAD_API)
+  message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                      "and LIBCXX_HAS_PTHREAD_API cannot be both"
+                      "set to ON at the same time.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
@@ -441,9 +458,6 @@ if (LIBCXX_ENABLE_ASSERTIONS)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   define_if_not(MSVC -D_DEBUG)
 endif()
-
-# Feature flags ===============================================================
-define_if(MSVC -D_CRT_SECURE_NO_WARNINGS)
 
 # Modules flags ===============================================================
 # FIXME The libc++ sources are fundamentally non-modular. They need special

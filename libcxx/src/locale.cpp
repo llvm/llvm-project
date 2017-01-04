@@ -24,6 +24,9 @@
 #endif
 #include "clocale"
 #include "cstring"
+#if defined(_LIBCPP_MSVCRT)
+#define _CTYPE_DISABLE_MACROS
+#endif
 #include "cwctype"
 #include "__sso_allocator"
 #if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
@@ -1108,9 +1111,13 @@ ctype<char>::classic_table()  _NOEXCEPT
 #elif __sun__
     return __ctype_mask;
 #elif defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
+#if _VC_CRT_MAJOR_VERSION < 14
+    // This is assumed to be safe, which is a nonsense assumption because we're
+    // going to end up dereferencing it later...
     return _ctype+1; // internal ctype mask table defined in msvcrt.dll
-// This is assumed to be safe, which is a nonsense assumption because we're
-// going to end up dereferencing it later...
+#else
+    return __pctype_func();
+#endif
 #elif defined(__EMSCRIPTEN__)
     return *__ctype_b_loc();
 #elif defined(_NEWLIB_VERSION)
@@ -3247,7 +3254,7 @@ __codecvt_utf8<wchar_t>::do_out(state_type&,
     const intern_type* frm, const intern_type* frm_end, const intern_type*& frm_nxt,
     extern_type* to, extern_type* to_end, extern_type*& to_nxt) const
 {
-#if _WIN32
+#if defined(_LIBCPP_SHORT_WCHAR)
     const uint16_t* _frm = reinterpret_cast<const uint16_t*>(frm);
     const uint16_t* _frm_end = reinterpret_cast<const uint16_t*>(frm_end);
     const uint16_t* _frm_nxt = _frm;
@@ -3259,7 +3266,7 @@ __codecvt_utf8<wchar_t>::do_out(state_type&,
     uint8_t* _to = reinterpret_cast<uint8_t*>(to);
     uint8_t* _to_end = reinterpret_cast<uint8_t*>(to_end);
     uint8_t* _to_nxt = _to;
-#if _WIN32
+#if defined(_LIBCPP_SHORT_WCHAR)
     result r = ucs2_to_utf8(_frm, _frm_end, _frm_nxt, _to, _to_end, _to_nxt,
                             _Maxcode_, _Mode_);
 #else
@@ -3279,7 +3286,7 @@ __codecvt_utf8<wchar_t>::do_in(state_type&,
     const uint8_t* _frm = reinterpret_cast<const uint8_t*>(frm);
     const uint8_t* _frm_end = reinterpret_cast<const uint8_t*>(frm_end);
     const uint8_t* _frm_nxt = _frm;
-#if _WIN32
+#if defined(_LIBCPP_SHORT_WCHAR)
     uint16_t* _to = reinterpret_cast<uint16_t*>(to);
     uint16_t* _to_end = reinterpret_cast<uint16_t*>(to_end);
     uint16_t* _to_nxt = _to;

@@ -12,7 +12,7 @@
 #include "system_error"  // __throw_system_error
 #include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
 
-#if defined(_WIN32)
+#if defined(_LIBCPP_WIN32API)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRA_LEAN
 #include <Windows.h>
@@ -22,13 +22,13 @@
 #else
 #if !defined(CLOCK_REALTIME)
 #include <sys/time.h>        // for gettimeofday and timeval
-#endif
-#endif
+#endif // !defined(CLOCK_REALTIME)
+#endif // defined(_LIBCPP_WIN32API)
 
 #if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 #if __APPLE__
 #include <mach/mach_time.h>  // mach_absolute_time, mach_timebase_info_data_t
-#elif !defined(_WIN32) && !defined(CLOCK_MONOTONIC)
+#elif !defined(_LIBCPP_WIN32API) && !defined(CLOCK_MONOTONIC)
 #error "Monotonic clock not implemented"
 #endif
 #endif
@@ -45,7 +45,7 @@ const bool system_clock::is_steady;
 system_clock::time_point
 system_clock::now() _NOEXCEPT
 {
-#if defined(_WIN32)
+#if defined(_LIBCPP_WIN32API)
   // FILETIME is in 100ns units
   using filetime_duration =
       _VSTD::chrono::duration<__int64,
@@ -53,8 +53,7 @@ system_clock::now() _NOEXCEPT
                                                     nanoseconds::period>>;
 
   // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.
-  static _LIBCPP_CONSTEXPR const filetime_duration
-      nt_to_unix_epoch{11644473600};
+  static _LIBCPP_CONSTEXPR const seconds nt_to_unix_epoch{11644473600};
 
   FILETIME ft;
 #if _WIN32_WINNT >= _WIN32_WINNT_WIN8
@@ -159,7 +158,7 @@ steady_clock::now() _NOEXCEPT
     return time_point(duration(fp()));
 }
 
-#elif defined(_WIN32)
+#elif defined(_LIBCPP_WIN32API)
 
 steady_clock::time_point
 steady_clock::now() _NOEXCEPT

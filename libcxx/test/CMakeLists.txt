@@ -55,18 +55,20 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   @ONLY)
 
+set(LIBCXX_TEST_DEPS "")
+
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
-  set(experimental_dep cxx_experimental)
+  set(LIBCXX_TEST_DEPS cxx_experimental)
 endif()
 
 if (LIBCXX_HAS_EXTERNAL_THREAD_API)
-  set(external_threads_dep cxx_external_threads)
+  list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
 endif()
 
 add_lit_testsuite(check-cxx
   "Running libcxx tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS cxx ${experimental_dep} ${external_threads_dep})
+  DEPENDS cxx ${LIBCXX_TEST_DEPS})
 
 add_custom_target(check-libcxx DEPENDS check-cxx)
 

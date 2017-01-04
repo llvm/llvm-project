@@ -29,9 +29,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // class error_category
 
+#if defined(_LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR)
 error_category::error_category() _NOEXCEPT
 {
 }
+#endif
 
 error_category::~error_category() _NOEXCEPT
 {
@@ -63,8 +65,16 @@ constexpr size_t strerror_buff_size = 1024;
 
 string do_strerror_r(int ev);
 
-#if defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC)                      \
-    && (!defined(__ANDROID__) || __ANDROID_API__ >= 23)
+#if defined(_LIBCPP_MSVCRT)
+string do_strerror_r(int ev) {
+  char buffer[strerror_buff_size];
+  if (::strerror_s(buffer, strerror_buff_size, ev) == 0)
+    return string(buffer);
+  std::snprintf(buffer, strerror_buff_size, "unknown error %d", ev);
+  return string(buffer);
+}
+#elif defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC) &&                 \
+    (!defined(__ANDROID__) || __ANDROID_API__ >= 23)
 // GNU Extended version
 string do_strerror_r(int ev) {
     char buffer[strerror_buff_size];

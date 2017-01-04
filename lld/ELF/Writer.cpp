@@ -625,15 +625,12 @@ void PhdrEntry::add(OutputSectionBase *Sec) {
 }
 
 template <class ELFT>
-static Symbol *addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
-                                    typename ELFT::uint Val,
-                                    uint8_t StOther = STV_HIDDEN) {
-  SymbolBody *S = Symtab<ELFT>::X->find(Name);
-  if (!S)
-    return nullptr;
-  if (!S->isUndefined() && !S->isShared())
-    return S->symbol();
-  return Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
+static void addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
+                                 typename ELFT::uint Val,
+                                 uint8_t StOther = STV_HIDDEN) {
+  if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
+    if (S->isUndefined() || S->isShared())
+      Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
 template <class ELFT>

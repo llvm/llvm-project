@@ -403,7 +403,7 @@ static int clangTidyMain(int argc, const char **argv) {
       llvm::errs() << "Error opening output file: " << EC.message() << '\n';
       return 1;
     }
-    exportReplacements(Errors, OS);
+    exportReplacements(FilePath.str(), Errors, OS);
   }
 
   printStats(Stats);
