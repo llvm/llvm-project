@@ -475,7 +475,9 @@ using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
 #define _LIBCPP_HAS_NO_CONSTEXPR
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
+#if _MSC_VER <= 1800
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
+#endif
 #define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #define __alignof__ __alignof

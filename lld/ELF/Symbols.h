@@ -236,7 +236,7 @@ public:
   const OutputSectionBase *Section;
 };
 
-class Undefined : public SymbolBody {
+template <class ELFT> class Undefined : public SymbolBody {
 public:
   Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
             InputFile *F);
@@ -245,6 +245,12 @@ public:
     return S->kind() == UndefinedKind;
   }
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol. When linking a DSO undefined
+  // symbols are implicitly imported, the symbol lookup will be performed by
+  // the dynamic loader. A call to an undefined symbol will be given a PLT
+  // entry and on ARM this may need a Thunk if the caller is in Thumb state.
+  Thunk<ELFT> *ThunkData = nullptr;
   InputFile *file() { return this->File; }
 };
 
@@ -416,7 +422,8 @@ struct Symbol {
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
       DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
-      Undefined, SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Undefined<llvm::object::ELF64LE>, SharedSymbol<llvm::object::ELF64LE>,
+      LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }
