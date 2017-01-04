@@ -7192,6 +7192,12 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
                                CharUnits &EndOffset) {
   bool DetermineForCompleteObject = refersToCompleteObject(LVal);
 
+  auto CheckedHandleSizeof = [&](QualType Ty, CharUnits &Result) {
+    if (Ty.isNull() || Ty->isIncompleteType() || Ty->isFunctionType())
+      return false;
+    return HandleSizeof(Info, ExprLoc, Ty, Result);
+  };
+
   // We want to evaluate the size of the entire object. This is a valid fallback
   // for when Type=1 and the designator is invalid, because we're asked for an
   // upper-bound.
@@ -7209,7 +7215,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
       return false;
 
     QualType BaseTy = getObjectType(LVal.getLValueBase());
-    return !BaseTy.isNull() && HandleSizeof(Info, ExprLoc, BaseTy, EndOffset);
+    return CheckedHandleSizeof(BaseTy, EndOffset);
   }
 
   // We want to evaluate the size of a subobject.
@@ -7238,7 +7244,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   }
 
   CharUnits BytesPerElem;
-  if (!HandleSizeof(Info, ExprLoc, Designator.MostDerivedType, BytesPerElem))
+  if (!CheckedHandleSizeof(Designator.MostDerivedType, BytesPerElem))
     return false;
 
   // According to the GCC documentation, we want the size of the subobject

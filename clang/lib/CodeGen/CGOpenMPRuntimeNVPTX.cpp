@@ -20,53 +20,64 @@
 using namespace clang;
 using namespace CodeGen;
 
-/// \brief Get the GPU warp size.
-llvm::Value *CGOpenMPRuntimeNVPTX::getNVPTXWarpSize(CodeGenFunction &CGF) {
+namespace {
+enum OpenMPRTLFunctionNVPTX {
+  /// \brief Call to void __kmpc_kernel_init(kmp_int32 omp_handle,
+  /// kmp_int32 thread_limit);
+  OMPRTL_NVPTX__kmpc_kernel_init,
+};
+
+// NVPTX Address space
+enum AddressSpace {
+  AddressSpaceShared = 3,
+};
+} // namespace
+
+/// Get the GPU warp size.
+static llvm::Value *getNVPTXWarpSize(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
-          &CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_warpsize),
+          &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_warpsize),
       llvm::None, "nvptx_warp_size");
 }
 
-/// \brief Get the id of the current thread on the GPU.
-llvm::Value *CGOpenMPRuntimeNVPTX::getNVPTXThreadID(CodeGenFunction &CGF) {
+/// Get the id of the current thread on the GPU.
+static llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
-          &CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x),
+          &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x),
       llvm::None, "nvptx_tid");
 }
 
-// \brief Get the maximum number of threads in a block of the GPU.
-llvm::Value *CGOpenMPRuntimeNVPTX::getNVPTXNumThreads(CodeGenFunction &CGF) {
+/// Get the maximum number of threads in a block of the GPU.
+static llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   return Bld.CreateCall(
       llvm::Intrinsic::getDeclaration(
-          &CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x),
+          &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x),
       llvm::None, "nvptx_num_threads");
 }
 
-/// \brief Get barrier to synchronize all threads in a block.
-void CGOpenMPRuntimeNVPTX::getNVPTXCTABarrier(CodeGenFunction &CGF) {
+/// Get barrier to synchronize all threads in a block.
+static void getNVPTXCTABarrier(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   Bld.CreateCall(llvm::Intrinsic::getDeclaration(
-      &CGM.getModule(), llvm::Intrinsic::nvvm_barrier0));
+      &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier0));
 }
 
-// \brief Synchronize all GPU threads in a block.
-void CGOpenMPRuntimeNVPTX::syncCTAThreads(CodeGenFunction &CGF) {
-  getNVPTXCTABarrier(CGF);
-}
+/// Synchronize all GPU threads in a block.
+static void syncCTAThreads(CodeGenFunction &CGF) { getNVPTXCTABarrier(CGF); }
 
-/// \brief Get the thread id of the OMP master thread.
+/// Get the thread id of the OMP master thread.
 /// The master thread id is the first thread (lane) of the last warp in the
 /// GPU block.  Warp size is assumed to be some power of 2.
 /// Thread id is 0 indexed.
 /// E.g: If NumThreads is 33, master id is 32.
 ///      If NumThreads is 64, master id is 32.
 ///      If NumThreads is 1024, master id is 992.
-llvm::Value *CGOpenMPRuntimeNVPTX::getMasterThreadID(CodeGenFunction &CGF) {
+static llvm::Value *getMasterThreadID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   llvm::Value *NumThreads = getNVPTXNumThreads(CGF);
 
@@ -76,19 +87,6 @@ llvm::Value *CGOpenMPRuntimeNVPTX::getMasterThreadID(CodeGenFunction &CGF) {
   return Bld.CreateAnd(Bld.CreateSub(NumThreads, Bld.getInt32(1)),
                        Bld.CreateNot(Mask), "master_tid");
 }
-
-namespace {
-enum OpenMPRTLFunctionNVPTX {
-  /// \brief Call to void __kmpc_kernel_init(kmp_int32 omp_handle,
-  /// kmp_int32 thread_limit);
-  OMPRTL_NVPTX__kmpc_kernel_init,
-};
-
-// NVPTX Address space
-enum ADDRESS_SPACE {
-  ADDRESS_SPACE_SHARED = 3,
-};
-} // namespace
 
 CGOpenMPRuntimeNVPTX::WorkerFunctionState::WorkerFunctionState(
     CodeGenModule &CGM)
@@ -119,14 +117,14 @@ void CGOpenMPRuntimeNVPTX::initializeEnvironment() {
       CGM.getModule(), CGM.Int32Ty, /*isConstant=*/false,
       llvm::GlobalValue::CommonLinkage,
       llvm::Constant::getNullValue(CGM.Int32Ty), "__omp_num_threads", 0,
-      llvm::GlobalVariable::NotThreadLocal, ADDRESS_SPACE_SHARED);
+      llvm::GlobalVariable::NotThreadLocal, AddressSpaceShared);
   ActiveWorkers->setAlignment(DL.getPrefTypeAlignment(CGM.Int32Ty));
 
   WorkID = new llvm::GlobalVariable(
       CGM.getModule(), CGM.Int64Ty, /*isConstant=*/false,
       llvm::GlobalValue::CommonLinkage,
       llvm::Constant::getNullValue(CGM.Int64Ty), "__tgt_work_id", 0,
-      llvm::GlobalVariable::NotThreadLocal, ADDRESS_SPACE_SHARED);
+      llvm::GlobalVariable::NotThreadLocal, AddressSpaceShared);
   WorkID->setAlignment(DL.getPrefTypeAlignment(CGM.Int64Ty));
 }
 

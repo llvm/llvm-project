@@ -288,19 +288,22 @@ checkDeducedTemplateArguments(ASTContext &Context,
         X.pack_size() != Y.pack_size())
       return DeducedTemplateArgument();
 
+    llvm::SmallVector<TemplateArgument, 8> NewPack;
     for (TemplateArgument::pack_iterator XA = X.pack_begin(),
                                       XAEnd = X.pack_end(),
                                          YA = Y.pack_begin();
          XA != XAEnd; ++XA, ++YA) {
-      // FIXME: Do we need to merge the results together here?
-      if (checkDeducedTemplateArguments(Context,
-                    DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
-                    DeducedTemplateArgument(*YA, Y.wasDeducedFromArrayBound()))
-            .isNull())
+      TemplateArgument Merged = checkDeducedTemplateArguments(
+          Context, DeducedTemplateArgument(*XA, X.wasDeducedFromArrayBound()),
+          DeducedTemplateArgument(*YA, Y.wasDeducedFromArrayBound()));
+      if (Merged.isNull())
         return DeducedTemplateArgument();
+      NewPack.push_back(Merged);
     }
 
-    return X;
+    return DeducedTemplateArgument(
+        TemplateArgument::CreatePackCopy(Context, NewPack),
+        X.wasDeducedFromArrayBound() && Y.wasDeducedFromArrayBound());
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
@@ -672,17 +675,20 @@ public:
     // for that pack, then clear out the deduced argument.
     for (auto &Pack : Packs) {
       DeducedTemplateArgument &DeducedArg = Deduced[Pack.Index];
-      if (!DeducedArg.isNull()) {
+      if (!Pack.New.empty() || !DeducedArg.isNull()) {
+        while (Pack.New.size() < PackElements)
+          Pack.New.push_back(DeducedTemplateArgument());
         Pack.New.push_back(DeducedArg);
         DeducedArg = DeducedTemplateArgument();
       }
     }
+    ++PackElements;
   }
 
   /// \brief Finish template argument deduction for a set of argument packs,
   /// producing the argument packs and checking for consistency with prior
   /// deductions.
-  Sema::TemplateDeductionResult finish(bool HasAnyArguments) {
+  Sema::TemplateDeductionResult finish() {
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
     for (auto &Pack : Packs) {
@@ -691,7 +697,7 @@ public:
 
       // Build or find a new value for this pack.
       DeducedTemplateArgument NewPack;
-      if (HasAnyArguments && Pack.New.empty()) {
+      if (PackElements && Pack.New.empty()) {
         if (Pack.DeferredDeduction.isNull()) {
           // We were not able to deduce anything for this parameter pack
           // (because it only appeared in non-deduced contexts), so just
@@ -758,6 +764,7 @@ private:
   TemplateParameterList *TemplateParams;
   SmallVectorImpl<DeducedTemplateArgument> &Deduced;
   TemplateDeductionInfo &Info;
+  unsigned PackElements = 0;
 
   SmallVector<DeducedPack, 2> Packs;
 };
@@ -861,10 +868,7 @@ DeduceTemplateArguments(Sema &S,
     QualType Pattern = Expansion->getPattern();
     PackDeductionScope PackScope(S, TemplateParams, Deduced, Info, Pattern);
 
-    bool HasAnyArguments = false;
     for (; ArgIdx < NumArgs; ++ArgIdx) {
-      HasAnyArguments = true;
-
       // Deduce template arguments from the pattern.
       if (Sema::TemplateDeductionResult Result
             = DeduceTemplateArgumentsByTypeMatch(S, TemplateParams, Pattern,
@@ -877,7 +881,7 @@ DeduceTemplateArguments(Sema &S,
 
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
-    if (auto Result = PackScope.finish(HasAnyArguments))
+    if (auto Result = PackScope.finish())
       return Result;
   }
 
@@ -1935,10 +1939,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     // Keep track of the deduced template arguments for each parameter pack
     // expanded by this pack expansion (the outer index) and for each
     // template argument (the inner SmallVectors).
-    bool HasAnyArguments = false;
     for (; hasTemplateArgumentForDeduction(Args, ArgIdx); ++ArgIdx) {
-      HasAnyArguments = true;
-
       // Deduce template arguments from the pattern.
       if (Sema::TemplateDeductionResult Result
             = DeduceTemplateArguments(S, TemplateParams, Pattern, Args[ArgIdx],
@@ -1950,7 +1951,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
-    if (auto Result = PackScope.finish(HasAnyArguments))
+    if (auto Result = PackScope.finish())
       return Result;
   }
 
@@ -2145,6 +2146,16 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
       InnerArg.setDeducedFromArrayBound(Arg.wasDeducedFromArrayBound());
       assert(InnerArg.getKind() != TemplateArgument::Pack &&
              "deduced nested pack");
+      if (P.isNull()) {
+        // We deduced arguments for some elements of this pack, but not for
+        // all of them. This happens if we get a conditionally-non-deduced
+        // context in a pack expansion (such as an overload set in one of the
+        // arguments).
+        S.Diag(Param->getLocation(),
+               diag::err_template_arg_deduced_incomplete_pack)
+          << Arg << Param;
+        return true;
+      }
       if (ConvertArg(InnerArg, PackedArgsBuilder.size()))
         return true;
 
@@ -3436,10 +3447,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
     PackDeductionScope PackScope(*this, TemplateParams, Deduced, Info,
                                  ParamPattern);
 
-    bool HasAnyArguments = false;
-    for (; ArgIdx < Args.size(); ++ArgIdx) {
-      HasAnyArguments = true;
-
+    for (; ArgIdx < Args.size(); PackScope.nextPackElement(), ++ArgIdx) {
       QualType OrigParamType = ParamPattern;
       ParamType = OrigParamType;
       Expr *Arg = Args[ArgIdx];
@@ -3448,31 +3456,26 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
       unsigned TDF = 0;
       if (AdjustFunctionParmAndArgTypesForDeduction(*this, TemplateParams,
                                                     ParamType, ArgType, Arg,
-                                                    TDF)) {
-        // We can't actually perform any deduction for this argument, so stop
-        // deduction at this point.
-        ++ArgIdx;
-        break;
-      }
+                                                    TDF))
+        continue;
+
+      // Keep track of the argument type and corresponding argument index,
+      // so we can check for compatibility between the deduced A and A.
+      if (!hasDeducibleTemplateParameters(*this, FunctionTemplate, ParamType))
+        continue;
 
       // As above, initializer lists need special handling.
       if (InitListExpr *ILE = dyn_cast<InitListExpr>(Arg)) {
         TemplateDeductionResult Result;
         if (!DeduceFromInitializerList(*this, TemplateParams, ParamType, ILE,
-                                       Info, Deduced, TDF, Result)) {
-          ++ArgIdx;
-          break;
-        }
+                                       Info, Deduced, TDF, Result))
+          continue;
 
         if (Result)
           return Result;
       } else {
-
-        // Keep track of the argument type and corresponding argument index,
-        // so we can check for compatibility between the deduced A and A.
-        if (hasDeducibleTemplateParameters(*this, FunctionTemplate, ParamType))
-          OriginalCallArgs.push_back(OriginalCallArg(OrigParamType, ArgIdx,
-                                                     ArgType));
+        OriginalCallArgs.push_back(OriginalCallArg(OrigParamType, ArgIdx,
+                                                   ArgType));
 
         if (TemplateDeductionResult Result
             = DeduceTemplateArgumentsByTypeMatch(*this, TemplateParams,
@@ -3480,13 +3483,11 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
                                                  Deduced, TDF))
           return Result;
       }
-
-      PackScope.nextPackElement();
     }
 
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
-    if (auto Result = PackScope.finish(HasAnyArguments))
+    if (auto Result = PackScope.finish())
       return Result;
 
     // After we've matching against a parameter pack, we're done.

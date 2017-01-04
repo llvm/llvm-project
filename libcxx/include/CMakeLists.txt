@@ -31,11 +31,8 @@ if (LIBCXX_INSTALL_HEADERS)
     # Generate and install a custom __config header. The new header is created
     # by  prepending __config_site to the current __config header.
     add_custom_command(OUTPUT ${LIBCXX_BINARY_DIR}/__generated_config
-      COMMAND ${CMAKE_COMMAND} -E copy
-        ${LIBCXX_BINARY_DIR}/__config_site
-        ${LIBCXX_BINARY_DIR}/__generated_config
       COMMAND ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
-        ${LIBCXX_BINARY_DIR}/__generated_config
+        ${LIBCXX_BINARY_DIR}/__config_site
         ${LIBCXX_SOURCE_DIR}/include/__config
         -o ${LIBCXX_BINARY_DIR}/__generated_config
       DEPENDS ${LIBCXX_SOURCE_DIR}/include/__config

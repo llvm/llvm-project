@@ -103,6 +103,12 @@ T deduce(std::initializer_list<T>); // expected-note {{conflicting types for par
 template <typename T>
 T deduce_ref(const std::initializer_list<T>&); // expected-note {{conflicting types for parameter 'T' ('int' vs. 'double')}}
 
+template<typename T, typename U> struct pair { pair(...); };
+template<typename T> void deduce_pairs(std::initializer_list<pair<T, typename T::type>>);
+struct WithIntType { typedef int type; };
+
+template<typename ...T> void deduce_after_init_list_in_pack(void (*)(T...), T...); // expected-note {{<int, int> vs. <(no value), double>}}
+
 void argument_deduction() {
   static_assert(same_type<decltype(deduce({1, 2, 3})), int>::value, "bad deduction");
   static_assert(same_type<decltype(deduce({1.0, 2.0, 3.0})), double>::value, "bad deduction");
@@ -113,6 +119,14 @@ void argument_deduction() {
   static_assert(same_type<decltype(deduce_ref({1.0, 2.0, 3.0})), double>::value, "bad deduction");
 
   deduce_ref({1, 2.0}); // expected-error {{no matching function}}
+
+  pair<WithIntType, int> pi;
+  pair<WithIntType, float> pf;
+  deduce_pairs({pi, pi, pi}); // ok
+  deduce_pairs({pi, pf, pi}); // FIXME: This should be rejected, as we fail to produce a type that exactly matches the argument type.
+
+  deduce_after_init_list_in_pack((void(*)(int,int))0, {}, 0);
+  deduce_after_init_list_in_pack((void(*)(int,int))0, {}, 0.0); // expected-error {{no matching function}}
 }
 
 void auto_deduction() {

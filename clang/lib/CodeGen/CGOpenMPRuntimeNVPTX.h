@@ -50,38 +50,6 @@ public:
 
 private:
   //
-  // NVPTX calls.
-  //
-
-  /// \brief Get the GPU warp size.
-  llvm::Value *getNVPTXWarpSize(CodeGenFunction &CGF);
-
-  /// \brief Get the id of the current thread on the GPU.
-  llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF);
-
-  // \brief Get the maximum number of threads in a block of the GPU.
-  llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF);
-
-  /// \brief Get barrier to synchronize all threads in a block.
-  void getNVPTXCTABarrier(CodeGenFunction &CGF);
-
-  // \brief Synchronize all GPU threads in a block.
-  void syncCTAThreads(CodeGenFunction &CGF);
-
-  //
-  // OMP calls.
-  //
-
-  /// \brief Get the thread id of the OMP master thread.
-  /// The master thread id is the first thread (lane) of the last warp in the
-  /// GPU block.  Warp size is assumed to be some power of 2.
-  /// Thread id is 0 indexed.
-  /// E.g: If NumThreads is 33, master id is 32.
-  ///      If NumThreads is 64, master id is 32.
-  ///      If NumThreads is 1024, master id is 992.
-  llvm::Value *getMasterThreadID(CodeGenFunction &CGF);
-
-  //
   // Private state and methods.
   //
 

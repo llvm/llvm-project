@@ -362,3 +362,48 @@ namespace deduction_after_explicit_pack {
     g<int, float&, double&>(a, b, c, &c); // ok
   }
 }
+
+namespace overload_vs_pack {
+  void f(int);
+  void f(float);
+  void g(double);
+
+  template<typename ...T> struct X {};
+  template<typename ...T> void x(T...);
+
+  template<typename ...T> struct Y { typedef int type(typename T::error...); };
+  template<> struct Y<int, float, double> { typedef int type; };
+
+  template<typename ...T> typename Y<T...>::type g1(X<T...>, void (*...fns)(T)); // expected-note {{deduced conflicting types for parameter 'T' (<int, float> vs. <(no value), double>)}}
+  template<typename ...T> typename Y<T...>::type g2(void(*)(T...), void (*...fns)(T)); // expected-note {{deduced conflicting types for parameter 'T' (<int, float> vs. <(no value), double>)}}
+
+  template<typename T> int &h1(decltype(g1(X<int, float, T>(), f, f, g)) *p);
+  template<typename T> float &h1(...);
+
+  template<typename T> int &h2(decltype(g2(x<int, float, T>, f, f, g)) *p);
+  template<typename T> float &h2(...);
+
+  int n1 = g1(X<int, float>(), f, g); // expected-error {{no matching function}}
+  int n2 = g2(x<int, float>, f, g); // expected-error {{no matching function}}
+
+  int &a1 = h1<double>(0); // ok, skip deduction for 'f's, deduce matching value from 'g'
+  int &a2 = h2<double>(0);
+
+  float &b1 = h1<float>(0); // deduce mismatching value from 'g', so we do not trigger instantiation of Y
+  float &b2 = h2<float>(0);
+
+  template<typename ...T> int partial_deduction(void (*...f)(T)); // expected-note {{deduced incomplete pack <(no value), double> for template parameter 'T'}}
+  int pd1 = partial_deduction(f, g); // expected-error {{no matching function}}
+
+  template<typename ...T> int partial_deduction_2(void (*...f)(T), ...); // expected-note {{deduced incomplete pack <(no value), double> for template parameter 'T'}}
+  int pd2 = partial_deduction_2(f, g); // expected-error {{no matching function}}
+
+  namespace cwg_example {
+    void f(char, char);
+    void f(int, int);
+    void x(int, char);
+
+    template<typename T, typename ...U> void j(void(*)(U...), void (*...fns)(T, U));
+    void test() { j(x, f, x); }
+  }
+}

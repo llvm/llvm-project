@@ -64,6 +64,7 @@ void positiveAndNegative(const ExpensiveToCopyType ConstCopy, const ExpensiveToC
 struct PositiveConstValueConstructor {
   PositiveConstValueConstructor(const ExpensiveToCopyType ConstCopy) {}
   // CHECK-MESSAGES: [[@LINE-1]]:59: warning: the const qualified parameter 'ConstCopy'
+  // CHECK-FIXES: PositiveConstValueConstructor(const ExpensiveToCopyType& ConstCopy) {}
 };
 
 template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
@@ -125,8 +126,17 @@ void negativeValueNonConstMethodIsCalled(ExpensiveToCopyType Obj) {
   Obj.nonConstMethod();
 }
 
-struct NegativeValueCopyConstructor {
-  NegativeValueCopyConstructor(ExpensiveToCopyType Copy) {}
+struct PositiveValueUnusedConstructor {
+  PositiveValueUnusedConstructor(ExpensiveToCopyType Copy) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:54: warning: the parameter 'Copy'
+  // CHECK-FIXES: PositiveValueUnusedConstructor(const ExpensiveToCopyType& Copy) {}
+};
+
+struct PositiveValueCopiedConstructor {
+  PositiveValueCopiedConstructor(ExpensiveToCopyType Copy) : Field(Copy) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:54: warning: the parameter 'Copy'
+  // CHECK-FIXES: PositiveValueCopiedConstructor(const ExpensiveToCopyType& Copy) : Field(Copy) {}
+  ExpensiveToCopyType Field;
 };
 
 template <typename T>

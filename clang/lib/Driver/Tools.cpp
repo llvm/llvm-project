@@ -2235,6 +2235,15 @@ static void AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
                    UseSeparateSections)) {
     CmdArgs.push_back("-plugin-opt=-data-sections");
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fprofile_sample_use_EQ)) {
+    StringRef FName = A->getValue();
+    if (!llvm::sys::fs::exists(FName))
+      D.Diag(diag::err_drv_no_such_file) << FName;
+    else
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-plugin-opt=sample-profile=") + FName));
+  }
 }
 
 /// This is a helper function for validating the optional refinement step
