@@ -10,16 +10,31 @@
 // Target-independent, SSA-based data flow graph for register data flow (RDF).
 //
 #include "RDFGraph.h"
-
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace rdf;
@@ -88,14 +103,12 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeId> &P) {
   return OS;
 }
 
-namespace {
-  void printRefHeader(raw_ostream &OS, const NodeAddr<RefNode*> RA,
-        const DataFlowGraph &G) {
-    OS << Print<NodeId>(RA.Id, G) << '<'
-       << Print<RegisterRef>(RA.Addr->getRegRef(G), G) << '>';
-    if (RA.Addr->getFlags() & NodeAttrs::Fixed)
-      OS << '!';
-  }
+static void printRefHeader(raw_ostream &OS, const NodeAddr<RefNode*> RA,
+                const DataFlowGraph &G) {
+  OS << Print<NodeId>(RA.Id, G) << '<'
+     << Print<RegisterRef>(RA.Addr->getRegRef(G), G) << '>';
+  if (RA.Addr->getFlags() & NodeAttrs::Fixed)
+    OS << '!';
 }
 
 template<>
@@ -183,9 +196,11 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeSet> &P) {
 }
 
 namespace {
+
   template <typename T>
   struct PrintListV {
     PrintListV(const NodeList &L, const DataFlowGraph &G) : List(L), G(G) {}
+
     typedef T Type;
     const NodeList &List;
     const DataFlowGraph &G;
@@ -201,7 +216,8 @@ namespace {
     }
     return OS;
   }
-}
+
+} // end anonymous namespace
 
 template<>
 raw_ostream &operator<< (raw_ostream &OS, const Print<NodeAddr<PhiNode*>> &P) {
@@ -219,10 +235,10 @@ raw_ostream &operator<< (raw_ostream &OS,
   // Print the target for calls and branches (for readability).
   if (MI.isCall() || MI.isBranch()) {
     MachineInstr::const_mop_iterator T =
-          find_if(MI.operands(),
-                  [] (const MachineOperand &Op) -> bool {
-                    return Op.isMBB() || Op.isGlobal() || Op.isSymbol();
-                  });
+          llvm::find_if(MI.operands(),
+                        [] (const MachineOperand &Op) -> bool {
+                          return Op.isMBB() || Op.isGlobal() || Op.isSymbol();
+                        });
     if (T != MI.operands_end()) {
       OS << ' ';
       if (T->isMBB())
@@ -327,8 +343,8 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-} // namespace rdf
-} // namespace llvm
+} // end namespace rdf
+} // end namespace llvm
 
 // Node allocation functions.
 //
@@ -390,7 +406,6 @@ void NodeAllocator::clear() {
   ActiveEnd = nullptr;
 }
 
-
 // Insert node NA after "this" in the circular chain.
 void NodeBase::append(NodeAddr<NodeBase*> NA) {
   NodeId Nx = Next;
@@ -400,7 +415,6 @@ void NodeBase::append(NodeAddr<NodeBase*> NA) {
     NA.Addr->Next = Nx;
   }
 }
-
 
 // Fundamental node manipulator functions.
 
@@ -590,7 +604,6 @@ NodeAddr<BlockNode*> FuncNode::getEntryBlock(const DataFlowGraph &G) {
   return findBlock(EntryB, G);
 }
 
-
 // Target operand information.
 //
 
@@ -640,7 +653,6 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
       return true;
   return false;
 }
-
 
 RegisterRef RegisterAggr::normalize(RegisterRef RR) const {
   RegisterId SuperReg = RR.Reg;
@@ -745,7 +757,6 @@ void RegisterAggr::print(raw_ostream &OS) const {
   OS << " }";
 }
 
-
 //
 // The data flow graph construction.
 //
@@ -753,9 +764,8 @@ void RegisterAggr::print(raw_ostream &OS) const {
 DataFlowGraph::DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
       const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
       const MachineDominanceFrontier &mdf, const TargetOperandInfo &toi)
-    : LMI(), MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf), TOI(toi) {
+    : MF(mf), TII(tii), TRI(tri), MDT(mdt), MDF(mdf), TOI(toi) {
 }
-
 
 // The implementation of the definition stack.
 // Each register reference has its own definition stack. In particular,
@@ -845,7 +855,6 @@ unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
   return P;
 }
 
-
 // Register information.
 
 // Get the list of references aliased to RR. Lane masks are ignored.
@@ -914,7 +923,6 @@ NodeAddr<NodeBase*> DataFlowGraph::cloneNode(const NodeAddr<NodeBase*> B) {
   }
   return NA;
 }
-
 
 // Allocation routines for specific node types/kinds.
 
@@ -1248,14 +1256,12 @@ bool DataFlowGraph::alias(RegisterRef RA, RegisterRef RB) const {
   return false;
 }
 
-
 // Clear all information in the graph.
 void DataFlowGraph::reset() {
   Memory.clear();
   BlockNodes.clear();
   Func = NodeAddr<FuncNode*>();
 }
-
 
 // Return the next reference node in the instruction node IA that is related
 // to RA. Conceptually, two reference nodes are related if they refer to the

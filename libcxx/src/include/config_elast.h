@@ -10,7 +10,9 @@
 #ifndef _LIBCPP_CONFIG_ELAST
 #define _LIBCPP_CONFIG_ELAST
 
-#if defined(_LIBCPP_MSCVRT)
+#include <__config>
+
+#if defined(_LIBCPP_MSVCRT)
 #include <stdlib.h>
 #else
 #include <errno.h>

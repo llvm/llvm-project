@@ -765,7 +765,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // handles the case where this is type ODRed with a definition needed
     // by the importing module, in which case the existing definition is
     // used.
-    if (IsImporting && !ImportFullTypeDefinitions &&
+    if (IsImporting && !ImportFullTypeDefinitions && Identifier &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||

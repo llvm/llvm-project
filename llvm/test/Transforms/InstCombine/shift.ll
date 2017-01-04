@@ -1049,3 +1049,15 @@ define <2 x i65> @test_63(<2 x i64> %t) {
   %b = ashr <2 x i65> %sext, <i65 33, i65 33>
   ret <2 x i65> %b
 }
+
+define i64 @test_64(i32 %t) {
+; CHECK-LABEL: @test_64(
+; CHECK-NEXT: [[SHL:%.*]] = shl i32 %t, 8
+; CHECK-NEXT: [[EXT:%.*]] = zext i32 [[SHL]] to i64
+; CHECK-NEXT: ret i64 [[EXT]]
+
+  %and = and i32 %t, 16777215
+  %ext = zext i32 %and to i64
+  %shl = shl i64 %ext, 8
+  ret i64 %shl
+}

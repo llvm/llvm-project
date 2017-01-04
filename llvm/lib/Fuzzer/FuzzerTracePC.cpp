@@ -80,6 +80,7 @@ static bool IsInterestingCoverageFile(std::string &File) {
 }
 
 void TracePC::InitializePrintNewPCs() {
+  if (!DoPrintNewPCs) return;
   assert(!PrintedPCs);
   PrintedPCs = new std::set<uintptr_t>;
   for (size_t i = 1; i < GetNumPCs(); i++)
@@ -88,6 +89,7 @@ void TracePC::InitializePrintNewPCs() {
 }
 
 void TracePC::PrintNewPCs() {
+  if (!DoPrintNewPCs) return;
   assert(PrintedPCs);
   for (size_t i = 1; i < GetNumPCs(); i++)
     if (PCs[i] && PrintedPCs->insert(PCs[i]).second)

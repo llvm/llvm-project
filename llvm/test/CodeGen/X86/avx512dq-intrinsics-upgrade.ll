@@ -79,14 +79,12 @@ define <8 x double>@test_int_x86_avx512_mask_insertf64x2_512(<8 x double> %x0, <
 ; CHECK-LABEL: test_int_x86_avx512_mask_insertf64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    ## kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [0,1,8,9,4,5,6,7]
-; CHECK-NEXT:    vmovapd %zmm0, %zmm4
-; CHECK-NEXT:    vpermt2pd %zmm1, %zmm3, %zmm4
+; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovb %edi, %k1
-; CHECK-NEXT:    vblendmpd %zmm4, %zmm2, %zmm2 {%k1}
-; CHECK-NEXT:    vpermt2pd %zmm1, %zmm3, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
-; CHECK-NEXT:    vaddpd %zmm4, %zmm0, %zmm0
+; CHECK-NEXT:    vaddpd %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x double> @llvm.x86.avx512.mask.insertf64x2.512(<8 x double> %x0, <2 x double> %x1, i32 1, <8 x double> %x3, i8 %x4)
   %res1 = call <8 x double> @llvm.x86.avx512.mask.insertf64x2.512(<8 x double> %x0, <2 x double> %x1, i32 1, <8 x double> zeroinitializer, i8 %x4)
@@ -122,14 +120,12 @@ define <8 x i64>@test_int_x86_avx512_mask_inserti64x2_512(<8 x i64> %x0, <2 x i6
 ; CHECK-LABEL: test_int_x86_avx512_mask_inserti64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    ## kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,9,4,5,6,7]
-; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm4
-; CHECK-NEXT:    vpermt2q %zmm1, %zmm3, %zmm4
+; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovb %edi, %k1
-; CHECK-NEXT:    vpblendmq %zmm4, %zmm2, %zmm2 {%k1}
-; CHECK-NEXT:    vpermt2q %zmm1, %zmm3, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vpaddq %zmm4, %zmm0, %zmm0
+; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; CHECK-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.inserti64x2.512(<8 x i64> %x0, <2 x i64> %x1, i32 1, <8 x i64> %x3, i8 %x4)
   %res1 = call <8 x i64> @llvm.x86.avx512.mask.inserti64x2.512(<8 x i64> %x0, <2 x i64> %x1, i32 1, <8 x i64> zeroinitializer, i8 %x4)

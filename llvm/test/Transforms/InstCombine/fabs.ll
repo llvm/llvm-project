@@ -98,3 +98,51 @@ define float @square_fabs_shrink_call2(float %x) {
 ; CHECK-NEXT: ret float %sq
 }
 
+; CHECK-LABEL: @fabs_select_constant_negative_positive(
+; CHECK: %fabs = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT: ret float %fabs
+define float @fabs_select_constant_negative_positive(i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float -1.0, float 2.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_constant_positive_negative(
+; CHECK: %fabs = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT: ret float %fabs
+define float @fabs_select_constant_positive_negative(i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 1.0, float -2.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_constant_negative_negative(
+; CHECK: %fabs = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT: ret float %fabs
+define float @fabs_select_constant_negative_negative(i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float -1.0, float -2.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_constant_neg0(
+; CHECK-NEXT: ret float 0.0
+define float @fabs_select_constant_neg0(i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float -0.0, float 0.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_var_constant_negative(
+; CHECK: %select = select i1 %cmp, float %x, float -1.000000e+00
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_var_constant_negative(i32 %c, float %x) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float %x, float -1.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
