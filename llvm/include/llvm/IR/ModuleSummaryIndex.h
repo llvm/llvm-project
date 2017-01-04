@@ -100,7 +100,7 @@ template <> struct DenseMapInfo<ValueInfo> {
 class GlobalValueSummary {
 public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
-  enum SummaryKind { AliasKind, FunctionKind, GlobalVarKind };
+  enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
 
   /// Group flags (Linkage, noRename, isOptSize, etc.) as a bitfield.
   struct GVFlags {
@@ -152,6 +152,8 @@ private:
   /// Kind of summary for use in dyn_cast<> et al.
   SummaryKind Kind;
 
+  GVFlags Flags;
+
   /// This is the hash of the name of the symbol in the original file. It is
   /// identical to the GUID for global symbols, but differs for local since the
   /// GUID includes the module level id in the hash.
@@ -165,8 +167,6 @@ private:
   /// not during writing of the per-module index which doesn't contain a
   /// module path string table.
   StringRef ModulePath;
-
-  GVFlags Flags;
 
   /// List of values referenced by this global value's definition
   /// (either by the initializer of a global variable, or referenced
