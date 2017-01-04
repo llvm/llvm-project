@@ -142,7 +142,7 @@ function(add_lldb_executable name)
     endif()
   endif()
 
-  if(ARG_GENERATE_INSTALL AND NOT ARG_INCLUDE_IN_FRAMEWORK)
+  if(ARG_GENERATE_INSTALL AND NOT (ARG_INCLUDE_IN_FRAMEWORK AND LLDB_BUILD_FRAMEWORK ))
     install(TARGETS ${name}
           COMPONENT ${name}
           RUNTIME DESTINATION bin)
