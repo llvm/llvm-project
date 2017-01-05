@@ -20,7 +20,6 @@
 #include "lldb/Target/Target.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTWalker.h"
-#include "swift/AST/ArchetypeBuilder.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticsFrontend.h"
@@ -792,7 +791,8 @@ public:
     if (!m_persistent_vars.count(var_decl))
       return;
 
-    swift::Type target_type = var_decl->getType();
+    swift::Type target_type = var_decl->getDeclContext()
+        ->mapTypeIntoContext(var_decl->getInterfaceType());
     swift::LValueType *target_lvalue_type = swift::LValueType::get(target_type);
 
     const bool implicit = true;
@@ -899,9 +899,11 @@ void SwiftASTManipulator::FindVariableDeclarations(
 
     size_t persistent_info_location = m_variables.size();
 
+    auto type = var_decl->getDeclContext()->mapTypeIntoContext(
+        var_decl->getInterfaceType());
     persistent_info.m_name = name;
     persistent_info.m_type = CompilerType(&var_decl->getASTContext(),
-                                          var_decl->getType().getPointer());
+                                          type.getPointer());
     persistent_info.m_decl = var_decl;
 
     m_variables.push_back(persistent_info);
@@ -1151,7 +1153,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Error &error) {
             if (error_var_name != var_decl->getName())
               continue;
 
-            swift::Type error_type = var_decl->getType();
+            swift::Type error_type = var_decl->getInterfaceType();
             CompilerType error_ast_type(&ast_context, error_type.getPointer());
             SwiftASTManipulatorBase::VariableMetadataSP error_metadata_sp(
                 new VariableMetadataError());
@@ -1203,8 +1205,10 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
   swift::NamedPattern *named_pattern =
       new (ast_context) swift::NamedPattern(var_decl, is_implicit);
 
+  swift::Type type = containing_context->mapTypeIntoContext(
+      var_decl->getInterfaceType());
   swift::TypedPattern *typed_pattern = new (ast_context) swift::TypedPattern(
-      named_pattern, swift::TypeLoc::withoutLoc(var_decl->getType()));
+      named_pattern, swift::TypeLoc::withoutLoc(type));
 
   swift::PatternBindingDecl *pattern_binding =
       swift::PatternBindingDecl::create(
@@ -1356,8 +1360,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
           is_static, is_let, loc, name, var_type, containing_function);
       redirected_var_decl->setInterfaceType(
-        swift::ArchetypeBuilder::mapTypeOutOfContext(
-          containing_function, var_type));
+          containing_function->mapTypeOutOfContext(var_type));
       redirected_var_decl->setDebuggerVar(true);
       redirected_var_decl->setImplicit(true);
 
@@ -1511,8 +1514,8 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   llvm::MutableArrayRef<swift::TypeLoc> inherited;
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(source_loc, name, source_loc,
-                           swift::TypeLoc::withoutLoc(GetSwiftType(type)),
                            nullptr, &m_source_file);
+  type_alias_decl->setUnderlyingType(GetSwiftType(type));
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log) {
@@ -1554,8 +1557,8 @@ SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
 
           if (name_alias_type) {
             // FIXME: What if the generic parameter is concrete?
-            ret.Wrapper_archetype = swift::ArchetypeBuilder::mapTypeIntoContext(
-                extension_decl, type_parameter->getDeclaredInterfaceType())
+            ret.Wrapper_archetype = extension_decl->mapTypeIntoContext(
+                type_parameter->getDeclaredInterfaceType())
                     ->castTo<swift::ArchetypeType>();
             ret.context_alias = name_alias_type;
             ret.context_real = name_alias_type->getSinglyDesugaredType();
