@@ -52,6 +52,11 @@
 // provided under the alternate keyword __nullptr, which changes the mangling
 // of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
 #define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
+// Define the `pointer_safety` enum as a C++11 strongly typed enumeration
+// instead of as a class simulating an enum. If this option is enabled
+// `pointer_safety` and `get_pointer_safety()` will no longer be available
+// in C++03.
+#define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
 #elif _LIBCPP_ABI_VERSION == 1
 #if !defined(_WIN32)
 // Enable compiling a definition of error_category() into the libc++ dylib.
@@ -557,7 +562,7 @@ namespace std {
 #define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
 #define _LIBCPP_HIDDEN
-#define _LIBCPP_TYPE_VIS_ONLY
+#define _LIBCPP_TEMPLATE_VIS
 #define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
 
@@ -600,8 +605,8 @@ namespace std {
 #  endif
 #endif
 
-#ifndef _LIBCPP_TYPE_VIS_ONLY
-# define _LIBCPP_TYPE_VIS_ONLY _LIBCPP_TYPE_VIS
+#ifndef _LIBCPP_TEMPLATE_VIS
+# define _LIBCPP_TEMPLATE_VIS _LIBCPP_TYPE_VIS
 #endif
 
 #ifndef _LIBCPP_FUNC_VIS_ONLY

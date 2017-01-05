@@ -173,6 +173,8 @@ template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
     return DR->ThunkData->getVA();
   if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
     return S->ThunkData->getVA();
+  if (const auto *S = dyn_cast<Undefined<ELFT>>(this))
+    return S->ThunkData->getVA();
   fatal("getThunkVA() not supported for Symbol class\n");
 }
 
@@ -232,8 +234,9 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
          (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
-                     uint8_t Type, InputFile *File)
+template <typename ELFT>
+Undefined<ELFT>::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
+                           uint8_t Type, InputFile *File)
     : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {
   this->File = File;
 }
@@ -353,6 +356,11 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template class elf::Undefined<ELF32LE>;
+template class elf::Undefined<ELF32BE>;
+template class elf::Undefined<ELF64LE>;
+template class elf::Undefined<ELF64BE>;
 
 template class elf::DefinedRegular<ELF32LE>;
 template class elf::DefinedRegular<ELF32BE>;

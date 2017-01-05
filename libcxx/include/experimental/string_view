@@ -192,7 +192,7 @@ namespace std {
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
     template<class _CharT, class _Traits = _VSTD::char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_string_view {
+    class _LIBCPP_TEMPLATE_VIS basic_string_view {
     public:
         // types
         typedef _Traits                                    traits_type;
@@ -788,7 +788,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [string.view.hash]
 // Shamelessly stolen from <string>
 template<class _CharT, class _Traits>
-struct _LIBCPP_TYPE_VIS_ONLY hash<std::experimental::basic_string_view<_CharT, _Traits> >
+struct _LIBCPP_TEMPLATE_VIS hash<std::experimental::basic_string_view<_CharT, _Traits> >
     : public unary_function<std::experimental::basic_string_view<_CharT, _Traits>, size_t>
 {
     size_t operator()(const std::experimental::basic_string_view<_CharT, _Traits>& __val) const _NOEXCEPT;

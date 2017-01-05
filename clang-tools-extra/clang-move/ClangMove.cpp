@@ -166,6 +166,27 @@ private:
   ClangMoveTool *MoveTool;
 };
 
+class TypeAliasMatch : public MatchFinder::MatchCallback {
+public:
+  explicit TypeAliasMatch(ClangMoveTool *MoveTool)
+      : MoveTool(MoveTool) {}
+
+  void run(const MatchFinder::MatchResult &Result) override {
+    if (const auto *TD = Result.Nodes.getNodeAs<clang::TypedefDecl>("typedef"))
+      MoveDeclFromOldFileToNewFile(MoveTool, TD);
+    else if (const auto *TAD =
+                 Result.Nodes.getNodeAs<clang::TypeAliasDecl>("type_alias")) {
+      const NamedDecl * D = TAD;
+      if (const auto * TD = TAD->getDescribedAliasTemplate())
+        D = TD;
+      MoveDeclFromOldFileToNewFile(MoveTool, D);
+    }
+  }
+
+private:
+  ClangMoveTool *MoveTool;
+};
+
 class EnumDeclarationMatch : public MatchFinder::MatchCallback {
 public:
   explicit EnumDeclarationMatch(ClangMoveTool *MoveTool)
@@ -587,13 +608,22 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                          .bind("function"),
                      MatchCallbacks.back().get());
 
-  // Match enum definition in old.h. Enum helpers (which are definied in old.cc)
+  // Match enum definition in old.h. Enum helpers (which are defined in old.cc)
   // will not be moved for now no matter whether they are used or not.
   MatchCallbacks.push_back(llvm::make_unique<EnumDeclarationMatch>(this));
   Finder->addMatcher(
       enumDecl(InOldHeader, *HasAnySymbolNames, isDefinition(), TopLevelDecl)
           .bind("enum"),
       MatchCallbacks.back().get());
+
+  // Match type alias in old.h, this includes "typedef" and "using" type alias
+  // declarations. Type alias helpers (which are defined in old.cc) will not be
+  // moved for now no matter whether they are used or not.
+  MatchCallbacks.push_back(llvm::make_unique<TypeAliasMatch>(this));
+  Finder->addMatcher(namedDecl(anyOf(typedefDecl().bind("typedef"),
+                                     typeAliasDecl().bind("type_alias")),
+                               InOldHeader, *HasAnySymbolNames, TopLevelDecl),
+                     MatchCallbacks.back().get());
 }
 
 void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
@@ -828,6 +858,9 @@ void ClangMoveTool::onEndOfTranslationUnit() {
     case Decl::Kind::ClassTemplate:
     case Decl::Kind::CXXRecord:
     case Decl::Kind::Enum:
+    case Decl::Kind::Typedef:
+    case Decl::Kind::TypeAlias:
+    case Decl::Kind::TypeAliasTemplate:
       return true;
     default:
       return false;

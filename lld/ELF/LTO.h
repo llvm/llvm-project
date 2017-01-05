@@ -43,7 +43,7 @@ public:
   BitcodeCompiler();
   ~BitcodeCompiler();
 
-  void add(BitcodeFile &F);
+  template <class ELFT> void add(BitcodeFile &F);
   std::vector<InputFile *> compile();
 
 private:

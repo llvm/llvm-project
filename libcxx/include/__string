@@ -69,7 +69,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // char_traits
 
 template <class _CharT>
-struct _LIBCPP_TYPE_VIS_ONLY char_traits
+struct _LIBCPP_TEMPLATE_VIS char_traits
 {
     typedef _CharT    char_type;
     typedef int       int_type;
@@ -192,7 +192,7 @@ char_traits<_CharT>::assign(char_type* __s, size_t __n, char_type __a)
 // char_traits<char>
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY char_traits<char>
+struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 {
     typedef char      char_type;
     typedef int       int_type;
@@ -237,7 +237,7 @@ struct _LIBCPP_TYPE_VIS_ONLY char_traits<char>
 // char_traits<wchar_t>
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY char_traits<wchar_t>
+struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 {
     typedef wchar_t   char_type;
     typedef wint_t    int_type;
@@ -283,7 +283,7 @@ struct _LIBCPP_TYPE_VIS_ONLY char_traits<wchar_t>
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY char_traits<char16_t>
+struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
 {
     typedef char16_t       char_type;
     typedef uint_least16_t int_type;
@@ -402,7 +402,7 @@ char_traits<char16_t>::assign(char_type* __s, size_t __n, char_type __a) _NOEXCE
 }
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY char_traits<char32_t>
+struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
 {
     typedef char32_t       char_type;
     typedef uint_least32_t int_type;

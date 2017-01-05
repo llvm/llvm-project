@@ -441,16 +441,16 @@ template <class _Tp, class _Up> _LIBCPP_CONSTEXPR bool is_convertible_v
 // 3.3.2, Other type transformations
 /*
 template <class>
-class _LIBCPP_TYPE_VIS_ONLY raw_invocation_type;
+class _LIBCPP_TEMPLATE_VIS raw_invocation_type;
 
 template <class _Fn, class ..._Args>
-class _LIBCPP_TYPE_VIS_ONLY raw_invocation_type<_Fn(_Args...)>;
+class _LIBCPP_TEMPLATE_VIS raw_invocation_type<_Fn(_Args...)>;
 
 template <class>
-class _LIBCPP_TYPE_VIS_ONLY invokation_type;
+class _LIBCPP_TEMPLATE_VIS invokation_type;
 
 template <class _Fn, class ..._Args>
-class _LIBCPP_TYPE_VIS_ONLY invokation_type<_Fn(_Args...)>;
+class _LIBCPP_TEMPLATE_VIS invokation_type<_Fn(_Args...)>;
 
 template <class _Tp>
 using invokation_type_t = typename invokation_type<_Tp>::type;

@@ -158,7 +158,7 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
             unaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")),
                           hasUnaryOperand(floatLiteral())),
             cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr());
+            declRefExpr(to(enumConstantDecl())));
 
   Finder->addMatcher(
       cxxConstructorDecl(

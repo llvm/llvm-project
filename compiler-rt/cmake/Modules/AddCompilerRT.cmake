@@ -256,6 +256,7 @@ set(COMPILER_RT_GTEST_CFLAGS
 )
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 
 if(MSVC)
   # clang doesn't support exceptions on Windows yet.

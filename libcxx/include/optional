@@ -1295,7 +1295,7 @@ optional<_Tp> make_optional(initializer_list<_Up> __il,  _Args&&... __args)
 }
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<optional<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<optional<_Tp> >
 {
     typedef optional<_Tp> argument_type;
     typedef size_t        result_type;

@@ -555,17 +555,16 @@ void ChangeNamespaceTool::moveOldNamespace(
   if (Decl::castToDeclContext(NsDecl)->decls_empty())
     return;
 
+  const SourceManager &SM = *Result.SourceManager;
   // Get the range of the code in the old namespace.
-  SourceLocation Start = getLocAfterNamespaceLBrace(
-      NsDecl, *Result.SourceManager, Result.Context->getLangOpts());
+  SourceLocation Start =
+      getLocAfterNamespaceLBrace(NsDecl, SM, Result.Context->getLangOpts());
   assert(Start.isValid() && "Can't find l_brace for namespace.");
-  SourceLocation End = NsDecl->getRBraceLoc().getLocWithOffset(-1);
-  // Create a replacement that deletes the code in the old namespace merely for
-  // retrieving offset and length from it.
-  const auto R = createReplacement(Start, End, "", *Result.SourceManager);
   MoveNamespace MoveNs;
-  MoveNs.Offset = R.getOffset();
-  MoveNs.Length = R.getLength();
+  MoveNs.Offset = SM.getFileOffset(Start);
+  // The range of the moved namespace is from the location just past the left
+  // brace to the location right before the right brace.
+  MoveNs.Length = SM.getFileOffset(NsDecl->getRBraceLoc()) - MoveNs.Offset;
 
   // Insert the new namespace after `DiffOldNamespace`. For example, if
   // `OldNamespace` is "a::b::c" and `NewNamespace` is `a::x::y`, then
@@ -577,18 +576,16 @@ void ChangeNamespaceTool::moveOldNamespace(
   const NamespaceDecl *OuterNs = getOuterNamespace(NsDecl, DiffOldNamespace);
   SourceLocation InsertionLoc = Start;
   if (OuterNs) {
-    SourceLocation LocAfterNs =
-        getStartOfNextLine(OuterNs->getRBraceLoc(), *Result.SourceManager,
-                           Result.Context->getLangOpts());
+    SourceLocation LocAfterNs = getStartOfNextLine(
+        OuterNs->getRBraceLoc(), SM, Result.Context->getLangOpts());
     assert(LocAfterNs.isValid() &&
            "Failed to get location after DiffOldNamespace");
     InsertionLoc = LocAfterNs;
   }
-  MoveNs.InsertionOffset = Result.SourceManager->getFileOffset(
-      Result.SourceManager->getSpellingLoc(InsertionLoc));
-  MoveNs.FID = Result.SourceManager->getFileID(Start);
+  MoveNs.InsertionOffset = SM.getFileOffset(SM.getSpellingLoc(InsertionLoc));
+  MoveNs.FID = SM.getFileID(Start);
   MoveNs.SourceMgr = Result.SourceManager;
-  MoveNamespaces[R.getFilePath()].push_back(MoveNs);
+  MoveNamespaces[SM.getFilename(Start)].push_back(MoveNs);
 }
 
 // Removes a class forward declaration from the code in the moved namespace and

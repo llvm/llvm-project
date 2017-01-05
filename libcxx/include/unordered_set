@@ -333,7 +333,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>,
           class _Alloc = allocator<_Value> >
-class _LIBCPP_TYPE_VIS_ONLY unordered_set
+class _LIBCPP_TEMPLATE_VIS unordered_set
 {
 public:
     // types
@@ -873,7 +873,7 @@ operator!=(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>,
           class _Alloc = allocator<_Value> >
-class _LIBCPP_TYPE_VIS_ONLY unordered_multiset
+class _LIBCPP_TEMPLATE_VIS unordered_multiset
 {
 public:
     // types
