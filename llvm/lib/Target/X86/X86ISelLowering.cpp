@@ -13085,10 +13085,10 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 static bool canonicalizeShuffleMaskWithCommute(ArrayRef<int> Mask) {
   int NumElements = Mask.size();
 
-  int NumV1Elements = 0, NumV2Elements = 0, NumSentinelElements = 0;
+  int NumV1Elements = 0, NumV2Elements = 0;
   for (int M : Mask)
     if (M < 0)
-      ++NumSentinelElements;
+      continue;
     else if (M < NumElements)
       ++NumV1Elements;
     else
@@ -30921,6 +30921,59 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::PCMPGT, SDLoc(N), VT, Shift.getOperand(0), Ones);
 }
 
+/// Check if truncation with saturation form type \p SrcVT to \p DstVT 
+/// is valid for the given \p Subtarget.
+static bool 
+isSATValidOnSubtarget(EVT SrcVT, EVT DstVT, const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512())
+    return false;
+  EVT SrcElVT = SrcVT.getScalarType();
+  EVT DstElVT = DstVT.getScalarType();
+  if (SrcElVT.getSizeInBits() < 16 || SrcElVT.getSizeInBits() > 64)
+    return false;
+  if (DstElVT.getSizeInBits() < 8 || DstElVT.getSizeInBits() > 32)
+    return false;
+  if (SrcVT.is512BitVector() || Subtarget.hasVLX())
+    return SrcElVT.getSizeInBits() >= 32 || Subtarget.hasBWI();
+  return false;
+}
+
+/// Detect a pattern of truncation with saturation:
+/// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
+/// Return the source value to be truncated or SDValue() if the pattern was not
+/// matched or the unsupported on the current target.
+static SDValue 
+detectUSatPattern(SDValue In, EVT VT, const X86Subtarget &Subtarget) {
+  if (In.getOpcode() != ISD::UMIN)
+    return SDValue();
+
+  EVT InVT = In.getValueType();
+  // FIXME: Scalar type may be supported if we move it to vector register.
+  if (!InVT.isVector() || !InVT.isSimple())
+    return SDValue();
+
+  if (!isSATValidOnSubtarget(InVT, VT, Subtarget))
+    return SDValue();
+
+  //Saturation with truncation. We truncate from InVT to VT.
+  assert(InVT.getScalarSizeInBits() > VT.getScalarSizeInBits() &&
+    "Unexpected types for truncate operation");
+
+  SDValue SrcVal;
+  APInt C;
+  if (ISD::isConstantSplatVector(In.getOperand(0).getNode(), C))
+    SrcVal = In.getOperand(1);
+  else if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C))
+    SrcVal = In.getOperand(0);
+  else
+    return SDValue();
+
+  // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
+  // the element size of the destination type.
+  return (C == ((uint64_t)1 << VT.getScalarSizeInBits()) - 1) ?
+    SrcVal : SDValue();
+}
+
 /// This function detects the AVG pattern between vectors of unsigned i8/i16,
 /// which is c = (a + b + 1) / 2, and replace this operation with the efficient
 /// X86ISD::AVG instruction.
@@ -31486,6 +31539,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
                           St->getPointerInfo(), St->getAlignment(),
                           St->getMemOperand()->getFlags());
+
+    if (SDValue Val =
+        detectUSatPattern(St->getValue(), St->getMemoryVT(), Subtarget))
+      return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
+                             dl, Val, St->getBasePtr(),
+                             St->getMemoryVT(), St->getMemOperand(), DAG);
 
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     unsigned NumElems = VT.getVectorNumElements();
@@ -32103,6 +32162,10 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   // Try to detect AVG pattern first.
   if (SDValue Avg = detectAVGPattern(Src, VT, DAG, Subtarget, DL))
     return Avg;
+
+  // Try the truncation with unsigned saturation.
+  if (SDValue Val = detectUSatPattern(Src, VT, Subtarget))
+    return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, Val);
 
   // The bitcast source is a direct mmx result.
   // Detect bitcasts between i32 to x86mmx

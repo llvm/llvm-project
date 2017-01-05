@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=arm64-apple-ios -mcpu=cyclone < %s | FileCheck %s -check-prefix=CYCLONE --check-prefix=ALL
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=kryo < %s | FileCheck %s -check-prefix=KRYO --check-prefix=ALL
+; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=falkor < %s | FileCheck %s -check-prefix=FALKOR --check-prefix=ALL
 
 ; rdar://11481771
 ; rdar://13713797
@@ -16,6 +17,10 @@ entry:
 ; KRYO: movi v1.2d, #0000000000000000
 ; KRYO: movi v2.2d, #0000000000000000
 ; KRYO: movi v3.2d, #0000000000000000
+; FALKOR: movi v0.2d, #0000000000000000
+; FALKOR: movi v1.2d, #0000000000000000
+; FALKOR: movi v2.2d, #0000000000000000
+; FALKOR: movi v3.2d, #0000000000000000
   tail call void @bar(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00) nounwind
   ret void
 }
@@ -47,6 +52,8 @@ define void @t4() nounwind ssp {
 ; CYCLONE: movi.2d v1, #0000000000000000
 ; KRYO: movi v0.2d, #0000000000000000
 ; KRYO: movi v1.2d, #0000000000000000
+; FALKOR: movi v0.2d, #0000000000000000
+; FALKOR: movi v1.2d, #0000000000000000
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
   ret void
 }

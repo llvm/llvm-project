@@ -83,6 +83,12 @@ std::string DirName(const std::string &FileName) {
   return Res;
 }
 
+std::string TmpDir() {
+  if (auto Env = getenv("TMPDIR"))
+    return Env;
+  return "/tmp";
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

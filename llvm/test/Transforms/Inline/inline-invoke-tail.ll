@@ -22,7 +22,7 @@ entry:
 ; CHECK-NOT: invoke
 ; CHECK-NOT: @foo
 ; CHECK-NOT: tail
-; CHCEK: call void @llvm.memcpy.p0i8.p0i8.i32
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i32
 ; CHECK: br
 
 invcont:

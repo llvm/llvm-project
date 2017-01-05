@@ -474,13 +474,23 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       break;
 
     // Skylake:
-    case 0x4e:
-      *Type = INTEL_COREI7; // "skylake-avx512"
-      *Subtype = INTEL_COREI7_SKYLAKE_AVX512;
-      break;
-    case 0x5e:
+    case 0x4e: // Skylake mobile
+    case 0x5e: // Skylake desktop
+    case 0x8e: // Kaby Lake mobile
+    case 0x9e: // Kaby Lake desktop
       *Type = INTEL_COREI7; // "skylake"
       *Subtype = INTEL_COREI7_SKYLAKE;
+      break;
+
+    // Skylake Xeon:
+    case 0x55:
+      *Type = INTEL_COREI7;
+      // Check that we really have AVX512
+      if (Features & (1 << FEATURE_AVX512)) {
+        *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      } else {
+        *Subtype = INTEL_COREI7_SKYLAKE; // "skylake"
+      }
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -1069,6 +1079,7 @@ StringRef sys::getHostCPUName() {
       .Case("POWER7", "pwr7")
       .Case("POWER8", "pwr8")
       .Case("POWER8E", "pwr8")
+      .Case("POWER8NVL", "pwr8")
       .Case("POWER9", "pwr9")
       .Default(generic);
 }

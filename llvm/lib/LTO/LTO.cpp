@@ -891,23 +891,17 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, Cache);
 
-  // Partition numbers for ThinLTO jobs start at 1 (see comments for
-  // GlobalResolution in LTO.h). Task numbers, however, start at
-  // ParallelCodeGenParallelismLevel if an LTO module is present, as tasks 0
-  // through ParallelCodeGenParallelismLevel-1 are reserved for parallel code
-  // generation partitions.
+  // Task numbers start at ParallelCodeGenParallelismLevel if an LTO
+  // module is present, as tasks 0 through ParallelCodeGenParallelismLevel-1
+  // are reserved for parallel code generation partitions.
   unsigned Task =
       HasRegularLTO ? RegularLTO.ParallelCodeGenParallelismLevel : 0;
-  unsigned Partition = 1;
-
   for (auto &Mod : ThinLTO.ModuleMap) {
     if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
                                      ExportLists[Mod.first],
                                      ResolvedODR[Mod.first], ThinLTO.ModuleMap))
       return E;
-
     ++Task;
-    ++Partition;
   }
 
   return BackendProc->wait();

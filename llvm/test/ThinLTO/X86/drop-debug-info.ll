@@ -3,7 +3,7 @@
 
 ; The imported module has out-of-date debug information, let's make sure we can
 ; drop them without crashing when materializing later.
-; RUN: llvm-lto -thinlto-action=import %t.bc -thinlto-index=%t.index.bc -o - | llvm-dis -o - | FileCheck %s
+; RUN: llvm-link %t.bc -summary-index=%t.index.bc -import=globalfunc:%p/Inputs/drop-debug-info.bc | llvm-dis -o - | FileCheck %s
 ; CHECK: define available_externally void @globalfunc
 ; CHECK-NOT: llvm.dbg.value
 

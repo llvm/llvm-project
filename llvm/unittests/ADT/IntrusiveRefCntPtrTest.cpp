@@ -15,7 +15,9 @@ namespace llvm {
 namespace {
 struct SimpleRefCounted : public RefCountedBase<SimpleRefCounted> {
   SimpleRefCounted() { ++NumInstances; }
-  SimpleRefCounted(const SimpleRefCounted &) { ++NumInstances; }
+  SimpleRefCounted(const SimpleRefCounted &) : RefCountedBase() {
+    ++NumInstances;
+  }
   ~SimpleRefCounted() { --NumInstances; }
 
   static int NumInstances;

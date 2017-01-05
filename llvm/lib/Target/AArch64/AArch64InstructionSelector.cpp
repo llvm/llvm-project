@@ -1071,8 +1071,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
-    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
-        (CmpInst::Predicate)I.getOperand(1).getPredicate());
+    // CSINC increments the result by one when the condition code is false.
+    // Therefore, we have to invert the predicate to get an increment by 1 when
+    // the predicate is true.
+    const AArch64CC::CondCode invCC =
+        changeICMPPredToAArch64CC(CmpInst::getInversePredicate(
+            (CmpInst::Predicate)I.getOperand(1).getPredicate()));
 
     MachineInstr &CmpMI = *BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
                                .addDef(ZReg)
@@ -1084,7 +1088,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
              .addDef(I.getOperand(0).getReg())
              .addUse(AArch64::WZR)
              .addUse(AArch64::WZR)
-             .addImm(CC);
+             .addImm(invCC);
 
     constrainSelectedInstRegOperands(CmpMI, TII, TRI, RBI);
     constrainSelectedInstRegOperands(CSetMI, TII, TRI, RBI);

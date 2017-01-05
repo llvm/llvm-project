@@ -28,6 +28,10 @@
 
 namespace llvm {
 
+namespace yaml {
+template <typename T> struct MappingTraits;
+}
+
 /// \brief Class to accumulate and hold information about a callee.
 struct CalleeInfo {
   enum class HotnessType : uint8_t { Unknown = 0, Cold = 1, None = 2, Hot = 3 };
@@ -330,6 +334,30 @@ public:
   }
 };
 
+struct TypeTestResolution {
+  /// Specifies which kind of type check we should emit for this byte array.
+  /// See http://clang.llvm.org/docs/ControlFlowIntegrityDesign.html for full
+  /// details on each kind of check; the enumerators are described with
+  /// reference to that document.
+  enum Kind {
+    Unsat,     ///< Unsatisfiable type (i.e. no global has this type metadata)
+    ByteArray, ///< Test a byte array (first example)
+    Inline,    ///< Inlined bit vector ("Short Inline Bit Vectors")
+    Single,    ///< Single element (last example in "Short Inline Bit Vectors")
+    AllOnes,   ///< All-ones bit vector ("Eliminating Bit Vector Checks for
+               ///  All-Ones Bit Vectors")
+  } TheKind = Unsat;
+
+  /// Range of the size expressed as a bit width. For example, if the size is in
+  /// range [0,256), this number will be 8. This helps generate the most compact
+  /// instruction sequences.
+  unsigned SizeBitWidth = 0;
+};
+
+struct TypeIdSummary {
+  TypeTestResolution TTRes;
+};
+
 /// 160 bits SHA1
 typedef std::array<uint32_t, 5> ModuleHash;
 
@@ -369,6 +397,14 @@ private:
 
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
+
+  /// Mapping from type identifiers to summary information for that type
+  /// identifier.
+  // FIXME: Add bitcode read/write support for this field.
+  std::map<std::string, TypeIdSummary> TypeIdMap;
+
+  // YAML I/O support.
+  friend yaml::MappingTraits<ModuleSummaryIndex>;
 
 public:
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }

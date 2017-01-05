@@ -1198,8 +1198,6 @@ private:
 
     typedef llvm::StringMap<std::unique_ptr<HNode>> NameToNode;
 
-    bool isValidKey(StringRef key);
-
     NameToNode                        Mapping;
     llvm::SmallVector<std::string, 6> ValidKeys;
   };

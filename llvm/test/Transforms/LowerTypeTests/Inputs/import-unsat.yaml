@@ -1,0 +1,10 @@
+---
+GlobalValueMap:
+  42:
+    - TypeTests: [123]
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind: Unsat
+      SizeBitWidth: 0
+...

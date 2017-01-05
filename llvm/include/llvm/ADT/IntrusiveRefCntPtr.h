@@ -21,8 +21,8 @@
 //   class MyClass : public RefCountedBase<MyClass> {};
 //
 //   void foo() {
-//     // Objects that inherit from RefCountedBase should always be instantiated
-//     // on the heap, never on the stack.
+//     // Constructing an IntrusiveRefCntPtr increases the pointee's refcount by
+//     // 1 (from 0 in this case).
 //     IntrusiveRefCntPtr<MyClass> Ptr1(new MyClass());
 //
 //     // Copying an IntrusiveRefCntPtr increases the pointee's refcount by 1.
@@ -68,9 +68,6 @@ namespace llvm {
 /// calls to Release() and Retain(), which increment and decrement the object's
 /// refcount, respectively.  When a Release() call decrements the refcount to 0,
 /// the object deletes itself.
-///
-/// Objects that inherit from RefCountedBase should always be allocated with
-/// operator new.
 template <class Derived> class RefCountedBase {
   mutable unsigned RefCount = 0;
 

@@ -1637,6 +1637,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::cos:
+  case Intrinsic::amdgcn_cos: {
+    Value *SrcSrc;
+    Value *Src = II->getArgOperand(0);
+    if (match(Src, m_FNeg(m_Value(SrcSrc))) ||
+        match(Src, m_Intrinsic<Intrinsic::fabs>(m_Value(SrcSrc)))) {
+      // cos(-x) -> cos(x)
+      // cos(fabs(x)) -> cos(x)
+      II->setArgOperand(0, SrcSrc);
+      return II;
+    }
+
+    break;
+  }
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
     // Turn PPC lvx -> load if the pointer is known aligned.
