@@ -625,7 +625,6 @@ Expected<bool> FunctionImporter::importFunctions(
     // now, before linking it (otherwise this will be a noop).
     if (Error Err = SrcModule->materializeMetadata())
       return std::move(Err);
-    UpgradeDebugInfo(*SrcModule);
 
     auto &ImportGUIDs = FunctionsToImportPerModule->second;
     // Find the globals to import
@@ -697,6 +696,10 @@ Expected<bool> FunctionImporter::importFunctions(
         GlobalsToImport.insert(&GA);
       }
     }
+
+    // Upgrade debug info after we're done materializing all the globals and we
+    // have loaded all the required metadata!
+    UpgradeDebugInfo(*SrcModule);
 
     // Link in the specified functions.
     if (renameModuleForThinLTO(*SrcModule, Index, &GlobalsToImport))

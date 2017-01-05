@@ -14,10 +14,12 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
@@ -86,11 +88,22 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "bitcode-reader"
+
+STATISTIC(NumMDStringLoaded, "Number of MDStrings loaded");
+STATISTIC(NumMDNodeTemporary, "Number of MDNode::Temporary created");
+STATISTIC(NumMDRecordLoaded, "Number of Metadata records loaded");
+
 /// Flag whether we need to import full type definitions for ThinLTO.
 /// Currently needed for Darwin and LLDB.
 static cl::opt<bool> ImportFullTypeDefinitions(
     "import-full-type-definitions", cl::init(false), cl::Hidden,
     cl::desc("Import full type definitions for ThinLTO."));
+
+static cl::opt<bool> DisableLazyLoading(
+    "disable-ondemand-mds-loading", cl::init(false), cl::Hidden,
+    cl::desc("Force disable the lazy-loading on-demand of metadata when "
+             "loading bitcode for importing."));
 
 namespace {
 
@@ -165,6 +178,10 @@ public:
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
   bool hasFwdRefs() const { return !ForwardReference.empty(); }
+  int getNextFwdRef() {
+    assert(hasFwdRefs());
+    return *ForwardReference.begin();
+  }
 
   /// Upgrade a type that had an MDString reference.
   void addTypeRef(MDString &UUID, DICompositeType &CT);
@@ -215,6 +232,7 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
   ForwardReference.insert(Idx);
 
   // Create and return a placeholder, which will later be RAUW'd.
+  ++NumMDNodeTemporary;
   Metadata *MD = MDNode::getTemporary(Context, None).release();
   MetadataPtrs[Idx].reset(MD);
   return MD;
@@ -340,8 +358,26 @@ class PlaceholderQueue {
   std::deque<DistinctMDOperandPlaceholder> PHs;
 
 public:
+  bool empty() { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
   void flush(BitcodeReaderMetadataList &MetadataList);
+
+  /// Return the list of temporaries nodes in the queue, these need to be
+  /// loaded before we can flush the queue.
+  void getTemporaries(BitcodeReaderMetadataList &MetadataList,
+                      DenseSet<unsigned> &Temporaries) {
+    for (auto &PH : PHs) {
+      auto ID = PH.getID();
+      auto *MD = MetadataList.lookup(ID);
+      if (!MD) {
+        Temporaries.insert(ID);
+        continue;
+      }
+      auto *N = dyn_cast_or_null<MDNode>(MD);
+      if (N && N->isTemporary())
+        Temporaries.insert(ID);
+    }
+  }
 };
 
 } // end anonymous namespace
@@ -375,6 +411,30 @@ class MetadataLoader::MetadataLoaderImpl {
   Module &TheModule;
   std::function<Type *(unsigned)> getTypeByID;
 
+  /// Cursor associated with the lazy-loading of Metadata. This is the easy way
+  /// to keep around the right "context" (Abbrev list) to be able to jump in
+  /// the middle of the metadata block and load any record.
+  BitstreamCursor IndexCursor;
+
+  /// Index that keeps track of MDString values.
+  std::vector<StringRef> MDStringRef;
+
+  /// On-demand loading of a single MDString. Requires the index above to be
+  /// populated.
+  MDString *lazyLoadOneMDString(unsigned Idx);
+
+  /// Index that keeps track of where to find a metadata record in the stream.
+  std::vector<uint64_t> GlobalMetadataBitPosIndex;
+
+  /// Populate the index above to enable lazily loading of metadata, and load
+  /// the named metadata as well as the transitively referenced global
+  /// Metadata.
+  Expected<bool> lazyLoadModuleMetadataBlock(PlaceholderQueue &Placeholders);
+
+  /// On-demand loading of a single metadata. Requires the index above to be
+  /// populated.
+  void lazyLoadOneMetadata(unsigned Idx, PlaceholderQueue &Placeholders);
+
   // Keep mapping of seens pair of old-style CU <-> SP, and update pointers to
   // point from SP to CU after a block is completly parsed.
   std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
@@ -394,12 +454,24 @@ class MetadataLoader::MetadataLoaderImpl {
 
   Error parseOneMetadata(SmallVectorImpl<uint64_t> &Record, unsigned Code,
                          PlaceholderQueue &Placeholders, StringRef Blob,
-                         bool ModuleLevel, unsigned &NextMetadataNo);
+                         unsigned &NextMetadataNo);
   Error parseMetadataStrings(ArrayRef<uint64_t> Record, StringRef Blob,
-                             unsigned &NextMetadataNo);
+                             std::function<void(StringRef)> CallBack);
   Error parseGlobalObjectAttachment(GlobalObject &GO,
                                     ArrayRef<uint64_t> Record);
   Error parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
+
+  void resolveForwardRefsAndPlaceholders(PlaceholderQueue &Placeholders);
+
+  /// Upgrade old-style CU <-> SP pointers to point from SP to CU.
+  void upgradeCUSubprograms() {
+    for (auto CU_SP : CUSubprograms)
+      if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
+        for (auto &Op : SPs->operands())
+          if (auto *SP = dyn_cast_or_null<MDNode>(Op))
+            SP->replaceOperandWith(7, CU_SP.first);
+    CUSubprograms.clear();
+  }
 
 public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
@@ -444,19 +516,216 @@ Error error(const Twine &Message) {
       Message, make_error_code(BitcodeError::CorruptedBitcode));
 }
 
+Expected<bool> MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock(
+    PlaceholderQueue &Placeholders) {
+  IndexCursor = Stream;
+  SmallVector<uint64_t, 64> Record;
+  // Get the abbrevs, and preload record positions to make them lazy-loadable.
+  while (true) {
+    BitstreamEntry Entry = IndexCursor.advanceSkippingSubblocks(
+        BitstreamCursor::AF_DontPopBlockAtEnd);
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock: {
+      return true;
+    }
+    case BitstreamEntry::Record: {
+      // The interesting case.
+      ++NumMDRecordLoaded;
+      uint64_t CurrentPos = IndexCursor.GetCurrentBitNo();
+      auto Code = IndexCursor.skipRecord(Entry.ID);
+      switch (Code) {
+      case bitc::METADATA_STRINGS: {
+        // Rewind and parse the strings.
+        IndexCursor.JumpToBit(CurrentPos);
+        StringRef Blob;
+        Record.clear();
+        IndexCursor.readRecord(Entry.ID, Record, &Blob);
+        unsigned NumStrings = Record[0];
+        MDStringRef.reserve(NumStrings);
+        auto IndexNextMDString = [&](StringRef Str) {
+          MDStringRef.push_back(Str);
+        };
+        if (auto Err = parseMetadataStrings(Record, Blob, IndexNextMDString))
+          return std::move(Err);
+        break;
+      }
+      case bitc::METADATA_INDEX_OFFSET: {
+        // This is the offset to the index, when we see this we skip all the
+        // records and load only an index to these.
+        IndexCursor.JumpToBit(CurrentPos);
+        Record.clear();
+        IndexCursor.readRecord(Entry.ID, Record);
+        if (Record.size() != 2)
+          return error("Invalid record");
+        auto Offset = Record[0] + (Record[1] << 32);
+        auto BeginPos = IndexCursor.GetCurrentBitNo();
+        IndexCursor.JumpToBit(BeginPos + Offset);
+        Entry = IndexCursor.advanceSkippingSubblocks(
+            BitstreamCursor::AF_DontPopBlockAtEnd);
+        assert(Entry.Kind == BitstreamEntry::Record &&
+               "Corrupted bitcode: Expected `Record` when trying to find the "
+               "Metadata index");
+        Record.clear();
+        auto Code = IndexCursor.readRecord(Entry.ID, Record);
+        (void)Code;
+        assert(Code == bitc::METADATA_INDEX && "Corrupted bitcode: Expected "
+                                               "`METADATA_INDEX` when trying "
+                                               "to find the Metadata index");
+
+        // Delta unpack
+        auto CurrentValue = BeginPos;
+        GlobalMetadataBitPosIndex.reserve(Record.size());
+        for (auto &Elt : Record) {
+          CurrentValue += Elt;
+          GlobalMetadataBitPosIndex.push_back(CurrentValue);
+        }
+        break;
+      }
+      case bitc::METADATA_INDEX:
+        // We don't expect to get there, the Index is loaded when we encounter
+        // the offset.
+        return error("Corrupted Metadata block");
+      case bitc::METADATA_NAME: {
+        // Named metadata need to be materialized now and aren't deferred.
+        IndexCursor.JumpToBit(CurrentPos);
+        Record.clear();
+        unsigned Code = IndexCursor.readRecord(Entry.ID, Record);
+        assert(Code == bitc::METADATA_NAME);
+
+        // Read name of the named metadata.
+        SmallString<8> Name(Record.begin(), Record.end());
+        Code = IndexCursor.ReadCode();
+
+        // Named Metadata comes in two parts, we expect the name to be followed
+        // by the node
+        Record.clear();
+        unsigned NextBitCode = IndexCursor.readRecord(Code, Record);
+        assert(NextBitCode == bitc::METADATA_NAMED_NODE);
+        (void)NextBitCode;
+
+        // Read named metadata elements.
+        unsigned Size = Record.size();
+        NamedMDNode *NMD = TheModule.getOrInsertNamedMetadata(Name);
+        for (unsigned i = 0; i != Size; ++i) {
+          // FIXME: We could use a placeholder here, however NamedMDNode are
+          // taking MDNode as operand and not using the Metadata infrastructure.
+          // It is acknowledged by 'TODO: Inherit from Metadata' in the
+          // NamedMDNode class definition.
+          MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[i]);
+          assert(MD && "Invalid record");
+          NMD->addOperand(MD);
+        }
+        break;
+      }
+      case bitc::METADATA_GLOBAL_DECL_ATTACHMENT: {
+        // FIXME: we need to do this early because we don't materialize global
+        // value explicitly.
+        IndexCursor.JumpToBit(CurrentPos);
+        Record.clear();
+        IndexCursor.readRecord(Entry.ID, Record);
+        if (Record.size() % 2 == 0)
+          return error("Invalid record");
+        unsigned ValueID = Record[0];
+        if (ValueID >= ValueList.size())
+          return error("Invalid record");
+        if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID]))
+          if (Error Err = parseGlobalObjectAttachment(
+                  *GO, ArrayRef<uint64_t>(Record).slice(1)))
+            return std::move(Err);
+        break;
+      }
+      case bitc::METADATA_KIND:
+      case bitc::METADATA_STRING_OLD:
+      case bitc::METADATA_OLD_FN_NODE:
+      case bitc::METADATA_OLD_NODE:
+      case bitc::METADATA_VALUE:
+      case bitc::METADATA_DISTINCT_NODE:
+      case bitc::METADATA_NODE:
+      case bitc::METADATA_LOCATION:
+      case bitc::METADATA_GENERIC_DEBUG:
+      case bitc::METADATA_SUBRANGE:
+      case bitc::METADATA_ENUMERATOR:
+      case bitc::METADATA_BASIC_TYPE:
+      case bitc::METADATA_DERIVED_TYPE:
+      case bitc::METADATA_COMPOSITE_TYPE:
+      case bitc::METADATA_SUBROUTINE_TYPE:
+      case bitc::METADATA_MODULE:
+      case bitc::METADATA_FILE:
+      case bitc::METADATA_COMPILE_UNIT:
+      case bitc::METADATA_SUBPROGRAM:
+      case bitc::METADATA_LEXICAL_BLOCK:
+      case bitc::METADATA_LEXICAL_BLOCK_FILE:
+      case bitc::METADATA_NAMESPACE:
+      case bitc::METADATA_MACRO:
+      case bitc::METADATA_MACRO_FILE:
+      case bitc::METADATA_TEMPLATE_TYPE:
+      case bitc::METADATA_TEMPLATE_VALUE:
+      case bitc::METADATA_GLOBAL_VAR:
+      case bitc::METADATA_LOCAL_VAR:
+      case bitc::METADATA_EXPRESSION:
+      case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_IMPORTED_ENTITY:
+      case bitc::METADATA_GLOBAL_VAR_EXPR:
+        // We don't expect to see any of these, if we see one, give up on
+        // lazy-loading and fallback.
+        MDStringRef.clear();
+        GlobalMetadataBitPosIndex.clear();
+        return false;
+      }
+      break;
+    }
+    }
+  }
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 
+  // Record the entry position so that we can jump back here and efficiently
+  // skip the whole block in case we lazy-load.
+  auto EntryPos = Stream.GetCurrentBitNo();
+
   if (Stream.EnterSubBlock(bitc::METADATA_BLOCK_ID))
     return error("Invalid record");
 
-  unsigned NextMetadataNo = MetadataList.size();
   SmallVector<uint64_t, 64> Record;
-
   PlaceholderQueue Placeholders;
+
+  // We lazy-load module-level metadata: we build an index for each record, and
+  // then load individual record as needed, starting with the named metadata.
+  if (ModuleLevel && IsImporting && MetadataList.empty() &&
+      !DisableLazyLoading) {
+    auto SuccessOrErr = lazyLoadModuleMetadataBlock(Placeholders);
+    if (!SuccessOrErr)
+      return SuccessOrErr.takeError();
+    if (SuccessOrErr.get()) {
+      // An index was successfully created and we will be able to load metadata
+      // on-demand.
+      MetadataList.resize(MDStringRef.size() +
+                          GlobalMetadataBitPosIndex.size());
+
+      // Reading the named metadata created forward references and/or
+      // placeholders, that we flush here.
+      resolveForwardRefsAndPlaceholders(Placeholders);
+      upgradeCUSubprograms();
+      // Return at the beginning of the block, since it is easy to skip it
+      // entirely from there.
+      Stream.ReadBlockEnd(); // Pop the abbrev block context.
+      Stream.JumpToBit(EntryPos);
+      if (Stream.SkipBlock())
+        return error("Invalid record");
+      return Error::success();
+    }
+    // Couldn't load an index, fallback to loading all the block "old-style".
+  }
+
+  unsigned NextMetadataNo = MetadataList.size();
 
   // Read all the records.
   while (true) {
@@ -467,16 +736,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      // Upgrade old-style CU <-> SP pointers to point from SP to CU.
-      for (auto CU_SP : CUSubprograms)
-        if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
-          for (auto &Op : SPs->operands())
-            if (auto *SP = dyn_cast_or_null<MDNode>(Op))
-              SP->replaceOperandWith(7, CU_SP.first);
-      CUSubprograms.clear();
-
-      MetadataList.tryToResolveCycles();
-      Placeholders.flush(MetadataList);
+      resolveForwardRefsAndPlaceholders(Placeholders);
+      upgradeCUSubprograms();
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -486,20 +747,86 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     // Read a record.
     Record.clear();
     StringRef Blob;
+    ++NumMDRecordLoaded;
     unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
-    if (Error Err = parseOneMetadata(Record, Code, Placeholders, Blob,
-                                     ModuleLevel, NextMetadataNo))
+    if (Error Err =
+            parseOneMetadata(Record, Code, Placeholders, Blob, NextMetadataNo))
       return Err;
   }
 }
 
+MDString *MetadataLoader::MetadataLoaderImpl::lazyLoadOneMDString(unsigned ID) {
+  ++NumMDStringLoaded;
+  if (Metadata *MD = MetadataList.lookup(ID))
+    return cast<MDString>(MD);
+  auto MDS = MDString::get(Context, MDStringRef[ID]);
+  MetadataList.assignValue(MDS, ID);
+  return MDS;
+}
+
+void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
+    unsigned ID, PlaceholderQueue &Placeholders) {
+  assert(ID < (MDStringRef.size()) + GlobalMetadataBitPosIndex.size());
+  assert(ID >= MDStringRef.size() && "Unexpected lazy-loading of MDString");
+#ifndef NDEBUG
+  // Lookup first if the metadata hasn't already been loaded.
+  if (auto *MD = MetadataList.lookup(ID)) {
+    auto *N = dyn_cast_or_null<MDNode>(MD);
+    assert(N && N->isTemporary() && "Lazy loading an already loaded metadata");
+  }
+#endif
+  SmallVector<uint64_t, 64> Record;
+  StringRef Blob;
+  IndexCursor.JumpToBit(GlobalMetadataBitPosIndex[ID - MDStringRef.size()]);
+  auto Entry = IndexCursor.advanceSkippingSubblocks();
+  ++NumMDRecordLoaded;
+  unsigned Code = IndexCursor.readRecord(Entry.ID, Record, &Blob);
+  if (Error Err = parseOneMetadata(Record, Code, Placeholders, Blob, ID))
+    report_fatal_error("Can't lazyload MD");
+}
+
+/// Ensure that all forward-references and placeholders are resolved.
+/// Iteratively lazy-loading metadata on-demand if needed.
+void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
+    PlaceholderQueue &Placeholders) {
+  DenseSet<unsigned> Temporaries;
+  while (1) {
+    // Populate Temporaries with the placeholders that haven't been loaded yet.
+    Placeholders.getTemporaries(MetadataList, Temporaries);
+
+    // If we don't have any temporary, or FwdReference, we're done!
+    if (Temporaries.empty() && !MetadataList.hasFwdRefs())
+      break;
+
+    // First, load all the temporaries. This can add new placeholders or
+    // forward references.
+    for (auto ID : Temporaries)
+      lazyLoadOneMetadata(ID, Placeholders);
+    Temporaries.clear();
+
+    // Second, load the forward-references. This can also add new placeholders
+    // or forward references.
+    while (MetadataList.hasFwdRefs())
+      lazyLoadOneMetadata(MetadataList.getNextFwdRef(), Placeholders);
+  }
+  // At this point we don't have any forward reference remaining, or temporary
+  // that haven't been loaded. We can safely drop RAUW support and mark cycles
+  // as resolved.
+  MetadataList.tryToResolveCycles();
+
+  // Finally, everything is in place, we can replace the placeholders operands
+  // with the final node they refer to.
+  Placeholders.flush(MetadataList);
+}
+
 Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVectorImpl<uint64_t> &Record, unsigned Code,
-    PlaceholderQueue &Placeholders, StringRef Blob, bool ModuleLevel,
-    unsigned &NextMetadataNo) {
+    PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo) {
 
   bool IsDistinct = false;
   auto getMD = [&](unsigned ID) -> Metadata * {
+    if (ID < MDStringRef.size())
+      return lazyLoadOneMDString(ID);
     if (!IsDistinct)
       return MetadataList.getMetadataFwdRef(ID);
     if (auto *MD = MetadataList.getMetadataIfResolved(ID))
@@ -519,7 +846,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   auto getMDString = [&](unsigned ID) -> MDString * {
     // This requires that the ID is not really a forward reference.  In
     // particular, the MDString must already have been resolved.
-    return cast_or_null<MDString>(getMDOrNull(ID));
+    auto MDS = getMDOrNull(ID);
+    return cast_or_null<MDString>(MDS);
   };
 
   // Support for old type refs.
@@ -539,6 +867,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Record.clear();
     Code = Stream.ReadCode();
 
+    ++NumMDRecordLoaded;
     unsigned NextBitCode = Stream.readRecord(Code, Record);
     if (NextBitCode != bitc::METADATA_NAMED_NODE)
       return error("METADATA_NAME not followed by METADATA_NAMED_NODE");
@@ -1153,15 +1482,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     // Test for upgrading !llvm.loop.
     HasSeenOldLoopTags |= mayBeOldLoopAttachmentTag(String);
-
+    ++NumMDStringLoaded;
     Metadata *MD = MDString::get(Context, String);
     MetadataList.assignValue(MD, NextMetadataNo++);
     break;
   }
-  case bitc::METADATA_STRINGS:
-    if (Error Err = parseMetadataStrings(Record, Blob, NextMetadataNo))
+  case bitc::METADATA_STRINGS: {
+    auto CreateNextMDString = [&](StringRef Str) {
+      ++NumMDStringLoaded;
+      MetadataList.assignValue(MDString::get(Context, Str), NextMetadataNo++);
+    };
+    if (Error Err = parseMetadataStrings(Record, Blob, CreateNextMDString))
       return Err;
     break;
+  }
   case bitc::METADATA_GLOBAL_DECL_ATTACHMENT: {
     if (Record.size() % 2 == 0)
       return error("Invalid record");
@@ -1182,12 +1516,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   }
-#undef GET_OR_DISTINCT
   return Error::success();
+#undef GET_OR_DISTINCT
 }
 
 Error MetadataLoader::MetadataLoaderImpl::parseMetadataStrings(
-    ArrayRef<uint64_t> Record, StringRef Blob, unsigned &NextMetadataNo) {
+    ArrayRef<uint64_t> Record, StringRef Blob,
+    std::function<void(StringRef)> CallBack) {
   // All the MDStrings in the block are emitted together in a single
   // record.  The strings are concatenated and stored in a blob along with
   // their sizes.
@@ -1213,8 +1548,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataStrings(
     if (Strings.size() < Size)
       return error("Invalid record: metadata strings truncated chars");
 
-    MetadataList.assignValue(MDString::get(Context, Strings.slice(0, Size)),
-                             NextMetadataNo++);
+    CallBack(Strings.slice(0, Size));
     Strings = Strings.drop_front(Size);
   } while (--NumStrings);
 
@@ -1244,6 +1578,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
 
   SmallVector<uint64_t, 64> Record;
 
+  PlaceholderQueue Placeholders;
+
   while (true) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
 
@@ -1252,6 +1588,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
+      resolveForwardRefsAndPlaceholders(Placeholders);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -1260,6 +1597,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
 
     // Read a metadata attachment record.
     Record.clear();
+    ++NumMDRecordLoaded;
     switch (Stream.readRecord(Entry.ID, Record)) {
     default: // Default behavior: ignore.
       break;
@@ -1284,7 +1622,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         if (I->second == LLVMContext::MD_tbaa && StripTBAA)
           continue;
 
-        Metadata *Node = MetadataList.getMetadataFwdRef(Record[i + 1]);
+        auto Idx = Record[i + 1];
+        if (Idx < (MDStringRef.size() + GlobalMetadataBitPosIndex.size()) &&
+            !MetadataList.lookup(Idx))
+          // Load the attachment if it is in the lazy-loadable range and hasn't
+          // been loaded yet.
+          lazyLoadOneMetadata(Idx, Placeholders);
+
+        Metadata *Node = MetadataList.getMetadataFwdRef(Idx);
         if (isa<LocalAsMetadata>(Node))
           // Drop the attachment.  This used to be legal, but there's no
           // upgrade path.
@@ -1347,6 +1692,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataKinds() {
 
     // Read a record.
     Record.clear();
+    ++NumMDRecordLoaded;
     unsigned Code = Stream.readRecord(Entry.ID, Record);
     switch (Code) {
     default: // Default behavior: ignore.

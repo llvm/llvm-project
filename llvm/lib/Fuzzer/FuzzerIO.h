@@ -37,6 +37,9 @@ std::string DirPlusFile(const std::string &DirPath,
 // Returns the name of the dir, similar to the 'dirname' utility.
 std::string DirName(const std::string &FileName);
 
+// Returns path to a TmpDir.
+std::string TmpDir();
+
 void DupAndCloseStderr();
 
 void CloseStdout();

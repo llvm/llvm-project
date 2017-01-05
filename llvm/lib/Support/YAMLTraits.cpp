@@ -175,7 +175,7 @@ void Input::endMapping() {
   if (!MN)
     return;
   for (const auto &NN : MN->Mapping) {
-    if (!MN->isValidKey(NN.first())) {
+    if (!is_contained(MN->ValidKeys, NN.first())) {
       setError(NN.second.get(), Twine("unknown key '") + NN.first() + "'");
       break;
     }
@@ -383,14 +383,6 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
     setError(N, "unknown node kind");
     return nullptr;
   }
-}
-
-bool Input::MapHNode::isValidKey(StringRef Key) {
-  for (std::string &K : ValidKeys) {
-    if (Key == K)
-      return true;
-  }
-  return false;
 }
 
 void Input::setError(const Twine &Message) {

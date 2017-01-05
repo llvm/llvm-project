@@ -3981,40 +3981,46 @@ static int CalculateTailCallSPDiff(SelectionDAG& DAG, bool isTailCall,
 static bool isFunctionGlobalAddress(SDValue Callee);
 
 static bool
-resideInSameModule(SDValue Callee, Reloc::Model RelMod) {
+resideInSameSection(const Function *Caller, SDValue Callee,
+                    const TargetMachine &TM) {
   // If !G, Callee can be an external symbol.
   GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-  if (!G) return false;
-
-  const GlobalValue *GV = G->getGlobal();
-
-  if (GV->isDeclaration()) return false;
-
-  switch(GV->getLinkage()) {
-  default: llvm_unreachable("unknow linkage type");
-  case GlobalValue::AvailableExternallyLinkage:
-  case GlobalValue::ExternalWeakLinkage:
+  if (!G)
     return false;
 
-  // Callee with weak linkage is allowed if it has hidden or protected
-  // visibility
-  case GlobalValue::LinkOnceAnyLinkage:
-  case GlobalValue::LinkOnceODRLinkage: // e.g. c++ inline functions
-  case GlobalValue::WeakAnyLinkage:
-  case GlobalValue::WeakODRLinkage:     // e.g. c++ template instantiation
-    if (GV->hasDefaultVisibility())
-      return false;
+  const GlobalValue *GV = G->getGlobal();
+  if (!GV->isStrongDefinitionForLinker())
+    return false;
 
-  case GlobalValue::ExternalLinkage:
-  case GlobalValue::InternalLinkage:
-  case GlobalValue::PrivateLinkage:
-    break;
+  // Any explicitly-specified sections and section prefixes must also match.
+  // Also, if we're using -ffunction-sections, then each function is always in
+  // a different section (the same is true for COMDAT functions).
+  if (TM.getFunctionSections() || GV->hasComdat() || Caller->hasComdat() ||
+      GV->getSection() != Caller->getSection())
+    return false;
+  if (const auto *F = dyn_cast<Function>(GV)) {
+    if (F->getSectionPrefix() != Caller->getSectionPrefix())
+      return false;
   }
 
-  // With '-fPIC', calling default visiblity function need insert 'nop' after
-  // function call, no matter that function resides in same module or not, so
-  // we treat it as in different module.
-  if (RelMod == Reloc::PIC_ && GV->hasDefaultVisibility())
+  // If the callee might be interposed, then we can't assume the ultimate call
+  // target will be in the same section. Even in cases where we can assume that
+  // interposition won't happen, in any case where the linker might insert a
+  // stub to allow for interposition, we must generate code as though
+  // interposition might occur. To understand why this matters, consider a
+  // situation where: a -> b -> c where the arrows indicate calls. b and c are
+  // in the same section, but a is in a different module (i.e. has a different
+  // TOC base pointer). If the linker allows for interposition between b and c,
+  // then it will generate a stub for the call edge between b and c which will
+  // save the TOC pointer into the designated stack slot allocated by b. If we
+  // return true here, and therefore allow a tail call between b and c, that
+  // stack slot won't exist and the b -> c stub will end up saving b'c TOC base
+  // pointer into the stack slot allocated by a (where the a -> b stub saved
+  // a's TOC base pointer). If we're not considering a tail call, but rather,
+  // whether a nop is needed after the call instruction in b, because the linker
+  // will insert a stub, it might complain about a missing nop if we omit it
+  // (although many don't complain in this case).
+  if (!TM.shouldAssumeDSOLocal(*Caller->getParent(), GV))
     return false;
 
   return true;
@@ -4130,11 +4136,11 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
       !isa<ExternalSymbolSDNode>(Callee))
     return false;
 
-  // Check if Callee resides in the same module, because for now, PPC64 SVR4 ABI
-  // (ELFv1/ELFv2) doesn't allow tail calls to a symbol resides in another
-  // module.
+  // Check if Callee resides in the same section, because for now, PPC64 SVR4
+  // ABI (ELFv1/ELFv2) doesn't allow tail calls to a symbol resides in another
+  // section.
   // ref: https://bugzilla.mozilla.org/show_bug.cgi?id=973977
-  if (!resideInSameModule(Callee, getTargetMachine().getRelocationModel()))
+  if (!resideInSameSection(MF.getFunction(), Callee, getTargetMachine()))
     return false;
 
   // TCO allows altering callee ABI, so we don't have to check further.
@@ -4592,14 +4598,6 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
   return CallOpc;
 }
 
-static
-bool isLocalCall(const SDValue &Callee)
-{
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    return G->getGlobal()->isStrongDefinitionForLinker();
-  return false;
-}
-
 SDValue PPCTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -4701,6 +4699,7 @@ SDValue PPCTargetLowering::FinishCall(
   // stack frame. If caller and callee belong to the same module (and have the
   // same TOC), the NOP will remain unchanged.
 
+  MachineFunction &MF = DAG.getMachineFunction();
   if (!isTailCall && Subtarget.isSVR4ABI()&& Subtarget.isPPC64() &&
       !isPatchPoint) {
     if (CallOpc == PPCISD::BCTRL) {
@@ -4724,11 +4723,11 @@ SDValue PPCTargetLowering::FinishCall(
       // The address needs to go after the chain input but before the flag (or
       // any other variadic arguments).
       Ops.insert(std::next(Ops.begin()), AddTOC);
-    } else if ((CallOpc == PPCISD::CALL) &&
-               (!isLocalCall(Callee) ||
-                DAG.getTarget().getRelocationModel() == Reloc::PIC_))
+    } else if (CallOpc == PPCISD::CALL &&
+      !resideInSameSection(MF.getFunction(), Callee, DAG.getTarget())) {
       // Otherwise insert NOP for non-local calls.
       CallOpc = PPCISD::CALL_NOP;
+    }
   }
 
   Chain = DAG.getNode(CallOpc, dl, NodeTys, Ops);

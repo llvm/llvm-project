@@ -43,12 +43,12 @@ class BitstreamWriter {
   unsigned BlockInfoCurBID;
 
   /// CurAbbrevs - Abbrevs installed at in this block.
-  std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> CurAbbrevs;
+  std::vector<std::shared_ptr<BitCodeAbbrev>> CurAbbrevs;
 
   struct Block {
     unsigned PrevCodeSize;
     size_t StartSizeWord;
-    std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> PrevAbbrevs;
+    std::vector<std::shared_ptr<BitCodeAbbrev>> PrevAbbrevs;
     Block(unsigned PCS, size_t SSW) : PrevCodeSize(PCS), StartSizeWord(SSW) {}
   };
 
@@ -59,7 +59,7 @@ class BitstreamWriter {
   /// These describe abbreviations that all blocks of the specified ID inherit.
   struct BlockInfo {
     unsigned BlockID;
-    std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> Abbrevs;
+    std::vector<std::shared_ptr<BitCodeAbbrev>> Abbrevs;
   };
   std::vector<BlockInfo> BlockInfoRecords;
 
@@ -469,12 +469,12 @@ public:
 
 private:
   // Emit the abbreviation as a DEFINE_ABBREV record.
-  void EncodeAbbrev(BitCodeAbbrev *Abbv) {
+  void EncodeAbbrev(const BitCodeAbbrev &Abbv) {
     EmitCode(bitc::DEFINE_ABBREV);
-    EmitVBR(Abbv->getNumOperandInfos(), 5);
-    for (unsigned i = 0, e = static_cast<unsigned>(Abbv->getNumOperandInfos());
+    EmitVBR(Abbv.getNumOperandInfos(), 5);
+    for (unsigned i = 0, e = static_cast<unsigned>(Abbv.getNumOperandInfos());
          i != e; ++i) {
-      const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i);
+      const BitCodeAbbrevOp &Op = Abbv.getOperandInfo(i);
       Emit(Op.isLiteral(), 1);
       if (Op.isLiteral()) {
         EmitVBR64(Op.getLiteralValue(), 8);
@@ -489,10 +489,10 @@ public:
 
   /// EmitAbbrev - This emits an abbreviation to the stream.  Note that this
   /// method takes ownership of the specified abbrev.
-  unsigned EmitAbbrev(BitCodeAbbrev *Abbv) {
+  unsigned EmitAbbrev(std::shared_ptr<BitCodeAbbrev> Abbv) {
     // Emit the abbreviation as a record.
-    EncodeAbbrev(Abbv);
-    CurAbbrevs.push_back(Abbv);
+    EncodeAbbrev(*Abbv);
+    CurAbbrevs.push_back(std::move(Abbv));
     return static_cast<unsigned>(CurAbbrevs.size())-1 +
       bitc::FIRST_APPLICATION_ABBREV;
   }
@@ -532,13 +532,13 @@ public:
 
   /// EmitBlockInfoAbbrev - Emit a DEFINE_ABBREV record for the specified
   /// BlockID.
-  unsigned EmitBlockInfoAbbrev(unsigned BlockID, BitCodeAbbrev *Abbv) {
+  unsigned EmitBlockInfoAbbrev(unsigned BlockID, std::shared_ptr<BitCodeAbbrev> Abbv) {
     SwitchToBlockID(BlockID);
-    EncodeAbbrev(Abbv);
+    EncodeAbbrev(*Abbv);
 
     // Add the abbrev to the specified block record.
     BlockInfo &Info = getOrCreateBlockInfo(BlockID);
-    Info.Abbrevs.push_back(Abbv);
+    Info.Abbrevs.push_back(std::move(Abbv));
 
     return Info.Abbrevs.size()-1+bitc::FIRST_APPLICATION_ABBREV;
   }

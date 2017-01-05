@@ -1470,6 +1470,9 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   bool IsUnscaled = TII->isUnscaledLdSt(MI);
   int Offset = getLdStOffsetOp(MI).getImm();
   int OffsetStride = IsUnscaled ? getMemScale(MI) : 1;
+  // Allow one more for offset.
+  if (Offset > 0)
+    Offset -= OffsetStride;
   if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride))
     return false;
 

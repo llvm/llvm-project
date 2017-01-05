@@ -128,7 +128,7 @@ extern template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
 /// \brief The CGSCC pass manager.
 ///
 /// See the documentation for the PassManager template for details. It runs
-/// a sequency of SCC passes over each SCC that the manager is run over. This
+/// a sequence of SCC passes over each SCC that the manager is run over. This
 /// typedef serves as a convenient way to refer to this construct.
 typedef PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
                     CGSCCUpdateResult &>

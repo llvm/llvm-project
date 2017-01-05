@@ -504,7 +504,7 @@ void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
     return;
 
   // There must be "S_NOP 0" between an instruction writing M0 and S_SENDMSG.
-  if (LastInstWritesM0 && I->getOpcode() == AMDGPU::S_SENDMSG) {
+  if (LastInstWritesM0 && (I->getOpcode() == AMDGPU::S_SENDMSG || I->getOpcode() == AMDGPU::S_SENDMSGHALT)) {
     BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
     LastInstWritesM0 = false;
     return;
@@ -619,7 +619,8 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       // signalling other hardware blocks
       if ((I->getOpcode() == AMDGPU::S_BARRIER &&
                ST->needWaitcntBeforeBarrier()) ||
-           I->getOpcode() == AMDGPU::S_SENDMSG)
+           I->getOpcode() == AMDGPU::S_SENDMSG ||
+           I->getOpcode() == AMDGPU::S_SENDMSGHALT)
         Required = LastIssued;
       else
         Required = handleOperands(*I);

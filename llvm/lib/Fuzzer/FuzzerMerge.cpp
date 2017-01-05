@@ -220,8 +220,8 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
     ListFilesInDirRecursive(Corpora[i], nullptr, &AllFiles, /*TopDir*/true);
   Printf("MERGE-OUTER: %zd files, %zd in the initial corpus\n",
          AllFiles.size(), NumFilesInFirstCorpus);
-  std::string CFPath =
-      "libFuzzerTemp." + std::to_string(GetPid()) + ".txt";
+  auto CFPath = DirPlusFile(TmpDir(),
+                       "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
   // Write the control file.
   RemoveFile(CFPath);
   std::ofstream ControlFile(CFPath);

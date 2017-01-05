@@ -80,9 +80,12 @@ unsigned X86TTIImpl::getNumberOfRegisters(bool Vector) {
 
 unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) {
   if (Vector) {
-    if (ST->hasAVX512()) return 512;
-    if (ST->hasAVX()) return 256;
-    if (ST->hasSSE1()) return 128;
+    if (ST->hasAVX512()) 
+      return 512;
+    if (ST->hasAVX()) 
+      return 256;
+    if (ST->hasSSE1()) 
+      return 128;
     return 0;
   }
 
@@ -598,197 +601,135 @@ int X86TTIImpl::getArithmeticInstrCost(
 
 int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
-
-  if (Kind == TTI::SK_Reverse) {
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-
-    static const CostTblEntry AVX512VBMIShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v64i8,  1 }, // vpermb
-      { ISD::VECTOR_SHUFFLE, MVT::v32i8,  1 }  // vpermb
-    };
-
-    if (ST->hasVBMI())
-      if (const auto *Entry = CostTableLookup(AVX512VBMIShuffleTbl,
-                                              ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry AVX512BWShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v32i16, 1 }, // vpermw
-      { ISD::VECTOR_SHUFFLE, MVT::v16i16, 1 }, // vpermw
-      { ISD::VECTOR_SHUFFLE, MVT::v64i8,  6 }  // vextracti64x4 + 2*vperm2i128
-                                               // + 2*pshufb + vinserti64x4
-    };
-
-    if (ST->hasBWI())
-      if (const auto *Entry = CostTableLookup(AVX512BWShuffleTbl,
-                                              ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry AVX512ShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v8f64,  1 }, // vpermpd
-      { ISD::VECTOR_SHUFFLE, MVT::v16f32, 1 }, // vpermps
-      { ISD::VECTOR_SHUFFLE, MVT::v8i64,  1 }, // vpermq
-      { ISD::VECTOR_SHUFFLE, MVT::v16i32, 1 }, // vpermd
-    };
-
-    if (ST->hasAVX512())
-      if (const auto *Entry =
-              CostTableLookup(AVX512ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry AVX2ShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v4f64,  1 }, // vpermpd
-      { ISD::VECTOR_SHUFFLE, MVT::v8f32,  1 }, // vpermps
-      { ISD::VECTOR_SHUFFLE, MVT::v4i64,  1 }, // vpermq
-      { ISD::VECTOR_SHUFFLE, MVT::v8i32,  1 }, // vpermd
-      { ISD::VECTOR_SHUFFLE, MVT::v16i16, 2 }, // vperm2i128 + pshufb
-      { ISD::VECTOR_SHUFFLE, MVT::v32i8,  2 }  // vperm2i128 + pshufb
-    };
-
-    if (ST->hasAVX2())
-      if (const auto *Entry =
-              CostTableLookup(AVX2ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry AVX1ShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v4f64,  2 }, // vperm2f128 + vpermilpd
-      { ISD::VECTOR_SHUFFLE, MVT::v8f32,  2 }, // vperm2f128 + vpermilps
-      { ISD::VECTOR_SHUFFLE, MVT::v4i64,  2 }, // vperm2f128 + vpermilpd
-      { ISD::VECTOR_SHUFFLE, MVT::v8i32,  2 }, // vperm2f128 + vpermilps
-      { ISD::VECTOR_SHUFFLE, MVT::v16i16, 4 }, // vextractf128 + 2*pshufb
-                                               // + vinsertf128
-      { ISD::VECTOR_SHUFFLE, MVT::v32i8,  4 }  // vextractf128 + 2*pshufb
-                                               // + vinsertf128
-    };
-
-    if (ST->hasAVX())
-      if (const auto *Entry =
-              CostTableLookup(AVX1ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry SSSE3ShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v8i16, 1 }, // pshufb
-      { ISD::VECTOR_SHUFFLE, MVT::v16i8, 1 }  // pshufb
-    };
-
-    if (ST->hasSSSE3())
-      if (const auto *Entry =
-              CostTableLookup(SSSE3ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry SSE2ShuffleTbl[] = {
-      { ISD::VECTOR_SHUFFLE, MVT::v2f64, 1 }, // shufpd
-      { ISD::VECTOR_SHUFFLE, MVT::v2i64, 1 }, // pshufd
-      { ISD::VECTOR_SHUFFLE, MVT::v4i32, 1 }, // pshufd
-      { ISD::VECTOR_SHUFFLE, MVT::v8i16, 3 }, // pshuflw + pshufhw  + pshufd
-      { ISD::VECTOR_SHUFFLE, MVT::v16i8, 9 }  // 2*pshuflw + 2*pshufhw
-                                              // + 2*pshufd + 2*unpck + packus
-    };
-
-    if (ST->hasSSE2())
-      if (const auto *Entry =
-              CostTableLookup(SSE2ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-    static const CostTblEntry SSE1ShuffleTbl[] = {
-        { ISD::VECTOR_SHUFFLE, MVT::v4f32, 1 }, // shufps
-    };
-
-    if (ST->hasSSE1())
-      if (const auto *Entry =
-              CostTableLookup(SSE1ShuffleTbl, ISD::VECTOR_SHUFFLE, LT.second))
-        return LT.first * Entry->Cost;
-
-  } else if (Kind == TTI::SK_Alternate) {
+  if (Kind == TTI::SK_Reverse || Kind == TTI::SK_Alternate) {
     // 64-bit packed float vectors (v2f32) are widened to type v4f32.
     // 64-bit packed integer vectors (v2i32) are promoted to type v2i64.
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
-    // The backend knows how to generate a single VEX.256 version of
-    // instruction VPBLENDW if the target supports AVX2.
-    if (ST->hasAVX2() && LT.second == MVT::v16i16)
-      return LT.first;
+    static const CostTblEntry AVX512VBMIShuffleTbl[] = {
+      { TTI::SK_Reverse, MVT::v64i8,  1 }, // vpermb
+      { TTI::SK_Reverse, MVT::v32i8,  1 }  // vpermb
+    };
 
-    static const CostTblEntry AVXAltShuffleTbl[] = {
-      {ISD::VECTOR_SHUFFLE, MVT::v4i64, 1},  // vblendpd
-      {ISD::VECTOR_SHUFFLE, MVT::v4f64, 1},  // vblendpd
+    if (ST->hasVBMI())
+      if (const auto *Entry =
+              CostTableLookup(AVX512VBMIShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
 
-      {ISD::VECTOR_SHUFFLE, MVT::v8i32, 1},  // vblendps
-      {ISD::VECTOR_SHUFFLE, MVT::v8f32, 1},  // vblendps
+    static const CostTblEntry AVX512BWShuffleTbl[] = {
+      { TTI::SK_Reverse, MVT::v32i16, 1 }, // vpermw
+      { TTI::SK_Reverse, MVT::v16i16, 1 }, // vpermw
+      { TTI::SK_Reverse, MVT::v64i8,  6 }  // vextracti64x4 + 2*vperm2i128
+                                           // + 2*pshufb + vinserti64x4
+    };
 
-      // This shuffle is custom lowered into a sequence of:
-      //  2x  vextractf128 , 2x vpblendw , 1x vinsertf128
-      {ISD::VECTOR_SHUFFLE, MVT::v16i16, 5},
+    if (ST->hasBWI())
+      if (const auto *Entry =
+              CostTableLookup(AVX512BWShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
 
-      // This shuffle is custom lowered into a long sequence of:
-      //  2x vextractf128 , 4x vpshufb , 2x vpor ,  1x vinsertf128
-      {ISD::VECTOR_SHUFFLE, MVT::v32i8, 9}
+    static const CostTblEntry AVX512ShuffleTbl[] = {
+      { TTI::SK_Reverse, MVT::v8f64,  1 }, // vpermpd
+      { TTI::SK_Reverse, MVT::v16f32, 1 }, // vpermps
+      { TTI::SK_Reverse, MVT::v8i64,  1 }, // vpermq
+      { TTI::SK_Reverse, MVT::v16i32, 1 }, // vpermd
+    };
+
+    if (ST->hasAVX512())
+      if (const auto *Entry =
+              CostTableLookup(AVX512ShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
+
+    static const CostTblEntry AVX2ShuffleTbl[] = {
+      { TTI::SK_Reverse,   MVT::v4f64,  1 }, // vpermpd
+      { TTI::SK_Reverse,   MVT::v8f32,  1 }, // vpermps
+      { TTI::SK_Reverse,   MVT::v4i64,  1 }, // vpermq
+      { TTI::SK_Reverse,   MVT::v8i32,  1 }, // vpermd
+      { TTI::SK_Reverse,   MVT::v16i16, 2 }, // vperm2i128 + pshufb
+      { TTI::SK_Reverse,   MVT::v32i8,  2 }, // vperm2i128 + pshufb
+
+      { TTI::SK_Alternate, MVT::v16i16, 1 }, // vpblendw
+      { TTI::SK_Alternate, MVT::v32i8,  1 }  // vpblendvb
+    };
+
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2ShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
+
+    static const CostTblEntry AVX1ShuffleTbl[] = {
+      { TTI::SK_Reverse,   MVT::v4f64,  2 }, // vperm2f128 + vpermilpd
+      { TTI::SK_Reverse,   MVT::v8f32,  2 }, // vperm2f128 + vpermilps
+      { TTI::SK_Reverse,   MVT::v4i64,  2 }, // vperm2f128 + vpermilpd
+      { TTI::SK_Reverse,   MVT::v8i32,  2 }, // vperm2f128 + vpermilps
+      { TTI::SK_Reverse,   MVT::v16i16, 4 }, // vextractf128 + 2*pshufb
+                                             // + vinsertf128
+      { TTI::SK_Reverse,   MVT::v32i8,  4 }, // vextractf128 + 2*pshufb
+                                             // + vinsertf128
+
+      { TTI::SK_Alternate, MVT::v4i64,  1 }, // vblendpd
+      { TTI::SK_Alternate, MVT::v4f64,  1 }, // vblendpd
+      { TTI::SK_Alternate, MVT::v8i32,  1 }, // vblendps
+      { TTI::SK_Alternate, MVT::v8f32,  1 }, // vblendps
+      { TTI::SK_Alternate, MVT::v16i16, 3 }, // vpand + vpandn + vpor
+      { TTI::SK_Alternate, MVT::v32i8,  3 }  // vpand + vpandn + vpor
     };
 
     if (ST->hasAVX())
-      if (const auto *Entry = CostTableLookup(AVXAltShuffleTbl,
-                                              ISD::VECTOR_SHUFFLE, LT.second))
+      if (const auto *Entry = CostTableLookup(AVX1ShuffleTbl, Kind, LT.second))
         return LT.first * Entry->Cost;
 
-    static const CostTblEntry SSE41AltShuffleTbl[] = {
-      // These are lowered into movsd.
-      {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
-      {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
-
-      // packed float vectors with four elements are lowered into BLENDI dag
-      // nodes. A v4i32/v4f32 BLENDI generates a single 'blendps'/'blendpd'.
-      {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
-      {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
-
-      // This shuffle generates a single pshufw.
-      {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
-
-      // There is no instruction that matches a v16i8 alternate shuffle.
-      // The backend will expand it into the sequence 'pshufb + pshufb + or'.
-      {ISD::VECTOR_SHUFFLE, MVT::v16i8, 3}
+    static const CostTblEntry SSE41ShuffleTbl[] = {
+      { TTI::SK_Alternate, MVT::v2i64,  1 }, // pblendw
+      { TTI::SK_Alternate, MVT::v2f64,  1 }, // movsd
+      { TTI::SK_Alternate, MVT::v4i32,  1 }, // pblendw
+      { TTI::SK_Alternate, MVT::v4f32,  1 }, // blendps
+      { TTI::SK_Alternate, MVT::v8i16,  1 }, // pblendw
+      { TTI::SK_Alternate, MVT::v16i8,  1 }  // pblendvb
     };
 
     if (ST->hasSSE41())
-      if (const auto *Entry = CostTableLookup(SSE41AltShuffleTbl, ISD::VECTOR_SHUFFLE,
-                                              LT.second))
+      if (const auto *Entry = CostTableLookup(SSE41ShuffleTbl, Kind, LT.second))
         return LT.first * Entry->Cost;
 
-    static const CostTblEntry SSSE3AltShuffleTbl[] = {
-      {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},  // movsd
-      {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},  // movsd
+    static const CostTblEntry SSSE3ShuffleTbl[] = {
+      { TTI::SK_Reverse,   MVT::v8i16,  1 }, // pshufb
+      { TTI::SK_Reverse,   MVT::v16i8,  1 }, // pshufb
 
-      // SSE3 doesn't have 'blendps'. The following shuffles are expanded into
-      // the sequence 'shufps + pshufd'
-      {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
-      {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},
-
-      {ISD::VECTOR_SHUFFLE, MVT::v8i16, 3}, // pshufb + pshufb + or
-      {ISD::VECTOR_SHUFFLE, MVT::v16i8, 3}  // pshufb + pshufb + or
+      { TTI::SK_Alternate, MVT::v8i16,  3 }, // pshufb + pshufb + por
+      { TTI::SK_Alternate, MVT::v16i8,  3 }  // pshufb + pshufb + por
     };
 
     if (ST->hasSSSE3())
-      if (const auto *Entry = CostTableLookup(SSSE3AltShuffleTbl,
-                                              ISD::VECTOR_SHUFFLE, LT.second))
+      if (const auto *Entry = CostTableLookup(SSSE3ShuffleTbl, Kind, LT.second))
         return LT.first * Entry->Cost;
 
-    static const CostTblEntry SSEAltShuffleTbl[] = {
-      {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},  // movsd
-      {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},  // movsd
+    static const CostTblEntry SSE2ShuffleTbl[] = {
+      { TTI::SK_Reverse,   MVT::v2f64,  1 }, // shufpd
+      { TTI::SK_Reverse,   MVT::v2i64,  1 }, // pshufd
+      { TTI::SK_Reverse,   MVT::v4i32,  1 }, // pshufd
+      { TTI::SK_Reverse,   MVT::v8i16,  3 }, // pshuflw + pshufhw  + pshufd
+      { TTI::SK_Reverse,   MVT::v16i8,  9 }, // 2*pshuflw + 2*pshufhw
+                                             // + 2*pshufd + 2*unpck + packus
 
-      {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2}, // shufps + pshufd
-      {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2}, // shufps + pshufd
-
-      // This is expanded into a long sequence of four extract + four insert.
-      {ISD::VECTOR_SHUFFLE, MVT::v8i16, 8}, // 4 x pextrw + 4 pinsrw.
-
-      // 8 x (pinsrw + pextrw + and + movb + movzb + or)
-      {ISD::VECTOR_SHUFFLE, MVT::v16i8, 48}
+      { TTI::SK_Alternate, MVT::v2i64,  1 }, // movsd
+      { TTI::SK_Alternate, MVT::v2f64,  1 }, // movsd
+      { TTI::SK_Alternate, MVT::v4i32,  2 }, // 2*shufps
+      { TTI::SK_Alternate, MVT::v8i16,  3 }, // pand + pandn + por
+      { TTI::SK_Alternate, MVT::v16i8,  3 }  // pand + pandn + por
     };
 
-    // Fall-back (SSE3 and SSE2).
-    if (const auto *Entry = CostTableLookup(SSEAltShuffleTbl,
-                                            ISD::VECTOR_SHUFFLE, LT.second))
-      return LT.first * Entry->Cost;
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2ShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
+
+    static const CostTblEntry SSE1ShuffleTbl[] = {
+      { TTI::SK_Reverse,   MVT::v4f32,  1 }, // shufps
+      { TTI::SK_Alternate, MVT::v4f32,  2 }  // 2*shufps
+    };
+
+    if (ST->hasSSE1())
+      if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
+        return LT.first * Entry->Cost;
 
   } else if (Kind == TTI::SK_PermuteTwoSrc) {
     // We assume that source and destination have the same vector type.

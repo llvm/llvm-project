@@ -1014,6 +1014,10 @@ function(add_unittest test_suite test_name)
   if (SUPPORTS_NO_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")
   endif ()
+  # Some parts of gtest rely on this GNU extension, don't warn on it.
+  if(SUPPORTS_NO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
+    list(APPEND LLVM_COMPILE_FLAGS "-Wno-gnu-zero-variadic-macro-arguments")
+  endif()
 
   set(LLVM_REQUIRES_RTTI OFF)
 

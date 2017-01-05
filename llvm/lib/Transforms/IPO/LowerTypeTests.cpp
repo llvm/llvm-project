@@ -27,9 +27,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -51,6 +54,20 @@ static cl::opt<bool> AvoidReuse(
     "lowertypetests-avoid-reuse",
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
     cl::Hidden, cl::init(true));
+
+static cl::opt<std::string> ClSummaryAction(
+    "lowertypetests-summary-action",
+    cl::desc("What to do with the summary when running this pass"), cl::Hidden);
+
+static cl::opt<std::string> ClReadSummary(
+    "lowertypetests-read-summary",
+    cl::desc("Read summary from given YAML file before running pass"),
+    cl::Hidden);
+
+static cl::opt<std::string> ClWriteSummary(
+    "lowertypetests-write-summary",
+    cl::desc("Write summary to given YAML file after running pass"),
+    cl::Hidden);
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -241,6 +258,9 @@ public:
 class LowerTypeTestsModule {
   Module &M;
 
+  // This is for testing purposes only.
+  std::unique_ptr<ModuleSummaryIndex> OwnedSummary;
+
   bool LinkerSubsectionsViaSymbols;
   Triple::ArchType Arch;
   Triple::OSType OS;
@@ -302,6 +322,7 @@ class LowerTypeTestsModule {
 
 public:
   LowerTypeTestsModule(Module &M);
+  ~LowerTypeTestsModule();
   bool lower();
 };
 
@@ -1080,11 +1101,41 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(Module &M) : M(M) {
+  // Handle the command-line summary arguments. This code is for testing
+  // purposes only, so we handle errors directly.
+  if (!ClSummaryAction.empty()) {
+    OwnedSummary = make_unique<ModuleSummaryIndex>();
+    if (!ClReadSummary.empty()) {
+      ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
+                            ": ");
+      auto ReadSummaryFile =
+          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *OwnedSummary;
+      ExitOnErr(errorCodeToError(In.error()));
+    }
+  }
+
   Triple TargetTriple(M.getTargetTriple());
   LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
   Arch = TargetTriple.getArch();
   OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
+}
+
+LowerTypeTestsModule::~LowerTypeTestsModule() {
+  if (ClSummaryAction.empty() || ClWriteSummary.empty())
+    return;
+
+  ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
+                        ": ");
+  std::error_code EC;
+  raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::F_Text);
+  ExitOnErr(errorCodeToError(EC));
+
+  yaml::Output Out(OS);
+  Out << *OwnedSummary;
 }
 
 bool LowerTypeTestsModule::lower() {

@@ -2902,6 +2902,7 @@ declare <4 x float> @llvm.x86.avx512.mask.vextractf32x4.512(<16 x float>, i32, <
 define <4 x i64> @test_mask_vextracti64x4(<4 x i64> %b, <8 x i64> %a, i8 %mask) {
 ; CHECK-LABEL: test_mask_vextracti64x4:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    kshiftlw $12, %k1, %k0
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k0
@@ -2923,7 +2924,7 @@ define <4 x i64> @test_mask_vextracti64x4(<4 x i64> %b, <8 x i64> %a, i8 %mask) 
 ; CHECK-NEXT:    vpmovsxdq %xmm2, %ymm2
 ; CHECK-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %res = call <4 x i64> @llvm.x86.avx512.mask.vextracti64x4.512(<8 x i64> %a, i32 2, <4 x i64> %b, i8 %mask)
+  %res = call <4 x i64> @llvm.x86.avx512.mask.vextracti64x4.512(<8 x i64> %a, i32 1, <4 x i64> %b, i8 %mask)
   ret <4 x i64> %res
 }
 
@@ -2963,9 +2964,9 @@ declare <4 x i32> @llvm.x86.avx512.mask.vextracti32x4.512(<16 x i32>, i32, <4 x 
 define <4 x double> @test_vextractf64x4(<8 x double> %a) {
 ; CHECK-LABEL: test_vextractf64x4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; CHECK-NEXT:    retq
-  %res = call <4 x double> @llvm.x86.avx512.mask.vextractf64x4.512(<8 x double> %a, i32 2, <4 x double> zeroinitializer, i8 -1)
+  %res = call <4 x double> @llvm.x86.avx512.mask.vextractf64x4.512(<8 x double> %a, i32 1, <4 x double> zeroinitializer, i8 -1)
   ret <4 x double> %res
 }
 

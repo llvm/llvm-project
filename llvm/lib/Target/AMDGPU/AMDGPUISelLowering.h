@@ -313,6 +313,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   SENDMSG,
+  SENDMSGHALT,
   INTERP_MOV,
   INTERP_P1,
   INTERP_P2,

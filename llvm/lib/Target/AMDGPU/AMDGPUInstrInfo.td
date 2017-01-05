@@ -266,6 +266,10 @@ def AMDGPUsendmsg : SDNode<"AMDGPUISD::SENDMSG",
                     SDTypeProfile<0, 1, [SDTCisInt<0>]>,
                     [SDNPHasChain, SDNPInGlue]>;
 
+def AMDGPUsendmsghalt : SDNode<"AMDGPUISD::SENDMSGHALT",
+                    SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                    [SDNPHasChain, SDNPInGlue]>;
+
 def AMDGPUinterp_mov : SDNode<"AMDGPUISD::INTERP_MOV",
                         SDTypeProfile<1, 3, [SDTCisFP<0>]>,
                         [SDNPInGlue]>;

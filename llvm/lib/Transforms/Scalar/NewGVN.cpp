@@ -79,6 +79,7 @@ STATISTIC(NumGVNInstrDeleted, "Number of instructions deleted");
 STATISTIC(NumGVNBlocksDeleted, "Number of blocks deleted");
 STATISTIC(NumGVNOpsSimplified, "Number of Expressions simplified");
 STATISTIC(NumGVNPhisAllSame, "Number of PHIs whos arguments are all the same");
+STATISTIC(NumGVNMaxIterations, "Maximum Number of iterations it took to converge GVN");
 
 //===----------------------------------------------------------------------===//
 //                                GVN Pass
@@ -1528,9 +1529,11 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
 
   initializeCongruenceClasses(F);
 
+  unsigned int Iterations = 0;
   // We start out in the entry block.
   BasicBlock *LastBlock = &F.getEntryBlock();
   while (TouchedInstructions.any()) {
+    ++Iterations;
     // Walk through all the instructions in all the blocks in RPO.
     for (int InstrNum = TouchedInstructions.find_first(); InstrNum != -1;
          InstrNum = TouchedInstructions.find_next(InstrNum)) {
@@ -1577,7 +1580,7 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
       TouchedInstructions.reset(InstrNum);
     }
   }
-
+  NumGVNMaxIterations = std::max(NumGVNMaxIterations.getValue(), Iterations);
 #ifndef NDEBUG
   verifyMemoryCongruency();
 #endif
