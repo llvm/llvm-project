@@ -427,9 +427,9 @@ public:
   ///
   /// \returns The abbreviation code for the newly-registered record type.
   static unsigned emitAbbrev(llvm::BitstreamWriter &out) {
-    auto *abbrev = new llvm::BitCodeAbbrev();
-    impl::emitOps<IDField, Fields...>(*abbrev);
-    return out.EmitAbbrev(abbrev);
+    auto Abbrev = std::make_shared<llvm::BitCodeAbbrev>();
+    impl::emitOps<IDField, Fields...>(*Abbrev);
+    return out.EmitAbbrev(std::move(Abbrev));
   }
 
   /// Emit a record identified by \p abbrCode to bitstream reader \p out, using
