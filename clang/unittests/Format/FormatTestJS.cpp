@@ -377,6 +377,16 @@ TEST_F(FormatTestJS, AmbientDeclarations) {
       "declare function\n"
       "x();",  // TODO(martinprobst): should ideally be indented.
       NineCols);
+  verifyFormat("declare function foo();\n"
+               "let x = 1;\n");
+  verifyFormat("declare function foo(): string;\n"
+               "let x = 1;\n");
+  verifyFormat("declare function foo(): {x: number};\n"
+               "let x = 1;\n");
+  verifyFormat("declare class X {}\n"
+               "let x = 1;\n");
+  verifyFormat("declare interface Y {}\n"
+               "let x = 1;\n");
   verifyFormat(
       "declare enum X {\n"
       "}",

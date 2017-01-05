@@ -1725,7 +1725,7 @@ namespace AfterError {
   constexpr int error() { // expected-error {{no return statement}}
     return foobar; // expected-error {{undeclared identifier}}
   }
-  constexpr int k = error(); // expected-error {{must be initialized by a constant expression}}
+  constexpr int k = error();
 }
 
 namespace std {
@@ -2030,7 +2030,7 @@ namespace PR21786 {
 
 namespace PR21859 {
   constexpr int Fun() { return; } // expected-error {{non-void constexpr function 'Fun' should return a value}}
-  constexpr int Var = Fun(); // expected-error {{constexpr variable 'Var' must be initialized by a constant expression}}
+  constexpr int Var = Fun();
 }
 
 struct InvalidRedef {

@@ -475,3 +475,14 @@ namespace rdar23721638 {
   }
   template void bar<A>(); // expected-note {{in instantiation}}
 }
+
+namespace anon_union_default_member_init {
+  template<typename T> void f() {
+    struct S {
+      union {
+        int i = 0;
+      };
+    };
+  }
+  void g() { f<int>(); }
+}

@@ -53,7 +53,7 @@ class TemplateDeductionInfo {
 public:
   TemplateDeductionInfo(SourceLocation Loc, unsigned DeducedDepth = 0)
     : Deduced(nullptr), Loc(Loc), HasSFINAEDiagnostic(false),
-      DeducedDepth(DeducedDepth), Expression(nullptr) {}
+      DeducedDepth(DeducedDepth), CallArgIndex(0) {}
 
   /// \brief Returns the location at which template argument is
   /// occurring.
@@ -175,21 +175,12 @@ public:
   /// FIXME: Finish documenting this.
   TemplateArgument SecondArg;
 
-  union {
-    /// \brief The expression which caused a deduction failure.
-    ///
-    ///   TDK_FailedOverloadResolution: this argument is the reference to
-    ///   an overloaded function which could not be resolved to a specific
-    ///   function.
-    Expr *Expression;
-
-    /// \brief The index of the function argument that caused a deduction
-    /// failure.
-    ///
-    ///   TDK_DeducedMismatch: this is the index of the argument that had a
-    ///   different argument type from its substituted parameter type.
-    unsigned CallArgIndex;
-  };
+  /// \brief The index of the function argument that caused a deduction
+  /// failure.
+  ///
+  ///   TDK_DeducedMismatch: this is the index of the argument that had a
+  ///   different argument type from its substituted parameter type.
+  unsigned CallArgIndex;
 
   /// \brief Information on packs that we're currently expanding.
   ///
@@ -234,10 +225,6 @@ struct DeductionFailureInfo {
   /// \brief Return the second template argument this deduction failure
   /// refers to, if any.
   const TemplateArgument *getSecondArg();
-
-  /// \brief Return the expression this deduction failure refers to,
-  /// if any.
-  Expr *getExpr();
 
   /// \brief Return the index of the call argument that this deduction
   /// failure refers to, if any.

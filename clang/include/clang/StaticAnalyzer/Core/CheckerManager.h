@@ -102,12 +102,12 @@ enum class ObjCMessageVisitKind {
 
 class CheckerManager {
   const LangOptions LangOpts;
-  AnalyzerOptionsRef AOptions;
+  AnalyzerOptions &AOptions;
   CheckName CurrentCheckName;
 
 public:
-  CheckerManager(const LangOptions &langOpts, AnalyzerOptionsRef AOptions)
-      : LangOpts(langOpts), AOptions(std::move(AOptions)) {}
+  CheckerManager(const LangOptions &langOpts, AnalyzerOptions &AOptions)
+      : LangOpts(langOpts), AOptions(AOptions) {}
 
   ~CheckerManager();
 
@@ -119,7 +119,7 @@ public:
   void finishedCheckerRegistration();
 
   const LangOptions &getLangOpts() const { return LangOpts; }
-  AnalyzerOptions &getAnalyzerOptions() { return *AOptions; }
+  AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
 
   typedef CheckerBase *CheckerRef;
   typedef const void *CheckerTag;

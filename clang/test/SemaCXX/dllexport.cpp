@@ -741,6 +741,27 @@ struct __declspec(dllexport) ClassWithMultipleDefaultCtors {
   ClassWithMultipleDefaultCtors(int = 40) {} // expected-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
   ClassWithMultipleDefaultCtors(int = 30, ...) {} // expected-note{{declared here}}
 };
+template <typename T>
+struct ClassTemplateWithMultipleDefaultCtors {
+  __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 40) {}      // expected-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+  __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 30, ...) {} // expected-note{{declared here}}
+};
+
+template <typename T> struct HasDefaults {
+  HasDefaults(int x = sizeof(T)) {} // expected-error {{invalid application of 'sizeof'}}
+};
+template struct __declspec(dllexport) HasDefaults<char>;
+
+template struct
+__declspec(dllexport) // expected-note {{in instantiation of default function argument expression for 'HasDefaults<void>' required here}}
+HasDefaults<void>; // expected-note {{in instantiation of member function 'HasDefaults<void>::HasDefaults' requested here}}
+
+template <typename T> struct HasDefaults2 {
+  __declspec(dllexport) // expected-note {{in instantiation of default function argument expression for 'HasDefaults2<void>' required here}}
+  HasDefaults2(int x = sizeof(T)) {} // expected-error {{invalid application of 'sizeof'}}
+};
+template struct HasDefaults2<void>; // expected-note {{in instantiation of member function 'HasDefaults2<void>::HasDefaults2' requested here}}
+
 #endif
 
 //===----------------------------------------------------------------------===//

@@ -644,10 +644,6 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
       Result.HasDiagnostic = true;
     }
     break;
-
-  case Sema::TDK_FailedOverloadResolution:
-    Result.Data = Info.Expression;
-    break;
   }
 
   return Result;
@@ -662,7 +658,6 @@ void DeductionFailureInfo::Destroy() {
   case Sema::TDK_TooManyArguments:
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_InvalidExplicitArguments:
-  case Sema::TDK_FailedOverloadResolution:
   case Sema::TDK_CUDATargetMismatch:
     break;
 
@@ -705,7 +700,6 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_DeducedMismatch:
   case Sema::TDK_NonDeducedMismatch:
-  case Sema::TDK_FailedOverloadResolution:
   case Sema::TDK_CUDATargetMismatch:
     return TemplateParameter();
 
@@ -737,7 +731,6 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_NonDeducedMismatch:
-  case Sema::TDK_FailedOverloadResolution:
   case Sema::TDK_CUDATargetMismatch:
     return nullptr;
 
@@ -765,7 +758,6 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_FailedOverloadResolution:
   case Sema::TDK_CUDATargetMismatch:
     return nullptr;
 
@@ -793,7 +785,6 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_SubstitutionFailure:
-  case Sema::TDK_FailedOverloadResolution:
   case Sema::TDK_CUDATargetMismatch:
     return nullptr;
 
@@ -807,14 +798,6 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_MiscellaneousDeductionFailure:
     break;
   }
-
-  return nullptr;
-}
-
-Expr *DeductionFailureInfo::getExpr() {
-  if (static_cast<Sema::TemplateDeductionResult>(Result) ==
-        Sema::TDK_FailedOverloadResolution)
-    return static_cast<Expr*>(Data);
 
   return nullptr;
 }
@@ -8958,9 +8941,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
                S.IdentifyCUDAPreference(Caller, Cand->Function) ==
                    Sema::CFP_WrongSide;
       };
-      Candidates.erase(std::remove_if(Candidates.begin(), Candidates.end(),
-                                      IsWrongSideCandidate),
-                       Candidates.end());
+      llvm::erase_if(Candidates, IsWrongSideCandidate);
     }
   }
 
@@ -9701,14 +9682,6 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_FailedOverloadResolution: {
-    OverloadExpr::FindResult R = OverloadExpr::find(DeductionFailure.getExpr());
-    S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_failed_overload_resolution)
-        << R.Expression->getName();
-    return;
-  }
-
   case Sema::TDK_DeducedMismatch: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
@@ -10045,7 +10018,6 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
     return 3;
 
   case Sema::TDK_InstantiationDepth:
-  case Sema::TDK_FailedOverloadResolution:
     return 4;
 
   case Sema::TDK_InvalidExplicitArguments:

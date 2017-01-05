@@ -220,10 +220,14 @@ namespace initlist_of_array {
 namespace init_list_deduction_failure {
   void f();
   void f(int);
+  // FIXME: It'd be nice to track that 'T' became a non-deduced context due to
+  // overload resolution failure for 'f'.
   template<typename T> void g(std::initializer_list<T>);
-  // expected-note@-1 {{candidate template ignored: couldn't resolve reference to overloaded function 'f'}}
-  void h() { g({f}); }
-  // expected-error@-1 {{no matching function for call to 'g'}}
+  // expected-note@-1 {{candidate template ignored: couldn't infer template argument 'T'}}
+  void h() {
+    g({f}); // expected-error {{no matching function for call to 'g'}}
+    g({f, h}); // ok
+  }
 }
 
 namespace deleted_copy {

@@ -515,6 +515,18 @@ struct __declspec(dllexport) ClassWithClosure {
 // M32-DAG:   ret void
 };
 
+template <typename T> struct TemplateWithClosure {
+  TemplateWithClosure(int x = sizeof(T)) {}
+};
+extern template struct TemplateWithClosure<char>;
+template struct __declspec(dllexport) TemplateWithClosure<char>;
+extern template struct TemplateWithClosure<int>;
+template struct __declspec(dllexport) TemplateWithClosure<int>;
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$TemplateWithClosure@D@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// M32-DAG:   call {{.*}} @"\01??0?$TemplateWithClosure@D@@QAE@H@Z"({{.*}}, i32 1)
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$TemplateWithClosure@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// M32-DAG:   call {{.*}} @"\01??0?$TemplateWithClosure@H@@QAE@H@Z"({{.*}}, i32 4)
+
 struct __declspec(dllexport) NestedOuter {
   DELETE_IMPLICIT_MEMBERS(NestedOuter);
   NestedOuter(void *p = 0) {}

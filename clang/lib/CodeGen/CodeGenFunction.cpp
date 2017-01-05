@@ -1049,6 +1049,19 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   return ResTy;
 }
 
+static bool
+shouldUseUndefinedBehaviorReturnOptimization(const FunctionDecl *FD,
+                                             const ASTContext &Context) {
+  QualType T = FD->getReturnType();
+  // Avoid the optimization for functions that return a record type with a
+  // trivial destructor or another trivially copyable type.
+  if (const RecordType *RT = T.getCanonicalType()->getAs<RecordType>()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+      return !ClassDecl->hasTrivialDestructor();
+  }
+  return !T.isTriviallyCopyableType(Context);
+}
+
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
@@ -1127,17 +1140,23 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   //   function call is used by the caller, the behavior is undefined.
   if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() && !SawAsmBlock &&
       !FD->getReturnType()->isVoidType() && Builder.GetInsertBlock()) {
+    bool ShouldEmitUnreachable =
+        CGM.getCodeGenOpts().StrictReturn ||
+        shouldUseUndefinedBehaviorReturnOptimization(FD, getContext());
     if (SanOpts.has(SanitizerKind::Return)) {
       SanitizerScope SanScope(this);
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
                 SanitizerHandler::MissingReturn,
                 EmitCheckSourceLocation(FD->getLocation()), None);
-    } else if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-      EmitTrapCall(llvm::Intrinsic::trap);
+    } else if (ShouldEmitUnreachable) {
+      if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+        EmitTrapCall(llvm::Intrinsic::trap);
     }
-    Builder.CreateUnreachable();
-    Builder.ClearInsertionPoint();
+    if (SanOpts.has(SanitizerKind::Return) || ShouldEmitUnreachable) {
+      Builder.CreateUnreachable();
+      Builder.ClearInsertionPoint();
+    }
   }
 
   // Emit the standard function epilogue.

@@ -386,6 +386,9 @@ class Configuration(object):
         # Configure extra flags
         compile_flags_str = self.get_lit_conf('compile_flags', '')
         self.cxx.compile_flags += shlex.split(compile_flags_str)
+        # FIXME: Can we remove this?
+        if self.is_windows:
+            self.cxx.compile_flags += ['-D_CRT_SECURE_NO_WARNINGS']
 
     def configure_default_compile_flags(self):
         # Try and get the std version from the command line. Fall back to
@@ -572,6 +575,9 @@ class Configuration(object):
             # Configure libraries
             if self.cxx_stdlib_under_test == 'libc++':
                 self.cxx.link_flags += ['-nodefaultlibs']
+                # FIXME: Handle MSVCRT as part of the ABI library handling.
+                if self.is_windows:
+                    self.cxx.link_flags += ['-nostdlib', '-lmsvcrtd']
                 self.configure_link_flags_cxx_library()
                 self.configure_link_flags_abi_library()
                 self.configure_extra_library_flags()
