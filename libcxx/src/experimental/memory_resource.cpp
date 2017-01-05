@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
 // new_delete_resource()
 
-class _LIBCPP_TYPE_VIS_ONLY __new_delete_memory_resource_imp
+class _LIBCPP_TYPE_VIS __new_delete_memory_resource_imp
     : public memory_resource
 {
 public:
@@ -42,7 +42,7 @@ protected:
 
 // null_memory_resource()
 
-class _LIBCPP_TYPE_VIS_ONLY __null_memory_resource_imp
+class _LIBCPP_TYPE_VIS __null_memory_resource_imp
     : public memory_resource
 {
 public:

@@ -244,7 +244,7 @@ public:
 };
 
 template <intmax_t _Num, intmax_t _Den = 1>
-class _LIBCPP_TYPE_VIS_ONLY ratio
+class _LIBCPP_TEMPLATE_VIS ratio
 {
     static_assert(__static_abs<_Num>::value >= 0, "ratio numerator is out of range");
     static_assert(_Den != 0, "ratio divide by 0");
@@ -308,7 +308,7 @@ template <class _R1, class _R2> using ratio_multiply
 #else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_multiply
+struct _LIBCPP_TEMPLATE_VIS ratio_multiply
     : public __ratio_multiply<_R1, _R2>::type {};
 
 #endif  // _LIBCPP_CXX03_LANG
@@ -335,7 +335,7 @@ template <class _R1, class _R2> using ratio_divide
 #else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_divide
+struct _LIBCPP_TEMPLATE_VIS ratio_divide
     : public __ratio_divide<_R1, _R2>::type {};
 
 #endif  // _LIBCPP_CXX03_LANG
@@ -370,7 +370,7 @@ template <class _R1, class _R2> using ratio_add
 #else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_add
+struct _LIBCPP_TEMPLATE_VIS ratio_add
     : public __ratio_add<_R1, _R2>::type {};
 
 #endif  // _LIBCPP_CXX03_LANG
@@ -405,7 +405,7 @@ template <class _R1, class _R2> using ratio_subtract
 #else  // _LIBCPP_CXX03_LANG
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_subtract
+struct _LIBCPP_TEMPLATE_VIS ratio_subtract
     : public __ratio_subtract<_R1, _R2>::type {};
 
 #endif  // _LIBCPP_CXX03_LANG
@@ -413,11 +413,11 @@ struct _LIBCPP_TYPE_VIS_ONLY ratio_subtract
 // ratio_equal
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_equal
+struct _LIBCPP_TEMPLATE_VIS ratio_equal
     : public _LIBCPP_BOOL_CONSTANT((_R1::num == _R2::num && _R1::den == _R2::den)) {};
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_not_equal
+struct _LIBCPP_TEMPLATE_VIS ratio_not_equal
     : public _LIBCPP_BOOL_CONSTANT((!ratio_equal<_R1, _R2>::value)) {};
 
 // ratio_less
@@ -476,19 +476,19 @@ struct __ratio_less<_R1, _R2, -1LL, -1LL>
 };
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_less
+struct _LIBCPP_TEMPLATE_VIS ratio_less
     : public _LIBCPP_BOOL_CONSTANT((__ratio_less<_R1, _R2>::value)) {};
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_less_equal
+struct _LIBCPP_TEMPLATE_VIS ratio_less_equal
     : public _LIBCPP_BOOL_CONSTANT((!ratio_less<_R2, _R1>::value)) {};
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_greater
+struct _LIBCPP_TEMPLATE_VIS ratio_greater
     : public _LIBCPP_BOOL_CONSTANT((ratio_less<_R2, _R1>::value)) {};
 
 template <class _R1, class _R2>
-struct _LIBCPP_TYPE_VIS_ONLY ratio_greater_equal
+struct _LIBCPP_TEMPLATE_VIS ratio_greater_equal
     : public _LIBCPP_BOOL_CONSTANT((!ratio_less<_R1, _R2>::value)) {};
 
 template <class _R1, class _R2>

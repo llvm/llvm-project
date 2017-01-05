@@ -10,12 +10,25 @@
 // XFAIL: c++03, c++98
 
 // <iterator>
-// template <class C> auto begin(C& c) -> decltype(c.begin());
-// template <class C> auto begin(const C& c) -> decltype(c.begin());
-// template <class C> auto end(C& c) -> decltype(c.end());
-// template <class C> auto end(const C& c) -> decltype(c.end());
-// template <class E> reverse_iterator<const E*> rbegin(initializer_list<E> il);
-// template <class E> reverse_iterator<const E*> rend(initializer_list<E> il);
+// template <class C> constexpr auto begin(C& c) -> decltype(c.begin());
+// template <class C> constexpr auto begin(const C& c) -> decltype(c.begin());
+// template <class C> constexpr auto cbegin(const C& c) -> decltype(std::begin(c)); // C++14
+// template <class C> constexpr auto cend(const C& c) -> decltype(std::end(c));     // C++14
+// template <class C> constexpr auto end  (C& c) -> decltype(c.end());
+// template <class C> constexpr auto end  (const C& c) -> decltype(c.end());
+// template <class E> constexpr reverse_iterator<const E*> rbegin(initializer_list<E> il);
+// template <class E> constexpr reverse_iterator<const E*> rend  (initializer_list<E> il);
+//
+// template <class C> auto constexpr rbegin(C& c) -> decltype(c.rbegin());                 // C++14
+// template <class C> auto constexpr rbegin(const C& c) -> decltype(c.rbegin());           // C++14
+// template <class C> auto constexpr rend(C& c) -> decltype(c.rend());                     // C++14
+// template <class C> constexpr auto rend(const C& c) -> decltype(c.rend());               // C++14
+// template <class T, size_t N> reverse_iterator<T*> constexpr rbegin(T (&array)[N]);      // C++14
+// template <class T, size_t N> reverse_iterator<T*> constexpr rend(T (&array)[N]);        // C++14
+// template <class C> constexpr auto crbegin(const C& c) -> decltype(std::rbegin(c));      // C++14
+// template <class C> constexpr auto crend(const C& c) -> decltype(std::rend(c));          // C++14
+//
+//  All of these are constexpr in C++17
 
 #include "test_macros.h"
 
@@ -25,6 +38,10 @@
 #include <array>
 #include <list>
 #include <initializer_list>
+
+// std::array is explicitly allowed to be initialized with A a = { init-list };.
+// Disable the missing braces warning for this reason.
+#include "disable_missing_braces_warning.h"
 
 template<typename C>
 void test_const_container( const C & c, typename C::value_type val ) {
@@ -141,5 +158,44 @@ int main(){
     constexpr const int *b = std::cbegin(arrA);
     constexpr const int *e = std::cend(arrA);
     static_assert(e - b == 3, "");
+#endif
+
+#if TEST_STD_VER > 14
+    {
+        typedef std::array<int, 5> C;
+        constexpr const C c{0,1,2,3,4};
+
+        static_assert ( c.begin()   == std::begin(c), "");
+        static_assert ( c.cbegin()  == std::cbegin(c), "");
+        static_assert ( c.end()     == std::end(c), "");
+        static_assert ( c.cend()    == std::cend(c), "");
+
+        static_assert ( c.rbegin()  == std::rbegin(c), "");
+        static_assert ( c.crbegin() == std::crbegin(c), "");
+        static_assert ( c.rend()    == std::rend(c), "");
+        static_assert ( c.crend()   == std::crend(c), "");
+
+        static_assert ( std::begin(c)   != std::end(c), "");
+        static_assert ( std::rbegin(c)  != std::rend(c), "");
+        static_assert ( std::cbegin(c)  != std::cend(c), "");
+        static_assert ( std::crbegin(c) != std::crend(c), "");
+        
+        static_assert ( *c.begin()  == 0, "");
+        static_assert ( *c.rbegin()  == 4, "");
+        
+        static_assert ( *std::begin(c)   == 0, "" );
+        static_assert ( *std::cbegin(c)  == 0, "" );
+        static_assert ( *std::rbegin(c)  == 4, "" );
+        static_assert ( *std::crbegin(c) == 4, "" );
+    }
+
+    {
+        static constexpr const int c[] = {0,1,2,3,4};
+        
+        static_assert ( *std::begin(c)   == 0, "" );
+        static_assert ( *std::cbegin(c)  == 0, "" );
+        static_assert ( *std::rbegin(c)  == 4, "" );
+        static_assert ( *std::crbegin(c) == 4, "" );
+    }
 #endif
 }

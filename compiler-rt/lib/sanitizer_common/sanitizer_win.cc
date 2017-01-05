@@ -31,6 +31,21 @@
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
 
+// A macro to tell the compiler that this part of the code cannot be reached,
+// if the compiler supports this feature. Since we're using this in
+// code that is called when terminating the process, the expansion of the
+// macro should not terminate the process to avoid infinite recursion.
+#if defined(__clang__)
+# define BUILTIN_UNREACHABLE() __builtin_unreachable()
+#elif defined(__GNUC__) && \
+    (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))
+# define BUILTIN_UNREACHABLE() __builtin_unreachable()
+#elif defined(_MSC_VER)
+# define BUILTIN_UNREACHABLE() __assume(0)
+#else
+# define BUILTIN_UNREACHABLE()
+#endif
+
 namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
@@ -659,7 +674,7 @@ void internal__exit(int exitcode) {
   if (::IsDebuggerPresent())
     __debugbreak();
   TerminateProcess(GetCurrentProcess(), exitcode);
-  __assume(0);
+  BUILTIN_UNREACHABLE();
 }
 
 uptr internal_ftruncate(fd_t fd, uptr size) {

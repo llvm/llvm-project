@@ -894,7 +894,7 @@ _LIBCPP_END_NAMESPACE_LFTS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<std::experimental::optional<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<std::experimental::optional<_Tp> >
 {
     typedef std::experimental::optional<_Tp> argument_type;
     typedef size_t        result_type;

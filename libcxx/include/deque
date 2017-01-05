@@ -167,11 +167,11 @@ template <class T, class Allocator>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator> class __deque_base;
-template <class _Tp, class _Allocator = allocator<_Tp> > class _LIBCPP_TYPE_VIS_ONLY deque;
+template <class _Tp, class _Allocator = allocator<_Tp> > class _LIBCPP_TEMPLATE_VIS deque;
 
 template <class _ValueType, class _Pointer, class _Reference, class _MapPointer,
           class _DiffType, _DiffType _BlockSize>
-class _LIBCPP_TYPE_VIS_ONLY __deque_iterator;
+class _LIBCPP_TEMPLATE_VIS __deque_iterator;
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
@@ -276,7 +276,7 @@ template <class _ValueType, class _Pointer, class _Reference, class _MapPointer,
                                __deque_block_size<_ValueType, _DiffType>::value
 #endif
           >
-class _LIBCPP_TYPE_VIS_ONLY __deque_iterator
+class _LIBCPP_TEMPLATE_VIS __deque_iterator
 {
     typedef _MapPointer __map_iterator;
 public:
@@ -428,9 +428,9 @@ private:
         : __m_iter_(__m), __ptr_(__p) {}
 
     template <class _Tp, class _Ap> friend class __deque_base;
-    template <class _Tp, class _Ap> friend class _LIBCPP_TYPE_VIS_ONLY deque;
+    template <class _Tp, class _Ap> friend class _LIBCPP_TEMPLATE_VIS deque;
     template <class _Vp, class _Pp, class _Rp, class _MP, class _Dp, _Dp>
-        friend class _LIBCPP_TYPE_VIS_ONLY __deque_iterator;
+        friend class _LIBCPP_TEMPLATE_VIS __deque_iterator;
 
     template <class _RAIter,
               class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
@@ -1183,7 +1183,7 @@ __deque_base<_Tp, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TYPE_VIS_ONLY deque
+class _LIBCPP_TEMPLATE_VIS deque
     : private __deque_base<_Tp, _Allocator>
 {
 public:

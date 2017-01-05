@@ -391,11 +391,11 @@ _LIBCPP_DECLARE_STRONG_ENUM(future_errc)
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(future_errc)
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY is_error_code_enum<future_errc> : public true_type {};
+struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<future_errc> : public true_type {};
 
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY is_error_code_enum<future_errc::__lx> : public true_type { };
+struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<future_errc::__lx> : public true_type { };
 #endif
 
 //enum class launch
@@ -1051,12 +1051,12 @@ __async_assoc_state<void, _Fp>::__on_zero_shared() _NOEXCEPT
     base::__on_zero_shared();
 }
 
-template <class _Rp> class _LIBCPP_TYPE_VIS_ONLY promise;
-template <class _Rp> class _LIBCPP_TYPE_VIS_ONLY shared_future;
+template <class _Rp> class _LIBCPP_TEMPLATE_VIS promise;
+template <class _Rp> class _LIBCPP_TEMPLATE_VIS shared_future;
 
 // future
 
-template <class _Rp> class _LIBCPP_TYPE_VIS_ONLY future;
+template <class _Rp> class _LIBCPP_TEMPLATE_VIS future;
 
 template <class _Rp, class _Fp>
 future<_Rp>
@@ -1075,7 +1075,7 @@ __make_async_assoc_state(_Fp __f);
 #endif
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY future
+class _LIBCPP_TEMPLATE_VIS future
 {
     __assoc_state<_Rp>* __state_;
 
@@ -1178,7 +1178,7 @@ future<_Rp>::get()
 }
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY future<_Rp&>
+class _LIBCPP_TEMPLATE_VIS future<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
@@ -1359,7 +1359,7 @@ swap(future<_Rp>& __x, future<_Rp>& __y) _NOEXCEPT
 template <class _Callable> class packaged_task;
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY promise
+class _LIBCPP_TEMPLATE_VIS promise
 {
     __assoc_state<_Rp>* __state_;
 
@@ -1526,7 +1526,7 @@ promise<_Rp>::set_exception_at_thread_exit(exception_ptr __p)
 // promise<R&>
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY promise<_Rp&>
+class _LIBCPP_TEMPLATE_VIS promise<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
@@ -1737,7 +1737,7 @@ swap(promise<_Rp>& __x, promise<_Rp>& __y) _NOEXCEPT
 }
 
 template <class _Rp, class _Alloc>
-    struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<promise<_Rp>, _Alloc>
+    struct _LIBCPP_TEMPLATE_VIS uses_allocator<promise<_Rp>, _Alloc>
         : public true_type {};
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
@@ -1998,7 +1998,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) cons
 }
 
 template<class _Rp, class ..._ArgTypes>
-class _LIBCPP_TYPE_VIS_ONLY packaged_task<_Rp(_ArgTypes...)>
+class _LIBCPP_TEMPLATE_VIS packaged_task<_Rp(_ArgTypes...)>
 {
 public:
     typedef _Rp result_type; // extension
@@ -2127,7 +2127,7 @@ packaged_task<_Rp(_ArgTypes...)>::reset()
 }
 
 template<class ..._ArgTypes>
-class _LIBCPP_TYPE_VIS_ONLY packaged_task<void(_ArgTypes...)>
+class _LIBCPP_TEMPLATE_VIS packaged_task<void(_ArgTypes...)>
 {
 public:
     typedef void result_type; // extension
@@ -2266,7 +2266,7 @@ swap(packaged_task<_Callable>& __x, packaged_task<_Callable>& __y) _NOEXCEPT
 }
 
 template <class _Callable, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<packaged_task<_Callable>, _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<packaged_task<_Callable>, _Alloc>
     : public true_type {};
 
 template <class _Rp, class _Fp>
@@ -2367,7 +2367,7 @@ async(_Fp&& __f, _Args&&... __args)
 // shared_future
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY shared_future
+class _LIBCPP_TEMPLATE_VIS shared_future
 {
     __assoc_state<_Rp>* __state_;
 
@@ -2441,7 +2441,7 @@ shared_future<_Rp>::operator=(const shared_future& __rhs) _NOEXCEPT
 }
 
 template <class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY shared_future<_Rp&>
+class _LIBCPP_TEMPLATE_VIS shared_future<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 

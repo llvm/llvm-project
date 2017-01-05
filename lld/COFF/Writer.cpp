@@ -304,7 +304,7 @@ void Writer::run() {
   writeBuildId();
 
   if (!Config->PDBPath.empty())
-    createPDB(Config->PDBPath, Symtab, SectionTable);
+    createPDB(Config->PDBPath, Symtab, SectionTable, BuildId->DI);
 
   if (auto EC = Buffer->commit())
     fatal(EC, "failed to write the output file");

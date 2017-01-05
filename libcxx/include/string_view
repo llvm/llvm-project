@@ -177,7 +177,7 @@ namespace std {
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _CharT, class _Traits = char_traits<_CharT> >
-class _LIBCPP_TYPE_VIS_ONLY basic_string_view {
+class _LIBCPP_TEMPLATE_VIS basic_string_view {
 public:
 	// types
 	typedef _Traits                                    traits_type;
@@ -735,7 +735,7 @@ typedef basic_string_view<wchar_t>  wstring_view;
 
 // [string.view.hash]
 template<class _CharT, class _Traits>
-struct _LIBCPP_TYPE_VIS_ONLY hash<basic_string_view<_CharT, _Traits> >
+struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, _Traits> >
     : public unary_function<basic_string_view<_CharT, _Traits>, size_t>
 {
     size_t operator()(const basic_string_view<_CharT, _Traits> __val) const _NOEXCEPT;

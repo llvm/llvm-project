@@ -397,7 +397,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Compare = less<_Key>,
           class _Allocator = allocator<_Key> >
-class _LIBCPP_TYPE_VIS_ONLY set
+class _LIBCPP_TEMPLATE_VIS set
 {
 public:
     // types:
@@ -810,7 +810,7 @@ swap(set<_Key, _Compare, _Allocator>& __x,
 
 template <class _Key, class _Compare = less<_Key>,
           class _Allocator = allocator<_Key> >
-class _LIBCPP_TYPE_VIS_ONLY multiset
+class _LIBCPP_TEMPLATE_VIS multiset
 {
 public:
     // types:

@@ -171,7 +171,7 @@ template <class charT, class traits, class T>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_istream
+class _LIBCPP_TEMPLATE_VIS basic_istream
     : virtual public basic_ios<_CharT, _Traits>
 {
     streamsize __gc_;
@@ -217,7 +217,7 @@ protected:
 public:
 
     // 27.7.1.1.3 Prefix/suffix:
-    class _LIBCPP_TYPE_VIS_ONLY sentry;
+    class _LIBCPP_TEMPLATE_VIS sentry;
 
     // 27.7.1.2 Formatted input:
     inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
@@ -294,7 +294,7 @@ public:
 };
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_istream<_CharT, _Traits>::sentry
+class _LIBCPP_TEMPLATE_VIS basic_istream<_CharT, _Traits>::sentry
 {
     bool __ok_;
 
@@ -1443,7 +1443,7 @@ operator>>(basic_istream<_CharT, _Traits>&& __is, _Tp&& __x)
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_iostream
+class _LIBCPP_TEMPLATE_VIS basic_iostream
     : public basic_istream<_CharT, _Traits>,
       public basic_ostream<_CharT, _Traits>
 {

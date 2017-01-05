@@ -190,7 +190,7 @@ use_facet(const locale& __l)
 // template <class _CharT> class collate;
 
 template <class _CharT>
-class _LIBCPP_TYPE_VIS_ONLY collate
+class _LIBCPP_TEMPLATE_VIS collate
     : public locale::facet
 {
 public:
@@ -274,7 +274,7 @@ _LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>
 
 // template <class CharT> class collate_byname;
 
-template <class _CharT> class _LIBCPP_TYPE_VIS_ONLY collate_byname;
+template <class _CharT> class _LIBCPP_TEMPLATE_VIS collate_byname;
 
 template <>
 class _LIBCPP_TYPE_VIS collate_byname<char>
@@ -425,7 +425,7 @@ public:
     _LIBCPP_ALWAYS_INLINE ctype_base() {}
 };
 
-template <class _CharT> class _LIBCPP_TYPE_VIS_ONLY ctype;
+template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype;
 
 template <>
 class _LIBCPP_TYPE_VIS ctype<wchar_t>
@@ -652,7 +652,7 @@ protected:
 
 // template <class CharT> class ctype_byname;
 
-template <class _CharT> class _LIBCPP_TYPE_VIS_ONLY ctype_byname;
+template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype_byname;
 
 template <>
 class _LIBCPP_TYPE_VIS ctype_byname<char>
@@ -813,7 +813,7 @@ public:
 
 // template <class internT, class externT, class stateT> class codecvt;
 
-template <class _InternT, class _ExternT, class _StateT> class _LIBCPP_TYPE_VIS_ONLY codecvt;
+template <class _InternT, class _ExternT, class _StateT> class _LIBCPP_TEMPLATE_VIS codecvt;
 
 // template <> class codecvt<char, char, mbstate_t>
 
@@ -1159,7 +1159,7 @@ protected:
 // template <class _InternT, class _ExternT, class _StateT> class codecvt_byname
 
 template <class _InternT, class _ExternT, class _StateT>
-class _LIBCPP_TYPE_VIS_ONLY codecvt_byname
+class _LIBCPP_TEMPLATE_VIS codecvt_byname
     : public codecvt<_InternT, _ExternT, _StateT>
 {
 public:
@@ -1367,7 +1367,7 @@ struct __widen_from_utf8<32>
 
 // template <class charT> class numpunct
 
-template <class _CharT> class _LIBCPP_TYPE_VIS_ONLY numpunct;
+template <class _CharT> class _LIBCPP_TEMPLATE_VIS numpunct;
 
 template <>
 class _LIBCPP_TYPE_VIS numpunct<char>
@@ -1433,7 +1433,7 @@ protected:
 
 // template <class charT> class numpunct_byname
 
-template <class _CharT> class _LIBCPP_TYPE_VIS_ONLY numpunct_byname;
+template <class _CharT> class _LIBCPP_TEMPLATE_VIS numpunct_byname;
 
 template <>
 class _LIBCPP_TYPE_VIS numpunct_byname<char>

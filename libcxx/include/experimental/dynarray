@@ -113,7 +113,7 @@ public:
 namespace std { namespace experimental { inline namespace __array_extensions_v1 {
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY dynarray
+struct _LIBCPP_TEMPLATE_VIS dynarray
 {
 public:
     // types:
@@ -295,7 +295,7 @@ dynarray<_Tp>::at(size_type __n) const
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<std::experimental::dynarray<_Tp>, _Alloc> : true_type {};
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<std::experimental::dynarray<_Tp>, _Alloc> : true_type {};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // if _LIBCPP_STD_VER > 11 

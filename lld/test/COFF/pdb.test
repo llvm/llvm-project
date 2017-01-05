@@ -28,8 +28,13 @@
 # CHECK-NEXT:   - Stream:          [ 8 ]
 # CHECK-NEXT:   - Stream:          [ 4 ]
 # CHECK-NEXT: PdbStream:
+# Ensure that the Guid matches the RSDS record:
+#   PDBSignature: 0x53445352
+#   PDBGUID (38 9A CC F2 14 A4 7F A2 6C F0 08 04 47 CF 5C 48)
+#   PDBAge: 1
 # CHECK-NEXT:   Age:             1
-# CHECK-NEXT:   Guid:            '{00000000-0000-0000-0000-000000000000}'
+# Guid:            '{389ACCF2-14A4-7FA2-6CF0-080447CF5C48}'
+# CHECK-NEXT:   Guid:            '{{.*}}'
 # CHECK-NEXT:   Signature:       0
 # CHECK-NEXT:   Version:         VC70
 # CHECK-NEXT:   NamedStreams:
