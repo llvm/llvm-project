@@ -228,10 +228,8 @@ void Sema::EraseUnwantedCUDAMatches(
       [&](const Pair &M1, const Pair &M2) { return GetCFP(M1) < GetCFP(M2); }));
 
   // Erase all functions with lower priority.
-  Matches.erase(
-      llvm::remove_if(
-          Matches, [&](const Pair &Match) { return GetCFP(Match) < BestCFP; }),
-      Matches.end());
+  llvm::erase_if(Matches,
+                 [&](const Pair &Match) { return GetCFP(Match) < BestCFP; });
 }
 
 /// When an implicitly-declared special member has to invoke more than one

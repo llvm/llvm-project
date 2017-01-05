@@ -1255,9 +1255,12 @@ void UnwrappedLineParser::tryToParseJSFunction() {
     if (FormatTok->is(tok::l_brace))
       tryToParseBracedList();
     else
-      while (FormatTok->isNot(tok::l_brace) && !eof())
+      while (!FormatTok->isOneOf(tok::l_brace, tok::semi) && !eof())
         nextToken();
   }
+
+  if (FormatTok->is(tok::semi))
+    return;
 
   parseChildBlock();
 }

@@ -6617,9 +6617,6 @@ public:
     /// \brief The explicitly-specified template arguments were not valid
     /// template arguments for the given template.
     TDK_InvalidExplicitArguments,
-    /// \brief The arguments included an overloaded function name that could
-    /// not be resolved to a suitable function.
-    TDK_FailedOverloadResolution,
     /// \brief Deduction failed; that's all we know.
     TDK_MiscellaneousDeductionFailure,
     /// \brief CUDA Target attributes do not match.

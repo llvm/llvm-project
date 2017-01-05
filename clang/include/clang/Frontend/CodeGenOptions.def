@@ -251,6 +251,10 @@ CODEGENOPT(DiagnosticsWithHotness, 1, 0)
 /// Whether copy relocations support is available when building as PIE.
 CODEGENOPT(PIECopyRelocations, 1, 0)
 
+/// Whether we should use the undefined behaviour optimization for control flow
+/// paths that reach the end of a function without executing a required return.
+CODEGENOPT(StrictReturn, 1, 1)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

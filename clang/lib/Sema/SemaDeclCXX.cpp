@@ -5395,6 +5395,26 @@ static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
   }
 }
 
+static void checkForMultipleExportedDefaultConstructors(Sema &S, CXXRecordDecl *Class) {
+  CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
+  for (Decl *Member : Class->decls()) {
+    // Look for exported default constructors.
+    auto *CD = dyn_cast<CXXConstructorDecl>(Member);
+    if (!CD || !CD->isDefaultConstructor() || !CD->hasAttr<DLLExportAttr>())
+      continue;
+
+    if (LastExportedDefaultCtor) {
+      S.Diag(LastExportedDefaultCtor->getLocation(),
+             diag::err_attribute_dll_ambiguous_default_ctor)
+          << Class;
+      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
+          << CD->getDeclName();
+      return;
+    }
+    LastExportedDefaultCtor = CD;
+  }
+}
+
 /// \brief Check class-level dllimport/dllexport attribute.
 void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   Attr *ClassAttr = getDLLAttr(Class);
@@ -10365,64 +10385,11 @@ void Sema::ActOnFinishCXXMemberDecls() {
       DelayedExceptionSpecChecks.clear();
       return;
     }
-  }
-}
-
-static void checkDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
-  // Don't do anything for template patterns.
-  if (Class->getDescribedClassTemplate())
-    return;
-
-  CallingConv ExpectedCallingConv = S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true);
-
-  CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
-  for (Decl *Member : Class->decls()) {
-    auto *CD = dyn_cast<CXXConstructorDecl>(Member);
-    if (!CD) {
-      // Recurse on nested classes.
-      if (auto *NestedRD = dyn_cast<CXXRecordDecl>(Member))
-        checkDefaultArgExprsForConstructors(S, NestedRD);
-      continue;
-    } else if (!CD->isDefaultConstructor() || !CD->hasAttr<DLLExportAttr>()) {
-      continue;
-    }
-
-    CallingConv ActualCallingConv =
-        CD->getType()->getAs<FunctionProtoType>()->getCallConv();
-
-    // Skip default constructors with typical calling conventions and no default
-    // arguments.
-    unsigned NumParams = CD->getNumParams();
-    if (ExpectedCallingConv == ActualCallingConv && NumParams == 0)
-      continue;
-
-    if (LastExportedDefaultCtor) {
-      S.Diag(LastExportedDefaultCtor->getLocation(),
-             diag::err_attribute_dll_ambiguous_default_ctor) << Class;
-      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
-          << CD->getDeclName();
-      return;
-    }
-    LastExportedDefaultCtor = CD;
-
-    for (unsigned I = 0; I != NumParams; ++I) {
-      (void)S.CheckCXXDefaultArgExpr(Class->getLocation(), CD,
-                                     CD->getParamDecl(I));
-      S.DiscardCleanupsInEvaluationContext();
-    }
+    checkForMultipleExportedDefaultConstructors(*this, Record);
   }
 }
 
 void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
-  auto *RD = dyn_cast<CXXRecordDecl>(D);
-
-  // Default constructors that are annotated with __declspec(dllexport) which
-  // have default arguments or don't use the standard calling convention are
-  // wrapped with a thunk called the default constructor closure.
-  if (RD && Context.getTargetInfo().getCXXABI().isMicrosoft())
-    checkDefaultArgExprsForConstructors(*this, RD);
-
   referenceDLLExportedClassMethods();
 }
 

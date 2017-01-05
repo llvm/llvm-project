@@ -5318,3 +5318,12 @@ SanitizerMask Contiki::getSupportedSanitizers() const {
     Res |= SanitizerKind::SafeStack;
   return Res;
 }
+
+/// AVR Toolchain
+AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
+                           const ArgList &Args)
+  : Generic_ELF(D, Triple, Args) { }
+Tool *AVRToolChain::buildLinker() const {
+  return new tools::AVR::Linker(*this);
+}
+// End AVR

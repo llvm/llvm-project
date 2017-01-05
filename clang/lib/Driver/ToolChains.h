@@ -1349,6 +1349,16 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY AVRToolChain : public Generic_ELF {
+protected:
+  Tool *buildLinker() const override;
+public:
+  AVRToolChain(const Driver &D, const llvm::Triple &Triple,
+               const llvm::opt::ArgList &Args);
+  bool IsIntegratedAssemblerDefault() const override { return true; }
+};
+
+
 } // end namespace toolchains
 } // end namespace driver
 } // end namespace clang

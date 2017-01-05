@@ -407,3 +407,24 @@ namespace overload_vs_pack {
     void test() { j(x, f, x); }
   }
 }
+
+namespace b29946541 {
+  template<typename> class A {};
+  template<typename T, typename U, template<typename, typename> class C>
+  void f(C<T, U>); // expected-note {{failed template argument deduction}}
+  void g(A<int> a) { f(a); } // expected-error {{no match}}
+}
+
+namespace deduction_from_empty_list {
+  template<int M, int N = 5> void f(int (&&)[N], int (&&)[N]) { // expected-note {{1 vs. 2}}
+    static_assert(M == N, "");
+  }
+
+  void test() {
+    f<5>({}, {});
+    f<1>({}, {0});
+    f<1>({0}, {});
+    f<1>({0}, {0});
+    f<1>({0}, {0, 1}); // expected-error {{no matching}}
+  }
+}

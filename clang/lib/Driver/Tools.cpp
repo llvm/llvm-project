@@ -3067,6 +3067,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         continue;
       }
 
+      if (C.getDefaultToolChain().getTriple().isOSBinFormatCOFF() &&
+          Value == "-mbig-obj")
+        continue; // LLVM handles bigobj automatically
+
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
@@ -4462,6 +4466,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fstrict_enums, options::OPT_fno_strict_enums,
                    false))
     CmdArgs.push_back("-fstrict-enums");
+  if (!Args.hasFlag(options::OPT_fstrict_return, options::OPT_fno_strict_return,
+                    true))
+    CmdArgs.push_back("-fno-strict-return");
   if (Args.hasFlag(options::OPT_fstrict_vtable_pointers,
                    options::OPT_fno_strict_vtable_pointers,
                    false))
@@ -12220,3 +12227,19 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec = Args.MakeArgString(TC.GetProgramPath("fatbinary"));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
+
+void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                               const InputInfo &Output,
+                               const InputInfoList &Inputs,
+                               const ArgList &Args,
+                               const char *LinkingOutput) const {
+
+  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  ArgStringList CmdArgs;
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
+                                          CmdArgs, Inputs));
+}
+// AVR tools end.

@@ -871,6 +871,14 @@ static bool isX86VectorCallAggregateSmallEnough(uint64_t NumMembers) {
   return NumMembers <= 4;
 }
 
+/// Returns a Homogeneous Vector Aggregate ABIArgInfo, used in X86.
+static ABIArgInfo getDirectX86Hva(llvm::Type* T = nullptr) {
+  auto AI = ABIArgInfo::getDirect(T);
+  AI.setInReg(true);
+  AI.setCanBeFlattened(false);
+  return AI;
+}
+
 //===----------------------------------------------------------------------===//
 // X86-32 ABI Implementation
 //===----------------------------------------------------------------------===//
@@ -882,6 +890,11 @@ struct CCState {
   unsigned CC;
   unsigned FreeRegs;
   unsigned FreeSSERegs;
+};
+
+enum {
+  // Vectorcall only allows the first 6 parameters to be passed in registers.
+  VectorcallMaxParamNumAsReg = 6
 };
 
 /// X86_32ABIInfo - The X86-32 ABI information.
@@ -929,6 +942,8 @@ class X86_32ABIInfo : public SwiftABIInfo {
   Class classify(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy, CCState &State) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State) const;
+  ABIArgInfo reclassifyHvaArgType(QualType RetTy, CCState &State, 
+                                  const ABIArgInfo& current) const;
   /// \brief Updates the number of available free registers, returns 
   /// true if any registers were allocated.
   bool updateFreeRegs(QualType Ty, CCState &State) const;
@@ -946,6 +961,8 @@ class X86_32ABIInfo : public SwiftABIInfo {
   void addFieldToArgStruct(SmallVector<llvm::Type *, 6> &FrameFields,
                            CharUnits &StackOffset, ABIArgInfo &Info,
                            QualType Type) const;
+  void computeVectorCallArgs(CGFunctionInfo &FI, CCState &State,
+                             bool &UsedInAlloca) const;
 
 public:
 
@@ -1494,6 +1511,27 @@ bool X86_32ABIInfo::shouldPrimitiveUseInReg(QualType Ty, CCState &State) const {
   return true;
 }
 
+ABIArgInfo
+X86_32ABIInfo::reclassifyHvaArgType(QualType Ty, CCState &State,
+                                    const ABIArgInfo &current) const {
+  // Assumes vectorCall calling convention.
+  const Type *Base = nullptr;
+  uint64_t NumElts = 0;
+
+  if (!Ty->isBuiltinType() && !Ty->isVectorType() &&
+      isHomogeneousAggregate(Ty, Base, NumElts)) {
+    if (State.FreeSSERegs >= NumElts) {
+      // HVA types get passed directly in registers if there is room.
+      State.FreeSSERegs -= NumElts;
+      return getDirectX86Hva();
+    }
+    // If there's no room, the HVA gets passed as normal indirect
+    // structure.
+    return getIndirectResult(Ty, /*ByVal=*/false, State);
+  } 
+  return current;
+}
+
 ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
                                                CCState &State) const {
   // FIXME: Set alignment on indirect arguments.
@@ -1513,19 +1551,34 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   }
 
   // vectorcall adds the concept of a homogenous vector aggregate, similar
-  // to other targets.
+  // to other targets, regcall uses some of the HVA rules.
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
   if ((State.CC == llvm::CallingConv::X86_VectorCall ||
        State.CC == llvm::CallingConv::X86_RegCall) &&
       isHomogeneousAggregate(Ty, Base, NumElts)) {
-    if (State.FreeSSERegs >= NumElts) {
-      State.FreeSSERegs -= NumElts;
-      if (Ty->isBuiltinType() || Ty->isVectorType())
+
+    if (State.CC == llvm::CallingConv::X86_RegCall) {
+      if (State.FreeSSERegs >= NumElts) {
+        State.FreeSSERegs -= NumElts;
+        if (Ty->isBuiltinType() || Ty->isVectorType())
+          return ABIArgInfo::getDirect();
+        return ABIArgInfo::getExpand();
+
+      }
+      return getIndirectResult(Ty, /*ByVal=*/false, State);
+    } else if (State.CC == llvm::CallingConv::X86_VectorCall) {
+      if (State.FreeSSERegs >= NumElts && (Ty->isBuiltinType() || Ty->isVectorType())) {
+        // Actual floating-point types get registers first time through if
+        // there is registers available
+        State.FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      return ABIArgInfo::getExpand();
+      }  else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
+        // HVA Types only get registers after everything else has been
+        // set, so it gets set as indirect for now.
+        return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty));
+      }
     }
-    return getIndirectResult(Ty, /*ByVal=*/false, State);
   }
 
   if (isAggregateTypeForABI(Ty)) {
@@ -1604,6 +1657,36 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   return ABIArgInfo::getDirect();
 }
 
+void X86_32ABIInfo::computeVectorCallArgs(CGFunctionInfo &FI, CCState &State,
+                                          bool &UsedInAlloca) const {
+  // Vectorcall only allows the first 6 parameters to be passed in registers,
+  // and homogeneous vector aggregates are only put into registers as a second
+  // priority.
+  unsigned Count = 0;
+  CCState ZeroState = State;
+  ZeroState.FreeRegs = ZeroState.FreeSSERegs = 0;
+  // HVAs must be done as a second priority for registers, so the deferred
+  // items are dealt with by going through the pattern a second time.
+  for (auto &I : FI.arguments()) {
+    if (Count < VectorcallMaxParamNumAsReg)
+      I.info = classifyArgumentType(I.type, State);
+    else
+      // Parameters after the 6th cannot be passed in registers,
+      // so pretend there are no registers left for them.
+      I.info = classifyArgumentType(I.type, ZeroState);
+    UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
+    ++Count;
+  }
+  Count = 0;
+  // Go through the arguments a second time to get HVAs registers if there
+  // are still some available.
+  for (auto &I : FI.arguments()) {
+    if (Count < VectorcallMaxParamNumAsReg)
+      I.info = reclassifyHvaArgType(I.type, State, I.info);
+    ++Count;
+  }
+}
+
 void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   CCState State(FI.getCallingConvention());
   if (IsMCUABI)
@@ -1638,9 +1721,14 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     ++State.FreeRegs;
 
   bool UsedInAlloca = false;
-  for (auto &I : FI.arguments()) {
-    I.info = classifyArgumentType(I.type, State);
-    UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
+  if (State.CC == llvm::CallingConv::X86_VectorCall) {
+    computeVectorCallArgs(FI, State, UsedInAlloca);
+  } else {
+    // If not vectorcall, revert to normal behavior.
+    for (auto &I : FI.arguments()) {
+      I.info = classifyArgumentType(I.type, State);
+      UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
+    }
   }
 
   // If we needed to use inalloca for any argument, do a second pass and rewrite
@@ -2070,10 +2158,14 @@ public:
   }
 
 private:
-  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs,
-                      bool IsReturnType) const;
+  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
+                      bool IsVectorCall, bool IsRegCall) const;
+  ABIArgInfo reclassifyHvaArgType(QualType Ty, unsigned &FreeSSERegs,
+                                      const ABIArgInfo &current) const;
+  void computeVectorCallArgs(CGFunctionInfo &FI, unsigned FreeSSERegs,
+                             bool IsVectorCall, bool IsRegCall) const;
 
-  bool IsMingw64;
+    bool IsMingw64;
 };
 
 class X86_64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -3679,8 +3771,24 @@ Address X86_64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*allowHigherAlign*/ false);
 }
 
+ABIArgInfo
+WinX86_64ABIInfo::reclassifyHvaArgType(QualType Ty, unsigned &FreeSSERegs,
+                                    const ABIArgInfo &current) const {
+  // Assumes vectorCall calling convention.
+  const Type *Base = nullptr;
+  uint64_t NumElts = 0;
+
+  if (!Ty->isBuiltinType() && !Ty->isVectorType() &&
+      isHomogeneousAggregate(Ty, Base, NumElts) && FreeSSERegs >= NumElts) {
+    FreeSSERegs -= NumElts;
+    return getDirectX86Hva();
+  }
+  return current;
+}
+
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType) const {
+                                      bool IsReturnType, bool IsVectorCall,
+                                      bool IsRegCall) const {
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -3704,20 +3812,33 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
   }
 
-  // vectorcall adds the concept of a homogenous vector aggregate, similar to
-  // other targets.
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
-  if (FreeSSERegs && isHomogeneousAggregate(Ty, Base, NumElts)) {
-    if (FreeSSERegs >= NumElts) {
-      FreeSSERegs -= NumElts;
-      if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+  // vectorcall adds the concept of a homogenous vector aggregate, similar to
+  // other targets.
+  if ((IsVectorCall || IsRegCall) &&
+      isHomogeneousAggregate(Ty, Base, NumElts)) {
+    if (IsRegCall) {
+      if (FreeSSERegs >= NumElts) {
+        FreeSSERegs -= NumElts;
+        if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+          return ABIArgInfo::getDirect();
+        return ABIArgInfo::getExpand();
+      }
+      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    } else if (IsVectorCall) {
+      if (FreeSSERegs >= NumElts &&
+          (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
+        FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      return ABIArgInfo::getExpand();
+      } else if (IsReturnType) {
+        return ABIArgInfo::getExpand();
+      } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
+        // HVAs are delayed and reclassified in the 2nd step.
+        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+      }
     }
-    return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
   }
-
 
   if (Ty->isMemberPointerType()) {
     // If the member pointer is represented by an LLVM int or ptr, pass it
@@ -3754,6 +3875,32 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   return ABIArgInfo::getDirect();
 }
 
+void WinX86_64ABIInfo::computeVectorCallArgs(CGFunctionInfo &FI,
+                                             unsigned FreeSSERegs,
+                                             bool IsVectorCall,
+                                             bool IsRegCall) const {
+  unsigned Count = 0;
+  for (auto &I : FI.arguments()) {
+    if (Count < VectorcallMaxParamNumAsReg)
+      I.info = classify(I.type, FreeSSERegs, false, IsVectorCall, IsRegCall);
+    else {
+      // Since these cannot be passed in registers, pretend no registers
+      // are left.
+      unsigned ZeroSSERegsAvail = 0;
+      I.info = classify(I.type, /*FreeSSERegs=*/ZeroSSERegsAvail, false,
+                        IsVectorCall, IsRegCall);
+    }
+    ++Count;
+  }
+
+  Count = 0;
+  for (auto &I : FI.arguments()) {
+    if (Count < VectorcallMaxParamNumAsReg)
+      I.info = reclassifyHvaArgType(I.type, FreeSSERegs, I.info);
+    ++Count;
+  }
+}
+
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   bool IsVectorCall =
       FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall;
@@ -3769,17 +3916,24 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true);
+    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true,
+                                  IsVectorCall, IsRegCall);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
     FreeSSERegs = 6;
   } else if (IsRegCall) {
+    // RegCall gives us 16 SSE registers, we can reuse the return registers.
     FreeSSERegs = 16;
   }
 
-  for (auto &I : FI.arguments())
-    I.info = classify(I.type, FreeSSERegs, false);
+  if (IsVectorCall) {
+    computeVectorCallArgs(FI, FreeSSERegs, IsVectorCall, IsRegCall);
+  } else {
+    for (auto &I : FI.arguments())
+      I.info = classify(I.type, FreeSSERegs, false, IsVectorCall, IsRegCall);
+  }
+
 }
 
 Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,

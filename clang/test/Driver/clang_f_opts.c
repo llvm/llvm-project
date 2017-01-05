@@ -477,3 +477,8 @@
 // CHECK-NEW-PM-NOT: -fno-experimental-new-pass-manager
 // CHECK-NO-NEW-PM: -fno-experimental-new-pass-manager
 // CHECK-NO-NEW-PM-NOT: -fexperimental-new-pass-manager
+
+// RUN: %clang -### -S -fstrict-return %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-RETURN %s
+// RUN: %clang -### -S -fno-strict-return %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-RETURN %s
+// CHECK-STRICT-RETURN-NOT: "-fno-strict-return"
+// CHECK-NO-STRICT-RETURN: "-fno-strict-return"

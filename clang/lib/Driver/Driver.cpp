@@ -3764,6 +3764,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       case llvm::Triple::wasm64:
         TC = new toolchains::WebAssembly(*this, Target, Args);
         break;
+      case llvm::Triple::avr:
+        TC = new toolchains::AVRToolChain(*this, Target, Args);
+        break;
       default:
         if (Target.getVendor() == llvm::Triple::Myriad)
           TC = new toolchains::MyriadToolChain(*this, Target, Args);

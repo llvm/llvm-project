@@ -1702,10 +1702,10 @@ void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
 void ASTWriter::WriteDeclAbbrevs() {
   using namespace llvm;
 
-  BitCodeAbbrev *Abv;
+  std::shared_ptr<BitCodeAbbrev> Abv;
 
   // Abbreviation for DECL_FIELD
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_FIELD));
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
@@ -1735,10 +1735,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
-  DeclFieldAbbrev = Stream.EmitAbbrev(Abv);
+  DeclFieldAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_OBJC_IVAR
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_OBJC_IVAR));
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
@@ -1771,10 +1771,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
-  DeclObjCIvarAbbrev = Stream.EmitAbbrev(Abv);
+  DeclObjCIvarAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_ENUM
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_ENUM));
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
@@ -1820,10 +1820,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
-  DeclEnumAbbrev = Stream.EmitAbbrev(Abv);
+  DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_RECORD
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_RECORD));
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
@@ -1864,10 +1864,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
-  DeclRecordAbbrev = Stream.EmitAbbrev(Abv);
+  DeclRecordAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_PARM_VAR
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_PARM_VAR));
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
@@ -1911,10 +1911,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
-  DeclParmVarAbbrev = Stream.EmitAbbrev(Abv);
+  DeclParmVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_TYPEDEF
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_TYPEDEF));
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
@@ -1940,10 +1940,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   // TypedefDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
-  DeclTypedefAbbrev = Stream.EmitAbbrev(Abv);
+  DeclTypedefAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_VAR
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_VAR));
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
@@ -1989,10 +1989,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
-  DeclVarAbbrev = Stream.EmitAbbrev(Abv);
+  DeclVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_CXX_METHOD
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CXX_METHOD));
   // RedeclarableDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // CanonicalDecl
@@ -2047,10 +2047,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   //  Add an AbbrevOp for 'size then elements' and use it here.
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  DeclCXXMethodAbbrev = Stream.EmitAbbrev(Abv);
+  DeclCXXMethodAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for EXPR_DECL_REF
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_DECL_REF));
   //Stmt
   //Expr
@@ -2070,10 +2070,10 @@ void ASTWriter::WriteDeclAbbrevs() {
                            1)); // RefersToEnclosingVariableOrCapture
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
-  DeclRefExprAbbrev = Stream.EmitAbbrev(Abv);
+  DeclRefExprAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for EXPR_INTEGER_LITERAL
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_INTEGER_LITERAL));
   //Stmt
   //Expr
@@ -2088,10 +2088,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
   Abv->Add(BitCodeAbbrevOp(32));                      // Bit Width
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Value
-  IntegerLiteralAbbrev = Stream.EmitAbbrev(Abv);
+  IntegerLiteralAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for EXPR_CHARACTER_LITERAL
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_CHARACTER_LITERAL));
   //Stmt
   //Expr
@@ -2106,10 +2106,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getValue
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // getKind
-  CharacterLiteralAbbrev = Stream.EmitAbbrev(Abv);
+  CharacterLiteralAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for EXPR_IMPLICIT_CAST
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_IMPLICIT_CAST));
   // Stmt
   // Expr
@@ -2124,17 +2124,17 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0)); // PathSize
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 6)); // CastKind
   // ImplicitCastExpr
-  ExprImplicitCastAbbrev = Stream.EmitAbbrev(Abv);
+  ExprImplicitCastAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_LEXICAL));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  DeclContextLexicalAbbrev = Stream.EmitAbbrev(Abv);
+  DeclContextLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  Abv = new BitCodeAbbrev();
+  Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_VISIBLE));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  DeclContextVisibleLookupAbbrev = Stream.EmitAbbrev(Abv);
+  DeclContextVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
 }
 
 /// isRequiredDecl - Check if this is a "required" Decl, which must be seen by
