@@ -29,7 +29,6 @@ check_cxx_compiler_flag(-std=c++11           COMPILER_RT_HAS_STD_CXX11_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC)
 check_cxx_compiler_flag(-fno-lto             COMPILER_RT_HAS_FNO_LTO_FLAG)
 check_cxx_compiler_flag("-Werror -msse3" COMPILER_RT_HAS_MSSE3_FLAG)
-check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 
 if(NOT WIN32 AND NOT CYGWIN)

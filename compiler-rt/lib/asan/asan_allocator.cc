@@ -681,6 +681,7 @@ struct Allocator {
 
   void PrintStats() {
     allocator.PrintStats();
+    quarantine.PrintStats();
   }
 
   void ForceLock() {
@@ -700,18 +701,21 @@ static AsanAllocator &get_allocator() {
   return instance.allocator;
 }
 
-bool AsanChunkView::IsValid() {
+bool AsanChunkView::IsValid() const {
   return chunk_ && chunk_->chunk_state != CHUNK_AVAILABLE;
 }
-bool AsanChunkView::IsAllocated() {
+bool AsanChunkView::IsAllocated() const {
   return chunk_ && chunk_->chunk_state == CHUNK_ALLOCATED;
 }
-uptr AsanChunkView::Beg() { return chunk_->Beg(); }
-uptr AsanChunkView::End() { return Beg() + UsedSize(); }
-uptr AsanChunkView::UsedSize() { return chunk_->UsedSize(); }
-uptr AsanChunkView::AllocTid() { return chunk_->alloc_tid; }
-uptr AsanChunkView::FreeTid() { return chunk_->free_tid; }
-AllocType AsanChunkView::GetAllocType() {
+bool AsanChunkView::IsQuarantined() const {
+  return chunk_ && chunk_->chunk_state == CHUNK_QUARANTINE;
+}
+uptr AsanChunkView::Beg() const { return chunk_->Beg(); }
+uptr AsanChunkView::End() const { return Beg() + UsedSize(); }
+uptr AsanChunkView::UsedSize() const { return chunk_->UsedSize(); }
+uptr AsanChunkView::AllocTid() const { return chunk_->alloc_tid; }
+uptr AsanChunkView::FreeTid() const { return chunk_->free_tid; }
+AllocType AsanChunkView::GetAllocType() const {
   return (AllocType)chunk_->alloc_type;
 }
 
@@ -722,14 +726,14 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
-u32 AsanChunkView::GetAllocStackId() { return chunk_->alloc_context_id; }
-u32 AsanChunkView::GetFreeStackId() { return chunk_->free_context_id; }
+u32 AsanChunkView::GetAllocStackId() const { return chunk_->alloc_context_id; }
+u32 AsanChunkView::GetFreeStackId() const { return chunk_->free_context_id; }
 
-StackTrace AsanChunkView::GetAllocStack() {
+StackTrace AsanChunkView::GetAllocStack() const {
   return GetStackTraceFromId(GetAllocStackId());
 }
 
-StackTrace AsanChunkView::GetFreeStack() {
+StackTrace AsanChunkView::GetFreeStack() const {
   return GetStackTraceFromId(GetFreeStackId());
 }
 
