@@ -92,12 +92,11 @@ std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
       DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info);
   if (Info.Line == 0)
     return "";
-  return convertToUnixPathSeparator(Info.FileName) + ":" +
-         std::to_string(Info.Line);
+  return Info.FileName + ":" + std::to_string(Info.Line);
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string elf::toString(const InputFile *F) {
+std::string lld::toString(const InputFile *F) {
   if (!F)
     return "(internal)";
   if (!F->ArchiveName.empty())
@@ -525,9 +524,9 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
             "could not get the buffer for the member defining symbol " +
                 Sym->getName());
 
-  if (C.getParent()->isThin() && Driver->Cpio)
-    Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
-                         Ret.getBuffer());
+  if (C.getParent()->isThin() && Driver->Tar)
+    Driver->Tar->append(relativeToRoot(check(C.getFullName())),
+                        Ret.getBuffer());
   if (C.getParent()->isThin())
     return {Ret, 0};
   return {Ret, C.getChildOffset()};

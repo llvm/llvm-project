@@ -59,7 +59,7 @@ recursive_mutex::recursive_mutex()
 
 recursive_mutex::~recursive_mutex()
 {
-    int e = __libcpp_mutex_destroy(&__m_);
+    int e = __libcpp_recursive_mutex_destroy(&__m_);
     (void)e;
     assert(e == 0);
 }
@@ -67,7 +67,7 @@ recursive_mutex::~recursive_mutex()
 void
 recursive_mutex::lock()
 {
-    int ec = __libcpp_mutex_lock(&__m_);
+    int ec = __libcpp_recursive_mutex_lock(&__m_);
     if (ec)
         __throw_system_error(ec, "recursive_mutex lock failed");
 }
@@ -75,7 +75,7 @@ recursive_mutex::lock()
 void
 recursive_mutex::unlock() _NOEXCEPT
 {
-    int e = __libcpp_mutex_unlock(&__m_);
+    int e = __libcpp_recursive_mutex_unlock(&__m_);
     (void)e;
     assert(e == 0);
 }
@@ -83,7 +83,7 @@ recursive_mutex::unlock() _NOEXCEPT
 bool
 recursive_mutex::try_lock() _NOEXCEPT
 {
-    return __libcpp_mutex_trylock(&__m_) == 0;
+    return __libcpp_recursive_mutex_trylock(&__m_) == 0;
 }
 
 // timed_mutex

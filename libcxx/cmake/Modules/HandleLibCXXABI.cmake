@@ -10,7 +10,10 @@
 #   abidefines: A list of defines needed to compile libc++ with the ABI library
 #   abilib    : The ABI library to link against.
 #   abifiles  : A list of files (which may be relative paths) to copy into the
-#               libc++ build tree for the build.  These files will also be
+#               libc++ build tree for the build.  These files will be copied
+#               twice: once into include/, so the libc++ build itself can find
+#               them, and once into include/c++/v1, so that a clang built into
+#               the same build area will find them.  These files will also be
 #               installed alongside the libc++ headers.
 #   abidirs   : A list of relative paths to create under an include directory
 #               in the libc++ build directory.
@@ -31,8 +34,10 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
   # The place in the build tree where we store out-of-source headers.
   set(LIBCXX_BUILD_HEADERS_ROOT "${CMAKE_BINARY_DIR}/include/c++-build")
   file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/c++/v1")
   foreach(_d ${abidirs})
     file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}/${_d}")
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/c++/v1/${_d}")
   endforeach()
 
   foreach(fpath ${LIBCXX_ABILIB_FILES})
@@ -44,6 +49,9 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
         get_filename_component(ifile ${fpath} NAME)
         file(COPY "${incpath}/${fpath}"
           DESTINATION "${LIBCXX_BUILD_HEADERS_ROOT}/${dstdir}"
+          )
+        file(COPY "${incpath}/${fpath}"
+          DESTINATION "${CMAKE_BINARY_DIR}/include/c++/v1/${dstdir}"
           )
         if (LIBCXX_INSTALL_HEADERS)
           install(FILES "${LIBCXX_BUILD_HEADERS_ROOT}/${fpath}"

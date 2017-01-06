@@ -10,9 +10,9 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// Clang 3.8 doesn't generate constexpr special members correctly.
-// XFAIL: clang-3.8, apple-clang-7, apple-clang-8
-
+// The following compilers don't generate constexpr special members correctly.
+// XFAIL: clang-3.5, clang-3.6, clang-3.7, clang-3.8
+// XFAIL: apple-clang-6, apple-clang-7, apple-clang-8
 
 // <variant>
 
@@ -64,7 +64,7 @@ struct TMoveAssignNTCopyAssign {
   int value;
 };
 
-static_assert(std::is_trivially_move_assignable_v<TMoveAssignNTCopyAssign>);
+static_assert(std::is_trivially_move_assignable_v<TMoveAssignNTCopyAssign>, "");
 
 void test_move_assignment_sfinae() {
   {
@@ -100,8 +100,8 @@ void test_move_assignment_same_index() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 0);
-    static_assert(result.value == 42);
+    static_assert(result.index == 0, "");
+    static_assert(result.value == 42, "");
   }
   {
     struct {
@@ -114,8 +114,8 @@ void test_move_assignment_same_index() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value == 42l);
+    static_assert(result.index == 1, "");
+    static_assert(result.value == 42l, "");
   }
   {
     struct {
@@ -128,8 +128,8 @@ void test_move_assignment_same_index() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value == 42);
+    static_assert(result.index == 1, "");
+    static_assert(result.value == 42, "");
   }
 }
 
@@ -145,8 +145,8 @@ void test_move_assignment_different_index() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value == 42l);
+    static_assert(result.index == 1, "");
+    static_assert(result.value == 42l, "");
   }
   {
     struct {
@@ -159,8 +159,8 @@ void test_move_assignment_different_index() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value == 42);
+    static_assert(result.index == 1, "");
+    static_assert(result.value == 42, "");
   }
 }
 

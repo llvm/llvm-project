@@ -48,6 +48,10 @@ MapOutOfBandToText(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
     return "library-unloaded";
   case CMICmnMIOutOfBandRecord::eOutOfBand_TargetStreamOutput:
     return "";
+  case CMICmnMIOutOfBandRecord::eOutOfBand_ConsoleStreamOutput:
+    return "";
+  case CMICmnMIOutOfBandRecord::eOutOfBand_LogStreamOutput:
+    return "";
   }
   assert(false && "unknown CMICmnMIOutofBandRecord::OutOfBand_e");
   return NULL;
@@ -86,6 +90,10 @@ MapOutOfBandToToken(CMICmnMIOutOfBandRecord::OutOfBand_e veType) {
     return "=";
   case CMICmnMIOutOfBandRecord::eOutOfBand_TargetStreamOutput:
     return "@";
+  case CMICmnMIOutOfBandRecord::eOutOfBand_ConsoleStreamOutput:
+    return "~";
+  case CMICmnMIOutOfBandRecord::eOutOfBand_LogStreamOutput:
+    return "&";
   }
   assert(false && "unknown CMICmnMIOutofBandRecord::OutOfBand_e");
   return NULL;

@@ -85,11 +85,11 @@ constexpr adopt_lock_t  adopt_lock  = adopt_lock_t();
 // the mangling consistent between dialects.
 #if defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
 template <class ..._Mutexes>
-class _LIBCPP_TYPE_VIS_ONLY lock_guard;
+class _LIBCPP_TEMPLATE_VIS lock_guard;
 #endif
 
 template <class _Mutex>
-class _LIBCPP_TYPE_VIS_ONLY _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable)
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable)
 #if !defined(_LIBCPP_ABI_VARIADIC_LOCK_GUARD)
 lock_guard
 #else
@@ -118,7 +118,7 @@ private:
 };
 
 template <class _Mutex>
-class _LIBCPP_TYPE_VIS_ONLY unique_lock
+class _LIBCPP_TEMPLATE_VIS unique_lock
 {
 public:
     typedef _Mutex mutex_type;

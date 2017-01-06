@@ -365,25 +365,6 @@ TEST(ClangMove, DontMoveAll) {
   }
 }
 
-TEST(ClangMove, IgnoreUnsupportedKindsAndMoveAll) {
-  const char Code[] = "#include \"foo.h\"\nint A::f() { return 0; }";
-  std::vector<std::string> TestHeaders = {
-      "typedef int Int;\nclass A {\npublic:\n  int f();\n};\n",
-      "using Int = int;\nclass A {\npublic:\n  int f();\n};\n",
-  };
-  move::MoveDefinitionSpec Spec;
-  Spec.Names.push_back("A");
-  Spec.OldHeader = "foo.h";
-  Spec.OldCC = "foo.cc";
-  Spec.NewHeader = "new_foo.h";
-  Spec.NewCC = "new_foo.cc";
-  for (const auto &Header : TestHeaders) {
-    auto Results = runClangMoveOnCode(Spec, Header.c_str(), Code);
-    EXPECT_EQ(Header, Results[Spec.NewHeader]);
-    EXPECT_EQ("", Results[Spec.OldHeader]);
-  }
-}
-
 TEST(ClangMove, MacroInFunction) {
   const char TestHeader[] = "#define INT int\n"
                             "class A {\npublic:\n  int f();\n};\n"

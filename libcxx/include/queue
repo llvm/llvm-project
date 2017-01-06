@@ -178,7 +178,7 @@ template <class T, class Container, class Compare>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Container = deque<_Tp> > class _LIBCPP_TYPE_VIS_ONLY queue;
+template <class _Tp, class _Container = deque<_Tp> > class _LIBCPP_TEMPLATE_VIS queue;
 
 template <class _Tp, class _Container>
 _LIBCPP_INLINE_VISIBILITY
@@ -191,7 +191,7 @@ bool
 operator< (const queue<_Tp, _Container>& __x,const queue<_Tp, _Container>& __y);
 
 template <class _Tp, class _Container /*= deque<_Tp>*/>
-class _LIBCPP_TYPE_VIS_ONLY queue
+class _LIBCPP_TEMPLATE_VIS queue
 {
 public:
     typedef _Container                               container_type;
@@ -381,14 +381,14 @@ swap(queue<_Tp, _Container>& __x, queue<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<queue<_Tp, _Container>, _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<queue<_Tp, _Container>, _Alloc>
     : public uses_allocator<_Container, _Alloc>
 {
 };
 
 template <class _Tp, class _Container = vector<_Tp>,
           class _Compare = less<typename _Container::value_type> >
-class _LIBCPP_TYPE_VIS_ONLY priority_queue
+class _LIBCPP_TEMPLATE_VIS priority_queue
 {
 public:
     typedef _Container                               container_type;
@@ -732,7 +732,7 @@ swap(priority_queue<_Tp, _Container, _Compare>& __x,
 }
 
 template <class _Tp, class _Container, class _Compare, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<priority_queue<_Tp, _Container, _Compare>, _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<priority_queue<_Tp, _Container, _Compare>, _Alloc>
     : public uses_allocator<_Container, _Alloc>
 {
 };

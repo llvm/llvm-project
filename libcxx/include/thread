@@ -211,7 +211,7 @@ _LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
 
 template<> struct hash<__thread_id>;
 
-class _LIBCPP_TYPE_VIS_ONLY __thread_id
+class _LIBCPP_TEMPLATE_VIS __thread_id
 {
     // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
     // NULL is the no-thread value on Darwin.  Someone needs to check
@@ -254,11 +254,11 @@ private:
 
     friend __thread_id this_thread::get_id() _NOEXCEPT;
     friend class _LIBCPP_TYPE_VIS thread;
-    friend struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>;
+    friend struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>;
 };
 
 template<>
-struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>
+struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
     : public unary_function<__thread_id, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY

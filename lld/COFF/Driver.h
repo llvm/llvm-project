@@ -20,6 +20,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/TarWriter.h"
 #include <memory>
 #include <set>
 #include <vector>
@@ -74,7 +75,7 @@ private:
   ArgParser Parser;
   SymbolTable Symtab;
 
-  std::unique_ptr<CpioFile> Cpio; // for /linkrepro
+  std::unique_ptr<llvm::TarWriter> Tar; // for /linkrepro
 
   // Opens a file. Path has to be resolved already.
   MemoryBufferRef openFile(StringRef Path);

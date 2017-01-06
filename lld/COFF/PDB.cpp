@@ -13,6 +13,7 @@
 #include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
@@ -131,7 +132,8 @@ static void addTypeInfo(SymbolTable *Symtab,
 
 // Creates a PDB file.
 void coff::createPDB(StringRef Path, SymbolTable *Symtab,
-                     ArrayRef<uint8_t> SectionTable) {
+                     ArrayRef<uint8_t> SectionTable,
+                     const llvm::codeview::DebugInfo *DI) {
   if (Config->DumpPdb)
     dumpCodeView(Symtab);
 
@@ -146,11 +148,9 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  InfoBuilder.setAge(1);
-
-  // Should be a random number, 0 for now.
-  InfoBuilder.setGuid({});
-
+  InfoBuilder.setAge(DI->PDB70.Age);
+  InfoBuilder.setGuid(
+      *reinterpret_cast<const pdb::PDB_UniqueId *>(&DI->PDB70.Signature));
   // Should be the current time, but set 0 for reproducibilty.
   InfoBuilder.setSignature(0);
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);

@@ -202,10 +202,9 @@ private:
   llvm::BumpPtrAllocator Alloc;
   std::unique_ptr<LTOModule> M;
 };
-
-std::string toString(InputFile *File);
-
 } // namespace coff
+
+std::string toString(coff::InputFile *File);
 } // namespace lld
 
 #endif

@@ -167,7 +167,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                       reg_info.byte_offset =
                           containing_reg_info->byte_offset + msbyte;
                     } else {
-                      assert(!"Invalid byte order");
+                      llvm_unreachable("Invalid byte order");
                     }
                   } else {
                     if (msbit > max_bit)

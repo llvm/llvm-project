@@ -681,7 +681,7 @@ _ValueType __libcpp_acquire_load(_ValueType const* __value) {
 template <class _Tp> class allocator;
 
 template <>
-class _LIBCPP_TYPE_VIS_ONLY allocator<void>
+class _LIBCPP_TEMPLATE_VIS allocator<void>
 {
 public:
     typedef void*             pointer;
@@ -692,7 +692,7 @@ public:
 };
 
 template <>
-class _LIBCPP_TYPE_VIS_ONLY allocator<const void>
+class _LIBCPP_TEMPLATE_VIS allocator<const void>
 {
 public:
     typedef const void*       pointer;
@@ -927,7 +927,7 @@ struct __pointer_traits_rebind<_Sp<_Tp, _A0, _A1, _A2>, _Up, false>
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Ptr>
-struct _LIBCPP_TYPE_VIS_ONLY pointer_traits
+struct _LIBCPP_TEMPLATE_VIS pointer_traits
 {
     typedef _Ptr                                                     pointer;
     typedef typename __pointer_traits_element_type<pointer>::type    element_type;
@@ -950,7 +950,7 @@ public:
 };
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY pointer_traits<_Tp*>
+struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*>
 {
     typedef _Tp*      pointer;
     typedef _Tp       element_type;
@@ -1489,7 +1489,7 @@ struct __alloc_traits_difference_type<_Alloc, _Ptr, true>
 };
 
 template <class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY allocator_traits
+struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
     typedef _Alloc                              allocator_type;
     typedef typename allocator_type::value_type value_type;
@@ -1742,7 +1742,7 @@ struct __rebind_alloc_helper
 // allocator
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY allocator
+class _LIBCPP_TEMPLATE_VIS allocator
 {
 public:
     typedef size_t            size_type;
@@ -1840,7 +1840,7 @@ public:
 };
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY allocator<const _Tp>
+class _LIBCPP_TEMPLATE_VIS allocator<const _Tp>
 {
 public:
     typedef size_t            size_type;
@@ -1944,7 +1944,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {return false;}
 
 template <class _OutputIterator, class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY raw_storage_iterator
+class _LIBCPP_TEMPLATE_VIS raw_storage_iterator
     : public iterator<output_iterator_tag,
                       _Tp,                                         // purposefully not C++03
                       ptrdiff_t,                                   // purposefully not C++03
@@ -2004,7 +2004,7 @@ struct auto_ptr_ref
 };
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY auto_ptr
+class _LIBCPP_TEMPLATE_VIS auto_ptr
 {
 private:
     _Tp* __ptr_;
@@ -2048,7 +2048,7 @@ public:
 };
 
 template <>
-class _LIBCPP_TYPE_VIS_ONLY auto_ptr<void>
+class _LIBCPP_TEMPLATE_VIS auto_ptr<void>
 {
 public:
     typedef void element_type;
@@ -2381,7 +2381,7 @@ struct __same_or_less_cv_qualified<_Ptr1, _Ptr2, false>
 // default_delete
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY default_delete
+struct _LIBCPP_TEMPLATE_VIS default_delete
 {
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
@@ -2400,7 +2400,7 @@ struct _LIBCPP_TYPE_VIS_ONLY default_delete
 };
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY default_delete<_Tp[]>
+struct _LIBCPP_TEMPLATE_VIS default_delete<_Tp[]>
 {
 public:
 #ifndef _LIBCPP_CXX03_LANG
@@ -2423,7 +2423,7 @@ public:
 };
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
-class _LIBCPP_TYPE_VIS_ONLY unique_ptr
+class _LIBCPP_TEMPLATE_VIS unique_ptr
 {
 public:
     typedef _Tp element_type;
@@ -2609,7 +2609,7 @@ public:
 };
 
 template <class _Tp, class _Dp>
-class _LIBCPP_TYPE_VIS_ONLY unique_ptr<_Tp[], _Dp>
+class _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp>
 {
 public:
     typedef _Tp element_type;
@@ -3357,7 +3357,7 @@ inline size_t __hash_combine(size_t __lhs, size_t __rhs) _NOEXCEPT {
 }
 
 template<class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<_Tp*>
+struct _LIBCPP_TEMPLATE_VIS hash<_Tp*>
     : public unary_function<_Tp*, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -3374,7 +3374,7 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<_Tp*>
 };
 
 template <class _Tp, class _Dp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<unique_ptr<_Tp, _Dp> >
+struct _LIBCPP_TEMPLATE_VIS hash<unique_ptr<_Tp, _Dp> >
 {
     typedef unique_ptr<_Tp, _Dp> argument_type;
     typedef size_t               result_type;
@@ -3699,7 +3699,7 @@ void __throw_bad_weak_ptr()
 #endif
 }
 
-template<class _Tp> class _LIBCPP_TYPE_VIS_ONLY weak_ptr;
+template<class _Tp> class _LIBCPP_TEMPLATE_VIS weak_ptr;
 
 class _LIBCPP_TYPE_VIS __shared_count
 {
@@ -3877,10 +3877,10 @@ __shared_ptr_emplace<_Tp, _Alloc>::__on_zero_shared_weak() _NOEXCEPT
     __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
-template<class _Tp> class _LIBCPP_TYPE_VIS_ONLY enable_shared_from_this;
+template<class _Tp> class _LIBCPP_TEMPLATE_VIS enable_shared_from_this;
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY shared_ptr
+class _LIBCPP_TEMPLATE_VIS shared_ptr
 {
 public:
     typedef _Tp element_type;
@@ -4156,8 +4156,8 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void __enable_weak_this(const volatile void*, const volatile void*) _NOEXCEPT {}
 
-    template <class _Up> friend class _LIBCPP_TYPE_VIS_ONLY shared_ptr;
-    template <class _Up> friend class _LIBCPP_TYPE_VIS_ONLY weak_ptr;
+    template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
+    template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
 };
 
 template<class _Tp>
@@ -5090,7 +5090,7 @@ get_deleter(const shared_ptr<_Tp>& __p) _NOEXCEPT
 #endif  // _LIBCPP_NO_RTTI
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY weak_ptr
+class _LIBCPP_TEMPLATE_VIS weak_ptr
 {
 public:
     typedef _Tp element_type;
@@ -5175,8 +5175,8 @@ public:
         bool owner_before(const weak_ptr<_Up>& __r) const
         {return __cntrl_ < __r.__cntrl_;}
 
-    template <class _Up> friend class _LIBCPP_TYPE_VIS_ONLY weak_ptr;
-    template <class _Up> friend class _LIBCPP_TYPE_VIS_ONLY shared_ptr;
+    template <class _Up> friend class _LIBCPP_TEMPLATE_VIS weak_ptr;
+    template <class _Up> friend class _LIBCPP_TEMPLATE_VIS shared_ptr;
 };
 
 template<class _Tp>
@@ -5376,7 +5376,7 @@ template <class _Tp> struct owner_less;
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY owner_less<shared_ptr<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> >
     : binary_function<shared_ptr<_Tp>, shared_ptr<_Tp>, bool>
 {
     typedef bool result_type;
@@ -5392,7 +5392,7 @@ struct _LIBCPP_TYPE_VIS_ONLY owner_less<shared_ptr<_Tp> >
 };
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY owner_less<weak_ptr<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> >
     : binary_function<weak_ptr<_Tp>, weak_ptr<_Tp>, bool>
 {
     typedef bool result_type;
@@ -5409,7 +5409,7 @@ struct _LIBCPP_TYPE_VIS_ONLY owner_less<weak_ptr<_Tp> >
 
 #if _LIBCPP_STD_VER > 14
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY owner_less<void>
+struct _LIBCPP_TEMPLATE_VIS owner_less<void>
 {
     template <class _Tp, class _Up>
     _LIBCPP_INLINE_VISIBILITY
@@ -5432,7 +5432,7 @@ struct _LIBCPP_TYPE_VIS_ONLY owner_less<void>
 #endif
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY enable_shared_from_this
+class _LIBCPP_TEMPLATE_VIS enable_shared_from_this
 {
     mutable weak_ptr<_Tp> __weak_this_;
 protected:
@@ -5467,7 +5467,7 @@ public:
 };
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<shared_ptr<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<shared_ptr<_Tp> >
 {
     typedef shared_ptr<_Tp>      argument_type;
     typedef size_t               result_type;
@@ -5616,6 +5616,15 @@ atomic_compare_exchange_weak_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v
 #endif  // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 
 //enum class
+#if defined(_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE)
+# ifndef _LIBCPP_CXX03_LANG
+enum class pointer_safety : unsigned char {
+  relaxed,
+  preferred,
+  strict
+};
+# endif
+#else
 struct _LIBCPP_TYPE_VIS pointer_safety
 {
     enum __lx
@@ -5628,15 +5637,32 @@ struct _LIBCPP_TYPE_VIS pointer_safety
     __lx __v_;
 
     _LIBCPP_INLINE_VISIBILITY
+    pointer_safety() : __v_() {}
+
+    _LIBCPP_INLINE_VISIBILITY
     pointer_safety(__lx __v) : __v_(__v) {}
     _LIBCPP_INLINE_VISIBILITY
     operator int() const {return __v_;}
 };
+#endif
+
+#if !defined(_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE) && \
+    defined(_LIBCPP_BUILDING_MEMORY)
+_LIBCPP_FUNC_VIS pointer_safety get_pointer_safety() _NOEXCEPT;
+#else
+// This function is only offered in C++03 under ABI v1.
+# if !defined(_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE) || !defined(_LIBCPP_CXX03_LANG)
+inline _LIBCPP_INLINE_VISIBILITY
+pointer_safety get_pointer_safety() _NOEXCEPT {
+  return pointer_safety::relaxed;
+}
+# endif
+#endif
+
 
 _LIBCPP_FUNC_VIS void declare_reachable(void* __p);
 _LIBCPP_FUNC_VIS void declare_no_pointers(char* __p, size_t __n);
 _LIBCPP_FUNC_VIS void undeclare_no_pointers(char* __p, size_t __n);
-_LIBCPP_FUNC_VIS pointer_safety get_pointer_safety() _NOEXCEPT;
 _LIBCPP_FUNC_VIS void* __undeclare_reachable(void* __p);
 
 template <class _Tp>

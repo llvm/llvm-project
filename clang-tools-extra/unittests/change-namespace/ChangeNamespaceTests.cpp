@@ -110,9 +110,49 @@ TEST_F(ChangeNamespaceTest, NewNsNestedInOldNs) {
                          "namespace nc {\n"
                          "class A {};\n"
                          "} // namespace nc\n"
-                         "\n"
                          "} // namespace nb\n"
                          "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, NewNsNestedInOldNsWithSurroundingNewLines) {
+  NewNamespace = "na::nb::nc";
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "\n"
+                     "class A {};\n"
+                     "\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "namespace na {\n"
+                         "namespace nb {\n"
+                         "namespace nc {\n"
+                         "\n"
+                         "class A {};\n"
+                         "\n"
+                         "} // namespace nc\n"
+                         "} // namespace nb\n"
+                         "} // namespace na\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, MoveOldNsWithSurroundingNewLines) {
+  NewNamespace = "nx::ny";
+  std::string Code = "namespace na {\n"
+                     "namespace nb {\n"
+                     "\n"
+                     "class A {};\n"
+                     "\n"
+                     "} // namespace nb\n"
+                     "} // namespace na\n";
+  std::string Expected = "\n\n"
+                         "namespace nx {\n"
+                         "namespace ny {\n"
+                         "\n"
+                         "class A {};\n"
+                         "\n"
+                         "} // namespace ny\n"
+                         "} // namespace nx\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
@@ -134,7 +174,6 @@ TEST_F(ChangeNamespaceTest, NewNsNestedInOldNsWithRefs) {
                          "class C {};\n"
                          "void f() { A a; B b; }\n"
                          "} // namespace nc\n"
-                         "\n"
                          "} // namespace nb\n"
                          "} // namespace na\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
@@ -1497,7 +1536,7 @@ TEST_F(ChangeNamespaceTest, UsingAliasInTemplate) {
                          "void f() {\n"
                          "  GG<float> g;\n"
                          "}\n"
-                         "} // namespace nc\n\n"
+                         "} // namespace nc\n"
                          "} // namespace nb\n"
                          "} // namespace na\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
@@ -1554,7 +1593,7 @@ TEST_F(ChangeNamespaceTest, TemplateUsingAliasInBaseClass) {
                          "  struct Derived::Nested nested;\n"
                          "  const struct Derived::Nested *nested_ptr;\n"
                          "}\n"
-                         "} // namespace nc\n\n"
+                         "} // namespace nc\n"
                          "} // namespace nb\n"
                          "} // namespace na\n";
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));

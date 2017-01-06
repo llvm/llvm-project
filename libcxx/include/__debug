@@ -56,7 +56,7 @@ class _LIBCPP_EXCEPTION_ABI __libcpp_debug_exception;
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS_ONLY __libcpp_debug_info {
+struct _LIBCPP_TEMPLATE_VIS __libcpp_debug_info {
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
   __libcpp_debug_info()
       : __file_(nullptr), __line_(-1), __pred_(nullptr), __msg_(nullptr) {}

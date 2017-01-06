@@ -19,9 +19,9 @@
 namespace __gnu_cxx {
 using namespace std;
 
-template <typename _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash { };
+template <typename _Tp> struct _LIBCPP_TEMPLATE_VIS hash { };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<const char*>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<const char*>
     : public unary_function<const char*, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -31,7 +31,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<const char*>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<char *>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<char *>
     : public unary_function<char*, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -41,7 +41,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<char *>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<char>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<char>
     : public unary_function<char, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -51,7 +51,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<char>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<signed char>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<signed char>
     : public unary_function<signed char, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -61,7 +61,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<signed char>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned char>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned char>
     : public unary_function<unsigned char, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -71,7 +71,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned char>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<short>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<short>
     : public unary_function<short, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -81,7 +81,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<short>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned short>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned short>
     : public unary_function<unsigned short, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -91,7 +91,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned short>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<int>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<int>
     : public unary_function<int, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -101,7 +101,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<int>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned int>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned int>
     : public unary_function<unsigned int, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -111,7 +111,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned int>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<long>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<long>
     : public unary_function<long, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -121,7 +121,7 @@ template <> struct _LIBCPP_TYPE_VIS_ONLY hash<long>
     }
 };
 
-template <> struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned long>
+template <> struct _LIBCPP_TEMPLATE_VIS hash<unsigned long>
     : public unary_function<unsigned long, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY

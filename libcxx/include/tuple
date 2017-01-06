@@ -471,7 +471,7 @@ struct __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
 
 
 template <class ..._Tp>
-class _LIBCPP_TYPE_VIS_ONLY tuple
+class _LIBCPP_TEMPLATE_VIS tuple
 {
     typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> base;
 
@@ -908,7 +908,7 @@ public:
 };
 
 template <>
-class _LIBCPP_TYPE_VIS_ONLY tuple<>
+class _LIBCPP_TEMPLATE_VIS tuple<>
 {
 public:
     _LIBCPP_INLINE_VISIBILITY
@@ -1340,7 +1340,7 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls)
 }
 
 template <class ..._Tp, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<tuple<_Tp...>, _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc>
     : true_type {};
 
 #endif // _LIBCPP_HAS_NO_VARIADICS

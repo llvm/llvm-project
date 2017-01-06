@@ -258,8 +258,7 @@ uint32_t DataEncoder::PutMaxU64(uint32_t offset, uint32_t byte_size,
   case 8:
     return PutU64(offset, value);
   default:
-    assert(!"GetMax64 unhandled case!");
-    break;
+    llvm_unreachable("GetMax64 unhandled case!");
   }
   return UINT32_MAX;
 }

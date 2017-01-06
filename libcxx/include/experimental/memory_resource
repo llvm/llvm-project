@@ -93,7 +93,7 @@ size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 }
 
 // 8.5, memory.resource
-class _LIBCPP_TYPE_VIS_ONLY memory_resource
+class _LIBCPP_TEMPLATE_VIS memory_resource
 {
     static const size_t __max_align = alignof(max_align_t);
 
@@ -151,7 +151,7 @@ memory_resource * set_default_resource(memory_resource * __new_res) _NOEXCEPT;
 
 // 8.6.1, memory.polymorphic.allocator.overview
 template <class _ValueType>
-class _LIBCPP_TYPE_VIS_ONLY polymorphic_allocator
+class _LIBCPP_TEMPLATE_VIS polymorphic_allocator
 {
 public:
     typedef _ValueType value_type;
@@ -334,7 +334,7 @@ bool operator!=(polymorphic_allocator<_Tp> const & __lhs,
 
 // 8.7.1, memory.resource.adaptor.overview
 template <class _CharAlloc>
-class _LIBCPP_TYPE_VIS_ONLY __resource_adaptor_imp
+class _LIBCPP_TEMPLATE_VIS __resource_adaptor_imp
   : public memory_resource
 {
     using _CTraits = allocator_traits<_CharAlloc>;

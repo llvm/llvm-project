@@ -42,7 +42,7 @@ public:
   ~IncludeFixerActionFactory() override;
 
   bool
-  runInvocation(clang::CompilerInvocation *Invocation,
+  runInvocation(std::shared_ptr<clang::CompilerInvocation> Invocation,
                 clang::FileManager *Files,
                 std::shared_ptr<clang::PCHContainerOperations> PCHContainerOps,
                 clang::DiagnosticConsumer *Diagnostics) override;
