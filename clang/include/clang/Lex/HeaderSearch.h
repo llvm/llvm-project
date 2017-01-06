@@ -147,7 +147,7 @@ class HeaderSearch {
   };
 
   /// \brief Header-search options used to initialize this header search.
-  IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts;
+  std::shared_ptr<HeaderSearchOptions> HSOpts;
 
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
@@ -248,7 +248,7 @@ class HeaderSearch {
   friend class DirectoryLookup;
   
 public:
-  HeaderSearch(IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts,
+  HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                const LangOptions &LangOpts, const TargetInfo *Target);
   ~HeaderSearch();

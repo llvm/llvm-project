@@ -208,3 +208,44 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done")
         self.runCmd("-var-evaluate-expression var_a")
         self.expect("\^done,value=\"10\"")
+
+    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
+    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr31485: data-disassemble doesn't follow flavor settings")
+    def test_lldbmi_gdb_set_disassembly_flavor(self):
+        """Test that 'lldb-mi --interpreter' works for -gdb-set disassembly-flavor."""
+
+        self.spawnLldbMi(args=None)
+
+        # Load executable
+        self.runCmd("-file-exec-and-symbols %s" % self.myexe)
+        self.expect("\^done")
+
+        # Run to BP_printf
+        line = line_number('main.cpp', '// BP_printf')
+        self.runCmd("-break-insert main.cpp:%d" % line)
+        self.expect("\^done,bkpt={number=\"1\"")
+        self.runCmd("-exec-run")
+        self.expect("\^running")
+        self.expect("\*stopped,reason=\"breakpoint-hit\".+addr=\"(0x[0-9a-f]+)\"")
+
+        # Get starting and ending address from $pc
+        pc = int(self.child.match.group(1), base=16)
+        s_addr, e_addr = pc, pc + 1
+
+        # Test default output (att)
+        self.runCmd("-data-disassemble -s %d -e %d -- 0" % (s_addr, e_addr))
+        self.expect("movl ")
+
+        # Test intel style
+        self.runCmd("-gdb-set disassembly-flavor intel")
+        self.expect("\^done")
+        self.runCmd("-data-disassemble -s %d -e %d -- 0" % (s_addr, e_addr))
+        self.expect("mov ")
+
+        # Test AT&T style
+        self.runCmd("-gdb-set disassembly-flavor intel")
+        self.expect("\^done")
+        self.runCmd("-data-disassemble -s %d -e %d -- 0" % (s_addr, e_addr))
+        self.expect("movl ")

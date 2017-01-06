@@ -63,6 +63,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 typedef pthread_mutex_t __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 
+typedef pthread_mutex_t __libcpp_recursive_mutex_t;
+
 // Condition Variable
 typedef pthread_cond_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER PTHREAD_COND_INITIALIZER
@@ -83,7 +85,19 @@ typedef pthread_key_t __libcpp_tls_key;
 
 // Mutex
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_recursive_mutex_init(__libcpp_mutex_t *__m);
+int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m);
+
+_LIBCPP_THREAD_ABI_VISIBILITY
+int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_mutex_lock(__libcpp_mutex_t *__m);
@@ -164,7 +178,7 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p);
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || \
     defined(_LIBCPP_BUILDING_THREAD_API_EXTERNAL_PTHREAD)
 
-int __libcpp_recursive_mutex_init(__libcpp_mutex_t *__m)
+int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t *__m)
 {
   pthread_mutexattr_t attr;
   int __ec = pthread_mutexattr_init(&attr);
@@ -186,6 +200,26 @@ int __libcpp_recursive_mutex_init(__libcpp_mutex_t *__m)
     return __ec;
   }
   return 0;
+}
+
+int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m)
+{
+  return pthread_mutex_lock(__m);
+}
+
+int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
+{
+  return pthread_mutex_trylock(__m);
+}
+
+int __libcpp_recursive_mutex_unlock(__libcpp_mutex_t *__m)
+{
+  return pthread_mutex_unlock(__m);
+}
+
+int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t *__m)
+{
+  return pthread_mutex_destroy(__m);
 }
 
 int __libcpp_mutex_lock(__libcpp_mutex_t *__m)

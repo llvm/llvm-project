@@ -285,11 +285,10 @@ void el_end(EditLine *el) {
   // assert( !"Not implemented!" );
 }
 
-void el_reset(EditLine *) { assert(!"Not implemented!"); }
+void el_reset(EditLine *) { llvm_unreachable("Not implemented!"); }
 
 int el_getc(EditLine *, char *) {
-  assert(!"Not implemented!");
-  return 0;
+  llvm_unreachable("Not implemented!");
 }
 
 void el_push(EditLine *, const char *) {}
@@ -297,8 +296,7 @@ void el_push(EditLine *, const char *) {}
 void el_beep(EditLine *) { Beep(1000, 500); }
 
 int el_parse(EditLine *, int, const char **) {
-  assert(!"Not implemented!");
-  return 0;
+  llvm_unreachable("Not implemented!");
 }
 
 int el_get(EditLine *el, int code, ...) {
@@ -311,7 +309,7 @@ int el_get(EditLine *el, int code, ...) {
     *dout = clientData;
   } break;
   default:
-    assert(!"Not implemented!");
+    llvm_unreachable("Not implemented!");
   }
   return 0;
 }
@@ -322,7 +320,7 @@ int el_source(EditLine *el, const char *file) {
   return 0;
 }
 
-void el_resize(EditLine *) { assert(!"Not implemented!"); }
+void el_resize(EditLine *) { llvm_unreachable("Not implemented!"); }
 
 const LineInfo *el_line(EditLine *el) { return 0; }
 
@@ -331,7 +329,7 @@ int el_insertstr(EditLine *, const char *) {
   return 0;
 }
 
-void el_deletestr(EditLine *, int) { assert(!"Not implemented!"); }
+void el_deletestr(EditLine *, int) { llvm_unreachable("Not implemented!"); }
 
 History *history_init(void) {
   // return dummy handle

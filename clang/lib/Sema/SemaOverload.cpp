@@ -604,7 +604,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     Result.Data = Info.Param.getOpaqueValue();
     break;
 
-  case Sema::TDK_DeducedMismatch: {
+  case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     auto *Saved = new (Context) DFIDeducedMismatchArgs;
     Saved->FirstArg = Info.FirstArg;
@@ -664,6 +665,7 @@ void DeductionFailureInfo::Destroy() {
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
     // FIXME: Destroy the data?
     Data = nullptr;
@@ -699,6 +701,7 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_CUDATargetMismatch:
     return TemplateParameter();
@@ -735,6 +738,7 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
     return nullptr;
 
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->TemplateArgs;
 
   case Sema::TDK_SubstitutionFailure:
@@ -764,6 +768,7 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
     return &static_cast<DFIArguments*>(Data)->FirstArg;
 
@@ -791,6 +796,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
     return &static_cast<DFIArguments*>(Data)->SecondArg;
 
@@ -803,11 +809,14 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
 }
 
 llvm::Optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
-  if (static_cast<Sema::TemplateDeductionResult>(Result) ==
-        Sema::TDK_DeducedMismatch)
+  switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
+  case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->CallArgIndex;
 
-  return llvm::None;
+  default:
+    return llvm::None;
+  }
 }
 
 void OverloadCandidateSet::destroyCandidates() {
@@ -9682,7 +9691,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
-  case Sema::TDK_DeducedMismatch: {
+  case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested: {
     // Format the template argument list into the argument string.
     SmallString<128> TemplateArgString;
     if (TemplateArgumentList *Args =
@@ -9695,7 +9705,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     S.Diag(Templated->getLocation(), diag::note_ovl_candidate_deduced_mismatch)
         << (*DeductionFailure.getCallArgIndex() + 1)
         << *DeductionFailure.getFirstArg() << *DeductionFailure.getSecondArg()
-        << TemplateArgString;
+        << TemplateArgString
+        << (DeductionFailure.Result == Sema::TDK_DeducedMismatchNested);
     break;
   }
 
@@ -10012,6 +10023,7 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_DeducedMismatch:
+  case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_MiscellaneousDeductionFailure:
   case Sema::TDK_CUDATargetMismatch:

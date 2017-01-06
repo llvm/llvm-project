@@ -1599,12 +1599,7 @@ StructuredData::ArraySP ScriptInterpreterPython::OSPlugin_ThreadsInfo(
 // as the underlying typedef for uint* types, size_t, off_t and other values
 // change.
 
-template <typename T> const char *GetPythonValueFormatString(T t) {
-  assert(!"Unhandled type passed to GetPythonValueFormatString(T), make a "
-          "specialization of GetPythonValueFormatString() to support this "
-          "type.");
-  return nullptr;
-}
+template <typename T> const char *GetPythonValueFormatString(T t) = delete;
 template <> const char *GetPythonValueFormatString(char *) { return "s"; }
 template <> const char *GetPythonValueFormatString(char) { return "b"; }
 template <> const char *GetPythonValueFormatString(unsigned char) {

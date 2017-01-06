@@ -116,8 +116,7 @@ ThreadKDP::CreateRegisterContextForFrame(StackFrame *frame) {
             new RegisterContextKDP_x86_64(*this, concrete_frame_idx));
         break;
       default:
-        assert(!"Add CPU type support in KDP");
-        break;
+        llvm_unreachable("Add CPU type support in KDP");
       }
     }
   } else {

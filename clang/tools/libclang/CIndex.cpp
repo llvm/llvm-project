@@ -68,13 +68,14 @@ using namespace clang::cxcursor;
 using namespace clang::cxtu;
 using namespace clang::cxindex;
 
-CXTranslationUnit cxtu::MakeCXTranslationUnit(CIndexer *CIdx, ASTUnit *AU) {
+CXTranslationUnit cxtu::MakeCXTranslationUnit(CIndexer *CIdx,
+                                              std::unique_ptr<ASTUnit> AU) {
   if (!AU)
     return nullptr;
   assert(CIdx);
   CXTranslationUnit D = new CXTranslationUnitImpl();
   D->CIdx = CIdx;
-  D->TheASTUnit = AU;
+  D->TheASTUnit = AU.release();
   D->StringPool = new cxstring::CXStringPool();
   D->Diagnostics = nullptr;
   D->OverridenCursorsPool = createOverridenCXCursorsPool();
@@ -3231,7 +3232,7 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
       /*CaptureDiagnostics=*/true,
       /*AllowPCHWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
-  *out_TU = MakeCXTranslationUnit(CXXIdx, AU.release());
+  *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(AU));
   return *out_TU ? CXError_Success : CXError_Failure;
 }
 
@@ -3383,7 +3384,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   if (isASTReadError(Unit ? Unit.get() : ErrUnit.get()))
     return CXError_ASTReadError;
 
-  *out_TU = MakeCXTranslationUnit(CXXIdx, Unit.release());
+  *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(Unit));
   return *out_TU ? CXError_Success : CXError_Failure;
 }
 

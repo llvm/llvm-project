@@ -1876,9 +1876,8 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   } break;
 
   default:
-    assert(
-        !"Unhandled architecture in Platform::GetSoftwareBreakpointTrapOpcode");
-    break;
+    llvm_unreachable(
+        "Unhandled architecture in Platform::GetSoftwareBreakpointTrapOpcode");
   }
 
   assert(bp_site);

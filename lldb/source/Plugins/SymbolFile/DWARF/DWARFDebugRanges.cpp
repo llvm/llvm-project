@@ -65,8 +65,7 @@ bool DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
       break;
 
     default:
-      assert(!"DWARFRangeList::Extract() unsupported address size.");
-      break;
+      llvm_unreachable("DWARFRangeList::Extract() unsupported address size.");
     }
 
     // Filter out empty ranges

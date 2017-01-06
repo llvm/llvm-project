@@ -143,10 +143,10 @@ private:
       ID.AddPointer(Sym);
     }
 
-    PathDiagnosticPiece *VisitNode(const ExplodedNode *N,
-                                   const ExplodedNode *PrevN,
-                                   BugReporterContext &BRC,
-                                   BugReport &BR) override;
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
   };
 };
 }
@@ -583,12 +583,10 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
   C.addTransition(State, N);
 }
 
-
-PathDiagnosticPiece *MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
-                                                      const ExplodedNode *N,
-                                                      const ExplodedNode *PrevN,
-                                                      BugReporterContext &BRC,
-                                                      BugReport &BR) {
+std::shared_ptr<PathDiagnosticPiece>
+MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
+    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
+    BugReport &BR) {
   const AllocationState *AS = N->getState()->get<AllocatedData>(Sym);
   if (!AS)
     return nullptr;
@@ -610,7 +608,8 @@ PathDiagnosticPiece *MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
   const Expr *ArgExpr = CE->getArg(FunctionsToTrack[Idx].Param);
   PathDiagnosticLocation Pos(ArgExpr, BRC.getSourceManager(),
                              N->getLocationContext());
-  return new PathDiagnosticEventPiece(Pos, "Data is allocated here.");
+  return std::make_shared<PathDiagnosticEventPiece>(Pos,
+                                                    "Data is allocated here.");
 }
 
 void ento::registerMacOSKeychainAPIChecker(CheckerManager &mgr) {

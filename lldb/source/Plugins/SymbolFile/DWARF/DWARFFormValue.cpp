@@ -734,12 +734,11 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
   }
 
   case DW_FORM_indirect:
-    assert(!"This shouldn't happen after the form has been extracted...");
-    break;
+    llvm_unreachable(
+        "This shouldn't happen after the form has been extracted...");
 
   default:
-    assert(!"Unhandled DW_FORM");
-    break;
+    llvm_unreachable("Unhandled DW_FORM");
   }
   return -1;
 }

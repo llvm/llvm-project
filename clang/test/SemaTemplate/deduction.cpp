@@ -428,3 +428,17 @@ namespace deduction_from_empty_list {
     f<1>({0}, {0, 1}); // expected-error {{no matching}}
   }
 }
+
+namespace check_extended_pack {
+  template<typename T> struct X { typedef int type; };
+  template<typename ...T> void f(typename X<T>::type...);
+  template<typename T> void f(T, int, int);
+  void g() {
+    f<int>(0, 0, 0);
+  }
+
+  template<int, int*> struct Y {};
+  template<int ...N> void g(Y<N...>); // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('int *' vs 'int')}}
+  int n;
+  void h() { g<0>(Y<0, &n>()); } // expected-error {{no matching function}}
+}

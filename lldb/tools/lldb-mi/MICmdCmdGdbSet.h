@@ -79,6 +79,7 @@ private:
   bool OptionFnPrint(const CMIUtilString::VecString_t &vrWords);
   bool OptionFnSolibSearchPath(const CMIUtilString::VecString_t &vrWords);
   bool OptionFnOutputRadix(const CMIUtilString::VecString_t &vrWords);
+  bool OptionFnDisassemblyFlavor(const CMIUtilString::VecString_t &vrWords);
   bool OptionFnFallback(const CMIUtilString::VecString_t &vrWords);
 
   // Attributes:

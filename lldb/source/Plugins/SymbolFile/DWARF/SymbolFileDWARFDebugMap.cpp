@@ -1253,8 +1253,7 @@ SymbolFileDWARFDebugMap::GetCompileUnit(SymbolFileDWARF *oso_dwarf) {
       }
     }
   }
-  assert(!"this shouldn't happen");
-  return lldb::CompUnitSP();
+  llvm_unreachable("this shouldn't happen");
 }
 
 SymbolFileDWARFDebugMap::CompileUnitInfo *

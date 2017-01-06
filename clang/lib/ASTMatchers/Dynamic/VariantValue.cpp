@@ -216,18 +216,20 @@ private:
 VariantMatcher::VariantMatcher() {}
 
 VariantMatcher VariantMatcher::SingleMatcher(const DynTypedMatcher &Matcher) {
-  return VariantMatcher(new SinglePayload(Matcher));
+  return VariantMatcher(std::make_shared<SinglePayload>(Matcher));
 }
 
 VariantMatcher
 VariantMatcher::PolymorphicMatcher(std::vector<DynTypedMatcher> Matchers) {
-  return VariantMatcher(new PolymorphicPayload(std::move(Matchers)));
+  return VariantMatcher(
+      std::make_shared<PolymorphicPayload>(std::move(Matchers)));
 }
 
 VariantMatcher VariantMatcher::VariadicOperatorMatcher(
     DynTypedMatcher::VariadicOperator Op,
     std::vector<VariantMatcher> Args) {
-  return VariantMatcher(new VariadicOpPayload(Op, std::move(Args)));
+  return VariantMatcher(
+      std::make_shared<VariadicOpPayload>(Op, std::move(Args)));
 }
 
 llvm::Optional<DynTypedMatcher> VariantMatcher::getSingleMatcher() const {

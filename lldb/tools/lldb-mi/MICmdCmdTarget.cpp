@@ -123,6 +123,7 @@ bool CMICmdCmdTargetSelect::Execute() {
 
   // Verify that we have managed to connect successfully
   lldb::SBStream errMsg;
+  error.GetDescription(errMsg);
   if (!process.IsValid()) {
     SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_INVALID_TARGET_PLUGIN),
                                    m_cmdData.strMiCmd.c_str(),

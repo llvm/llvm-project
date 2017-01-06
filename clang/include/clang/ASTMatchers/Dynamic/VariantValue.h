@@ -119,7 +119,7 @@ class VariantMatcher {
   /// \brief Payload interface to be specialized by each matcher type.
   ///
   /// It follows a similar interface as VariantMatcher itself.
-  class Payload : public RefCountedBase<Payload> {
+  class Payload {
   public:
     virtual ~Payload();
     virtual llvm::Optional<DynTypedMatcher> getSingleMatcher() const = 0;
@@ -208,7 +208,8 @@ public:
   std::string getTypeAsString() const;
 
 private:
-  explicit VariantMatcher(Payload *Value) : Value(Value) {}
+  explicit VariantMatcher(std::shared_ptr<Payload> Value)
+      : Value(std::move(Value)) {}
 
   template <typename T> struct TypedMatcherOps;
 
@@ -216,7 +217,7 @@ private:
   class PolymorphicPayload;
   class VariadicOpPayload;
 
-  IntrusiveRefCntPtr<const Payload> Value;
+  std::shared_ptr<const Payload> Value;
 };
 
 template <typename T>

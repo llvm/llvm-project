@@ -484,8 +484,7 @@ bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
         break;
 
       default:
-        assert(!"Unhandled encoding_data_type.");
-        break;
+        llvm_unreachable("Unhandled encoding_data_type.");
       }
     } else {
       // We have no encoding type, return void?
@@ -529,8 +528,7 @@ bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
         break;
 
       default:
-        assert(!"Unhandled encoding_data_type.");
-        break;
+        llvm_unreachable("Unhandled encoding_data_type.");
       }
     }
 

@@ -243,6 +243,8 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll(bugnumber="llvm.org/pr31545", compiler="clang",
+            compiler_version=['>=', '4.0'], archs="i386")
     def test_lldbmi_stack_list_variables(self):
         """Test that 'lldb-mi --interpreter' can shows local variables and arguments."""
 

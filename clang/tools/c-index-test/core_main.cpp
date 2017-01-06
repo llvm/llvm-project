@@ -140,8 +140,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
   ArgsWithProgName.append(Args.begin(), Args.end());
   IntrusiveRefCntPtr<DiagnosticsEngine>
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
-  IntrusiveRefCntPtr<CompilerInvocation>
-    CInvok(createInvocationFromCommandLine(ArgsWithProgName, Diags));
+  auto CInvok = createInvocationFromCommandLine(ArgsWithProgName, Diags);
   if (!CInvok)
     return true;
 
@@ -152,8 +151,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
                                      /*WrappedAction=*/nullptr);
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
-      CInvok.get(), PCHContainerOps, Diags, IndexAction.get()));
+  auto Unit = ASTUnit::LoadFromCompilerInvocationAction(
+      std::move(CInvok), PCHContainerOps, Diags, IndexAction.get());
 
   if (!Unit)
     return true;

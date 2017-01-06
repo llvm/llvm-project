@@ -13,6 +13,7 @@
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBStringList.h"
 #include "lldb/API/SBThread.h"
 
 // In-house headers:
@@ -30,6 +31,7 @@ const CMICmdCmdGdbShow::MapGdbOptionNameToFnGdbOptionPtr_t
         {"target-async", &CMICmdCmdGdbShow::OptionFnTargetAsync},
         {"print", &CMICmdCmdGdbShow::OptionFnPrint},
         {"language", &CMICmdCmdGdbShow::OptionFnLanguage},
+        {"disassembly-flavor", &CMICmdCmdGdbShow::OptionFnDisassemblyFlavor},
         {"fallback", &CMICmdCmdGdbShow::OptionFnFallback}};
 
 //++
@@ -322,6 +324,26 @@ bool CMICmdCmdGdbShow::OptionFnLanguage(
   const lldb::LanguageType eLanguageType = sbCompileUnit.GetLanguage();
 
   m_strValue = lldb::SBLanguageRuntime::GetNameForLanguageType(eLanguageType);
+  return MIstatus::success;
+}
+
+//++
+//------------------------------------------------------------------------------------
+// Details: Carry out work to complete the GDB show option 'disassembly-flavor' to prepare
+//          and send back the requested information.
+// Type:    Method.
+// Args:    vrWords - (R) List of additional parameters used by this option.
+// Return:  MIstatus::success - Function succeeded.
+//          MIstatus::failure - Function failed.
+// Throws:  None.
+//--
+bool CMICmdCmdGdbShow::OptionFnDisassemblyFlavor(const CMIUtilString::VecString_t &vrWords) {
+  MIunused(vrWords);
+
+  // Get current disassembly flavor
+  lldb::SBDebugger &rDbgr = m_rLLDBDebugSessionInfo.GetDebugger();
+  m_strValue = lldb::SBDebugger::GetInternalVariableValue("target.x86-disassembly-flavor",
+                                                          rDbgr.GetInstanceName()).GetStringAtIndex(0);
   return MIstatus::success;
 }
 

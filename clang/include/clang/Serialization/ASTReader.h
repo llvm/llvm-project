@@ -384,8 +384,8 @@ private:
   std::unique_ptr<ASTReaderListener> Listener;
 
   /// \brief The receiver of deserialization events.
-  ASTDeserializationListener *DeserializationListener;
-  bool OwnsDeserializationListener;
+  ASTDeserializationListener *DeserializationListener = nullptr;
+  bool OwnsDeserializationListener = false;
 
   SourceManager &SourceMgr;
   FileManager &FileMgr;
@@ -394,7 +394,7 @@ private:
 
   /// \brief The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
-  Sema *SemaObj;
+  Sema *SemaObj = nullptr;
 
   /// \brief The preprocessor that will be loading the source file.
   Preprocessor &PP;
@@ -403,7 +403,7 @@ private:
   ASTContext &Context;
 
   /// \brief The AST consumer.
-  ASTConsumer *Consumer;
+  ASTConsumer *Consumer = nullptr;
 
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
@@ -414,7 +414,7 @@ private:
   IdentifierResolver DummyIdResolver;
 
   /// A mapping from extension block names to module file extensions.
-  llvm::StringMap<IntrusiveRefCntPtr<ModuleFileExtension>> ModuleFileExtensions;
+  llvm::StringMap<std::shared_ptr<ModuleFileExtension>> ModuleFileExtensions;
 
   /// \brief A timer used to track the time spent deserializing.
   std::unique_ptr<llvm::Timer> ReadTimer;
@@ -802,10 +802,10 @@ private:
   SourceLocation OptimizeOffPragmaLocation;
 
   /// \brief The PragmaMSStructKind pragma ms_struct state if set, or -1.
-  int PragmaMSStructState;
+  int PragmaMSStructState = -1;
 
   /// \brief The PragmaMSPointersToMembersKind pragma pointers_to_members state.
-  int PragmaMSPointersToMembersState;
+  int PragmaMSPointersToMembersState = -1;
   SourceLocation PointersToMembersPragmaLocation;
 
   /// \brief The OpenCL extension settings.
@@ -870,10 +870,10 @@ private:
   bool UseGlobalIndex;
 
   /// \brief Whether we have tried loading the global module index yet.
-  bool TriedLoadingGlobalIndex;
+  bool TriedLoadingGlobalIndex = false;
 
   ///\brief Whether we are currently processing update records.
-  bool ProcessingUpdateRecords;
+  bool ProcessingUpdateRecords = false;
 
   typedef llvm::DenseMap<unsigned, SwitchCase *> SwitchCaseMapTy;
   /// \brief Mapping from switch-case IDs in the chain to switch-case statements
@@ -886,73 +886,73 @@ private:
 
   /// \brief The number of source location entries de-serialized from
   /// the PCH file.
-  unsigned NumSLocEntriesRead;
+  unsigned NumSLocEntriesRead = 0;
 
   /// \brief The number of source location entries in the chain.
-  unsigned TotalNumSLocEntries;
+  unsigned TotalNumSLocEntries = 0;
 
   /// \brief The number of statements (and expressions) de-serialized
   /// from the chain.
-  unsigned NumStatementsRead;
+  unsigned NumStatementsRead = 0;
 
   /// \brief The total number of statements (and expressions) stored
   /// in the chain.
-  unsigned TotalNumStatements;
+  unsigned TotalNumStatements = 0;
 
   /// \brief The number of macros de-serialized from the chain.
-  unsigned NumMacrosRead;
+  unsigned NumMacrosRead = 0;
 
   /// \brief The total number of macros stored in the chain.
-  unsigned TotalNumMacros;
+  unsigned TotalNumMacros = 0;
 
   /// \brief The number of lookups into identifier tables.
-  unsigned NumIdentifierLookups;
+  unsigned NumIdentifierLookups = 0;
 
   /// \brief The number of lookups into identifier tables that succeed.
-  unsigned NumIdentifierLookupHits;
+  unsigned NumIdentifierLookupHits = 0;
 
   /// \brief The number of selectors that have been read.
-  unsigned NumSelectorsRead;
+  unsigned NumSelectorsRead = 0;
 
   /// \brief The number of method pool entries that have been read.
-  unsigned NumMethodPoolEntriesRead;
+  unsigned NumMethodPoolEntriesRead = 0;
 
   /// \brief The number of times we have looked up a selector in the method
   /// pool.
-  unsigned NumMethodPoolLookups;
+  unsigned NumMethodPoolLookups = 0;
 
   /// \brief The number of times we have looked up a selector in the method
   /// pool and found something.
-  unsigned NumMethodPoolHits;
+  unsigned NumMethodPoolHits = 0;
 
   /// \brief The number of times we have looked up a selector in the method
   /// pool within a specific module.
-  unsigned NumMethodPoolTableLookups;
+  unsigned NumMethodPoolTableLookups = 0;
 
   /// \brief The number of times we have looked up a selector in the method
   /// pool within a specific module and found something.
-  unsigned NumMethodPoolTableHits;
+  unsigned NumMethodPoolTableHits = 0;
 
   /// \brief The total number of method pool entries in the selector table.
-  unsigned TotalNumMethodPoolEntries;
+  unsigned TotalNumMethodPoolEntries = 0;
 
   /// Number of lexical decl contexts read/total.
-  unsigned NumLexicalDeclContextsRead, TotalLexicalDeclContexts;
+  unsigned NumLexicalDeclContextsRead = 0, TotalLexicalDeclContexts = 0;
 
   /// Number of visible decl contexts read/total.
-  unsigned NumVisibleDeclContextsRead, TotalVisibleDeclContexts;
+  unsigned NumVisibleDeclContextsRead = 0, TotalVisibleDeclContexts = 0;
 
   /// Total size of modules, in bits, currently loaded
-  uint64_t TotalModulesSizeInBits;
+  uint64_t TotalModulesSizeInBits = 0;
 
   /// \brief Number of Decl/types that are currently deserializing.
-  unsigned NumCurrentElementsDeserializing;
+  unsigned NumCurrentElementsDeserializing = 0;
 
   /// \brief Set true while we are in the process of passing deserialized
   /// "interesting" decls to consumer inside FinishedDeserializing().
   /// This is used as a guard to avoid recursively repeating the process of
   /// passing decls to consumer.
-  bool PassingDeclsToConsumer;
+  bool PassingDeclsToConsumer = false;
 
   /// \brief The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.
@@ -1055,7 +1055,7 @@ private:
   };
 
   /// \brief What kind of records we are reading.
-  ReadingKind ReadingKind;
+  ReadingKind ReadingKind = Read_None;
 
   /// \brief RAII object to change the reading kind.
   class ReadingKindTracker {
@@ -1366,7 +1366,7 @@ public:
   /// deserializing.
   ASTReader(Preprocessor &PP, ASTContext &Context,
             const PCHContainerReader &PCHContainerRdr,
-            ArrayRef<IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
+            ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "", bool DisableValidation = false,
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
