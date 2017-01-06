@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 // Sanitizer Coverage Controller for Trace PC Guard.
 
-#include "sancov_flags.h"
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
@@ -18,7 +17,6 @@ using namespace __sanitizer;
 
 using AddressRange = LoadedModule::AddressRange;
 
-namespace __sancov {
 namespace {
 
 static const u64 Magic64 = 0xC0BFFFFFFFFFFF64ULL;
@@ -98,10 +96,6 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
   InternalFree(file_path);
   InternalFree(module_name);
   InternalFree(pcs);
-
-  if (sancov_flags()->symbolize) {
-    Printf("TODO(aizatsky): call sancov to symbolize\n");
-  }
 }
 
 // Collects trace-pc guard coverage.
@@ -112,8 +106,6 @@ class TracePcGuardController {
     CHECK(!initialized);
 
     initialized = true;
-    InitializeSancovFlags();
-
     pc_vector.Initialize(0);
   }
 
@@ -148,27 +140,26 @@ class TracePcGuardController {
 static TracePcGuardController pc_guard_controller;
 
 }  // namespace
-}  // namespace __sancov
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(  // NOLINT
     const uptr* pcs, uptr len) {
-  return __sancov::SanitizerDumpCoverage(pcs, len);
+  return SanitizerDumpCoverage(pcs, len);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_pc_guard(u32* guard) {
   if (!*guard) return;
-  __sancov::pc_guard_controller.TracePcGuard(guard, GET_CALLER_PC() - 1);
+  pc_guard_controller.TracePcGuard(guard, GET_CALLER_PC() - 1);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_pc_guard_init(u32* start, u32* end) {
   if (start == end || *start) return;
-  __sancov::pc_guard_controller.InitTracePcGuard(start, end);
+  pc_guard_controller.InitTracePcGuard(start, end);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_trace_pc_guard_coverage() {
-  __sancov::pc_guard_controller.Dump();
+  pc_guard_controller.Dump();
 }
 }  // extern "C"

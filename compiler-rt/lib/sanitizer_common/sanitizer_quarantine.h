@@ -73,6 +73,11 @@ class Quarantine {
       Recycle(cb);
   }
 
+  void PrintStats() const {
+    // It assumes that the world is stopped, just as the allocator's PrintStats.
+    cache_.PrintStats();
+  }
+
  private:
   // Read-only data.
   char pad0_[kCacheLineSize];
@@ -163,8 +168,25 @@ class QuarantineCache {
     return b;
   }
 
+  void PrintStats() const {
+    uptr batch_count = 0;
+    uptr total_quarantine_bytes = 0;
+    uptr total_quarantine_chunks = 0;
+    for (List::ConstIterator it = list_.begin(); it != list_.end(); ++it) {
+      batch_count++;
+      total_quarantine_bytes += (*it).size;
+      total_quarantine_chunks += (*it).count;
+    }
+    Printf("Global quarantine stats: batches: %zd; bytes: %zd; chunks: %zd "
+           "(capacity: %zd chunks)\n",
+           batch_count, total_quarantine_bytes, total_quarantine_chunks,
+           batch_count * QuarantineBatch::kSize);
+  }
+
  private:
-  IntrusiveList<QuarantineBatch> list_;
+  typedef IntrusiveList<QuarantineBatch> List;
+
+  List list_;
   atomic_uintptr_t size_;
 
   void SizeAdd(uptr add) {

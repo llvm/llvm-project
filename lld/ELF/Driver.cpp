@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -182,8 +183,8 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
 
-  if (Cpio)
-    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
+  if (Tar)
+    Tar->append(relativeToRoot(Path), MBRef.getBuffer());
 
   return MBRef;
 }
@@ -309,14 +310,16 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
-    ErrorOr<CpioFile *> F = CpioFile::create(Path);
-    if (F) {
-      Cpio.reset(*F);
-      Cpio->append("response.txt", createResponseFile(Args));
-      Cpio->append("version.txt", getLLDVersion() + "\n");
-    } else
-      error(F.getError(),
-            Twine("--reproduce: failed to open ") + Path + ".cpio");
+    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
+        TarWriter::create(Path, path::stem(Path));
+    if (ErrOrWriter) {
+      Tar = std::move(*ErrOrWriter);
+      Tar->append("response.txt", createResponseFile(Args));
+      Tar->append("version.txt", getLLDVersion() + "\n");
+    } else {
+      error(Twine("--reproduce: failed to open ") + Path + ": " +
+            toString(ErrOrWriter.takeError()));
+    }
   }
 
   readConfigs(Args);
