@@ -56,12 +56,9 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   if (!isPerformingImport() && !isModuleExporting())
     return false;
 
-  // If we are exporting, we need to see whether this value is marked
-  // as NoRename in the summary. If we are importing, we may not have
-  // a summary in the distributed backend case (only summaries for values
-  // importes as defs, not references, are included in the index passed
-  // to the distributed backends).
   if (isPerformingImport()) {
+    assert((!GlobalsToImport->count(SGV) || !isNonRenamableLocal(*SGV)) &&
+           "Attempting to promote non-renamable local");
     // We don't know for sure yet if we are importing this value (as either
     // a reference or a def), since we are simply walking all values in the
     // module. But by necessity if we end up importing it and it is local,
@@ -77,12 +74,27 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   assert(Summaries->second.size() == 1 && "Local has more than one summary");
   auto Linkage = Summaries->second.front()->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
-    assert(!Summaries->second.front()->noRename());
+    assert(!isNonRenamableLocal(*SGV) &&
+           "Attempting to promote non-renamable local");
     return true;
   }
 
   return false;
 }
+
+#ifndef NDEBUG
+bool FunctionImportGlobalProcessing::isNonRenamableLocal(
+    const GlobalValue &GV) const {
+  if (!GV.hasLocalLinkage())
+    return false;
+  // This needs to stay in sync with the logic in buildModuleSummaryIndex.
+  if (GV.hasSection())
+    return true;
+  if (Used.count(const_cast<GlobalValue *>(&GV)))
+    return true;
+  return false;
+}
+#endif
 
 std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV,
                                                     bool DoPromote) {

@@ -1100,5 +1100,126 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
   EXPECT_FALSE(DefaultDie.getSibling().isValid());
 }
 
+TEST(DWARFDebugInfo, TestChildIterators) {
+  // Test the DWARF APIs related to iterating across the children of a DIE using
+  // the DWARFDie::iterator class.
+  uint16_t Version = 4;
+  
+  const uint8_t AddrSize = sizeof(void *);
+  initLLVMIfNeeded();
+  Triple Triple = getHostTripleForAddrSize(AddrSize);
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  if (HandleExpectedError(ExpectedDG))
+    return;
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  
+  enum class Tag: uint16_t  {
+    A = dwarf::DW_TAG_lo_user,
+    B,
+  };
+  
+  // Scope to allow us to re-use the same DIE names
+  {
+    // Create DWARF tree that looks like:
+    //
+    // CU
+    //   A
+    //   B
+    auto CUDie = CU.getUnitDIE();
+    CUDie.addChild((dwarf::Tag)Tag::A);
+    CUDie.addChild((dwarf::Tag)Tag::B);
+  }
+  
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  DWARFContextInMemory DwarfContext(*Obj.get());
+  
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  
+  // Get the compile unit DIE is valid.
+  auto CUDie = U->getUnitDIE(false);
+  EXPECT_TRUE(CUDie.isValid());
+  // CUDie.dump(llvm::outs(), UINT32_MAX);
+  uint32_t Index;
+  DWARFDie A;
+  DWARFDie B;
+  
+  // Verify the compile unit DIE's children.
+  Index = 0;
+  for (auto Die : CUDie.children()) {
+    switch (Index++) {
+      case 0: A = Die; break;
+      case 1: B = Die; break;
+    }
+  }
+  
+  EXPECT_EQ(A.getTag(), (dwarf::Tag)Tag::A);
+  EXPECT_EQ(B.getTag(), (dwarf::Tag)Tag::B);
+
+  // Verify that A has no children by verifying that the begin and end contain
+  // invalid DIEs and also that the iterators are equal.
+  EXPECT_EQ(A.begin(), A.end());
+}
+
+TEST(DWARFDebugInfo, TestChildIteratorsOnInvalidDie) {
+  // Verify that an invalid DIE has no children.
+  DWARFDie Invalid;
+  auto begin = Invalid.begin();
+  auto end = Invalid.end();
+  EXPECT_FALSE(begin->isValid());
+  EXPECT_FALSE(end->isValid());
+  EXPECT_EQ(begin, end);
+}
+
+  
+TEST(DWARFDebugInfo, TestEmptyChildren) {
+  // Test a DIE that says it has children in the abbreviation, but actually
+  // doesn't have any attributes, will not return anything during iteration.
+  // We do this by making sure the begin and end iterators are equal.
+  uint16_t Version = 4;
+  
+  const uint8_t AddrSize = sizeof(void *);
+  initLLVMIfNeeded();
+  Triple Triple = getHostTripleForAddrSize(AddrSize);
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  if (HandleExpectedError(ExpectedDG))
+    return;
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  
+  // Scope to allow us to re-use the same DIE names
+  {
+    // Create a compile unit DIE that has an abbreviation that says it has
+    // children, but doesn't have any actual attributes. This helps us test
+    // a DIE that has only one child: a NULL DIE.
+    auto CUDie = CU.getUnitDIE();
+    CUDie.setForceChildren();
+  }
+  
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  DWARFContextInMemory DwarfContext(*Obj.get());
+  
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  
+  // Get the compile unit DIE is valid.
+  auto CUDie = U->getUnitDIE(false);
+  EXPECT_TRUE(CUDie.isValid());
+  CUDie.dump(llvm::outs(), UINT32_MAX);
+  
+  // Verify that the CU Die that says it has children, but doesn't, actually
+  // has begin and end iterators that are equal. We want to make sure we don't
+  // see the Null DIEs during iteration.
+  EXPECT_EQ(CUDie.begin(), CUDie.end());
+}
 
 } // end anonymous namespace

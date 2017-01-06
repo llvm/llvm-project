@@ -266,6 +266,11 @@ void Fuzzer::StaticInterruptCallback() {
   F->InterruptCallback();
 }
 
+void Fuzzer::StaticFileSizeExceedCallback() {
+  Printf("==%lu== ERROR: libFuzzer: file size exceeded\n", GetPid());
+  exit(1);
+}
+
 void Fuzzer::CrashCallback() {
   Printf("==%lu== ERROR: libFuzzer: deadly signal\n", GetPid());
   if (EF->__sanitizer_print_stack_trace)

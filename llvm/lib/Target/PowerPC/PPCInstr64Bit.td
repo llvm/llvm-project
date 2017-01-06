@@ -1154,6 +1154,9 @@ defm FCFID  : XForm_26r<63, 846, (outs f8rc:$frD), (ins f8rc:$frB),
 defm FCTID  : XForm_26r<63, 814, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fctid", "$frD, $frB", IIC_FPGeneral,
                         []>, isPPC64;
+defm FCTIDU : XForm_26r<63, 942, (outs f8rc:$frD), (ins f8rc:$frB),
+                        "fctidu", "$frD, $frB", IIC_FPGeneral,
+                        []>, isPPC64;
 defm FCTIDZ : XForm_26r<63, 815, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fctidz", "$frD, $frB", IIC_FPGeneral,
                         [(set f64:$frD, (PPCfctidz f64:$frB))]>, isPPC64;

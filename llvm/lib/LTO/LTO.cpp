@@ -337,12 +337,21 @@ void LTO::addSymbolToGlobalRes(SmallPtrSet<GlobalValue *, 8> &Used,
     if (Res.Prevailing)
       GlobalRes.IRName = GV->getName();
   }
+  // Set the partition to external if we know it is used elsewhere, e.g.
+  // it is visible to a regular object, is referenced from llvm.compiler_used,
+  // or was already recorded as being referenced from a different partition.
   if (Res.VisibleToRegularObj || (GV && Used.count(GV)) ||
       (GlobalRes.Partition != GlobalResolution::Unknown &&
-       GlobalRes.Partition != Partition))
+       GlobalRes.Partition != Partition)) {
     GlobalRes.Partition = GlobalResolution::External;
-  else
+  } else
+    // First recorded reference, save the current partition.
     GlobalRes.Partition = Partition;
+
+  // Flag as visible outside of ThinLTO if visible from a regular object or
+  // if this is a reference in the regular LTO partition.
+  GlobalRes.VisibleOutsideThinLTO |=
+      (Res.VisibleToRegularObj || (Partition == GlobalResolution::RegularLTO));
 }
 
 static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
@@ -848,6 +857,19 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
 
+  // Compute "dead" symbols, we don't want to import/export these!
+  DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
+  for (auto &Res : GlobalResolutions) {
+    if (Res.second.VisibleOutsideThinLTO &&
+        // IRName will be defined if we have seen the prevailing copy of
+        // this value. If not, no need to preserve any ThinLTO copies.
+        !Res.second.IRName.empty())
+      GUIDPreservedSymbols.insert(GlobalValue::getGUID(Res.second.IRName));
+  }
+
+  auto DeadSymbols =
+      computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
+
   StringMap<FunctionImporter::ImportMapTy> ImportLists(
       ThinLTO.ModuleMap.size());
   StringMap<FunctionImporter::ExportSetTy> ExportLists(
@@ -856,12 +878,21 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 
   if (Conf.OptLevel > 0) {
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                             ImportLists, ExportLists);
+                             ImportLists, ExportLists, &DeadSymbols);
 
     std::set<GlobalValue::GUID> ExportedGUIDs;
     for (auto &Res : GlobalResolutions) {
-      if (!Res.second.IRName.empty() &&
-          Res.second.Partition == GlobalResolution::External)
+      // First check if the symbol was flagged as having external references.
+      if (Res.second.Partition != GlobalResolution::External)
+        continue;
+      // IRName will be defined if we have seen the prevailing copy of
+      // this value. If not, no need to mark as exported from a ThinLTO
+      // partition (and we can't get the GUID).
+      if (Res.second.IRName.empty())
+        continue;
+      auto GUID = GlobalValue::getGUID(Res.second.IRName);
+      // Mark exported unless index-based analysis determined it to be dead.
+      if (!DeadSymbols.count(GUID))
         ExportedGUIDs.insert(GlobalValue::getGUID(Res.second.IRName));
     }
 

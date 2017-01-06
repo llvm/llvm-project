@@ -156,3 +156,21 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
   %d = select i1 %c, i8 %a, i8 %b
   ret i8 %d
 }
+
+; FIXME: The 'not' is redundant.
+
+define i32 @smin(i32 %x) {
+; CHECK-LABEL: smin:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    notl %ecx
+; CHECK-NEXT:    xorl $-1, %edi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    retq
+  %not_x = xor i32 %x, -1
+  %1 = icmp slt i32 %not_x, -1
+  %sel = select i1 %1, i32 %not_x, i32 -1
+  ret i32 %sel
+}
+

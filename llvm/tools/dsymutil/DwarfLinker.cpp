@@ -1796,8 +1796,7 @@ static bool analyzeContextInfo(const DWARFDie &DIE,
 
   Info.Prune = InImportedModule;
   if (DIE.hasChildren())
-    for (auto Child = DIE.getFirstChild(); Child && !Child.isNULL();
-         Child = Child.getSibling())
+    for (auto Child: DIE.children())
       Info.Prune &= analyzeContextInfo(Child, MyIdx, CU, CurrentDeclContext,
                                        StringPool, Contexts, InImportedModule);
 
@@ -2294,8 +2293,7 @@ void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
   if (!Die.hasChildren() || (Flags & TF_ParentWalk))
     return;
 
-  for (auto Child = Die.getFirstChild(); Child && !Child.isNULL();
-       Child = Child.getSibling())
+  for (auto Child: Die.children())
     lookForDIEsToKeep(RelocMgr, Child, DMO, CU, Flags);
 }
 
@@ -2814,8 +2812,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
 
   // Determine whether there are any children that we want to keep.
   bool HasChildren = false;
-  for (auto Child = InputDIE.getFirstChild(); Child && !Child.isNULL();
-       Child = Child.getSibling()) {
+  for (auto Child: InputDIE.children()) {
     unsigned Idx = U.getDIEIndex(Child);
     if (Unit.getInfo(Idx).Keep) {
       HasChildren = true;
@@ -2840,8 +2837,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   }
 
   // Recursively clone children.
-  for (auto Child = InputDIE.getFirstChild(); Child && !Child.isNULL();
-       Child = Child.getSibling()) {
+  for (auto Child: InputDIE.children()) {
     if (DIE *Clone = cloneDIE(Child, Unit, PCOffset, OutOffset, Flags)) {
       Die->addChild(Clone);
       OutOffset = Clone->getOffset() + Clone->getSize();

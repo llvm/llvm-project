@@ -14,10 +14,10 @@
 #ifndef LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H
 #define LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
-class MCOperand;
 
 class LanaiInstPrinter : public MCInstPrinter {
 public:
@@ -28,14 +28,14 @@ public:
   void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
                  const MCSubtargetInfo &STI) override;
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
-                    const char *Modifier = 0);
+                    const char *Modifier = nullptr);
   void printPredicateOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);
   void printMemRiOperand(const MCInst *MI, int OpNo, raw_ostream &O,
-                         const char *Modifier = 0);
+                         const char *Modifier = nullptr);
   void printMemRrOperand(const MCInst *MI, int OpNo, raw_ostream &O,
-                         const char *Modifier = 0);
+                         const char *Modifier = nullptr);
   void printMemSplsOperand(const MCInst *MI, int OpNo, raw_ostream &O,
-                           const char *Modifier = 0);
+                           const char *Modifier = nullptr);
   void printCCOperand(const MCInst *MI, int OpNo, raw_ostream &O);
   void printAluOperand(const MCInst *MI, int OpNo, raw_ostream &O);
   void printHi16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -60,6 +60,7 @@ private:
   bool printMemoryStoreIncrement(const MCInst *MI, raw_ostream &Ostream,
                                  StringRef Opcode, int AddOffset);
 };
-} // namespace llvm
+
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LANAI_INSTPRINTER_LANAIINSTPRINTER_H

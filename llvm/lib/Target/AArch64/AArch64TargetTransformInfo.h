@@ -104,7 +104,7 @@ public:
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
       TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None);
 
-  int getAddressComputationCost(Type *Ty, bool IsComplex);
+  int getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy);
 

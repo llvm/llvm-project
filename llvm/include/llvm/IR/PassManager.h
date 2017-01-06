@@ -342,8 +342,8 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   static AnalysisKey *ID() { return &DerivedT::Key; }
 };
 
-/// This templated class represents "all analyses that operate over <a
-/// particular IR unit>" (e.g. a Function or a Module) in instances of
+/// This templated class represents "all analyses that operate over \<a
+/// particular IR unit\>" (e.g. a Function or a Module) in instances of
 /// PreservedAnalysis.
 ///
 /// This lets a transformation say e.g. "I preserved all function analyses".

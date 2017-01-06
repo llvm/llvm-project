@@ -34,7 +34,7 @@ using namespace lld::elf;
 
 // Returns a string to construct an error message.
 template <class ELFT>
-std::string elf::toString(const InputSectionBase<ELFT> *Sec) {
+std::string lld::toString(const InputSectionBase<ELFT> *Sec) {
   return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
 }
 
@@ -844,7 +844,7 @@ template class elf::MergeInputSection<ELF32BE>;
 template class elf::MergeInputSection<ELF64LE>;
 template class elf::MergeInputSection<ELF64BE>;
 
-template std::string elf::toString(const InputSectionBase<ELF32LE> *);
-template std::string elf::toString(const InputSectionBase<ELF32BE> *);
-template std::string elf::toString(const InputSectionBase<ELF64LE> *);
-template std::string elf::toString(const InputSectionBase<ELF64BE> *);
+template std::string lld::toString(const InputSectionBase<ELF32LE> *);
+template std::string lld::toString(const InputSectionBase<ELF32BE> *);
+template std::string lld::toString(const InputSectionBase<ELF64LE> *);
+template std::string lld::toString(const InputSectionBase<ELF64BE> *);

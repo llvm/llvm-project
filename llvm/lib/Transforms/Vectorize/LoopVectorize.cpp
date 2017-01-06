@@ -6785,22 +6785,19 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
   return Cost;
 }
 
-/// \brief Check whether the address computation for a non-consecutive memory
-/// access looks like an unlikely candidate for being merged into the indexing
-/// mode.
+/// \brief Gets Address Access SCEV after verifying that the access pattern
+/// is loop invariant except the induction variable dependence.
 ///
-/// We look for a GEP which has one index that is an induction variable and all
-/// other indices are loop invariant. If the stride of this access is also
-/// within a small bound we decide that this address computation can likely be
-/// merged into the addressing mode.
-/// In all other cases, we identify the address computation as complex.
-static bool isLikelyComplexAddressComputation(Value *Ptr,
-                                              LoopVectorizationLegality *Legal,
-                                              ScalarEvolution *SE,
-                                              const Loop *TheLoop) {
+/// This SCEV can be sent to the Target in order to estimate the address
+/// calculation cost.
+static const SCEV *getAddressAccessSCEV(
+              Value *Ptr,
+              LoopVectorizationLegality *Legal,
+              ScalarEvolution *SE,
+              const Loop *TheLoop) {
   auto *Gep = dyn_cast<GetElementPtrInst>(Ptr);
   if (!Gep)
-    return true;
+    return nullptr;
 
   // We are looking for a gep with all loop invariant indices except for one
   // which should be an induction variable.
@@ -6809,33 +6806,11 @@ static bool isLikelyComplexAddressComputation(Value *Ptr,
     Value *Opd = Gep->getOperand(i);
     if (!SE->isLoopInvariant(SE->getSCEV(Opd), TheLoop) &&
         !Legal->isInductionVariable(Opd))
-      return true;
+      return nullptr;
   }
 
-  // Now we know we have a GEP ptr, %inv, %ind, %inv. Make sure that the step
-  // can likely be merged into the address computation.
-  unsigned MaxMergeDistance = 64;
-
-  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Ptr));
-  if (!AddRec)
-    return true;
-
-  // Check the step is constant.
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  // Calculate the pointer stride and check if it is consecutive.
-  const auto *C = dyn_cast<SCEVConstant>(Step);
-  if (!C)
-    return true;
-
-  const APInt &APStepVal = C->getAPInt();
-
-  // Huge step value - give up.
-  if (APStepVal.getBitWidth() > 64)
-    return true;
-
-  int64_t StepVal = APStepVal.getSExtValue();
-
-  return StepVal > MaxMergeDistance;
+  // Now we know we have a GEP ptr, %inv, %ind, %inv. return the Ptr SCEV.
+  return SE->getSCEV(Ptr);
 }
 
 static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
@@ -7063,12 +7038,12 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       unsigned Cost = 0;
       Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
 
-      // True if the memory instruction's address computation is complex.
-      bool IsComplexComputation =
-          isLikelyComplexAddressComputation(Ptr, Legal, SE, TheLoop);
+      // Figure out whether the access is strided and get the stride value
+      // if it's known in compile time
+      const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, SE, TheLoop); 
 
       // Get the cost of the scalar memory instruction and address computation.
-      Cost += VF * TTI.getAddressComputationCost(PtrTy, IsComplexComputation);
+      Cost += VF * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
       Cost += VF *
               TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
                                   Alignment, AS);

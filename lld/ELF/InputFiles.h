@@ -36,10 +36,16 @@ class InputFile;
 
 namespace lld {
 namespace elf {
+class InputFile;
+}
+
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+std::string toString(const elf::InputFile *F);
+
+namespace elf {
 
 using llvm::object::Archive;
 
-class InputFile;
 class Lazy;
 class SymbolBody;
 
@@ -83,9 +89,6 @@ protected:
 private:
   const Kind FileKind;
 };
-
-// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string toString(const InputFile *F);
 
 template <typename ELFT> class ELFFileBase : public InputFile {
 public:

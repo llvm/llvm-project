@@ -9,45 +9,62 @@
 
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cctype>
+#include <cstdint>
 #include <cstdio>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 namespace {
-
-class AArch64Operand;
 
 class AArch64AsmParser : public MCTargetAsmParser {
 private:
   StringRef Mnemonic; ///< Instruction mnemonic.
 
   // Map of register aliases registers via the .req directive.
-  StringMap<std::pair<bool, unsigned> > RegisterReqs;
+  StringMap<std::pair<bool, unsigned>> RegisterReqs;
 
   AArch64TargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
@@ -118,6 +135,7 @@ public:
 #include "AArch64GenAsmMatcher.inc"
   };
   bool IsILP32;
+
   AArch64AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                    const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI) {
@@ -143,9 +161,6 @@ public:
                                 MCSymbolRefExpr::VariantKind &DarwinRefKind,
                                 int64_t &Addend);
 };
-} // end anonymous namespace
-
-namespace {
 
 /// AArch64Operand - Instances of this class represent a parsed AArch64 machine
 /// instruction.
@@ -531,6 +546,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 2);
   }
+
   bool isImm0_7() const {
     if (!isImm())
       return false;
@@ -540,6 +556,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 8);
   }
+
   bool isImm1_8() const {
     if (!isImm())
       return false;
@@ -549,6 +566,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val > 0 && Val < 9);
   }
+
   bool isImm0_15() const {
     if (!isImm())
       return false;
@@ -558,6 +576,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 16);
   }
+
   bool isImm1_16() const {
     if (!isImm())
       return false;
@@ -567,6 +586,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val > 0 && Val < 17);
   }
+
   bool isImm0_31() const {
     if (!isImm())
       return false;
@@ -576,6 +596,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 32);
   }
+
   bool isImm1_31() const {
     if (!isImm())
       return false;
@@ -585,6 +606,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 1 && Val < 32);
   }
+
   bool isImm1_32() const {
     if (!isImm())
       return false;
@@ -594,6 +616,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 1 && Val < 33);
   }
+
   bool isImm0_63() const {
     if (!isImm())
       return false;
@@ -603,6 +626,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 64);
   }
+
   bool isImm1_63() const {
     if (!isImm())
       return false;
@@ -612,6 +636,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 1 && Val < 64);
   }
+
   bool isImm1_64() const {
     if (!isImm())
       return false;
@@ -621,6 +646,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 1 && Val < 65);
   }
+
   bool isImm0_127() const {
     if (!isImm())
       return false;
@@ -630,6 +656,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 128);
   }
+
   bool isImm0_255() const {
     if (!isImm())
       return false;
@@ -639,6 +666,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 256);
   }
+
   bool isImm0_65535() const {
     if (!isImm())
       return false;
@@ -648,6 +676,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 0 && Val < 65536);
   }
+
   bool isImm32_63() const {
     if (!isImm())
       return false;
@@ -657,6 +686,7 @@ public:
     int64_t Val = MCE->getValue();
     return (Val >= 32 && Val < 64);
   }
+
   bool isLogicalImm32() const {
     if (!isImm())
       return false;
@@ -669,6 +699,7 @@ public:
     Val &= 0xFFFFFFFF;
     return AArch64_AM::isLogicalImmediate(Val, 32);
   }
+
   bool isLogicalImm64() const {
     if (!isImm())
       return false;
@@ -677,6 +708,7 @@ public:
       return false;
     return AArch64_AM::isLogicalImmediate(MCE->getValue(), 64);
   }
+
   bool isLogicalImm32Not() const {
     if (!isImm())
       return false;
@@ -686,6 +718,7 @@ public:
     int64_t Val = ~MCE->getValue() & 0xFFFFFFFF;
     return AArch64_AM::isLogicalImmediate(Val, 32);
   }
+
   bool isLogicalImm64Not() const {
     if (!isImm())
       return false;
@@ -694,7 +727,9 @@ public:
       return false;
     return AArch64_AM::isLogicalImmediate(~MCE->getValue(), 64);
   }
+
   bool isShiftedImm() const { return Kind == k_ShiftedImm; }
+
   bool isAddSubImm() const {
     if (!isShiftedImm() && !isImm())
       return false;
@@ -737,6 +772,7 @@ public:
     // code deal with it.
     return true;
   }
+
   bool isAddSubImmNeg() const {
     if (!isShiftedImm() && !isImm())
       return false;
@@ -756,7 +792,9 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr);
     return CE != nullptr && CE->getValue() < 0 && -CE->getValue() <= 0xfff;
   }
+
   bool isCondCode() const { return Kind == k_CondCode; }
+
   bool isSIMDImmType10() const {
     if (!isImm())
       return false;
@@ -765,6 +803,7 @@ public:
       return false;
     return AArch64_AM::isAdvSIMDModImmType10(MCE->getValue());
   }
+
   bool isBranchTarget26() const {
     if (!isImm())
       return false;
@@ -776,6 +815,7 @@ public:
       return false;
     return (Val >= -(0x2000000 << 2) && Val <= (0x1ffffff << 2));
   }
+
   bool isPCRelLabel19() const {
     if (!isImm())
       return false;
@@ -787,6 +827,7 @@ public:
       return false;
     return (Val >= -(0x40000 << 2) && Val <= (0x3ffff << 2));
   }
+
   bool isBranchTarget14() const {
     if (!isImm())
       return false;
@@ -891,40 +932,49 @@ public:
   bool isFPImm() const { return Kind == k_FPImm; }
   bool isBarrier() const { return Kind == k_Barrier; }
   bool isSysReg() const { return Kind == k_SysReg; }
+
   bool isMRSSystemRegister() const {
     if (!isSysReg()) return false;
 
     return SysReg.MRSReg != -1U;
   }
+
   bool isMSRSystemRegister() const {
     if (!isSysReg()) return false;
     return SysReg.MSRReg != -1U;
   }
+
   bool isSystemPStateFieldWithImm0_1() const {
     if (!isSysReg()) return false;
     return (SysReg.PStateField == AArch64PState::PAN ||
             SysReg.PStateField == AArch64PState::UAO);
   }
+
   bool isSystemPStateFieldWithImm0_15() const {
     if (!isSysReg() || isSystemPStateFieldWithImm0_1()) return false;
     return SysReg.PStateField != -1U;
   }
+
   bool isReg() const override { return Kind == k_Register && !Reg.isVector; }
   bool isVectorReg() const { return Kind == k_Register && Reg.isVector; }
+
   bool isVectorRegLo() const {
     return Kind == k_Register && Reg.isVector &&
            AArch64MCRegisterClasses[AArch64::FPR128_loRegClassID].contains(
                Reg.RegNum);
   }
+
   bool isGPR32as64() const {
     return Kind == k_Register && !Reg.isVector &&
       AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.RegNum);
   }
+
   bool isWSeqPair() const {
     return Kind == k_Register && !Reg.isVector &&
            AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
                Reg.RegNum);
   }
+
   bool isXSeqPair() const {
     return Kind == k_Register && !Reg.isVector &&
            AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID].contains(
@@ -957,19 +1007,25 @@ public:
   bool isVectorIndex1() const {
     return Kind == k_VectorIndex && VectorIndex.Val == 1;
   }
+
   bool isVectorIndexB() const {
     return Kind == k_VectorIndex && VectorIndex.Val < 16;
   }
+
   bool isVectorIndexH() const {
     return Kind == k_VectorIndex && VectorIndex.Val < 8;
   }
+
   bool isVectorIndexS() const {
     return Kind == k_VectorIndex && VectorIndex.Val < 4;
   }
+
   bool isVectorIndexD() const {
     return Kind == k_VectorIndex && VectorIndex.Val < 2;
   }
+
   bool isToken() const override { return Kind == k_Token; }
+
   bool isTokenEqual(StringRef Str) const {
     return Kind == k_Token && getToken() == Str;
   }
@@ -1006,6 +1062,7 @@ public:
     AArch64_AM::ShiftExtendType ET = getShiftExtendType();
     return ET != AArch64_AM::UXTX && ET != AArch64_AM::SXTX;
   }
+
   bool isExtendLSL64() const {
     if (!isExtend())
       return false;
@@ -1836,18 +1893,16 @@ void AArch64Operand::print(raw_ostream &OS) const {
       OS << "<prfop invalid #" << getPrefetch() << ">";
     break;
   }
-  case k_PSBHint: {
+  case k_PSBHint:
     OS << getPSBHintName();
     break;
-  }
-  case k_ShiftExtend: {
+  case k_ShiftExtend:
     OS << "<" << AArch64_AM::getShiftExtendName(getShiftExtendType()) << " #"
        << getShiftExtendAmount();
     if (!hasShiftExtendAmount())
       OS << "<imp>";
     OS << '>';
     break;
-  }
   }
 }
 
@@ -2469,7 +2524,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     Expr = MCConstantExpr::create(op2, getContext());                          \
     Operands.push_back(                                                        \
         AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));           \
-  } while (0)
+  } while (false)
 
   if (Mnemonic == "ic") {
     if (!Op.compare_lower("ialluis")) {
@@ -3979,7 +4034,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
-
   switch (MatchResult) {
   case Match_Success: {
     // Perform range checking and other semantic validations
@@ -4550,7 +4604,6 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-
 OperandMatchResultTy
 AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
 
@@ -4601,7 +4654,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
- if (RI->getEncodingValue(SecondReg) != FirstEncoding + 1 ||
+  if (RI->getEncodingValue(SecondReg) != FirstEncoding + 1 ||
       (isXReg && !XRegClass.contains(SecondReg)) ||
       (isWReg && !WRegClass.contains(SecondReg))) {
     Error(E,"expected second odd register of a "
@@ -4610,7 +4663,7 @@ AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
   }
 
   unsigned Pair = 0;
-  if(isXReg) {
+  if (isXReg) {
     Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,
            &AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID]);
   } else {

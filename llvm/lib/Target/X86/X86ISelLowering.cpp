@@ -16985,10 +16985,9 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, newSelect, zeroConst);
   }
 
-  if (Cond.getOpcode() == ISD::SETCC) {
+  if (Cond.getOpcode() == ISD::SETCC)
     if (SDValue NewCond = LowerSETCC(Cond, DAG))
       Cond = NewCond;
-  }
 
   // (select (x == 0), -1, y) -> (sign_bit (x - 1)) | y
   // (select (x == 0), y, -1) -> ~(sign_bit (x - 1)) | y
@@ -18306,27 +18305,33 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
     case X86ISD::VSRAI: Opc = X86ISD::VSRA; break;
   }
 
+  // Need to build a vector containing shift amount.
+  // SSE/AVX packed shifts only use the lower 64-bit of the shift count.
+  // +=================+============+=======================================+
+  // | ShAmt is        | HasSSE4.1? | Construct ShAmt vector as             |
+  // +=================+============+=======================================+
+  // | i64             | Yes, No    | Use ShAmt as lowest elt               |
+  // | i32             | Yes        | zero-extend in-reg                    |
+  // | (i32 zext(i16)) | Yes        | zero-extend in-reg                    |
+  // | i16/i32         | No         | v4i32 build_vector(ShAmt, 0, ud, ud)) |
+  // +=================+============+=======================================+
   const X86Subtarget &Subtarget =
       static_cast<const X86Subtarget &>(DAG.getSubtarget());
-  if (Subtarget.hasSSE41() && ShAmt.getOpcode() == ISD::ZERO_EXTEND &&
-      ShAmt.getOperand(0).getSimpleValueType() == MVT::i16) {
-    // Let the shuffle legalizer expand this shift amount node.
+  if (SVT == MVT::i64)
+    ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v2i64, ShAmt);
+  else if (Subtarget.hasSSE41() && ShAmt.getOpcode() == ISD::ZERO_EXTEND &&
+           ShAmt.getOperand(0).getSimpleValueType() == MVT::i16) {
     SDValue Op0 = ShAmt.getOperand(0);
     Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(Op0), MVT::v8i16, Op0);
-    ShAmt = getShuffleVectorZeroOrUndef(Op0, 0, true, Subtarget, DAG);
+    ShAmt = DAG.getZeroExtendVectorInReg(Op0, SDLoc(Op0), MVT::v2i64);
+  } else if (Subtarget.hasSSE41() &&
+             ShAmt.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v4i32, ShAmt);
+    ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
   } else {
-    // Need to build a vector containing shift amount.
-    // SSE/AVX packed shifts only use the lower 64-bit of the shift count.
-    SmallVector<SDValue, 4> ShOps;
-    ShOps.push_back(ShAmt);
-    if (SVT == MVT::i32) {
-      ShOps.push_back(DAG.getConstant(0, dl, SVT));
-      ShOps.push_back(DAG.getUNDEF(SVT));
-    }
-    ShOps.push_back(DAG.getUNDEF(SVT));
-
-    MVT BVT = SVT == MVT::i32 ? MVT::v4i32 : MVT::v2i64;
-    ShAmt = DAG.getBuildVector(BVT, dl, ShOps);
+    SmallVector<SDValue, 4> ShOps = {ShAmt, DAG.getConstant(0, dl, SVT),
+                                     DAG.getUNDEF(SVT), DAG.getUNDEF(SVT)};
+    ShAmt = DAG.getBuildVector(MVT::v4i32, dl, ShOps);
   }
 
   // The return type has to be a 128-bit type with the same element
@@ -28739,6 +28744,27 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
     DCI.AddToWorklist(Op1.getNode());
     DCI.CombineTo(OrigOp.getNode(),
                   DAG.getNode(Opcode, DL, VT, Op0, Op1,
+                              DAG.getConstant(Imm, DL, MVT::i8)));
+    return true;
+  }
+  case ISD::EXTRACT_SUBVECTOR: {
+    unsigned EltSize = EltVT.getSizeInBits();
+    if (EltSize != 32 && EltSize != 64)
+      return false;
+    MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
+    // Only change element size, not type.
+    if (VT.isInteger() != OpEltVT.isInteger())
+      return false;
+    uint64_t Imm = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+    Imm = (Imm * OpEltVT.getSizeInBits()) / EltSize;
+    // Op0 needs to be bitcasted to a larger vector with the same element type.
+    SDValue Op0 = Op.getOperand(0);
+    MVT Op0VT = MVT::getVectorVT(EltVT,
+                            Op0.getSimpleValueType().getSizeInBits() / EltSize);
+    Op0 = DAG.getBitcast(Op0VT, Op0);
+    DCI.AddToWorklist(Op0.getNode());
+    DCI.CombineTo(OrigOp.getNode(),
+                  DAG.getNode(Opcode, DL, VT, Op0,
                               DAG.getConstant(Imm, DL, MVT::i8)));
     return true;
   }

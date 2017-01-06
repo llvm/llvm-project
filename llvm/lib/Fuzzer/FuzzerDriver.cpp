@@ -468,6 +468,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleInt = Flags.handle_int;
   Options.HandleSegv = Flags.handle_segv;
   Options.HandleTerm = Flags.handle_term;
+  Options.HandleXfsz = Flags.handle_xfsz;
   SetSignalHandler(Options);
 
   if (Flags.minimize_crash_internal_step)

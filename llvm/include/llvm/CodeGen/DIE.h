@@ -651,6 +651,9 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   unsigned AbbrevNumber = ~0u;
   /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
+  /// Set to true to force a DIE to emit an abbreviation that says it has
+  /// children even when it doesn't. This is used for unit testing purposes.
+  bool ForceChildren;
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -659,7 +662,8 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   PointerUnion<DIE *, DIEUnit *> Owner;
 
   DIE() = delete;
-  explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag) {}
+  explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag),
+      ForceChildren(false) {}
 
 public:
   static DIE *get(BumpPtrAllocator &Alloc, dwarf::Tag Tag) {
@@ -677,7 +681,8 @@ public:
   /// Get the compile/type unit relative offset of this DIE.
   unsigned getOffset() const { return Offset; }
   unsigned getSize() const { return Size; }
-  bool hasChildren() const { return !Children.empty(); }
+  bool hasChildren() const { return ForceChildren || !Children.empty(); }
+  void setForceChildren(bool B) { ForceChildren = B; }
 
   typedef IntrusiveBackList<DIE>::iterator child_iterator;
   typedef IntrusiveBackList<DIE>::const_iterator const_child_iterator;

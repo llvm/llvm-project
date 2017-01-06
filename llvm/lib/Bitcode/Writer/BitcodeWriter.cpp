@@ -971,9 +971,8 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
 static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   uint64_t RawFlags = 0;
 
-  RawFlags |= Flags.NoRename; // bool
-  RawFlags |= (Flags.IsNotViableToInline << 1);
-  RawFlags |= (Flags.HasInlineAsmMaybeReferencingInternal << 2);
+  RawFlags |= Flags.NotEligibleToImport; // bool
+  RawFlags |= (Flags.LiveRoot << 1);
   // Linkage don't need to be remapped at that time for the summary. Any future
   // change to the getEncodedLinkage() function will need to be taken into
   // account here as well.
@@ -3435,7 +3434,7 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
 // Current version for the summary.
 // This is bumped whenever we introduce changes in the way some record are
 // interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 2;
+static const uint64_t INDEX_VERSION = 3;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.

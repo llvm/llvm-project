@@ -308,7 +308,7 @@ public:
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   typedef LiveInVector::const_iterator livein_iterator;
-  livein_iterator livein_begin() const { return LiveIns.begin(); }
+  livein_iterator livein_begin() const;
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }
   iterator_range<livein_iterator> liveins() const {

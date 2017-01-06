@@ -11,8 +11,7 @@ declare !type !0 void @foo()
 
 define i1 @bar(i8* %ptr) {
   ; X64: icmp eq i64 {{.*}}, ptrtoint (void ()* @[[JT:.*]] to i64)
-  ; WASM32: sub i64 {{.*}}, 0
-  ; WASM32: icmp ult i64 {{.*}}, 1
+  ; WASM32: ret i1 false
   %p = call i1 @llvm.type.test(i8* %ptr, metadata !"void")
   ret i1 %p
 }

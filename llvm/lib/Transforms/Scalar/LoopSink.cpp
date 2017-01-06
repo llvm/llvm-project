@@ -283,8 +283,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   // sinked.
   for (auto II = Preheader->rbegin(), E = Preheader->rend(); II != E;) {
     Instruction *I = &*II++;
-    if (!L.hasLoopInvariantOperands(I) ||
-        !canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, nullptr))
+    if (!canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, nullptr))
       continue;
     if (sinkInstruction(L, *I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI))
       Changed = true;

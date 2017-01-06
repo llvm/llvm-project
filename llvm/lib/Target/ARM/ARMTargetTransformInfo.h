@@ -104,7 +104,8 @@ public:
 
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
-  int getAddressComputationCost(Type *Val, bool IsComplex);
+  int getAddressComputationCost(Type *Val, ScalarEvolution *SE, 
+                                const SCEV *Ptr);
 
   int getFPOpCost(Type *Ty);
 

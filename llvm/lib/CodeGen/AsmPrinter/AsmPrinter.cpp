@@ -108,7 +108,7 @@ static unsigned getGVAlignmentLog2(const GlobalValue *GV, const DataLayout &DL,
 AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
-      LastMI(nullptr), LastFn(0), Counter(~0U) {
+      isCFIMoveForDebugging(false), LastMI(nullptr), LastFn(0), Counter(~0U) {
   DD = nullptr;
   MMI = nullptr;
   LI = nullptr;
@@ -262,6 +262,28 @@ bool AsmPrinter::doInitialization(Module &M) {
       Handlers.push_back(HandlerInfo(DD, DbgTimerName, DbgTimerDescription,
                                      DWARFGroupName, DWARFGroupDescription));
     }
+  }
+
+  switch (MAI->getExceptionHandlingType()) {
+  case ExceptionHandling::SjLj:
+  case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::ARM:
+    isCFIMoveForDebugging = true;
+    if (MAI->getExceptionHandlingType() != ExceptionHandling::DwarfCFI)
+      break;
+    for (auto &F: M.getFunctionList()) {
+      // If the module contains any function with unwind data,
+      // .eh_frame has to be emitted.
+      // Ignore functions that won't get emitted.
+      if (!F.isDeclarationForLinker() && F.needsUnwindTableEntry()) {
+        isCFIMoveForDebugging = false;
+        break;
+      }
+    }
+    break;
+  default:
+    isCFIMoveForDebugging = false;
+    break;
   }
 
   EHStreamer *ES = nullptr;

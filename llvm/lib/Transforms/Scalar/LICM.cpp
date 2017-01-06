@@ -408,6 +408,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
           CurAST->deleteValue(&I);
           I.eraseFromParent();
         }
+        Changed = true;
         continue;
       }
 
@@ -911,14 +912,23 @@ bool llvm::promoteLoopAccessesToScalars(
   //
   // If at least one store is guaranteed to execute, both properties are
   // satisfied, and promotion is legal.
+  //
   // This, however, is not a necessary condition. Even if no store/load is
-  // guaranteed to execute, we can still establish these properties:
-  // (p1) by proving that hoisting the load into the preheader is
-  // safe (i.e. proving dereferenceability on all paths through the loop). We
+  // guaranteed to execute, we can still establish these properties.
+  // We can establish (p1) by proving that hoisting the load into the preheader
+  // is safe (i.e. proving dereferenceability on all paths through the loop). We
   // can use any access within the alias set to prove dereferenceability,
   // since they're all must alias.
-  // (p2) by proving the memory is thread-local, so the memory model
+  // 
+  // There are two ways establish (p2): 
+  // a) Prove the location is thread-local. In this case the memory model
   // requirement does not apply, and stores are safe to insert.
+  // b) Prove a store dominates every exit block. In this case, if an exit
+  // blocks is reached, the original dynamic path would have taken us through
+  // the store, so inserting a store into the exit block is safe. Note that this
+  // is different from the store being guaranteed to execute. For instance,
+  // if an exception is thrown on the first iteration of the loop, the original
+  // store is never executed, but the exit blocks are not executed either.
 
   bool DereferenceableInPH = false;
   bool SafeToInsertStore = false;
@@ -999,6 +1009,17 @@ bool llvm::promoteLoopAccessesToScalars(
             Alignment = std::max(Alignment, InstAlignment);
           }
         }
+
+        // If a store dominates all exit blocks, it is safe to sink.
+        // As explained above, if an exit block was executed, a dominating
+        // store must have been been executed at least once, so we are not
+        // introducing stores on paths that did not have them.
+        // Note that this only looks at explicit exit blocks. If we ever
+        // start sinking stores into unwind edges (see above), this will break.
+        if (!SafeToInsertStore)
+          SafeToInsertStore = llvm::all_of(ExitBlocks, [&](BasicBlock *Exit) {
+            return DT->dominates(Store->getParent(), Exit);
+          });
 
         // If the store is not guaranteed to execute, we may still get
         // deref info through it.

@@ -90,6 +90,7 @@ add_llvm_library(LLVMSupport
   StringSaver.cpp
   StringRef.cpp
   SystemUtils.cpp
+  TarWriter.cpp
   TargetParser.cpp
   ThreadPool.cpp
   Timer.cpp
