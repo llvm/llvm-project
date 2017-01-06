@@ -92,12 +92,11 @@ std::string elf::ObjectFile<ELFT>::getLineInfo(InputSectionBase<ELFT> *S,
       DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info);
   if (Info.Line == 0)
     return "";
-  return convertToUnixPathSeparator(Info.FileName) + ":" +
-         std::to_string(Info.Line);
+  return Info.FileName + ":" + std::to_string(Info.Line);
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string elf::toString(const InputFile *F) {
+std::string lld::toString(const InputFile *F) {
   if (!F)
     return "(internal)";
   if (!F->ArchiveName.empty())

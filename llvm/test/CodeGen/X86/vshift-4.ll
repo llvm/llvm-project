@@ -9,7 +9,6 @@ define void @shift1a(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
 ; X32-LABEL: shift1a:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
 ; X32-NEXT:    psllq %xmm1, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%eax)
 ; X32-NEXT:    retl
@@ -34,7 +33,6 @@ define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, <2 x i64> %sh) nounwind {
 ; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
 ; X32-NEXT:    movdqa %xmm0, %xmm3
 ; X32-NEXT:    psllq %xmm2, %xmm3
-; X32-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
 ; X32-NEXT:    psllq %xmm1, %xmm0
 ; X32-NEXT:    movsd {{.*#+}} xmm3 = xmm0[0],xmm3[1]
 ; X32-NEXT:    movapd %xmm3, (%eax)

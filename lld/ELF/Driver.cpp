@@ -426,7 +426,7 @@ static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
   if (S.startswith("0x"))
     S = S.drop_front(2);
   if (S.getAsInteger(16, VA))
-    error("invalid argument: " + stringize(Arg));
+    error("invalid argument: " + toString(Arg));
   return VA;
 }
 

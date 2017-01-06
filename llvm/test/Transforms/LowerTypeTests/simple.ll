@@ -92,7 +92,7 @@ define i1 @bar(i32* %p) {
   ; CHECK: [[S0:%[^ ]*]] = bitcast i32* [[B0]] to i8*
   %pi8 = bitcast i32* %p to i8*
   ; CHECK: [[S1:%[^ ]*]] = ptrtoint i8* [[S0]] to i32
-  ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], add (i32 ptrtoint ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]] to i32), i32 4)
+  ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], ptrtoint (i8* getelementptr (i8, i8* bitcast ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]] to i8*), i32 4) to i32)
   ; CHECK: [[S3:%[^ ]*]] = lshr i32 [[S2]], 8
   ; CHECK: [[S4:%[^ ]*]] = shl i32 [[S2]], 24
   ; CHECK: [[S5:%[^ ]*]] = or i32 [[S3]], [[S4]]

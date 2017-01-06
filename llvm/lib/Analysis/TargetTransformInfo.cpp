@@ -389,8 +389,9 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
 }
 
 int TargetTransformInfo::getAddressComputationCost(Type *Tp,
-                                                   bool IsComplex) const {
-  int Cost = TTIImpl->getAddressComputationCost(Tp, IsComplex);
+                                                   ScalarEvolution *SE,
+                                                   const SCEV *Ptr) const {
+  int Cost = TTIImpl->getAddressComputationCost(Tp, SE, Ptr);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -10,6 +10,8 @@
 #ifndef LLVM_LIB_DEBUGINFO_DWARFDIE_H
 #define LLVM_LIB_DEBUGINFO_DWARFDIE_H
 
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 
@@ -40,9 +42,6 @@ public:
   
   bool isValid() const { return U && Die; }
   explicit operator bool() const { return isValid(); }
-  bool operator ==(const DWARFDie &RHS) const {
-    return Die == RHS.Die && U == RHS.U;
-  }
   const DWARFDebugInfoEntry *getDebugInfoEntry() const { return Die; }
   DWARFUnit *getDwarfUnit() const { return U; }
 
@@ -361,8 +360,61 @@ public:
   getInlinedChainForAddress(const uint64_t Address,
                             SmallVectorImpl<DWARFDie> &InlinedChain) const;
 
+  class iterator;
+  
+  iterator begin() const;
+  iterator end() const;
+  iterator_range<iterator> children() const;
 };
 
+  
+inline bool operator==(const DWARFDie &LHS, const DWARFDie &RHS) {
+  return LHS.getDebugInfoEntry() == RHS.getDebugInfoEntry() &&
+      LHS.getDwarfUnit() == RHS.getDwarfUnit();
+}
+
+inline bool operator!=(const DWARFDie &LHS, const DWARFDie &RHS) {
+  return !(LHS == RHS);
+}
+
+class DWARFDie::iterator : public iterator_facade_base<iterator,
+                                                      std::forward_iterator_tag,
+                                                      const DWARFDie> {
+  DWARFDie Die;
+  void skipNull() {
+    if (Die && Die.isNULL())
+      Die = DWARFDie();
+  }
+public:
+  iterator() = default;
+  explicit iterator(DWARFDie D) : Die(D) {
+    // If we start out with only a Null DIE then invalidate.
+    skipNull();
+  }
+  iterator &operator++() {
+    Die = Die.getSibling();
+    // Don't include the NULL die when iterating.
+    skipNull();
+    return *this;
+  }
+  explicit operator bool() const { return Die.isValid(); }
+  const DWARFDie &operator*() const { return Die; }
+  bool operator==(const iterator &X) const { return Die == X.Die; }
+};
+
+// These inline functions must follow the DWARFDie::iterator definition above
+// as they use functions from that class.
+inline DWARFDie::iterator DWARFDie::begin() const {
+  return iterator(getFirstChild());
+}
+
+inline DWARFDie::iterator DWARFDie::end() const {
+  return iterator();
+}
+
+inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {
+  return make_range(begin(), end());
+}
 
 } // end namespace llvm
 

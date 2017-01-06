@@ -44,6 +44,10 @@ using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
+std::string lld::toString(uint32_t Type) {
+  return getELFRelocationTypeName(elf::Config->EMachine, Type);
+}
+
 namespace lld {
 namespace elf {
 
@@ -51,10 +55,6 @@ TargetInfo *Target;
 
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
-
-std::string toString(uint32_t Type) {
-  return getELFRelocationTypeName(Config->EMachine, Type);
-}
 
 template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
   for (InputSectionData *D : Symtab<ELFT>::X->Sections) {

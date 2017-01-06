@@ -19,6 +19,13 @@
 using namespace llvm;
 using namespace llvm::object;
 
+// Returns a symbol name for an error message.
+std::string lld::toString(coff::SymbolBody &B) {
+  if (Optional<std::string> S = coff::demangle(B.getName()))
+    return ("\"" + *S + "\" (" + B.getName() + ")").str();
+  return B.getName();
+}
+
 namespace lld {
 namespace coff {
 
@@ -73,13 +80,5 @@ Defined *Undefined::getWeakAlias() {
       return D;
   return nullptr;
 }
-
-// Returns a symbol name for an error message.
-std::string toString(SymbolBody &B) {
-  if (Optional<std::string> S = demangle(B.getName()))
-    return ("\"" + *S + "\" (" + B.getName() + ")").str();
-  return B.getName();
-}
-
 } // namespace coff
 } // namespace lld

@@ -106,7 +106,7 @@ public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
 
-  /// Group flags (Linkage, noRename, isOptSize, etc.) as a bitfield.
+  /// Group flags (Linkage, NotEligibleToImport, etc.) as a bitfield.
   struct GVFlags {
     /// \brief The linkage type of the associated global value.
     ///
@@ -117,39 +117,20 @@ public:
     /// types based on global summary-based analysis.
     unsigned Linkage : 4;
 
-    /// Indicate if the global value cannot be renamed (in a specific section,
-    /// possibly referenced from inline assembly, etc).
-    unsigned NoRename : 1;
+    /// Indicate if the global value cannot be imported (e.g. it cannot
+    /// be renamed or references something that can't be renamed).
+    unsigned NotEligibleToImport : 1;
 
-    /// Indicate if a function contains inline assembly (which is opaque),
-    /// that may reference a local value. This is used to prevent importing
-    /// of this function, since we can't promote and rename the uses of the
-    /// local in the inline assembly. Use a flag rather than bloating the
-    /// summary with references to every possible local value in the
-    /// llvm.used set.
-    unsigned HasInlineAsmMaybeReferencingInternal : 1;
-
-    /// Indicate if the function is not viable to inline.
-    unsigned IsNotViableToInline : 1;
+    /// Indicate that the global value must be considered a live root for
+    /// index-based liveness analysis. Used for special LLVM values such as
+    /// llvm.global_ctors that the linker does not know about.
+    unsigned LiveRoot : 1;
 
     /// Convenience Constructors
-    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool NoRename,
-                     bool HasInlineAsmMaybeReferencingInternal,
-                     bool IsNotViableToInline)
-        : Linkage(Linkage), NoRename(NoRename),
-          HasInlineAsmMaybeReferencingInternal(
-              HasInlineAsmMaybeReferencingInternal),
-          IsNotViableToInline(IsNotViableToInline) {}
-
-    GVFlags(const GlobalValue &GV)
-        : Linkage(GV.getLinkage()), NoRename(GV.hasSection()),
-          HasInlineAsmMaybeReferencingInternal(false) {
-      IsNotViableToInline = false;
-      if (const auto *F = dyn_cast<Function>(&GV))
-        // Inliner doesn't handle variadic functions.
-        // FIXME: refactor this to use the same code that inliner is using.
-        IsNotViableToInline = F->isVarArg();
-    }
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage,
+                     bool NotEligibleToImport, bool LiveRoot)
+        : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
+          LiveRoot(LiveRoot) {}
   };
 
 private:
@@ -217,31 +198,19 @@ public:
     Flags.Linkage = Linkage;
   }
 
-  bool isNotViableToInline() const { return Flags.IsNotViableToInline; }
+  /// Return true if this global value can't be imported.
+  bool notEligibleToImport() const { return Flags.NotEligibleToImport; }
 
-  /// Return true if this summary is for a GlobalValue that needs promotion
-  /// to be referenced from another module.
-  bool needsRenaming() const { return GlobalValue::isLocalLinkage(linkage()); }
+  /// Return true if this global value must be considered a root for live
+  /// value analysis on the index.
+  bool liveRoot() const { return Flags.LiveRoot; }
 
-  /// Return true if this global value cannot be renamed (in a specific section,
-  /// possibly referenced from inline assembly, etc).
-  bool noRename() const { return Flags.NoRename; }
+  /// Flag that this global value must be considered a root for live
+  /// value analysis on the index.
+  void setLiveRoot() { Flags.LiveRoot = true; }
 
-  /// Flag that this global value cannot be renamed (in a specific section,
-  /// possibly referenced from inline assembly, etc).
-  void setNoRename() { Flags.NoRename = true; }
-
-  /// Return true if this global value possibly references another value
-  /// that can't be renamed.
-  bool hasInlineAsmMaybeReferencingInternal() const {
-    return Flags.HasInlineAsmMaybeReferencingInternal;
-  }
-
-  /// Flag that this global value possibly references another value that
-  /// can't be renamed.
-  void setHasInlineAsmMaybeReferencingInternal() {
-    Flags.HasInlineAsmMaybeReferencingInternal = true;
-  }
+  /// Flag that this global value cannot be imported.
+  void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
 
   /// Return the list of values referenced by this global value definition.
   ArrayRef<ValueInfo> refs() const { return RefEdgeList; }
@@ -411,6 +380,7 @@ public:
   const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
+  size_t size() const { return GlobalValueMap.size(); }
 
   /// Get the list of global value summary objects for a given value name.
   const GlobalValueSummaryList &getGlobalValueSummaryList(StringRef ValueName) {

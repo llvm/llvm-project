@@ -453,10 +453,9 @@ inline Symbol *SymbolBody::symbol() {
   return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
                                     offsetof(Symbol, Body));
 }
-
-std::string toString(const SymbolBody &B);
-
 } // namespace elf
+
+std::string toString(const elf::SymbolBody &B);
 } // namespace lld
 
 #endif

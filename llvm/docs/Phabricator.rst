@@ -132,7 +132,7 @@ committed to trunk. If you do not have commit access, someone has to
 commit the change for you (with attribution). It is sufficient to add
 a comment to the approved review indicating you cannot commit the patch
 yourself. If you have commit access, there are multiple workflows to commit the
-change. Whichever method you follow it is recommend that your commit message
+change. Whichever method you follow it is recommended that your commit message
 ends with the line:
 
 ::

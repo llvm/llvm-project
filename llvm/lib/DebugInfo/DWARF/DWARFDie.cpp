@@ -299,11 +299,8 @@ DWARFDie::collectChildrenAddressRanges(DWARFAddressRangesVector& Ranges) const {
     Ranges.insert(Ranges.end(), DIERanges.begin(), DIERanges.end());
   }
 
-  DWARFDie Child = getFirstChild();
-  while (Child) {
+  for (auto Child: children())
     Child.collectChildrenAddressRanges(Ranges);
-    Child = Child.getSibling();
-  }
 }
 
 bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {

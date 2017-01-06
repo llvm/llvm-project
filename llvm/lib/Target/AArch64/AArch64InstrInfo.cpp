@@ -14,16 +14,37 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
-#include <algorithm>
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -529,19 +550,19 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
     default:
       llvm_unreachable("Unknown branch opcode in Cond");
     case AArch64::CBZW:
-      Is64Bit = 0;
+      Is64Bit = false;
       CC = AArch64CC::EQ;
       break;
     case AArch64::CBZX:
-      Is64Bit = 1;
+      Is64Bit = true;
       CC = AArch64CC::EQ;
       break;
     case AArch64::CBNZW:
-      Is64Bit = 0;
+      Is64Bit = false;
       CC = AArch64CC::NE;
       break;
     case AArch64::CBNZX:
-      Is64Bit = 1;
+      Is64Bit = true;
       CC = AArch64CC::NE;
       break;
     }
@@ -1044,7 +1065,7 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::SUBSWri:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
-    return Instr.getOpcode();;
+    return Instr.getOpcode();
 
   case AArch64::ADDWrr:    return AArch64::ADDSWrr;
   case AArch64::ADDWri:    return AArch64::ADDSWri;
@@ -1072,12 +1093,15 @@ static bool areCFlagsAliveInSuccessors(MachineBasicBlock *MBB) {
 }
 
 namespace {
+
 struct UsedNZCV {
-  bool N;
-  bool Z;
-  bool C;
-  bool V;
-  UsedNZCV(): N(false), Z(false), C(false), V(false) {}
+  bool N = false;
+  bool Z = false;
+  bool C = false;
+  bool V = false;
+
+  UsedNZCV() = default;
+
   UsedNZCV& operator |=(const UsedNZCV& UsedFlags) {
     this->N |= UsedFlags.N;
     this->Z |= UsedFlags.Z;
@@ -1086,6 +1110,7 @@ struct UsedNZCV {
     return *this;
   }
 };
+
 } // end anonymous namespace
 
 /// Find a condition code used by the instruction.
@@ -1561,7 +1586,7 @@ bool AArch64InstrInfo::isScaledAddr(const MachineInstr &MI) const {
 
 /// Check all MachineMemOperands for a hint to suppress pairing.
 bool AArch64InstrInfo::isLdStPairSuppressed(const MachineInstr &MI) const {
-  return any_of(MI.memoperands(), [](MachineMemOperand *MMO) {
+  return llvm::any_of(MI.memoperands(), [](MachineMemOperand *MMO) {
     return MMO->getFlags() & MOSuppressPair;
   });
 }
@@ -1994,7 +2019,7 @@ static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
 void AArch64InstrInfo::copyPhysRegTuple(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, const DebugLoc &DL,
     unsigned DestReg, unsigned SrcReg, bool KillSrc, unsigned Opcode,
-    llvm::ArrayRef<unsigned> Indices) const {
+    ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() &&
          "Unexpected register copy without NEON");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -2583,7 +2608,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   //
   // <rdar://problem/11522048>
   //
-  if (MI.isCopy()) {
+  if (MI.isFullCopy()) {
     unsigned DstReg = MI.getOperand(0).getReg();
     unsigned SrcReg = MI.getOperand(1).getReg();
     if (SrcReg == AArch64::SP &&
@@ -2598,7 +2623,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     }
   }
 
-  // Handle the case where a copy is being spilled or refilled but the source
+  // Handle the case where a copy is being spilled or filled but the source
   // and destination register class don't match.  For example:
   //
   //   %vreg0<def> = COPY %XZR; GPR64common:%vreg0
@@ -2613,7 +2638,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   //
   //   %vreg0<def> = COPY %vreg1; GPR64:%vreg0, FPR64:%vreg1
   //
-  // will be refilled as
+  // will be filled as
   //
   //   LDRDui %vreg0, fi<#0>
   //
@@ -2622,9 +2647,11 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   //   LDRXui %vregTemp, fi<#0>
   //   %vreg0 = FMOV %vregTemp
   //
-  if (MI.isFullCopy() && Ops.size() == 1 &&
+  if (MI.isCopy() && Ops.size() == 1 &&
       // Make sure we're only folding the explicit COPY defs/uses.
       (Ops[0] == 0 || Ops[0] == 1)) {
+    bool IsSpill = Ops[0] == 0;
+    bool IsFill = !IsSpill;
     const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     MachineBasicBlock &MBB = *MI.getParent();
@@ -2632,20 +2659,111 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     const MachineOperand &SrcMO = MI.getOperand(1);
     unsigned DstReg = DstMO.getReg();
     unsigned SrcReg = SrcMO.getReg();
+    // This is slightly expensive to compute for physical regs since
+    // getMinimalPhysRegClass is slow.
     auto getRegClass = [&](unsigned Reg) {
       return TargetRegisterInfo::isVirtualRegister(Reg)
                  ? MRI.getRegClass(Reg)
                  : TRI.getMinimalPhysRegClass(Reg);
     };
-    const TargetRegisterClass &DstRC = *getRegClass(DstReg);
-    const TargetRegisterClass &SrcRC = *getRegClass(SrcReg);
-    if (DstRC.getSize() == SrcRC.getSize()) {
-      if (Ops[0] == 0)
+
+    if (DstMO.getSubReg() == 0 && SrcMO.getSubReg() == 0) {
+      assert(getRegClass(DstReg)->getSize() == getRegClass(SrcReg)->getSize() &&
+             "Mismatched register size in non subreg COPY");
+      if (IsSpill)
         storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
-                            &SrcRC, &TRI);
+                            getRegClass(SrcReg), &TRI);
       else
-        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, &DstRC, &TRI);
+        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex,
+                             getRegClass(DstReg), &TRI);
       return &*--InsertPt;
+    }
+
+    // Handle cases like spilling def of:
+    //
+    //   %vreg0:sub_32<def,read-undef> = COPY %WZR; GPR64common:%vreg0
+    //
+    // where the physical register source can be widened and stored to the full
+    // virtual reg destination stack slot, in this case producing:
+    //
+    //   STRXui %XZR, <fi#0>
+    //
+    if (IsSpill && DstMO.isUndef() &&
+        TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+      assert(SrcMO.getSubReg() == 0 &&
+             "Unexpected subreg on physical register");
+      const TargetRegisterClass *SpillRC;
+      unsigned SpillSubreg;
+      switch (DstMO.getSubReg()) {
+      default:
+        SpillRC = nullptr;
+        break;
+      case AArch64::sub_32:
+      case AArch64::ssub:
+        if (AArch64::GPR32RegClass.contains(SrcReg)) {
+          SpillRC = &AArch64::GPR64RegClass;
+          SpillSubreg = AArch64::sub_32;
+        } else if (AArch64::FPR32RegClass.contains(SrcReg)) {
+          SpillRC = &AArch64::FPR64RegClass;
+          SpillSubreg = AArch64::ssub;
+        } else
+          SpillRC = nullptr;
+        break;
+      case AArch64::dsub:
+        if (AArch64::FPR64RegClass.contains(SrcReg)) {
+          SpillRC = &AArch64::FPR128RegClass;
+          SpillSubreg = AArch64::dsub;
+        } else
+          SpillRC = nullptr;
+        break;
+      }
+
+      if (SpillRC)
+        if (unsigned WidenedSrcReg =
+                TRI.getMatchingSuperReg(SrcReg, SpillSubreg, SpillRC)) {
+          storeRegToStackSlot(MBB, InsertPt, WidenedSrcReg, SrcMO.isKill(),
+                              FrameIndex, SpillRC, &TRI);
+          return &*--InsertPt;
+        }
+    }
+
+    // Handle cases like filling use of:
+    //
+    //   %vreg0:sub_32<def,read-undef> = COPY %vreg1; GPR64:%vreg0, GPR32:%vreg1
+    //
+    // where we can load the full virtual reg source stack slot, into the subreg
+    // destination, in this case producing:
+    //
+    //   LDRWui %vreg0:sub_32<def,read-undef>, <fi#0>
+    //
+    if (IsFill && SrcMO.getSubReg() == 0 && DstMO.isUndef()) {
+      const TargetRegisterClass *FillRC;
+      switch (DstMO.getSubReg()) {
+      default:
+        FillRC = nullptr;
+        break;
+      case AArch64::sub_32:
+        FillRC = &AArch64::GPR32RegClass;
+        break;
+      case AArch64::ssub:
+        FillRC = &AArch64::FPR32RegClass;
+        break;
+      case AArch64::dsub:
+        FillRC = &AArch64::FPR64RegClass;
+        break;
+      }
+
+      if (FillRC) {
+        assert(getRegClass(SrcReg)->getSize() == FillRC->getSize() &&
+               "Mismatched regclass size on folded subreg COPY");
+        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC, &TRI);
+        MachineInstr &LoadMI = *--InsertPt;
+        MachineOperand &LoadDst = LoadMI.getOperand(0);
+        assert(LoadDst.getSubReg() == 0 && "unexpected subreg on fill load");
+        LoadDst.setSubReg(DstMO.getSubReg());
+        LoadDst.setIsUndef();
+        return &LoadMI;
+      }
     }
   }
 
@@ -2936,7 +3054,7 @@ bool AArch64InstrInfo::useMachineCombiner() const {
 
   return true;
 }
-//
+
 // True when Opc sets flag
 static bool isCombineInstrSettingFlag(unsigned Opc) {
   switch (Opc) {
@@ -2955,7 +3073,7 @@ static bool isCombineInstrSettingFlag(unsigned Opc) {
   }
   return false;
 }
-//
+
 // 32b Opcodes that can be combined with a MUL
 static bool isCombineInstrCandidate32(unsigned Opc) {
   switch (Opc) {
@@ -2974,7 +3092,7 @@ static bool isCombineInstrCandidate32(unsigned Opc) {
   }
   return false;
 }
-//
+
 // 64b Opcodes that can be combined with a MUL
 static bool isCombineInstrCandidate64(unsigned Opc) {
   switch (Opc) {
@@ -2993,7 +3111,7 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   }
   return false;
 }
-//
+
 // FP Opcodes that can be combined with a FMUL
 static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   switch (Inst.getOpcode()) {
@@ -3009,13 +3127,13 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f32:
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
-		TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options; 
-    return (Options.UnsafeFPMath || 
-				    Options.AllowFPOpFusion == FPOpFusion::Fast);
+    TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
+    return (Options.UnsafeFPMath ||
+            Options.AllowFPOpFusion == FPOpFusion::Fast);
   }
   return false;
 }
-//
+
 // Opcodes that can be combined with a MUL
 static bool isCombineInstrCandidate(unsigned Opc) {
   return (isCombineInstrCandidate32(Opc) || isCombineInstrCandidate64(Opc));
@@ -3205,7 +3323,7 @@ static bool getFMAPatterns(MachineInstr &Root,
                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
 
   if (!isCombineInstrCandidateFP(Root))
-    return 0;
+    return false;
 
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
@@ -3971,8 +4089,6 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   // Record MUL and ADD/SUB for deletion
   DelInstrs.push_back(MUL);
   DelInstrs.push_back(&Root);
-
-  return;
 }
 
 /// \brief Replace csincr-branch sequence by simple conditional branch
@@ -4148,6 +4264,7 @@ AArch64InstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
 ArrayRef<std::pair<unsigned, const char *>>
 AArch64InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace AArch64II;
+
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PAGE, "aarch64-page"},
       {MO_PAGEOFF, "aarch64-pageoff"},
@@ -4162,6 +4279,7 @@ AArch64InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
 ArrayRef<std::pair<unsigned, const char *>>
 AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace AArch64II;
+
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_GOT, "aarch64-got"},
       {MO_NC, "aarch64-nc"},

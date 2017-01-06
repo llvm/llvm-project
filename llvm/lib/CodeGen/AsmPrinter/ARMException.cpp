@@ -53,7 +53,8 @@ void ARMException::beginFunction(const MachineFunction *MF) {
 
   if (MoveType == AsmPrinter::CFI_M_Debug) {
     if (!hasEmittedCFISections) {
-      Asm->OutStreamer->EmitCFISections(false, true);
+      if (Asm->needsOnlyDebugCFIMoves())
+        Asm->OutStreamer->EmitCFISections(false, true);
       hasEmittedCFISections = true;
     }
 

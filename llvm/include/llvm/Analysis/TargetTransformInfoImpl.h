@@ -15,6 +15,7 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFOIMPL_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFOIMPL_H
 
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -370,7 +371,10 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) { return 0; }
 
-  unsigned getAddressComputationCost(Type *Tp, bool) { return 0; }
+  unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *,
+                                     const SCEV *) {
+    return 0; 
+  }
 
   unsigned getReductionCost(unsigned, Type *, bool) { return 1; }
 
@@ -421,6 +425,30 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const {
     return VF;
+  }
+protected:
+  bool isStridedAccess(const SCEV *Ptr) {
+    return Ptr && isa<SCEVAddRecExpr>(Ptr);
+  }
+
+  const SCEVConstant *getConstantStrideStep(ScalarEvolution *SE,
+                                            const SCEV *Ptr) {
+    if (!isStridedAccess(Ptr))
+      return nullptr;
+    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(Ptr);
+    return dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(*SE));
+  }
+
+  bool isConstantStridedAccessLessThan(ScalarEvolution *SE, const SCEV *Ptr,
+                                       int64_t MergeDistance) {
+    const SCEVConstant *Step = getConstantStrideStep(SE, Ptr);
+    if (!Step)
+      return false;
+    APInt StrideVal = Step->getAPInt();
+    if (StrideVal.getBitWidth() > 64)
+      return false;
+    // FIXME: need to take absolute value for negtive stride case  
+    return StrideVal.getSExtValue() < MergeDistance;
   }
 };
 

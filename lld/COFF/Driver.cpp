@@ -369,7 +369,7 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     case OPT_libpath:
       break;
     default:
-      OS << stringize(Arg) << "\n";
+      OS << toString(Arg) << "\n";
     }
   }
 

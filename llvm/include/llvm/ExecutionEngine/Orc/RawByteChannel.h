@@ -47,9 +47,9 @@ public:
   /// Locks the channel for writing.
   template <typename FunctionIdT, typename SequenceIdT>
   Error startSendMessage(const FunctionIdT &FnId, const SequenceIdT &SeqNo) {
+    writeLock.lock();
     if (auto Err = serializeSeq(*this, FnId, SeqNo))
       return Err;
-    writeLock.lock();
     return Error::success();
   }
 

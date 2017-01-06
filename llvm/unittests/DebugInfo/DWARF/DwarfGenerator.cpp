@@ -108,6 +108,10 @@ dwarfgen::DIE dwarfgen::CompileUnit::getUnitDIE() {
   return dwarfgen::DIE(this, &DU.getUnitDie());
 }
 
+void dwarfgen::DIE::setForceChildren() {
+  Die->setForceChildren(true);
+}
+
 //===----------------------------------------------------------------------===//
 /// dwarfgen::Generator implementation.
 //===----------------------------------------------------------------------===//

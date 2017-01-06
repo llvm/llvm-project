@@ -71,7 +71,8 @@ public:
                             unsigned AddressSpace);
   int getGatherScatterOpCost(unsigned Opcode, Type *DataTy, Value *Ptr,
                              bool VariableMask, unsigned Alignment);
-  int getAddressComputationCost(Type *PtrTy, bool IsComplex);
+  int getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                const SCEV *Ptr);
 
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> Tys, FastMathFlags FMF);

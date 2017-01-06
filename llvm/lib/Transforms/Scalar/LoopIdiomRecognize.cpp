@@ -997,7 +997,7 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 /// Check if the given conditional branch is based on the comparison between
 /// a variable and zero, and if the variable is non-zero, the control yields to
 /// the loop entry. If the branch matches the behavior, the variable involved
-/// in the comparion is returned. This function will be called to see if the
+/// in the comparison is returned. This function will be called to see if the
 /// precondition and postcondition of the loop are in desirable form.
 static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry) {
   if (!BI || !BI->isConditional())

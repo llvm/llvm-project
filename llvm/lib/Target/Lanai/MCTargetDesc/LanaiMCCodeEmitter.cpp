@@ -12,37 +12,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lanai.h"
+#include "LanaiAluCode.h"
 #include "MCTargetDesc/LanaiBaseInfo.h"
 #include "MCTargetDesc/LanaiFixupKinds.h"
 #include "MCTargetDesc/LanaiMCExpr.h"
-#include "MCTargetDesc/LanaiMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 #define DEBUG_TYPE "mccodeemitter"
 
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 namespace llvm {
+
 namespace {
+
 class LanaiMCCodeEmitter : public MCCodeEmitter {
-  LanaiMCCodeEmitter(const LanaiMCCodeEmitter &); // DO NOT IMPLEMENT
-  void operator=(const LanaiMCCodeEmitter &);     // DO NOT IMPLEMENT
-  const MCInstrInfo &InstrInfo;
-  MCContext &Context;
-
 public:
-  LanaiMCCodeEmitter(const MCInstrInfo &MCII, MCContext &C)
-      : InstrInfo(MCII), Context(C) {}
-
-  ~LanaiMCCodeEmitter() override {}
+  LanaiMCCodeEmitter(const MCInstrInfo &MCII, MCContext &C) {}
+  LanaiMCCodeEmitter(const LanaiMCCodeEmitter &) = delete;
+  void operator=(const LanaiMCCodeEmitter &) = delete;
+  ~LanaiMCCodeEmitter() override = default;
 
   // The functions below are called by TableGen generated functions for getting
   // the binary encoding of instructions/opereands.
@@ -85,6 +86,8 @@ public:
   unsigned adjustPqBitsSpls(const MCInst &Inst, unsigned Value,
                             const MCSubtargetInfo &STI) const;
 };
+
+} // end anonymous namespace
 
 Lanai::Fixups FixupKind(const MCExpr *Expr) {
   if (isa<MCSymbolRefExpr>(Expr))
@@ -298,8 +301,8 @@ unsigned LanaiMCCodeEmitter::getBranchTargetOpValue(
 }
 
 #include "LanaiGenMCCodeEmitter.inc"
-} // namespace
-} // namespace llvm
+
+} // end namespace llvm
 
 llvm::MCCodeEmitter *
 llvm::createLanaiMCCodeEmitter(const MCInstrInfo &InstrInfo,

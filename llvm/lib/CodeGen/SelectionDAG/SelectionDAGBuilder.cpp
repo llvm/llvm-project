@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -7339,19 +7340,23 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
   if (!Range)
     return Op;
 
-  Constant *Lo = cast<ConstantAsMetadata>(Range->getOperand(0))->getValue();
-  if (!Lo->isNullValue())
+  ConstantRange CR = getConstantRangeFromMetadata(*Range);
+  if (CR.isFullSet() || CR.isEmptySet() || CR.isWrappedSet())
     return Op;
 
-  Constant *Hi = cast<ConstantAsMetadata>(Range->getOperand(1))->getValue();
-  unsigned Bits = cast<ConstantInt>(Hi)->getValue().logBase2();
+  APInt Lo = CR.getUnsignedMin();
+  if (!Lo.isMinValue())
+    return Op;
+
+  APInt Hi = CR.getUnsignedMax();
+  unsigned Bits = Hi.getActiveBits();
 
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
 
   SDLoc SL = getCurSDLoc();
 
-  SDValue ZExt = DAG.getNode(ISD::AssertZext, SL, Op.getValueType(),
-                             Op, DAG.getValueType(SmallVT));
+  SDValue ZExt = DAG.getNode(ISD::AssertZext, SL, Op.getValueType(), Op,
+                             DAG.getValueType(SmallVT));
   unsigned NumVals = Op.getNode()->getNumValues();
   if (NumVals == 1)
     return ZExt;

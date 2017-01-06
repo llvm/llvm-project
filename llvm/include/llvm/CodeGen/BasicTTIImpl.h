@@ -925,7 +925,10 @@ public:
     return LT.first;
   }
 
-  unsigned getAddressComputationCost(Type *Ty, bool IsComplex) { return 0; }
+  unsigned getAddressComputationCost(Type *Ty, ScalarEvolution *,
+                                     const SCEV *) {
+    return 0; 
+  }
 
   unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");

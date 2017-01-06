@@ -1,6 +1,5 @@
 ; Test that we correctly import an unsat resolution for type identifier "typeid1".
-; FIXME: We should not require -O2 to simplify this to return false.
-; RUN: opt -S -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-unsat.yaml -lowertypetests-write-summary=%t -O2 < %s | FileCheck %s
+; RUN: opt -S -lowertypetests -lowertypetests-summary-action=import -lowertypetests-read-summary=%S/Inputs/import-unsat.yaml -lowertypetests-write-summary=%t < %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY:      GlobalValueMap:

@@ -62,6 +62,7 @@ struct FuzzingOptions {
   bool HandleInt = false;
   bool HandleSegv = false;
   bool HandleTerm = false;
+  bool HandleXfsz = false;
 };
 
 }  // namespace fuzzer

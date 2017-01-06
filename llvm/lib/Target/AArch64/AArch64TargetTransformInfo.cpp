@@ -417,14 +417,17 @@ int AArch64TTIImpl::getArithmeticInstrCost(
   }
 }
 
-int AArch64TTIImpl::getAddressComputationCost(Type *Ty, bool IsComplex) {
+int AArch64TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                              const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
   // extra micro-ops can significantly decrease throughput.
   unsigned NumVectorInstToHideOverhead = 10;
+  int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && IsComplex)
+  if (Ty->isVectorTy() && SE && 
+      !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 
   // In many cases the address computation is not merged into the instruction
