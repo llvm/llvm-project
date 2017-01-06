@@ -3181,7 +3181,7 @@ public:
   /// Get the using declaration from which this was instantiated. This will
   /// always be an UnresolvedUsingValueDecl or an UnresolvedUsingTypenameDecl
   /// that is a pack expansion.
-  NamedDecl *getInstantiatedFromUsingDecl() { return InstantiatedFrom; }
+  NamedDecl *getInstantiatedFromUsingDecl() const { return InstantiatedFrom; }
 
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.

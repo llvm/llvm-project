@@ -15,6 +15,7 @@
 #include <stdlib.h>
 
 #include "Platform.h"
+#include "llvm/Support/ErrorHandling.h"
 
 int ioctl(int d, int request, ...) {
   switch (request) {

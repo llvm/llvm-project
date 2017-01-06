@@ -552,23 +552,10 @@ cref(reference_wrapper<_Tp> __t) _NOEXCEPT
     return cref(__t.get());
 }
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
-
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp> void ref(const _Tp&&) = delete;
 template <class _Tp> void cref(const _Tp&&) = delete;
-
-#else  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
-
-template <class _Tp> void ref(const _Tp&&);// = delete;
-template <class _Tp> void cref(const _Tp&&);// = delete;
-
-#endif  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp1, class _Tp2 = void>

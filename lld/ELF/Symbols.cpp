@@ -202,6 +202,10 @@ void SymbolBody::parseSymbolVersion() {
   // Truncate the symbol name so that it doesn't include the version string.
   Name = {S.data(), Pos};
 
+  // If this is an undefined or shared symbol it is not a definition.
+  if (isUndefined() || isShared())
+    return;
+
   // '@@' in a symbol name means the default version.
   // It is usually the most recent one.
   bool IsDefault = (Verstr[0] == '@');

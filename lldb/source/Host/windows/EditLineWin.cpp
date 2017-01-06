@@ -13,6 +13,7 @@
 #include "lldb/Host/windows/windows.h"
 
 #include "lldb/Host/windows/editlinewin.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <assert.h>
 #include <vector>
 

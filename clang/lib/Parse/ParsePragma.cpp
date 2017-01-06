@@ -506,10 +506,12 @@ void Parser::HandlePragmaOpenCLExtension() {
   // overriding all previously issued extension directives, but only if the
   // behavior is set to disable."
   if (Name == "all") {
-    if (State == Disable)
+    if (State == Disable) {
       Opt.disableAll();
-    else
+      Opt.enableSupportedCore(getLangOpts().OpenCLVersion);
+    } else {
       PP.Diag(NameLoc, diag::warn_pragma_expected_predicate) << 1;
+    }
   } else if (State == Begin) {
     if (!Opt.isKnown(Name) ||
         !Opt.isSupported(Name, getLangOpts().OpenCLVersion)) {

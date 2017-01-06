@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#if TEST_STD_VER >= 11
 #define DELETE_FUNCTION = delete
 #else
 #define DELETE_FUNCTION

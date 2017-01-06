@@ -19,7 +19,9 @@
 #include <type_traits>
 #include <cassert>
 
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 11
 #define DELETE_FUNCTION = delete
 #else
 #define DELETE_FUNCTION { assert(false); }

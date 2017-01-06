@@ -34,6 +34,9 @@ std::string rewritePath(StringRef S);
 
 // Returns the string form of the given argument.
 std::string toString(llvm::opt::Arg *Arg);
+
+// Replaces backslashes with slashes if Windows.
+std::string convertToUnixPathSeparator(StringRef S);
 }
 
 #endif

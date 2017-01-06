@@ -34,7 +34,7 @@ pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
 pythonize_bool(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-pythonize_bool(LIBCXX_HAS_EXTERNAL_THREAD_API)
+pythonize_bool(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
 
 # By default, for non-standalone builds, libcxx and libcxxabi share a library
 # directory.
