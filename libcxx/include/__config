@@ -101,6 +101,16 @@
 #define __is_identifier(__x) 1
 #endif
 
+#if defined(__clang__)
+#define _LIBCPP_COMPILER_CLANG
+#elif defined(__GNUC__)
+#define _LIBCPP_COMPILER_GCC
+#elif defined(_MSC_VER)
+#define _LIBCPP_COMPILER_MSVC
+#elif defined(__IBMCPP__)
+#define _LIBCPP_COMPILER_IBM
+#endif
+
 // Need to detect which libc we're using if we're on Linux.
 #if defined(__linux__)
 #include <features.h>
@@ -164,16 +174,7 @@
 #  define _LIBCPP_LITTLE_ENDIAN 1
 #  define _LIBCPP_BIG_ENDIAN    0
 #  define _LIBCPP_SHORT_WCHAR   1
-// Compiler intrinsics (MSVC)
-#  if defined(_MSC_VER) && _MSC_VER >= 1400
-#    define _LIBCPP_HAS_IS_BASE_OF
-#  endif
-#  if defined(_MSC_VER) && !defined(__clang__)
-#    define _LIBCPP_MSVC // Using Microsoft Visual C++ compiler
-#    define _LIBCPP_TOSTRING2(x) #x
-#    define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
-#    define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
-#  endif
+
 // If mingw not explicitly detected, assume using MS C runtime only.
 #  ifndef __MINGW32__
 #    define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
@@ -230,7 +231,7 @@
 #define _LIBCPP_NO_CFI
 #endif
 
-#if defined(__clang__)
+#if defined(_LIBCPP_COMPILER_CLANG)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
 // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT left here for backward compatibility.
@@ -274,10 +275,6 @@ typedef __char32_t char32_t;
 #else
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
-
-#if !(__has_feature(cxx_deleted_functions))
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
-#endif  // !(__has_feature(cxx_deleted_functions))
 
 #if !(__has_feature(cxx_lambdas))
 #define _LIBCPP_HAS_NO_LAMBDAS
@@ -390,7 +387,7 @@ namespace std {
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
-#elif defined(__GNUC__)
+#elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
@@ -431,7 +428,6 @@ namespace std {
 
 #ifndef __GXX_EXPERIMENTAL_CXX0X__
 #define _LIBCPP_HAS_NO_DECLTYPE
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
@@ -448,7 +444,6 @@ namespace std {
 
 #if _GNUC_VER < 404
 #define _LIBCPP_HAS_NO_DECLTYPE
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
@@ -475,15 +470,23 @@ using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
 #define _LIBCPP_HAS_NO_ASAN
 #endif
 
-#elif defined(_LIBCPP_MSVC)
+#elif defined(_LIBCPP_COMPILER_MSVC)
 
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+#define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
+
+#if _MSC_VER < 1900
+#error "MSVC versions prior to Visual Studio 2015 are not supported"
+#endif
+
+#define _LIBCPP_HAS_IS_BASE_OF
 #define _LIBCPP_HAS_NO_CONSTEXPR
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #if _MSC_VER <= 1800
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #endif
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
@@ -500,7 +503,7 @@ namespace std {
 
 #define _LIBCPP_HAS_NO_ASAN
 
-#elif defined(__IBMCPP__)
+#elif defined(_LIBCPP_COMPILER_IBM)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
@@ -530,7 +533,7 @@ namespace std {
 
 #define _LIBCPP_HAS_NO_ASAN
 
-#endif // __clang__ || __GNUC__ || _MSC_VER || __IBMCPP__
+#endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
 
 #if defined(__ELF__)
 #define _LIBCPP_OBJECT_FORMAT_ELF   1
@@ -566,7 +569,7 @@ namespace std {
 #define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
 
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_COMPILER_MSVC)
 # define _LIBCPP_INLINE_VISIBILITY __forceinline
 # define _LIBCPP_ALWAYS_INLINE     __forceinline
 # define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
@@ -739,7 +742,7 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_DEFAULT = default;
 #endif
 
-#ifdef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifdef _LIBCPP_CXX03_LANG
 #define _LIBCPP_EQUAL_DELETE
 #else
 #define _LIBCPP_EQUAL_DELETE = delete
@@ -891,9 +894,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Thread API
-#if !defined(_LIBCPP_HAS_NO_THREADS) && \
-    !defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && \
-    !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 # if defined(__FreeBSD__) || \
     defined(__Fuchsia__) || \
     defined(__NetBSD__) || \
@@ -901,7 +902,9 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     defined(__APPLE__) || \
     defined(__CloudABI__) || \
     defined(__sun__)
-#  define _LIBCPP_HAS_THREAD_API_PTHREAD
+#   ifndef _LIBCPP_HAS_THREAD_API_PTHREAD
+#     define _LIBCPP_HAS_THREAD_API_PTHREAD
+#   endif
 # else
 #  error "No thread API"
 # endif // _LIBCPP_HAS_THREAD_API

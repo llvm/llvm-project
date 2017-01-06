@@ -509,7 +509,7 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   }
 
   // Non-affine PHI writes do not "happen" at a particular instruction, but
-  // after exiting the statement. Therefore they are guaranteed execute and
+  // after exiting the statement. Therefore they are guaranteed to execute and
   // overwrite the old value.
   if (Kind == ScopArrayInfo::MK_PHI || Kind == ScopArrayInfo::MK_ExitPHI)
     isKnownMustAccess = true;

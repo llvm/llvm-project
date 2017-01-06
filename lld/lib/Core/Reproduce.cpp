@@ -39,7 +39,7 @@ std::string lld::relativeToRoot(StringRef Path) {
     Res = Root.substr(2);
 
   path::append(Res, path::relative_path(Abs));
-  return Res.str();
+  return convertToUnixPathSeparator(Res);
 }
 
 // Quote a given string if it contains a space character.
@@ -63,4 +63,14 @@ std::string lld::toString(opt::Arg *Arg) {
   if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
     return K + V;
   return K + " " + V;
+}
+
+std::string lld::convertToUnixPathSeparator(StringRef S) {
+#ifdef LLVM_ON_WIN32
+  std::string Ret = S.str();
+  std::replace(Ret.begin(), Ret.end(), '\\', '/');
+  return Ret;
+#else
+  return S;
+#endif
 }

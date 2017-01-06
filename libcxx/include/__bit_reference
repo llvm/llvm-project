@@ -40,11 +40,8 @@ class __bit_reference
     __storage_pointer __seg_;
     __storage_type    __mask_;
 
-#if defined(__clang__) || defined(__IBMCPP__) || defined(_LIBCPP_MSVC)
     friend typename _Cp::__self;
-#else
-    friend class _Cp::__self;
-#endif
+
     friend class __bit_const_reference<_Cp>;
     friend class __bit_iterator<_Cp, false>;
 public:
@@ -130,11 +127,7 @@ class __bit_const_reference
     __storage_pointer        __seg_;
     __storage_type __mask_;
 
-#if defined(__clang__) || defined(__IBMCPP__) || defined(_LIBCPP_MSVC)
     friend typename _Cp::__self;
-#else
-    friend class _Cp::__self;
-#endif
     friend class __bit_iterator<_Cp, true>;
 public:
     _LIBCPP_INLINE_VISIBILITY
@@ -1221,11 +1214,8 @@ private:
     __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
         : __seg_(__s), __ctz_(__ctz) {}
 
-#if defined(__clang__) || defined(__IBMCPP__) || defined(_LIBCPP_MSVC)
     friend typename _Cp::__self;
-#else
-    friend class _Cp::__self;
-#endif
+
     friend class __bit_reference<_Cp>;
     friend class __bit_const_reference<_Cp>;
     friend class __bit_iterator<_Cp, true>;

@@ -18,7 +18,7 @@
 #include <cstdarg> // va_ macros
 // "builtins" not implemented here for Clang or GCC as they provide
 // implementations. Assuming required for elsewhere else, certainly MSVC.
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_COMPILER_MSVC)
 #include <intrin.h>
 #endif
 #if defined(_LIBCPP_MSVCRT)
@@ -49,7 +49,7 @@ size_t wcsnrtombs(char *__restrict dst, const wchar_t **__restrict src,
 #define _Exit _exit
 #endif
 
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_COMPILER_MSVC)
 
 // Bit builtin's make these assumptions when calling _BitScanForward/Reverse
 // etc. These assumptions are expected to be true for Win32/Win64 which this
