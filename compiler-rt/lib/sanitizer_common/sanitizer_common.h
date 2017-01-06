@@ -281,6 +281,7 @@ void UpdateProcessName();
 void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
+void PrintModuleMap();
 bool FileExists(const char *filename);
 const char *GetEnv(const char *name);
 bool SetEnv(const char *name, const char *value);
@@ -656,6 +657,32 @@ enum ModuleArch {
   kModuleArchARM64
 };
 
+// When adding a new architecture, don't forget to also update
+// script/asan_symbolize.py and sanitizer_symbolizer_libcdep.cc.
+inline const char *ModuleArchToString(ModuleArch arch) {
+  switch (arch) {
+    case kModuleArchUnknown:
+      return "";
+    case kModuleArchI386:
+      return "i386";
+    case kModuleArchX86_64:
+      return "x86_64";
+    case kModuleArchX86_64H:
+      return "x86_64h";
+    case kModuleArchARMV6:
+      return "armv6";
+    case kModuleArchARMV7:
+      return "armv7";
+    case kModuleArchARMV7S:
+      return "armv7s";
+    case kModuleArchARMV7K:
+      return "armv7k";
+    case kModuleArchARM64:
+      return "arm64";
+  }
+  CHECK(0 && "Invalid module arch");
+}
+
 const uptr kModuleUUIDSize = 16;
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
@@ -665,6 +692,7 @@ class LoadedModule {
   LoadedModule()
       : full_name_(nullptr),
         base_address_(0),
+        max_executable_address_(0),
         arch_(kModuleArchUnknown),
         instrumented_(false) {
     internal_memset(uuid_, 0, kModuleUUIDSize);
@@ -679,6 +707,7 @@ class LoadedModule {
 
   const char *full_name() const { return full_name_; }
   uptr base_address() const { return base_address_; }
+  uptr max_executable_address() const { return max_executable_address_; }
   ModuleArch arch() const { return arch_; }
   const u8 *uuid() const { return uuid_; }
   bool instrumented() const { return instrumented_; }
@@ -698,6 +727,7 @@ class LoadedModule {
  private:
   char *full_name_;  // Owned.
   uptr base_address_;
+  uptr max_executable_address_;
   ModuleArch arch_;
   u8 uuid_[kModuleUUIDSize];
   bool instrumented_;
