@@ -1751,30 +1751,57 @@ class NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const Builtin::Info BuiltinInfo[];
   CudaArch GPU;
+  std::unique_ptr<TargetInfo> HostTarget;
 
 public:
-  NVPTXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+  NVPTXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts,
+                  unsigned TargetPointerWidth)
       : TargetInfo(Triple) {
+    assert((TargetPointerWidth == 32 || TargetPointerWidth == 64) &&
+           "NVPTX only supports 32- and 64-bit modes.");
+
     TLSSupported = false;
-    LongWidth = LongAlign = 64;
     AddrSpaceMap = &NVPTXAddrSpaceMap;
     UseAddrSpaceMapMangling = true;
+
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
     GPU = CudaArch::SM_20;
 
+    if (TargetPointerWidth == 32)
+      resetDataLayout("e-p:32:32-i64:64-v16:16-v32:32-n16:32:64");
+    else
+      resetDataLayout("e-i64:64-v16:16-v32:32-n16:32:64");
+
     // If possible, get a TargetInfo for our host triple, so we can match its
     // types.
     llvm::Triple HostTriple(Opts.HostTriple);
-    if (HostTriple.isNVPTX())
-      return;
-    std::unique_ptr<TargetInfo> HostTarget(
-        AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+    if (!HostTriple.isNVPTX())
+      HostTarget.reset(AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+
+    // If no host target, make some guesses about the data layout and return.
     if (!HostTarget) {
+      LongWidth = LongAlign = TargetPointerWidth;
+      PointerWidth = PointerAlign = TargetPointerWidth;
+      switch (TargetPointerWidth) {
+      case 32:
+        SizeType = TargetInfo::UnsignedInt;
+        PtrDiffType = TargetInfo::SignedInt;
+        IntPtrType = TargetInfo::SignedInt;
+        break;
+      case 64:
+        SizeType = TargetInfo::UnsignedLong;
+        PtrDiffType = TargetInfo::SignedLong;
+        IntPtrType = TargetInfo::SignedLong;
+        break;
+      default:
+        llvm_unreachable("TargetPointerWidth must be 32 or 64");
+      }
       return;
     }
 
+    // Copy properties from host target.
     PointerWidth = HostTarget->getPointerWidth(/* AddrSpace = */ 0);
     PointerAlign = HostTarget->getPointerAlign(/* AddrSpace = */ 0);
     BoolWidth = HostTarget->getBoolWidth();
@@ -1935,6 +1962,16 @@ public:
     Opts.support("cl_khr_local_int32_base_atomics");
     Opts.support("cl_khr_local_int32_extended_atomics");
   }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    // CUDA compilations support all of the host's calling conventions.
+    //
+    // TODO: We should warn if you apply a non-default CC to anything other than
+    // a host function.
+    if (HostTarget)
+      return HostTarget->checkCallingConvention(CC);
+    return CCCR_Warning;
+  }
 };
 
 const Builtin::Info NVPTXTargetInfo::BuiltinInfo[] = {
@@ -1952,31 +1989,6 @@ const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::makeArrayRef(GCCRegNames);
 }
-
-class NVPTX32TargetInfo : public NVPTXTargetInfo {
-public:
-  NVPTX32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : NVPTXTargetInfo(Triple, Opts) {
-    LongWidth = LongAlign = 32;
-    PointerWidth = PointerAlign = 32;
-    SizeType = TargetInfo::UnsignedInt;
-    PtrDiffType = TargetInfo::SignedInt;
-    IntPtrType = TargetInfo::SignedInt;
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v32:32-n16:32:64");
-  }
-};
-
-class NVPTX64TargetInfo : public NVPTXTargetInfo {
-public:
-  NVPTX64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : NVPTXTargetInfo(Triple, Opts) {
-    PointerWidth = PointerAlign = 64;
-    SizeType = TargetInfo::UnsignedLong;
-    PtrDiffType = TargetInfo::SignedLong;
-    IntPtrType = TargetInfo::SignedLong;
-    resetDataLayout("e-i64:64-v16:16-v32:32-n16:32:64");
-  }
-};
 
 static const unsigned AMDGPUAddrSpaceMap[] = {
   1,    // opencl_global
@@ -8735,9 +8747,9 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::nvptx:
-    return new NVPTX32TargetInfo(Triple, Opts);
+    return new NVPTXTargetInfo(Triple, Opts, /*TargetPointerWidth=*/32);
   case llvm::Triple::nvptx64:
-    return new NVPTX64TargetInfo(Triple, Opts);
+    return new NVPTXTargetInfo(Triple, Opts, /*TargetPointerWidth=*/64);
 
   case llvm::Triple::amdgcn:
   case llvm::Triple::r600:

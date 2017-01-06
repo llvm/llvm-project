@@ -4086,13 +4086,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = getToolChain().getDriver();
   ArgStringList CmdArgs;
 
-  bool IsWindowsGNU = getToolChain().getTriple().isWindowsGNUEnvironment();
-  bool IsWindowsCygnus =
-      getToolChain().getTriple().isWindowsCygwinEnvironment();
-  bool IsWindowsMSVC = getToolChain().getTriple().isWindowsMSVCEnvironment();
-  bool IsPS4CPU = getToolChain().getTriple().isPS4CPU();
-  bool IsIAMCU = getToolChain().getTriple().isOSIAMCU();
-
   // Check number of inputs for sanity. We need at least one input.
   assert(Inputs.size() >= 1 && "Must have at least one input.");
   const InputInfo &Input = Inputs[0];
@@ -4105,6 +4098,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   assert((IsCuda || (IsOpenMPDevice && Inputs.size() == 2) ||
           Inputs.size() == 1) &&
          "Unable to handle multiple inputs.");
+
+  bool IsWindowsGNU = getToolChain().getTriple().isWindowsGNUEnvironment();
+  bool IsWindowsCygnus =
+      getToolChain().getTriple().isWindowsCygwinEnvironment();
+  bool IsWindowsMSVC = getToolChain().getTriple().isWindowsMSVCEnvironment();
+  bool IsPS4CPU = getToolChain().getTriple().isPS4CPU();
+  bool IsIAMCU = getToolChain().getTriple().isOSIAMCU();
+
+  // Adjust IsWindowsXYZ for CUDA compilations.  Even when compiling in device
+  // mode (i.e., getToolchain().getTriple() is NVPTX, not Windows), we need to
+  // pass Windows-specific flags to cc1.
+  if (IsCuda) {
+    const llvm::Triple *AuxTriple = getToolChain().getAuxTriple();
+    IsWindowsMSVC |= AuxTriple && AuxTriple->isWindowsMSVCEnvironment();
+    IsWindowsGNU |= AuxTriple && AuxTriple->isWindowsGNUEnvironment();
+    IsWindowsCygnus |= AuxTriple && AuxTriple->isWindowsCygwinEnvironment();
+  }
 
   // C++ is not supported for IAMCU.
   if (IsIAMCU && types::isCXX(Input.getType()))

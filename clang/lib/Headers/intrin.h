@@ -65,7 +65,6 @@ static __inline__
 void __cpuid(int[4], int);
 static __inline__
 void __cpuidex(int[4], int, int);
-void __debugbreak(void);
 static __inline__
 __int64 __emul(int, int);
 static __inline__
@@ -109,10 +108,6 @@ void __outdword(unsigned short, unsigned long);
 void __outdwordstring(unsigned short, unsigned long *, unsigned long);
 void __outword(unsigned short, unsigned short);
 void __outwordstring(unsigned short, unsigned short *, unsigned long);
-static __inline__
-unsigned int __popcnt(unsigned int);
-static __inline__
-unsigned short __popcnt16(unsigned short);
 unsigned long __readcr0(void);
 unsigned long __readcr2(void);
 static __inline__
@@ -123,8 +118,6 @@ unsigned int __readdr(unsigned int);
 #ifdef __i386__
 static __inline__
 unsigned char __readfsbyte(unsigned long);
-static __inline__
-unsigned long __readfsdword(unsigned long);
 static __inline__
 unsigned __int64 __readfsqword(unsigned long);
 static __inline__
@@ -179,108 +172,34 @@ static __inline__
 unsigned char _bittestandreset(long *, long);
 static __inline__
 unsigned char _bittestandset(long *, long);
-unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64);
-unsigned long __cdecl _byteswap_ulong(unsigned long);
-unsigned short __cdecl _byteswap_ushort(unsigned short);
 void __cdecl _disable(void);
 void __cdecl _enable(void);
 long _InterlockedAddLargeStatistic(__int64 volatile *_Addend, long _Value);
-static __inline__
-long _InterlockedAnd(long volatile *_Value, long _Mask);
-static __inline__
-short _InterlockedAnd16(short volatile *_Value, short _Mask);
-static __inline__
-char _InterlockedAnd8(char volatile *_Value, char _Mask);
 unsigned char _interlockedbittestandreset(long volatile *, long);
 static __inline__
 unsigned char _interlockedbittestandset(long volatile *, long);
-static __inline__
-long __cdecl _InterlockedCompareExchange(long volatile *_Destination,
-                                         long _Exchange, long _Comparand);
 long _InterlockedCompareExchange_HLEAcquire(long volatile *, long, long);
 long _InterlockedCompareExchange_HLERelease(long volatile *, long, long);
-static __inline__
-short _InterlockedCompareExchange16(short volatile *_Destination,
-                                    short _Exchange, short _Comparand);
-static __inline__
-__int64 _InterlockedCompareExchange64(__int64 volatile *_Destination,
-                                      __int64 _Exchange, __int64 _Comparand);
 __int64 _InterlockedcompareExchange64_HLEAcquire(__int64 volatile *, __int64,
                                                  __int64);
 __int64 _InterlockedCompareExchange64_HLERelease(__int64 volatile *, __int64,
                                                  __int64);
-static __inline__
-char _InterlockedCompareExchange8(char volatile *_Destination, char _Exchange,
-                                  char _Comparand);
 void *_InterlockedCompareExchangePointer_HLEAcquire(void *volatile *, void *,
                                                     void *);
 void *_InterlockedCompareExchangePointer_HLERelease(void *volatile *, void *,
                                                     void *);
-static __inline__
-long __cdecl _InterlockedDecrement(long volatile *_Addend);
-static __inline__
-short _InterlockedDecrement16(short volatile *_Addend);
-long _InterlockedExchange(long volatile *_Target, long _Value);
-static __inline__
-short _InterlockedExchange16(short volatile *_Target, short _Value);
-static __inline__
-char _InterlockedExchange8(char volatile *_Target, char _Value);
-static __inline__
-long __cdecl _InterlockedExchangeAdd(long volatile *_Addend, long _Value);
 long _InterlockedExchangeAdd_HLEAcquire(long volatile *, long);
 long _InterlockedExchangeAdd_HLERelease(long volatile *, long);
-static __inline__
-short _InterlockedExchangeAdd16(short volatile *_Addend, short _Value);
 __int64 _InterlockedExchangeAdd64_HLEAcquire(__int64 volatile *, __int64);
 __int64 _InterlockedExchangeAdd64_HLERelease(__int64 volatile *, __int64);
-static __inline__
-char _InterlockedExchangeAdd8(char volatile *_Addend, char _Value);
-static __inline__
-long __cdecl _InterlockedIncrement(long volatile *_Addend);
-static __inline__
-short _InterlockedIncrement16(short volatile *_Addend);
-static __inline__
-long _InterlockedOr(long volatile *_Value, long _Mask);
-static __inline__
-short _InterlockedOr16(short volatile *_Value, short _Mask);
-static __inline__
-char _InterlockedOr8(char volatile *_Value, char _Mask);
-static __inline__
-long _InterlockedXor(long volatile *_Value, long _Mask);
-static __inline__
-short _InterlockedXor16(short volatile *_Value, short _Mask);
-static __inline__
-char _InterlockedXor8(char volatile *_Value, char _Mask);
 void __cdecl _invpcid(unsigned int, void *);
-static __inline__
-unsigned long __cdecl _lrotl(unsigned long, int);
-static __inline__
-unsigned long __cdecl _lrotr(unsigned long, int);
 static __inline__ void
 __attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
 _ReadBarrier(void);
 static __inline__ void
 __attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
 _ReadWriteBarrier(void);
-static __inline__
-void *_ReturnAddress(void);
 unsigned int _rorx_u32(unsigned int, const unsigned int);
-static __inline__
-unsigned int __cdecl _rotl(unsigned int _Value, int _Shift);
-static __inline__
-unsigned short _rotl16(unsigned short _Value, unsigned char _Shift);
-static __inline__
-unsigned __int64 __cdecl _rotl64(unsigned __int64 _Value, int _Shift);
-static __inline__
-unsigned char _rotl8(unsigned char _Value, unsigned char _Shift);
-static __inline__
-unsigned int __cdecl _rotr(unsigned int _Value, int _Shift);
-static __inline__
-unsigned short _rotr16(unsigned short _Value, unsigned char _Shift);
-static __inline__
-unsigned __int64 __cdecl _rotr64(unsigned __int64 _Value, int _Shift);
-static __inline__
-unsigned char _rotr8(unsigned char _Value, unsigned char _Shift);
 int _sarx_i32(int, unsigned int);
 #if __STDC_HOSTED__
 int __cdecl _setjmp(jmp_buf);
@@ -317,8 +236,6 @@ void __lwpval64(unsigned __int64, unsigned int, unsigned int);
 unsigned __int64 __lzcnt64(unsigned __int64);
 static __inline__
 void __movsq(unsigned long long *, unsigned long long const *, size_t);
-static __inline__
-unsigned __int64 __popcnt64(unsigned __int64);
 static __inline__
 unsigned char __readgsbyte(unsigned long);
 static __inline__
@@ -357,7 +274,6 @@ static __inline__
 unsigned char _bittestandreset64(__int64 *, __int64);
 static __inline__
 unsigned char _bittestandset64(__int64 *, __int64);
-unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64);
 long _InterlockedAnd_np(long volatile *_Value, long _Mask);
 short _InterlockedAnd16_np(short volatile *_Value, short _Mask);
 __int64 _InterlockedAnd64_np(__int64 volatile *_Value, __int64 _Mask);
@@ -383,11 +299,8 @@ __int64 _InterlockedCompareExchange64_HLERelease(__int64 volatile *, __int64,
                                                  __int64);
 __int64 _InterlockedCompareExchange64_np(__int64 volatile *_Destination,
                                          __int64 _Exchange, __int64 _Comparand);
-void *_InterlockedCompareExchangePointer(void *volatile *_Destination,
-                                         void *_Exchange, void *_Comparand);
 void *_InterlockedCompareExchangePointer_np(void *volatile *_Destination,
                                             void *_Exchange, void *_Comparand);
-void *_InterlockedExchangePointer(void *volatile *_Target, void *_Value);
 long _InterlockedOr_np(long volatile *_Value, long _Mask);
 short _InterlockedOr16_np(short volatile *_Value, short _Mask);
 __int64 _InterlockedOr64_np(__int64 volatile *_Value, __int64 _Mask);
@@ -398,9 +311,6 @@ __int64 _InterlockedXor64_np(__int64 volatile *_Value, __int64 _Mask);
 char _InterlockedXor8_np(char volatile *_Value, char _Mask);
 unsigned __int64 _rorx_u64(unsigned __int64, const unsigned int);
 __int64 _sarx_i64(__int64, unsigned int);
-#if __STDC_HOSTED__
-int __cdecl _setjmpex(jmp_buf);
-#endif
 unsigned __int64 _shlx_u64(unsigned __int64, unsigned int);
 unsigned __int64 _shrx_u64(unsigned __int64, unsigned int);
 static __inline__

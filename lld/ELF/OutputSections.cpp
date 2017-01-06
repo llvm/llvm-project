@@ -534,41 +534,111 @@ static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
 
-template <class ELFT>
-static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
-                                            StringRef OutsecName) {
-  typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = getOutFlags(C);
+namespace llvm {
+template <> struct DenseMapInfo<lld::elf::SectionKey> {
+  static lld::elf::SectionKey getEmptyKey();
+  static lld::elf::SectionKey getTombstoneKey();
+  static unsigned getHashValue(const lld::elf::SectionKey &Val);
+  static bool isEqual(const lld::elf::SectionKey &LHS,
+                      const lld::elf::SectionKey &RHS);
+};
+}
 
-  // For SHF_MERGE we create different output sections for each alignment.
-  // This makes each output section simple and keeps a single level mapping from
-  // input to output.
-  // In case of relocatable object generation we do not try to perform merging
-  // and treat SHF_MERGE sections as regular ones, but also create different
-  // output sections for them to allow merging at final linking stage.
+template <class ELFT>
+static SectionKey createKey(InputSectionBase<ELFT> *C, StringRef OutsecName) {
+  //  The ELF spec just says
+  // ----------------------------------------------------------------
+  // In the first phase, input sections that match in name, type and
+  // attribute flags should be concatenated into single sections.
+  // ----------------------------------------------------------------
+  //
+  // However, it is clear that at least some flags have to be ignored for
+  // section merging. At the very least SHF_GROUP and SHF_COMPRESSED have to be
+  // ignored. We should not have two output .text sections just because one was
+  // in a group and another was not for example.
+  //
+  // It also seems that that wording was a late addition and didn't get the
+  // necessary scrutiny.
+  //
+  // Merging sections with different flags is expected by some users. One
+  // reason is that if one file has
+  //
+  // int *const bar __attribute__((section(".foo"))) = (int *)0;
+  //
+  // gcc with -fPIC will produce a read only .foo section. But if another
+  // file has
+  //
+  // int zed;
+  // int *const bar __attribute__((section(".foo"))) = (int *)&zed;
+  //
+  // gcc with -fPIC will produce a read write section.
+  //
+  // Last but not least, when using linker script the merge rules are forced by
+  // the script. Unfortunately, linker scripts are name based. This means that
+  // expressions like *(.foo*) can refer to multiple input sections with
+  // different flags. We cannot put them in different output sections or we
+  // would produce wrong results for
+  //
+  // start = .; *(.foo.*) end = .; *(.bar)
+  //
+  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
+  // another. The problem is that there is no way to layout those output
+  // sections such that the .foo sections are the only thing between the start
+  // and end symbols.
+  //
+  // Given the above issues, we instead merge sections by name and error on
+  // incompatible types and flags.
+  //
+  // The exception being SHF_MERGE, where we create different output sections
+  // for each alignment. This makes each output section simple. In case of
+  // relocatable object generation we do not try to perform merging and treat
+  // SHF_MERGE sections as regular ones, but also create different output
+  // sections for them to allow merging at final linking stage.
+  //
+  // Fortunately, creating symbols in the middle of a merge section is not
+  // supported by bfd or gold, so the SHF_MERGE exception should not cause
+  // problems with most linker scripts.
+
+  typedef typename ELFT::uint uintX_t;
+  uintX_t Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
+
   uintX_t Alignment = 0;
   if (isa<MergeInputSection<ELFT>>(C) ||
       (Config->Relocatable && (C->Flags & SHF_MERGE)))
     Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
 
-  return SectionKey<ELFT::Is64Bits>{OutsecName, C->Type, Flags, Alignment};
+  return SectionKey{OutsecName, Flags, Alignment};
 }
+
+template <class ELFT> OutputSectionFactory<ELFT>::OutputSectionFactory() {}
+
+template <class ELFT> OutputSectionFactory<ELFT>::~OutputSectionFactory() {}
 
 template <class ELFT>
 std::pair<OutputSectionBase *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
-  SectionKey<ELFT::Is64Bits> Key = createKey(C, OutsecName);
+  SectionKey Key = createKey(C, OutsecName);
   return create(Key, C);
+}
+
+static uint64_t getIncompatibleFlags(uint64_t Flags) {
+  return Flags & (SHF_ALLOC | SHF_TLS);
 }
 
 template <class ELFT>
 std::pair<OutputSectionBase *, bool>
-OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
+OutputSectionFactory<ELFT>::create(const SectionKey &Key,
                                    InputSectionBase<ELFT> *C) {
   uintX_t Flags = getOutFlags(C);
   OutputSectionBase *&Sec = Map[Key];
   if (Sec) {
+    if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(C->Flags))
+      error("Section has flags incompatible with others with the same name " +
+            toString(C));
+    if (Sec->Type != C->Type)
+      error("Section has different type from others with the same name " +
+            toString(C));
     Sec->Flags |= Flags;
     return {Sec, false};
   }
@@ -588,36 +658,22 @@ OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
   return {Sec, true};
 }
 
-template <bool Is64Bits>
-typename lld::elf::SectionKey<Is64Bits>
-DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getEmptyKey() {
-  return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0, 0};
+SectionKey DenseMapInfo<SectionKey>::getEmptyKey() {
+  return SectionKey{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0};
 }
 
-template <bool Is64Bits>
-typename lld::elf::SectionKey<Is64Bits>
-DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getTombstoneKey() {
-  return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getTombstoneKey(), 0, 0,
-                              0};
+SectionKey DenseMapInfo<SectionKey>::getTombstoneKey() {
+  return SectionKey{DenseMapInfo<StringRef>::getTombstoneKey(), 0, 0};
 }
 
-template <bool Is64Bits>
-unsigned
-DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getHashValue(const Key &Val) {
-  return hash_combine(Val.Name, Val.Type, Val.Flags, Val.Alignment);
+unsigned DenseMapInfo<SectionKey>::getHashValue(const SectionKey &Val) {
+  return hash_combine(Val.Name, Val.Flags, Val.Alignment);
 }
 
-template <bool Is64Bits>
-bool DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::isEqual(const Key &LHS,
-                                                           const Key &RHS) {
+bool DenseMapInfo<SectionKey>::isEqual(const SectionKey &LHS,
+                                       const SectionKey &RHS) {
   return DenseMapInfo<StringRef>::isEqual(LHS.Name, RHS.Name) &&
-         LHS.Type == RHS.Type && LHS.Flags == RHS.Flags &&
-         LHS.Alignment == RHS.Alignment;
-}
-
-namespace llvm {
-template struct DenseMapInfo<SectionKey<true>>;
-template struct DenseMapInfo<SectionKey<false>>;
+         LHS.Flags == RHS.Flags && LHS.Alignment == RHS.Alignment;
 }
 
 namespace lld {

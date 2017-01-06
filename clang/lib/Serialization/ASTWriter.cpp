@@ -4222,29 +4222,10 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
   SelectorOffsets[ID - FirstSelectorID] = Offset;
 }
 
-ASTWriter::ASTWriter(
-  llvm::BitstreamWriter &Stream,
-  ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
-  bool IncludeTimestamps)
-    : Stream(Stream), Context(nullptr), PP(nullptr), Chain(nullptr),
-      WritingModule(nullptr), IncludeTimestamps(IncludeTimestamps),
-      WritingAST(false), DoneWritingDeclsAndTypes(false),
-      ASTHasCompilerErrors(false), FirstDeclID(NUM_PREDEF_DECL_IDS),
-      NextDeclID(FirstDeclID), FirstTypeID(NUM_PREDEF_TYPE_IDS),
-      NextTypeID(FirstTypeID), FirstIdentID(NUM_PREDEF_IDENT_IDS),
-      NextIdentID(FirstIdentID), FirstMacroID(NUM_PREDEF_MACRO_IDS),
-      NextMacroID(FirstMacroID), FirstSubmoduleID(NUM_PREDEF_SUBMODULE_IDS),
-      NextSubmoduleID(FirstSubmoduleID),
-      FirstSelectorID(NUM_PREDEF_SELECTOR_IDS), NextSelectorID(FirstSelectorID),
-      NumStatements(0), NumMacros(0),
-      NumLexicalDeclContexts(0), NumVisibleDeclContexts(0),
-      TypeExtQualAbbrev(0), TypeFunctionProtoAbbrev(0), DeclParmVarAbbrev(0),
-      DeclContextLexicalAbbrev(0), DeclContextVisibleLookupAbbrev(0),
-      UpdateVisibleAbbrev(0), DeclRecordAbbrev(0), DeclTypedefAbbrev(0),
-      DeclVarAbbrev(0), DeclFieldAbbrev(0), DeclEnumAbbrev(0),
-      DeclObjCIvarAbbrev(0), DeclCXXMethodAbbrev(0), DeclRefExprAbbrev(0),
-      CharacterLiteralAbbrev(0), IntegerLiteralAbbrev(0),
-      ExprImplicitCastAbbrev(0) {
+ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
+                     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+                     bool IncludeTimestamps)
+    : Stream(Stream), IncludeTimestamps(IncludeTimestamps) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));

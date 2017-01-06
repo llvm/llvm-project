@@ -69,6 +69,12 @@ public:
 #pragma GCC system_header
 #endif
 
+#if defined(_LIBCPP_NONUNIQUE_RTTI_BIT)
+#define _LIBCPP_HAS_NONUNIQUE_TYPEINFO
+#else
+#define _LIBCPP_HAS_UNIQUE_TYPEINFO
+#endif
+
 namespace std  // purposefully not using versioning namespace
 {
 
@@ -77,76 +83,89 @@ class _LIBCPP_EXCEPTION_ABI type_info
     type_info& operator=(const type_info&);
     type_info(const type_info&);
 
-protected:
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-    const char* __type_name;
-#else
-    // A const char* with the non-unique RTTI bit possibly set.
-    uintptr_t __type_name;
+#if defined(_LIBCPP_HAS_NONUNIQUE_TYPEINFO)
+    _LIBCPP_INLINE_VISIBILITY
+    int __compare_nonunique_names(const type_info &__arg) const _NOEXCEPT
+    { return __builtin_strcmp(name(), __arg.name()); }
 #endif
 
+protected:
+#if defined(_LIBCPP_HAS_NONUNIQUE_TYPEINFO)
+    // A const char* with the non-unique RTTI bit possibly set.
+    uintptr_t __type_name;
+
     _LIBCPP_INLINE_VISIBILITY
-    explicit type_info(const char* __n)
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        : __type_name(__n) {}
+    type_info(const char* __n) : __type_name(reinterpret_cast<uintptr_t>(__n)) {}
 #else
-        : __type_name(reinterpret_cast<uintptr_t>(__n)) {}
+    const char *__type_name;
+
+    _LIBCPP_INLINE_VISIBILITY
+    type_info(const char* __n) : __type_name(__n) {}
 #endif
 
 public:
     virtual ~type_info();
 
+#if defined(_LIBCPP_HAS_NONUNIQUE_TYPEINFO)
     _LIBCPP_INLINE_VISIBILITY
     const char* name() const _NOEXCEPT
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        {return __type_name;}
-#else
-        {return reinterpret_cast<const char*>(__type_name & ~_LIBCPP_NONUNIQUE_RTTI_BIT);}
-#endif
+    {
+      return reinterpret_cast<const char*>(__type_name &
+                                           ~_LIBCPP_NONUNIQUE_RTTI_BIT);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     bool before(const type_info& __arg) const _NOEXCEPT
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        {return __type_name < __arg.__type_name;}
-#else
-        {if (!((__type_name & __arg.__type_name) & _LIBCPP_NONUNIQUE_RTTI_BIT))
-           return __type_name < __arg.__type_name;
-         return __compare_nonunique_names(__arg) < 0;}
-#endif
+    {
+      if (!((__type_name & __arg.__type_name) & _LIBCPP_NONUNIQUE_RTTI_BIT))
+        return __type_name < __arg.__type_name;
+      return __compare_nonunique_names(__arg) < 0;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     size_t hash_code() const _NOEXCEPT
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        {return reinterpret_cast<size_t>(__type_name);}
-#else
-        {if (!(__type_name & _LIBCPP_NONUNIQUE_RTTI_BIT)) return __type_name;
-         const char *__ptr = name();
-         size_t __hash = 5381;
-         while (unsigned char __c = static_cast<unsigned char>(*__ptr++))
-           __hash = (__hash * 33) ^ __c;
-         return __hash;}
-#endif
+    {
+      if (!(__type_name & _LIBCPP_NONUNIQUE_RTTI_BIT))
+        return __type_name;
+
+      const char* __ptr = name();
+      size_t __hash = 5381;
+      while (unsigned char __c = static_cast<unsigned char>(*__ptr++))
+        __hash = (__hash * 33) ^ __c;
+      return __hash;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     bool operator==(const type_info& __arg) const _NOEXCEPT
-#ifndef _LIBCPP_NONUNIQUE_RTTI_BIT
-        {return __type_name == __arg.__type_name;}
+    {
+      if (__type_name == __arg.__type_name)
+        return true;
+
+      if (!((__type_name & __arg.__type_name) & _LIBCPP_NONUNIQUE_RTTI_BIT))
+        return false;
+      return __compare_nonunique_names(__arg) == 0;
+    }
 #else
-        {if (__type_name == __arg.__type_name) return true;
-         if (!((__type_name & __arg.__type_name) & _LIBCPP_NONUNIQUE_RTTI_BIT))
-           return false;
-         return __compare_nonunique_names(__arg) == 0;}
+    _LIBCPP_INLINE_VISIBILITY
+    const char* name() const _NOEXCEPT
+    { return __type_name; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool before(const type_info& __arg) const _NOEXCEPT
+    { return __type_name < __arg.__type_name; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    size_t hash_code() const _NOEXCEPT
+    { return reinterpret_cast<size_t>(__type_name); }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator==(const type_info& __arg) const _NOEXCEPT
+    { return __type_name == __arg.__type_name; }
 #endif
+
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const type_info& __arg) const _NOEXCEPT
-        {return !operator==(__arg);}
-
-#ifdef _LIBCPP_NONUNIQUE_RTTI_BIT
-  private:
-    _LIBCPP_INLINE_VISIBILITY
-    int __compare_nonunique_names(const type_info &__arg) const _NOEXCEPT
-        {return __builtin_strcmp(name(), __arg.name());}
-#endif
+    { return !operator==(__arg); }
 };
 
 class _LIBCPP_EXCEPTION_ABI bad_cast

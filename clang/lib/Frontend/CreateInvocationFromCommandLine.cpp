@@ -30,9 +30,9 @@ using namespace llvm::opt;
 ///
 /// \return A CompilerInvocation, or 0 if none was built for the given
 /// argument vector.
-CompilerInvocation *
-clang::createInvocationFromCommandLine(ArrayRef<const char *> ArgList,
-                            IntrusiveRefCntPtr<DiagnosticsEngine> Diags) {
+std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
+    ArrayRef<const char *> ArgList,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags) {
   if (!Diags.get()) {
     // No diagnostics engine was provided, so create our own diagnostics object
     // with the default options.
@@ -93,12 +93,12 @@ clang::createInvocationFromCommandLine(ArrayRef<const char *> ArgList,
   }
 
   const ArgStringList &CCArgs = Cmd.getArguments();
-  std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation());
+  auto CI = llvm::make_unique<CompilerInvocation>();
   if (!CompilerInvocation::CreateFromArgs(*CI,
                                      const_cast<const char **>(CCArgs.data()),
                                      const_cast<const char **>(CCArgs.data()) +
                                      CCArgs.size(),
                                      *Diags))
     return nullptr;
-  return CI.release();
+  return CI;
 }

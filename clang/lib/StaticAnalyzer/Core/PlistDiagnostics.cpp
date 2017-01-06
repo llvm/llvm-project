@@ -208,19 +208,14 @@ static void ReportCall(raw_ostream &o,
                        unsigned indent,
                        unsigned depth) {
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callEnter =
-    P.getCallEnterEvent();
-
-  if (callEnter)
+  if (auto callEnter = P.getCallEnterEvent())
     ReportPiece(o, *callEnter, FM, SM, LangOpts, indent, depth, true,
                 P.isLastInMainSourceFile());
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callEnterWithinCaller =
-    P.getCallEnterWithinCallerEvent();
 
   ++depth;
 
-  if (callEnterWithinCaller)
+  if (auto callEnterWithinCaller = P.getCallEnterWithinCallerEvent())
     ReportPiece(o, *callEnterWithinCaller, FM, SM, LangOpts,
                 indent, depth, true);
 
@@ -229,10 +224,7 @@ static void ReportCall(raw_ostream &o,
 
   --depth;
 
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> callExit =
-    P.getCallExitEvent();
-
-  if (callExit)
+  if (auto callExit = P.getCallExitEvent())
     ReportPiece(o, *callExit, FM, SM, LangOpts, indent, depth, true);
 }
 
@@ -299,10 +291,9 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   if (!Diags.empty())
     SM = &Diags.front()->path.front()->getLocation().getManager();
 
-
-  auto AddPieceFID = [&FM, &Fids, SM](const PathDiagnosticPiece *Piece)->void {
-    AddFID(FM, Fids, *SM, Piece->getLocation().asLocation());
-    ArrayRef<SourceRange> Ranges = Piece->getRanges();
+  auto AddPieceFID = [&FM, &Fids, SM](const PathDiagnosticPiece &Piece) {
+    AddFID(FM, Fids, *SM, Piece.getLocation().asLocation());
+    ArrayRef<SourceRange> Ranges = Piece.getRanges();
     for (const SourceRange &Range : Ranges) {
       AddFID(FM, Fids, *SM, Range.getBegin());
       AddFID(FM, Fids, *SM, Range.getEnd());
@@ -318,23 +309,20 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
       const PathPieces &Path = *WorkList.pop_back_val();
 
       for (const auto &Iter : Path) {
-        const PathDiagnosticPiece *Piece = Iter.get();
+        const PathDiagnosticPiece &Piece = *Iter;
         AddPieceFID(Piece);
 
         if (const PathDiagnosticCallPiece *Call =
-            dyn_cast<PathDiagnosticCallPiece>(Piece)) {
-          if (IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-              CallEnterWithin = Call->getCallEnterWithinCallerEvent())
-            AddPieceFID(CallEnterWithin.get());
+                dyn_cast<PathDiagnosticCallPiece>(&Piece)) {
+          if (auto CallEnterWithin = Call->getCallEnterWithinCallerEvent())
+            AddPieceFID(*CallEnterWithin);
 
-          if (IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-              CallEnterEvent = Call->getCallEnterEvent())
-            AddPieceFID(CallEnterEvent.get());
+          if (auto CallEnterEvent = Call->getCallEnterEvent())
+            AddPieceFID(*CallEnterEvent);
 
           WorkList.push_back(&Call->path);
-        }
-        else if (const PathDiagnosticMacroPiece *Macro =
-                 dyn_cast<PathDiagnosticMacroPiece>(Piece)) {
+        } else if (const PathDiagnosticMacroPiece *Macro =
+                       dyn_cast<PathDiagnosticMacroPiece>(&Piece)) {
           WorkList.push_back(&Macro->subPieces);
         }
       }

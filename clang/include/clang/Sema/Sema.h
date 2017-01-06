@@ -6605,6 +6605,10 @@ public:
     /// \brief After substituting deduced template arguments, a dependent
     /// parameter type did not match the corresponding argument.
     TDK_DeducedMismatch,
+    /// \brief After substituting deduced template arguments, an element of
+    /// a dependent parameter type did not match the corresponding element
+    /// of the corresponding argument (when deducing from an initializer list).
+    TDK_DeducedMismatchNested,
     /// \brief A non-depnedent component of the parameter did not match the
     /// corresponding component of the argument.
     TDK_NonDeducedMismatch,
@@ -6643,13 +6647,14 @@ public:
   /// brief A function argument from which we performed template argument
   // deduction for a call.
   struct OriginalCallArg {
-    OriginalCallArg(QualType OriginalParamType,
-                    unsigned ArgIdx,
-                    QualType OriginalArgType)
-      : OriginalParamType(OriginalParamType), ArgIdx(ArgIdx),
-        OriginalArgType(OriginalArgType) { }
+    OriginalCallArg(QualType OriginalParamType, bool DecomposedParam,
+                    unsigned ArgIdx, QualType OriginalArgType)
+        : OriginalParamType(OriginalParamType),
+          DecomposedParam(DecomposedParam), ArgIdx(ArgIdx),
+          OriginalArgType(OriginalArgType) {}
 
     QualType OriginalParamType;
+    bool DecomposedParam;
     unsigned ArgIdx;
     QualType OriginalArgType;
   };

@@ -243,7 +243,7 @@ public:
   std::vector<std::string> Plugins;
 
   /// The list of module file extensions.
-  std::vector<IntrusiveRefCntPtr<ModuleFileExtension>> ModuleFileExtensions;
+  std::vector<std::shared_ptr<ModuleFileExtension>> ModuleFileExtensions;
 
   /// \brief The list of module map files to load before processing the input.
   std::vector<std::string> ModuleMapFiles;

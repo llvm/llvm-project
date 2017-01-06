@@ -541,8 +541,8 @@ TEST_F(FormatTestJS, FunctionLiterals) {
                "      foo();\n"
                "      bar();\n"
                "    },\n"
-               "    this, arg1IsReallyLongAndNeeedsLineBreaks,\n"
-               "    arg3IsReallyLongAndNeeedsLineBreaks);");
+               "    this, arg1IsReallyLongAndNeedsLineBreaks,\n"
+               "    arg3IsReallyLongAndNeedsLineBreaks);");
   verifyFormat("var closure = goog.bind(function() {  // comment\n"
                "  foo();\n"
                "  bar();\n"

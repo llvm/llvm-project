@@ -264,42 +264,12 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 }
 
 template <class ELFT>
-static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
-                                            StringRef OutsecName) {
-  // When using linker script the merge rules are different.
-  // Unfortunately, linker scripts are name based. This means that expressions
-  // like *(.foo*) can refer to multiple input sections that would normally be
-  // placed in different output sections. We cannot put them in different
-  // output sections or we would produce wrong results for
-  // start = .; *(.foo.*) end = .; *(.bar)
-  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
-  // another. The problem is that there is no way to layout those output
-  // sections such that the .foo sections are the only thing between the
-  // start and end symbols.
-
-  // An extra annoyance is that we cannot simply disable merging of the contents
-  // of SHF_MERGE sections, but our implementation requires one output section
-  // per "kind" (string or not, which size/aligment).
-  // Fortunately, creating symbols in the middle of a merge section is not
-  // supported by bfd or gold, so we can just create multiple section in that
-  // case.
-  typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
-
-  uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
-
-  return SectionKey<ELFT::Is64Bits>{OutsecName, /*Type*/ 0, Flags, Alignment};
-}
-
-template <class ELFT>
 void LinkerScript<ELFT>::addSection(OutputSectionFactory<ELFT> &Factory,
                                     InputSectionBase<ELFT> *Sec,
                                     StringRef Name) {
   OutputSectionBase *OutSec;
   bool IsNew;
-  std::tie(OutSec, IsNew) = Factory.create(createKey(Sec, Name), Sec);
+  std::tie(OutSec, IsNew) = Factory.create(Sec, Name);
   if (IsNew)
     OutputSections->push_back(OutSec);
   OutSec->addSection(Sec);

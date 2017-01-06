@@ -82,14 +82,15 @@ IncludeFixerActionFactory::IncludeFixerActionFactory(
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
 
 bool IncludeFixerActionFactory::runInvocation(
-    clang::CompilerInvocation *Invocation, clang::FileManager *Files,
+    std::shared_ptr<clang::CompilerInvocation> Invocation,
+    clang::FileManager *Files,
     std::shared_ptr<clang::PCHContainerOperations> PCHContainerOps,
     clang::DiagnosticConsumer *Diagnostics) {
   assert(Invocation->getFrontendOpts().Inputs.size() == 1);
 
   // Set up Clang.
   clang::CompilerInstance Compiler(PCHContainerOps);
-  Compiler.setInvocation(Invocation);
+  Compiler.setInvocation(std::move(Invocation));
   Compiler.setFileManager(Files);
 
   // Create the compiler's actual diagnostics engine. We want to drop all

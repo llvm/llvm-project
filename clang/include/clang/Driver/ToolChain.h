@@ -139,6 +139,13 @@ public:
   vfs::FileSystem &getVFS() const;
   const llvm::Triple &getTriple() const { return Triple; }
 
+  /// Get the toolchain's aux triple, if it has one.
+  ///
+  /// Exactly what the aux triple represents depends on the toolchain, but for
+  /// example when compiling CUDA code for the GPU, the triple might be NVPTX,
+  /// while the aux triple is the host (CPU) toolchain, e.g. x86-linux-gnu.
+  virtual const llvm::Triple *getAuxTriple() const { return nullptr; }
+
   llvm::Triple::ArchType getArch() const { return Triple.getArch(); }
   StringRef getArchName() const { return Triple.getArchName(); }
   StringRef getPlatform() const { return Triple.getVendorName(); }

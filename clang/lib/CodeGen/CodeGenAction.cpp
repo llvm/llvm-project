@@ -44,6 +44,7 @@ namespace clang {
     virtual void anchor();
     DiagnosticsEngine &Diags;
     BackendAction Action;
+    const HeaderSearchOptions &HeaderSearchOpts;
     const CodeGenOptions &CodeGenOpts;
     const TargetOptions &TargetOpts;
     const LangOptions &LangOpts;
@@ -77,8 +78,8 @@ namespace clang {
         const SmallVectorImpl<std::pair<unsigned, llvm::Module *>> &LinkModules,
         std::unique_ptr<raw_pwrite_stream> OS, LLVMContext &C,
         CoverageSourceInfo *CoverageInfo = nullptr)
-        : Diags(Diags), Action(Action), CodeGenOpts(CodeGenOpts),
-          TargetOpts(TargetOpts), LangOpts(LangOpts),
+        : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
+          CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
           AsmOutStream(std::move(OS)), Context(nullptr),
           LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
           LLVMIRGenerationRefCount(0),
@@ -225,8 +226,8 @@ namespace clang {
 
       EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-      EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
-                        C.getTargetInfo().getDataLayout(),
+      EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
+                        LangOpts, C.getTargetInfo().getDataLayout(),
                         getModule(), Action, std::move(AsmOutStream));
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
@@ -898,9 +899,10 @@ void CodeGenAction::ExecuteAction() {
     Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler,
                                       &CI.getDiagnostics());
 
-    EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
-                      CI.getLangOpts(), CI.getTarget().getDataLayout(),
-                      TheModule.get(), BA, std::move(OS));
+    EmitBackendOutput(CI.getDiagnostics(), CI.getHeaderSearchOpts(),
+                      CI.getCodeGenOpts(), TargetOpts, CI.getLangOpts(),
+                      CI.getTarget().getDataLayout(), TheModule.get(), BA,
+                      std::move(OS));
     return;
   }
 

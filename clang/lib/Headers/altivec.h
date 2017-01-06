@@ -12574,6 +12574,9 @@ static __inline__ float __ATTRS_o_ai vec_extract(vector float __a, int __b) {
 
 #ifdef __POWER9_VECTOR__
 
+#define vec_insert4b __builtin_vsx_insertword
+#define vec_extract4b __builtin_vsx_extractuword
+
 /* vec_extract_exp */
 
 static __inline__ vector unsigned int __ATTRS_o_ai

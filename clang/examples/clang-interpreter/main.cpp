@@ -145,7 +145,7 @@ int main(int argc, const char **argv, char * const *envp) {
 
   // Create a compiler instance to handle the actual work.
   CompilerInstance Clang;
-  Clang.setInvocation(CI.release());
+  Clang.setInvocation(std::move(CI));
 
   // Create the compilers actual diagnostics engine.
   Clang.createDiagnostics();

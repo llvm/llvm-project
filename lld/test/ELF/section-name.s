@@ -19,9 +19,9 @@ _start:
 .byte 0
 .section .data,"aw"
 .byte 0
-.section .bss.a,"",@nobits
+.section .bss.a,"aw",@nobits
 .byte 0
-.section .bss,"",@nobits
+.section .bss,"aw",@nobits
 .byte 0
 .section .foo.a,"aw"
 .byte 0
@@ -51,9 +51,8 @@ _start:
 // CHECK:  7 .data         00000002
 // CHECK:  8 .foo.a        00000001
 // CHECK:  9 .foo          00000001
-// CHECK: 10 .bss          00000001
-// CHECK: 11 .bss          00000001
-// CHECK: 12 .comment      00000008
-// CHECK: 13 .symtab       00000060
-// CHECK: 14 .shstrtab     00000075
-// CHECK: 15 .strtab       0000001d
+// CHECK: 10 .bss          00000002
+// CHECK: 11 .comment      00000008
+// CHECK: 12 .symtab       00000060
+// CHECK: 13 .shstrtab     00000075
+// CHECK: 14 .strtab       0000001d

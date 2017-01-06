@@ -105,6 +105,7 @@ T deduce_ref(const std::initializer_list<T>&); // expected-note {{conflicting ty
 
 template<typename T, typename U> struct pair { pair(...); };
 template<typename T> void deduce_pairs(std::initializer_list<pair<T, typename T::type>>);
+// expected-note@-1 {{deduced type 'pair<[...], typename WithIntType::type>' of element of 1st parameter does not match adjusted type 'pair<[...], float>' of element of argument [with T = WithIntType]}}
 struct WithIntType { typedef int type; };
 
 template<typename ...T> void deduce_after_init_list_in_pack(void (*)(T...), T...); // expected-note {{<int, int> vs. <(no value), double>}}
@@ -123,7 +124,7 @@ void argument_deduction() {
   pair<WithIntType, int> pi;
   pair<WithIntType, float> pf;
   deduce_pairs({pi, pi, pi}); // ok
-  deduce_pairs({pi, pf, pi}); // FIXME: This should be rejected, as we fail to produce a type that exactly matches the argument type.
+  deduce_pairs({pi, pf, pi}); // expected-error {{no matching function}}
 
   deduce_after_init_list_in_pack((void(*)(int,int))0, {}, 0);
   deduce_after_init_list_in_pack((void(*)(int,int))0, {}, 0.0); // expected-error {{no matching function}}
@@ -298,9 +299,18 @@ namespace TemporaryInitListSourceRange_PR22367 {
 
 namespace ParameterPackNestedInitializerLists_PR23904c3 {
   template <typename ...T>
-  void f(std::initializer_list<std::initializer_list<T>> ...tt);
+  void f(std::initializer_list<std::initializer_list<T>> ...tt); // expected-note 2{{conflicting}} expected-note {{incomplete pack}}
 
-  void foo() { f({{0}}, {{'\0'}}); }
+  void foo() {
+    f({{0}}, {{'\0'}}); // ok, T = <int, char>
+    f({{0}, {'\0'}}); // expected-error {{no match}}
+    f({{0, '\0'}}); // expected-error {{no match}}
+
+    f({{0}}, {{{}}}); // expected-error {{no match}}
+    f({{0}}, {{{}, '\0'}}); // ok, T = <int, char>
+    f({{0}, {{}}}); // ok, T = <int>
+    f({{0, {}}}); // ok, T = <int>
+  }
 }
 
 namespace update_rbrace_loc_crash {
@@ -326,4 +336,14 @@ namespace update_rbrace_loc_crash {
     // expected-note@+1 {{in instantiation of function template specialization}}
     Explode<ContainsIncomplete, 4>([](int) {});
   }
+}
+
+namespace no_conversion_after_auto_list_deduction {
+  // We used to deduce 'auto' == 'std::initializer_list<X>' here, and then
+  // incorrectly accept the declaration of 'x'.
+  struct X { using T = std::initializer_list<X> X::*; operator T(); };
+  auto X::*x = { X() }; // expected-error {{from initializer list}}
+
+  struct Y { using T = std::initializer_list<Y>(*)(); operator T(); };
+  auto (*y)() = { Y() }; // expected-error {{from initializer list}}
 }

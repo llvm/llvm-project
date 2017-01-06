@@ -83,10 +83,10 @@ class DynamicTypePropagation:
       ID.AddPointer(Sym);
     }
 
-    PathDiagnosticPiece *VisitNode(const ExplodedNode *N,
-                                   const ExplodedNode *PrevN,
-                                   BugReporterContext &BRC,
-                                   BugReport &BR) override;
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
 
   private:
     // The tracked symbol.
@@ -923,9 +923,11 @@ void DynamicTypePropagation::reportGenericsBug(
   C.emitReport(std::move(R));
 }
 
-PathDiagnosticPiece *DynamicTypePropagation::GenericsBugVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
-    BugReport &BR) {
+std::shared_ptr<PathDiagnosticPiece>
+DynamicTypePropagation::GenericsBugVisitor::VisitNode(const ExplodedNode *N,
+                                                      const ExplodedNode *PrevN,
+                                                      BugReporterContext &BRC,
+                                                      BugReport &BR) {
   ProgramStateRef state = N->getState();
   ProgramStateRef statePrev = PrevN->getState();
 
@@ -975,7 +977,8 @@ PathDiagnosticPiece *DynamicTypePropagation::GenericsBugVisitor::VisitNode(
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return new PathDiagnosticEventPiece(Pos, OS.str(), true, nullptr);
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,
+                                                    nullptr);
 }
 
 /// Register checkers.

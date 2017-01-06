@@ -143,7 +143,7 @@ class SDiagsWriter : public DiagnosticConsumer {
 
   struct SharedState;
 
-  explicit SDiagsWriter(IntrusiveRefCntPtr<SharedState> State)
+  explicit SDiagsWriter(std::shared_ptr<SharedState> State)
       : LangOpts(nullptr), OriginalInstance(false), MergeChildRecords(false),
         State(std::move(State)) {}
 
@@ -151,7 +151,7 @@ public:
   SDiagsWriter(StringRef File, DiagnosticOptions *Diags, bool MergeChildRecords)
       : LangOpts(nullptr), OriginalInstance(true),
         MergeChildRecords(MergeChildRecords),
-        State(new SharedState(File, Diags)) {
+        State(std::make_shared<SharedState>(File, Diags)) {
     if (MergeChildRecords)
       RemoveOldDiagnostics();
     EmitPreamble();
@@ -251,7 +251,7 @@ private:
 
   /// \brief State that is shared among the various clones of this diagnostic
   /// consumer.
-  struct SharedState : RefCountedBase<SharedState> {
+  struct SharedState {
     SharedState(StringRef File, DiagnosticOptions *Diags)
         : DiagOpts(Diags), Stream(Buffer), OutputFile(File.str()),
           EmittedAnyDiagBlocks(false) {}
@@ -299,7 +299,7 @@ private:
   };
 
   /// \brief State shared among the various clones of this diagnostic consumer.
-  IntrusiveRefCntPtr<SharedState> State;
+  std::shared_ptr<SharedState> State;
 };
 } // end anonymous namespace
 

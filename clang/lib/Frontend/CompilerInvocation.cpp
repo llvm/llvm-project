@@ -60,12 +60,11 @@ CompilerInvocationBase::CompilerInvocationBase()
     PreprocessorOpts(new PreprocessorOptions()) {}
 
 CompilerInvocationBase::CompilerInvocationBase(const CompilerInvocationBase &X)
-  : RefCountedBase<CompilerInvocation>(),
-    LangOpts(new LangOptions(*X.getLangOpts())),
-    TargetOpts(new TargetOptions(X.getTargetOpts())),
-    DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
-    HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
-    PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())) {}
+    : LangOpts(new LangOptions(*X.getLangOpts())),
+      TargetOpts(new TargetOptions(X.getTargetOpts())),
+      DiagnosticOpts(new DiagnosticOptions(X.getDiagnosticOpts())),
+      HeaderSearchOpts(new HeaderSearchOptions(X.getHeaderSearchOpts())),
+      PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())) {}
 
 CompilerInvocationBase::~CompilerInvocationBase() {}
 
@@ -1215,8 +1214,8 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
     // Add the testing module file extension.
     Opts.ModuleFileExtensions.push_back(
-      new TestModuleFileExtension(BlockName, MajorVersion, MinorVersion,
-                                  Hashed, UserInfo));
+        std::make_shared<TestModuleFileExtension>(
+            BlockName, MajorVersion, MinorVersion, Hashed, UserInfo));
   }
 
   if (const Arg *A = Args.getLastArg(OPT_code_completion_at)) {

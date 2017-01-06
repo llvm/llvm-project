@@ -66,8 +66,7 @@ public:
   typedef SmallVector<std::unique_ptr<BugReporterVisitor>, 8> VisitorList;
   typedef VisitorList::iterator visitor_iterator;
   typedef SmallVector<StringRef, 2> ExtraTextList;
-  typedef SmallVector<llvm::IntrusiveRefCntPtr<PathDiagnosticNotePiece>, 4>
-      NoteList;
+  typedef SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4> NoteList;
 
 protected:
   friend class BugReporter;
@@ -268,12 +267,12 @@ public:
   /// the extra note should appear.
   void addNote(StringRef Msg, const PathDiagnosticLocation &Pos,
                ArrayRef<SourceRange> Ranges) {
-    PathDiagnosticNotePiece *P = new PathDiagnosticNotePiece(Pos, Msg);
+    auto P = std::make_shared<PathDiagnosticNotePiece>(Pos, Msg);
 
     for (const auto &R : Ranges)
       P->addRange(R);
 
-    Notes.push_back(P);
+    Notes.push_back(std::move(P));
   }
 
   // FIXME: Instead of making an override, we could have default-initialized

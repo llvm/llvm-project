@@ -206,7 +206,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS recursive_mutex
 {
-    __libcpp_mutex_t __m_;
+    __libcpp_recursive_mutex_t __m_;
 
 public:
      recursive_mutex();
@@ -221,7 +221,8 @@ public:
     bool try_lock() _NOEXCEPT;
     void unlock()  _NOEXCEPT;
 
-    typedef __libcpp_mutex_t* native_handle_type;
+    typedef __libcpp_recursive_mutex_t* native_handle_type;
+
     _LIBCPP_INLINE_VISIBILITY
     native_handle_type native_handle() {return &__m_;}
 };
