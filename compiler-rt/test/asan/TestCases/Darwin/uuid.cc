@@ -9,7 +9,7 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  char buf[256];
+  char buf[2048];
   snprintf(buf, sizeof(buf), "otool -l %s", argv[0]);
   system(buf);
   // CHECK: cmd LC_UUID
