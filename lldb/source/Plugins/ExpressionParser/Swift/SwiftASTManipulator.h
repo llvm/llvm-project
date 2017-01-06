@@ -56,12 +56,15 @@ public:
     swift::Identifier GetName() const { return m_name; }
     swift::VarDecl *GetDecl() const { return m_decl; }
     bool GetIsLet() const;
+    bool GetIsCaptureList() const;
 
     VariableInfo() : m_type(), m_name(), m_metadata() {}
 
     VariableInfo(CompilerType &type, swift::Identifier name,
-                 VariableMetadataSP metadata, bool is_let = false)
-        : m_type(type), m_name(name), m_is_let(is_let), m_metadata(metadata) {}
+                 VariableMetadataSP metadata, bool is_let = false,
+                 bool is_capture_list = false)
+        : m_type(type), m_name(name), m_is_let(is_let),
+          m_is_capture_list(is_capture_list), m_metadata(metadata) {}
 
     template <class T> bool MetadataIs() const {
       return (m_metadata && m_metadata->GetType() == T::Type());
@@ -78,6 +81,7 @@ public:
     swift::Identifier m_name;
     swift::VarDecl *m_decl = nullptr;
     bool m_is_let = false;
+    bool m_is_capture_list = false;
 
   public:
     VariableMetadataSP m_metadata;
