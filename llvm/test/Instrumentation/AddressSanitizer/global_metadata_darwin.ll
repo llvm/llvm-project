@@ -22,7 +22,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; CHECK: @__asan_binder_global = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"
 
 ; Test that there is the flag global variable:
-; CHECK: @__asan_globals_registered = common global i64 0
+; CHECK: @__asan_globals_registered = common hidden global i64 0
 
 ; The binder has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.
