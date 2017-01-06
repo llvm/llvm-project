@@ -3720,9 +3720,17 @@ static void AddObjCProperties(
       Builder.AddPlaceholderChunk(
           Builder.getAllocator().CopyString(PlaceholderStr));
 
+      // When completing blocks properties that return void the default
+      // property completion result should show up before the setter,
+      // otherwise the setter completion should show up before the default
+      // property completion, as we normally want to use the result of the
+      // call.
       Results.MaybeAddResult(
           Result(Builder.TakeString(), P,
-                 Results.getBasePriority(P) + CCD_BlockPropertySetter),
+                 Results.getBasePriority(P) +
+                     (BlockLoc.getTypePtr()->getReturnType()->isVoidType()
+                          ? CCD_BlockPropertySetter
+                          : -CCD_BlockPropertySetter)),
           CurContext);
     }
   };

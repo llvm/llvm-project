@@ -42,6 +42,9 @@ using namespace CodeGen;
 /// markers.
 static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                       const LangOptions &LangOpts) {
+  if (CGOpts.DisableLifetimeMarkers)
+    return false;
+
   // Asan uses markers for use-after-scope checks.
   if (CGOpts.SanitizeAddressUseAfterScope)
     return true;

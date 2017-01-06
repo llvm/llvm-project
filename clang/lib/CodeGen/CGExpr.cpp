@@ -604,12 +604,13 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   }
 
   if (Checks.size() > 0) {
+    // Make sure we're not losing information. Alignment needs to be a power of
+    // 2
+    assert(!AlignVal || (uint64_t)1 << llvm::Log2_64(AlignVal) == AlignVal);
     llvm::Constant *StaticData[] = {
-     EmitCheckSourceLocation(Loc),
-      EmitCheckTypeDescriptor(Ty),
-      llvm::ConstantInt::get(SizeTy, AlignVal),
-      llvm::ConstantInt::get(Int8Ty, TCK)
-    };
+        EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
+        llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2_64(AlignVal) : 1),
+        llvm::ConstantInt::get(Int8Ty, TCK)};
     EmitCheck(Checks, SanitizerHandler::TypeMismatch, StaticData, Ptr);
   }
 

@@ -22,6 +22,17 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64 -cl-ext=+cl_khr_fp16 -cl-ext=-cl_khr_fp64 -DNOFP64
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-ext=-all -cl-ext=+cl_khr_fp64,-cl_khr_fp64,+cl_khr_fp16 -DNOFP64
 
+// Test with -finclude-default-header, which includes opencl-c.h. opencl-c.h
+// disables all extensions by default, but supported core extensions for a
+// particular OpenCL version must be re-enabled (for example, cl_khr_fp64 is
+// enabled by default with -cl-std=CL2.0).
+//
+// RUN: %clang_cc1 %s -triple amdgcn-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL2.0 -finclude-default-header
+
+#ifdef _OPENCL_H_
+// expected-no-diagnostics
+#endif
+
 #ifdef FP64
 // expected-no-diagnostics
 #endif
@@ -33,6 +44,7 @@ void f1(double da) { // expected-error {{type 'double' requires cl_khr_fp64 exte
 }
 #endif
 
+#ifndef _OPENCL_H_
 int isnan(float x) {
     return __builtin_isnan(x);
 }
@@ -40,6 +52,7 @@ int isnan(float x) {
 int isfinite(float x) {
     return __builtin_isfinite(x);
 }
+#endif
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #ifdef NOFP64

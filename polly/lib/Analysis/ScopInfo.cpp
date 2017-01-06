@@ -2037,10 +2037,10 @@ void Scop::realignParams() {
 static __isl_give isl_set *
 simplifyAssumptionContext(__isl_take isl_set *AssumptionContext,
                           const Scop &S) {
-  // If we modelt all blocks in the SCoP that have side effects we can simplify
-  // the context with the constraints that are needed for anything to be
-  // executed at all. However, if we have error blocks in the SCoP we already
-  // assumed some parameter combinations cannot occure and removed them from the
+  // If we have modeled all blocks in the SCoP that have side effects we can
+  // simplify the context with the constraints that are needed for anything to
+  // be executed at all. However, if we have error blocks in the SCoP we already
+  // assumed some parameter combinations cannot occur and removed them from the
   // domains, thus we cannot use the remaining domain to simplify the
   // assumptions.
   if (!S.hasErrorBlock()) {
@@ -2456,7 +2456,7 @@ void Scop::propagateDomainConstraintsToRegionExit(
 
   auto &BoxedLoops = getBoxedLoops();
   // Do not propagate the domain if there is a loop backedge inside the region
-  // that would prevent the exit block from beeing executed.
+  // that would prevent the exit block from being executed.
   auto *L = BBLoop;
   while (L && contains(L)) {
     SmallVector<BasicBlock *, 4> LatchBBs;
@@ -3052,7 +3052,7 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
                                        MinMaxAccessesNonReadOnly);
 
     // Bail out if the number of values we need to compare is too large.
-    // This is important as the number of comparisions grows quadratically with
+    // This is important as the number of comparisons grows quadratically with
     // the number of values we need to compare.
     if (!Valid || (MinMaxAccessesNonReadOnly.size() + ReadOnlyPairs.size() >
                    RunTimeChecksMaxArraysPerGroup))
@@ -3330,7 +3330,7 @@ Scop::~Scop() {
     isl_set_free(IAClass.ExecutionContext);
 
   // Explicitly release all Scop objects and the underlying isl objects before
-  // we relase the isl context.
+  // we release the isl context.
   Stmts.clear();
   ScopArrayInfoSet.clear();
   ScopArrayInfoMap.clear();
@@ -3459,7 +3459,7 @@ static bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
     return true;
 
   // Even if the statement is not modeled precisely we can hoist the load if it
-  // does not involve any parameters that might have been specilized by the
+  // does not involve any parameters that might have been specialized by the
   // statement domain.
   for (unsigned u = 0, e = MA->getNumSubscripts(); u < e; u++)
     if (!isa<SCEVConstant>(MA->getSubscript(u)))
@@ -3976,7 +3976,7 @@ void Scop::addRecordedAssumptions() {
     //                     _              _____
     //   Dom => S   <==>   A v B   <==>   A - B
     //
-    // To avoid the complement we will register A - B as a restricton not an
+    // To avoid the complement we will register A - B as a restriction not an
     // assumption.
     isl_set *S = AS.Set;
     if (AS.Sign == AS_RESTRICTION)
@@ -4107,7 +4107,7 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
-  // handling cdoe to all users of this function.
+  // handling code to all users of this function.
   auto PWAC = Affinator.getPwAff(E, BB);
   if (PWAC.first) {
     // TODO: We could use a heuristic and either use:

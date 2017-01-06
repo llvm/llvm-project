@@ -205,14 +205,9 @@ protected:
       basic_ios<char_type, traits_type>::swap(__rhs);
     }
 
-#if _LIBCPP_STD_VER > 11
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     basic_istream           (const basic_istream& __rhs) = delete;
     basic_istream& operator=(const basic_istream& __rhs) = delete;
-#else
-    basic_istream           (const basic_istream& __rhs); // not defined
-    basic_istream& operator=(const basic_istream& __rhs); // not defined
-#endif
 #endif
 public:
 

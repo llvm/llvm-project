@@ -486,7 +486,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<
       std::shared_ptr<CompilerInvocation>,
-      llvm::CrashRecoveryContextDeleteCleanup<
+      llvm::CrashRecoveryContextDestructorCleanup<
           std::shared_ptr<CompilerInvocation>>>
       CInvokCleanup(&CInvok);
 

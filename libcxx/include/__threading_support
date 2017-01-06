@@ -17,39 +17,17 @@
 #pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_HAS_NO_THREADS
-
-#ifndef __libcpp_has_include
-  #ifndef __has_include
-    #define __libcpp_has_include(x) 0
-  #else
-    #define __libcpp_has_include(x) __has_include(x)
-  #endif
-#endif
-
-#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL) && \
-    !__libcpp_has_include(<__external_threading>)
-// If the <__external_threading> header is absent, build libc++ against a
-// pthread-oriented thread api but leave out its implementation. This setup
-// allows building+testing of an externally-threaded library variant (on any
-// platform that supports pthreads). Here, an 'externally-threaded' library
-// variant is one where the implementation of the libc++ thread api is provided
-// as a separate library.
-#define _LIBCPP_HAS_THREAD_API_EXTERNAL_PTHREAD
-#endif
-
-#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL) && \
-    __libcpp_has_include(<__external_threading>)
-#include <__external_threading>
-#else
-
-#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || \
-    defined(_LIBCPP_HAS_THREAD_API_EXTERNAL_PTHREAD)
-#include <pthread.h>
-#include <sched.h>
-#endif
-
 #if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
+# include <__external_threading>
+#elif !defined(_LIBCPP_HAS_NO_THREADS)
+
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+# include <pthread.h>
+# include <sched.h>
+#endif
+
+#if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
+    defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL)
 #define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_FUNC_VIS
 #else
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
@@ -57,8 +35,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || \
-    defined(_LIBCPP_HAS_THREAD_API_EXTERNAL_PTHREAD)
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 // Mutex
 typedef pthread_mutex_t __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
@@ -175,8 +152,10 @@ void *__libcpp_tls_get(__libcpp_tls_key __key);
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_tls_set(__libcpp_tls_key __key, void *__p);
 
-#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD) || \
-    defined(_LIBCPP_BUILDING_THREAD_API_EXTERNAL_PTHREAD)
+#if !defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
+    defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL)
+
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
 int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t *__m)
 {
@@ -344,10 +323,10 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 
 #endif // _LIBCPP_HAS_THREAD_API_PTHREAD
 
+#endif // !_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL || _LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL
+
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !_LIBCPP_HAS_THREAD_API_EXTERNAL || !__libcpp_has_include(<__external_threading>)
-
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // !_LIBCPP_HAS_NO_THREADS
 
 #endif // _LIBCPP_THREADING_SUPPORT

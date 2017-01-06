@@ -14122,48 +14122,13 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
          "Invalid Expr argument to DoMarkVarDeclReferenced");
   Var->setReferenced();
 
+  if (SemaRef.isUnevaluatedContext())
+    return;
+
   TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
-  bool MarkODRUsed = true;
-
-  // If the context is not potentially evaluated, this is not an odr-use and
-  // does not trigger instantiation.
-  if (!IsPotentiallyEvaluatedContext(SemaRef)) {
-    if (SemaRef.isUnevaluatedContext())
-      return;
-
-    // If we don't yet know whether this context is going to end up being an
-    // evaluated context, and we're referencing a variable from an enclosing
-    // scope, add a potential capture.
-    //
-    // FIXME: Is this necessary? These contexts are only used for default
-    // arguments, where local variables can't be used.
-    const bool RefersToEnclosingScope =
-        (SemaRef.CurContext != Var->getDeclContext() &&
-         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
-    if (RefersToEnclosingScope) {
-      if (LambdaScopeInfo *const LSI =
-              SemaRef.getCurLambda(/*IgnoreCapturedRegions=*/true)) {
-        // If a variable could potentially be odr-used, defer marking it so
-        // until we finish analyzing the full expression for any
-        // lvalue-to-rvalue
-        // or discarded value conversions that would obviate odr-use.
-        // Add it to the list of potential captures that will be analyzed
-        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
-        // unless the variable is a reference that was initialized by a constant
-        // expression (this will never need to be captured or odr-used).
-        assert(E && "Capture variable should be used in an expression.");
-        if (!Var->getType()->isReferenceType() ||
-            !IsVariableNonDependentAndAConstantExpression(Var, SemaRef.Context))
-          LSI->addPotentialCapture(E->IgnoreParens());
-      }
-    }
-
-    if (!isTemplateInstantiation(TSK))
-      return;
-
-    // Instantiate, but do not mark as odr-used, variable templates.
-    MarkODRUsed = false;
-  }
+  bool MarkODRUsed = IsPotentiallyEvaluatedContext(SemaRef);
+  bool NeedDefinition =
+      MarkODRUsed || Var->isUsableInConstantExpressions(SemaRef.Context);
 
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
@@ -14173,14 +14138,15 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // If this might be a member specialization of a static data member, check
   // the specialization is visible. We already did the checks for variable
   // template specializations when we created them.
-  if (TSK != TSK_Undeclared && !isa<VarTemplateSpecializationDecl>(Var))
+  if (NeedDefinition && TSK != TSK_Undeclared &&
+      !isa<VarTemplateSpecializationDecl>(Var))
     SemaRef.checkSpecializationVisibility(Loc, Var);
 
   // Perform implicit instantiation of static data members, static data member
   // templates of class templates, and variable template specializations. Delay
   // instantiations of variable templates, except for those that could be used
   // in a constant expression.
-  if (isTemplateInstantiation(TSK)) {
+  if (NeedDefinition && isTemplateInstantiation(TSK)) {
     bool TryInstantiating = TSK == TSK_ImplicitInstantiation;
 
     if (TryInstantiating && !isa<VarTemplateSpecializationDecl>(Var)) {
@@ -14219,9 +14185,6 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
-  if (!MarkODRUsed)
-    return;
-
   // Per C++11 [basic.def.odr], a variable is odr-used "unless it satisfies
   // the requirements for appearing in a constant expression (5.19) and, if
   // it is an object, the lvalue-to-rvalue conversion (4.1)
@@ -14230,14 +14193,39 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // Note that we use the C++11 definition everywhere because nothing in
   // C++03 depends on whether we get the C++03 version correct. The second
   // part does not apply to references, since they are not objects.
-  if (E && IsVariableAConstantExpression(Var, SemaRef.Context)) {
+  if (MarkODRUsed && E && IsVariableAConstantExpression(Var, SemaRef.Context)) {
     // A reference initialized by a constant expression can never be
     // odr-used, so simply ignore it.
     if (!Var->getType()->isReferenceType())
       SemaRef.MaybeODRUseExprs.insert(E);
-  } else
+  } else if (MarkODRUsed) {
     MarkVarDeclODRUsed(Var, Loc, SemaRef,
                        /*MaxFunctionScopeIndex ptr*/ nullptr);
+  } else {
+    // If we don't yet know whether this context is going to end up being an
+    // evaluated context, and we're referencing a variable from an enclosing
+    // scope, add a potential capture.
+    const bool RefersToEnclosingScope =
+        (SemaRef.CurContext != Var->getDeclContext() &&
+         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
+    if (RefersToEnclosingScope) {
+      if (LambdaScopeInfo *const LSI =
+              SemaRef.getCurLambda(/*IgnoreCapturedRegions=*/true)) {
+        // If a variable could potentially be odr-used, defer marking it so
+        // until we finish analyzing the full expression for any
+        // lvalue-to-rvalue
+        // or discarded value conversions that would obviate odr-use.
+        // Add it to the list of potential captures that will be analyzed
+        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
+        // unless the variable is a reference that was initialized by a constant
+        // expression (this will never need to be captured or odr-used).
+        assert(E && "Capture variable should be used in an expression.");
+        if (!Var->getType()->isReferenceType() ||
+            !IsVariableNonDependentAndAConstantExpression(Var, SemaRef.Context))
+          LSI->addPotentialCapture(E->IgnoreParens());
+      }
+    }
+  }
 }
 
 /// \brief Mark a variable referenced, and check whether it is odr-used
@@ -14346,33 +14334,28 @@ namespace {
     MarkReferencedDecls(Sema &S, SourceLocation Loc) : S(S), Loc(Loc) { }
 
     bool TraverseTemplateArgument(const TemplateArgument &Arg);
-    bool TraverseRecordType(RecordType *T);
   };
 }
 
 bool MarkReferencedDecls::TraverseTemplateArgument(
     const TemplateArgument &Arg) {
-  if (Arg.getKind() == TemplateArgument::Declaration) {
-    if (Decl *D = Arg.getAsDecl())
-      S.MarkAnyDeclReferenced(Loc, D, true);
+  {
+    // A non-type template argument is a constant-evaluated context.
+    EnterExpressionEvaluationContext Evaluated(S, Sema::ConstantEvaluated);
+    if (Arg.getKind() == TemplateArgument::Declaration) {
+      if (Decl *D = Arg.getAsDecl())
+        S.MarkAnyDeclReferenced(Loc, D, true);
+    } else if (Arg.getKind() == TemplateArgument::Expression) {
+      S.MarkDeclarationsReferencedInExpr(Arg.getAsExpr(), false);
+    }
   }
 
   return Inherited::TraverseTemplateArgument(Arg);
 }
 
-bool MarkReferencedDecls::TraverseRecordType(RecordType *T) {
-  if (ClassTemplateSpecializationDecl *Spec
-                  = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl())) {
-    const TemplateArgumentList &Args = Spec->getTemplateArgs();
-    return TraverseTemplateArguments(Args.data(), Args.size());
-  }
-
-  return true;
-}
-
 void Sema::MarkDeclarationsReferencedInType(SourceLocation Loc, QualType T) {
   MarkReferencedDecls Marker(*this, Loc);
-  Marker.TraverseType(Context.getCanonicalType(T));
+  Marker.TraverseType(T);
 }
 
 namespace {

@@ -15,6 +15,7 @@ typedef void (^FooBlock)(Foo *someParameter);
 @interface Test : Obj
 @property (readwrite, nonatomic, copy) FooBlock onEventHandler;
 @property (readonly, nonatomic, copy) void (^onReadonly)(int *someParameter);
+@property (readwrite, nonatomic, copy) int (^processEvent)(int eventCode);
 @property (readonly, nonatomic, strong) Obj *obj;
 @end
 
@@ -29,10 +30,10 @@ typedef void (^FooBlock)(Foo *someParameter);
   SELFY.foo = 2
 }
 
-// RUN: c-index-test -code-completion-at=%s:26:8 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// RUN: c-index-test -code-completion-at=%s:27:27 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// RUN: c-index-test -code-completion-at=%s:28:22 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// RUN: c-index-test -code-completion-at=%s:29:9 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:27:8 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:28:27 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:29:22 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:30:9 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: ObjCPropertyDecl:{ResultType int}{TypedText foo} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Obj *}{TypedText obj} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onAction}{LeftParen (}{Placeholder Obj *object}{RightParen )} (35)
@@ -40,6 +41,8 @@ typedef void (^FooBlock)(Foo *someParameter);
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onEventHandler}{LeftParen (}{Placeholder Foo *someParameter}{RightParen )} (35)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType FooBlock}{TypedText onEventHandler}{Equal  = }{Placeholder ^(Foo *someParameter)} (38)
 // CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText onReadonly}{LeftParen (}{Placeholder int *someParameter}{RightParen )} (35)
+// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText processEvent}{LeftParen (}{Placeholder int eventCode}{RightParen )} (35)
+// CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType int (^)(int)}{TypedText processEvent}{Equal  = }{Placeholder ^int(int eventCode)} (32)
 
 - (void) takeInt:(int)x { }
 
@@ -53,16 +56,17 @@ typedef void (^FooBlock)(Foo *someParameter);
   return self.foo;
 }
 
-// RUN: c-index-test -code-completion-at=%s:47:9 %s | FileCheck -check-prefix=CHECK-NO %s
-// RUN: c-index-test -code-completion-at=%s:48:16 %s | FileCheck -check-prefix=CHECK-NO %s
-// RUN: c-index-test -code-completion-at=%s:49:23 %s | FileCheck -check-prefix=CHECK-NO %s
-// RUN: c-index-test -code-completion-at=%s:50:12 %s | FileCheck -check-prefix=CHECK-NO %s
-// RUN: c-index-test -code-completion-at=%s:51:15 %s | FileCheck -check-prefix=CHECK-NO %s
-// RUN: c-index-test -code-completion-at=%s:53:15 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:50:9 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:51:16 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:52:23 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:53:12 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:54:15 %s | FileCheck -check-prefix=CHECK-NO %s
+// RUN: c-index-test -code-completion-at=%s:56:15 %s | FileCheck -check-prefix=CHECK-NO %s
 // CHECK-NO: ObjCPropertyDecl:{ResultType int}{TypedText foo} (35)
 // CHECK-NO-NEXT: ObjCPropertyDecl:{ResultType Obj *}{TypedText obj} (35)
 // CHECK-NO-NEXT: ObjCPropertyDecl:{ResultType void (^)(Obj *)}{TypedText onAction} (35)
 // CHECK-NO-NEXT: ObjCPropertyDecl:{ResultType FooBlock}{TypedText onEventHandler} (35)
 // CHECK-NO-NEXT: ObjCPropertyDecl:{ResultType void (^)(int *)}{TypedText onReadonly} (35)
+// CHECK-NO-NEXT: ObjCPropertyDecl:{ResultType int (^)(int)}{TypedText processEvent} (35)
 
 @end

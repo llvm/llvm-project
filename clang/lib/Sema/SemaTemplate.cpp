@@ -5159,6 +5159,11 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     return Arg;
   }
 
+  // The initialization of the parameter from the argument is
+  // a constant-evaluated context.
+  EnterExpressionEvaluationContext ConstantEvaluated(*this,
+                                                     Sema::ConstantEvaluated);
+
   if (getLangOpts().CPlusPlus1z) {
     // C++1z [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be

@@ -651,6 +651,8 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       VersymIndex = Versym->vs_index;
       ++Versym;
     }
+    bool Hidden = VersymIndex & VERSYM_HIDDEN;
+    VersymIndex = VersymIndex & ~VERSYM_HIDDEN;
 
     StringRef Name = check(Sym.getName(this->StringTable));
     if (Sym.isUndefined()) {
@@ -658,15 +660,23 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       continue;
     }
 
-    if (Versym) {
-      // Ignore local symbols and non-default versions.
-      if (VersymIndex == VER_NDX_LOCAL || (VersymIndex & VERSYM_HIDDEN))
-        continue;
-    }
+    // Ignore local symbols.
+    if (Versym && VersymIndex == VER_NDX_LOCAL)
+      continue;
 
     const Elf_Verdef *V =
         VersymIndex == VER_NDX_GLOBAL ? nullptr : Verdefs[VersymIndex];
-    elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
+
+    if (!Hidden)
+      elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
+
+    // Also add the symbol with the versioned name to handle undefined symbols
+    // with explicit versions.
+    if (V) {
+      StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
+      Name = Saver.save(Twine(Name) + "@" + VerName);
+      elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
+    }
   }
 }
 

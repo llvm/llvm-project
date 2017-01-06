@@ -120,7 +120,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
-  SANITIZER_CHECK(TypeMismatch, type_mismatch, 0)                              \
+  SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
   SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
 
 enum SanitizerHandler {
