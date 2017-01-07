@@ -663,13 +663,16 @@ const uptr kModuleUUIDSize = 16;
 class LoadedModule {
  public:
   LoadedModule()
-      : full_name_(nullptr), base_address_(0), arch_(kModuleArchUnknown) {
+      : full_name_(nullptr),
+        base_address_(0),
+        arch_(kModuleArchUnknown),
+        instrumented_(false) {
     internal_memset(uuid_, 0, kModuleUUIDSize);
     ranges_.clear();
   }
   void set(const char *module_name, uptr base_address);
   void set(const char *module_name, uptr base_address, ModuleArch arch,
-           u8 uuid[kModuleUUIDSize]);
+           u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable);
   bool containsAddress(uptr address) const;
@@ -678,6 +681,7 @@ class LoadedModule {
   uptr base_address() const { return base_address_; }
   ModuleArch arch() const { return arch_; }
   const u8 *uuid() const { return uuid_; }
+  bool instrumented() const { return instrumented_; }
 
   struct AddressRange {
     AddressRange *next;
@@ -696,6 +700,7 @@ class LoadedModule {
   uptr base_address_;
   ModuleArch arch_;
   u8 uuid_[kModuleUUIDSize];
+  bool instrumented_;
   IntrusiveList<AddressRange> ranges_;
 };
 
