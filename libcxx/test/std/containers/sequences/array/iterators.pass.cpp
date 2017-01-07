@@ -132,10 +132,10 @@ int main()
         static_assert ( std::rbegin(c)  != std::rend(c), "");
         static_assert ( std::cbegin(c)  != std::cend(c), "");
         static_assert ( std::crbegin(c) != std::crend(c), "");
-        
+
         static_assert ( *c.begin()  == 0, "");
         static_assert ( *c.rbegin()  == 4, "");
-        
+
         static_assert ( *std::begin(c)   == 0, "" );
         static_assert ( *std::cbegin(c)  == 0, "" );
         static_assert ( *std::rbegin(c)  == 4, "" );

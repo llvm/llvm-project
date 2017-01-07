@@ -67,7 +67,8 @@ class Configuration(object):
         self.cxx_library_root = None
         self.cxx_runtime_root = None
         self.abi_library_root = None
-        self.env = {}
+        self.link_shared = self.get_lit_bool('enable_shared', default=True)
+        self.exec_env = {}
         self.use_target = False
         self.use_system_cxx_lib = False
         self.use_clang_verify = False
@@ -146,7 +147,7 @@ class Configuration(object):
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
                              list(self.config.available_features))
-        self.lit_config.note('Using environment: %r' % self.env)
+        self.lit_config.note('Using environment: %r' % self.exec_env)
 
     def get_test_format(self):
         return LibcxxTestFormat(
@@ -154,7 +155,7 @@ class Configuration(object):
             self.use_clang_verify,
             self.execute_external,
             self.executor,
-            exec_env=self.env)
+            exec_env=self.exec_env)
 
     def configure_executor(self):
         exec_str = self.get_lit_conf('executor', "None")
@@ -207,12 +208,16 @@ class Configuration(object):
             self.config.available_features.add('%s-%s' % (cxx_type, maj_v))
             self.config.available_features.add('%s-%s.%s' % (
                 cxx_type, maj_v, min_v))
+        self.cxx.compile_env = dict(os.environ)
+        # 'CCACHE_CPP2' prevents ccache from stripping comments while
+        # preprocessing. This is required to prevent stripping of '-verify'
+        # comments.
+        self.cxx.compile_env['CCACHE_CPP2'] = '1'
 
     def _configure_clang_cl(self, clang_path):
         assert self.cxx_is_clang_cl
         # FIXME: don't hardcode the target
-        flags = ['-fms-compatibility-version=19.00',
-                 '--target=i686-unknown-windows']
+        flags = ['--target=i686-pc-windows']
         compile_flags = []
         link_flags = ['-fuse-ld=lld']
         if 'INCLUDE' in os.environ:
@@ -555,7 +560,7 @@ class Configuration(object):
         if not os.path.isdir(dynamic_env):
             os.makedirs(dynamic_env)
         self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT="%s"' % dynamic_env]
-        self.env['LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT'] = ("%s" % dynamic_env)
+        self.exec_env['LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT'] = ("%s" % dynamic_env)
 
         dynamic_helper = os.path.join(self.libcxx_src_root, 'test', 'support',
                                       'filesystem_dynamic_test_helper.py')
@@ -577,7 +582,7 @@ class Configuration(object):
                 self.cxx.link_flags += ['-nodefaultlibs']
                 # FIXME: Handle MSVCRT as part of the ABI library handling.
                 if self.is_windows:
-                    self.cxx.link_flags += ['-nostdlib', '-lmsvcrtd']
+                    self.cxx.link_flags += ['-nostdlib']
                 self.configure_link_flags_cxx_library()
                 self.configure_link_flags_abi_library()
                 self.configure_extra_library_flags()
@@ -602,8 +607,14 @@ class Configuration(object):
         if not self.use_system_cxx_lib:
             if self.cxx_library_root:
                 self.cxx.link_flags += ['-L' + self.cxx_library_root]
-            if self.cxx_runtime_root and not self.is_windows:
-                self.cxx.link_flags += ['-Wl,-rpath,' + self.cxx_runtime_root]
+                if self.is_windows and self.link_shared:
+                    self.add_path(self.cxx.compile_env, self.cxx_library_root)
+            if self.cxx_runtime_root:
+                if not self.is_windows:
+                    self.cxx.link_flags += ['-Wl,-rpath,' +
+                                            self.cxx_runtime_root]
+                elif self.is_windows and self.link_shared:
+                    self.add_path(self.exec_env, self.cxx_runtime_root)
 
     def configure_link_flags_abi_library_path(self):
         # Configure ABI library paths.
@@ -612,14 +623,15 @@ class Configuration(object):
             self.cxx.link_flags += ['-L' + self.abi_library_root]
             if not self.is_windows:
                 self.cxx.link_flags += ['-Wl,-rpath,' + self.abi_library_root]
+            else:
+                self.add_path(self.exec_env, self.abi_library_root)
 
     def configure_link_flags_cxx_library(self):
         libcxx_experimental = self.get_lit_bool('enable_experimental', default=False)
         if libcxx_experimental:
             self.config.available_features.add('c++experimental')
             self.cxx.link_flags += ['-lc++experimental']
-        libcxx_shared = self.get_lit_bool('enable_shared', default=True)
-        if libcxx_shared:
+        if self.link_shared:
             self.cxx.link_flags += ['-lc++']
         else:
             cxx_library_root = self.get_lit_conf('cxx_library_root')
@@ -654,7 +666,8 @@ class Configuration(object):
         elif cxx_abi == 'libcxxrt':
             self.cxx.link_flags += ['-lcxxrt']
         elif cxx_abi == 'none' or cxx_abi == 'default':
-            pass
+            if self.is_windows:
+                self.cxx.link_flags += ['-lmsvcrtd']
         else:
             self.lit_config.fatal(
                 'C++ ABI setting %s unsupported for tests' % cxx_abi)
@@ -746,7 +759,7 @@ class Configuration(object):
                 self.cxx.flags += ['-fsanitize=undefined',
                                    '-fno-sanitize=vptr,function,float-divide-by-zero',
                                    '-fno-sanitize-recover=all']
-                self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
+                self.exec_env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')
 
             # Setup the sanitizer compile flags
@@ -754,10 +767,10 @@ class Configuration(object):
             if san == 'Address' or san == 'Address;Undefined' or san == 'Undefined;Address':
                 self.cxx.flags += ['-fsanitize=address']
                 if llvm_symbolizer is not None:
-                    self.env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
+                    self.exec_env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
                 # FIXME: Turn ODR violation back on after PR28391 is resolved
                 # https://llvm.org/bugs/show_bug.cgi?id=28391
-                self.env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
+                self.exec_env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')
                 self.cxx.compile_flags += ['-O1']
@@ -769,7 +782,7 @@ class Configuration(object):
                     self.cxx.compile_flags += [
                         '-fsanitize-memory-track-origins']
                 if llvm_symbolizer is not None:
-                    self.env['MSAN_SYMBOLIZER_PATH'] = llvm_symbolizer
+                    self.exec_env['MSAN_SYMBOLIZER_PATH'] = llvm_symbolizer
                 self.config.available_features.add('msan')
                 self.config.available_features.add('sanitizer-new-delete')
                 self.cxx.compile_flags += ['-O1']
@@ -855,8 +868,8 @@ class Configuration(object):
         sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
-        exec_env_str = 'env ' if len(self.env) != 0 else ''
-        for k, v in self.env.items():
+        exec_env_str = 'env ' if len(self.exec_env) != 0 else ''
+        for k, v in self.exec_env.items():
             exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
         exec_str = exec_env_str
@@ -898,4 +911,12 @@ class Configuration(object):
                 "inferred target_triple as: %r" % self.config.target_triple)
 
     def configure_env(self):
-        self.target_info.configure_env(self.env)
+        self.target_info.configure_env(self.exec_env)
+
+    def add_path(self, dest_env, new_path):
+        if 'PATH' not in dest_env:
+            dest_env['PATH'] = new_path
+        else:
+            split_char = ';' if self.is_windows else ':'
+            dest_env['PATH'] = '%s%s%s' % (new_path, split_char,
+                                           dest_env['PATH'])
