@@ -226,12 +226,8 @@ int X86TTIImpl::getArithmeticInstrCost(
     // Vectorizing division is a bad idea. See the SSE2 table for more comments.
     { ISD::SDIV,  MVT::v64i8,  64*20 },
     { ISD::SDIV,  MVT::v32i16, 32*20 },
-    { ISD::SDIV,  MVT::v16i32, 16*20 },
-    { ISD::SDIV,  MVT::v8i64,   8*20 },
     { ISD::UDIV,  MVT::v64i8,  64*20 },
-    { ISD::UDIV,  MVT::v32i16, 32*20 },
-    { ISD::UDIV,  MVT::v16i32, 16*20 },
-    { ISD::UDIV,  MVT::v8i64,   8*20 },
+    { ISD::UDIV,  MVT::v32i16, 32*20 }
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
@@ -240,17 +236,23 @@ int X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX512CostTable[] = {
-    { ISD::SHL,     MVT::v16i32,    1 },
-    { ISD::SRL,     MVT::v16i32,    1 },
-    { ISD::SRA,     MVT::v16i32,    1 },
-    { ISD::SHL,     MVT::v8i64,     1 },
-    { ISD::SRL,     MVT::v8i64,     1 },
-    { ISD::SRA,     MVT::v8i64,     1 },
+    { ISD::SHL,     MVT::v16i32,     1 },
+    { ISD::SRL,     MVT::v16i32,     1 },
+    { ISD::SRA,     MVT::v16i32,     1 },
+    { ISD::SHL,     MVT::v8i64,      1 },
+    { ISD::SRL,     MVT::v8i64,      1 },
+    { ISD::SRA,     MVT::v8i64,      1 },
 
-    { ISD::MUL,     MVT::v32i8,    13 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,     MVT::v16i8,     5 }, // extend/pmullw/trunc sequence.
-    { ISD::MUL,     MVT::v16i32,    1 }, // pmulld
-    { ISD::MUL,     MVT::v8i64,     8 }  // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,     MVT::v32i8,     13 }, // extend/pmullw/trunc sequence.
+    { ISD::MUL,     MVT::v16i8,      5 }, // extend/pmullw/trunc sequence.
+    { ISD::MUL,     MVT::v16i32,     1 }, // pmulld
+    { ISD::MUL,     MVT::v8i64,      8 }, // 3*pmuludq/3*shift/2*add
+
+    // Vectorizing division is a bad idea. See the SSE2 table for more comments.
+    { ISD::SDIV,    MVT::v16i32, 16*20 },
+    { ISD::SDIV,    MVT::v8i64,   8*20 },
+    { ISD::UDIV,    MVT::v16i32, 16*20 },
+    { ISD::UDIV,    MVT::v8i64,   8*20 }
   };
 
   if (ST->hasAVX512())

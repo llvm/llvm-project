@@ -42,6 +42,8 @@
 using namespace llvm;
 using namespace lowertypetests;
 
+using SummaryAction = LowerTypeTestsSummaryAction;
+
 #define DEBUG_TYPE "lowertypetests"
 
 STATISTIC(ByteArraySizeBits, "Byte array size in bits");
@@ -55,9 +57,15 @@ static cl::opt<bool> AvoidReuse(
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<std::string> ClSummaryAction(
+static cl::opt<SummaryAction> ClSummaryAction(
     "lowertypetests-summary-action",
-    cl::desc("What to do with the summary when running this pass"), cl::Hidden);
+    cl::desc("What to do with the summary when running this pass"),
+    cl::values(clEnumValN(SummaryAction::None, "none", "Do nothing"),
+               clEnumValN(SummaryAction::Import, "import",
+                          "Import typeid resolutions from summary and globals"),
+               clEnumValN(SummaryAction::Export, "export",
+                          "Export typeid resolutions to summary and globals")),
+    cl::Hidden);
 
 static cl::opt<std::string> ClReadSummary(
     "lowertypetests-read-summary",
@@ -226,8 +234,8 @@ public:
 class LowerTypeTestsModule {
   Module &M;
 
-  // This is for testing purposes only.
-  std::unique_ptr<ModuleSummaryIndex> OwnedSummary;
+  SummaryAction Action;
+  ModuleSummaryIndex *Summary;
 
   bool LinkerSubsectionsViaSymbols;
   Triple::ArchType Arch;
@@ -319,21 +327,38 @@ class LowerTypeTestsModule {
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions);
 
 public:
-  LowerTypeTestsModule(Module &M);
-  ~LowerTypeTestsModule();
+  LowerTypeTestsModule(Module &M, SummaryAction Action,
+                       ModuleSummaryIndex *Summary);
   bool lower();
+
+  // Lower the module using the action and summary passed as command line
+  // arguments. For testing purposes only.
+  static bool runForTesting(Module &M);
 };
 
 struct LowerTypeTests : public ModulePass {
   static char ID;
-  LowerTypeTests() : ModulePass(ID) {
+
+  bool UseCommandLine = false;
+
+  SummaryAction Action;
+  ModuleSummaryIndex *Summary;
+
+  LowerTypeTests() : ModulePass(ID), UseCommandLine(true) {
+    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
+  }
+
+  LowerTypeTests(SummaryAction Action, ModuleSummaryIndex *Summary)
+      : ModulePass(ID), Action(Action), Summary(Summary) {
     initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    return LowerTypeTestsModule(M).lower();
+    if (UseCommandLine)
+      return LowerTypeTestsModule::runForTesting(M);
+    return LowerTypeTestsModule(M, Action, Summary).lower();
   }
 };
 
@@ -343,7 +368,10 @@ INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
                 false)
 char LowerTypeTests::ID = 0;
 
-ModulePass *llvm::createLowerTypeTestsPass() { return new LowerTypeTests; }
+ModulePass *llvm::createLowerTypeTestsPass(SummaryAction Action,
+                                           ModuleSummaryIndex *Summary) {
+  return new LowerTypeTests(Action, Summary);
+}
 
 /// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
@@ -1145,22 +1173,12 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 }
 
 /// Lower all type tests in this module.
-LowerTypeTestsModule::LowerTypeTestsModule(Module &M) : M(M) {
-  // Handle the command-line summary arguments. This code is for testing
-  // purposes only, so we handle errors directly.
-  if (!ClSummaryAction.empty()) {
-    OwnedSummary = make_unique<ModuleSummaryIndex>();
-    if (!ClReadSummary.empty()) {
-      ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
-                            ": ");
-      auto ReadSummaryFile =
-          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
-
-      yaml::Input In(ReadSummaryFile->getBuffer());
-      In >> *OwnedSummary;
-      ExitOnErr(errorCodeToError(In.error()));
-    }
-  }
+LowerTypeTestsModule::LowerTypeTestsModule(Module &M, SummaryAction Action,
+                                           ModuleSummaryIndex *Summary)
+    : M(M), Action(Action), Summary(Summary) {
+  // FIXME: Use these fields.
+  (void)this->Action;
+  (void)this->Summary;
 
   Triple TargetTriple(M.getTargetTriple());
   LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
@@ -1169,18 +1187,36 @@ LowerTypeTestsModule::LowerTypeTestsModule(Module &M) : M(M) {
   ObjectFormat = TargetTriple.getObjectFormat();
 }
 
-LowerTypeTestsModule::~LowerTypeTestsModule() {
-  if (ClSummaryAction.empty() || ClWriteSummary.empty())
-    return;
+bool LowerTypeTestsModule::runForTesting(Module &M) {
+  ModuleSummaryIndex Summary;
 
-  ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
-                        ": ");
-  std::error_code EC;
-  raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::F_Text);
-  ExitOnErr(errorCodeToError(EC));
+  // Handle the command-line summary arguments. This code is for testing
+  // purposes only, so we handle errors directly.
+  if (!ClReadSummary.empty()) {
+    ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
+                          ": ");
+    auto ReadSummaryFile =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
 
-  yaml::Output Out(OS);
-  Out << *OwnedSummary;
+    yaml::Input In(ReadSummaryFile->getBuffer());
+    In >> Summary;
+    ExitOnErr(errorCodeToError(In.error()));
+  }
+
+  bool Changed = LowerTypeTestsModule(M, ClSummaryAction, &Summary).lower();
+
+  if (!ClWriteSummary.empty()) {
+    ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
+                          ": ");
+    std::error_code EC;
+    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::F_Text);
+    ExitOnErr(errorCodeToError(EC));
+
+    yaml::Output Out(OS);
+    Out << Summary;
+  }
+
+  return Changed;
 }
 
 bool LowerTypeTestsModule::lower() {
@@ -1313,7 +1349,8 @@ bool LowerTypeTestsModule::lower() {
 
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  bool Changed = LowerTypeTestsModule(M).lower();
+  bool Changed =
+      LowerTypeTestsModule(M, SummaryAction::None, /*Summary=*/nullptr).lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

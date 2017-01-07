@@ -1423,7 +1423,7 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     if (widenLoopCompare(DU))
       return nullptr;
 
-    // This user does not evaluate to a recurence after widening, so don't
+    // This user does not evaluate to a recurrence after widening, so don't
     // follow it. Instead insert a Trunc to kill off the original use,
     // eventually isolating the original narrow IV so it can be removed.
     truncateIVUse(DU, DT, LI);

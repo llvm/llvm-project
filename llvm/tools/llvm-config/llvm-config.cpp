@@ -698,8 +698,12 @@ int main(int argc, char **argv) {
 
     // Print SYSTEM_LIBS after --libs.
     // FIXME: Each LLVM component may have its dependent system libs.
-    if (PrintSystemLibs)
-      OS << LLVM_SYSTEM_LIBS << '\n';
+    if (PrintSystemLibs) {
+      // Output system libraries only if linking against a static
+      // library (since the shared library links to all system libs
+      // already)
+      OS << (LinkMode == LinkModeStatic ? LLVM_SYSTEM_LIBS : "") << '\n';
+    }
   } else if (!Components.empty()) {
     errs() << "llvm-config: error: components given, but unused\n\n";
     usage();
