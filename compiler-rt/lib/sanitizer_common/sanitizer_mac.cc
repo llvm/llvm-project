@@ -845,6 +845,36 @@ void SignalContext::DumpAllRegisters(void *context) {
 # undef DUMPREG
 }
 
+static inline bool CompareBaseAddress(const LoadedModule &a,
+                                      const LoadedModule &b) {
+  return a.base_address() < b.base_address();
+}
+
+void FormatUUID(char *out, uptr size, const u8 *uuid) {
+  internal_snprintf(out, size,
+                    "<%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-"
+                    "%02X%02X%02X%02X%02X%02X>",
+                    uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5],
+                    uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11],
+                    uuid[12], uuid[13], uuid[14], uuid[15]);
+}
+
+void PrintModuleMap() {
+  Printf("Process module map:\n");
+  MemoryMappingLayout memory_mapping(false);
+  InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
+  memory_mapping.DumpListOfModules(&modules);
+  InternalSort(&modules, modules.size(), CompareBaseAddress);
+  for (uptr i = 0; i < modules.size(); ++i) {
+    char uuid_str[128];
+    FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
+    Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
+           modules[i].max_executable_address(), modules[i].full_name(),
+           ModuleArchToString(modules[i].arch()), uuid_str);
+  }
+  Printf("End of module map.\n");
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC
