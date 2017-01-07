@@ -35,8 +35,9 @@ class MemoryMappingLayout {
  public:
   explicit MemoryMappingLayout(bool cache_enabled);
   ~MemoryMappingLayout();
-  bool Next(uptr *start, uptr *end, uptr *offset,
-            char filename[], uptr filename_size, uptr *protection);
+  bool Next(uptr *start, uptr *end, uptr *offset, char filename[],
+            uptr filename_size, uptr *protection, ModuleArch *arch = nullptr,
+            u8 *uuid = nullptr);
   void Reset();
   // In some cases, e.g. when running under a sandbox on Linux, ASan is unable
   // to obtain the memory mappings. It should fall back to pre-cached data
@@ -65,15 +66,18 @@ class MemoryMappingLayout {
   static ProcSelfMapsBuff cached_proc_self_maps_;
   static StaticSpinMutex cache_lock_;  // protects cached_proc_self_maps_.
 # elif SANITIZER_MAC
-  template<u32 kLCSegment, typename SegmentCommand>
-  bool NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
-                       char filename[], uptr filename_size,
+  template <u32 kLCSegment, typename SegmentCommand>
+  bool NextSegmentLoad(uptr *start, uptr *end, uptr *offset, char filename[],
+                       uptr filename_size, ModuleArch *arch, u8 *uuid,
                        uptr *protection);
   int current_image_;
   u32 current_magic_;
   u32 current_filetype_;
+  ModuleArch current_arch_;
+  u8 current_uuid_[kModuleUUIDSize];
   int current_load_cmd_count_;
   char *current_load_cmd_addr_;
+  bool current_instrumented_;
 # endif
 };
 
