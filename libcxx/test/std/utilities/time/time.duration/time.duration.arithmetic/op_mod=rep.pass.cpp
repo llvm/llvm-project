@@ -34,7 +34,7 @@ int main()
     us %= 3;
     assert(us.count() == 2);
     }
-    
+
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "");
 #endif

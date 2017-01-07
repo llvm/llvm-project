@@ -34,7 +34,7 @@ int main()
     ns *= 5;
     assert(ns.count() == 15);
     }
-    
+
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "");
 #endif

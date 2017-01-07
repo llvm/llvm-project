@@ -38,7 +38,7 @@ int main()
     us1 %= std::chrono::milliseconds(3);
     assert(us1.count() == 2);
     }
-    
+
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "");
 #endif
