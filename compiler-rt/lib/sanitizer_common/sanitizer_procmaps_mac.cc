@@ -150,20 +150,34 @@ ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
   }
 }
 
-static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
-  const load_command *current_lc = first_lc;
-  while (1) {
-    if (current_lc->cmd == 0) return;
-    if (current_lc->cmd == LC_UUID) {
-      const uuid_command *uuid_lc = (const uuid_command *)current_lc;
-      const uint8_t *uuid = &uuid_lc->uuid[0];
-      internal_memcpy(uuid_output, uuid, kModuleUUIDSize);
-      return;
-    }
+static const load_command *NextCommand(const load_command *lc) {
+  return (const load_command *)((char *)lc + lc->cmdsize);
+}
 
-    current_lc =
-        (const load_command *)(((char *)current_lc) + current_lc->cmdsize);
+static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
+  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
+    if (lc->cmd != LC_UUID) continue;
+
+    const uuid_command *uuid_lc = (const uuid_command *)lc;
+    const uint8_t *uuid = &uuid_lc->uuid[0];
+    internal_memcpy(uuid_output, uuid, kModuleUUIDSize);
+    return;
   }
+}
+
+static bool IsModuleInstrumented(const load_command *first_lc) {
+  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
+    if (lc->cmd != LC_LOAD_DYLIB) continue;
+
+    const dylib_command *dylib_lc = (const dylib_command *)lc;
+    uint32_t dylib_name_offset = dylib_lc->dylib.name.offset;
+    const char *dylib_name = ((const char *)dylib_lc) + dylib_name_offset;
+    dylib_name = StripModuleName(dylib_name);
+    if (dylib_name != 0 && (internal_strstr(dylib_name, "libclang_rt."))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
@@ -193,9 +207,10 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
           continue;
         }
       }
+      FindUUID((const load_command *)current_load_cmd_addr_, &current_uuid_[0]);
+      current_instrumented_ =
+          IsModuleInstrumented((const load_command *)current_load_cmd_addr_);
     }
-
-    FindUUID((const load_command *)current_load_cmd_addr_, &current_uuid_[0]);
 
     for (; current_load_cmd_count_ >= 0; current_load_cmd_count_--) {
       switch (current_magic_) {
@@ -244,7 +259,8 @@ void MemoryMappingLayout::DumpListOfModules(
     } else {
       modules->push_back(LoadedModule());
       cur_module = &modules->back();
-      cur_module->set(cur_name, cur_beg, cur_arch, cur_uuid);
+      cur_module->set(cur_name, cur_beg, cur_arch, cur_uuid,
+                      current_instrumented_);
     }
     cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute);
   }

@@ -644,7 +644,6 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #endif
 
 #include <__undef_min_max>
-#include <__undef___deallocate>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -1772,7 +1771,7 @@ public:
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
         }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
-        {_VSTD::__deallocate((void*)__p);}
+        {_VSTD::__libcpp_deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -1868,7 +1867,7 @@ public:
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
     }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
-        {_VSTD::__deallocate((void*)__p);}
+        {_VSTD::__libcpp_deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)

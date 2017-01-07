@@ -20,7 +20,6 @@
 #include <utility>
 
 #include <__undef_min_max>
-#include <__undef___deallocate>
 
 #include <__debug>
 
@@ -1321,7 +1320,7 @@ private:
         void __move_assign_alloc(__hash_table&, false_type) _NOEXCEPT {}
 #endif // _LIBCPP_CXX03_LANG
 
-    void __deallocate(__next_pointer __np) _NOEXCEPT;
+    void __deallocate_node(__next_pointer __np) _NOEXCEPT;
     __next_pointer __detach() _NOEXCEPT;
 
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
@@ -1454,7 +1453,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
                  "Predicate must be copy-constructible.");
     static_assert((is_copy_constructible<hasher>::value),
                  "Hasher must be copy-constructible.");
-    __deallocate(__p1_.first().__next_);
+    __deallocate_node(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);
 #endif
@@ -1492,7 +1491,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u)
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate(__next_pointer __np)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer __np)
     _NOEXCEPT
 {
     __node_allocator& __na = __node_alloc();
@@ -1599,11 +1598,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
             }
             catch (...)
             {
-                __deallocate(__cache);
+                __deallocate_node(__cache);
                 throw;
             }
 #endif  // _LIBCPP_NO_EXCEPTIONS
-            __deallocate(__cache);
+            __deallocate_node(__cache);
         }
         const_iterator __i = __u.begin();
         while (__u.size() != 0)
@@ -1661,11 +1660,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
         }
         catch (...)
         {
-            __deallocate(__cache);
+            __deallocate_node(__cache);
             throw;
         }
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        __deallocate(__cache);
+        __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
         __insert_unique(*__first);
@@ -1701,11 +1700,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
         }
         catch (...)
         {
-            __deallocate(__cache);
+            __deallocate_node(__cache);
             throw;
         }
 #endif  // _LIBCPP_NO_EXCEPTIONS
-        __deallocate(__cache);
+        __deallocate_node(__cache);
     }
     for (; __first != __last; ++__first)
         __insert_multi(_NodeTypes::__get_value(*__first));
@@ -1765,7 +1764,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::clear() _NOEXCEPT
 {
     if (size() > 0)
     {
-        __deallocate(__p1_.first().__next_);
+        __deallocate_node(__p1_.first().__next_);
         __p1_.first().__next_ = nullptr;
         size_type __bc = bucket_count();
         for (size_type __i = 0; __i < __bc; ++__i)

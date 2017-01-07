@@ -117,6 +117,12 @@ sleep_for(const chrono::nanoseconds& ns)
     using namespace chrono;
     if (ns > nanoseconds::zero())
     {
+#if defined(_LIBCPP_WIN32API)
+        milliseconds ms = duration_cast<milliseconds>(ns);
+        if (ns > duration_cast<nanoseconds>(ms))
+          ++ms;
+        Sleep(ms.count());
+#else
         seconds s = duration_cast<seconds>(ns);
         timespec ts;
         typedef decltype(ts.tv_sec) ts_sec;
@@ -134,6 +140,7 @@ sleep_for(const chrono::nanoseconds& ns)
 
         while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
             ;
+#endif
     }
 }
 

@@ -49,7 +49,7 @@ Visibility Macros
   attribute. With GCC the `visibility(...)` attribute is used and member
   functions are affected.
 
-**_LIBCPP_TEMPLATE_ONLY**
+**_LIBCPP_TEMPLATE_VIS**
   The same as `_LIBCPP_TYPE_VIS` except that it may be applied to class
   templates.
 

@@ -348,7 +348,6 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <new>
 
 #include <__undef_min_max>
-#include <__undef___deallocate>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -3697,7 +3696,7 @@ valarray<_Tp>::resize(size_t __n, value_type __x)
     {
         while (__end_ != __begin_)
             (--__end_)->~value_type();
-        _VSTD::__deallocate(__begin_);
+        _VSTD::__libcpp_deallocate(__begin_);
         __begin_ = __end_ = nullptr;
     }
     if (__n)

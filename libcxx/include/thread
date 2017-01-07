@@ -148,7 +148,8 @@ class __thread_specific_ptr
     __thread_specific_ptr(const __thread_specific_ptr&);
     __thread_specific_ptr& operator=(const __thread_specific_ptr&);
 
-    static void __at_thread_exit(void*);
+    static void _LIBCPP_TLS_DESTRUCTOR_CC __at_thread_exit(void*);
+
 public:
     typedef _Tp* pointer;
 
@@ -164,7 +165,7 @@ public:
 };
 
 template <class _Tp>
-void
+void _LIBCPP_TLS_DESTRUCTOR_CC
 __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 {
     delete static_cast<pointer>(__p);
@@ -173,12 +174,10 @@ __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr()
 {
-    int __ec = __libcpp_tls_create(
-        &__key_,
-        &__thread_specific_ptr::__at_thread_exit);
-    if (__ec)
-        __throw_system_error(__ec,
-                           "__thread_specific_ptr construction failed");
+  int __ec =
+      __libcpp_tls_create(&__key_, &__thread_specific_ptr::__at_thread_exit);
+  if (__ec)
+    __throw_system_error(__ec, "__thread_specific_ptr construction failed");
 }
 
 template <class _Tp>

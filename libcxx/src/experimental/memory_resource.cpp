@@ -34,7 +34,7 @@ protected:
         { return __allocate(__size); }
 
     virtual void do_deallocate(void * __p, size_t, size_t)
-        { __deallocate(__p); }
+        { _VSTD::__libcpp_deallocate(__p); }
 
     virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT
         { return &__other == this; }
