@@ -6561,6 +6561,13 @@ InitializationSequence::Perform(Sema &S,
     break;
   }
 
+  // Promote from an unevaluated context to an unevaluated list context in
+  // C++11 list-initialization; we need to instantiate entities usable in
+  // constant expressions here in order to perform narrowing checks =(
+  EnterExpressionEvaluationContext Evaluated(
+      S, EnterExpressionEvaluationContext::InitList,
+      CurInit.get() && isa<InitListExpr>(CurInit.get()));
+
   // C++ [class.abstract]p2:
   //   no objects of an abstract class can be created except as subobjects
   //   of a class derived from it

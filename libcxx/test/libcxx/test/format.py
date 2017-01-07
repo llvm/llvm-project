@@ -41,11 +41,6 @@ class LibcxxTestFormat(object):
         self.execute_external = execute_external
         self.executor = executor
         self.exec_env = dict(exec_env)
-        self.cxx.compile_env = dict(os.environ)
-        # 'CCACHE_CPP2' prevents ccache from stripping comments while
-        # preprocessing. This is required to prevent stripping of '-verify'
-        # comments.
-        self.cxx.compile_env['CCACHE_CPP2'] = '1'
 
     @staticmethod
     def _make_custom_parsers():

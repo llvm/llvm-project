@@ -814,6 +814,12 @@ public:
     /// run time.
     Unevaluated,
 
+    /// \brief The current expression occurs within a braced-init-list within
+    /// an unevaluated operand. This is mostly like a regular unevaluated
+    /// context, except that we still instantiate constexpr functions that are
+    /// referenced here so that we can perform narrowing checks correctly.
+    UnevaluatedList,
+
     /// \brief The current expression occurs within a discarded statement.
     /// This behaves largely similarly to an unevaluated operand in preventing
     /// definitions from being required, but not in other ways.
@@ -906,7 +912,8 @@ public:
     MangleNumberingContext &getMangleNumberingContext(ASTContext &Ctx);
 
     bool isUnevaluated() const {
-      return Context == Unevaluated || Context == UnevaluatedAbstract;
+      return Context == Unevaluated || Context == UnevaluatedAbstract ||
+             Context == UnevaluatedList;
     }
   };
 
@@ -10240,6 +10247,22 @@ public:
     Actions.PushExpressionEvaluationContext(NewContext,
                                             Sema::ReuseLambdaContextDecl,
                                             IsDecltype);
+  }
+
+  enum InitListTag { InitList };
+  EnterExpressionEvaluationContext(Sema &Actions, InitListTag,
+                                   bool ShouldEnter = true)
+      : Actions(Actions), Entered(false) {
+    // In C++11 onwards, narrowing checks are performed on the contents of
+    // braced-init-lists, even when they occur within unevaluated operands.
+    // Therefore we still need to instantiate constexpr functions used in such
+    // a context.
+    if (ShouldEnter && Actions.isUnevaluatedContext() &&
+        Actions.getLangOpts().CPlusPlus11) {
+      Actions.PushExpressionEvaluationContext(Sema::UnevaluatedList, nullptr,
+                                              false);
+      Entered = true;
+    }
   }
 
   ~EnterExpressionEvaluationContext() {

@@ -13150,39 +13150,61 @@ ExprResult Sema::HandleExprEvaluationContextForTypeof(Expr *E) {
   return TransformToPotentiallyEvaluated(E);
 }
 
-static bool IsPotentiallyEvaluatedContext(Sema &SemaRef) {
-  // Do not mark anything as "used" within a dependent context; wait for
-  // an instantiation.
-  if (SemaRef.CurContext->isDependentContext())
-    return false;
-
+/// Are we within a context in which some evaluation could be performed (be it
+/// constant evaluation or runtime evaluation)? Sadly, this notion is not quite
+/// captured by C++'s idea of an "unevaluated context".
+static bool isEvaluatableContext(Sema &SemaRef) {
   switch (SemaRef.ExprEvalContexts.back().Context) {
     case Sema::Unevaluated:
     case Sema::UnevaluatedAbstract:
-      // We are in an expression that is not potentially evaluated; do nothing.
-      // (Depending on how you read the standard, we actually do need to do
-      // something here for null pointer constants, but the standard's
-      // definition of a null pointer constant is completely crazy.)
-      return false;
-
     case Sema::DiscardedStatement:
-      // These are technically a potentially evaluated but they have the effect
-      // of suppressing use marking.
+      // Expressions in this context are never evaluated.
       return false;
 
+    case Sema::UnevaluatedList:
     case Sema::ConstantEvaluated:
     case Sema::PotentiallyEvaluated:
-      // We are in a potentially evaluated expression (or a constant-expression
-      // in C++03); we need to do implicit template instantiation, implicitly
-      // define class members, and mark most declarations as used.
+      // Expressions in this context could be evaluated.
       return true;
 
     case Sema::PotentiallyEvaluatedIfUsed:
       // Referenced declarations will only be used if the construct in the
-      // containing expression is used.
+      // containing expression is used, at which point we'll be given another
+      // turn to mark them.
       return false;
   }
   llvm_unreachable("Invalid context");
+}
+
+/// Are we within a context in which references to resolved functions or to
+/// variables result in odr-use?
+static bool isOdrUseContext(Sema &SemaRef, bool SkipDependentUses = true) {
+  // An expression in a template is not really an expression until it's been
+  // instantiated, so it doesn't trigger odr-use.
+  if (SkipDependentUses && SemaRef.CurContext->isDependentContext())
+    return false;
+
+  switch (SemaRef.ExprEvalContexts.back().Context) {
+    case Sema::Unevaluated:
+    case Sema::UnevaluatedList:
+    case Sema::UnevaluatedAbstract:
+    case Sema::DiscardedStatement:
+      return false;
+
+    case Sema::ConstantEvaluated:
+    case Sema::PotentiallyEvaluated:
+      return true;
+
+    case Sema::PotentiallyEvaluatedIfUsed:
+      return false;
+  }
+  llvm_unreachable("Invalid context");
+}
+
+static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
+  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
+  return Func->isConstexpr() &&
+         (Func->isImplicitlyInstantiable() || (MD && !MD->isUserProvided()));
 }
 
 /// \brief Mark a function referenced, and check whether it is odr-used
@@ -13200,7 +13222,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //
   // We (incorrectly) mark overload resolution as an unevaluated context, so we
   // can just check that here.
-  bool OdrUse = MightBeOdrUse && IsPotentiallyEvaluatedContext(*this);
+  bool OdrUse = MightBeOdrUse && isOdrUseContext(*this);
 
   // Determine whether we require a function definition to exist, per
   // C++11 [temp.inst]p3:
@@ -13209,27 +13231,11 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //   specialization is implicitly instantiated when the specialization is
   //   referenced in a context that requires a function definition to exist.
   //
-  // We consider constexpr function templates to be referenced in a context
-  // that requires a definition to exist whenever they are referenced.
-  //
-  // FIXME: This instantiates constexpr functions too frequently. If this is
-  // really an unevaluated context (and we're not just in the definition of a
-  // function template or overload resolution or other cases which we
-  // incorrectly consider to be unevaluated contexts), and we're not in a
-  // subexpression which we actually need to evaluate (for instance, a
-  // template argument, array bound or an expression in a braced-init-list),
-  // we are not permitted to instantiate this constexpr function definition.
-  //
-  // FIXME: This also implicitly defines special members too frequently. They
-  // are only supposed to be implicitly defined if they are odr-used, but they
-  // are not odr-used from constant expressions in unevaluated contexts.
-  // However, they cannot be referenced if they are deleted, and they are
-  // deleted whenever the implicit definition of the special member would
-  // fail (with very few exceptions).
-  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
+  // That is either when this is an odr-use, or when a usage of a constexpr
+  // function occurs within an evaluatable context.
   bool NeedDefinition =
-      OdrUse || (Func->isConstexpr() && (Func->isImplicitlyInstantiable() ||
-                                         (MD && !MD->isUserProvided())));
+      OdrUse || (isEvaluatableContext(*this) &&
+                 isImplicitlyDefinableConstexprFunction(Func));
 
   // C++14 [temp.expl.spec]p6:
   //   If a template [...] is explicitly specialized then that specialization
@@ -14122,13 +14128,12 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
          "Invalid Expr argument to DoMarkVarDeclReferenced");
   Var->setReferenced();
 
-  if (SemaRef.isUnevaluatedContext())
-    return;
-
   TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
-  bool MarkODRUsed = IsPotentiallyEvaluatedContext(SemaRef);
+
+  bool OdrUseContext = isOdrUseContext(SemaRef);
   bool NeedDefinition =
-      MarkODRUsed || Var->isUsableInConstantExpressions(SemaRef.Context);
+      OdrUseContext || (isEvaluatableContext(SemaRef) &&
+                        Var->isUsableInConstantExpressions(SemaRef.Context));
 
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
@@ -14193,18 +14198,20 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // Note that we use the C++11 definition everywhere because nothing in
   // C++03 depends on whether we get the C++03 version correct. The second
   // part does not apply to references, since they are not objects.
-  if (MarkODRUsed && E && IsVariableAConstantExpression(Var, SemaRef.Context)) {
+  if (OdrUseContext && E &&
+      IsVariableAConstantExpression(Var, SemaRef.Context)) {
     // A reference initialized by a constant expression can never be
     // odr-used, so simply ignore it.
     if (!Var->getType()->isReferenceType())
       SemaRef.MaybeODRUseExprs.insert(E);
-  } else if (MarkODRUsed) {
+  } else if (OdrUseContext) {
     MarkVarDeclODRUsed(Var, Loc, SemaRef,
                        /*MaxFunctionScopeIndex ptr*/ nullptr);
-  } else {
-    // If we don't yet know whether this context is going to end up being an
-    // evaluated context, and we're referencing a variable from an enclosing
-    // scope, add a potential capture.
+  } else if (isOdrUseContext(SemaRef, /*SkipDependentUses*/false)) {
+    // If this is a dependent context, we don't need to mark variables as
+    // odr-used, but we may still need to track them for lambda capture.
+    // FIXME: Do we also need to do this inside dependent typeid expressions
+    // (which are modeled as unevaluated at this point)?
     const bool RefersToEnclosingScope =
         (SemaRef.CurContext != Var->getDeclContext() &&
          Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
@@ -14321,9 +14328,13 @@ void Sema::MarkAnyDeclReferenced(SourceLocation Loc, Decl *D,
 }
 
 namespace {
-  // Mark all of the declarations referenced
+  // Mark all of the declarations used by a type as referenced.
   // FIXME: Not fully implemented yet! We need to have a better understanding
-  // of when we're entering
+  // of when we're entering a context we should not recurse into.
+  // FIXME: This is and EvaluatedExprMarker are more-or-less equivalent to
+  // TreeTransforms rebuilding the type in a new context. Rather than
+  // duplicating the TreeTransform logic, we should consider reusing it here.
+  // Currently that causes problems when rebuilding LambdaExprs.
   class MarkReferencedDecls : public RecursiveASTVisitor<MarkReferencedDecls> {
     Sema &S;
     SourceLocation Loc;
@@ -14462,6 +14473,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   switch (ExprEvalContexts.back().Context) {
   case Unevaluated:
+  case UnevaluatedList:
   case UnevaluatedAbstract:
   case DiscardedStatement:
     // The argument will never be evaluated, so don't complain.

@@ -1565,6 +1565,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     //   A lambda-expression shall not appear in an unevaluated operand
     //   (Clause 5).
     case Unevaluated:
+    case UnevaluatedList:
     case UnevaluatedAbstract:
     // C++1y [expr.const]p2:
     //   A conditional-expression e is a core constant expression unless the

@@ -861,21 +861,8 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   }
 }
 
-static void runThinLTOBackend(const CodeGenOptions &CGOpts, Module *M,
+static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
                               std::unique_ptr<raw_pwrite_stream> OS) {
-  // If we are performing a ThinLTO importing compile, load the function index
-  // into memory and pass it into thinBackend, which will run the function
-  // importer and invoke LTO passes.
-  Expected<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
-      llvm::getModuleSummaryIndexForFile(CGOpts.ThinLTOIndexFile);
-  if (!IndexOrErr) {
-    logAllUnhandledErrors(IndexOrErr.takeError(), errs(),
-                          "Error loading index file '" +
-                              CGOpts.ThinLTOIndexFile + "': ");
-    return;
-  }
-  std::unique_ptr<ModuleSummaryIndex> CombinedIndex = std::move(*IndexOrErr);
-
   StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -961,8 +948,26 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               BackendAction Action,
                               std::unique_ptr<raw_pwrite_stream> OS) {
   if (!CGOpts.ThinLTOIndexFile.empty()) {
-    runThinLTOBackend(CGOpts, M, std::move(OS));
-    return;
+    // If we are performing a ThinLTO importing compile, load the function index
+    // into memory and pass it into runThinLTOBackend, which will run the
+    // function importer and invoke LTO passes.
+    Expected<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+        llvm::getModuleSummaryIndexForFile(CGOpts.ThinLTOIndexFile);
+    if (!IndexOrErr) {
+      logAllUnhandledErrors(IndexOrErr.takeError(), errs(),
+                            "Error loading index file '" +
+                            CGOpts.ThinLTOIndexFile + "': ");
+      return;
+    }
+    std::unique_ptr<ModuleSummaryIndex> CombinedIndex = std::move(*IndexOrErr);
+    // A null CombinedIndex means we should skip ThinLTO compilation
+    // (LLVM will optionally ignore empty index files, returning null instead
+    // of an error).
+    bool DoThinLTOBackend = CombinedIndex != nullptr;
+    if (DoThinLTOBackend) {
+      runThinLTOBackend(CombinedIndex.get(), M, std::move(OS));
+      return;
+    }
   }
 
   EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts, M);

@@ -115,9 +115,8 @@ namespace PR13064 {
   struct A { explicit A(int); }; // expected-note{{here}}
   template<typename T> struct B { T a { 0 }; };
   B<A> b;
-  // expected-note@+1 {{in instantiation of default member initializer}}
   template<typename T> struct C { T a = { 0 }; }; // expected-error{{explicit}}
-  C<A> c; // expected-note{{here}}
+  C<A> c; // expected-note {{in instantiation of default member initializer}}
 }
 
 namespace PR16903 {

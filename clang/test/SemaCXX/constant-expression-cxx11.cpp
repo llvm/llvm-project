@@ -1902,9 +1902,9 @@ namespace ZeroSizeTypes {
 namespace BadDefaultInit {
   template<int N> struct X { static const int n = N; };
 
-  struct A { // expected-error {{default member initializer for 'k' needed within definition of enclosing class}}
+  struct A {
     int k = // expected-note {{default member initializer declared here}}
-        X<A().k>::n; // expected-error {{not a constant expression}} expected-note {{implicit default constructor for 'BadDefaultInit::A' first required here}}
+        X<A().k>::n; // expected-error {{default member initializer for 'k' needed within definition of enclosing class}}
   };
 
   // FIXME: The "constexpr constructor must initialize all members" diagnostic
