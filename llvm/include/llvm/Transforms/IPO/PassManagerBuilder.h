@@ -21,7 +21,6 @@
 #include <vector>
 
 namespace llvm {
-class ModuleSummaryIndex;
 class Pass;
 class TargetLibraryInfoImpl;
 class TargetMachine;

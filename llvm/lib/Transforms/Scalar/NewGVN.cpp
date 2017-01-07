@@ -79,7 +79,8 @@ STATISTIC(NumGVNInstrDeleted, "Number of instructions deleted");
 STATISTIC(NumGVNBlocksDeleted, "Number of blocks deleted");
 STATISTIC(NumGVNOpsSimplified, "Number of Expressions simplified");
 STATISTIC(NumGVNPhisAllSame, "Number of PHIs whos arguments are all the same");
-STATISTIC(NumGVNMaxIterations, "Maximum Number of iterations it took to converge GVN");
+STATISTIC(NumGVNMaxIterations,
+          "Maximum Number of iterations it took to converge GVN");
 
 //===----------------------------------------------------------------------===//
 //                                GVN Pass
@@ -390,10 +391,10 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_END(NewGVN, "newgvn", "Global Value Numbering", false, false)
 
 PHIExpression *NewGVN::createPHIExpression(Instruction *I) {
-  BasicBlock *PhiBlock = I->getParent();
+  BasicBlock *PHIBlock = I->getParent();
   auto *PN = cast<PHINode>(I);
-  auto *E = new (ExpressionAllocator)
-      PHIExpression(PN->getNumOperands(), I->getParent());
+  auto *E =
+      new (ExpressionAllocator) PHIExpression(PN->getNumOperands(), PHIBlock);
 
   E->allocateOperands(ArgRecycler, ExpressionAllocator);
   E->setType(I->getType());
@@ -408,10 +409,10 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I) {
 
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const Use &U) -> Value * {
-                   // Don't try to transform self-defined phis
+                   // Don't try to transform self-defined phis.
                    if (U == PN)
                      return PN;
-                   const BasicBlockEdge BBE(PN->getIncomingBlock(U), PhiBlock);
+                   const BasicBlockEdge BBE(PN->getIncomingBlock(U), PHIBlock);
                    return lookupOperandLeader(U, I, BBE);
                  });
   return E;
@@ -810,36 +811,50 @@ bool NewGVN::setMemoryAccessEquivTo(MemoryAccess *From, MemoryAccess *To) {
 const Expression *NewGVN::performSymbolicPHIEvaluation(Instruction *I,
                                                        const BasicBlock *B) {
   auto *E = cast<PHIExpression>(createPHIExpression(I));
-  if (E->op_empty()) {
+  // We match the semantics of SimplifyPhiNode from InstructionSimplify here.
+
+  // See if all arguaments are the same.
+  // We track if any were undef because they need special handling.
+  bool HasUndef = false;
+  auto Filtered = make_filter_range(E->operands(), [&](const Value *Arg) {
+    if (Arg == I)
+      return false;
+    if (isa<UndefValue>(Arg)) {
+      HasUndef = true;
+      return false;
+    }
+    return true;
+  });
+  // If we are left with no operands, it's undef
+  if (Filtered.begin() == Filtered.end()) {
     DEBUG(dbgs() << "Simplified PHI node " << *I << " to undef"
                  << "\n");
     E->deallocateOperands(ArgRecycler);
     ExpressionAllocator.Deallocate(E);
     return createConstantExpression(UndefValue::get(I->getType()));
   }
-
-  Value *AllSameValue = E->getOperand(0);
-
-  // See if all arguments are the same, ignoring undef arguments, because we can
-  // choose a value that is the same for them.
-  for (const Value *Arg : E->operands())
-    if (Arg != AllSameValue && !isa<UndefValue>(Arg)) {
-      AllSameValue = nullptr;
-      break;
+  Value *AllSameValue = *(Filtered.begin());
+  ++Filtered.begin();
+  // Can't use std::equal here, sadly, because filter.begin moves.
+  if (llvm::all_of(Filtered, [AllSameValue](const Value *V) {
+        return V == AllSameValue;
+      })) {
+    // In LLVM's non-standard representation of phi nodes, it's possible to have
+    // phi nodes with cycles (IE dependent on other phis that are .... dependent
+    // on the original phi node), especially in weird CFG's where some arguments
+    // are unreachable, or uninitialized along certain paths.  This can cause
+    // infinite loops during evaluation. We work around this by not trying to
+    // really evaluate them independently, but instead using a variable
+    // expression to say if one is equivalent to the other.
+    // We also special case undef, so that if we have an undef, we can't use the
+    // common value unless it dominates the phi block.
+    if (HasUndef) {
+      // Only have to check for instructions
+      if (auto *AllSameInst = dyn_cast<Instruction>(AllSameValue))
+        if (!DT->dominates(AllSameInst, I))
+          return E;
     }
 
-  if (AllSameValue) {
-    // It's possible to have phi nodes with cycles (IE dependent on
-    // other phis that are .... dependent on the original phi node),
-    // especially in weird CFG's where some arguments are unreachable, or
-    // uninitialized along certain paths.
-    // This can cause infinite loops  during evaluation (even if you disable
-    // the recursion below, you will simply ping-pong between congruence
-    // classes). If a phi node symbolically evaluates to another phi node,
-    // just leave it alone. If they are really the same, we will still
-    // eliminate them in favor of each other.
-    if (isa<PHINode>(AllSameValue))
-      return E;
     NumGVNPhisAllSame++;
     DEBUG(dbgs() << "Simplified PHI node " << *I << " to " << *AllSameValue
                  << "\n");
@@ -1009,7 +1024,6 @@ void NewGVN::markMemoryUsersTouched(MemoryAccess *MA) {
 
 // Perform congruence finding on a given value numbering expression.
 void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
-
   ValueToExpression[V] = E;
   // This is guaranteed to return something, since it will at least find
   // INITIAL.
@@ -1984,9 +1998,13 @@ bool NewGVN::eliminateInstructions(Function &F) {
           Value *Member = C.Val;
           Use *MemberUse = C.U;
 
-          // We ignore void things because we can't get a value from them.
-          if (Member && Member->getType()->isVoidTy())
-            continue;
+          if (Member) {
+            // We ignore void things because we can't get a value from them.
+            // FIXME: We could actually use this to kill dead stores that are
+            // dominated by equivalent earlier stores.
+            if (Member->getType()->isVoidTy())
+              continue;
+          }
 
           if (EliminationStack.empty()) {
             DEBUG(dbgs() << "Elimination Stack is empty\n");
@@ -1995,8 +2013,6 @@ bool NewGVN::eliminateInstructions(Function &F) {
                          << EliminationStack.dfs_back().first << ","
                          << EliminationStack.dfs_back().second << ")\n");
           }
-          if (Member && isa<Constant>(Member))
-            assert(isa<Constant>(CC->RepLeader));
 
           DEBUG(dbgs() << "Current DFS numbers are (" << MemberDFSIn << ","
                        << MemberDFSOut << ")\n");
@@ -2037,11 +2053,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
             continue;
           Value *Result = EliminationStack.back();
 
-          // Don't replace our existing users with ourselves, and don't replace
-          // phi node arguments with the result of the same phi node.
-          // IE tmp = phi(tmp11, undef); tmp11 = foo -> tmp = phi(tmp, undef)
-          if (MemberUse->get() == Result ||
-              (isa<PHINode>(Result) && MemberUse->getUser() == Result))
+          // Don't replace our existing users with ourselves.
+          if (MemberUse->get() == Result)
             continue;
 
           DEBUG(dbgs() << "Found replacement " << *Result << " for "

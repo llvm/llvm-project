@@ -316,9 +316,9 @@ else()
   endif()
 endif()
 
-check_cxx_compiler_flag("-Wno-variadic-macros" SUPPORTS_NO_VARIADIC_MACROS_FLAG)
-check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments"
-                        SUPPORTS_NO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
+check_cxx_compiler_flag("-Wvariadic-macros" SUPPORTS_VARIADIC_MACROS_FLAG)
+check_cxx_compiler_flag("-Wgnu-zero-variadic-macro-arguments"
+                        SUPPORTS_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS_FLAG)
 
 set(USE_NO_MAYBE_UNINITIALIZED 0)
 set(USE_NO_UNINITIALIZED 0)
@@ -461,13 +461,6 @@ if( MSVC )
 
   if(LLVM_ENABLE_DIA_SDK AND NOT HAVE_DIA_SDK)
     message(FATAL_ERROR "DIA SDK not found. If you have both VS 2012 and 2013 installed, you may need to uninstall the former and re-install the latter afterwards.")
-  endif()
-
-  # Normalize to 0/1 for lit.site.cfg
-  if(LLVM_ENABLE_DIA_SDK)
-    set(LLVM_ENABLE_DIA_SDK 1)
-  else()
-    set(LLVM_ENABLE_DIA_SDK 0)
   endif()
 else()
   set(LLVM_ENABLE_DIA_SDK 0)

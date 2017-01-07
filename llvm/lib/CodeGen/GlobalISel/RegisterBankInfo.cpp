@@ -55,11 +55,10 @@ const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
                                    unsigned NumRegBanks)
     : RegBanks(RegBanks), NumRegBanks(NumRegBanks) {
-  DEBUG(for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
+#ifndef NDEBUG
+  for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx)
     assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
-    assert(!RegBanks[Idx]->isValid() &&
-           "RegisterBank should be invalid before initialization");
-  });
+#endif // NDEBUG
 }
 
 RegisterBankInfo::~RegisterBankInfo() {
@@ -70,13 +69,15 @@ RegisterBankInfo::~RegisterBankInfo() {
 }
 
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
-  DEBUG(for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
+#ifndef NDEBUG
+  for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     const RegisterBank &RegBank = getRegBank(Idx);
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
     dbgs() << "Verify " << RegBank << '\n';
     assert(RegBank.verify(TRI) && "RegBank is invalid");
-  });
+  }
+#endif // NDEBUG
   return true;
 }
 

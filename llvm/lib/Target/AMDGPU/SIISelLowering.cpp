@@ -99,6 +99,18 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v16i32, Custom);
   setOperationAction(ISD::STORE, MVT::i1, Custom);
 
+  setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
+  setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
+  setTruncStoreAction(MVT::v16i32, MVT::v16i16, Expand);
+  setTruncStoreAction(MVT::v32i32, MVT::v32i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v4i32, MVT::v4i8, Expand);
+  setTruncStoreAction(MVT::v8i32, MVT::v8i8, Expand);
+  setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
+  setTruncStoreAction(MVT::v32i32, MVT::v32i8, Expand);
+
+
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
   setOperationAction(ISD::ConstantPool, MVT::v2i64, Expand);

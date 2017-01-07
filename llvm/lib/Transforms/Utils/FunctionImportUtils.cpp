@@ -67,12 +67,15 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
     return true;
   }
 
-  // When exporting, consult the index.
-  auto Summaries = ImportIndex.findGlobalValueSummaryList(SGV->getGUID());
-  assert(Summaries != ImportIndex.end() &&
-         "Missing summary for global value when exporting");
-  assert(Summaries->second.size() == 1 && "Local has more than one summary");
-  auto Linkage = Summaries->second.front()->linkage();
+  // When exporting, consult the index. We can have more than one local
+  // with the same GUID, in the case of same-named locals in different but
+  // same-named source files that were compiled in their respective directories
+  // (so the source file name and resulting GUID is the same). Find the one
+  // in this module.
+  auto Summary = ImportIndex.findSummaryInModule(
+      SGV->getGUID(), SGV->getParent()->getModuleIdentifier());
+  assert(Summary && "Missing summary for global value when exporting");
+  auto Linkage = Summary->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
     assert(!isNonRenamableLocal(*SGV) &&
            "Attempting to promote non-renamable local");

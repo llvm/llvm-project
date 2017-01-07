@@ -879,18 +879,22 @@ extern template class AnalysisManager<Function>;
 /// \brief Convenience typedef for the Function analysis manager.
 typedef AnalysisManager<Function> FunctionAnalysisManager;
 
-/// \brief A module analysis which acts as a proxy for a function analysis
-/// manager.
+/// \brief An analysis over an "outer" IR unit that provides access to an
+/// analysis manager over an "inner" IR unit.  The inner unit must be contained
+/// in the outer unit.
 ///
-/// This primarily proxies invalidation information from the module analysis
-/// manager and module pass manager to a function analysis manager. You should
-/// never use a function analysis manager from within (transitively) a module
-/// pass manager unless your parent module pass has received a proxy result
-/// object for it.
+/// Fore example, InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> is
+/// an analysis over Modules (the "outer" unit) that provides access to a
+/// Function analysis manager.  The FunctionAnalysisManager is the "inner"
+/// manager being proxied, and Functions are the "inner" unit.  The inner/outer
+/// relationship is valid because each Function is contained in one Module.
 ///
-/// Note that the proxy's result is a move-only object and represents ownership
-/// of the validity of the analyses in the \c FunctionAnalysisManager it
-/// provides.
+/// If you're (transitively) within a pass manager for an IR unit U that
+/// contains IR unit V, you should never use an analysis manager over V, except
+/// via one of these proxies.
+///
+/// Note that the proxy's result is a move-only RAII object.  The validity of
+/// the analyses in the inner analysis manager is tied to its lifetime.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class InnerAnalysisManagerProxy
     : public AnalysisInfoMixin<
@@ -926,23 +930,16 @@ public:
     /// \brief Accessor for the analysis manager.
     AnalysisManagerT &getManager() { return *InnerAM; }
 
-    /// \brief Handler for invalidation of the outer IR unit.
+    /// \brief Handler for invalidation of the outer IR unit, \c IRUnitT.
     ///
-    /// If this analysis itself is preserved, then we assume that the set of \c
-    /// IR units that the inner analysis manager controls hasn't changed and
-    /// thus we don't need to invalidate *all* cached data associated with any
-    /// \c IRUnitT* in the \c AnalysisManagerT.
+    /// If the proxy analysis itself is not preserved, we assume that the set of
+    /// inner IR objects contained in IRUnit may have changed.  In this case,
+    /// we have to call \c clear() on the inner analysis manager, as it may now
+    /// have stale pointers to its inner IR objects.
     ///
-    /// Regardless of whether this analysis is marked as preserved, all of the
-    /// analyses in the \c AnalysisManagerT are potentially invalidated (for
-    /// the relevant inner set of their IR units) based on the set of preserved
-    /// analyses.
-    ///
-    /// Because this needs to understand the mapping from one IR unit to an
-    /// inner IR unit, this method isn't defined in the primary template.
-    /// Instead, each specialization of this template will need to provide an
-    /// explicit specialization of this method to handle that particular pair
-    /// of IR unit and inner AnalysisManagerT.
+    /// Regardless of whether the proxy analysis is marked as preserved, all of
+    /// the analyses in the inner analysis manager are potentially invalidated
+    /// based on the set of preserved analyses.
     bool invalidate(
         IRUnitT &IR, const PreservedAnalyses &PA,
         typename AnalysisManager<IRUnitT, ExtraArgTs...>::Invalidator &Inv);
@@ -956,13 +953,9 @@ public:
 
   /// \brief Run the analysis pass and create our proxy result object.
   ///
-  /// This doesn't do any interesting work, it is primarily used to insert our
-  /// proxy result object into the module analysis cache so that we can proxy
-  /// invalidation to the function analysis manager.
-  ///
-  /// In debug builds, it will also assert that the analysis manager is empty
-  /// as no queries should arrive at the function analysis manager prior to
-  /// this analysis being requested.
+  /// This doesn't do any interesting work; it is primarily used to insert our
+  /// proxy result object into the outer analysis cache so that we can proxy
+  /// invalidation to the inner analysis manager.
   Result run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
              ExtraArgTs...) {
     return Result(*InnerAM);
@@ -996,22 +989,24 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
 extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
                                                 Module>;
 
-/// \brief A function analysis which acts as a proxy for a module analysis
-/// manager.
+/// \brief An analysis over an "inner" IR unit that provides access to an
+/// analysis manager over a "outer" IR unit.  The inner unit must be contained
+/// in the outer unit.
 ///
-/// This primarily provides an accessor to a parent module analysis manager to
-/// function passes. Only the const interface of the module analysis manager is
-/// provided to indicate that once inside of a function analysis pass you
-/// cannot request a module analysis to actually run. Instead, the user must
-/// rely on the \c getCachedResult API.
+/// For example OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> is an
+/// analysis over Functions (the "inner" unit) which provides access to a Module
+/// analysis manager.  The ModuleAnalysisManager is the "outer" manager being
+/// proxied, and Modules are the "outer" IR unit.  The inner/outer relationship
+/// is valid because each Function is contained in one Module.
 ///
-/// The invalidation provided by this proxy involves tracking when an
-/// invalidation event in the outer analysis manager needs to trigger an
-/// invalidation of a particular analysis on this IR unit.
+/// This proxy only exposes the const interface of the outer analysis manager,
+/// to indicate that you cannot cause an outer analysis to run from within an
+/// inner pass.  Instead, you must rely on the \c getCachedResult API.
 ///
-/// Because outer analyses aren't invalidated while these IR units are being
-/// precessed, we have to register and handle these as deferred invalidation
-/// events.
+/// This proxy doesn't manage invalidation in any way -- that is handled by the
+/// recursive return path of each layer of the pass manager.  A consequence of
+/// this is the outer analyses may be stale.  We invalidate the outer analyses
+/// only when we're done running passes over the inner IR units.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 class OuterAnalysisManagerProxy
     : public AnalysisInfoMixin<
@@ -1024,7 +1019,7 @@ public:
 
     const AnalysisManagerT &getManager() const { return *AM; }
 
-    /// \brief Handle invalidation by ignoring it, this pass is immutable.
+    /// \brief Handle invalidation by ignoring it; this pass is immutable.
     bool invalidate(
         IRUnitT &, const PreservedAnalyses &,
         typename AnalysisManager<IRUnitT, ExtraArgTs...>::Invalidator &) {
@@ -1089,18 +1084,15 @@ AnalysisKey
 
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 Function>;
-/// Provide the \c ModuleAnalysisManager to \c Fucntion proxy.
+/// Provide the \c ModuleAnalysisManager to \c Function proxy.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>
     ModuleAnalysisManagerFunctionProxy;
 
 /// \brief Trivial adaptor that maps from a module to its functions.
 ///
 /// Designed to allow composition of a FunctionPass(Manager) and
-/// a ModulePassManager. Note that if this pass is constructed with a pointer
-/// to a \c ModuleAnalysisManager it will run the
-/// \c FunctionAnalysisManagerModuleProxy analysis prior to running the function
-/// pass over the module to enable a \c FunctionAnalysisManager to be used
-/// within this run safely.
+/// a ModulePassManager, by running the FunctionPass(Manager) over every
+/// function in the module.
 ///
 /// Function passes run within this adaptor can rely on having exclusive access
 /// to the function they are run over. They should not read or modify any other
@@ -1115,6 +1107,10 @@ typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>
 /// module.
 /// FIXME: Make the above true for all of LLVM's actual passes, some still
 /// violate this principle.
+///
+/// Note that although function passes can access module analyses, module
+/// analyses are not invalidated while the function passes are running, so they
+/// may be stale.  Function analyses will not be stale.
 template <typename FunctionPassT>
 class ModuleToFunctionPassAdaptor
     : public PassInfoMixin<ModuleToFunctionPassAdaptor<FunctionPassT>> {
@@ -1124,7 +1120,6 @@ public:
 
   /// \brief Runs the function pass across every function in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
-    // Setup the function analysis manager from its proxy.
     FunctionAnalysisManager &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -1145,10 +1140,11 @@ public:
       PA.intersect(std::move(PassPA));
     }
 
-    // By definition we preserve the proxy. We also preserve all analyses on
-    // Function units. This precludes *any* invalidation of function analyses
-    // by the proxy, but that's OK because we've taken care to invalidate
-    // analyses in the function analysis manager incrementally above.
+    // The FunctionAnalysisManagerModuleProxy is preserved because (we assume)
+    // the function passes we ran didn't add or remove any functions.
+    //
+    // We also preserve all analyses on Functions, because we did all the
+    // invalidation we needed to do above.
     PA.preserveSet<AllAnalysesOn<Function>>();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
@@ -1166,7 +1162,7 @@ createModuleToFunctionPassAdaptor(FunctionPassT Pass) {
   return ModuleToFunctionPassAdaptor<FunctionPassT>(std::move(Pass));
 }
 
-/// \brief A template utility pass to force an analysis result to be available.
+/// \brief A utility pass template to force an analysis result to be available.
 ///
 /// If there are extra arguments at the pass's run level there may also be
 /// extra arguments to the analysis manager's \c getResult routine. We can't
@@ -1196,17 +1192,14 @@ struct RequireAnalysisPass
   }
 };
 
-/// \brief A template utility pass to force an analysis result to be
-/// invalidated.
-///
-/// This is a no-op pass which simply forces a specific analysis result to be
-/// invalidated when it is run.
+/// \brief A no-op pass template which simply forces a specific analysis result
+/// to be invalidated.
 template <typename AnalysisT>
 struct InvalidateAnalysisPass
     : PassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
   /// \brief Run this pass over some unit of IR.
   ///
-  /// This pass can be run over any unit of IR and use any analysis manager
+  /// This pass can be run over any unit of IR and use any analysis manager,
   /// provided they satisfy the basic API requirements. When this pass is
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
@@ -1218,10 +1211,10 @@ struct InvalidateAnalysisPass
   }
 };
 
-/// \brief A utility pass that does nothing but preserves no analyses.
+/// \brief A utility pass that does nothing, but preserves no analyses.
 ///
-/// As a consequence fo not preserving any analyses, this pass will force all
-/// analysis passes to be re-run to produce fresh results if any are needed.
+/// Because this preserves no analyses, any analysis passes queried after this
+/// pass runs will recompute fresh results.
 struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
   /// \brief Run this pass over some unit of IR.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>

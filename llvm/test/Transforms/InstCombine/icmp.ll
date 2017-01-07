@@ -1243,69 +1243,6 @@ define i1 @icmp_shl24(i32 %x) {
   ret i1 %cmp
 }
 
-; If the (shl x, C) preserved the sign and this is a sign test,
-; compare the LHS operand instead
-define i1 @icmp_shl_nsw_sgt(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sgt i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @icmp_shl_nsw_sge0(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, -1
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sge i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @icmp_shl_nsw_sge1(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sge i32 %shl, 1
-  ret i1 %cmp
-}
-
-define <2 x i1> @icmp_shl_nsw_sge1_vec(<2 x i32> %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge1_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %x, zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
-;
-  %shl = shl nsw <2 x i32> %x, <i32 21, i32 21>
-  %cmp = icmp sge <2 x i32> %shl, <i32 1, i32 1>
-  ret <2 x i1> %cmp
-}
-
-; Checks for icmp (eq|ne) (shl x, C), 0
-define i1 @icmp_shl_nsw_eq(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_eq(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %mul = shl nsw i32 %x, 5
-  %cmp = icmp eq i32 %mul, 0
-  ret i1 %cmp
-}
-
-define <2 x i1> @icmp_shl_nsw_eq_vec(<2 x i32> %x) {
-; CHECK-LABEL: @icmp_shl_nsw_eq_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
-;
-  %mul = shl nsw <2 x i32> %x, <i32 5, i32 5>
-  %cmp = icmp eq <2 x i32> %mul, zeroinitializer
-  ret <2 x i1> %cmp
-}
-
 define i1 @icmp_shl_eq(i32 %x) {
 ; CHECK-LABEL: @icmp_shl_eq(
 ; CHECK-NEXT:    [[MUL_MASK:%.*]] = and i32 %x, 134217727

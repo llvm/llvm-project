@@ -308,6 +308,16 @@ public:
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   typedef LiveInVector::const_iterator livein_iterator;
+#ifndef NDEBUG
+  /// Unlike livein_begin, this method does not check that the liveness
+  /// information is accurate. Still for debug purposes it may be useful
+  /// to have iterators that won't assert if the liveness information
+  /// is not current.
+  livein_iterator livein_begin_dbg() const { return LiveIns.begin(); }
+  iterator_range<livein_iterator> liveins_dbg() const {
+    return make_range(livein_begin_dbg(), livein_end());
+  }
+#endif
   livein_iterator livein_begin() const;
   livein_iterator livein_end()   const { return LiveIns.end(); }
   bool            livein_empty() const { return LiveIns.empty(); }

@@ -767,6 +767,14 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
   // Move the new node to the Preheader, before its terminator.
   I.moveBefore(Preheader->getTerminator());
 
+  // Do not retain debug locations when we are moving instructions to different
+  // basic blocks, because we want to avoid jumpy line tables. Calls, however,
+  // need to retain their debug locs because they may be inlined.
+  // FIXME: How do we retain source locations without causing poor debugging
+  // behavior?
+  if (!isa<CallInst>(I))
+    I.setDebugLoc(DebugLoc());
+
   if (isa<LoadInst>(I))
     ++NumMovedLoads;
   else if (isa<CallInst>(I))

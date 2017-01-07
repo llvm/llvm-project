@@ -8,28 +8,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
+
 class BPFAsmBackend : public MCAsmBackend {
 public:
   bool IsLittleEndian;
 
   BPFAsmBackend(bool IsLittleEndian)
     : MCAsmBackend(), IsLittleEndian(IsLittleEndian) {}
-  ~BPFAsmBackend() override {}
+  ~BPFAsmBackend() override = default;
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
                   uint64_t Value, bool IsPCRel) const override;
@@ -53,6 +49,8 @@ public:
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
 
+} // end anonymous namespace
+
 bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   if ((Count % 8) != 0)
     return false;
@@ -66,7 +64,6 @@ bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 void BPFAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                unsigned DataSize, uint64_t Value,
                                bool IsPCRel) const {
-
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
     assert(Value == 0);
   } else if (Fixup.getKind() == FK_Data_4 || Fixup.getKind() == FK_Data_8) {
@@ -91,7 +88,6 @@ void BPFAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
 
 MCObjectWriter *BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   return createBPFELFObjectWriter(OS, 0, IsLittleEndian);
-}
 }
 
 MCAsmBackend *llvm::createBPFAsmBackend(const Target &T,

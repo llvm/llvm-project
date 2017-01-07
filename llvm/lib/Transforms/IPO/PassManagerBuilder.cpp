@@ -857,7 +857,8 @@ void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
   // Lower type metadata and the type.test intrinsic. This pass supports Clang's
   // control flow integrity mechanisms (-fsanitize=cfi*) and needs to run at
   // link time if CFI is enabled. The pass does nothing if CFI is disabled.
-  PM.add(createLowerTypeTestsPass());
+  PM.add(createLowerTypeTestsPass(LowerTypeTestsSummaryAction::None,
+                                  /*Summary=*/nullptr));
 
   if (OptLevel != 0)
     addLateLTOOptimizationPasses(PM);
