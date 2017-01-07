@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[]) {
   char buf[2048];
-  snprintf(buf, sizeof(buf), "otool -l %s", argv[0]);
+  snprintf(buf, sizeof(buf), "otool -l %s 1>&2", argv[0]);
   system(buf);
   // CHECK: cmd LC_UUID
   // CHECK-NEXT: cmdsize 24
