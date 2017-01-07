@@ -24,6 +24,7 @@ binary_name_filter = None
 fix_filename_patterns = None
 logfile = sys.stdin
 allow_system_symbolizer = True
+force_system_symbolizer = False
 
 # FIXME: merge the code that calls fix_filename().
 def fix_filename(file_name):
@@ -36,6 +37,10 @@ def fix_filename(file_name):
 
 def sysroot_path_filter(binary_name):
   return sysroot_path + binary_name
+
+def is_valid_arch(s):
+  return s in ["i386", "x86_64", "x86_64h", "arm", "armv6", "armv7", "armv7s",
+               "armv7k", "arm64", "powerpc64", "powerpc64le", "s390x", "s390"]
 
 def guess_arch(addr):
   # Guess which arch we're running. 10 = len('0x') + 8 hex digits.
@@ -206,10 +211,10 @@ class UnbufferedLineConverter(object):
 
 
 class DarwinSymbolizer(Symbolizer):
-  def __init__(self, addr, binary):
+  def __init__(self, addr, binary, arch):
     super(DarwinSymbolizer, self).__init__()
     self.binary = binary
-    self.arch = guess_arch(addr)
+    self.arch = arch
     self.open_atos()
 
   def open_atos(self):
@@ -268,9 +273,9 @@ def BreakpadSymbolizerFactory(binary):
   return None
 
 
-def SystemSymbolizerFactory(system, addr, binary):
+def SystemSymbolizerFactory(system, addr, binary, arch):
   if system == 'Darwin':
-    return DarwinSymbolizer(addr, binary)
+    return DarwinSymbolizer(addr, binary, arch)
   elif system == 'Linux' or system == 'FreeBSD':
     return Addr2LineSymbolizer(binary)
 
@@ -369,7 +374,7 @@ class SymbolizationLoop(object):
       self.frame_no = 0
       self.process_line = self.process_line_posix
 
-  def symbolize_address(self, addr, binary, offset):
+  def symbolize_address(self, addr, binary, offset, arch):
     # On non-Darwin (i.e. on platforms without .dSYM debug info) always use
     # a single symbolizer binary.
     # On Darwin, if the dsym hint producer is present:
@@ -381,31 +386,35 @@ class SymbolizationLoop(object):
     #     if so, reuse |last_llvm_symbolizer| which has the full set of hints;
     #  3. otherwise create a new symbolizer and pass all currently known
     #     .dSYM hints to it.
-    if not binary in self.llvm_symbolizers:
-      use_new_symbolizer = True
-      if self.system == 'Darwin' and self.dsym_hint_producer:
-        dsym_hints_for_binary = set(self.dsym_hint_producer(binary))
-        use_new_symbolizer = bool(dsym_hints_for_binary - self.dsym_hints)
-        self.dsym_hints |= dsym_hints_for_binary
-      if self.last_llvm_symbolizer and not use_new_symbolizer:
+    result = None
+    if not force_system_symbolizer:
+      if not binary in self.llvm_symbolizers:
+        use_new_symbolizer = True
+        if self.system == 'Darwin' and self.dsym_hint_producer:
+          dsym_hints_for_binary = set(self.dsym_hint_producer(binary))
+          use_new_symbolizer = bool(dsym_hints_for_binary - self.dsym_hints)
+          self.dsym_hints |= dsym_hints_for_binary
+        if self.last_llvm_symbolizer and not use_new_symbolizer:
+            self.llvm_symbolizers[binary] = self.last_llvm_symbolizer
+        else:
+          self.last_llvm_symbolizer = LLVMSymbolizerFactory(
+              self.system, arch, self.dsym_hints)
           self.llvm_symbolizers[binary] = self.last_llvm_symbolizer
-      else:
-        self.last_llvm_symbolizer = LLVMSymbolizerFactory(
-            self.system, guess_arch(addr), self.dsym_hints)
-        self.llvm_symbolizers[binary] = self.last_llvm_symbolizer
-    # Use the chain of symbolizers:
-    # Breakpad symbolizer -> LLVM symbolizer -> addr2line/atos
-    # (fall back to next symbolizer if the previous one fails).
-    if not binary in symbolizers:
-      symbolizers[binary] = ChainSymbolizer(
-          [BreakpadSymbolizerFactory(binary), self.llvm_symbolizers[binary]])
-    result = symbolizers[binary].symbolize(addr, binary, offset)
+      # Use the chain of symbolizers:
+      # Breakpad symbolizer -> LLVM symbolizer -> addr2line/atos
+      # (fall back to next symbolizer if the previous one fails).
+      if not binary in symbolizers:
+        symbolizers[binary] = ChainSymbolizer(
+            [BreakpadSymbolizerFactory(binary), self.llvm_symbolizers[binary]])
+      result = symbolizers[binary].symbolize(addr, binary, offset)
+    else:
+      symbolizers[binary] = ChainSymbolizer([])
     if result is None:
       if not allow_system_symbolizer:
         raise Exception('Failed to launch or use llvm-symbolizer.')
       # Initialize system symbolizer only if other symbolizers failed.
       symbolizers[binary].append_symbolizer(
-          SystemSymbolizerFactory(self.system, addr, binary))
+          SystemSymbolizerFactory(self.system, addr, binary, arch))
       result = symbolizers[binary].symbolize(addr, binary, offset)
     # The system symbolizer must produce some result.
     assert result
@@ -441,16 +450,26 @@ class SymbolizationLoop(object):
     if DEBUG:
       print line
     _, frameno_str, addr, binary, offset = match.groups()
+    arch = ""
+    # Arch can be embedded in the filename, e.g.: "libabc.dylib:x86_64h"
+    colon_pos = binary.rfind(":")
+    if colon_pos != -1:
+      maybe_arch = binary[colon_pos+1:]
+      if is_valid_arch(maybe_arch):
+        arch = maybe_arch
+        binary = binary[0:colon_pos]
+    if arch == "":
+      arch = guess_arch(addr)
     if frameno_str == '0':
       # Assume that frame #0 is the first frame of new stack trace.
       self.frame_no = 0
     original_binary = binary
     if self.binary_name_filter:
       binary = self.binary_name_filter(binary)
-    symbolized_line = self.symbolize_address(addr, binary, offset)
+    symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     if not symbolized_line:
       if original_binary != binary:
-        symbolized_line = self.symbolize_address(addr, binary, offset)
+        symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     return self.get_symbolized_lines(symbolized_line)
 
 
@@ -472,6 +491,8 @@ if __name__ == '__main__':
   parser.add_argument('-l','--logfile', default=sys.stdin,
                       type=argparse.FileType('r'),
                       help='set log file name to parse, default is stdin')
+  parser.add_argument('--force-system-symbolizer', action='store_true',
+                      help='don\'t use llvm-symbolizer')
   args = parser.parse_args()
   if args.path_to_cut:
     fix_filename_patterns = args.path_to_cut
@@ -486,5 +507,9 @@ if __name__ == '__main__':
     logfile = args.logfile
   else:
     logfile = sys.stdin
+  if args.force_system_symbolizer:
+    force_system_symbolizer = True
+  if force_system_symbolizer:
+    assert(allow_system_symbolizer)
   loop = SymbolizationLoop(binary_name_filter)
   loop.process_logfile()
