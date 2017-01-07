@@ -12,7 +12,10 @@
 #include "exception"
 #include "new"
 
-#if defined(__APPLE__) && !defined(LIBCXXRT) && \
+#if defined(_LIBCPP_ABI_MICROSOFT)
+#include <eh.h>
+#include <corecrt_terminate.h>
+#elif defined(__APPLE__) && !defined(LIBCXXRT) && \
     !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
   #include <cxxabi.h>
 
@@ -46,13 +49,21 @@ namespace std
 unexpected_handler
 set_unexpected(unexpected_handler func) _NOEXCEPT
 {
-    return __sync_lock_test_and_set(&__unexpected_handler, func);
+#if defined(_LIBCPP_ABI_MICROSOFT)
+  return ::set_unexpected(func);
+#else
+  return __sync_lock_test_and_set(&__unexpected_handler, func);
+#endif
 }
 
 unexpected_handler
 get_unexpected() _NOEXCEPT
 {
-    return __sync_fetch_and_add(&__unexpected_handler, (unexpected_handler)0);
+#if defined(_LIBCPP_ABI_MICROSOFT)
+  return ::_get_unexpected();
+#else
+  return __sync_fetch_and_add(&__unexpected_handler, (unexpected_handler)0);
+#endif
 }
 
 _LIBCPP_NORETURN
@@ -67,13 +78,21 @@ unexpected()
 terminate_handler
 set_terminate(terminate_handler func) _NOEXCEPT
 {
-    return __sync_lock_test_and_set(&__terminate_handler, func);
+#if defined(_LIBCPP_ABI_MICROSOFT)
+  return ::set_terminate(func);
+#else
+  return __sync_lock_test_and_set(&__terminate_handler, func);
+#endif
 }
 
 terminate_handler
 get_terminate() _NOEXCEPT
 {
-    return __sync_fetch_and_add(&__terminate_handler, (terminate_handler)0);
+#if defined(_LIBCPP_ABI_MICROSOFT)
+  return ::_get_terminate();
+#else
+  return __sync_fetch_and_add(&__terminate_handler, (terminate_handler)0);
+#endif
 }
 
 #ifndef __EMSCRIPTEN__ // We provide this in JS
@@ -103,6 +122,7 @@ terminate() _NOEXCEPT
 #endif // !defined(LIBCXXRT) && !defined(_LIBCPPABI_VERSION)
 
 #if !defined(LIBCXXRT) && !defined(__GLIBCXX__) && !defined(__EMSCRIPTEN__)
+
 bool uncaught_exception() _NOEXCEPT { return uncaught_exceptions() > 0; }
 
 int uncaught_exceptions() _NOEXCEPT
@@ -115,7 +135,9 @@ int uncaught_exceptions() _NOEXCEPT
 # else
     return __cxa_uncaught_exception() ? 1 : 0;
 # endif
-#else  // __APPLE__
+#elif defined(_LIBCPP_ABI_MICROSOFT)
+    return __uncaught_exceptions();
+#else
 #   if defined(_MSC_VER) && ! defined(__clang__)
         _LIBCPP_WARNING("uncaught_exceptions not yet implemented")
 #   else
