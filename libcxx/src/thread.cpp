@@ -119,7 +119,7 @@ sleep_for(const chrono::nanoseconds& ns)
     {
 #if defined(_LIBCPP_WIN32API)
         milliseconds ms = duration_cast<milliseconds>(ns);
-        if (ns > duration_cast<nanoseconds>(ms))
+        if (ms.count() == 0 || ns > duration_cast<nanoseconds>(ms))
           ++ms;
         Sleep(ms.count());
 #else
