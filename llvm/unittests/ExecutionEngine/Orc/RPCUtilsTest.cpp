@@ -108,8 +108,7 @@ namespace rpc {
 } // end namespace orc
 } // end namespace llvm
 
-class DummyRPCAPI {
-public:
+namespace DummyRPCAPI {
 
   class VoidBool : public Function<VoidBool, void(bool)> {
   public:
@@ -137,11 +136,10 @@ public:
 
 };
 
-class DummyRPCEndpoint : public DummyRPCAPI,
-                         public SingleThreadedRPC<QueueChannel> {
+class DummyRPCEndpoint : public SingleThreadedRPCEndpoint<QueueChannel> {
 public:
   DummyRPCEndpoint(Queue &Q1, Queue &Q2)
-      : SingleThreadedRPC(C, true), C(Q1, Q2) {}
+      : SingleThreadedRPCEndpoint(C, true), C(Q1, Q2) {}
 private:
   QueueChannel C;
 };
@@ -453,6 +451,55 @@ TEST(DummyRPC, TestParallelCallGroup) {
     EXPECT_EQ(A, 2) << "First parallel call returned bogus result";
     EXPECT_EQ(B, 4) << "Second parallel call returned bogus result";
     EXPECT_EQ(C, 6) << "Third parallel call returned bogus result";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestAPICalls) {
+
+  using DummyCalls1 = APICalls<DummyRPCAPI::VoidBool, DummyRPCAPI::IntInt>;
+  using DummyCalls2 = APICalls<DummyRPCAPI::AllTheTypes>;
+  using DummyCalls3 = APICalls<DummyCalls1, DummyRPCAPI::CustomType>;
+  using DummyCallsAll = APICalls<DummyCalls1, DummyCalls2, DummyRPCAPI::CustomType>;
+
+  static_assert(DummyCalls1::Contains<DummyRPCAPI::VoidBool>::value,
+                "Contains<Func> template should return true here");
+  static_assert(!DummyCalls1::Contains<DummyRPCAPI::CustomType>::value,
+                "Contains<Func> template should return false here");
+
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread(
+    [&]() {
+      Server.addHandler<DummyRPCAPI::VoidBool>([](bool b) { });
+      Server.addHandler<DummyRPCAPI::IntInt>([](int x) { return x; });
+      Server.addHandler<DummyRPCAPI::CustomType>([](RPCFoo F) {});
+
+      for (unsigned I = 0; I < 4; ++I) {
+        auto Err = Server.handleOne();
+        (void)!!Err;
+      }
+    });
+
+  {
+    auto Err = DummyCalls1::negotiate(Client);
+    EXPECT_FALSE(!!Err) << "DummyCalls1::negotiate failed";
+  }
+
+  {
+    auto Err = DummyCalls3::negotiate(Client);
+    EXPECT_FALSE(!!Err) << "DummyCalls3::negotiate failed";
+  }
+
+  {
+    auto Err = DummyCallsAll::negotiate(Client);
+    EXPECT_EQ(errorToErrorCode(std::move(Err)).value(),
+              static_cast<int>(OrcErrorCode::UnknownRPCFunction))
+      << "Expected 'UnknownRPCFunction' error for attempted negotiate of "
+         "unsupported function";
   }
 
   ServerThread.join();

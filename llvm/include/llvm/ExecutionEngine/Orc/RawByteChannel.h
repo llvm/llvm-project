@@ -48,9 +48,7 @@ public:
   template <typename FunctionIdT, typename SequenceIdT>
   Error startSendMessage(const FunctionIdT &FnId, const SequenceIdT &SeqNo) {
     writeLock.lock();
-    if (auto Err = serializeSeq(*this, FnId, SeqNo))
-      return Err;
-    return Error::success();
+    return serializeSeq(*this, FnId, SeqNo);
   }
 
   /// Notify the channel that we're ending a message send.

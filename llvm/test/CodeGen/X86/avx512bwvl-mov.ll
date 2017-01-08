@@ -26,7 +26,7 @@ define <32 x i8> @test_256_3(i8 * %addr, <32 x i8> %old, <32 x i8> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %ymm2, %ymm2, %ymm2 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqb %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf3,0x75,0x28,0x3f,0xca,0x04]
-; CHECK-NEXT:    vpblendmb (%rdi), %ymm0, %ymm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x66,0x07]
+; CHECK-NEXT:    vmovdqu8 (%rdi), %ymm0 {%k1} ## encoding: [0x62,0xf1,0x7f,0x29,0x6f,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <32 x i8> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <32 x i8>*
@@ -74,7 +74,7 @@ define <16 x i16> @test_256_7(i8 * %addr, <16 x i16> %old, <16 x i16> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %ymm2, %ymm2, %ymm2 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqw %ymm2, %ymm1, %k1 ## encoding: [0x62,0xf3,0xf5,0x28,0x3f,0xca,0x04]
-; CHECK-NEXT:    vpblendmw (%rdi), %ymm0, %ymm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x66,0x07]
+; CHECK-NEXT:    vmovdqu16 (%rdi), %ymm0 {%k1} ## encoding: [0x62,0xf1,0xff,0x29,0x6f,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <16 x i16> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x i16>*
@@ -122,7 +122,7 @@ define <16 x i8> @test_128_3(i8 * %addr, <16 x i8> %old, <16 x i8> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqb %xmm2, %xmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x08,0x3f,0xca,0x04]
-; CHECK-NEXT:    vpblendmb (%rdi), %xmm0, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x66,0x07]
+; CHECK-NEXT:    vmovdqu8 (%rdi), %xmm0 {%k1} ## encoding: [0x62,0xf1,0x7f,0x09,0x6f,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <16 x i8> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x i8>*
@@ -170,7 +170,7 @@ define <8 x i16> @test_128_7(i8 * %addr, <8 x i16> %old, <8 x i16> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqw %xmm2, %xmm1, %k1 ## encoding: [0x62,0xf3,0xf5,0x08,0x3f,0xca,0x04]
-; CHECK-NEXT:    vpblendmw (%rdi), %xmm0, %xmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x66,0x07]
+; CHECK-NEXT:    vmovdqu16 (%rdi), %xmm0 {%k1} ## encoding: [0x62,0xf1,0xff,0x09,0x6f,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i16> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <8 x i16>*
