@@ -173,7 +173,8 @@ static void instantiateDependentEnableIfAttr(
     const EnableIfAttr *A, const Decl *Tmpl, Decl *New) {
   Expr *Cond = nullptr;
   {
-    EnterExpressionEvaluationContext Unevaluated(S, Sema::Unevaluated);
+    Sema::ContextRAII SwitchContext(S, cast<FunctionDecl>(New));
+    EnterExpressionEvaluationContext Unevaluated(S, Sema::ConstantEvaluated);
     ExprResult Result = S.SubstExpr(A->getCond(), TemplateArgs);
     if (Result.isInvalid())
       return;

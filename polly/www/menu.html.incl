@@ -40,12 +40,16 @@ Optimizations</span></h2>
   <div class="submenu">
     <label>Resources</label>
     <br>
-    <a href="https://www.pollylabs.org">Polly Labs Research Laboratory<a><br>
     <a href="https://www.pollylabs.org"><img style="padding-left: 3.5em;
     padding-right: 1em; width:10em" src="/images/pollylabs.png" /></a>
+    <div class="container" style="width: 240px">
+      <div class="inner_pollylabs" style="width: 240px"></div>
+    </div>
+    <a href="https://www.polyhedral.info">polyhedral.info</a>
+    <div class="container" style="width: 240px">
+      <div class="inner_polyinfo" style="width: 240px"></div>
+    </div>
     <br>
-    <a href="https://www.polyhedral.info">polyhedral.info Community</a>
-    <a href="http://impact.gforge.inria.fr/impact2017/">IMPACT Polyhedral Workshop<a><br>
   </div>
 </div>
 
@@ -60,3 +64,50 @@ Optimizations</span></h2>
 
 </script>
 
+<script
+src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+<script>
+
+$(document).ready(function() {
+    
+    var yql =
+    "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20rss%20where%20url%3D%22http%3A%2F%2Fpollylabs.org%2Frss.xml%22%20LIMIT%205&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+    
+    $.getJSON(yql, function(res) {
+	str = "<div class=\"rss-box\"><ul>";
+	for (var i = 0; i < res.query.count; i++) {
+	  var it = res.query.results.item[i];
+          var date = it.pubDate.substr(5, 11);
+	  str = str + "<li class=\"rss-item\" ><a href=\"" + it.link + "\">";
+	  str = str + "<span class=\"rss-title\">" + res.query.results.item[i].title + "</span> ";
+	  str = str + "<span class=\"rss-date\">(" + date + ")</span>";
+          str = str + "</a></li>";
+	}
+	str = str + "<li class=\"rss-item\"><a href=\"http://pollylabs.org/blog.html\"><span class=\"rss-title\"> ...  more news </span></a></li>";
+	str = str + "</ul></div>";
+	$( ".inner_pollylabs" ).append(str);
+    }, "jsonp");
+
+    var yql_polyinfo =
+    "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20rss%20where%20url%3D%22http%3A%2F%2Fpolyhedral.info%2Frss.xml%22%20LIMIT%205&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
+    
+    $.getJSON(yql_polyinfo, function(res) {
+	str = "<div class=\"rss-box\"><ul>";
+	for (var i = 0; i < res.query.count; i++) {
+	  var it = res.query.results.item[i];
+          var date = it.pubDate.substr(5, 11);
+	  str = str + "<li class=\"rss-item\" ><a href=\"" + it.link + "\">";
+	  str = str + "<span class=\"rss-title\">" + res.query.results.item[i].title + "</span> ";
+	  str = str + "<span class=\"rss-date\">(" + date + ")</span>";
+          str = str + "</a></li>";
+	}
+	str = str + "<li class=\"rss-item\"><a href=\"http://polyhedral.info/blog.html\"><span class=\"rss-title\"> ...  more news </span></a></li>";
+	str = str + "</ul></div>";
+	$( ".inner_polyinfo" ).append(str);
+	console.log(str);
+    }, "jsonp");
+    
+});
+
+</script>

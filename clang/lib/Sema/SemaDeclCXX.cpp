@@ -9137,6 +9137,16 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
   // invalid).
   if (R.empty() &&
       NameInfo.getName().getNameKind() != DeclarationName::CXXConstructorName) {
+    // HACK: Work around a bug in libstdc++'s detection of ::gets. Sometimes
+    // it will believe that glibc provides a ::gets in cases where it does not,
+    // and will try to pull it into namespace std with a using-declaration.
+    // Just ignore the using-declaration in that case.
+    auto *II = NameInfo.getName().getAsIdentifierInfo();
+    if (getLangOpts().CPlusPlus14 && II && II->isStr("gets") &&
+        CurContext->isStdNamespace() &&
+        isa<TranslationUnitDecl>(LookupContext) &&
+        getSourceManager().isInSystemHeader(UsingLoc))
+      return nullptr;
     if (TypoCorrection Corrected = CorrectTypo(
             R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
             llvm::make_unique<UsingValidatorCCC>(
