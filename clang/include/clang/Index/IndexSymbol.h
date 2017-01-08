@@ -59,6 +59,13 @@ enum class SymbolLanguage {
   CXX,
 };
 
+/// Language specific sub-kinds.
+enum class SymbolSubKind {
+  None,
+  CXXCopyConstructor,
+  CXXMoveConstructor,
+};
+
 /// Set of properties that provide additional info about a symbol.
 enum class SymbolProperty : uint8_t {
   Generic                       = 1 << 0,
@@ -107,6 +114,7 @@ struct SymbolRelation {
 
 struct SymbolInfo {
   SymbolKind Kind;
+  SymbolSubKind SubKind;
   SymbolPropertySet Properties;
   SymbolLanguage Lang;
 };
@@ -121,6 +129,7 @@ void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
 bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
 
 StringRef getSymbolKindString(SymbolKind K);
+StringRef getSymbolSubKindString(SymbolSubKind K);
 StringRef getSymbolLanguageString(SymbolLanguage K);
 
 void applyForEachSymbolProperty(SymbolPropertySet Props,
