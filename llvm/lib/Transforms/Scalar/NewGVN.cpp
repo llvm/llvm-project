@@ -337,8 +337,11 @@ private:
 
   // New instruction creation.
   void handleNewInstruction(Instruction *){};
+
+  // Various instruction touch utilities
   void markUsersTouched(Value *);
   void markMemoryUsersTouched(MemoryAccess *);
+  void markLeaderChangeTouched(CongruenceClass *CC);
 
   // Utilities.
   void cleanupTables();
@@ -1022,11 +1025,22 @@ void NewGVN::markMemoryUsersTouched(MemoryAccess *MA) {
   }
 }
 
+// Touch the instructions that need to be updated after a congruence class has a
+// leader change, and mark changed values.
+void NewGVN::markLeaderChangeTouched(CongruenceClass *CC) {
+  for (auto M : CC->Members) {
+    if (auto *I = dyn_cast<Instruction>(M))
+      TouchedInstructions.set(InstrDFS[I]);
+    ChangedValues.insert(M);
+  }
+}
+
 // Perform congruence finding on a given value numbering expression.
 void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
   ValueToExpression[V] = E;
   // This is guaranteed to return something, since it will at least find
   // INITIAL.
+
   CongruenceClass *VClass = ValueToClass[V];
   assert(VClass && "Should have found a vclass");
   // Dead classes should have been eliminated from the mapping.
@@ -1045,14 +1059,17 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
       place->second = NewClass;
 
       // Constants and variables should always be made the leader.
-      if (const auto *CE = dyn_cast<ConstantExpression>(E))
+      if (const auto *CE = dyn_cast<ConstantExpression>(E)) {
         NewClass->RepLeader = CE->getConstantValue();
-      else if (const auto *VE = dyn_cast<VariableExpression>(E))
-        NewClass->RepLeader = VE->getVariableValue();
-      else if (const auto *SE = dyn_cast<StoreExpression>(E))
-        NewClass->RepLeader = SE->getStoreInst()->getValueOperand();
-      else
+      } else if (const auto *SE = dyn_cast<StoreExpression>(E)) {
+        StoreInst *SI = SE->getStoreInst();
+        NewClass->RepLeader =
+            lookupOperandLeader(SI->getValueOperand(), SI, SI->getParent());
+      } else {
         NewClass->RepLeader = V;
+      }
+      assert(!isa<VariableExpression>(E) &&
+             "VariableExpression should have been handled already");
 
       EClass = NewClass;
       DEBUG(dbgs() << "Created new congruence class for " << *V
@@ -1091,14 +1108,11 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
           ExpressionToClass.erase(VClass->DefiningExpr);
         }
       } else if (VClass->RepLeader == V) {
-        // FIXME: When the leader changes, the value numbering of
-        // everything may change, so we need to reprocess.
+        // When the leader changes, the value numbering of
+        // everything may change due to symbolization changes, so we need to
+        // reprocess.
         VClass->RepLeader = *(VClass->Members.begin());
-        for (auto M : VClass->Members) {
-          if (auto *I = dyn_cast<Instruction>(M))
-            TouchedInstructions.set(InstrDFS[I]);
-          ChangedValues.insert(M);
-        }
+        markLeaderChangeTouched(VClass);
       }
     }
 
@@ -1119,6 +1133,27 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
         }
         markMemoryUsersTouched(MA);
       }
+    }
+  } else if (StoreInst *SI = dyn_cast<StoreInst>(V)) {
+    // There is, sadly, one complicating thing for stores.  Stores do not
+    // produce values, only consume them.  However, in order to make loads and
+    // stores value number the same, we ignore the value operand of the store.
+    // But the value operand will still be the leader of our class, and thus, it
+    // may change.  Because the store is a use, the store will get reprocessed,
+    // but nothing will change about it, and so nothing above will catch it
+    // (since the class will not change).  In order to make sure everything ends
+    // up okay, we need to recheck the leader of the class.  Since stores of
+    // different values value number differently due to different memorydefs, we
+    // are guaranteed the leader is always the same between stores in the same
+    // class.
+    DEBUG(dbgs() << "Checking store leader\n");
+    auto ProperLeader =
+        lookupOperandLeader(SI->getValueOperand(), SI, SI->getParent());
+    if (EClass->RepLeader != ProperLeader) {
+      DEBUG(dbgs() << "Store leader changed, fixing\n");
+      EClass->RepLeader = ProperLeader;
+      markLeaderChangeTouched(EClass);
+      markMemoryUsersTouched(MSSA->getMemoryAccess(SI));
     }
   }
 }

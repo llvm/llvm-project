@@ -196,8 +196,15 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
   };
 
   FunctionImporter Importer(Index, Loader);
-  if (!Importer.importFunctions(TheModule, ImportList))
+  Expected<bool> Result = Importer.importFunctions(TheModule, ImportList);
+  if (!Result) {
+    handleAllErrors(Result.takeError(), [&](ErrorInfoBase &EIB) {
+      SMDiagnostic Err = SMDiagnostic(TheModule.getModuleIdentifier(),
+                                      SourceMgr::DK_Error, EIB.message());
+      Err.print("ThinLTO", errs());
+    });
     report_fatal_error("importFunctions failed");
+  }
 }
 
 static void optimizeModule(Module &TheModule, TargetMachine &TM,

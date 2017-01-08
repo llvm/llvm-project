@@ -672,7 +672,8 @@ define double @sqrt_intrinsic_arg_4th(double %x) {
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_4th(
 ; CHECK-NEXT: %mul = fmul fast double %x, %x
-; CHECK-NEXT: ret double %mul
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %mul)
+; CHECK-NEXT: ret double %fabs
 }
 
 define double @sqrt_intrinsic_arg_5th(double %x) {
@@ -684,8 +685,9 @@ define double @sqrt_intrinsic_arg_5th(double %x) {
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_5th(
 ; CHECK-NEXT: %mul = fmul fast double %x, %x
+; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %mul)
 ; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %x)
-; CHECK-NEXT: %1 = fmul fast double %mul, %sqrt1
+; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
 

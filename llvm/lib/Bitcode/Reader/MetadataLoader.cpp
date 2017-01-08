@@ -429,7 +429,7 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Populate the index above to enable lazily loading of metadata, and load
   /// the named metadata as well as the transitively referenced global
   /// Metadata.
-  Expected<bool> lazyLoadModuleMetadataBlock(PlaceholderQueue &Placeholders);
+  Expected<bool> lazyLoadModuleMetadataBlock();
 
   /// On-demand loading of a single metadata. Requires the index above to be
   /// populated.
@@ -516,8 +516,8 @@ Error error(const Twine &Message) {
       Message, make_error_code(BitcodeError::CorruptedBitcode));
 }
 
-Expected<bool> MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock(
-    PlaceholderQueue &Placeholders) {
+Expected<bool>
+MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
   IndexCursor = Stream;
   SmallVector<uint64_t, 64> Record;
   // Get the abbrevs, and preload record positions to make them lazy-loadable.
@@ -701,7 +701,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   // then load individual record as needed, starting with the named metadata.
   if (ModuleLevel && IsImporting && MetadataList.empty() &&
       !DisableLazyLoading) {
-    auto SuccessOrErr = lazyLoadModuleMetadataBlock(Placeholders);
+    auto SuccessOrErr = lazyLoadModuleMetadataBlock();
     if (!SuccessOrErr)
       return SuccessOrErr.takeError();
     if (SuccessOrErr.get()) {
@@ -1577,7 +1577,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
     return error("Invalid record");
 
   SmallVector<uint64_t, 64> Record;
-
   PlaceholderQueue Placeholders;
 
   while (true) {
@@ -1624,10 +1623,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
 
         auto Idx = Record[i + 1];
         if (Idx < (MDStringRef.size() + GlobalMetadataBitPosIndex.size()) &&
-            !MetadataList.lookup(Idx))
+            !MetadataList.lookup(Idx)) {
           // Load the attachment if it is in the lazy-loadable range and hasn't
           // been loaded yet.
           lazyLoadOneMetadata(Idx, Placeholders);
+          resolveForwardRefsAndPlaceholders(Placeholders);
+        }
 
         Metadata *Node = MetadataList.getMetadataFwdRef(Idx);
         if (isa<LocalAsMetadata>(Node))

@@ -1189,19 +1189,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (Name == "fabs" && hasFloatVersion(Name))
-    Ret = optimizeUnaryDoubleFP(CI, B, false);
+    return optimizeUnaryDoubleFP(CI, B, false);
 
-  Value *Op = CI->getArgOperand(0);
-  if (Instruction *I = dyn_cast<Instruction>(Op)) {
-    // Fold fabs(x * x) -> x * x; any squared FP value must already be positive.
-    if (I->getOpcode() == Instruction::FMul)
-      if (I->getOperand(0) == I->getOperand(1))
-        return Op;
-  }
-  return Ret;
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
