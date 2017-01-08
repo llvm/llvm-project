@@ -123,6 +123,9 @@ extern "C" {
   // lib/sanitizer_common/sanitizer_stacktrace_printer.h.
   void __sanitizer_symbolize_pc(void *pc, const char *fmt, char *out_buf,
                                 size_t out_buf_size);
+  // Same as __sanitizer_symbolize_pc, but for data section (i.e. globals).
+  void __sanitizer_symbolize_data(void *data_ptr, const char *fmt,
+                                  char *out_buf, size_t out_buf_size);
 
   // Sets the callback to be called right before death on error.
   // Passing 0 will unset the callback.
