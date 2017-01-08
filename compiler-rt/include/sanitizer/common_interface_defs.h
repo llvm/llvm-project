@@ -117,6 +117,13 @@ extern "C" {
   // Print the stack trace leading to this call. Useful for debugging user code.
   void __sanitizer_print_stack_trace();
 
+  // Symbolizes the supplied 'pc' using the format string 'fmt'.
+  // Outputs at most 'out_buf_size' bytes into 'out_buf'.
+  // The format syntax is described in
+  // lib/sanitizer_common/sanitizer_stacktrace_printer.h.
+  void __sanitizer_symbolize_pc(void *pc, const char *fmt, char *out_buf,
+                                size_t out_buf_size);
+
   // Sets the callback to be called right before death on error.
   // Passing 0 will unset the callback.
   void __sanitizer_set_death_callback(void (*callback)(void));
