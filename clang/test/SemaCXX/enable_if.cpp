@@ -464,3 +464,11 @@ void runFoo() {
   Foo<double>().bar(1);
 }
 }
+
+namespace instantiate_constexpr_in_enable_if {
+  template<typename T> struct X {
+    static constexpr bool ok() { return true; }
+    void f() __attribute__((enable_if(ok(), "")));
+  };
+  void g() { X<int>().f(); }
+}

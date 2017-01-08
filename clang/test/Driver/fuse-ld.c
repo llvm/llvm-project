@@ -32,7 +32,7 @@
 
 
 
-// RUN: %clang %s -### \
+// RUN: %clang %s -### -fuse-ld=ld \
 // RUN:     -target arm-linux-androideabi \
 // RUN:     -B%S/Inputs/basic_android_tree/bin 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD
@@ -50,7 +50,7 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK-ANDROID-ARM-GOLD
 // CHECK-ANDROID-ARM-GOLD: Inputs/basic_android_tree/bin{{/|\\+}}arm-linux-androideabi-ld.gold
 
-// RUN: %clang %s -### \
+// RUN: %clang %s -### -fuse-ld=ld \
 // RUN:     -target arm-linux-androideabi \
 // RUN:     -gcc-toolchain %S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD-TC
