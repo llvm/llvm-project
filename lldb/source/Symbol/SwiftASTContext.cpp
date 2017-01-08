@@ -3322,7 +3322,7 @@ SwiftASTContext::CreateModule(const ConstString &module_basename,
     if (ast) {
       swift::Identifier module_id(
           ast->getIdentifier(module_basename.GetCString()));
-      module = swift::Module::create(module_id, *ast);
+      module = swift::ModuleDecl::create(module_id, *ast);
       if (module) {
         m_swift_module_cache[module_basename.GetCString()] = module;
         return module;
@@ -3748,7 +3748,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
   swift_module->forAllVisibleModules({},
                                      true, // includePrivateTopLevel
-                                     [&](swift::Module::ImportedModule import) {
+                                     [&](swift::ModuleDecl::ImportedModule import) {
                                        import.second->collectLinkLibraries(
                                            addLinkLibrary);
                                      });
@@ -4184,7 +4184,7 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
       ConstString module_name(qualified_name, dot_pos - qualified_name);
       swift::ModuleDecl *swift_module = GetCachedModule(module_name);
       if (swift_module) {
-        swift::Module::AccessPathTy access_path;
+        swift::ModuleDecl::AccessPathTy access_path;
         llvm::SmallVector<swift::ValueDecl *, 4> decls;
         const char *module_type_name = dot_pos + 1;
         swift_module->lookupValue(access_path, GetIdentifier(module_type_name),
@@ -4409,7 +4409,7 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
   size_t before = results.size();
 
   if (name && name[0] && swift_module) {
-    swift::Module::AccessPathTy access_path;
+    swift::ModuleDecl::AccessPathTy access_path;
     llvm::SmallVector<swift::ValueDecl *, 4> value_decls;
     swift::Identifier identifier(GetIdentifier(name));
     if (strchr(name, '.'))
@@ -4561,7 +4561,7 @@ swift::ModuleDecl *SwiftASTContext::GetScratchModule() {
   VALID_OR_RETURN(nullptr);
 
   if (m_scratch_module == nullptr)
-    m_scratch_module = swift::Module::create(
+    m_scratch_module = swift::ModuleDecl::create(
         GetASTContext()->getIdentifier("__lldb_scratch_module"),
         *GetASTContext());
   return m_scratch_module;
@@ -8888,7 +8888,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
               if (import_decl) {
                 switch (import_decl->getImportKind()) {
                 case swift::ImportKind::Module: {
-                  swift::Module *imported_module = import_decl->getModule();
+                  swift::ModuleDecl *imported_module = import_decl->getModule();
                   if (imported_module) {
                     s->Printf("import %s\n", imported_module->getName().get());
                   }
