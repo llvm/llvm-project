@@ -740,8 +740,7 @@ define <16 x float> @sitofp_16i1_float(<16 x i32> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -805,11 +804,10 @@ define <16 x double> @sitofp_16i1_double(<16 x double> %a) {
 ; KNL-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; KNL-NEXT:    vcmpltpd %zmm0, %zmm2, %k2
-; KNL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
-; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k2} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm1, %ymm1
 ; KNL-NEXT:    vcvtdq2pd %ymm1, %zmm1
 ; KNL-NEXT:    retq
@@ -834,8 +832,7 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; KNL-NEXT:    retq
@@ -858,8 +855,7 @@ define <8 x float> @sitofp_8i1_float(<8 x float> %a) {
 ; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; KNL-NEXT:    vcmpltps %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; KNL-NEXT:    retq

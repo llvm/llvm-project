@@ -6864,6 +6864,21 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
        .addReg(Reg, RegState::Undef).addImm(0xff);
     return true;
   }
+  case X86::AVX512_512_SEXT_MASK_32:
+  case X86::AVX512_512_SEXT_MASK_64: {
+    unsigned Reg = MIB->getOperand(0).getReg();
+    unsigned MaskReg = MIB->getOperand(1).getReg();
+    unsigned MaskState = getRegState(MIB->getOperand(1));
+    unsigned Opc = (MI.getOpcode() == X86::AVX512_512_SEXT_MASK_64) ?
+                   X86::VPTERNLOGQZrrikz : X86::VPTERNLOGDZrrikz;
+    MI.RemoveOperand(1);
+    MIB->setDesc(get(Opc));
+    // VPTERNLOG needs 3 register inputs and an immediate.
+    // 0xff will return 1s for any input.
+    MIB.addReg(Reg, RegState::Undef).addReg(MaskReg, MaskState)
+       .addReg(Reg, RegState::Undef).addReg(Reg, RegState::Undef).addImm(0xff);
+    return true;
+  }
   case X86::VMOVAPSZ128rm_NOVLX:
     return expandNOVLXLoad(MIB, &getRegisterInfo(), get(X86::VMOVAPSrm),
                            get(X86::VBROADCASTF32X4rm), X86::sub_xmm);

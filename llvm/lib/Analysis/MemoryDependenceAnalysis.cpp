@@ -344,38 +344,24 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   if (!InvariantGroupMD)
     return MemDepResult::getUnknown();
 
-  Value *LoadOperand = LI->getPointerOperand();
+  // Take the ptr operand after all casts and geps 0. This way we can search
+  // cast graph down only.
+  Value *LoadOperand = LI->getPointerOperand()->stripPointerCasts();
+
   // It's is not safe to walk the use list of global value, because function
   // passes aren't allowed to look outside their functions.
+  // FIXME: this could be fixed by filtering instructions from outside
+  // of current function.
   if (isa<GlobalValue>(LoadOperand))
     return MemDepResult::getUnknown();
 
   // Queue to process all pointers that are equivalent to load operand.
   SmallVector<const Value *, 8> LoadOperandsQueue;
-  SmallSet<const Value *, 14> SeenValues;
-  auto TryInsertToQueue = [&](Value *V) {
-    if (SeenValues.insert(V).second)
-      LoadOperandsQueue.push_back(V);
-  };
-
-  TryInsertToQueue(LoadOperand);
+  LoadOperandsQueue.push_back(LoadOperand);
   while (!LoadOperandsQueue.empty()) {
     const Value *Ptr = LoadOperandsQueue.pop_back_val();
-    assert(Ptr);
-    if (isa<GlobalValue>(Ptr))
-      continue;
-
-    // Value comes from bitcast: Ptr = bitcast x. Insert x.
-    if (auto *BCI = dyn_cast<BitCastInst>(Ptr))
-      TryInsertToQueue(BCI->getOperand(0));
-    // Gep with zeros is equivalent to bitcast.
-    // FIXME: we are not sure if some bitcast should be canonicalized to gep 0
-    // or gep 0 to bitcast because of SROA, so there are 2 forms. When typeless
-    // pointers will be upstream then both cases will be gone (and this BFS
-    // also won't be needed).
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
-      if (GEP->hasAllZeroIndices())
-        TryInsertToQueue(GEP->getOperand(0));
+    assert(Ptr && !isa<GlobalValue>(Ptr) &&
+           "Null or GlobalValue should not be inserted");
 
     for (const Use &Us : Ptr->uses()) {
       auto *U = dyn_cast<Instruction>(Us.getUser());
@@ -385,13 +371,17 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
       // Bitcast or gep with zeros are using Ptr. Add to queue to check it's
       // users.      U = bitcast Ptr
       if (isa<BitCastInst>(U)) {
-        TryInsertToQueue(U);
+        LoadOperandsQueue.push_back(U);
         continue;
       }
-      // U = getelementptr Ptr, 0, 0...
+      // Gep with zeros is equivalent to bitcast.
+      // FIXME: we are not sure if some bitcast should be canonicalized to gep 0
+      // or gep 0 to bitcast because of SROA, so there are 2 forms. When
+      // typeless pointers will be ready then both cases will be gone
+      // (and this BFS also won't be needed).
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
         if (GEP->hasAllZeroIndices()) {
-          TryInsertToQueue(U);
+          LoadOperandsQueue.push_back(U);
           continue;
         }
 

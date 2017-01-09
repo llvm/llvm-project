@@ -134,7 +134,7 @@ namespace DummyRPCAPI {
     static const char* getName() { return "CustomType"; }
   };
 
-};
+}
 
 class DummyRPCEndpoint : public SingleThreadedRPCEndpoint<QueueChannel> {
 public:
