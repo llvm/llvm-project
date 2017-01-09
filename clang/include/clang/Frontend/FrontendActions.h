@@ -88,6 +88,8 @@ public:
   static std::unique_ptr<raw_pwrite_stream>
   ComputeASTConsumerArguments(CompilerInstance &CI, StringRef InFile,
                               std::string &Sysroot, std::string &OutputFile);
+
+  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
