@@ -140,7 +140,7 @@ namespace dr1959 { // dr1959: 3.9
     a() = default;
     a(const a &) = delete; // expected-note 2{{deleted}}
     a(const b &) = delete; // not inherited
-    a(c &&) = delete; // expected-note {{deleted}}
+    a(c &&) = delete;
     template<typename T> a(T) = delete;
   };
 
@@ -152,13 +152,14 @@ namespace dr1959 { // dr1959: 3.9
   b y = x; // expected-error {{deleted}}
   b z = z; // expected-error {{deleted}}
 
-  // FIXME: It's not really clear that this matches the intent, but it's
-  // consistent with the behavior for assignment operators.
   struct c : a {
     using a::a;
     c(const c &);
   };
-  c q(static_cast<c&&>(q)); // expected-error {{call to deleted}}
+  // FIXME: As a resolution to an open DR against P0136R0, we disallow
+  // use of inherited constructors to construct from a single argument
+  // where the derived class is reference-related to its type.
+  c q(static_cast<c&&>(q));
 #endif
 }
 

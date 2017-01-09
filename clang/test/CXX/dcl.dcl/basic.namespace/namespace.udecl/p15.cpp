@@ -28,14 +28,23 @@ namespace default_ctor {
   struct C;
   struct D;
 
+  struct convert_to_D1 {
+    operator D&&();
+  };
+  struct convert_to_D2 {
+    operator D&&();
+  };
+
   struct A { // expected-note 4{{candidate}}
     A(); // expected-note {{candidate}}
 
     A(C &&); // expected-note {{candidate}}
     C &operator=(C&&); // expected-note {{candidate}}
 
-    A(D &&); // expected-note {{candidate}}
+    A(D &&);
     D &operator=(D&&); // expected-note {{candidate}}
+
+    A(convert_to_D2); // expected-note {{candidate}}
   };
 
   struct B { // expected-note 4{{candidate}}
@@ -44,8 +53,10 @@ namespace default_ctor {
     B(C &&); // expected-note {{candidate}}
     C &operator=(C&&); // expected-note {{candidate}}
 
-    B(D &&); // expected-note {{candidate}}
+    B(D &&);
     D &operator=(D&&); // expected-note {{candidate}}
+
+    B(convert_to_D2); // expected-note {{candidate}}
   };
 
   struct C : A, B {
@@ -75,7 +86,20 @@ namespace default_ctor {
   // versions are inherited.
   D d; // expected-error {{ambiguous}}
   void f(D d) {
-    D d2(static_cast<D&&>(d)); // expected-error {{ambiguous}}
+    D d2(static_cast<D&&>(d)); // ok, ignores inherited constructors
+    D d3(convert_to_D1{}); // ok, ignores inherited constructors
+    D d4(convert_to_D2{}); // expected-error {{ambiguous}}
     d = static_cast<D&&>(d); // expected-error {{ambiguous}}
   }
+
+  struct Y;
+  struct X { // expected-note 2{{candidate}}
+    X();
+    X(volatile Y &); // expected-note {{constructor inherited from base class cannot be used to initialize from an argument of the derived class type}}
+  } x;
+  struct Y : X { using X::X; } volatile y; // expected-note 2{{candidate}}
+  struct Z : Y { using Y::Y; } volatile z; // expected-note 3{{candidate}} expected-note 5{{inherited here}}
+  Z z1(x); // ok
+  Z z2(y); // ok, Z is not reference-related to type of y
+  Z z3(z); // expected-error {{no match}}
 }

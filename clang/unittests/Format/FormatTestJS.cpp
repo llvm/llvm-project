@@ -858,6 +858,26 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
                "return 1",
                "a = null\n"
                "  return   1");
+  verifyFormat(
+      "x = {\n"
+      "  a: 1\n"
+      "}\n"
+      "class Y {}",
+      "  x  =  {a  : 1}\n"
+      "   class  Y {  }");
+}
+
+TEST_F(FormatTestJS, ImportExportASI) {
+  verifyFormat(
+      "import {x} from 'y'\n"
+      "export function z() {}",
+      "import   {x} from 'y'\n"
+      "  export function z() {}");
+  verifyFormat(
+      "export {x}\n"
+      "class Y {}",
+      "  export {x}\n"
+      "  class  Y {\n}");
 }
 
 TEST_F(FormatTestJS, ClosureStyleCasts) {
