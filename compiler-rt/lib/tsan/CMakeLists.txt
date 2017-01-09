@@ -107,6 +107,10 @@ if(APPLE)
     # Pass ASM file directly to the C++ compiler.
     set_source_files_properties(${TSAN_ASM_SOURCES} PROPERTIES LANGUAGE C)
   endif()
+
+  add_weak_symbols("ubsan" WEAK_SYMBOL_LINKFLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINKFLAGS)
+
   add_compiler_rt_runtime(clang_rt.tsan
     SHARED
     OS ${TSAN_SUPPORTED_OS}
@@ -117,6 +121,7 @@ if(APPLE)
                 RTSanitizerCommonLibc
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
+    LINKFLAGS ${WEAK_SYMBOL_LINKFLAGS}
     PARENT_TARGET tsan)
   add_compiler_rt_object_libraries(RTTsan_dynamic
     OS ${TSAN_SUPPORTED_OS}

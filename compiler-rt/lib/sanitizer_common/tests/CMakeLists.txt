@@ -81,6 +81,9 @@ endif()
 if(APPLE)
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON ${DARWIN_osx_CFLAGS})
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${DARWIN_osx_LINKFLAGS})
+
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINKFLAGS)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${WEAK_SYMBOL_LINKFLAGS})
 endif()
 
 # MSVC linker is allocating 1M for the stack by default, which is not

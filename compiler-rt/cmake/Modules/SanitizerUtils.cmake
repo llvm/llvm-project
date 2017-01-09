@@ -46,6 +46,17 @@ macro(add_sanitizer_rt_symbols name)
   endforeach()
 endmacro()
 
+# This function is only used on Darwin, where undefined symbols must be specified
+# in the linker invocation.
+function(add_weak_symbols libname linkflags)
+  file(STRINGS "${COMPILER_RT_SOURCE_DIR}/lib/${libname}/weak_symbols.txt" WEAK_SYMBOLS)
+  set(local_linkflags ${${linkflags}})
+  foreach(SYMBOL ${WEAK_SYMBOLS})
+    set(local_linkflags ${local_linkflags} -Wl,-U,${SYMBOL})
+  endforeach()
+  set(${linkflags} ${local_linkflags} PARENT_SCOPE)
+endfunction()
+
 macro(add_sanitizer_rt_version_list name)
   set(vers ${CMAKE_CURRENT_BINARY_DIR}/${name}.vers)
   cmake_parse_arguments(ARG "" "" "LIBS;EXTRA" ${ARGN})

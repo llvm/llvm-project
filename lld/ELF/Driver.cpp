@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -51,6 +52,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
+  Tar = nullptr;
 
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();
@@ -168,25 +170,6 @@ void LinkerDriver::addFile(StringRef Path) {
     else
       Files.push_back(createObjectFile(MBRef));
   }
-}
-
-Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
-  if (Config->Verbose)
-    outs() << Path << "\n";
-
-  auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (auto EC = MBOrErr.getError()) {
-    error(EC, "cannot open " + Path);
-    return None;
-  }
-  std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  MemoryBufferRef MBRef = MB->getMemBufferRef();
-  make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
-
-  if (Tar)
-    Tar->append(relativeToRoot(Path), MBRef.getBuffer());
-
-  return MBRef;
 }
 
 // Add a given library by searching it from input search paths.
@@ -313,9 +296,10 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
     Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
         TarWriter::create(Path, path::stem(Path));
     if (ErrOrWriter) {
-      Tar = std::move(*ErrOrWriter);
+      Tar = ErrOrWriter->get();
       Tar->append("response.txt", createResponseFile(Args));
       Tar->append("version.txt", getLLDVersion() + "\n");
+      make<std::unique_ptr<TarWriter>>(std::move(*ErrOrWriter));
     } else {
       error(Twine("--reproduce: failed to open ") + Path + ": " +
             toString(ErrOrWriter.takeError()));

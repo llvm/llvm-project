@@ -29,6 +29,7 @@
 
 namespace llvm {
 class DWARFDebugLine;
+class TarWriter;
 namespace lto {
 class InputFile;
 }
@@ -48,6 +49,13 @@ using llvm::object::Archive;
 
 class Lazy;
 class SymbolBody;
+
+// If -reproduce option is given, all input files are written
+// to this tar archive.
+extern llvm::TarWriter *Tar;
+
+// Opens a given file.
+llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
 // The root class of input files.
 class InputFile {
