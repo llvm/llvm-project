@@ -1313,6 +1313,7 @@ static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L) {
   case SymbolLanguage::C: return CXIdxEntityLang_C;
   case SymbolLanguage::ObjC: return CXIdxEntityLang_ObjC;
   case SymbolLanguage::CXX: return CXIdxEntityLang_CXX;
+  case SymbolLanguage::Swift: llvm_unreachable("unexpected Swift symbol language");;
   }
   llvm_unreachable("invalid symbol language");
 }
