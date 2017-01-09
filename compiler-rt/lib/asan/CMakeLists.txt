@@ -106,6 +106,10 @@ endif()
 add_compiler_rt_component(asan)
 
 if(APPLE)
+  add_weak_symbols("asan" WEAK_SYMBOL_LINKFLAGS)
+  add_weak_symbols("ubsan" WEAK_SYMBOL_LINKFLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINKFLAGS)
+
   add_compiler_rt_runtime(clang_rt.asan
     SHARED
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
@@ -117,6 +121,7 @@ if(APPLE)
                 RTLSanCommon
                 RTUbsan
     CFLAGS ${ASAN_DYNAMIC_CFLAGS}
+    LINKFLAGS ${WEAK_SYMBOL_LINKFLAGS}
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     PARENT_TARGET asan)
 else()

@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "Driver.h"
 #include "Error.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
@@ -26,6 +25,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -35,6 +35,8 @@ using namespace llvm::sys::fs;
 
 using namespace lld;
 using namespace lld::elf;
+
+TarWriter *elf::Tar;
 
 namespace {
 // In ELF object file all section addresses are zero. If we have multiple
@@ -51,6 +53,24 @@ public:
     return std::unique_ptr<LoadedObjectInfo>();
   }
 };
+}
+
+Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
+  if (Config->Verbose)
+    outs() << Path << "\n";
+
+  auto MBOrErr = MemoryBuffer::getFile(Path);
+  if (auto EC = MBOrErr.getError()) {
+    error(EC, "cannot open " + Path);
+    return None;
+  }
+  std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
+  MemoryBufferRef MBRef = MB->getMemBufferRef();
+  make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
+
+  if (Tar)
+    Tar->append(relativeToRoot(Path), MBRef.getBuffer());
+  return MBRef;
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
@@ -524,9 +544,8 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
             "could not get the buffer for the member defining symbol " +
                 Sym->getName());
 
-  if (C.getParent()->isThin() && Driver->Tar)
-    Driver->Tar->append(relativeToRoot(check(C.getFullName())),
-                        Ret.getBuffer());
+  if (C.getParent()->isThin() && Tar)
+    Tar->append(relativeToRoot(check(C.getFullName())), Ret.getBuffer());
   if (C.getParent()->isThin())
     return {Ret, 0};
   return {Ret, C.getChildOffset()};
