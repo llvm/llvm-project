@@ -215,14 +215,14 @@ public:
 
   /// \brief Create the initialization entity for a parameter.
   static InitializedEntity InitializeParameter(ASTContext &Context,
-                                               ParmVarDecl *Parm) {
+                                               const ParmVarDecl *Parm) {
     return InitializeParameter(Context, Parm, Parm->getType());
   }
 
   /// \brief Create the initialization entity for a parameter, but use
   /// another type.
   static InitializedEntity InitializeParameter(ASTContext &Context,
-                                               ParmVarDecl *Parm,
+                                               const ParmVarDecl *Parm,
                                                QualType Type) {
     bool Consumed = (Context.getLangOpts().ObjCAutoRefCount &&
                      Parm->hasAttr<NSConsumedAttr>());

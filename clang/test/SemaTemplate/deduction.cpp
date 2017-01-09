@@ -342,7 +342,7 @@ namespace deduction_substitution_failure {
 
   template<typename T, typename U> struct A {};
   template<typename T> struct A<T, typename Fail<T>::error> {}; // expected-note {{instantiation of}}
-  A<int, int> ai; // expected-note {{during template argument deduction for class template partial specialization 'A<T, typename Fail<T>::error>' [with T = int]}}
+  A<int, int> ai; // expected-note {{during template argument deduction for class template partial specialization 'A<T, typename Fail<T>::error>' [with T = int]}} expected-note {{in instantiation of template class 'deduction_substitution_failure::A<int, int>'}}
 
   template<typename T, typename U> int B; // expected-warning 0-1 {{extension}}
   template<typename T> int B<T, typename Fail<T>::error> {}; // expected-note {{instantiation of}}
@@ -350,17 +350,39 @@ namespace deduction_substitution_failure {
 }
 
 namespace deduction_after_explicit_pack {
-  template<typename ...T, typename U> int *f(T ...t, int &r, U *u) { // expected-note {{couldn't infer template argument 'U'}}
+  template<typename ...T, typename U> int *f(T ...t, int &r, U *u) {
     return u;
   }
   template<typename U, typename ...T> int *g(T ...t, int &r, U *u) {
     return u;
   }
   void h(float a, double b, int c) {
-    // FIXME: Under DR1388, this appears to be valid.
-    f<float&, double&>(a, b, c, &c); // expected-error {{no matching}}
+    f<float&, double&>(a, b, c, &c); // ok
     g<int, float&, double&>(a, b, c, &c); // ok
   }
+
+  template<class... ExtraArgs>
+  int test(ExtraArgs..., unsigned vla_size, const char *input);
+  int n = test(0, "");
+
+  template <typename... T> void i(T..., int, T..., ...); // expected-note 5{{deduced conflicting}}
+  void j() {
+    i(0);
+    i(0, 1); // expected-error {{no match}}
+    i(0, 1, 2); // expected-error {{no match}}
+    i<>(0);
+    i<>(0, 1); // expected-error {{no match}}
+    i<>(0, 1, 2); // expected-error {{no match}}
+    i<int, int>(0, 1, 2, 3, 4);
+    i<int, int>(0, 1, 2, 3, 4, 5); // expected-error {{no match}}
+  }
+
+  // GCC alarmingly accepts this by deducing T={int} by matching the second
+  // parameter against the first argument, then passing the first argument
+  // through the first parameter.
+  template<typename... T> struct X { X(int); operator int(); };
+  template<typename... T> void p(T..., X<T...>, ...); // expected-note {{deduced conflicting}}
+  void q() { p(X<int>(0), 0); } // expected-error {{no match}}
 }
 
 namespace overload_vs_pack {

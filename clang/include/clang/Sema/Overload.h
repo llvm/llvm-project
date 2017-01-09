@@ -531,6 +531,13 @@ namespace clang {
       Ambiguous.construct();
     }
 
+    void setAsIdentityConversion(QualType T) {
+      setStandard();
+      Standard.setAsIdentityConversion();
+      Standard.setFromType(T);
+      Standard.setAllToTypes(T);
+    }
+
     /// \brief Whether the target is really a std::initializer_list, and the
     /// sequence only represents the worst element conversion.
     bool isStdInitializerListElement() const {
@@ -601,7 +608,16 @@ namespace clang {
 
     /// This candidate was not viable because its OpenCL extension is disabled.
     ovl_fail_ext_disabled,
+
+    /// This inherited constructor is not viable because it would slice the
+    /// argument.
+    ovl_fail_inhctor_slice,
   };
+
+  /// A list of implicit conversion sequences for the arguments of an
+  /// OverloadCandidate.
+  typedef llvm::MutableArrayRef<ImplicitConversionSequence>
+      ConversionSequenceList;
 
   /// OverloadCandidate - A single candidate in an overload set (C++ 13.3).
   struct OverloadCandidate {
@@ -627,17 +643,12 @@ namespace clang {
     /// is a surrogate, but only if IsSurrogate is true.
     CXXConversionDecl *Surrogate;
 
-    /// Conversions - The conversion sequences used to convert the
-    /// function arguments to the function parameters, the pointer points to a
-    /// fixed size array with NumConversions elements. The memory is owned by
-    /// the OverloadCandidateSet.
-    ImplicitConversionSequence *Conversions;
+    /// The conversion sequences used to convert the function arguments
+    /// to the function parameters.
+    ConversionSequenceList Conversions;
 
     /// The FixIt hints which can be used to fix the Bad candidate.
     ConversionFixItGenerator Fix;
-
-    /// NumConversions - The number of elements in the Conversions array.
-    unsigned NumConversions;
 
     /// Viable - True to indicate that this overload candidate is viable.
     bool Viable;
@@ -664,6 +675,26 @@ namespace clang {
     /// to be used while performing partial ordering of function templates.
     unsigned ExplicitCallArguments;
 
+    /// The number of diagnose_if attributes that this overload triggered.
+    /// If any of the triggered attributes are errors, this won't count
+    /// diagnose_if warnings.
+    unsigned NumTriggeredDiagnoseIfs = 0;
+
+    /// Basically a TinyPtrVector<DiagnoseIfAttr *> that doesn't own the vector:
+    /// If NumTriggeredDiagnoseIfs is 0 or 1, this is a DiagnoseIfAttr *,
+    /// otherwise it's a pointer to an array of `NumTriggeredDiagnoseIfs`
+    /// DiagnoseIfAttr *s.
+    llvm::PointerUnion<DiagnoseIfAttr *, DiagnoseIfAttr **> DiagnoseIfInfo;
+
+    /// Gets an ArrayRef for the data at DiagnoseIfInfo. Note that this may give
+    /// you a pointer into DiagnoseIfInfo.
+    ArrayRef<DiagnoseIfAttr *> getDiagnoseIfInfo() const {
+      auto *Ptr = NumTriggeredDiagnoseIfs <= 1
+                      ? DiagnoseIfInfo.getAddrOfPtr1()
+                      : DiagnoseIfInfo.get<DiagnoseIfAttr **>();
+      return {Ptr, NumTriggeredDiagnoseIfs};
+    }
+
     union {
       DeductionFailureInfo DeductionFailure;
       
@@ -677,9 +708,9 @@ namespace clang {
     /// hasAmbiguousConversion - Returns whether this overload
     /// candidate requires an ambiguous conversion or not.
     bool hasAmbiguousConversion() const {
-      for (unsigned i = 0, e = NumConversions; i != e; ++i) {
-        if (!Conversions[i].isInitialized()) return false;
-        if (Conversions[i].isAmbiguous()) return true;
+      for (auto &C : Conversions) {
+        if (!C.isInitialized()) return false;
+        if (C.isAmbiguous()) return true;
       }
       return false;
     }
@@ -728,17 +759,42 @@ namespace clang {
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<Decl *, 16> Functions;
 
-    // Allocator for OverloadCandidate::Conversions. We store the first few
-    // elements inline to avoid allocation for small sets.
-    llvm::BumpPtrAllocator ConversionSequenceAllocator;
+    // Allocator for ConversionSequenceLists and DiagnoseIfAttr* arrays.
+    // We store the first few of each of these inline to avoid allocation for
+    // small sets.
+    llvm::BumpPtrAllocator SlabAllocator;
 
     SourceLocation Loc;
     CandidateSetKind Kind;
 
-    unsigned NumInlineSequences;
-    llvm::AlignedCharArray<alignof(ImplicitConversionSequence),
-                           16 * sizeof(ImplicitConversionSequence)>
-        InlineSpace;
+    constexpr static unsigned NumInlineBytes =
+        24 * sizeof(ImplicitConversionSequence);
+    unsigned NumInlineBytesUsed;
+    llvm::AlignedCharArray<alignof(void *), NumInlineBytes> InlineSpace;
+
+    /// If we have space, allocates from inline storage. Otherwise, allocates
+    /// from the slab allocator.
+    /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
+    /// instead.
+    template <typename T>
+    T *slabAllocate(unsigned N) {
+      // It's simpler if this doesn't need to consider alignment.
+      static_assert(alignof(T) == alignof(void *),
+                    "Only works for pointer-aligned types.");
+      static_assert(std::is_trivial<T>::value ||
+                        std::is_same<ImplicitConversionSequence, T>::value,
+                    "Add destruction logic to OverloadCandidateSet::clear().");
+
+      unsigned NBytes = sizeof(T) * N;
+      if (NBytes > NumInlineBytes - NumInlineBytesUsed)
+        return SlabAllocator.Allocate<T>(N);
+      char *FreeSpaceStart = InlineSpace.buffer + NumInlineBytesUsed;
+      assert(uintptr_t(FreeSpaceStart) % alignof(void *) == 0 &&
+             "Misaligned storage!");
+
+      NumInlineBytesUsed += NBytes;
+      return reinterpret_cast<T *>(FreeSpaceStart);
+    }
 
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     void operator=(const OverloadCandidateSet &) = delete;
@@ -747,11 +803,16 @@ namespace clang {
 
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK)
-        : Loc(Loc), Kind(CSK), NumInlineSequences(0) {}
+        : Loc(Loc), Kind(CSK), NumInlineBytesUsed(0) {}
     ~OverloadCandidateSet() { destroyCandidates(); }
 
     SourceLocation getLocation() const { return Loc; }
     CandidateSetKind getKind() const { return Kind; }
+
+    /// Make a DiagnoseIfAttr* array in a block of memory that will live for
+    /// as long as this OverloadCandidateSet. Returns a pointer to the start
+    /// of that array.
+    DiagnoseIfAttr **addDiagnoseIfComplaints(ArrayRef<DiagnoseIfAttr *> CA);
 
     /// \brief Determine when this overload candidate will be new to the
     /// overload set.
@@ -769,30 +830,32 @@ namespace clang {
     size_t size() const { return Candidates.size(); }
     bool empty() const { return Candidates.empty(); }
 
-    /// \brief Add a new candidate with NumConversions conversion sequence slots
-    /// to the overload set.
-    OverloadCandidate &addCandidate(unsigned NumConversions = 0) {
-      Candidates.push_back(OverloadCandidate());
-      OverloadCandidate &C = Candidates.back();
-
-      // Assign space from the inline array if there are enough free slots
-      // available.
-      if (NumConversions + NumInlineSequences <= 16) {
-        ImplicitConversionSequence *I =
-            (ImplicitConversionSequence *)InlineSpace.buffer;
-        C.Conversions = &I[NumInlineSequences];
-        NumInlineSequences += NumConversions;
-      } else {
-        // Otherwise get memory from the allocator.
-        C.Conversions = ConversionSequenceAllocator
-                          .Allocate<ImplicitConversionSequence>(NumConversions);
-      }
+    /// \brief Allocate storage for conversion sequences for NumConversions
+    /// conversions.
+    ConversionSequenceList
+    allocateConversionSequences(unsigned NumConversions) {
+      ImplicitConversionSequence *Conversions =
+          slabAllocate<ImplicitConversionSequence>(NumConversions);
 
       // Construct the new objects.
-      for (unsigned i = 0; i != NumConversions; ++i)
-        new (&C.Conversions[i]) ImplicitConversionSequence();
+      for (unsigned I = 0; I != NumConversions; ++I)
+        new (&Conversions[I]) ImplicitConversionSequence();
 
-      C.NumConversions = NumConversions;
+      return ConversionSequenceList(Conversions, NumConversions);
+    }
+
+    /// \brief Add a new candidate with NumConversions conversion sequence slots
+    /// to the overload set.
+    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
+                                    ConversionSequenceList Conversions = None) {
+      assert((Conversions.empty() || Conversions.size() == NumConversions) &&
+             "preallocated conversion sequence has wrong length");
+
+      Candidates.push_back(OverloadCandidate());
+      OverloadCandidate &C = Candidates.back();
+      C.Conversions = Conversions.empty()
+                          ? allocateConversionSequences(NumConversions)
+                          : Conversions;
       return C;
     }
 

@@ -737,7 +737,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
       return;
   }
   if (Next->is(tok::exclaim) && PreviousMustBeValue)
-    addUnwrappedLine();
+    return addUnwrappedLine();
   bool NextMustBeValue = mustBeJSIdentOrValue(Keywords, Next);
   bool NextEndsTemplateExpr =
       Next->is(TT_TemplateString) && Next->TokenText.startswith("}");
@@ -745,9 +745,10 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
       (PreviousMustBeValue ||
        Previous->isOneOf(tok::r_square, tok::r_paren, tok::plusplus,
                          tok::minusminus)))
-    addUnwrappedLine();
-  if (PreviousMustBeValue && isJSDeclOrStmt(Keywords, Next))
-    addUnwrappedLine();
+    return addUnwrappedLine();
+  if ((PreviousMustBeValue || Previous->is(tok::r_brace)) &&
+      isJSDeclOrStmt(Keywords, Next))
+    return addUnwrappedLine();
 }
 
 void UnwrappedLineParser::parseStructuralElement() {
@@ -1974,7 +1975,14 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
       !FormatTok->isStringLiteral())
     return;
 
-  while (!eof() && FormatTok->isNot(tok::semi)) {
+  while (!eof()) {
+    if (FormatTok->is(tok::semi))
+      return;
+    if (Line->Tokens.size() == 0) {
+      // Common issue: Automatic Semicolon Insertion wrapped the line, so the
+      // import statement should terminate.
+      return;
+    }
     if (FormatTok->is(tok::l_brace)) {
       FormatTok->BlockKind = BK_Block;
       parseBracedList();

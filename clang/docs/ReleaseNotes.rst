@@ -47,6 +47,10 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
+- The ``diagnose_if`` attribute has been added to clang. This attribute allows
+  clang to emit a warning or error if a function call meets one or more
+  user-specified conditions.
+
 -  ...
 
 Improvements to Clang's diagnostics

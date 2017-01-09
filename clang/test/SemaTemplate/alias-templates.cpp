@@ -244,3 +244,13 @@ namespace redecl {
   template<typename = void> using A = int;
   A<> a; // ok
 }
+
+namespace PR31514 {
+  template<typename T, typename> using EnableTupleSize = T;
+
+  template<typename T> struct tuple_size { static const int value = 0; };
+  template<typename T> struct tuple_size<EnableTupleSize<const T, decltype(tuple_size<T>::value)>> {};
+  template<typename T> struct tuple_size<EnableTupleSize<volatile T, decltype(tuple_size<T>::value)>> {};
+
+  tuple_size<const int> t;
+}

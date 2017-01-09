@@ -97,6 +97,10 @@ EHPersonality::GNU_CPlusPlus_SEH = { "__gxx_personality_seh0", nullptr };
 const EHPersonality
 EHPersonality::GNU_ObjC = {"__gnu_objc_personality_v0", "objc_exception_throw"};
 const EHPersonality
+EHPersonality::GNU_ObjC_SJLJ = {"__gnu_objc_personality_sj0", "objc_exception_throw"};
+const EHPersonality
+EHPersonality::GNU_ObjC_SEH = {"__gnu_objc_personality_seh0", "objc_exception_throw"};
+const EHPersonality
 EHPersonality::GNU_ObjCXX = { "__gnustep_objcxx_personality_v0", nullptr };
 const EHPersonality
 EHPersonality::GNUstep_ObjC = { "__gnustep_objc_personality_v0", nullptr };
@@ -137,6 +141,10 @@ static const EHPersonality &getObjCPersonality(const llvm::Triple &T,
     // fallthrough
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
+    if (L.SjLjExceptions)
+      return EHPersonality::GNU_ObjC_SJLJ;
+    else if (useLibGCCSEHPersonality(T))
+      return EHPersonality::GNU_ObjC_SEH;
     return EHPersonality::GNU_ObjC;
   }
   llvm_unreachable("bad runtime kind");

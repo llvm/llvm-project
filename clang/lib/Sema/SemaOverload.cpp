@@ -29,6 +29,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -589,7 +590,6 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   Result.Result = static_cast<unsigned>(TDK);
   Result.HasDiagnostic = false;
   switch (TDK) {
-  case Sema::TDK_Success:
   case Sema::TDK_Invalid:
   case Sema::TDK_InstantiationDepth:
   case Sema::TDK_TooManyArguments:
@@ -645,6 +645,10 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
       Result.HasDiagnostic = true;
     }
     break;
+
+  case Sema::TDK_Success:
+  case Sema::TDK_NonDependentConversionFailure:
+    llvm_unreachable("not a deduction failure");
   }
 
   return Result;
@@ -660,6 +664,7 @@ void DeductionFailureInfo::Destroy() {
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_CUDATargetMismatch:
+  case Sema::TDK_NonDependentConversionFailure:
     break;
 
   case Sema::TDK_Inconsistent:
@@ -704,6 +709,7 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_CUDATargetMismatch:
+  case Sema::TDK_NonDependentConversionFailure:
     return TemplateParameter();
 
   case Sema::TDK_Incomplete:
@@ -735,6 +741,7 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case Sema::TDK_Underqualified:
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_CUDATargetMismatch:
+  case Sema::TDK_NonDependentConversionFailure:
     return nullptr;
 
   case Sema::TDK_DeducedMismatch:
@@ -763,6 +770,7 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_CUDATargetMismatch:
+  case Sema::TDK_NonDependentConversionFailure:
     return nullptr;
 
   case Sema::TDK_Inconsistent:
@@ -791,6 +799,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_CUDATargetMismatch:
+  case Sema::TDK_NonDependentConversionFailure:
     return nullptr;
 
   case Sema::TDK_Inconsistent:
@@ -821,8 +830,8 @@ llvm::Optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
 
 void OverloadCandidateSet::destroyCandidates() {
   for (iterator i = begin(), e = end(); i != e; ++i) {
-    for (unsigned ii = 0, ie = i->NumConversions; ii != ie; ++ii)
-      i->Conversions[ii].~ImplicitConversionSequence();
+    for (auto &C : i->Conversions)
+      C.~ImplicitConversionSequence();
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
       i->DeductionFailure.Destroy();
   }
@@ -830,10 +839,18 @@ void OverloadCandidateSet::destroyCandidates() {
 
 void OverloadCandidateSet::clear() {
   destroyCandidates();
-  ConversionSequenceAllocator.Reset();
-  NumInlineSequences = 0;
+  // DiagnoseIfAttrs are just pointers, so we don't need to destroy them.
+  SlabAllocator.Reset();
+  NumInlineBytesUsed = 0;
   Candidates.clear();
   Functions.clear();
+}
+
+DiagnoseIfAttr **
+OverloadCandidateSet::addDiagnoseIfComplaints(ArrayRef<DiagnoseIfAttr *> CA) {
+  auto *DIA = slabAllocate<DiagnoseIfAttr *>(CA.size());
+  std::uninitialized_copy(CA.begin(), CA.end(), DIA);
+  return DIA;
 }
 
 namespace {
@@ -5814,6 +5831,28 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
+static void initDiagnoseIfComplaint(Sema &S, OverloadCandidateSet &CandidateSet,
+                                    OverloadCandidate &Candidate,
+                                    FunctionDecl *Function,
+                                    ArrayRef<Expr *> Args,
+                                    bool MissingImplicitThis = false,
+                                    Expr *ExplicitThis = nullptr) {
+  SmallVector<DiagnoseIfAttr *, 8> Results;
+  if (DiagnoseIfAttr *DIA = S.checkArgDependentDiagnoseIf(
+          Function, Args, Results, MissingImplicitThis, ExplicitThis)) {
+    Results.clear();
+    Results.push_back(DIA);
+  }
+
+  Candidate.NumTriggeredDiagnoseIfs = Results.size();
+  if (Results.empty())
+    Candidate.DiagnoseIfInfo = nullptr;
+  else if (Results.size() == 1)
+    Candidate.DiagnoseIfInfo = Results[0];
+  else
+    Candidate.DiagnoseIfInfo = CandidateSet.addDiagnoseIfComplaints(Results);
+}
+
 /// AddOverloadCandidate - Adds the given function to the set of
 /// candidate functions, using the given function call arguments.  If
 /// @p SuppressUserConversions, then don't allow user-defined
@@ -5829,7 +5868,8 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
                            OverloadCandidateSet &CandidateSet,
                            bool SuppressUserConversions,
                            bool PartialOverloading,
-                           bool AllowExplicit) {
+                           bool AllowExplicit,
+                           ConversionSequenceList EarlyConversions) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Function->getType()->getAs<FunctionType>());
   assert(Proto && "Functions without a prototype cannot be overloaded");
@@ -5845,10 +5885,11 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
       // function, e.g., X::f(). We use an empty type for the implied
       // object argument (C++ [over.call.func]p3), and the acting context
       // is irrelevant.
-      AddMethodCandidate(Method, FoundDecl, Method->getParent(),
-                         QualType(), Expr::Classification::makeSimpleLValue(),
-                         Args, CandidateSet, SuppressUserConversions,
-                         PartialOverloading);
+      AddMethodCandidate(Method, FoundDecl, Method->getParent(), QualType(),
+                         Expr::Classification::makeSimpleLValue(),
+                         /*ThisArg=*/nullptr, Args, CandidateSet,
+                         SuppressUserConversions, PartialOverloading,
+                         EarlyConversions);
       return;
     }
     // We treat a constructor like a non-member function, since its object
@@ -5881,7 +5922,8 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
 
   // Add this candidate
-  OverloadCandidate &Candidate = CandidateSet.addCandidate(Args.size());
+  OverloadCandidate &Candidate =
+      CandidateSet.addCandidate(Args.size(), EarlyConversions);
   Candidate.FoundDecl = FoundDecl;
   Candidate.Function = Function;
   Candidate.Viable = true;
@@ -5945,7 +5987,10 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   // Determine the implicit conversion sequences for each of the
   // arguments.
   for (unsigned ArgIdx = 0; ArgIdx < Args.size(); ++ArgIdx) {
-    if (ArgIdx < NumParams) {
+    if (Candidate.Conversions[ArgIdx].isInitialized()) {
+      // We already formed a conversion sequence for this parameter during
+      // template argument deduction.
+    } else if (ArgIdx < NumParams) {
       // (C++ 13.3.2p3): for F to be a viable function, there shall
       // exist for each argument an implicit conversion sequence
       // (13.3.3.1) that converts that argument to the corresponding
@@ -5971,6 +6016,31 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     }
   }
 
+  // C++ [over.best.ics]p4+: (proposed DR resolution)
+  //   If the target is the first parameter of an inherited constructor when
+  //   constructing an object of type C with an argument list that has exactly
+  //   one expression, an implicit conversion sequence cannot be formed if C is
+  //   reference-related to the type that the argument would have after the
+  //   application of the user-defined conversion (if any) and before the final
+  //   standard conversion sequence. 
+  auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl.getDecl());
+  if (Shadow && Args.size() == 1 && !isa<InitListExpr>(Args.front())) {
+    bool DerivedToBase, ObjCConversion, ObjCLifetimeConversion;
+    QualType ConvertedArgumentType = Args.front()->getType();
+    if (Candidate.Conversions[0].isUserDefined())
+      ConvertedArgumentType =
+          Candidate.Conversions[0].UserDefined.After.getFromType();
+    if (CompareReferenceRelationship(Args.front()->getLocStart(),
+                                     Context.getRecordType(Shadow->getParent()),
+                                     ConvertedArgumentType, DerivedToBase,
+                                     ObjCConversion,
+                                     ObjCLifetimeConversion) >= Ref_Related) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_inhctor_slice;
+      return;
+    }
+  }
+
   if (EnableIfAttr *FailedAttr = CheckEnableIf(Function, Args)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
@@ -5983,6 +6053,8 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     Candidate.FailureKind = ovl_fail_ext_disabled;
     return;
   }
+
+  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Function, Args);
 }
 
 ObjCMethodDecl *
@@ -6095,66 +6167,87 @@ getOrderedEnableIfAttrs(const FunctionDecl *Function) {
   return Result;
 }
 
-EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
-                                  bool MissingImplicitThis) {
-  auto EnableIfAttrs = getOrderedEnableIfAttrs(Function);
-  if (EnableIfAttrs.empty())
-    return nullptr;
-
-  SFINAETrap Trap(*this);
-  SmallVector<Expr *, 16> ConvertedArgs;
-  bool InitializationFailed = false;
+static bool
+convertArgsForAvailabilityChecks(Sema &S, FunctionDecl *Function, Expr *ThisArg,
+                                 ArrayRef<Expr *> Args, Sema::SFINAETrap &Trap,
+                                 bool MissingImplicitThis, Expr *&ConvertedThis,
+                                 SmallVectorImpl<Expr *> &ConvertedArgs) {
+  if (ThisArg) {
+    CXXMethodDecl *Method = cast<CXXMethodDecl>(Function);
+    assert(!isa<CXXConstructorDecl>(Method) &&
+           "Shouldn't have `this` for ctors!");
+    assert(!Method->isStatic() && "Shouldn't have `this` for static methods!");
+    ExprResult R = S.PerformObjectArgumentInitialization(
+        ThisArg, /*Qualifier=*/nullptr, Method, Method);
+    if (R.isInvalid())
+      return false;
+    ConvertedThis = R.get();
+  } else {
+    if (auto *MD = dyn_cast<CXXMethodDecl>(Function)) {
+      (void)MD;
+      assert((MissingImplicitThis || MD->isStatic() ||
+              isa<CXXConstructorDecl>(MD)) &&
+             "Expected `this` for non-ctor instance methods");
+    }
+    ConvertedThis = nullptr;
+  }
 
   // Ignore any variadic arguments. Converting them is pointless, since the
-  // user can't refer to them in the enable_if condition.
+  // user can't refer to them in the function condition.
   unsigned ArgSizeNoVarargs = std::min(Function->param_size(), Args.size());
 
   // Convert the arguments.
   for (unsigned I = 0; I != ArgSizeNoVarargs; ++I) {
     ExprResult R;
-    if (I == 0 && !MissingImplicitThis && isa<CXXMethodDecl>(Function) &&
-        !cast<CXXMethodDecl>(Function)->isStatic() &&
-        !isa<CXXConstructorDecl>(Function)) {
-      CXXMethodDecl *Method = cast<CXXMethodDecl>(Function);
-      R = PerformObjectArgumentInitialization(Args[0], /*Qualifier=*/nullptr,
-                                              Method, Method);
-    } else {
-      R = PerformCopyInitialization(InitializedEntity::InitializeParameter(
-                                        Context, Function->getParamDecl(I)),
+    R = S.PerformCopyInitialization(InitializedEntity::InitializeParameter(
+                                        S.Context, Function->getParamDecl(I)),
                                     SourceLocation(), Args[I]);
-    }
 
-    if (R.isInvalid()) {
-      InitializationFailed = true;
-      break;
-    }
+    if (R.isInvalid())
+      return false;
 
     ConvertedArgs.push_back(R.get());
   }
 
-  if (InitializationFailed || Trap.hasErrorOccurred())
-    return EnableIfAttrs[0];
+  if (Trap.hasErrorOccurred())
+    return false;
 
   // Push default arguments if needed.
   if (!Function->isVariadic() && Args.size() < Function->getNumParams()) {
     for (unsigned i = Args.size(), e = Function->getNumParams(); i != e; ++i) {
       ParmVarDecl *P = Function->getParamDecl(i);
-      ExprResult R = PerformCopyInitialization(
-          InitializedEntity::InitializeParameter(Context,
+      ExprResult R = S.PerformCopyInitialization(
+          InitializedEntity::InitializeParameter(S.Context,
                                                  Function->getParamDecl(i)),
           SourceLocation(),
           P->hasUninstantiatedDefaultArg() ? P->getUninstantiatedDefaultArg()
                                            : P->getDefaultArg());
-      if (R.isInvalid()) {
-        InitializationFailed = true;
-        break;
-      }
+      if (R.isInvalid())
+        return false;
       ConvertedArgs.push_back(R.get());
     }
 
-    if (InitializationFailed || Trap.hasErrorOccurred())
-      return EnableIfAttrs[0];
+    if (Trap.hasErrorOccurred())
+      return false;
   }
+  return true;
+}
+
+EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
+                                  bool MissingImplicitThis) {
+  SmallVector<EnableIfAttr *, 4> EnableIfAttrs =
+      getOrderedEnableIfAttrs(Function);
+  if (EnableIfAttrs.empty())
+    return nullptr;
+
+  SFINAETrap Trap(*this);
+  SmallVector<Expr *, 16> ConvertedArgs;
+  // FIXME: We should look into making enable_if late-parsed.
+  Expr *DiscardedThis;
+  if (!convertArgsForAvailabilityChecks(
+          *this, Function, /*ThisArg=*/nullptr, Args, Trap,
+          /*MissingImplicitThis=*/true, DiscardedThis, ConvertedArgs))
+    return EnableIfAttrs[0];
 
   for (auto *EIA : EnableIfAttrs) {
     APValue Result;
@@ -6168,6 +6261,87 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
       return EIA;
   }
   return nullptr;
+}
+
+static bool gatherDiagnoseIfAttrs(FunctionDecl *Function, bool ArgDependent,
+                                  SmallVectorImpl<DiagnoseIfAttr *> &Errors,
+                                  SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal) {
+  for (auto *DIA : Function->specific_attrs<DiagnoseIfAttr>())
+    if (ArgDependent == DIA->getArgDependent()) {
+      if (DIA->isError())
+        Errors.push_back(DIA);
+      else
+        Nonfatal.push_back(DIA);
+    }
+
+  return !Errors.empty() || !Nonfatal.empty();
+}
+
+template <typename CheckFn>
+static DiagnoseIfAttr *
+checkDiagnoseIfAttrsWith(const SmallVectorImpl<DiagnoseIfAttr *> &Errors,
+                         SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal,
+                         CheckFn &&IsSuccessful) {
+  // Note that diagnose_if attributes are late-parsed, so they appear in the
+  // correct order (unlike enable_if attributes).
+  auto ErrAttr = llvm::find_if(Errors, IsSuccessful);
+  if (ErrAttr != Errors.end())
+    return *ErrAttr;
+
+  llvm::erase_if(Nonfatal, [&](DiagnoseIfAttr *A) { return !IsSuccessful(A); });
+  return nullptr;
+}
+
+DiagnoseIfAttr *
+Sema::checkArgDependentDiagnoseIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
+                                  SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal,
+                                  bool MissingImplicitThis,
+                                  Expr *ThisArg) {
+  SmallVector<DiagnoseIfAttr *, 4> Errors;
+  if (!gatherDiagnoseIfAttrs(Function, /*ArgDependent=*/true, Errors, Nonfatal))
+    return nullptr;
+
+  SFINAETrap Trap(*this);
+  SmallVector<Expr *, 16> ConvertedArgs;
+  Expr *ConvertedThis;
+  if (!convertArgsForAvailabilityChecks(*this, Function, ThisArg, Args, Trap,
+                                        MissingImplicitThis, ConvertedThis,
+                                        ConvertedArgs))
+    return nullptr;
+
+  return checkDiagnoseIfAttrsWith(Errors, Nonfatal, [&](DiagnoseIfAttr *DIA) {
+    APValue Result;
+    // It's sane to use the same ConvertedArgs for any redecl of this function,
+    // since EvaluateWithSubstitution only cares about the position of each
+    // argument in the arg list, not the ParmVarDecl* it maps to.
+    if (!DIA->getCond()->EvaluateWithSubstitution(
+            Result, Context, DIA->getParent(), ConvertedArgs, ConvertedThis))
+      return false;
+    return Result.isInt() && Result.getInt().getBoolValue();
+  });
+}
+
+DiagnoseIfAttr *Sema::checkArgIndependentDiagnoseIf(
+    FunctionDecl *Function, SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal) {
+  SmallVector<DiagnoseIfAttr *, 4> Errors;
+  if (!gatherDiagnoseIfAttrs(Function, /*ArgDependent=*/false, Errors,
+                             Nonfatal))
+    return nullptr;
+
+  return checkDiagnoseIfAttrsWith(Errors, Nonfatal, [&](DiagnoseIfAttr *DIA) {
+    bool Result;
+    return DIA->getCond()->EvaluateAsBooleanCondition(Result, Context) &&
+           Result;
+  });
+}
+
+void Sema::emitDiagnoseIfDiagnostic(SourceLocation Loc,
+                                    const DiagnoseIfAttr *DIA) {
+  auto Code = DIA->isError() ? diag::err_diagnose_if_succeeded
+                             : diag::warn_diagnose_if_succeeded;
+  Diag(Loc, Code) << DIA->getMessage();
+  Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+      << DIA->getParent() << DIA->getCond()->getSourceRange();
 }
 
 /// \brief Add all of the function declarations in the given function set to
@@ -6185,7 +6359,7 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
         AddMethodCandidate(cast<CXXMethodDecl>(FD), F.getPair(),
                            cast<CXXMethodDecl>(FD)->getParent(),
                            Args[0]->getType(), Args[0]->Classify(Context),
-                           Args.slice(1), CandidateSet,
+                           Args[0], Args.slice(1), CandidateSet,
                            SuppressUserConversions, PartialOverloading);
       else
         AddOverloadCandidate(FD, F.getPair(), Args, CandidateSet,
@@ -6194,13 +6368,12 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
       FunctionTemplateDecl *FunTmpl = cast<FunctionTemplateDecl>(D);
       if (isa<CXXMethodDecl>(FunTmpl->getTemplatedDecl()) &&
           !cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl())->isStatic())
-        AddMethodTemplateCandidate(FunTmpl, F.getPair(),
-                              cast<CXXRecordDecl>(FunTmpl->getDeclContext()),
-                                   ExplicitTemplateArgs,
-                                   Args[0]->getType(),
-                                   Args[0]->Classify(Context), Args.slice(1),
-                                   CandidateSet, SuppressUserConversions,
-                                   PartialOverloading);
+        AddMethodTemplateCandidate(
+            FunTmpl, F.getPair(),
+            cast<CXXRecordDecl>(FunTmpl->getDeclContext()),
+            ExplicitTemplateArgs, Args[0]->getType(),
+            Args[0]->Classify(Context), Args[0], Args.slice(1), CandidateSet,
+            SuppressUserConversions, PartialOverloading);
       else
         AddTemplateOverloadCandidate(FunTmpl, F.getPair(),
                                      ExplicitTemplateArgs, Args,
@@ -6215,6 +6388,7 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
 void Sema::AddMethodCandidate(DeclAccessPair FoundDecl,
                               QualType ObjectType,
                               Expr::Classification ObjectClassification,
+                              Expr *ThisArg,
                               ArrayRef<Expr *> Args,
                               OverloadCandidateSet& CandidateSet,
                               bool SuppressUserConversions) {
@@ -6230,12 +6404,12 @@ void Sema::AddMethodCandidate(DeclAccessPair FoundDecl,
     AddMethodTemplateCandidate(TD, FoundDecl, ActingContext,
                                /*ExplicitArgs*/ nullptr,
                                ObjectType, ObjectClassification,
-                               Args, CandidateSet,
+                               ThisArg, Args, CandidateSet,
                                SuppressUserConversions);
   } else {
     AddMethodCandidate(cast<CXXMethodDecl>(Decl), FoundDecl, ActingContext,
                        ObjectType, ObjectClassification,
-                       Args,
+                       ThisArg, Args,
                        CandidateSet, SuppressUserConversions);
   }
 }
@@ -6251,10 +6425,11 @@ void
 Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
                          CXXRecordDecl *ActingContext, QualType ObjectType,
                          Expr::Classification ObjectClassification,
-                         ArrayRef<Expr *> Args,
+                         Expr *ThisArg, ArrayRef<Expr *> Args,
                          OverloadCandidateSet &CandidateSet,
                          bool SuppressUserConversions,
-                         bool PartialOverloading) {
+                         bool PartialOverloading,
+                         ConversionSequenceList EarlyConversions) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Method->getType()->getAs<FunctionType>());
   assert(Proto && "Methods without a prototype cannot be overloaded");
@@ -6275,7 +6450,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
 
   // Add this candidate
-  OverloadCandidate &Candidate = CandidateSet.addCandidate(Args.size() + 1);
+  OverloadCandidate &Candidate =
+      CandidateSet.addCandidate(Args.size() + 1, EarlyConversions);
   Candidate.FoundDecl = FoundDecl;
   Candidate.Function = Method;
   Candidate.IsSurrogate = false;
@@ -6337,7 +6513,10 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   // Determine the implicit conversion sequences for each of the
   // arguments.
   for (unsigned ArgIdx = 0; ArgIdx < Args.size(); ++ArgIdx) {
-    if (ArgIdx < NumParams) {
+    if (Candidate.Conversions[ArgIdx + 1].isInitialized()) {
+      // We already formed a conversion sequence for this parameter during
+      // template argument deduction.
+    } else if (ArgIdx < NumParams) {
       // (C++ 13.3.2p3): for F to be a viable function, there shall
       // exist for each argument an implicit conversion sequence
       // (13.3.3.1) that converts that argument to the corresponding
@@ -6368,6 +6547,9 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
+
+  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Method, Args,
+                          /*MissingImplicitThis=*/!ThisArg, ThisArg);
 }
 
 /// \brief Add a C++ member function template as a candidate to the candidate
@@ -6380,6 +6562,7 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
                                  TemplateArgumentListInfo *ExplicitTemplateArgs,
                                  QualType ObjectType,
                                  Expr::Classification ObjectClassification,
+                                 Expr *ThisArg,
                                  ArrayRef<Expr *> Args,
                                  OverloadCandidateSet& CandidateSet,
                                  bool SuppressUserConversions,
@@ -6398,19 +6581,30 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
   //   functions.
   TemplateDeductionInfo Info(CandidateSet.getLocation());
   FunctionDecl *Specialization = nullptr;
-  if (TemplateDeductionResult Result
-      = DeduceTemplateArguments(MethodTmpl, ExplicitTemplateArgs, Args,
-                                Specialization, Info, PartialOverloading)) {
-    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+  ConversionSequenceList Conversions;
+  if (TemplateDeductionResult Result = DeduceTemplateArguments(
+          MethodTmpl, ExplicitTemplateArgs, Args, Specialization, Info,
+          PartialOverloading, [&](ArrayRef<QualType> ParamTypes) {
+            return CheckNonDependentConversions(
+                MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
+                SuppressUserConversions, ActingContext, ObjectType,
+                ObjectClassification);
+          })) {
+    OverloadCandidate &Candidate =
+        CandidateSet.addCandidate(Conversions.size(), Conversions);
     Candidate.FoundDecl = FoundDecl;
     Candidate.Function = MethodTmpl->getTemplatedDecl();
     Candidate.Viable = false;
-    Candidate.FailureKind = ovl_fail_bad_deduction;
     Candidate.IsSurrogate = false;
     Candidate.IgnoreObjectArgument = false;
     Candidate.ExplicitCallArguments = Args.size();
-    Candidate.DeductionFailure = MakeDeductionFailureInfo(Context, Result,
-                                                          Info);
+    if (Result == TDK_NonDependentConversionFailure)
+      Candidate.FailureKind = ovl_fail_bad_conversion;
+    else {
+      Candidate.FailureKind = ovl_fail_bad_deduction;
+      Candidate.DeductionFailure = MakeDeductionFailureInfo(Context, Result,
+                                                            Info);
+    }
     return;
   }
 
@@ -6420,8 +6614,9 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
   assert(isa<CXXMethodDecl>(Specialization) &&
          "Specialization is not a member function?");
   AddMethodCandidate(cast<CXXMethodDecl>(Specialization), FoundDecl,
-                     ActingContext, ObjectType, ObjectClassification, Args,
-                     CandidateSet, SuppressUserConversions, PartialOverloading);
+                     ActingContext, ObjectType, ObjectClassification,
+                     /*ThisArg=*/ThisArg, Args, CandidateSet,
+                     SuppressUserConversions, PartialOverloading, Conversions);
 }
 
 /// \brief Add a C++ function template specialization as a candidate
@@ -6449,19 +6644,29 @@ Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
   //   functions.
   TemplateDeductionInfo Info(CandidateSet.getLocation());
   FunctionDecl *Specialization = nullptr;
-  if (TemplateDeductionResult Result
-        = DeduceTemplateArguments(FunctionTemplate, ExplicitTemplateArgs, Args,
-                                  Specialization, Info, PartialOverloading)) {
-    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+  ConversionSequenceList Conversions;
+  if (TemplateDeductionResult Result = DeduceTemplateArguments(
+          FunctionTemplate, ExplicitTemplateArgs, Args, Specialization, Info,
+          PartialOverloading, [&](ArrayRef<QualType> ParamTypes) {
+            return CheckNonDependentConversions(FunctionTemplate, ParamTypes,
+                                                Args, CandidateSet, Conversions,
+                                                SuppressUserConversions);
+          })) {
+    OverloadCandidate &Candidate =
+        CandidateSet.addCandidate(Conversions.size(), Conversions);
     Candidate.FoundDecl = FoundDecl;
     Candidate.Function = FunctionTemplate->getTemplatedDecl();
     Candidate.Viable = false;
-    Candidate.FailureKind = ovl_fail_bad_deduction;
     Candidate.IsSurrogate = false;
     Candidate.IgnoreObjectArgument = false;
     Candidate.ExplicitCallArguments = Args.size();
-    Candidate.DeductionFailure = MakeDeductionFailureInfo(Context, Result,
-                                                          Info);
+    if (Result == TDK_NonDependentConversionFailure)
+      Candidate.FailureKind = ovl_fail_bad_conversion;
+    else {
+      Candidate.FailureKind = ovl_fail_bad_deduction;
+      Candidate.DeductionFailure = MakeDeductionFailureInfo(Context, Result,
+                                                            Info);
+    }
     return;
   }
 
@@ -6469,7 +6674,64 @@ Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
   // deduction as a candidate.
   assert(Specialization && "Missing function template specialization?");
   AddOverloadCandidate(Specialization, FoundDecl, Args, CandidateSet,
-                       SuppressUserConversions, PartialOverloading);
+                       SuppressUserConversions, PartialOverloading,
+                       /*AllowExplicit*/false, Conversions);
+}
+
+/// Check that implicit conversion sequences can be formed for each argument
+/// whose corresponding parameter has a non-dependent type, per DR1391's
+/// [temp.deduct.call]p10.
+bool Sema::CheckNonDependentConversions(
+    FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
+    ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
+    ConversionSequenceList &Conversions, bool SuppressUserConversions,
+    CXXRecordDecl *ActingContext, QualType ObjectType,
+    Expr::Classification ObjectClassification) {
+  // FIXME: The cases in which we allow explicit conversions for constructor
+  // arguments never consider calling a constructor template. It's not clear
+  // that is correct.
+  const bool AllowExplicit = false;
+
+  auto *FD = FunctionTemplate->getTemplatedDecl();
+  auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  bool HasThisConversion = Method && !isa<CXXConstructorDecl>(Method);
+  unsigned ThisConversions = HasThisConversion ? 1 : 0;
+
+  Conversions =
+      CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
+
+  // Overload resolution is always an unevaluated context.
+  EnterExpressionEvaluationContext Unevaluated(*this, Sema::Unevaluated);
+
+  // For a method call, check the 'this' conversion here too. DR1391 doesn't
+  // require that, but this check should never result in a hard error, and
+  // overload resolution is permitted to sidestep instantiations.
+  if (HasThisConversion && !cast<CXXMethodDecl>(FD)->isStatic() &&
+      !ObjectType.isNull()) {
+    Conversions[0] = TryObjectArgumentInitialization(
+        *this, CandidateSet.getLocation(), ObjectType, ObjectClassification,
+        Method, ActingContext);
+    if (Conversions[0].isBad())
+      return true;
+  }
+
+  for (unsigned I = 0, N = std::min(ParamTypes.size(), Args.size()); I != N;
+       ++I) {
+    QualType ParamType = ParamTypes[I];
+    if (!ParamType->isDependentType()) {
+      Conversions[ThisConversions + I]
+        = TryCopyInitialization(*this, Args[I], ParamType,
+                                SuppressUserConversions,
+                                /*InOverloadResolution=*/true,
+                                /*AllowObjCWritebackConversion=*/
+                                  getLangOpts().ObjCAutoRefCount,
+                                AllowExplicit);
+      if (Conversions[ThisConversions + I].isBad())
+        return true;
+    }
+  }
+
+  return false;
 }
 
 /// Determine whether this is an allowable conversion from the result
@@ -6677,6 +6939,8 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
+
+  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Conversion, None, false, From);
 }
 
 /// \brief Adds a conversion function template specialization
@@ -6829,6 +7093,8 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
+
+  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Conversion, None);
 }
 
 /// \brief Add overload candidates for overloaded operators that are
@@ -6877,10 +7143,8 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
          Oper != OperEnd;
          ++Oper)
       AddMethodCandidate(Oper.getPair(), Args[0]->getType(),
-                         Args[0]->Classify(Context), 
-                         Args.slice(1),
-                         CandidateSet,
-                         /* SuppressUserConversions = */ false);
+                         Args[0]->Classify(Context), Args[0], Args.slice(1),
+                         CandidateSet, /*SuppressUserConversions=*/false);
   }
 }
 
@@ -8708,8 +8972,8 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
 
   // Define functions that don't require ill-formed conversions for a given
   // argument to be better candidates than functions that do.
-  unsigned NumArgs = Cand1.NumConversions;
-  assert(Cand2.NumConversions == NumArgs && "Overload candidate mismatch");
+  unsigned NumArgs = Cand1.Conversions.size();
+  assert(Cand2.Conversions.size() == NumArgs && "Overload candidate mismatch");
   bool HasBetterConversion = false;
   for (unsigned ArgIdx = StartArg; ArgIdx < NumArgs; ++ArgIdx) {
     bool Cand1Bad = IsIllFormedConversion(Cand1.Conversions[ArgIdx]);
@@ -8911,6 +9175,17 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
   }
 }
 
+static bool isCandidateUnavailableDueToDiagnoseIf(const OverloadCandidate &OC) {
+  ArrayRef<DiagnoseIfAttr *> Info = OC.getDiagnoseIfInfo();
+  if (!Info.empty() && Info[0]->isError())
+    return true;
+
+  assert(llvm::all_of(Info,
+                      [](const DiagnoseIfAttr *A) { return !A->isError(); }) &&
+         "DiagnoseIf info shouldn't have mixed warnings and errors.");
+  return false;
+}
+
 /// \brief Computes the best viable function (C++ 13.3.3)
 /// within an overload candidate set.
 ///
@@ -8989,12 +9264,18 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Best is the best viable function.
   if (Best->Function &&
       (Best->Function->isDeleted() ||
-       S.isFunctionConsideredUnavailable(Best->Function)))
+       S.isFunctionConsideredUnavailable(Best->Function) ||
+       isCandidateUnavailableDueToDiagnoseIf(*Best)))
     return OR_Deleted;
 
   if (!EquivalentCands.empty())
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
+
+  for (const auto *W : Best->getDiagnoseIfInfo()) {
+    assert(W->isWarning() && "Errors should've been caught earlier!");
+    S.emitDiagnoseIfDiagnostic(Loc, W);
+  }
 
   return OR_Success;
 }
@@ -9836,7 +10117,7 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
   EnableIfAttr *Attr = static_cast<EnableIfAttr*>(Cand->DeductionFailure.Data);
 
   S.Diag(Callee->getLocation(),
-         diag::note_ovl_candidate_disabled_by_enable_if_attr)
+         diag::note_ovl_candidate_disabled_by_function_cond_attr)
       << Attr->getCond()->getSourceRange() << Attr->getMessage();
 }
 
@@ -9866,21 +10147,28 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   FunctionDecl *Fn = Cand->Function;
 
   // Note deleted candidates, but only if they're viable.
-  if (Cand->Viable && (Fn->isDeleted() ||
-      S.isFunctionConsideredUnavailable(Fn))) {
-    std::string FnDesc;
-    OverloadCandidateKind FnKind =
+  if (Cand->Viable) {
+    if (Fn->isDeleted() || S.isFunctionConsideredUnavailable(Fn)) {
+      std::string FnDesc;
+      OverloadCandidateKind FnKind =
         ClassifyOverloadCandidate(S, Cand->FoundDecl, Fn, FnDesc);
 
-    S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
-      << FnKind << FnDesc
-      << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
-    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
-    return;
-  }
+      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
+        << FnKind << FnDesc
+        << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
+      return;
+    }
+    if (isCandidateUnavailableDueToDiagnoseIf(*Cand)) {
+      auto *A = Cand->DiagnoseIfInfo.get<DiagnoseIfAttr *>();
+      assert(A->isError() && "Non-error diagnose_if disables a candidate?");
+      S.Diag(Cand->Function->getLocation(),
+             diag::note_ovl_candidate_disabled_by_function_cond_attr)
+          << A->getCond()->getSourceRange() << A->getMessage();
+      return;
+    }
 
-  // We don't really have anything else to say about viable candidates.
-  if (Cand->Viable) {
+    // We don't really have anything else to say about viable candidates.
     S.NoteOverloadCandidate(Cand->FoundDecl, Fn);
     return;
   }
@@ -9908,7 +10196,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
   case ovl_fail_bad_conversion: {
     unsigned I = (Cand->IgnoreObjectArgument ? 1 : 0);
-    for (unsigned N = Cand->NumConversions; I != N; ++I)
+    for (unsigned N = Cand->Conversions.size(); I != N; ++I)
       if (Cand->Conversions[I].isBad())
         return DiagnoseBadConversion(S, Cand, I, TakingCandidateAddress);
 
@@ -9926,6 +10214,12 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
   case ovl_fail_ext_disabled:
     return DiagnoseOpenCLExtensionDisabled(S, Cand);
+
+  case ovl_fail_inhctor_slice:
+    S.Diag(Fn->getLocation(),
+           diag::note_ovl_candidate_inherited_constructor_slice);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
+    return;
 
   case ovl_fail_addr_not_available: {
     bool Available = checkAddressOfCandidateIsAvailable(S, Cand->Function);
@@ -9971,12 +10265,12 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
 static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
                                          SourceLocation OpLoc,
                                          OverloadCandidate *Cand) {
-  assert(Cand->NumConversions <= 2 && "builtin operator is not binary");
+  assert(Cand->Conversions.size() <= 2 && "builtin operator is not binary");
   std::string TypeStr("operator");
   TypeStr += Opc;
   TypeStr += "(";
   TypeStr += Cand->BuiltinTypes.ParamTypes[0].getAsString();
-  if (Cand->NumConversions == 1) {
+  if (Cand->Conversions.size() == 1) {
     TypeStr += ")";
     S.Diag(OpLoc, diag::note_ovl_builtin_unary_candidate) << TypeStr;
   } else {
@@ -9989,9 +10283,7 @@ static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
 
 static void NoteAmbiguousUserConversions(Sema &S, SourceLocation OpLoc,
                                          OverloadCandidate *Cand) {
-  unsigned NoOperands = Cand->NumConversions;
-  for (unsigned ArgIdx = 0; ArgIdx < NoOperands; ++ArgIdx) {
-    const ImplicitConversionSequence &ICS = Cand->Conversions[ArgIdx];
+  for (const ImplicitConversionSequence &ICS : Cand->Conversions) {
     if (ICS.isBad()) break; // all meaningless after first invalid
     if (!ICS.isAmbiguous()) continue;
 
@@ -10011,7 +10303,8 @@ static SourceLocation GetLocationForCandidate(const OverloadCandidate *Cand) {
 static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
   switch ((Sema::TemplateDeductionResult)DFI.Result) {
   case Sema::TDK_Success:
-    llvm_unreachable("TDK_success while diagnosing bad deduction");
+  case Sema::TDK_NonDependentConversionFailure:
+    llvm_unreachable("non-deduction failure while diagnosing bad deduction");
 
   case Sema::TDK_Invalid:
   case Sema::TDK_Incomplete:
@@ -10114,11 +10407,11 @@ struct CompareOverloadCandidatesForDisplay {
 
         // If there's any ordering between the defined conversions...
         // FIXME: this might not be transitive.
-        assert(L->NumConversions == R->NumConversions);
+        assert(L->Conversions.size() == R->Conversions.size());
 
         int leftBetter = 0;
         unsigned I = (L->IgnoreObjectArgument || R->IgnoreObjectArgument);
-        for (unsigned E = L->NumConversions; I != E; ++I) {
+        for (unsigned E = L->Conversions.size(); I != E; ++I) {
           switch (CompareImplicitConversionSequences(S, Loc,
                                                      L->Conversions[I],
                                                      R->Conversions[I])) {
@@ -10167,7 +10460,8 @@ struct CompareOverloadCandidatesForDisplay {
 }
 
 /// CompleteNonViableCandidate - Normally, overload resolution only
-/// computes up to the first. Produces the FixIt set if possible.
+/// computes up to the first bad conversion. Produces the FixIt set if
+/// possible.
 static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
                                        ArrayRef<Expr *> Args) {
   assert(!Cand->Viable);
@@ -10180,30 +10474,24 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   // Use a implicit copy initialization to check conversion fixes.
   Cand->Fix.setConversionChecker(TryCopyInitialization);
 
-  // Skip forward to the first bad conversion.
-  unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0);
-  unsigned ConvCount = Cand->NumConversions;
-  while (true) {
+  // Attempt to fix the bad conversion.
+  unsigned ConvCount = Cand->Conversions.size();
+  for (unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0); /**/;
+       ++ConvIdx) {
     assert(ConvIdx != ConvCount && "no bad conversion in candidate");
-    ConvIdx++;
-    if (Cand->Conversions[ConvIdx - 1].isBad()) {
-      Unfixable = !Cand->TryToFixBadConversion(ConvIdx - 1, S);
+    if (Cand->Conversions[ConvIdx].isInitialized() &&
+        Cand->Conversions[ConvIdx].isBad()) {
+      Unfixable = !Cand->TryToFixBadConversion(ConvIdx, S);
       break;
     }
   }
-
-  if (ConvIdx == ConvCount)
-    return;
-
-  assert(!Cand->Conversions[ConvIdx].isInitialized() &&
-         "remaining conversion is initialized?");
 
   // FIXME: this should probably be preserved from the overload
   // operation somehow.
   bool SuppressUserConversions = false;
 
-  const FunctionProtoType* Proto;
-  unsigned ArgIdx = ConvIdx;
+  const FunctionProtoType *Proto;
+  unsigned ArgIdx = 0;
 
   if (Cand->IsSurrogate) {
     QualType ConvType
@@ -10211,40 +10499,56 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
     if (const PointerType *ConvPtrType = ConvType->getAs<PointerType>())
       ConvType = ConvPtrType->getPointeeType();
     Proto = ConvType->getAs<FunctionProtoType>();
-    ArgIdx--;
+    ArgIdx = 1;
   } else if (Cand->Function) {
     Proto = Cand->Function->getType()->getAs<FunctionProtoType>();
     if (isa<CXXMethodDecl>(Cand->Function) &&
         !isa<CXXConstructorDecl>(Cand->Function))
-      ArgIdx--;
+      ArgIdx = 1;
   } else {
     // Builtin binary operator with a bad first conversion.
     assert(ConvCount <= 3);
-    for (; ConvIdx != ConvCount; ++ConvIdx)
-      Cand->Conversions[ConvIdx]
-        = TryCopyInitialization(S, Args[ConvIdx],
-                                Cand->BuiltinTypes.ParamTypes[ConvIdx],
-                                SuppressUserConversions,
-                                /*InOverloadResolution*/ true,
-                                /*AllowObjCWritebackConversion=*/
-                                  S.getLangOpts().ObjCAutoRefCount);
+    for (unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0);
+         ConvIdx != ConvCount; ++ConvIdx) {
+      if (Cand->Conversions[ConvIdx].isInitialized())
+        continue;
+      if (Cand->BuiltinTypes.ParamTypes[ConvIdx]->isDependentType())
+        Cand->Conversions[ConvIdx].setAsIdentityConversion(
+            Args[ConvIdx]->getType());
+      else
+        Cand->Conversions[ConvIdx] = TryCopyInitialization(
+            S, Args[ConvIdx], Cand->BuiltinTypes.ParamTypes[ConvIdx],
+            SuppressUserConversions,
+            /*InOverloadResolution*/ true,
+            /*AllowObjCWritebackConversion=*/
+            S.getLangOpts().ObjCAutoRefCount);
+      // FIXME: If the conversion is bad, try to fix it.
+    }
     return;
   }
 
   // Fill in the rest of the conversions.
   unsigned NumParams = Proto->getNumParams();
-  for (; ConvIdx != ConvCount; ++ConvIdx, ++ArgIdx) {
-    if (ArgIdx < NumParams) {
-      Cand->Conversions[ConvIdx] = TryCopyInitialization(
-          S, Args[ArgIdx], Proto->getParamType(ArgIdx), SuppressUserConversions,
-          /*InOverloadResolution=*/true,
-          /*AllowObjCWritebackConversion=*/
-          S.getLangOpts().ObjCAutoRefCount);
-      // Store the FixIt in the candidate if it exists.
-      if (!Unfixable && Cand->Conversions[ConvIdx].isBad())
-        Unfixable = !Cand->TryToFixBadConversion(ConvIdx, S);
-    }
-    else
+  for (unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0);
+       ConvIdx != ConvCount; ++ConvIdx, ++ArgIdx) {
+    if (Cand->Conversions[ConvIdx].isInitialized()) {
+      // Found the bad conversion.
+    } else if (ArgIdx < NumParams) {
+      if (Proto->getParamType(ArgIdx)->isDependentType())
+        Cand->Conversions[ConvIdx].setAsIdentityConversion(
+            Args[ArgIdx]->getType());
+      else {
+        Cand->Conversions[ConvIdx] =
+            TryCopyInitialization(S, Args[ArgIdx], Proto->getParamType(ArgIdx),
+                                  SuppressUserConversions,
+                                  /*InOverloadResolution=*/true,
+                                  /*AllowObjCWritebackConversion=*/
+                                  S.getLangOpts().ObjCAutoRefCount);
+        // Store the FixIt in the candidate if it exists.
+        if (!Unfixable && Cand->Conversions[ConvIdx].isBad())
+          Unfixable = !Cand->TryToFixBadConversion(ConvIdx, S);
+      }
+    } else
       Cand->Conversions[ConvIdx].setEllipsis();
   }
 }
@@ -12429,6 +12733,16 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       TemplateArgs = &TemplateArgsBuffer;
     }
 
+    // Poor-programmer's Lazy<Expr *>; isImplicitAccess requires stripping
+    // parens/casts, which would be nice to avoid potentially doing multiple
+    // times.
+    llvm::Optional<Expr *> UnresolvedBase;
+    auto GetUnresolvedBase = [&] {
+      if (!UnresolvedBase.hasValue())
+        UnresolvedBase =
+          UnresExpr->isImplicitAccess() ? nullptr : UnresExpr->getBase();
+      return *UnresolvedBase;
+    };
     for (UnresolvedMemberExpr::decls_iterator I = UnresExpr->decls_begin(),
            E = UnresExpr->decls_end(); I != E; ++I) {
 
@@ -12449,14 +12763,15 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           continue;
 
         AddMethodCandidate(Method, I.getPair(), ActingDC, ObjectType,
-                           ObjectClassification, Args, CandidateSet,
+                           ObjectClassification,
+                           /*ThisArg=*/GetUnresolvedBase(), Args, CandidateSet,
                            /*SuppressUserConversions=*/false);
       } else {
-        AddMethodTemplateCandidate(cast<FunctionTemplateDecl>(Func),
-                                   I.getPair(), ActingDC, TemplateArgs,
-                                   ObjectType,  ObjectClassification,
-                                   Args, CandidateSet,
-                                   /*SuppressUsedConversions=*/false);
+        AddMethodTemplateCandidate(
+            cast<FunctionTemplateDecl>(Func), I.getPair(), ActingDC,
+            TemplateArgs, ObjectType, ObjectClassification,
+            /*ThisArg=*/GetUnresolvedBase(), Args, CandidateSet,
+            /*SuppressUsedConversions=*/false);
       }
     }
 
@@ -12569,10 +12884,20 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
            diag::err_ovl_no_viable_member_function_in_call)
           << Method << Method->getSourceRange();
       Diag(Method->getLocation(),
-           diag::note_ovl_candidate_disabled_by_enable_if_attr)
+           diag::note_ovl_candidate_disabled_by_function_cond_attr)
           << Attr->getCond()->getSourceRange() << Attr->getMessage();
       return ExprError();
     }
+
+    SmallVector<DiagnoseIfAttr *, 4> Nonfatal;
+    if (const DiagnoseIfAttr *Attr = checkArgDependentDiagnoseIf(
+            Method, Args, Nonfatal, false, MemE->getBase())) {
+      emitDiagnoseIfDiagnostic(MemE->getMemberLoc(), Attr);
+      return ExprError();
+    }
+
+    for (const auto *Attr : Nonfatal)
+      emitDiagnoseIfDiagnostic(MemE->getMemberLoc(), Attr);
   }
 
   if ((isa<CXXConstructorDecl>(CurContext) || 
@@ -12652,7 +12977,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Object.get()->getType(),
                        Object.get()->Classify(Context),
-                       Args, CandidateSet,
+                       Object.get(), Args, CandidateSet,
                        /*SuppressUserConversions=*/ false);
   }
 
@@ -12928,7 +13253,8 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Base->getType(), Base->Classify(Context),
-                       None, CandidateSet, /*SuppressUserConversions=*/false);
+                       Base, None, CandidateSet,
+                       /*SuppressUserConversions=*/false);
   }
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
