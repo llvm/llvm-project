@@ -1879,13 +1879,6 @@ public:
   unsigned selectInterleaveCount(bool OptForSize, unsigned VF,
                                  unsigned LoopCost);
 
-  /// \return The most profitable unroll factor.
-  /// This method finds the best unroll-factor based on register pressure and
-  /// other parameters. VF and LoopCost are the selected vectorization factor
-  /// and the cost of the selected VF.
-  unsigned computeInterleaveCount(bool OptForSize, unsigned VF,
-                                  unsigned LoopCost);
-
   /// \brief A struct that represents some properties of the register usage
   /// of a loop.
   struct RegisterUsage {

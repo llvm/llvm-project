@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 
@@ -147,15 +148,6 @@ static void writeUstarHeader(raw_fd_ostream &OS, StringRef Path, size_t Size) {
   OS << StringRef(reinterpret_cast<char *>(&Hdr), sizeof(Hdr));
 }
 
-// We want to use '/' as a path separator even on Windows.
-// This function canonicalizes a given path.
-static std::string canonicalize(std::string S) {
-#ifdef LLVM_ON_WIN32
-  std::replace(S.begin(), S.end(), '\\', '/');
-#endif
-  return S;
-}
-
 // Creates a TarWriter instance and returns it.
 Expected<std::unique_ptr<TarWriter>> TarWriter::create(StringRef OutputPath,
                                                        StringRef BaseDir) {
@@ -171,7 +163,7 @@ TarWriter::TarWriter(int FD, StringRef BaseDir)
 // Append a given file to an archive.
 void TarWriter::append(StringRef Path, StringRef Data) {
   // Write Path and Data.
-  std::string S = BaseDir + "/" + canonicalize(Path) + "\0";
+  std::string S = BaseDir + "/" + sys::path::convert_to_slash(Path) + "\0";
   if (fitsInUstar(S)) {
     writeUstarHeader(OS, S, Data.size());
   } else {

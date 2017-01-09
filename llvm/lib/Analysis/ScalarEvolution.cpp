@@ -10012,6 +10012,18 @@ void ScalarEvolution::verify() const {
   // TODO: Verify more things.
 }
 
+bool ScalarEvolution::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv) {
+  // Invalidate the ScalarEvolution object whenever it isn't preserved or one
+  // of its dependencies is invalidated.
+  auto PAC = PA.getChecker<ScalarEvolutionAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
+         Inv.invalidate<AssumptionAnalysis>(F, PA) ||
+         Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
+         Inv.invalidate<LoopAnalysis>(F, PA);
+}
+
 AnalysisKey ScalarEvolutionAnalysis::Key;
 
 ScalarEvolution ScalarEvolutionAnalysis::run(Function &F,

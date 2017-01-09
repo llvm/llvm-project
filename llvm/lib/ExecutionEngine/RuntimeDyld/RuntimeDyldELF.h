@@ -40,6 +40,9 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveAArch64Relocation(const SectionEntry &Section, uint64_t Offset,
                                 uint64_t Value, uint32_t Type, int64_t Addend);
 
+  bool resolveAArch64ShortBranch(unsigned SectionID, relocation_iterator RelI,
+                                 const RelocationValueRef &Value);
+
   void resolveARMRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint32_t Value, uint32_t Type, int32_t Addend);
 

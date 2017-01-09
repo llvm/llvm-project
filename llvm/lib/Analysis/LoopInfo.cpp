@@ -179,9 +179,9 @@ bool Loop::isLCSSAForm(DominatorTree &DT) const {
 }
 
 bool Loop::isRecursivelyLCSSAForm(DominatorTree &DT, const LoopInfo &LI) const {
-  // For each block we check that it doesn't have any uses outside of it's
-  // innermost loop. This process will transitivelly guarntee that current loop 
-  // and all of the nested loops are in the LCSSA form.
+  // For each block we check that it doesn't have any uses outside of its
+  // innermost loop. This process will transitively guarantee that the current
+  // loop and all of the nested loops are in LCSSA form.
   return all_of(this->blocks(), [&](const BasicBlock *BB) {
     return isBlockInLCSSAForm(*LI.getLoopFor(BB), *BB, DT);
   });

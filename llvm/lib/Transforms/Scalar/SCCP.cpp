@@ -511,9 +511,6 @@ private:
   void visitSelectInst(SelectInst &I);
   void visitBinaryOperator(Instruction &I);
   void visitCmpInst(CmpInst &I);
-  void visitExtractElementInst(ExtractElementInst &I);
-  void visitInsertElementInst(InsertElementInst &I);
-  void visitShuffleVectorInst(ShuffleVectorInst &I);
   void visitExtractValueInst(ExtractValueInst &EVI);
   void visitInsertValueInst(InsertValueInst &IVI);
   void visitLandingPadInst(LandingPadInst &I) { markAnythingOverdefined(&I); }
@@ -968,21 +965,6 @@ void SCCPSolver::visitCmpInst(CmpInst &I) {
     return;
 
   markOverdefined(&I);
-}
-
-void SCCPSolver::visitExtractElementInst(ExtractElementInst &I) {
-  // TODO : SCCP does not handle vectors properly.
-  return markOverdefined(&I);
-}
-
-void SCCPSolver::visitInsertElementInst(InsertElementInst &I) {
-  // TODO : SCCP does not handle vectors properly.
-  return markOverdefined(&I);
-}
-
-void SCCPSolver::visitShuffleVectorInst(ShuffleVectorInst &I) {
-  // TODO : SCCP does not handle vectors properly.
-  return markOverdefined(&I);
 }
 
 // Handle getelementptr instructions.  If all operands are constants then we

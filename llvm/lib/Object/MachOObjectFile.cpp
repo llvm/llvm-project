@@ -2823,7 +2823,11 @@ StringRef MachORebaseEntry::typeName() const {
 }
 
 bool MachORebaseEntry::operator==(const MachORebaseEntry &Other) const {
+#ifdef EXPENSIVE_CHECKS
   assert(Opcodes == Other.Opcodes && "compare iterators of different files");
+#else
+  assert(Opcodes.data() == Other.Opcodes.data() && "compare iterators of different files");
+#endif
   return (Ptr == Other.Ptr) &&
          (RemainingLoopCount == Other.RemainingLoopCount) &&
          (Done == Other.Done);
@@ -3073,7 +3077,11 @@ uint32_t MachOBindEntry::flags() const { return Flags; }
 int MachOBindEntry::ordinal() const { return Ordinal; }
 
 bool MachOBindEntry::operator==(const MachOBindEntry &Other) const {
+#ifdef EXPENSIVE_CHECKS
   assert(Opcodes == Other.Opcodes && "compare iterators of different files");
+#else
+  assert(Opcodes.data() == Other.Opcodes.data() && "compare iterators of different files");
+#endif
   return (Ptr == Other.Ptr) &&
          (RemainingLoopCount == Other.RemainingLoopCount) &&
          (Done == Other.Done);
