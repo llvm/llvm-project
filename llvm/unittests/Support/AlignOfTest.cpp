@@ -91,6 +91,24 @@ V8::~V8() {}
 
 template <typename M> struct T { M m; };
 
+typedef uint8_t t1;
+typedef uint16_t t2;
+typedef uint32_t t3;
+typedef uint64_t t4;
+typedef int8_t t5;
+typedef int16_t t6;
+typedef int32_t t7;
+typedef int64_t t8;
+typedef struct { uint8_t bytes[16]; } t9;
+typedef struct { uint16_t words[16]; } t10;
+typedef struct { uint32_t words[16]; } t11;
+typedef struct { uint64_t words[16]; } t12;
+
+typedef AlignedCharArrayUnion<t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12> U;
+
+static_assert(sizeof(U) == sizeof(uint64_t[16]), "Statically-computed size must be right");
+static_assert(alignof(U) == alignof(uint64_t), "Statically-computed alignment must be right");
+
 TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_LE(1u, alignof(AlignedCharArrayUnion<A1>));
   EXPECT_LE(2u, alignof(AlignedCharArrayUnion<A2>));

@@ -183,7 +183,13 @@ else()
   target_link_libraries(lldb-server ${LLDB_USED_LIBS})
   target_link_libraries(lldb-server ${CLANG_USED_LIBS})
 endif()
-llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
+if(NOT LLVM_LINK_LLVM_DYLIB)
+  # This is necessary in !LLVM_LINK_LLVM_DYLIB as LLDB's libs do not track their
+  # dependencies properly. It is conditional because in a LLVM_LINK_LLVM_DYLIB
+  # build it would introduce duplicate symbols (add_lldb_tool links to libLLVM,
+  # and this would add the individual .a files as well).
+  llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
+endif()
 
 target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 

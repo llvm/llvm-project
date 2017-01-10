@@ -1840,7 +1840,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "!\"" << DIV->getName() << '\"';
       else
         MO.print(OS, MST, TRI);
-    } else if (TRI && (isInsertSubreg() || isRegSequence()) && MO.isImm()) {
+    } else if (TRI && (isInsertSubreg() || isRegSequence() ||
+                       (isSubregToReg() && i == 3)) && MO.isImm()) {
       OS << TRI->getSubRegIndexName(MO.getImm());
     } else if (i == AsmDescOp && MO.isImm()) {
       // Pretty print the inline asm operand descriptor.

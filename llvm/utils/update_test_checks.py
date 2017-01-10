@@ -64,7 +64,7 @@ LLC_FUNCTION_RE = re.compile(
     flags=(re.M | re.S))
 OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
-    r'(\s+)?[^{]*\{\n(?P<body>.*?)^\}$',
+    r'(\s+)?[^)]*[^{]*\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
 CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')

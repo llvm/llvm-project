@@ -917,12 +917,11 @@ bool RuntimeDyldELF::resolveAArch64ShortBranch(
       return false;
 
     const auto &SymInfo = Loc->second;
-    Address = reinterpret_cast<uint64_t>(
-        Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
+    Address =
+        uint64_t(Sections[SymInfo.getSectionID()].getLoadAddressWithOffset(
             SymInfo.getOffset()));
   } else {
-    Address =
-        reinterpret_cast<uint64_t>(Sections[Value.SectionID].getLoadAddress());
+    Address = uint64_t(Sections[Value.SectionID].getLoadAddress());
   }
   uint64_t Offset = RelI->getOffset();
   uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);

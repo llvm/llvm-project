@@ -5,6 +5,8 @@
 
 declare void @foo()
 
+declare i32 @llvm.bitreverse.i32(i32)
+
 ; This testcase tests for a problem where LICM hoists 
 ; potentially trapping instructions when they are not guaranteed to execute.
 define i32 @test1(i1 %c) {
@@ -121,4 +123,29 @@ then:                                             ; preds = %tailrecurse
 
 ifend:                                            ; preds = %tailrecurse
   ret { i32*, i32 } %d
+}
+
+; CHECK: define i32 @hoist_bitreverse(i32)
+; CHECK: bitreverse
+; CHECK: br label %header
+define i32 @hoist_bitreverse(i32)  {
+  br label %header
+
+header:
+  %sum = phi i32 [ 0, %1 ], [ %5, %latch ]
+  %2 = phi i32 [ 0, %1 ], [ %6, %latch ]
+  %3 = icmp slt i32 %2, 1024
+  br i1 %3, label %body, label %return
+
+body:
+  %4 = call i32 @llvm.bitreverse.i32(i32 %0)
+  %5 = add i32 %sum, %4
+  br label %latch
+
+latch:
+  %6 = add nsw i32 %2, 1
+  br label %header
+
+return:
+  ret i32 %sum
 }

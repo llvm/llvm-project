@@ -24,7 +24,8 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerParameterPtr(SelectionDAG &DAG, const SDLoc &SL, SDValue Chain,
                             unsigned Offset) const;
   SDValue LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &SL,
-                         SDValue Chain, unsigned Offset, bool Signed) const;
+                         SDValue Chain, unsigned Offset, bool Signed,
+                         const ISD::InputArg *Arg = nullptr) const;
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,

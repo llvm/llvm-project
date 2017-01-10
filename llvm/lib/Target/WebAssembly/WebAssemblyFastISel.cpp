@@ -663,6 +663,9 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   for (auto const &Arg : F->args())
     MFI->addParam(getLegalType(getSimpleType(Arg.getType())));
 
+  if (!F->getReturnType()->isVoidTy())
+    MFI->addResult(getLegalType(getSimpleType(F->getReturnType())));
+
   return true;
 }
 

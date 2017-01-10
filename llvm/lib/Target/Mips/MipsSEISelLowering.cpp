@@ -3377,8 +3377,12 @@ MipsSETargetLowering::emitFILL_FW(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
   unsigned Wd = MI.getOperand(0).getReg();
   unsigned Fs = MI.getOperand(1).getReg();
-  unsigned Wt1 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-  unsigned Wt2 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
+  unsigned Wt1 = RegInfo.createVirtualRegister(
+      Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
+                              : &Mips::MSA128WEvensRegClass);
+  unsigned Wt2 = RegInfo.createVirtualRegister(
+      Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
+                              : &Mips::MSA128WEvensRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)

@@ -783,6 +783,10 @@ protected:
   // Similarly, we create a new latch condition when setting up the structure
   // of the new loop, so the old one can become dead.
   SmallPtrSet<Instruction *, 4> DeadInstructions;
+
+  // Holds the end values for each induction variable. We save the end values
+  // so we can later fix-up the external users of the induction variables.
+  DenseMap<PHINode *, Value *> IVEndValues;
 };
 
 class InnerLoopUnroller : public InnerLoopVectorizer {
@@ -3417,7 +3421,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
     // Create phi nodes to merge from the  backedge-taken check block.
     PHINode *BCResumeVal = PHINode::Create(
         OrigPhi->getType(), 3, "bc.resume.val", ScalarPH->getTerminator());
-    Value *EndValue;
+    Value *&EndValue = IVEndValues[OrigPhi];
     if (OrigPhi == OldInduction) {
       // We know what the end value is.
       EndValue = CountRoundDown;
@@ -3435,9 +3439,6 @@ void InnerLoopVectorizer::createEmptyLoop() {
     // The new PHI merges the original incoming value, in case of a bypass,
     // or the value at the end of the vectorized loop.
     BCResumeVal->addIncoming(EndValue, MiddleBlock);
-
-    // Fix up external users of the induction variable.
-    fixupIVUsers(OrigPhi, II, CountRoundDown, EndValue, MiddleBlock);
 
     // Fix the scalar body counter (PHI node).
     unsigned BlockIdx = OrigPhi->getBasicBlockIndex(ScalarPH);
@@ -4109,11 +4110,23 @@ void InnerLoopVectorizer::vectorizeLoop() {
     Phi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
   } // end of for each Phi in PHIsToFix.
 
-  fixLCSSAPHIs();
-
-  // Make sure DomTree is updated.
+  // Update the dominator tree.
+  //
+  // FIXME: After creating the structure of the new loop, the dominator tree is
+  //        no longer up-to-date, and it remains that way until we update it
+  //        here. An out-of-date dominator tree is problematic for SCEV,
+  //        because SCEVExpander uses it to guide code generation. The
+  //        vectorizer use SCEVExpanders in several places. Instead, we should
+  //        keep the dominator tree up-to-date as we go.
   updateAnalysis();
 
+  // Fix-up external users of the induction variables.
+  for (auto &Entry : *Legal->getInductionVars())
+    fixupIVUsers(Entry.first, Entry.second,
+                 getOrCreateVectorTripCount(LI->getLoopFor(LoopVectorBody)),
+                 IVEndValues[Entry.first], LoopMiddleBlock);
+
+  fixLCSSAPHIs();
   predicateInstructions();
 
   // Remove redundant induction instructions.

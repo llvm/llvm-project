@@ -1,10 +1,9 @@
-; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
-
 ; FUNC-LABEL: {{^}}v_test_imin_sle_i32:
-; SI: v_min_i32_e32
+; GCN: v_min_i32_e32
 
 ; EG: MIN_INT
 define void @v_test_imin_sle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -17,7 +16,7 @@ define void @v_test_imin_sle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_i32:
-; SI: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 define void @s_test_imin_sle_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -28,7 +27,7 @@ define void @s_test_imin_sle_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v1i32:
-; SI: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 define void @s_test_imin_sle_v1i32(<1 x i32> addrspace(1)* %out, <1 x i32> %a, <1 x i32> %b) nounwind {
@@ -39,10 +38,10 @@ define void @s_test_imin_sle_v1i32(<1 x i32> addrspace(1)* %out, <1 x i32> %a, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v4i32:
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
-; SI: s_min_i32
+; GCN: s_min_i32
+; GCN: s_min_i32
+; GCN: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 ; EG: MIN_INT
@@ -56,11 +55,11 @@ define void @s_test_imin_sle_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_i8:
-; SI: s_load_dword
-; SI: s_load_dword
-; SI: s_sext_i32_i8
-; SI: s_sext_i32_i8
-; SI: s_min_i32
+; GCN: s_load_dword
+; GCN: s_load_dword
+; GCN: s_sext_i32_i8
+; GCN: s_sext_i32_i8
+; GCN: s_min_i32
 define void @s_test_imin_sle_i8(i8 addrspace(1)* %out, i8 %a, i8 %b) nounwind {
   %cmp = icmp sle i8 %a, %b
   %val = select i1 %cmp, i8 %a, i8 %b
@@ -72,21 +71,26 @@ define void @s_test_imin_sle_i8(i8 addrspace(1)* %out, i8 %a, i8 %b) nounwind {
 ; extloads with mubuf instructions.
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v4i8:
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
-; SI: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
+; GCN: buffer_load_sbyte
 
 ; SI: v_min_i32
 ; SI: v_min_i32
 ; SI: v_min_i32
 ; SI: v_min_i32
 
-; SI: s_endpgm
+; VI: v_min_i32
+; VI: v_min_i32
+; VI: v_min_i32
+; VI: v_min_i32
+
+; GCN: s_endpgm
 
 ; EG: MIN_INT
 ; EG: MIN_INT
@@ -117,7 +121,7 @@ define void @s_test_imin_sle_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %a, <
 }
 
 ; FUNC-LABEL: @v_test_imin_slt_i32
-; SI: v_min_i32_e32
+; GCN: v_min_i32_e32
 
 ; EG: MIN_INT
 define void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -130,7 +134,7 @@ define void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 }
 
 ; FUNC-LABEL: @s_test_imin_slt_i32
-; SI: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 define void @s_test_imin_slt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -141,8 +145,8 @@ define void @s_test_imin_slt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_slt_v2i32:
-; SI: s_min_i32
-; SI: s_min_i32
+; GCN: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 ; EG: MIN_INT
@@ -154,7 +158,7 @@ define void @s_test_imin_slt_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_slt_imm_i32:
-; SI: s_min_i32 {{s[0-9]+}}, {{s[0-9]+}}, 8
+; GCN: s_min_i32 {{s[0-9]+}}, {{s[0-9]+}}, 8
 
 ; EG: MIN_INT {{.*}}literal.{{[xyzw]}}
 define void @s_test_imin_slt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
@@ -165,7 +169,7 @@ define void @s_test_imin_slt_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_imm_i32:
-; SI: s_min_i32 {{s[0-9]+}}, {{s[0-9]+}}, 8
+; GCN: s_min_i32 {{s[0-9]+}}, {{s[0-9]+}}, 8
 
 ; EG: MIN_INT {{.*}}literal.{{[xyzw]}}
 define void @s_test_imin_sle_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
@@ -176,7 +180,7 @@ define void @s_test_imin_sle_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 }
 
 ; FUNC-LABEL: @v_test_umin_ule_i32
-; SI: v_min_u32_e32
+; GCN: v_min_u32_e32
 
 ; EG: MIN_UINT
 define void @v_test_umin_ule_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -189,11 +193,11 @@ define void @v_test_umin_ule_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 }
 
 ; FUNC-LABEL: @v_test_umin_ule_v3i32
-; SI: v_min_u32_e32
-; SI: v_min_u32_e32
-; SI: v_min_u32_e32
+; GCN: v_min_u32_e32
+; GCN: v_min_u32_e32
+; GCN: v_min_u32_e32
 ; SI-NOT: v_min_u32_e32
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -207,7 +211,7 @@ define void @v_test_umin_ule_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> addrs
   ret void
 }
 ; FUNC-LABEL: @s_test_umin_ule_i32
-; SI: s_min_u32
+; GCN: s_min_u32
 
 ; EG: MIN_UINT
 define void @s_test_umin_ule_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -218,7 +222,7 @@ define void @s_test_umin_ule_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 }
 
 ; FUNC-LABEL: @v_test_umin_ult_i32
-; SI: v_min_u32_e32
+; GCN: v_min_u32_e32
 
 ; EG: MIN_UINT
 define void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -231,9 +235,9 @@ define void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 }
 
 ; FUNC-LABEL: {{^}}v_test_umin_ult_i8:
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: v_min_u32_e32
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+; GCN: v_min_u32_e32
 
 ; EG: MIN_UINT
 define void @v_test_umin_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
@@ -246,7 +250,7 @@ define void @v_test_umin_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i
 }
 
 ; FUNC-LABEL: @s_test_umin_ult_i32
-; SI: s_min_u32
+; GCN: s_min_u32
 
 ; EG: MIN_UINT
 define void @s_test_umin_ult_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -258,10 +262,10 @@ define void @s_test_umin_ult_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 
 ; FUNC-LABEL: @v_test_umin_ult_i32_multi_use
 ; SI-NOT: v_min
-; SI: v_cmp_lt_u32
+; GCN: v_cmp_lt_u32
 ; SI-NEXT: v_cndmask_b32
 ; SI-NOT: v_min
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG-NOT: MIN_UINT
 define void @v_test_umin_ult_i32_multi_use(i32 addrspace(1)* %out0, i1 addrspace(1)* %out1, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
@@ -274,9 +278,27 @@ define void @v_test_umin_ult_i32_multi_use(i32 addrspace(1)* %out0, i1 addrspace
   ret void
 }
 
+; FUNC-LABEL: @v_test_umin_ult_i16_multi_use
+; GCN-NOT: v_min
+; GCN: v_cmp_lt_u32
+; GCN-NEXT: v_cndmask_b32
+; GCN-NOT: v_min
+; GCN: s_endpgm
+
+; EG-NOT: MIN_UINT
+define void @v_test_umin_ult_i16_multi_use(i16 addrspace(1)* %out0, i1 addrspace(1)* %out1, i16 addrspace(1)* %aptr, i16 addrspace(1)* %bptr) nounwind {
+  %a = load i16, i16 addrspace(1)* %aptr, align 2
+  %b = load i16, i16 addrspace(1)* %bptr, align 2
+  %cmp = icmp ult i16 %a, %b
+  %val = select i1 %cmp, i16 %a, i16 %b
+  store i16 %val, i16 addrspace(1)* %out0, align 2
+  store i1 %cmp, i1 addrspace(1)* %out1
+  ret void
+}
+
 
 ; FUNC-LABEL: @s_test_umin_ult_v1i32
-; SI: s_min_u32
+; GCN: s_min_u32
 
 ; EG: MIN_UINT
 define void @s_test_umin_ult_v1i32(<1 x i32> addrspace(1)* %out, <1 x i32> %a, <1 x i32> %b) nounwind {
@@ -287,14 +309,14 @@ define void @s_test_umin_ult_v1i32(<1 x i32> addrspace(1)* %out, <1 x i32> %a, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_umin_ult_v8i32:
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
-; SI: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
+; GCN: s_min_u32
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -312,14 +334,14 @@ define void @s_test_umin_ult_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <
 }
 
 ; FUNC-LABEL: {{^}}s_test_umin_ult_v8i16:
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
-; SI: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
+; GCN: v_min_u32
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -338,11 +360,11 @@ define void @s_test_umin_ult_v8i16(<8 x i16> addrspace(1)* %out, <8 x i16> %a, <
 
 ; Make sure redundant and removed
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umin_ult_i16:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
-; SI: s_min_u32 [[MIN:s[0-9]+]], [[A]], [[B]]
-; SI: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
-; SI: buffer_store_dword [[VMIN]]
+; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN: s_min_u32 [[MIN:s[0-9]+]], [[A]], [[B]]
+; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
+; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_UINT
 define void @simplify_demanded_bits_test_umin_ult_i16(i32 addrspace(1)* %out, i16 zeroext %a, i16 zeroext %b) nounwind {
@@ -358,11 +380,11 @@ define void @simplify_demanded_bits_test_umin_ult_i16(i32 addrspace(1)* %out, i1
 ; Make sure redundant sign_extend_inreg removed.
 
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_min_slt_i16:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0xc
-; SI: s_min_i32 [[MIN:s[0-9]+]], [[A]], [[B]]
-; SI: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
-; SI: buffer_store_dword [[VMIN]]
+; GCN-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN: s_min_i32 [[MIN:s[0-9]+]], [[A]], [[B]]
+; GCN: v_mov_b32_e32 [[VMIN:v[0-9]+]], [[MIN]]
+; GCN: buffer_store_dword [[VMIN]]
 
 ; EG: MIN_INT
 define void @simplify_demanded_bits_test_min_slt_i16(i32 addrspace(1)* %out, i16 signext %a, i16 signext %b) nounwind {
@@ -377,7 +399,7 @@ define void @simplify_demanded_bits_test_min_slt_i16(i32 addrspace(1)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_i16:
-; SI: s_min_i32
+; GCN: s_min_i32
 
 ; EG: MIN_INT
 define void @s_test_imin_sle_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwind {
@@ -389,7 +411,7 @@ define void @s_test_imin_sle_i16(i16 addrspace(1)* %out, i16 %a, i16 %b) nounwin
 
 ; 64 bit
 ; FUNC-LABEL: {{^}}test_umin_ult_i64
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -401,7 +423,7 @@ define void @test_umin_ult_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}test_umin_ule_i64
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG: MIN_UINT
 ; EG: MIN_UINT
@@ -413,7 +435,7 @@ define void @test_umin_ule_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}test_imin_slt_i64
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG-DAG: MIN_UINT
 ; EG-DAG: MIN_INT
@@ -425,7 +447,7 @@ define void @test_imin_slt_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}test_imin_sle_i64
-; SI: s_endpgm
+; GCN: s_endpgm
 
 ; EG-DAG: MIN_UINT
 ; EG-DAG: MIN_INT

@@ -111,6 +111,7 @@ enum ProcessorTypes {
   AMDATHLON,
   AMDFAM14H,
   AMDFAM16H,
+  AMDFAM17H,
   CPU_TYPE_MAX
 };
 
@@ -149,6 +150,7 @@ enum ProcessorSubtypes {
   AMD_BTVER2,
   AMDFAM15H_BDVER3,
   AMDFAM15H_BDVER4,
+  AMDFAM17H_ZNVER1,
   CPU_SUBTYPE_MAX
 };
 
@@ -742,6 +744,14 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     }
     *Subtype = AMD_BTVER2;
     break; // "btver2"
+  case 23:
+    *Type = AMDFAM17H;
+    if (Features & (1 << FEATURE_ADX)) {
+      *Subtype = AMDFAM17H_ZNVER1;
+      break; // "znver1"
+    }
+    *Subtype =  AMD_BTVER1;
+    break;
   default:
     break; // "generic"
   }
@@ -949,6 +959,15 @@ StringRef sys::getHostCPUName() {
         return "btver2";
       default:
         return "amdfam16";
+      }
+    case AMDFAM17H:
+      switch (Subtype) {
+      case AMD_BTVER1:
+        return "btver1";
+      case AMDFAM17H_ZNVER1:
+        return "znver1";
+      default:
+        return "amdfam17";
       }
     default:
       return "generic";

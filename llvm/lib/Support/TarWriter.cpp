@@ -54,6 +54,13 @@ struct UstarHeader {
 };
 static_assert(sizeof(UstarHeader) == BlockSize, "invalid Ustar header");
 
+static UstarHeader makeUstarHeader() {
+  UstarHeader Hdr = {};
+  memcpy(Hdr.Magic, "ustar", 5); // Ustar magic
+  memcpy(Hdr.Version, "00", 2);  // Ustar version
+  return Hdr;
+}
+
 // A PAX attribute is in the form of "<length> <key>=<value>\n"
 // where <length> is the length of the entire string including
 // the length field itself. An example string is this.
@@ -98,10 +105,9 @@ static void writePaxHeader(raw_fd_ostream &OS, StringRef Path) {
   std::string PaxAttr = formatPax("path", Path);
 
   // Create a 512-byte header.
-  UstarHeader Hdr = {};
+  UstarHeader Hdr = makeUstarHeader();
   snprintf(Hdr.Size, sizeof(Hdr.Size), "%011zo", PaxAttr.size());
-  Hdr.TypeFlag = 'x';            // PAX magic
-  memcpy(Hdr.Magic, "ustar", 6); // Ustar magic
+  Hdr.TypeFlag = 'x'; // PAX magic
   computeChecksum(Hdr);
 
   // Write them down.
@@ -116,7 +122,7 @@ static void writePaxHeader(raw_fd_ostream &OS, StringRef Path) {
 static std::pair<StringRef, StringRef> splitPath(StringRef Path) {
   if (Path.size() <= sizeof(UstarHeader::Name))
     return {"", Path};
-  size_t Sep = Path.rfind('/', sizeof(UstarHeader::Name) + 1);
+  size_t Sep = Path.rfind('/', sizeof(UstarHeader::Prefix) + 1);
   if (Sep == StringRef::npos)
     return {"", Path};
   return {Path.substr(0, Sep), Path.substr(Sep + 1)};
@@ -138,11 +144,10 @@ static void writeUstarHeader(raw_fd_ostream &OS, StringRef Path, size_t Size) {
   StringRef Name;
   std::tie(Prefix, Name) = splitPath(Path);
 
-  UstarHeader Hdr = {};
+  UstarHeader Hdr = makeUstarHeader();
   memcpy(Hdr.Name, Name.data(), Name.size());
   memcpy(Hdr.Mode, "0000664", 8);
   snprintf(Hdr.Size, sizeof(Hdr.Size), "%011zo", Size);
-  memcpy(Hdr.Magic, "ustar", 6);
   memcpy(Hdr.Prefix, Prefix.data(), Prefix.size());
   computeChecksum(Hdr);
   OS << StringRef(reinterpret_cast<char *>(&Hdr), sizeof(Hdr));

@@ -5361,8 +5361,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // fold (select false, X, Y) -> Y
     return !N0C->isNullValue() ? N1 : N2;
   }
-  // fold (select C, 1, X) -> (or C, X)
-  if (VT == MVT::i1 && isOneConstant(N1))
+  // fold (select X, X, Y) -> (or X, Y)
+  // fold (select X, 1, Y) -> (or C, Y)
+  if (VT == VT0 && VT == MVT::i1 && (N0 == N1 || isOneConstant(N1)))
     return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N2);
 
   if (SDValue V = foldSelectOfConstants(N))
@@ -5380,16 +5381,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     AddToWorklist(NOTNode.getNode());
     return DAG.getNode(ISD::OR, SDLoc(N), VT, NOTNode, N1);
   }
-  // fold (select C, X, 0) -> (and C, X)
-  if (VT == MVT::i1 && isNullConstant(N2))
-    return DAG.getNode(ISD::AND, SDLoc(N), VT, N0, N1);
-  // fold (select X, X, Y) -> (or X, Y)
-  // fold (select X, 1, Y) -> (or X, Y)
-  if (VT == MVT::i1 && (N0 == N1 || isOneConstant(N1)))
-    return DAG.getNode(ISD::OR, SDLoc(N), VT, N0, N2);
   // fold (select X, Y, X) -> (and X, Y)
   // fold (select X, Y, 0) -> (and X, Y)
-  if (VT == MVT::i1 && (N0 == N2 || isNullConstant(N2)))
+  if (VT == VT0 && VT == MVT::i1 && (N0 == N2 || isNullConstant(N2)))
     return DAG.getNode(ISD::AND, SDLoc(N), VT, N0, N1);
 
   // If we can fold this based on the true/false value, do so.
@@ -5470,7 +5464,6 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   }
 
   // select (xor Cond, 1), X, Y -> select Cond, Y, X
-  // select (xor Cond, 0), X, Y -> selext Cond, X, Y
   if (VT0 == MVT::i1) {
     if (N0->getOpcode() == ISD::XOR) {
       if (auto *C = dyn_cast<ConstantSDNode>(N0->getOperand(1))) {
@@ -5478,9 +5471,6 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
         if (C->isOne())
           return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(),
                              Cond0, N2, N1);
-        else
-          return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(),
-                             Cond0, N1, N2);
       }
     }
   }

@@ -792,6 +792,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
                          LoopFunc,
                          LoopStart);
     BranchInst::Create(LoopStart, NewEntry);
+    DT->setNewRoot(NewEntry);
   }
 
   // Create an extra loop end node

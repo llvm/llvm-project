@@ -101,7 +101,7 @@ LLVMBool LLVMTargetHasAsmBackend(LLVMTargetRef T) {
 }
 
 LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
-        const char* Triple, const char* CPU, const char* Features,
+        const char *Triple, const char *CPU, const char *Features,
         LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
         LLVMCodeModel CodeModel) {
   Optional<Reloc::Model> RM;
@@ -139,7 +139,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
 
   TargetOptions opt;
   return wrap(unwrap(T)->createTargetMachine(Triple, CPU, Features, opt, RM,
-    CM, OL));
+                                             CM, OL));
 }
 
 void LLVMDisposeTargetMachine(LLVMTargetMachineRef T) { delete unwrap(T); }

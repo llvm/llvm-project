@@ -760,6 +760,42 @@ def : Proc<"bdver4", [
   FeatureMWAITX
 ]>;
 
+// TODO: The scheduler model falls to BTVER2 model.
+// The znver1 model has to be put in place.
+// Zen
+def: ProcessorModel<"znver1", BtVer2Model, [
+  FeatureADX,
+  FeatureAES,
+  FeatureAVX2,
+  FeatureBMI,
+  FeatureBMI2,
+  FeatureCLFLUSHOPT,
+  FeatureCMPXCHG16B,
+  FeatureF16C,
+  FeatureFMA,
+  FeatureFSGSBase,
+  FeatureFXSR,
+  FeatureFastLZCNT,
+  FeatureLAHFSAHF,
+  FeatureLZCNT,
+  FeatureMMX,
+  FeatureMOVBE,
+  FeatureMWAITX,
+  FeaturePCLMUL,
+  FeaturePOPCNT,
+  FeaturePRFCHW,
+  FeatureRDRAND,
+  FeatureRDSEED,
+  FeatureSHA,
+  FeatureSMAP,
+  FeatureSSE4A,
+  FeatureSlowSHLD,
+  FeatureX87,
+  FeatureXSAVE,
+  FeatureXSAVEC,
+  FeatureXSAVEOPT,
+  FeatureXSAVES]>;
+
 def : Proc<"geode",           [FeatureX87, FeatureSlowUAMem16, Feature3DNowA]>;
 
 def : Proc<"winchip-c6",      [FeatureX87, FeatureSlowUAMem16, FeatureMMX]>;
