@@ -57,6 +57,7 @@ enum class SymbolLanguage {
   C,
   ObjC,
   CXX,
+  Swift,
 };
 
 /// Language specific sub-kinds.
@@ -64,6 +65,28 @@ enum class SymbolSubKind {
   None,
   CXXCopyConstructor,
   CXXMoveConstructor,
+
+  // Swift sub-kinds
+
+  SwiftAccessorGetter,
+  SwiftAccessorSetter,
+  SwiftAccessorWillSet,
+  SwiftAccessorDidSet,
+  SwiftAccessorAddressor,
+  SwiftAccessorMutableAddressor,
+
+  SwiftExtensionOfStruct,
+  SwiftExtensionOfClass,
+  SwiftExtensionOfEnum,
+  SwiftExtensionOfProtocol,
+
+  SwiftPrefixOperator,
+  SwiftPostfixOperator,
+  SwiftInfixOperator,
+
+  SwiftSubscript,
+  SwiftAssociatedType,
+  SwiftGenericTypeParam,
 };
 
 /// Set of properties that provide additional info about a symbol.
