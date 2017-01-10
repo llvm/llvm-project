@@ -2663,6 +2663,12 @@ class X86TargetInfo : public TargetInfo {
     CK_BDVER4,
     //@}
 
+    /// \name zen
+    /// Zen architecture processors.
+    //@{
+    CK_ZNVER1,
+    //@}
+
     /// This specification is deprecated and will be removed in the future.
     /// Users should prefer \see CK_K8.
     // FIXME: Warn on this when the CPU is set to it.
@@ -2744,6 +2750,7 @@ class X86TargetInfo : public TargetInfo {
         .Case("bdver2", CK_BDVER2)
         .Case("bdver3", CK_BDVER3)
         .Case("bdver4", CK_BDVER4)
+        .Case("znver1", CK_ZNVER1)
         .Case("x86-64", CK_x86_64)
         .Case("geode", CK_Geode)
         .Default(CK_Generic);
@@ -2943,6 +2950,7 @@ public:
     case CK_BDVER2:
     case CK_BDVER3:
     case CK_BDVER4:
+    case CK_ZNVER1:
     case CK_x86_64:
       return true;
     }
@@ -3189,6 +3197,33 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
+    break;
+  case CK_ZNVER1:
+    setFeatureEnabledImpl(Features, "adx", true);
+    setFeatureEnabledImpl(Features, "aes", true);
+    setFeatureEnabledImpl(Features, "avx2", true);
+    setFeatureEnabledImpl(Features, "bmi", true);
+    setFeatureEnabledImpl(Features, "bmi2", true);
+    setFeatureEnabledImpl(Features, "clflushopt", true);
+    setFeatureEnabledImpl(Features, "cx16", true);
+    setFeatureEnabledImpl(Features, "f16c", true);
+    setFeatureEnabledImpl(Features, "fma", true);
+    setFeatureEnabledImpl(Features, "fsgsbase", true);
+    setFeatureEnabledImpl(Features, "fxsr", true);
+    setFeatureEnabledImpl(Features, "lzcnt", true);
+    setFeatureEnabledImpl(Features, "mwaitx", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
+    setFeatureEnabledImpl(Features, "pclmul", true);
+    setFeatureEnabledImpl(Features, "popcnt", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
+    setFeatureEnabledImpl(Features, "rdrnd", true);
+    setFeatureEnabledImpl(Features, "rdseed", true);
+    setFeatureEnabledImpl(Features, "sha", true);
+    setFeatureEnabledImpl(Features, "sse4a", true);
+    setFeatureEnabledImpl(Features, "xsave", true);
+    setFeatureEnabledImpl(Features, "xsavec", true);
+    setFeatureEnabledImpl(Features, "xsaveopt", true);
+    setFeatureEnabledImpl(Features, "xsaves", true);
     break;
   case CK_BDVER4:
     setFeatureEnabledImpl(Features, "avx2", true);
@@ -3740,6 +3775,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_BDVER4:
     defineCPUMacros(Builder, "bdver4");
+    break;
+  case CK_ZNVER1:
+    defineCPUMacros(Builder, "znver1");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");

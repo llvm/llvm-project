@@ -70,30 +70,47 @@ namespace Auto {
   template<template<int*> typename T> struct TIntPtr {};
   template<template<auto> typename T> struct TAuto {};
   template<template<auto*> typename T> struct TAutoPtr {};
+  template<template<decltype(auto)> typename T> struct TDecltypeAuto {};
   template<auto> struct Auto;
   template<auto*> struct AutoPtr;
+  template<decltype(auto)> struct DecltypeAuto;
   template<int> struct Int;
   template<int*> struct IntPtr;
 
   TInt<Auto> ia;
-  TInt<AutoPtr> iap; // FIXME: ill-formed
+  TInt<AutoPtr> iap; // expected-error {{different template parameters}}
+  TInt<DecltypeAuto> ida; // FIXME expected-error {{different template parameters}}
   TInt<Int> ii;
   TInt<IntPtr> iip; // expected-error {{different template parameters}}
 
   TIntPtr<Auto> ipa;
   TIntPtr<AutoPtr> ipap;
+  TIntPtr<DecltypeAuto> ipda; // FIXME expected-error {{different template parameters}}
   TIntPtr<Int> ipi; // expected-error {{different template parameters}}
   TIntPtr<IntPtr> ipip;
 
   TAuto<Auto> aa;
-  TAuto<AutoPtr> aap; // FIXME: ill-formed
-  TAuto<Int> ai; // FIXME: ill-formed
-  TAuto<IntPtr> aip; // FIXME: ill-formed
+  TAuto<AutoPtr> aap; // expected-error {{different template parameters}}
+  TAuto<Int> ai; // expected-error {{different template parameters}}
+  TAuto<IntPtr> aip; // expected-error {{different template parameters}}
 
   TAutoPtr<Auto> apa;
   TAutoPtr<AutoPtr> apap;
-  TAutoPtr<Int> api; // FIXME: ill-formed
-  TAutoPtr<IntPtr> apip; // FIXME: ill-formed
+  TAutoPtr<Int> api; // expected-error {{different template parameters}}
+  TAutoPtr<IntPtr> apip; // expected-error {{different template parameters}}
+
+  TDecltypeAuto<DecltypeAuto> dada;
+  TDecltypeAuto<Int> dai; // expected-error {{different template parameters}}
+  TDecltypeAuto<IntPtr> daip; // expected-error {{different template parameters}}
+
+  // FIXME: It's completely unclear what should happen here. A case can be made
+  // that 'auto' is more specialized, because it's always a prvalue, whereas
+  // 'decltype(auto)' could have any value category. Under that interpretation,
+  // we get the following results entirely backwards:
+  TAuto<DecltypeAuto> ada; // expected-error {{different template parameters}}
+  TAutoPtr<DecltypeAuto> apda; // expected-error {{different template parameters}}
+  TDecltypeAuto<Auto> daa;
+  TDecltypeAuto<AutoPtr> daa; // expected-error {{different template parameters}}
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;

@@ -3812,6 +3812,7 @@ ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
   if (Major >= 7 || Major == 0) {
     switch (getArch()) {
     case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
     case llvm::Triple::arm:
     case llvm::Triple::armeb:
     case llvm::Triple::thumb:

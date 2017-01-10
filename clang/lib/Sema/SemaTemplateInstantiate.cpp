@@ -2264,9 +2264,6 @@ bool Sema::InstantiateInClassInitializer(
   if (auto *L = getASTMutationListener())
     L->DefaultMemberInitializerInstantiated(Instantiation);
 
-  // Exit the scope of this instantiation.
-  SavedContext.pop();
-
   // Return true if the in-class initializer is still missing.
   return !Instantiation->getInClassInitializer();
 }

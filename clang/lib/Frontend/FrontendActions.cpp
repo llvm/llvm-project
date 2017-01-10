@@ -127,6 +127,12 @@ GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
   return OS;
 }
 
+bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI,
+                                              StringRef Filename) {
+  CI.getLangOpts().CompilingPCH = true;
+  return true;
+}
+
 std::unique_ptr<ASTConsumer>
 GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
                                         StringRef InFile) {

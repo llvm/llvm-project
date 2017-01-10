@@ -5395,13 +5395,31 @@ static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
   }
 }
 
-static void checkForMultipleExportedDefaultConstructors(Sema &S, CXXRecordDecl *Class) {
+static void checkForMultipleExportedDefaultConstructors(Sema &S,
+                                                        CXXRecordDecl *Class) {
+  // Only the MS ABI has default constructor closures, so we don't need to do
+  // this semantic checking anywhere else.
+  if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
+    return;
+
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
     // Look for exported default constructors.
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
-    if (!CD || !CD->isDefaultConstructor() || !CD->hasAttr<DLLExportAttr>())
+    if (!CD || !CD->isDefaultConstructor())
       continue;
+    auto *Attr = CD->getAttr<DLLExportAttr>();
+    if (!Attr)
+      continue;
+
+    // If the class is non-dependent, mark the default arguments as ODR-used so
+    // that we can properly codegen the constructor closure.
+    if (!Class->isDependentContext()) {
+      for (ParmVarDecl *PD : CD->parameters()) {
+        (void)S.CheckCXXDefaultArgExpr(Attr->getLocation(), CD, PD);
+        S.DiscardCleanupsInEvaluationContext();
+      }
+    }
 
     if (LastExportedDefaultCtor) {
       S.Diag(LastExportedDefaultCtor->getLocation(),

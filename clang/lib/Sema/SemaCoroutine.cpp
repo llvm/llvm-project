@@ -578,17 +578,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
             isa<CoyieldExpr>(First) ? 1 : 2);
   }
 
-  bool AnyCoawaits = false;
-  bool AnyCoyields = false;
-  for (auto *CoroutineStmt : Fn->CoroutineStmts) {
-    AnyCoawaits |= isa<CoawaitExpr>(CoroutineStmt);
-    AnyCoyields |= isa<CoyieldExpr>(CoroutineStmt);
-  }
-
-  if (!AnyCoawaits && !AnyCoyields)
-    Diag(Fn->CoroutineStmts.front()->getLocStart(),
-         diag::ext_coroutine_without_co_await_co_yield);
-
   SourceLocation Loc = FD->getLocation();
 
   // Form a declaration statement for the promise declaration, so that AST

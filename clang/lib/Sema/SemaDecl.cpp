@@ -1044,7 +1044,8 @@ Corrected:
   }
 
   // We can have a type template here if we're classifying a template argument.
-  if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl))
+  if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl) &&
+      !isa<VarTemplateDecl>(FirstDecl))
     return NameClassification::TypeTemplate(
         TemplateName(cast<TemplateDecl>(FirstDecl)));
 

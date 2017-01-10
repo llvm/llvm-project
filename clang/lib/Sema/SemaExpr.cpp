@@ -13118,7 +13118,13 @@ void Sema::PopExpressionEvaluationContext() {
         //   evaluate [...] a lambda-expression.
         D = diag::err_lambda_in_constant_expression;
       }
+
       // C++1z allows lambda expressions as core constant expressions.
+      // FIXME: In C++1z, reinstate the restrictions on lambda expressions (CWG
+      // 1607) from appearing within template-arguments and array-bounds that
+      // are part of function-signatures.  Be mindful that P0315 (Lambdas in
+      // unevaluated contexts) might lift some of these restrictions in a 
+      // future version.
       if (Rec.Context != ConstantEvaluated || !getLangOpts().CPlusPlus1z)
         for (const auto *L : Rec.Lambdas)
           Diag(L->getLocStart(), D);

@@ -9680,6 +9680,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Major >= 7 || Major == 0) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
     case llvm::Triple::arm:
     case llvm::Triple::armeb:
     case llvm::Triple::thumb:
