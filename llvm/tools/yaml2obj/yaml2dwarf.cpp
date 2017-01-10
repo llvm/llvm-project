@@ -233,3 +233,98 @@ void yaml2debug_info(raw_ostream &OS, const DWARFYAML::Data &DI) {
     }
   }
 }
+
+void yaml2FileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
+  OS.write(File.Name.data(), File.Name.size());
+  OS.write('\0');
+  encodeULEB128(File.DirIdx, OS);
+  encodeULEB128(File.ModTime, OS);
+  encodeULEB128(File.Length, OS);
+}
+
+void yaml2debug_line(raw_ostream &OS, const DWARFYAML::Data &DI) {
+  for (const auto LineTable : DI.DebugLines) {
+    writeInteger((uint32_t)LineTable.TotalLength, OS, DI.IsLittleEndian);
+    uint64_t SizeOfPrologueLength = 4;
+    if (LineTable.TotalLength == UINT32_MAX) {
+      writeInteger((uint64_t)LineTable.TotalLength64, OS, DI.IsLittleEndian);
+      SizeOfPrologueLength = 8;
+    }
+    writeInteger((uint16_t)LineTable.Version, OS, DI.IsLittleEndian);
+    writeVariableSizedInteger(LineTable.PrologueLength, SizeOfPrologueLength,
+                              OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)LineTable.MinInstLength, OS, DI.IsLittleEndian);
+    if (LineTable.Version >= 4)
+      writeInteger((uint8_t)LineTable.MaxOpsPerInst, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)LineTable.DefaultIsStmt, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)LineTable.LineBase, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)LineTable.LineRange, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)LineTable.OpcodeBase, OS, DI.IsLittleEndian);
+
+    for (auto OpcodeLength : LineTable.StandardOpcodeLengths)
+      writeInteger((uint8_t)OpcodeLength, OS, DI.IsLittleEndian);
+
+    for (auto IncludeDir : LineTable.IncludeDirs) {
+      OS.write(IncludeDir.data(), IncludeDir.size());
+      OS.write('\0');
+    }
+    OS.write('\0');
+
+    for (auto File : LineTable.Files)
+      yaml2FileEntry(OS, File);
+    OS.write('\0');
+
+    for (auto Op : LineTable.Opcodes) {
+      writeInteger((uint8_t)Op.Opcode, OS, DI.IsLittleEndian);
+      if (Op.Opcode == 0) {
+        encodeULEB128(Op.ExtLen, OS);
+        writeInteger((uint8_t)Op.SubOpcode, OS, DI.IsLittleEndian);
+        switch (Op.SubOpcode) {
+        case dwarf::DW_LNE_set_address:
+        case dwarf::DW_LNE_set_discriminator:
+          writeVariableSizedInteger(Op.Data, DI.CompileUnits[0].AddrSize, OS,
+                                    DI.IsLittleEndian);
+          break;
+        case dwarf::DW_LNE_define_file:
+          yaml2FileEntry(OS, Op.FileEntry);
+          break;
+        case dwarf::DW_LNE_end_sequence:
+          break;
+        default:
+          for (auto OpByte : Op.UnknownOpcodeData)
+            writeInteger((uint8_t)OpByte, OS, DI.IsLittleEndian);
+        }
+      } else if (Op.Opcode < LineTable.OpcodeBase) {
+        switch (Op.Opcode) {
+        case dwarf::DW_LNS_copy:
+        case dwarf::DW_LNS_negate_stmt:
+        case dwarf::DW_LNS_set_basic_block:
+        case dwarf::DW_LNS_const_add_pc:
+        case dwarf::DW_LNS_set_prologue_end:
+        case dwarf::DW_LNS_set_epilogue_begin:
+          break;
+
+        case dwarf::DW_LNS_advance_pc:
+        case dwarf::DW_LNS_set_file:
+        case dwarf::DW_LNS_set_column:
+        case dwarf::DW_LNS_set_isa:
+          encodeULEB128(Op.Data, OS);
+          break;
+
+        case dwarf::DW_LNS_advance_line:
+          encodeSLEB128(Op.SData, OS);
+          break;
+
+        case dwarf::DW_LNS_fixed_advance_pc:
+          writeInteger((uint16_t)Op.Data, OS, DI.IsLittleEndian);
+          break;
+
+        default:
+          for (auto OpData : Op.StandardOpcodeData) {
+            encodeULEB128(OpData, OS);
+          }
+        }
+      }
+    }
+  }
+}

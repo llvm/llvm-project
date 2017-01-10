@@ -2,7 +2,6 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; Function Attrs: nounwind uwtable
 define i32 @foo1(i32* %a) #0 {
 entry:
   %0 = load i32, i32* %a, align 4
@@ -22,7 +21,6 @@ entry:
   ret i32 %0
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @foo2(i32* %a) #0 {
 entry:
 ; Same check as in @foo1, but make sure it works if the assume is first too.
@@ -40,7 +38,6 @@ entry:
   ret i32 %0
 }
 
-; Function Attrs: nounwind
 declare void @llvm.assume(i1) #1
 
 define i32 @simple(i32 %a) #1 {
@@ -55,7 +52,6 @@ entry:
   ret i32 %a
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @can1(i1 %a, i1 %b, i1 %c) {
 entry:
   %and1 = and i1 %a, %b
@@ -71,7 +67,6 @@ entry:
   ret i32 5
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @can2(i1 %a, i1 %b, i1 %c) {
 entry:
   %v = or i1 %a, %b
@@ -103,7 +98,6 @@ entry:
   ret i32 %and1
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @bar2(i32 %a) #0 {
 entry:
 ; CHECK-LABEL: @bar2
@@ -118,7 +112,6 @@ entry:
   ret i32 %and1
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @bar3(i32 %a, i1 %x, i1 %y) #0 {
 entry:
   %and1 = and i32 %a, 3
@@ -139,7 +132,6 @@ entry:
   ret i32 %and1
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @bar4(i32 %a, i32 %b) {
 entry:
   %and1 = and i32 %b, 3
@@ -160,30 +152,41 @@ entry:
 }
 
 define i32 @icmp1(i32 %a) #0 {
-entry:
+; CHECK-LABEL: @icmp1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i32 1
+;
   %cmp = icmp sgt i32 %a, 5
   tail call void @llvm.assume(i1 %cmp)
   %conv = zext i1 %cmp to i32
   ret i32 %conv
-
-; CHECK-LABEL: @icmp1
-; CHECK: call void @llvm.assume
-; CHECK: ret i32 1
-
 }
 
-; Function Attrs: nounwind uwtable
 define i32 @icmp2(i32 %a) #0 {
-entry:
+; CHECK-LABEL: @icmp2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i32 0
+;
   %cmp = icmp sgt i32 %a, 5
   tail call void @llvm.assume(i1 %cmp)
-  %0 = zext i1 %cmp to i32
-  %lnot.ext = xor i32 %0, 1
+  %t0 = zext i1 %cmp to i32
+  %lnot.ext = xor i32 %t0, 1
   ret i32 %lnot.ext
+}
 
-; CHECK-LABEL: @icmp2
-; CHECK: call void @llvm.assume
-; CHECK: ret i32 0
+; FIXME: If the 'not' of a condition is known true, then the condition must be false. 
+
+define i1 @assume_not(i1 %cond) {
+; CHECK-LABEL: @assume_not(
+; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %notcond = xor i1 %cond, true
+  call void @llvm.assume(i1 %notcond)
+  ret i1 %cond
 }
 
 declare void @escape(i32* %a)

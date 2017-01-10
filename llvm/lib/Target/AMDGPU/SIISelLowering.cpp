@@ -711,7 +711,8 @@ SDValue SITargetLowering::LowerParameterPtr(SelectionDAG &DAG,
 
 SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                          const SDLoc &SL, SDValue Chain,
-                                         unsigned Offset, bool Signed) const {
+                                         unsigned Offset, bool Signed,
+                                         const ISD::InputArg *Arg) const {
   const DataLayout &DL = DAG.getDataLayout();
   Type *Ty = MemVT.getTypeForEVT(*DAG.getContext());
   PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
@@ -725,20 +726,21 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                              MachineMemOperand::MODereferenceable |
                              MachineMemOperand::MOInvariant);
 
-  SDValue Val;
+  SDValue Val = Load;
+  if (Arg && (Arg->Flags.isSExt() || Arg->Flags.isZExt()) &&
+      VT.bitsLT(MemVT)) {
+    unsigned Opc = Arg->Flags.isZExt() ? ISD::AssertZext : ISD::AssertSext;
+    Val = DAG.getNode(Opc, SL, MemVT, Val, DAG.getValueType(VT));
+  }
+
   if (MemVT.isFloatingPoint())
-    Val = getFPExtOrFPTrunc(DAG, Load, SL, VT);
+    Val = getFPExtOrFPTrunc(DAG, Val, SL, VT);
   else if (Signed)
-    Val = DAG.getSExtOrTrunc(Load, SL, VT);
+    Val = DAG.getSExtOrTrunc(Val, SL, VT);
   else
-    Val = DAG.getZExtOrTrunc(Load, SL, VT);
+    Val = DAG.getZExtOrTrunc(Val, SL, VT);
 
-  SDValue Ops[] = {
-    Val,
-    Load.getValue(1)
-  };
-
-  return DAG.getMergeValues(Ops, SL);
+  return DAG.getMergeValues({ Val, Load.getValue(1) }, SL);
 }
 
 SDValue SITargetLowering::LowerFormalArguments(
@@ -911,7 +913,8 @@ SDValue SITargetLowering::LowerFormalArguments(
       // The first 36 bytes of the input buffer contains information about
       // thread group and global sizes.
       SDValue Arg = LowerParameter(DAG, VT, MemVT,  DL, Chain,
-                                   Offset, Ins[i].Flags.isSExt());
+                                   Offset, Ins[i].Flags.isSExt(),
+                                   &Ins[i]);
       Chains.push_back(Arg.getValue(1));
 
       auto *ParamTy =

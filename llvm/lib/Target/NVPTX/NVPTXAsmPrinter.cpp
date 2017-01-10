@@ -12,42 +12,83 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXAsmPrinter.h"
 #include "InstPrinter/NVPTXInstPrinter.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "NVPTX.h"
-#include "NVPTXInstrInfo.h"
+#include "NVPTXAsmPrinter.h"
 #include "NVPTXMCExpr.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXRegisterInfo.h"
+#include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
 #include "cl_common_defines.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <new>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
@@ -62,11 +103,11 @@ InterleaveSrc("nvptx-emit-src", cl::ZeroOrMore, cl::Hidden,
               cl::desc("NVPTX Specific: Emit source line in ptx file"),
               cl::init(false));
 
-namespace {
 /// DiscoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
-void DiscoverDependentGlobals(const Value *V,
-                              DenseSet<const GlobalVariable *> &Globals) {
+static void
+DiscoverDependentGlobals(const Value *V,
+                         DenseSet<const GlobalVariable *> &Globals) {
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
     Globals.insert(GV);
   else {
@@ -80,11 +121,12 @@ void DiscoverDependentGlobals(const Value *V,
 
 /// VisitGlobalVariableForEmission - Add \p GV to the list of GlobalVariable
 /// instances to be emitted, but only after any dependents have been added
-/// first.
-void VisitGlobalVariableForEmission(
-    const GlobalVariable *GV, SmallVectorImpl<const GlobalVariable *> &Order,
-    DenseSet<const GlobalVariable *> &Visited,
-    DenseSet<const GlobalVariable *> &Visiting) {
+/// first.s
+static void
+VisitGlobalVariableForEmission(const GlobalVariable *GV,
+                               SmallVectorImpl<const GlobalVariable *> &Order,
+                               DenseSet<const GlobalVariable *> &Visited,
+                               DenseSet<const GlobalVariable *> &Visiting) {
   // Have we already visited this one?
   if (Visited.count(GV))
     return;
@@ -107,7 +149,6 @@ void VisitGlobalVariableForEmission(
   Order.push_back(GV);
   Visited.insert(GV);
   Visiting.erase(GV);
-}
 }
 
 void NVPTXAsmPrinter::emitLineNumberAsDotLoc(const MachineInstr &MI) {
@@ -369,7 +410,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     } else if (Ty->isAggregateType() || Ty->isVectorTy()) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
       unsigned retAlignment = 0;
-      if (!llvm::getAlign(*F, 0, retAlignment))
+      if (!getAlign(*F, 0, retAlignment))
         retAlignment = DL.getABITypeAlignment(Ty);
       O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
         << "]";
@@ -401,7 +442,6 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     }
   }
   O << ") ";
-  return;
 }
 
 void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
@@ -459,7 +499,7 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
   MRI = &MF->getRegInfo();
   F = MF->getFunction();
   emitLinkageDirective(F, O);
-  if (llvm::isKernelFunction(*F))
+  if (isKernelFunction(*F))
     O << ".entry ";
   else {
     O << ".func ";
@@ -470,7 +510,7 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
 
   emitFunctionParamList(*MF, O);
 
-  if (llvm::isKernelFunction(*F))
+  if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
   OutStreamer->EmitRawText(O.str());
@@ -513,15 +553,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If none of reqntid* is specified, don't output reqntid directive.
   unsigned reqntidx, reqntidy, reqntidz;
   bool specified = false;
-  if (!llvm::getReqNTIDx(F, reqntidx))
+  if (!getReqNTIDx(F, reqntidx))
     reqntidx = 1;
   else
     specified = true;
-  if (!llvm::getReqNTIDy(F, reqntidy))
+  if (!getReqNTIDy(F, reqntidy))
     reqntidy = 1;
   else
     specified = true;
-  if (!llvm::getReqNTIDz(F, reqntidz))
+  if (!getReqNTIDz(F, reqntidz))
     reqntidz = 1;
   else
     specified = true;
@@ -535,15 +575,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If none of maxntid* is specified, don't output maxntid directive.
   unsigned maxntidx, maxntidy, maxntidz;
   specified = false;
-  if (!llvm::getMaxNTIDx(F, maxntidx))
+  if (!getMaxNTIDx(F, maxntidx))
     maxntidx = 1;
   else
     specified = true;
-  if (!llvm::getMaxNTIDy(F, maxntidy))
+  if (!getMaxNTIDy(F, maxntidy))
     maxntidy = 1;
   else
     specified = true;
-  if (!llvm::getMaxNTIDz(F, maxntidz))
+  if (!getMaxNTIDz(F, maxntidz))
     maxntidz = 1;
   else
     specified = true;
@@ -553,11 +593,11 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
       << "\n";
 
   unsigned mincta;
-  if (llvm::getMinCTASm(F, mincta))
+  if (getMinCTASm(F, mincta))
     O << ".minnctapersm " << mincta << "\n";
 
   unsigned maxnreg;
-  if (llvm::getMaxNReg(F, maxnreg))
+  if (getMaxNReg(F, maxnreg))
     O << ".maxnreg " << maxnreg << "\n";
 }
 
@@ -617,12 +657,9 @@ void NVPTXAsmPrinter::printVecModifiedImmediate(
     llvm_unreachable("Unknown Modifier on immediate operand");
 }
 
-
-
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
-
   emitLinkageDirective(F, O);
-  if (llvm::isKernelFunction(*F))
+  if (isKernelFunction(*F))
     O << ".entry ";
   else
     O << ".func ";
@@ -684,7 +721,7 @@ static bool canDemoteGlobalVar(const GlobalVariable *gv, Function const *&f) {
   if (!gv->hasInternalLinkage())
     return false;
   PointerType *Pty = gv->getType();
-  if (Pty->getAddressSpace() != llvm::ADDRESS_SPACE_SHARED)
+  if (Pty->getAddressSpace() != ADDRESS_SPACE_SHARED)
     return false;
 
   const Function *oneFunc = nullptr;
@@ -699,7 +736,7 @@ static bool canDemoteGlobalVar(const GlobalVariable *gv, Function const *&f) {
 }
 
 static bool useFuncSeen(const Constant *C,
-                        llvm::DenseMap<const Function *, bool> &seenMap) {
+                        DenseMap<const Function *, bool> &seenMap) {
   for (const User *U : C->users()) {
     if (const Constant *cu = dyn_cast<Constant>(U)) {
       if (useFuncSeen(cu, seenMap))
@@ -719,7 +756,7 @@ static bool useFuncSeen(const Constant *C,
 }
 
 void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
-  llvm::DenseMap<const Function *, bool> seenMap;
+  DenseMap<const Function *, bool> seenMap;
   for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
     const Function *F = &*FI;
 
@@ -1040,7 +1077,6 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
 void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
                                          raw_ostream &O,
                                          bool processDemoted) {
-
   // Skip meta data
   if (GVar->hasSection()) {
     if (GVar->getSection() == "llvm.metadata")
@@ -1069,13 +1105,13 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << ".weak ";
   }
 
-  if (llvm::isTexture(*GVar)) {
-    O << ".global .texref " << llvm::getTextureName(*GVar) << ";\n";
+  if (isTexture(*GVar)) {
+    O << ".global .texref " << getTextureName(*GVar) << ";\n";
     return;
   }
 
-  if (llvm::isSurface(*GVar)) {
-    O << ".global .surfref " << llvm::getSurfaceName(*GVar) << ";\n";
+  if (isSurface(*GVar)) {
+    O << ".global .surfref " << getSurfaceName(*GVar) << ";\n";
     return;
   }
 
@@ -1088,8 +1124,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
-  if (llvm::isSampler(*GVar)) {
-    O << ".global .samplerref " << llvm::getSamplerName(*GVar);
+  if (isSampler(*GVar)) {
+    O << ".global .samplerref " << getSamplerName(*GVar);
 
     const Constant *Initializer = nullptr;
     if (GVar->hasInitializer())
@@ -1150,12 +1186,11 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   }
 
   if (GVar->hasPrivateLinkage()) {
-
-    if (!strncmp(GVar->getName().data(), "unrollpragma", 12))
+    if (strncmp(GVar->getName().data(), "unrollpragma", 12) == 0)
       return;
 
     // FIXME - need better way (e.g. Metadata) to avoid generating this global
-    if (!strncmp(GVar->getName().data(), "filename", 8))
+    if (strncmp(GVar->getName().data(), "filename", 8) == 0)
       return;
     if (GVar->use_empty())
       return;
@@ -1199,8 +1234,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // Ptx allows variable initilization only for constant and global state
     // spaces.
     if (GVar->hasInitializer()) {
-      if ((PTy->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL) ||
-          (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST)) {
+      if ((PTy->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
+          (PTy->getAddressSpace() == ADDRESS_SPACE_CONST)) {
         const Constant *Initializer = GVar->getInitializer();
         // 'undef' is treated as there is no value specified.
         if (!Initializer->isNullValue() && !isa<UndefValue>(Initializer)) {
@@ -1233,8 +1268,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       ElementSize = DL.getTypeStoreSize(ETy);
       // Ptx allows variable initilization only for constant and
       // global state spaces.
-      if (((PTy->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL) ||
-           (PTy->getAddressSpace() == llvm::ADDRESS_SPACE_CONST)) &&
+      if (((PTy->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
+           (PTy->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
           GVar->hasInitializer()) {
         const Constant *Initializer = GVar->getInitializer();
         if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
@@ -1285,7 +1320,6 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     default:
       llvm_unreachable("type not supported yet");
     }
-
   }
   O << ";\n";
 }
@@ -1305,16 +1339,16 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
 void NVPTXAsmPrinter::emitPTXAddressSpace(unsigned int AddressSpace,
                                           raw_ostream &O) const {
   switch (AddressSpace) {
-  case llvm::ADDRESS_SPACE_LOCAL:
+  case ADDRESS_SPACE_LOCAL:
     O << "local";
     break;
-  case llvm::ADDRESS_SPACE_GLOBAL:
+  case ADDRESS_SPACE_GLOBAL:
     O << "global";
     break;
-  case llvm::ADDRESS_SPACE_CONST:
+  case ADDRESS_SPACE_CONST:
     O << "const";
     break;
-  case llvm::ADDRESS_SPACE_SHARED:
+  case ADDRESS_SPACE_SHARED:
     O << "shared";
     break;
   default:
@@ -1363,7 +1397,6 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
 
 void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
                                             raw_ostream &O) {
-
   const DataLayout &DL = getDataLayout();
 
   // GlobalVariables are always constant pointers themselves.
@@ -1406,7 +1439,6 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   default:
     llvm_unreachable("type not supported yet");
   }
-  return;
 }
 
 static unsigned int getOpenCLAlignment(const DataLayout &DL, Type *Ty) {
@@ -1450,7 +1482,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   Function::const_arg_iterator I, E;
   unsigned paramIndex = 0;
   bool first = true;
-  bool isKernelFunc = llvm::isKernelFunction(*F);
+  bool isKernelFunc = isKernelFunction(*F);
   bool isABI = (nvptxSubtarget->getSmVersion() >= 20);
   MVT thePointerTy = TLI->getPointerTy(DL);
 
@@ -1533,13 +1565,13 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
             default:
               O << ".ptr ";
               break;
-            case llvm::ADDRESS_SPACE_CONST:
+            case ADDRESS_SPACE_CONST:
               O << ".ptr .const ";
               break;
-            case llvm::ADDRESS_SPACE_SHARED:
+            case ADDRESS_SPACE_SHARED:
               O << ".ptr .shared ";
               break;
-            case llvm::ADDRESS_SPACE_GLOBAL:
+            case ADDRESS_SPACE_GLOBAL:
               O << ".ptr .global ";
               break;
             }
@@ -1820,7 +1852,6 @@ static void ConvertDoubleToBytes(unsigned char *p, double val) {
 
 void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
                                    AggBuffer *aggBuffer) {
-
   const DataLayout &DL = getDataLayout();
 
   if (isa<UndefValue>(CPV) || CPV->isNullValue()) {
@@ -1985,7 +2016,6 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
 // buildTypeNameMap - Run through symbol table looking for type names.
 //
 
-
 bool NVPTXAsmPrinter::ignoreLoc(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -2100,7 +2130,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     raw_string_ostream OS(S);
     OS << "Unsupported expression in static initializer: ";
     CE->printAsOperand(OS, /*PrintType=*/ false,
-                       !MF ? 0 : MF->getFunction()->getParent());
+                       !MF ? nullptr : MF->getFunction()->getParent());
     report_fatal_error(OS.str());
   }
 
@@ -2330,7 +2360,7 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
                                       raw_ostream &O, const char *Modifier) {
   printOperand(MI, opNum, O);
 
-  if (Modifier && !strcmp(Modifier, "add")) {
+  if (Modifier && strcmp(Modifier, "add") == 0) {
     O << ", ";
     printOperand(MI, opNum + 1, O);
   } else {

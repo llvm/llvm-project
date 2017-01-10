@@ -127,7 +127,7 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
           NewValue.Value = 0xDEADBEEFDEADBEEF;
           DWARFDie DIEWrapper(CU.get(), &DIE);
           auto FormValue = DIEWrapper.getAttributeValue(AttrSpec.Attr);
-          if(!FormValue)
+          if (!FormValue)
             return;
           auto Form = FormValue.getValue().getForm();
           bool indirect = false;
@@ -211,11 +211,137 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   }
 }
 
+bool dumpFileEntry(DataExtractor &Data, uint32_t &Offset,
+                   DWARFYAML::File &File) {
+  File.Name = Data.getCStr(&Offset);
+  if (File.Name.empty())
+    return false;
+  File.DirIdx = Data.getULEB128(&Offset);
+  File.ModTime = Data.getULEB128(&Offset);
+  File.Length = Data.getULEB128(&Offset);
+  return true;
+}
+
+void dumpDebugLines(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
+  for (const auto &CU : DCtx.compile_units()) {
+    auto CUDIE = CU->getUnitDIE();
+    if (!CUDIE)
+      continue;
+    if (auto StmtOffset =
+            CUDIE.getAttributeValueAsSectionOffset(dwarf::DW_AT_stmt_list)) {
+      DWARFYAML::LineTable DebugLines;
+      DataExtractor LineData(DCtx.getLineSection().Data, DCtx.isLittleEndian(),
+                             CU->getAddressByteSize());
+      uint32_t Offset = *StmtOffset;
+      uint64_t SizeOfPrologueLength = 4;
+      DebugLines.TotalLength = LineData.getU32(&Offset);
+      uint64_t LineTableLength = DebugLines.TotalLength;
+      if (DebugLines.TotalLength == UINT32_MAX) {
+        DebugLines.TotalLength64 = LineData.getU64(&Offset);
+        LineTableLength = DebugLines.TotalLength64;
+        SizeOfPrologueLength = 8;
+      }
+      DebugLines.Version = LineData.getU16(&Offset);
+      DebugLines.PrologueLength =
+          LineData.getUnsigned(&Offset, SizeOfPrologueLength);
+      const uint64_t EndPrologue = DebugLines.PrologueLength + Offset;
+
+      DebugLines.MinInstLength = LineData.getU8(&Offset);
+      if (DebugLines.Version >= 4)
+        DebugLines.MaxOpsPerInst = LineData.getU8(&Offset);
+      DebugLines.DefaultIsStmt = LineData.getU8(&Offset);
+      DebugLines.LineBase = LineData.getU8(&Offset);
+      DebugLines.LineRange = LineData.getU8(&Offset);
+      DebugLines.OpcodeBase = LineData.getU8(&Offset);
+
+      DebugLines.StandardOpcodeLengths.reserve(DebugLines.OpcodeBase - 1);
+      for (uint8_t i = 1; i < DebugLines.OpcodeBase; ++i)
+        DebugLines.StandardOpcodeLengths.push_back(LineData.getU8(&Offset));
+
+      while (Offset < EndPrologue) {
+        StringRef Dir = LineData.getCStr(&Offset);
+        if (!Dir.empty())
+          DebugLines.IncludeDirs.push_back(Dir);
+        else
+          break;
+      }
+
+      while (Offset < EndPrologue) {
+        DWARFYAML::File TmpFile;
+        if (dumpFileEntry(LineData, Offset, TmpFile))
+          DebugLines.Files.push_back(TmpFile);
+        else
+          break;
+      }
+
+      const uint64_t LineEnd =
+          LineTableLength + *StmtOffset + SizeOfPrologueLength;
+      while (Offset < LineEnd) {
+        DWARFYAML::LineTableOpcode NewOp;
+        NewOp.Opcode = (dwarf::LineNumberOps)LineData.getU8(&Offset);
+        if (NewOp.Opcode == 0) {
+          auto StartExt = Offset;
+          NewOp.ExtLen = LineData.getULEB128(&Offset);
+          NewOp.SubOpcode =
+              (dwarf::LineNumberExtendedOps)LineData.getU8(&Offset);
+          switch (NewOp.SubOpcode) {
+          case dwarf::DW_LNE_set_address:
+          case dwarf::DW_LNE_set_discriminator:
+            NewOp.Data = LineData.getAddress(&Offset);
+            break;
+          case dwarf::DW_LNE_define_file:
+            dumpFileEntry(LineData, Offset, NewOp.FileEntry);
+            break;
+          case dwarf::DW_LNE_end_sequence:
+            break;
+          default:
+            while (Offset < StartExt + NewOp.ExtLen)
+              NewOp.UnknownOpcodeData.push_back(LineData.getU8(&Offset));
+          }
+        } else if (NewOp.Opcode < DebugLines.OpcodeBase) {
+          switch (NewOp.Opcode) {
+          case dwarf::DW_LNS_copy:
+          case dwarf::DW_LNS_negate_stmt:
+          case dwarf::DW_LNS_set_basic_block:
+          case dwarf::DW_LNS_const_add_pc:
+          case dwarf::DW_LNS_set_prologue_end:
+          case dwarf::DW_LNS_set_epilogue_begin:
+            break;
+
+          case dwarf::DW_LNS_advance_pc:
+          case dwarf::DW_LNS_set_file:
+          case dwarf::DW_LNS_set_column:
+          case dwarf::DW_LNS_set_isa:
+            NewOp.Data = LineData.getULEB128(&Offset);
+            break;
+
+          case dwarf::DW_LNS_advance_line:
+            NewOp.SData = LineData.getSLEB128(&Offset);
+            break;
+
+          case dwarf::DW_LNS_fixed_advance_pc:
+            NewOp.Data = LineData.getU16(&Offset);
+            break;
+
+          default:
+            for (uint8_t i = 0;
+                 i < DebugLines.StandardOpcodeLengths[NewOp.Opcode - 1]; ++i)
+              NewOp.StandardOpcodeData.push_back(LineData.getULEB128(&Offset));
+          }
+        }
+        DebugLines.Opcodes.push_back(NewOp);
+      }
+      Y.DebugLines.push_back(DebugLines);
+    }
+  }
+}
+
 std::error_code dwarf2yaml(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
   dumpDebugAbbrev(DCtx, Y);
   dumpDebugStrings(DCtx, Y);
   dumpDebugARanges(DCtx, Y);
   dumpDebugPubSections(DCtx, Y);
   dumpDebugInfo(DCtx, Y);
+  dumpDebugLines(DCtx, Y);
   return obj2yaml_error::success;
 }

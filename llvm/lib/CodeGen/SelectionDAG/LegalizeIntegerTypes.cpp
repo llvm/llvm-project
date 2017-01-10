@@ -1714,7 +1714,7 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
   EVT CCT = getSetCCResultType(NVT);
 
   // Hi part is always the same op
-  Hi = DAG.getNode(N->getOpcode(), DL, {NVT, NVT}, {LHSH, RHSH});
+  Hi = DAG.getNode(N->getOpcode(), DL, NVT, {LHSH, RHSH});
 
   // We need to know whether to select Lo part that corresponds to 'winning'
   // Hi part or if Hi parts are equal.
@@ -1725,7 +1725,7 @@ void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
   SDValue LoCmp = DAG.getSelect(DL, NVT, IsHiLeft, LHSL, RHSL);
 
   // Recursed Lo part if Hi parts are equal, this uses unsigned version
-  SDValue LoMinMax = DAG.getNode(LoOpc, DL, {NVT, NVT}, {LHSL, RHSL});
+  SDValue LoMinMax = DAG.getNode(LoOpc, DL, NVT, {LHSL, RHSL});
 
   Lo = DAG.getSelect(DL, NVT, IsHiEq, LoMinMax, LoCmp);
 }

@@ -3257,6 +3257,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
       case Intrinsic::dbg_value:
         return true;
 
+      case Intrinsic::bitreverse:
       case Intrinsic::bswap:
       case Intrinsic::ctlz:
       case Intrinsic::ctpop:

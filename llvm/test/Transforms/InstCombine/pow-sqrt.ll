@@ -9,5 +9,14 @@ define double @pow_half(double %x) {
 ; CHECK-NEXT:  %sqrt = call fast double @sqrt(double %x)
 ; CHECK-NEXT:  ret double %sqrt
 
-declare double @llvm.pow.f64(double, double)
+define double @pow_neghalf(double %x) {
+  %pow = call fast double @llvm.pow.f64(double %x, double -5.000000e-01)
+  ret double %pow
+}
 
+; CHECK-LABEL: define double @pow_neghalf(
+; CHECK-NEXT: %sqrt = call fast double @sqrt(double %x) #0
+; CHECK-NEXT: %sqrtrecip = fdiv fast double 1.000000e+00, %sqrt
+; CHECK-NEXT: ret double %sqrtrecip
+
+declare double @llvm.pow.f64(double, double)

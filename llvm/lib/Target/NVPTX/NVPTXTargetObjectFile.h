@@ -11,14 +11,13 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETOBJECTFILE_H
 
 #include "NVPTXSection.h"
+#include "llvm/MC/MCSection.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
-class GlobalVariable;
-class Module;
 
 class NVPTXTargetObjectFile : public TargetLoweringObjectFile {
-
 public:
   NVPTXTargetObjectFile() {
     TextSection = nullptr;
@@ -43,7 +42,7 @@ public:
     DwarfMacinfoSection = nullptr;
   }
 
-  virtual ~NVPTXTargetObjectFile();
+  ~NVPTXTargetObjectFile() override;
 
   void Initialize(MCContext &ctx, const TargetMachine &TM) override {
     TargetLoweringObjectFile::Initialize(ctx, TM);
@@ -52,7 +51,6 @@ public:
     BSSSection = new NVPTXSection(MCSection::SV_ELF, SectionKind::getBSS());
     ReadOnlySection =
         new NVPTXSection(MCSection::SV_ELF, SectionKind::getReadOnly());
-
     StaticCtorSection =
         new NVPTXSection(MCSection::SV_ELF, SectionKind::getMetadata());
     StaticDtorSection =
@@ -102,4 +100,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_NVPTX_NVPTXTARGETOBJECTFILE_H

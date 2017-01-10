@@ -46,5 +46,6 @@ void yaml2pubsection(llvm::raw_ostream &OS,
                      const llvm::DWARFYAML::PubSection &Sect,
                      bool IsLittleEndian);
 void yaml2debug_info(llvm::raw_ostream &OS, const llvm::DWARFYAML::Data &DI);
+void yaml2debug_line(llvm::raw_ostream &OS, const llvm::DWARFYAML::Data &DI);
 
 #endif

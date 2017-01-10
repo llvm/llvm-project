@@ -2096,7 +2096,7 @@ static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
     return Builder.CreateGEP(nullptr, GEPBase, GEPOffset, "lftr.limit");
   } else {
     // In any other case, convert both IVInit and IVCount to integers before
-    // comparing. This may result in SCEV expension of pointers, but in practice
+    // comparing. This may result in SCEV expansion of pointers, but in practice
     // SCEV will fold the pointer arithmetic away as such:
     // BECount = (IVEnd - IVInit - 1) => IVLimit = IVInit (postinc).
     //

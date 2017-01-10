@@ -144,7 +144,7 @@ def do_SQRTF32_RN : Predicate<"usePrecSqrtF32()">;
 def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 
-def true : Predicate<"1">;
+def true : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 
