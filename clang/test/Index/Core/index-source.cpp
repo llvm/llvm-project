@@ -1,5 +1,16 @@
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
 
+// CHECK: [[@LINE+1]]:7 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Def | rel: 0
+class Cls {
+  // CHECK: [[@LINE+2]]:3 | constructor/C++ | Cls | c:@S@Cls@F@Cls#I# | __ZN3ClsC1Ei | Decl,RelChild | rel: 1
+  // CHECK-NEXT: RelChild | Cls | c:@S@Cls
+  Cls(int x);
+  // CHECK: [[@LINE+1]]:3 | constructor/cxx-copy-ctor/C++ | Cls | c:@S@Cls@F@Cls#&1$@S@Cls# | __ZN3ClsC1ERKS_ | Decl,RelChild | rel: 1
+  Cls(const Cls &);
+  // CHECK: [[@LINE+1]]:3 | constructor/cxx-move-ctor/C++ | Cls | c:@S@Cls@F@Cls#&&$@S@Cls# | __ZN3ClsC1EOS_ | Decl,RelChild | rel: 1
+  Cls(Cls &&);
+};
+
 template <typename TemplArg>
 class TemplCls {
 // CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | TemplCls | c:@ST>1#T@TemplCls | <no-cgname> | Def | rel: 0
