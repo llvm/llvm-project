@@ -100,3 +100,9 @@ struct S : public template_tuple<identity, identity> {
 void foo() {
   f7<identity>();
 }
+
+namespace CheckDependentNonTypeParamTypes {
+  template<template<typename T, typename U, T v> class> struct A {}; // expected-note {{previous}}
+  template<typename T, typename U, U v> struct B {}; // expected-note {{different type}}
+  A<B> ab; // expected-error {{different template parameters}}
+}

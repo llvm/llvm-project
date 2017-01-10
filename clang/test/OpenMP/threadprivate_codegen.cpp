@@ -275,7 +275,7 @@ S1 arr_x[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK:      {{.*}}[[ARR_LOOP]]{{.*}}
 // CHECK-NEXT: [[ARR_ELEMENTPAST:%.*]] = phi [[S1]]* [ [[ARR_CUR]], {{.*}} ], [ [[ARR_ELEMENT:%.*]], {{.*}} ]
 // CHECK-NEXT: [[ARR_ELEMENT:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR_ELEMENTPAST]], i{{.*}} -1
-// CHECK-NEXT: invoke {{.*}} [[S1_DTOR]]([[S1]]* [[ARR_ELEMENT]])
+// CHECK-NEXT: {{call|invoke}} {{.*}} [[S1_DTOR]]([[S1]]* [[ARR_ELEMENT]])
 // CHECK:      [[ARR_DONE:%.*]] = icmp eq [[S1]]* [[ARR_ELEMENT]], [[ARR_BEGIN]]
 // CHECK-NEXT: br i1 [[ARR_DONE]], label %[[ARR_EXIT:.*]], label %[[ARR_LOOP]]
 // CHECK:      {{.*}}[[ARR_EXIT]]{{.*}}

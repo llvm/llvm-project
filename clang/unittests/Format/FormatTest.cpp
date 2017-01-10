@@ -5780,6 +5780,10 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyGoogleFormat("MACRO Constructor(const int& i) : a(a), b(b) {}");
   verifyFormat("void f() { f(a, c * d); }");
   verifyFormat("void f() { f(new a(), c * d); }");
+  verifyFormat("void f(const MyOverride &override);");
+  verifyFormat("void f(const MyFinal &final);");
+  verifyIndependentOfContext("bool a = f() && override.f();");
+  verifyIndependentOfContext("bool a = f() && final.f();");
 
   verifyIndependentOfContext("InvalidRegions[*R] = 0;");
 

@@ -1,8 +1,13 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
 void foo() {
 }
 
+#if __cplusplus >= 201103L
+// expected-note@+2 4 {{declared here}}
+#endif
 bool foobool(int argc) {
   return argc;
 }
@@ -43,6 +48,9 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST]; // expected-error 2 {{expected 2 for loops after '#pragma omp target teams distribute', but found only 1}}
 
+#if __cplusplus >= 201103L
+// expected-note@+5 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
 // expected-error@+3 2 {{directive '#pragma omp target teams distribute' cannot contain more than one 'collapse' clause}}
 // expected-error@+2 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
 // expected-error@+1 2 {{expression is not an integral constant expression}}
@@ -54,7 +62,11 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
-// expected-error@+1 2 {{expression is not an integral constant expression}}
+#if __cplusplus <= 199711L
+  // expected-error@+4 2 {{expression is not an integral constant expression}}
+#else
+  // expected-error@+2 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
+#endif
 #pragma omp target teams distribute collapse (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -93,10 +105,17 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4]; // expected-error {{expected 4 for loops after '#pragma omp target teams distribute', but found only 1}}
 
-#pragma omp target teams distribute collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+// expected-error@+4 {{expression is not an integral constant expression}}
+#if __cplusplus >= 201103L
+// expected-note@+2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
+#pragma omp target teams distribute collapse (foobool(1) > 0 ? 1 : 2)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
+#if __cplusplus >= 201103L
+  // expected-note@+5{{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
 // expected-error@+3 {{expression is not an integral constant expression}}
 // expected-error@+2 2 {{directive '#pragma omp target teams distribute' cannot contain more than one 'collapse' clause}}
 // expected-error@+1 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
@@ -108,7 +127,11 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
-// expected-error@+1 {{expression is not an integral constant expression}}
+#if __cplusplus <= 199711L
+  // expected-error@+4 {{expression is not an integral constant expression}}
+#else
+  // expected-error@+2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
+#endif
 #pragma omp target teams distribute collapse (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];

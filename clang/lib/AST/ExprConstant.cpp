@@ -1627,8 +1627,17 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   // C++1y: A constant initializer for an object o [...] may also invoke
   // constexpr constructors for o and its subobjects even if those objects
   // are of non-literal class types.
-  if (Info.getLangOpts().CPlusPlus14 && This &&
-      Info.EvaluatingDecl == This->getLValueBase())
+  //
+  // C++11 missed this detail for aggregates, so classes like this:
+  //   struct foo_t { union { int i; volatile int j; } u; };
+  // are not (obviously) initializable like so:
+  //   __attribute__((__require_constant_initialization__))
+  //   static const foo_t x = {{0}};
+  // because "i" is a subobject with non-literal initialization (due to the
+  // volatile member of the union). See:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
+  // Therefore, we use the C++1y behavior.
+  if (This && Info.EvaluatingDecl == This->getLValueBase())
     return true;
 
   // Prvalue constant expressions must be of literal types.

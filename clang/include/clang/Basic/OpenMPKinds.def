@@ -483,7 +483,6 @@ OPENMP_TARGET_PARALLEL_CLAUSE(reduction)
 OPENMP_TARGET_PARALLEL_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target parallel for'.
-// TODO: add target clauses 'is_device_ptr'
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(if)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(device)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(map)
@@ -502,6 +501,7 @@ OPENMP_TARGET_PARALLEL_FOR_CLAUSE(collapse)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(schedule)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(ordered)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(linear)
+OPENMP_TARGET_PARALLEL_FOR_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target update'.
 // TODO More clauses for 'target update' directive.
@@ -633,7 +633,6 @@ OPENMP_DISTRIBUTE_SIMD_CLAUSE(simdlen)
 OPENMP_DISTRIBUTE_SIMD_CLAUSE(reduction)
 
 // Clauses allowed for OpenMP directive 'target parallel for simd'.
-// TODO: add target clauses 'is_device_ptr'
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(if)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(device)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(map)
@@ -655,6 +654,7 @@ OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(linear)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(safelen)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(aligned)
+OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target simd'.
 OPENMP_TARGET_SIMD_CLAUSE(if)

@@ -1654,6 +1654,7 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
   typedef RecursiveASTVisitor<DependencyChecker> super;
 
   unsigned Depth;
+  bool FindLessThanDepth;
 
   // Whether we're looking for a use of a template parameter that makes the
   // overall construct type-dependent / a dependent type. This is strictly
@@ -1664,25 +1665,16 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
   bool Match;
   SourceLocation MatchLoc;
 
-  DependencyChecker(unsigned Depth, bool IgnoreNonTypeDependent)
-      : Depth(Depth), IgnoreNonTypeDependent(IgnoreNonTypeDependent),
-        Match(false) {}
+  DependencyChecker(unsigned Depth, bool IgnoreNonTypeDependent,
+                    bool FindLessThanDepth = false)
+      : Depth(Depth), FindLessThanDepth(FindLessThanDepth),
+        IgnoreNonTypeDependent(IgnoreNonTypeDependent), Match(false) {}
 
   DependencyChecker(TemplateParameterList *Params, bool IgnoreNonTypeDependent)
-      : IgnoreNonTypeDependent(IgnoreNonTypeDependent), Match(false) {
-    NamedDecl *ND = Params->getParam(0);
-    if (TemplateTypeParmDecl *PD = dyn_cast<TemplateTypeParmDecl>(ND)) {
-      Depth = PD->getDepth();
-    } else if (NonTypeTemplateParmDecl *PD =
-                 dyn_cast<NonTypeTemplateParmDecl>(ND)) {
-      Depth = PD->getDepth();
-    } else {
-      Depth = cast<TemplateTemplateParmDecl>(ND)->getDepth();
-    }
-  }
+      : DependencyChecker(Params->getDepth(), IgnoreNonTypeDependent) {}
 
   bool Matches(unsigned ParmDepth, SourceLocation Loc = SourceLocation()) {
-    if (ParmDepth >= Depth) {
+    if (FindLessThanDepth ^ (ParmDepth >= Depth)) {
       Match = true;
       MatchLoc = Loc;
       return true;
@@ -2337,15 +2329,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     // A<T, T> have identical types when A is declared as:
     //
     //   template<typename T, typename U = T> struct A;
-    TemplateName CanonName = Context.getCanonicalTemplateName(Name);
-    CanonType = Context.getTemplateSpecializationType(CanonName,
-                                                      Converted);
-
-    // FIXME: CanonType is not actually the canonical type, and unfortunately
-    // it is a TemplateSpecializationType that we will never use again.
-    // In the future, we need to teach getTemplateSpecializationType to only
-    // build the canonical type and return that to us.
-    CanonType = Context.getCanonicalType(CanonType);
+    CanonType = Context.getCanonicalTemplateSpecializationType(Name, Converted);
 
     // This might work out to be a current instantiation, in which
     // case the canonical type needs to be the InjectedClassNameType.
@@ -3453,7 +3437,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
                              SourceLocation TemplateLoc,
                              SourceLocation RAngleLoc,
                              TemplateTypeParmDecl *Param,
-                         SmallVectorImpl<TemplateArgument> &Converted) {
+                             SmallVectorImpl<TemplateArgument> &Converted) {
   TypeSourceInfo *ArgType = Param->getDefaultArgumentInfo();
 
   // If the argument type is dependent, instantiate it now based
@@ -5839,6 +5823,15 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
   return E;
 }
 
+static bool isDependentOnOuter(NonTypeTemplateParmDecl *NTTP) {
+  if (NTTP->getDepth() == 0 || !NTTP->getType()->isDependentType())
+    return false;
+  DependencyChecker Checker(NTTP->getDepth(), /*IgnoreNonTypeDependent*/ false,
+                            /*FindLessThanDepth*/ true);
+  Checker.TraverseType(NTTP->getType());
+  return Checker.Match;
+}
+
 /// \brief Match two template parameters within template parameter lists.
 static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
                                        bool Complain,
@@ -5895,11 +5888,10 @@ static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
 
     // If we are matching a template template argument to a template
     // template parameter and one of the non-type template parameter types
-    // is dependent, then we must wait until template instantiation time
-    // to actually compare the arguments.
+    // is dependent on an outer template's parameter, then we must wait until
+    // template instantiation time to actually compare the arguments.
     if (Kind == Sema::TPL_TemplateTemplateArgumentMatch &&
-        (OldNTTP->getType()->isDependentType() ||
-         NewNTTP->getType()->isDependentType()))
+        (isDependentOnOuter(OldNTTP) || isDependentOnOuter(NewNTTP)))
       return true;
 
     if (!S.Context.hasSameType(OldNTTP->getType(), NewNTTP->getType())) {

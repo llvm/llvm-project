@@ -198,7 +198,7 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   //   An expression is potentially evaluated unless it appears where an
   //   integral constant expression is required (see 5.19) [...].
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
-  EnterExpressionEvaluationContext Unevaluated(Actions,
+  EnterExpressionEvaluationContext ConstantEvaluated(Actions,
                                                Sema::ConstantEvaluated);
 
   ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
