@@ -49,8 +49,19 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
     set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
     set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     set(LLVM_LIT_PATH "${LLVM_PATH}/utils/lit/lit.py")
+
+    # --cmakedir is supported since llvm r291218 (4.0 release)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if(NOT HAD_ERROR)
+      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH)
+    else()
+      set(LLVM_CMAKE_PATH
+          "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+    endif()
   else()
     message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
                         "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config "
@@ -125,6 +136,9 @@ option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
+option(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY
+  "Build libc++abi with an externalized threading library.
+   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON" OFF)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
 option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit tests." ${LLVM_INCLUDE_TESTS})
 set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
@@ -367,16 +381,28 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
+  if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
+    message(FATAL_ERROR "LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY can only"
+                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
+                        " is also set to ON.")
+  endif()
   add_definitions(-D_LIBCXXABI_HAS_NO_THREADS)
 endif()
 
-if (LIBCXXABI_HAS_PTHREAD_API AND LIBCXXABI_HAS_EXTERNAL_THREAD_API)
-  message(FATAL_ERROR "The options LIBCXXABI_HAS_EXTERNAL_THREAD_API"
-                      "and LIBCXXABI_HAS_PTHREAD_API cannot be both"
-                      "set to ON at the same time.")
+if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
+  if (LIBCXXABI_HAS_PTHREAD_API)
+    message(FATAL_ERROR "The options LIBCXXABI_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXXABI_HAS_PTHREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
+  if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
+    message(FATAL_ERROR "The options LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY"
+                        " and LIBCXXABI_HAS_EXTERNAL_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
 endif()
 
-if (LIBCXXABI_HAS_EXTERNAL_THREAD_API AND LIBCXXABI_ENABLE_SHARED)
+if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXXABI_ENABLE_SHARED)
   # Need to allow unresolved symbols if this is to work with shared library builds
   if (APPLE)
     add_link_flags("-undefined dynamic_lookup")
@@ -388,11 +414,14 @@ endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
-  add_definitions(-D_LIBCXXABI_USE_THREAD_API_PTHREAD)
 endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
-  add_definitions(-D_LIBCXXABI_HAS_THREAD_API_EXTERNAL)
+  add_definitions(-D_LIBCPP_HAS_THREAD_API_EXTERNAL)
+endif()
+
+if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
+  add_definitions(-D_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 endif()
 
 if (MSVC)

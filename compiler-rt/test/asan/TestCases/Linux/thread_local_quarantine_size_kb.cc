@@ -5,8 +5,10 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-VALUE
 // RUN: %env_asan_opts=thread_local_quarantine_size_kb=64:quarantine_size_mb=64 %run %t 2>&1 | \
 // RUN:   FileCheck %s --allow-empty --check-prefix=CHECK-SMALL-LOCAL-CACHE-SMALL-OVERHEAD
-// RUN: %env_asan_opts=thread_local_quarantine_size_kb=0:quarantine_size_mb=64 %run %t 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=CHECK-NO-LOCAL-CACHE-HUGE-OVERHEAD
+// RUN: %env_asan_opts=thread_local_quarantine_size_kb=0:quarantine_size_mb=0 %run %t 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-QUARANTINE-DISABLED
+// RUN: %env_asan_opts=thread_local_quarantine_size_kb=0:quarantine_size_mb=64 not %run %t 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-FOR-PARAMETER-ERROR
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,4 +39,5 @@ int main() {
 
 // CHECK-VALUE: thread_local_quarantine_size_kb=256K
 // CHECK-SMALL-LOCAL-CACHE-SMALL-OVERHEAD-NOT: Heap size limit exceeded
-// CHECK-NO-LOCAL-CACHE-HUGE-OVERHEAD: Heap size limit exceeded
+// CHECK-QUARANTINE-DISABLED-NOT: Heap size limit exceeded
+// CHECK-FOR-PARAMETER-ERROR: thread_local_quarantine_size_kb can be set to 0 only when quarantine_size_mb is set to 0

@@ -399,7 +399,21 @@ template <class ELFT> static uint32_t getAlignment(SharedSymbol<ELFT> *SS) {
   return 1 << TrailingZeros;
 }
 
-// Reserve space in .bss for copy relocation.
+template <class ELFT> static bool isReadOnly(SharedSymbol<ELFT> *SS) {
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Phdr Elf_Phdr;
+
+  // Determine if the symbol is read-only by scanning the DSO's program headers.
+  uintX_t Value = SS->Sym.st_value;
+  for (const Elf_Phdr &Phdr : check(SS->file()->getObj().program_headers()))
+    if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
+        !(Phdr.p_flags & ELF::PF_W) && Value >= Phdr.p_vaddr &&
+        Value < Phdr.p_vaddr + Phdr.p_memsz)
+      return true;
+  return false;
+}
+
+// Reserve space in .bss or .bss.rel.ro for copy relocation.
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Sym Elf_Sym;
@@ -409,10 +423,16 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   if (SymSize == 0)
     fatal("cannot create a copy relocation for symbol " + toString(*SS));
 
+  // See if this symbol is in a read-only segment. If so, preserve the symbol's
+  // memory protection by reserving space in the .bss.rel.ro section.
+  bool IsReadOnly = isReadOnly(SS);
+  OutputSection<ELFT> *CopySec =
+      IsReadOnly ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+
   uintX_t Alignment = getAlignment(SS);
-  uintX_t Off = alignTo(Out<ELFT>::Bss->Size, Alignment);
-  Out<ELFT>::Bss->Size = Off + SymSize;
-  Out<ELFT>::Bss->updateAlignment(Alignment);
+  uintX_t Off = alignTo(CopySec->Size, Alignment);
+  CopySec->Size = Off + SymSize;
+  CopySec->updateAlignment(Alignment);
   uintX_t Shndx = SS->Sym.st_shndx;
   uintX_t Value = SS->Sym.st_value;
   // Look through the DSO's dynamic symbol table for aliases and create a
@@ -425,12 +445,12 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
         Symtab<ELFT>::X->find(check(S.getName(SS->file()->getStringTable()))));
     if (!Alias)
       continue;
-    Alias->OffsetInBss = Off;
+    Alias->CopyIsInBssRelRo = IsReadOnly;
+    Alias->CopyOffset = Off;
     Alias->NeedsCopyOrPltAddr = true;
     Alias->symbol()->IsUsedInRegularObj = true;
   }
-  In<ELFT>::RelaDyn->addReloc(
-      {Target->CopyRel, Out<ELFT>::Bss, SS->OffsetInBss, false, SS, 0});
+  In<ELFT>::RelaDyn->addReloc({Target->CopyRel, CopySec, Off, false, SS, 0});
 }
 
 template <class ELFT>

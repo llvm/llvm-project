@@ -12,6 +12,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   execute_process(COMMAND "${LLVM_CONFIG_PATH}" "--obj-root" "--includedir"
+                          "--cmakedir"
                   RESULT_VARIABLE HAD_ERROR
                   OUTPUT_VARIABLE LLVM_CONFIG_OUTPUT
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -23,12 +24,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   list(GET LLVM_CONFIG_OUTPUT 0 OBJ_ROOT)
   list(GET LLVM_CONFIG_OUTPUT 1 MAIN_INCLUDE_DIR)
+  list(GET LLVM_CONFIG_OUTPUT 2 LLVM_CMAKE_PATH)
 
   set(LLVM_OBJ_ROOT ${OBJ_ROOT} CACHE PATH "path to LLVM build tree")
   set(LLVM_MAIN_INCLUDE_DIR ${MAIN_INCLUDE_DIR} CACHE PATH "path to llvm/include")
 
   file(TO_CMAKE_PATH ${LLVM_OBJ_ROOT} LLVM_BINARY_DIR)
-  set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 
   if(NOT EXISTS "${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
     message(FATAL_ERROR "LLVMConfig.cmake not found")

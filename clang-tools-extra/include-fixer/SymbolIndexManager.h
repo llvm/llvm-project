@@ -13,6 +13,7 @@
 #include "SymbolIndex.h"
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include <future>
 
 namespace clang {
 namespace include_fixer {
@@ -21,8 +22,8 @@ namespace include_fixer {
 /// to an indentifier in the source code from multiple symbol databases.
 class SymbolIndexManager {
 public:
-  void addSymbolIndex(std::unique_ptr<SymbolIndex> DB) {
-    SymbolIndices.push_back(std::move(DB));
+  void addSymbolIndex(std::function<std::unique_ptr<SymbolIndex>()> F) {
+    SymbolIndices.push_back(std::async(std::launch::async, F));
   }
 
   /// Search for header files to be included for an identifier.
@@ -39,7 +40,7 @@ public:
   search(llvm::StringRef Identifier, bool IsNestedSearch = true) const;
 
 private:
-  std::vector<std::unique_ptr<SymbolIndex>> SymbolIndices;
+  std::vector<std::shared_future<std::unique_ptr<SymbolIndex>>> SymbolIndices;
 };
 
 } // namespace include_fixer

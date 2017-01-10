@@ -169,6 +169,11 @@ void InitializeFlags() {
         (ASAN_LOW_MEMORY) ? 1 << 6 : FIRST_32_SECOND_64(1 << 8, 1 << 10);
     f->thread_local_quarantine_size_kb = kDefaultThreadLocalQuarantineSizeKb;
   }
+  if (f->thread_local_quarantine_size_kb == 0 && f->quarantine_size_mb > 0) {
+    Report("%s: thread_local_quarantine_size_kb can be set to 0 only when "
+           "quarantine_size_mb is set to 0\n", SanitizerToolName);
+    Die();
+  }
   if (!f->replace_str && common_flags()->intercept_strlen) {
     Report("WARNING: strlen interceptor is enabled even though replace_str=0. "
            "Use intercept_strlen=0 to disable it.");

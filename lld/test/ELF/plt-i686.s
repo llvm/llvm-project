@@ -30,20 +30,20 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x13000
-// CHECK-NEXT: Offset: 0x3000
+// CHECK-NEXT: Address: 0x12000
+// CHECK-NEXT: Offset: 0x2000
 // CHECK-NEXT: Size: 20
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 4
 // CHECK-NEXT: EntrySize: 0
 
-// 0x13000 + got.plt.reserved(12) = 0x1300C
-// 0x13000 + got.plt.reserved(12) + 4 = 0x13010
+// 0x12000 + got.plt.reserved(12) = 0x1200C
+// 0x12000 + got.plt.reserved(12) + 4 = 0x12010
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.plt {
-// CHECK-NEXT:     0x1300C R_386_JUMP_SLOT bar 0x0
-// CHECK-NEXT:     0x13010 R_386_JUMP_SLOT zed 0x0
+// CHECK-NEXT:     0x1200C R_386_JUMP_SLOT bar 0x0
+// CHECK-NEXT:     0x12010 R_386_JUMP_SLOT zed 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -73,16 +73,16 @@
 // 77840 = 0x13010 = .got.plt (0x13000) + got.plt.reserved(12) + 4
 // DISASM:      Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    11020: ff 35 04 30 01 00 pushl 77828
-// DISASM-NEXT:    11026: ff 25 08 30 01 00 jmpl *77832
+// DISASM-NEXT:    11020: ff 35 04 20 01 00 pushl 73732
+// DISASM-NEXT:    11026: ff 25 08 20 01 00 jmpl *73736
 // DISASM-NEXT:    1102c: 90 nop
 // DISASM-NEXT:    1102d: 90 nop
 // DISASM-NEXT:    1102e: 90 nop
 // DISASM-NEXT:    1102f: 90 nop
-// DISASM-NEXT:    11030: ff 25 0c 30 01 00 jmpl *77836
+// DISASM-NEXT:    11030: ff 25 0c 20 01 00 jmpl *73740
 // DISASM-NEXT:    11036: 68 00 00 00 00 pushl $0
 // DISASM-NEXT:    1103b: e9 e0 ff ff ff jmp -32 <.plt>
-// DISASM-NEXT:    11040: ff 25 10 30 01 00 jmpl *77840
+// DISASM-NEXT:    11040: ff 25 10 20 01 00 jmpl *73744
 // DISASM-NEXT:    11046: 68 08 00 00 00 pushl $8
 // DISASM-NEXT:    1104b: e9 d0 ff ff ff jmp -48 <.plt>
 
@@ -106,8 +106,8 @@
 // CHECKSHARED-NEXT:     SHF_ALLOC
 // CHECKSHARED-NEXT:     SHF_WRITE
 // CHECKSHARED-NEXT:   ]
-// CHECKSHARED-NEXT:   Address: 0x3000
-// CHECKSHARED-NEXT:   Offset: 0x3000
+// CHECKSHARED-NEXT:   Address: 0x2000
+// CHECKSHARED-NEXT:   Offset: 0x2000
 // CHECKSHARED-NEXT:   Size: 20
 // CHECKSHARED-NEXT:   Link: 0
 // CHECKSHARED-NEXT:   Info: 0
@@ -115,12 +115,12 @@
 // CHECKSHARED-NEXT:   EntrySize: 0
 // CHECKSHARED-NEXT:   }
 
-// 0x3000 + got.plt.reserved(12) = 0x300C
-// 0x3000 + got.plt.reserved(12) + 4 = 0x3010
+// 0x2000 + got.plt.reserved(12) = 0x200C
+// 0x2000 + got.plt.reserved(12) + 4 = 0x2010
 // CHECKSHARED:        Relocations [
 // CHECKSHARED-NEXT:     Section ({{.*}}) .rel.plt {
-// CHECKSHARED-NEXT:       0x300C R_386_JUMP_SLOT bar 0x0
-// CHECKSHARED-NEXT:       0x3010 R_386_JUMP_SLOT zed 0x0
+// CHECKSHARED-NEXT:       0x200C R_386_JUMP_SLOT bar 0x0
+// CHECKSHARED-NEXT:       0x2010 R_386_JUMP_SLOT zed 0x0
 // CHECKSHARED-NEXT:     }
 // CHECKSHARED-NEXT:   ]
 
@@ -156,10 +156,10 @@
 // DISASMPIE-NEXT:   102d:	90 nop
 // DISASMPIE-NEXT:   102e:	90 nop
 // DISASMPIE-NEXT:   102f:	90 nop
-// DISASMPIE-NEXT:   1030:	ff a3 0c 30 00 00 jmpl *12300(%ebx)
+// DISASMPIE-NEXT:   1030:	ff a3 0c 20 00 00 jmpl *8204(%ebx)
 // DISASMPIE-NEXT:   1036:	68 00 00 00 00 pushl $0
 // DISASMPIE-NEXT:   103b:	e9 e0 ff ff ff jmp -32 <.plt>
-// DISASMPIE-NEXT:   1040:	ff a3 10 30 00 00 jmpl *12304(%ebx)
+// DISASMPIE-NEXT:   1040:	ff a3 10 20 00 00 jmpl *8208(%ebx)
 // DISASMPIE-NEXT:   1046:	68 08 00 00 00 pushl $8
 // DISASMPIE-NEXT:   104b:	e9 d0 ff ff ff jmp -48 <.plt>
 

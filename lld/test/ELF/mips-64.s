@@ -26,14 +26,14 @@ v2:
 
 
 # SYM: SYMBOL TABLE:
-# SYM: 00030000 l       .data           00000004 v1
-# SYM: 00030008 g       .data           00000008 v2
+# SYM: 00020000 l       .data           00000004 v1
+# SYM: 00020008 g       .data           00000008 v2
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rela.dyn {
-# CHECK-NEXT:     0x30010 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE - 0x30000
+# CHECK-NEXT:     0x20010 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE - 0x20000
 #                                                             ^-- v1
-# CHECK-NEXT:     0x30008 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE v2 0x8
+# CHECK-NEXT:     0x20008 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE v2 0x8
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
@@ -52,8 +52,8 @@ v2:
 # CHECK-NEXT:     Entry {
 # CHECK-NEXT:       Address:
 # CHECK-NEXT:       Access:
-# CHECK-NEXT:       Initial: 0x30008
-# CHECK-NEXT:       Value: 0x30008
+# CHECK-NEXT:       Initial: 0x20008
+# CHECK-NEXT:       Value: 0x20008
 # CHECK-NEXT:       Type: Object
 # CHECK-NEXT:       Section: .data
 # CHECK-NEXT:       Name: v2

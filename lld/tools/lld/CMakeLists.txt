@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_lld_tool(lld
   lld.cpp
   )
@@ -6,7 +10,6 @@ target_link_libraries(lld
   lldDriver
   lldCOFF
   lldELF
-  LLVMSupport
   )
 
 install(TARGETS lld

@@ -64,7 +64,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   do {
     std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
     for (const auto &DB : SymbolIndices) {
-      auto Res = DB->search(Names.back().str());
+      auto Res = DB.get()->search(Names.back());
       Symbols.insert(Symbols.end(), Res.begin(), Res.end());
     }
 

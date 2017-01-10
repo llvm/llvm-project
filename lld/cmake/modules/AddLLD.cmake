@@ -1,5 +1,5 @@
 macro(add_lld_library name)
-  add_llvm_library(${name} ${ARGN})
+  llvm_add_library(${name} ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
 endmacro(add_lld_library)
 

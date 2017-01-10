@@ -33,12 +33,12 @@ sym1:
 // PLT-NEXT:     1024:       04 e0 9f e5     ldr     lr, [pc, #4]
 // PLT-NEXT:     1028:       0e e0 8f e0     add     lr, pc, lr
 // PLT-NEXT:     102c:       08 f0 be e5     ldr     pc, [lr, #8]!
-// PLT-NEXT:     1030:       d0 1f 00 00
+// PLT-NEXT:     1030:       d0 0f 00 00
 // PLT-NEXT:     1034:       04 c0 9f e5     ldr     r12, [pc, #4]
 // PLT-NEXT:     1038:       0f c0 8c e0     add     r12, r12, pc
 // PLT-NEXT:     103c:       00 f0 9c e5     ldr     pc, [r12]
-// PLT-NEXT:     1040:       cc 1f 00 00
+// PLT-NEXT:     1040:       cc 0f 00 00
 // PLT-NEXT:     1044:       04 c0 9f e5     ldr     r12, [pc, #4]
 // PLT-NEXT:     1048:       0f c0 8c e0     add     r12, r12, pc
 // PLT-NEXT:     104c:       00 f0 9c e5     ldr     pc, [r12]
-// PLT-NEXT:     1050:       c0 1f 00 00
+// PLT-NEXT:     1050:       c0 0f 00 00
