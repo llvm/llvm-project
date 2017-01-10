@@ -34,21 +34,21 @@ v2:
   .word v1   # R_MIPS_32 target v1 addend 0
 
 # BE: Contents of section .data:
-# BE-NEXT: 30000 00000000 00000004 00030000
+# BE-NEXT: 20000 00000000 00000004 00020000
 #                         ^-- v2+4 ^-- v1
 
 # EL: Contents of section .data:
-# EL-NEXT: 30000 00000000 04000000 00000300
+# EL-NEXT: 20000 00000000 04000000 00000200
 #                         ^-- v2+4 ^-- v1
 
 # SYM: SYMBOL TABLE:
-# SYM: 00030000 l       .data           00000004 v1
-# SYM: 00030004 g       .data           00000008 v2
+# SYM: 00020000 l       .data           00000004 v1
+# SYM: 00020004 g       .data           00000008 v2
 
 # REL:      Relocations [
 # REL-NEXT:   Section (7) .rel.dyn {
-# REL-NEXT:     0x30008 R_MIPS_REL32 - 0x0
-# REL-NEXT:     0x30004 R_MIPS_REL32 v2 0x0
+# REL-NEXT:     0x20008 R_MIPS_REL32 - 0x0
+# REL-NEXT:     0x20004 R_MIPS_REL32 v2 0x0
 # REL-NEXT:   }
 # REL-NEXT: ]
 
@@ -68,8 +68,8 @@ v2:
 # REL-NEXT:     Entry {
 # REL-NEXT:       Address:
 # REL-NEXT:       Access:
-# REL-NEXT:       Initial: 0x30004
-# REL-NEXT:       Value: 0x30004
+# REL-NEXT:       Initial: 0x20004
+# REL-NEXT:       Value: 0x20004
 # REL-NEXT:       Type: Object
 # REL-NEXT:       Section: .data
 # REL-NEXT:       Name: v2

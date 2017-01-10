@@ -43,7 +43,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HI:
 # CHECK: .FR_PPC64_TOC16_HI:
-# CHECK: 10010014: 3c 22 ff ff addis 1, 2, -1
+# CHECK: 10010014: 3c 22 ff fe addis 1, 2, -2
 
 .section .R_PPC64_TOC16_HA,"ax",@progbits
 .globl .FR_PPC64_TOC16_HA
@@ -52,7 +52,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HA:
 # CHECK: .FR_PPC64_TOC16_HA:
-# CHECK: 10010018: 3c 22 00 00 addis 1, 2, 0
+# CHECK: 10010018: 3c 22 ff ff addis 1, 2, -1
 
 .section .R_PPC64_REL24,"ax",@progbits
 .globl .FR_PPC64_REL24

@@ -385,7 +385,7 @@ int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m)
 
 int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t *__m)
 {
-  static_cast<void>(__m);
+  DeleteCriticalSection(__m);
   return 0;
 }
 

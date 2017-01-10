@@ -410,8 +410,8 @@ condition_variable::wait_for(unique_lock<mutex>& __lk,
     typedef time_point<system_clock, duration<long double, nano> > __sys_tpf;
     typedef time_point<system_clock, nanoseconds> __sys_tpi;
     __sys_tpf _Max = __sys_tpi::max();
-    system_clock::time_point __s_now = system_clock::now();
     steady_clock::time_point __c_now = steady_clock::now();
+    system_clock::time_point __s_now = system_clock::now();
     if (_Max - __d > __s_now)
         __do_timed_wait(__lk, __s_now + __ceil<nanoseconds>(__d));
     else

@@ -3344,12 +3344,13 @@ struct __scalar_hash<_Tp, 4>
     }
 };
 
+struct _PairT {
+  size_t first;
+  size_t second;
+};
+
 _LIBCPP_INLINE_VISIBILITY
 inline size_t __hash_combine(size_t __lhs, size_t __rhs) _NOEXCEPT {
-    struct _PairT {
-      size_t first;
-      size_t second;
-    };
     typedef __scalar_hash<_PairT> _HashT;
     const _PairT __p = {__lhs, __rhs};
     return _HashT()(__p);

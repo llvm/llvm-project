@@ -4,6 +4,6 @@ add_lld_library(lldConfig
   ADDITIONAL_HEADER_DIRS
   ${LLD_INCLUDE_DIR}/lld/Config
 
-  LINK_LIBS
-    LLVMSupport
+  LINK_COMPONENTS
+    Support
   )
