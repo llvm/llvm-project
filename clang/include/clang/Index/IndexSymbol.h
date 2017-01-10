@@ -57,6 +57,36 @@ enum class SymbolLanguage {
   C,
   ObjC,
   CXX,
+  Swift,
+};
+
+/// Language specific sub-kinds.
+enum class SymbolSubKind {
+  None,
+  CXXCopyConstructor,
+  CXXMoveConstructor,
+
+  // Swift sub-kinds
+
+  SwiftAccessorGetter,
+  SwiftAccessorSetter,
+  SwiftAccessorWillSet,
+  SwiftAccessorDidSet,
+  SwiftAccessorAddressor,
+  SwiftAccessorMutableAddressor,
+
+  SwiftExtensionOfStruct,
+  SwiftExtensionOfClass,
+  SwiftExtensionOfEnum,
+  SwiftExtensionOfProtocol,
+
+  SwiftPrefixOperator,
+  SwiftPostfixOperator,
+  SwiftInfixOperator,
+
+  SwiftSubscript,
+  SwiftAssociatedType,
+  SwiftGenericTypeParam,
 };
 
 /// Set of properties that provide additional info about a symbol.
@@ -107,6 +137,7 @@ struct SymbolRelation {
 
 struct SymbolInfo {
   SymbolKind Kind;
+  SymbolSubKind SubKind;
   SymbolPropertySet Properties;
   SymbolLanguage Lang;
 };
@@ -121,6 +152,7 @@ void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
 bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
 
 StringRef getSymbolKindString(SymbolKind K);
+StringRef getSymbolSubKindString(SymbolSubKind K);
 StringRef getSymbolLanguageString(SymbolLanguage K);
 
 void applyForEachSymbolProperty(SymbolPropertySet Props,
