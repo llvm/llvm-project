@@ -7,11 +7,11 @@
 
 # REQUIRES: mips
 
-# CHECK:      Contents of section .got:
-# CHECK-NEXT:  30008 00000000 80000000 00000001 ffff8000
-# CHECK-NEXT:  30018 00000001 00000000 ffff9000
 # CHECK:      Contents of section .data:
-# CHECK-NEXT:  40000 0002000c ffff8004 ffff9004
+# CHECK-NEXT:  30000 0002000c ffff8004 ffff9004
+# CHECK:      Contents of section .got:
+# CHECK-NEXT:  40008 00000000 80000000 00000001 ffff8000
+# CHECK-NEXT:  40018 00000001 00000000 ffff9000
 #
 # CHECK: SYMBOL TABLE:
 # CHECK: 0002000c         .text           00000000 __tls_get_addr

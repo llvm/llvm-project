@@ -106,9 +106,9 @@ endif()
 add_compiler_rt_component(asan)
 
 if(APPLE)
-  add_weak_symbols("asan" WEAK_SYMBOL_LINKFLAGS)
-  add_weak_symbols("ubsan" WEAK_SYMBOL_LINKFLAGS)
-  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINKFLAGS)
+  add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_runtime(clang_rt.asan
     SHARED
@@ -121,7 +121,7 @@ if(APPLE)
                 RTLSanCommon
                 RTUbsan
     CFLAGS ${ASAN_DYNAMIC_CFLAGS}
-    LINKFLAGS ${WEAK_SYMBOL_LINKFLAGS}
+    LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${ASAN_DYNAMIC_DEFINITIONS}
     PARENT_TARGET asan)
 else()
@@ -188,7 +188,7 @@ else()
               RTAsan_dynamic_version_script_dummy
               RTUbsan_cxx
       CFLAGS ${ASAN_DYNAMIC_CFLAGS}
-      LINKFLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
+      LINK_FLAGS ${ASAN_DYNAMIC_LINK_FLAGS}
                 ${VERSION_SCRIPT_FLAG}
       LINK_LIBS ${ASAN_DYNAMIC_LIBS}
       DEFS ${ASAN_DYNAMIC_DEFINITIONS}

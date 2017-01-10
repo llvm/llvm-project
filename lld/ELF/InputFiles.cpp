@@ -418,6 +418,14 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec,
   if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
+  // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
+  // files contain definitions of symbol "__x86.get_pc_thunk.bx" in linkonce
+  // sections. Drop those sections to avoid duplicate symbol errors.
+  // FIXME: This is glibc PR20543, we should remove this hack once that has been
+  // fixed for a while.
+  if (Name.startswith(".gnu.linkonce."))
+    return &InputSection<ELFT>::Discarded;
+
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.

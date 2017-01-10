@@ -77,8 +77,8 @@ macro(add_tsan_unittest testname)
         list(APPEND TEST_OBJECTS lib${TSAN_TEST_RUNTIME}.a)
         list(APPEND TEST_DEPS ${TSAN_TEST_RUNTIME})
 
-        add_weak_symbols("ubsan" WEAK_SYMBOL_LINKFLAGS)
-        add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINKFLAGS)
+        add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+        add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
         # Intentionally do *not* link with `-fsanitize=thread`. We already link
         # against a static version of the runtime, and we don't want the dynamic
@@ -87,7 +87,7 @@ macro(add_tsan_unittest testname)
                 OBJECTS ${TEST_OBJECTS}
                 DEPS ${TEST_DEPS}
                 LINK_FLAGS ${TARGET_LINK_FLAGS} ${DARWIN_osx_LINK_FLAGS}
-                           ${WEAK_SYMBOL_LINKFLAGS} -lc++)
+                           ${WEAK_SYMBOL_LINK_FLAGS} -lc++)
       endif()
     endforeach()
   endif()

@@ -1201,10 +1201,12 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   }
   case SymbolBody::DefinedCommonKind:
     return In<ELFT>::Common->OutSec;
-  case SymbolBody::SharedKind:
-    if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
-      return Out<ELFT>::Bss;
+  case SymbolBody::SharedKind: {
+    auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
+    if (SS.needsCopy())
+      return SS.getBssSectionForCopy();
     break;
+  }
   case SymbolBody::UndefinedKind:
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:

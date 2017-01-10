@@ -48,13 +48,13 @@ endmacro()
 
 # This function is only used on Darwin, where undefined symbols must be specified
 # in the linker invocation.
-function(add_weak_symbols libname linkflags)
+function(add_weak_symbols libname link_flags)
   file(STRINGS "${COMPILER_RT_SOURCE_DIR}/lib/${libname}/weak_symbols.txt" WEAK_SYMBOLS)
-  set(local_linkflags ${${linkflags}})
+  set(local_link_flags ${${link_flags}})
   foreach(SYMBOL ${WEAK_SYMBOLS})
-    set(local_linkflags ${local_linkflags} -Wl,-U,${SYMBOL})
+    set(local_link_flags ${local_link_flags} -Wl,-U,${SYMBOL})
   endforeach()
-  set(${linkflags} ${local_linkflags} PARENT_SCOPE)
+  set(${link_flags} ${local_link_flags} PARENT_SCOPE)
 endfunction()
 
 macro(add_sanitizer_rt_version_list name)

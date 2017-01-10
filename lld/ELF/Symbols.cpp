@@ -81,7 +81,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       return 0;
     if (SS.isFunc())
       return Body.getPltVA<ELFT>();
-    return Out<ELFT>::Bss->Addr + SS.OffsetInBss;
+    return SS.getBssSectionForCopy()->Addr + SS.CopyOffset;
   }
   case SymbolBody::UndefinedKind:
     return 0;
@@ -97,7 +97,8 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-      IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
+      IsInIgot(false), CopyIsInBssRelRo(false), Type(Type), StOther(StOther),
+      Name(Name) {}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -245,6 +246,12 @@ Undefined<ELFT>::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
   this->File = File;
 }
 
+template <typename ELFT>
+OutputSection<ELFT> *SharedSymbol<ELFT>::getBssSectionForCopy() const {
+  assert(needsCopy());
+  return CopyIsInBssRelRo ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+}
+
 DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
                              uint8_t StOther, uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
@@ -365,6 +372,11 @@ template class elf::Undefined<ELF32LE>;
 template class elf::Undefined<ELF32BE>;
 template class elf::Undefined<ELF64LE>;
 template class elf::Undefined<ELF64BE>;
+
+template class elf::SharedSymbol<ELF32LE>;
+template class elf::SharedSymbol<ELF32BE>;
+template class elf::SharedSymbol<ELF64LE>;
+template class elf::SharedSymbol<ELF64BE>;
 
 template class elf::DefinedRegular<ELF32LE>;
 template class elf::DefinedRegular<ELF32BE>;

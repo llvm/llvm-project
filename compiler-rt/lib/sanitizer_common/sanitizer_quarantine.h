@@ -49,18 +49,31 @@ class Quarantine {
   }
 
   void Init(uptr size, uptr cache_size) {
-    atomic_store(&max_size_, size, memory_order_release);
+    // Thread local quarantine size can be zero only when global quarantine size
+    // is zero (it allows us to perform just one atomic read per Put() call).
+    CHECK((size == 0 && cache_size == 0) || cache_size != 0);
+
+    atomic_store(&max_size_, size, memory_order_relaxed);
     atomic_store(&min_size_, size / 10 * 9,
-                 memory_order_release); // 90% of max size.
-    max_cache_size_ = cache_size;
+                 memory_order_relaxed);  // 90% of max size.
+    atomic_store(&max_cache_size_, cache_size, memory_order_relaxed);
   }
 
-  uptr GetSize() const { return atomic_load(&max_size_, memory_order_acquire); }
-  uptr GetCacheSize() const { return max_cache_size_; }
+  uptr GetSize() const { return atomic_load(&max_size_, memory_order_relaxed); }
+  uptr GetCacheSize() const {
+    return atomic_load(&max_cache_size_, memory_order_relaxed);
+  }
 
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
-    c->Enqueue(cb, ptr, size);
-    if (c->Size() > max_cache_size_)
+    uptr cache_size = GetCacheSize();
+    if (cache_size) {
+      c->Enqueue(cb, ptr, size);
+    } else {
+      // cache_size == 0 only when size == 0 (see Init).
+      cb.Recycle(ptr);
+    }
+    // Check cache size anyway to accommodate for runtime cache_size change.
+    if (c->Size() > cache_size)
       Drain(c, cb);
   }
 
@@ -83,7 +96,7 @@ class Quarantine {
   char pad0_[kCacheLineSize];
   atomic_uintptr_t max_size_;
   atomic_uintptr_t min_size_;
-  uptr max_cache_size_;
+  atomic_uintptr_t max_cache_size_;
   char pad1_[kCacheLineSize];
   SpinMutex cache_mutex_;
   SpinMutex recycle_mutex_;
@@ -92,7 +105,7 @@ class Quarantine {
 
   void NOINLINE Recycle(Callback cb) {
     Cache tmp;
-    uptr min_size = atomic_load(&min_size_, memory_order_acquire);
+    uptr min_size = atomic_load(&min_size_, memory_order_relaxed);
     {
       SpinMutexLock l(&cache_mutex_);
       while (cache_.Size() > min_size) {
@@ -205,6 +218,7 @@ class QuarantineCache {
     return b;
   }
 };
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_QUARANTINE_H

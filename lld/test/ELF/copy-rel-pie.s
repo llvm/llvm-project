@@ -24,21 +24,21 @@ _start:
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x3020
+// CHECK-NEXT: Address: 0x4000
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x3020 R_X86_64_COPY foo 0x0
+// CHECK-NEXT:     0x4000 R_X86_64_COPY foo 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .rela.plt {
-// CHECK-NEXT:     0x3018 R_X86_64_JUMP_SLOT bar 0x0
+// CHECK-NEXT:     0x2018 R_X86_64_JUMP_SLOT bar 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 // (0x1010 + 0x10) - 0x1005 = 27
-// 0x3020          - 0x100a = 8214
+// 0x4000          - 0x100a = 12278
 
 // DISASM:      Disassembly of section .text:
 // DISASM-NEXT: _start:
 // DISASM-NEXT:     1000:       e8 1b 00 00 00  callq   27
-// DISASM-NEXT:     1005:       e8 16 20 00 00  callq   8214 <foo>
+// DISASM-NEXT:     1005:       e8 f6 2f 00 00  callq   12278 <foo>

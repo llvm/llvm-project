@@ -56,29 +56,30 @@ using namespace lld::elf;
 LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
-template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
+template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, Visibility, STT_NOTYPE,
-                                            0, 0, STB_GLOBAL, nullptr, nullptr);
-  Cmd->Sym = Sym->body();
+  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
+      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
+      /*Type*/ 0,
+      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 
-  // If we have no SECTIONS then we don't have '.' and don't call
-  // assignAddresses(). We calculate symbol value immediately in this case.
-  if (!ScriptConfig->HasSections)
-    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(0);
+  replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, /*IsLocal=*/false,
+                                    Visibility, STT_NOTYPE, 0, 0, nullptr,
+                                    nullptr);
+  return Sym->body();
 }
 
-template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
-  // If we have SECTIONS block then output sections haven't been created yet.
+template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   const OutputSectionBase *Sec =
       ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
-  Symbol *Sym = Symtab<ELFT>::X->addSynthetic(
-      Cmd->Name, Sec, 0, Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
-  Cmd->Sym = Sym->body();
+  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
+      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
+      /*Type*/ 0,
+      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 
-  // If we already know section then we can calculate symbol value immediately.
-  if (Sec)
-    cast<DefinedSynthetic>(Cmd->Sym)->Value = Cmd->Expression(0) - Sec->Addr;
+  replaceBody<DefinedSynthetic>(Sym, Cmd->Name, 0, Sec);
+  return Sym->body();
 }
 
 static bool isUnderSysroot(StringRef Path) {
@@ -90,21 +91,39 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
-  if (Cmd->Expression.IsAbsolute())
-    addRegular<ELFT>(Cmd);
-  else
-    addSynthetic<ELFT>(Cmd);
+template <class ELFT> static void assignSymbol(SymbolAssignment *Cmd) {
+  // If there are sections, then let the value be assigned later in
+  // `assignAddresses`.
+  if (ScriptConfig->HasSections)
+    return;
+
+  uint64_t Value = Cmd->Expression(0);
+  if (Cmd->Expression.IsAbsolute()) {
+    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Value;
+  } else {
+    const OutputSectionBase *Sec = Cmd->Expression.Section();
+    if (Sec)
+      cast<DefinedSynthetic>(Cmd->Sym)->Value = Value - Sec->Addr;
+  }
 }
-// If a symbol was in PROVIDE(), we need to define it only when
-// it is an undefined symbol.
-template <class ELFT> static bool shouldDefine(SymbolAssignment *Cmd) {
+
+template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Name == ".")
-    return false;
-  if (!Cmd->Provide)
-    return true;
+    return;
+
+  // If a symbol was in PROVIDE(), we need to define it only when
+  // it is a referenced undefined symbol.
   SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
-  return B && B->isUndefined();
+  if (Cmd->Provide && (!B || B->isDefined()))
+    return;
+
+  // Otherwise, create a new symbol if one does not exist or an
+  // undefined one does exist.
+  if (Cmd->Expression.IsAbsolute())
+    Cmd->Sym = addRegular<ELFT>(Cmd);
+  else
+    Cmd->Sym = addSynthetic<ELFT>(Cmd);
+  assignSymbol<ELFT>(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -283,8 +302,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 
     // Handle symbol assignments outside of any output section.
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
-      if (shouldDefine<ELFT>(Cmd))
-        addSymbol<ELFT>(Cmd);
+      addSymbol<ELFT>(Cmd);
       continue;
     }
 
@@ -326,8 +344,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
       // ".foo : { ...; bar = .; }". Handle them.
       for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
         if (auto *OutCmd = dyn_cast<SymbolAssignment>(Base.get()))
-          if (shouldDefine<ELFT>(OutCmd))
-            addSymbol<ELFT>(OutCmd);
+          addSymbol<ELFT>(OutCmd);
 
       // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
       // is given, input sections are aligned to that value, whether the

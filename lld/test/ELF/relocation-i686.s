@@ -49,13 +49,13 @@ movl bar@GOT, %eax
 // ADDR-NEXT: Offset: 0x1040
 // ADDR-NEXT: Size: 32
 
-// ADDR:      Name: .got
+// ADDR:      Name: .got (
 // ADDR-NEXT: Type: SHT_PROGBITS
 // ADDR-NEXT: Flags [
 // ADDR-NEXT:   SHF_ALLOC
 // ADDR-NEXT:   SHF_WRITE
 // ADDR-NEXT: ]
-// ADDR-NEXT: Address: 0x12078
+// ADDR-NEXT: Address: 0x13078
 // ADDR-NEXT: Offset:
 // ADDR-NEXT: Size: 8
 
@@ -67,7 +67,7 @@ R_386_GOTPC:
 
 // CHECK:      Disassembly of section .R_386_GOTPC:
 // CHECK-NEXT: R_386_GOTPC:
-// CHECK-NEXT:   11014:  {{.*}} movl  $4204, %eax
+// CHECK-NEXT:   11014:  {{.*}} movl  $8300, %eax
 
 .section .dynamic_reloc, "ax",@progbits
  call bar

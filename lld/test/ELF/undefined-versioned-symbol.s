@@ -15,19 +15,19 @@
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2000
+// CHECK-NEXT:     Offset: 0x1000
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
 // CHECK-NEXT:     Symbol: basename (1)
 // CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2008
+// CHECK-NEXT:     Offset: 0x1008
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
 // CHECK-NEXT:     Symbol: basename (2)
 // CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
-// CHECK-NEXT:     Offset: 0x2010
+// CHECK-NEXT:     Offset: 0x1010
 // CHECK-NEXT:     Type: R_X86_64_64 (1)
 // CHECK-NEXT:     Symbol: basename (3)
 // CHECK-NEXT:     Addend: 0x0
