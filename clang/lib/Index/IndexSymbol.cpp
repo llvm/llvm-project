@@ -152,10 +152,18 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::ObjC;
       break;
     case Decl::ObjCMethod:
-      if (cast<ObjCMethodDecl>(D)->isInstanceMethod())
+      if (cast<ObjCMethodDecl>(D)->isInstanceMethod()) {
+        const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
         Info.Kind = SymbolKind::InstanceMethod;
-      else
+        if (MD->isPropertyAccessor()) {
+          if (MD->param_size())
+            Info.SubKind = SymbolSubKind::AccessorSetter;
+          else
+            Info.SubKind = SymbolSubKind::AccessorGetter;
+        }
+      } else {
         Info.Kind = SymbolKind::ClassMethod;
+      }
       Info.Lang = SymbolLanguage::ObjC;
       if (isUnitTest(cast<ObjCMethodDecl>(D)))
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
@@ -379,6 +387,8 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::None: return "<none>";
   case SymbolSubKind::CXXCopyConstructor: return "cxx-copy-ctor";
   case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
+  case SymbolSubKind::AccessorGetter: return "acc-get";
+  case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::SwiftAccessorGetter: return "acc-get";
   case SymbolSubKind::SwiftAccessorSetter: return "acc-set";
   case SymbolSubKind::SwiftAccessorWillSet: return "acc-willset";

@@ -111,9 +111,9 @@ extern int setjmp(jmp_buf);
 @implementation I2
 // CHECK: [[@LINE+6]]:13 | instance-property/ObjC | prop | c:objc(cs)I2(py)prop | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | I2 | c:objc(cs)I2
-// CHECK: [[@LINE+4]]:13 | instance-method/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+4]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
-// CHECK: [[@LINE+2]]:13 | instance-method/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+2]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 @synthesize prop = _prop;
 
@@ -127,11 +127,11 @@ extern int setjmp(jmp_buf);
 
 @interface I3
 @property (readwrite) id prop;
-// CHECK: [[@LINE+3]]:1 | instance-method/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+3]]:1 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
 // CHECK-NEXT: RelAcc | prop | c:objc(cs)I3(py)prop
 -(id)prop;
-// CHECK: [[@LINE+3]]:1 | instance-method/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+3]]:1 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Decl,Dyn,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
 // CHECK-NEXT: RelAcc | prop | c:objc(cs)I3(py)prop
 -(void)setProp:(id)p;
@@ -141,8 +141,8 @@ extern int setjmp(jmp_buf);
 @implementation I3
 // CHECK: [[@LINE+4]]:13 | instance-property/ObjC | prop | c:objc(cs)I3(py)prop | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | I3 | c:objc(cs)I3
-// CHECK: [[@LINE+2]]:13 | instance-method/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,RelChild | rel: 1
-// CHECK: [[@LINE+1]]:13 | instance-method/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+2]]:13 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:13 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,RelChild | rel: 1
 @synthesize prop = _prop;
 @end
 
