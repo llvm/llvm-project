@@ -159,7 +159,7 @@ extern int setjmp(jmp_buf);
 @implementation I3(bar)
 @end
 
-// CHECK: [[@LINE+1]]:12 | extension/ObjC | <no-name> | <no-usr> | <no-cgname> | Decl | rel: 0
+// CHECK-NOT: [[@LINE+1]]:12 | extension/ObjC |
 @interface NonExistent()
 @end
 
