@@ -365,6 +365,9 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
             .getLocWithOffset(Range.getOffset())
             .print(llvm::dbgs(), CI->getSourceManager()));
   DEBUG(llvm::dbgs() << " ...");
+  llvm::StringRef FileName = CI->getSourceManager().getFilename(
+      CI->getSourceManager().getLocForStartOfFile(
+          CI->getSourceManager().getMainFileID()));
 
   QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
 
@@ -385,9 +388,10 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
   // context, it might treat the identifier as a nested class of the scoped
   // namespace.
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols =
-      SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false);
+      SymbolIndexMgr.search(QueryString, /*IsNestedSearch=*/false, FileName);
   if (MatchedSymbols.empty())
-    MatchedSymbols = SymbolIndexMgr.search(Query);
+    MatchedSymbols =
+        SymbolIndexMgr.search(Query, /*IsNestedSearch=*/true, FileName);
   DEBUG(llvm::dbgs() << "Having found " << MatchedSymbols.size()
                      << " symbols\n");
   // We store a copy of MatchedSymbols in a place where it's globally reachable.

@@ -65,6 +65,8 @@ enum class SymbolSubKind {
   None,
   CXXCopyConstructor,
   CXXMoveConstructor,
+  AccessorGetter,
+  AccessorSetter,
 
   // Swift sub-kinds
 
@@ -103,7 +105,7 @@ static const unsigned SymbolPropertyBitNum = 7;
 typedef unsigned SymbolPropertySet;
 
 /// Set of roles that are attributed to symbol occurrences.
-enum class SymbolRole : uint16_t {
+enum class SymbolRole : uint32_t {
   Declaration = 1 << 0,
   Definition  = 1 << 1,
   Reference   = 1 << 2,
@@ -122,8 +124,10 @@ enum class SymbolRole : uint16_t {
   RelationCalledBy    = 1 << 13,
   RelationExtendedBy  = 1 << 14,
   RelationAccessorOf  = 1 << 15,
+  RelationContainedBy = 1 << 16,
+  RelationIBTypeOf    = 1 << 17,
 };
-static const unsigned SymbolRoleBitNum = 16;
+static const unsigned SymbolRoleBitNum = 18;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.

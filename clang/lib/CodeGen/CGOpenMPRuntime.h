@@ -130,6 +130,35 @@ protected:
                                                 bool IsOffloadEntry,
                                                 const RegionCodeGenTy &CodeGen);
 
+  /// \brief Emits code for OpenMP 'if' clause using specified \a CodeGen
+  /// function. Here is the logic:
+  /// if (Cond) {
+  ///   ThenGen();
+  /// } else {
+  ///   ElseGen();
+  /// }
+  void emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
+                       const RegionCodeGenTy &ThenGen,
+                       const RegionCodeGenTy &ElseGen);
+
+  /// \brief Emits object of ident_t type with info for source location.
+  /// \param Flags Flags for OpenMP location.
+  ///
+  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
+                                  unsigned Flags = 0);
+
+  /// \brief Returns pointer to ident_t type.
+  llvm::Type *getIdentTyPointerTy();
+
+  /// \brief Gets thread id value for the current thread.
+  ///
+  llvm::Value *getThreadID(CodeGenFunction &CGF, SourceLocation Loc);
+
+  /// \brief Get the function name of an outlined region.
+  //  The name can be customized depending on the target.
+  //
+  virtual StringRef getOutlinedHelperName() const { return ".omp_outlined."; }
+
 private:
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
@@ -388,15 +417,6 @@ private:
   /// \brief Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
 
-  /// \brief Emits object of ident_t type with info for source location.
-  /// \param Flags Flags for OpenMP location.
-  ///
-  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
-                                  unsigned Flags = 0);
-
-  /// \brief Returns pointer to ident_t type.
-  llvm::Type *getIdentTyPointerTy();
-
   /// \brief Returns pointer to kmpc_micro type.
   llvm::Type *getKmpc_MicroPointerTy();
 
@@ -431,10 +451,6 @@ private:
   /// \brief Emits address of the word in a memory where current thread id is
   /// stored.
   virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
-
-  /// \brief Gets thread id value for the current thread.
-  ///
-  llvm::Value *getThreadID(CodeGenFunction &CGF, SourceLocation Loc);
 
   /// \brief Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has

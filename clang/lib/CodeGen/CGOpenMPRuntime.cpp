@@ -99,10 +99,11 @@ class CGOpenMPOutlinedRegionInfo final : public CGOpenMPRegionInfo {
 public:
   CGOpenMPOutlinedRegionInfo(const CapturedStmt &CS, const VarDecl *ThreadIDVar,
                              const RegionCodeGenTy &CodeGen,
-                             OpenMPDirectiveKind Kind, bool HasCancel)
+                             OpenMPDirectiveKind Kind, bool HasCancel,
+                             StringRef HelperName)
       : CGOpenMPRegionInfo(CS, ParallelOutlinedRegion, CodeGen, Kind,
                            HasCancel),
-        ThreadIDVar(ThreadIDVar) {
+        ThreadIDVar(ThreadIDVar), HelperName(HelperName) {
     assert(ThreadIDVar != nullptr && "No ThreadID in OpenMP region.");
   }
 
@@ -111,7 +112,7 @@ public:
   const VarDecl *getThreadIDVariable() const override { return ThreadIDVar; }
 
   /// \brief Get the name of the capture helper.
-  StringRef getHelperName() const override { return ".omp_outlined."; }
+  StringRef getHelperName() const override { return HelperName; }
 
   static bool classof(const CGCapturedStmtInfo *Info) {
     return CGOpenMPRegionInfo::classof(Info) &&
@@ -123,6 +124,7 @@ private:
   /// \brief A variable or parameter storing global thread id for OpenMP
   /// constructs.
   const VarDecl *ThreadIDVar;
+  StringRef HelperName;
 };
 
 /// \brief API for captured statement code generation in OpenMP constructs.
@@ -855,7 +857,7 @@ llvm::Value *CGOpenMPRuntime::emitParallelOrTeamsOutlinedFunction(
   else if (auto *OPFD = dyn_cast<OMPParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
-                                    HasCancel);
+                                    HasCancel, getOutlinedHelperName());
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
   return CGF.GenerateOpenMPCapturedStmtFunction(*CS);
 }
@@ -1892,9 +1894,9 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
 /// } else {
 ///   ElseGen();
 /// }
-static void emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
-                            const RegionCodeGenTy &ThenGen,
-                            const RegionCodeGenTy &ElseGen) {
+void CGOpenMPRuntime::emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
+                                      const RegionCodeGenTy &ThenGen,
+                                      const RegionCodeGenTy &ElseGen) {
   CodeGenFunction::LexicalScope ConditionScope(CGF, Cond->getSourceRange());
 
   // If the condition constant folds and can be elided, try to avoid emitting

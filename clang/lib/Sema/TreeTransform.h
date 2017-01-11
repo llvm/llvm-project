@@ -7779,6 +7779,18 @@ StmtResult TreeTransform<Derived>::
   return Res;
 }
 
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPTargetTeamsDistributeSimdDirective(
+    OMPTargetTeamsDistributeSimdDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(
+      OMPD_target_teams_distribute_simd, DirName, nullptr, D->getLocStart());
+  auto Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
 
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation

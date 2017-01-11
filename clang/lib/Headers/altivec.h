@@ -7664,13 +7664,15 @@ vec_rlmi(vector unsigned long long __a, vector unsigned long long __b,
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_rlnm(vector unsigned int __a, vector unsigned int __b,
          vector unsigned int __c) {
-  return __builtin_altivec_vrlwnm(__a, __b) & __c;
+  vector unsigned int OneByte = { 0x8, 0x8, 0x8, 0x8 };
+  return __builtin_altivec_vrlwnm(__a, ((__c << OneByte) | __b));
 }
 
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_rlnm(vector unsigned long long __a, vector unsigned long long __b,
          vector unsigned long long __c) {
-  return __builtin_altivec_vrldnm(__a, __b) & __c;
+  vector unsigned long long OneByte = { 0x8, 0x8 };
+  return __builtin_altivec_vrldnm(__a, ((__c << OneByte) | __b));
 }
 #endif
 

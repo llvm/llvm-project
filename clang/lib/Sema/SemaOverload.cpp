@@ -6596,7 +6596,9 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
     Candidate.Function = MethodTmpl->getTemplatedDecl();
     Candidate.Viable = false;
     Candidate.IsSurrogate = false;
-    Candidate.IgnoreObjectArgument = false;
+    Candidate.IgnoreObjectArgument =
+        cast<CXXMethodDecl>(Candidate.Function)->isStatic() ||
+        ObjectType.isNull();
     Candidate.ExplicitCallArguments = Args.size();
     if (Result == TDK_NonDependentConversionFailure)
       Candidate.FailureKind = ovl_fail_bad_conversion;
@@ -6658,7 +6660,11 @@ Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
     Candidate.Function = FunctionTemplate->getTemplatedDecl();
     Candidate.Viable = false;
     Candidate.IsSurrogate = false;
-    Candidate.IgnoreObjectArgument = false;
+    // Ignore the object argument if there is one, since we don't have an object
+    // type.
+    Candidate.IgnoreObjectArgument =
+        isa<CXXMethodDecl>(Candidate.Function) &&
+        !isa<CXXConstructorDecl>(Candidate.Function);
     Candidate.ExplicitCallArguments = Args.size();
     if (Result == TDK_NonDependentConversionFailure)
       Candidate.FailureKind = ovl_fail_bad_conversion;
@@ -10490,56 +10496,42 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   // operation somehow.
   bool SuppressUserConversions = false;
 
-  const FunctionProtoType *Proto;
-  unsigned ArgIdx = 0;
+  unsigned ConvIdx = 0;
+  ArrayRef<QualType> ParamTypes;
 
   if (Cand->IsSurrogate) {
     QualType ConvType
       = Cand->Surrogate->getConversionType().getNonReferenceType();
     if (const PointerType *ConvPtrType = ConvType->getAs<PointerType>())
       ConvType = ConvPtrType->getPointeeType();
-    Proto = ConvType->getAs<FunctionProtoType>();
-    ArgIdx = 1;
+    ParamTypes = ConvType->getAs<FunctionProtoType>()->getParamTypes();
+    // Conversion 0 is 'this', which doesn't have a corresponding argument.
+    ConvIdx = 1;
   } else if (Cand->Function) {
-    Proto = Cand->Function->getType()->getAs<FunctionProtoType>();
+    ParamTypes =
+        Cand->Function->getType()->getAs<FunctionProtoType>()->getParamTypes();
     if (isa<CXXMethodDecl>(Cand->Function) &&
-        !isa<CXXConstructorDecl>(Cand->Function))
-      ArgIdx = 1;
-  } else {
-    // Builtin binary operator with a bad first conversion.
-    assert(ConvCount <= 3);
-    for (unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0);
-         ConvIdx != ConvCount; ++ConvIdx) {
-      if (Cand->Conversions[ConvIdx].isInitialized())
-        continue;
-      if (Cand->BuiltinTypes.ParamTypes[ConvIdx]->isDependentType())
-        Cand->Conversions[ConvIdx].setAsIdentityConversion(
-            Args[ConvIdx]->getType());
-      else
-        Cand->Conversions[ConvIdx] = TryCopyInitialization(
-            S, Args[ConvIdx], Cand->BuiltinTypes.ParamTypes[ConvIdx],
-            SuppressUserConversions,
-            /*InOverloadResolution*/ true,
-            /*AllowObjCWritebackConversion=*/
-            S.getLangOpts().ObjCAutoRefCount);
-      // FIXME: If the conversion is bad, try to fix it.
+        !isa<CXXConstructorDecl>(Cand->Function)) {
+      // Conversion 0 is 'this', which doesn't have a corresponding argument.
+      ConvIdx = 1;
     }
-    return;
+  } else {
+    // Builtin operator.
+    assert(ConvCount <= 3);
+    ParamTypes = Cand->BuiltinTypes.ParamTypes;
   }
 
   // Fill in the rest of the conversions.
-  unsigned NumParams = Proto->getNumParams();
-  for (unsigned ConvIdx = (Cand->IgnoreObjectArgument ? 1 : 0);
-       ConvIdx != ConvCount; ++ConvIdx, ++ArgIdx) {
+  for (unsigned ArgIdx = 0; ConvIdx != ConvCount; ++ConvIdx, ++ArgIdx) {
     if (Cand->Conversions[ConvIdx].isInitialized()) {
-      // Found the bad conversion.
-    } else if (ArgIdx < NumParams) {
-      if (Proto->getParamType(ArgIdx)->isDependentType())
+      // We've already checked this conversion.
+    } else if (ArgIdx < ParamTypes.size()) {
+      if (ParamTypes[ArgIdx]->isDependentType())
         Cand->Conversions[ConvIdx].setAsIdentityConversion(
             Args[ArgIdx]->getType());
       else {
         Cand->Conversions[ConvIdx] =
-            TryCopyInitialization(S, Args[ArgIdx], Proto->getParamType(ArgIdx),
+            TryCopyInitialization(S, Args[ArgIdx], ParamTypes[ArgIdx],
                                   SuppressUserConversions,
                                   /*InOverloadResolution=*/true,
                                   /*AllowObjCWritebackConversion=*/

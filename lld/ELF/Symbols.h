@@ -420,6 +420,7 @@ struct Symbol {
   unsigned InVersionScript : 1;
 
   bool includeInDynsym() const;
+  uint8_t computeBinding() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 
   // This field is used to store the Symbol's SymbolBody. This instantiation of

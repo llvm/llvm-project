@@ -5,4 +5,12 @@ module libc [no_undeclared_includes] {
   module stdint { header "stdint.h" export * }
   module stdio { header "stdio.h" export * }
   module util { header "util.h" export * }
+  module POSIX {
+    module sys {
+      module types {
+        umbrella header "sys/_types/_types.h"
+        export *
+      }
+    }
+  }
 }

@@ -229,6 +229,28 @@ TEST_F(FindAllSymbolsTest, CXXRecordSymbolsTemplate) {
   EXPECT_TRUE(hasSymbol(Symbol));
 }
 
+TEST_F(FindAllSymbolsTest, DontIgnoreTemplatePartialSpecialization) {
+  static const char Code[] = R"(
+      template<class> class Class; // undefined
+      template<class R, class... ArgTypes>
+      class Class<R(ArgTypes...)> {
+      };
+
+      template<class T> void f() {};
+      template<> void f<int>() {};
+      )";
+  runFindAllSymbols(Code);
+  SymbolInfo Symbol =
+      SymbolInfo("Class", SymbolInfo::SymbolKind::Class, HeaderName, 4, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol =
+      SymbolInfo("f", SymbolInfo::SymbolKind::Function, HeaderName, 7, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol =
+      SymbolInfo("f", SymbolInfo::SymbolKind::Function, HeaderName, 8, {});
+  EXPECT_FALSE(hasSymbol(Symbol));
+}
+
 TEST_F(FindAllSymbolsTest, FunctionSymbols) {
   static const char Code[] = R"(
       namespace na {

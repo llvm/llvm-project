@@ -600,11 +600,8 @@ private:
 public:
   // If NeedType is true, then TryAnnotateTypeOrScopeToken will try harder to
   // find a type name by attempting typo correction.
-  bool TryAnnotateTypeOrScopeToken(bool EnteringContext = false,
-                                   bool NeedType = false);
-  bool TryAnnotateTypeOrScopeTokenAfterScopeSpec(bool EnteringContext,
-                                                 bool NeedType,
-                                                 CXXScopeSpec &SS,
+  bool TryAnnotateTypeOrScopeToken();
+  bool TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
                                                  bool IsNewScope);
   bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
 

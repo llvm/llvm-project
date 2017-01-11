@@ -748,6 +748,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->IsExplicitlyDefaulted = Record.readInt();
   FD->HasImplicitReturnZero = Record.readInt();
   FD->IsConstexpr = Record.readInt();
+  FD->UsesSEHTry = Record.readInt();
   FD->HasSkippedBody = Record.readInt();
   FD->IsLateTemplateParsed = Record.readInt();
   FD->setCachedLinkage(Linkage(Record.readInt()));

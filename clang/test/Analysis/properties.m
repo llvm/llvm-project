@@ -315,6 +315,32 @@ void testConsistencyAssign(Person *p) {
 }
 @end
 
+__attribute__((objc_root_class))
+@interface ClassWithPrivatePropertyInClassExtensionWithProtocolShadowingCategory
+@end
+
+@protocol HasStuff
+@property (nonatomic, readonly) int stuffProperty;
+@end
+
+@interface ClassWithPrivatePropertyInClassExtensionWithProtocolShadowingCategory (Private)
+@property (nonatomic, readonly) int stuffProperty;
+@end
+
+@interface ClassWithPrivatePropertyInClassExtensionWithProtocolShadowingCategory (Internal) <HasStuff>
+@end
+
+@interface ClassWithPrivatePropertyInClassExtensionWithProtocolShadowingCategory() <HasStuff>
+@end
+
+@implementation ClassWithPrivatePropertyInClassExtensionWithProtocolShadowingCategory
+@synthesize stuffProperty = _stuffProperty;
+
+-(void)foo {
+  (void)self.stuffProperty;
+}
+@end
+
 //------
 // Setter ivar invalidation.
 //------
