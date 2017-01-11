@@ -25,6 +25,9 @@ namespace CodeGen {
 
 class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
 private:
+  // Parallel outlined function work for workers to execute.
+  llvm::SmallVector<llvm::Function *, 16> Work;
+
   struct EntryFunctionState {
     llvm::BasicBlock *ExitBB = nullptr;
   };
@@ -100,6 +103,29 @@ private:
                                   bool IsOffloadEntry,
                                   const RegionCodeGenTy &CodeGen) override;
 
+  /// \brief Emits code for parallel or serial call of the \a OutlinedFn with
+  /// variables captured in a record which address is stored in \a
+  /// CapturedStruct.
+  /// This call is for the Generic Execution Mode.
+  /// \param OutlinedFn Outlined function to be run in parallel threads. Type of
+  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
+  /// \param CapturedVars A pointer to the record with the references to
+  /// variables used in \a OutlinedFn function.
+  /// \param IfCond Condition in the associated 'if' clause, if it was
+  /// specified, nullptr otherwise.
+  void emitGenericParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                               llvm::Value *OutlinedFn,
+                               ArrayRef<llvm::Value *> CapturedVars,
+                               const Expr *IfCond);
+
+protected:
+  /// \brief Get the function name of an outlined region.
+  //  The name can be customized depending on the target.
+  //
+  StringRef getOutlinedHelperName() const override {
+    return "__omp_outlined__";
+  }
+
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
 
@@ -137,6 +163,20 @@ public:
   void emitTeamsCall(CodeGenFunction &CGF, const OMPExecutableDirective &D,
                      SourceLocation Loc, llvm::Value *OutlinedFn,
                      ArrayRef<llvm::Value *> CapturedVars) override;
+
+  /// \brief Emits code for parallel or serial call of the \a OutlinedFn with
+  /// variables captured in a record which address is stored in \a
+  /// CapturedStruct.
+  /// \param OutlinedFn Outlined function to be run in parallel threads. Type of
+  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
+  /// \param CapturedVars A pointer to the record with the references to
+  /// variables used in \a OutlinedFn function.
+  /// \param IfCond Condition in the associated 'if' clause, if it was
+  /// specified, nullptr otherwise.
+  void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                        llvm::Value *OutlinedFn,
+                        ArrayRef<llvm::Value *> CapturedVars,
+                        const Expr *IfCond) override;
 };
 
 } // CodeGen namespace.

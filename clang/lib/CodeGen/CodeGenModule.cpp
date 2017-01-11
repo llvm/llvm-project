@@ -1243,9 +1243,15 @@ void CodeGenModule::EmitModuleLinkOptions() {
   SmallVector<clang::Module *, 16> Stack;
 
   // Seed the stack with imported modules.
-  for (Module *M : ImportedModules)
+  for (Module *M : ImportedModules) {
+    // Do not add any link flags when an implementation TU of a module imports
+    // a header of that same module.
+    if (M->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+        !getLangOpts().isCompilingModule())
+      continue;
     if (Visited.insert(M).second)
       Stack.push_back(M);
+  }
 
   // Find all of the modules to import, making a little effort to prune
   // non-leaf modules.

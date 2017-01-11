@@ -383,6 +383,23 @@ namespace deduction_after_explicit_pack {
   template<typename... T> struct X { X(int); operator int(); };
   template<typename... T> void p(T..., X<T...>, ...); // expected-note {{deduced conflicting}}
   void q() { p(X<int>(0), 0); } // expected-error {{no match}}
+
+  struct A {
+    template <typename T> void f(T, void *, int = 0); // expected-note 2{{no known conversion from 'double' to 'void *' for 2nd argument}}
+    void f(); // expected-note 2{{requires 0}}
+
+    template <typename T> static void g(T, void *, int = 0); // expected-note 2{{no known conversion from 'double' to 'void *' for 2nd argument}}
+    void g(); // expected-note 2{{requires 0}}
+
+    void h() {
+      f(1.0, 2.0); // expected-error {{no match}}
+      g(1.0, 2.0); // expected-error {{no match}}
+    }
+  };
+  void f(A a) {
+    a.f(1.0, 2.0); // expected-error {{no match}}
+    a.g(1.0, 2.0); // expected-error {{no match}}
+  }
 }
 
 namespace overload_vs_pack {

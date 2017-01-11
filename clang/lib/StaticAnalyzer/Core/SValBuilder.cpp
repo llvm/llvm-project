@@ -218,6 +218,18 @@ SValBuilder::getDerivedRegionValueSymbolVal(SymbolRef parentSymbol,
 }
 
 DefinedSVal SValBuilder::getMemberPointer(const DeclaratorDecl* DD) {
+  assert(!DD || isa<CXXMethodDecl>(DD) || isa<FieldDecl>(DD));
+
+  if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(DD)) {
+    // Sema treats pointers to static member functions as have function pointer
+    // type, so return a function pointer for the method.
+    // We don't need to play a similar trick for static member fields
+    // because these are represented as plain VarDecls and not FieldDecls
+    // in the AST.
+    if (MD->isStatic())
+      return getFunctionPointer(MD);
+  }
+
   return nonloc::PointerToMember(DD);
 }
 

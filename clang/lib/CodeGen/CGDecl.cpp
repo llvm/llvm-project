@@ -311,7 +311,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   if (!Init) {
     if (!getLangOpts().CPlusPlus)
       CGM.ErrorUnsupported(D.getInit(), "constant l-value expression");
-    else if (Builder.GetInsertBlock()) {
+    else if (HaveInsertPoint()) {
       // Since we have a static initializer, this global variable can't
       // be constant.
       GV->setConstant(false);
@@ -352,7 +352,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   GV->setConstant(CGM.isTypeConstant(D.getType(), true));
   GV->setInitializer(Init);
 
-  if (hasNontrivialDestruction(D.getType())) {
+  if (hasNontrivialDestruction(D.getType()) && HaveInsertPoint()) {
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.

@@ -1092,12 +1092,50 @@ void HeaderSearch::MarkFileModuleHeader(const FileEntry *FE,
 }
 
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
-                                          const FileEntry *File,
-                                          bool isImport, Module *M) {
+                                          const FileEntry *File, bool isImport,
+                                          bool ModulesEnabled, Module *M) {
   ++NumIncluded; // Count # of attempted #includes.
 
   // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
+
+  // FIXME: this is a workaround for the lack of proper modules-aware support
+  // for #import / #pragma once
+  auto TryEnterImported = [&](void) -> bool {
+    if (!ModulesEnabled)
+      return false;
+    // Modules with builtins are special; multiple modules use builtins as
+    // modular headers, example:
+    //
+    //    module stddef { header "stddef.h" export * }
+    //
+    // After module map parsing, this expands to:
+    //
+    //    module stddef {
+    //      header "/path_to_builtin_dirs/stddef.h"
+    //      textual "stddef.h"
+    //    }
+    //
+    // It's common that libc++ and system modules will both define such
+    // submodules. Make sure cached results for a builtin header won't
+    // prevent other builtin modules to potentially enter the builtin header.
+    // Note that builtins are header guarded and the decision to actually
+    // enter them is postponed to the controlling macros logic below.
+    bool TryEnterHdr = false;
+    if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
+      TryEnterHdr = File->getDir() == ModMap.getBuiltinDir() &&
+                    ModuleMap::isBuiltinHeader(
+                        llvm::sys::path::filename(File->getName()));
+
+    // Textual headers can be #imported from different modules. Since ObjC
+    // headers find in the wild might rely only on #import and do not contain
+    // controlling macros, be conservative and only try to enter textual headers
+    // if such macro is present.
+    if (!FileInfo.isModuleHeader &&
+        FileInfo.getControllingMacro(ExternalLookup))
+      TryEnterHdr = true;
+    return TryEnterHdr;
+  };
 
   // If this is a #import directive, check that we have not already imported
   // this header.
@@ -1106,11 +1144,12 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     FileInfo.isImport = true;
 
     // Has this already been #import'ed or #include'd?
-    if (FileInfo.NumIncludes) return false;
+    if (FileInfo.NumIncludes && !TryEnterImported())
+      return false;
   } else {
     // Otherwise, if this is a #include of a file that was previously #import'd
     // or if this is the second #include of a #pragma once file, ignore it.
-    if (FileInfo.isImport)
+    if (FileInfo.isImport && !TryEnterImported())
       return false;
   }
 

@@ -356,7 +356,9 @@ X86TargetInfo::X86TargetInfo() {
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
-  default:
+  case R_386_16:
+  case R_386_32:
+  case R_386_TLS_LDO_32:
     return R_ABS;
   case R_386_TLS_GD:
     return R_TLSGD;
@@ -381,6 +383,12 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLS;
   case R_386_TLS_LE_32:
     return R_NEG_TLS;
+  case R_386_NONE:
+    return R_HINT;
+  default:
+    error("do not know how to handle relocation " + toString(Type) + " (" +
+          Twine(Type) + ")");
+    return R_HINT;
   }
 }
 

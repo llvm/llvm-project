@@ -6432,9 +6432,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  // Diagnose shadowed variables before filtering for scope.
-  if (D.getCXXScopeSpec().isEmpty())
-    CheckShadow(S, NewVD, Previous);
+  // Find the shadowed declaration before filtering for scope.
+  NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
+                                ? getShadowedDeclaration(NewVD, Previous)
+                                : nullptr;
 
   // Don't consider existing declarations that are in a different
   // scope and are out-of-semantic-context declarations (if the new
@@ -6529,6 +6530,10 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  // Diagnose shadowed variables iff this isn't a redeclaration.
+  if (ShadowedDecl && !D.isRedeclaration())
+    CheckShadow(NewVD, ShadowedDecl, Previous);
+
   ProcessPragmaWeak(S, NewVD);
 
   // If this is the first declaration of an extern C variable, update
@@ -6602,33 +6607,40 @@ static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
   return SourceLocation();
 }
 
+/// \brief Return the declaration shadowed by the given variable \p D, or null
+/// if it doesn't shadow any declaration or shadowing warnings are disabled.
+NamedDecl *Sema::getShadowedDeclaration(const VarDecl *D,
+                                        const LookupResult &R) {
+  // Return if warning is ignored.
+  if (Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc()))
+    return nullptr;
+
+  // Don't diagnose declarations at file scope.
+  if (D->hasGlobalStorage())
+    return nullptr;
+
+  // Only diagnose if we're shadowing an unambiguous field or variable.
+  if (R.getResultKind() != LookupResult::Found)
+    return nullptr;
+
+  NamedDecl *ShadowedDecl = R.getFoundDecl();
+  return isa<VarDecl>(ShadowedDecl) || isa<FieldDecl>(ShadowedDecl)
+             ? ShadowedDecl
+             : nullptr;
+}
+
 /// \brief Diagnose variable or built-in function shadowing.  Implements
 /// -Wshadow.
 ///
 /// This method is called whenever a VarDecl is added to a "useful"
 /// scope.
 ///
-/// \param S the scope in which the shadowing name is being declared
+/// \param ShadowedDecl the declaration that is shadowed by the given variable
 /// \param R the lookup of the name
 ///
-void Sema::CheckShadow(Scope *S, VarDecl *D, const LookupResult& R) {
-  // Return if warning is ignored.
-  if (Diags.isIgnored(diag::warn_decl_shadow, R.getNameLoc()))
-    return;
-
-  // Don't diagnose declarations at file scope.
-  if (D->hasGlobalStorage())
-    return;
-
+void Sema::CheckShadow(VarDecl *D, NamedDecl *ShadowedDecl,
+                       const LookupResult &R) {
   DeclContext *NewDC = D->getDeclContext();
-
-  // Only diagnose if we're shadowing an unambiguous field or variable.
-  if (R.getResultKind() != LookupResult::Found)
-    return;
-
-  NamedDecl* ShadowedDecl = R.getFoundDecl();
-  if (!isa<VarDecl>(ShadowedDecl) && !isa<FieldDecl>(ShadowedDecl))
-    return;
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
     // Fields are not shadowed by variables in C++ static methods.
@@ -6739,7 +6751,8 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
   LookupResult R(*this, D->getDeclName(), D->getLocation(),
                  Sema::LookupOrdinaryName, Sema::ForRedeclaration);
   LookupName(R, S);
-  CheckShadow(S, D, R);
+  if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
+    CheckShadow(D, ShadowedDecl, R);
 }
 
 /// Check if 'E', which is an expression that is about to be modified, refers

@@ -1014,6 +1014,7 @@ private:
   void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef VerStr);
   std::vector<SymbolVersion> readSymbols();
+  void readLocals();
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
@@ -1861,17 +1862,22 @@ void ScriptParser::readAnonymousDeclaration() {
   if (consume("global:") || peek() != "local:")
     Config->VersionScriptGlobals = readSymbols();
 
-  // Next, read local symbols.
-  if (consume("local:")) {
-    if (consume("*")) {
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-      expect(";");
-    } else {
-      setError("local symbol list for anonymous version is not supported");
-    }
-  }
+  readLocals();
   expect("}");
   expect(";");
+}
+
+void ScriptParser::readLocals() {
+  if (!consume("local:"))
+    return;
+  std::vector<SymbolVersion> Locals = readSymbols();
+  for (SymbolVersion V : Locals) {
+    if (V.Name == "*") {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      continue;
+    }
+    Config->VersionScriptLocals.push_back(V);
+  }
 }
 
 // Reads a list of symbols, e.g. "VerStr { global: foo; bar; local: *; };".
@@ -1885,16 +1891,7 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   if (consume("global:") || peek() != "local:")
     Config->VersionDefinitions.back().Globals = readSymbols();
 
-  // Read local symbols.
-  if (consume("local:")) {
-    if (consume("*")) {
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-      expect(";");
-    } else {
-      for (SymbolVersion V : readSymbols())
-        Config->VersionScriptLocals.push_back(V);
-    }
-  }
+  readLocals();
   expect("}");
 
   // Each version may have a parent version. For example, "Ver2"

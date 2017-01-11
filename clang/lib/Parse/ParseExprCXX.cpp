@@ -735,7 +735,7 @@ ExprResult Parser::TryParseLambdaExpression() {
 ///        sometimes skip the initializers for init-captures and not fully
 ///        populate \p Intro. This flag will be set to \c true if we do so.
 /// \return A DiagnosticID if it hit something unexpected. The location for
-///         for the diagnostic is that of the current token.
+///         the diagnostic is that of the current token.
 Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
                                                  bool *SkippedInits) {
   typedef Optional<unsigned> DiagResult;

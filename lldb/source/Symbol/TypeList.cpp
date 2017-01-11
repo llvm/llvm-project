@@ -108,13 +108,13 @@ void TypeList::Dump(Stream *s, bool show_context) {
 
 void TypeList::RemoveMismatchedTypes(const char *qualified_typename,
                                      bool exact_match) {
-  std::string type_scope;
-  std::string type_basename;
+  llvm::StringRef type_scope;
+  llvm::StringRef type_basename;
   TypeClass type_class = eTypeClassAny;
   if (!Type::GetTypeScopeAndBasename(qualified_typename, type_scope,
                                      type_basename, type_class)) {
     type_basename = qualified_typename;
-    type_scope.clear();
+    type_scope = "";
   }
   return RemoveMismatchedTypes(type_scope, type_basename, type_class,
                                exact_match);
@@ -145,8 +145,8 @@ void TypeList::RemoveMismatchedTypes(const std::string &type_scope,
     ConstString match_type_name_const_str(the_type->GetQualifiedName());
     if (match_type_name_const_str) {
       const char *match_type_name = match_type_name_const_str.GetCString();
-      std::string match_type_scope;
-      std::string match_type_basename;
+      llvm::StringRef match_type_scope;
+      llvm::StringRef match_type_basename;
       if (Type::GetTypeScopeAndBasename(match_type_name, match_type_scope,
                                         match_type_basename,
                                         match_type_class)) {
