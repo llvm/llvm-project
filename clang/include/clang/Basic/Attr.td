@@ -195,6 +195,9 @@ class VariadicEnumArgument<string name, string type, list<string> values,
   list<string> Enums = enums;
 }
 
+// Represents an attribute wrapped by another attribute.
+class AttrArgument<string name, bit opt = 0> : Argument<name, opt>;
+
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety> {
   string Name = name;
@@ -1498,6 +1501,29 @@ def SwiftImportPropertyAsAccessors : InheritableAttr {
   let Spellings = [];
   let SemaHandler = 0;
   let Documentation = [Undocumented];
+}
+
+def SwiftVersioned : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">];
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}
+
+def SwiftVersionedRemoval : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">];
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+  let AdditionalMembers = [{
+    attr::Kind getAttrKindToRemove() const {
+      return static_cast<attr::Kind>(getRawKind());
+    }
+  }];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {

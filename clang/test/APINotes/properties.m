@@ -10,22 +10,36 @@
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnly 'id'
 // CHECK-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyForClass 'id'
 // CHECK-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyInVersion3 'id'
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
-// CHECK-4-NEXT: {{^$}}
+// CHECK-4-NEXT: SwiftVersionedAttr {{.+}} 3.0
+// CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyForClassInVersion3 'id'
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
-// CHECK-4-NEXT: {{^$}}
+// CHECK-4-NEXT: SwiftVersionedAttr {{.+}} 3.0
+// CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyExceptInVersion3 'id'
-// CHECK-3-NEXT: {{^$}}
+// CHECK-3-NEXT: SwiftVersionedAttr {{.+}} 0{{$}}
+// CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-4-NEXT: SwiftVersionedRemovalAttr {{.+}} Implicit 3.0 {{[0-9]+}}
+// CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyForClassExceptInVersion3 'id'
-// CHECK-3-NEXT: {{^$}}
+// CHECK-3-NEXT: SwiftVersionedAttr {{.+}} 0{{$}}
+// CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} Implicit
+// CHECK-4-NEXT: SwiftVersionedRemovalAttr {{.+}} Implicit 3.0 {{[0-9]+}}
+// CHECK-NOT: Attr
+
+// CHECK-LABEL: Decl
