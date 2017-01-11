@@ -46,10 +46,13 @@ public:
   }
 
   void handleDeclarator(const DeclaratorDecl *D,
-                        const NamedDecl *Parent = nullptr) {
+                        const NamedDecl *Parent = nullptr,
+                        bool isIBType = false) {
     if (!Parent) Parent = D;
 
-    IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), Parent);
+    IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), Parent,
+                                 Parent->getLexicalDeclContext(),
+                                 /*isBase=*/false, isIBType);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent);
     if (IndexCtx.shouldIndexFunctionLocalSymbols()) {
       // Only index parameters in definitions, parameters in declarations are
@@ -92,8 +95,11 @@ public:
     if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic, Relations))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
-    for (const auto *I : D->parameters())
-      handleDeclarator(I, D);
+    bool hasIBActionAndFirst = D->hasAttr<IBActionAttr>();
+    for (const auto *I : D->parameters()) {
+      handleDeclarator(I, D, /*isIBType=*/hasIBActionAndFirst);
+      hasIBActionAndFirst = false;
+    }
 
     if (D->isThisDeclarationADefinition()) {
       const Stmt *Body = D->getBody();
@@ -333,6 +339,9 @@ public:
         handleObjCMethod(MD, D);
     if (!IndexCtx.handleDecl(D))
       return false;
+    if (IBOutletCollectionAttr *attr = D->getAttr<IBOutletCollectionAttr>())
+      IndexCtx.indexTypeSourceInfo(attr->getInterfaceLoc(), D,
+                                   D->getLexicalDeclContext(), false, true);
     IndexCtx.indexTypeSourceInfo(D->getTypeSourceInfo(), D);
     return true;
   }

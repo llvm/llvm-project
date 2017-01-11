@@ -98,6 +98,12 @@ extern int setjmp(jmp_buf);
 
 @interface I2
 @property (readwrite) id prop;
+
+// CHECK: [[@LINE+4]]:63 | instance-property(IB,IBColl)/ObjC | buttons | c:objc(cs)I2(py)buttons | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+2]]:50 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont,RelIBType | rel: 1
+// CHECK-NEXT: RelCont,RelIBType | buttons | c:objc(cs)I2(py)buttons
+@property (nonatomic, strong) IBOutletCollection(I1) NSArray *buttons;
 @end
 
 // CHECK: [[@LINE+2]]:17 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,Impl,RelChild | rel: 1
@@ -110,6 +116,13 @@ extern int setjmp(jmp_buf);
 // CHECK: [[@LINE+2]]:13 | instance-method/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 @synthesize prop = _prop;
+
+// CHECK: [[@LINE+5]]:1 | instance-method(IB)/ObjC | doAction:foo: | c:objc(cs)I2(im)doAction:foo: | -[I2 doAction:foo:] | Def,Dyn,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+3]]:22 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont,RelIBType | rel: 1
+// CHECK-NEXT: RelCont,RelIBType | doAction:foo: | c:objc(cs)I2(im)doAction:foo:
+// CHECK: [[@LINE+1]]:39 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont | rel: 1
+-(IBAction)doAction:(I1 *)sender foo:(I1 *)bar {}
 @end
 
 @interface I3
