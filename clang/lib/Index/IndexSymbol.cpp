@@ -289,6 +289,7 @@ void index::applyForEachSymbolRole(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationCalledBy);
   APPLY_FOR_ROLE(RelationExtendedBy);
   APPLY_FOR_ROLE(RelationAccessorOf);
+  APPLY_FOR_ROLE(RelationContainedBy);
 
 #undef APPLY_FOR_ROLE
 }
@@ -317,6 +318,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     case SymbolRole::RelationCalledBy: OS << "RelCall"; break;
     case SymbolRole::RelationExtendedBy: OS << "RelExt"; break;
     case SymbolRole::RelationAccessorOf: OS << "RelAcc"; break;
+    case SymbolRole::RelationContainedBy: OS << "RelCont"; break;
     }
   });
 }
