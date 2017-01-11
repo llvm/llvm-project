@@ -25,7 +25,7 @@ include_directories(../../source)
 
 include(../../cmake/LLDBDependencies.cmake)
 
-add_lldb_executable(lldb-server INCLUDE_IN_FRAMEWORK
+add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp
@@ -59,6 +59,3 @@ else()
 endif()
 
 set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})
-
-install(TARGETS lldb-server
-  RUNTIME DESTINATION bin)

@@ -1,9 +1,13 @@
+if(NOT LLDB_BUILT_STANDALONE)
+  set(tablegen_deps intrinsics_gen)
+endif()
+
+
 add_lldb_library(lldbPluginRenderScriptRuntime
   RenderScriptRuntime.cpp
   RenderScriptExpressionOpts.cpp
   RenderScriptx86ABIFixups.cpp
-  )
 
-if(NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(lldbPluginRenderScriptRuntime intrinsics_gen)
-endif()
+  DEPENDS
+  ${tablegen_deps}
+  )

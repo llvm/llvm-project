@@ -1,3 +1,7 @@
+if(NOT LLDB_BUILT_STANDALONE)
+  set(tablegen_deps intrinsics_gen)
+endif()
+
 add_lldb_library(lldbPluginExpressionParserClang
   ASTDumper.cpp
   ASTResultSynthesizer.cpp
@@ -12,8 +16,7 @@ add_lldb_library(lldbPluginExpressionParserClang
   ClangUserExpression.cpp
   ClangUtilityFunction.cpp
   IRForTarget.cpp
-  )
 
-if(NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(lldbPluginExpressionParserClang intrinsics_gen)
-endif()
+  DEPENDS
+  ${tablegen_deps}
+  )
