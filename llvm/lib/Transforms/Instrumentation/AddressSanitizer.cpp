@@ -587,6 +587,22 @@ class AddressSanitizerModule : public ModulePass {
   void initializeCallbacks(Module &M);
 
   bool InstrumentGlobals(IRBuilder<> &IRB, Module &M);
+  void InstrumentGlobalsCOFF(IRBuilder<> &IRB, Module &M,
+                             ArrayRef<GlobalVariable *> ExtendedGlobals,
+                             ArrayRef<Constant *> MetadataInitializers);
+  void InstrumentGlobalsMachO(IRBuilder<> &IRB, Module &M,
+                              ArrayRef<GlobalVariable *> ExtendedGlobals,
+                              ArrayRef<Constant *> MetadataInitializers);
+  void
+  InstrumentGlobalsWithMetadataArray(IRBuilder<> &IRB, Module &M,
+                                     ArrayRef<GlobalVariable *> ExtendedGlobals,
+                                     ArrayRef<Constant *> MetadataInitializers);
+
+  GlobalVariable *CreateMetadataGlobal(Module &M, Constant *Initializer,
+                                       StringRef OriginalName);
+  void SetComdatForGlobalMetadata(GlobalVariable *G, GlobalVariable *Metadata);
+  IRBuilder<> CreateAsanModuleDtor(Module &M);
+
   bool ShouldInstrumentGlobal(GlobalVariable *G);
   bool ShouldUseMachOGlobalsSection() const;
   StringRef getGlobalMetadataSection() const;
@@ -1445,15 +1461,170 @@ void AddressSanitizerModule::initializeCallbacks(Module &M) {
 
   // Declare the functions that find globals in a shared object and then invoke
   // the (un)register function on them.
-  AsanRegisterImageGlobals = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(kAsanRegisterImageGlobalsName,
-      IRB.getVoidTy(), IntptrTy, nullptr));
+  AsanRegisterImageGlobals =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          kAsanRegisterImageGlobalsName, IRB.getVoidTy(), IntptrTy, nullptr));
   AsanRegisterImageGlobals->setLinkage(Function::ExternalLinkage);
 
-  AsanUnregisterImageGlobals = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(kAsanUnregisterImageGlobalsName,
-      IRB.getVoidTy(), IntptrTy, nullptr));
+  AsanUnregisterImageGlobals =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          kAsanUnregisterImageGlobalsName, IRB.getVoidTy(), IntptrTy, nullptr));
   AsanUnregisterImageGlobals->setLinkage(Function::ExternalLinkage);
+}
+
+// Put the metadata and the instrumented global in the same group. This ensures
+// that the metadata is discarded if the instrumented global is discarded.
+void AddressSanitizerModule::SetComdatForGlobalMetadata(
+    GlobalVariable *G, GlobalVariable *Metadata) {
+  Module &M = *G->getParent();
+  Comdat *C = G->getComdat();
+  if (!C) {
+    if (!G->hasName()) {
+      // If G is unnamed, it must be internal. Give it an artificial name
+      // so we can put it in a comdat.
+      assert(G->hasLocalLinkage());
+      G->setName(Twine(kAsanGenPrefix) + "_anon_global");
+    }
+    C = M.getOrInsertComdat(G->getName());
+    // Make this IMAGE_COMDAT_SELECT_NODUPLICATES on COFF.
+    if (TargetTriple.isOSBinFormatCOFF())
+      C->setSelectionKind(Comdat::NoDuplicates);
+    G->setComdat(C);
+  }
+
+  assert(G->hasComdat());
+  Metadata->setComdat(G->getComdat());
+}
+
+// Create a separate metadata global and put it in the appropriate ASan
+// global registration section.
+GlobalVariable *
+AddressSanitizerModule::CreateMetadataGlobal(Module &M, Constant *Initializer,
+                                             StringRef OriginalName) {
+  auto &DL = M.getDataLayout();
+  GlobalVariable *Metadata =
+      new GlobalVariable(M, Initializer->getType(), false,
+                         GlobalVariable::InternalLinkage, Initializer,
+                         Twine("__asan_global_") +
+                             GlobalValue::getRealLinkageName(OriginalName));
+  Metadata->setSection(getGlobalMetadataSection());
+
+  // We don't want any padding, but we also need a reasonable alignment.
+  // The MSVC linker always inserts padding when linking incrementally. We
+  // cope with that by aligning each struct to its size, which must be a power
+  // of two.
+  unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(Initializer->getType());
+  assert(isPowerOf2_32(SizeOfGlobalStruct) &&
+         "global metadata will not be padded appropriately");
+  Metadata->setAlignment(SizeOfGlobalStruct);
+  return Metadata;
+}
+
+IRBuilder<> AddressSanitizerModule::CreateAsanModuleDtor(Module &M) {
+  Function *AsanDtorFunction =
+      Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
+                       GlobalValue::InternalLinkage, kAsanModuleDtorName, &M);
+  BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
+  appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
+
+  return IRBuilder<>(ReturnInst::Create(*C, AsanDtorBB));
+}
+
+void AddressSanitizerModule::InstrumentGlobalsCOFF(
+    IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
+    ArrayRef<Constant *> MetadataInitializers) {
+  assert(ExtendedGlobals.size() == MetadataInitializers.size());
+
+  for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
+    GlobalVariable *G = ExtendedGlobals[i];
+    GlobalVariable *Metadata =
+        CreateMetadataGlobal(M, MetadataInitializers[i], G->getName());
+    SetComdatForGlobalMetadata(G, Metadata);
+  }
+}
+
+void AddressSanitizerModule::InstrumentGlobalsMachO(
+    IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
+    ArrayRef<Constant *> MetadataInitializers) {
+  assert(ExtendedGlobals.size() == MetadataInitializers.size());
+
+  // On recent Mach-O platforms, use a structure which binds the liveness of
+  // the global variable to the metadata struct. Keep the list of "Liveness" GV
+  // created to be added to llvm.compiler.used
+  StructType *LivenessTy = StructType::get(IntptrTy, IntptrTy, nullptr);
+  SmallVector<GlobalValue *, 16> LivenessGlobals(ExtendedGlobals.size());
+
+  for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
+    Constant *Initializer = MetadataInitializers[i];
+    GlobalVariable *G = ExtendedGlobals[i];
+    GlobalVariable *Metadata =
+        CreateMetadataGlobal(M, Initializer, G->getName());
+
+    // On recent Mach-O platforms, we emit the global metadata in a way that
+    // allows the linker to properly strip dead globals.
+    auto LivenessBinder = ConstantStruct::get(
+        LivenessTy, Initializer->getAggregateElement(0u),
+        ConstantExpr::getPointerCast(Metadata, IntptrTy), nullptr);
+    GlobalVariable *Liveness = new GlobalVariable(
+        M, LivenessTy, false, GlobalVariable::InternalLinkage, LivenessBinder,
+        Twine("__asan_binder_") + G->getName());
+    Liveness->setSection("__DATA,__asan_liveness,regular,live_support");
+    LivenessGlobals[i] = Liveness;
+  }
+
+  // Update llvm.compiler.used, adding the new liveness globals. This is
+  // needed so that during LTO these variables stay alive. The alternative
+  // would be to have the linker handling the LTO symbols, but libLTO
+  // current API does not expose access to the section for each symbol.
+  if (!LivenessGlobals.empty())
+    appendToCompilerUsed(M, LivenessGlobals);
+
+  // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
+  // to look up the loaded image that contains it. Second, we can store in it
+  // whether registration has already occurred, to prevent duplicate
+  // registration.
+  //
+  // common linkage ensures that there is only one global per shared library.
+  GlobalVariable *RegisteredFlag = new GlobalVariable(
+      M, IntptrTy, false, GlobalVariable::CommonLinkage,
+      ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
+  RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
+
+  IRB.CreateCall(AsanRegisterImageGlobals,
+                 {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
+
+  // We also need to unregister globals at the end, e.g., when a shared library
+  // gets closed.
+  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRB_Dtor.CreateCall(AsanUnregisterImageGlobals,
+                      {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
+}
+
+void AddressSanitizerModule::InstrumentGlobalsWithMetadataArray(
+    IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
+    ArrayRef<Constant *> MetadataInitializers) {
+  assert(ExtendedGlobals.size() == MetadataInitializers.size());
+  unsigned N = ExtendedGlobals.size();
+  assert(N > 0);
+
+  // On platforms that don't have a custom metadata section, we emit an array
+  // of global metadata structures.
+  ArrayType *ArrayOfGlobalStructTy =
+      ArrayType::get(MetadataInitializers[0]->getType(), N);
+  auto AllGlobals = new GlobalVariable(
+      M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
+      ConstantArray::get(ArrayOfGlobalStructTy, MetadataInitializers), "");
+
+  IRB.CreateCall(AsanRegisterGlobals,
+                 {IRB.CreatePointerCast(AllGlobals, IntptrTy),
+                  ConstantInt::get(IntptrTy, N)});
+
+  // We also need to unregister globals at the end, e.g., when a shared library
+  // gets closed.
+  IRBuilder<> IRB_Dtor = CreateAsanModuleDtor(M);
+  IRB_Dtor.CreateCall(AsanUnregisterGlobals,
+                      {IRB.CreatePointerCast(AllGlobals, IntptrTy),
+                       ConstantInt::get(IntptrTy, N)});
 }
 
 // This function replaces all global variables with new variables that have
@@ -1472,9 +1643,6 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   if (n == 0) return false;
 
   auto &DL = M.getDataLayout();
-  bool UseComdatMetadata = TargetTriple.isOSBinFormatCOFF();
-  bool UseMachOGlobalsSection = ShouldUseMachOGlobalsSection();
-  bool UseMetadataArray = !(UseComdatMetadata || UseMachOGlobalsSection);
 
   // A global is described by a structure
   //   size_t beg;
@@ -1489,19 +1657,8 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   StructType *GlobalStructTy =
       StructType::get(IntptrTy, IntptrTy, IntptrTy, IntptrTy, IntptrTy,
                       IntptrTy, IntptrTy, IntptrTy, nullptr);
-  unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(GlobalStructTy);
-  assert(isPowerOf2_32(SizeOfGlobalStruct) &&
-         "global metadata will not be padded appropriately");
-  SmallVector<Constant *, 16> Initializers(UseMetadataArray ? n : 0);
-
-  // On recent Mach-O platforms, use a structure which binds the liveness of
-  // the global variable to the metadata struct. Keep the list of "Liveness" GV
-  // created to be added to llvm.compiler.used
-  StructType *LivenessTy  = nullptr;
-  if (UseMachOGlobalsSection)
-    LivenessTy = StructType::get(IntptrTy, IntptrTy, nullptr);
-  SmallVector<GlobalValue *, 16> LivenessGlobals(
-      UseMachOGlobalsSection ? n : 0);
+  SmallVector<GlobalVariable *, 16> NewGlobals(n);
+  SmallVector<Constant *, 16> Initializers(n);
 
   bool HasDynamicallyInitializedGlobals = false;
 
@@ -1573,25 +1730,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
         ConstantExpr::getGetElementPtr(NewTy, NewGlobal, Indices2, true));
     NewGlobal->takeName(G);
     G->eraseFromParent();
-    G = NewGlobal;
-
-    if (UseComdatMetadata) {
-      // Get or create a COMDAT for G so that we can use it with our metadata.
-      Comdat *C = G->getComdat();
-      if (!C) {
-        if (!G->hasName()) {
-          // If G is unnamed, it must be internal. Give it an artificial name
-          // so we can put it in a comdat.
-          assert(G->hasLocalLinkage());
-          G->setName(Twine(kAsanGenPrefix) + "_anon_global");
-        }
-        C = M.getOrInsertComdat(G->getName());
-        // Make this IMAGE_COMDAT_SELECT_NODUPLICATES on COFF.
-        if (TargetTriple.isOSBinFormatCOFF())
-          C->setSelectionKind(Comdat::NoDuplicates);
-        G->setComdat(C);
-      }
-    }
+    NewGlobals[i] = NewGlobal;
 
     Constant *SourceLoc;
     if (!MD.SourceLoc.empty()) {
@@ -1642,116 +1781,20 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
 
     DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
-    // If we aren't using separate metadata globals, add it to the initializer
-    // list and continue.
-    if (UseMetadataArray) {
-      Initializers[i] = Initializer;
-      continue;
-    }
+    Initializers[i] = Initializer;
+  }
 
-    // Create a separate metadata global and put it in the appropriate ASan
-    // global registration section.
-    GlobalVariable *Metadata = new GlobalVariable(
-        M, GlobalStructTy, false, GlobalVariable::InternalLinkage,
-        Initializer, Twine("__asan_global_") +
-                             GlobalValue::getRealLinkageName(G->getName()));
-    Metadata->setSection(getGlobalMetadataSection());
-
-    // We don't want any padding, but we also need a reasonable alignment.
-    // The MSVC linker always inserts padding when linking incrementally. We
-    // cope with that by aligning each struct to its size, which must be a power
-    // of two.
-    Metadata->setAlignment(SizeOfGlobalStruct);
-
-    // On platforms that support comdats, put the metadata and the
-    // instrumented global in the same group. This ensures that the metadata
-    // is discarded if the instrumented global is discarded.
-    if (UseComdatMetadata) {
-      assert(G->hasComdat());
-      Metadata->setComdat(G->getComdat());
-      continue;
-    }
-    assert(UseMachOGlobalsSection);
-
-    // On recent Mach-O platforms, we emit the global metadata in a way that
-    // allows the linker to properly strip dead globals.
-    auto LivenessBinder = ConstantStruct::get(
-        LivenessTy, Initializer->getAggregateElement(0u),
-        ConstantExpr::getPointerCast(Metadata, IntptrTy), nullptr);
-    GlobalVariable *Liveness = new GlobalVariable(
-        M, LivenessTy, false, GlobalVariable::InternalLinkage, LivenessBinder,
-        Twine("__asan_binder_") + G->getName());
-    Liveness->setSection("__DATA,__asan_liveness,regular,live_support");
-    LivenessGlobals[i] = Liveness;
+  if (TargetTriple.isOSBinFormatCOFF()) {
+    InstrumentGlobalsCOFF(IRB, M, NewGlobals, Initializers);
+  } else if (ShouldUseMachOGlobalsSection()) {
+    InstrumentGlobalsMachO(IRB, M, NewGlobals, Initializers);
+  } else {
+    InstrumentGlobalsWithMetadataArray(IRB, M, NewGlobals, Initializers);
   }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
   if (HasDynamicallyInitializedGlobals)
     createInitializerPoisonCalls(M, ModuleName);
-
-  // Platforms with a dedicated metadata section don't need to emit any more
-  // code.
-  if (UseComdatMetadata)
-    return true;
-
-  GlobalVariable *AllGlobals = nullptr;
-  GlobalVariable *RegisteredFlag = nullptr;
-
-  if (UseMachOGlobalsSection) {
-    // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
-    // to look up the loaded image that contains it. Second, we can store in it
-    // whether registration has already occurred, to prevent duplicate
-    // registration.
-    //
-    // common linkage ensures that there is only one global per shared library.
-    RegisteredFlag = new GlobalVariable(
-        M, IntptrTy, false, GlobalVariable::CommonLinkage,
-        ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
-    RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
-
-    // Update llvm.compiler.used, adding the new liveness globals. This is
-    // needed so that during LTO these variables stay alive. The alternative
-    // would be to have the linker handling the LTO symbols, but libLTO
-    // current API does not expose access to the section for each symbol.
-    if (!LivenessGlobals.empty())
-      appendToCompilerUsed(M, LivenessGlobals);
-  } else if (UseMetadataArray) {
-    // On platforms that don't have a custom metadata section, we emit an array
-    // of global metadata structures.
-    ArrayType *ArrayOfGlobalStructTy = ArrayType::get(GlobalStructTy, n);
-    AllGlobals = new GlobalVariable(
-        M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
-        ConstantArray::get(ArrayOfGlobalStructTy, Initializers), "");
-  }
-
-  // Create a call to register the globals with the runtime.
-  if (UseMachOGlobalsSection) {
-    IRB.CreateCall(AsanRegisterImageGlobals,
-                   {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
-  } else {
-    IRB.CreateCall(AsanRegisterGlobals,
-                   {IRB.CreatePointerCast(AllGlobals, IntptrTy),
-                    ConstantInt::get(IntptrTy, n)});
-  }
-
-  // We also need to unregister globals at the end, e.g., when a shared library
-  // gets closed.
-  Function *AsanDtorFunction =
-      Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
-                       GlobalValue::InternalLinkage, kAsanModuleDtorName, &M);
-  BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
-  IRBuilder<> IRB_Dtor(ReturnInst::Create(*C, AsanDtorBB));
-
-  if (UseMachOGlobalsSection) {
-    IRB_Dtor.CreateCall(AsanUnregisterImageGlobals,
-                        {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
-  } else {
-    IRB_Dtor.CreateCall(AsanUnregisterGlobals,
-                        {IRB.CreatePointerCast(AllGlobals, IntptrTy),
-                         ConstantInt::get(IntptrTy, n)});
-  }
-
-  appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
 
   DEBUG(dbgs() << M);
   return true;
