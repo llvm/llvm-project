@@ -22,12 +22,12 @@ def LLVM_HASH_INCLUDES_DIFFS():
 
 
 def LLVM_REF():
-    llvm_ref = "master"
+    llvm_ref = "release_40"
     return llvm_ref
 
 
 def CLANG_REF():
-    clang_ref = "master"
+    clang_ref = "release_40"
     return clang_ref
 
 # For use with Xcode-style builds
