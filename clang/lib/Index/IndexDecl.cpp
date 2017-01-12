@@ -289,11 +289,12 @@ public:
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
     const ObjCInterfaceDecl *C = D->getClassInterface();
-    if (C)
-      TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D,
-                                  SymbolRoleSet(), SymbolRelation{
-                                    (unsigned)SymbolRole::RelationExtendedBy, D
-                                  }));
+    if (!C)
+      return true;
+    TRY_TO(IndexCtx.handleReference(C, D->getLocation(), D, D, SymbolRoleSet(),
+                                   SymbolRelation{
+                                     (unsigned)SymbolRole::RelationExtendedBy, D
+                                   }));
     SourceLocation CategoryLoc = D->getCategoryNameLoc();
     if (!CategoryLoc.isValid())
       CategoryLoc = D->getLocation();
