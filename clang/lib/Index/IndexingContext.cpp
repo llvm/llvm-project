@@ -314,9 +314,15 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
 
   if (Parent) {
     if (IsRef) {
-      addRelation(SymbolRelation{(unsigned)SymbolRole::RelationContainedBy, Parent});
+      addRelation(SymbolRelation{
+        (unsigned)SymbolRole::RelationContainedBy,
+        Parent
+      });
     } else if (!cast<DeclContext>(Parent)->isFunctionOrMethod()) {
-      addRelation(SymbolRelation{(unsigned)SymbolRole::RelationChildOf, Parent});
+      addRelation(SymbolRelation{
+        (unsigned)SymbolRole::RelationChildOf,
+        Parent
+      });
     }
   }
 
