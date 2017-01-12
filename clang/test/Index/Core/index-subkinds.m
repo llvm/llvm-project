@@ -26,12 +26,12 @@
 -(void)testIt2 {}
 @end
 
-// CHECK: [[@LINE+3]]:12 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref,RelExt | rel: 1
-// CHECK-NEXT: RelExt | cat | c:objc(cy)MyTestCase@cat
+// CHECK: [[@LINE+3]]:12 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref,RelExt,RelCont | rel: 1
+// CHECK-NEXT: RelExt,RelCont | cat | c:objc(cy)MyTestCase@cat
 // CHECK: [[@LINE+1]]:23 | extension/ObjC | cat | c:objc(cy)MyTestCase@cat | <no-cgname> | Decl | rel: 0
 @interface MyTestCase(cat)
 @end
-// CHECK: [[@LINE+2]]:17 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref | rel: 0
+// CHECK: [[@LINE+2]]:17 | class(test)/ObjC | MyTestCase | c:objc(cs)MyTestCase | _OBJC_CLASS_$_MyTestCase | Ref,RelCont | rel: 1
 // CHECK: [[@LINE+1]]:28 | extension/ObjC | MyTestCase | c:objc(cy)MyTestCase@cat | <no-cgname> | Def | rel: 0
 @implementation MyTestCase(cat)
 // CHECK: [[@LINE+1]]:1 | instance-method(test)/ObjC | testInCat | c:objc(cs)MyTestCase(im)testInCat | -[MyTestCase(cat) testInCat] | Def,Dyn,RelChild | rel: 1
