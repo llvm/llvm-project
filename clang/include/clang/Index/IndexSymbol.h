@@ -65,6 +65,8 @@ enum class SymbolSubKind {
   None,
   CXXCopyConstructor,
   CXXMoveConstructor,
+  AccessorGetter,
+  AccessorSetter,
 
   // Swift sub-kinds
 
