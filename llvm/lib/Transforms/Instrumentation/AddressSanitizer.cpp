@@ -1501,22 +1501,12 @@ void AddressSanitizerModule::SetComdatForGlobalMetadata(
 GlobalVariable *
 AddressSanitizerModule::CreateMetadataGlobal(Module &M, Constant *Initializer,
                                              StringRef OriginalName) {
-  auto &DL = M.getDataLayout();
   GlobalVariable *Metadata =
       new GlobalVariable(M, Initializer->getType(), false,
                          GlobalVariable::InternalLinkage, Initializer,
                          Twine("__asan_global_") +
                              GlobalValue::getRealLinkageName(OriginalName));
   Metadata->setSection(getGlobalMetadataSection());
-
-  // We don't want any padding, but we also need a reasonable alignment.
-  // The MSVC linker always inserts padding when linking incrementally. We
-  // cope with that by aligning each struct to its size, which must be a power
-  // of two.
-  unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(Initializer->getType());
-  assert(isPowerOf2_32(SizeOfGlobalStruct) &&
-         "global metadata will not be padded appropriately");
-  Metadata->setAlignment(SizeOfGlobalStruct);
   return Metadata;
 }
 
@@ -1534,11 +1524,22 @@ void AddressSanitizerModule::InstrumentGlobalsCOFF(
     IRBuilder<> &IRB, Module &M, ArrayRef<GlobalVariable *> ExtendedGlobals,
     ArrayRef<Constant *> MetadataInitializers) {
   assert(ExtendedGlobals.size() == MetadataInitializers.size());
+  auto &DL = M.getDataLayout();
 
   for (size_t i = 0; i < ExtendedGlobals.size(); i++) {
+    Constant *Initializer = MetadataInitializers[i];
     GlobalVariable *G = ExtendedGlobals[i];
     GlobalVariable *Metadata =
-        CreateMetadataGlobal(M, MetadataInitializers[i], G->getName());
+        CreateMetadataGlobal(M, Initializer, G->getName());
+
+    // The MSVC linker always inserts padding when linking incrementally. We
+    // cope with that by aligning each struct to its size, which must be a power
+    // of two.
+    unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(Initializer->getType());
+    assert(isPowerOf2_32(SizeOfGlobalStruct) &&
+           "global metadata will not be padded appropriately");
+    Metadata->setAlignment(SizeOfGlobalStruct);
+
     SetComdatForGlobalMetadata(G, Metadata);
   }
 }
