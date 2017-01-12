@@ -312,9 +312,20 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     Roles |= Rel.Roles;
   };
 
-  if (!IsRef && Parent && !cast<DeclContext>(Parent)->isFunctionOrMethod()) {
-    addRelation(SymbolRelation{(unsigned)SymbolRole::RelationChildOf, Parent});
+  if (Parent) {
+    if (IsRef) {
+      addRelation(SymbolRelation{
+        (unsigned)SymbolRole::RelationContainedBy,
+        Parent
+      });
+    } else if (!cast<DeclContext>(Parent)->isFunctionOrMethod()) {
+      addRelation(SymbolRelation{
+        (unsigned)SymbolRole::RelationChildOf,
+        Parent
+      });
+    }
   }
+
   for (auto &Rel : Relations) {
     addRelation(SymbolRelation(Rel.Roles,
                                Rel.RelatedSymbol->getCanonicalDecl()));

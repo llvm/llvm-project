@@ -21,7 +21,7 @@ public:
 };
 
 TemplCls<int> gtv(0);
-// CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | TemplCls | c:@ST>1#T@TemplCls | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:1 | class(Gen)/C++ | TemplCls | c:@ST>1#T@TemplCls | <no-cgname> | Ref,RelCont | rel: 1
 
 template <typename T>
 class BT {
@@ -38,7 +38,7 @@ class BT {
 // CHECK: [[@LINE+1]]:23 | type-alias/C | size_t |
 typedef unsigned long size_t;
 // CHECK: [[@LINE+2]]:7 | function/C | operator new | c:@F@operator new#l# | __Znwm |
-// CHECK: [[@LINE+1]]:20 | type-alias/C | size_t | {{.*}} | Ref |
+// CHECK: [[@LINE+1]]:20 | type-alias/C | size_t | {{.*}} | Ref,RelCont |
 void* operator new(size_t sz);
 
 // CHECK: [[@LINE+1]]:37 | variable(Gen)/C++ | tmplVar | c:index-source.cpp@VT>1#T@tmplVar | __ZL7tmplVar | Def | rel: 0
@@ -46,8 +46,8 @@ template<typename T> static const T tmplVar = T(0);
 // CHECK: [[@LINE+1]]:29 | variable(Gen,TS)/C++ | tmplVar | c:index-source.cpp@tmplVar>#I | __ZL7tmplVarIiE | Def | rel: 0
 template<> static const int tmplVar<int> = 0;
 // CHECK: [[@LINE+2]]:5 | variable/C | gvi | c:@gvi | _gvi | Def | rel: 0
-// CHECK: [[@LINE+1]]:11 | variable(Gen,TS)/C++ | tmplVar | c:index-source.cpp@tmplVar>#I | __ZL7tmplVarIiE | Ref,Read | rel: 0
+// CHECK: [[@LINE+1]]:11 | variable(Gen,TS)/C++ | tmplVar | c:index-source.cpp@tmplVar>#I | __ZL7tmplVarIiE | Ref,Read,RelCont | rel: 1
 int gvi = tmplVar<int>;
 // CHECK: [[@LINE+2]]:5 | variable/C | gvf | c:@gvf | _gvf | Def | rel: 0
-// CHECK: [[@LINE+1]]:11 | variable(Gen)/C++ | tmplVar | c:index-source.cpp@VT>1#T@tmplVar | __ZL7tmplVar | Ref,Read | rel: 0
+// CHECK: [[@LINE+1]]:11 | variable(Gen)/C++ | tmplVar | c:index-source.cpp@VT>1#T@tmplVar | __ZL7tmplVar | Ref,Read,RelCont | rel: 1
 int gvf = tmplVar<float>;

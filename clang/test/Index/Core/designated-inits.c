@@ -5,7 +5,7 @@ struct MyStruct {
 };
 
 enum {
-  MyValToSet;
+  MyValToSet
 };
 
 // CHECK: [[@LINE+1]]:14 | struct/C | MyStruct |
@@ -20,7 +20,7 @@ const struct MyStruct _MyStruct[]
       [0] = {
         [0][0] = {
           [0] = {
-            // CHECK: [[@LINE+2]]:14 | field/C | myfield | {{.*}} | Ref |
+            // CHECK: [[@LINE+2]]:14 | field/C | myfield | {{.*}} | Ref,RelCont |
             // CHECK: [[@LINE+1]]:24 | enumerator/C | MyValToSet |
             .myfield = MyValToSet,
             // CHECK-NOT: | field/C | myfield |
