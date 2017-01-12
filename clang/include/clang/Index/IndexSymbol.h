@@ -70,8 +70,6 @@ enum class SymbolSubKind {
 
   // Swift sub-kinds
 
-  SwiftAccessorGetter,
-  SwiftAccessorSetter,
   SwiftAccessorWillSet,
   SwiftAccessorDidSet,
   SwiftAccessorAddressor,
