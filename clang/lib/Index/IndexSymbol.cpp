@@ -389,8 +389,6 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
   case SymbolSubKind::AccessorGetter: return "acc-get";
   case SymbolSubKind::AccessorSetter: return "acc-set";
-  case SymbolSubKind::SwiftAccessorGetter: return "acc-get";
-  case SymbolSubKind::SwiftAccessorSetter: return "acc-set";
   case SymbolSubKind::SwiftAccessorWillSet: return "acc-willset";
   case SymbolSubKind::SwiftAccessorDidSet: return "acc-didset";
   case SymbolSubKind::SwiftAccessorAddressor: return "acc-addr";
