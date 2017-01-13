@@ -7789,6 +7789,7 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   Specialization->setTemplateKeywordLoc(TemplateLoc);
   Specialization->setBraceRange(SourceRange());
 
+  bool PreviouslyDLLExported = Specialization->hasAttr<DLLExportAttr>();
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
 
@@ -7851,8 +7852,9 @@ Sema::ActOnExplicitInstantiation(Scope *S,
 
     // Fix a TSK_ImplicitInstantiation followed by a
     // TSK_ExplicitInstantiationDefinition
-    if (Old_TSK == TSK_ImplicitInstantiation &&
-        Specialization->hasAttr<DLLExportAttr>() &&
+    bool NewlyDLLExported =
+        !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
+    if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
         (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
          Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment())) {
       // In the MS ABI, an explicit instantiation definition can add a dll
