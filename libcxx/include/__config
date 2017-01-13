@@ -27,7 +27,7 @@
 #define _GNUC_VER 0
 #endif
 
-#define _LIBCPP_VERSION 4000
+#define _LIBCPP_VERSION 5000
 
 #ifndef _LIBCPP_ABI_VERSION
 #define _LIBCPP_ABI_VERSION 1
@@ -772,7 +772,7 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
-#if __has_extension(cxx_explicit_conversions) || defined(__IBMCPP__) || \
+#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
     (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
 #   define _LIBCPP_EXPLICIT explicit
 #else

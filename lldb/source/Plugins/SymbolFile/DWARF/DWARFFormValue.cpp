@@ -406,8 +406,6 @@ void DWARFFormValue::Dump(Stream &s) const {
   uint64_t uvalue = Unsigned();
   bool cu_relative_offset = false;
 
-  bool verbose = s.GetVerbose();
-
   switch (m_form) {
   case DW_FORM_addr:
     s.Address(uvalue, sizeof(uint64_t));
@@ -476,8 +474,6 @@ void DWARFFormValue::Dump(Stream &s) const {
   case DW_FORM_strp: {
     const char *dbg_str = AsCString();
     if (dbg_str) {
-      if (verbose)
-        s.Printf(" .debug_str[0x%8.8x] = ", (uint32_t)uvalue);
       s.QuotedCString(dbg_str);
     } else {
       s.PutHex32(uvalue);
@@ -496,28 +492,18 @@ void DWARFFormValue::Dump(Stream &s) const {
   }
   case DW_FORM_ref1:
     cu_relative_offset = true;
-    if (verbose)
-      s.Printf("cu + 0x%2.2x", (uint8_t)uvalue);
     break;
   case DW_FORM_ref2:
     cu_relative_offset = true;
-    if (verbose)
-      s.Printf("cu + 0x%4.4x", (uint16_t)uvalue);
     break;
   case DW_FORM_ref4:
     cu_relative_offset = true;
-    if (verbose)
-      s.Printf("cu + 0x%4.4x", (uint32_t)uvalue);
     break;
   case DW_FORM_ref8:
     cu_relative_offset = true;
-    if (verbose)
-      s.Printf("cu + 0x%8.8" PRIx64, uvalue);
     break;
   case DW_FORM_ref_udata:
     cu_relative_offset = true;
-    if (verbose)
-      s.Printf("cu + 0x%" PRIx64, uvalue);
     break;
 
   // All DW_FORM_indirect attributes should be resolved prior to calling this
@@ -535,9 +521,6 @@ void DWARFFormValue::Dump(Stream &s) const {
   if (cu_relative_offset) {
     assert(m_cu); // CU must be valid for DW_FORM_ref forms that are compile
                   // unit relative or we will get this wrong
-    if (verbose)
-      s.PutCString(" => ");
-
     s.Printf("{0x%8.8" PRIx64 "}", uvalue + m_cu->GetOffset());
   }
 }

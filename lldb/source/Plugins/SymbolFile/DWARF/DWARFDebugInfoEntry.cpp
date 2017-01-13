@@ -666,13 +666,9 @@ void DWARFDebugInfoEntry::DumpAttribute(
     SymbolFileDWARF *dwarf2Data, const DWARFCompileUnit *cu,
     const DWARFDataExtractor &debug_info_data, lldb::offset_t *offset_ptr,
     Stream &s, dw_attr_t attr, dw_form_t form) {
-  bool verbose = s.GetVerbose();
   bool show_form = s.GetFlags().Test(DWARFDebugInfo::eDumpFlag_ShowForm);
 
-  if (verbose)
-    s.Offset(*offset_ptr);
-  else
-    s.Printf("            ");
+  s.Printf("            ");
   s.Indent(DW_AT_value_to_name(attr));
 
   if (show_form) {
@@ -694,35 +690,18 @@ void DWARFDebugInfoEntry::DumpAttribute(
 
   s.PutCString("( ");
 
-  // Always dump form value if verbose is enabled
-  if (verbose) {
-    form_value.Dump(s);
-  }
-
   // Check to see if we have any special attribute formatters
   switch (attr) {
   case DW_AT_stmt_list:
-    if (verbose)
-      s.PutCString(" ( ");
     s.Printf("0x%8.8" PRIx64, form_value.Unsigned());
-    if (verbose)
-      s.PutCString(" )");
     break;
 
   case DW_AT_language:
-    if (verbose)
-      s.PutCString(" ( ");
     s.PutCString(DW_LANG_value_to_name(form_value.Unsigned()));
-    if (verbose)
-      s.PutCString(" )");
     break;
 
   case DW_AT_encoding:
-    if (verbose)
-      s.PutCString(" ( ");
     s.PutCString(DW_ATE_value_to_name(form_value.Unsigned()));
-    if (verbose)
-      s.PutCString(" )");
     break;
 
   case DW_AT_frame_base:
@@ -730,32 +709,20 @@ void DWARFDebugInfoEntry::DumpAttribute(
   case DW_AT_data_member_location: {
     const uint8_t *blockData = form_value.BlockData();
     if (blockData) {
-      if (!verbose)
-        form_value.Dump(s);
-
       // Location description is inlined in data in the form value
       DWARFDataExtractor locationData(debug_info_data,
                                       (*offset_ptr) - form_value.Unsigned(),
                                       form_value.Unsigned());
-      if (verbose)
-        s.PutCString(" ( ");
       DWARFExpression::PrintDWARFExpression(
           s, locationData, DWARFCompileUnit::GetAddressByteSize(cu), 4, false);
-      if (verbose)
-        s.PutCString(" )");
     } else {
       // We have a location list offset as the value that is
       // the offset into the .debug_loc section that describes
       // the value over it's lifetime
       uint64_t debug_loc_offset = form_value.Unsigned();
       if (dwarf2Data) {
-        if (!verbose)
-          form_value.Dump(s);
         DWARFExpression::PrintDWARFLocationList(
             s, cu, dwarf2Data->get_debug_loc_data(), debug_loc_offset);
-      } else {
-        if (!verbose)
-          form_value.Dump(s);
       }
     }
   } break;
@@ -765,25 +732,17 @@ void DWARFDebugInfoEntry::DumpAttribute(
     uint64_t abstract_die_offset = form_value.Reference();
     form_value.Dump(s);
     //  *ostrm_ptr << HEX32 << abstract_die_offset << " ( ";
-    if (verbose)
-      s.PutCString(" ( ");
     GetName(dwarf2Data, cu, abstract_die_offset, s);
-    if (verbose)
-      s.PutCString(" )");
   } break;
 
   case DW_AT_type: {
     uint64_t type_die_offset = form_value.Reference();
-    if (!verbose)
-      form_value.Dump(s);
     s.PutCString(" ( ");
     AppendTypeName(dwarf2Data, cu, type_die_offset, s);
     s.PutCString(" )");
   } break;
 
   case DW_AT_ranges: {
-    if (!verbose)
-      form_value.Dump(s);
     lldb::offset_t ranges_offset = form_value.Unsigned();
     dw_addr_t base_addr = cu ? cu->GetBaseAddress() : 0;
     if (dwarf2Data)
@@ -792,8 +751,6 @@ void DWARFDebugInfoEntry::DumpAttribute(
   } break;
 
   default:
-    if (!verbose)
-      form_value.Dump(s);
     break;
   }
 

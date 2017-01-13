@@ -119,6 +119,8 @@ StringRef elf::getOutputSectionName(StringRef Name) {
 }
 
 template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
+  if (IS == In<ELFT>::ShStrTab)
+    error("discarding .shstrtab section is not allowed");
   if (!Config->PrintGcSections)
     return;
   errs() << "removing unused section from '" << IS->Name << "' in file '"
@@ -377,6 +379,12 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
     In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
     Symtab<ELFT>::X->Sections.push_back(In<ELFT>::EhFrameHdr);
   }
+
+  if (In<ELFT>::SymTab)
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::SymTab);
+  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::ShStrTab);
+  if (In<ELFT>::StrTab)
+    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::StrTab);
 }
 
 template <class ELFT>
@@ -1089,10 +1097,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   auto OS = dyn_cast_or_null<OutputSection<ELFT>>(findSection(".ARM.exidx"));
   if (OS && !OS->Sections.empty() && !Config->Relocatable)
     OS->addSection(make<ARMExidxSentinelSection<ELFT>>());
-
-  addInputSec(In<ELFT>::SymTab);
-  addInputSec(In<ELFT>::ShStrTab);
-  addInputSec(In<ELFT>::StrTab);
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
