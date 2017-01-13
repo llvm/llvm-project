@@ -92,6 +92,29 @@ public:
     return true;
   }
 
+  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, unsigned Size) {
+    if (RBIdx == PMI_FirstGPR) {
+      if (Size <= 32)
+        return 0;
+      if (Size <= 64)
+        return 1;
+      llvm_unreachable("Unexpected size");
+    }
+    if (RBIdx == PMI_FirstFPR) {
+      if (Size <= 32)
+        return 0;
+      if (Size <= 64)
+        return 1;
+      if (Size <= 128)
+        return 2;
+      if (Size <= 256)
+        return 3;
+      if (Size <= 512)
+        return 4;
+      llvm_unreachable("Unexpected size");
+    }
+    llvm_unreachable("Unexpected bank");
+}
 };
 
 /// This class provides the information for the target register banks.

@@ -381,6 +381,8 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
   unsigned Size = Ty.getSizeInBits();
   bool IsFPR = Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
 
+  PartialMappingIdx RBIdx = IsFPR ? PMI_FirstFPR : PMI_FirstGPR;
+
 #ifndef NDEBUG
   // Make sure all the operands are using similar size and type.
   // Should probably be checked by the machine verifier.
@@ -392,16 +394,16 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
   // for each types.
   for (unsigned Idx = 1; Idx != NumOperands; ++Idx) {
     LLT OpTy = MRI.getType(MI.getOperand(Idx).getReg());
-    assert(AArch64::getRegBankBaseIdxOffset(OpTy.getSizeInBits()) ==
-               AArch64::getRegBankBaseIdxOffset(Size) &&
-           "Operand has incompatible size");
+    assert(
+        AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(
+            RBIdx, OpTy.getSizeInBits()) ==
+            AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(RBIdx, Size) &&
+        "Operand has incompatible size");
     bool OpIsFPR = OpTy.isVector() || isPreISelGenericFloatingPointOpcode(Opc);
     (void)OpIsFPR;
     assert(IsFPR == OpIsFPR && "Operand has incompatible type");
   }
 #endif // End NDEBUG.
-
-  PartialMappingIdx RBIdx = IsFPR ? PMI_FirstFPR : PMI_FirstGPR;
 
   return InstructionMapping{DefaultMappingID, 1,
                             AArch64::getValueMapping(RBIdx, Size), NumOperands};
