@@ -634,7 +634,7 @@ static BDVState meetBDVStateImpl(const BDVState &LHS, const BDVState &RHS) {
 
 // Values of type BDVState form a lattice, and this function implements the meet
 // operation.
-static BDVState meetBDVState(BDVState LHS, BDVState RHS) {
+static BDVState meetBDVState(const BDVState &LHS, const BDVState &RHS) {
   BDVState Result = meetBDVStateImpl(LHS, RHS);
   assert(Result == meetBDVStateImpl(RHS, LHS) &&
          "Math is wrong: meet does not commute!");

@@ -29,7 +29,7 @@ typedef std::function<void(unsigned Task, StringRef Path)> AddFileFn;
 
 /// Create a local file system cache which uses the given cache directory and
 /// file callback.
-NativeObjectCache localCache(std::string CacheDirectoryPath, AddFileFn AddFile);
+NativeObjectCache localCache(StringRef CacheDirectoryPath, AddFileFn AddFile);
 
 } // namespace lto
 } // namespace llvm

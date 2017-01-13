@@ -4764,7 +4764,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DILocalVariable *Variable,
                                              DIExpression *Expr, int64_t Offset,
-                                             DebugLoc dl,
+                                             const DebugLoc &dl,
                                              unsigned DbgSDNodeOrder) {
   SDDbgValue *SDV;
   auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode());

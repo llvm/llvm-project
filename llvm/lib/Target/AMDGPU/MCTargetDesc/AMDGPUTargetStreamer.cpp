@@ -116,10 +116,9 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
 }
 
-void
-AMDGPUTargetELFStreamer::EmitAMDGPUNote(const MCExpr* DescSZ,
-                                        PT_NOTE::NoteType Type,
-                              std::function<void(MCELFStreamer &)> EmitDesc) {
+void AMDGPUTargetELFStreamer::EmitAMDGPUNote(
+    const MCExpr *DescSZ, PT_NOTE::NoteType Type,
+    function_ref<void(MCELFStreamer &)> EmitDesc) {
   auto &S = getStreamer();
   auto &Context = S.getContext();
 
