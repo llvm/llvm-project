@@ -3628,7 +3628,7 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
   MachineInstrBuilder MIB =
       BuildMI(*BB, MI, DL, TII->get(UsingMips32 ? Mips::LH : Mips::LH64), Rt);
   for (unsigned i = 1; i < MI.getNumOperands(); i++)
-    MIB.addOperand(MI.getOperand(i));
+    MIB.add(MI.getOperand(i));
 
   BuildMI(*BB, MI, DL, TII->get(Mips::FILL_H), Wd).addReg(Rt);
 

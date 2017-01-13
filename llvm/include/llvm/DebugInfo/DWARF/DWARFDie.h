@@ -13,6 +13,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 
 namespace llvm {
@@ -286,11 +287,43 @@ public:
   getInlinedChainForAddress(const uint64_t Address,
                             SmallVectorImpl<DWARFDie> &InlinedChain) const;
 
+  class attribute_iterator;
+
+  /// Get an iterator range to all attributes in the current DIE only.
+  ///
+  /// \returns an iterator range for the attributes of the current DIE.
+  iterator_range<attribute_iterator> attributes() const;
+  
   class iterator;
   
   iterator begin() const;
   iterator end() const;
   iterator_range<iterator> children() const;
+};
+  
+class DWARFDie::attribute_iterator :
+    public iterator_facade_base<attribute_iterator, std::forward_iterator_tag,
+                                const DWARFAttribute> {
+  /// The DWARF DIE we are extracting attributes from.
+  DWARFDie Die;
+  /// The value vended to clients via the operator*() or operator->().
+  DWARFAttribute AttrValue;
+  /// The attribute index within the abbreviation declaration in Die.
+  uint32_t Index;
+  
+  /// Update the attribute index and attempt to read the attribute value. If the
+  /// attribute is able to be read, update AttrValue and the Index member
+  /// variable. If the attribute value is not able to be read, an appropriate
+  /// error will be set if the Err member variable is non-NULL and the iterator
+  /// will be set to the end value so iteration stops.
+  void updateForIndex(const DWARFAbbreviationDeclaration &AbbrDecl, uint32_t I);
+public:
+  attribute_iterator() = delete;
+  explicit attribute_iterator(DWARFDie D, bool End);
+  attribute_iterator &operator++();
+  explicit operator bool() const { return AttrValue.isValid(); }
+  const DWARFAttribute &operator*() const { return AttrValue; }
+  bool operator==(const attribute_iterator &X) const { return Index == X.Index; }
 };
 
   

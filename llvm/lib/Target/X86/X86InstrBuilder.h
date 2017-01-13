@@ -147,7 +147,7 @@ addOffset(const MachineInstrBuilder &MIB, int Offset) {
 
 static inline const MachineInstrBuilder &
 addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
-  return MIB.addImm(1).addReg(0).addOperand(Offset).addReg(0);
+  return MIB.addImm(1).addReg(0).add(Offset).addReg(0);
 }
 
 /// addRegOffset - This function is used to add a memory reference of the form

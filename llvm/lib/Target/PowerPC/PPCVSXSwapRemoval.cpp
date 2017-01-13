@@ -936,9 +936,9 @@ bool PPCVSXSwapRemoval::removeSwaps() {
       Changed = true;
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
       MachineBasicBlock *MBB = MI->getParent();
-      BuildMI(*MBB, MI, MI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), MI->getOperand(0).getReg())
-        .addOperand(MI->getOperand(1));
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+              MI->getOperand(0).getReg())
+          .add(MI->getOperand(1));
 
       DEBUG(dbgs() << format("Replaced %d with copy: ",
                              SwapVector[EntryIdx].VSEId));

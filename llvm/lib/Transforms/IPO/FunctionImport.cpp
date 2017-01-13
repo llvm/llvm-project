@@ -124,7 +124,7 @@ namespace {
 static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
              const GlobalValueSummaryList &CalleeSummaryList,
-             unsigned Threshold) {
+             unsigned Threshold, StringRef CallerModulePath) {
   auto It = llvm::find_if(
       CalleeSummaryList,
       [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
@@ -145,6 +145,21 @@ selectCallee(const ModuleSummaryIndex &Index,
 
         auto *Summary = cast<FunctionSummary>(GVSummary);
 
+        // If this is a local function, make sure we import the copy
+        // in the caller's module. The only time a local function can
+        // share an entry in the index is if there is a local with the same name
+        // in another module that had the same source file name (in a different
+        // directory), where each was compiled in their own directory so there
+        // was not distinguishing path.
+        // However, do the import from another module if there is only one
+        // entry in the list - in that case this must be a reference due
+        // to indirect call profile data, since a function pointer can point to
+        // a local in another module.
+        if (GlobalValue::isLocalLinkage(Summary->linkage()) &&
+            CalleeSummaryList.size() > 1 &&
+            Summary->modulePath() != CallerModulePath)
+          return false;
+
         if (Summary->instCount() > Threshold)
           return false;
 
@@ -163,11 +178,13 @@ selectCallee(const ModuleSummaryIndex &Index,
 /// null if there's no match.
 static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
                                               unsigned Threshold,
-                                              const ModuleSummaryIndex &Index) {
+                                              const ModuleSummaryIndex &Index,
+                                              StringRef CallerModulePath) {
   auto CalleeSummaryList = Index.findGlobalValueSummaryList(GUID);
   if (CalleeSummaryList == Index.end())
     return nullptr; // This function does not have a summary
-  return selectCallee(Index, CalleeSummaryList->second, Threshold);
+  return selectCallee(Index, CalleeSummaryList->second, Threshold,
+                      CallerModulePath);
 }
 
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,
@@ -202,7 +219,8 @@ static void computeImportForFunction(
     const auto NewThreshold =
         Threshold * GetBonusMultiplier(Edge.second.Hotness);
 
-    auto *CalleeSummary = selectCallee(GUID, NewThreshold, Index);
+    auto *CalleeSummary =
+        selectCallee(GUID, NewThreshold, Index, Summary.modulePath());
     if (!CalleeSummary) {
       DEBUG(dbgs() << "ignored! No qualifying callee with summary found.\n");
       continue;

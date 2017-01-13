@@ -2599,7 +2599,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
     for (unsigned j = 0, m = SI->getNumOperands(); j < m; ++j) {
       const MachineOperand &Op = SI->getOperand(j);
       if (!Op.isReg()) {
-        MIB.addOperand(Op);
+        MIB.add(Op);
         continue;
       }
       if (!Op.isUse())

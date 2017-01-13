@@ -1,4 +1,4 @@
-//===- yaml2dwarf - Convert YAML to DWARF binary data ---------------------===//
+//===- DWARFEmitter - Convert YAML to DWARF binary data -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief The DWARF component of yaml2obj.
+/// \brief The DWARF component of yaml2obj. Provided as library code for tests.
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
@@ -49,14 +50,14 @@ void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
-void yaml2debug_str(raw_ostream &OS, const DWARFYAML::Data &DI) {
+void DWARFYAML::EmitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Str : DI.DebugStrings) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }
 }
 
-void yaml2debug_abbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
+void DWARFYAML::EmitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto AbbrevDecl : DI.AbbrevDecls) {
     encodeULEB128(AbbrevDecl.Code, OS);
     encodeULEB128(AbbrevDecl.Tag, OS);
@@ -70,7 +71,7 @@ void yaml2debug_abbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
   }
 }
 
-void yaml2debug_aranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
+void DWARFYAML::EmitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Range : DI.ARanges) {
     auto HeaderStart = OS.tell();
     writeInteger((uint32_t)Range.Length, OS, DI.IsLittleEndian);
@@ -93,8 +94,9 @@ void yaml2debug_aranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   }
 }
 
-void yaml2pubsection(raw_ostream &OS, const DWARFYAML::PubSection &Sect,
-                     bool IsLittleEndian) {
+void DWARFYAML::EmitPubSection(raw_ostream &OS,
+                               const DWARFYAML::PubSection &Sect,
+                               bool IsLittleEndian) {
   writeInteger((uint32_t)Sect.Length, OS, IsLittleEndian);
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
@@ -108,7 +110,7 @@ void yaml2pubsection(raw_ostream &OS, const DWARFYAML::PubSection &Sect,
   }
 }
 
-void yaml2debug_info(raw_ostream &OS, const DWARFYAML::Data &DI) {
+void DWARFYAML::EmitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
   for (auto CU : DI.CompileUnits) {
     writeInteger((uint32_t)CU.Length, OS, DI.IsLittleEndian);
@@ -234,7 +236,7 @@ void yaml2debug_info(raw_ostream &OS, const DWARFYAML::Data &DI) {
   }
 }
 
-void yaml2FileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
+void EmitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   OS.write(File.Name.data(), File.Name.size());
   OS.write('\0');
   encodeULEB128(File.DirIdx, OS);
@@ -242,7 +244,7 @@ void yaml2FileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
   encodeULEB128(File.Length, OS);
 }
 
-void yaml2debug_line(raw_ostream &OS, const DWARFYAML::Data &DI) {
+void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const auto LineTable : DI.DebugLines) {
     writeInteger((uint32_t)LineTable.TotalLength, OS, DI.IsLittleEndian);
     uint64_t SizeOfPrologueLength = 4;
@@ -271,7 +273,7 @@ void yaml2debug_line(raw_ostream &OS, const DWARFYAML::Data &DI) {
     OS.write('\0');
 
     for (auto File : LineTable.Files)
-      yaml2FileEntry(OS, File);
+      EmitFileEntry(OS, File);
     OS.write('\0');
 
     for (auto Op : LineTable.Opcodes) {
@@ -286,7 +288,7 @@ void yaml2debug_line(raw_ostream &OS, const DWARFYAML::Data &DI) {
                                     DI.IsLittleEndian);
           break;
         case dwarf::DW_LNE_define_file:
-          yaml2FileEntry(OS, Op.FileEntry);
+          EmitFileEntry(OS, Op.FileEntry);
           break;
         case dwarf::DW_LNE_end_sequence:
           break;

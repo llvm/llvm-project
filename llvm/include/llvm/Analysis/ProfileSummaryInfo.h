@@ -29,6 +29,7 @@
 namespace llvm {
 class BasicBlock;
 class BlockFrequencyInfo;
+class CallSite;
 class ProfileSummary;
 /// \brief Analysis providing profile information.
 ///
@@ -48,6 +49,7 @@ private:
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
   Optional<uint64_t> HotCountThreshold, ColdCountThreshold;
+  bool extractProfTotalWeight(const Instruction *TI, uint64_t &TotalCount);
 
 public:
   ProfileSummaryInfo(Module &M) : M(M) {}
@@ -63,6 +65,12 @@ public:
   bool isColdCount(uint64_t C);
   /// \brief Returns true if BasicBlock \p B is considered hot.
   bool isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI);
+  /// \brief Returns true if BasicBlock \p B is considered cold.
+  bool isColdBB(const BasicBlock *B, BlockFrequencyInfo *BFI);
+  /// \brief Returns true if CallSite \p CS is considered hot.
+  bool isHotCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
+  /// \brief Returns true if Callsite \p CS is considered cold.
+  bool isColdCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
 };
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.

@@ -264,7 +264,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // uses of arg registers.
   auto MIB = MIRBuilder.buildInstrNoInsert(Callee.isReg() ? AArch64::BLR
                                                           : AArch64::BL);
-  MIB.addOperand(Callee);
+  MIB.add(Callee);
 
   // Tell the call which registers are clobbered.
   auto TRI = MF.getSubtarget().getRegisterInfo();

@@ -5233,7 +5233,7 @@ static unsigned forceReg(MachineInstr &MI, MachineOperand &Base,
 
   unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
   BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LA), Reg)
-      .addOperand(Base)
+      .add(Base)
       .addImm(0)
       .addReg(0);
   return Reg;
@@ -5322,8 +5322,11 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
     if (Invert)
       CCMask ^= CCValid;
     BuildMI(*MBB, MI, DL, TII->get(STOCOpcode))
-      .addReg(SrcReg).addOperand(Base).addImm(Disp)
-      .addImm(CCValid).addImm(CCMask);
+        .addReg(SrcReg)
+        .add(Base)
+        .addImm(Disp)
+        .addImm(CCValid)
+        .addImm(CCMask);
     MI.eraseFromParent();
     return MBB;
   }
@@ -5350,7 +5353,10 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
   //   # fallthrough to JoinMBB
   MBB = FalseMBB;
   BuildMI(MBB, DL, TII->get(StoreOpcode))
-    .addReg(SrcReg).addOperand(Base).addImm(Disp).addReg(IndexReg);
+      .addReg(SrcReg)
+      .add(Base)
+      .addImm(Disp)
+      .addReg(IndexReg);
   MBB->addSuccessor(JoinMBB);
 
   MI.eraseFromParent();
@@ -5415,8 +5421,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   //   %OrigVal = L Disp(%Base)
   //   # fall through to LoopMMB
   MBB = StartMBB;
-  BuildMI(MBB, DL, TII->get(LOpcode), OrigVal)
-    .addOperand(Base).addImm(Disp).addReg(0);
+  BuildMI(MBB, DL, TII->get(LOpcode), OrigVal).add(Base).addImm(Disp).addReg(0);
   MBB->addSuccessor(LoopMBB);
 
   //  LoopMBB:
@@ -5437,8 +5442,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   if (Invert) {
     // Perform the operation normally and then invert every bit of the field.
     unsigned Tmp = MRI.createVirtualRegister(RC);
-    BuildMI(MBB, DL, TII->get(BinOpcode), Tmp)
-      .addReg(RotatedOldVal).addOperand(Src2);
+    BuildMI(MBB, DL, TII->get(BinOpcode), Tmp).addReg(RotatedOldVal).add(Src2);
     if (BitSize <= 32)
       // XILF with the upper BitSize bits set.
       BuildMI(MBB, DL, TII->get(SystemZ::XILF), RotatedNewVal)
@@ -5454,7 +5458,8 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   } else if (BinOpcode)
     // A simply binary operation.
     BuildMI(MBB, DL, TII->get(BinOpcode), RotatedNewVal)
-      .addReg(RotatedOldVal).addOperand(Src2);
+        .addReg(RotatedOldVal)
+        .add(Src2);
   else if (IsSubWord)
     // Use RISBG to rotate Src2 into position and use it to replace the
     // field in RotatedOldVal.
@@ -5465,7 +5470,10 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
     BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
       .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
   BuildMI(MBB, DL, TII->get(CSOpcode), Dest)
-    .addReg(OldVal).addReg(NewVal).addOperand(Base).addImm(Disp);
+      .addReg(OldVal)
+      .addReg(NewVal)
+      .add(Base)
+      .addImm(Disp);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
     .addImm(SystemZ::CCMASK_CS).addImm(SystemZ::CCMASK_CS_NE).addMBB(LoopMBB);
   MBB->addSuccessor(LoopMBB);
@@ -5533,8 +5541,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   //   %OrigVal     = L Disp(%Base)
   //   # fall through to LoopMMB
   MBB = StartMBB;
-  BuildMI(MBB, DL, TII->get(LOpcode), OrigVal)
-    .addOperand(Base).addImm(Disp).addReg(0);
+  BuildMI(MBB, DL, TII->get(LOpcode), OrigVal).add(Base).addImm(Disp).addReg(0);
   MBB->addSuccessor(LoopMBB);
 
   //  LoopMBB:
@@ -5581,7 +5588,10 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
     BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
       .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
   BuildMI(MBB, DL, TII->get(CSOpcode), Dest)
-    .addReg(OldVal).addReg(NewVal).addOperand(Base).addImm(Disp);
+      .addReg(OldVal)
+      .addReg(NewVal)
+      .add(Base)
+      .addImm(Disp);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
     .addImm(SystemZ::CCMASK_CS).addImm(SystemZ::CCMASK_CS_NE).addMBB(LoopMBB);
   MBB->addSuccessor(LoopMBB);
@@ -5642,7 +5652,9 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   //   # fall through to LoopMMB
   MBB = StartMBB;
   BuildMI(MBB, DL, TII->get(LOpcode), OrigOldVal)
-    .addOperand(Base).addImm(Disp).addReg(0);
+      .add(Base)
+      .addImm(Disp)
+      .addReg(0);
   MBB->addSuccessor(LoopMBB);
 
   //  LoopMBB:
@@ -5696,7 +5708,10 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   BuildMI(MBB, DL, TII->get(SystemZ::RLL), StoreVal)
     .addReg(RetrySwapVal).addReg(NegBitShift).addImm(-BitSize);
   BuildMI(MBB, DL, TII->get(CSOpcode), RetryOldVal)
-    .addReg(OldVal).addReg(StoreVal).addOperand(Base).addImm(Disp);
+      .addReg(OldVal)
+      .addReg(StoreVal)
+      .add(Base)
+      .addImm(Disp);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
     .addImm(SystemZ::CCMASK_CS).addImm(SystemZ::CCMASK_CS_NE).addMBB(LoopMBB);
   MBB->addSuccessor(LoopMBB);
@@ -5869,7 +5884,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     if (!isUInt<12>(DestDisp)) {
       unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-          .addOperand(DestBase)
+          .add(DestBase)
           .addImm(DestDisp)
           .addReg(0);
       DestBase = MachineOperand::CreateReg(Reg, false);
@@ -5878,15 +5893,18 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     if (!isUInt<12>(SrcDisp)) {
       unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
       BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-          .addOperand(SrcBase)
+          .add(SrcBase)
           .addImm(SrcDisp)
           .addReg(0);
       SrcBase = MachineOperand::CreateReg(Reg, false);
       SrcDisp = 0;
     }
     BuildMI(*MBB, MI, DL, TII->get(Opcode))
-      .addOperand(DestBase).addImm(DestDisp).addImm(ThisLength)
-      .addOperand(SrcBase).addImm(SrcDisp);
+        .add(DestBase)
+        .addImm(DestDisp)
+        .addImm(ThisLength)
+        .add(SrcBase)
+        .addImm(SrcDisp);
     DestDisp += ThisLength;
     SrcDisp += ThisLength;
     Length -= ThisLength;

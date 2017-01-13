@@ -369,7 +369,7 @@ void AArch64InstrInfo::instantiateCondBranch(
     // Folded compare-and-branch
     // Note that we use addOperand instead of addReg to keep the flags.
     const MachineInstrBuilder MIB =
-        BuildMI(&MBB, DL, get(Cond[1].getImm())).addOperand(Cond[2]);
+        BuildMI(&MBB, DL, get(Cond[1].getImm())).add(Cond[2]);
     if (Cond.size() > 3)
       MIB.addImm(Cond[3].getImm());
     MIB.addMBB(TBB);
@@ -3793,7 +3793,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstrBuilder MIB1 =
         BuildMI(MF, Root.getDebugLoc(), TII->get(SubOpc), NewVR)
             .addReg(ZeroReg)
-            .addOperand(Root.getOperand(2));
+            .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);

@@ -252,8 +252,10 @@ define <16 x i32> @shuffle_v16i32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19
 define <16 x i32> @shuffle_v16i32_0_1_2_19_u_u_u_u_u_u_u_u_u_u_u_u(<16 x i32> %a, <16 x i32> %b)  {
 ; ALL-LABEL: shuffle_v16i32_0_1_2_19_u_u_u_u_u_u_u_u_u_u_u_u:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovdqa32 {{.*#+}} zmm2 = <0,1,2,19,u,u,u,u,u,u,u,u,u,u,u,u>
-; ALL-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; ALL-NEXT:    movw $8, %ax
+; ALL-NEXT:    kmovw %eax, %k1
+; ALL-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
+; ALL-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %c = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 19, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i32> %c

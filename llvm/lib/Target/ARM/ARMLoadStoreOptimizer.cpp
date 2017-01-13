@@ -517,8 +517,12 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
 
     if (InsertSub) {
       // An instruction above couldn't be updated, so insert a sub.
-      AddDefaultT1CC(BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base), true)
-        .addReg(Base).addImm(WordOffset * 4).addImm(Pred).addReg(PredReg);
+      BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base)
+          .add(t1CondCodeOp(true))
+          .addReg(Base)
+          .addImm(WordOffset * 4)
+          .addImm(Pred)
+          .addReg(PredReg);
       return;
     }
 
@@ -534,9 +538,12 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
     // information and *always* have to reset at the end of a block.
     // See PR21029.
     if (MBBI != MBB.end()) --MBBI;
-    AddDefaultT1CC(
-      BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base), true)
-      .addReg(Base).addImm(WordOffset * 4).addImm(Pred).addReg(PredReg);
+    BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base)
+        .add(t1CondCodeOp(true))
+        .addReg(Base)
+        .addImm(WordOffset * 4)
+        .addImm(Pred)
+        .addReg(PredReg);
   }
 }
 
@@ -713,10 +720,12 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
           .addReg(Base, getKillRegState(KillOldBase)).addImm(Offset/4)
           .addImm(Pred).addReg(PredReg);
       } else
-        AddDefaultT1CC(
-          BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase), true)
-          .addReg(Base, getKillRegState(KillOldBase)).addImm(Offset)
-          .addImm(Pred).addReg(PredReg);
+        BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase)
+            .add(t1CondCodeOp(true))
+            .addReg(Base, getKillRegState(KillOldBase))
+            .addImm(Offset)
+            .addImm(Pred)
+            .addReg(PredReg);
     } else {
       BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase)
         .addReg(Base, getKillRegState(KillOldBase)).addImm(Offset)
@@ -1259,7 +1268,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
 
   // Transfer the rest of operands.
   for (unsigned OpNum = 3, e = MI->getNumOperands(); OpNum != e; ++OpNum)
-    MIB.addOperand(MI->getOperand(OpNum));
+    MIB.add(MI->getOperand(OpNum));
 
   // Transfer memoperands.
   MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
@@ -1462,12 +1471,10 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   DebugLoc DL = MI.getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
   if (NewOpc == ARM::t2LDRD_PRE || NewOpc == ARM::t2LDRD_POST) {
-    MIB.addOperand(Reg0Op).addOperand(Reg1Op)
-       .addReg(BaseOp.getReg(), RegState::Define);
+    MIB.add(Reg0Op).add(Reg1Op).addReg(BaseOp.getReg(), RegState::Define);
   } else {
     assert(NewOpc == ARM::t2STRD_PRE || NewOpc == ARM::t2STRD_POST);
-    MIB.addReg(BaseOp.getReg(), RegState::Define)
-       .addOperand(Reg0Op).addOperand(Reg1Op);
+    MIB.addReg(BaseOp.getReg(), RegState::Define).add(Reg0Op).add(Reg1Op);
   }
   MIB.addReg(BaseOp.getReg(), RegState::Kill)
      .addImm(Offset).addImm(Pred).addReg(PredReg);
@@ -1477,7 +1484,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
 
   // Transfer implicit operands.
   for (const MachineOperand &MO : MI.implicit_operands())
-    MIB.addOperand(MO);
+    MIB.add(MO);
   MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
 
   MBB.erase(MBBI);
@@ -1891,8 +1898,9 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 
   for (auto Use : Prev->uses())
     if (Use.isKill()) {
-      AddDefaultPred(BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(ARM::tBX))
-                         .addReg(Use.getReg(), RegState::Kill))
+      BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(ARM::tBX))
+          .addReg(Use.getReg(), RegState::Kill)
+          .add(predOps(ARMCC::AL))
           .copyImplicitOps(*MBBI);
       MBB.erase(MBBI);
       MBB.erase(Prev);

@@ -266,7 +266,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       NewMI = BuildMI(*BB, I, BB->findDebugLoc(I),
                       TII->get(AMDGPU::getLDSNoRetOp(MI.getOpcode())));
       for (unsigned i = 1, e = MI.getNumOperands(); i < e; ++i) {
-        NewMI.addOperand(MI.getOperand(i));
+        NewMI.add(MI.getOperand(i));
       }
     } else {
       return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
@@ -339,34 +339,34 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::RAT_WRITE_CACHELESS_64_eg:
   case AMDGPU::RAT_WRITE_CACHELESS_128_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
         .addImm(isEOP(I)); // Set End of program bit
     break;
 
   case AMDGPU::RAT_STORE_TYPED_eg:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
-        .addOperand(MI.getOperand(2))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
         .addImm(isEOP(I)); // Set End of program bit
     break;
 
   case AMDGPU::BRANCH:
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP))
-        .addOperand(MI.getOperand(0));
+        .add(MI.getOperand(0));
     break;
 
   case AMDGPU::BRANCH_COND_f32: {
     MachineInstr *NewMI =
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(AMDGPU::PRED_SETNE)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
-        .addOperand(MI.getOperand(0))
+        .add(MI.getOperand(0))
         .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);
     break;
   }
@@ -375,12 +375,12 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineInstr *NewMI =
         BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::PRED_X),
                 AMDGPU::PREDICATE_BIT)
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(AMDGPU::PRED_SETNE_INT)
             .addImm(0); // Flags
     TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
-        .addOperand(MI.getOperand(0))
+        .add(MI.getOperand(0))
         .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);
     break;
   }
@@ -408,13 +408,13 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return BB;
     unsigned CfInst = (MI.getOpcode() == AMDGPU::EG_ExportSwz) ? 84 : 40;
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(MI.getOpcode()))
-        .addOperand(MI.getOperand(0))
-        .addOperand(MI.getOperand(1))
-        .addOperand(MI.getOperand(2))
-        .addOperand(MI.getOperand(3))
-        .addOperand(MI.getOperand(4))
-        .addOperand(MI.getOperand(5))
-        .addOperand(MI.getOperand(6))
+        .add(MI.getOperand(0))
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .add(MI.getOperand(3))
+        .add(MI.getOperand(4))
+        .add(MI.getOperand(5))
+        .add(MI.getOperand(6))
         .addImm(CfInst)
         .addImm(EOP);
     break;

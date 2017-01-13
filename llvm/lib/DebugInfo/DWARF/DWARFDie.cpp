@@ -399,3 +399,53 @@ DWARFDie DWARFDie::getSibling() const {
     return U->getSibling(Die);
   return DWARFDie();
 }
+
+iterator_range<DWARFDie::attribute_iterator>
+DWARFDie::attributes() const {
+  return make_range(attribute_iterator(*this, false),
+                    attribute_iterator(*this, true));
+}
+
+DWARFDie::attribute_iterator::attribute_iterator(DWARFDie D, bool End) :
+    Die(D), AttrValue(0), Index(0) {
+  auto AbbrDecl = Die.getAbbreviationDeclarationPtr();
+  assert(AbbrDecl && "Must have abbreviation declaration");
+  if (End) {
+    // This is the end iterator so we set the index to the attribute count.
+    Index = AbbrDecl->getNumAttributes();
+  } else {
+    // This is the begin iterator so we extract the value for this->Index.
+    AttrValue.Offset = D.getOffset() + AbbrDecl->getCodeByteSize();
+    updateForIndex(*AbbrDecl, 0);
+  }
+}
+
+void DWARFDie::attribute_iterator::updateForIndex(
+    const DWARFAbbreviationDeclaration &AbbrDecl, uint32_t I) {
+  Index = I;
+  // AbbrDecl must be valid befor calling this function.
+  auto NumAttrs = AbbrDecl.getNumAttributes();
+  if (Index < NumAttrs) {
+    AttrValue.Attr = AbbrDecl.getAttrByIndex(Index);
+    // Add the previous byte size of any previous attribute value.
+    AttrValue.Offset += AttrValue.ByteSize;
+    AttrValue.Value.setForm(AbbrDecl.getFormByIndex(Index));
+    uint32_t ParseOffset = AttrValue.Offset;
+    auto U = Die.getDwarfUnit();
+    assert(U && "Die must have valid DWARF unit");
+    bool b = AttrValue.Value.extractValue(U->getDebugInfoExtractor(),
+                                          &ParseOffset, U);
+    (void)b;
+    assert(b && "extractValue cannot fail on fully parsed DWARF");
+    AttrValue.ByteSize = ParseOffset - AttrValue.Offset;
+  } else {
+    assert(Index == NumAttrs && "Indexes should be [0, NumAttrs) only");
+    AttrValue.clear();
+  }
+}
+
+DWARFDie::attribute_iterator &DWARFDie::attribute_iterator::operator++() {
+  if (auto AbbrDecl = Die.getAbbreviationDeclarationPtr())
+    updateForIndex(*AbbrDecl, Index + 1);
+  return *this;
+}

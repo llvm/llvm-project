@@ -69,7 +69,7 @@ void MachineDominatorTree::releaseMemory() {
 }
 
 void MachineDominatorTree::verifyAnalysis() const {
-  if (VerifyMachineDomInfo)
+  if (VerifyMachineDomInfo && isExecuted())
     verifyDomTree();
 }
 

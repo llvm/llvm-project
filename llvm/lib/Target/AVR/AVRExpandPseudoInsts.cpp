@@ -509,8 +509,8 @@ bool AVRExpandPseudo::expand<AVR::LDIWRdK>(Block &MBB, BlockIt MBBI) {
     const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
     unsigned TF = MI.getOperand(1).getTargetFlags();
 
-    MIBLO.addOperand(MachineOperand::CreateBA(BA, TF | AVRII::MO_LO));
-    MIBHI.addOperand(MachineOperand::CreateBA(BA, TF | AVRII::MO_HI));
+    MIBLO.add(MachineOperand::CreateBA(BA, TF | AVRII::MO_LO));
+    MIBHI.add(MachineOperand::CreateBA(BA, TF | AVRII::MO_HI));
     break;
   }
   case MachineOperand::MO_Immediate: {
@@ -785,9 +785,8 @@ bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode,
       auto Op1 = MI.getOperand(0);
       auto Op2 = MI.getOperand(1);
 
-      MachineInstr &NewInst = *buildMI(MBB, MBBI, Opcode)
-        .addOperand(Op1).addOperand(Op2)
-        .getInstr();
+      MachineInstr &NewInst =
+          *buildMI(MBB, MBBI, Opcode).add(Op1).add(Op2).getInstr();
       f(NewInst);
   });
 }
@@ -810,15 +809,13 @@ bool AVRExpandPseudo::expandAtomicArithmeticOp(unsigned Width,
       unsigned StoreOpcode = (Width == 8) ? AVR::STPtrRr : AVR::STWPtrRr;
 
       // Create the load
-      buildMI(MBB, MBBI, LoadOpcode).addOperand(Op1).addOperand(Op2);
+      buildMI(MBB, MBBI, LoadOpcode).add(Op1).add(Op2);
 
       // Create the arithmetic op
-      buildMI(MBB, MBBI, ArithOpcode)
-        .addOperand(Op1).addOperand(Op1)
-        .addOperand(Op2);
+      buildMI(MBB, MBBI, ArithOpcode).add(Op1).add(Op1).add(Op2);
 
       // Create the store
-      buildMI(MBB, MBBI, StoreOpcode).addOperand(Op2).addOperand(Op1);
+      buildMI(MBB, MBBI, StoreOpcode).add(Op2).add(Op1);
   });
 }
 

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -135,10 +136,52 @@ bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
   // not update/scale branch weights. Unlike false negatives, this will not cause
   // performance problem.
   uint64_t TotalCount;
-  if (B->getTerminator()->extractProfTotalWeight(TotalCount) &&
-      isHotCount(TotalCount))
-    return true;
-  return false;
+  auto *TI = B->getTerminator();
+  return extractProfTotalWeight(TI, TotalCount) && isHotCount(TotalCount);
+}
+
+bool ProfileSummaryInfo::isColdBB(const BasicBlock *B,
+                                  BlockFrequencyInfo *BFI) {
+  auto Count = BFI->getBlockProfileCount(B);
+  return Count && isColdCount(*Count);
+}
+
+bool ProfileSummaryInfo::extractProfTotalWeight(const Instruction *I,
+                                                uint64_t &TotalCount) {
+  // Use profile weight on metadata only for sample profiling where block counts
+  // could differ from the count of an instruction within the block.
+  if (Summary.get()->getKind() != ProfileSummary::PSK_Sample)
+    return false;
+
+  return (isa<CallInst>(I) ||
+          (isa<TerminatorInst>(I) && !isa<ReturnInst>(I))) &&
+         I->extractProfTotalWeight(TotalCount);
+}
+
+bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
+                                       BlockFrequencyInfo *BFI) {
+  auto *CallInst = CS.getInstruction();
+  if (!CS)
+    return false;
+  // Check if there is a profile metadata on the instruction. If it is present,
+  // determine hotness solely based on that.
+  uint64_t TotalCount;
+  if (extractProfTotalWeight(CallInst, TotalCount))
+    return isHotCount(TotalCount);
+  return BFI && isHotBB(CallInst->getParent(), BFI);
+}
+
+bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
+                                        BlockFrequencyInfo *BFI) {
+  auto *CallInst = CS.getInstruction();
+  if (!CS)
+    return false;
+  // Check if there is a profile metadata on the instruction. If it is present,
+  // and tells that the callsite is not cold, then return false;
+  uint64_t TotalCount;
+  if (extractProfTotalWeight(CallInst, TotalCount) && !isColdCount(TotalCount))
+    return false;
+  return BFI && isColdBB(CallInst->getParent(), BFI);
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

@@ -955,6 +955,9 @@ void PMDataManager::freePass(Pass *P, StringRef Msg,
         AvailableAnalysis.erase(Pos);
     }
   }
+
+  if (!P->getAsImmutablePass())
+    P->setExecuted(false);
 }
 
 /// Add pass P into the PassVector. Update
@@ -1293,6 +1296,7 @@ bool BBPassManager::runOnFunction(Function &F) {
         PassManagerPrettyStackEntry X(BP, *I);
         TimeRegion PassTimer(getPassTimer(BP));
 
+        BP->setExecuted(true);
         LocalChanged |= BP->runOnBasicBlock(*I);
       }
 
@@ -1459,7 +1463,9 @@ bool FunctionPassManagerImpl::run(Function &F) {
 
   initializeAllAnalysisInfo();
   for (unsigned Index = 0; Index < getNumContainedManagers(); ++Index) {
-    Changed |= getContainedManager(Index)->runOnFunction(F);
+    FPPassManager *P = getContainedManager(Index);
+    P->setExecuted(true);
+    Changed |= P->runOnFunction(F);
     F.getContext().yield();
   }
 
@@ -1510,6 +1516,7 @@ bool FPPassManager::runOnFunction(Function &F) {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
 
+      FP->setExecuted(true);
       LocalChanged |= FP->runOnFunction(F);
     }
 
@@ -1530,8 +1537,10 @@ bool FPPassManager::runOnFunction(Function &F) {
 bool FPPassManager::runOnModule(Module &M) {
   bool Changed = false;
 
-  for (Function &F : M)
+  for (Function &F : M) {
+    setExecuted(true);
     Changed |= runOnFunction(F);
+  }
 
   return Changed;
 }
@@ -1587,6 +1596,7 @@ MPPassManager::runOnModule(Module &M) {
       PassManagerPrettyStackEntry X(MP, M);
       TimeRegion PassTimer(getPassTimer(MP));
 
+      MP->setExecuted(true);
       LocalChanged |= MP->runOnModule(M);
     }
 
@@ -1690,7 +1700,9 @@ bool PassManagerImpl::run(Module &M) {
 
   initializeAllAnalysisInfo();
   for (unsigned Index = 0; Index < getNumContainedManagers(); ++Index) {
-    Changed |= getContainedManager(Index)->runOnModule(M);
+    MPPassManager *P = getContainedManager(Index);
+    P->setExecuted(true);
+    Changed |= P->runOnModule(M);
     M.getContext().yield();
   }
 

@@ -4752,7 +4752,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   else
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE))
-            .addOperand(*Op)
+            .add(*Op)
             .addImm(Offset)
             .addMetadata(Variable)
             .addMetadata(Expr));

@@ -206,6 +206,9 @@ AnalysisType *Pass::getAnalysisIfAvailable() const {
   Pass *ResultPass = Resolver->getAnalysisIfAvailable(PI, true);
   if (!ResultPass) return nullptr;
 
+  if (!ResultPass->isExecuted())
+    return nullptr;
+
   // Because the AnalysisType may not be a subclass of pass (for
   // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially
   // adjust the return pointer (because the class may multiply inherit, once
@@ -234,6 +237,8 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI) const {
   assert (ResultPass && 
           "getAnalysis*() called on an analysis that was not "
           "'required' by pass!");
+  assert(ResultPass->isExecuted() &&
+         "getAnalysis*() called on an analysis that was freed");
 
   // Because the AnalysisType may not be a subclass of pass (for
   // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially

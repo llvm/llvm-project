@@ -488,7 +488,6 @@ template <uint16_t Version, class AddrType> void TestChildren() {
   // Get the compile unit DIE is valid.
   auto DieDG = U->getUnitDIE(false);
   EXPECT_TRUE(DieDG.isValid());
-  // DieDG.dump(llvm::outs(), U, UINT32_MAX);
 
   // Verify the first child of the compile unit DIE is our subprogram.
   auto SubprogramDieDG = DieDG.getFirstChild();
@@ -662,11 +661,9 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   // Get the compile unit DIE is valid.
   auto Unit1DieDG = U1->getUnitDIE(false);
   EXPECT_TRUE(Unit1DieDG.isValid());
-  // Unit1DieDG.dump(llvm::outs(), UINT32_MAX);
 
   auto Unit2DieDG = U2->getUnitDIE(false);
   EXPECT_TRUE(Unit2DieDG.isValid());
-  // Unit2DieDG.dump(llvm::outs(), UINT32_MAX);
 
   // Verify the first child of the compile unit 1 DIE is our int base type.
   auto CU1TypeDieDG = Unit1DieDG.getFirstChild();
@@ -887,7 +884,6 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   // Get the compile unit DIE is valid.
   auto DieDG = U->getUnitDIE(false);
   EXPECT_TRUE(DieDG.isValid());
-  // DieDG.dump(llvm::outs(), U, UINT32_MAX);
   
   uint64_t LowPC, HighPC;
   Optional<uint64_t> OptU64;
@@ -1067,7 +1063,6 @@ TEST(DWARFDebugInfo, TestRelations) {
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
   EXPECT_TRUE(CUDie.isValid());
-  // CUDie.dump(llvm::outs(), UINT32_MAX);
   
   // The compile unit doesn't have a parent or a sibling.
   auto ParentDie = CUDie.getParent();
@@ -1185,7 +1180,6 @@ TEST(DWARFDebugInfo, TestChildIterators) {
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
   EXPECT_TRUE(CUDie.isValid());
-  // CUDie.dump(llvm::outs(), UINT32_MAX);
   uint32_t Index;
   DWARFDie A;
   DWARFDie B;
@@ -1255,12 +1249,73 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
   EXPECT_TRUE(CUDie.isValid());
-  CUDie.dump(llvm::outs(), UINT32_MAX);
   
   // Verify that the CU Die that says it has children, but doesn't, actually
   // has begin and end iterators that are equal. We want to make sure we don't
   // see the Null DIEs during iteration.
   EXPECT_EQ(CUDie.begin(), CUDie.end());
+}
+
+TEST(DWARFDebugInfo, TestAttributeIterators) {
+  // Test the DWARF APIs related to iterating across all attribute values in a
+  // a DWARFDie.
+  uint16_t Version = 4;
+  
+  const uint8_t AddrSize = sizeof(void *);
+  initLLVMIfNeeded();
+  Triple Triple = getHostTripleForAddrSize(AddrSize);
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  if (HandleExpectedError(ExpectedDG))
+    return;
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  const uint64_t CULowPC = 0x1000;
+  StringRef CUPath("/tmp/main.c");
+  
+  // Scope to allow us to re-use the same DIE names
+  {
+    auto CUDie = CU.getUnitDIE();
+    // Encode an attribute value before an attribute with no data.
+    CUDie.addAttribute(DW_AT_name, DW_FORM_strp, CUPath.data());
+    // Encode an attribute value with no data in .debug_info/types to ensure
+    // the iteration works correctly.
+    CUDie.addAttribute(DW_AT_declaration, DW_FORM_flag_present);
+    // Encode an attribute value after an attribute with no data.
+    CUDie.addAttribute(DW_AT_low_pc, DW_FORM_addr, CULowPC);
+  }
+  
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  DWARFContextInMemory DwarfContext(*Obj.get());
+  
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  
+  // Get the compile unit DIE is valid.
+  auto CUDie = U->getUnitDIE(false);
+  EXPECT_TRUE(CUDie.isValid());
+  
+  auto R = CUDie.attributes();
+  auto I = R.begin();
+  auto E = R.end();
+  
+  ASSERT_NE(E, I);
+  EXPECT_EQ(I->Attr, DW_AT_name);
+  auto ActualCUPath = I->Value.getAsCString();
+  EXPECT_EQ(CUPath, *ActualCUPath);
+  
+  ASSERT_NE(E, ++I);
+  EXPECT_EQ(I->Attr, DW_AT_declaration);
+  EXPECT_EQ(1ull, *I->Value.getAsUnsignedConstant());
+  
+  ASSERT_NE(E, ++I);
+  EXPECT_EQ(I->Attr, DW_AT_low_pc);
+  EXPECT_EQ(CULowPC, *I->Value.getAsAddress());
+  
+  EXPECT_EQ(E, ++I);
 }
 
 } // end anonymous namespace

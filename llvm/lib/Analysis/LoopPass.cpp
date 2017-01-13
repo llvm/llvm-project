@@ -198,6 +198,7 @@ bool LPPassManager::runOnFunction(Function &F) {
         PassManagerPrettyStackEntry X(P, *CurrentLoop->getHeader());
         TimeRegion PassTimer(getPassTimer(P));
 
+        P->setExecuted(true);
         Changed |= P->runOnLoop(CurrentLoop, *this);
       }
       LoopWasDeleted = CurrentLoop->isInvalid();

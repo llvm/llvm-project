@@ -522,7 +522,7 @@ ImplicitNullChecks::insertFaultingLoad(MachineInstr *LoadMI,
                  .addImm(LoadMI->getOpcode());
 
   for (auto &MO : LoadMI->uses())
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   MIB.setMemRefs(LoadMI->memoperands_begin(), LoadMI->memoperands_end());
 

@@ -187,6 +187,11 @@ cl::list<uint32_t>
 
 // TYPE OPTIONS
 cl::opt<bool>
+    CompactRecords("compact-records",
+                   cl::desc("Dump type and symbol records with less detail"),
+                   cl::cat(TypeOptions), cl::sub(RawSubcommand));
+
+cl::opt<bool>
     DumpTpiRecords("tpi-records",
                    cl::desc("dump CodeView type records from TPI stream"),
                    cl::cat(TypeOptions), cl::sub(RawSubcommand));
@@ -556,24 +561,33 @@ int main(int argc_, const char *argv_[]) {
     }
   }
 
-  if (opts::RawSubcommand && opts::raw::RawAll) {
-    opts::raw::DumpHeaders = true;
-    opts::raw::DumpModules = true;
-    opts::raw::DumpModuleFiles = true;
-    opts::raw::DumpModuleSyms = true;
-    opts::raw::DumpGlobals = true;
-    opts::raw::DumpPublics = true;
-    opts::raw::DumpSectionHeaders = true;
-    opts::raw::DumpStreamSummary = true;
-    opts::raw::DumpPageStats = true;
-    opts::raw::DumpStreamBlocks = true;
-    opts::raw::DumpTpiRecords = true;
-    opts::raw::DumpTpiHash = true;
-    opts::raw::DumpIpiRecords = true;
-    opts::raw::DumpSectionMap = true;
-    opts::raw::DumpSectionContribs = true;
-    opts::raw::DumpLineInfo = true;
-    opts::raw::DumpFpo = true;
+  if (opts::RawSubcommand) {
+    if (opts::raw::RawAll) {
+      opts::raw::DumpHeaders = true;
+      opts::raw::DumpModules = true;
+      opts::raw::DumpModuleFiles = true;
+      opts::raw::DumpModuleSyms = true;
+      opts::raw::DumpGlobals = true;
+      opts::raw::DumpPublics = true;
+      opts::raw::DumpSectionHeaders = true;
+      opts::raw::DumpStreamSummary = true;
+      opts::raw::DumpPageStats = true;
+      opts::raw::DumpStreamBlocks = true;
+      opts::raw::DumpTpiRecords = true;
+      opts::raw::DumpTpiHash = true;
+      opts::raw::DumpIpiRecords = true;
+      opts::raw::DumpSectionMap = true;
+      opts::raw::DumpSectionContribs = true;
+      opts::raw::DumpLineInfo = true;
+      opts::raw::DumpFpo = true;
+    }
+
+    if (opts::raw::CompactRecords &&
+        (opts::raw::DumpTpiRecordBytes || opts::raw::DumpIpiRecordBytes)) {
+      errs() << "-compact-records is incompatible with -tpi-record-bytes and "
+                "-ipi-record-bytes.\n";
+      exit(1);
+    }
   }
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);

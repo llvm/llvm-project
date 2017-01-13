@@ -25,8 +25,8 @@ set PATH=%PATH%;c:\gnuwin32\bin
 
 set revision=%1
 set branch=trunk
-set package_version=4.0.0-r%revision%
-set clang_format_vs_version=4.0.0.%revision%
+set package_version=5.0.0-r%revision%
+set clang_format_vs_version=5.0.0.%revision%
 set build_dir=llvm_package_%revision%
 
 echo Branch: %branch%

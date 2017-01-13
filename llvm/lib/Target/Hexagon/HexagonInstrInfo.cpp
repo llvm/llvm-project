@@ -1074,13 +1074,13 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       unsigned Offset = Is128B ? VecOffset << 7 : VecOffset << 6;
       MachineInstr *MI1New =
           BuildMI(MBB, MI, DL, get(NewOpc))
-              .addOperand(MI.getOperand(0))
+              .add(MI.getOperand(0))
               .addImm(MI.getOperand(1).getImm())
               .addReg(SrcSubLo)
               .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
       MI1New->getOperand(0).setIsKill(false);
       BuildMI(MBB, MI, DL, get(NewOpc))
-          .addOperand(MI.getOperand(0))
+          .add(MI.getOperand(0))
           // The Vectors are indexed in multiples of vector size.
           .addImm(MI.getOperand(1).getImm() + Offset)
           .addReg(SrcSubHi)
@@ -1106,15 +1106,13 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
       unsigned DstReg = MI.getOperand(0).getReg();
       unsigned Offset = Is128B ? VecOffset << 7 : VecOffset << 6;
-      MachineInstr *MI1New =
-          BuildMI(MBB, MI, DL, get(NewOpc),
-                  HRI.getSubReg(DstReg, Hexagon::vsub_lo))
-              .addOperand(MI.getOperand(1))
-              .addImm(MI.getOperand(2).getImm());
+      MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpc),
+                                     HRI.getSubReg(DstReg, Hexagon::vsub_lo))
+                                 .add(MI.getOperand(1))
+                                 .addImm(MI.getOperand(2).getImm());
       MI1New->getOperand(1).setIsKill(false);
-      BuildMI(MBB, MI, DL, get(NewOpc),
-              HRI.getSubReg(DstReg, Hexagon::vsub_hi))
-          .addOperand(MI.getOperand(1))
+      BuildMI(MBB, MI, DL, get(NewOpc), HRI.getSubReg(DstReg, Hexagon::vsub_hi))
+          .add(MI.getOperand(1))
           // The Vectors are indexed in multiples of vector size.
           .addImm(MI.getOperand(2).getImm() + Offset)
           .setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
@@ -1227,18 +1225,18 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
       if (Op0.getReg() != Op2.getReg()) {
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
-                    .addOperand(Op0)
-                    .addOperand(Op1)
-                    .addOperand(Op2);
+                     .add(Op0)
+                     .add(Op1)
+                     .add(Op2);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
         IsDestLive = true;
       }
       if (Op0.getReg() != Op3.getReg()) {
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vncmov))
-                    .addOperand(Op0)
-                    .addOperand(Op1)
-                    .addOperand(Op3);
+                     .add(Op0)
+                     .add(Op1)
+                     .add(Op3);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
       }
@@ -1259,10 +1257,10 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_lo);
         unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
-                    .addOperand(Op0)
-                    .addOperand(Op1)
-                    .addReg(SrcHi)
-                    .addReg(SrcLo);
+                     .add(Op0)
+                     .add(Op1)
+                     .addReg(SrcHi)
+                     .addReg(SrcLo);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
         IsDestLive = true;
@@ -1271,10 +1269,10 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         unsigned SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_lo);
         unsigned SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
-                    .addOperand(Op0)
-                    .addOperand(Op1)
-                    .addReg(SrcHi)
-                    .addReg(SrcLo);
+                     .add(Op0)
+                     .add(Op1)
+                     .addReg(SrcHi)
+                     .addReg(SrcLo);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
       }
@@ -1376,7 +1374,7 @@ bool HexagonInstrInfo::PredicateInstruction(
     MachineOperand &Op = MI.getOperand(NOp);
     if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
       break;
-    T.addOperand(Op);
+    T.add(Op);
     NOp++;
   }
 
@@ -1386,7 +1384,7 @@ bool HexagonInstrInfo::PredicateInstruction(
   assert(GotPredReg);
   T.addReg(PredReg, PredRegFlags);
   while (NOp < NumOps)
-    T.addOperand(MI.getOperand(NOp++));
+    T.add(MI.getOperand(NOp++));
 
   MI.setDesc(get(PredOpc));
   while (unsigned n = MI.getNumOperands())

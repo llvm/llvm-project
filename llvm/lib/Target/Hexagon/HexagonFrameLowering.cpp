@@ -1473,8 +1473,7 @@ bool HexagonFrameLowering::expandCopy(MachineBasicBlock &B,
     return false;
 
   unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR)
-    .addOperand(MI->getOperand(1));
+  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR).add(MI->getOperand(1));
   BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), DstR)
     .addReg(TmpR, RegState::Kill);
 
@@ -2221,7 +2220,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         if (SrcRR.Reg != FoundR || SrcRR.Sub != 0) {
           const DebugLoc &DL = SI.getDebugLoc();
           CopyIn = BuildMI(B, StartIt, DL, HII.get(TargetOpcode::COPY), FoundR)
-                      .addOperand(SrcOp);
+                       .add(SrcOp);
         }
 
         ++StartIt;

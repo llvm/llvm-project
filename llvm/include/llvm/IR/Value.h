@@ -294,7 +294,15 @@ public:
   // when using them since you might not get all uses.
   // The methods that don't start with materialized_ assert that modules is
   // fully materialized.
-  void assertModuleIsMaterialized() const;
+  void assertModuleIsMaterializedImpl() const;
+  // This indirection exists so we can keep assertModuleIsMaterializedImpl()
+  // around in release builds of Value.cpp to be linked with other code built
+  // in debug mode. But this avoids calling it in any of the release built code.
+  void assertModuleIsMaterialized() const {
+#ifndef NDEBUG
+    assertModuleIsMaterializedImpl();
+#endif
+  }
 
   bool use_empty() const {
     assertModuleIsMaterialized();

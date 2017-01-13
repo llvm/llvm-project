@@ -7848,24 +7848,27 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
     //   add    r5, pc
     //   str    r5, [$jbuf, #+4] ; &jbuf[1]
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::t2LDRpci), NewVReg1)
-                   .addConstantPoolIndex(CPI)
-                   .addMemOperand(CPMMO));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::t2LDRpci), NewVReg1)
+        .addConstantPoolIndex(CPI)
+        .addMemOperand(CPMMO)
+        .add(predOps(ARMCC::AL));
     // Set the low bit because of thumb mode.
     unsigned NewVReg2 = MRI->createVirtualRegister(TRC);
-    AddDefaultCC(
-      AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::t2ORRri), NewVReg2)
-                     .addReg(NewVReg1, RegState::Kill)
-                     .addImm(0x01)));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::t2ORRri), NewVReg2)
+        .addReg(NewVReg1, RegState::Kill)
+        .addImm(0x01)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
     unsigned NewVReg3 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tPICADD), NewVReg3)
       .addReg(NewVReg2, RegState::Kill)
       .addImm(PCLabelId);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::t2STRi12))
-                   .addReg(NewVReg3, RegState::Kill)
-                   .addFrameIndex(FI)
-                   .addImm(36)  // &jbuf[1] :: pc
-                   .addMemOperand(FIMMOSt));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::t2STRi12))
+        .addReg(NewVReg3, RegState::Kill)
+        .addFrameIndex(FI)
+        .addImm(36) // &jbuf[1] :: pc
+        .addMemOperand(FIMMOSt)
+        .add(predOps(ARMCC::AL));
   } else if (isThumb) {
     // Incoming value: jbuf
     //   ldr.n  r1, LCPI1_4
@@ -7875,51 +7878,58 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
     //   add    r2, $jbuf, #+4 ; &jbuf[1]
     //   str    r1, [r2]
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::tLDRpci), NewVReg1)
-                   .addConstantPoolIndex(CPI)
-                   .addMemOperand(CPMMO));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::tLDRpci), NewVReg1)
+        .addConstantPoolIndex(CPI)
+        .addMemOperand(CPMMO)
+        .add(predOps(ARMCC::AL));
     unsigned NewVReg2 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tPICADD), NewVReg2)
       .addReg(NewVReg1, RegState::Kill)
       .addImm(PCLabelId);
     // Set the low bit because of thumb mode.
     unsigned NewVReg3 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::tMOVi8), NewVReg3)
-                   .addReg(ARM::CPSR, RegState::Define)
-                   .addImm(1));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::tMOVi8), NewVReg3)
+        .addReg(ARM::CPSR, RegState::Define)
+        .addImm(1)
+        .add(predOps(ARMCC::AL));
     unsigned NewVReg4 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::tORR), NewVReg4)
-                   .addReg(ARM::CPSR, RegState::Define)
-                   .addReg(NewVReg2, RegState::Kill)
-                   .addReg(NewVReg3, RegState::Kill));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::tORR), NewVReg4)
+        .addReg(ARM::CPSR, RegState::Define)
+        .addReg(NewVReg2, RegState::Kill)
+        .addReg(NewVReg3, RegState::Kill)
+        .add(predOps(ARMCC::AL));
     unsigned NewVReg5 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tADDframe), NewVReg5)
             .addFrameIndex(FI)
             .addImm(36); // &jbuf[1] :: pc
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::tSTRi))
-                   .addReg(NewVReg4, RegState::Kill)
-                   .addReg(NewVReg5, RegState::Kill)
-                   .addImm(0)
-                   .addMemOperand(FIMMOSt));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::tSTRi))
+        .addReg(NewVReg4, RegState::Kill)
+        .addReg(NewVReg5, RegState::Kill)
+        .addImm(0)
+        .addMemOperand(FIMMOSt)
+        .add(predOps(ARMCC::AL));
   } else {
     // Incoming value: jbuf
     //   ldr  r1, LCPI1_1
     //   add  r1, pc, r1
     //   str  r1, [$jbuf, #+4] ; &jbuf[1]
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::LDRi12),  NewVReg1)
-                   .addConstantPoolIndex(CPI)
-                   .addImm(0)
-                   .addMemOperand(CPMMO));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::LDRi12), NewVReg1)
+        .addConstantPoolIndex(CPI)
+        .addImm(0)
+        .addMemOperand(CPMMO)
+        .add(predOps(ARMCC::AL));
     unsigned NewVReg2 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::PICADD), NewVReg2)
-                   .addReg(NewVReg1, RegState::Kill)
-                   .addImm(PCLabelId));
-    AddDefaultPred(BuildMI(*MBB, MI, dl, TII->get(ARM::STRi12))
-                   .addReg(NewVReg2, RegState::Kill)
-                   .addFrameIndex(FI)
-                   .addImm(36)  // &jbuf[1] :: pc
-                   .addMemOperand(FIMMOSt));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::PICADD), NewVReg2)
+        .addReg(NewVReg1, RegState::Kill)
+        .addImm(PCLabelId)
+        .add(predOps(ARMCC::AL));
+    BuildMI(*MBB, MI, dl, TII->get(ARM::STRi12))
+        .addReg(NewVReg2, RegState::Kill)
+        .addFrameIndex(FI)
+        .addImm(36) // &jbuf[1] :: pc
+        .addMemOperand(FIMMOSt)
+        .add(predOps(ARMCC::AL));
   }
 }
 
@@ -8032,31 +8042,36 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   unsigned NumLPads = LPadList.size();
   if (Subtarget->isThumb2()) {
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::t2LDRi12), NewVReg1)
-                   .addFrameIndex(FI)
-                   .addImm(4)
-                   .addMemOperand(FIMMOLd));
+    BuildMI(DispatchBB, dl, TII->get(ARM::t2LDRi12), NewVReg1)
+        .addFrameIndex(FI)
+        .addImm(4)
+        .addMemOperand(FIMMOLd)
+        .add(predOps(ARMCC::AL));
 
     if (NumLPads < 256) {
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::t2CMPri))
-                     .addReg(NewVReg1)
-                     .addImm(LPadList.size()));
+      BuildMI(DispatchBB, dl, TII->get(ARM::t2CMPri))
+          .addReg(NewVReg1)
+          .addImm(LPadList.size())
+          .add(predOps(ARMCC::AL));
     } else {
       unsigned VReg1 = MRI->createVirtualRegister(TRC);
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::t2MOVi16), VReg1)
-                     .addImm(NumLPads & 0xFFFF));
+      BuildMI(DispatchBB, dl, TII->get(ARM::t2MOVi16), VReg1)
+          .addImm(NumLPads & 0xFFFF)
+          .add(predOps(ARMCC::AL));
 
       unsigned VReg2 = VReg1;
       if ((NumLPads & 0xFFFF0000) != 0) {
         VReg2 = MRI->createVirtualRegister(TRC);
-        AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::t2MOVTi16), VReg2)
-                       .addReg(VReg1)
-                       .addImm(NumLPads >> 16));
+        BuildMI(DispatchBB, dl, TII->get(ARM::t2MOVTi16), VReg2)
+            .addReg(VReg1)
+            .addImm(NumLPads >> 16)
+            .add(predOps(ARMCC::AL));
       }
 
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::t2CMPrr))
-                     .addReg(NewVReg1)
-                     .addReg(VReg2));
+      BuildMI(DispatchBB, dl, TII->get(ARM::t2CMPrr))
+          .addReg(NewVReg1)
+          .addReg(VReg2)
+          .add(predOps(ARMCC::AL));
     }
 
     BuildMI(DispatchBB, dl, TII->get(ARM::t2Bcc))
@@ -8065,16 +8080,17 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addReg(ARM::CPSR);
 
     unsigned NewVReg3 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::t2LEApcrelJT),NewVReg3)
-                   .addJumpTableIndex(MJTI));
+    BuildMI(DispContBB, dl, TII->get(ARM::t2LEApcrelJT), NewVReg3)
+        .addJumpTableIndex(MJTI)
+        .add(predOps(ARMCC::AL));
 
     unsigned NewVReg4 = MRI->createVirtualRegister(TRC);
-    AddDefaultCC(
-      AddDefaultPred(
-        BuildMI(DispContBB, dl, TII->get(ARM::t2ADDrs), NewVReg4)
+    BuildMI(DispContBB, dl, TII->get(ARM::t2ADDrs), NewVReg4)
         .addReg(NewVReg3, RegState::Kill)
         .addReg(NewVReg1)
-        .addImm(ARM_AM::getSORegOpc(ARM_AM::lsl, 2))));
+        .addImm(ARM_AM::getSORegOpc(ARM_AM::lsl, 2))
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
 
     BuildMI(DispContBB, dl, TII->get(ARM::t2BR_JT))
       .addReg(NewVReg4, RegState::Kill)
@@ -8082,15 +8098,17 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addJumpTableIndex(MJTI);
   } else if (Subtarget->isThumb()) {
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::tLDRspi), NewVReg1)
-                   .addFrameIndex(FI)
-                   .addImm(1)
-                   .addMemOperand(FIMMOLd));
+    BuildMI(DispatchBB, dl, TII->get(ARM::tLDRspi), NewVReg1)
+        .addFrameIndex(FI)
+        .addImm(1)
+        .addMemOperand(FIMMOLd)
+        .add(predOps(ARMCC::AL));
 
     if (NumLPads < 256) {
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::tCMPi8))
-                     .addReg(NewVReg1)
-                     .addImm(NumLPads));
+      BuildMI(DispatchBB, dl, TII->get(ARM::tCMPi8))
+          .addReg(NewVReg1)
+          .addImm(NumLPads)
+          .add(predOps(ARMCC::AL));
     } else {
       MachineConstantPool *ConstantPool = MF->getConstantPool();
       Type *Int32Ty = Type::getInt32Ty(MF->getFunction()->getContext());
@@ -8103,12 +8121,14 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
 
       unsigned VReg1 = MRI->createVirtualRegister(TRC);
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::tLDRpci))
-                     .addReg(VReg1, RegState::Define)
-                     .addConstantPoolIndex(Idx));
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::tCMPr))
-                     .addReg(NewVReg1)
-                     .addReg(VReg1));
+      BuildMI(DispatchBB, dl, TII->get(ARM::tLDRpci))
+          .addReg(VReg1, RegState::Define)
+          .addConstantPoolIndex(Idx)
+          .add(predOps(ARMCC::AL));
+      BuildMI(DispatchBB, dl, TII->get(ARM::tCMPr))
+          .addReg(NewVReg1)
+          .addReg(VReg1)
+          .add(predOps(ARMCC::AL));
     }
 
     BuildMI(DispatchBB, dl, TII->get(ARM::tBcc))
@@ -8117,37 +8137,42 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addReg(ARM::CPSR);
 
     unsigned NewVReg2 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tLSLri), NewVReg2)
-                   .addReg(ARM::CPSR, RegState::Define)
-                   .addReg(NewVReg1)
-                   .addImm(2));
+    BuildMI(DispContBB, dl, TII->get(ARM::tLSLri), NewVReg2)
+        .addReg(ARM::CPSR, RegState::Define)
+        .addReg(NewVReg1)
+        .addImm(2)
+        .add(predOps(ARMCC::AL));
 
     unsigned NewVReg3 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tLEApcrelJT), NewVReg3)
-                   .addJumpTableIndex(MJTI));
+    BuildMI(DispContBB, dl, TII->get(ARM::tLEApcrelJT), NewVReg3)
+        .addJumpTableIndex(MJTI)
+        .add(predOps(ARMCC::AL));
 
     unsigned NewVReg4 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg4)
-                   .addReg(ARM::CPSR, RegState::Define)
-                   .addReg(NewVReg2, RegState::Kill)
-                   .addReg(NewVReg3));
+    BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg4)
+        .addReg(ARM::CPSR, RegState::Define)
+        .addReg(NewVReg2, RegState::Kill)
+        .addReg(NewVReg3)
+        .add(predOps(ARMCC::AL));
 
     MachineMemOperand *JTMMOLd = MF->getMachineMemOperand(
         MachinePointerInfo::getJumpTable(*MF), MachineMemOperand::MOLoad, 4, 4);
 
     unsigned NewVReg5 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tLDRi), NewVReg5)
-                   .addReg(NewVReg4, RegState::Kill)
-                   .addImm(0)
-                   .addMemOperand(JTMMOLd));
+    BuildMI(DispContBB, dl, TII->get(ARM::tLDRi), NewVReg5)
+        .addReg(NewVReg4, RegState::Kill)
+        .addImm(0)
+        .addMemOperand(JTMMOLd)
+        .add(predOps(ARMCC::AL));
 
     unsigned NewVReg6 = NewVReg5;
     if (IsPositionIndependent) {
       NewVReg6 = MRI->createVirtualRegister(TRC);
-      AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg6)
-                     .addReg(ARM::CPSR, RegState::Define)
-                     .addReg(NewVReg5, RegState::Kill)
-                     .addReg(NewVReg3));
+      BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg6)
+          .addReg(ARM::CPSR, RegState::Define)
+          .addReg(NewVReg5, RegState::Kill)
+          .addReg(NewVReg3)
+          .add(predOps(ARMCC::AL));
     }
 
     BuildMI(DispContBB, dl, TII->get(ARM::tBR_JTr))
@@ -8155,31 +8180,36 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addJumpTableIndex(MJTI);
   } else {
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::LDRi12), NewVReg1)
-                   .addFrameIndex(FI)
-                   .addImm(4)
-                   .addMemOperand(FIMMOLd));
+    BuildMI(DispatchBB, dl, TII->get(ARM::LDRi12), NewVReg1)
+        .addFrameIndex(FI)
+        .addImm(4)
+        .addMemOperand(FIMMOLd)
+        .add(predOps(ARMCC::AL));
 
     if (NumLPads < 256) {
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::CMPri))
-                     .addReg(NewVReg1)
-                     .addImm(NumLPads));
+      BuildMI(DispatchBB, dl, TII->get(ARM::CMPri))
+          .addReg(NewVReg1)
+          .addImm(NumLPads)
+          .add(predOps(ARMCC::AL));
     } else if (Subtarget->hasV6T2Ops() && isUInt<16>(NumLPads)) {
       unsigned VReg1 = MRI->createVirtualRegister(TRC);
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::MOVi16), VReg1)
-                     .addImm(NumLPads & 0xFFFF));
+      BuildMI(DispatchBB, dl, TII->get(ARM::MOVi16), VReg1)
+          .addImm(NumLPads & 0xFFFF)
+          .add(predOps(ARMCC::AL));
 
       unsigned VReg2 = VReg1;
       if ((NumLPads & 0xFFFF0000) != 0) {
         VReg2 = MRI->createVirtualRegister(TRC);
-        AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::MOVTi16), VReg2)
-                       .addReg(VReg1)
-                       .addImm(NumLPads >> 16));
+        BuildMI(DispatchBB, dl, TII->get(ARM::MOVTi16), VReg2)
+            .addReg(VReg1)
+            .addImm(NumLPads >> 16)
+            .add(predOps(ARMCC::AL));
       }
 
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::CMPrr))
-                     .addReg(NewVReg1)
-                     .addReg(VReg2));
+      BuildMI(DispatchBB, dl, TII->get(ARM::CMPrr))
+          .addReg(NewVReg1)
+          .addReg(VReg2)
+          .add(predOps(ARMCC::AL));
     } else {
       MachineConstantPool *ConstantPool = MF->getConstantPool();
       Type *Int32Ty = Type::getInt32Ty(MF->getFunction()->getContext());
@@ -8192,13 +8222,15 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
 
       unsigned VReg1 = MRI->createVirtualRegister(TRC);
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::LDRcp))
-                     .addReg(VReg1, RegState::Define)
-                     .addConstantPoolIndex(Idx)
-                     .addImm(0));
-      AddDefaultPred(BuildMI(DispatchBB, dl, TII->get(ARM::CMPrr))
-                     .addReg(NewVReg1)
-                     .addReg(VReg1, RegState::Kill));
+      BuildMI(DispatchBB, dl, TII->get(ARM::LDRcp))
+          .addReg(VReg1, RegState::Define)
+          .addConstantPoolIndex(Idx)
+          .addImm(0)
+          .add(predOps(ARMCC::AL));
+      BuildMI(DispatchBB, dl, TII->get(ARM::CMPrr))
+          .addReg(NewVReg1)
+          .addReg(VReg1, RegState::Kill)
+          .add(predOps(ARMCC::AL));
     }
 
     BuildMI(DispatchBB, dl, TII->get(ARM::Bcc))
@@ -8207,23 +8239,25 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       .addReg(ARM::CPSR);
 
     unsigned NewVReg3 = MRI->createVirtualRegister(TRC);
-    AddDefaultCC(
-      AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::MOVsi), NewVReg3)
-                     .addReg(NewVReg1)
-                     .addImm(ARM_AM::getSORegOpc(ARM_AM::lsl, 2))));
+    BuildMI(DispContBB, dl, TII->get(ARM::MOVsi), NewVReg3)
+        .addReg(NewVReg1)
+        .addImm(ARM_AM::getSORegOpc(ARM_AM::lsl, 2))
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
     unsigned NewVReg4 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::LEApcrelJT), NewVReg4)
-                   .addJumpTableIndex(MJTI));
+    BuildMI(DispContBB, dl, TII->get(ARM::LEApcrelJT), NewVReg4)
+        .addJumpTableIndex(MJTI)
+        .add(predOps(ARMCC::AL));
 
     MachineMemOperand *JTMMOLd = MF->getMachineMemOperand(
         MachinePointerInfo::getJumpTable(*MF), MachineMemOperand::MOLoad, 4, 4);
     unsigned NewVReg5 = MRI->createVirtualRegister(TRC);
-    AddDefaultPred(
-      BuildMI(DispContBB, dl, TII->get(ARM::LDRrs), NewVReg5)
-      .addReg(NewVReg3, RegState::Kill)
-      .addReg(NewVReg4)
-      .addImm(0)
-      .addMemOperand(JTMMOLd));
+    BuildMI(DispContBB, dl, TII->get(ARM::LDRrs), NewVReg5)
+        .addReg(NewVReg3, RegState::Kill)
+        .addReg(NewVReg4)
+        .addImm(0)
+        .addMemOperand(JTMMOLd)
+        .add(predOps(ARMCC::AL));
 
     if (IsPositionIndependent) {
       BuildMI(DispContBB, dl, TII->get(ARM::BR_JTadd))
@@ -8368,26 +8402,35 @@ static void emitPostLd(MachineBasicBlock *BB, MachineBasicBlock::iterator Pos,
   unsigned LdOpc = getLdOpcode(LdSize, IsThumb1, IsThumb2);
   assert(LdOpc != 0 && "Should have a load opcode");
   if (LdSize >= 8) {
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
-                       .addReg(AddrOut, RegState::Define).addReg(AddrIn)
-                       .addImm(0));
+    BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
+        .addReg(AddrOut, RegState::Define)
+        .addReg(AddrIn)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
   } else if (IsThumb1) {
     // load + update AddrIn
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
-                       .addReg(AddrIn).addImm(0));
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, Pos, dl, TII->get(ARM::tADDi8), AddrOut);
-    MIB = AddDefaultT1CC(MIB);
-    MIB.addReg(AddrIn).addImm(LdSize);
-    AddDefaultPred(MIB);
+    BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
+        .addReg(AddrIn)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
+    BuildMI(*BB, Pos, dl, TII->get(ARM::tADDi8), AddrOut)
+        .add(t1CondCodeOp())
+        .addReg(AddrIn)
+        .addImm(LdSize)
+        .add(predOps(ARMCC::AL));
   } else if (IsThumb2) {
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
-                       .addReg(AddrOut, RegState::Define).addReg(AddrIn)
-                       .addImm(LdSize));
+    BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
+        .addReg(AddrOut, RegState::Define)
+        .addReg(AddrIn)
+        .addImm(LdSize)
+        .add(predOps(ARMCC::AL));
   } else { // arm
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
-                       .addReg(AddrOut, RegState::Define).addReg(AddrIn)
-                       .addReg(0).addImm(LdSize));
+    BuildMI(*BB, Pos, dl, TII->get(LdOpc), Data)
+        .addReg(AddrOut, RegState::Define)
+        .addReg(AddrIn)
+        .addReg(0)
+        .addImm(LdSize)
+        .add(predOps(ARMCC::AL));
   }
 }
 
@@ -8400,24 +8443,36 @@ static void emitPostSt(MachineBasicBlock *BB, MachineBasicBlock::iterator Pos,
   unsigned StOpc = getStOpcode(StSize, IsThumb1, IsThumb2);
   assert(StOpc != 0 && "Should have a store opcode");
   if (StSize >= 8) {
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
-                       .addReg(AddrIn).addImm(0).addReg(Data));
+    BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
+        .addReg(AddrIn)
+        .addImm(0)
+        .addReg(Data)
+        .add(predOps(ARMCC::AL));
   } else if (IsThumb1) {
     // store + update AddrIn
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(StOpc)).addReg(Data)
-                       .addReg(AddrIn).addImm(0));
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, Pos, dl, TII->get(ARM::tADDi8), AddrOut);
-    MIB = AddDefaultT1CC(MIB);
-    MIB.addReg(AddrIn).addImm(StSize);
-    AddDefaultPred(MIB);
+    BuildMI(*BB, Pos, dl, TII->get(StOpc))
+        .addReg(Data)
+        .addReg(AddrIn)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
+    BuildMI(*BB, Pos, dl, TII->get(ARM::tADDi8), AddrOut)
+        .add(t1CondCodeOp())
+        .addReg(AddrIn)
+        .addImm(StSize)
+        .add(predOps(ARMCC::AL));
   } else if (IsThumb2) {
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
-                       .addReg(Data).addReg(AddrIn).addImm(StSize));
+    BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
+        .addReg(Data)
+        .addReg(AddrIn)
+        .addImm(StSize)
+        .add(predOps(ARMCC::AL));
   } else { // arm
-    AddDefaultPred(BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
-                       .addReg(Data).addReg(AddrIn).addReg(0)
-                       .addImm(StSize));
+    BuildMI(*BB, Pos, dl, TII->get(StOpc), AddrOut)
+        .addReg(Data)
+        .addReg(AddrIn)
+        .addReg(0)
+        .addImm(StSize)
+        .add(predOps(ARMCC::AL));
   }
 }
 
@@ -8548,16 +8603,15 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
     unsigned Vtmp = varEnd;
     if ((LoopSize & 0xFFFF0000) != 0)
       Vtmp = MRI.createVirtualRegister(TRC);
-    AddDefaultPred(BuildMI(BB, dl,
-                           TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16),
-                           Vtmp).addImm(LoopSize & 0xFFFF));
+    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16), Vtmp)
+        .addImm(LoopSize & 0xFFFF)
+        .add(predOps(ARMCC::AL));
 
     if ((LoopSize & 0xFFFF0000) != 0)
-      AddDefaultPred(BuildMI(BB, dl,
-                             TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16),
-                             varEnd)
-                         .addReg(Vtmp)
-                         .addImm(LoopSize >> 16));
+      BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16), varEnd)
+          .addReg(Vtmp)
+          .addImm(LoopSize >> 16)
+          .add(predOps(ARMCC::AL));
   } else {
     MachineConstantPool *ConstantPool = MF->getConstantPool();
     Type *Int32Ty = Type::getInt32Ty(MF->getFunction()->getContext());
@@ -8570,11 +8624,16 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
     unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
 
     if (IsThumb)
-      AddDefaultPred(BuildMI(*BB, MI, dl, TII->get(ARM::tLDRpci)).addReg(
-          varEnd, RegState::Define).addConstantPoolIndex(Idx));
+      BuildMI(*BB, MI, dl, TII->get(ARM::tLDRpci))
+          .addReg(varEnd, RegState::Define)
+          .addConstantPoolIndex(Idx)
+          .add(predOps(ARMCC::AL));
     else
-      AddDefaultPred(BuildMI(*BB, MI, dl, TII->get(ARM::LDRcp)).addReg(
-          varEnd, RegState::Define).addConstantPoolIndex(Idx).addImm(0));
+      BuildMI(*BB, MI, dl, TII->get(ARM::LDRcp))
+          .addReg(varEnd, RegState::Define)
+          .addConstantPoolIndex(Idx)
+          .addImm(0)
+          .add(predOps(ARMCC::AL));
   }
   BB->addSuccessor(loopMBB);
 
@@ -8611,16 +8670,19 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
 
   // Decrement loop variable by UnitSize.
   if (IsThumb1) {
-    MachineInstrBuilder MIB =
-        BuildMI(*BB, BB->end(), dl, TII->get(ARM::tSUBi8), varLoop);
-    MIB = AddDefaultT1CC(MIB);
-    MIB.addReg(varPhi).addImm(UnitSize);
-    AddDefaultPred(MIB);
+    BuildMI(*BB, BB->end(), dl, TII->get(ARM::tSUBi8), varLoop)
+        .add(t1CondCodeOp())
+        .addReg(varPhi)
+        .addImm(UnitSize)
+        .add(predOps(ARMCC::AL));
   } else {
     MachineInstrBuilder MIB =
         BuildMI(*BB, BB->end(), dl,
                 TII->get(IsThumb2 ? ARM::t2SUBri : ARM::SUBri), varLoop);
-    AddDefaultCC(AddDefaultPred(MIB.addReg(varPhi).addImm(UnitSize)));
+    MIB.addReg(varPhi)
+        .addImm(UnitSize)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
     MIB->getOperand(5).setReg(ARM::CPSR);
     MIB->getOperand(5).setIsDef(true);
   }
@@ -8714,11 +8776,12 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   }
   }
 
-  AddDefaultCC(AddDefaultPred(BuildMI(*MBB, MI, DL, TII.get(ARM::t2SUBrr),
-                                      ARM::SP)
-                         .addReg(ARM::SP, RegState::Kill)
-                         .addReg(ARM::R4, RegState::Kill)
-                         .setMIFlags(MachineInstr::FrameSetup)));
+  BuildMI(*MBB, MI, DL, TII.get(ARM::t2SUBrr), ARM::SP)
+      .addReg(ARM::SP, RegState::Kill)
+      .addReg(ARM::R4, RegState::Kill)
+      .setMIFlags(MachineInstr::FrameSetup)
+      .add(predOps(ARMCC::AL))
+      .add(condCodeOp());
 
   MI.eraseFromParent();
   return MBB;
@@ -8743,9 +8806,10 @@ ARMTargetLowering::EmitLowered__dbzchk(MachineInstr &MI,
   MF->push_back(TrapBB);
   MBB->addSuccessor(TrapBB);
 
-  AddDefaultPred(BuildMI(*MBB, MI, DL, TII->get(ARM::tCMPi8))
-                     .addReg(MI.getOperand(0).getReg())
-                     .addImm(0));
+  BuildMI(*MBB, MI, DL, TII->get(ARM::tCMPi8))
+      .addReg(MI.getOperand(0).getReg())
+      .addImm(0)
+      .add(predOps(ARMCC::AL));
   BuildMI(*MBB, MI, DL, TII->get(ARM::t2Bcc))
       .addMBB(TrapBB)
       .addImm(ARMCC::EQ)
@@ -8770,11 +8834,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   // Thumb1 post-indexed loads are really just single-register LDMs.
   case ARM::tLDR_postidx: {
     BuildMI(*BB, MI, dl, TII->get(ARM::tLDMIA_UPD))
-      .addOperand(MI.getOperand(1)) // Rn_wb
-      .addOperand(MI.getOperand(2)) // Rn
-      .addOperand(MI.getOperand(3)) // PredImm
-      .addOperand(MI.getOperand(4)) // PredReg
-      .addOperand(MI.getOperand(0)); // Rt
+        .add(MI.getOperand(1))  // Rn_wb
+        .add(MI.getOperand(2))  // Rn
+        .add(MI.getOperand(3))  // PredImm
+        .add(MI.getOperand(4))  // PredReg
+        .add(MI.getOperand(0)); // Rt
     MI.eraseFromParent();
     return BB;
   }
@@ -8805,12 +8869,12 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     MachineMemOperand *MMO = *MI.memoperands_begin();
     BuildMI(*BB, MI, dl, TII->get(NewOpc))
-        .addOperand(MI.getOperand(0)) // Rn_wb
-        .addOperand(MI.getOperand(1)) // Rt
-        .addOperand(MI.getOperand(2)) // Rn
-        .addImm(Offset)               // offset (skip GPR==zero_reg)
-        .addOperand(MI.getOperand(5)) // pred
-        .addOperand(MI.getOperand(6))
+        .add(MI.getOperand(0)) // Rn_wb
+        .add(MI.getOperand(1)) // Rt
+        .add(MI.getOperand(2)) // Rn
+        .addImm(Offset)        // offset (skip GPR==zero_reg)
+        .add(MI.getOperand(5)) // pred
+        .add(MI.getOperand(6))
         .addMemOperand(MMO);
     MI.eraseFromParent();
     return BB;
@@ -8827,7 +8891,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(NewOpc));
     for (unsigned i = 0; i < MI.getNumOperands(); ++i)
-      MIB.addOperand(MI.getOperand(i));
+      MIB.add(MI.getOperand(i));
     MI.eraseFromParent();
     return BB;
   }
@@ -8900,18 +8964,20 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned LHS1 = MI.getOperand(1).getReg();
     unsigned LHS2 = MI.getOperand(2).getReg();
     if (RHSisZero) {
-      AddDefaultPred(BuildMI(BB, dl,
-                             TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
-                     .addReg(LHS1).addImm(0));
+      BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
+          .addReg(LHS1)
+          .addImm(0)
+          .add(predOps(ARMCC::AL));
       BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
         .addReg(LHS2).addImm(0)
         .addImm(ARMCC::EQ).addReg(ARM::CPSR);
     } else {
       unsigned RHS1 = MI.getOperand(3).getReg();
       unsigned RHS2 = MI.getOperand(4).getReg();
-      AddDefaultPred(BuildMI(BB, dl,
-                             TII->get(isThumb2 ? ARM::t2CMPrr : ARM::CMPrr))
-                     .addReg(LHS1).addReg(RHS1));
+      BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPrr : ARM::CMPrr))
+          .addReg(LHS1)
+          .addReg(RHS1)
+          .add(predOps(ARMCC::AL));
       BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPrr : ARM::CMPrr))
         .addReg(LHS2).addReg(RHS2)
         .addImm(ARMCC::EQ).addReg(ARM::CPSR);
@@ -8925,7 +8991,9 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2Bcc : ARM::Bcc))
       .addMBB(destMBB).addImm(ARMCC::EQ).addReg(ARM::CPSR);
     if (isThumb2)
-      AddDefaultPred(BuildMI(BB, dl, TII->get(ARM::t2B)).addMBB(exitMBB));
+      BuildMI(BB, dl, TII->get(ARM::t2B))
+          .addMBB(exitMBB)
+          .add(predOps(ARMCC::AL));
     else
       BuildMI(BB, dl, TII->get(ARM::B)) .addMBB(exitMBB);
 
@@ -8988,9 +9056,10 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     RSBBB->addSuccessor(SinkBB);
 
     // insert a cmp at the end of BB
-    AddDefaultPred(BuildMI(BB, dl,
-                           TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
-                   .addReg(ABSSrcReg).addImm(0));
+    BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
+        .addReg(ABSSrcReg)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
 
     // insert a bcc with opposite CC to ARMCC::MI at the end of BB
     BuildMI(BB, dl,

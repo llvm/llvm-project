@@ -400,7 +400,9 @@ bool DWARFFormValue::extractValue(const DataExtractor &data,
       Value.uval = data.getULEB128(offset_ptr);
       break;
     default:
-      return false;
+      // DWARFFormValue::skipValue() will have caught this and caused all
+      // DWARF DIEs to fail to be parsed, so this code is not be reachable.
+      llvm_unreachable("unsupported form");
     }
   } while (indirect);
 

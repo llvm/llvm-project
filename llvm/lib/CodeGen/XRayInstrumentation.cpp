@@ -81,7 +81,7 @@ void XRayInstrumentation::replaceRetWithPatchableRet(MachineFunction &MF,
         auto MIB = BuildMI(MBB, T, T.getDebugLoc(), TII->get(Opc))
                        .addImm(T.getOpcode());
         for (auto &MO : T.operands())
-          MIB.addOperand(MO);
+          MIB.add(MO);
         Terminators.push_back(&T);
       }
     }

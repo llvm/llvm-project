@@ -1697,7 +1697,7 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   if (log) {
     StreamString s;
-    s.Printf("ABISysV_x86_64::PrepareTrivialCall (tid = 0x%" PRIx64
+    s.Printf("ABISysV_arm64::PrepareTrivialCall (tid = 0x%" PRIx64
              ", sp = 0x%" PRIx64 ", func_addr = 0x%" PRIx64
              ", return_addr = 0x%" PRIx64,
              thread.GetID(), (uint64_t)sp, (uint64_t)func_addr,

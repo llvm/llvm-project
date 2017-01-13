@@ -9,7 +9,9 @@
 
 #include "LLVMOutputStyle.h"
 
+#include "CompactTypeDumpVisitor.h"
 #include "llvm-pdbdump.h"
+
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
@@ -34,6 +36,7 @@
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <unordered_map>
 
@@ -524,22 +527,40 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   if (!Tpi)
     return Tpi.takeError();
 
-  CVTypeDumper Dumper(TypeDB);
+  // Even if the user doesn't want to dump type records, we still need to
+  // iterate them in order to build the type database. So when they want to
+  // dump symbols but not types, don't stick a dumper on the end, just build
+  // the type database.
+  TypeDatabaseVisitor DBV(TypeDB);
+  CompactTypeDumpVisitor CTDV(TypeDB, &P);
+  TypeDumpVisitor TDV(TypeDB, &P, false);
+  TypeDeserializer Deserializer;
+  TypeVisitorCallbackPipeline Pipeline;
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(DBV);
+
+  CVTypeVisitor Visitor(Pipeline);
+
   if (DumpRecords || DumpRecordBytes) {
     DictScope D(P, Label);
 
     P.printNumber(VerLabel, Tpi->getTpiVersion());
     P.printNumber("Record count", Tpi->NumTypeRecords());
-
     ListScope L(P, "Records");
 
     bool HadError = false;
-    for (auto &Type : Tpi->types(&HadError)) {
-      DictScope DD(P, "");
+    if (opts::raw::CompactRecords)
+      Pipeline.addCallbackToPipeline(CTDV);
+    else
+      Pipeline.addCallbackToPipeline(TDV);
+
+    for (auto Type : Tpi->types(&HadError)) {
+      std::unique_ptr<DictScope> Scope;
+      if (!opts::raw::CompactRecords)
+        Scope.reset(new DictScope(P, ""));
 
       if (DumpRecords) {
-        TypeDumpVisitor TDV(TypeDB, &P, false);
-        if (auto EC = Dumper.dump(Type, TDV))
+        if (auto EC = Visitor.visitTypeRecord(Type))
           return EC;
       }
 
@@ -550,18 +571,16 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     if (HadError)
       return make_error<RawError>(raw_error_code::corrupt_file,
                                   "TPI stream contained corrupt record");
-  } else if (opts::raw::DumpModuleSyms) {
-    // Even if the user doesn't want to dump type records, we still need to
-    // iterate them in order to build the type database. So when they want to
-    // dump symbols but not types, don't stick a dumper on the end, just build
-    // the type database.
-    TypeDatabaseVisitor DBV(TypeDB);
-    TypeDeserializer Deserializer;
-    TypeVisitorCallbackPipeline Pipeline;
-    Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(DBV);
+    {
+      ListScope L(P, "TypeIndexOffsets");
+      for (const auto &IO : Tpi->getTypeIndexOffsets()) {
+        P.printString(formatv("Index: {0:x}, Offset: {1:N}", IO.Type.getIndex(),
+                              (uint32_t)IO.Offset)
+                          .str());
+      }
+    }
 
-    CVTypeVisitor Visitor(Pipeline);
+  } else if (opts::raw::DumpModuleSyms) {
 
     bool HadError = false;
     for (auto Type : Tpi->types(&HadError)) {

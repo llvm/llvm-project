@@ -12,30 +12,57 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPC.h"
+#include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <new>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "ppc-codegen"
@@ -60,6 +87,7 @@ static cl::opt<bool> EnableBranchHint(
     cl::Hidden);
 
 namespace {
+
   //===--------------------------------------------------------------------===//
   /// PPCDAGToDAGISel - PPC specific code to select PPC machine
   /// instructions for SelectionDAG operations.
@@ -69,6 +97,7 @@ namespace {
     const PPCSubtarget *PPCSubTarget;
     const PPCTargetLowering *PPCLowering;
     unsigned GlobalBaseReg;
+
   public:
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm)
         : SelectionDAGISel(tm), TM(tm) {}
@@ -184,7 +213,6 @@ namespace {
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                       unsigned ConstraintID,
                                       std::vector<SDValue> &OutOps) override {
-
       switch(ConstraintID) {
       default:
         errs() << "ConstraintID: " << ConstraintID << "\n";
@@ -237,7 +265,8 @@ private:
 
     void transferMemOperands(SDNode *N, SDNode *Result);
   };
-}
+
+} // end anonymous namespace
 
 /// InsertVRSaveCode - Once the entire function has been instruction selected,
 /// all virtual registers are created and all machine instructions are built,
@@ -303,7 +332,6 @@ void PPCDAGToDAGISel::InsertVRSaveCode(MachineFunction &Fn) {
   }
 }
 
-
 /// getGlobalBaseReg - Output the instructions required to put the
 /// base address to use for accessing globals into a register.
 ///
@@ -367,7 +395,6 @@ static bool isIntS16Immediate(SDNode *N, short &Imm) {
 static bool isIntS16Immediate(SDValue Op, short &Imm) {
   return isIntS16Immediate(Op.getNode(), Imm);
 }
-
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -833,6 +860,7 @@ static SDNode *getInt64(SelectionDAG *CurDAG, SDNode *N) {
 }
 
 namespace {
+
 class BitPermutationSelector {
   struct ValueBit {
     SDValue V;
@@ -898,14 +926,12 @@ class BitPermutationSelector {
   // associated with each) used to choose the lowering method.
   struct ValueRotInfo {
     SDValue V;
-    unsigned RLAmt;
-    unsigned NumGroups;
-    unsigned FirstGroupStartIdx;
-    bool Repl32;
+    unsigned RLAmt = std::numeric_limits<unsigned>::max();
+    unsigned NumGroups = 0;
+    unsigned FirstGroupStartIdx = std::numeric_limits<unsigned>::max();
+    bool Repl32 = false;
 
-    ValueRotInfo()
-      : RLAmt(UINT32_MAX), NumGroups(0), FirstGroupStartIdx(UINT32_MAX),
-        Repl32(false) {}
+    ValueRotInfo() = default;
 
     // For sorting (in reverse order) by NumGroups, and then by
     // FirstGroupStartIdx.
@@ -1985,7 +2011,8 @@ public:
     return RNLM;
   }
 };
-} // anonymous namespace
+
+} // end anonymous namespace
 
 bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
   if (N->getValueType(0) != MVT::i32 &&
@@ -2450,7 +2477,6 @@ void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
 }
 
-
 // Select - Convert the specified operand from a target-independent to a
 // target-specific node if it hasn't already been changed.
 void PPCDAGToDAGISel::Select(SDNode *N) {
@@ -2474,19 +2500,18 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
 
-  case ISD::Constant: {
+  case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
       ReplaceNode(N, getInt64(CurDAG, N));
       return;
     }
     break;
-  }
 
-  case ISD::SETCC: {
+  case ISD::SETCC:
     if (trySETCC(N))
       return;
     break;
-  }
+
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
     return;
@@ -2502,11 +2527,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
   }
 
-  case PPCISD::READ_TIME_BASE: {
+  case PPCISD::READ_TIME_BASE:
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ReadTB, dl, MVT::i32, MVT::i32,
                                           MVT::Other, N->getOperand(0)));
     return;
-  }
 
   case PPCISD::SRA_ADDZE: {
     SDValue N0 = N->getOperand(0);
@@ -2911,8 +2935,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       CurDAG->SelectNodeTo(N, PPC::XXSEL, N->getValueType(0), Ops);
       return;
     }
-
     break;
+
   case ISD::VECTOR_SHUFFLE:
     if (PPCSubTarget->hasVSX() && (N->getValueType(0) == MVT::v2f64 ||
                                   N->getValueType(0) == MVT::v2i64)) {
@@ -3088,7 +3112,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                                           SDValue(Tmp, 0), GA));
     return;
   }
-  case PPCISD::PPC32_PICGOT: {
+  case PPCISD::PPC32_PICGOT:
     // Generate a PIC-safe GOT reference.
     assert(!PPCSubTarget->isPPC64() && PPCSubTarget->isSVR4ABI() &&
       "PPCISD::PPC32_PICGOT is only supported for 32-bit SVR4");
@@ -3096,7 +3120,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                          PPCLowering->getPointerTy(CurDAG->getDataLayout()),
                          MVT::i32);
     return;
-  }
+
   case PPCISD::VADD_SPLAT: {
     // This expands into one of three sequences, depending on whether
     // the first operand is odd or even, positive or negative.
@@ -3139,7 +3163,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SDValue TmpVal = SDValue(Tmp, 0);
       ReplaceNode(N, CurDAG->getMachineNode(Opc2, dl, VT, TmpVal, TmpVal));
       return;
-
     } else if (Elt > 0) {
       // Elt is odd and positive, in the range [17,31].
       //
@@ -3154,7 +3177,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       ReplaceNode(N, CurDAG->getMachineNode(Opc3, dl, VT, SDValue(Tmp1, 0),
                                             SDValue(Tmp2, 0)));
       return;
-
     } else {
       // Elt is odd and negative, in the range [-31,-17].
       //
@@ -3199,7 +3221,7 @@ SDValue PPCDAGToDAGISel::combineToCMPB(SDNode *N) {
   EVT VT = N->getValueType(0);
 
   SDValue RHS, LHS;
-  bool BytesFound[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  bool BytesFound[8] = {false, false, false, false, false, false, false, false};
   uint64_t Mask = 0, Alt = 0;
 
   auto IsByteSelectCC = [this](SDValue O, unsigned &b,
@@ -3499,7 +3521,6 @@ void PPCDAGToDAGISel::PreprocessISelDAG() {
 /// PostprocessISelDAG - Perform some late peephole optimizations
 /// on the DAG representation.
 void PPCDAGToDAGISel::PostprocessISelDAG() {
-
   // Skip peepholes at -O0.
   if (TM.getOptLevel() == CodeGenOpt::None)
     return;
@@ -4519,7 +4540,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       CurDAG->RemoveDeadNode(Base.getNode());
   }
 }
-
 
 /// createPPCISelDag - This pass converts a legalized DAG into a
 /// PowerPC-specific DAG, ready for instruction scheduling.

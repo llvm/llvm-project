@@ -38,8 +38,10 @@ Pass *MachineFunctionPass::createPrinterPass(raw_ostream &O,
 bool MachineFunctionPass::runOnFunction(Function &F) {
   // Do not codegen any 'available_externally' functions at all, they have
   // definitions outside the translation unit.
-  if (F.hasAvailableExternallyLinkage())
+  if (F.hasAvailableExternallyLinkage()) {
+    setExecuted(false);
     return false;
+  }
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
   MachineFunction &MF = MMI.getMachineFunction(F);
