@@ -670,5 +670,72 @@ TEST(CXXMethodDecl, CXXMethodDeclWithNoExceptSpecification) {
       Language::Lang_CXX11));
 }
 
+class ExceptionSpecRangeVerifier : public RangeVerifier<TypeLoc> {
+protected:
+  SourceRange getRange(const TypeLoc &Node) override {
+    auto T =
+      Node.getUnqualifiedLoc().castAs<FunctionProtoTypeLoc>();
+    assert(!T.isNull());
+    return T.getExceptionSpecRange();
+  }
+};
+
+class ParmVarExceptionSpecRangeVerifier : public RangeVerifier<ParmVarDecl> {
+protected:
+  SourceRange getRange(const ParmVarDecl &Node) override {
+    if (const TypeSourceInfo *TSI = Node.getTypeSourceInfo()) {
+      TypeLoc TL = TSI->getTypeLoc();
+      if (TL.getType()->isPointerType()) {
+        TL = TL.getNextTypeLoc().IgnoreParens();
+        if (auto FPTL = TL.getAs<FunctionProtoTypeLoc>()) {
+          return FPTL.getExceptionSpecRange();
+        }
+      }
+    }
+    return SourceRange();
+  }
+};
+
+TEST(FunctionDecl, ExceptionSpecifications) {
+  ExceptionSpecRangeVerifier Verifier;
+
+  Verifier.expectRange(1, 10, 1, 16);
+  EXPECT_TRUE(Verifier.match("void f() throw();\n", loc(functionType())));
+
+  Verifier.expectRange(1, 10, 1, 34);
+  EXPECT_TRUE(Verifier.match("void f() throw(void(void) throw());\n",
+                             loc(functionType())));
+
+  Verifier.expectRange(1, 10, 1, 19);
+  std::vector<std::string> Args;
+  Args.push_back("-fms-extensions");
+  EXPECT_TRUE(Verifier.match("void f() throw(...);\n", loc(functionType()),
+                             Args, Language::Lang_CXX));
+
+  Verifier.expectRange(1, 10, 1, 10);
+  EXPECT_TRUE(Verifier.match("void f() noexcept;\n", loc(functionType()),
+                             Language::Lang_CXX11));
+
+  Verifier.expectRange(1, 10, 1, 24);
+  EXPECT_TRUE(Verifier.match("void f() noexcept(false);\n", loc(functionType()),
+                             Language::Lang_CXX11));
+
+  Verifier.expectRange(1, 10, 1, 32);
+  EXPECT_TRUE(Verifier.match("void f() noexcept(noexcept(1+1));\n",
+                             loc(functionType()), Language::Lang_CXX11));
+
+  ParmVarExceptionSpecRangeVerifier Verifier2;
+  Verifier2.expectRange(1, 25, 1, 31);
+  EXPECT_TRUE(Verifier2.match("void g(void (*fp)(void) throw());\n",
+                              parmVarDecl(hasType(pointerType(pointee(
+                                  parenType(innerType(functionType()))))))));
+
+  Verifier2.expectRange(1, 25, 1, 38);
+  EXPECT_TRUE(Verifier2.match("void g(void (*fp)(void) noexcept(true));\n",
+                              parmVarDecl(hasType(pointerType(pointee(
+                                  parenType(innerType(functionType())))))),
+                              Language::Lang_CXX11));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

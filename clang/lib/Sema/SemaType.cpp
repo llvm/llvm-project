@@ -5253,7 +5253,7 @@ namespace {
         ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
         TL.setParam(tpi++, Param);
       }
-      // FIXME: exception specs
+      TL.setExceptionSpecRange(FTI.getExceptionSpecRange());
     }
     void VisitParenTypeLoc(ParenTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::Paren);

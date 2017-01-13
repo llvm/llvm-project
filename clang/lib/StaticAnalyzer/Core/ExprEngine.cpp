@@ -515,8 +515,9 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
           Init = ASE->getBase()->IgnoreImplicit();
 
         SVal LValue = State->getSVal(Init, stackFrame);
-        if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
-          InitVal = State->getSVal(*LValueLoc);
+        if (!Field->getType()->isReferenceType())
+          if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
+            InitVal = State->getSVal(*LValueLoc);
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {

@@ -1089,7 +1089,7 @@ void Sema::EndOpenMPDSABlock(Stmt *CurDirective) {
             auto *VDPrivate = buildVarDecl(
                 *this, DE->getExprLoc(), Type.getUnqualifiedType(),
                 VD->getName(), VD->hasAttrs() ? &VD->getAttrs() : nullptr);
-            ActOnUninitializedDecl(VDPrivate, /*TypeMayContainAuto=*/false);
+            ActOnUninitializedDecl(VDPrivate);
             if (VDPrivate->isInvalidDecl())
               continue;
             PrivateCopies.push_back(buildDeclRefExpr(
@@ -1762,8 +1762,7 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   if (!WithInit)
     CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C, SourceRange()));
   S.CurContext->addHiddenDecl(CED);
-  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
-                         /*TypeMayContainAuto=*/true);
+  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false);
   return CED;
 }
 
@@ -3976,33 +3975,32 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // Lower bound variable, initialized with zero.
     VarDecl *LBDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.lb");
     LB = buildDeclRefExpr(SemaRef, LBDecl, VType, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        LBDecl, SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(LBDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
+                                 /*DirectInit*/ false);
 
     // Upper bound variable, initialized with last iteration number.
     VarDecl *UBDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.ub");
     UB = buildDeclRefExpr(SemaRef, UBDecl, VType, InitLoc);
     SemaRef.AddInitializerToDecl(UBDecl, LastIteration.get(),
-                                 /*DirectInit*/ false,
-                                 /*TypeMayContainAuto*/ false);
+                                 /*DirectInit*/ false);
 
     // A 32-bit variable-flag where runtime returns 1 for the last iteration.
     // This will be used to implement clause 'lastprivate'.
     QualType Int32Ty = SemaRef.Context.getIntTypeForBitwidth(32, true);
     VarDecl *ILDecl = buildVarDecl(SemaRef, InitLoc, Int32Ty, ".omp.is_last");
     IL = buildDeclRefExpr(SemaRef, ILDecl, Int32Ty, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        ILDecl, SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(ILDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
+                                 /*DirectInit*/ false);
 
     // Stride variable returned by runtime (we initialize it to 1 by default).
     VarDecl *STDecl =
         buildVarDecl(SemaRef, InitLoc, StrideVType, ".omp.stride");
     ST = buildDeclRefExpr(SemaRef, STDecl, StrideVType, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        STDecl, SemaRef.ActOnIntegerConstant(InitLoc, 1).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(STDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 1).get(),
+                                 /*DirectInit*/ false);
 
     // Build expression: UB = min(UB, LastIteration)
     // It is necessary for CodeGen of directives with static scheduling.
@@ -7523,7 +7521,7 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     Type = Type.getUnqualifiedType();
     auto VDPrivate = buildVarDecl(*this, ELoc, Type, D->getName(),
                                   D->hasAttrs() ? &D->getAttrs() : nullptr);
-    ActOnUninitializedDecl(VDPrivate, /*TypeMayContainAuto=*/false);
+    ActOnUninitializedDecl(VDPrivate);
     if (VDPrivate->isInvalidDecl())
       continue;
     auto VDPrivateRefExpr = buildDeclRefExpr(
@@ -7829,7 +7827,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
                                        RefExpr->getExprLoc());
       AddInitializerToDecl(VDPrivate,
                            DefaultLvalueConversion(VDInitRefExpr).get(),
-                           /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                           /*DirectInit=*/false);
     }
     if (VDPrivate->isInvalidDecl()) {
       if (IsImplicitClause) {
@@ -8679,10 +8677,9 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
       }
     }
     if (Init && DeclareReductionRef.isUnset()) {
-      AddInitializerToDecl(RHSVD, Init, /*DirectInit=*/false,
-                           /*TypeMayContainAuto=*/false);
+      AddInitializerToDecl(RHSVD, Init, /*DirectInit=*/false);
     } else if (!Init)
-      ActOnUninitializedDecl(RHSVD, /*TypeMayContainAuto=*/false);
+      ActOnUninitializedDecl(RHSVD);
     if (RHSVD->isInvalidDecl())
       continue;
     if (!RHSVD->hasInit() && DeclareReductionRef.isUnset()) {
@@ -8931,7 +8928,7 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     else
       InitExpr = VD ? SimpleRefExpr : Ref;
     AddInitializerToDecl(Init, DefaultLvalueConversion(InitExpr).get(),
-                         /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                         /*DirectInit=*/false);
     auto InitRef = buildDeclRefExpr(*this, Init, Type, ELoc);
 
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
@@ -11009,7 +11006,7 @@ OMPClause *Sema::ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            RefExpr->getExprLoc());
     AddInitializerToDecl(VDPrivate,
                          DefaultLvalueConversion(VDInitRefExpr).get(),
-                         /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                         /*DirectInit=*/false);
 
     // If required, build a capture to implement the privatization initialized
     // with the current list item value.

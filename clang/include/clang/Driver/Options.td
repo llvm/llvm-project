@@ -1047,6 +1047,7 @@ def fno_ms_extensions : Flag<["-"], "fno-ms-extensions">, Group<f_Group>,
 def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
   Flags<[CoreOption]>;
 def fno_delayed_template_parsing : Flag<["-"], "fno-delayed-template-parsing">, Group<f_Group>,
+  HelpText<"Disable delayed template parsing">,
   Flags<[DriverOption, CoreOption]>;
 def fno_objc_exceptions: Flag<["-"], "fno-objc-exceptions">, Group<f_Group>;
 def fno_objc_legacy_dispatch : Flag<["-"], "fno-objc-legacy-dispatch">, Group<f_Group>;

@@ -446,9 +446,19 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
              I = Known->second.begin(),
              E = Known->second.end();
          I != E; ++I) {
-      if (I->isAvailable() && (!RequestingModule ||
-                               I->getModule()->isSubModuleOf(RequestingModule)))
+
+      if (I->isAvailable() &&
+          (!RequestingModule ||
+           I->getModule()->isSubModuleOf(RequestingModule))) {
+        // When no requesting module is available, the caller is looking if a
+        // header is part a module by only looking into the module map. This is
+        // done by warn_uncovered_module_header checks; don't consider textual
+        // headers part of it in this mode, otherwise we get misleading warnings
+        // that a umbrella header is not including a textual header.
+        if (!RequestingModule && I->getRole() == ModuleMap::TextualHeader)
+          continue;
         return false;
+      }
     }
     return true;
   }

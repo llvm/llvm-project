@@ -297,12 +297,10 @@ ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C,
                                              SourceLocation L,
                                              DeclarationName Name,
                                              TemplateParameterList *Params,
-                                             NamedDecl *Decl,
-                                             ClassTemplateDecl *PrevDecl) {
+                                             NamedDecl *Decl) {
   AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
   ClassTemplateDecl *New = new (C, DC) ClassTemplateDecl(C, DC, L, Name,
                                                          Params, Decl);
-  New->setPreviousDecl(PrevDecl);
   return New;
 }
 

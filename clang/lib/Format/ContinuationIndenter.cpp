@@ -1003,12 +1003,15 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   // Generally inherit NoLineBreak from the current scope to nested scope.
   // However, don't do this for non-empty nested blocks, dict literals and
   // array literals as these follow different indentation rules.
+  const FormatToken *Previous = Current.getPreviousNonComment();
   bool NoLineBreak =
       Current.Children.empty() &&
       !Current.isOneOf(TT_DictLiteral, TT_ArrayInitializerLSquare) &&
       (State.Stack.back().NoLineBreak ||
        (Current.is(TT_TemplateOpener) &&
-        State.Stack.back().ContainsUnwrappedBuilder));
+        State.Stack.back().ContainsUnwrappedBuilder) ||
+       (Current.is(tok::l_brace) && !Newline && Previous &&
+        Previous->is(tok::comma)));
   State.Stack.push_back(ParenState(NewIndent, NewIndentLevel, LastSpace,
                                    AvoidBinPacking, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;

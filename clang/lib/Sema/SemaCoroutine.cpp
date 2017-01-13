@@ -187,7 +187,7 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
                         S.Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
     S.CheckVariableDeclarationType(ScopeInfo->CoroutinePromise);
     if (!ScopeInfo->CoroutinePromise->isInvalidDecl())
-      S.ActOnUninitializedDecl(ScopeInfo->CoroutinePromise, false);
+      S.ActOnUninitializedDecl(ScopeInfo->CoroutinePromise);
   }
 
   return ScopeInfo;

@@ -6816,6 +6816,14 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "    aaaaaa.aaaaaaa,\n"
                "    aaaaaa.aaaaaaa,\n"
                "};");
+
+  // Don't create hanging lists.
+  verifyFormat("someFunction(Param,\n"
+               "             {List1, List2,\n"
+               "              List3});",
+               getLLVMStyleWithColumns(35));
+  verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaa, {},\n"
+               "                               aaaaaaaaaaaaaaaaaaaaaaa);");
 }
 
 TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
