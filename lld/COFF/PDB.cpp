@@ -14,8 +14,12 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
+#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
-#include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
+#include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
+#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
@@ -61,44 +65,75 @@ static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
   return nullptr;
 }
 
-static ArrayRef<uint8_t> getDebugT(ObjectFile *File) {
-  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$T");
+static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
+  SectionChunk *Sec = findByName(File->getDebugChunks(), SecName);
   if (!Sec)
     return {};
 
   // First 4 bytes are section magic.
   ArrayRef<uint8_t> Data = Sec->getContents();
   if (Data.size() < 4)
-    fatal(".debug$T too short");
+    fatal(SecName + " too short");
   if (read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
-    fatal(".debug$T has an invalid magic");
+    fatal(SecName + " has an invalid magic");
   return Data.slice(4);
 }
 
+// Merge .debug$T sections and returns it.
+static std::vector<uint8_t> mergeDebugT(SymbolTable *Symtab) {
+  ScopedPrinter W(outs());
+
+  // Visit all .debug$T sections to add them to Builder.
+  codeview::TypeTableBuilder Builder(BAlloc);
+  for (ObjectFile *File : Symtab->ObjectFiles) {
+    ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
+    if (Data.empty())
+      continue;
+
+    msf::ByteStream Stream(Data);
+    codeview::CVTypeArray Types;
+    msf::StreamReader Reader(Stream);
+    if (auto EC = Reader.readArray(Types, Reader.getLength()))
+      fatal(EC, "Reader::readArray failed");
+    if (!codeview::mergeTypeStreams(Builder, Types))
+      fatal("codeview::mergeTypeStreams failed");
+  }
+
+  // Construct section contents.
+  std::vector<uint8_t> V;
+  Builder.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Rec) {
+    V.insert(V.end(), Rec.begin(), Rec.end());
+  });
+  return V;
+}
+
 static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
-  ArrayRef<uint8_t> Data = getDebugT(File);
+  ListScope LS(W, "DebugT");
+  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
     return;
 
-  msf::ByteStream Stream(Data);
-  CVTypeDumper TypeDumper(&W, false);
-  if (auto EC = TypeDumper.dump(Data))
+  TypeDatabase TDB;
+  TypeDumpVisitor TDV(TDB, &W, false);
+  CVTypeDumper TypeDumper(TDB);
+  if (auto EC = TypeDumper.dump(Data, TDV))
     fatal(EC, "CVTypeDumper::dump failed");
 }
 
 static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
-  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$S");
-  if (!Sec)
+  ListScope LS(W, "DebugS");
+  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$S");
+  if (Data.empty())
     return;
 
-  msf::ByteStream Stream(Sec->getContents());
+  msf::ByteStream Stream(Data);
   CVSymbolArray Symbols;
   msf::StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
     fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
 
-  CVTypeDumper TypeDumper(&W, false);
-  CVSymbolDumper SymbolDumper(W, TypeDumper, nullptr, false);
+  TypeDatabase TDB;
+  CVSymbolDumper SymbolDumper(W, TDB, nullptr, false);
   if (auto EC = SymbolDumper.dump(Symbols))
     fatal(EC, "CVSymbolDumper::dump failed");
 }
@@ -113,21 +148,15 @@ static void dumpCodeView(SymbolTable *Symtab) {
   }
 }
 
-static void addTypeInfo(SymbolTable *Symtab,
-                        pdb::TpiStreamBuilder &TpiBuilder) {
-  for (ObjectFile *File : Symtab->ObjectFiles) {
-    ArrayRef<uint8_t> Data = getDebugT(File);
-    if (Data.empty())
-      continue;
-
-    msf::ByteStream Stream(Data);
-    codeview::CVTypeArray Records;
-    msf::StreamReader Reader(Stream);
-    if (auto EC = Reader.readArray(Records, Reader.getLength()))
-      fatal(EC, "Reader.readArray failed");
-    for (const codeview::CVType &Rec : Records)
-      TpiBuilder.addTypeRecord(Rec);
-  }
+static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
+                        ArrayRef<uint8_t> Data) {
+  msf::ByteStream Stream(Data);
+  codeview::CVTypeArray Records;
+  msf::StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Records, Reader.getLength()))
+    fatal(EC, "Reader.readArray failed");
+  for (const codeview::CVType &Rec : Records)
+    TpiBuilder.addTypeRecord(Rec);
 }
 
 // Creates a PDB file.
@@ -162,8 +191,11 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   // Add an empty TPI stream.
   auto &TpiBuilder = Builder.getTpiBuilder();
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
-  if (Config->DebugPdb)
-    addTypeInfo(Symtab, TpiBuilder);
+  std::vector<uint8_t> TpiData;
+  if (Config->DebugPdb) {
+    TpiData = mergeDebugT(Symtab);
+    addTypeInfo(TpiBuilder, TpiData);
+  }
 
   // Add an empty IPI stream.
   auto &IpiBuilder = Builder.getIpiBuilder();

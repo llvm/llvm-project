@@ -23,7 +23,12 @@ namespace include_fixer {
 class SymbolIndexManager {
 public:
   void addSymbolIndex(std::function<std::unique_ptr<SymbolIndex>()> F) {
-    SymbolIndices.push_back(std::async(std::launch::async, F));
+#if LLVM_ENABLE_THREADS
+    auto Strategy = std::launch::async;
+#else
+    auto Strategy = std::launch::deferred;
+#endif
+    SymbolIndices.push_back(std::async(Strategy, F));
   }
 
   /// Search for header files to be included for an identifier.
@@ -37,7 +42,8 @@ public:
   ///
   /// \returns A list of symbol candidates.
   std::vector<find_all_symbols::SymbolInfo>
-  search(llvm::StringRef Identifier, bool IsNestedSearch = true) const;
+  search(llvm::StringRef Identifier, bool IsNestedSearch = true,
+         llvm::StringRef FileName = "") const;
 
 private:
   std::vector<std::shared_future<std::unique_ptr<SymbolIndex>>> SymbolIndices;

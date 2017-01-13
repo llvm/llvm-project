@@ -995,8 +995,8 @@ size_t Module::FindTypes(
     TypeList &types) {
   size_t num_matches = 0;
   const char *type_name_cstr = name.GetCString();
-  std::string type_scope;
-  std::string type_basename;
+  llvm::StringRef type_scope;
+  llvm::StringRef type_basename;
   const bool append = true;
   TypeClass type_class = eTypeClassAny;
   TypeMap typesmap;
@@ -1006,13 +1006,9 @@ size_t Module::FindTypes(
     // from the root namespace and implies and exact match. The typenames we
     // get back from clang do not start with "::" so we need to strip this off
     // in order to get the qualified names to match
+    exact_match = type_scope.consume_front("::");
 
-    if (type_scope.size() >= 2 && type_scope[0] == ':' &&
-        type_scope[1] == ':') {
-      type_scope.erase(0, 2);
-      exact_match = true;
-    }
-    ConstString type_basename_const_str(type_basename.c_str());
+    ConstString type_basename_const_str(type_basename);
     if (FindTypes_Impl(sc, type_basename_const_str, nullptr, append,
                        max_matches, searched_symbol_files, typesmap)) {
       typesmap.RemoveMismatchedTypes(type_scope, type_basename, type_class,

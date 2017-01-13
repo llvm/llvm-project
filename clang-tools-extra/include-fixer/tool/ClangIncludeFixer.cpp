@@ -332,7 +332,8 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Query symbol mode.
   if (!QuerySymbol.empty()) {
-    auto MatchedSymbols = SymbolIndexMgr->search(QuerySymbol);
+    auto MatchedSymbols = SymbolIndexMgr->search(
+        QuerySymbol, /*IsNestedSearch=*/true, SourceFilePath);
     for (auto &Symbol : MatchedSymbols) {
       std::string HeaderPath = Symbol.getFilePath().str();
       Symbol.SetFilePath(((HeaderPath[0] == '"' || HeaderPath[0] == '<')

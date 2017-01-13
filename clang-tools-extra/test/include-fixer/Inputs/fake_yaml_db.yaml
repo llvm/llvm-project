@@ -9,7 +9,6 @@ FilePath:        foo.h
 LineNumber:      1
 Type:            Class
 NumOccurrences:  1
-...
 ---
 Name:           bar
 Contexts:
@@ -21,7 +20,7 @@ FilePath:        ../include/bar.h
 LineNumber:      1
 Type:            Class
 NumOccurrences:  1
-...
+---
 Name:           bar
 Contexts:
   - ContextType:     Namespace
@@ -32,7 +31,7 @@ FilePath:        ../include/bar.h
 LineNumber:      2
 Type:            Class
 NumOccurrences:  3
-...
+---
 Name:           bar
 Contexts:
   - ContextType:     Namespace
@@ -50,4 +49,12 @@ FilePath:        var.h
 LineNumber:      1
 Type:            Variable
 NumOccurrences:  1
-...
+---
+Name:            bar
+Contexts:
+  - ContextType:    Namespace
+    ContextName:    c
+FilePath:        test/include-fixer/baz.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  1
