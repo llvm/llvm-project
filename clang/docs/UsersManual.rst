@@ -41,6 +41,7 @@ specific section:
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`
 -  :ref:`Objective C++ Language <objcxx>`
+-  :ref:`OpenCL C Language <opencl>`: v1.0, v1.1, v1.2, v2.0.
 
 In addition to these base languages and their dialects, Clang supports a
 broad variety of language extensions, which are documented in the
@@ -1973,6 +1974,365 @@ Controlling implementation limits
  is provided or target does not support TLS, code generation for threadprivate
  variables relies on OpenMP runtime library.
 
+.. _opencl:
+
+OpenCL Features
+===============
+
+Clang can be used to compile OpenCL kernels for execution on a device
+(e.g. GPU). It is possible to compile the kernel into a binary (e.g. for AMD or
+Nvidia targets) that can be uploaded to run directly on a device (e.g. using
+`clCreateProgramWithBinary
+<https://www.khronos.org/registry/OpenCL/specs/opencl-1.1.pdf#111>`_) or
+into generic bitcode files loadable into other toolchains.
+
+Compiling to a binary using the default target from the installation can be done
+as follows:
+
+   .. code-block:: console
+
+     $ echo "kernel void k(){}" > test.cl
+     $ clang test.cl
+
+Compiling for a specific target can be done by specifying the triple corresponding
+to the target, for example:
+
+   .. code-block:: console
+
+     $ clang -target nvptx64-unknown-unknown test.cl
+     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+
+Compiling to bitcode can be done as follows:
+
+   .. code-block:: console
+
+     $ clang -c -emit-llvm test.cl
+
+This will produce a generic test.bc file that can be used in vendor toolchains
+to perform machine code generation.
+
+Clang currently supports OpenCL C language standards up to v2.0.
+
+OpenCL Specific Options
+-----------------------
+
+Most of the OpenCL build options from `the specification v2.0 section 5.8.4
+<https://www.khronos.org/registry/cl/specs/opencl-2.0.pdf#200>`_ are available.
+
+Examples:
+
+   .. code-block:: console
+
+     $ clang -cl-std=CL2.0 -cl-single-precision-constant test.cl
+
+Some extra options are available to support special OpenCL features.
+
+.. option:: -finclude-default-header
+
+Loads standard includes during compilations. By default OpenCL headers are not
+loaded and therefore standard library includes are not available. To load them
+automatically a flag has been added to the frontend (see also :ref:`the section
+on the OpenCL Header <opencl_header>`):
+
+   .. code-block:: console
+
+     $ clang -Xclang -finclude-default-header test.cl
+
+Alternatively ``-include`` or ``-I`` followed by the path to the header location
+can be given manually.
+
+   .. code-block:: console
+
+     $ clang -I<path to clang>/lib/Headers/opencl-c.h test.cl
+
+In this case the kernel code should contain ``#include <opencl-c.h>`` just as a
+regular C include.
+
+.. option:: -cl-ext
+
+Disables support of OpenCL extensions. All OpenCL targets provide a list
+of extensions that they support. Clang allows to amend this using the ``-cl-ext``
+flag with a comma-separated list of extensions prefixed with ``'+'`` or ``'-'``.
+The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where extensions
+can be either one of `the OpenCL specification extensions
+<https://www.khronos.org/registry/cl/sdk/2.0/docs/man/xhtml/EXTENSION.html>`_
+or any known vendor extension. Alternatively, ``'all'`` can be used to enable
+or disable all known extensions.
+Example disabling double support for the 64-bit SPIR target:
+
+   .. code-block:: console
+
+     $ clang -cc1 -triple spir64-unknown-unknown -cl-ext=-cl_khr_fp64 test.cl
+
+Enabling all extensions except double support in R600 AMD GPU can be done using:
+
+   .. code-block:: console
+
+     $ clang -cc1 -triple r600-unknown-unknown -cl-ext=-all,+cl_khr_fp16 test.cl
+
+.. _opencl_fake_address_space_map:
+
+.. option:: -ffake-address-space-map
+
+Overrides the target address space map with a fake map.
+This allows adding explicit address space IDs to the bitcode for non-segmented
+memory architectures that don't have separate IDs for each of the OpenCL
+logical address spaces by default. Passing ``-ffake-address-space-map`` will
+add/override address spaces of the target compiled for with the following values:
+``1-global``, ``2-constant``, ``3-local``, ``4-generic``. The private address
+space is represented by the absence of an address space attribute in the IR (see
+also :ref:`the section on the address space attribute <opencl_addrsp>`).
+
+   .. code-block:: console
+
+     $ clang -ffake-address-space-map test.cl
+
+Some other flags used for the compilation for C can also be passed while
+compiling for OpenCL, examples: ``-c``, ``-O<1-4|s>``, ``-o``, ``-emit-llvm``, etc.
+
+OpenCL Targets
+--------------
+
+OpenCL targets are derived from the regular Clang target classes. The OpenCL
+specific parts of the target representation provide address space mapping as
+well as a set of supported extensions.
+
+Specific Targets
+^^^^^^^^^^^^^^^^
+
+There is a set of concrete HW architectures that OpenCL can be compiled for.
+
+- For AMD target:
+
+   .. code-block:: console
+
+     $ clang -target amdgcn-amd-amdhsa-opencl test.cl
+
+- For Nvidia architectures:
+
+   .. code-block:: console
+
+     $ clang -target nvptx64-unknown-unknown test.cl
+
+
+Generic Targets
+^^^^^^^^^^^^^^^
+
+- SPIR is available as a generic target to allow portable bitcode to be produced
+  that can be used across GPU toolchains. The implementation follows `the SPIR
+  specification <https://www.khronos.org/spir>`_. There are two flavors
+  available for 32 and 64 bits.
+
+   .. code-block:: console
+
+    $ clang -target spir-unknown-unknown test.cl
+    $ clang -target spir64-unknown-unknown test.cl
+
+  All known OpenCL extensions are supported in the SPIR targets. Clang will
+  generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and SPIR v2.0
+  for OpenCL v2.0.
+
+- x86 is used by some implementations that are x86 compatible and currently
+  remains for backwards compatibility (with older implementations prior to
+  SPIR target support). For "non-SPMD" targets which cannot spawn multiple
+  work-items on the fly using hardware, which covers practically all non-GPU
+  devices such as CPUs and DSPs, additional processing is needed for the kernels
+  to support multiple work-item execution. For this, a 3rd party toolchain,
+  such as for example `POCL <http://portablecl.org/>`_, can be used.
+
+  This target does not support multiple memory segments and, therefore, the fake
+  address space map can be added using the :ref:`-ffake-address-space-map
+  <opencl_fake_address_space_map>` flag.
+
+.. _opencl_header:
+
+OpenCL Header
+-------------
+
+By default Clang will not include standard headers and therefore OpenCL builtin
+functions and some types (i.e. vectors) are unknown. The default CL header is,
+however, provided in the Clang installation and can be enabled by passing the
+``-finclude-default-header`` flag to the Clang frontend.
+
+   .. code-block:: console
+
+     $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
+     $ clang -Xclang -finclude-default-header -cl-std=CL2.0 test.cl
+
+Because the header is very large and long to parse, PCH (:doc:`PCHInternals`)
+and modules (:doc:`Modules`) are used internally to improve the compilation
+speed.
+
+To enable modules for OpenCL:
+
+   .. code-block:: console
+
+     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
+
+OpenCL Metadata
+---------------
+
+Clang uses metadata to provide additional OpenCL semantics in IR needed for
+backends and OpenCL runtime.
+
+Each kernel will have function metadata attached to it, specifying the arguments.
+Kernel argument metadata is used to provide source level information for querying
+at runtime, for example using the `clGetKernelArgInfo 
+<https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf#167>`_
+call.
+
+Note that ``-cl-kernel-arg-info`` enables more information about the original CL
+code to be added e.g. kernel parameter names will appear in the OpenCL metadata
+along with other information. 
+
+The IDs used to encode the OpenCL's logical address spaces in the argument info
+metadata follows the SPIR address space mapping as defined in the SPIR
+specification `section 2.2
+<https://www.khronos.org/registry/spir/specs/spir_spec-2.0.pdf#18>`_
+
+OpenCL-Specific Attributes
+--------------------------
+
+OpenCL support in Clang contains a set of attribute taken directly from the
+specification as well as additional attributes.
+
+See also :doc:`AttributeReference`.
+
+nosvm
+^^^^^
+
+Clang supports this attribute to comply to OpenCL v2.0 conformance, but it
+does not have any effect on the IR. For more details reffer to the specification
+`section 6.7.2
+<https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#49>`_
+
+
+opencl_hint_unroll
+^^^^^^^^^^^^^^^^^^
+
+The implementation of this feature mirrors the unroll hint for C.
+More details on the syntax can be found in the specification
+`section 6.11.5
+<https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#61>`_
+
+convergent
+^^^^^^^^^^
+
+To make sure no invalid optimizations occur for single program multiple data
+(SPMD) / single instruction multiple thread (SIMT) Clang provides attributes that
+can be used for special functions that have cross work item semantics.
+An example is the subgroup operations such as `intel_sub_group_shuffle 
+<https://www.khronos.org/registry/cl/extensions/intel/cl_intel_subgroups.txt>`_
+
+   .. code-block:: c
+
+     // Define custom my_sub_group_shuffle(data, c)
+     // that makes use of intel_sub_group_shuffle
+     r1 = … 
+     if (r0) r1 = computeA();
+     // Shuffle data from r1 into r3
+     // of threads id r2.
+     r3 = my_sub_group_shuffle(r1, r2);
+     if (r0) r3 = computeB();
+
+with non-SPMD semantics this is optimized to the following equivalent code:
+
+   .. code-block:: c
+
+     r1 = …
+     if (!r0)
+       // Incorrect functionality! The data in r1
+       // have not been computed by all threads yet.
+       r3 = my_sub_group_shuffle(r1, r2);
+     else {
+       r1 = computeA();
+       r3 = my_sub_group_shuffle(r1, r2);
+       r3 = computeB();
+     }
+
+Declaring the function ``my_sub_group_shuffle`` with the convergent attribute
+would prevent this:
+
+   .. code-block:: c
+
+     my_sub_group_shuffle() __attribute__((convergent));
+
+Using ``convergent`` guarantees correct execution by keeping CFG equivalence
+wrt operations marked as ``convergent``. CFG ``G´`` is equivalent to ``G`` wrt
+node ``Ni`` : ``iff ∀ Nj (i≠j)`` domination and post-domination relations with
+respect to ``Ni`` remain the same in both ``G`` and ``G´``. 
+
+noduplicate
+^^^^^^^^^^^
+
+``noduplicate`` is more restrictive with respect to optimizations than
+``convergent`` because a convergent function only preserves CFG equivalence.
+This allows some optimizations to happen as long as the control flow remains
+unmodified.
+
+   .. code-block:: c
+
+     for (int i=0; i<4; i++)
+       my_sub_group_shuffle()
+
+can be modified to:
+
+   .. code-block:: c
+
+     my_sub_group_shuffle();
+     my_sub_group_shuffle();
+     my_sub_group_shuffle();
+     my_sub_group_shuffle();
+
+while using ``noduplicate`` would disallow this. Also ``noduplicate`` doesn't
+have the same safe semantics of CFG as ``convergent`` and can cause changes in
+CFG that modify semantics of the original program.
+
+``noduplicate`` is kept for backwards compatibility only and it considered to be
+deprecated for future uses.
+
+.. _opencl_addrsp:
+
+address_space
+^^^^^^^^^^^^^
+
+Clang has arbitrary address space support using the ``address_space(N)``
+attribute, where ``N`` is an integer number in the range ``0`` to ``16777215``
+(``0xffffffu``).
+
+An OpenCL implementation provides a list of standard address spaces using
+keywords: ``private``, ``local``, ``global``, and ``generic``. In the AST and
+in the IR local, global, or generic will be represented by the address space
+attribute with the corresponding unique number. Note that private does not have
+any corresponding attribute added and, therefore, is represented by the absence
+of an address space number. The specific IDs for an address space do not have to
+match between the AST and the IR. Typically in the AST address space numbers
+represent logical segments while in the IR they represent physical segments.
+Therefore, machines with flat memory segments can map all AST address space
+numbers to the same physical segment ID or skip address space attribute
+completely while generating the IR. However, if the address space information
+is needed by the IR passes e.g. to improve alias analysis, it is recommended
+to keep it and only lower to reflect physical memory segments in the late
+machine passes.
+
+OpenCL builtins
+---------------
+
+There are some standard OpenCL functions that are implemented as Clang builtins:
+
+- All pipe functions from `section 6.13.16.2/6.13.16.3
+  <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#160>`_ of
+  the OpenCL v2.0 kernel language specification. `
+
+- Address space qualifier conversion functions ``to_global``/``to_local``/``to_private``
+  from `section 6.13.9
+  <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#101>`_.
+
+- All the ``enqueue_kernel`` functions from `section 6.13.17.1
+  <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#164>`_ and
+  enqueue query functions from `section 6.13.17.5
+  <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#171>`_.
+
 .. _target_features:
 
 Target-Specific Features and Limitations
@@ -2102,7 +2462,7 @@ Clang expects the GCC executable "gcc.exe" compiled for
 clang-cl
 ========
 
-clang-cl is an alternative command-line interface to Clang driver, designed for
+clang-cl is an alternative command-line interface to Clang, designed for
 compatibility with the Visual C++ compiler, cl.exe.
 
 To enable clang-cl to find system headers, libraries, and the linker when run
@@ -2110,7 +2470,7 @@ from the command-line, it should be executed inside a Visual Studio Native Tools
 Command Prompt or a regular Command Prompt where the environment has been set
 up using e.g. `vcvars32.bat <http://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx>`_.
 
-clang-cl can also be used from inside Visual Studio  by using an LLVM Platform
+clang-cl can also be used from inside Visual Studio by using an LLVM Platform
 Toolset.
 
 Command-Line Options
@@ -2145,116 +2505,125 @@ Execute ``clang-cl /?`` to see a list of supported options:
   ::
 
     CL.EXE COMPATIBILITY OPTIONS:
-      /?                     Display available options
-      /arch:<value>          Set architecture for code generation
-      /Brepro-               Emit an object file which cannot be reproduced over time
-      /Brepro                Emit an object file which can be reproduced over time
-      /C                     Don't discard comments when preprocessing
-      /c                     Compile only
-      /D <macro[=value]>     Define macro
-      /EH<value>             Exception handling model
-      /EP                    Disable linemarker output and preprocess to stdout
-      /E                     Preprocess to stdout
-      /fallback              Fall back to cl.exe if clang-cl fails to compile
-      /FA                    Output assembly code file during compilation
-      /Fa<file or directory> Output assembly code to this file during compilation (with /FA)
-      /Fe<file or directory> Set output executable file or directory (ends in / or \)
-      /FI <value>            Include file before parsing
-      /Fi<file>              Set preprocess output file name (with /P)
-      /Fo<file or directory> Set output object file, or directory (ends in / or \) (with /c)
+      /?                      Display available options
+      /arch:<value>           Set architecture for code generation
+      /Brepro-                Emit an object file which cannot be reproduced over time
+      /Brepro                 Emit an object file which can be reproduced over time
+      /C                      Don't discard comments when preprocessing
+      /c                      Compile only
+      /D <macro[=value]>      Define macro
+      /EH<value>              Exception handling model
+      /EP                     Disable linemarker output and preprocess to stdout
+      /execution-charset:<value>
+                              Runtime encoding, supports only UTF-8
+      /E                      Preprocess to stdout
+      /fallback               Fall back to cl.exe if clang-cl fails to compile
+      /FA                     Output assembly code file during compilation
+      /Fa<file or directory>  Output assembly code to this file during compilation (with /FA)
+      /Fe<file or directory>  Set output executable file or directory (ends in / or \)
+      /FI <value>             Include file before parsing
+      /Fi<file>               Set preprocess output file name (with /P)
+      /Fo<file or directory>  Set output object file, or directory (ends in / or \) (with /c)
       /fp:except-
       /fp:except
       /fp:fast
       /fp:precise
       /fp:strict
-      /Fp<filename>          Set pch filename (with /Yc and /Yu)
-      /GA                    Assume thread-local variables are defined in the executable
-      /Gd                    Set __cdecl as a default calling convention
-      /GF-                   Disable string pooling
-      /GR-                   Disable emission of RTTI data
-      /GR                    Enable emission of RTTI data
-      /Gr                    Set __fastcall as a default calling convention
-      /GS-                   Disable buffer security check
-      /GS                    Enable buffer security check
-      /Gs<value>             Set stack probe size
-      /Gv                    Set __vectorcall as a default calling convention
-      /Gw-                   Don't put each data item in its own section
-      /Gw                    Put each data item in its own section
-      /GX-                   Enable exception handling
-      /GX                    Enable exception handling
-      /Gy-                   Don't put each function in its own section
-      /Gy                    Put each function in its own section
-      /Gz                    Set __stdcall as a default calling convention
-      /help                  Display available options
-      /imsvc <dir>           Add directory to system include search path, as if part of %INCLUDE%
-      /I <dir>               Add directory to include search path
-      /J                     Make char type unsigned
-      /LDd                   Create debug DLL
-      /LD                    Create DLL
-      /link <options>        Forward options to the linker
-      /MDd                   Use DLL debug run-time
-      /MD                    Use DLL run-time
-      /MTd                   Use static debug run-time
-      /MT                    Use static run-time
-      /Od                    Disable optimization
-      /Oi-                   Disable use of builtin functions
-      /Oi                    Enable use of builtin functions
-      /Os                    Optimize for size
-      /Ot                    Optimize for speed
-      /O<value>              Optimization level
-      /o <file or directory> Set output file or directory (ends in / or \)
-      /P                     Preprocess to file
-      /Qvec-                 Disable the loop vectorization passes
-      /Qvec                  Enable the loop vectorization passes
-      /showIncludes          Print info about included files to stderr
-      /std:<value>           Language standard to compile for
-      /TC                    Treat all source files as C
-      /Tc <filename>         Specify a C source file
-      /TP                    Treat all source files as C++
-      /Tp <filename>         Specify a C++ source file
-      /U <macro>             Undefine macro
-      /vd<value>             Control vtordisp placement
-      /vmb                   Use a best-case representation method for member pointers
-      /vmg                   Use a most-general representation for member pointers
-      /vmm                   Set the default most-general representation to multiple inheritance
-      /vms                   Set the default most-general representation to single inheritance
-      /vmv                   Set the default most-general representation to virtual inheritance
-      /volatile:iso          Volatile loads and stores have standard semantics
-      /volatile:ms           Volatile loads and stores have acquire and release semantics
-      /W0                    Disable all warnings
-      /W1                    Enable -Wall
-      /W2                    Enable -Wall
-      /W3                    Enable -Wall
-      /W4                    Enable -Wall and -Wextra
-      /Wall                  Enable -Wall and -Wextra
-      /WX-                   Do not treat warnings as errors
-      /WX                    Treat warnings as errors
-      /w                     Disable all warnings
-      /Y-                    Disable precompiled headers, overrides /Yc and /Yu
-      /Yc<filename>          Generate a pch file for all code up to and including <filename>
-      /Yu<filename>          Load a pch file and use it instead of all code up to and including <filename>
-      /Z7                    Enable CodeView debug information in object files
-      /Zc:sizedDealloc-      Disable C++14 sized global deallocation functions
-      /Zc:sizedDealloc       Enable C++14 sized global deallocation functions
-      /Zc:strictStrings      Treat string literals as const
-      /Zc:threadSafeInit-    Disable thread-safe initialization of static variables
-      /Zc:threadSafeInit     Enable thread-safe initialization of static variables
-      /Zc:trigraphs-         Disable trigraphs (default)
-      /Zc:trigraphs          Enable trigraphs
-      /Zd                    Emit debug line number tables only
-      /Zi                    Alias for /Z7. Does not produce PDBs.
-      /Zl                    Don't mention any default libraries in the object file
-      /Zp                    Set the default maximum struct packing alignment to 1
-      /Zp<value>             Specify the default maximum struct packing alignment
-      /Zs                    Syntax-check only
+      /Fp<filename>           Set pch filename (with /Yc and /Yu)
+      /GA                     Assume thread-local variables are defined in the executable
+      /Gd                     Set __cdecl as a default calling convention
+      /GF-                    Disable string pooling
+      /GR-                    Disable emission of RTTI data
+      /GR                     Enable emission of RTTI data
+      /Gr                     Set __fastcall as a default calling convention
+      /GS-                    Disable buffer security check
+      /GS                     Enable buffer security check
+      /Gs<value>              Set stack probe size
+      /Gv                     Set __vectorcall as a default calling convention
+      /Gw-                    Don't put each data item in its own section
+      /Gw                     Put each data item in its own section
+      /GX-                    Enable exception handling
+      /GX                     Enable exception handling
+      /Gy-                    Don't put each function in its own section
+      /Gy                     Put each function in its own section
+      /Gz                     Set __stdcall as a default calling convention
+      /help                   Display available options
+      /imsvc <dir>            Add directory to system include search path, as if part of %INCLUDE%
+      /I <dir>                Add directory to include search path
+      /J                      Make char type unsigned
+      /LDd                    Create debug DLL
+      /LD                     Create DLL
+      /link <options>         Forward options to the linker
+      /MDd                    Use DLL debug run-time
+      /MD                     Use DLL run-time
+      /MTd                    Use static debug run-time
+      /MT                     Use static run-time
+      /Od                     Disable optimization
+      /Oi-                    Disable use of builtin functions
+      /Oi                     Enable use of builtin functions
+      /Os                     Optimize for size
+      /Ot                     Optimize for speed
+      /O<value>               Optimization level
+      /o <file or directory>  Set output file or directory (ends in / or \)
+      /P                      Preprocess to file
+      /Qvec-                  Disable the loop vectorization passes
+      /Qvec                   Enable the loop vectorization passes
+      /showIncludes           Print info about included files to stderr
+      /source-charset:<value> Source encoding, supports only UTF-8
+      /std:<value>            Language standard to compile for
+      /TC                     Treat all source files as C
+      /Tc <filename>          Specify a C source file
+      /TP                     Treat all source files as C++
+      /Tp <filename>          Specify a C++ source file
+      /utf-8                  Set source and runtime encoding to UTF-8 (default)
+      /U <macro>              Undefine macro
+      /vd<value>              Control vtordisp placement
+      /vmb                    Use a best-case representation method for member pointers
+      /vmg                    Use a most-general representation for member pointers
+      /vmm                    Set the default most-general representation to multiple inheritance
+      /vms                    Set the default most-general representation to single inheritance
+      /vmv                    Set the default most-general representation to virtual inheritance
+      /volatile:iso           Volatile loads and stores have standard semantics
+      /volatile:ms            Volatile loads and stores have acquire and release semantics
+      /W0                     Disable all warnings
+      /W1                     Enable -Wall
+      /W2                     Enable -Wall
+      /W3                     Enable -Wall
+      /W4                     Enable -Wall and -Wextra
+      /Wall                   Enable -Wall and -Wextra
+      /WX-                    Do not treat warnings as errors
+      /WX                     Treat warnings as errors
+      /w                      Disable all warnings
+      /Y-                     Disable precompiled headers, overrides /Yc and /Yu
+      /Yc<filename>           Generate a pch file for all code up to and including <filename>
+      /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
+      /Z7                     Enable CodeView debug information in object files
+      /Zc:sizedDealloc-       Disable C++14 sized global deallocation functions
+      /Zc:sizedDealloc        Enable C++14 sized global deallocation functions
+      /Zc:strictStrings       Treat string literals as const
+      /Zc:threadSafeInit-     Disable thread-safe initialization of static variables
+      /Zc:threadSafeInit      Enable thread-safe initialization of static variables
+      /Zc:trigraphs-          Disable trigraphs (default)
+      /Zc:trigraphs           Enable trigraphs
+      /Zd                     Emit debug line number tables only
+      /Zi                     Alias for /Z7. Does not produce PDBs.
+      /Zl                     Don't mention any default libraries in the object file
+      /Zp                     Set the default maximum struct packing alignment to 1
+      /Zp<value>              Specify the default maximum struct packing alignment
+      /Zs                     Syntax-check only
 
     OPTIONS:
       -###                    Print (but do not run) the commands to run for this compilation
       --analyze               Run the static analyzer
       -fansi-escape-codes     Use ANSI escape codes for diagnostics
       -fcolor-diagnostics     Use colors in diagnostics
+      -fdelayed-template-parsing
+                              Parse templated function definitions at the end of the translation unit
+      -fdiagnostics-absolute-paths
+                              Print absolute paths in diagnostics
       -fdiagnostics-parseable-fixits
                               Print fix-its in machine parseable form
+      -flto                   Enable LTO in 'full' mode
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
                               number to report in _MSC_VER (0 = don't define it (default))
@@ -2262,12 +2631,23 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
       -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
                               (0 = don't define it (default))
+      -fno-delayed-template-parsing
+                              Disable delayed template parsing
       -fno-sanitize-coverage=<value>
                               Disable specified features of coverage instrumentation for Sanitizers
       -fno-sanitize-recover=<value>
                               Disable recovery for specified sanitizers
       -fno-sanitize-trap=<value>
                               Disable trapping for specified sanitizers
+      -fno-standalone-debug   Limit debug information produced to reduce size of debug binary
+      -fprofile-instr-generate=<file>
+                              Generate instrumented code to collect execution counts into <file>
+                              (overridden by LLVM_PROFILE_FILE env var)
+      -fprofile-instr-generate
+                              Generate instrumented code to collect execution counts into default.profraw file
+                              (overriden by '=' form of option or LLVM_PROFILE_FILE env var)
+      -fprofile-instr-use=<value>
+                              Use instrumentation data for profile-guided optimization
       -fsanitize-blacklist=<value>
                               Path to blacklist file for sanitizers
       -fsanitize-coverage=<value>
@@ -2277,6 +2657,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-trap=<value> Enable trapping for specified sanitizers
       -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
                               behavior. See user manual for available checks
+      -fstandalone-debug      Emit full debug info for all types used by the program
       -gcodeview              Generate CodeView debug information
       -gline-tables-only      Emit debug line number tables only
       -miamcu                 Use Intel MCU ABI

@@ -1818,8 +1818,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   }
 
   if (!InitExpr.isInvalid())
-    Actions.AddInitializerToDecl(DeclOut, InitExpr.get(), !CopyInitialization,
-                                 DS.containsPlaceholderType());
+    Actions.AddInitializerToDecl(DeclOut, InitExpr.get(), !CopyInitialization);
   else
     Actions.ActOnInitializerError(DeclOut);
 

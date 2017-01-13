@@ -1351,6 +1351,19 @@ class FunctionTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                FunctionTypeLoc,
                                                FunctionType,
                                                FunctionLocInfo> {
+  bool hasExceptionSpec() const {
+    if (auto *FPT = dyn_cast<FunctionProtoType>(getTypePtr())) {
+      return FPT->hasExceptionSpec();
+    }
+    return false;
+  }
+
+  SourceRange *getExceptionSpecRangePtr() const {
+    assert(hasExceptionSpec() && "No exception spec range");
+    // After the Info comes the ParmVarDecl array, and after that comes the
+    // exception specification information.
+    return (SourceRange *)(getParmArray() + getNumParams());
+  }
 public:
   SourceLocation getLocalRangeBegin() const {
     return getLocalData()->LocalRangeBegin;
@@ -1382,6 +1395,16 @@ public:
 
   SourceRange getParensRange() const {
     return SourceRange(getLParenLoc(), getRParenLoc());
+  }
+
+  SourceRange getExceptionSpecRange() const {
+    if (hasExceptionSpec())
+      return *getExceptionSpecRangePtr();
+    return SourceRange();
+  }
+  void setExceptionSpecRange(SourceRange R) {
+    if (hasExceptionSpec())
+      *getExceptionSpecRangePtr() = R;
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
@@ -1416,12 +1439,15 @@ public:
     setLocalRangeEnd(Loc);
     for (unsigned i = 0, e = getNumParams(); i != e; ++i)
       setParam(i, nullptr);
+    if (hasExceptionSpec())
+      setExceptionSpecRange(Loc);
   }
 
   /// \brief Returns the size of the type source info data block that is
   /// specific to this type.
   unsigned getExtraLocalDataSize() const {
-    return getNumParams() * sizeof(ParmVarDecl *);
+    unsigned ExceptSpecSize = hasExceptionSpec() ? sizeof(SourceRange) : 0;
+    return (getNumParams() * sizeof(ParmVarDecl *)) + ExceptSpecSize;
   }
 
   unsigned getExtraLocalDataAlignment() const { return alignof(ParmVarDecl *); }

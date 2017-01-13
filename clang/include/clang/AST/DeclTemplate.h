@@ -2028,8 +2028,7 @@ public:
                                    SourceLocation L,
                                    DeclarationName Name,
                                    TemplateParameterList *Params,
-                                   NamedDecl *Decl,
-                                   ClassTemplateDecl *PrevDecl);
+                                   NamedDecl *Decl);
 
   /// \brief Create an empty class template node.
   static ClassTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
