@@ -690,6 +690,7 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "arm64";
   }
   CHECK(0 && "Invalid module arch");
+  return "";
 }
 
 const uptr kModuleUUIDSize = 16;
