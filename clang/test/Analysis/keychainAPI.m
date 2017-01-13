@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=osx.SecKeychainAPI %s -verify
+// RUN: %clang_cc1 -analyze -analyzer-checker=osx.SecKeychainAPI -fblocks %s -verify
+
+#include "Inputs/system-header-simulator-objc.h"
 
 // Fake typedefs.
 typedef unsigned int OSStatus;
@@ -6,8 +8,6 @@ typedef unsigned int SecKeychainAttributeList;
 typedef unsigned int SecKeychainItemRef;
 typedef unsigned int SecItemClass;
 typedef unsigned int UInt32;
-typedef unsigned int CFTypeRef;
-typedef unsigned int UInt16;
 typedef unsigned int SecProtocolType;
 typedef unsigned int SecAuthenticationType;
 typedef unsigned int SecKeychainAttributeInfo;
@@ -77,7 +77,7 @@ void errRetVal() {
   void *outData;
   st = SecKeychainItemCopyContent(2, ptr, ptr, &length, &outData);
   if (st == GenericError)
-    SecKeychainItemFreeContent(ptr, outData); // expected-warning{{Only call free if a valid (non-NULL) buffer was returned}}
+    SecKeychainItemFreeContent(ptr, outData);
 } // expected-warning{{Allocated data is not released: missing a call to 'SecKeychainItemFreeContent'}}
 
 // If null is passed in, the data is not allocated, so no need for the matching free.
@@ -99,14 +99,6 @@ void doubleAlloc() {
     st = SecKeychainItemCopyContent(2, ptr, ptr, &length, &outData); // expected-warning {{Allocated data should be released before another call to the allocator:}}
     if (st == noErr)
       SecKeychainItemFreeContent(ptr, outData);
-}
-
-void fooOnlyFree() {
-  unsigned int *ptr = 0;
-  OSStatus st = 0;
-  UInt32 length;
-  void *outData = &length;
-  SecKeychainItemFreeContent(ptr, outData);// expected-warning{{Trying to free data which has not been allocated}}
 }
 
 // Do not warn if undefined value is passed to a function.
@@ -220,11 +212,27 @@ int foo(CFTypeRef keychainOrArray, SecProtocolType protocol,
     if (st == noErr)
       SecKeychainItemFreeContent(ptr, outData[3]);
   }
-  if (length) { // expected-warning{{Allocated data is not released: missing a call to 'SecKeychainItemFreeContent'}}
+  if (length) { // TODO: We do not report a warning here since the symbol is no longer live, but it's not marked as dead.
     length++;
   }
   return 0;
-}// no-warning
+}
+
+int testErrorCodeAsLHS(CFTypeRef keychainOrArray, SecProtocolType protocol,
+        SecAuthenticationType authenticationType, SecKeychainItemRef *itemRef) {
+  unsigned int *ptr = 0;
+  OSStatus st = 0;
+  UInt32 length;
+  void *outData;
+  st = SecKeychainFindInternetPassword(keychainOrArray,
+                                       16, "server", 16, "domain", 16, "account",
+                                       16, "path", 222, protocol, authenticationType,
+                                       &length, &outData, itemRef);
+  if (noErr == st)
+    SecKeychainItemFreeContent(ptr, outData);
+
+  return 0;
+}
 
 void free(void *ptr);
 void deallocateWithFree() {
@@ -251,7 +259,6 @@ extern const CFAllocatorRef kCFAllocatorMallocZone;
 extern const CFAllocatorRef kCFAllocatorNull;
 extern const CFAllocatorRef kCFAllocatorUseContext;
 CFStringRef CFStringCreateWithBytesNoCopy(CFAllocatorRef alloc, const uint8_t *bytes, CFIndex numBytes, CFStringEncoding encoding, Boolean externalFormat, CFAllocatorRef contentsDeallocator);
-extern void CFRelease(CFStringRef cf);
 
 void DellocWithCFStringCreate1(CFAllocatorRef alloc) {
   unsigned int *ptr = 0;
@@ -333,11 +340,11 @@ void radar10508828() {
     SecKeychainItemFreeContent(0, pwdBytes);
 }
 
-void radar10508828_2() {
+void radar10508828_20092614() {
   UInt32 pwdLen = 0;
   void*  pwdBytes = 0;
   OSStatus rc = SecKeychainFindGenericPassword(0, 3, "foo", 3, "bar", &pwdLen, &pwdBytes, 0);
-  SecKeychainItemFreeContent(0, pwdBytes); // expected-warning {{Only call free if a valid (non-NULL) buffer was returned}}
+  SecKeychainItemFreeContent(0, pwdBytes);
 }
 
 //Example from bug 10797.
@@ -426,3 +433,24 @@ void allocAndFree3(void *attrList) {
       SecKeychainItemFreeContent(attrList, outData);
 }
 
+typedef struct AuthorizationValue {
+    int length;
+    void *data;
+} AuthorizationValue;
+typedef struct AuthorizationCallback {
+    OSStatus (*SetContextVal)(AuthorizationValue *inValue);
+} AuthorizationCallback;
+static AuthorizationCallback cb;
+int radar_19196494() {
+  @autoreleasepool {
+    AuthorizationValue login_password = {};
+    UInt32 passwordLength;
+    void *passwordData = 0;
+    OSStatus err = SecKeychainFindGenericPassword(0, 0, "", 0, "", (UInt32 *)&login_password.length, (void**)&login_password.data, 0);
+    cb.SetContextVal(&login_password);
+    if (err == noErr) {
+      SecKeychainItemFreeContent(0, login_password.data);
+    }
+  }
+  return 0;
+}
