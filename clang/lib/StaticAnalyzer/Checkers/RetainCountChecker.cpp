@@ -2661,6 +2661,7 @@ public:
                      const InvalidatedSymbols *invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
                      ArrayRef<const MemRegion *> Regions,
+                     const LocationContext* LCtx,
                      const CallEvent *Call) const;
 
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
@@ -3647,7 +3648,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
       // same state.
       SVal StoredVal = state->getSVal(regionLoc->getRegion());
       if (StoredVal != val)
-        escapes = (state == (state->bindLoc(*regionLoc, val)));
+        escapes = (state == (state->bindLoc(*regionLoc, val, C.getLocationContext())));
     }
     if (!escapes) {
       // Case 4: We do not currently model what happens when a symbol is
@@ -3714,10 +3715,11 @@ ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
 
 ProgramStateRef
 RetainCountChecker::checkRegionChanges(ProgramStateRef state,
-                                    const InvalidatedSymbols *invalidated,
-                                    ArrayRef<const MemRegion *> ExplicitRegions,
-                                    ArrayRef<const MemRegion *> Regions,
-                                    const CallEvent *Call) const {
+                                       const InvalidatedSymbols *invalidated,
+                                       ArrayRef<const MemRegion *> ExplicitRegions,
+                                       ArrayRef<const MemRegion *> Regions,
+                                       const LocationContext *LCtx,
+                                       const CallEvent *Call) const {
   if (!invalidated)
     return state;
 

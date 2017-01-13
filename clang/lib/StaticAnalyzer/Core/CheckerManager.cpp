@@ -521,17 +521,19 @@ void CheckerManager::runCheckersForDeadSymbols(ExplodedNodeSet &Dst,
 /// \brief Run checkers for region changes.
 ProgramStateRef
 CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
-                                    const InvalidatedSymbols *invalidated,
-                                    ArrayRef<const MemRegion *> ExplicitRegions,
-                                    ArrayRef<const MemRegion *> Regions,
-                                    const CallEvent *Call) {
+                                            const InvalidatedSymbols *invalidated,
+                                            ArrayRef<const MemRegion *> ExplicitRegions,
+                                            ArrayRef<const MemRegion *> Regions,
+                                            const LocationContext *LCtx,
+                                            const CallEvent *Call) {
   for (unsigned i = 0, e = RegionChangesCheckers.size(); i != e; ++i) {
     // If any checker declares the state infeasible (or if it starts that way),
     // bail out.
     if (!state)
       return nullptr;
     state = RegionChangesCheckers[i](state, invalidated,
-                                     ExplicitRegions, Regions, Call);
+                                     ExplicitRegions, Regions,
+                                     LCtx, Call);
   }
   return state;
 }
