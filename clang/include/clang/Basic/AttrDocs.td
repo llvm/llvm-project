@@ -386,6 +386,7 @@ warnings or errors at compile-time if calls to the attributed function meet
 certain user-defined criteria. For example:
 
 .. code-block:: c
+
   void abs(int a)
     __attribute__((diagnose_if(a >= 0, "Redundant abs call", "warning")));
   void must_abs(int a)
