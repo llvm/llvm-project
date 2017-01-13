@@ -148,8 +148,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
     const ValueMapping *Map =                                                  \
-        AArch64::getCopyMapping(PMI_First##RBNameDst == PMI_FirstGPR,          \
-                                PMI_First##RBNameSrc == PMI_FirstGPR, Size);   \
+        getCopyMapping(PMI_First##RBNameDst == PMI_FirstGPR,                   \
+                       PMI_First##RBNameSrc == PMI_FirstGPR, Size);            \
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
@@ -254,10 +254,10 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
       break;
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
-        /*ID*/ 1, /*Cost*/ 1, AArch64::getValueMapping(PMI_FirstGPR, Size),
+        /*ID*/ 1, /*Cost*/ 1, getValueMapping(PMI_FirstGPR, Size),
         /*NumOperands*/ 3);
     InstructionMapping FPRMapping(
-        /*ID*/ 2, /*Cost*/ 1, AArch64::getValueMapping(PMI_FirstFPR, Size),
+        /*ID*/ 2, /*Cost*/ 1, getValueMapping(PMI_FirstFPR, Size),
         /*NumOperands*/ 3);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -277,21 +277,21 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        AArch64::getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ true, Size),
+        getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ true, Size),
         /*NumOperands*/ 2);
     InstructionMapping FPRMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        AArch64::getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ false, Size),
+        getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ false, Size),
         /*NumOperands*/ 2);
     InstructionMapping GPRToFPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        AArch64::getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ true, Size),
+        getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ true, Size),
         /*NumOperands*/ 2);
     InstructionMapping FPRToGPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        AArch64::getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ false, Size),
+        getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ false, Size),
         /*NumOperands*/ 2);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -313,15 +313,15 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        getOperandsMapping({AArch64::getValueMapping(PMI_FirstGPR, Size),
+        getOperandsMapping({getValueMapping(PMI_FirstGPR, Size),
                             // Addresses are GPR 64-bit.
-                            AArch64::getValueMapping(PMI_FirstGPR, 64)}),
+                            getValueMapping(PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
     InstructionMapping FPRMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        getOperandsMapping({AArch64::getValueMapping(PMI_FirstFPR, Size),
+        getOperandsMapping({getValueMapping(PMI_FirstFPR, Size),
                             // Addresses are GPR 64-bit.
-                            AArch64::getValueMapping(PMI_FirstGPR, 64)}),
+                            getValueMapping(PMI_FirstGPR, 64)}),
         /*NumOperands*/ 2);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -405,8 +405,8 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(const MachineInstr &MI) {
   }
 #endif // End NDEBUG.
 
-  return InstructionMapping{DefaultMappingID, 1,
-                            AArch64::getValueMapping(RBIdx, Size), NumOperands};
+  return InstructionMapping{DefaultMappingID, 1, getValueMapping(RBIdx, Size),
+                            NumOperands};
 }
 
 RegisterBankInfo::InstructionMapping
@@ -457,7 +457,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     return InstructionMapping{DefaultMappingID, copyCost(DstRB, SrcRB, Size),
-                              AArch64::getCopyMapping(DstIsGPR, SrcIsGPR, Size),
+                              getCopyMapping(DstIsGPR, SrcIsGPR, Size),
                               /*NumOperands*/ 2};
   }
   case TargetOpcode::G_SEQUENCE:
@@ -535,8 +535,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx)
     if (MI.getOperand(Idx).isReg())
-      OpdsMapping[Idx] =
-          AArch64::getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
+      OpdsMapping[Idx] = getValueMapping(OpRegBankIdx[Idx], OpSize[Idx]);
 
   Mapping.setOperandsMapping(getOperandsMapping(OpdsMapping));
   return Mapping;
