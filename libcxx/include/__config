@@ -772,7 +772,7 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
-#if __has_extension(cxx_explicit_conversions) || defined(__IBMCPP__) || \
+#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
     (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
 #   define _LIBCPP_EXPLICIT explicit
 #else
