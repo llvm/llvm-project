@@ -547,8 +547,26 @@ bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
   assert (isa<LoadInst>(I) || isa<StoreInst>(I));
   Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
                        I->getOperand(0)->getType());
-  if (!isUInt<12>(Offset) &&
-      (MemAccessTy->isFloatingPointTy() || MemAccessTy->isVectorTy()))
+  bool IsFPAccess = MemAccessTy->isFloatingPointTy();
+  bool IsVectorAccess = MemAccessTy->isVectorTy();
+
+  // A store of an extracted vector element will be combined into a VSTE type
+  // instruction.
+  if (!IsVectorAccess && isa<StoreInst>(I)) {
+    Value *DataOp = I->getOperand(0);
+    if (isa<ExtractElementInst>(DataOp))
+      IsVectorAccess = true;
+  }
+
+  // A load which gets inserted into a vector element will be combined into a
+  // VLE type instruction.
+  if (!IsVectorAccess && isa<LoadInst>(I) && I->hasOneUse()) {
+    User *LoadUser = *I->user_begin();
+    if (isa<InsertElementInst>(LoadUser))
+      IsVectorAccess = true;
+  }
+
+  if (!isUInt<12>(Offset) && (IsFPAccess || IsVectorAccess))
     return false;
 
   return true;

@@ -57,7 +57,7 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint32_t *OffsetPtr,
   // Skip all data in the .debug_info for the attributes
   for (const auto &AttrSpec : AbbrevDecl->attributes()) {
     // Check if this attribute has a fixed byte size.
-    if (Optional<uint8_t> FixedSize = AttrSpec.getByteSize(U)) {
+    if (auto FixedSize = AttrSpec.getByteSize(U)) {
       // Attribute byte size if fixed, just add the size to the offset.
       *OffsetPtr += *FixedSize;
     } else if (!DWARFFormValue::skipValue(AttrSpec.Form, DebugInfoData,

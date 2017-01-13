@@ -62,12 +62,19 @@ ModulePass *llvm::createWebAssemblyFixFunctionBitcasts() {
 // Recursively descend the def-use lists from V to find non-bitcast users of
 // bitcasts of V.
 static void FindUses(Value *V, Function &F,
-                     SmallVectorImpl<std::pair<Use *, Function *>> &Uses) {
+                     SmallVectorImpl<std::pair<Use *, Function *>> &Uses,
+                     SmallPtrSetImpl<Constant *> &ConstantBCs) {
   for (Use &U : V->uses()) {
     if (BitCastOperator *BC = dyn_cast<BitCastOperator>(U.getUser()))
-      FindUses(BC, F, Uses);
-    else if (U.get()->getType() != F.getType())
+      FindUses(BC, F, Uses, ConstantBCs);
+    else if (U.get()->getType() != F.getType()) {
+      if (isa<Constant>(U.get())) {
+        // Only add constant bitcasts to the list once; they get RAUW'd
+        auto c = ConstantBCs.insert(cast<Constant>(U.get()));
+        if (!c.second) continue;
+      }
       Uses.push_back(std::make_pair(&U, &F));
+    }
   }
 }
 
@@ -122,10 +129,10 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
 
 bool FixFunctionBitcasts::runOnModule(Module &M) {
   SmallVector<std::pair<Use *, Function *>, 0> Uses;
+  SmallPtrSet<Constant *, 2> ConstantBCs;
 
   // Collect all the places that need wrappers.
-  for (Function &F : M)
-    FindUses(&F, F, Uses);
+  for (Function &F : M) FindUses(&F, F, Uses, ConstantBCs);
 
   DenseMap<std::pair<Function *, FunctionType *>, Function *> Wrappers;
 

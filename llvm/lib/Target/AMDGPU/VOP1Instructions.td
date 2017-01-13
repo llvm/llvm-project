@@ -232,7 +232,7 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
   let InsDPP = (ins Src0RC32:$vdst, Src0RC32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsSDWA = (ins Src0RC32:$vdst, Int32InputMods:$src0_modifiers, VCSrc_b32:$src0,
+  let InsSDWA = (ins Src0RC32:$vdst, Src0ModSDWA:$src0_modifiers, VCSrc_b32:$src0,
                      clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel);
 

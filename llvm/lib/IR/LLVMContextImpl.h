@@ -26,6 +26,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1193,6 +1194,12 @@ public:
 
   /// Collection of per-GlobalObject metadata used in this context.
   DenseMap<const GlobalObject *, MDGlobalAttachmentMap> GlobalObjectMetadata;
+
+  /// Collection of per-GlobalObject sections used in this context.
+  DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
+
+  /// Stable collection of section strings.
+  StringSet<> SectionStrings;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to

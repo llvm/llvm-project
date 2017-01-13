@@ -526,7 +526,10 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
   unsigned BitWidth = KnownZero.getBitWidth();
 
-  for (auto &AssumeVH : Q.AC->assumptions()) {
+  // Note that the patterns below need to be kept in sync with the code
+  // in AssumptionCache::updateAffectedValues.
+
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
     if (!AssumeVH)
       continue;
     CallInst *I = cast<CallInst>(AssumeVH);
@@ -2580,51 +2583,70 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   return false;
 }
 
-bool llvm::CannotBeOrderedLessThanZero(const Value *V,
-                                       const TargetLibraryInfo *TLI,
-                                       unsigned Depth) {
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
-    return !CFP->getValueAPF().isNegative() || CFP->getValueAPF().isZero();
+/// If \p SignBitOnly is true, test for a known 0 sign bit rather than a
+/// standard ordered compare. e.g. make -0.0 olt 0.0 be true because of the sign
+/// bit despite comparing equal.
+static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
+                                            const TargetLibraryInfo *TLI,
+                                            bool SignBitOnly,
+                                            unsigned Depth) {
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
+    return !CFP->getValueAPF().isNegative() ||
+           (!SignBitOnly && CFP->getValueAPF().isZero());
+  }
 
   if (Depth == MaxDepth)
-    return false;  // Limit search depth.
+    return false; // Limit search depth.
 
   const Operator *I = dyn_cast<Operator>(V);
-  if (!I) return false;
+  if (!I)
+    return false;
 
   switch (I->getOpcode()) {
-  default: break;
+  default:
+    break;
   // Unsigned integers are always nonnegative.
   case Instruction::UIToFP:
     return true;
   case Instruction::FMul:
     // x*x is always non-negative or a NaN.
-    if (I->getOperand(0) == I->getOperand(1))
+    if (I->getOperand(0) == I->getOperand(1) &&
+        (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
       return true;
+
     LLVM_FALLTHROUGH;
   case Instruction::FAdd:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1) &&
+           cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::Select:
-    return CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                           Depth + 1) &&
+           cannotBeOrderedLessThanZeroImpl(I->getOperand(2), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     // Widening/narrowing never change sign.
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::Call:
     Intrinsic::ID IID = getIntrinsicForCallSite(cast<CallInst>(I), TLI);
     switch (IID) {
     default:
       break;
     case Intrinsic::maxnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) ||
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1) ||
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::minnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1) &&
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::exp:
     case Intrinsic::exp2:
     case Intrinsic::fabs:
@@ -2636,16 +2658,28 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
         if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
           return true;
       }
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::fma:
     case Intrinsic::fmuladd:
       // x*x+y is non-negative if y is non-negative.
       return I->getOperand(0) == I->getOperand(1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+             (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()) &&
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(2), TLI, SignBitOnly,
+                                             Depth + 1);
     }
     break;
   }
   return false;
+}
+
+bool llvm::CannotBeOrderedLessThanZero(const Value *V,
+                                       const TargetLibraryInfo *TLI) {
+  return cannotBeOrderedLessThanZeroImpl(V, TLI, false, 0);
+}
+
+bool llvm::SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI) {
+  return cannotBeOrderedLessThanZeroImpl(V, TLI, true, 0);
 }
 
 /// If the specified value can be set by repeating the same byte in memory,

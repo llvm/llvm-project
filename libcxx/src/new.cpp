@@ -198,7 +198,11 @@ void
 operator delete(void* ptr, std::align_val_t) _NOEXCEPT
 {
     if (ptr)
+#if defined(_LIBCPP_MSVCRT)
+        ::_aligned_free(ptr);
+#else
         ::free(ptr);
+#endif
 }
 
 _LIBCPP_WEAK

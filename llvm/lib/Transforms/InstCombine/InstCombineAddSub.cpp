@@ -1371,15 +1371,9 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
           SimplifyFAddInst(LHS, RHS, I.getFastMathFlags(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
-  if (isa<Constant>(RHS)) {
-    if (isa<PHINode>(LHS))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
-
-    if (SelectInst *SI = dyn_cast<SelectInst>(LHS))
-      if (Instruction *NV = FoldOpIntoSelect(I, SI))
-        return NV;
-  }
+  if (isa<Constant>(RHS))
+    if (Instruction *FoldedFAdd = foldOpWithConstantIntoOperand(I))
+      return FoldedFAdd;
 
   // -A + B  -->  B - A
   // -A + -B  -->  -(A + B)

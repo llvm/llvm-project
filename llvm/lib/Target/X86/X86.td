@@ -209,9 +209,9 @@ def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
 def FeatureSlowDivide32 : SubtargetFeature<"idivl-to-divb",
                                      "HasSlowDivide32", "true",
                                      "Use 8-bit divide for positive values less than 256">;
-def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divw",
+def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
                                      "HasSlowDivide64", "true",
-                                     "Use 16-bit divide for positive values less than 65536">;
+                                     "Use 32-bit divide for positive values less than 2^32">;
 def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "PadShortFunctions", "true",
                                      "Pad short functions">;
@@ -461,6 +461,7 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
   FeatureAES,
+  FeatureSlowDivide64,
   FeaturePCLMUL,
   FeatureXSAVE,
   FeatureXSAVEOPT,

@@ -16,16 +16,28 @@
 #define LLVM_LIB_TARGET_ARM_ARMISELLOWERING_H
 
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLowering.h"
-#include <vector>
+#include <utility>
 
 namespace llvm {
-  class ARMConstantPoolValue;
-  class ARMSubtarget;
+
+class ARMSubtarget;
+class InstrItineraryData;
 
   namespace ARMISD {
+
     // ARM Specific DAG Nodes
     enum NodeType : unsigned {
       // Start the numbering where the builtin ops and target ops leave off.
@@ -217,12 +229,15 @@ namespace llvm {
       VST3LN_UPD,
       VST4LN_UPD
     };
-  }
+
+  } // end namespace ARMISD
 
   /// Define some predicates that are used for node matching.
   namespace ARM {
+
     bool isBitFieldInvertedMask(unsigned v);
-  }
+
+  } // end namespace ARM
 
   //===--------------------------------------------------------------------===//
   //  ARMTargetLowering - ARM Implementation of the TargetLowering interface
@@ -531,6 +546,7 @@ namespace llvm {
     std::pair<SDValue, SDValue> getARMXALUOOp(SDValue Op, SelectionDAG &DAG, SDValue &ARMcc) const;
 
     typedef SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPassVector;
+
     void PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG, SDValue Chain,
                           SDValue &Arg, RegsToPassVector &RegsToPass,
                           CCValAssign &VA, CCValAssign &NextVA,
@@ -623,6 +639,7 @@ namespace llvm {
       return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
           MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
     }
+
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(
       MachineBasicBlock *Entry,
@@ -644,9 +661,8 @@ namespace llvm {
                               unsigned ArgOffset, unsigned TotalArgRegsSaveSize,
                               bool ForceMutable = false) const;
 
-    SDValue
-      LowerCall(TargetLowering::CallLoweringInfo &CLI,
-                SmallVectorImpl<SDValue> &InVals) const override;
+    SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                      SmallVectorImpl<SDValue> &InVals) const override;
 
     /// HandleByVal - Target-specific cleanup for ByVal support.
     void HandleByVal(CCState *, unsigned &, unsigned) const override;
@@ -712,9 +728,12 @@ namespace llvm {
   };
 
   namespace ARM {
+
     FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                              const TargetLibraryInfo *libInfo);
-  }
-}
 
-#endif  // ARMISELLOWERING_H
+  } // end namespace ARM
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_ARM_ARMISELLOWERING_H

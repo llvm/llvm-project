@@ -77,6 +77,11 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   switch (Name[0]) {
   default: break;
   case 'a': {
+    if (Name.startswith("arm.rbit") || Name.startswith("aarch64.rbit")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
+                                        F->arg_begin()->getType());
+      return true;
+    }
     if (Name.startswith("arm.neon.vclz")) {
       Type* args[2] = {
         F->arg_begin()->getType(),
@@ -1760,6 +1765,11 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
+
+  case Intrinsic::bitreverse:
+    CI->replaceAllUsesWith(Builder.CreateCall(NewFn, {CI->getArgOperand(0)}));
+    CI->eraseFromParent();
+    return;
 
   case Intrinsic::ctlz:
   case Intrinsic::cttz:

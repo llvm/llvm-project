@@ -374,7 +374,7 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 int AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
@@ -466,28 +466,27 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);
 }
 
-int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                     unsigned Alignment, unsigned AddressSpace) {
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+  auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
-      Src->isVectorTy() && Alignment != 16 &&
-      Src->getVectorElementType()->isIntegerTy(64)) {
-    // Unaligned stores are extremely inefficient. We don't split
-    // unaligned v2i64 stores because the negative impact that has shown in
-    // practice on inlined memcpy code.
-    // We make v2i64 stores expensive so that we will only vectorize if there
+      LT.second.is128BitVector() && Alignment < 16) {
+    // Unaligned stores are extremely inefficient. We don't split all
+    // unaligned 128-bit stores because the negative impact that has shown in
+    // practice on inlined block copy code.
+    // We make such stores expensive so that we will only vectorize if there
     // are 6 other instructions getting vectorized.
-    int AmortizationCost = 6;
+    const int AmortizationCost = 6;
 
     return LT.first * 2 * AmortizationCost;
   }
 
-  if (Src->isVectorTy() && Src->getVectorElementType()->isIntegerTy(8) &&
-      Src->getVectorNumElements() < 8) {
+  if (Ty->isVectorTy() && Ty->getVectorElementType()->isIntegerTy(8) &&
+      Ty->getVectorNumElements() < 8) {
     // We scalarize the loads/stores because there is not v.4b register and we
     // have to promote the elements to v.4h.
-    unsigned NumVecElts = Src->getVectorNumElements();
+    unsigned NumVecElts = Ty->getVectorNumElements();
     unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
     // We generate 2 instructions per vector element.
     return NumVectorizableInstsToAmortize * NumVecElts * 2;

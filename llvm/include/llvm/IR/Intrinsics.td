@@ -578,8 +578,8 @@ def int_invariant_end   : Intrinsic<[],
                                      llvm_anyptr_ty],
                                     [IntrArgMemOnly, NoCapture<2>]>;
 
-def int_invariant_group_barrier : Intrinsic<[llvm_ptr_ty], 
-                                            [llvm_ptr_ty], 
+def int_invariant_group_barrier : Intrinsic<[llvm_ptr_ty],
+                                            [llvm_ptr_ty],
                                             [IntrNoMem]>;
 
 //===------------------------ Stackmap Intrinsics -------------------------===//
@@ -682,29 +682,6 @@ let IntrProperties = [IntrNoMem] in {
 def int_convert_to_fp16   : Intrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_fp16 : Intrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
 }
-
-// These convert intrinsics are to support various conversions between
-// various types with rounding and saturation. NOTE: avoid using these
-// intrinsics as they might be removed sometime in the future and
-// most targets don't support them.
-def int_convertff  : Intrinsic<[llvm_anyfloat_ty],
-                               [llvm_anyfloat_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertfsi : Intrinsic<[llvm_anyfloat_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertfui : Intrinsic<[llvm_anyfloat_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertsif : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyfloat_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertuif : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyfloat_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertss  : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertsu  : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertus  : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
-def int_convertuu  : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty]>;
 
 // Clear cache intrinsic, default to ignore (ie. emit nothing)
 // maps to void __clear_cache() on supporting platforms

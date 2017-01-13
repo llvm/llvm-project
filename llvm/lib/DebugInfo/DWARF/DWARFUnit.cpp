@@ -230,10 +230,12 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_entry_pc);
     if (BaseAddr)
       setBaseAddress(*BaseAddr);
-    AddrOffsetSectionBase = UnitDie.getAttributeValueAsSectionOffset(
-        DW_AT_GNU_addr_base, 0);
-    RangeSectionBase = UnitDie.getAttributeValueAsSectionOffset(
-        DW_AT_rnglists_base, 0);
+    AddrOffsetSectionBase =
+        UnitDie.getAttributeValueAsSectionOffset(DW_AT_GNU_addr_base)
+            .getValueOr(0);
+    RangeSectionBase =
+        UnitDie.getAttributeValueAsSectionOffset(DW_AT_rnglists_base)
+            .getValueOr(0);
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
   }

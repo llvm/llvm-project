@@ -44,7 +44,7 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
                              const TargetOptions &Options)
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT), TargetCPU(CPU),
       TargetFS(FS), AsmInfo(nullptr), MRI(nullptr), MII(nullptr), STI(nullptr),
-      RequireStructuredCFG(false), Options(Options) {
+      RequireStructuredCFG(false), DefaultOptions(Options), Options(Options) {
   if (EnableIPRA.getNumOccurrences())
     this->Options.EnableIPRA = EnableIPRA;
 }
@@ -63,14 +63,15 @@ bool TargetMachine::isPositionIndependent() const {
 /// \brief Reset the target options based on the function's attributes.
 // FIXME: This function needs to go away for a number of reasons:
 // a) global state on the TargetMachine is terrible in general,
-// b) there's no default state here to keep,
-// c) these target options should be passed only on the function
+// b) these target options should be passed only on the function
 //    and not on the TargetMachine (via TargetOptions) at all.
 void TargetMachine::resetTargetOptions(const Function &F) const {
 #define RESET_OPTION(X, Y)                                                     \
   do {                                                                         \
     if (F.hasFnAttribute(Y))                                                   \
       Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");          \
+    else                                                                       \
+      Options.X = DefaultOptions.X;                                            \
   } while (0)
 
   RESET_OPTION(LessPreciseFPMADOption, "less-precise-fpmad");
@@ -87,6 +88,8 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
     Options.FPDenormalMode = FPDenormal::PreserveSign;
   else if (Denormal == "positive-zero")
     Options.FPDenormalMode = FPDenormal::PositiveZero;
+  else
+    Options.FPDenormalMode = DefaultOptions.FPDenormalMode;
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,

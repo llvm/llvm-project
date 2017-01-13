@@ -23,21 +23,32 @@ class raw_ostream;
 class DWARFAbbreviationDeclaration {
 public:
   struct AttributeSpec {
-    AttributeSpec(dwarf::Attribute A, dwarf::Form F, Optional<uint8_t> S)
-        : Attr(A), Form(F), ByteSize(S) {}
+    AttributeSpec(dwarf::Attribute A, dwarf::Form F, Optional<int64_t> V)
+        : Attr(A), Form(F), ByteSizeOrValue(V) {}
     dwarf::Attribute Attr;
     dwarf::Form Form;
-    /// If ByteSize has a value, then it contains the fixed size in bytes for
-    /// the Form in this object. If ByteSize doesn't have a value, then the
-    /// byte size of Form either varies according to the DWARFUnit that it is
-    /// contained in or the value size varies and must be decoded from the
-    /// debug information in order to determine its size.
-    Optional<uint8_t> ByteSize;
+    /// The following field is used for ByteSize for non-implicit_const
+    /// attributes and as value for implicit_const ones, indicated by
+    /// Form == DW_FORM_implicit_const.
+    /// The following cases are distinguished:
+    /// * Form != DW_FORM_implicit_const and ByteSizeOrValue has a value:
+    ///     ByteSizeOrValue contains the fixed size in bytes
+    ///     for the Form in this object.
+    /// * Form != DW_FORM_implicit_const and ByteSizeOrValue is None:
+    ///     byte size of Form either varies according to the DWARFUnit
+    ///     that it is contained in or the value size varies and must be
+    ///     decoded from the debug information in order to determine its size.
+    /// * Form == DW_FORM_implicit_const:
+    ///     ByteSizeOrValue contains value for the implicit_const attribute.
+    Optional<int64_t> ByteSizeOrValue;
+    bool isImplicitConst() const {
+      return Form == dwarf::DW_FORM_implicit_const;
+    }
     /// Get the fixed byte size of this Form if possible. This function might
     /// use the DWARFUnit to calculate the size of the Form, like for
     /// DW_AT_address and DW_AT_ref_addr, so this isn't just an accessor for
     /// the ByteSize member.
-    Optional<uint8_t> getByteSize(const DWARFUnit &U) const;
+    Optional<int64_t> getByteSize(const DWARFUnit &U) const;
   };
   typedef SmallVector<AttributeSpec, 8> AttributeSpecVector;
 

@@ -90,6 +90,20 @@ void DIBuilder::finalize() {
         VMContext, SmallVector<Metadata *, 16>(AllImportedModules.begin(),
                                                AllImportedModules.end())));
 
+  for (const auto &I : AllMacrosPerParent) {
+    // DIMacroNode's with nullptr parent are DICompileUnit direct children.
+    if (!I.first) {
+      CUNode->replaceMacros(MDTuple::get(VMContext, I.second.getArrayRef()));
+      continue;
+    }
+    // Otherwise, it must be a temporary DIMacroFile that need to be resolved.
+    auto *TMF = cast<DIMacroFile>(I.first);
+    auto *MF = DIMacroFile::get(VMContext, dwarf::DW_MACINFO_start_file,
+                                TMF->getLine(), TMF->getFile(),
+                                getOrCreateMacroArray(I.second.getArrayRef()));
+    replaceTemporary(llvm::TempDIMacroNode(TMF), MF);
+  }
+
   // Now that all temp nodes have been replaced or deleted, resolve remaining
   // cycles.
   for (const auto &N : UnresolvedNodes)
@@ -177,6 +191,31 @@ DIImportedEntity *DIBuilder::createImportedDeclaration(DIScope *Context,
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
                               DIFile::ChecksumKind CSKind, StringRef Checksum) {
   return DIFile::get(VMContext, Filename, Directory, CSKind, Checksum);
+}
+
+DIMacro *DIBuilder::createMacro(DIMacroFile *Parent, unsigned LineNumber,
+                                unsigned MacroType, StringRef Name,
+                                StringRef Value) {
+  assert(!Name.empty() && "Unable to create macro without name");
+  assert((MacroType == dwarf::DW_MACINFO_undef ||
+          MacroType == dwarf::DW_MACINFO_define) &&
+         "Unexpected macro type");
+  auto *M = DIMacro::get(VMContext, MacroType, LineNumber, Name, Value);
+  AllMacrosPerParent[Parent].insert(M);
+  return M;
+}
+
+DIMacroFile *DIBuilder::createTempMacroFile(DIMacroFile *Parent,
+                                            unsigned LineNumber, DIFile *File) {
+  auto *MF = DIMacroFile::getTemporary(VMContext, dwarf::DW_MACINFO_start_file,
+                                       LineNumber, File, DIMacroNodeArray())
+                 .release();
+  AllMacrosPerParent[Parent].insert(MF);
+  // Add the new temporary DIMacroFile to the macro per parent map as a parent.
+  // This is needed to assure DIMacroFile with no children to have an entry in
+  // the map. Otherwise, it will not be resolved in DIBuilder::finalize().
+  AllMacrosPerParent.insert({MF, {}});
+  return MF;
 }
 
 DIEnumerator *DIBuilder::createEnumerator(StringRef Name, int64_t Val) {
@@ -506,6 +545,11 @@ DICompositeType *DIBuilder::createReplaceableCompositeType(
 }
 
 DINodeArray DIBuilder::getOrCreateArray(ArrayRef<Metadata *> Elements) {
+  return MDTuple::get(VMContext, Elements);
+}
+
+DIMacroNodeArray
+DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
   return MDTuple::get(VMContext, Elements);
 }
 

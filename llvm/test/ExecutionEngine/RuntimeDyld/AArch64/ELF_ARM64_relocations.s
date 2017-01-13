@@ -47,7 +47,10 @@ k:
         .size   k, 16
 r:
 # R_AARCH64_PREL32: use Q instead of f to fit in 32 bits.
-        .word  Q - .
+        .word  Q - .        
+# R_AARCH64_PREL64
+        .p2align        3
+        .xword f - .
 
 # rtdyld-check: *{4}(g) = 0xd2e02460
 # rtdyld-check: *{4}(g + 4) = 0xf2c8ace0
@@ -65,6 +68,7 @@ r:
 
 # rtdyld-check: *{8}k = f
 # rtdyld-check: *{4}r = (Q - r)[31:0]
+# rtdyld-check: *{8}(r + 8) = f - r - 8
 
 ## f & 0xFFF = 0xdef (bits 11:0 of f)
 ## 0xdef << 10 = 0x37bc00

@@ -853,17 +853,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-/// \brief Pass for printing a loop's contents as LLVM's text IR assembly.
-class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
-  raw_ostream &OS;
-  std::string Banner;
-
-public:
-  PrintLoopPass();
-  PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
-
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &);
-};
+/// Function to print a loop's contents as LLVM's text IR assembly.
+void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
 
 } // End llvm namespace
 

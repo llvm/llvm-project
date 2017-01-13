@@ -557,6 +557,27 @@ class IntInputMods <IntInputModsMatchClass matchClass> : InputMods <matchClass> 
 def Int32InputMods : IntInputMods<Int32InputModsMatchClass>;
 def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
 
+def FPVRegInputModsMatchClass : AsmOperandClass {
+  let Name = "VRegWithFPInputMods";
+  let ParserMethod = "parseRegWithFPInputMods";
+  let PredicateMethod = "isVReg";
+}
+
+def FPVRegInputMods : InputMods <FPVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndFPInputMods";
+}
+
+def IntVRegInputModsMatchClass : AsmOperandClass {
+  let Name = "VRegWithIntInputMods";
+  let ParserMethod = "parseRegWithIntInputMods";
+  let PredicateMethod = "isVReg";
+}
+
+def IntVRegInputMods : InputMods <IntVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndIntInputMods";
+}
+
+
 //===----------------------------------------------------------------------===//
 // Complex patterns
 //===----------------------------------------------------------------------===//
@@ -759,6 +780,15 @@ class getSrcMod <ValueType VT> {
                           ),
                          Int32InputMods)
                      );
+}
+
+// Return type of input modifiers operand specified input operand for SDWA/DPP
+class getSrcModExt <ValueType VT> {
+    bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+               !if(!eq(VT.Value, f32.Value), 1,
+               !if(!eq(VT.Value, f64.Value), 1,
+               0)));
+  Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
@@ -1001,6 +1031,11 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field Operand Src0Mod = getSrcMod<Src0VT>.ret;
   field Operand Src1Mod = getSrcMod<Src1VT>.ret;
   field Operand Src2Mod = getSrcMod<Src2VT>.ret;
+  field Operand Src0ModDPP = getSrcModExt<Src0VT>.ret;
+  field Operand Src1ModDPP = getSrcModExt<Src1VT>.ret;
+  field Operand Src0ModSDWA = getSrcModExt<Src0VT>.ret;
+  field Operand Src1ModSDWA = getSrcModExt<Src1VT>.ret;
+  
 
   field bit HasDst = !if(!eq(DstVT.Value, untyped.Value), 0, 1);
   field bit HasDst32 = HasDst;
@@ -1038,15 +1073,16 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field dag Outs32 = Outs;
   field dag Outs64 = Outs;
   field dag OutsDPP = getOutsExt<HasDst, DstVT, DstRCDPP>.ret;
-  field dag OutsSDWA = getOutsExt<HasDst, DstVT, DstRCDPP>.ret;
+  field dag OutsSDWA = getOutsExt<HasDst, DstVT, DstRCSDWA>.ret;
 
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
   field dag Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                              HasModifiers, Src0Mod, Src1Mod, Src2Mod>.ret;
   field dag InsDPP = getInsDPP<Src0DPP, Src1DPP, NumSrcArgs,
-                               HasModifiers, Src0Mod, Src1Mod>.ret;
+                               HasModifiers, Src0ModDPP, Src1ModDPP>.ret;
   field dag InsSDWA = getInsSDWA<Src0SDWA, Src1SDWA, NumSrcArgs,
-                                 HasModifiers, Src0Mod, Src1Mod, DstVT>.ret;
+                                 HasModifiers, Src0ModSDWA, Src1ModSDWA,
+                                 DstVT>.ret;
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;

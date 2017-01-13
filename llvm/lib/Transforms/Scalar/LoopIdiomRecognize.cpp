@@ -46,7 +46,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -61,6 +60,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -186,24 +186,12 @@ public:
 };
 } // End anonymous namespace.
 
-PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L,
-                                              LoopAnalysisManager &AM) {
-  const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
-  Function *F = L.getHeader()->getParent();
-
-  // Use getCachedResult because Loop pass cannot trigger a function analysis.
-  auto *AA = FAM.getCachedResult<AAManager>(*F);
-  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
-  auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
-  auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
-  auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(*F);
-  const auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
+PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
+                                              LoopStandardAnalysisResults &AR,
+                                              LPMUpdater &) {
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
-  assert((AA && DT && LI && SE && TLI && TTI && DL) &&
-         "Analyses for Loop Idiom Recognition not available");
 
-  LoopIdiomRecognize LIR(AA, DT, LI, SE, TLI, TTI, DL);
+  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI, DL);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 

@@ -5957,6 +5957,30 @@ let Predicates = [HasAVX512] in {
             (VCVTUSI2SDZrm_Int VR128X:$src1, addr:$src2)>;
 } // Predicates = [HasAVX512]
 
+// Patterns used for matching vcvtsi2s{s,d} intrinsic sequences from clang
+// which produce unnecessary vmovs{s,d} instructions
+let Predicates = [HasAVX512] in {
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128X:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR64:$src)))))),
+          (VCVTSI642SSZrr_Int VR128X:$dst, GR64:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128X:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR32:$src)))))),
+          (VCVTSI2SSZrr_Int VR128X:$dst, GR32:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR64:$src)))))),
+          (VCVTSI642SDZrr_Int VR128X:$dst, GR64:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR32:$src)))))),
+          (VCVTSI2SDZrr_Int VR128X:$dst, GR32:$src)>;
+} // Predicates = [HasAVX512]
+
 // Convert float/double to signed/unsigned int 32/64 with truncation
 multiclass avx512_cvt_s_all<bits<8> opc, string asm, X86VectorVTInfo _SrcRC,
                             X86VectorVTInfo _DstRC, SDNode OpNode,
@@ -6136,6 +6160,21 @@ def : Pat<(f32 (fpround FR64X:$src)),
           (COPY_TO_REGCLASS (VCVTSD2SSZrr (COPY_TO_REGCLASS FR64X:$src, VR128X),
                     (COPY_TO_REGCLASS FR64X:$src, VR128X)), VR128X)>,
            Requires<[HasAVX512]>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128X:$dst),
+                   (v4f32 (scalar_to_vector
+                     (f32 (fpround (f64 (extractelt VR128X:$src, (iPTR 0))))))))),
+          (VCVTSD2SSZrr VR128X:$dst, VR128X:$src)>,
+          Requires<[HasAVX512]>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector
+                     (f64 (fpextend (f32 (extractelt VR128X:$src, (iPTR 0))))))))),
+          (VCVTSS2SDZrr VR128X:$dst, VR128X:$src)>,
+          Requires<[HasAVX512]>;
+
 //===----------------------------------------------------------------------===//
 // AVX-512  Vector convert from signed/unsigned integer to float/double
 //          and from float/double to signed/unsigned integer

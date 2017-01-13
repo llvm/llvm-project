@@ -1022,7 +1022,7 @@ __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
         // The apic id and max threads per pkg come from cpuid(1).
         //
         __kmp_x86_cpuid(1, 0, &buf);
-        if (! (buf.edx >> 9) & 1) {
+        if (((buf.edx >> 9) & 1) == 0) {
             __kmp_set_system_affinity(oldMask, TRUE);
             __kmp_free(threadInfo);
             KMP_CPU_FREE(oldMask);

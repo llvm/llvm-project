@@ -135,6 +135,10 @@ struct CongruenceClass {
   // purposes, and for skipping empty classes.
   bool Dead = false;
 
+  // Number of stores in this congruence class.
+  // This is used so we can detect store equivalence changes properly.
+  int StoreCount = 0;
+
   explicit CongruenceClass(unsigned ID) : ID(ID) {}
   CongruenceClass(unsigned ID, Value *Leader, const Expression *E)
       : ID(ID), RepLeader(Leader), DefiningExpr(E) {}
@@ -198,7 +202,7 @@ class NewGVN : public FunctionPass {
   ExpressionClassMap ExpressionToClass;
 
   // Which values have changed as a result of leader changes.
-  SmallPtrSet<Value *, 8> ChangedValues;
+  SmallPtrSet<Value *, 8> LeaderChanges;
 
   // Reachability info.
   using BlockEdge = BasicBlockEdge;
@@ -317,7 +321,8 @@ private:
   template <class T>
   Value *lookupOperandLeader(Value *, const User *, const T &) const;
   void performCongruenceFinding(Value *, const Expression *);
-
+  void moveValueToNewCongruenceClass(Value *, CongruenceClass *,
+                                     CongruenceClass *);
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
   void processOutgoingEdges(TerminatorInst *, BasicBlock *);
@@ -347,7 +352,8 @@ private:
   void cleanupTables();
   std::pair<unsigned, unsigned> assignDFSNumbers(BasicBlock *, unsigned);
   void updateProcessedCount(Value *V);
-  void verifyMemoryCongruency();
+  void verifyMemoryCongruency() const;
+  bool singleReachablePHIPath(const MemoryAccess *, const MemoryAccess *) const;
 };
 
 char NewGVN::ID = 0;
@@ -717,10 +723,10 @@ const StoreExpression *NewGVN::createStoreExpression(StoreInst *SI,
 // Utility function to check whether the congruence class has a member other
 // than the given instruction.
 bool hasMemberOtherThanUs(const CongruenceClass *CC, Instruction *I) {
-  // Either it has more than one member, in which case it must contain something
-  // other than us (because it's indexed by value), or if it only has one member
+  // Either it has more than one store, in which case it must contain something
+  // other than us (because it's indexed by value), or if it only has one store
   // right now, that member should not be us.
-  return CC->Members.size() > 1 || CC->Members.count(I) == 0;
+  return CC->StoreCount > 1 || CC->Members.count(I) == 0;
 }
 
 const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I,
@@ -1044,7 +1050,40 @@ void NewGVN::markLeaderChangeTouched(CongruenceClass *CC) {
   for (auto M : CC->Members) {
     if (auto *I = dyn_cast<Instruction>(M))
       TouchedInstructions.set(InstrDFS[I]);
-    ChangedValues.insert(M);
+    LeaderChanges.insert(M);
+  }
+}
+
+// Move a value, currently in OldClass, to be part of NewClass
+// Update OldClass for the move (including changing leaders, etc)
+void NewGVN::moveValueToNewCongruenceClass(Value *V, CongruenceClass *OldClass,
+                                           CongruenceClass *NewClass) {
+  DEBUG(dbgs() << "New congruence class for " << V << " is " << NewClass->ID
+               << "\n");
+  OldClass->Members.erase(V);
+  NewClass->Members.insert(V);
+  if (isa<StoreInst>(V)) {
+    --OldClass->StoreCount;
+    assert(OldClass->StoreCount >= 0);
+    ++NewClass->StoreCount;
+    assert(NewClass->StoreCount > 0);
+  }
+
+  ValueToClass[V] = NewClass;
+  // See if we destroyed the class or need to swap leaders.
+  if (OldClass->Members.empty() && OldClass != InitialClass) {
+    if (OldClass->DefiningExpr) {
+      OldClass->Dead = true;
+      DEBUG(dbgs() << "Erasing expression " << OldClass->DefiningExpr
+                   << " from table\n");
+      ExpressionToClass.erase(OldClass->DefiningExpr);
+    }
+  } else if (OldClass->RepLeader == V) {
+    // When the leader changes, the value numbering of
+    // everything may change due to symbolization changes, so we need to
+    // reprocess.
+    OldClass->RepLeader = *(OldClass->Members.begin());
+    markLeaderChangeTouched(OldClass);
   }
 }
 
@@ -1101,33 +1140,16 @@ void NewGVN::performCongruenceFinding(Value *V, const Expression *E) {
       assert(!EClass->Dead && "We accidentally looked up a dead class");
     }
   }
-  bool WasInChanged = ChangedValues.erase(V);
-  if (VClass != EClass || WasInChanged) {
+  bool ClassChanged = VClass != EClass;
+  bool LeaderChanged = LeaderChanges.erase(V);
+  if (ClassChanged || LeaderChanged) {
     DEBUG(dbgs() << "Found class " << EClass->ID << " for expression " << E
                  << "\n");
 
-    if (VClass != EClass) {
-      DEBUG(dbgs() << "New congruence class for " << V << " is " << EClass->ID
-                   << "\n");
+    if (ClassChanged)
 
-      VClass->Members.erase(V);
-      EClass->Members.insert(V);
-      ValueToClass[V] = EClass;
-      // See if we destroyed the class or need to swap leaders.
-      if (VClass->Members.empty() && VClass != InitialClass) {
-        if (VClass->DefiningExpr) {
-          VClass->Dead = true;
-          DEBUG(dbgs() << "Erasing expression " << *E << " from table\n");
-          ExpressionToClass.erase(VClass->DefiningExpr);
-        }
-      } else if (VClass->RepLeader == V) {
-        // When the leader changes, the value numbering of
-        // everything may change due to symbolization changes, so we need to
-        // reprocess.
-        VClass->RepLeader = *(VClass->Members.begin());
-        markLeaderChangeTouched(VClass);
-      }
-    }
+      moveValueToNewCongruenceClass(V, VClass, EClass);
+
 
     markUsersTouched(V);
     if (auto *I = dyn_cast<Instruction>(V)) {
@@ -1315,9 +1337,12 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
       // MemoryDef's for stores and all MemoryPhis to be equal.  Right now, no
       // other expression can generate a memory equivalence.  If we start
       // handling memcpy/etc, we can expand this.
-      if (isa<StoreInst>(&I))
+      if (isa<StoreInst>(&I)) {
         MemoryAccessEquiv.insert(
             {MSSA->getMemoryAccess(&I), MSSA->getLiveOnEntryDef()});
+        ++InitialClass->StoreCount;
+        assert(InitialClass->StoreCount > 0);
+      }
     }
   }
   InitialClass->Members.swap(InitialValues);
@@ -1454,9 +1479,40 @@ void NewGVN::valueNumberInstruction(Instruction *I) {
   }
 }
 
+// Check if there is a path, using single or equal argument phi nodes, from
+// First to Second.
+bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
+                                    const MemoryAccess *Second) const {
+  if (First == Second)
+    return true;
+
+  if (auto *FirstDef = dyn_cast<MemoryUseOrDef>(First)) {
+    auto *DefAccess = FirstDef->getDefiningAccess();
+    return singleReachablePHIPath(DefAccess, Second);
+  } else {
+    auto *MP = cast<MemoryPhi>(First);
+    auto ReachableOperandPred = [&](const Use &U) {
+      return ReachableBlocks.count(MP->getIncomingBlock(U));
+    };
+    auto FilteredPhiArgs =
+        make_filter_range(MP->operands(), ReachableOperandPred);
+    SmallVector<const Value *, 32> OperandList;
+    std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
+              std::back_inserter(OperandList));
+    bool Okay = OperandList.size() == 1;
+    if (!Okay)
+      Okay = std::equal(OperandList.begin(), OperandList.end(),
+                        OperandList.begin());
+    if (Okay)
+      return singleReachablePHIPath(cast<MemoryAccess>(OperandList[0]), Second);
+    return false;
+  }
+}
+
 // Verify the that the memory equivalence table makes sense relative to the
-// congruence classes.
-void NewGVN::verifyMemoryCongruency() {
+// congruence classes.  Note that this checking is not perfect, and is currently
+// subject to very rare false negatives. It is only useful for testing/debugging.
+void NewGVN::verifyMemoryCongruency() const {
   // Anything equivalent in the memory access table should be in the same
   // congruence class.
 
@@ -1483,11 +1539,12 @@ void NewGVN::verifyMemoryCongruency() {
     if (auto *FirstMUD = dyn_cast<MemoryUseOrDef>(KV.first)) {
       auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second);
       if (FirstMUD && SecondMUD)
-        assert(
-            ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
-                ValueToClass.lookup(SecondMUD->getMemoryInst()) &&
-            "The instructions for these memory operations should have been in "
-            "the same congruence class");
+        assert((singleReachablePHIPath(FirstMUD, SecondMUD) ||
+               ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
+                       ValueToClass.lookup(SecondMUD->getMemoryInst())) &&
+                   "The instructions for these memory operations should have "
+                   "been in the same congruence class or reachable through"
+                   "a single argument phi");
     } else if (auto *FirstMP = dyn_cast<MemoryPhi>(KV.first)) {
 
       // We can only sanely verify that MemoryDefs in the operand list all have

@@ -46,6 +46,30 @@ class AssumptionCache {
   /// intrinsic.
   SmallVector<WeakVH, 4> AssumeHandles;
 
+  class AffectedValueCallbackVH final : public CallbackVH {
+    AssumptionCache *AC;
+    void deleted() override;
+    void allUsesReplacedWith(Value *) override;
+
+  public:
+    using DMI = DenseMapInfo<Value *>;
+
+    AffectedValueCallbackVH(Value *V, AssumptionCache *AC = nullptr)
+        : CallbackVH(V), AC(AC) {}
+  };
+
+  friend AffectedValueCallbackVH;
+
+  /// \brief A map of values about which an assumption might be providing
+  /// information to the relevant set of assumptions.
+  using AffectedValuesMap =
+    DenseMap<AffectedValueCallbackVH, SmallVector<WeakVH, 1>,
+             AffectedValueCallbackVH::DMI>;
+  AffectedValuesMap AffectedValues;
+
+  /// Get the vector of assumptions which affect a value from the cache.
+  SmallVector<WeakVH, 1> &getAffectedValues(Value *V);
+
   /// \brief Flag tracking whether we have scanned the function yet.
   ///
   /// We want to be as lazy about this as possible, and so we scan the function
@@ -66,11 +90,16 @@ public:
   /// not already be in the cache.
   void registerAssumption(CallInst *CI);
 
+  /// \brief Update the cache of values being affected by this assumption (i.e.
+  /// the values about which this assumption provides information).
+  void updateAffectedValues(CallInst *CI);
+
   /// \brief Clear the cache of @llvm.assume intrinsics for a function.
   ///
   /// It will be re-scanned the next time it is requested.
   void clear() {
     AssumeHandles.clear();
+    AffectedValues.clear();
     Scanned = false;
   }
 
@@ -86,6 +115,18 @@ public:
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
+  }
+
+  /// \brief Access the list of assumptions which affect this value.
+  MutableArrayRef<WeakVH> assumptionsFor(const Value *V) {
+    if (!Scanned)
+      scanFunction();
+
+    auto AVI = AffectedValues.find_as(const_cast<Value *>(V));
+    if (AVI == AffectedValues.end())
+      return MutableArrayRef<WeakVH>();
+
+    return AVI->second;
   }
 };
 

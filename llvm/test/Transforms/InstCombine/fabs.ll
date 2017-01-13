@@ -5,6 +5,8 @@
 declare float @fabsf(float)
 declare double @fabs(double)
 declare fp128 @fabsl(fp128)
+declare float @llvm.fma.f32(float, float, float)
+declare float @llvm.fmuladd.f32(float, float, float)
 
 define float @square_fabs_call_f32(float %x) {
   %mul = fmul float %x, %x
@@ -80,7 +82,6 @@ define fp128 @square_fabs_intrinsic_f128(fp128 %x) {
 ; CHECK-NEXT: ret fp128 %fabsl
 }
 
-; TODO: This should be able to elimnated the fabs
 define float @square_nnan_fabs_intrinsic_f32(float %x) {
   %mul = fmul nnan float %x, %x
   %fabsf = call float @llvm.fabs.f32(float %mul)
@@ -88,8 +89,7 @@ define float @square_nnan_fabs_intrinsic_f32(float %x) {
 
 ; CHECK-LABEL: square_nnan_fabs_intrinsic_f32(
 ; CHECK-NEXT: %mul = fmul nnan float %x, %x
-; CHECK-NEXT: %fabsf = call float @llvm.fabs.f32(float %mul)
-; CHECK-NEXT: ret float %fabsf
+; CHECK-NEXT: ret float %mul
 }
 
 ; Shrinking a library call to a smaller type should not be inhibited by nor inhibit the square optimization.
@@ -169,4 +169,48 @@ define float @fabs_select_var_constant_negative(i32 %c, float %x) {
   %select = select i1 %cmp, float %x, float -1.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
+}
+
+; The fabs cannot be eliminated because %x may be a NaN
+define float @square_fma_fabs_intrinsic_f32(float %x) {
+  %fma = call float @llvm.fma.f32(float %x, float %x, float 1.0)
+  %fabsf = call float @llvm.fabs.f32(float %fma)
+  ret float %fabsf
+
+; CHECK-LABEL: @square_fma_fabs_intrinsic_f32(
+; CHECK-NEXT: %fma = call float @llvm.fma.f32(float %x, float %x, float 1.000000e+00)
+; CHECK-NEXT: %fabsf = call float @llvm.fabs.f32(float %fma)
+; CHECK-NEXT: ret float %fabsf
+}
+
+; The fabs cannot be eliminated because %x may be a NaN
+define float @square_nnan_fma_fabs_intrinsic_f32(float %x) {
+  %fma = call nnan float @llvm.fma.f32(float %x, float %x, float 1.0)
+  %fabsf = call float @llvm.fabs.f32(float %fma)
+  ret float %fabsf
+
+; CHECK-LABEL: @square_nnan_fma_fabs_intrinsic_f32(
+; CHECK-NEXT: %fma = call nnan float @llvm.fma.f32(float %x, float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float %fma
+}
+
+define float @square_fmuladd_fabs_intrinsic_f32(float %x) {
+  %fmuladd = call float @llvm.fmuladd.f32(float %x, float %x, float 1.0)
+  %fabsf = call float @llvm.fabs.f32(float %fmuladd)
+  ret float %fabsf
+
+; CHECK-LABEL: @square_fmuladd_fabs_intrinsic_f32(
+; CHECK-NEXT: %fmuladd = call float @llvm.fmuladd.f32(float %x, float %x, float 1.000000e+00)
+; CHECK-NEXT: %fabsf = call float @llvm.fabs.f32(float %fmuladd)
+; CHECK-NEXT: ret float %fabsf
+}
+
+define float @square_nnan_fmuladd_fabs_intrinsic_f32(float %x) {
+  %fmuladd = call nnan float @llvm.fmuladd.f32(float %x, float %x, float 1.0)
+  %fabsf = call float @llvm.fabs.f32(float %fmuladd)
+  ret float %fabsf
+
+; CHECK-LABEL: @square_nnan_fmuladd_fabs_intrinsic_f32(
+; CHECK-NEXT: %fmuladd = call nnan float @llvm.fmuladd.f32(float %x, float %x, float 1.000000e+00)
+; CHECK-NEXT: ret float %fmuladd
 }

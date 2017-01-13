@@ -148,7 +148,7 @@ public:
     ///
     /// This happens when an edge has been deleted. We leave the edge objects
     /// around but clear them.
-    operator bool() const;
+    explicit operator bool() const;
 
     /// Returnss the \c Kind of the edge.
     Kind getKind() const;

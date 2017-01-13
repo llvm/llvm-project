@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsTargetStreamer.h"
 #include "InstPrinter/MipsInstPrinter.h"
 #include "MipsELFStreamer.h"
@@ -685,17 +684,6 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // the ABI, but this is fraught with wide ranging dependency
   // issues as well.
   unsigned EFlags = MCA.getELFHeaderEFlags();
-
-  // FIXME: Fix a dependency issue by instantiating the ABI object to some
-  // default based off the triple. The triple doesn't describe the target
-  // fully, but any external user of the API that uses the MCTargetStreamer
-  // would otherwise crash on assertion failure.
-
-  ABI = MipsABIInfo(
-      STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
-          ? MipsABIInfo::O32()
-          : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])

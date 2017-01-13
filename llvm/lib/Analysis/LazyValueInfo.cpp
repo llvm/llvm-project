@@ -925,7 +925,7 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!BBI)
     return;
 
-  for (auto &AssumeVH : AC->assumptions()) {
+  for (auto &AssumeVH : AC->assumptionsFor(Val)) {
     if (!AssumeVH)
       continue;
     auto *I = cast<CallInst>(AssumeVH);

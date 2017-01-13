@@ -1,5 +1,5 @@
 ; RUN: opt -S -licm < %s | FileCheck %s
-; RUN: opt -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
 
 ; UDiv is safe to speculate if the denominator is known non-zero.
 

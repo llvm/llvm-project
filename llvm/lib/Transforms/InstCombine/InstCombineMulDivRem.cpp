@@ -267,14 +267,8 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 
   // Simplify mul instructions with a constant RHS.
   if (isa<Constant>(Op1)) {
-    // Try to fold constant mul into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
-
-    if (isa<PHINode>(Op0))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
+    if (Instruction *FoldedMul = foldOpWithConstantIntoOperand(I))
+      return FoldedMul;
 
     // Canonicalize (X+C1)*CI -> X*CI+C1*CI.
     {
@@ -626,14 +620,8 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
 
   // Simplify mul instructions with a constant RHS.
   if (isa<Constant>(Op1)) {
-    // Try to fold constant mul into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
-
-    if (isa<PHINode>(Op0))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
+    if (Instruction *FoldedMul = foldOpWithConstantIntoOperand(I))
+      return FoldedMul;
 
     // (fmul X, -1.0) --> (fsub -0.0, X)
     if (match(Op1, m_SpecificFP(-1.0))) {
@@ -956,14 +944,9 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
         }
       }
 
-      if (*C2 != 0) { // avoid X udiv 0
-        if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-          if (Instruction *R = FoldOpIntoSelect(I, SI))
-            return R;
-        if (isa<PHINode>(Op0))
-          if (Instruction *NV = FoldOpIntoPhi(I))
-            return NV;
-      }
+      if (*C2 != 0) // avoid X udiv 0
+        if (Instruction *FoldedDiv = foldOpWithConstantIntoOperand(I))
+          return FoldedDiv;
     }
   }
 
@@ -1441,6 +1424,16 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       SimpR->setFastMathFlags(I.getFastMathFlags());
       return SimpR;
     }
+  }
+
+  Value *LHS;
+  Value *RHS;
+
+  // -x / -y -> x / y
+  if (match(Op0, m_FNeg(m_Value(LHS))) && match(Op1, m_FNeg(m_Value(RHS)))) {
+    I.setOperand(0, LHS);
+    I.setOperand(1, RHS);
+    return &I;
   }
 
   return nullptr;

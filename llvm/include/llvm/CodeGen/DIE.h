@@ -52,13 +52,20 @@ class DIEAbbrevData {
   /// Dwarf form code.
   dwarf::Form Form;
 
+  /// Dwarf attribute value for DW_FORM_implicit_const
+  int64_t Value;
+
 public:
-  DIEAbbrevData(dwarf::Attribute A, dwarf::Form F) : Attribute(A), Form(F) {}
+  DIEAbbrevData(dwarf::Attribute A, dwarf::Form F)
+      : Attribute(A), Form(F), Value(0) {}
+  DIEAbbrevData(dwarf::Attribute A, int64_t V)
+      : Attribute(A), Form(dwarf::DW_FORM_implicit_const), Value(V) {}
 
   /// Accessors.
   /// @{
   dwarf::Attribute getAttribute() const { return Attribute; }
   dwarf::Form getForm() const { return Form; }
+  int64_t getValue() const { return Value; }
   /// @}
 
   /// Used to gather unique data for the abbreviation folding set.
@@ -100,6 +107,11 @@ public:
   /// Adds another set of attribute information to the abbreviation.
   void AddAttribute(dwarf::Attribute Attribute, dwarf::Form Form) {
     Data.push_back(DIEAbbrevData(Attribute, Form));
+  }
+
+  /// Adds attribute with DW_FORM_implicit_const value
+  void AddImplicitConstAttribute(dwarf::Attribute Attribute, int64_t Value) {
+    Data.push_back(DIEAbbrevData(Attribute, Value));
   }
 
   /// Used to gather unique data for the abbreviation folding set.

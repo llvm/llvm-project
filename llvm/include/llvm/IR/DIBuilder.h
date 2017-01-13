@@ -17,7 +17,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfo.h"
@@ -51,6 +53,10 @@ namespace llvm {
     SmallVector<Metadata *, 4> AllSubprograms;
     SmallVector<Metadata *, 4> AllGVs;
     SmallVector<TrackingMDNodeRef, 4> AllImportedModules;
+    /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
+    /// Metadata all of type DIMacroNode.
+    /// DIMacroNode's with nullptr parent are DICompileUnit direct children.
+    MapVector<MDNode *, SetVector<Metadata *>> AllMacrosPerParent;
 
     /// Track nodes that may be unresolved.
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
@@ -115,6 +121,24 @@ namespace llvm {
     DIFile *createFile(StringRef Filename, StringRef Directory,
                        DIFile::ChecksumKind CSKind = DIFile::CSK_None,
                        StringRef Checksum = StringRef());
+
+    /// Create debugging information entry for a macro.
+    /// \param Parent     Macro parent (could be nullptr).
+    /// \param Line       Source line number where the macro is defined.
+    /// \param MacroType  DW_MACINFO_define or DW_MACINFO_undef.
+    /// \param Name       Macro name.
+    /// \param Value      Macro value.
+    DIMacro *createMacro(DIMacroFile *Parent, unsigned Line, unsigned MacroType,
+                         StringRef Name, StringRef Value = StringRef());
+
+    /// Create debugging information temporary entry for a macro file.
+    /// List of macro node direct children will be calculated by DIBuilder,
+    /// using the \p Parent relationship.
+    /// \param Parent     Macro file parent (could be nullptr).
+    /// \param Line       Source line number where the macro file is included.
+    /// \param File       File descriptor containing the name of the macro file.
+    DIMacroFile *createTempMacroFile(DIMacroFile *Parent, unsigned Line,
+                                     DIFile *File);
 
     /// Create a single enumerator value.
     DIEnumerator *createEnumerator(StringRef Name, int64_t Val);
@@ -446,6 +470,9 @@ namespace llvm {
 
     /// Get a DINodeArray, create one if required.
     DINodeArray getOrCreateArray(ArrayRef<Metadata *> Elements);
+
+    /// Get a DIMacroNodeArray, create one if required.
+    DIMacroNodeArray getOrCreateMacroArray(ArrayRef<Metadata *> Elements);
 
     /// Get a DITypeRefArray, create one if required.
     DITypeRefArray getOrCreateTypeArray(ArrayRef<Metadata *> Elements);

@@ -138,22 +138,12 @@ public:
   // section.
   uintX_t getOffset(uintX_t Offset) const;
 
-  // ELF supports ZLIB-compressed section.
-  // Returns true if the section is compressed.
-  bool isCompressed() const;
   void uncompress();
 
   // Returns a source location string. Used to construct an error message.
   std::string getLocation(uintX_t Offset);
 
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
-
-private:
-  std::pair<ArrayRef<uint8_t>, uint64_t>
-  getElfCompressedData(ArrayRef<uint8_t> Data);
-
-  std::pair<ArrayRef<uint8_t>, uint64_t>
-  getRawCompressedData(ArrayRef<uint8_t> Data);
 };
 
 // SectionPiece represents a piece of splittable section contents.

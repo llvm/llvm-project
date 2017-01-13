@@ -1382,13 +1382,8 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       }
     }
 
-    // Try to fold constant and into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
-    if (isa<PHINode>(Op0))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
+    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
+      return FoldedLogic;
   }
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, Builder))
@@ -2125,14 +2120,8 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
                             Builder->getInt(C1->getValue() & ~RHS->getValue()));
     }
 
-    // Try to fold constant and into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
-
-    if (isa<PHINode>(Op0))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
+    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
+      return FoldedLogic;
   }
 
   // Given an OR instruction, check to see if this is a bswap.
@@ -2594,13 +2583,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       }
     }
 
-    // Try to fold constant and into select arguments.
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-      if (Instruction *R = FoldOpIntoSelect(I, SI))
-        return R;
-    if (isa<PHINode>(Op0))
-      if (Instruction *NV = FoldOpIntoPhi(I))
-        return NV;
+    if (Instruction *FoldedLogic = foldOpWithConstantIntoOperand(I))
+      return FoldedLogic;
   }
 
   BinaryOperator *Op1I = dyn_cast<BinaryOperator>(Op1);

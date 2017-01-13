@@ -70,14 +70,14 @@ define <2 x i32> @vtrni32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vtrn.32 d17, d16
-; CHECK-NEXT:    vadd.i32 d16, d17, d16
+; CHECK-NEXT:    vmul.i32 d16, d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
 	%tmp2 = load <2 x i32>, <2 x i32>* %B
 	%tmp3 = shufflevector <2 x i32> %tmp1, <2 x i32> %tmp2, <2 x i32> <i32 0, i32 2>
 	%tmp4 = shufflevector <2 x i32> %tmp1, <2 x i32> %tmp2, <2 x i32> <i32 1, i32 3>
-        %tmp5 = add <2 x i32> %tmp3, %tmp4
+        %tmp5 = mul <2 x i32> %tmp3, %tmp4
 	ret <2 x i32> %tmp5
 }
 

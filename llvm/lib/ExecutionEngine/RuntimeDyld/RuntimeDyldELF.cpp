@@ -374,6 +374,9 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
     write(isBE, TargetPtr, static_cast<uint32_t>(Result & 0xffffffffU));
     break;
   }
+  case ELF::R_AARCH64_PREL64:
+    write(isBE, TargetPtr, Value + Addend - FinalAddress);
+    break;
   case ELF::R_AARCH64_CALL26: // fallthrough
   case ELF::R_AARCH64_JUMP26: {
     // Operation: S+A-P. Set Call or B immediate value to bits fff_fffc of the

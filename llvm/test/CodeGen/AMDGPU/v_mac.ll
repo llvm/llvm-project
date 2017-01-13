@@ -212,5 +212,71 @@ entry:
   ret void
 }
 
+; Without special casing the inline constant check for v_mac_f32's
+; src2, this fails to fold the 1.0 into a mad.
+
+; GCN-LABEL: {{^}}fold_inline_imm_into_mac_src2_f32:
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; GCN: v_add_f32_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
+; GCN: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
+define void @fold_inline_imm_into_mac_src2_f32(float addrspace(1)* %out, float addrspace(1)* %a, float addrspace(1)* %b) #3 {
+bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %gep.a = getelementptr inbounds float, float addrspace(1)* %a, i64 %tid.ext
+  %gep.b = getelementptr inbounds float, float addrspace(1)* %b, i64 %tid.ext
+  %gep.out = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %tmp = load volatile float, float addrspace(1)* %gep.a
+  %tmp1 = load volatile float, float addrspace(1)* %gep.b
+  %tmp2 = fadd float %tmp, %tmp
+  %tmp3 = fmul float %tmp2, 4.0
+  %tmp4 = fsub float 1.0, %tmp3
+  %tmp5 = fadd float %tmp4, %tmp1
+  %tmp6 = fadd float %tmp1, %tmp1
+  %tmp7 = fmul float %tmp6, %tmp
+  %tmp8 = fsub float 1.0, %tmp7
+  %tmp9 = fmul float %tmp8, 8.0
+  %tmp10 = fadd float %tmp5, %tmp9
+  store float %tmp10, float addrspace(1)* %gep.out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fold_inline_imm_into_mac_src2_f16:
+; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_ushort [[B:v[0-9]+]]
+
+; FIXME: How is this not folded?
+; SI: v_cvt_f32_f16_e32 v{{[0-9]+}}, 0x3c00
+
+; VI: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
+; VI: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
+define void @fold_inline_imm_into_mac_src2_f16(half addrspace(1)* %out, half addrspace(1)* %a, half addrspace(1)* %b) #3 {
+bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %gep.a = getelementptr inbounds half, half addrspace(1)* %a, i64 %tid.ext
+  %gep.b = getelementptr inbounds half, half addrspace(1)* %b, i64 %tid.ext
+  %gep.out = getelementptr inbounds half, half addrspace(1)* %out, i64 %tid.ext
+  %tmp = load volatile half, half addrspace(1)* %gep.a
+  %tmp1 = load volatile half, half addrspace(1)* %gep.b
+  %tmp2 = fadd half %tmp, %tmp
+  %tmp3 = fmul half %tmp2, 4.0
+  %tmp4 = fsub half 1.0, %tmp3
+  %tmp5 = fadd half %tmp4, %tmp1
+  %tmp6 = fadd half %tmp1, %tmp1
+  %tmp7 = fmul half %tmp6, %tmp
+  %tmp8 = fsub half 1.0, %tmp7
+  %tmp9 = fmul half %tmp8, 8.0
+  %tmp10 = fadd half %tmp5, %tmp9
+  store half %tmp10, half addrspace(1)* %gep.out
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x() #2
+
 attributes #0 = { nounwind "unsafe-fp-math"="false" }
 attributes #1 = { nounwind "unsafe-fp-math"="true" }
+attributes #2 = { nounwind readnone }
+attributes #3 = { nounwind }

@@ -153,30 +153,24 @@ public:
     return ThisValue;
   }
 
-  IterType &operator+=(std::ptrdiff_t N) {
-    while (N > 0) {
-      // We are done with the current record, discard it so that we are
-      // positioned at the next record.
-      IterRef = IterRef.drop_front(ThisLen);
-      if (IterRef.getLength() == 0) {
-        // There is nothing after the current record, we must make this an end
-        // iterator.
+  IterType &operator++() {
+    // We are done with the current record, discard it so that we are
+    // positioned at the next record.
+    IterRef = IterRef.drop_front(ThisLen);
+    if (IterRef.getLength() == 0) {
+      // There is nothing after the current record, we must make this an end
+      // iterator.
+      moveToEnd();
+    } else {
+      // There is some data after the current record.
+      auto EC = Extract(IterRef, ThisLen, ThisValue);
+      if (EC) {
+        consumeError(std::move(EC));
+        markError();
+      } else if (ThisLen == 0) {
+        // An empty record? Make this an end iterator.
         moveToEnd();
-        return *this;
-      } else {
-        // There is some data after the current record.
-        auto EC = Extract(IterRef, ThisLen, ThisValue);
-        if (EC) {
-          consumeError(std::move(EC));
-          markError();
-          return *this;
-        } else if (ThisLen == 0) {
-          // An empty record? Make this an end iterator.
-          moveToEnd();
-          return *this;
-        }
       }
-      --N;
     }
     return *this;
   }

@@ -19,6 +19,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include <mutex>
@@ -35,7 +36,10 @@ using namespace lld::elf;
 // Returns a string to construct an error message.
 template <class ELFT>
 std::string lld::toString(const InputSectionBase<ELFT> *Sec) {
-  return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
+  // File can be absent if section is synthetic.
+  std::string FileName =
+      Sec->getFile() ? Sec->getFile()->getName() : "<internal>";
+  return (FileName + ":(" + Sec->Name + ")").str();
 }
 
 template <class ELFT>
@@ -102,11 +106,6 @@ template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
   return Data.size();
 }
 
-// Returns a string for an error message.
-template <class SectionT> static std::string getName(SectionT *Sec) {
-  return (Sec->getFile()->getName() + ":(" + Sec->Name + ")").str();
-}
-
 template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (kind()) {
@@ -128,71 +127,23 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   llvm_unreachable("invalid section kind");
 }
 
-template <class ELFT> bool InputSectionBase<ELFT>::isCompressed() const {
-  return (Flags & SHF_COMPRESSED) || Name.startswith(".zdebug");
-}
-
-// Returns compressed data and its size when uncompressed.
-template <class ELFT>
-std::pair<ArrayRef<uint8_t>, uint64_t>
-InputSectionBase<ELFT>::getElfCompressedData(ArrayRef<uint8_t> Data) {
-  // Compressed section with Elf_Chdr is the ELF standard.
-  if (Data.size() < sizeof(Elf_Chdr))
-    fatal(toString(this) + ": corrupted compressed section");
-  auto *Hdr = reinterpret_cast<const Elf_Chdr *>(Data.data());
-  if (Hdr->ch_type != ELFCOMPRESS_ZLIB)
-    fatal(toString(this) + ": unsupported compression type");
-  return {Data.slice(sizeof(*Hdr)), Hdr->ch_size};
-}
-
-// Returns compressed data and its size when uncompressed.
-template <class ELFT>
-std::pair<ArrayRef<uint8_t>, uint64_t>
-InputSectionBase<ELFT>::getRawCompressedData(ArrayRef<uint8_t> Data) {
-  // Compressed sections without Elf_Chdr header contain this header
-  // instead. This is a GNU extension.
-  struct ZlibHeader {
-    char Magic[4]; // Should be "ZLIB"
-    char Size[8];  // Uncompressed size in big-endian
-  };
-
-  if (Data.size() < sizeof(ZlibHeader))
-    fatal(toString(this) + ": corrupted compressed section");
-  auto *Hdr = reinterpret_cast<const ZlibHeader *>(Data.data());
-  if (memcmp(Hdr->Magic, "ZLIB", 4))
-    fatal(toString(this) + ": broken ZLIB-compressed section");
-  return {Data.slice(sizeof(*Hdr)), read64be(Hdr->Size)};
-}
-
 // Uncompress section contents. Note that this function is called
 // from parallel_for_each, so it must be thread-safe.
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
-  if (!zlib::isAvailable())
-    fatal(toString(this) +
-          ": build lld with zlib to enable compressed sections support");
+  Decompressor Decompressor = check(Decompressor::create(
+      Name, toStringRef(Data), ELFT::TargetEndianness == llvm::support::little,
+      ELFT::Is64Bits));
 
-  // This section is compressed. Here we decompress it. Ideally, all
-  // compressed sections have SHF_COMPRESSED bit and their contents
-  // start with headers of Elf_Chdr type. However, sections whose
-  // names start with ".zdebug_" don't have the bit and contains a raw
-  // ZLIB-compressed data (which is a bad thing because section names
-  // shouldn't be significant in ELF.) We need to be able to read both.
-  ArrayRef<uint8_t> Buf; // Compressed data
-  size_t Size;           // Uncompressed size
-  if (Flags & SHF_COMPRESSED)
-    std::tie(Buf, Size) = getElfCompressedData(Data);
-  else
-    std::tie(Buf, Size) = getRawCompressedData(Data);
-
-  // Uncompress Buf.
+  size_t Size = Decompressor.getDecompressedSize();
   char *OutputBuf;
   {
     static std::mutex Mu;
     std::lock_guard<std::mutex> Lock(Mu);
     OutputBuf = BAlloc.Allocate<char>(Size);
   }
-  if (zlib::uncompress(toStringRef(Buf), OutputBuf, Size) != zlib::StatusOK)
-    fatal(toString(this) + ": error while uncompressing section");
+
+  if (Error E = Decompressor.decompress({OutputBuf, Size}))
+    fatal(E, toString(this));
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 

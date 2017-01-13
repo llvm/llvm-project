@@ -2169,8 +2169,9 @@ Fast-Math Flags
 
 LLVM IR floating-point binary ops (:ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) have the following flags that can
-be set to enable otherwise unsafe floating point operations
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) and :ref:`call <i_call>`
+instructions have the following flags that can be set to enable
+otherwise unsafe floating point transformations.
 
 ``nnan``
    No NaNs - Allow optimizations to assume the arguments and result are not

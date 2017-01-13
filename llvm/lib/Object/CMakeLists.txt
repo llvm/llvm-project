@@ -3,6 +3,7 @@ add_llvm_library(LLVMObject
   ArchiveWriter.cpp
   Binary.cpp
   COFFObjectFile.cpp
+  Decompressor.cpp
   ELF.cpp
   ELFObjectFile.cpp
   Error.cpp

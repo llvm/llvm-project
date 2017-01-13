@@ -433,12 +433,12 @@
 ; CHECK-O: Running pass: TailCallElimPass
 ; CHECK-O: Running pass: SimplifyCFGPass
 ; CHECK-O: Running pass: ReassociatePass
-; CHECK-O: Starting llvm::Loop pass manager run.
-; CHECK-O: Finished llvm::Loop pass manager run.
+; CHECK-O: Starting Loop pass manager run.
+; CHECK-O: Finished Loop pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass
 ; CHECK-O: Running pass: InstCombinePass
-; CHECK-O: Starting llvm::Loop pass manager run.
-; CHECK-O: Finished llvm::Loop pass manager run.
+; CHECK-O: Starting Loop pass manager run.
+; CHECK-O: Finished Loop pass manager run.
 ; CHECK-O: Running pass: MemCpyOptPass
 ; CHECK-O: Running pass: SCCPPass
 ; CHECK-O: Running pass: BDCEPass
@@ -544,20 +544,21 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetIRAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: RepeatedPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Loop pass manager run
-; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Loop pass manager run
-; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Loop pass manager run
-; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Module pass manager run
 

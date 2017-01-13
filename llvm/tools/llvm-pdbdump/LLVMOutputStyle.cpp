@@ -10,9 +10,15 @@
 #include "LLVMOutputStyle.h"
 
 #include "llvm-pdbdump.h"
+#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
+#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
@@ -83,8 +89,7 @@ static void printSectionOffset(llvm::raw_ostream &OS,
   OS << Off.Off << ", " << Off.Isect;
 }
 
-LLVMOutputStyle::LLVMOutputStyle(PDBFile &File)
-    : File(File), P(outs()), Dumper(&P, false) {}
+LLVMOutputStyle::LLVMOutputStyle(PDBFile &File) : File(File), P(outs()) {}
 
 Error LLVMOutputStyle::dump() {
   if (auto EC = dumpFileHeaders())
@@ -519,6 +524,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   if (!Tpi)
     return Tpi.takeError();
 
+  CVTypeDumper Dumper(TypeDB);
   if (DumpRecords || DumpRecordBytes) {
     DictScope D(P, Label);
 
@@ -532,7 +538,8 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
       DictScope DD(P, "");
 
       if (DumpRecords) {
-        if (auto EC = Dumper.dump(Type))
+        TypeDumpVisitor TDV(TypeDB, &P, false);
+        if (auto EC = Dumper.dump(Type, TDV))
           return EC;
       }
 
@@ -545,19 +552,23 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
                                   "TPI stream contained corrupt record");
   } else if (opts::raw::DumpModuleSyms) {
     // Even if the user doesn't want to dump type records, we still need to
-    // iterate them in order to build the list of types so that we can print
-    // them when dumping module symbols. So when they want to dump symbols
-    // but not types, use a null output stream.
-    ScopedPrinter *OldP = Dumper.getPrinter();
-    Dumper.setPrinter(nullptr);
+    // iterate them in order to build the type database. So when they want to
+    // dump symbols but not types, don't stick a dumper on the end, just build
+    // the type database.
+    TypeDatabaseVisitor DBV(TypeDB);
+    TypeDeserializer Deserializer;
+    TypeVisitorCallbackPipeline Pipeline;
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(DBV);
+
+    CVTypeVisitor Visitor(Pipeline);
 
     bool HadError = false;
-    for (auto &Type : Tpi->types(&HadError)) {
-      if (auto EC = Dumper.dump(Type))
+    for (auto Type : Tpi->types(&HadError)) {
+      if (auto EC = Visitor.visitTypeRecord(Type))
         return EC;
     }
 
-    Dumper.setPrinter(OldP);
     dumpTpiHash(P, *Tpi);
     if (HadError)
       return make_error<RawError>(raw_error_code::corrupt_file,
@@ -640,7 +651,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
 
         if (ShouldDumpSymbols) {
           ListScope SS(P, "Symbols");
-          codeview::CVSymbolDumper SD(P, Dumper, nullptr, false);
+          codeview::CVSymbolDumper SD(P, TypeDB, nullptr, false);
           bool HadError = false;
           for (auto S : ModS.symbols(&HadError)) {
             DictScope LL(P, "");
@@ -865,7 +876,7 @@ Error LLVMOutputStyle::dumpPublicsStream() {
   P.printList("Section Offsets", Publics->getSectionOffsets(),
               printSectionOffset);
   ListScope L(P, "Symbols");
-  codeview::CVSymbolDumper SD(P, Dumper, nullptr, false);
+  codeview::CVSymbolDumper SD(P, TypeDB, nullptr, false);
   bool HadError = false;
   for (auto S : Publics->getSymbols(&HadError)) {
     DictScope DD(P, "");

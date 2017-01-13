@@ -18,9 +18,9 @@ declare float @llvm.fabs.f32(float) #1
 ; VI: v_add_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -1.0
 ; VI: v_cmp_gt_f32_e64 vcc, |v{{[0-9]+}}|, |v{{[0-9]+}}|
 ; VI: v_cndmask_b32_e32
-; VI: v_add_f32_e32
-; VI: v_mul_f32_e32
-; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; VI: v_add_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |v{{[0-9]+}}|
+; VI: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
+; VI: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 define void @multiple_fadd_use_test_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
   %a11 = fadd fast float %y, -1.0
   %a12 = call float @llvm.fabs.f32(float %a11)
@@ -113,9 +113,9 @@ define void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
 ; VI: v_add_f16_e64 v{{[0-9]+}}, s{{[0-9]+}}, -1.0
 ; VI: v_cmp_gt_f16_e64 vcc, |v{{[0-9]+}}|, |v{{[0-9]+}}|
 ; VI: v_cndmask_b32_e32
-; VI: v_add_f16_e32
-; VI: v_mul_f16_e32
-; VI: v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; VI: v_add_f16_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |v{{[0-9]+}}|
+; VI: v_mul_f16_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
+; VI: v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 define void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half

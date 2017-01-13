@@ -33,7 +33,6 @@ class ShiftOpndItins<InstrItinClass arg_rr, InstrItinClass arg_rm,
   InstrItinClass ri = arg_ri;
 }
 
-
 // scalar
 let Sched = WriteFAdd in {
 def SSE_ALU_F32S : OpndItins<
@@ -1922,6 +1921,79 @@ def Int_CVTSS2SDrm: I<0x5A, MRMSrcMem,
                     Sched<[WriteCvtF2FLd, ReadAfterLd]>;
 }
 } // isCodeGenOnly = 1
+
+// Patterns used for matching (v)cvtsi2ss, (v)cvtsi2sd, (v)cvtsd2ss and
+// (v)cvtss2sd intrinsic sequences from clang which produce unnecessary
+// vmovs{s,d} instructions
+let Predicates = [UseAVX] in {
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector
+                     (f32 (fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
+          (Int_VCVTSD2SSrr VR128:$dst, VR128:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector
+                     (f64 (fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
+          (Int_VCVTSS2SDrr VR128:$dst, VR128:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR64:$src)))))),
+          (Int_VCVTSI2SS64rr VR128:$dst, GR64:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR32:$src)))))),
+          (Int_VCVTSI2SSrr VR128:$dst, GR32:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR64:$src)))))),
+          (Int_VCVTSI2SD64rr VR128:$dst, GR64:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR32:$src)))))),
+          (Int_VCVTSI2SDrr VR128:$dst, GR32:$src)>;
+} // Predicates = [UseAVX]
+
+let Predicates = [UseSSE2] in {
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector
+                     (f32 (fpround (f64 (extractelt VR128:$src, (iPTR 0))))))))),
+          (Int_CVTSD2SSrr VR128:$dst, VR128:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector
+                     (f64 (fpextend (f32 (extractelt VR128:$src, (iPTR 0))))))))),
+          (Int_CVTSS2SDrr VR128:$dst, VR128:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR64:$src)))))),
+          (Int_CVTSI2SD64rr VR128:$dst, GR64:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp GR32:$src)))))),
+          (Int_CVTSI2SDrr VR128:$dst, GR32:$src)>;
+} // Predicates = [UseSSE2]
+
+let Predicates = [UseSSE1] in {
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR64:$src)))))),
+          (Int_CVTSI2SS64rr VR128:$dst, GR64:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp GR32:$src)))))),
+          (Int_CVTSI2SSrr VR128:$dst, GR32:$src)>;
+} // Predicates = [UseSSE1]
 
 // Convert packed single/double fp to doubleword
 def VCVTPS2DQrr : VPDI<0x5B, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),

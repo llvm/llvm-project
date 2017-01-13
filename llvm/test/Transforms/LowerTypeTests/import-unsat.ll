@@ -10,7 +10,7 @@
 ; SUMMARY-NEXT:   typeid1:
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Unsat
-; SUMMARY-NEXT:       SizeBitWidth:    0
+; SUMMARY-NEXT:       SizeM1BitWidth:  0
 
 target datalayout = "e-p:32:32"
 

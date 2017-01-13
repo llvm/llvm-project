@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/LoopPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -32,13 +32,14 @@ namespace {
 /// PrintLoopPass - Print a Function corresponding to a Loop.
 ///
 class PrintLoopPassWrapper : public LoopPass {
-  PrintLoopPass P;
+  raw_ostream &OS;
+  std::string Banner;
 
 public:
   static char ID;
-  PrintLoopPassWrapper() : LoopPass(ID) {}
+  PrintLoopPassWrapper() : LoopPass(ID), OS(dbgs()) {}
   PrintLoopPassWrapper(raw_ostream &OS, const std::string &Banner)
-      : LoopPass(ID), P(OS, Banner) {}
+      : LoopPass(ID), OS(OS), Banner(Banner) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -49,8 +50,7 @@ public:
                        [](BasicBlock *BB) { return BB; });
     if (BBI != L->blocks().end() &&
         isFunctionInPrintList((*BBI)->getParent()->getName())) {
-      LoopAnalysisManager DummyLAM;
-      P.run(*L, DummyLAM);
+      printLoop(*L, OS, Banner);
     }
     return false;
   }

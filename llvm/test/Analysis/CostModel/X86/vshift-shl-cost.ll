@@ -7,6 +7,9 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512dq -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512bw -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512BW
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512vl -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512VL
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512dq,+avx512vl -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512VL
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512bw,+avx512vl -cost-model -analyze | FileCheck %s --check-prefix=CHECK --check-prefix=AVX512 --check-prefix=AVX512BWVL
 
 ; Verify the cost of vector shift left instructions.
 
@@ -161,7 +164,9 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; AVX: Found an estimated cost of 44 for instruction:   %shift
 ; AVX2: Found an estimated cost of 22 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 22 for instruction:   %shift
-; AVX512BW: Found an estimated cost of 2 for instruction:   %shift
+; AVX512BW: Found an estimated cost of 11 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 22 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 11 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %shift = shl <64 x i8> %a, %b
   ret <64 x i8> %shift
@@ -289,6 +294,8 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; AVX2: Found an estimated cost of 20 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 20 for instruction:   %shift
 ; AVX512BW: Found an estimated cost of 1 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 20 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %splat = shufflevector <32 x i16> %b, <32 x i16> undef, <32 x i32> zeroinitializer
   %shift = shl <32 x i16> %a, %splat
@@ -328,7 +335,9 @@ define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, <64 x i8> %b) {
 ; AVX: Found an estimated cost of 44 for instruction:   %shift
 ; AVX2: Found an estimated cost of 22 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 22 for instruction:   %shift
-; AVX512BW: Found an estimated cost of 2 for instruction:   %shift
+; AVX512BW: Found an estimated cost of 11 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 22 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 11 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %splat = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
   %shift = shl <64 x i8> %a, %splat
@@ -450,6 +459,8 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) {
 ; AVX2: Found an estimated cost of 2 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 2 for instruction:   %shift
 ; AVX512BW: Found an estimated cost of 1 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 2 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 1 for instruction:   %shift
 ; XOPAVX: Found an estimated cost of 4 for instruction:   %shift
 ; XOPAVX2: Found an estimated cost of 2 for instruction:   %shift
   %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
@@ -487,7 +498,9 @@ define <64 x i8> @constant_shift_v64i8(<64 x i8> %a) {
 ; AVX: Found an estimated cost of 44 for instruction:   %shift
 ; AVX2: Found an estimated cost of 22 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 22 for instruction:   %shift
-; AVX512BW: Found an estimated cost of 2 for instruction:   %shift
+; AVX512BW: Found an estimated cost of 11 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 22 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 11 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %shift = shl <64 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>
   ret <64 x i8> %shift
@@ -608,6 +621,8 @@ define <32 x i16> @splatconstant_shift_v32i16(<32 x i16> %a) {
 ; AVX2: Found an estimated cost of 2 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 2 for instruction:   %shift
 ; AVX512BW: Found an estimated cost of 1 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 2 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 1 for instruction:   %shift
 ; XOPAVX: Found an estimated cost of 4 for instruction:   %shift
 ; XOPAVX2: Found an estimated cost of 2 for instruction:   %shift
   %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -647,6 +662,8 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) {
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
 ; AVX512F: Found an estimated cost of 4 for instruction:   %shift
 ; AVX512BW: Found an estimated cost of 2 for instruction:   %shift
+; AVX512VL: Found an estimated cost of 4 for instruction:   %shift
+; AVX512BWVL: Found an estimated cost of 2 for instruction:   %shift
 ; XOPAVX: Found an estimated cost of 8 for instruction:   %shift
 ; XOPAVX2: Found an estimated cost of 4 for instruction:   %shift
   %shift = shl <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>

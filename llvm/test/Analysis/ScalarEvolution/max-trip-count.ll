@@ -207,3 +207,84 @@ for.cond.i:                                       ; preds = %for.body.i
 bar.exit:                                         ; preds = %for.cond.i, %for.body.i
   ret i32 0
 }
+
+; CHECK-LABEL: @ne_max_trip_count_1
+; CHECK: Loop %for.body: max backedge-taken count is 7
+define i32 @ne_max_trip_count_1(i32 %n) {
+entry:
+  %masked = and i32 %n, 7
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %add = add nsw i32 %i, 1
+  %cmp = icmp ne i32 %i, %masked
+  br i1 %cmp, label %for.body, label %bar.exit
+
+bar.exit:
+  ret i32 0
+}
+
+; CHECK-LABEL: @ne_max_trip_count_2
+; CHECK: Loop %for.body: max backedge-taken count is -1
+define i32 @ne_max_trip_count_2(i32 %n) {
+entry:
+  %masked = and i32 %n, 7
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %add = add nsw i32 %i, 1
+  %cmp = icmp ne i32 %add, %masked
+  br i1 %cmp, label %for.body, label %bar.exit
+
+bar.exit:
+  ret i32 0
+}
+
+; CHECK-LABEL: @ne_max_trip_count_3
+; CHECK: Loop %for.body: max backedge-taken count is 6
+define i32 @ne_max_trip_count_3(i32 %n) {
+entry:
+  %masked = and i32 %n, 7
+  %guard = icmp eq i32 %masked, 0
+  br i1 %guard, label %exit, label %for.preheader
+
+for.preheader:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %for.preheader ], [ %add, %for.body ]
+  %add = add nsw i32 %i, 1
+  %cmp = icmp ne i32 %add, %masked
+  br i1 %cmp, label %for.body, label %loop.exit
+
+loop.exit:
+  br label %exit
+
+exit:
+  ret i32 0
+}
+
+; CHECK-LABEL: @ne_max_trip_count_4
+; CHECK: Loop %for.body: max backedge-taken count is -2
+define i32 @ne_max_trip_count_4(i32 %n) {
+entry:
+  %guard = icmp eq i32 %n, 0
+  br i1 %guard, label %exit, label %for.preheader
+
+for.preheader:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %for.preheader ], [ %add, %for.body ]
+  %add = add nsw i32 %i, 1
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %loop.exit
+
+loop.exit:
+  br label %exit
+
+exit:
+  ret i32 0
+}
