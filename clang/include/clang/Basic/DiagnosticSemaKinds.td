@@ -1900,6 +1900,10 @@ def err_auto_new_deduction_failure : Error<
 def err_auto_different_deductions : Error<
   "'%select{auto|decltype(auto)|__auto_type}0' deduced as %1 in declaration "
   "of %2 and deduced as %3 in declaration of %4">;
+def err_auto_non_deduced_not_alone : Error<
+  "%select{function with deduced return type|"
+  "declaration with trailing return type}0 "
+  "must be the only declaration in its group">;
 def err_implied_std_initializer_list_not_found : Error<
   "cannot deduce type of initializer list because std::initializer_list was "
   "not found; include <initializer_list>">;

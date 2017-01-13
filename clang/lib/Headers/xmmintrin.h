@@ -2067,7 +2067,7 @@ _mm_storer_ps(float *__p, __m128 __a)
 ///    _MM_HINT_T1: Move data using the T1 hint. The PREFETCHT1 instruction will
 ///    be generated. \n
 ///    _MM_HINT_T2: Move data using the T2 hint. The PREFETCHT2 instruction will
-///    be generated.                                   
+///    be generated.
 #define _mm_prefetch(a, sel) (__builtin_prefetch((void *)(a), 0, (sel)))
 #endif
 
@@ -2435,17 +2435,17 @@ extern "C" {
 ///      For checking exception masks: _MM_MASK_UNDERFLOW, _MM_MASK_OVERFLOW,
 ///      _MM_MASK_INVALID, _MM_MASK_DENORM, _MM_MASK_DIV_ZERO, _MM_MASK_INEXACT.
 ///      There is a convenience wrapper _MM_GET_EXCEPTION_MASK().
-///    </li>            
+///    </li>
 ///    <li>
 ///      For checking rounding modes: _MM_ROUND_NEAREST, _MM_ROUND_DOWN,
 ///      _MM_ROUND_UP, _MM_ROUND_TOWARD_ZERO. There is a convenience wrapper
 ///      _MM_GET_ROUNDING_MODE(x) where x is one of these macros.
 ///    </li>
-///    <li> 
+///    <li>
 ///      For checking flush-to-zero mode: _MM_FLUSH_ZERO_ON, _MM_FLUSH_ZERO_OFF.
 ///      There is a convenience wrapper _MM_GET_FLUSH_ZERO_MODE().
 ///    </li>
-///    <li> 
+///    <li>
 ///      For checking denormals-are-zero mode: _MM_DENORMALS_ZERO_ON,
 ///      _MM_DENORMALS_ZERO_OFF. There is a convenience wrapper
 ///      _MM_GET_DENORMALS_ZERO_MODE().
@@ -2468,11 +2468,11 @@ extern "C" {
 unsigned int _mm_getcsr(void);
 
 /// \brief Sets the MXCSR register with the 32-bit unsigned integer value.
-///   
+///
 ///    There are several groups of macros associated with this intrinsic,
 ///    including:
 ///    <ul>
-///    <li> 
+///    <li>
 ///      For setting exception states: _MM_EXCEPT_INVALID, _MM_EXCEPT_DIV_ZERO,
 ///      _MM_EXCEPT_DENORM, _MM_EXCEPT_OVERFLOW, _MM_EXCEPT_UNDERFLOW,
 ///      _MM_EXCEPT_INEXACT. There is a convenience wrapper
@@ -2517,7 +2517,7 @@ unsigned int _mm_getcsr(void);
 ///
 /// \param __i
 ///    A 32-bit unsigned integer value to be written to the MXCSR register.
-void _mm_setcsr(unsigned int);
+void _mm_setcsr(unsigned int __i);
 
 #if defined(__cplusplus)
 } // extern "C"

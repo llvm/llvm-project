@@ -115,11 +115,11 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
         SymbolRef Sym = SymMgr.conjureSymbol(elem, LCtx, T,
                                              currBldrCtx->blockCount());
         SVal V = svalBuilder.makeLoc(Sym);
-        hasElems = hasElems->bindLoc(elementV, V);
+        hasElems = hasElems->bindLoc(elementV, V, LCtx);
 
         // Bind the location to 'nil' on the false branch.
         SVal nilV = svalBuilder.makeIntVal(0, T);
-        noElems = noElems->bindLoc(elementV, nilV);
+        noElems = noElems->bindLoc(elementV, nilV, LCtx);
       }
 
     // Create the new nodes.

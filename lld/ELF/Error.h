@@ -37,14 +37,10 @@ extern llvm::StringRef Argv0;
 
 void log(const Twine &Msg);
 void warn(const Twine &Msg);
-
 void error(const Twine &Msg);
-void error(std::error_code EC, const Twine &Prefix);
+LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 
 LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
-LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
-LLVM_ATTRIBUTE_NORETURN void fatal(std::error_code EC, const Twine &Prefix);
-LLVM_ATTRIBUTE_NORETURN void fatal(Error &E, const Twine &Prefix);
 
 // check() functions are convenient functions to strip errors
 // from error-or-value objects.

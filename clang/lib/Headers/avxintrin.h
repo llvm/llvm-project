@@ -2184,12 +2184,32 @@ _mm256_cvttps_epi32(__m256 __a)
   return (__m256i)__builtin_ia32_cvttps2dq256((__v8sf) __a);
 }
 
+/// \brief Returns the first element of the input vector of [4 x double].
+///
+/// \headerfile <avxintrin.h>
+///
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x double].
+/// \returns A 64 bit double containing the first element of the input vector.
 static __inline double __DEFAULT_FN_ATTRS
 _mm256_cvtsd_f64(__m256d __a)
 {
  return __a[0];
 }
 
+/// \brief Returns the first element of the input vector of [8 x i32].
+///
+/// \headerfile <avxintrin.h>
+///
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32].
+/// \returns A 32 bit integer containing the first element of the input vector.
 static __inline int __DEFAULT_FN_ATTRS
 _mm256_cvtsi256_si32(__m256i __a)
 {
@@ -2197,6 +2217,16 @@ _mm256_cvtsi256_si32(__m256i __a)
  return __b[0];
 }
 
+/// \brief Returns the first element of the input vector of [8 x float].
+///
+/// \headerfile <avxintrin.h>
+///
+/// This intrinsic is a utility function and does not correspond to a specific
+///    instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x float].
+/// \returns A 32 bit float containing the first element of the input vector.
 static __inline float __DEFAULT_FN_ATTRS
 _mm256_cvtss_f32(__m256 __a)
 {

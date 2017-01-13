@@ -1867,6 +1867,11 @@ public:
   /// types, but not through decltype or typedefs.
   AutoType *getContainedAutoType() const;
 
+  /// Determine whether this type was written with a leading 'auto'
+  /// corresponding to a trailing return type (possibly for a nested
+  /// function type within a pointer to function type or similar).
+  bool hasAutoForTrailingReturnType() const;
+
   /// Member-template getAs<specific type>'.  Look through sugar for
   /// an instance of \<specific type>.   This scheme will eventually
   /// replace the specific getAsXXXX methods above.

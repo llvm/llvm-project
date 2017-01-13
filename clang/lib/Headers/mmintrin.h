@@ -211,7 +211,7 @@ _mm_packs_pu16(__m64 __m1, __m64 __m2)
 /// This intrinsic corresponds to the <c> PUNPCKHBW </c> instruction.
 ///
 /// \param __m1
-///    A 64-bit integer vector of [8 x i8]. \n 
+///    A 64-bit integer vector of [8 x i8]. \n
 ///    Bits [39:32] are written to bits [7:0] of the result. \n
 ///    Bits [47:40] are written to bits [23:16] of the result. \n
 ///    Bits [55:48] are written to bits [39:32] of the result. \n

@@ -130,11 +130,11 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
 // Uncompress section contents. Note that this function is called
 // from parallel_for_each, so it must be thread-safe.
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
-  Decompressor Decompressor = check(Decompressor::create(
+  Decompressor Dec = check(Decompressor::create(
       Name, toStringRef(Data), ELFT::TargetEndianness == llvm::support::little,
       ELFT::Is64Bits));
 
-  size_t Size = Decompressor.getDecompressedSize();
+  size_t Size = Dec.getDecompressedSize();
   char *OutputBuf;
   {
     static std::mutex Mu;
@@ -142,8 +142,9 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
     OutputBuf = BAlloc.Allocate<char>(Size);
   }
 
-  if (Error E = Decompressor.decompress({OutputBuf, Size}))
-    fatal(E, toString(this));
+  if (Error E = Dec.decompress({OutputBuf, Size}))
+    fatal(toString(this) +
+          ": decompress failed: " + llvm::toString(std::move(E)));
   Data = ArrayRef<uint8_t>((uint8_t *)OutputBuf, Size);
 }
 

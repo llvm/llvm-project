@@ -115,7 +115,7 @@ _mm_hsub_ps(__m128 __a, __m128 __b)
 
 /// \brief Moves and duplicates high-order (odd-indexed) values from a 128-bit
 ///    vector of [4 x float] to float values stored in a 128-bit vector of
-///    [4 x float]. 
+///    [4 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -136,7 +136,7 @@ _mm_movehdup_ps(__m128 __a)
 }
 
 /// \brief Duplicates low-order (even-indexed) values from a 128-bit vector of
-///    [4 x float] to float values stored in a 128-bit vector of [4 x float]. 
+///    [4 x float] to float values stored in a 128-bit vector of [4 x float].
 ///
 /// \headerfile <x86intrin.h>
 ///

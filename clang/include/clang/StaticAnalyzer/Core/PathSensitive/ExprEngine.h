@@ -293,6 +293,7 @@ public:
                        const InvalidatedSymbols *invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
+                       const LocationContext *LCtx,
                        const CallEvent *Call) override;
 
   /// printState - Called by ProgramStateManager to print checker-specific data.
@@ -522,7 +523,9 @@ protected:
 
   /// Call PointerEscape callback when a value escapes as a result of bind.
   ProgramStateRef processPointerEscapedOnBind(ProgramStateRef State,
-                                              SVal Loc, SVal Val) override;
+                                              SVal Loc,
+                                              SVal Val,
+                                              const LocationContext *LCtx) override;
   /// Call PointerEscape callback when a value escapes as a result of
   /// region invalidation.
   /// \param[in] ITraits Specifies invalidation traits for regions/symbols.

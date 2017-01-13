@@ -46,7 +46,7 @@ static void saveBuffer(StringRef Buffer, const Twine &Path) {
   std::error_code EC;
   raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
   if (EC)
-    error(EC, "cannot create " + Path);
+    error("cannot create " + Path + ": " + EC.message());
   OS << Buffer;
 }
 
