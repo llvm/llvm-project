@@ -15,13 +15,11 @@ int no_return() {
   // -fno-strict-return should not emit trap + unreachable but it should return
   // an undefined value instead.
 
-  // CHECK-NOSTRICT: entry:
-  // CHECK-NOSTRICT-NEXT: alloca
+  // CHECK-NOSTRICT: alloca
   // CHECK-NOSTRICT-NEXT: load
   // CHECK-NOSTRICT-NEXT: ret i32
   // CHECK-NOSTRICT-NEXT: }
 
-  // CHECK-NOSTRICT-OPT: entry:
   // CHECK-NOSTRICT-OPT: ret i32 undef
 }
 
