@@ -207,8 +207,8 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   std::vector<std::pair<std::string, std::string>> FileToSourceText = {
       {TestHeaderName, Header}, {TestCCName, CC}};
 
-  auto CreateFiles = [&FileToSourceText, &Context, &FileToFileID](
-      llvm::StringRef Name, llvm::StringRef Code) {
+  auto CreateFiles = [&Context, &FileToFileID](llvm::StringRef Name,
+                                               llvm::StringRef Code) {
     if (!Name.empty()) {
       FileToFileID[Name] = Context.createInMemoryFile(Name, Code);
     }
