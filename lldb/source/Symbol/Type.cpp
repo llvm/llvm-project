@@ -620,50 +620,59 @@ ConstString Type::GetQualifiedName() {
   return GetForwardCompilerType().GetConstTypeName();
 }
 
-bool Type::GetTypeScopeAndBasename(const char *&name_cstr, std::string &scope,
-                                   std::string &basename,
+bool Type::GetTypeScopeAndBasename(const llvm::StringRef& name,
+                                   llvm::StringRef &scope,
+                                   llvm::StringRef &basename,
                                    TypeClass &type_class) {
-  // Protect against null c string.
-
   type_class = eTypeClassAny;
 
-  if (name_cstr && name_cstr[0]) {
-    llvm::StringRef name_strref(name_cstr);
-    if (name_strref.startswith("struct ")) {
-      name_cstr += 7;
-      type_class = eTypeClassStruct;
-    } else if (name_strref.startswith("class ")) {
-      name_cstr += 6;
-      type_class = eTypeClassClass;
-    } else if (name_strref.startswith("union ")) {
-      name_cstr += 6;
-      type_class = eTypeClassUnion;
-    } else if (name_strref.startswith("enum ")) {
-      name_cstr += 5;
-      type_class = eTypeClassEnumeration;
-    } else if (name_strref.startswith("typedef ")) {
-      name_cstr += 8;
-      type_class = eTypeClassTypedef;
-    }
-    const char *basename_cstr = name_cstr;
-    const char *namespace_separator = ::strstr(basename_cstr, "::");
-    if (namespace_separator) {
-      const char *template_arg_char = ::strchr(basename_cstr, '<');
-      while (namespace_separator != nullptr) {
-        if (template_arg_char &&
-            namespace_separator > template_arg_char) // but namespace'd template
-                                                     // arguments are still good
-                                                     // to go
-          break;
-        basename_cstr = namespace_separator + 2;
-        namespace_separator = strstr(basename_cstr, "::");
+  if (name.empty())
+    return false;
+
+  basename = name;
+  if (basename.consume_front("struct "))
+    type_class = eTypeClassStruct;
+  else if (basename.consume_front("class "))
+    type_class = eTypeClassClass;
+  else if (basename.consume_front("union "))
+    type_class = eTypeClassUnion;
+  else if (basename.consume_front("enum "))
+    type_class = eTypeClassEnumeration;
+  else if (basename.consume_front("typedef "))
+    type_class = eTypeClassTypedef;
+
+  size_t namespace_separator = basename.find("::");
+  if (namespace_separator == llvm::StringRef::npos)
+    return false;
+
+  size_t template_begin = basename.find('<');
+  while (namespace_separator != llvm::StringRef::npos) {
+    if (template_begin != llvm::StringRef::npos &&
+        namespace_separator > template_begin) {
+      size_t template_depth = 1;
+      llvm::StringRef template_arg =
+          basename.drop_front(template_begin + 1);
+      while (template_depth > 0 && !template_arg.empty()) {
+        if (template_arg.front() == '<')
+          template_depth++;
+        else if (template_arg.front() == '>')
+          template_depth--;
+        template_arg = template_arg.drop_front(1);
       }
-      if (basename_cstr > name_cstr) {
-        scope.assign(name_cstr, basename_cstr - name_cstr);
-        basename.assign(basename_cstr);
-        return true;
-      }
+      if (template_depth != 0)
+        return false; // We have an invalid type name. Bail out.
+      if (template_arg.empty())
+        break; // The template ends at the end of the full name.
+      basename = template_arg;
+    } else {
+      basename = basename.drop_front(namespace_separator + 2);
     }
+    template_begin = basename.find('<');
+    namespace_separator = basename.find("::");
+  }
+  if (basename.size() < name.size()) {
+    scope = name.take_front(name.size() - basename.size());
+    return true;
   }
   return false;
 }

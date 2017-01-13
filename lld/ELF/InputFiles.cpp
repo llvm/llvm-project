@@ -61,7 +61,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
 
   auto MBOrErr = MemoryBuffer::getFile(Path);
   if (auto EC = MBOrErr.getError()) {
-    error(EC, "cannot open " + Path);
+    error("cannot open " + Path + ": " + EC.message());
     return None;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
@@ -857,8 +857,8 @@ template <class ELFT> void BinaryFile::parse() {
   StringRef EndName = Saver.save(Twine(Filename) + "_end");
   StringRef SizeName = Saver.save(Twine(Filename) + "_size");
 
-  auto *Section =
-      make<InputSection<ELFT>>(SHF_ALLOC, SHT_PROGBITS, 8, Data, ".data");
+  auto *Section = make<InputSection<ELFT>>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                                           8, Data, ".data");
   Sections.push_back(Section);
 
   elf::Symtab<ELFT>::X->addRegular(StartName, STV_DEFAULT, STT_OBJECT, 0, 0,

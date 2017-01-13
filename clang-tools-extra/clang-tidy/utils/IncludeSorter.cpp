@@ -61,7 +61,8 @@ DetermineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
                                       : IncludeSorter::IK_CXXSystemInclude;
   }
   StringRef CanonicalInclude = MakeCanonicalName(IncludeFile, Style);
-  if (CanonicalFile.equals(CanonicalInclude)) {
+  if (CanonicalFile.endswith(CanonicalInclude)
+      || CanonicalInclude.endswith(CanonicalFile)) {
     return IncludeSorter::IK_MainTUInclude;
   }
   if (Style == IncludeSorter::IS_Google) {

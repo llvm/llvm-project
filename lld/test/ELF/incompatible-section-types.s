@@ -6,5 +6,5 @@
 .section .foo, "aw", @progbits, unique, 1
 .quad 0
 
-.section .foo, "aw", @nobits, unique, 2
+.section .foo, "aw", @init_array, unique, 2
 .quad 0

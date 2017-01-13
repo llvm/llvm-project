@@ -294,10 +294,22 @@ InputFile *LazyObject::fetch() {
   return createObjectFile(MBRef);
 }
 
-bool Symbol::includeInDynsym() const {
+uint8_t Symbol::computeBinding() const {
+  if (Config->Relocatable)
+    return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
+    return STB_LOCAL;
+  if (VersionId == VER_NDX_LOCAL && !body()->isUndefined())
+    return STB_LOCAL;
+  if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
+  return Binding;
+}
+
+bool Symbol::includeInDynsym() const {
+  if (computeBinding() == STB_LOCAL)
     return false;
-  return (ExportDynamic && VersionId != VER_NDX_LOCAL) || body()->isShared() ||
+  return ExportDynamic || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
 

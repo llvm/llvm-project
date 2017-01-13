@@ -232,7 +232,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   if (auto EC = Buffer->commit())
-    error(EC, "failed to write to the output file");
+    error("failed to write to the output file: " + EC.message());
 
   // Flush the output streams and exit immediately. A full shutdown
   // is a good test that we are keeping track of all allocated memory,
@@ -1671,7 +1671,7 @@ template <class ELFT> void Writer<ELFT>::openFile() {
                                FileOutputBuffer::F_executable);
 
   if (auto EC = BufferOrErr.getError())
-    error(EC, "failed to open " + Config->OutputFile);
+    error("failed to open " + Config->OutputFile + ": " + EC.message());
   else
     Buffer = std::move(*BufferOrErr);
 }
