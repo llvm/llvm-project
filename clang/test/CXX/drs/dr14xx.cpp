@@ -343,7 +343,7 @@ namespace dr1490 {  // dr1490: 3.7 c++11
   std::initializer_list<char>{"abc"}; // expected-error {{expected unqualified-id}}}
 } // dr190
 
-namespace dr1495 { // dr1495: 4.0
+namespace dr1495 { // dr1495: 4
   // Deduction succeeds in both directions.
   template<typename T, typename U> struct A {}; // expected-note {{template is declared here}}
   template<typename T, typename U> struct A<U, T> {}; // expected-error {{class template partial specialization is not more specialized}}
