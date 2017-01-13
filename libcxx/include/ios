@@ -573,7 +573,7 @@ ios_base::exceptions(iostate __iostate)
 }
 
 #if defined(_LIBCPP_CXX03_LANG)
-struct _LIBCPP_TYPE_VIS_ONLY __cxx03_bool {
+struct _LIBCPP_TYPE_VIS __cxx03_bool {
   typedef void (__cxx03_bool::*__bool_type)();
   void __true_value() {}
 };
@@ -591,9 +591,6 @@ public:
     typedef typename traits_type::int_type int_type;
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
-
-  // __true_value will generate undefined references when linking unless
-  // we give it internal linkage.
 
 #if defined(_LIBCPP_CXX03_LANG)
     _LIBCPP_ALWAYS_INLINE
