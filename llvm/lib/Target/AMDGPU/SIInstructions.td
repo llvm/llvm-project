@@ -871,6 +871,11 @@ def : Pat <
 >;
 
 def : Pat <
+  (i16 (sext_inreg i16:$src, i1)),
+  (S_BFE_I32 $src, (i32 0x00010000)) // 0 | 1 << 16
+>;
+
+def : Pat <
   (i16 (sext_inreg i16:$src, i8)),
   (S_BFE_I32 $src, (i32 0x80000)) // 0 | 8 << 16
 >;

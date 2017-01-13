@@ -14,14 +14,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-pdbdump.h"
-#include "CompilandDumper.h"
-#include "ExternalSymbolDumper.h"
-#include "FunctionDumper.h"
 #include "LLVMOutputStyle.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
-#include "TypeDumper.h"
-#include "VariableDumper.h"
+#include "PrettyCompilandDumper.h"
+#include "PrettyExternalSymbolDumper.h"
+#include "PrettyFunctionDumper.h"
+#include "PrettyTypeDumper.h"
+#include "PrettyVariableDumper.h"
 #include "YAMLOutputStyle.h"
 
 #include "llvm/ADT/ArrayRef.h"

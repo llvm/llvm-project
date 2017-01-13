@@ -49,7 +49,7 @@ static UstarHeader create(StringRef Base, StringRef Filename) {
   EXPECT_TRUE((bool)TarOrErr);
   std::unique_ptr<TarWriter> Tar = std::move(*TarOrErr);
   Tar->append(Filename, "contents");
-  Tar.release();
+  Tar.reset();
 
   // Read the tar file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(Path);
@@ -61,28 +61,28 @@ static UstarHeader create(StringRef Base, StringRef Filename) {
 
 TEST_F(TarWriterTest, Basics) {
   UstarHeader Hdr = create("base", "file");
-  ASSERT_EQ("ustar", StringRef(Hdr.Magic));
-  ASSERT_EQ("00", StringRef(Hdr.Version, 2));
-  ASSERT_EQ("base/file", StringRef(Hdr.Name));
-  ASSERT_EQ("00000000010", StringRef(Hdr.Size));
+  EXPECT_EQ("ustar", StringRef(Hdr.Magic));
+  EXPECT_EQ("00", StringRef(Hdr.Version, 2));
+  EXPECT_EQ("base/file", StringRef(Hdr.Name));
+  EXPECT_EQ("00000000010", StringRef(Hdr.Size));
 }
 
 TEST_F(TarWriterTest, LongFilename) {
   UstarHeader Hdr1 = create(
       "012345678", std::string(99, 'x') + "/" + std::string(44, 'x') + "/foo");
-  ASSERT_EQ("foo", StringRef(Hdr1.Name));
-  ASSERT_EQ("012345678/" + std::string(99, 'x') + "/" + std::string(44, 'x'),
+  EXPECT_EQ("foo", StringRef(Hdr1.Name));
+  EXPECT_EQ("012345678/" + std::string(99, 'x') + "/" + std::string(44, 'x'),
             StringRef(Hdr1.Prefix));
 
   UstarHeader Hdr2 = create(
       "012345678", std::string(99, 'x') + "/" + std::string(45, 'x') + "/foo");
-  ASSERT_EQ("foo", StringRef(Hdr2.Name));
-  ASSERT_EQ("012345678/" + std::string(99, 'x') + "/" + std::string(45, 'x'),
+  EXPECT_EQ("foo", StringRef(Hdr2.Name));
+  EXPECT_EQ("012345678/" + std::string(99, 'x') + "/" + std::string(45, 'x'),
             StringRef(Hdr2.Prefix));
 
   UstarHeader Hdr3 = create(
       "012345678", std::string(99, 'x') + "/" + std::string(46, 'x') + "/foo");
-  ASSERT_EQ(std::string(46, 'x') + "/foo", StringRef(Hdr3.Name));
-  ASSERT_EQ("012345678/" + std::string(99, 'x'), StringRef(Hdr3.Prefix));
+  EXPECT_EQ(std::string(46, 'x') + "/foo", StringRef(Hdr3.Name));
+  EXPECT_EQ("012345678/" + std::string(99, 'x'), StringRef(Hdr3.Prefix));
 }
 }

@@ -302,6 +302,10 @@ private:
     NonLocalPointerInfo() : Size(MemoryLocation::UnknownSize) {}
   };
 
+  /// Cache storing single nonlocal def for the instruction.
+  /// It is set when nonlocal def would be found in function returning only
+  /// local dependencies.
+  DenseMap<Instruction *, NonLocalDepResult> NonLocalDefsCache;
   /// This map stores the cached results of doing a pointer lookup at the
   /// bottom of a block.
   ///
@@ -441,9 +445,9 @@ public:
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
   /// find anything, and Def if it can be assumed that 2 instructions load or
-  /// store the same value.
-  /// FIXME: This analysis works only on single block because of restrictions
-  /// at the call site.
+  /// store the same value and NonLocal which indicate that non-local Def was
+  /// found, which can be retrieved by calling getNonLocalPointerDependency
+  /// with the same queried instruction.
   MemDepResult getInvariantGroupPointerDependency(LoadInst *LI, BasicBlock *BB);
 
   /// Looks at a memory location for a load (specified by MemLocBase, Offs, and

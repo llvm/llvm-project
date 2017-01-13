@@ -29,6 +29,7 @@ class DataLayout;
 class DominatorTree;
 class Loop;
 class LoopInfo;
+class OptimizationRemarkEmitter;
 class Pass;
 class PredicatedScalarEvolution;
 class PredIteratorCache;
@@ -404,11 +405,11 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
 /// DataLayout, TargetLibraryInfo, Loop, AliasSet information for all
-/// instructions of the loop and loop safety information as arguments.
-/// It returns changed status.
+/// instructions of the loop and loop safety information as
+/// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LoopSafetyInfo *);
+                LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -416,10 +417,11 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
 /// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, DataLayout,
 /// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
-/// loop and loop safety information as arguments. It returns changed status.
+/// loop and loop safety information as arguments. Diagnostics is emitted via \p
+/// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 LoopSafetyInfo *);
+                 LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
@@ -427,12 +429,14 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// loop invariant. It takes AliasSet, Loop exit blocks vector, loop exit blocks
 /// insertion point vector, PredIteratorCache, LoopInfo, DominatorTree, Loop,
 /// AliasSet information for all instructions of the loop and loop safety
-/// information as arguments. It returns changed status.
+/// information as arguments. Diagnostics is emitted via \p ORE. It returns
+/// changed status.
 bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
                                   SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *, LoopSafetyInfo *);
+                                  Loop *, AliasSetTracker *, LoopSafetyInfo *,
+                                  OptimizationRemarkEmitter *);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw
@@ -478,11 +482,12 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// preheader to loop body (no speculation).
 /// If SafetyInfo is not null, we are checking for hoisting/sinking
 /// instructions from loop body to preheader/exit. Check if the instruction
-/// can execute specultatively.
-///
+/// can execute speculatively.
+/// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
-                        LoopSafetyInfo *SafetyInfo);
+                        LoopSafetyInfo *SafetyInfo,
+                        OptimizationRemarkEmitter *ORE = nullptr);
 }
 
 #endif

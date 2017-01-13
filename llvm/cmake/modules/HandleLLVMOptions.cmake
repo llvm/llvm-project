@@ -597,6 +597,14 @@ if (UNIX AND
   append("-fcolor-diagnostics" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
+# lld doesn't print colored diagnostics when invoked from Ninja
+if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
+  include(CheckLinkerFlag)
+  check_linker_flag("-Wl,-color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
+  append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,-color-diagnostics"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
 # Add flags for add_dead_strip().
 # FIXME: With MSVS, consider compiling with /Gy and linking with /OPT:REF?
 # But MinSizeRel seems to add that automatically, so maybe disable these

@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 
 ; Find the metadata for @global:
-; CHECK: [[METADATA:@.+]] = internal global {{.*}} @global {{.*}} section "__DATA,__asan_globals,regular", align 1
+; CHECK: [[METADATA:@.+]] = internal global {{.*}} @global {{.*}} section "__DATA,__asan_globals,regular", align 64
 
 ; Find the liveness binder for @global and its metadata:
 ; CHECK: @__asan_binder_global = internal global {{.*}} @global {{.*}} [[METADATA]] {{.*}} section "__DATA,__asan_liveness,regular,live_support"

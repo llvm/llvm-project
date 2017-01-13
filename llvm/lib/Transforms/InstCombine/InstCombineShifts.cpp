@@ -530,13 +530,8 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
         return BinaryOperator::CreateMul(BO->getOperand(0),
                                          ConstantExpr::getShl(BOOp, Op1));
 
-  // Try to fold constant and into select arguments.
-  if (SelectInst *SI = dyn_cast<SelectInst>(Op0))
-    if (Instruction *R = FoldOpIntoSelect(I, SI))
-      return R;
-  if (isa<PHINode>(Op0))
-    if (Instruction *NV = FoldOpIntoPhi(I))
-      return NV;
+  if (Instruction *FoldedShift = foldOpWithConstantIntoOperand(I))
+    return FoldedShift;
 
   // Fold shift2(trunc(shift1(x,c1)), c2) -> trunc(shift2(shift1(x,c1),c2))
   if (TruncInst *TI = dyn_cast<TruncInst>(Op0)) {

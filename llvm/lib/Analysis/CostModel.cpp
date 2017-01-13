@@ -438,8 +438,11 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
       getOperandInfo(I->getOperand(0));
     TargetTransformInfo::OperandValueKind Op2VK =
       getOperandInfo(I->getOperand(1));
+    SmallVector<const Value*, 2> Operands(I->operand_values()); 
     return TTI->getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK,
-                                       Op2VK);
+                                       Op2VK, TargetTransformInfo::OP_None, 
+                                       TargetTransformInfo::OP_None, 
+                                       Operands);
   }
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);

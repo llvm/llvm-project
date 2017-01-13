@@ -29,7 +29,7 @@ template <> struct ScalarEnumerationTraits<TypeTestResolution::Kind> {
 template <> struct MappingTraits<TypeTestResolution> {
   static void mapping(IO &io, TypeTestResolution &res) {
     io.mapOptional("Kind", res.TheKind);
-    io.mapOptional("SizeBitWidth", res.SizeBitWidth);
+    io.mapOptional("SizeM1BitWidth", res.SizeM1BitWidth);
   }
 };
 

@@ -103,4 +103,8 @@ void elf::fatal(std::error_code EC, const Twine &Prefix) {
   fatal(Prefix + ": " + EC.message());
 }
 
+void elf::fatal(Error &E, const Twine &Prefix) {
+  fatal(Prefix + ": " + llvm::toString(std::move(E)));
+}
+
 } // namespace lld

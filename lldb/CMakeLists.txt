@@ -28,7 +28,7 @@ if (NOT LLDB_DISABLE_PYTHON)
     # Don't set -m when building the framework.
     set(FINISH_EXTRA_ARGS "-m")
   endif()
-  set(LLDB_WRAP_PYTHON ${LLDB_PYTHON_TARGET_DIR}/LLDBWrapPython.cpp)
+  set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
 
   add_subdirectory(scripts)
 endif ()

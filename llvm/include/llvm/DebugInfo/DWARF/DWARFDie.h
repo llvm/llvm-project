@@ -147,21 +147,6 @@ public:
   /// DW_AT_abstract_origin referenced DIEs.
   ///
   /// \param Attr the attribute to extract.
-  /// \param FailValue the value to return if this DIE doesn't have this
-  /// attribute.
-  /// \returns the address value of the attribute or FailValue if the
-  /// attribute doesn't exist or if the attribute's form isn't a form that
-  /// describes an address.
-  uint64_t getAttributeValueAsAddress(dwarf::Attribute Attr,
-                                      uint64_t FailValue) const;
-
-  /// Extract the specified attribute from this DIE as an address.
-  ///
-  /// Extract an attribute value from this DIE only. This call doesn't look
-  /// for the attribute value in any DW_AT_specification or
-  /// DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
   /// \returns an optional value for the attribute.
   Optional<uint64_t> getAttributeValueAsAddress(dwarf::Attribute Attr) const;
   
@@ -172,39 +157,9 @@ public:
   /// DW_AT_abstract_origin referenced DIEs.
   ///
   /// \param Attr the attribute to extract.
-  /// \param FailValue the value to return if this DIE doesn't have this
-  /// attribute.
-  /// \returns the signed integer constant value of the attribute or FailValue
-  /// if the attribute doesn't exist or if the attribute's form isn't a form
-  /// that describes a signed integer.
-  int64_t getAttributeValueAsSignedConstant(dwarf::Attribute Attr,
-                                            int64_t FailValue) const;
-
-  /// Extract the specified attribute from this DIE as a signed integer.
-  ///
-  /// Extract an attribute value from this DIE only. This call doesn't look
-  /// for the attribute value in any DW_AT_specification or
-  /// DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
   /// \returns an optional value for the attribute.
   Optional<int64_t>
   getAttributeValueAsSignedConstant(dwarf::Attribute Attr) const;
-  
-  /// Extract the specified attribute from this DIE as an unsigned integer.
-  ///
-  /// Extract an attribute value from this DIE only. This call doesn't look
-  /// for the attribute value in any DW_AT_specification or
-  /// DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
-  /// \param FailValue the value to return if this DIE doesn't have this
-  /// attribute.
-  /// \returns the unsigned integer constant value of the attribute or FailValue
-  /// if the attribute doesn't exist or if the attribute's form isn't a form
-  /// that describes an unsigned integer.
-  uint64_t getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr,
-                                               uint64_t FailValue) const;
   
   /// Extract the specified attribute from this DIE as an unsigned integer.
   ///
@@ -224,38 +179,9 @@ public:
   /// DW_AT_abstract_origin referenced DIEs.
   ///
   /// \param Attr the attribute to extract.
-  /// \param FailValue the value to return if this DIE doesn't have this
-  /// attribute.
-  /// \returns the unsigned integer constant value of the attribute or FailValue
-  /// if the attribute doesn't exist or if the attribute's form isn't a form
-  /// that describes a reference.
-  uint64_t getAttributeValueAsReference(dwarf::Attribute Attr,
-                                        uint64_t FailValue) const;
-  
-  /// Extract the specified attribute from this DIE as absolute DIE Offset.
-  ///
-  /// Extract an attribute value from this DIE only. This call doesn't look
-  /// for the attribute value in any DW_AT_specification or
-  /// DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
   /// \returns an optional value for the attribute.
   Optional<uint64_t> getAttributeValueAsReference(dwarf::Attribute Attr) const;
   
-  /// Extract the specified attribute from this DIE as absolute section offset.
-  ///
-  /// Extract an attribute value from this DIE only. This call doesn't look
-  /// for the attribute value in any DW_AT_specification or
-  /// DW_AT_abstract_origin referenced DIEs.
-  ///
-  /// \param Attr the attribute to extract.
-  /// \param FailValue the value to return if this DIE doesn't have this
-  /// attribute.
-  /// \returns the unsigned integer constant value of the attribute or FailValue
-  /// if the attribute doesn't exist or if the attribute's form isn't a form
-  /// that describes a section offset.
-  uint64_t getAttributeValueAsSectionOffset(dwarf::Attribute Attr,
-                                            uint64_t FailValue) const;
   /// Extract the specified attribute from this DIE as absolute section offset.
   ///
   /// Extract an attribute value from this DIE only. This call doesn't look

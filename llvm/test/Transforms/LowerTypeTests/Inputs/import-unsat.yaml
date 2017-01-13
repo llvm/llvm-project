@@ -6,5 +6,5 @@ TypeIdMap:
   typeid1:
     TTRes:
       Kind: Unsat
-      SizeBitWidth: 0
+      SizeM1BitWidth: 0
 ...

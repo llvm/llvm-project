@@ -12,11 +12,22 @@
 // template<> struct char_traits<char16_t>
 
 // static int compare(const char_type* s1, const char_type* s2, size_t n);
+// constexpr in C++17
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
+
+#if TEST_STD_VER > 14
+constexpr bool test_constexpr()
+{
+    return std::char_traits<char16_t>::compare(u"123", u"223", 3) < 0
+        && std::char_traits<char16_t>::compare(u"223", u"123", 3) > 0
+        && std::char_traits<char16_t>::compare(u"123", u"123", 3) == 0;
+}
+#endif
+
 
 int main()
 {
@@ -42,6 +53,10 @@ int main()
     assert(std::char_traits<char16_t>::compare(u"223", u"123", 3) > 0);
     assert(std::char_traits<char16_t>::compare(u"133", u"123", 3) > 0);
     assert(std::char_traits<char16_t>::compare(u"124", u"123", 3) > 0);
+#endif
+
+#if TEST_STD_VER > 14
+    static_assert(test_constexpr(), "" );
 #endif
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 }

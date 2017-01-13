@@ -205,7 +205,9 @@ public:
     Info.resize(OrigUnit.getNumDIEs());
 
     auto CUDie = OrigUnit.getUnitDIE(false);
-    unsigned Lang = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_language, 0);
+    unsigned Lang =
+        CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_language)
+            .getValueOr(0);
     HasODR = CanUseODR && (Lang == dwarf::DW_LANG_C_plus_plus ||
                            Lang == dwarf::DW_LANG_C_plus_plus_03 ||
                            Lang == dwarf::DW_LANG_C_plus_plus_11 ||
@@ -1556,7 +1558,8 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // Do not unique anything inside CU local functions.
     if ((Context.getTag() == dwarf::DW_TAG_namespace ||
          Context.getTag() == dwarf::DW_TAG_compile_unit) &&
-        !DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_external, 0))
+        !DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_external)
+             .getValueOr(0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
     LLVM_FALLTHROUGH;
   case dwarf::DW_TAG_member:
@@ -1570,7 +1573,8 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // created on demand. For example implicitely defined constructors
     // are ambiguous because of the way we identify contexts, and they
     // won't be generated everytime everywhere.
-    if (DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_artificial, 0))
+    if (DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_artificial)
+            .getValueOr(0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
     break;
   }
@@ -1610,11 +1614,12 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // namespaces, use these additional data points to make the process
     // safer.  This is disabled for clang modules, because forward
     // declarations of module-defined types do not have a file and line.
-    ByteSize = DIE.getAttributeValueAsUnsignedConstant(
-        dwarf::DW_AT_byte_size, UINT64_MAX);
+    ByteSize = DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_byte_size)
+                   .getValueOr(UINT64_MAX);
     if (Tag != dwarf::DW_TAG_namespace || !Name) {
-      if (unsigned FileNum = DIE.getAttributeValueAsUnsignedConstant(
-              dwarf::DW_AT_decl_file, 0)) {
+      if (unsigned FileNum =
+              DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_decl_file)
+                  .getValueOr(0)) {
         if (const auto *LT = U.getOrigUnit().getContext().getLineTableForUnit(
                 &U.getOrigUnit())) {
           // FIXME: dsymutil-classic compatibility. I'd rather not
@@ -1627,8 +1632,9 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
           // instead of "" would allow more uniquing, but for now, do
           // it this way to match dsymutil-classic.
           if (LT->hasFileAtIndex(FileNum)) {
-            Line = DIE.getAttributeValueAsUnsignedConstant(
-                dwarf::DW_AT_decl_line, 0);
+            Line =
+                DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_decl_line)
+                    .getValueOr(0);
             // Cache the resolved paths, because calling realpath is expansive.
             StringRef ResolvedPath = U.getResolvedPath(FileNum);
             if (!ResolvedPath.empty()) {
@@ -1803,9 +1809,10 @@ static bool analyzeContextInfo(const DWARFDie &DIE,
   // Prune this DIE if it is either a forward declaration inside a
   // DW_TAG_module or a DW_TAG_module that contains nothing but
   // forward declarations.
-  Info.Prune &= (DIE.getTag() == dwarf::DW_TAG_module) ||
-                DIE.getAttributeValueAsUnsignedConstant(
-                    dwarf::DW_AT_declaration, 0);
+  Info.Prune &=
+      (DIE.getTag() == dwarf::DW_TAG_module) ||
+      DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_declaration)
+          .getValueOr(0);
 
   // Don't prune it if there is no definition for the DIE.
   Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset();
@@ -2740,12 +2747,13 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
     // independantly by the linker). The computation of the actual
     // high_pc value is done in cloneAddressAttribute().
     AttrInfo.OrigHighPc =
-        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_high_pc, 0);
+        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_high_pc).getValueOr(0);
     // Also store the low_pc. It might get relocated in an
     // inline_subprogram that happens at the beginning of its
     // inlining function.
     AttrInfo.OrigLowPc =
-        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc, UINT64_MAX);
+        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc)
+            .getValueOr(UINT64_MAX);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
@@ -2864,8 +2872,9 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
-  uint64_t OrigLowPc = OrigUnitDie.getAttributeValueAsAddress(
-      dwarf::DW_AT_low_pc, -1ULL);
+  uint64_t OrigLowPc =
+      OrigUnitDie.getAttributeValueAsAddress(dwarf::DW_AT_low_pc)
+          .getValueOr(-1ULL);
   // Ranges addresses are based on the unit's low_pc. Compute the
   // offset we need to apply to adapt to the new unit's low_pc.
   int64_t UnitPcOffset = 0;

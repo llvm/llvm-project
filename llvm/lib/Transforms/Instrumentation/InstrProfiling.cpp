@@ -32,6 +32,11 @@ cl::opt<bool> DoNameCompression("enable-name-compression",
                                 cl::desc("Enable name string compression"),
                                 cl::init(true));
 
+cl::opt<bool> DoHashBasedCounterSplit(
+    "hash-based-counter-split",
+    cl::desc("Rename counter variable of a comdat function based on cfg hash"),
+    cl::init(true));
+
 cl::opt<bool> ValueProfileStaticAlloc(
     "vp-static-alloc",
     cl::desc("Do static counter allocation for value profiler"),
@@ -272,7 +277,16 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix) {
   StringRef NamePrefix = getInstrProfNameVarPrefix();
   StringRef Name = Inc->getName()->getName().substr(NamePrefix.size());
-  return (Prefix + Name).str();
+  Function *F = Inc->getParent()->getParent();
+  Module *M = F->getParent();
+  if (!DoHashBasedCounterSplit || !isIRPGOFlagSet(M) ||
+      !canRenameComdatFunc(*F))
+    return (Prefix + Name).str();
+  uint64_t FuncHash = Inc->getHash()->getZExtValue();
+  SmallVector<char, 24> HashPostfix;
+  if (Name.endswith((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
+    return (Prefix + Name).str();
+  return (Prefix + Name + "." + Twine(FuncHash)).str();
 }
 
 static inline bool shouldRecordFunctionAddr(Function *F) {

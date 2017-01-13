@@ -9,7 +9,11 @@ entry:
 }
 
 ; CHECK-ARMv4-LABEL: f7:
-; CHECK-ARMv4: moveq r6, #1
+; CHECK-ARMv4-DAG: bl ___eqsf2
+; CHECK-ARMv4-DAG: bl ___unordsf2
+; CHECK-ARMv4: cmp r0, #0
+; CHECK-ARMv4: movne r0, #1
+; CHECK-ARMv4: orrs r0, r0,
 ; CHECK-ARMv4: moveq r0, #42
 
 ; CHECK-ARMv7-LABEL: f7:

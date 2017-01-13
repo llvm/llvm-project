@@ -1,5 +1,5 @@
 ; RUN: opt < %s -S -basicaa -licm | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='lcssa,require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='lcssa,require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
 
 ; Check that we can hoist unordered loads
 define i32 @test1(i32* nocapture %y) nounwind uwtable ssp {

@@ -319,7 +319,7 @@ liveins:
   - { reg: '%rsi' }
 # CHECK:  bb.0.entry:
 # CHECK:  %rbx = MOV64rr %rdx
-# CHECK-NEXT:  %rdi = FAULTING_LOAD_OP %bb.3.is_null, 260, killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:  %rdi = FAULTING_LOAD_OP %bb.3.is_null, {{[0-9]+}}, killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
 
 body:             |
   bb.0.entry:

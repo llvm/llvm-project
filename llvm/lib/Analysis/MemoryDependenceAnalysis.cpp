@@ -323,17 +323,28 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
 
+  MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
-      MemDepResult invariantGroupDependency =
-          getInvariantGroupPointerDependency(LI, BB);
+      InvariantGroupDependency = getInvariantGroupPointerDependency(LI, BB);
 
-      if (invariantGroupDependency.isDef())
-        return invariantGroupDependency;
+      if (InvariantGroupDependency.isDef())
+        return InvariantGroupDependency;
     }
   }
-  return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst,
-                                        Limit);
+  MemDepResult SimpleDep = getSimplePointerDependencyFrom(
+      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit);
+  if (SimpleDep.isDef())
+    return SimpleDep;
+  // Non-local invariant group dependency indicates there is non local Def
+  // (it only returns nonLocal if it finds nonLocal def), which is better than
+  // local clobber and everything else.
+  if (InvariantGroupDependency.isNonLocal())
+    return InvariantGroupDependency;
+
+  assert(InvariantGroupDependency.isUnknown() &&
+         "InvariantGroupDependency should be only unknown at this point");
+  return SimpleDep;
 }
 
 MemDepResult
@@ -358,6 +369,20 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   // Queue to process all pointers that are equivalent to load operand.
   SmallVector<const Value *, 8> LoadOperandsQueue;
   LoadOperandsQueue.push_back(LoadOperand);
+
+  Instruction *ClosestDependency = nullptr;
+  // Order of instructions in uses list is unpredictible. In order to always
+  // get the same result, we will look for the closest dominance.
+  auto GetClosestDependency = [this](Instruction *Best, Instruction *Other) {
+    assert(Other && "Must call it with not null instruction");
+    if (Best == nullptr || DT.dominates(Best, Other))
+      return Other;
+    return Best;
+  };
+
+
+  // FIXME: This loop is O(N^2) because dominates can be O(n) and in worst case
+  // we will see all the instructions. This should be fixed in MSSA.
   while (!LoadOperandsQueue.empty()) {
     const Value *Ptr = LoadOperandsQueue.pop_back_val();
     assert(Ptr && !isa<GlobalValue>(Ptr) &&
@@ -388,12 +413,24 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
       // If we hit load/store with the same invariant.group metadata (and the
       // same pointer operand) we can assume that value pointed by pointer
       // operand didn't change.
-      if ((isa<LoadInst>(U) || isa<StoreInst>(U)) && U->getParent() == BB &&
+      if ((isa<LoadInst>(U) || isa<StoreInst>(U)) &&
           U->getMetadata(LLVMContext::MD_invariant_group) == InvariantGroupMD)
-        return MemDepResult::getDef(U);
+        ClosestDependency = GetClosestDependency(ClosestDependency, U);
     }
   }
-  return MemDepResult::getUnknown();
+
+  if (!ClosestDependency)
+    return MemDepResult::getUnknown();
+  if (ClosestDependency->getParent() == BB)
+    return MemDepResult::getDef(ClosestDependency);
+  // Def(U) can't be returned here because it is non-local. If local
+  // dependency won't be found then return nonLocal counting that the
+  // user will call getNonLocalPointerDependency, which will return cached
+  // result.
+  NonLocalDefsCache.try_emplace(
+      LI, NonLocalDepResult(ClosestDependency->getParent(),
+                            MemDepResult::getDef(ClosestDependency), nullptr));
+  return MemDepResult::getNonLocal();
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
@@ -877,7 +914,17 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   assert(Loc.Ptr->getType()->isPointerTy() &&
          "Can't get pointer deps of a non-pointer!");
   Result.clear();
-
+  {
+    // Check if there is cached Def with invariant.group. FIXME: cache might be
+    // invalid if cached instruction would be removed between call to
+    // getPointerDependencyFrom and this function.
+    auto NonLocalDefIt = NonLocalDefsCache.find(QueryInst);
+    if (NonLocalDefIt != NonLocalDefsCache.end()) {
+      Result.push_back(std::move(NonLocalDefIt->second));
+      NonLocalDefsCache.erase(NonLocalDefIt);
+      return;
+    }
+  }
   // This routine does not expect to deal with volatile instructions.
   // Doing so would require piping through the QueryInst all the way through.
   // TODO: volatiles can't be elided, but they can be reordered with other

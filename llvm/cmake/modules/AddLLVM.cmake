@@ -1007,6 +1007,7 @@ function(add_unittest test_suite test_name)
   endif()
 
   include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
+  include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include)
   if (NOT LLVM_ENABLE_THREADS)
     list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_PTHREAD=0)
   endif ()

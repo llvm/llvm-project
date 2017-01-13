@@ -41,28 +41,30 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   if (AlreadyInit)
     return;
   AlreadyInit = true;
-  // Initialize the GPR bank.
-  createRegisterBank(AArch64::GPRRegBankID, "GPR");
-  // The GPR register bank is fully defined by all the registers in
-  // GR64all + its subclasses.
-  addRegBankCoverage(AArch64::GPRRegBankID, AArch64::GPR64allRegClassID, TRI);
+
   const RegisterBank &RBGPR = getRegBank(AArch64::GPRRegBankID);
   (void)RBGPR;
   assert(&AArch64::GPRRegBank == &RBGPR &&
          "The order in RegBanks is messed up");
-  assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
-         "Subclass not added?");
-  assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
 
-  // Initialize the FPR bank.
-  createRegisterBank(AArch64::FPRRegBankID, "FPR");
-  // The FPR register bank is fully defined by all the registers in
-  // GR64all + its subclasses.
-  addRegBankCoverage(AArch64::FPRRegBankID, AArch64::QQQQRegClassID, TRI);
   const RegisterBank &RBFPR = getRegBank(AArch64::FPRRegBankID);
   (void)RBFPR;
   assert(&AArch64::FPRRegBank == &RBFPR &&
          "The order in RegBanks is messed up");
+
+  const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
+  (void)RBCCR;
+  assert(&AArch64::CCRRegBank == &RBCCR &&
+         "The order in RegBanks is messed up");
+
+  // The GPR register bank is fully defined by all the registers in
+  // GR64all + its subclasses.
+  assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
+         "Subclass not added?");
+  assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
+
+  // The FPR register bank is fully defined by all the registers in
+  // GR64all + its subclasses.
   assert(RBFPR.covers(*TRI.getRegClass(AArch64::QQRegClassID)) &&
          "Subclass not added?");
   assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
@@ -70,13 +72,6 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(RBFPR.getSize() == 512 &&
          "FPRs should hold up to 512-bit via QQQQ sequence");
 
-  // Initialize the CCR bank.
-  createRegisterBank(AArch64::CCRRegBankID, "CCR");
-  addRegBankCoverage(AArch64::CCRRegBankID, AArch64::CCRRegClassID, TRI);
-  const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
-  (void)RBCCR;
-  assert(&AArch64::CCRRegBank == &RBCCR &&
-         "The order in RegBanks is messed up");
   assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
          "Class not added?");
   assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");

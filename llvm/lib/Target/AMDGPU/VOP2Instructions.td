@@ -183,13 +183,13 @@ class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
                        HasModifiers, Src0Mod, Src1Mod, Src2Mod>.ret;
-  let InsDPP = (ins FP32InputMods:$src0_modifiers, Src0DPP:$src0,
-                    FP32InputMods:$src1_modifiers, Src1DPP:$src1,
+  let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
+                    Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                     VGPR_32:$src2, // stub argument
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsSDWA = (ins FP32InputMods:$src0_modifiers, Src0SDWA:$src0,
-                     FP32InputMods:$src1_modifiers, Src1SDWA:$src1,
+  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
+                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      VGPR_32:$src2, // stub argument
                      clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);

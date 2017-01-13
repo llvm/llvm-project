@@ -54,7 +54,7 @@ bb11:                                             ; preds = %bb2
 }
 
 ; Test that comdat function's address is recorded.
-; LOWER: @__profd_foo3.[[FOO3_HASH:[0-9]+]] = linkonce_odr{{.*}}@foo3.[[FOO3_HASH]]
+; LOWER: @__profd_foo3.[[FOO3_HASH:[0-9]+]] = linkonce_odr{{.*}}@__profc_foo3.[[FOO3_HASH]]
 ; Function Attrs: nounwind uwtable
 define linkonce_odr i32 @foo3()  comdat  {
   ret i32 1

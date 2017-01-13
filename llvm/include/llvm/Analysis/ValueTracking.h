@@ -169,8 +169,12 @@ template <typename T> class ArrayRef;
 
   /// Return true if we can prove that the specified FP value is either a NaN or
   /// never less than 0.0.
-  bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI,
-                                   unsigned Depth = 0);
+  /// If \p IncludeNeg0 is false, -0.0 is considered less than 0.0.
+  bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
+
+  /// \returns true if we can prove that the specified FP value has a 0 sign
+  /// bit.
+  bool SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI);
 
   /// If the specified value can be set by repeating the same byte in memory,
   /// return the i8 value that it is represented with. This is true for all i8

@@ -317,10 +317,10 @@ struct TypeTestResolution {
                ///  All-Ones Bit Vectors")
   } TheKind = Unsat;
 
-  /// Range of the size expressed as a bit width. For example, if the size is in
-  /// range [0,256), this number will be 8. This helps generate the most compact
+  /// Range of size-1 expressed as a bit width. For example, if the size is in
+  /// range [1,256], this number will be 8. This helps generate the most compact
   /// instruction sequences.
-  unsigned SizeBitWidth = 0;
+  unsigned SizeM1BitWidth = 0;
 };
 
 struct TypeIdSummary {

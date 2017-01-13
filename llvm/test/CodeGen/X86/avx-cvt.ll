@@ -62,6 +62,17 @@ define <8 x float> @fptrunc00(<8 x double> %b) nounwind {
   ret <8 x float> %a
 }
 
+define <4 x float> @fptrunc01(<2 x double> %a0, <4 x float> %a1) nounwind {
+; CHECK-LABEL: fptrunc01:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vcvtsd2ss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %ext = extractelement <2 x double> %a0, i32 0
+  %cvt = fptrunc double %ext to float
+  %res = insertelement <4 x float> %a1, float %cvt, i32 0
+  ret <4 x float> %res
+}
+
 define <4 x double> @fpext00(<4 x float> %b) nounwind {
 ; CHECK-LABEL: fpext00:
 ; CHECK:       # BB#0:
@@ -69,6 +80,17 @@ define <4 x double> @fpext00(<4 x float> %b) nounwind {
 ; CHECK-NEXT:    retq
   %a = fpext <4 x float> %b to <4 x double>
   ret <4 x double> %a
+}
+
+define <2 x double> @fpext01(<2 x double> %a0, <4 x float> %a1) nounwind {
+; CHECK-LABEL: fpext01:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vcvtss2sd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %ext = extractelement <4 x float> %a1, i32 0
+  %cvt = fpext float %ext to double
+  %res = insertelement <2 x double> %a0, double %cvt, i32 0
+  ret <2 x double> %res
 }
 
 define double @funcA(i64* nocapture %e) nounwind uwtable readonly ssp {

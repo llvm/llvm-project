@@ -57,6 +57,9 @@ public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F), U(nullptr) {}
   dwarf::Form getForm() const { return Form; }
   void setForm(dwarf::Form F) { Form = F; }
+  void setUValue(uint64_t V) { Value.uval = V; }
+  void setSValue(int64_t V) { Value.sval = V; }
+  void setPValue(const char *V) { Value.cstr = V; }
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS) const;

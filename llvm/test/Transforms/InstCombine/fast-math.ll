@@ -241,7 +241,7 @@ define float @fmul2(float %f1) {
 ; X/C1 * C2 => X * (C2/C1) is disabled if X/C1 has multiple uses
 @fmul2_external = external global float
 define float @fmul2_disable(float %f1) {
-  %div = fdiv fast float 1.000000e+00, %f1 
+  %div = fdiv fast float 1.000000e+00, %f1
   store float %div, float* @fmul2_external
   %mul = fmul fast float %div, 2.000000e+00
   ret float %mul
@@ -672,8 +672,7 @@ define double @sqrt_intrinsic_arg_4th(double %x) {
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_4th(
 ; CHECK-NEXT: %mul = fmul fast double %x, %x
-; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %mul)
-; CHECK-NEXT: ret double %fabs
+; CHECK-NEXT: ret double %mul
 }
 
 define double @sqrt_intrinsic_arg_5th(double %x) {
@@ -685,9 +684,8 @@ define double @sqrt_intrinsic_arg_5th(double %x) {
 
 ; CHECK-LABEL: sqrt_intrinsic_arg_5th(
 ; CHECK-NEXT: %mul = fmul fast double %x, %x
-; CHECK-NEXT: %fabs = call fast double @llvm.fabs.f64(double %mul)
 ; CHECK-NEXT: %sqrt1 = call fast double @llvm.sqrt.f64(double %x)
-; CHECK-NEXT: %1 = fmul fast double %fabs, %sqrt1
+; CHECK-NEXT: %1 = fmul fast double %mul, %sqrt1
 ; CHECK-NEXT: ret double %1
 }
 

@@ -152,25 +152,11 @@ const char *DWARFDie::getAttributeValueAsString(dwarf::Attribute Attr,
   return Result.hasValue() ? Result.getValue() : FailValue;
 }
 
-uint64_t DWARFDie::getAttributeValueAsAddress(dwarf::Attribute Attr,
-                                              uint64_t FailValue) const {
-  if (auto Value = getAttributeValueAsAddress(Attr))
-    return *Value;
-  return FailValue;
-}
-
 Optional<uint64_t>
 DWARFDie::getAttributeValueAsAddress(dwarf::Attribute Attr) const {
   if (auto FormValue = getAttributeValue(Attr))
     return FormValue->getAsAddress();
   return None;
-}
-
-int64_t DWARFDie::getAttributeValueAsSignedConstant(dwarf::Attribute Attr,
-                                                    int64_t FailValue) const {
-  if (auto Value = getAttributeValueAsSignedConstant(Attr))
-    return *Value;
-  return FailValue;
 }
 
 Optional<int64_t>
@@ -180,15 +166,6 @@ DWARFDie::getAttributeValueAsSignedConstant(dwarf::Attribute Attr) const {
   return None;
 }
 
-uint64_t
-DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr,
-                                              uint64_t FailValue) const {
-  if (auto Value = getAttributeValueAsUnsignedConstant(Attr))
-    return *Value;
-  return FailValue;
-}
-
-
 Optional<uint64_t>
 DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr) const {
   if (auto FormValue = getAttributeValue(Attr))
@@ -196,26 +173,11 @@ DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr) const {
   return None;
 }
 
-uint64_t DWARFDie::getAttributeValueAsReference(dwarf::Attribute Attr,
-                                                uint64_t FailValue) const {
-  if (auto Value = getAttributeValueAsReference(Attr))
-    return *Value;
-  return FailValue;
-}
-
-
 Optional<uint64_t>
 DWARFDie::getAttributeValueAsReference(dwarf::Attribute Attr) const {
   if (auto FormValue = getAttributeValue(Attr))
     return FormValue->getAsReference();
   return None;
-}
-
-uint64_t DWARFDie::getAttributeValueAsSectionOffset(dwarf::Attribute Attr,
-                                                    uint64_t FailValue) const {
-  if (auto Value = getAttributeValueAsSectionOffset(Attr))
-    return *Value;
-  return FailValue;
 }
 
 Optional<uint64_t>
@@ -345,9 +307,10 @@ DWARFDie::getName(DINameKind Kind) const {
 
 void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
                               uint32_t &CallColumn) const {
-  CallFile = getAttributeValueAsUnsignedConstant(DW_AT_call_file, 0);
-  CallLine = getAttributeValueAsUnsignedConstant(DW_AT_call_line, 0);
-  CallColumn = getAttributeValueAsUnsignedConstant(DW_AT_call_column, 0);
+  CallFile = getAttributeValueAsUnsignedConstant(DW_AT_call_file).getValueOr(0);
+  CallLine = getAttributeValueAsUnsignedConstant(DW_AT_call_line).getValueOr(0);
+  CallColumn =
+      getAttributeValueAsUnsignedConstant(DW_AT_call_column).getValueOr(0);
 }
 
 void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,

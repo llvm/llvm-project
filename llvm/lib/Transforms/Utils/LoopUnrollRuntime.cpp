@@ -301,15 +301,17 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter,
       LI->addTopLevelLoop(NewLoop);
   }
 
+  NewLoopsMap NewLoops;
+  NewLoops[L] = NewLoop;
   // For each block in the original loop, create a new copy,
   // and update the value map with the newly created values.
   for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
     BasicBlock *NewBB = CloneBasicBlock(*BB, VMap, "." + suffix, F);
     NewBlocks.push_back(NewBB);
 
-    if (NewLoop)
-      NewLoop->addBasicBlockToLoop(NewBB, *LI);
-    else if (ParentLoop)
+    if (NewLoop) {
+      addClonedBlockToLoopInfo(*BB, NewBB, LI, NewLoops);
+    } else if (ParentLoop)
       ParentLoop->addBasicBlockToLoop(NewBB, *LI);
 
     VMap[*BB] = NewBB;

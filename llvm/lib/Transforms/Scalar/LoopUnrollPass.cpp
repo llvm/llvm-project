@@ -19,7 +19,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <climits>
@@ -1111,41 +1111,23 @@ Pass *llvm::createSimpleLoopUnrollPass() {
   return llvm::createLoopUnrollPass(-1, -1, 0, 0, 0);
 }
 
-PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM) {
+PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
+                                      LoopStandardAnalysisResults &AR,
+                                      LPMUpdater &) {
   const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
 
-
-  DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
-  LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(*F);
-  ScalarEvolution *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
-  auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
-  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
   auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
-  if (!DT)
-    report_fatal_error(
-        "LoopUnrollPass: DominatorTreeAnalysis not cached at a higher level");
-  if (!LI)
-    report_fatal_error(
-        "LoopUnrollPass: LoopAnalysis not cached at a higher level");
-  if (!SE)
-    report_fatal_error(
-        "LoopUnrollPass: ScalarEvolutionAnalysis not cached at a higher level");
-  if (!TTI)
-    report_fatal_error(
-        "LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
-  if (!AC)
-    report_fatal_error(
-        "LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
+  // FIXME: This should probably be optional rather than required.
   if (!ORE)
     report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
                        "cached at a higher level");
 
-  bool Changed =
-      tryToUnrollLoop(&L, *DT, LI, SE, *TTI, *AC, *ORE, /*PreserveLCSSA*/ true,
-                      ProvidedCount, ProvidedThreshold, ProvidedAllowPartial,
-                      ProvidedRuntime, ProvidedUpperBound);
+  bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, &AR.SE, AR.TTI, AR.AC, *ORE,
+                                 /*PreserveLCSSA*/ true, ProvidedCount,
+                                 ProvidedThreshold, ProvidedAllowPartial,
+                                 ProvidedRuntime, ProvidedUpperBound);
 
   if (!Changed)
     return PreservedAnalyses::all();

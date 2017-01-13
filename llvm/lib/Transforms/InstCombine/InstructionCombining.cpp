@@ -770,10 +770,6 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   return RI;
 }
 
-/// Given an instruction with a select as one operand and a constant as the
-/// other operand, try to fold the binary operator into the select arguments.
-/// This also works for Cast instructions, which obviously do not have a second
-/// operand.
 Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
   // Don't modify shared select instructions.
   if (!SI->hasOneUse())
@@ -824,9 +820,6 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
-/// Given a binary operator, cast instruction, or select which has a PHI node as
-/// operand #0, see if we can fold the instruction into the PHI (which is only
-/// possible if all operands to the PHI are constants).
 Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
   PHINode *PN = cast<PHINode>(I.getOperand(0));
   unsigned NumPHIValues = PN->getNumIncomingValues();
@@ -962,6 +955,19 @@ Instruction *InstCombiner::FoldOpIntoPhi(Instruction &I) {
     eraseInstFromFunction(*User);
   }
   return replaceInstUsesWith(I, NewPN);
+}
+
+Instruction *InstCombiner::foldOpWithConstantIntoOperand(Instruction &I) {
+  assert(isa<Constant>(I.getOperand(1)) && "Unexpected operand type");
+
+  if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
+    if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))
+      return NewSel;
+  } else if (isa<PHINode>(I.getOperand(0))) {
+    if (Instruction *NewPhi = FoldOpIntoPhi(I))
+      return NewPhi;
+  }
+  return nullptr;
 }
 
 /// Given a pointer type and a constant offset, determine whether or not there

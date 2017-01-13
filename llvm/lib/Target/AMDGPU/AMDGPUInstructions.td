@@ -629,8 +629,9 @@ def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
 def umax_oneuse : HasOneUseBinOp<umax>;
 def umin_oneuse : HasOneUseBinOp<umin>;
-def sub_oneuse : HasOneUseBinOp<sub>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
+
+def sub_oneuse : HasOneUseBinOp<sub>;
 
 def select_oneuse : HasOneUseTernaryOp<select>;
 

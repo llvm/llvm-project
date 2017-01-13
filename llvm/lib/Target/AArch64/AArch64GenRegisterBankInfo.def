@@ -18,9 +18,132 @@
 namespace llvm {
 namespace AArch64 {
 
-RegisterBank GPRRegBank;
-RegisterBank FPRRegBank;
-RegisterBank CCRRegBank;
+const uint32_t GPRCoverageData[] = {
+    // Classes 0-31
+    (1u << AArch64::GPR32allRegClassID) | (1u << AArch64::GPR32RegClassID) |
+        (1u << AArch64::GPR32spRegClassID) |
+        (1u << AArch64::GPR32commonRegClassID) |
+        (1u << AArch64::GPR32sponlyRegClassID) |
+        (1u << AArch64::GPR64allRegClassID) | (1u << AArch64::GPR64RegClassID) |
+        (1u << AArch64::GPR64spRegClassID) |
+        (1u << AArch64::GPR64commonRegClassID) |
+        (1u << AArch64::tcGPR64RegClassID) |
+        (1u << AArch64::GPR64sponlyRegClassID),
+    // Classes 32-63
+    0,
+    // FIXME: The entries below this point can be safely removed once this is
+    // tablegenerated. It's only needed because of the hardcoded register class
+    // limit.
+    // Classes 64-96
+    0,
+    // Classes 97-128
+    0,
+    // Classes 129-160
+    0,
+    // Classes 161-192
+    0,
+    // Classes 193-224
+    0,
+};
+
+const uint32_t FPRCoverageData[] = {
+    // Classes 0-31
+    (1u << AArch64::FPR8RegClassID) | (1u << AArch64::FPR16RegClassID) |
+        (1u << AArch64::FPR32RegClassID) | (1u << AArch64::FPR64RegClassID) |
+        (1u << AArch64::DDRegClassID) | (1u << AArch64::FPR128RegClassID) |
+        (1u << AArch64::FPR128_loRegClassID) | (1u << AArch64::DDDRegClassID) |
+        (1u << AArch64::DDDDRegClassID),
+    // Classes 32-63
+    (1u << (AArch64::QQRegClassID - 32)) |
+        (1u << (AArch64::QQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
+        (1u
+         << (AArch64::
+                 QQQ_with_qsub1_in_FPR128_lo_and_QQQ_with_qsub2_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQ_with_qsub0_in_FPR128_lo_and_QQQ_with_qsub2_in_FPR128_loRegClassID -
+             32)) |
+        (1u << (AArch64::QQQQRegClassID - 32)) |
+        (1u << (AArch64::QQQQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQQQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQQQ_with_qsub2_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQQQ_with_qsub3_in_FPR128_loRegClassID - 32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub1_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub1_in_FPR128_lo_and_QQQQ_with_qsub2_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub2_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub2_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub1_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
+             32)) |
+        (1u
+         << (AArch64::
+                 QQ_with_qsub0_in_FPR128_lo_and_QQ_with_qsub1_in_FPR128_loRegClassID -
+             32)) |
+        (1u << (AArch64::QQQRegClassID - 32)) |
+        (1u << (AArch64::QQQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
+        (1u << (AArch64::QQQ_with_qsub2_in_FPR128_loRegClassID - 32)) |
+        (1u
+         << (AArch64::
+                 QQQ_with_qsub0_in_FPR128_lo_and_QQQ_with_qsub1_in_FPR128_loRegClassID -
+             32)),
+    // FIXME: The entries below this point can be safely removed once this
+    // is tablegenerated. It's only needed because of the hardcoded register
+    // class limit.
+    // Classes 64-96
+    0,
+    // Classes 97-128
+    0,
+    // Classes 129-160
+    0,
+    // Classes 161-192
+    0,
+    // Classes 193-224
+    0,
+};
+
+const uint32_t CCRCoverageData[] = {
+    // Classes 0-31
+    1u << AArch64::CCRRegClassID,
+    // Classes 32-63
+    0,
+    // FIXME: The entries below this point can be safely removed once this
+    // is tablegenerated. It's only needed because of the hardcoded register
+    // class limit.
+    // Classes 64-96
+    0,
+    // Classes 97-128
+    0,
+    // Classes 129-160
+    0,
+    // Classes 161-192
+    0,
+    // Classes 193-224
+    0,
+};
+
+RegisterBank GPRRegBank(AArch64::GPRRegBankID, "GPR", 64, GPRCoverageData);
+RegisterBank FPRRegBank(AArch64::FPRRegBankID, "FPR", 512, FPRCoverageData);
+RegisterBank CCRRegBank(AArch64::CCRRegBankID, "CCR", 32, CCRCoverageData);
 
 RegisterBank *RegBanks[] = {&GPRRegBank, &FPRRegBank, &CCRRegBank};
 

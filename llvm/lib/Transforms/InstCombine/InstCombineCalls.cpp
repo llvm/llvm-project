@@ -1599,21 +1599,17 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // fma fneg(x), fneg(y), z -> fma x, y, z
     if (match(Src0, m_FNeg(m_Value(LHS))) &&
         match(Src1, m_FNeg(m_Value(RHS)))) {
-      CallInst *NewCall = Builder->CreateCall(II->getCalledFunction(),
-                                              {LHS, RHS, II->getArgOperand(2)});
-      NewCall->takeName(II);
-      NewCall->copyFastMathFlags(II);
-      return replaceInstUsesWith(*II, NewCall);
+      II->setArgOperand(0, LHS);
+      II->setArgOperand(1, RHS);
+      return II;
     }
 
     // fma fabs(x), fabs(x), z -> fma x, x, z
     if (match(Src0, m_Intrinsic<Intrinsic::fabs>(m_Value(LHS))) &&
         match(Src1, m_Intrinsic<Intrinsic::fabs>(m_Value(RHS))) && LHS == RHS) {
-      CallInst *NewCall = Builder->CreateCall(II->getCalledFunction(),
-                                              {LHS, LHS, II->getArgOperand(2)});
-      NewCall->takeName(II);
-      NewCall->copyFastMathFlags(II);
-      return replaceInstUsesWith(*II, NewCall);
+      II->setArgOperand(0, LHS);
+      II->setArgOperand(1, RHS);
+      return II;
     }
 
     // fma x, 1, z -> fadd x, z
@@ -2760,6 +2756,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (KnownOne.isAllOnesValue())
       return eraseInstFromFunction(*II);
 
+    // Update the cache of affected values for this assumption (we might be
+    // here because we just simplified the condition).
+    AC.updateAffectedValues(II);
     break;
   }
   case Intrinsic::experimental_gc_relocate: {

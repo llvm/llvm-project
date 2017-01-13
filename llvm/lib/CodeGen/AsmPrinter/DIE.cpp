@@ -79,6 +79,13 @@ void DIEAbbrev::Emit(const AsmPrinter *AP) const {
     // Emit form type.
     AP->EmitULEB128(AttrData.getForm(),
                     dwarf::FormEncodingString(AttrData.getForm()).data());
+
+    // Emit value for DW_FORM_implicit_const.
+    if (AttrData.getForm() == dwarf::DW_FORM_implicit_const) {
+      assert(AP->getDwarfVersion() >= 5 &&
+            "DW_FORM_implicit_const is supported starting from DWARFv5");
+      AP->EmitSLEB128(AttrData.getValue());
+    }
   }
 
   // Mark end of abbreviation.
@@ -160,7 +167,11 @@ DIE *DIE::getParent() const {
 DIEAbbrev DIE::generateAbbrev() const {
   DIEAbbrev Abbrev(Tag, hasChildren());
   for (const DIEValue &V : values())
-    Abbrev.AddAttribute(V.getAttribute(), V.getForm());
+    if (V.getForm() == dwarf::DW_FORM_implicit_const)
+      Abbrev.AddImplicitConstAttribute(V.getAttribute(),
+                                       V.getDIEInteger().getValue());
+    else
+      Abbrev.AddAttribute(V.getAttribute(), V.getForm());
   return Abbrev;
 }
 
@@ -342,6 +353,8 @@ void DIEValue::dump() const {
 ///
 void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   switch (Form) {
+  case dwarf::DW_FORM_implicit_const:
+    LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_flag_present:
     // Emit something to keep the lines and comments in sync.
     // FIXME: Is there a better way to do this?
@@ -406,6 +419,7 @@ void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
 ///
 unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   switch (Form) {
+  case dwarf::DW_FORM_implicit_const: LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_flag_present: return 0;
   case dwarf::DW_FORM_flag:  LLVM_FALLTHROUGH;
   case dwarf::DW_FORM_ref1:  LLVM_FALLTHROUGH;

@@ -1295,16 +1295,12 @@ public:
   /// Check \c this can be discriminated from \c RHS in a linetable entry.
   /// Scope and inlined-at chains are not recorded in the linetable, so they
   /// cannot be used to distinguish basic blocks.
-  ///
-  /// The current implementation is weaker than it should be, since it just
-  /// checks filename and line.
-  ///
-  /// FIXME: Add a check for getDiscriminator().
-  /// FIXME: Add a check for getColumn().
-  /// FIXME: Change the getFilename() check to getFile() (or add one for
-  /// getDirectory()).
   bool canDiscriminate(const DILocation &RHS) const {
-    return getFilename() != RHS.getFilename() || getLine() != RHS.getLine();
+    return getLine() != RHS.getLine() ||
+           getColumn() != RHS.getColumn() ||
+           getDiscriminator() != RHS.getDiscriminator() ||
+           getFilename() != RHS.getFilename() ||
+           getDirectory() != RHS.getDirectory();
   }
 
   /// Get the DWARF discriminator.
@@ -1327,10 +1323,13 @@ public:
   /// represented in a single line entry.  In this case, no location
   /// should be set.
   ///
-  /// Currently this function is simply a stub, and no location will be
-  /// used for all cases.
-  static DILocation *getMergedLocation(const DILocation *LocA,
-                                       const DILocation *LocB) {
+  /// Currently the function does not create a new location. If the locations
+  /// are the same, or cannot be discriminated, the first location is returned.
+  /// Otherwise an empty location will be used.
+  static const DILocation *getMergedLocation(const DILocation *LocA,
+                                             const DILocation *LocB) {
+    if (LocA && LocB && (LocA == LocB || !LocA->canDiscriminate(*LocB)))
+      return LocA;
     return nullptr;
   }
 

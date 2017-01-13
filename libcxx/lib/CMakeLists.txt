@@ -229,8 +229,7 @@ if (LIBCXX_ENABLE_STATIC)
     if (LIBCXX_CXX_ABI_LIBRARY_PATH)
       set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
     endif()
-    if ((TARGET ${LIBCXX_CXX_ABI_LIBRARY}) OR
-        (${LIBCXX_CXX_ABI_LIBRARY} STREQUAL "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI))
+    if (TARGET ${LIBCXX_CXX_ABI_LIBRARY})
       set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
     else()
       set(MERGE_ARCHIVES_ABI_TARGET
@@ -301,9 +300,7 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   set(LIBCXX_INTERFACE_LIBRARY_NAMES)
   foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
     # FIXME: Handle cxxabi_static and unwind_static.
-    if (TARGET ${lib} OR
-        (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
-        (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
+    if (TARGET ${lib})
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
     else()
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")

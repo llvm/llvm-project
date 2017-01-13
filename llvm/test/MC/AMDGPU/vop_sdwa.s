@@ -594,3 +594,39 @@ v_cmp_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
 // NOSICI: error:
 // VI: v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x22,0x7c,0x01,0x16,0x02,0x04]
 v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+//===----------------------------------------------------------------------===//
+// Check that immideates and scalar regs are not supported
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_mov_b32 v0, 1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_and_b32 v0, 42, v1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_add_f32 v0, v1, 345 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_cmpx_class_f32 vcc, -1, 200 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_mov_b32 v0, s1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_and_b32 v0, s42, v1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_add_f32 v0, v1, s45 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_cmpx_class_f32 vcc, s1, s2 src0_sel:BYTE_2 src1_sel:WORD_0

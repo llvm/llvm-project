@@ -386,7 +386,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_NONE:
     return R_HINT;
   default:
-    error("do not know how to handle relocation " + toString(Type) + " (" +
+    error("do not know how to handle relocation '" + toString(Type) + "' (" +
           Twine(Type) + ")");
     return R_HINT;
   }
@@ -631,7 +631,11 @@ template <class ELFT>
 RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                            const SymbolBody &S) const {
   switch (Type) {
-  default:
+  case R_X86_64_32:
+  case R_X86_64_32S:
+  case R_X86_64_64:
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_DTPOFF64:
     return R_ABS;
   case R_X86_64_TPOFF32:
     return R_TLS;
@@ -656,6 +660,10 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_NONE:
+    return R_HINT;
+  default:
+    error("do not know how to handle relocation '" + toString(Type) + "' (" +
+          Twine(Type) + ")");
     return R_HINT;
   }
 }
@@ -878,7 +886,7 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unexpected relocation");
   }
 }
 

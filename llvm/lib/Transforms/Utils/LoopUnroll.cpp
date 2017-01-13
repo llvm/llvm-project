@@ -172,6 +172,36 @@ static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
   return false;
 }
 
+/// Adds ClonedBB to LoopInfo, creates a new loop for ClonedBB if necessary
+/// and adds a mapping from the original loop to the new loop to NewLoops.
+/// Returns nullptr if no new loop was created and a pointer to the
+/// original loop OriginalBB was part of otherwise.
+const Loop* llvm::addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
+                                           BasicBlock *ClonedBB, LoopInfo *LI,
+                                           NewLoopsMap &NewLoops) {
+  // Figure out which loop New is in.
+  const Loop *OldLoop = LI->getLoopFor(OriginalBB);
+  assert(OldLoop && "Should (at least) be in the loop being unrolled!");
+
+  Loop *&NewLoop = NewLoops[OldLoop];
+  if (!NewLoop) {
+    // Found a new sub-loop.
+    assert(OriginalBB == OldLoop->getHeader() &&
+           "Header should be first in RPO");
+
+    Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
+    assert(NewLoopParent &&
+           "Expected parent loop before sub-loop in RPO");
+    NewLoop = new Loop;
+    NewLoopParent->addChildLoop(NewLoop);
+    NewLoop->addBasicBlockToLoop(ClonedBB, *LI);
+    return OldLoop;
+  } else {
+    NewLoop->addBasicBlockToLoop(ClonedBB, *LI);
+    return nullptr;
+  }
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form. Returns true
 /// if unrolling was successful, or false if the loop was unmodified. Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
@@ -428,28 +458,14 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
         assert(LI->getLoopFor(*BB) == L && "Header should not be in a sub-loop");
         L->addBasicBlockToLoop(New, *LI);
       } else {
-        // Figure out which loop New is in.
-        const Loop *OldLoop = LI->getLoopFor(*BB);
-        assert(OldLoop && "Should (at least) be in the loop being unrolled!");
-
-        Loop *&NewLoop = NewLoops[OldLoop];
-        if (!NewLoop) {
-          // Found a new sub-loop.
-          assert(*BB == OldLoop->getHeader() &&
-                 "Header should be first in RPO");
-
-          Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
-          assert(NewLoopParent &&
-                 "Expected parent loop before sub-loop in RPO");
-          NewLoop = new Loop;
-          NewLoopParent->addChildLoop(NewLoop);
-          LoopsToSimplify.insert(NewLoop);
+        const Loop *OldLoop = addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
+        if (OldLoop) {
+          LoopsToSimplify.insert(NewLoops[OldLoop]);
 
           // Forget the old loop, since its inputs may have changed.
           if (SE)
             SE->forgetLoop(OldLoop);
         }
-        NewLoop->addBasicBlockToLoop(New, *LI);
       }
 
       if (*BB == Header)

@@ -254,7 +254,7 @@ InstrumentationMapExtractor::InstrumentationMapExtractor(std::string Filename,
               make_error<StringError>(
                   Twine("Cannot load YAML instrumentation map from '") +
                       Filename + "'.",
-                  std::make_error_code(std::errc::wrong_protocol_type)),
+                  std::make_error_code(std::errc::executable_format_error)),
               std::move(E));
         });
     break;

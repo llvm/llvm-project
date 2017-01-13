@@ -2493,10 +2493,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *LHS = vectorizeTree(LHSVL);
       Value *RHS = vectorizeTree(RHSVL);
 
-      if (LHS == RHS && isa<Instruction>(LHS)) {
-        assert((VL0->getOperand(0) == VL0->getOperand(1)) && "Invalid order");
-      }
-
       if (Value *V = alreadyVectorized(E->Scalars))
         return V;
 

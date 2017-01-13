@@ -91,6 +91,20 @@ define <4 x float> @combine_vpermil2ps_1z74(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res1
 }
 
+define <4 x float> @combine_vpermil2ps_02zu(<4 x float> %a0, <4 x float> %a1) {
+; X32-LABEL: combine_vpermil2ps_02zu:
+; X32:       # BB#0:
+; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X32-NEXT:    retl
+;
+; X64-LABEL: combine_vpermil2ps_02zu:
+; X64:       # BB#0:
+; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; X64-NEXT:    retq
+  %res0 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 4, i32 undef>, i8 0)
+  ret <4 x float> %res0
+}
+
 define <8 x float> @combine_vpermil2ps256_identity(<8 x float> %a0, <8 x float> %a1) {
 ; X32-LABEL: combine_vpermil2ps256_identity:
 ; X32:       # BB#0:

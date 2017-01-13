@@ -33,6 +33,9 @@ k:
 r:
 # R_AARCH64_PREL32: use Q instead of f to fit in 32 bits.
         .word  Q - .
+# R_AARCH64_PREL64
+        .p2align        3
+        .xword f - .
 
 # LE instructions read as BE
 # rtdyld-check: *{4}(g) = 0x6024e0d2
@@ -41,3 +44,4 @@ r:
 # rtdyld-check: *{4}(g + 12) = 0xe0bd99f2
 # rtdyld-check: *{8}k = f
 # rtdyld-check: *{4}r = (Q - r)[31:0]
+# rtdyld-check: *{8}(r + 8) = f - r - 8

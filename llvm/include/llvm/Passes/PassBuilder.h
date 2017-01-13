@@ -18,8 +18,8 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
 
 namespace llvm {

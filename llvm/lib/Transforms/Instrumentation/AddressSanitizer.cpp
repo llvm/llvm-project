@@ -1598,8 +1598,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
       StructType::get(IntptrTy, IntptrTy, IntptrTy, IntptrTy, IntptrTy,
                       IntptrTy, IntptrTy, IntptrTy, nullptr);
   unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(GlobalStructTy);
-  assert((isPowerOf2_32(SizeOfGlobalStruct) ||
-          !TargetTriple.isOSBinFormatCOFF()) &&
+  assert(isPowerOf2_32(SizeOfGlobalStruct) &&
          "global metadata will not be padded appropriately");
   SmallVector<Constant *, 16> Initializers(UseMetadataArray ? n : 0);
 
@@ -1766,13 +1765,11 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
                              GlobalValue::getRealLinkageName(G->getName()));
     Metadata->setSection(getGlobalMetadataSection());
 
+    // We don't want any padding, but we also need a reasonable alignment.
     // The MSVC linker always inserts padding when linking incrementally. We
     // cope with that by aligning each struct to its size, which must be a power
     // of two.
-    if (TargetTriple.isOSBinFormatCOFF())
-      Metadata->setAlignment(SizeOfGlobalStruct);
-    else
-      Metadata->setAlignment(1); // Don't leave padding in between.
+    Metadata->setAlignment(SizeOfGlobalStruct);
 
     // On platforms that support comdats, put the metadata and the
     // instrumented global in the same group. This ensures that the metadata

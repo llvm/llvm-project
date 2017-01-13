@@ -13,13 +13,14 @@
 #include "xray-converter.h"
 
 #include "xray-extract.h"
-#include "xray-record-yaml.h"
 #include "xray-registry.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/XRay/Trace.h"
+#include "llvm/XRay/YAMLXRayRecord.h"
 
 using namespace llvm;
 using namespace xray;
@@ -31,15 +32,6 @@ static cl::opt<std::string> ConvertInput(cl::Positional,
                                          cl::desc("<xray log file>"),
                                          cl::Required, cl::sub(Convert));
 enum class ConvertFormats { BINARY, YAML };
-static cl::opt<ConvertFormats> ConvertInputFormat(
-    "input-format", cl::desc("input format"),
-    cl::values(clEnumValN(ConvertFormats::BINARY, "raw",
-                          "input is in raw binary"),
-               clEnumValN(ConvertFormats::YAML, "yaml", "input is in yaml")),
-    cl::sub(Convert));
-static cl::alias ConvertInputFormat2("i", cl::aliasopt(ConvertInputFormat),
-                                     cl::desc("Alias for -input-format"),
-                                     cl::sub(Convert));
 static cl::opt<ConvertFormats> ConvertOutputFormat(
     "output-format", cl::desc("output format"),
     cl::values(clEnumValN(ConvertFormats::BINARY, "raw", "output in binary"),
@@ -91,12 +83,10 @@ static cl::alias InstrMapFormat2("t", cl::aliasopt(InstrMapFormat),
                                  cl::desc("Alias for -instr-map-format"),
                                  cl::sub(Convert));
 
-using llvm::yaml::MappingTraits;
-using llvm::yaml::ScalarEnumerationTraits;
 using llvm::yaml::IO;
 using llvm::yaml::Output;
 
-void TraceConverter::exportAsYAML(const LogReader &Records, raw_ostream &OS) {
+void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
   YAMLXRayTrace Trace;
   const auto &FH = Records.getFileHeader();
   Trace.Header = {FH.Version, FH.Type, FH.ConstantTSC, FH.NonstopTSC,
@@ -112,7 +102,7 @@ void TraceConverter::exportAsYAML(const LogReader &Records, raw_ostream &OS) {
   Out << Trace;
 }
 
-void TraceConverter::exportAsRAWv1(const LogReader &Records, raw_ostream &OS) {
+void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
   // First write out the file header, in the correct endian-appropriate format
   // (XRay assumes currently little endian).
   support::endian::Writer<support::endianness::little> Writer(OS);
@@ -180,24 +170,6 @@ static CommandRegistration Unused(&Convert, []() -> Error {
   llvm::xray::FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                                   FunctionAddresses);
   llvm::xray::TraceConverter TC(FuncIdHelper, ConvertSymbolize);
-  LogReader::LoaderFunction Loader;
-  switch (ConvertInputFormat) {
-  case ConvertFormats::BINARY:
-    Loader = NaiveLogLoader;
-    break;
-  case ConvertFormats::YAML:
-    Loader = YAMLLogLoader;
-    break;
-  }
-
-  LogReader Reader(ConvertInput, Err, ConvertSortInput, Loader);
-  if (Err)
-    return joinErrors(
-        make_error<StringError>(
-            Twine("Failed loading input file '") + ConvertInput + "'.",
-            std::make_error_code(std::errc::protocol_error)),
-        std::move(Err));
-
   raw_fd_ostream OS(ConvertOutput, EC,
                     ConvertOutputFormat == ConvertFormats::BINARY
                         ? sys::fs::OpenFlags::F_None
@@ -206,13 +178,22 @@ static CommandRegistration Unused(&Convert, []() -> Error {
     return make_error<StringError>(
         Twine("Cannot open file '") + ConvertOutput + "' for writing.", EC);
 
-  switch (ConvertOutputFormat) {
-  case ConvertFormats::YAML:
-    TC.exportAsYAML(Reader, OS);
-    break;
-  case ConvertFormats::BINARY:
-    TC.exportAsRAWv1(Reader, OS);
-    break;
+  if (auto TraceOrErr = loadTraceFile(ConvertInput, ConvertSortInput)) {
+    auto &T = *TraceOrErr;
+    switch (ConvertOutputFormat) {
+    case ConvertFormats::YAML:
+      TC.exportAsYAML(T, OS);
+      break;
+    case ConvertFormats::BINARY:
+      TC.exportAsRAWv1(T, OS);
+      break;
+    }
+  } else {
+    return joinErrors(
+        make_error<StringError>(
+            Twine("Failed loading input file '") + ConvertInput + "'.",
+            std::make_error_code(std::errc::executable_format_error)),
+        TraceOrErr.takeError());
   }
   return Error::success();
 });

@@ -392,6 +392,44 @@ define void @testNotGlobal() {
    ret void
 }
 
+; CHECK-LABEL: define void @handling_loops()
+define void @handling_loops() {
+  %a = alloca %struct.A, align 8
+  %1 = bitcast %struct.A* %a to i8*
+  %2 = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTV1A, i64 0, i64 2) to i32 (...)**), i32 (...)*** %2, align 8, !invariant.group !0
+  %3 = load i8, i8* @unknownPtr, align 4
+  %4 = icmp sgt i8 %3, 0
+  br i1 %4, label %.lr.ph.i, label %_Z2g2R1A.exit
+
+.lr.ph.i:                                         ; preds = %0
+  %5 = bitcast %struct.A* %a to void (%struct.A*)***
+  %6 = load i8, i8* @unknownPtr, align 4
+  %7 = icmp sgt i8 %6, 1
+  br i1 %7, label %._crit_edge.preheader, label %_Z2g2R1A.exit
+
+._crit_edge.preheader:                            ; preds = %.lr.ph.i
+  br label %._crit_edge
+
+._crit_edge:                                      ; preds = %._crit_edge.preheader, %._crit_edge
+  %8 = phi i8 [ %10, %._crit_edge ], [ 1, %._crit_edge.preheader ]
+  %.pre = load void (%struct.A*)**, void (%struct.A*)*** %5, align 8, !invariant.group !0
+  %9 = load void (%struct.A*)*, void (%struct.A*)** %.pre, align 8
+  ; CHECK: call void @_ZN1A3fooEv(%struct.A* nonnull %a)
+  call void %9(%struct.A* nonnull %a) #3
+  ; CHECK-NOT: call void %
+  %10 = add nuw nsw i8 %8, 1
+  %11 = load i8, i8* @unknownPtr, align 4
+  %12 = icmp slt i8 %10, %11
+  br i1 %12, label %._crit_edge, label %_Z2g2R1A.exit.loopexit
+
+_Z2g2R1A.exit.loopexit:                           ; preds = %._crit_edge
+  br label %_Z2g2R1A.exit
+
+_Z2g2R1A.exit:                                    ; preds = %_Z2g2R1A.exit.loopexit, %.lr.ph.i, %0
+  ret void
+}
+
 
 declare void @foo(i8*)
 declare void @foo2(i8*, i8)

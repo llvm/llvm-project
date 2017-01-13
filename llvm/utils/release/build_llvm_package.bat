@@ -11,6 +11,10 @@ REM
 REM   Visual Studio 2015, CMake, Ninja, SVN, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
 REM   Visual Studio 2015 SDK (for the clang-format plugin).
+REM
+REM
+REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
+REM   https://github.com/swig/swig/issues/769
 
 
 REM You need to modify the paths below:

@@ -517,8 +517,8 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType vt> :
   VOPC_Profile<sched, vt, i32> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
   let Asm64 = "$sdst, $src0_modifiers, $src1";
-  let InsSDWA = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0,
-                     Int32InputMods:$src1_modifiers, Src1RC64:$src1,
+  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
+                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
   let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
   let HasSrc1Mods = 0;

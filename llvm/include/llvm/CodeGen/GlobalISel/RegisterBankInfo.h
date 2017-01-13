@@ -384,10 +384,6 @@ protected:
 
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
-  ///
-  /// \note For the verify method to succeed all the \p NumRegBanks
-  /// must be initialized by createRegisterBank and updated with
-  /// addRegBankCoverage RegisterBank.
   RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks);
 
   /// This constructor is meaningless.
@@ -399,31 +395,6 @@ protected:
   RegisterBankInfo() {
     llvm_unreachable("This constructor should not be executed");
   }
-
-  /// Create a new register bank with the given parameter and add it
-  /// to RegBanks.
-  /// \pre \p ID must not already be used.
-  /// \pre \p ID < NumRegBanks.
-  void createRegisterBank(unsigned ID, const char *Name);
-
-  /// Add \p RCId to the set of register class that the register bank,
-  /// identified \p ID, covers.
-  /// This method transitively adds all the sub classes and the subreg-classes
-  /// of \p RCId to the set of covered register classes.
-  /// It also adjusts the size of the register bank to reflect the maximal
-  /// size of a value that can be hold into that register bank.
-  ///
-  /// \note This method does *not* add the super classes of \p RCId.
-  /// The rationale is if \p ID covers the registers of \p RCId, that
-  /// does not necessarily mean that \p ID covers the set of registers
-  /// of RCId's superclasses.
-  /// This method does *not* add the superreg classes as well for consistents.
-  /// The expected use is to add the coverage top-down with respect to the
-  /// register hierarchy.
-  ///
-  /// \todo TableGen should just generate the BitSet vector for us.
-  void addRegBankCoverage(unsigned ID, unsigned RCId,
-                          const TargetRegisterInfo &TRI);
 
   /// Get the register bank identified by \p ID.
   RegisterBank &getRegBank(unsigned ID) {

@@ -2,6 +2,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   CodeViewError.cpp
   CodeViewRecordIO.cpp
   CVSymbolVisitor.cpp
+  CVTypeDumper.cpp
   CVTypeVisitor.cpp
   EnumTables.cpp
   Line.cpp
@@ -10,7 +11,9 @@ add_llvm_library(LLVMDebugInfoCodeView
   RecordSerialization.cpp
   SymbolRecordMapping.cpp
   SymbolDumper.cpp
-  TypeDumper.cpp
+  TypeDatabase.cpp
+  TypeDatabaseVisitor.cpp
+  TypeDumpVisitor.cpp
   TypeRecord.cpp
   TypeRecordMapping.cpp
   TypeSerializer.cpp
