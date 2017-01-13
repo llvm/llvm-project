@@ -269,24 +269,24 @@ struct Allocator {
   }
 
   void RePoisonChunk(uptr chunk) {
-    // This could a user-facing chunk (with redzones), or some internal
+    // This could be a user-facing chunk (with redzones), or some internal
     // housekeeping chunk, like TransferBatch. Start by assuming the former.
     AsanChunk *ac = GetAsanChunk((void *)chunk);
     uptr allocated_size = allocator.GetActuallyAllocatedSize((void *)ac);
     uptr beg = ac->Beg();
     uptr end = ac->Beg() + ac->UsedSize(true);
     uptr chunk_end = chunk + allocated_size;
-    if (chunk < beg && beg < end && end <= chunk_end) {
-      // Looks like a valid AsanChunk. Or maybe not. Be conservative and only
-      // poison the redzones.
+    if (chunk < beg && beg < end && end <= chunk_end &&
+        ac->chunk_state == CHUNK_ALLOCATED) {
+      // Looks like a valid AsanChunk in use, poison redzones only.
       PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
       uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
       FastPoisonShadowPartialRightRedzone(
           end_aligned_down, end - end_aligned_down,
           chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
     } else {
-      // This can not be an AsanChunk. Poison everything. It may be reused as
-      // AsanChunk later.
+      // This is either not an AsanChunk or freed or quarantined AsanChunk.
+      // In either case, poison everything.
       PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
     }
   }

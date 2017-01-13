@@ -43,8 +43,14 @@
 .thumb
 #endif
 
-.p2align 2
+@ int __eqsf2(float a, float b)
+
+    .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__eqsf2)
+#if defined(COMPILER_RT_ARMHF_TARGET)
+    vmov r0, s0
+    vmov r1, s1
+#endif
     // Make copies of a and b with the sign bit shifted off the top.  These will
     // be used to detect zeros and NaNs.
 #if __ARM_ARCH_ISA_THUMB == 1
@@ -166,16 +172,23 @@ LOCAL_LABEL(CHECK_NAN):
     JMP(lr)
 #endif
 END_COMPILERRT_FUNCTION(__eqsf2)
+
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__lesf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__ltsf2, __eqsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__nesf2, __eqsf2)
 
-.p2align 2
+@ int __gtsf2(float a, float b)
+
+    .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__gtsf2)
     // Identical to the preceding except in that we return -1 for NaN values.
     // Given that the two paths share so much code, one might be tempted to
     // unify them; however, the extra code needed to do so makes the code size
     // to performance tradeoff very hard to justify for such small functions.
+#if defined(COMPILER_RT_ARMHF_TARGET)
+    vmov r0, s0
+    vmov r1, s1
+#endif
 #if __ARM_ARCH_ISA_THUMB == 1
     push    {r6, lr}
     lsls    r2,        r0, #1
@@ -215,6 +228,8 @@ LOCAL_LABEL(CHECK_NAN_2):
 6:
     pop     {r6, pc}
 #else
+    mov     r2,         r0, lsl #1
+    mov     r3,         r1, lsl #1
     orrs    r12,    r2, r3, lsr #1
     it ne
     eorsne  r12,    r0, r1
@@ -233,10 +248,17 @@ LOCAL_LABEL(CHECK_NAN_2):
     JMP(lr)
 #endif
 END_COMPILERRT_FUNCTION(__gtsf2)
+
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__gesf2, __gtsf2)
 
-.p2align 2
+@ int __unordsf2(float a, float b)
+
+    .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__unordsf2)
+#if defined(COMPILER_RT_ARMHF_TARGET)
+    vmov    r0,         s0
+    vmov    r1,         s1
+#endif
     // Return 1 for NaN values, 0 otherwise.
     lsls    r2,         r0, #1
     lsls    r3,         r1, #1
@@ -260,7 +282,15 @@ DEFINE_COMPILERRT_FUNCTION(__unordsf2)
     JMP(lr)
 END_COMPILERRT_FUNCTION(__unordsf2)
 
+#if defined(COMPILER_RT_ARMHF_TARGET)
+DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpum):
+	vmov s0, r0
+	vmov s1, r1
+	b SYMBOL_NAME(__unordsf2)
+END_COMPILERRT_FUNCTION(__aeabi_fcmpum)
+#else
 DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_fcmpun, __unordsf2)
+#endif
 
 NO_EXEC_STACK_DIRECTIVE
 
