@@ -36,13 +36,6 @@ private:
 protected:
   AArch64GenRegisterBankInfo();
 
-public:
-  static RegisterBankInfo::PartialMapping PartMappings[];
-  static RegisterBankInfo::ValueMapping ValMappings[];
-  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
-                              unsigned ValLength, const RegisterBank &RB);
-  static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
-                                unsigned Size, unsigned Offset);
   enum PartialMappingIdx {
     PMI_None = -1,
     PMI_GPR32 = 1,
@@ -59,6 +52,10 @@ public:
     PMI_Min = PMI_FirstGPR,
   };
 
+  static RegisterBankInfo::PartialMapping PartMappings[];
+  static RegisterBankInfo::ValueMapping ValMappings[];
+  static PartialMappingIdx BankIDToCopyMapIdx[];
+
   enum ValueMappingIdx {
     First3OpsIdx = 0,
     Last3OpsIdx = 18,
@@ -68,6 +65,10 @@ public:
     DistanceBetweenCrossRegCpy = 2
   };
 
+  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
+                              unsigned ValLength, const RegisterBank &RB);
+  static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
+                                unsigned Size, unsigned Offset);
   static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
                                      PartialMappingIdx LastAlias,
                                      ArrayRef<PartialMappingIdx> Order);
@@ -85,13 +86,10 @@ public:
   getValueMapping(PartialMappingIdx RBIdx, unsigned Size);
 
   /// Get the pointer to the ValueMapping of the operands of a copy
-  /// instruction from a GPR or FPR register to a GPR or FPR register
-  /// with a size of \p Size.
-  ///
-  /// If \p DstIsGPR is true, the destination of the copy is on GPR,
-  /// otherwise it is on FPR. Same thing for \p SrcIsGPR.
+  /// instruction from the \p SrcBankID register bank to the \p DstBankID
+  /// register bank with a size of \p Size.
   static const RegisterBankInfo::ValueMapping *
-  getCopyMapping(bool DstIsGPR, bool SrcIsGPR, unsigned Size);
+  getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
 };
 
 /// This class provides the information for the target register banks.

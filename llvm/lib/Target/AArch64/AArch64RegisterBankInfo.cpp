@@ -147,9 +147,8 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     unsigned PartialMapSrcIdx = PMI_##RBNameSrc##Size - PMI_Min;               \
     (void)PartialMapDstIdx;                                                    \
     (void)PartialMapSrcIdx;                                                    \
-    const ValueMapping *Map =                                                  \
-        getCopyMapping(PMI_First##RBNameDst == PMI_FirstGPR,                   \
-                       PMI_First##RBNameSrc == PMI_FirstGPR, Size);            \
+    const ValueMapping *Map = getCopyMapping(                                  \
+        AArch64::RBNameDst##RegBankID, AArch64::RBNameSrc##RegBankID, Size);  \
     (void)Map;                                                                 \
     assert(Map[0].BreakDown ==                                                 \
                &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
@@ -277,21 +276,21 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
     InstructionMappings AltMappings;
     InstructionMapping GPRMapping(
         /*ID*/ 1, /*Cost*/ 1,
-        getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ true, Size),
+        getCopyMapping(AArch64::GPRRegBankID, AArch64::GPRRegBankID, Size),
         /*NumOperands*/ 2);
     InstructionMapping FPRMapping(
         /*ID*/ 2, /*Cost*/ 1,
-        getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ false, Size),
+        getCopyMapping(AArch64::FPRRegBankID, AArch64::FPRRegBankID, Size),
         /*NumOperands*/ 2);
     InstructionMapping GPRToFPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        getCopyMapping(/*DstIsGPR*/ false, /*SrcIsGPR*/ true, Size),
+        getCopyMapping(AArch64::FPRRegBankID, AArch64::GPRRegBankID, Size),
         /*NumOperands*/ 2);
     InstructionMapping FPRToGPRMapping(
         /*ID*/ 3,
         /*Cost*/ copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank, Size),
-        getCopyMapping(/*DstIsGPR*/ true, /*SrcIsGPR*/ false, Size),
+        getCopyMapping(AArch64::GPRRegBankID, AArch64::FPRRegBankID, Size),
         /*NumOperands*/ 2);
 
     AltMappings.emplace_back(std::move(GPRMapping));
@@ -456,9 +455,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     const RegisterBank &SrcRB =
         SrcIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
-    return InstructionMapping{DefaultMappingID, copyCost(DstRB, SrcRB, Size),
-                              getCopyMapping(DstIsGPR, SrcIsGPR, Size),
-                              /*NumOperands*/ 2};
+    return InstructionMapping{
+        DefaultMappingID, copyCost(DstRB, SrcRB, Size),
+        getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
+        /*NumOperands*/ 2};
   }
   case TargetOpcode::G_SEQUENCE:
     // FIXME: support this, but the generic code is really not going to do
