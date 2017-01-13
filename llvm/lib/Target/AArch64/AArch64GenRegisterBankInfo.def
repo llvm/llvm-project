@@ -144,26 +144,12 @@ const uint32_t CCRCoverageData[] = {
 RegisterBank GPRRegBank(AArch64::GPRRegBankID, "GPR", 64, GPRCoverageData);
 RegisterBank FPRRegBank(AArch64::FPRRegBankID, "FPR", 512, FPRCoverageData);
 RegisterBank CCRRegBank(AArch64::CCRRegBankID, "CCR", 32, CCRCoverageData);
+} // end namespace AArch64
 
-RegisterBank *RegBanks[] = {&GPRRegBank, &FPRRegBank, &CCRRegBank};
+RegisterBank *AArch64GenRegisterBankInfo::RegBanks[] = {
+    &AArch64::GPRRegBank, &AArch64::FPRRegBank, &AArch64::CCRRegBank};
 
-// PartialMappings.
-enum PartialMappingIdx {
-  PMI_None = -1,
-  PMI_GPR32 = 1,
-  PMI_GPR64,
-  PMI_FPR32,
-  PMI_FPR64,
-  PMI_FPR128,
-  PMI_FPR256,
-  PMI_FPR512,
-  PMI_FirstGPR = PMI_GPR32,
-  PMI_LastGPR = PMI_GPR64,
-  PMI_FirstFPR = PMI_FPR32,
-  PMI_LastFPR = PMI_FPR512,
-  PMI_Min = PMI_FirstGPR,
-};
-
+namespace AArch64 {
 static unsigned getRegBankBaseIdxOffset(unsigned Size) {
   assert(Size && "0-sized type!!");
   // Make anything smaller than 32 gets 32
@@ -171,84 +157,76 @@ static unsigned getRegBankBaseIdxOffset(unsigned Size) {
   // 32 is 0, 64 is 1, 128 is 2, and so on.
   return Log2_32(Size) - /*Log2_32(32)=*/ 5;
 }
+}
 
-RegisterBankInfo::PartialMapping PartMappings[] {
-  /* StartIdx, Length, RegBank */
-  // 0: GPR 32-bit value.
-  {0, 32, GPRRegBank},
-  // 1: GPR 64-bit value.
-  {0, 64, GPRRegBank},
-  // 2: FPR 32-bit value.
-  {0, 32, FPRRegBank},
-  // 3: FPR 64-bit value.
-  {0, 64, FPRRegBank},
-  // 4: FPR 128-bit value.
-  {0, 128, FPRRegBank},
-  // 5: FPR 256-bit value.
-  {0, 256, FPRRegBank},
-  // 6: FPR 512-bit value.
-  {0, 512, FPRRegBank}
-};
-
-enum ValueMappingIdx {
-  First3OpsIdx = 0,
-  Last3OpsIdx = 18,
-  DistanceBetweenRegBanks = 3,
-  FirstCrossRegCpyIdx = 21,
-  LastCrossRegCpyIdx = 27,
-  DistanceBetweenCrossRegCpy = 2
-};
+RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
+    /* StartIdx, Length, RegBank */
+    // 0: GPR 32-bit value.
+    {0, 32, AArch64::GPRRegBank},
+    // 1: GPR 64-bit value.
+    {0, 64, AArch64::GPRRegBank},
+    // 2: FPR 32-bit value.
+    {0, 32, AArch64::FPRRegBank},
+    // 3: FPR 64-bit value.
+    {0, 64, AArch64::FPRRegBank},
+    // 4: FPR 128-bit value.
+    {0, 128, AArch64::FPRRegBank},
+    // 5: FPR 256-bit value.
+    {0, 256, AArch64::FPRRegBank},
+    // 6: FPR 512-bit value.
+    {0, 512, AArch64::FPRRegBank}};
 
 // ValueMappings.
-RegisterBankInfo::ValueMapping ValMappings[]{
+RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     /* BreakDown, NumBreakDowns */
     // 3-operands instructions (all binary operations should end up with one of
     // those mapping).
     // 0: GPR 32-bit value. <-- This must match First3OpsIdx.
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     // 3: GPR 64-bit value.
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     // 6: FPR 32-bit value.
-    {&PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     // 9: FPR 64-bit value.
-    {&PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     // 12: FPR 128-bit value.
-    {&PartMappings[PMI_FPR128 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR128 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
     // 15: FPR 256-bit value.
-    {&PartMappings[PMI_FPR256 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR256 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR256 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
     // 18: FPR 512-bit value. <-- This must match Last3OpsIdx.
-    {&PartMappings[PMI_FPR512 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR512 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR512 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
     // Cross register bank copies.
     // 21: GPR 32-bit value to FPR 32-bit value. <-- This must match
     //                                               FirstCrossRegCpyIdx.
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     // 23: GPR 64-bit value to FPR 64-bit value.
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     // 25: FPR 32-bit value to GPR 32-bit value.
-    {&PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     // 27: FPR 64-bit value to GPR 64-bit value. <-- This must match
     //                                               LastCrossRegCpyIdx.
-    {&PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1}
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1}
 };
 
+namespace AArch64 {
 /// Get the pointer to the ValueMapping representing the RegisterBank
 /// at \p RBIdx with a size of \p Size.
 ///
@@ -257,16 +235,20 @@ RegisterBankInfo::ValueMapping ValMappings[]{
 ///
 /// \pre \p RBIdx != PartialMappingIdx::None
 const RegisterBankInfo::ValueMapping *
-getValueMapping(PartialMappingIdx RBIdx, unsigned Size) {
-  assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
-  unsigned ValMappingIdx = First3OpsIdx +
-                           (RBIdx - AArch64::PartialMappingIdx::PMI_Min +
-                            getRegBankBaseIdxOffset(Size)) *
-                               ValueMappingIdx::DistanceBetweenRegBanks;
-  assert(ValMappingIdx >= AArch64::First3OpsIdx &&
-         ValMappingIdx <= AArch64::Last3OpsIdx && "Mapping out of bound");
+getValueMapping(AArch64GenRegisterBankInfo::PartialMappingIdx RBIdx,
+                unsigned Size) {
+  assert(RBIdx != AArch64GenRegisterBankInfo::PartialMappingIdx::PMI_None &&
+         "No mapping needed for that");
+  unsigned ValMappingIdx =
+      AArch64GenRegisterBankInfo::First3OpsIdx +
+      (RBIdx - AArch64GenRegisterBankInfo::PartialMappingIdx::PMI_Min +
+       getRegBankBaseIdxOffset(Size)) *
+          AArch64GenRegisterBankInfo::ValueMappingIdx::DistanceBetweenRegBanks;
+  assert(ValMappingIdx >= AArch64GenRegisterBankInfo::First3OpsIdx &&
+         ValMappingIdx <= AArch64GenRegisterBankInfo::Last3OpsIdx &&
+         "Mapping out of bound");
 
-  return &ValMappings[ValMappingIdx];
+  return &AArch64GenRegisterBankInfo::ValMappings[ValMappingIdx];
 }
 
 /// Get the pointer to the ValueMapping of the operands of a copy
@@ -277,20 +259,45 @@ getValueMapping(PartialMappingIdx RBIdx, unsigned Size) {
 /// otherwise it is on FPR. Same thing for \p SrcIsGPR.
 const RegisterBankInfo::ValueMapping *
 getCopyMapping(bool DstIsGPR, bool SrcIsGPR, unsigned Size) {
-  PartialMappingIdx DstRBIdx = DstIsGPR ? PMI_FirstGPR : PMI_FirstFPR;
-  PartialMappingIdx SrcRBIdx = SrcIsGPR ? PMI_FirstGPR : PMI_FirstFPR;
+  AArch64GenRegisterBankInfo::PartialMappingIdx DstRBIdx =
+      DstIsGPR ? AArch64GenRegisterBankInfo::PMI_FirstGPR
+               : AArch64GenRegisterBankInfo::PMI_FirstFPR;
+  AArch64GenRegisterBankInfo::PartialMappingIdx SrcRBIdx =
+      SrcIsGPR ? AArch64GenRegisterBankInfo::PMI_FirstGPR
+               : AArch64GenRegisterBankInfo::PMI_FirstFPR;
   if (DstRBIdx == SrcRBIdx)
     return getValueMapping(DstRBIdx, Size);
   assert(Size <= 64 && "GPR cannot handle that size");
-  unsigned ValMappingIdx =
-      FirstCrossRegCpyIdx +
-      (DstRBIdx - PMI_Min + getRegBankBaseIdxOffset(Size)) *
-          ValueMappingIdx::DistanceBetweenCrossRegCpy;
-  assert(ValMappingIdx >= AArch64::FirstCrossRegCpyIdx &&
-         ValMappingIdx <= AArch64::LastCrossRegCpyIdx &&
+  unsigned ValMappingIdx = AArch64GenRegisterBankInfo::FirstCrossRegCpyIdx +
+                           (DstRBIdx - AArch64GenRegisterBankInfo::PMI_Min +
+                            getRegBankBaseIdxOffset(Size)) *
+                               AArch64GenRegisterBankInfo::ValueMappingIdx::
+                                   DistanceBetweenCrossRegCpy;
+  assert(ValMappingIdx >= AArch64GenRegisterBankInfo::FirstCrossRegCpyIdx &&
+         ValMappingIdx <= AArch64GenRegisterBankInfo::LastCrossRegCpyIdx &&
          "Mapping out of bound");
-  return &ValMappings[ValMappingIdx];
+  return &AArch64GenRegisterBankInfo::ValMappings[ValMappingIdx];
+}
+} // End AArch64 namespace.
+
+bool AArch64GenRegisterBankInfo::checkPartialMap(unsigned Idx,
+                                                 unsigned ValStartIdx,
+                                                 unsigned ValLength,
+                                                 const RegisterBank &RB) {
+  const PartialMapping &Map = PartMappings[Idx - PartialMappingIdx::PMI_Min];
+  return Map.StartIdx == ValStartIdx && Map.Length == ValLength &&
+         Map.RegBank == &RB;
 }
 
-} // End AArch64 namespace.
+bool AArch64GenRegisterBankInfo::checkValueMapImpl(unsigned Idx,
+                                                   unsigned FirstInBank,
+                                                   unsigned Size,
+                                                   unsigned Offset) {
+  unsigned PartialMapBaseIdx = Idx - PartialMappingIdx::PMI_Min;
+  const ValueMapping &Map =
+      AArch64::getValueMapping((PartialMappingIdx)FirstInBank, Size)[Offset];
+  return Map.BreakDown == &PartMappings[PartialMapBaseIdx] &&
+         Map.NumBreakDowns == 1;
+}
+
 } // End llvm namespace.
