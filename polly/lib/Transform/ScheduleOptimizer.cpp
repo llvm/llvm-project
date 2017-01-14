@@ -162,6 +162,12 @@ static cl::opt<int> SecondCacheLevelSize(
     cl::desc("The size of the second level specified in bytes."), cl::Hidden,
     cl::init(262144), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<int> VectorRegisterBitwidth(
+    "polly-target-vector-register-bitwidth",
+    cl::desc("The size in bits of a vector register (if not set, this "
+             "information is taken from LLVM's target information."),
+    cl::Hidden, cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<int> FirstLevelDefaultTileSize(
     "polly-default-tile-size",
     cl::desc("The default tile size (if not enough were provided by"
@@ -599,7 +605,11 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
   // by a vector register. Use 2 by default.
-  auto Nvec = TTI->getRegisterBitWidth(true) / 64;
+  long RegisterBitwidth = VectorRegisterBitwidth;
+
+  if (RegisterBitwidth == -1)
+    RegisterBitwidth = TTI->getRegisterBitWidth(true);
+  auto Nvec = RegisterBitwidth / 64;
   if (Nvec == 0)
     Nvec = 2;
   int Nr =

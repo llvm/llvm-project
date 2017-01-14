@@ -150,3 +150,6 @@ void alwaysWarnWithArg(int a) _diagnose_if(1 || a, "alwaysWarn", "warning"); // 
 void runAlwaysWarnWithArg(int a) {
   alwaysWarnWithArg(a); // expected-warning{{alwaysWarn}}
 }
+
+// Test that diagnose_if warnings generated in system headers are not ignored.
+#include "Inputs/diagnose-if-warn-system-header.h"

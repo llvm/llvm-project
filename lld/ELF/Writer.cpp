@@ -10,6 +10,7 @@
 #include "Writer.h"
 #include "Config.h"
 #include "LinkerScript.h"
+#include "MapFile.h"
 #include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
@@ -233,6 +234,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  writeMapFile<ELFT>(OutputSections);
   if (auto EC = Buffer->commit())
     error("failed to write to the output file: " + EC.message());
 

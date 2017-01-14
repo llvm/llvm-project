@@ -121,6 +121,8 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
+def Map: JS<"Map">;
+
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
@@ -269,6 +271,7 @@ def alias_format_b: S<"b">, Alias<format>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
+def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
@@ -325,7 +328,6 @@ def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
 def M: Flag<["-"], "M">;
-def Map: JS<"Map">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
@@ -350,7 +352,6 @@ def Qy : F<"Qy">;
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
 def alias_define_common_dc: F<"dc">, Alias<define_common>;
 def alias_define_common_dp: F<"dp">, Alias<define_common>;
-def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;
 

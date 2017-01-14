@@ -13916,8 +13916,10 @@ bool Sema::tryCaptureVariable(
 
     // Check whether we've already captured it.
     if (isVariableAlreadyCapturedInScopeInfo(CSI, Var, Nested, CaptureType, 
-                                             DeclRefType)) 
+                                             DeclRefType)) {
+      CSI->getCapture(Var).markUsed(BuildAndDiagnose);
       break;
+    }
     // If we are instantiating a generic lambda call operator body, 
     // we do not want to capture new variables.  What was captured
     // during either a lambdas transformation or initial parsing

@@ -1197,6 +1197,39 @@ static bool is32Or64BitBasicType(QualType Ty, ASTContext &Context) {
   return Size == 32 || Size == 64;
 }
 
+static bool addFieldSizes(ASTContext &Context, const RecordDecl *RD,
+                          uint64_t &Size) {
+  for (const auto *FD : RD->fields()) {
+    // Scalar arguments on the stack get 4 byte alignment on x86. If the
+    // argument is smaller than 32-bits, expanding the struct will create
+    // alignment padding.
+    if (!is32Or64BitBasicType(FD->getType(), Context))
+      return false;
+
+    // FIXME: Reject bit-fields wholesale; there are two problems, we don't know
+    // how to expand them yet, and the predicate for telling if a bitfield still
+    // counts as "basic" is more complicated than what we were doing previously.
+    if (FD->isBitField())
+      return false;
+
+    Size += Context.getTypeSize(FD->getType());
+  }
+  return true;
+}
+
+static bool addBaseAndFieldSizes(ASTContext &Context, const CXXRecordDecl *RD,
+                                 uint64_t &Size) {
+  // Don't do this if there are any non-empty bases.
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    if (!addBaseAndFieldSizes(Context, Base.getType()->getAsCXXRecordDecl(),
+                              Size))
+      return false;
+  }
+  if (!addFieldSizes(Context, RD, Size))
+    return false;
+  return true;
+}
+
 /// Test whether an argument type which is to be passed indirectly (on the
 /// stack) would have the equivalent layout if it was expanded into separate
 /// arguments. If so, we prefer to do the latter to avoid inhibiting
@@ -1207,8 +1240,9 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   if (!RT)
     return false;
   const RecordDecl *RD = RT->getDecl();
+  uint64_t Size = 0;
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!IsWin32StructABI ) {
+    if (!IsWin32StructABI) {
       // On non-Windows, we have to conservatively match our old bitcode
       // prototypes in order to be ABI-compatible at the bitcode level.
       if (!CXXRD->isCLike())
@@ -1217,30 +1251,12 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
       // Don't do this for dynamic classes.
       if (CXXRD->isDynamicClass())
         return false;
-      // Don't do this if there are any non-empty bases.
-      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
-        if (!isEmptyRecord(getContext(), Base.getType(), /*AllowArrays=*/true))
-          return false;
-      }
     }
-  }
-
-  uint64_t Size = 0;
-
-  for (const auto *FD : RD->fields()) {
-    // Scalar arguments on the stack get 4 byte alignment on x86. If the
-    // argument is smaller than 32-bits, expanding the struct will create
-    // alignment padding.
-    if (!is32Or64BitBasicType(FD->getType(), getContext()))
+    if (!addBaseAndFieldSizes(getContext(), CXXRD, Size))
       return false;
-
-    // FIXME: Reject bit-fields wholesale; there are two problems, we don't know
-    // how to expand them yet, and the predicate for telling if a bitfield still
-    // counts as "basic" is more complicated than what we were doing previously.
-    if (FD->isBitField())
+  } else {
+    if (!addFieldSizes(getContext(), RD, Size))
       return false;
-
-    Size += getContext().getTypeSize(FD->getType());
   }
 
   // We can do this if there was no alignment padding.

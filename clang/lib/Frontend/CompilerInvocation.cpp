@@ -2420,7 +2420,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   bool Success = true;
 
   // Parse the arguments.
-  std::unique_ptr<OptTable> Opts(createDriverOptTable());
+  std::unique_ptr<OptTable> Opts = createDriverOptTable();
   const unsigned IncludedFlagsBitmask = options::CC1Option;
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args =

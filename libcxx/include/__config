@@ -101,6 +101,8 @@
 #define __is_identifier(__x) 1
 #endif
 
+#define __has_keyword(__x) !(__is_identifier(__x))
+
 #if defined(__clang__)
 #define _LIBCPP_COMPILER_CLANG
 #elif defined(__GNUC__)
@@ -290,7 +292,7 @@ typedef __char32_t char32_t;
 #endif
 
 #if !(__has_feature(cxx_nullptr))
-# if __has_extension(cxx_nullptr) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
+# if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
 #   define nullptr __nullptr
 # else
 #   define _LIBCPP_HAS_NO_NULLPTR
@@ -741,7 +743,7 @@ template <unsigned> struct __static_assert_check {};
 
 #ifdef _LIBCPP_HAS_NO_DECLTYPE
 // GCC 4.6 provides __decltype in all standard modes.
-#if !__is_identifier(__decltype) || _GNUC_VER >= 406
+#if __has_keyword(__decltype) || _GNUC_VER >= 406
 #  define decltype(__x) __decltype(__x)
 #else
 #  define decltype(__x) __typeof__(__x)
@@ -970,7 +972,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
 #endif
 
-#if __has_feature(cxx_atomic) || __has_extension(c_atomic)
+#if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #define _LIBCPP_HAS_C_ATOMIC_IMP
 #elif _GNUC_VER > 407
 #define _LIBCPP_HAS_GCC_ATOMIC_IMP
@@ -1004,6 +1006,16 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #if defined(_LIBCPP_MSVCRT) || defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_NO_OFF_T_FUNCTIONS
 #endif
+#endif
+
+#if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+# define _LIBCPP_DIAGNOSE_WARNING(...) \
+    __attribute__((diagnose_if(__VA_ARGS__, "warning")))
+# define _LIBCPP_DIAGNOSE_ERROR(...) \
+    __attribute__((diagnose_if(__VA_ARGS__, "error")))
+#else
+# define _LIBCPP_DIAGNOSE_WARNING(...)
+# define _LIBCPP_DIAGNOSE_ERROR(...)
 #endif
 
 #endif // __cplusplus

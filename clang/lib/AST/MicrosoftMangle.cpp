@@ -2997,14 +2997,14 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // N.B. The length is in terms of bytes, not characters.
   Mangler.mangleNumber(SL->getByteLength() + SL->getCharByteWidth());
 
-  auto GetLittleEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetLittleEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = Index % CharByteWidth;
     return static_cast<char>((CodeUnit >> (8 * OffsetInCodeUnit)) & 0xff);
   };
 
-  auto GetBigEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetBigEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = (CharByteWidth - 1) - (Index % CharByteWidth);

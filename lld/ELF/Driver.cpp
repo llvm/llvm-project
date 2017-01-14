@@ -512,6 +512,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Init = getString(Args, OPT_init, "_init");
   Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->MapFile = getString(Args, OPT_Map);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);

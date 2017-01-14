@@ -43,7 +43,8 @@ macro(find_llvm_parts)
     execute_process(
       COMMAND ${LLVM_CONFIG_PATH} --cmakedir
       RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT)
+      OUTPUT_VARIABLE CONFIG_OUTPUT
+      ERROR_QUIET)
     if(NOT HAD_ERROR)
       string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH)
     else()

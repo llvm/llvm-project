@@ -52,7 +52,8 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  ...
+-  -Wunused-lambda-capture warns when a variable explicitly captured
+   by a lambda is not used in the body of the lambda.
 
 New Compiler Flags
 ------------------

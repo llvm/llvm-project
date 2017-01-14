@@ -483,6 +483,7 @@ def UnusedFunction : DiagGroup<"unused-function", [UnneededInternalDecl]>;
 def UnusedMemberFunction : DiagGroup<"unused-member-function",
                                      [UnneededMemberFunction]>;
 def UnusedLabel : DiagGroup<"unused-label">;
+def UnusedLambdaCapture : DiagGroup<"unused-lambda-capture">;
 def UnusedParameter : DiagGroup<"unused-parameter">;
 def UnusedResult : DiagGroup<"unused-result">;
 def PotentiallyEvaluatedExpression : DiagGroup<"potentially-evaluated-expression">;
@@ -620,8 +621,9 @@ def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
                         // UnusedParameter, (matches GCC's behavior)
                         // UnusedMemberFunction, (clean-up llvm before enabling)
-                        UnusedPrivateField, UnusedLocalTypedef,
-                        UnusedValue, UnusedVariable, UnusedPropertyIvar]>,
+                        UnusedPrivateField, UnusedLambdaCapture,
+                        UnusedLocalTypedef, UnusedValue, UnusedVariable,
+                        UnusedPropertyIvar]>,
                         DiagCategory<"Unused Entity Issue">;
 
 // Format settings.

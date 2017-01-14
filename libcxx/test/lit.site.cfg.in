@@ -26,7 +26,7 @@ config.executor                 = "@LIBCXX_EXECUTOR@"
 config.llvm_unwinder            = "@LIBCXXABI_USE_LLVM_UNWINDER@"
 config.has_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
 config.use_libatomic            = "@LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@"
-
+config.debug_build              = "@LIBCXX_DEBUG_BUILD@"
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
 config.cxx_ext_threads          = "@LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY@"
 

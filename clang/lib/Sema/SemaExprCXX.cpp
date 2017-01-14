@@ -1106,6 +1106,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
             dyn_cast<CapturingScopeInfo>(FunctionScopes[idx])) {
       if (CSI->CXXThisCaptureIndex != 0) {
         // 'this' is already being captured; there isn't anything more to do.
+        CSI->Captures[CSI->CXXThisCaptureIndex - 1].markUsed(BuildAndDiagnose);
         break;
       }
       LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI);

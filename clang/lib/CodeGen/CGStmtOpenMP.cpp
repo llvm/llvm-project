@@ -986,7 +986,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
                         OriginalBaseLValue);
         // Store the address of the original variable associated with the LHS
         // implicit variable.
-        PrivateScope.addPrivate(LHSVD, [this, OASELValueLB]() -> Address {
+        PrivateScope.addPrivate(LHSVD, [OASELValueLB]() -> Address {
           return OASELValueLB.getAddress();
         });
         // Emit reduction copy.
@@ -1040,9 +1040,8 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
             *this, OrigVD->getType(), ASELValue.getType(), OriginalBaseLValue);
         // Store the address of the original variable associated with the LHS
         // implicit variable.
-        PrivateScope.addPrivate(LHSVD, [this, ASELValue]() -> Address {
-          return ASELValue.getAddress();
-        });
+        PrivateScope.addPrivate(
+            LHSVD, [ASELValue]() -> Address { return ASELValue.getAddress(); });
         // Emit reduction copy.
         bool IsRegistered = PrivateScope.addPrivate(
             OrigVD, [this, OrigVD, PrivateVD, BaseLValue, ASELValue,
@@ -2633,7 +2632,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
   for (const auto *C : S.getClausesOfKind<OMPDependClause>())
     for (auto *IRef : C->varlists())
       Data.Dependences.push_back(std::make_pair(C->getDependencyKind(), IRef));
-  auto &&CodeGen = [PartId, &S, &Data, CS, &BodyGen, &LastprivateDstsOrigs](
+  auto &&CodeGen = [&Data, CS, &BodyGen, &LastprivateDstsOrigs](
       CodeGenFunction &CGF, PrePostActionTy &Action) {
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
@@ -3250,7 +3249,7 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
     NewVValType = XRValExpr->getType();
     auto *ERValExpr = IsXLHSInRHSPart ? RHS : LHS;
     auto &&Gen = [&CGF, &NewVVal, UE, ExprRValue, XRValExpr, ERValExpr,
-                  IsSeqCst, IsPostfixUpdate](RValue XRValue) -> RValue {
+                  IsPostfixUpdate](RValue XRValue) -> RValue {
       CodeGenFunction::OpaqueValueMapping MapExpr(CGF, ERValExpr, ExprRValue);
       CodeGenFunction::OpaqueValueMapping MapX(CGF, XRValExpr, XRValue);
       RValue Res = CGF.EmitAnyExpr(UE);
@@ -3277,7 +3276,7 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
     NewVValType = X->getType().getNonReferenceType();
     ExprRValue = convertToType(CGF, ExprRValue, E->getType(),
                                X->getType().getNonReferenceType(), Loc);
-    auto &&Gen = [&CGF, &NewVVal, ExprRValue](RValue XRValue) -> RValue {
+    auto &&Gen = [&NewVVal, ExprRValue](RValue XRValue) -> RValue {
       NewVVal = XRValue;
       return ExprRValue;
     };

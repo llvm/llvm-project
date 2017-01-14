@@ -1533,8 +1533,9 @@ private:
   /// The affinator used to translate SCEVs to isl expressions.
   SCEVAffinator Affinator;
 
-  typedef std::map<std::pair<AssertingVH<const Value>, int>,
-                   std::unique_ptr<ScopArrayInfo>>
+  typedef std::map<
+      std::pair<AssertingVH<const Value>, enum ScopArrayInfo::MemoryKind>,
+      std::unique_ptr<ScopArrayInfo>>
       ArrayInfoMapTy;
 
   typedef StringMap<std::unique_ptr<ScopArrayInfo>> ArrayNameMapTy;

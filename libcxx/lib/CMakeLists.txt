@@ -102,7 +102,25 @@ endif()
 if (NOT WIN32)
   add_flags_if_supported(-fPIC)
 endif()
+
 add_link_flags_if_supported(-nodefaultlibs)
+
+if (LIBCXX_TARGETING_MSVC)
+  if (LIBCXX_DEBUG_BUILD)
+    set(LIB_SUFFIX "d")
+  else()
+    set(LIB_SUFFIX "")
+  endif()
+  add_compile_flags(/Zl)
+  add_link_flags(/nodefaultlib)
+
+  add_library_flags(ucrt${LIB_SUFFIX}) # Universal C runtime
+  add_library_flags(vcruntime${LIB_SUFFIX}) # C++ runtime
+  add_library_flags(msvcrt${LIB_SUFFIX}) # C runtime startup files
+  # Required for standards-complaint wide character formatting functions
+  # (e.g. `printfw`/`scanfw`)
+  add_library_flags(iso_stdio_wide_specifiers)
+endif()
 
 if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)

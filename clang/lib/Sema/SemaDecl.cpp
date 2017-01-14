@@ -656,7 +656,8 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                        Name, nullptr, true, TemplateResult,
                        MemberOfUnknownSpecialization) == TNK_Type_template) {
       TemplateName TplName = TemplateResult.get();
-      Diag(IILoc, diag::err_template_missing_args) << TplName;
+      Diag(IILoc, diag::err_template_missing_args)
+        << (int)getTemplateNameKindForDiagnostics(TplName) << TplName;
       if (TemplateDecl *TplDecl = TplName.getAsTemplateDecl()) {
         Diag(TplDecl->getLocation(), diag::note_template_decl_here)
           << TplDecl->getTemplateParameters()->getSourceRange();
@@ -1070,6 +1071,24 @@ Corrected:
 
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
   return BuildDeclarationNameExpr(SS, Result, ADL);
+}
+
+Sema::TemplateNameKindForDiagnostics
+Sema::getTemplateNameKindForDiagnostics(TemplateName Name) {
+  auto *TD = Name.getAsTemplateDecl();
+  if (!TD)
+    return TemplateNameKindForDiagnostics::DependentTemplate;
+  if (isa<ClassTemplateDecl>(TD))
+    return TemplateNameKindForDiagnostics::ClassTemplate;
+  if (isa<FunctionTemplateDecl>(TD))
+    return TemplateNameKindForDiagnostics::FunctionTemplate;
+  if (isa<VarTemplateDecl>(TD))
+    return TemplateNameKindForDiagnostics::VarTemplate;
+  if (isa<TypeAliasTemplateDecl>(TD))
+    return TemplateNameKindForDiagnostics::AliasTemplate;
+  if (isa<TemplateTemplateParmDecl>(TD))
+    return TemplateNameKindForDiagnostics::TemplateTemplateParam;
+  return TemplateNameKindForDiagnostics::DependentTemplate;
 }
 
 // Determines the context to return to after temporarily entering a

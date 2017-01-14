@@ -453,9 +453,7 @@ swap(multimap<Key, T, Compare, Allocator>& x,
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _CP, class _Compare,
-          bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value
-         >
+template <class _Key, class _CP, class _Compare, bool _IsSmall>
 class __map_value_compare
     : private _Compare
 {

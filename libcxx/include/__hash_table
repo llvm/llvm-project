@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <type_traits>
 
 #include <__undef_min_max>
 
@@ -37,6 +38,15 @@ union __hash_value_type;
 template <class _Key, class _Tp>
 struct __hash_value_type;
 #endif
+
+template <class _Key, class _Cp, class _Hash,
+          bool =  is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
+class __unordered_map_hasher;
+
+template <class _Key, class _Cp, class _Pred,
+          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
+         >
+class __unordered_map_equal;
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
@@ -856,6 +866,29 @@ public:
     template <class> friend class __hash_map_node_destructor;
 };
 
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Key, class _Hash, class _Equal, class _Alloc>
+struct __diagnose_hash_table_helper {
+  static constexpr bool __trigger_diagnostics()
+  _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+    "the specified hash functor does not provide a const call operator")
+  _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+    "the specified comparator type does not provide a const call operator")
+  { return true; }
+};
+
+template <class _Key, class _Value, class _Hash, class _Equal, class _Alloc>
+struct __diagnose_hash_table_helper<
+  __hash_value_type<_Key, _Value>,
+  __unordered_map_hasher<_Key, __hash_value_type<_Key, _Value>, _Hash>,
+  __unordered_map_equal<_Key, __hash_value_type<_Key, _Value>, _Equal>,
+  _Alloc>
+: __diagnose_hash_table_helper<_Key, _Hash, _Equal, _Alloc>
+{
+};
+#endif // _LIBCPP_CXX03_LANG
+
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table
 {
@@ -1453,6 +1486,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
                  "Predicate must be copy-constructible.");
     static_assert((is_copy_constructible<hasher>::value),
                  "Hasher must be copy-constructible.");
+#ifndef _LIBCPP_CXX03_LANG
+    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
+#endif
     __deallocate_node(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);

@@ -1714,6 +1714,18 @@ public:
                bool IsAddressOfOperand,
                std::unique_ptr<CorrectionCandidateCallback> CCC = nullptr);
 
+  /// Describes the detailed kind of a template name. Used in diagnostics.
+  enum class TemplateNameKindForDiagnostics {
+    ClassTemplate,
+    FunctionTemplate,
+    VarTemplate,
+    AliasTemplate,
+    TemplateTemplateParam,
+    DependentTemplate
+  };
+  TemplateNameKindForDiagnostics
+  getTemplateNameKindForDiagnostics(TemplateName Name);
+
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
@@ -5363,6 +5375,9 @@ public:
   /// was successfully completed.
   ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
                              Scope *CurScope);
+
+  /// \brief Diagnose if an explicit lambda capture is unused.
+  void DiagnoseUnusedLambdaCapture(const sema::LambdaScopeInfo::Capture &From);
 
   /// \brief Complete a lambda-expression having processed and attached the
   /// lambda body.

@@ -191,6 +191,11 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
        Current.NestingLevel < State.StartOfLineLevel))
     return true;
 
+  if (startsSegmentOfBuilderTypeCall(Current) &&
+      (State.Stack.back().CallContinuation != 0 ||
+       State.Stack.back().BreakBeforeParameter))
+    return true;
+
   if (State.Column <= NewLineColumn)
     return false;
 
@@ -253,11 +258,6 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if ((Current.is(TT_FunctionDeclarationName) ||
        (Current.is(tok::kw_operator) && !Previous.is(tok::coloncolon))) &&
       !Previous.is(tok::kw_template) && State.Stack.back().BreakBeforeParameter)
-    return true;
-
-  if (startsSegmentOfBuilderTypeCall(Current) &&
-      (State.Stack.back().CallContinuation != 0 ||
-       State.Stack.back().BreakBeforeParameter))
     return true;
 
   // The following could be precomputed as they do not depend on the state.

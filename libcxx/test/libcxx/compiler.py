@@ -296,7 +296,7 @@ class CXXCompiler(object):
 
     def addWarningFlagIfSupported(self, flag):
         if self.hasWarningFlag(flag):
-            assert flag not in self.warning_flags
-            self.warning_flags += [flag]
+            if flag not in self.warning_flags:
+                self.warning_flags += [flag]
             return True
         return False

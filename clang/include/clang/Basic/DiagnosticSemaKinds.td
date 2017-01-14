@@ -316,6 +316,9 @@ def warn_unneeded_member_function : Warning<
   InGroup<UnneededMemberFunction>, DefaultIgnore;
 def warn_unused_private_field: Warning<"private field %0 is not used">,
   InGroup<UnusedPrivateField>, DefaultIgnore;
+def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
+  "%select{used|required to be captured for use in an unevaluated context}1">,
+  InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
@@ -3409,8 +3412,8 @@ def note_ovl_candidate : Note<"candidate "
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
 def note_ovl_candidate_inherited_constructor_slice : Note<
-    "constructor inherited from base class cannot be used to initialize from "
-    "an argument of the derived class type">;
+    "candidate %select{constructor|template}0 ignored: "
+    "inherited constructor cannot be used to %select{copy|move}1 object">;
 def note_ovl_candidate_illegal_constructor : Note<
     "candidate %select{constructor|template}0 ignored: "
     "instantiation %select{takes|would take}0 its own class type by value">;
@@ -3445,7 +3448,8 @@ def note_ovl_candidate_has_pass_object_size_params: Note<
     "candidate address cannot be taken because parameter %0 has "
     "pass_object_size attribute">;
 def err_diagnose_if_succeeded : Error<"%0">;
-def warn_diagnose_if_succeeded : Warning<"%0">, InGroup<UserDefinedWarnings>;
+def warn_diagnose_if_succeeded : Warning<"%0">, InGroup<UserDefinedWarnings>,
+    ShowInSystemHeader;
 def note_ovl_candidate_disabled_by_function_cond_attr : Note<
     "candidate disabled: %0">;
 def note_ovl_candidate_disabled_by_extension : Note<
@@ -3860,11 +3864,13 @@ def err_template_decl_ref : Error<
 
 // C++ Template Argument Lists
 def err_template_missing_args : Error<
-  "use of class template %0 requires template arguments">;
+  "use of "
+  "%select{class template|function template|variable template|alias template|"
+  "template template parameter|template}0 %1 requires template arguments">;
 def err_template_arg_list_different_arity : Error<
   "%select{too few|too many}0 template arguments for "
-  "%select{class template|function template|template template parameter"
-  "|template}1 %2">;
+  "%select{class template|function template|variable template|alias template|"
+  "template template parameter|template}1 %2">;
 def note_template_decl_here : Note<"template is declared here">;
 def err_template_arg_must_be_type : Error<
   "template argument for template type parameter must be a type">;

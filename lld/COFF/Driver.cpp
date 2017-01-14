@@ -658,6 +658,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->DumpPdb = Args.hasArg(OPT_dumppdb);
   Config->DebugPdb = Args.hasArg(OPT_debugpdb);
 
+  Config->MapFile = getMapFile(Args);
+
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.
   std::vector<MemoryBufferRef> MBs;
@@ -845,17 +847,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result.
   writeResult(&Symtab);
-
-  // Create a symbol map file containing symbol VAs and their names
-  // to help debugging.
-  std::string MapFile = getMapFile(Args);
-  if (!MapFile.empty()) {
-    std::error_code EC;
-    raw_fd_ostream Out(MapFile, EC, OpenFlags::F_Text);
-    if (EC)
-      fatal(EC, "could not create the symbol map " + MapFile);
-    Symtab.printMap(Out);
-  }
 
   // Call exit to avoid calling destructors.
   exit(0);

@@ -3438,6 +3438,12 @@ TEST_F(FormatTest, LineBreakingInBinaryExpressions) {
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa || aaaaaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa) {\n}",
       OnePerLine);
+
+  verifyFormat("int i = someFunction(aaaaaaa, 0)\n"
+               "                .aaa(aaaaaaaaaaaaa) *\n"
+               "            aaaaaaa +\n"
+               "        aaaaaaa;",
+               getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, ExpressionIndentation) {

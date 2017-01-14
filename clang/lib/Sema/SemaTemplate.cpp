@@ -3327,7 +3327,7 @@ bool Sema::CheckTemplateTypeArgument(TemplateTypeParmDecl *Param,
     SourceRange SR = AL.getSourceRange();
     TemplateName Name = Arg.getAsTemplate();
     Diag(SR.getBegin(), diag::err_template_missing_args)
-      << Name << SR;
+      << (int)getTemplateNameKindForDiagnostics(Name) << Name << SR;
     if (TemplateDecl *Decl = Name.getAsTemplateDecl())
       Diag(Decl->getLocation(), diag::note_template_decl_here);
 
@@ -3912,9 +3912,7 @@ static bool diagnoseArityMismatch(Sema &S, TemplateDecl *Template,
                         TemplateArgs.getRAngleLoc());
   S.Diag(TemplateLoc, diag::err_template_arg_list_different_arity)
     << (NumArgs > NumParams)
-    << (isa<ClassTemplateDecl>(Template)? 0 :
-        isa<FunctionTemplateDecl>(Template)? 1 :
-        isa<TemplateTemplateParmDecl>(Template)? 2 : 3)
+    << (int)S.getTemplateNameKindForDiagnostics(TemplateName(Template))
     << Template << Range;
   S.Diag(Template->getLocation(), diag::note_template_decl_here)
     << Params->getSourceRange();
@@ -4022,9 +4020,7 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
         // Not enough arguments for this parameter pack.
         Diag(TemplateLoc, diag::err_template_arg_list_different_arity)
           << false
-          << (isa<ClassTemplateDecl>(Template)? 0 :
-              isa<FunctionTemplateDecl>(Template)? 1 :
-              isa<TemplateTemplateParmDecl>(Template)? 2 : 3)
+          << (int)getTemplateNameKindForDiagnostics(TemplateName(Template))
           << Template;
         Diag(Template->getLocation(), diag::note_template_decl_here)
           << Params->getSourceRange();
