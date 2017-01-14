@@ -30,7 +30,7 @@ This proposal relates only to moving the hosting of our source-code repository
 from SVN hosted on our own servers to Git hosted on GitHub. We are not proposing
 using GitHub's issue tracker, pull-requests, or code-review.
 
-Contributers will continue to earn commit access on demand under the Developer
+Contributors will continue to earn commit access on demand under the Developer
 Policy, except that that a GitHub account will be required instead of SVN
 username/password-hash.
 
@@ -433,7 +433,7 @@ Concerns
  * Using the monolithic repository may add overhead for those *integrating* a
    standalone sub-project, even if they aren't contributing to it, due to the
    same disk space concern as the point above. The availability of the
-   sub-project Git mirror addesses this, even without SVN access.
+   sub-project Git mirror addresses this, even without SVN access.
  * Preservation of the existing read/write SVN-based workflows relies on the
    GitHub SVN bridge, which is an extra dependency.  Maintaining this locks us
    into GitHub and could restrict future workflow changes.
