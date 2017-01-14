@@ -52,6 +52,9 @@ Non-comprehensive list of changes in this release
   the previously used names should become descriptions and a short name in the
   style of a programming language identifier should be added.
 
+* LLVM now handles invariant.group across different basic blocks, which makes
+  it possible to devirtualize virtual calls inside loops.
+
 * ... next change ...
 
 .. NOTE
