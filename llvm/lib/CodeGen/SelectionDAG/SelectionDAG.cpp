@@ -2745,7 +2745,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
 
   // Are all operands of a build vector constant powers of two?
   if (Val.getOpcode() == ISD::BUILD_VECTOR)
-    if (llvm::all_of(Val->ops(), [this, BitWidth](SDValue E) {
+    if (llvm::all_of(Val->ops(), [BitWidth](SDValue E) {
           if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(E))
             return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
           return false;

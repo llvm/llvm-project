@@ -71,11 +71,10 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: var_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; AVX512-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; AVX512-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shift_v4i64:
@@ -491,11 +490,10 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: splatvar_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; AVX512-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
-; AVX512-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpxor %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vpbroadcastq %xmm1, %ymm1
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatvar_shift_v4i64:
@@ -836,10 +834,10 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: constant_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrlvq {{.*}}(%rip), %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [4611686018427387904,72057594037927936,4294967296,2]
-; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,7,31,62]
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: constant_shift_v4i64:

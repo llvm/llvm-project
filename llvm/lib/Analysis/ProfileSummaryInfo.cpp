@@ -56,22 +56,23 @@ static uint64_t getMinCountForPercentile(SummaryEntryVector &DS,
 // The profile summary metadata may be attached either by the frontend or by
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
-// available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::computeSummary() {
+// available in the module and parses it to get the Summary object. Returns true
+// if a valid Summary is available.
+bool ProfileSummaryInfo::computeSummary() {
   if (Summary)
-    return;
+    return true;
   auto *SummaryMD = M.getProfileSummary();
   if (!SummaryMD)
-    return;
+    return false;
   Summary.reset(ProfileSummary::getFromMD(SummaryMD));
+  return true;
 }
 
 /// Returns true if the function's entry is hot. If it returns false, it
 /// either means it is not hot or it is unknown whether it is hot or not (for
 /// example, no profile data is available).
 bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
-  computeSummary();
-  if (!F || !Summary)
+  if (!F || !computeSummary())
     return false;
   auto FunctionCount = F->getEntryCount();
   // FIXME: The heuristic used below for determining hotness is based on
@@ -84,13 +85,12 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
 /// either means it is not cold or it is unknown whether it is cold or not (for
 /// example, no profile data is available).
 bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
-  computeSummary();
   if (!F)
     return false;
   if (F->hasFnAttribute(Attribute::Cold)) {
     return true;
   }
-  if (!Summary)
+  if (!computeSummary())
     return false;
   auto FunctionCount = F->getEntryCount();
   // FIXME: The heuristic used below for determining coldness is based on
@@ -101,9 +101,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) {
 
 /// Compute the hot and cold thresholds.
 void ProfileSummaryInfo::computeThresholds() {
-  if (!Summary)
-    computeSummary();
-  if (!Summary)
+  if (!computeSummary())
     return;
   auto &DetailedSummary = Summary->getDetailedSummary();
   HotCountThreshold =
@@ -148,6 +146,8 @@ bool ProfileSummaryInfo::isColdBB(const BasicBlock *B,
 
 bool ProfileSummaryInfo::extractProfTotalWeight(const Instruction *I,
                                                 uint64_t &TotalCount) {
+  if (!computeSummary())
+    return false;
   // Use profile weight on metadata only for sample profiling where block counts
   // could differ from the count of an instruction within the block.
   if (Summary.get()->getKind() != ProfileSummary::PSK_Sample)

@@ -1582,6 +1582,14 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
         return false;
       }
     }
+
+    // We must also check for overlaps with regmask clobbers.
+    BitVector RegMaskUsable;
+    if (LIS->checkRegMaskInterference(RHS, RegMaskUsable) &&
+        !RegMaskUsable.test(DstReg)) {
+      DEBUG(dbgs() << "\t\tRegMask interference\n");
+      return false;
+    }
   }
 
   // Skip any value computations, we are not adding new values to the
@@ -1615,14 +1623,6 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
         if (MI->readsRegister(DstReg, TRI)) {
           DEBUG(dbgs() << "\t\tInterference (read): " << *MI);
           return false;
-        }
-
-        // We must also check for clobbers caused by regmasks.
-        for (const auto &MO : MI->operands()) {
-          if (MO.isRegMask() && MO.clobbersPhysReg(DstReg)) {
-            DEBUG(dbgs() << "\t\tInterference (regmask clobber): " << *MI);
-            return false;
-          }
         }
       }
     }

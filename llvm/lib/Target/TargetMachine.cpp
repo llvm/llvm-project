@@ -198,7 +198,7 @@ CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
 void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
 
 TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
+  return TargetIRAnalysis([](const Function &F) {
     return TargetTransformInfo(F.getParent()->getDataLayout());
   });
 }

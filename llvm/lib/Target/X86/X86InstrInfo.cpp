@@ -4044,6 +4044,131 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
         BuildMI(MF, MI.getDebugLoc(), get(X86::LEA16r)).add(Dest).add(Src),
         MI.getOperand(2));
     break;
+
+  case X86::VMOVDQU8Z128rmk:
+  case X86::VMOVDQU8Z256rmk:
+  case X86::VMOVDQU8Zrmk:
+  case X86::VMOVDQU16Z128rmk:
+  case X86::VMOVDQU16Z256rmk:
+  case X86::VMOVDQU16Zrmk:
+  case X86::VMOVDQU32Z128rmk: case X86::VMOVDQA32Z128rmk:
+  case X86::VMOVDQU32Z256rmk: case X86::VMOVDQA32Z256rmk:
+  case X86::VMOVDQU32Zrmk:    case X86::VMOVDQA32Zrmk:
+  case X86::VMOVDQU64Z128rmk: case X86::VMOVDQA64Z128rmk:
+  case X86::VMOVDQU64Z256rmk: case X86::VMOVDQA64Z256rmk:
+  case X86::VMOVDQU64Zrmk:    case X86::VMOVDQA64Zrmk:
+  case X86::VMOVUPDZ128rmk:   case X86::VMOVAPDZ128rmk:
+  case X86::VMOVUPDZ256rmk:   case X86::VMOVAPDZ256rmk:
+  case X86::VMOVUPDZrmk:      case X86::VMOVAPDZrmk:
+  case X86::VMOVUPSZ128rmk:   case X86::VMOVAPSZ128rmk:
+  case X86::VMOVUPSZ256rmk:   case X86::VMOVAPSZ256rmk:
+  case X86::VMOVUPSZrmk:      case X86::VMOVAPSZrmk: {
+    unsigned Opc;
+    switch (MIOpc) {
+    default: llvm_unreachable("Unreachable!");
+    case X86::VMOVDQU8Z128rmk:  Opc = X86::VPBLENDMBZ128rmk; break;
+    case X86::VMOVDQU8Z256rmk:  Opc = X86::VPBLENDMBZ256rmk; break;
+    case X86::VMOVDQU8Zrmk:     Opc = X86::VPBLENDMBZrmk;    break;
+    case X86::VMOVDQU16Z128rmk: Opc = X86::VPBLENDMWZ128rmk; break;
+    case X86::VMOVDQU16Z256rmk: Opc = X86::VPBLENDMWZ256rmk; break;
+    case X86::VMOVDQU16Zrmk:    Opc = X86::VPBLENDMWZrmk;    break;
+    case X86::VMOVDQU32Z128rmk: Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQU32Z256rmk: Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQU32Zrmk:    Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQU64Z128rmk: Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQU64Z256rmk: Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQU64Zrmk:    Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVUPDZ128rmk:   Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVUPDZ256rmk:   Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVUPDZrmk:      Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVUPSZ128rmk:   Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVUPSZ256rmk:   Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVUPSZrmk:      Opc = X86::VBLENDMPSZrmk;    break;
+    case X86::VMOVDQA32Z128rmk: Opc = X86::VPBLENDMDZ128rmk; break;
+    case X86::VMOVDQA32Z256rmk: Opc = X86::VPBLENDMDZ256rmk; break;
+    case X86::VMOVDQA32Zrmk:    Opc = X86::VPBLENDMDZrmk;    break;
+    case X86::VMOVDQA64Z128rmk: Opc = X86::VPBLENDMQZ128rmk; break;
+    case X86::VMOVDQA64Z256rmk: Opc = X86::VPBLENDMQZ256rmk; break;
+    case X86::VMOVDQA64Zrmk:    Opc = X86::VPBLENDMQZrmk;    break;
+    case X86::VMOVAPDZ128rmk:   Opc = X86::VBLENDMPDZ128rmk; break;
+    case X86::VMOVAPDZ256rmk:   Opc = X86::VBLENDMPDZ256rmk; break;
+    case X86::VMOVAPDZrmk:      Opc = X86::VBLENDMPDZrmk;    break;
+    case X86::VMOVAPSZ128rmk:   Opc = X86::VBLENDMPSZ128rmk; break;
+    case X86::VMOVAPSZ256rmk:   Opc = X86::VBLENDMPSZ256rmk; break;
+    case X86::VMOVAPSZrmk:      Opc = X86::VBLENDMPSZrmk;    break;
+    }
+
+    NewMI = BuildMI(MF, MI.getDebugLoc(), get(Opc))
+              .add(Dest)
+              .add(MI.getOperand(2))
+              .add(Src)
+              .add(MI.getOperand(3))
+              .add(MI.getOperand(4))
+              .add(MI.getOperand(5))
+              .add(MI.getOperand(6))
+              .add(MI.getOperand(7));
+    break;
+  }
+  case X86::VMOVDQU8Z128rrk:
+  case X86::VMOVDQU8Z256rrk:
+  case X86::VMOVDQU8Zrrk:
+  case X86::VMOVDQU16Z128rrk:
+  case X86::VMOVDQU16Z256rrk:
+  case X86::VMOVDQU16Zrrk:
+  case X86::VMOVDQU32Z128rrk: case X86::VMOVDQA32Z128rrk:
+  case X86::VMOVDQU32Z256rrk: case X86::VMOVDQA32Z256rrk:
+  case X86::VMOVDQU32Zrrk:    case X86::VMOVDQA32Zrrk:
+  case X86::VMOVDQU64Z128rrk: case X86::VMOVDQA64Z128rrk:
+  case X86::VMOVDQU64Z256rrk: case X86::VMOVDQA64Z256rrk:
+  case X86::VMOVDQU64Zrrk:    case X86::VMOVDQA64Zrrk:
+  case X86::VMOVUPDZ128rrk:   case X86::VMOVAPDZ128rrk:
+  case X86::VMOVUPDZ256rrk:   case X86::VMOVAPDZ256rrk:
+  case X86::VMOVUPDZrrk:      case X86::VMOVAPDZrrk:
+  case X86::VMOVUPSZ128rrk:   case X86::VMOVAPSZ128rrk:
+  case X86::VMOVUPSZ256rrk:   case X86::VMOVAPSZ256rrk:
+  case X86::VMOVUPSZrrk:      case X86::VMOVAPSZrrk: {
+    unsigned Opc;
+    switch (MIOpc) {
+    default: llvm_unreachable("Unreachable!");
+    case X86::VMOVDQU8Z128rrk:  Opc = X86::VPBLENDMBZ128rrk; break;
+    case X86::VMOVDQU8Z256rrk:  Opc = X86::VPBLENDMBZ256rrk; break;
+    case X86::VMOVDQU8Zrrk:     Opc = X86::VPBLENDMBZrrk;    break;
+    case X86::VMOVDQU16Z128rrk: Opc = X86::VPBLENDMWZ128rrk; break;
+    case X86::VMOVDQU16Z256rrk: Opc = X86::VPBLENDMWZ256rrk; break;
+    case X86::VMOVDQU16Zrrk:    Opc = X86::VPBLENDMWZrrk;    break;
+    case X86::VMOVDQU32Z128rrk: Opc = X86::VPBLENDMDZ128rrk; break;
+    case X86::VMOVDQU32Z256rrk: Opc = X86::VPBLENDMDZ256rrk; break;
+    case X86::VMOVDQU32Zrrk:    Opc = X86::VPBLENDMDZrrk;    break;
+    case X86::VMOVDQU64Z128rrk: Opc = X86::VPBLENDMQZ128rrk; break;
+    case X86::VMOVDQU64Z256rrk: Opc = X86::VPBLENDMQZ256rrk; break;
+    case X86::VMOVDQU64Zrrk:    Opc = X86::VPBLENDMQZrrk;    break;
+    case X86::VMOVUPDZ128rrk:   Opc = X86::VBLENDMPDZ128rrk; break;
+    case X86::VMOVUPDZ256rrk:   Opc = X86::VBLENDMPDZ256rrk; break;
+    case X86::VMOVUPDZrrk:      Opc = X86::VBLENDMPDZrrk;    break;
+    case X86::VMOVUPSZ128rrk:   Opc = X86::VBLENDMPSZ128rrk; break;
+    case X86::VMOVUPSZ256rrk:   Opc = X86::VBLENDMPSZ256rrk; break;
+    case X86::VMOVUPSZrrk:      Opc = X86::VBLENDMPSZrrk;    break;
+    case X86::VMOVDQA32Z128rrk: Opc = X86::VPBLENDMDZ128rrk; break;
+    case X86::VMOVDQA32Z256rrk: Opc = X86::VPBLENDMDZ256rrk; break;
+    case X86::VMOVDQA32Zrrk:    Opc = X86::VPBLENDMDZrrk;    break;
+    case X86::VMOVDQA64Z128rrk: Opc = X86::VPBLENDMQZ128rrk; break;
+    case X86::VMOVDQA64Z256rrk: Opc = X86::VPBLENDMQZ256rrk; break;
+    case X86::VMOVDQA64Zrrk:    Opc = X86::VPBLENDMQZrrk;    break;
+    case X86::VMOVAPDZ128rrk:   Opc = X86::VBLENDMPDZ128rrk; break;
+    case X86::VMOVAPDZ256rrk:   Opc = X86::VBLENDMPDZ256rrk; break;
+    case X86::VMOVAPDZrrk:      Opc = X86::VBLENDMPDZrrk;    break;
+    case X86::VMOVAPSZ128rrk:   Opc = X86::VBLENDMPSZ128rrk; break;
+    case X86::VMOVAPSZ256rrk:   Opc = X86::VBLENDMPSZ256rrk; break;
+    case X86::VMOVAPSZrrk:      Opc = X86::VBLENDMPSZrrk;    break;
+    }
+
+    NewMI = BuildMI(MF, MI.getDebugLoc(), get(Opc))
+              .add(Dest)
+              .add(MI.getOperand(2))
+              .add(Src)
+              .add(MI.getOperand(3));
+    break;
+  }
   }
 
   if (!NewMI) return nullptr;
@@ -6831,14 +6956,33 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     assert(HasAVX && "AVX not supported");
     return Expand2AddrUndef(MIB, get(X86::VXORPSYrr));
   case X86::AVX512_128_SET0:
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZ128rr));
-  case X86::AVX512_256_SET0:
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZ256rr));
+  case X86::AVX512_FsFLD0SS:
+  case X86::AVX512_FsFLD0SD: {
+    bool HasVLX = Subtarget.hasVLX();
+    unsigned SrcReg = MIB->getOperand(0).getReg();
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    if (HasVLX || TRI->getEncodingValue(SrcReg) < 16)
+      return Expand2AddrUndef(MIB,
+                              get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
+    // Extended register without VLX. Use a larger XOR.
+    SrcReg = TRI->getMatchingSuperReg(SrcReg, X86::sub_xmm, &X86::VR512RegClass);
+    MIB->getOperand(0).setReg(SrcReg);
+    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
+  }
+  case X86::AVX512_256_SET0: {
+    bool HasVLX = Subtarget.hasVLX();
+    unsigned SrcReg = MIB->getOperand(0).getReg();
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    if (HasVLX || TRI->getEncodingValue(SrcReg) < 16)
+      return Expand2AddrUndef(MIB,
+                              get(HasVLX ? X86::VPXORDZ256rr : X86::VXORPSYrr));
+    // Extended register without VLX. Use a larger XOR.
+    SrcReg = TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
+    MIB->getOperand(0).setReg(SrcReg);
+    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
+  }
   case X86::AVX512_512_SET0:
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
-  case X86::AVX512_FsFLD0SS:
-  case X86::AVX512_FsFLD0SD:
-    return Expand2AddrUndef(MIB, get(X86::VXORPSZ128rr));
   case X86::V_SETALLONES:
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VPCMPEQDrr : X86::PCMPEQDrr));
   case X86::AVX2_SETALLONES:

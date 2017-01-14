@@ -70,6 +70,9 @@ private:
   // lives.
   DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
 
+  typedef std::pair<const BasicBlock *, const BasicBlock *> CFGEdge;
+  DenseMap<CFGEdge, SmallVector<MachineBasicBlock *, 1>> MachinePreds;
+
   // List of stubbed PHI instructions, for values and basic blocks to be filled
   // in once all MachineBasicBlocks have been created.
   SmallVector<std::pair<const PHINode *, MachineInstr *>, 4> PendingPHIs;
@@ -390,10 +393,27 @@ private:
   /// the type being accessed (according to the Module's DataLayout).
   unsigned getMemOpAlignment(const Instruction &I);
 
-  /// Get the MachineBasicBlock that represents \p BB.
-  /// If such basic block does not exist, it is created.
+  /// Get the MachineBasicBlock that represents \p BB. Specifically, the block
+  /// returned will be the head of the translated block (suitable for branch
+  /// destinations). If such basic block does not exist, it is created.
   MachineBasicBlock &getOrCreateBB(const BasicBlock &BB);
 
+  /// Record \p NewPred as a Machine predecessor to `Edge.second`, corresponding
+  /// to `Edge.first` at the IR level. This is used when IRTranslation creates
+  /// multiple MachineBasicBlocks for a given IR block and the CFG is no longer
+  /// represented simply by the IR-level CFG.
+  void addMachineCFGPred(CFGEdge Edge, MachineBasicBlock *NewPred);
+
+  /// Returns the Machine IR predecessors for the given IR CFG edge. Usually
+  /// this is just the single MachineBasicBlock corresponding to the predecessor
+  /// in the IR. More complex lowering can result in multiple MachineBasicBlocks
+  /// preceding the original though (e.g. switch instructions).
+  ArrayRef<MachineBasicBlock *> getMachinePredBBs(CFGEdge Edge) {
+    auto RemappedEdge = MachinePreds.find(Edge);
+    if (RemappedEdge != MachinePreds.end())
+      return RemappedEdge->second;
+    return &getOrCreateBB(*Edge.first);
+  }
 
 public:
   // Ctor, nothing fancy.

@@ -2212,9 +2212,10 @@ SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
          !shouldEmitGOTReloc(GA->getGlobal());
 }
 
-static SDValue buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
-                                      SDLoc DL, unsigned Offset, EVT PtrVT,
-                                      unsigned GAFlags = SIInstrInfo::MO_NONE) {
+static SDValue
+buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
+                        const SDLoc &DL, unsigned Offset, EVT PtrVT,
+                        unsigned GAFlags = SIInstrInfo::MO_NONE) {
   // In order to support pc-relative addressing, the PC_ADD_REL_OFFSET SDNode is
   // lowered to the following code sequence:
   //
@@ -2332,7 +2333,8 @@ SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG,
                      DAG.getValueType(VT));
 }
 
-static SDValue emitNonHSAIntrinsicError(SelectionDAG& DAG, SDLoc DL, EVT VT) {
+static SDValue emitNonHSAIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
+                                        EVT VT) {
   DiagnosticInfoUnsupported BadIntrin(*DAG.getMachineFunction().getFunction(),
                                       "non-hsa intrinsic with hsa target",
                                       DL.getDebugLoc());
@@ -2340,7 +2342,8 @@ static SDValue emitNonHSAIntrinsicError(SelectionDAG& DAG, SDLoc DL, EVT VT) {
   return DAG.getUNDEF(VT);
 }
 
-static SDValue emitRemovedIntrinsicError(SelectionDAG& DAG, SDLoc DL, EVT VT) {
+static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
+                                         EVT VT) {
   DiagnosticInfoUnsupported BadIntrin(*DAG.getMachineFunction().getFunction(),
                                       "intrinsic not supported on subtarget",
                                       DL.getDebugLoc());

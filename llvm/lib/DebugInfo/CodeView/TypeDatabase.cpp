@@ -71,7 +71,7 @@ TypeIndex TypeDatabase::getNextTypeIndex() const {
 }
 
 /// Records the name of a type, and reserves its type index.
-void TypeDatabase::recordType(StringRef Name, CVType Data) {
+void TypeDatabase::recordType(StringRef Name, const CVType &Data) {
   CVUDTNames.push_back(Name);
   TypeRecords.push_back(Data);
 }

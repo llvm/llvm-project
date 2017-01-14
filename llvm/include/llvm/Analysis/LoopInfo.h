@@ -469,7 +469,7 @@ public:
   /// the loop that branches to the loop header.
   ///
   /// The LoopID metadata node should have one or more operands and the first
-  /// operand should should be the node itself.
+  /// operand should be the node itself.
   void setLoopID(MDNode *LoopID) const;
 
   /// Return true if no exit block for the loop has a predecessor that is

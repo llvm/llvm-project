@@ -22,8 +22,8 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "instcombine"
 
 Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
-  assert(I.getOperand(1)->getType() == I.getOperand(0)->getType());
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  assert(Op0->getType() == Op1->getType());
 
   // See if we can fold away this shift.
   if (SimplifyDemandedInstructionBits(I))
@@ -715,48 +715,39 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V =
-          SimplifyShlInst(I.getOperand(0), I.getOperand(1), I.hasNoSignedWrap(),
-                          I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (Value *V = SimplifyShlInst(Op0, Op1, I.hasNoSignedWrap(),
+                                 I.hasNoUnsignedWrap(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *V = commonShiftTransforms(I))
     return V;
 
-  if (ConstantInt *Op1C = dyn_cast<ConstantInt>(I.getOperand(1))) {
-    unsigned ShAmt = Op1C->getZExtValue();
+  const APInt *ShAmtAPInt;
+  if (match(Op1, m_APInt(ShAmtAPInt))) {
+    unsigned ShAmt = ShAmtAPInt->getZExtValue();
 
-    // Turn:
-    //  %zext = zext i32 %V to i64
-    //  %res = shl i64 %V, 8
-    //
-    // Into:
-    //  %shl = shl i32 %V, 8
-    //  %res = zext i32 %shl to i64
-    //
-    // This is only valid if %V would have zeros shifted out.
-    if (auto *ZI = dyn_cast<ZExtInst>(I.getOperand(0))) {
-      unsigned SrcBitWidth = ZI->getSrcTy()->getScalarSizeInBits();
-      if (ShAmt < SrcBitWidth &&
-          MaskedValueIsZero(ZI->getOperand(0),
-                            APInt::getHighBitsSet(SrcBitWidth, ShAmt), 0, &I)) {
-        auto *Shl = Builder->CreateShl(ZI->getOperand(0), ShAmt);
-        return new ZExtInst(Shl, I.getType());
-      }
+    // shl (zext X), ShAmt --> zext (shl X, ShAmt)
+    // This is only valid if X would have zeros shifted out.
+    Value *X;
+    if (match(Op0, m_ZExt(m_Value(X)))) {
+      unsigned SrcWidth = X->getType()->getScalarSizeInBits();
+      if (ShAmt < SrcWidth &&
+          MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmt), 0, &I))
+        return new ZExtInst(Builder->CreateShl(X, ShAmt), I.getType());
     }
 
     // If the shifted-out value is known-zero, then this is a NUW shift.
     if (!I.hasNoUnsignedWrap() &&
-        MaskedValueIsZero(I.getOperand(0),
-                          APInt::getHighBitsSet(Op1C->getBitWidth(), ShAmt), 0,
-                          &I)) {
+        MaskedValueIsZero(
+            Op0, APInt::getHighBitsSet(ShAmtAPInt->getBitWidth(), ShAmt), 0,
+            &I)) {
       I.setHasNoUnsignedWrap();
       return &I;
     }
 
-    // If the shifted out value is all signbits, this is a NSW shift.
-    if (!I.hasNoSignedWrap() &&
-        ComputeNumSignBits(I.getOperand(0), 0, &I) > ShAmt) {
+    // If the shifted-out value is all signbits, then this is a NSW shift.
+    if (!I.hasNoSignedWrap() && ComputeNumSignBits(Op0, 0, &I) > ShAmt) {
       I.setHasNoSignedWrap();
       return &I;
     }
@@ -765,8 +756,8 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   // (C1 << A) << C2 -> (C1 << C2) << A
   Constant *C1, *C2;
   Value *A;
-  if (match(I.getOperand(0), m_OneUse(m_Shl(m_Constant(C1), m_Value(A)))) &&
-      match(I.getOperand(1), m_Constant(C2)))
+  if (match(Op0, m_OneUse(m_Shl(m_Constant(C1), m_Value(A)))) &&
+      match(Op1, m_Constant(C2)))
     return BinaryOperator::CreateShl(ConstantExpr::getShl(C1, C2), A);
 
   return nullptr;
@@ -776,43 +767,38 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyLShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, &TLI, &DT, &AC))
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (Value *V = SimplifyLShrInst(Op0, Op1, I.isExact(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))
     return R;
 
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
-    unsigned ShAmt = Op1C->getZExtValue();
-
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op0)) {
-      unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+  const APInt *ShAmtAPInt;
+  if (match(Op1, m_APInt(ShAmtAPInt))) {
+    unsigned ShAmt = ShAmtAPInt->getZExtValue();
+    unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+    auto *II = dyn_cast<IntrinsicInst>(Op0);
+    if (II && isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmt &&
+        (II->getIntrinsicID() == Intrinsic::ctlz ||
+         II->getIntrinsicID() == Intrinsic::cttz ||
+         II->getIntrinsicID() == Intrinsic::ctpop)) {
       // ctlz.i32(x)>>5  --> zext(x == 0)
       // cttz.i32(x)>>5  --> zext(x == 0)
       // ctpop.i32(x)>>5 --> zext(x == -1)
-      if ((II->getIntrinsicID() == Intrinsic::ctlz ||
-           II->getIntrinsicID() == Intrinsic::cttz ||
-           II->getIntrinsicID() == Intrinsic::ctpop) &&
-          isPowerOf2_32(BitWidth) && Log2_32(BitWidth) == ShAmt) {
-        bool isCtPop = II->getIntrinsicID() == Intrinsic::ctpop;
-        Constant *RHS = ConstantInt::getSigned(Op0->getType(), isCtPop ? -1:0);
-        Value *Cmp = Builder->CreateICmpEQ(II->getArgOperand(0), RHS);
-        return new ZExtInst(Cmp, II->getType());
-      }
+      bool IsPop = II->getIntrinsicID() == Intrinsic::ctpop;
+      Constant *RHS = ConstantInt::getSigned(Op0->getType(), IsPop ? -1 : 0);
+      Value *Cmp = Builder->CreateICmpEQ(II->getArgOperand(0), RHS);
+      return new ZExtInst(Cmp, II->getType());
     }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
-        MaskedValueIsZero(Op0, APInt::getLowBitsSet(Op1C->getBitWidth(), ShAmt),
-                          0, &I)){
+        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmt), 0, &I)) {
       I.setIsExact();
       return &I;
     }
   }
-
   return nullptr;
 }
 
@@ -820,14 +806,12 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyAShrInst(I.getOperand(0), I.getOperand(1), I.isExact(),
-                                  DL, &TLI, &DT, &AC))
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (Value *V = SimplifyAShrInst(Op0, Op1, I.isExact(), DL, &TLI, &DT, &AC))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = commonShiftTransforms(I))
     return R;
-
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
     unsigned ShAmt = Op1C->getZExtValue();

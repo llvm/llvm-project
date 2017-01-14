@@ -31,6 +31,7 @@ add_llvm_library(LLVMSupport
   APInt.cpp
   APSInt.cpp
   ARMBuildAttrs.cpp
+  ARMAttributeParser.cpp
   ARMWinEH.cpp
   Allocator.cpp
   BlockFrequency.cpp

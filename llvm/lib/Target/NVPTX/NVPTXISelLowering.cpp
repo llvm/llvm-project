@@ -164,8 +164,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
   addRegisterClass(MVT::f32, &NVPTX::Float32RegsRegClass);
   addRegisterClass(MVT::f64, &NVPTX::Float64RegsRegClass);
+  addRegisterClass(MVT::f16, &NVPTX::Float16RegsRegClass);
+
+  setOperationAction(ISD::SETCC, MVT::f16,
+                     STI.allowFP16Math() ? Legal : Promote);
 
   // Operations not directly supported by NVPTX.
+  setOperationAction(ISD::SELECT_CC, MVT::f16,
+                     STI.allowFP16Math() ? Expand : Promote);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i1, Expand);
@@ -173,6 +179,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i16, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f16,
+                     STI.allowFP16Math() ? Expand : Promote);
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   setOperationAction(ISD::BR_CC, MVT::f64, Expand);
   setOperationAction(ISD::BR_CC, MVT::i1, Expand);
@@ -259,6 +267,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // This is legal in NVPTX
   setOperationAction(ISD::ConstantFP, MVT::f64, Legal);
   setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+  setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
 
   // TRAP can be lowered to PTX trap
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
@@ -305,24 +314,60 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTargetDAGCombine(ISD::SREM);
   setTargetDAGCombine(ISD::UREM);
 
+  if (!STI.allowFP16Math()) {
+    // Promote fp16 arithmetic if fp16 hardware isn't available or the
+    // user passed --nvptx-no-fp16-math. The flag is useful because,
+    // although sm_53+ GPUs have some sort of FP16 support in
+    // hardware, only sm_53 and sm_60 have full implementation. Others
+    // only have token amount of hardware and are likely to run faster
+    // by using fp32 units instead.
+    setOperationAction(ISD::FADD, MVT::f16, Promote);
+    setOperationAction(ISD::FMUL, MVT::f16, Promote);
+    setOperationAction(ISD::FSUB, MVT::f16, Promote);
+    setOperationAction(ISD::FMA, MVT::f16, Promote);
+  }
+
   // Library functions.  These default to Expand, but we have instructions
   // for them.
+  setOperationAction(ISD::FCEIL,  MVT::f16, Legal);
   setOperationAction(ISD::FCEIL,  MVT::f32, Legal);
   setOperationAction(ISD::FCEIL,  MVT::f64, Legal);
+  setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
   setOperationAction(ISD::FFLOOR, MVT::f32, Legal);
   setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
   setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
   setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+  setOperationAction(ISD::FRINT, MVT::f16, Legal);
   setOperationAction(ISD::FRINT,  MVT::f32, Legal);
   setOperationAction(ISD::FRINT,  MVT::f64, Legal);
+  setOperationAction(ISD::FROUND, MVT::f16, Legal);
   setOperationAction(ISD::FROUND, MVT::f32, Legal);
   setOperationAction(ISD::FROUND, MVT::f64, Legal);
+  setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
   setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
   setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
   setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+
+  // 'Expand' implements FCOPYSIGN without calling an external library.
+  setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
+
+  // FP16 does not support these nodes in hardware, but we can perform
+  // these ops using single-precision hardware.
+  setOperationAction(ISD::FDIV, MVT::f16, Promote);
+  setOperationAction(ISD::FREM, MVT::f16, Promote);
+  setOperationAction(ISD::FSQRT, MVT::f16, Promote);
+  setOperationAction(ISD::FSIN, MVT::f16, Promote);
+  setOperationAction(ISD::FCOS, MVT::f16, Promote);
+  setOperationAction(ISD::FABS, MVT::f16, Promote);
+  setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
+  setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
+  setOperationAction(ISD::FMINNAN, MVT::f16, Promote);
+  setOperationAction(ISD::FMAXNAN, MVT::f16, Promote);
 
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
@@ -967,19 +1012,21 @@ std::string NVPTXTargetLowering::getPrototype(
       unsigned size = 0;
       if (auto *ITy = dyn_cast<IntegerType>(retTy)) {
         size = ITy->getBitWidth();
-        if (size < 32)
-          size = 32;
       } else {
         assert(retTy->isFloatingPointTy() &&
                "Floating point type expected here");
         size = retTy->getPrimitiveSizeInBits();
       }
+      // PTX ABI requires all scalar return values to be at least 32
+      // bits in size.  fp16 normally uses .b16 as its storage type in
+      // PTX, so its size must be adjusted here, too.
+      if (size < 32)
+        size = 32;
 
       O << ".param .b" << size << " _";
     } else if (isa<PointerType>(retTy)) {
       O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else if ((retTy->getTypeID() == Type::StructTyID) ||
-               isa<VectorType>(retTy)) {
+    } else if (retTy->isAggregateType() || retTy->isVectorTy()) {
       auto &DL = CS->getCalledFunction()->getParent()->getDataLayout();
       O << ".param .align " << retAlignment << " .b8 _["
         << DL.getTypeAllocSize(retTy) << "]";
@@ -1018,7 +1065,7 @@ std::string NVPTXTargetLowering::getPrototype(
           OIdx += len - 1;
         continue;
       }
-       // i8 types in IR will be i16 types in SDAG
+      // i8 types in IR will be i16 types in SDAG
       assert((getValueType(DL, Ty) == Outs[OIdx].VT ||
               (getValueType(DL, Ty) == MVT::i8 && Outs[OIdx].VT == MVT::i16)) &&
              "type mismatch between callee prototype and arguments");
@@ -1028,8 +1075,13 @@ std::string NVPTXTargetLowering::getPrototype(
         sz = cast<IntegerType>(Ty)->getBitWidth();
         if (sz < 32)
           sz = 32;
-      } else if (isa<PointerType>(Ty))
+      } else if (isa<PointerType>(Ty)) {
         sz = PtrVT.getSizeInBits();
+      } else if (Ty->isHalfTy())
+        // PTX ABI requires all scalar parameters to be at least 32
+        // bits in size.  fp16 normally uses .b16 as its storage type
+        // in PTX, so its size must be adjusted here, too.
+        sz = 32;
       else
         sz = Ty->getPrimitiveSizeInBits();
       O << ".param .b" << sz << " ";
@@ -1340,7 +1392,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           needExtend = true;
         if (sz < 32)
           sz = 32;
-      }
+      } else if (VT.isFloatingPoint() && sz < 32)
+        // PTX ABI requires all scalar parameters to be at least 32
+        // bits in size.  fp16 normally uses .b16 as its storage type
+        // in PTX, so its size must be adjusted here, too.
+        sz = 32;
       SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareParamOps[] = { Chain,
                                     DAG.getConstant(paramCount, dl, MVT::i32),
@@ -1952,12 +2008,15 @@ SDValue NVPTXTargetLowering::LowerLOADi1(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   EVT ValVT = Op.getOperand(1).getValueType();
-  if (ValVT == MVT::i1)
+  switch (ValVT.getSimpleVT().SimpleTy) {
+  case MVT::i1:
     return LowerSTOREi1(Op, DAG);
-  else if (ValVT.isVector())
-    return LowerSTOREVector(Op, DAG);
-  else
-    return SDValue();
+  default:
+    if (ValVT.isVector())
+      return LowerSTOREVector(Op, DAG);
+    else
+      return SDValue();
+  }
 }
 
 SDValue
@@ -2557,8 +2616,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
           // specifically not for aggregates.
           TmpVal = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, TmpVal);
           TheStoreType = MVT::i32;
-        }
-        else if (TmpVal.getValueSizeInBits() < 16)
+        } else if (RetTy->isHalfTy()) {
+          TheStoreType = MVT::f16;
+        } else if (TmpVal.getValueSizeInBits() < 16)
           TmpVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, TmpVal);
 
         SDValue Ops[] = {
@@ -3863,27 +3923,35 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
 bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
                                    CodeGenOpt::Level OptLevel) const {
-  const Function *F = MF.getFunction();
-  const TargetOptions &TO = MF.getTarget().Options;
-
   // Always honor command-line argument
-  if (FMAContractLevelOpt.getNumOccurrences() > 0) {
+  if (FMAContractLevelOpt.getNumOccurrences() > 0)
     return FMAContractLevelOpt > 0;
-  } else if (OptLevel == 0) {
-    // Do not contract if we're not optimizing the code
+
+  // Do not contract if we're not optimizing the code.
+  if (OptLevel == 0)
     return false;
-  } else if (TO.AllowFPOpFusion == FPOpFusion::Fast || TO.UnsafeFPMath) {
-    // Honor TargetOptions flags that explicitly say fusion is okay
+
+  // Honor TargetOptions flags that explicitly say fusion is okay.
+  if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
     return true;
-  } else if (F->hasFnAttribute("unsafe-fp-math")) {
-    // Check for unsafe-fp-math=true coming from Clang
+
+  return allowUnsafeFPMath(MF);
+}
+
+bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
+  // Honor TargetOptions flags that explicitly say unsafe math is okay.
+  if (MF.getTarget().Options.UnsafeFPMath)
+    return true;
+
+  // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
+  const Function *F = MF.getFunction();
+  if (F->hasFnAttribute("unsafe-fp-math")) {
     Attribute Attr = F->getFnAttribute("unsafe-fp-math");
     StringRef Val = Attr.getValueAsString();
     if (Val == "true")
       return true;
   }
 
-  // We did not have a clear indication that fusion is allowed, so assume not
   return false;
 }
 

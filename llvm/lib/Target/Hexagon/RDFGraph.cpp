@@ -276,7 +276,7 @@ raw_ostream &operator<< (raw_ostream &OS,
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
-  auto PrintBBs = [&OS,&P] (std::vector<int> Ns) -> void {
+  auto PrintBBs = [&OS] (std::vector<int> Ns) -> void {
     unsigned N = Ns.size();
     for (int I : Ns) {
       OS << "BB#" << I;

@@ -216,8 +216,7 @@ define <8 x i32> @mask_shuffle_v8i32_23456701(<8 x i32> %a, <8 x i32> %passthru,
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,2,3,0]
 ; CHECK-NEXT:    kmovb %edi, %k1
-; CHECK-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
-; CHECK-NEXT:    vmovdqa %ymm1, %ymm0
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1>
   %mask.cast = bitcast i8 %mask to <8 x i1>

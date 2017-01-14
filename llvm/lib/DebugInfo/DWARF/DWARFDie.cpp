@@ -134,7 +134,7 @@ bool DWARFDie::isSubroutineDIE() const {
 }
 
 Optional<DWARFFormValue>
-DWARFDie::getAttributeValue(dwarf::Attribute Attr) const {
+DWARFDie::find(dwarf::Attribute Attr) const {
   if (!isValid())
     return None;
   auto AbbrevDecl = getAbbreviationDeclarationPtr();
@@ -143,54 +143,53 @@ DWARFDie::getAttributeValue(dwarf::Attribute Attr) const {
   return None;
 }
 
-const char *DWARFDie::getAttributeValueAsString(dwarf::Attribute Attr,
-                                                const char *FailValue) const {
-  auto FormValue = getAttributeValue(Attr);
-  if (!FormValue)
-    return FailValue;
-  Optional<const char *> Result = FormValue->getAsCString();
-  return Result.hasValue() ? Result.getValue() : FailValue;
-}
-
-Optional<uint64_t>
-DWARFDie::getAttributeValueAsAddress(dwarf::Attribute Attr) const {
-  if (auto FormValue = getAttributeValue(Attr))
-    return FormValue->getAsAddress();
+Optional<DWARFFormValue>
+DWARFDie::findRecursively(dwarf::Attribute Attr) const {
+  if (!isValid())
+    return None;
+  if (auto Value = find(Attr))
+    return Value;
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
+    if (auto Value = Die.find(Attr))
+      return Value;
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_specification))
+    if (auto Value = Die.find(Attr))
+      return Value;
   return None;
 }
 
-Optional<int64_t>
-DWARFDie::getAttributeValueAsSignedConstant(dwarf::Attribute Attr) const {
-  if (auto FormValue = getAttributeValue(Attr))
-    return FormValue->getAsSignedConstant();
+Optional<DWARFFormValue>
+DWARFDie::find(ArrayRef<dwarf::Attribute> Attrs) const {
+  if (!isValid())
+    return None;
+  auto AbbrevDecl = getAbbreviationDeclarationPtr();
+  if (AbbrevDecl) {
+    for (auto Attr : Attrs) {
+      if (auto Value = AbbrevDecl->getAttributeValue(getOffset(), Attr, *U))
+        return Value;
+    }
+  }
   return None;
 }
 
-Optional<uint64_t>
-DWARFDie::getAttributeValueAsUnsignedConstant(dwarf::Attribute Attr) const {
-  if (auto FormValue = getAttributeValue(Attr))
-    return FormValue->getAsUnsignedConstant();
+Optional<DWARFFormValue>
+DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
+  if (!isValid())
+    return None;
+  if (auto Value = find(Attrs))
+    return Value;
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
+    if (auto Value = Die.find(Attrs))
+      return Value;
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_specification))
+    if (auto Value = Die.find(Attrs))
+      return Value;
   return None;
 }
-
-Optional<uint64_t>
-DWARFDie::getAttributeValueAsReference(dwarf::Attribute Attr) const {
-  if (auto FormValue = getAttributeValue(Attr))
-    return FormValue->getAsReference();
-  return None;
-}
-
-Optional<uint64_t>
-DWARFDie::getAttributeValueAsSectionOffset(dwarf::Attribute Attr) const {
-  if (auto FormValue = getAttributeValue(Attr))
-    return FormValue->getAsSectionOffset();
-  return None;
-}
-
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
-  auto SpecRef = getAttributeValueAsReference(Attr);
+  auto SpecRef = toReference(find(Attr));
   if (SpecRef) {
     auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef);
     if (SpecUnit)
@@ -201,14 +200,11 @@ DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
 
 Optional<uint64_t>
 DWARFDie::getRangesBaseAttribute() const {
-  auto Result = getAttributeValueAsSectionOffset(DW_AT_rnglists_base);
-  if (Result)
-    return Result;
-  return getAttributeValueAsSectionOffset(DW_AT_GNU_ranges_base);
+  return toSectionOffset(find({DW_AT_rnglists_base, DW_AT_GNU_ranges_base}));
 }
 
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
-  if (auto FormValue = getAttributeValue(DW_AT_high_pc)) {
+  if (auto FormValue = find(DW_AT_high_pc)) {
     if (auto Address = FormValue->getAsAddress()) {
       // High PC is an address.
       return Address;
@@ -222,7 +218,7 @@ Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
 }
 
 bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC) const {
-  auto LowPcAddr = getAttributeValueAsAddress(DW_AT_low_pc);
+  auto LowPcAddr = toAddress(find(DW_AT_low_pc));
   if (!LowPcAddr)
     return false;
   if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
@@ -243,7 +239,7 @@ DWARFDie::getAddressRanges() const {
     return DWARFAddressRangesVector(1, std::make_pair(LowPC, HighPC));
   }
   // Multiple ranges from .debug_ranges section.
-  auto RangesOffset = getAttributeValueAsSectionOffset(DW_AT_ranges);
+  auto RangesOffset = toSectionOffset(find(DW_AT_ranges));
   if (RangesOffset) {
     DWARFDebugRangeList RangeList;
     if (U->extractRangeList(*RangesOffset, RangeList))
@@ -284,33 +280,22 @@ const char *
 DWARFDie::getName(DINameKind Kind) const {
   if (!isValid() || Kind == DINameKind::None)
     return nullptr;
-  const char *name = nullptr;
   // Try to get mangled name only if it was asked for.
   if (Kind == DINameKind::LinkageName) {
-    if ((name = getAttributeValueAsString(DW_AT_MIPS_linkage_name, nullptr)))
-      return name;
-    if ((name = getAttributeValueAsString(DW_AT_linkage_name, nullptr)))
-      return name;
+    if (auto Name = dwarf::toString(findRecursively({DW_AT_MIPS_linkage_name,
+                                    DW_AT_linkage_name}), nullptr))
+      return Name;
   }
-  if ((name = getAttributeValueAsString(DW_AT_name, nullptr)))
-    return name;
-  // Try to get name from specification DIE.
-  DWARFDie SpecDie = getAttributeValueAsReferencedDie(DW_AT_specification);
-  if (SpecDie && (name = SpecDie.getName(Kind)))
-    return name;
-  // Try to get name from abstract origin DIE.
-  DWARFDie AbsDie = getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
-  if (AbsDie && (name = AbsDie.getName(Kind)))
-    return name;
+  if (auto Name = dwarf::toString(findRecursively(DW_AT_name), nullptr))
+    return Name;
   return nullptr;
 }
 
 void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
                               uint32_t &CallColumn) const {
-  CallFile = getAttributeValueAsUnsignedConstant(DW_AT_call_file).getValueOr(0);
-  CallLine = getAttributeValueAsUnsignedConstant(DW_AT_call_line).getValueOr(0);
-  CallColumn =
-      getAttributeValueAsUnsignedConstant(DW_AT_call_column).getValueOr(0);
+  CallFile = toUnsigned(find(DW_AT_call_file), 0);
+  CallLine = toUnsigned(find(DW_AT_call_line), 0);
+  CallColumn = toUnsigned(find(DW_AT_call_column), 0);
 }
 
 void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,

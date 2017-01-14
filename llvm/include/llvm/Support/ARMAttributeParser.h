@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_READOBJ_ARMATTRIBUTEPARSER_H
-#define LLVM_TOOLS_LLVM_READOBJ_ARMATTRIBUTEPARSER_H
+#ifndef LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
+#define LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
 
-#include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/ScopedPrinter.h"
+#include "ARMBuildAttributes.h"
+#include "ScopedPrinter.h"
 
 namespace llvm {
 class StringRef;

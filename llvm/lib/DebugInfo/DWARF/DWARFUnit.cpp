@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
@@ -151,11 +152,11 @@ void DWARFUnit::clear() {
 }
 
 const char *DWARFUnit::getCompilationDir() {
-  return getUnitDIE().getAttributeValueAsString(DW_AT_comp_dir, nullptr);
+  return toString(getUnitDIE().find(DW_AT_comp_dir), nullptr);
 }
 
 Optional<uint64_t> DWARFUnit::getDWOId() {
-  return getUnitDIE().getAttributeValueAsUnsignedConstant(DW_AT_GNU_dwo_id);
+  return toUnsigned(getUnitDIE().find(DW_AT_GNU_dwo_id));
 }
 
 void DWARFUnit::extractDIEsToVector(
@@ -225,17 +226,11 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
-    auto BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_low_pc);
-    if (!BaseAddr)
-      BaseAddr = UnitDie.getAttributeValueAsAddress(DW_AT_entry_pc);
+    auto BaseAddr = toAddress(UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc}));
     if (BaseAddr)
       setBaseAddress(*BaseAddr);
-    AddrOffsetSectionBase =
-        UnitDie.getAttributeValueAsSectionOffset(DW_AT_GNU_addr_base)
-            .getValueOr(0);
-    RangeSectionBase =
-        UnitDie.getAttributeValueAsSectionOffset(DW_AT_rnglists_base)
-            .getValueOr(0);
+    AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
+    RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
   }
@@ -266,17 +261,16 @@ bool DWARFUnit::parseDWO() {
   DWARFDie UnitDie = getUnitDIE();
   if (!UnitDie)
     return false;
-  const char *DWOFileName =
-      UnitDie.getAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
+  auto DWOFileName = toString(UnitDie.find(DW_AT_GNU_dwo_name));
   if (!DWOFileName)
     return false;
-  const char *CompilationDir =
-      UnitDie.getAttributeValueAsString(DW_AT_comp_dir, nullptr);
+  auto CompilationDir = toString(UnitDie.find(DW_AT_comp_dir));
   SmallString<16> AbsolutePath;
-  if (sys::path::is_relative(DWOFileName) && CompilationDir != nullptr) {
-    sys::path::append(AbsolutePath, CompilationDir);
+  if (sys::path::is_relative(*DWOFileName) && CompilationDir &&
+      *CompilationDir) {
+    sys::path::append(AbsolutePath, *CompilationDir);
   }
-  sys::path::append(AbsolutePath, DWOFileName);
+  sys::path::append(AbsolutePath, *DWOFileName);
   DWO = llvm::make_unique<DWOHolder>(AbsolutePath);
   DWARFUnit *DWOCU = DWO->getUnit();
   // Verify that compile unit in .dwo file is valid.

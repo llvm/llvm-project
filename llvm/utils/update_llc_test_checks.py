@@ -54,7 +54,7 @@ RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple=([^ ]+)')
 TRIPLE_IR_RE = re.compile(r'^target\s+triple\s*=\s*"([^"]+)"$')
 IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
-CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
 ASM_FUNCTION_PPC_RE = re.compile(
@@ -260,8 +260,8 @@ def main():
       llc_cmd_args = llc_cmd[len('llc'):].strip()
       llc_cmd_args = llc_cmd_args.replace('< %s', '').replace('%s', '').strip()
 
-      check_prefixes = [m.group(1)
-                        for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)]
+      check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
+                               for item in m.group(1).split(',')]
       if not check_prefixes:
         check_prefixes = ['CHECK']
 

@@ -85,7 +85,7 @@ void LLVMTargetMachine::initAsmInfo() {
 LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      StringRef DataLayoutString,
                                      const Triple &TT, StringRef CPU,
-                                     StringRef FS, TargetOptions Options,
+                                     StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
                                      CodeGenOpt::Level OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
@@ -172,7 +172,8 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
 
     // Pass to reset the MachineFunction if the ISel failed.
     PM.add(createResetMachineFunctionPass(
-        PassConfig->reportDiagnosticWhenGlobalISelFallback()));
+        PassConfig->reportDiagnosticWhenGlobalISelFallback(),
+        PassConfig->isGlobalISelAbortEnabled()));
 
     // Provide a fallback path when we do not want to abort on
     // not-yet-supported input.

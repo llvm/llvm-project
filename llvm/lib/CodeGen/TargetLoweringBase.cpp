@@ -1918,11 +1918,7 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 /// override the target defaults.
 static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
   const Function *F = MF.getFunction();
-  StringRef RecipAttrName = "reciprocal-estimates";
-  if (!F->hasFnAttribute(RecipAttrName))
-    return StringRef();
-
-  return F->getFnAttribute(RecipAttrName).getValueAsString();
+  return F->getFnAttribute("reciprocal-estimates").getValueAsString();
 }
 
 /// Construct a string for the given reciprocal operation of the given type.

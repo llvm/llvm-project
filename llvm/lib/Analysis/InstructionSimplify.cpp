@@ -4267,6 +4267,7 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
     case Intrinsic::fabs: {
       if (SignBitMustBeZero(*ArgBegin, Q.TLI))
         return *ArgBegin;
+      return nullptr;
     }
     default:
       return nullptr;

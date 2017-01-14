@@ -126,7 +126,7 @@ void dumpDebugInfo(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
           DWARFYAML::FormValue NewValue;
           NewValue.Value = 0xDEADBEEFDEADBEEF;
           DWARFDie DIEWrapper(CU.get(), &DIE);
-          auto FormValue = DIEWrapper.getAttributeValue(AttrSpec.Attr);
+          auto FormValue = DIEWrapper.find(AttrSpec.Attr);
           if (!FormValue)
             return;
           auto Form = FormValue.getValue().getForm();
@@ -228,7 +228,7 @@ void dumpDebugLines(DWARFContextInMemory &DCtx, DWARFYAML::Data &Y) {
     if (!CUDIE)
       continue;
     if (auto StmtOffset =
-            CUDIE.getAttributeValueAsSectionOffset(dwarf::DW_AT_stmt_list)) {
+            dwarf::toSectionOffset(CUDIE.find(dwarf::DW_AT_stmt_list))) {
       DWARFYAML::LineTable DebugLines;
       DataExtractor LineData(DCtx.getLineSection().Data, DCtx.isLittleEndian(),
                              CU->getAddressByteSize());

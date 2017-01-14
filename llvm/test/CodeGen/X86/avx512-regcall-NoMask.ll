@@ -325,13 +325,11 @@ define x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
 }
 
 ; X32-LABEL:  test_argRet128Vector:
-; X32:        vmovdqa{{.*}}  %xmm0, %xmm1
-; X32:        vmovdqa{{.*}}  %xmm1, %xmm0
+; X32:        vpblend{{.*}}  %xmm0, %xmm1, %xmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet128Vector:
-; WIN64:        vmovdqa{{.*}}  %xmm0, %xmm1
-; WIN64:        vmovdqa{{.*}}  %xmm1, %xmm0
+; WIN64:        vpblend{{.*}}  %xmm0, %xmm1, %xmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 128 bit vector
@@ -360,13 +358,11 @@ define x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i32> %a)  {
 }
 
 ; X32-LABEL:  test_argRet256Vector:
-; X32:        vmovdqa{{.*}}  %ymm0, %ymm1
-; X32:        vmovdqa{{.*}}  %ymm1, %ymm0
+; X32:        vpblend{{.*}}  %ymm0, %ymm1, %ymm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet256Vector:
-; WIN64:        vmovdqa{{.*}}  %ymm0, %ymm1
-; WIN64:        vmovdqa{{.*}}  %ymm1, %ymm0
+; WIN64:        vpblend{{.*}}  %ymm0, %ymm1, %ymm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 256 bit vector
@@ -395,13 +391,11 @@ define x86_regcallcc <8 x i32> @test_CallargRet256Vector(<8 x i32> %a)  {
 }
 
 ; X32-LABEL:  test_argRet512Vector:
-; X32:        vmovdqa{{.*}}  %zmm0, %zmm1
-; X32:        vmovdqa{{.*}}  %zmm1, %zmm0
+; X32:        vpblend{{.*}}  %zmm0, %zmm1, %zmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_argRet512Vector:
-; WIN64:        vmovdqa{{.*}}  %zmm0, %zmm1
-; WIN64:        vmovdqa{{.*}}  %zmm1, %zmm0
+; WIN64:        vpblend{{.*}}  %zmm0, %zmm1, %zmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when receiving/returning 512 bit vector

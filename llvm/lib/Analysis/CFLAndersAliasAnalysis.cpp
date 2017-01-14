@@ -307,7 +307,7 @@ class CFLAndersAAResult::FunctionInfo {
 
 public:
   FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
-               const ReachabilitySet &, AliasAttrMap);
+               const ReachabilitySet &, const AliasAttrMap &);
 
   bool mayAlias(const Value *, uint64_t, const Value *, uint64_t) const;
   const AliasSummary &getAliasSummary() const { return Summary; }
@@ -470,7 +470,7 @@ static void populateExternalAttributes(
 
 CFLAndersAAResult::FunctionInfo::FunctionInfo(
     const Function &Fn, const SmallVectorImpl<Value *> &RetVals,
-    const ReachabilitySet &ReachSet, AliasAttrMap AMap) {
+    const ReachabilitySet &ReachSet, const AliasAttrMap &AMap) {
   populateAttrMap(AttrMap, AMap);
   populateExternalAttributes(Summary.RetParamAttributes, Fn, RetVals, AMap);
   populateAliasMap(AliasMap, ReachSet);

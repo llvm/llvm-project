@@ -239,7 +239,7 @@ public:
     std::function<void(SDNode *, SDNode *)> Callback;
     DAGNodeDeletedListener(SelectionDAG &DAG,
                            std::function<void(SDNode *, SDNode *)> Callback)
-        : DAGUpdateListener(DAG), Callback(Callback) {}
+        : DAGUpdateListener(DAG), Callback(std::move(Callback)) {}
     void NodeDeleted(SDNode *N, SDNode *E) override { Callback(N, E); }
   };
 

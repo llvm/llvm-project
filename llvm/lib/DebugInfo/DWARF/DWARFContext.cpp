@@ -128,8 +128,7 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH,
       auto CUDIE = CU->getUnitDIE();
       if (!CUDIE)
         continue;
-      if (auto StmtOffset =
-              CUDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list)) {
+      if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list))) {
         DataExtractor lineData(getLineSection().Data, isLittleEndian(),
                                savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
@@ -387,7 +386,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!UnitDIE)
     return nullptr;
 
-  auto Offset = UnitDIE.getAttributeValueAsSectionOffset(DW_AT_stmt_list);
+  auto Offset = toSectionOffset(UnitDIE.find(DW_AT_stmt_list));
   if (!Offset)
     return nullptr; // No line table for this compile unit.
 

@@ -108,7 +108,8 @@ enum AddressSpace {
 enum FromType {
   Unsigned = 0,
   Signed,
-  Float
+  Float,
+  Untyped
 };
 enum VecType {
   Scalar = 1,

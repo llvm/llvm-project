@@ -1113,7 +1113,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
              APInt::getHighBitsSet(BitWidth, ShiftAmt);
     };
 
-    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
       return APIntOps::lshr(KnownOne, ShiftAmt);
     };
 
@@ -1124,11 +1124,11 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   }
   case Instruction::AShr: {
     // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KZF = [BitWidth](const APInt &KnownZero, unsigned ShiftAmt) {
+    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
       return APIntOps::ashr(KnownZero, ShiftAmt);
     };
 
-    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
       return APIntOps::ashr(KnownOne, ShiftAmt);
     };
 

@@ -205,14 +205,12 @@ public:
     Info.resize(OrigUnit.getNumDIEs());
 
     auto CUDie = OrigUnit.getUnitDIE(false);
-    unsigned Lang =
-        CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_language)
-            .getValueOr(0);
-    HasODR = CanUseODR && (Lang == dwarf::DW_LANG_C_plus_plus ||
-                           Lang == dwarf::DW_LANG_C_plus_plus_03 ||
-                           Lang == dwarf::DW_LANG_C_plus_plus_11 ||
-                           Lang == dwarf::DW_LANG_C_plus_plus_14 ||
-                           Lang == dwarf::DW_LANG_ObjC_plus_plus);
+    if (auto Lang = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language)))
+      HasODR = CanUseODR && (*Lang == dwarf::DW_LANG_C_plus_plus ||
+                             *Lang == dwarf::DW_LANG_C_plus_plus_03 ||
+                             *Lang == dwarf::DW_LANG_C_plus_plus_11 ||
+                             *Lang == dwarf::DW_LANG_C_plus_plus_14 ||
+                             *Lang == dwarf::DW_LANG_ObjC_plus_plus);
   }
 
   DWARFUnit &getOrigUnit() const { return OrigUnit; }
@@ -843,8 +841,7 @@ void DwarfStreamer::emitLocationsForUnit(const CompileUnit &Unit,
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
   int64_t UnitPcOffset = 0;
-  auto OrigLowPc = OrigUnitDie.getAttributeValueAsAddress(dwarf::DW_AT_low_pc);
-  if (OrigLowPc)
+  if (auto OrigLowPc = dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc)))
     UnitPcOffset = int64_t(*OrigLowPc) - Unit.getLowPc();
 
   for (const auto &Attr : Attributes) {
@@ -1558,8 +1555,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // Do not unique anything inside CU local functions.
     if ((Context.getTag() == dwarf::DW_TAG_namespace ||
          Context.getTag() == dwarf::DW_TAG_compile_unit) &&
-        !DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_external)
-             .getValueOr(0))
+        !dwarf::toUnsigned(DIE.find(dwarf::DW_AT_external), 0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
     LLVM_FALLTHROUGH;
   case dwarf::DW_TAG_member:
@@ -1573,8 +1569,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // created on demand. For example implicitely defined constructors
     // are ambiguous because of the way we identify contexts, and they
     // won't be generated everytime everywhere.
-    if (DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_artificial)
-            .getValueOr(0))
+    if (dwarf::toUnsigned(DIE.find(dwarf::DW_AT_artificial), 0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
     break;
   }
@@ -1614,12 +1609,9 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
     // namespaces, use these additional data points to make the process
     // safer.  This is disabled for clang modules, because forward
     // declarations of module-defined types do not have a file and line.
-    ByteSize = DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_byte_size)
-                   .getValueOr(UINT64_MAX);
+    ByteSize = dwarf::toUnsigned(DIE.find(dwarf::DW_AT_byte_size), UINT64_MAX);
     if (Tag != dwarf::DW_TAG_namespace || !Name) {
-      if (unsigned FileNum =
-              DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_decl_file)
-                  .getValueOr(0)) {
+      if (unsigned FileNum = dwarf::toUnsigned(DIE.find(dwarf::DW_AT_decl_file), 0)) {
         if (const auto *LT = U.getOrigUnit().getContext().getLineTableForUnit(
                 &U.getOrigUnit())) {
           // FIXME: dsymutil-classic compatibility. I'd rather not
@@ -1632,9 +1624,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
           // instead of "" would allow more uniquing, but for now, do
           // it this way to match dsymutil-classic.
           if (LT->hasFileAtIndex(FileNum)) {
-            Line =
-                DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_decl_line)
-                    .getValueOr(0);
+            Line = dwarf::toUnsigned(DIE.find(dwarf::DW_AT_decl_line), 0);
             // Cache the resolved paths, because calling realpath is expansive.
             StringRef ResolvedPath = U.getResolvedPath(FileNum);
             if (!ResolvedPath.empty()) {
@@ -1782,8 +1772,7 @@ static bool analyzeContextInfo(const DWARFDie &DIE,
   //
   // We treat non-C++ modules like namespaces for this reason.
   if (DIE.getTag() == dwarf::DW_TAG_module && ParentIdx == 0 &&
-      DIE.getAttributeValueAsString(dwarf::DW_AT_name,
-                                    "") != CU.getClangModuleName()) {
+      dwarf::toString(DIE.find(dwarf::DW_AT_name), "") != CU.getClangModuleName()) {
     InImportedModule = true;
   }
 
@@ -1811,8 +1800,7 @@ static bool analyzeContextInfo(const DWARFDie &DIE,
   // forward declarations.
   Info.Prune &=
       (DIE.getTag() == dwarf::DW_TAG_module) ||
-      DIE.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_declaration)
-          .getValueOr(0);
+      dwarf::toUnsigned(DIE.find(dwarf::DW_AT_declaration), 0);
 
   // Don't prune it if there is no definition for the DIE.
   Info.Prune &= Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset();
@@ -2129,7 +2117,7 @@ unsigned DwarfLinker::shouldKeepSubprogramDIE(
   std::tie(LowPcOffset, LowPcEndOffset) =
       getAttributeOffsets(Abbrev, *LowPcIdx, Offset, OrigUnit);
 
-  auto LowPc = DIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc);
+  auto LowPc = dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc));
   assert(LowPc.hasValue() && "low_pc attribute is not an address.");
   if (!LowPc ||
       !RelocMgr.hasValidRelocation(LowPcOffset, LowPcEndOffset, MyInfo))
@@ -2746,14 +2734,11 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
     // file might be start address of another function which got moved
     // independantly by the linker). The computation of the actual
     // high_pc value is done in cloneAddressAttribute().
-    AttrInfo.OrigHighPc =
-        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_high_pc).getValueOr(0);
+    AttrInfo.OrigHighPc = dwarf::toAddress(InputDIE.find(dwarf::DW_AT_high_pc), 0);
     // Also store the low_pc. It might get relocated in an
     // inline_subprogram that happens at the beginning of its
     // inlining function.
-    AttrInfo.OrigLowPc =
-        InputDIE.getAttributeValueAsAddress(dwarf::DW_AT_low_pc)
-            .getValueOr(UINT64_MAX);
+    AttrInfo.OrigLowPc = dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc), UINT64_MAX);
   }
 
   // Reset the Offset to 0 as we will be working on the local copy of
@@ -2872,9 +2857,7 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   auto InvalidRange = FunctionRanges.end(), CurrRange = InvalidRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
-  uint64_t OrigLowPc =
-      OrigUnitDie.getAttributeValueAsAddress(dwarf::DW_AT_low_pc)
-          .getValueOr(-1ULL);
+  uint64_t OrigLowPc = dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc), -1ULL);
   // Ranges addresses are based on the unit's low_pc. Compute the
   // offset we need to apply to adapt to the new unit's low_pc.
   int64_t UnitPcOffset = 0;
@@ -2969,7 +2952,7 @@ static void patchStmtList(DIE &Die, DIEInteger Offset) {
 void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
                                         DWARFContext &OrigDwarf) {
   DWARFDie CUDie = Unit.getOrigUnit().getUnitDIE();
-  auto StmtList = CUDie.getAttributeValueAsSectionOffset(dwarf::DW_AT_stmt_list);
+  auto StmtList = dwarf::toSectionOffset(CUDie.find(dwarf::DW_AT_stmt_list));
   if (!StmtList)
     return;
 
@@ -3201,10 +3184,8 @@ void DwarfLinker::DIECloner::copyAbbrev(
 
 static uint64_t getDwoId(const DWARFDie &CUDie,
                          const DWARFUnit &Unit) {
-  auto DwoId = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_dwo_id);
-  if (DwoId)
-    return *DwoId;
-  DwoId = CUDie.getAttributeValueAsUnsignedConstant(dwarf::DW_AT_GNU_dwo_id);
+  auto DwoId = dwarf::toUnsigned(CUDie.find({dwarf::DW_AT_dwo_id,
+                                             dwarf::DW_AT_GNU_dwo_id}));
   if (DwoId)
     return *DwoId;
   return 0;
@@ -3214,20 +3195,16 @@ bool DwarfLinker::registerModuleReference(
     const DWARFDie &CUDie, const DWARFUnit &Unit,
     DebugMap &ModuleMap, unsigned Indent) {
   std::string PCMfile =
-      CUDie.getAttributeValueAsString(dwarf::DW_AT_dwo_name, "");
-  if (PCMfile.empty())
-    PCMfile =
-        CUDie.getAttributeValueAsString(dwarf::DW_AT_GNU_dwo_name, "");
+      dwarf::toString(CUDie.find({dwarf::DW_AT_dwo_name,
+                                  dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
     return false;
 
   // Clang module DWARF skeleton CUs abuse this for the path to the module.
-  std::string PCMpath =
-      CUDie.getAttributeValueAsString(dwarf::DW_AT_comp_dir, "");
+  std::string PCMpath = dwarf::toString(CUDie.find(dwarf::DW_AT_comp_dir), "");
   uint64_t DwoId = getDwoId(CUDie, Unit);
 
-  std::string Name =
-      CUDie.getAttributeValueAsString(dwarf::DW_AT_name, "");
+  std::string Name = dwarf::toString(CUDie.find(dwarf::DW_AT_name), "");
   if (Name.empty()) {
     reportWarning("Anonymous module skeleton CU for " + PCMfile);
     return true;

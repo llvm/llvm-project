@@ -30,7 +30,7 @@ using namespace llvm;
 ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
-static bool isSupportedType(const DataLayout DL, const ARMTargetLowering &TLI,
+static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
   EVT VT = TLI.getValueType(DL, T);
   if (!VT.isSimple() || !VT.isInteger() || VT.isVector())

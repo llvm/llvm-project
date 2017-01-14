@@ -83,11 +83,10 @@ define <2 x i64> @var_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: var_shift_v2i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX512-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm3
-; AVX512-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shift_v2i64:
@@ -649,11 +648,10 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: splatvar_shift_v2i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX512-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
-; AVX512-NEXT:    vpsrlq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vpbroadcastq %xmm1, %xmm1
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatvar_shift_v2i64:
@@ -1085,10 +1083,10 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: constant_shift_v2i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrlvq {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [4611686018427387904,72057594037927936]
-; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,7]
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: constant_shift_v2i64:

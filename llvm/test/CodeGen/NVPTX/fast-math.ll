@@ -34,5 +34,22 @@ define float @fadd_ftz(float %a, float %b) #1 {
   ret float %t1
 }
 
+declare float @llvm.sin.f32(float)
+declare float @llvm.cos.f32(float)
+
+; CHECK-LABEL: fsin_approx
+; CHECK:       sin.approx.f32
+define float @fsin_approx(float %a) #0 {
+  %r = tail call float @llvm.sin.f32(float %a)
+  ret float %r
+}
+
+; CHECK-LABEL: fcos_approx
+; CHECK:       cos.approx.f32
+define float @fcos_approx(float %a) #0 {
+  %r = tail call float @llvm.cos.f32(float %a)
+  ret float %r
+}
+
 attributes #0 = { "unsafe-fp-math" = "true" }
 attributes #1 = { "nvptx-f32ftz" = "true" }

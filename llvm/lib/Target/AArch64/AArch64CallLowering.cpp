@@ -129,11 +129,10 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
   MachineInstrBuilder MIB;
 };
 
-void AArch64CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
-                                            SmallVectorImpl<ArgInfo> &SplitArgs,
-                                            const DataLayout &DL,
-                                            MachineRegisterInfo &MRI,
-                                            SplitArgTy PerformArgSplit) const {
+void AArch64CallLowering::splitToValueTypes(
+    const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
+    const DataLayout &DL, MachineRegisterInfo &MRI,
+    const SplitArgTy &PerformArgSplit) const {
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
 

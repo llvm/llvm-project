@@ -289,8 +289,8 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
 // bit widths (APInt Operator- does not like that). If the value cannot be
 // represented in uint64 we return an "empty" APInt. This is then interpreted
 // as the value is not in range.
-static llvm::Optional<APInt> calculateOffsetDiff(APInt V1, APInt V2)
-{
+static llvm::Optional<APInt> calculateOffsetDiff(const APInt &V1,
+                                                 const APInt &V2) {
   llvm::Optional<APInt> Res = None;
   unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
                 V1.getBitWidth() : V2.getBitWidth();

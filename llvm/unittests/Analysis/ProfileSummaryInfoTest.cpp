@@ -45,8 +45,8 @@ protected:
     BPI.reset(new BranchProbabilityInfo(F, *LI));
     return BlockFrequencyInfo(F, *BPI, *LI);
   }
-  std::unique_ptr<Module> makeLLVMModule(StringRef ProfKind) {
-    const char *ModuleStrig =
+  std::unique_ptr<Module> makeLLVMModule(const char *ProfKind = nullptr) {
+    const char *ModuleString =
         "define i32 @g(i32 %x) !prof !21 {{\n"
         "  ret i32 0\n"
         "}\n"
@@ -67,31 +67,62 @@ protected:
         "  %y2 = phi i32 [0, %bb1], [1, %bb2] \n"
         "  ret i32 %y2\n"
         "}\n"
-        "!llvm.module.flags = !{{!1}"
-        "!20 = !{{!\"function_entry_count\", i64 400}"
-        "!21 = !{{!\"function_entry_count\", i64 1}"
-        "!22 = !{{!\"function_entry_count\", i64 100}"
-        "!23 = !{{!\"branch_weights\", i32 64, i32 4}"
-        "!1 = !{{i32 1, !\"ProfileSummary\", !2}"
-        "!2 = !{{!3, !4, !5, !6, !7, !8, !9, !10}"
-        "!3 = !{{!\"ProfileFormat\", !\"{0}\"}"
-        "!4 = !{{!\"TotalCount\", i64 10000}"
-        "!5 = !{{!\"MaxCount\", i64 10}"
-        "!6 = !{{!\"MaxInternalCount\", i64 1}"
-        "!7 = !{{!\"MaxFunctionCount\", i64 1000}"
-        "!8 = !{{!\"NumCounts\", i64 3}"
-        "!9 = !{{!\"NumFunctions\", i64 3}"
-        "!10 = !{{!\"DetailedSummary\", !11}"
-        "!11 = !{{!12, !13, !14}"
-        "!12 = !{{i32 10000, i64 1000, i32 1}"
-        "!13 = !{{i32 999000, i64 300, i32 3}"
-        "!14 = !{{i32 999999, i64 5, i32 10}";
+        "!20 = !{{!\"function_entry_count\", i64 400}\n"
+        "!21 = !{{!\"function_entry_count\", i64 1}\n"
+        "!22 = !{{!\"function_entry_count\", i64 100}\n"
+        "!23 = !{{!\"branch_weights\", i32 64, i32 4}\n"
+        "{0}";
+    const char *SummaryString = "!llvm.module.flags = !{{!1}"
+                                "!1 = !{{i32 1, !\"ProfileSummary\", !2}"
+                                "!2 = !{{!3, !4, !5, !6, !7, !8, !9, !10}"
+                                "!3 = !{{!\"ProfileFormat\", !\"{0}\"}"
+                                "!4 = !{{!\"TotalCount\", i64 10000}"
+                                "!5 = !{{!\"MaxCount\", i64 10}"
+                                "!6 = !{{!\"MaxInternalCount\", i64 1}"
+                                "!7 = !{{!\"MaxFunctionCount\", i64 1000}"
+                                "!8 = !{{!\"NumCounts\", i64 3}"
+                                "!9 = !{{!\"NumFunctions\", i64 3}"
+                                "!10 = !{{!\"DetailedSummary\", !11}"
+                                "!11 = !{{!12, !13, !14}"
+                                "!12 = !{{i32 10000, i64 1000, i32 1}"
+                                "!13 = !{{i32 999000, i64 300, i32 3}"
+                                "!14 = !{{i32 999999, i64 5, i32 10}";
     SMDiagnostic Err;
-    return parseAssemblyString(StringRef(formatv(ModuleStrig, ProfKind)), Err,
-                               C);
+    if (ProfKind)
+      return parseAssemblyString(
+          formatv(ModuleString, formatv(SummaryString, ProfKind).str()).str(),
+          Err, C);
+    else
+      return parseAssemblyString(formatv(ModuleString, "").str(), Err, C);
   }
 };
 
+TEST_F(ProfileSummaryInfoTest, TestNoProfile) {
+  auto M = makeLLVMModule(/*ProfKind=*/nullptr);
+  Function *F = M->getFunction("f");
+
+  ProfileSummaryInfo PSI = buildPSI(M.get());
+  // In the absence of profiles, is{Hot|Cold}X methods should always return
+  // false.
+  EXPECT_FALSE(PSI.isHotCount(1000));
+  EXPECT_FALSE(PSI.isHotCount(0));
+  EXPECT_FALSE(PSI.isColdCount(1000));
+  EXPECT_FALSE(PSI.isColdCount(0));
+
+  EXPECT_FALSE(PSI.isFunctionEntryHot(F));
+  EXPECT_FALSE(PSI.isFunctionEntryCold(F));
+
+  BasicBlock &BB0 = F->getEntryBlock();
+  BasicBlock *BB1 = BB0.getTerminator()->getSuccessor(0);
+
+  BlockFrequencyInfo BFI = buildBFI(*F);
+  EXPECT_FALSE(PSI.isHotBB(&BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBB(&BB0, &BFI));
+
+  CallSite CS1(BB1->getFirstNonPHI());
+  EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
+  EXPECT_FALSE(PSI.isColdCallSite(CS1, &BFI));
+}
 TEST_F(ProfileSummaryInfoTest, TestCommon) {
   auto M = makeLLVMModule("InstrProf");
   Function *F = M->getFunction("f");

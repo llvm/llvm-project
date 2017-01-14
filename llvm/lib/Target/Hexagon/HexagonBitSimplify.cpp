@@ -896,6 +896,7 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
                   *MRI.getTargetRegisterInfo());
 
   auto VerifySR = [&HRI] (const TargetRegisterClass *RC, unsigned Sub) -> void {
+    (void)HRI;
     assert(Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo) ||
            Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_hi));
   };

@@ -565,6 +565,12 @@ multiclass BFIPatterns <Instruction BFI_INT,
   >;
 
   def : Pat <
+    (f32 (fcopysign f32:$src0, f64:$src1)),
+    (BFI_INT (LoadImm32 (i32 0x7fffffff)), $src0,
+             (i32 (EXTRACT_SUBREG $src1, sub1)))
+  >;
+
+  def : Pat <
     (f64 (fcopysign f64:$src0, f64:$src1)),
     (REG_SEQUENCE RC64,
       (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,

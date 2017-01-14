@@ -496,7 +496,7 @@ class PBQPRAGraph : public PBQP::Graph<RegAllocSolverImpl> {
 private:
   typedef PBQP::Graph<RegAllocSolverImpl> BaseT;
 public:
-  PBQPRAGraph(GraphMetadata Metadata) : BaseT(Metadata) {}
+  PBQPRAGraph(GraphMetadata Metadata) : BaseT(std::move(Metadata)) {}
 
   /// @brief Dump this graph to dbgs().
   void dump() const;

@@ -45,7 +45,7 @@ class ProfileSummaryInfo {
 private:
   Module &M;
   std::unique_ptr<ProfileSummary> Summary;
-  void computeSummary();
+  bool computeSummary();
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
   Optional<uint64_t> HotCountThreshold, ColdCountThreshold;

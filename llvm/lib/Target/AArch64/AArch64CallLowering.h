@@ -50,7 +50,7 @@ private:
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
-                         SplitArgTy SplitArg) const;
+                         const SplitArgTy &SplitArg) const;
 };
 } // End of namespace llvm;
 #endif

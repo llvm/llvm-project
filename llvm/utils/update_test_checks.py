@@ -66,11 +66,11 @@ OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
     r'(\s+)?[^)]*[^{]*\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
-CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 # Match things that look at identifiers, but only if they are followed by
 # spaces, commas, paren, or end of the string
-IR_VALUE_RE = re.compile(r'(\s+)%(.+?)([,\s\(\)]|\Z)')
+IR_VALUE_RE = re.compile(r'(\s+)%(\w+?)([,\s\(\)]|\Z)')
 
 
 # Invoke the tool that is being tested.
@@ -324,8 +324,8 @@ def main():
       tool_cmd_args = tool_cmd[len(tool_basename):].strip()
       tool_cmd_args = tool_cmd_args.replace('< %s', '').replace('%s', '').strip()
 
-      check_prefixes = [m.group(1)
-                        for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)]
+      check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
+                               for item in m.group(1).split(',')]
       if not check_prefixes:
         check_prefixes = ['CHECK']
 

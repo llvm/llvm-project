@@ -132,6 +132,10 @@ static cl::opt<unsigned>
                     cl::desc("Maximum depth of recursive compare complexity"),
                     cl::init(32));
 
+static cl::opt<unsigned> MaxConstantEvolvingDepth(
+    "scalar-evolution-max-constant-evolving-depth", cl::Hidden,
+    cl::desc("Maximum depth of recursive constant evolving"), cl::init(32));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -6403,7 +6407,10 @@ static bool canConstantEvolve(Instruction *I, const Loop *L) {
 /// recursing through each instruction operand until reaching a loop header phi.
 static PHINode *
 getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
-                               DenseMap<Instruction *, PHINode *> &PHIMap) {
+                               DenseMap<Instruction *, PHINode *> &PHIMap,
+                               unsigned Depth) {
+  if (Depth > MaxConstantEvolvingDepth)
+    return nullptr;
 
   // Otherwise, we can evaluate this instruction if all of its operands are
   // constant or derived from a PHI node themselves.
@@ -6423,7 +6430,7 @@ getConstantEvolvingPHIOperands(Instruction *UseInst, const Loop *L,
     if (!P) {
       // Recurse and memoize the results, whether a phi is found or not.
       // This recursive call invalidates pointers into PHIMap.
-      P = getConstantEvolvingPHIOperands(OpInst, L, PHIMap);
+      P = getConstantEvolvingPHIOperands(OpInst, L, PHIMap, Depth + 1);
       PHIMap[OpInst] = P;
     }
     if (!P)
@@ -6450,7 +6457,7 @@ static PHINode *getConstantEvolvingPHI(Value *V, const Loop *L) {
 
   // Record non-constant instructions contained by the loop.
   DenseMap<Instruction *, PHINode *> PHIMap;
-  return getConstantEvolvingPHIOperands(I, L, PHIMap);
+  return getConstantEvolvingPHIOperands(I, L, PHIMap, 0);
 }
 
 /// EvaluateExpression - Given an expression that passes the
