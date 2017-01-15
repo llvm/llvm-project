@@ -253,12 +253,6 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   if (!TVR->getValueType()->isReferenceType())
     return;
 
-  // FIXME: This is a hotfix for https://llvm.org/bugs/show_bug.cgi?id=31592
-  // A proper fix is very much necessary. Otherwise we would never normally bind
-  // a NonLoc to a reference.
-  if (V.getAs<NonLoc>())
-    return;
-
   ProgramStateRef State = C.getState();
 
   ProgramStateRef StNonNull, StNull;
