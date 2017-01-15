@@ -67,6 +67,14 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
+   Improvements to ThinLTO (-flto=thin)
+   ------------------------------------
+   * Integration with profile data (PGO). When available, profile data 
+     enables more accurate function importing decisions, as well as 
+     cross-module indirect call promotion.
+   * Significant build-time and binary-size improvements when compiling with 
+     debug info (-g).
+
 Changes to the LLVM IR
 ----------------------
 
