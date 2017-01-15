@@ -13,20 +13,6 @@
 ; CHECK-AA-INVALIDATE: Running pass: GVN
 ; CHECK-AA-INVALIDATE: Running analysis: MemoryDependenceAnalysis
 ;
-; Check the assumptions analysis specifically.
-; FIXME: We don't have any test cases that actually fail if the assumption
-; cache becomes stale. This just tests what we believe to be correct.
-; RUN: opt -disable-output -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<memdep>,invalidate<assumptions>,gvn' \
-; RUN:     | FileCheck %s --check-prefix=CHECK-ASSUMPTIONS-INVALIDATE
-; CHECK-ASSUMPTIONS-INVALIDATE: Running pass: RequireAnalysisPass
-; CHECK-ASSUMPTIONS-INVALIDATE: Running analysis: MemoryDependenceAnalysis
-; CHECK-ASSUMPTIONS-INVALIDATE: Running pass: InvalidateAnalysisPass
-; CHECK-ASSUMPTIONS-INVALIDATE: Invalidating analysis: AssumptionAnalysis
-; CHECK-ASSUMPTIONS-INVALIDATE: Invalidating analysis: MemoryDependenceAnalysis
-; CHECK-ASSUMPTIONS-INVALIDATE: Running pass: GVN
-; CHECK-ASSUMPTIONS-INVALIDATE: Running analysis: MemoryDependenceAnalysis
-;
 ; Check domtree specifically.
 ; RUN: opt -disable-output -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<memdep>,invalidate<domtree>,gvn' \

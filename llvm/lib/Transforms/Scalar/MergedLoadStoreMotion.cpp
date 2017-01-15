@@ -596,8 +596,8 @@ MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Impl.run(F, MD, AA))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   PA.preserve<MemoryDependenceAnalysis>();
   return PA;

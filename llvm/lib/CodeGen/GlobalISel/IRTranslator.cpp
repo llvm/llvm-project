@@ -12,7 +12,6 @@
 
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -135,11 +134,6 @@ MachineBasicBlock &IRTranslator::getOrCreateBB(const BasicBlock &BB) {
   return *MBB;
 }
 
-void IRTranslator::addMachineCFGPred(CFGEdge Edge, MachineBasicBlock *NewPred) {
-  assert(NewPred && "new edge must be a real MachineBasicBlock");
-  MachinePreds[Edge].push_back(NewPred);
-}
-
 bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
                                      MachineIRBuilder &MIRBuilder) {
   // FIXME: handle signed/unsigned wrapping flags.
@@ -215,36 +209,30 @@ bool IRTranslator::translateSwitch(const User &U,
 
   const SwitchInst &SwInst = cast<SwitchInst>(U);
   const unsigned SwCondValue = getOrCreateVReg(*SwInst.getCondition());
-  const BasicBlock *OrigBB = SwInst.getParent();
 
   LLT LLTi1 = LLT(*Type::getInt1Ty(U.getContext()), *DL);
   for (auto &CaseIt : SwInst.cases()) {
     const unsigned CaseValueReg = getOrCreateVReg(*CaseIt.getCaseValue());
     const unsigned Tst = MRI->createGenericVirtualRegister(LLTi1);
     MIRBuilder.buildICmp(CmpInst::ICMP_EQ, Tst, CaseValueReg, SwCondValue);
-    MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
-    const BasicBlock *TrueBB = CaseIt.getCaseSuccessor();
-    MachineBasicBlock &TrueMBB = getOrCreateBB(*TrueBB);
+    MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+    MachineBasicBlock &TrueBB = getOrCreateBB(*CaseIt.getCaseSuccessor());
 
-    MIRBuilder.buildBrCond(Tst, TrueMBB);
-    CurMBB.addSuccessor(&TrueMBB);
-    addMachineCFGPred({OrigBB, TrueBB}, &CurMBB);
+    MIRBuilder.buildBrCond(Tst, TrueBB);
+    CurBB.addSuccessor(&TrueBB);
 
-    MachineBasicBlock *FalseMBB =
+    MachineBasicBlock *FalseBB =
         MF->CreateMachineBasicBlock(SwInst.getParent());
-    MF->push_back(FalseMBB);
-    MIRBuilder.buildBr(*FalseMBB);
-    CurMBB.addSuccessor(FalseMBB);
+    MF->push_back(FalseBB);
+    MIRBuilder.buildBr(*FalseBB);
+    CurBB.addSuccessor(FalseBB);
 
-    MIRBuilder.setMBB(*FalseMBB);
+    MIRBuilder.setMBB(*FalseBB);
   }
   // handle default case
-  const BasicBlock *DefaultBB = SwInst.getDefaultDest();
-  MachineBasicBlock &DefaultMBB = getOrCreateBB(*DefaultBB);
-  MIRBuilder.buildBr(DefaultMBB);
-  MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
-  CurMBB.addSuccessor(&DefaultMBB);
-  addMachineCFGPred({OrigBB, DefaultBB}, &CurMBB);
+  MachineBasicBlock &DefaultBB = getOrCreateBB(*SwInst.getDefaultDest());
+  MIRBuilder.buildBr(DefaultBB);
+  MIRBuilder.getMBB().addSuccessor(&DefaultBB);
 
   return true;
 }
@@ -748,21 +736,11 @@ void IRTranslator::finishPendingPhis() {
     // won't create extra control flow here, otherwise we need to find the
     // dominating predecessor here (or perhaps force the weirder IRTranslators
     // to provide a simple boundary).
-    SmallSet<const BasicBlock *, 4> HandledPreds;
-
     for (unsigned i = 0; i < PI->getNumIncomingValues(); ++i) {
-      auto IRPred = PI->getIncomingBlock(i);
-      if (HandledPreds.count(IRPred))
-        continue;
-
-      HandledPreds.insert(IRPred);
-      unsigned ValReg = getOrCreateVReg(*PI->getIncomingValue(i));
-      for (auto Pred : getMachinePredBBs({IRPred, PI->getParent()})) {
-        assert(Pred->isSuccessor(MIB->getParent()) &&
-               "incorrect CFG at MachineBasicBlock level");
-        MIB.addUse(ValReg);
-        MIB.addMBB(Pred);
-      }
+      assert(BBToMBB[PI->getIncomingBlock(i)]->isSuccessor(MIB->getParent()) &&
+             "I appear to have misunderstood Machine PHIs");
+      MIB.addUse(getOrCreateVReg(*PI->getIncomingValue(i)));
+      MIB.addMBB(BBToMBB[PI->getIncomingBlock(i)]);
     }
   }
 }
@@ -816,7 +794,6 @@ void IRTranslator::finalizeFunction() {
   ValToVReg.clear();
   FrameIndices.clear();
   Constants.clear();
-  MachinePreds.clear();
 }
 
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {

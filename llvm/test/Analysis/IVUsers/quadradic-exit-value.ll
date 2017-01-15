@@ -1,5 +1,12 @@
+; This test ensures that IVUsers works correctly in the legacy pass manager
+; without LCSSA and in the specific ways that some of its users (LSR) require.
+;
+; FIXME: We need some way to match the precision here in the new PM where loop
+; passes *always* work on LCSSA. This should stop using a different set of
+; checks at that point.
+
 ; RUN: opt < %s -analyze -iv-users | FileCheck %s
-; RUN: opt -passes='function(require<scalar-evolution>,loop(print<ivusers>))' -S < %s 2>&1| FileCheck %s
+; RUN: opt < %s -disable-output -passes='print<ivusers>' 2>&1 | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

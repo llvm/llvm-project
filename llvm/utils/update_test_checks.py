@@ -70,7 +70,7 @@ CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 # Match things that look at identifiers, but only if they are followed by
 # spaces, commas, paren, or end of the string
-IR_VALUE_RE = re.compile(r'(\s+)%(\w+?)([,\s\(\)]|\Z)')
+IR_VALUE_RE = re.compile(r'(\s+)%([\w\.]+?)([,\s\(\)]|\Z)')
 
 
 # Invoke the tool that is being tested.

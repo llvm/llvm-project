@@ -145,7 +145,6 @@ LoopAnalysisManagerFunctionProxy::run(Function &F,
 
 PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PreservedAnalyses PA;
-  PA.preserve<AssumptionAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   PA.preserve<LoopAnalysisManagerFunctionProxy>();

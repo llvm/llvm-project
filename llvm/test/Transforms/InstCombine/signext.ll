@@ -72,6 +72,19 @@ define i32 @test6(i16 %P) {
   ret i32 %tmp.5
 }
 
+define <2 x i32> @test6_splat_vec(<2 x i12> %P) {
+; CHECK-LABEL: @test6_splat_vec(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i12> %P to <2 x i32>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[Z]], <i32 20, i32 20>
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[SHL]], <i32 20, i32 20>
+; CHECK-NEXT:    ret <2 x i32> [[ASHR]]
+;
+  %z = zext <2 x i12> %P to <2 x i32>
+  %shl = shl <2 x i32> %z, <i32 20, i32 20>
+  %ashr = ashr <2 x i32> %shl, <i32 20, i32 20>
+  ret <2 x i32> %ashr
+}
+
 define i32 @test7(i32 %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[SUB:%.*]] = ashr i32 %x, 5

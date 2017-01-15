@@ -69,6 +69,7 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
                                            LPMUpdater &) {
   if (!simplifyLoopCFG(L, AR.DT, AR.LI))
     return PreservedAnalyses::all();
+
   return getLoopPassPreservedAnalyses();
 }
 

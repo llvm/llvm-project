@@ -414,7 +414,6 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
     initializeAnalysisImpl(P);
     
     // Actually run this pass on the current SCC.
-    P->setExecuted(true);
     Changed |= RunPassOnSCC(P, CurSCC, CG,
                             CallGraphUpToDate, DevirtualizedCall);
     

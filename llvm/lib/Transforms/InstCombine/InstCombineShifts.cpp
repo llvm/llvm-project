@@ -813,39 +813,28 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
   if (Instruction *R = commonShiftTransforms(I))
     return R;
 
+  unsigned BitWidth = I.getType()->getScalarSizeInBits();
   if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
     unsigned ShAmt = Op1C->getZExtValue();
 
-    // If the input is a SHL by the same constant (ashr (shl X, C), C), then we
-    // have a sign-extend idiom.
+    // If the shift amount equals the difference in width of the destination
+    // and source types:
+    // ashr (shl (zext X), C), C --> sext X
     Value *X;
-    if (match(Op0, m_Shl(m_Value(X), m_Specific(Op1)))) {
-      // If the input is an extension from the shifted amount value, e.g.
-      //   %x = zext i8 %A to i32
-      //   %y = shl i32 %x, 24
-      //   %z = ashr %y, 24
-      // then turn this into "z = sext i8 A to i32".
-      if (ZExtInst *ZI = dyn_cast<ZExtInst>(X)) {
-        uint32_t SrcBits = ZI->getOperand(0)->getType()->getScalarSizeInBits();
-        uint32_t DestBits = ZI->getType()->getScalarSizeInBits();
-        if (Op1C->getZExtValue() == DestBits-SrcBits)
-          return new SExtInst(ZI->getOperand(0), ZI->getType());
-      }
-    }
+    if (match(Op0, m_Shl(m_ZExt(m_Value(X)), m_Specific(Op1))) &&
+        ShAmt == BitWidth - X->getType()->getScalarSizeInBits())
+      return new SExtInst(X, I.getType());
 
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
-        MaskedValueIsZero(Op0, APInt::getLowBitsSet(Op1C->getBitWidth(), ShAmt),
-                          0, &I)) {
+        MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmt), 0, &I)) {
       I.setIsExact();
       return &I;
     }
   }
 
   // See if we can turn a signed shr into an unsigned shr.
-  if (MaskedValueIsZero(Op0,
-                        APInt::getSignBit(I.getType()->getScalarSizeInBits()),
-                        0, &I))
+  if (MaskedValueIsZero(Op0, APInt::getSignBit(BitWidth), 0, &I))
     return BinaryOperator::CreateLShr(Op0, Op1);
 
   return nullptr;

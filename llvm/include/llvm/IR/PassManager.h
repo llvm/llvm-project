@@ -73,6 +73,46 @@ struct alignas(8) AnalysisKey {};
 /// if it is, the analysis knows that it itself is preserved.
 struct alignas(8) AnalysisSetKey {};
 
+/// This templated class represents "all analyses that operate over \<a
+/// particular IR unit\>" (e.g. a Function or a Module) in instances of
+/// PreservedAnalysis.
+///
+/// This lets a transformation say e.g. "I preserved all function analyses".
+///
+/// Note that you must provide an explicit instantiation declaration and
+/// definition for this template in order to get the correct behavior on
+/// Windows. Otherwise, the address of SetKey will not be stable.
+template <typename IRUnitT> class AllAnalysesOn {
+public:
+  static AnalysisSetKey *ID() { return &SetKey; }
+
+private:
+  static AnalysisSetKey SetKey;
+};
+
+template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
+
+extern template class AllAnalysesOn<Module>;
+extern template class AllAnalysesOn<Function>;
+
+/// Represents analyses that only rely on functions' control flow.
+///
+/// This can be used with \c PreservedAnalyses to mark the CFG as preserved and
+/// to query whether it has been preserved.
+///
+/// The CFG of a function is defined as the set of basic blocks and the edges
+/// between them. Changing the set of basic blocks in a function is enough to
+/// mutate the CFG. Mutating the condition of a branch or argument of an
+/// invoked function does not mutate the CFG, but changing the successor labels
+/// of those instructions does.
+class CFGAnalyses {
+public:
+  static AnalysisSetKey *ID() { return &SetKey; }
+
+private:
+  static AnalysisSetKey SetKey;
+};
+
 /// A set of analyses that are preserved following a run of a transformation
 /// pass.
 ///
@@ -341,29 +381,6 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   /// configuration, this mixin can provide the static key as well.
   static AnalysisKey *ID() { return &DerivedT::Key; }
 };
-
-/// This templated class represents "all analyses that operate over \<a
-/// particular IR unit\>" (e.g. a Function or a Module) in instances of
-/// PreservedAnalysis.
-///
-/// This lets a transformation say e.g. "I preserved all function analyses".
-///
-/// Note that you must provide an explicit instantiation declaration and
-/// definition for this template in order to get the correct behavior on
-/// Windows. Otherwise, the address of SetKey will not be stable.
-template <typename IRUnitT>
-class AllAnalysesOn {
-public:
-  static AnalysisSetKey *ID() { return &SetKey; }
-
-private:
-  static AnalysisSetKey SetKey;
-};
-
-template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
-
-extern template class AllAnalysesOn<Module>;
-extern template class AllAnalysesOn<Function>;
 
 /// \brief Manages a sequence of passes over a particular unit of IR.
 ///

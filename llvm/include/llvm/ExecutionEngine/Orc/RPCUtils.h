@@ -1116,7 +1116,7 @@ public:
         return Error::success();
       // If it's invalid and we can't re-attempt negotiation, throw an error.
       if (!Retry)
-        return orcError(OrcErrorCode::UnknownRPCFunction);
+        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
     }
 
     // We don't have a function id for Func yet, call the remote to try to
@@ -1254,7 +1254,7 @@ public:
         return Error::success();
       // If it's invalid and we can't re-attempt negotiation, throw an error.
       if (!Retry)
-        return orcError(OrcErrorCode::UnknownRPCFunction);
+        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
     }
 
     // We don't have a function id for Func yet, call the remote to try to

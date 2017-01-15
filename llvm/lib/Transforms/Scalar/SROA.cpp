@@ -4235,9 +4235,8 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  // FIXME: Even when promoting allocas we should preserve some abstract set of
-  // CFG-specific analyses.
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
 }

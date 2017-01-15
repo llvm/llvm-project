@@ -147,9 +147,19 @@ function(add_flag_or_print_warning flag name)
   endif()
 endfunction()
 
-if(LLVM_ENABLE_LLD)
-  check_cxx_compiler_flag("-fuse-ld=lld" CXX_SUPPORTS_LLD)
-  append_if(CXX_SUPPORTS_LLD "-fuse-ld=lld"
+if( LLVM_ENABLE_LLD )
+	if ( LLVM_USE_LINKER )
+		message(FATAL_ERROR "LLVM_ENABLE_LLD and LLVM_USE_LINKER can't be set at the same time")
+	endif()
+	set(LLVM_USE_LINKER "lld")
+endif()
+
+if( LLVM_USE_LINKER )
+  check_cxx_compiler_flag("-fuse-ld=${LLVM_USE_LINKER}" CXX_SUPPORTS_CUSTOM_LINKER)
+  if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
+	  message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'")
+  endif()
+  append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
 

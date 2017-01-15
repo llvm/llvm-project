@@ -321,7 +321,6 @@ public:
     PA.preserveSet<AllAnalysesOn<Loop>>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
     // We also preserve the set of standard analyses.
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<ScalarEvolutionAnalysis>();

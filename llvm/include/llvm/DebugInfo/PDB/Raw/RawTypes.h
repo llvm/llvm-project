@@ -302,6 +302,15 @@ struct InfoStreamHeader {
   PDB_UniqueId Guid;
 };
 
+/// The header preceeding the /names stream.
+struct NameHashTableHeader {
+  support::ulittle32_t Signature;
+  support::ulittle32_t HashVersion;
+  support::ulittle32_t ByteSize;
+};
+
+const uint32_t NameHashTableSignature = 0xEFFEEFFE;
+
 } // namespace pdb
 } // namespace llvm
 

@@ -84,6 +84,13 @@ public:
   /// its instructions.
   AssumptionCache(Function &F) : F(F), Scanned(false) {}
 
+  /// This cache is designed to be self-updating and so it should never be
+  /// invalidated.
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &) {
+    return false;
+  }
+
   /// \brief Add an @llvm.assume intrinsic to this function's cache.
   ///
   /// The call passed in must be an instruction within this function and must

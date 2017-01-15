@@ -1128,8 +1128,8 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
                                  /*PreserveLCSSA*/ true, ProvidedCount,
                                  ProvidedThreshold, ProvidedAllowPartial,
                                  ProvidedRuntime, ProvidedUpperBound);
-
   if (!Changed)
     return PreservedAnalyses::all();
+
   return getLoopPassPreservedAnalyses();
 }

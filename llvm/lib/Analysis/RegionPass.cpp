@@ -94,7 +94,6 @@ bool RGPassManager::runOnFunction(Function &F) {
         PassManagerPrettyStackEntry X(P, *CurrentRegion->getEntry());
 
         TimeRegion PassTimer(getPassTimer(P));
-        P->setExecuted(true);
         Changed |= P->runOnRegion(CurrentRegion, *this);
       }
 

@@ -634,6 +634,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   bool Changed = LR.processLoop(&L);
   if (!Changed)
     return PreservedAnalyses::all();
+
   return getLoopPassPreservedAnalyses();
 }
 

@@ -39,6 +39,7 @@ add_pdb_impl_folder(Raw
   Raw/ModInfo.cpp
   Raw/ModStream.cpp
   Raw/NameHashTable.cpp
+  Raw/NameHashTableBuilder.cpp
   Raw/NameMap.cpp
   Raw/NameMapBuilder.cpp
   Raw/PDBFile.cpp

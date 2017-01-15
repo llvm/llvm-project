@@ -1393,7 +1393,9 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
                             LookupAssumptionCache, LookupDomTree);
   if (!MadeChange)
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   PA.preserve<MemoryDependenceAnalysis>();
   return PA;

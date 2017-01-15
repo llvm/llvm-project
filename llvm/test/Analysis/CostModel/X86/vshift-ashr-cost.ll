@@ -23,7 +23,7 @@ define <2 x i64> @var_shift_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41: Found an estimated cost of 12 for instruction:   %shift
 ; AVX: Found an estimated cost of 12 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 2 for instruction:   %shift
   %shift = ashr <2 x i64> %a, %b
   ret <2 x i64> %shift
@@ -35,7 +35,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41: Found an estimated cost of 24 for instruction:   %shift
 ; AVX: Found an estimated cost of 24 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %shift = ashr <4 x i64> %a, %b
   ret <4 x i64> %shift
@@ -183,7 +183,7 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE41: Found an estimated cost of 12 for instruction:   %shift
 ; AVX: Found an estimated cost of 12 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 2 for instruction:   %shift
   %splat = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
   %shift = ashr <2 x i64> %a, %splat
@@ -196,7 +196,7 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE41: Found an estimated cost of 24 for instruction:   %shift
 ; AVX: Found an estimated cost of 24 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %splat = shufflevector <4 x i64> %b, <4 x i64> undef, <4 x i32> zeroinitializer
   %shift = ashr <4 x i64> %a, %splat
@@ -352,7 +352,7 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) {
 ; SSE41: Found an estimated cost of 12 for instruction:   %shift
 ; AVX: Found an estimated cost of 12 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 2 for instruction:   %shift
   %shift = ashr <2 x i64> %a, <i64 1, i64 7>
   ret <2 x i64> %shift
@@ -364,7 +364,7 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) {
 ; SSE41: Found an estimated cost of 24 for instruction:   %shift
 ; AVX: Found an estimated cost of 24 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %shift = ashr <4 x i64> %a, <i64 1, i64 7, i64 15, i64 31>
   ret <4 x i64> %shift
@@ -509,7 +509,7 @@ define <2 x i64> @splatconstant_shift_v2i64(<2 x i64> %a) {
 ; SSE41: Found an estimated cost of 4 for instruction:   %shift
 ; AVX: Found an estimated cost of 4 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 2 for instruction:   %shift
   %shift = ashr <2 x i64> %a, <i64 7, i64 7>
   ret <2 x i64> %shift
@@ -521,7 +521,7 @@ define <4 x i64> @splatconstant_shift_v4i64(<4 x i64> %a) {
 ; SSE41: Found an estimated cost of 8 for instruction:   %shift
 ; AVX: Found an estimated cost of 8 for instruction:   %shift
 ; AVX2: Found an estimated cost of 4 for instruction:   %shift
-; AVX512: Found an estimated cost of 4 for instruction:   %shift
+; AVX512: Found an estimated cost of 1 for instruction:   %shift
 ; XOP: Found an estimated cost of 4 for instruction:   %shift
   %shift = ashr <4 x i64> %a, <i64 7, i64 7, i64 7, i64 7>
   ret <4 x i64> %shift

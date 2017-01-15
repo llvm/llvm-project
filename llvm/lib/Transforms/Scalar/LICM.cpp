@@ -201,9 +201,9 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.SE, ORE, true))
     return PreservedAnalyses::all();
 
-  // FIXME: There is no setPreservesCFG in the new PM. When that becomes
-  // available, it should be used here.
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 char LegacyLICMPass::ID = 0;

@@ -623,6 +623,7 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
   if (!runImpl(F, TTI, DT, F.getEntryBlock()))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

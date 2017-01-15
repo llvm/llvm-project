@@ -738,7 +738,7 @@ to your path, you can push committed changes upstream with `git llvm push`.
 While this is using SVN under the hood, it does not require any interaction from
 you with git-svn.
 After a few minutes, `git pull` should get back the changes as they were
-commited. Note that a current limitation is that `git` does not directly record
+committed. Note that a current limitation is that `git` does not directly record
 file rename, and thus it is propagated to SVN as a combination of delete-add
 instead of a file rename.
 

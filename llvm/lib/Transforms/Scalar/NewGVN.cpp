@@ -1038,16 +1038,16 @@ void NewGVN::markUsersTouched(Value *V) {
   // Now mark the users as touched.
   for (auto *User : V->users()) {
     assert(isa<Instruction>(User) && "Use of value not within an instruction?");
-    TouchedInstructions.set(InstrDFS[User]);
+    TouchedInstructions.set(InstrDFS.lookup(User));
   }
 }
 
 void NewGVN::markMemoryUsersTouched(MemoryAccess *MA) {
   for (auto U : MA->users()) {
     if (auto *MUD = dyn_cast<MemoryUseOrDef>(U))
-      TouchedInstructions.set(InstrDFS[MUD->getMemoryInst()]);
+      TouchedInstructions.set(InstrDFS.lookup(MUD->getMemoryInst()));
     else
-      TouchedInstructions.set(InstrDFS[U]);
+      TouchedInstructions.set(InstrDFS.lookup(U));
   }
 }
 
@@ -1056,7 +1056,7 @@ void NewGVN::markMemoryUsersTouched(MemoryAccess *MA) {
 void NewGVN::markLeaderChangeTouched(CongruenceClass *CC) {
   for (auto M : CC->Members) {
     if (auto *I = dyn_cast<Instruction>(M))
-      TouchedInstructions.set(InstrDFS[I]);
+      TouchedInstructions.set(InstrDFS.lookup(I));
     LeaderChanges.insert(M);
   }
 }
@@ -1076,13 +1076,12 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
   // dominator tree, or the new class leader should dominate the new member
   // instruction.  We simply check that the member instruction does not properly
   // dominate the new class leader.
-  assert(
-      !isa<Instruction>(NewClass->RepLeader) || !NewClass->RepLeader ||
-      I == NewClass->RepLeader ||
-      !DT->properlyDominates(
-          I->getParent(),
-          cast<Instruction>(NewClass->RepLeader)->getParent()) &&
-          "New class for instruction should not be dominated by instruction");
+  assert((!isa<Instruction>(NewClass->RepLeader) || !NewClass->RepLeader ||
+          I == NewClass->RepLeader ||
+          !DT->properlyDominates(
+              I->getParent(),
+              cast<Instruction>(NewClass->RepLeader)->getParent())) &&
+         "New class for instruction should not be dominated by instruction");
 
   if (NewClass->RepLeader != I) {
     auto DFSNum = InstrDFS.lookup(I);
@@ -1261,11 +1260,11 @@ void NewGVN::updateReachableEdge(BasicBlock *From, BasicBlock *To) {
       // they are the only thing that depend on new edges. Anything using their
       // values will get propagated to if necessary.
       if (MemoryAccess *MemPhi = MSSA->getMemoryAccess(To))
-        TouchedInstructions.set(InstrDFS[MemPhi]);
+        TouchedInstructions.set(InstrDFS.lookup(MemPhi));
 
       auto BI = To->begin();
       while (isa<PHINode>(BI)) {
-        TouchedInstructions.set(InstrDFS[&*BI]);
+        TouchedInstructions.set(InstrDFS.lookup(&*BI));
         ++BI;
       }
     }
@@ -1455,7 +1454,7 @@ void NewGVN::updateProcessedCount(Value *V) {
   if (ProcessedCount.count(V) == 0) {
     ProcessedCount.insert({V, 1});
   } else {
-    ProcessedCount[V] += 1;
+    ++ProcessedCount[V];
     assert(ProcessedCount[V] < 100 &&
            "Seem to have processed the same Value a lot");
   }
@@ -1558,7 +1557,8 @@ bool NewGVN::singleReachablePHIPath(const MemoryAccess *First,
 
 // Verify the that the memory equivalence table makes sense relative to the
 // congruence classes.  Note that this checking is not perfect, and is currently
-// subject to very rare false negatives. It is only useful for testing/debugging.
+// subject to very rare false negatives. It is only useful for
+// testing/debugging.
 void NewGVN::verifyMemoryCongruency() const {
   // Anything equivalent in the memory access table should be in the same
   // congruence class.
@@ -1587,11 +1587,11 @@ void NewGVN::verifyMemoryCongruency() const {
       auto *SecondMUD = dyn_cast<MemoryUseOrDef>(KV.second);
       if (FirstMUD && SecondMUD)
         assert((singleReachablePHIPath(FirstMUD, SecondMUD) ||
-               ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
-                       ValueToClass.lookup(SecondMUD->getMemoryInst())) &&
-                   "The instructions for these memory operations should have "
-                   "been in the same congruence class or reachable through"
-                   "a single argument phi");
+                ValueToClass.lookup(FirstMUD->getMemoryInst()) ==
+                    ValueToClass.lookup(SecondMUD->getMemoryInst())) &&
+               "The instructions for these memory operations should have "
+               "been in the same congruence class or reachable through"
+               "a single argument phi");
     } else if (auto *FirstMP = dyn_cast<MemoryPhi>(KV.first)) {
 
       // We can only sanely verify that MemoryDefs in the operand list all have
@@ -1891,7 +1891,7 @@ void NewGVN::convertDenseToDFSOrdered(
     VD.Val = D;
     // If it's an instruction, use the real local dfs number.
     if (auto *I = dyn_cast<Instruction>(D))
-      VD.LocalNum = InstrDFS[I];
+      VD.LocalNum = InstrDFS.lookup(I);
     else
       llvm_unreachable("Should have been an instruction");
 
@@ -1910,7 +1910,7 @@ void NewGVN::convertDenseToDFSOrdered(
           VD.LocalNum = InstrDFS.size() + 1;
         } else {
           IBlock = I->getParent();
-          VD.LocalNum = InstrDFS[I];
+          VD.LocalNum = InstrDFS.lookup(I);
         }
         DomTreeNode *DomNode = DT->getNode(IBlock);
         VD.DFSIn = DomNode->getDFSNumIn();

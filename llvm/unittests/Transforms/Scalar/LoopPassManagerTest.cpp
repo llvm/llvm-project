@@ -551,7 +551,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
     // Not preserving `AAManager`.
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -568,24 +567,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
     PA.preserve<AAManager>();
-    // Not preserving `AssumptionAnalysis`.
-    PA.preserve<DominatorTreeAnalysis>();
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<LoopAnalysisManagerFunctionProxy>();
-    PA.preserve<ScalarEvolutionAnalysis>();
-    return PA;
-  }));
-  EXPECT_CALL(MLAHandle, run(HasName("loop.0.0"), _, _));
-  EXPECT_CALL(MLAHandle, run(HasName("loop.0.1"), _, _));
-  EXPECT_CALL(MLAHandle, run(HasName("loop.0"), _, _));
-  FPM.addPass(MFPHandle.getPass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(
-      RequireAnalysisLoopPass<MockLoopAnalysisHandle::Analysis>()));
-
-  EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
-    auto PA = PreservedAnalyses::none();
-    PA.preserve<AAManager>();
-    PA.preserve<AssumptionAnalysis>();
     // Not preserving `DominatorTreeAnalysis`.
     PA.preserve<LoopAnalysis>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -602,7 +583,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
     PA.preserve<AAManager>();
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     // Not preserving the `LoopAnalysis`.
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -619,7 +599,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
     PA.preserve<AAManager>();
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     // Not preserving the `LoopAnalysisManagerFunctionProxy`.
@@ -636,7 +615,6 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   EXPECT_CALL(MFPHandle, run(HasName("f"), _)).WillOnce(InvokeWithoutArgs([] {
     auto PA = PreservedAnalyses::none();
     PA.preserve<AAManager>();
-    PA.preserve<AssumptionAnalysis>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
@@ -654,7 +632,7 @@ TEST_F(LoopPassManagerTest, InvalidationOfBundledAnalyses) {
   // 'g' once with a requires pass and then run our mock pass over g a bunch
   // but just get cached results each time.
   EXPECT_CALL(MLAHandle, run(HasName("loop.g.0"), _, _));
-  EXPECT_CALL(MFPHandle, run(HasName("g"), _)).Times(7);
+  EXPECT_CALL(MFPHandle, run(HasName("g"), _)).Times(6);
 
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.run(*M, MAM);

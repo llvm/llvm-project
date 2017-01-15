@@ -63,6 +63,10 @@ public:
     return *this;
   }
 
+  /// Handle invalidation events in the new pass manager.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
+
   /// The new interface to emit remarks.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
 

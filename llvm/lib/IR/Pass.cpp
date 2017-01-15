@@ -146,16 +146,13 @@ PassManagerType FunctionPass::getPotentialPassManagerType() const {
   return PMT_FunctionPassManager;
 }
 
-bool FunctionPass::skipFunction(const Function &F) {
-  if (!F.getContext().getOptBisect().shouldRunPass(this, F)) {
-    setExecuted(false);
+bool FunctionPass::skipFunction(const Function &F) const {
+  if (!F.getContext().getOptBisect().shouldRunPass(this, F))
     return true;
-  }
 
   if (F.hasFnAttribute(Attribute::OptimizeNone)) {
     DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' on function "
                  << F.getName() << "\n");
-    setExecuted(false);
     return true;
   }
   return false;

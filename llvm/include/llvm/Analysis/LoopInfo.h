@@ -682,6 +682,10 @@ public:
     return *this;
   }
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   // Most of the public interface is provided via LoopInfoBase.
 
   /// Update LoopInfo after removing the last backedge from a loop. This updates

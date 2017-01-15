@@ -29,7 +29,6 @@
 #ifndef LLVM_PASS_H
 #define LLVM_PASS_H
 
-#include <assert.h>
 #include <string>
 
 namespace llvm {
@@ -83,39 +82,16 @@ class Pass {
   AnalysisResolver *Resolver;  // Used to resolve analysis
   const void *PassID;
   PassKind Kind;
-  bool Executed;
-
   void operator=(const Pass&) = delete;
   Pass(const Pass &) = delete;
 
 public:
   explicit Pass(PassKind K, char &pid)
-    : Resolver(nullptr), PassID(&pid), Kind(K), Executed(false) { }
+    : Resolver(nullptr), PassID(&pid), Kind(K) { }
   virtual ~Pass();
 
+
   PassKind getPassKind() const { return Kind; }
-
-  /// Returns true if the pass has already executed.
-  ///
-  /// For an analysis pass it means the result is available. If the function
-  /// returns false, the pass was not run, was skipped or freed.
-  ///
-  bool isExecuted() const { return Executed; }
-
-  /// Marks the pass as executed or not.
-  ///
-  /// A pass should be marked as executed, if its 'runOn*' method successfully
-  /// finished. When the pass is not needed anymore, it is marked as
-  /// 'non-executed', it takes place in \c freePass. It also occurs when the
-  /// pass is skipped for some reason.
-  ///
-  /// The flag should be set prior to call to 'runOn*' method. If it decides
-  /// that the pass should be skipped, it will reset the flag.
-  ///
-  void setExecuted(bool x) {
-    assert(x || !getAsImmutablePass()); // Immutable pass cannot be invalidated.
-    Executed = x;
-  }
 
   /// getPassName - Return a nice clean name for a pass.  This usually
   /// implemented in terms of the name that is registered by one of the
@@ -303,7 +279,8 @@ public:
   ///
   bool runOnModule(Module &) override { return false; }
 
-  explicit ImmutablePass(char &pid) : ModulePass(pid) { setExecuted(true); }
+  explicit ImmutablePass(char &pid)
+  : ModulePass(pid) {}
 
   // Force out-of-line virtual method.
   ~ImmutablePass() override;
@@ -339,9 +316,8 @@ public:
 protected:
   /// Optional passes call this function to check whether the pass should be
   /// skipped. This is the case when Attribute::OptimizeNone is set or when
-  /// optimization bisect is over the limit. It also resets flag Executed on
-  /// the pass.
-  bool skipFunction(const Function &F);
+  /// optimization bisect is over the limit.
+  bool skipFunction(const Function &F) const;
 };
 
 

@@ -264,10 +264,7 @@ bool TargetLoweringObjectFile::shouldPutJumpTableInFunctionSection(
   // in discardable section
   // FIXME: this isn't the right predicate, should be based on the MCSection
   // for the function.
-  if (F.isWeakForLinker())
-    return true;
-
-  return false;
+  return F.isWeakForLinker();
 }
 
 /// Given a mergable constant with the specified size and relocation

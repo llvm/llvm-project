@@ -207,6 +207,10 @@ int X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX512UniformConstCostTable[] = {
+    { ISD::SRA,  MVT::v2i64,   1 },
+    { ISD::SRA,  MVT::v4i64,   1 },
+    { ISD::SRA,  MVT::v8i64,   1 },
+
     { ISD::SDIV, MVT::v16i32, 15 }, // vpmuldq sequence
     { ISD::UDIV, MVT::v16i32, 15 }, // vpmuludq sequence
   };
@@ -347,8 +351,12 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,     MVT::v16i32,     1 },
     { ISD::SRL,     MVT::v16i32,     1 },
     { ISD::SRA,     MVT::v16i32,     1 },
+
     { ISD::SHL,     MVT::v8i64,      1 },
     { ISD::SRL,     MVT::v8i64,      1 },
+
+    { ISD::SRA,     MVT::v2i64,      1 },
+    { ISD::SRA,     MVT::v4i64,      1 },
     { ISD::SRA,     MVT::v8i64,      1 },
 
     { ISD::MUL,     MVT::v32i8,     13 }, // extend/pmullw/trunc sequence.
