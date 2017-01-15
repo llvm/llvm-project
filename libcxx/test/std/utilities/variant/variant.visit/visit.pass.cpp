@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// FIXME: This test hangs for an unknown reason on Windows. See llvm.org/PR31642
+// UNSUPPORTED: windows
+
 // <variant>
 // template <class Visitor, class... Variants>
 // constexpr see below visit(Visitor&& vis, Variants&&... vars);

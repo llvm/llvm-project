@@ -382,6 +382,9 @@ class Configuration(object):
         if '__cpp_structured_bindings' not in macros:
             self.config.available_features.add('libcpp-no-structured-bindings')
 
+        if self.is_windows:
+            self.config.available_features.add('windows')
+
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:

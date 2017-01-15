@@ -2268,7 +2268,7 @@ def warn_unsupported_target_attribute
     InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported for this target">;
-// The err_*_attribute_argument_not_int are seperate because they're used by
+// The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
   "'aligned' attribute requires integer constant">;
@@ -3455,7 +3455,7 @@ def note_ovl_candidate_disabled_by_function_cond_attr : Note<
 def note_ovl_candidate_disabled_by_extension : Note<
     "candidate disabled due to OpenCL extension">;
 def err_addrof_function_disabled_by_enable_if_attr : Error<
-    "cannot take address of function %0 becuase it has one or more "
+    "cannot take address of function %0 because it has one or more "
     "non-tautological enable_if conditions">;
 def note_addrof_ovl_candidate_disabled_by_enable_if_attr : Note<
     "candidate function made ineligible by enable_if">;

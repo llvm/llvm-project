@@ -447,9 +447,9 @@ void DFGImpl::OutputDependencyFile() {
   // Create phony targets if requested.
   if (PhonyTarget && !Files.empty()) {
     // Skip the first entry, this is always the input file itself.
-    for (StringRef File : Files) {
+    for (auto I = Files.begin() + 1, E = Files.end(); I != E; ++I) {
       OS << '\n';
-      PrintFilename(OS, File, OutputFormat);
+      PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";
     }
   }

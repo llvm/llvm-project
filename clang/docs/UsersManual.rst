@@ -2645,7 +2645,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               (overridden by LLVM_PROFILE_FILE env var)
       -fprofile-instr-generate
                               Generate instrumented code to collect execution counts into default.profraw file
-                              (overriden by '=' form of option or LLVM_PROFILE_FILE env var)
+                              (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
       -fprofile-instr-use=<value>
                               Use instrumentation data for profile-guided optimization
       -fsanitize-blacklist=<value>

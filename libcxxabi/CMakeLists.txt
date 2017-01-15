@@ -479,8 +479,12 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
     set(LIBCXXABI_LIBUNWIND_SOURCES "")
   endif()
 
-  include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
-  include_directories("${LIBCXXABI_LIBUNWIND_SOURCES}")
+  if (NOT LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL STREQUAL "LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL-NOTFOUND")
+    include_directories("${LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL}")
+  endif()
+  if (NOT LIBCXXABI_LIBUNWIND_SOURCES STREQUAL "")
+    include_directories("${LIBCXXABI_LIBUNWIND_SOURCES}")
+  endif()
 endif()
 
 # Add source code. This also contains all of the logic for deciding linker flags

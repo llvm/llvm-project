@@ -246,11 +246,11 @@ namespace FnPtrs {
 
   int noOvlNoCandidate(int m) __attribute__((enable_if(false, "")));
   void test8() {
-    int (*p)(int) = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
-    int (*p2)(int) = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+    int (*p)(int) = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' because it has one or more non-tautological enable_if conditions}}
+    int (*p2)(int) = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' because it has one or more non-tautological enable_if conditions}}
     int (*a)(int);
-    a = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
-    a = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
+    a = noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' because it has one or more non-tautological enable_if conditions}}
+    a = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' because it has one or more non-tautological enable_if conditions}}
   }
 }
 

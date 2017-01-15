@@ -886,7 +886,7 @@ def BackendOptimizationFailure : DiagGroup<"pass-failed">;
 def ProfileInstrOutOfDate : DiagGroup<"profile-instr-out-of-date">;
 def ProfileInstrUnprofiled : DiagGroup<"profile-instr-unprofiled">;
 
-// AddressSanitizer frontent instrumentation remarks.
+// AddressSanitizer frontend instrumentation remarks.
 def SanitizeAddressRemarks : DiagGroup<"sanitize-address">;
 
 // Issues with serialized diagnostics.

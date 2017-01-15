@@ -6,7 +6,9 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/map-file4.s -o %t4.o
 // RUN: rm -f %t4.a
 // RUN: llvm-ar rc %t4.a %t4.o
-// RUN: ld.lld  %t1.o %t2.o %t3.o %t4.a -o %t -Map=%t.map
+// RUN: ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -M | FileCheck %s
+// RUN: ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -print-map | FileCheck %s
+// RUN: ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -Map=%t.map
 // RUN: FileCheck %s < %t.map
 
 .global _start

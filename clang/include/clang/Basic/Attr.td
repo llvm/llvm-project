@@ -346,7 +346,7 @@ class TargetSpecificAttr<TargetArch target> {
   // should contain a shared value between the attributes.
   //
   // Target-specific attributes which use this feature should ensure that the
-  // spellings match exactly betweeen the attributes, and if the arguments or
+  // spellings match exactly between the attributes, and if the arguments or
   // subjects differ, should specify HasCustomParsing = 1 and implement their
   // own parsing and semantic handling requirements as-needed.
   string ParseKind;

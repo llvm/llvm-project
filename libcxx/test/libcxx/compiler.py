@@ -287,7 +287,8 @@ class CXXCompiler(object):
         # TODO(EricWF): Are there other flags we need to worry about?
         if '-v' in cmd:
             cmd.remove('-v')
-        out, err, rc = lit.util.executeCommand(cmd, input='#error\n')
+        out, err, rc = lit.util.executeCommand(
+            cmd, input=lit.util.to_bytes('#error\n'))
 
         assert rc != 0
         if flag in err:

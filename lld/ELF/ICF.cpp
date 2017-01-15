@@ -191,7 +191,7 @@ void ICF<ELFT>::segregate(size_t Begin, size_t End, bool Constant) {
     size_t Mid = Bound - Sections.begin();
 
     // Now we split [Begin, End) into [Begin, Mid) and [Mid, End) by
-    // updating the sections in [Begin, End). We use Mid as an equivalence
+    // updating the sections in [Begin, Mid). We use Mid as an equivalence
     // class ID because every group ends with a unique index.
     for (size_t I = Begin; I < Mid; ++I)
       Sections[I]->Class[Next] = Mid;
@@ -291,7 +291,7 @@ template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t Begin, size_t End) {
 // groups of sections, grouped by the class.
 //
 // This function calls Fn on every group that starts within [Begin, End).
-// Note that a group must starts in that range but doesn't necessarily
+// Note that a group must start in that range but doesn't necessarily
 // have to end before End.
 template <class ELFT>
 void ICF<ELFT>::forEachClassRange(size_t Begin, size_t End,
