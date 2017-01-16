@@ -462,8 +462,3 @@
 // CHECK-WCHAR2: -fshort-wchar
 // CHECK-WCHAR2-NOT: -fno-short-wchar
 // DELIMITERS: {{^ *"}}
-
-// RUN: %clang -### -S -fstrict-return %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-RETURN %s
-// RUN: %clang -### -S -fno-strict-return %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-RETURN %s
-// CHECK-STRICT-RETURN-NOT: "-fno-strict-return"
-// CHECK-NO-STRICT-RETURN: "-fno-strict-return"
