@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(devirt<4>(inline))' -S | FileCheck %s
 ; PR4834
 
 define i32 @test1() {

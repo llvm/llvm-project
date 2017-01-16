@@ -61,7 +61,6 @@ struct UnrollAnalyzerTest : public FunctionPass {
 char UnrollAnalyzerTest::ID = 0;
 
 std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
-                                       UnrollAnalyzerTest *P,
                                        const char *ModuleStr) {
   SMDiagnostic Err;
   return parseAssemblyString(ModuleStr, Err, Context);
@@ -87,7 +86,7 @@ TEST(UnrollAnalyzerTest, BasicSimplifications) {
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -150,7 +149,7 @@ TEST(UnrollAnalyzerTest, OuterLoopSimplification) {
 
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -195,7 +194,7 @@ TEST(UnrollAnalyzerTest, CmpSimplifications) {
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -242,7 +241,7 @@ TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -288,7 +287,7 @@ TEST(UnrollAnalyzerTest, CastSimplifications) {
 
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);

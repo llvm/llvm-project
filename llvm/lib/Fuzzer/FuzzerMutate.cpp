@@ -486,7 +486,7 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
                                       const std::vector<Mutator> &Mutators) {
   assert(MaxSize > 0);
   if (Size == 0) {
-    for (size_t i = 0; i < MaxSize; i++)
+    for (size_t i = 0; i < Min(size_t(4), MaxSize); i++)
       Data[i] = RandCh(Rand);
     if (Options.OnlyASCII)
       ToASCII(Data, MaxSize);

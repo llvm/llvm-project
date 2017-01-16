@@ -11,8 +11,8 @@ entry:
 ; CHECK-NEXT: call void @__sanitizer_cov_trace_switch(i64 [[TMP]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* @__sancov_gen_cov_switch_values, i32 0, i32 0))
   switch i32 %x, label %sw.epilog [
     i32 1, label %sw.bb
-    i32 101, label %sw.bb.1
-    i32 1001, label %sw.bb.2
+    i32 1001, label %sw.bb.1
+    i32 101, label %sw.bb.2
   ]
 
 sw.bb:                                            ; preds = %entry

@@ -222,9 +222,9 @@ define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
 ; SKX-NEXT:    kmovw %edi, %k1
 ; SKX-NEXT:    vxorps {{.*}}(%rip){1to16}, %zmm0, %zmm3
 ; SKX-NEXT:    vfnmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
-; SKX-NEXT:    vblendmps %zmm1, %zmm3, %zmm1 {%k1}
-; SKX-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm1 {%k1}
-; SKX-NEXT:    vmovaps %zmm1, %zmm0
+; SKX-NEXT:    vmovaps %zmm1, %zmm3 {%k1}
+; SKX-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k1}
+; SKX-NEXT:    vmovaps %zmm3, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test15:
@@ -232,9 +232,9 @@ define <16 x float> @test15(<16 x float> %a, <16 x float> %b, <16 x float> %c, i
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vpxord {{.*}}(%rip){1to16}, %zmm0, %zmm3
 ; KNL-NEXT:    vfnmadd213ps {ru-sae}, %zmm2, %zmm0, %zmm1
-; KNL-NEXT:    vblendmps %zmm1, %zmm3, %zmm1 {%k1}
-; KNL-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm1 {%k1}
-; KNL-NEXT:    vmovaps %zmm1, %zmm0
+; KNL-NEXT:    vmovaps %zmm1, %zmm3 {%k1}
+; KNL-NEXT:    vfnmadd132ps {rd-sae}, %zmm0, %zmm2, %zmm3 {%k1}
+; KNL-NEXT:    vmovaps %zmm3, %zmm0
 ; KNL-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a

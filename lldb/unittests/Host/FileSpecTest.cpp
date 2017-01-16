@@ -109,6 +109,28 @@ TEST(FileSpecTest, CopyByAppendingPathComponent) {
   EXPECT_STREQ("bar", fs.GetFilename().GetCString());
 }
 
+TEST(FileSpecTest, PrependPathComponent) {
+  FileSpec fs_posix("foo", false, FileSpec::ePathSyntaxPosix);
+  fs_posix.PrependPathComponent("/bar");
+  EXPECT_STREQ("/bar/foo", fs_posix.GetCString());
+
+  FileSpec fs_posix_2("foo/bar", false, FileSpec::ePathSyntaxPosix);
+  fs_posix_2.PrependPathComponent("/baz");
+  EXPECT_STREQ("/baz/foo/bar", fs_posix_2.GetCString());
+
+  FileSpec fs_windows("baz", false, FileSpec::ePathSyntaxWindows);
+  fs_windows.PrependPathComponent("F:\\bar");
+  EXPECT_STREQ("F:\\bar\\baz", fs_windows.GetCString());
+
+  FileSpec fs_posix_root("bar", false, FileSpec::ePathSyntaxPosix);
+  fs_posix_root.PrependPathComponent("/");
+  EXPECT_STREQ("/bar", fs_posix_root.GetCString());
+
+  FileSpec fs_windows_root("bar", false, FileSpec::ePathSyntaxWindows);
+  fs_windows_root.PrependPathComponent("F:\\");
+  EXPECT_STREQ("F:\\bar", fs_windows_root.GetCString());
+}
+
 static void Compare(const FileSpec &one, const FileSpec &two, bool full_match,
                     bool remove_backup_dots, bool result) {
   EXPECT_EQ(result, FileSpec::Equal(one, two, full_match, remove_backup_dots))

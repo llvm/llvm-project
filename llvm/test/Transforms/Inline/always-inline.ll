@@ -5,10 +5,14 @@
 ; RUN: opt < %s -inline-threshold=-20000000 -always-inline -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
 ;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
-; the always inliner, but test that we get the correct result.
-; RUN: opt < %s -passes=always-inline -S | FileCheck %s
+; the always inliner, but test that we get the correct result. The new PM
+; always inliner also doesn't support inlining call-site alwaysinline
+; annotations. It isn't clear that this is a reasonable use case for
+; 'alwaysinline'.
+; RUN: opt < %s -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
 
-define i32 @inner1() alwaysinline {
+define internal i32 @inner1() alwaysinline {
+; CHECK-NOT: @inner1(
   ret i32 1
 }
 define i32 @outer1() {
@@ -20,13 +24,14 @@ define i32 @outer1() {
    ret i32 %r
 }
 
-; The always inliner can't DCE internal functions. PR2945
-; CHECK-LABEL: @pr2945(
+; The always inliner can't DCE arbitrary internal functions. PR2945
 define internal i32 @pr2945() nounwind {
+; CHECK-LABEL: @pr2945(
   ret i32 0
 }
 
 define internal void @inner2(i32 %N) alwaysinline {
+; CHECK-NOT: @inner2(
   %P = alloca i32, i32 %N
   ret void
 }
@@ -47,7 +52,9 @@ define void @outer2(i32 %N) {
 declare i32 @a() returns_twice
 declare i32 @b() returns_twice
 
-define i32 @inner3() alwaysinline {
+; Cannot alwaysinline when that would introduce a returns_twice call.
+define internal i32 @inner3() alwaysinline {
+; CHECK-LABEL: @inner3(
 entry:
   %call = call i32 @a() returns_twice
   %add = add nsw i32 1, %call
@@ -64,7 +71,8 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner4() alwaysinline returns_twice {
+define internal i32 @inner4() alwaysinline returns_twice {
+; CHECK-NOT: @inner4(
 entry:
   %call = call i32 @b() returns_twice
   %add = add nsw i32 1, %call
@@ -82,7 +90,9 @@ entry:
   ret i32 %add
 }
 
-define i32 @inner5(i8* %addr) alwaysinline {
+; We can't inline this even though it has alwaysinline!
+define internal i32 @inner5(i8* %addr) alwaysinline {
+; CHECK-LABEL: @inner5(
 entry:
   indirectbr i8* %addr, [ label %one, label %two ]
 
@@ -103,7 +113,9 @@ define i32 @outer5(i32 %x) {
   ret i32 %call
 }
 
-define void @inner6(i32 %x) alwaysinline {
+; We alwaysinline a function that call itself recursively.
+define internal void @inner6(i32 %x) alwaysinline {
+; CHECK-LABEL: @inner6(
 entry:
   %icmp = icmp slt i32 %x, 0
   br i1 %icmp, label %return, label %bb
@@ -126,7 +138,9 @@ entry:
   ret void
 }
 
+; This is not an alwaysinline function and is actually external.
 define i32 @inner7() {
+; CHECK-LABEL: @inner7(
   ret i32 1
 }
 define i32 @outer7() {
@@ -138,7 +152,8 @@ define i32 @outer7() {
    ret i32 %r
 }
 
-define float* @inner8(float* nocapture align 128 %a) alwaysinline {
+define internal float* @inner8(float* nocapture align 128 %a) alwaysinline {
+; CHECK-NOT: @inner8(
   ret float* %a
 }
 define float @outer8(float* nocapture %a) {
@@ -149,4 +164,144 @@ define float @outer8(float* nocapture %a) {
   %inner_a = call float* @inner8(float* %a)
   %f = load float, float* %inner_a, align 4
   ret float %f
+}
+
+
+; The 'inner9*' and 'outer9' functions are designed to check that we remove
+; a function that is inlined by the always inliner even when it is used by
+; a complex constant expression prior to being inlined.
+
+; The 'a' function gets used in a complex constant expression that, despite
+; being constant folded, means it isn't dead. As a consequence it shouldn't be
+; deleted. If it is, then the constant expression needs to become more complex
+; to accurately test this scenario.
+define internal void @inner9a(i1 %b) alwaysinline {
+; CHECK-LABEL: @inner9a(
+entry:
+  ret void
+}
+
+define internal void @inner9b(i1 %b) alwaysinline {
+; CHECK-NOT: @inner9b(
+entry:
+  ret void
+}
+
+declare void @dummy9(i1 %b)
+
+define void @outer9() {
+; CHECK-LABEL: @outer9(
+entry:
+  ; First we use @inner9a in a complex constant expression that may get folded
+  ; but won't get removed, and then we call it which will get inlined. Despite
+  ; this the function can't be deleted because of the constant expression
+  ; usage.
+  %sink = alloca i1
+  store volatile i1 icmp eq (i64 ptrtoint (void (i1)* @inner9a to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)), i1* %sink
+; CHECK: store volatile
+  call void @inner9a(i1 false)
+; CHECK-NOT: call void @inner9a
+
+  ; Next we call @inner9b passing in a constant expression. This constant
+  ; expression will in fact be removed by inlining, so we should also be able
+  ; to delete the function.
+  call void @inner9b(i1 icmp eq (i64 ptrtoint (void (i1)* @inner9b to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)))
+; CHECK-NOT: @inner9b
+
+  ret void
+; CHECK: ret void
+}
+
+; The 'inner10' and 'outer10' functions test a frustrating consquence of the
+; current 'alwaysinline' semantic model. Because such functions are allowed to
+; be external functions, it may be necessary to both inline all of their uses
+; and leave them in the final output. These tests can be removed if and when
+; we restrict alwaysinline further.
+define void @inner10() alwaysinline {
+; CHECK-LABEL: @inner10(
+entry:
+  ret void
+}
+
+define void @outer10() {
+; CHECK-LABEL: @outer10(
+entry:
+  call void @inner10()
+; CHECK-NOT: call void @inner10
+
+  ret void
+; CHECK: ret void
+}
+
+; The 'inner11' and 'outer11' functions test another dimension of non-internal
+; functions with alwaysinline. These functions use external linkages that we can
+; actually remove safely and so we should.
+define linkonce void @inner11a() alwaysinline {
+; CHECK-NOT: @inner11a(
+entry:
+  ret void
+}
+
+define available_externally void @inner11b() alwaysinline {
+; CHECK-NOT: @inner11b(
+entry:
+  ret void
+}
+
+define void @outer11() {
+; CHECK-LABEL: @outer11(
+entry:
+  call void @inner11a()
+  call void @inner11b()
+; CHECK-NOT: call void @inner11a
+; CHECK-NOT: call void @inner11b
+
+  ret void
+; CHECK: ret void
+}
+
+; The 'inner12' and 'outer12' functions test that we don't remove functions
+; which are part of a comdat group even if they otherwise seem dead.
+$comdat12 = comdat any
+
+define linkonce void @inner12() alwaysinline comdat($comdat12) {
+; CHECK-LABEL: @inner12(
+  ret void
+}
+
+define void @outer12() comdat($comdat12) {
+; CHECK-LABEL: @outer12(
+entry:
+  call void @inner12()
+; CHECK-NOT: call void @inner12
+
+  ret void
+; CHECK: ret void
+}
+
+; The 'inner13*' and 'outer13' functions test that we do remove functions
+; which are part of a comdat group where all of the members are removed during
+; always inlining.
+$comdat13 = comdat any
+
+define linkonce void @inner13a() alwaysinline comdat($comdat13) {
+; CHECK-NOT: @inner13a(
+  ret void
+}
+
+define linkonce void @inner13b() alwaysinline comdat($comdat13) {
+; CHECK-NOT: @inner13b(
+  ret void
+}
+
+define void @outer13() {
+; CHECK-LABEL: @outer13(
+entry:
+  call void @inner13a()
+  call void @inner13b()
+; CHECK-NOT: call void @inner13a
+; CHECK-NOT: call void @inner13b
+
+  ret void
+; CHECK: ret void
 }

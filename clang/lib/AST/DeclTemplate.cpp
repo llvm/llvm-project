@@ -204,44 +204,6 @@ void RedeclarableTemplateDecl::addSpecializationImpl(
                                       SETraits::getDecl(Entry));
 }
 
-/// \brief Generate the injected template arguments for the given template
-/// parameter list, e.g., for the injected-class-name of a class template.
-static void GenerateInjectedTemplateArgs(ASTContext &Context,
-                                         TemplateParameterList *Params,
-                                         TemplateArgument *Args) {
-  for (NamedDecl *Param : *Params) {
-    TemplateArgument Arg;
-    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
-      QualType ArgType = Context.getTypeDeclType(TTP);
-      if (TTP->isParameterPack())
-        ArgType = Context.getPackExpansionType(ArgType, None);
-
-      Arg = TemplateArgument(ArgType);
-    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-      Expr *E = new (Context) DeclRefExpr(NTTP, /*enclosing*/ false,
-                                  NTTP->getType().getNonLValueExprType(Context),
-                                  Expr::getValueKindForType(NTTP->getType()),
-                                          NTTP->getLocation());
-
-      if (NTTP->isParameterPack())
-        E = new (Context) PackExpansionExpr(Context.DependentTy, E,
-                                            NTTP->getLocation(), None);
-      Arg = TemplateArgument(E);
-    } else {
-      auto *TTP = cast<TemplateTemplateParmDecl>(Param);
-      if (TTP->isParameterPack())
-        Arg = TemplateArgument(TemplateName(TTP), Optional<unsigned>());
-      else
-        Arg = TemplateArgument(TemplateName(TTP));
-    }
-
-    if (Param->isTemplateParameterPack())
-      Arg = TemplateArgument::CreatePackCopy(Context, Arg);
-
-    *Args++ = Arg;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // FunctionTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -310,10 +272,13 @@ ArrayRef<TemplateArgument> FunctionTemplateDecl::getInjectedTemplateArgs() {
   TemplateParameterList *Params = getTemplateParameters();
   Common *CommonPtr = getCommonPtr();
   if (!CommonPtr->InjectedArgs) {
-    CommonPtr->InjectedArgs
-      = new (getASTContext()) TemplateArgument[Params->size()];
-    GenerateInjectedTemplateArgs(getASTContext(), Params,
-                                 CommonPtr->InjectedArgs);
+    auto &Context = getASTContext();
+    SmallVector<TemplateArgument, 16> TemplateArgs;
+    Context.getInjectedTemplateArgs(Params, TemplateArgs);
+    CommonPtr->InjectedArgs =
+        new (Context) TemplateArgument[TemplateArgs.size()];
+    std::copy(TemplateArgs.begin(), TemplateArgs.end(),
+              CommonPtr->InjectedArgs);
   }
 
   return llvm::makeArrayRef(CommonPtr->InjectedArgs, Params->size());
@@ -332,12 +297,10 @@ ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C,
                                              SourceLocation L,
                                              DeclarationName Name,
                                              TemplateParameterList *Params,
-                                             NamedDecl *Decl,
-                                             ClassTemplateDecl *PrevDecl) {
+                                             NamedDecl *Decl) {
   AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
   ClassTemplateDecl *New = new (C, DC) ClassTemplateDecl(C, DC, L, Name,
                                                          Params, Decl);
-  New->setPreviousDecl(PrevDecl);
   return New;
 }
 
@@ -464,8 +427,7 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateParameterList *Params = getTemplateParameters();
   SmallVector<TemplateArgument, 16> TemplateArgs;
-  TemplateArgs.resize(Params->size());
-  GenerateInjectedTemplateArgs(getASTContext(), Params, TemplateArgs.data());
+  Context.getInjectedTemplateArgs(Params, TemplateArgs);
   CommonPtr->InjectedClassNameType
     = Context.getTemplateSpecializationType(TemplateName(this),
                                             TemplateArgs);
@@ -761,9 +723,16 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
     raw_ostream &OS, const PrintingPolicy &Policy, bool Qualified) const {
   NamedDecl::getNameForDiagnostic(OS, Policy, Qualified);
 
-  const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.asArray(), Policy);
+  auto *PS = dyn_cast<ClassTemplatePartialSpecializationDecl>(this);
+  if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
+          PS ? PS->getTemplateArgsAsWritten() : nullptr) {
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, ArgsAsWritten->arguments(), Policy);
+  } else {
+    const TemplateArgumentList &TemplateArgs = getTemplateArgs();
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy);
+  }
 }
 
 ClassTemplateDecl *
@@ -1093,9 +1062,16 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
     raw_ostream &OS, const PrintingPolicy &Policy, bool Qualified) const {
   NamedDecl::getNameForDiagnostic(OS, Policy, Qualified);
 
-  const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-  TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.asArray(), Policy);
+  auto *PS = dyn_cast<VarTemplatePartialSpecializationDecl>(this);
+  if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
+          PS ? PS->getTemplateArgsAsWritten() : nullptr) {
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, ArgsAsWritten->arguments(), Policy);
+  } else {
+    const TemplateArgumentList &TemplateArgs = getTemplateArgs();
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy);
+  }
 }
 
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {

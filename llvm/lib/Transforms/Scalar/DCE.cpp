@@ -124,9 +124,12 @@ static bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
 }
 
 PreservedAnalyses DCEPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (eliminateDeadCode(F, AM.getCachedResult<TargetLibraryAnalysis>(F)))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  if (!eliminateDeadCode(F, AM.getCachedResult<TargetLibraryAnalysis>(F)))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 namespace {

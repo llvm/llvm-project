@@ -33,7 +33,7 @@ void foo() {
   // PARTIAL:      br i1 %[[CHECK012]], {{.*}} !prof ![[WEIGHT_MD:.*]], !nosanitize
 
   // PARTIAL:      br i1 %[[CHECK02]], {{.*}}
-  // PARTIAL:      call void @__ubsan_handle_type_mismatch_abort(
+  // PARTIAL:      call void @__ubsan_handle_type_mismatch_v1_abort(
   // PARTIAL-NEXT: unreachable
-  // PARTIAL:      call void @__ubsan_handle_type_mismatch(
+  // PARTIAL:      call void @__ubsan_handle_type_mismatch_v1(
 }

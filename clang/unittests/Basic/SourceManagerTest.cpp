@@ -78,10 +78,10 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   SourceMgr.setMainFileID(mainFileID);
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -198,10 +198,10 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
@@ -298,10 +298,10 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   VoidModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, LangOpts, 
-                          &*Target);
-  Preprocessor PP(new PreprocessorOptions(), Diags, LangOpts, SourceMgr,
-                  HeaderInfo, ModLoader,
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

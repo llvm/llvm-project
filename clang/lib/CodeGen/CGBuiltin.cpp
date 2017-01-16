@@ -35,6 +35,11 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+static
+int64_t clamp(int64_t Value, int64_t Low, int64_t High) {
+  return std::min(High, std::max(Low, Value));
+}
+
 /// getBuiltinLibFunction - Given a builtin id for a function like
 /// "__builtin_fabsf", return a Function* for "fabsf".
 llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
@@ -4313,9 +4318,9 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == ARM::BI__builtin_arm_rbit) {
-    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_rbit),
-                                               EmitScalarExpr(E->getArg(0)),
-                              "rbit");
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::bitreverse, Arg->getType()), Arg, "rbit");
   }
 
   if (BuiltinID == ARM::BI__clear_cache) {
@@ -5221,14 +5226,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
            "rbit of unusual size!");
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::aarch64_rbit, Arg->getType()), Arg, "rbit");
+        CGM.getIntrinsic(Intrinsic::bitreverse, Arg->getType()), Arg, "rbit");
   }
   if (BuiltinID == AArch64::BI__builtin_arm_rbit64) {
     assert((getContext().getTypeSize(E->getType()) == 64) &&
            "rbit of unusual size!");
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::aarch64_rbit, Arg->getType()), Arg, "rbit");
+        CGM.getIntrinsic(Intrinsic::bitreverse, Arg->getType()), Arg, "rbit");
   }
 
   if (BuiltinID == AArch64::BI__clear_cache) {
@@ -8190,6 +8195,85 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     }
     llvm_unreachable("Unknown FMA operation");
     return nullptr; // Suppress no-return warning
+  }
+
+  case PPC::BI__builtin_vsx_insertword: {
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_vsx_xxinsertw);
+
+    // Third argument is a compile time constant int. It must be clamped to
+    // to the range [0, 12].
+    ConstantInt *ArgCI = dyn_cast<ConstantInt>(Ops[2]);
+    assert(ArgCI &&
+           "Third arg to xxinsertw intrinsic must be constant integer");
+    const int64_t MaxIndex = 12;
+    int64_t Index = clamp(ArgCI->getSExtValue(), 0, MaxIndex);
+
+    // The builtin semantics don't exactly match the xxinsertw instructions
+    // semantics (which ppc_vsx_xxinsertw follows). The builtin extracts the
+    // word from the first argument, and inserts it in the second argument. The
+    // instruction extracts the word from its second input register and inserts
+    // it into its first input register, so swap the first and second arguments.
+    std::swap(Ops[0], Ops[1]);
+
+    // Need to cast the second argument from a vector of unsigned int to a
+    // vector of long long.
+    Ops[1] = Builder.CreateBitCast(Ops[1], llvm::VectorType::get(Int64Ty, 2));
+
+    if (getTarget().isLittleEndian()) {
+      // Create a shuffle mask of (1, 0)
+      Constant *ShuffleElts[2] = { ConstantInt::get(Int32Ty, 1),
+                                   ConstantInt::get(Int32Ty, 0)
+                                 };
+      Constant *ShuffleMask = llvm::ConstantVector::get(ShuffleElts);
+
+      // Reverse the double words in the vector we will extract from.
+      Ops[0] = Builder.CreateBitCast(Ops[0], llvm::VectorType::get(Int64Ty, 2));
+      Ops[0] = Builder.CreateShuffleVector(Ops[0], Ops[0], ShuffleMask);
+
+      // Reverse the index.
+      Index = MaxIndex - Index;
+    }
+
+    // Intrinsic expects the first arg to be a vector of int.
+    Ops[0] = Builder.CreateBitCast(Ops[0], llvm::VectorType::get(Int32Ty, 4));
+    Ops[2] = ConstantInt::getSigned(Int32Ty, Index);
+    return Builder.CreateCall(F, Ops);
+  }
+
+  case PPC::BI__builtin_vsx_extractuword: {
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_vsx_xxextractuw);
+
+    // Intrinsic expects the first argument to be a vector of doublewords.
+    Ops[0] = Builder.CreateBitCast(Ops[0], llvm::VectorType::get(Int64Ty, 2));
+
+    // The second argument is a compile time constant int that needs to
+    // be clamped to the range [0, 12].
+    ConstantInt *ArgCI = dyn_cast<ConstantInt>(Ops[1]);
+    assert(ArgCI &&
+           "Second Arg to xxextractuw intrinsic must be a constant integer!");
+    const int64_t MaxIndex = 12;
+    int64_t Index = clamp(ArgCI->getSExtValue(), 0, MaxIndex);
+
+    if (getTarget().isLittleEndian()) {
+      // Reverse the index.
+      Index = MaxIndex - Index;
+      Ops[1] = ConstantInt::getSigned(Int32Ty, Index);
+
+      // Emit the call, then reverse the double words of the results vector.
+      Value *Call = Builder.CreateCall(F, Ops);
+
+      // Create a shuffle mask of (1, 0)
+      Constant *ShuffleElts[2] = { ConstantInt::get(Int32Ty, 1),
+                                   ConstantInt::get(Int32Ty, 0)
+                                 };
+      Constant *ShuffleMask = llvm::ConstantVector::get(ShuffleElts);
+
+      Value *ShuffleCall = Builder.CreateShuffleVector(Call, Call, ShuffleMask);
+      return ShuffleCall;
+    } else {
+      Ops[1] = ConstantInt::getSigned(Int32Ty, Index);
+      return Builder.CreateCall(F, Ops);
+    }
   }
   }
 }

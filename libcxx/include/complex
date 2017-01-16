@@ -252,13 +252,13 @@ template<class T, class charT, class traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template<class _Tp> class _LIBCPP_TYPE_VIS_ONLY complex;
+template<class _Tp> class _LIBCPP_TEMPLATE_VIS complex;
 
 template<class _Tp> complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w);
 template<class _Tp> complex<_Tp> operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY complex
+class _LIBCPP_TEMPLATE_VIS complex
 {
 public:
     typedef _Tp value_type;
@@ -316,11 +316,11 @@ public:
         }
 };
 
-template<> class _LIBCPP_TYPE_VIS_ONLY complex<double>;
-template<> class _LIBCPP_TYPE_VIS_ONLY complex<long double>;
+template<> class _LIBCPP_TEMPLATE_VIS complex<double>;
+template<> class _LIBCPP_TEMPLATE_VIS complex<long double>;
 
 template<>
-class _LIBCPP_TYPE_VIS_ONLY complex<float>
+class _LIBCPP_TEMPLATE_VIS complex<float>
 {
     float __re_;
     float __im_;
@@ -378,7 +378,7 @@ public:
 };
 
 template<>
-class _LIBCPP_TYPE_VIS_ONLY complex<double>
+class _LIBCPP_TEMPLATE_VIS complex<double>
 {
     double __re_;
     double __im_;
@@ -436,7 +436,7 @@ public:
 };
 
 template<>
-class _LIBCPP_TYPE_VIS_ONLY complex<long double>
+class _LIBCPP_TEMPLATE_VIS complex<long double>
 {
     long double __re_;
     long double __im_;
@@ -844,7 +844,7 @@ imag(const complex<_Tp>& __c)
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 typename __libcpp_complex_overload_traits<_Tp>::_ValueType
-imag(_Tp __re)
+imag(_Tp)
 {
     return 0;
 }

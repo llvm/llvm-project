@@ -93,7 +93,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                              vs_style, strip_path_prefix);
       } else if (info.module) {
         RenderModuleLocation(buffer, info.module, info.module_offset,
-                             strip_path_prefix);
+                             info.module_arch, strip_path_prefix);
       } else {
         buffer->append("(<unknown module>)");
       }
@@ -103,8 +103,9 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       if (info.address & kExternalPCBit)
         {} // There PCs are not meaningful.
       else if (info.module)
-        buffer->append("(%s+%p)", StripModuleName(info.module),
-                       (void *)info.module_offset);
+        // Always strip the module name for %M.
+        RenderModuleLocation(buffer, StripModuleName(info.module),
+                             info.module_offset, info.module_arch, "");
       else
         buffer->append("(%p)", (void *)info.address);
       break;
@@ -165,9 +166,13 @@ void RenderSourceLocation(InternalScopedString *buffer, const char *file,
 }
 
 void RenderModuleLocation(InternalScopedString *buffer, const char *module,
-                          uptr offset, const char *strip_path_prefix) {
-  buffer->append("(%s+0x%zx)", StripPathPrefix(module, strip_path_prefix),
-                 offset);
+                          uptr offset, ModuleArch arch,
+                          const char *strip_path_prefix) {
+  buffer->append("(%s", StripPathPrefix(module, strip_path_prefix));
+  if (arch != kModuleArchUnknown) {
+    buffer->append(":%s", ModuleArchToString(arch));
+  }
+  buffer->append("+0x%zx)", offset);
 }
 
 } // namespace __sanitizer

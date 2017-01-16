@@ -203,8 +203,8 @@ unsigned AVRDAGToDAGISel::selectIndexedProgMemLoad(const LoadSDNode *LD,
 bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
                                                    unsigned ConstraintCode,
                                                    std::vector<SDValue> &OutOps) {
-  assert(ConstraintCode == InlineAsm::Constraint_m ||
-         ConstraintCode == InlineAsm::Constraint_Q &&
+  assert((ConstraintCode == InlineAsm::Constraint_m ||
+         ConstraintCode == InlineAsm::Constraint_Q) &&
       "Unexpected asm memory constraint");
 
   MachineRegisterInfo &RI = MF->getRegInfo();

@@ -163,6 +163,10 @@ void WebAssemblyPassConfig::addIRPasses() {
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass(TM));
 
+  // Fix function bitcasts, as WebAssembly requires caller and callee signatures
+  // to match.
+  addPass(createWebAssemblyFixFunctionBitcasts());
+
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyOptimizeReturned());

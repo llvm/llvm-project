@@ -186,7 +186,7 @@ public:
 
   bool parseEOL(const Twine &ErrMsg);
 
-  bool parseMany(std::function<bool()> parseOne, bool hasComma = true);
+  bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);
 
   bool parseIntToken(int64_t &V, const Twine &ErrMsg);
 

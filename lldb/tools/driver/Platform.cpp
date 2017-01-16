@@ -15,6 +15,7 @@
 #include <stdlib.h>
 
 #include "Platform.h"
+#include "llvm/Support/ErrorHandling.h"
 
 int ioctl(int d, int request, ...) {
   switch (request) {
@@ -34,9 +35,8 @@ int ioctl(int d, int request, ...) {
     return 0;
   } break;
   default:
-    assert(!"Not implemented!");
+    llvm_unreachable("Not implemented!");
   }
-  return -1;
 }
 
 int kill(pid_t pid, int sig) {
@@ -44,13 +44,11 @@ int kill(pid_t pid, int sig) {
   if (pid == getpid())
     exit(sig);
   //
-  assert(!"Not implemented!");
-  return -1;
+  llvm_unreachable("Not implemented!");
 }
 
 int tcsetattr(int fd, int optional_actions, const struct termios *termios_p) {
-  assert(!"Not implemented!");
-  return -1;
+  llvm_unreachable("Not implemented!");
 }
 
 int tcgetattr(int fildes, struct termios *termios_p) {

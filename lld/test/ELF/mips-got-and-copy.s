@@ -19,22 +19,22 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: Primary GOT {
-# CHECK-NEXT:   Canonical gp value: 0x37FF0
+# CHECK-NEXT:   Canonical gp value: 0x47FF0
 # CHECK-NEXT:   Reserved entries [
 # CHECK:        ]
 # CHECK-NEXT:   Local entries [
 # CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x30008
+# CHECK-NEXT:       Address: 0x40008
 # CHECK-NEXT:       Access: -32744
-# CHECK-NEXT:       Initial: 0x40010
+# CHECK-NEXT:       Initial: 0x50000
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   Global entries [
 # CHECK-NEXT:     Entry {
-# CHECK-NEXT:       Address: 0x3000C
+# CHECK-NEXT:       Address: 0x4000C
 # CHECK-NEXT:       Access: -32740
-# CHECK-NEXT:       Initial: 0x40014
-# CHECK-NEXT:       Value: 0x40014
+# CHECK-NEXT:       Initial: 0x50004
+# CHECK-NEXT:       Value: 0x50004
 # CHECK-NEXT:       Type: Object (0x1)
 # CHECK-NEXT:       Section: .bss (0xD)
 # CHECK-NEXT:       Name: data1@

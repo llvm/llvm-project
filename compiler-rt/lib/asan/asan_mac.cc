@@ -49,15 +49,6 @@ namespace __asan {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 
-bool PlatformHasDifferentMemcpyAndMemmove() {
-  // On OS X 10.7 memcpy() and memmove() are both resolved
-  // into memmove$VARIANT$sse42.
-  // See also https://github.com/google/sanitizers/issues/34.
-  // TODO(glider): need to check dynamically that memcpy() and memmove() are
-  // actually the same function.
-  return GetMacosVersion() == MACOS_VERSION_SNOW_LEOPARD;
-}
-
 // No-op. Mac does not support static linkage anyway.
 void *AsanDoesNotSupportStaticLinkage() {
   return 0;

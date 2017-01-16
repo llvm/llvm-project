@@ -32,7 +32,7 @@ namespace PackExpansionNotAtEnd {
 
   template<typename ... Types, // expected-note{{non-deducible template parameter 'Types'}}
            typename Tail> // expected-note{{non-deducible template parameter 'Tail'}}
-  struct UselessPartialSpec<Types..., Tail>; // expected-warning{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
+  struct UselessPartialSpec<Types..., Tail>; // expected-error{{class template partial specialization contains template parameters that cannot be deduced; this partial specialization will never be used}}
 }
 
 namespace DeduceNonTypeTemplateArgsInArray {

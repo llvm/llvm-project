@@ -11,28 +11,79 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64ISelLowering.h"
 #include "AArch64CallingConvention.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64ISelLowering.h"
 #include "AArch64PerfectShuffle.h"
+#include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
-#include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetCallingConv.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <limits>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-lower"
@@ -59,7 +110,6 @@ static const MVT MVT_CC = MVT::i32;
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
-
   // AArch64 doesn't have comparisons which set GPRs or setcc instructions, so
   // we have to make something up. Arbitrarily, choose ZeroOrOne.
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -109,6 +159,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
   setOperationAction(ISD::SETCC, MVT::f32, Custom);
   setOperationAction(ISD::SETCC, MVT::f64, Custom);
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+  setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
@@ -217,7 +269,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // AArch64 doesn't have {U|S}MUL_LOHI.
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
   setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-
 
   setOperationAction(ISD::CTPOP, MVT::i32, Custom);
   setOperationAction(ISD::CTPOP, MVT::i64, Custom);
@@ -3632,6 +3683,7 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
   llvm_unreachable("Unexpected platform trying to use TLS");
 }
+
 SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -4549,7 +4601,6 @@ SDValue AArch64TargetLowering::LowerShiftRightParts(SDValue Op,
   return DAG.getMergeValues(Ops, dl);
 }
 
-
 /// LowerShiftLeftParts - Lower SHL_PARTS, which returns two
 /// i64 values and take a 2 x i64 value to shift plus a shift amount.
 SDValue AArch64TargetLowering::LowerShiftLeftParts(SDValue Op,
@@ -5074,10 +5125,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     int WindowBase;
     int WindowScale;
 
-    bool operator ==(SDValue OtherVec) { return Vec == OtherVec; }
     ShuffleSourceInfo(SDValue Vec)
-        : Vec(Vec), MinElt(UINT_MAX), MaxElt(0), ShuffleVec(Vec), WindowBase(0),
-          WindowScale(1) {}
+      : Vec(Vec), MinElt(std::numeric_limits<unsigned>::max()), MaxElt(0),
+          ShuffleVec(Vec), WindowBase(0), WindowScale(1) {}
+
+    bool operator ==(SDValue OtherVec) { return Vec == OtherVec; }
   };
 
   // First gather all vectors used as an immediate source for this BUILD_VECTOR
@@ -7028,7 +7080,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::aarch64_ldaxp:
-  case Intrinsic::aarch64_ldxp: {
+  case Intrinsic::aarch64_ldxp:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i128;
     Info.ptrVal = I.getArgOperand(0);
@@ -7038,9 +7090,8 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.readMem = true;
     Info.writeMem = false;
     return true;
-  }
   case Intrinsic::aarch64_stlxp:
-  case Intrinsic::aarch64_stxp: {
+  case Intrinsic::aarch64_stxp:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i128;
     Info.ptrVal = I.getArgOperand(2);
@@ -7050,7 +7101,6 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.readMem = false;
     Info.writeMem = true;
     return true;
-  }
   default:
     break;
   }
@@ -7481,8 +7531,7 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Check reg1 + SIZE_IN_BYTES * reg2 and reg1 + reg2
 
-  return !AM.Scale || AM.Scale == 1 ||
-         (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes);
+  return AM.Scale == 1 || (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes);
 }
 
 int AArch64TargetLowering::getScalingFactorCost(const DataLayout &DL,
@@ -8045,13 +8094,13 @@ static SDValue tryCombineToEXTR(SDNode *N,
 
   SDValue LHS;
   uint32_t ShiftLHS = 0;
-  bool LHSFromHi = 0;
+  bool LHSFromHi = false;
   if (!findEXTRHalf(N->getOperand(0), LHS, ShiftLHS, LHSFromHi))
     return SDValue();
 
   SDValue RHS;
   uint32_t ShiftRHS = 0;
-  bool RHSFromHi = 0;
+  bool RHSFromHi = false;
   if (!findEXTRHalf(N->getOperand(1), RHS, ShiftRHS, RHSFromHi))
     return SDValue();
 
@@ -9733,52 +9782,51 @@ static bool isEquivalentMaskless(unsigned CC, unsigned width,
 
   switch(CC) {
   case AArch64CC::LE:
-  case AArch64CC::GT: {
+  case AArch64CC::GT:
     if ((AddConstant == 0) ||
         (CompConstant == MaxUInt - 1 && AddConstant < 0) ||
         (AddConstant >= 0 && CompConstant < 0) ||
         (AddConstant <= 0 && CompConstant <= 0 && CompConstant < AddConstant))
       return true;
-  } break;
+    break;
   case AArch64CC::LT:
-  case AArch64CC::GE: {
+  case AArch64CC::GE:
     if ((AddConstant == 0) ||
         (AddConstant >= 0 && CompConstant <= 0) ||
         (AddConstant <= 0 && CompConstant <= 0 && CompConstant <= AddConstant))
       return true;
-  } break;
+    break;
   case AArch64CC::HI:
-  case AArch64CC::LS: {
+  case AArch64CC::LS:
     if ((AddConstant >= 0 && CompConstant < 0) ||
        (AddConstant <= 0 && CompConstant >= -1 &&
         CompConstant < AddConstant + MaxUInt))
       return true;
-  } break;
+   break;
   case AArch64CC::PL:
-  case AArch64CC::MI: {
+  case AArch64CC::MI:
     if ((AddConstant == 0) ||
         (AddConstant > 0 && CompConstant <= 0) ||
         (AddConstant < 0 && CompConstant <= AddConstant))
       return true;
-  } break;
+    break;
   case AArch64CC::LO:
-  case AArch64CC::HS: {
+  case AArch64CC::HS:
     if ((AddConstant >= 0 && CompConstant <= 0) ||
         (AddConstant <= 0 && CompConstant >= 0 &&
          CompConstant <= AddConstant + MaxUInt))
       return true;
-  } break;
+    break;
   case AArch64CC::EQ:
-  case AArch64CC::NE: {
+  case AArch64CC::NE:
     if ((AddConstant > 0 && CompConstant < 0) ||
         (AddConstant < 0 && CompConstant >= 0 &&
          CompConstant < AddConstant + MaxUInt) ||
         (AddConstant >= 0 && CompConstant >= 0 &&
          CompConstant >= AddConstant) ||
         (AddConstant <= 0 && CompConstant < 0 && CompConstant < AddConstant))
-
       return true;
-  } break;
+    break;
   case AArch64CC::VS:
   case AArch64CC::VC:
   case AArch64CC::AL:
@@ -10273,8 +10321,10 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,
   // All of the indexed addressing mode instructions take a signed
   // 9 bit immediate offset.
   if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1))) {
-    int64_t RHSC = (int64_t)RHS->getZExtValue();
-    if (RHSC >= 256 || RHSC <= -256)
+    int64_t RHSC = RHS->getSExtValue();
+    if (Op->getOpcode() == ISD::SUB)
+      RHSC = -(uint64_t)RHSC;
+    if (!isInt<9>(RHSC))
       return false;
     IsInc = (Op->getOpcode() == ISD::ADD);
     Offset = Op->getOperand(1);
@@ -10500,7 +10550,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
   if (ValTy->getPrimitiveSizeInBits() == 128) {
     Intrinsic::ID Int =
         IsAcquire ? Intrinsic::aarch64_ldaxp : Intrinsic::aarch64_ldxp;
-    Function *Ldxr = llvm::Intrinsic::getDeclaration(M, Int);
+    Function *Ldxr = Intrinsic::getDeclaration(M, Int);
 
     Addr = Builder.CreateBitCast(Addr, Type::getInt8PtrTy(M->getContext()));
     Value *LoHi = Builder.CreateCall(Ldxr, Addr, "lohi");
@@ -10516,7 +10566,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int =
       IsAcquire ? Intrinsic::aarch64_ldaxr : Intrinsic::aarch64_ldxr;
-  Function *Ldxr = llvm::Intrinsic::getDeclaration(M, Int, Tys);
+  Function *Ldxr = Intrinsic::getDeclaration(M, Int, Tys);
 
   return Builder.CreateTruncOrBitCast(
       Builder.CreateCall(Ldxr, Addr),
@@ -10526,8 +10576,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilder<> &Builder) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Builder.CreateCall(
-      llvm::Intrinsic::getDeclaration(M, Intrinsic::aarch64_clrex));
+  Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::aarch64_clrex));
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilder<> &Builder,

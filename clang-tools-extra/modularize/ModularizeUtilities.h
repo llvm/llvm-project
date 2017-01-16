@@ -214,8 +214,6 @@ public:
   llvm::IntrusiveRefCntPtr<clang::FileManager> FileMgr;
   /// Source manager.
   llvm::IntrusiveRefCntPtr<clang::SourceManager> SourceMgr;
-  /// Options controlling the \#include directive.
-  llvm::IntrusiveRefCntPtr<clang::HeaderSearchOptions> HeaderSearchOpts;
   /// Header search manager.
   std::unique_ptr<clang::HeaderSearch> HeaderInfo;
   // The loaded module map objects.

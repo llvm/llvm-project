@@ -16,6 +16,11 @@
 #define LLVM_LIB_TARGET_X86_INSTPRINTER_X86INSTCOMMENTS_H
 
 namespace llvm {
+
+  enum AsmComments {
+    AC_EVEX_2_VEX = 0x2 // For instr that was compressed from EVEX to VEX.
+  };
+
   class MCInst;
   class raw_ostream;
   bool EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,

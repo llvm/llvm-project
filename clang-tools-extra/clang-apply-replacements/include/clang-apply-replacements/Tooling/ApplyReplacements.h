@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_APPLYREPLACEMENTS_H
 #define LLVM_CLANG_APPLYREPLACEMENTS_H
 
+#include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -43,6 +44,9 @@ typedef std::vector<clang::tooling::TranslationUnitReplacements> TUReplacements;
 /// \brief Collection of TranslationUnitReplacement files.
 typedef std::vector<std::string> TUReplacementFiles;
 
+/// \brief Collection of TranslationUniDiagnostics.
+typedef std::vector<clang::tooling::TranslationUnitDiagnostics> TUDiagnostics;
+
 /// \brief Map mapping file name to Replacements targeting that file.
 typedef llvm::DenseMap<const clang::FileEntry *,
                        std::vector<clang::tooling::Replacement>>
@@ -58,8 +62,8 @@ typedef llvm::DenseMap<const clang::FileEntry *,
 /// \param[in] Directory Directory to begin search for serialized
 /// TranslationUnitReplacements.
 /// \param[out] TUs Collection of all found and deserialized
-/// TranslationUnitReplacements.
-/// \param[out] TURFiles Collection of all TranslationUnitReplacement files
+/// TranslationUnitReplacements or TranslationUnitDiagnostics.
+/// \param[out] TUFiles Collection of all TranslationUnitReplacement files
 /// found in \c Directory.
 /// \param[in] Diagnostics DiagnosticsEngine used for error output.
 ///
@@ -67,7 +71,11 @@ typedef llvm::DenseMap<const clang::FileEntry *,
 /// directory structure.
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUReplacements &TUs,
-    TUReplacementFiles &TURFiles, clang::DiagnosticsEngine &Diagnostics);
+    TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);
+
+std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TUDiagnostics &TUs,
+    TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);
 
 /// \brief Deduplicate, check for conflicts, and apply all Replacements stored
 /// in \c TUs. If conflicts occur, no Replacements are applied.
@@ -75,7 +83,8 @@ std::error_code collectReplacementsFromDirectory(
 /// \post For all (key,value) in GroupedReplacements, value[i].getOffset() <=
 /// value[i+1].getOffset().
 ///
-/// \param[in] TUs Collection of TranslationUnitReplacements to merge,
+/// \param[in] TUs Collection of TranslationUnitReplacements or
+/// TranslationUnitDiagnostics to merge,
 /// deduplicate, and test for conflicts.
 /// \param[out] GroupedReplacements Container grouping all Replacements by the
 /// file they target.
@@ -85,6 +94,10 @@ std::error_code collectReplacementsFromDirectory(
 ///          \li true If all changes were applied successfully.
 ///          \li false If there were conflicts.
 bool mergeAndDeduplicate(const TUReplacements &TUs,
+                         FileToReplacementsMap &GroupedReplacements,
+                         clang::SourceManager &SM);
+
+bool mergeAndDeduplicate(const TUDiagnostics &TUs,
                          FileToReplacementsMap &GroupedReplacements,
                          clang::SourceManager &SM);
 

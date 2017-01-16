@@ -180,6 +180,8 @@ private:
   /// \pre \p U is a branch instruction.
   bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateSwitch(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateExtractValue(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertValue(const User &U, MachineIRBuilder &MIRBuilder);
@@ -292,12 +294,8 @@ private:
     return translateBinaryOp(TargetOpcode::G_FREM, U, MIRBuilder);
   }
 
-
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
-  bool translateSwitch(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
-  }
   bool translateIndirectBr(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;
   }

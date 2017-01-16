@@ -21,6 +21,7 @@
 // XFAIL: arm-linux-gnueabi
 
 #if !defined(SHARED_LIB)
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdio.h>
@@ -32,13 +33,13 @@
 
 #include "sanitizer/asan_interface.h"
 
-constexpr unsigned nPtrs = 200;
-char *ptrs[nPtrs];
-
 void test_malloc_shadow(char *p, size_t sz, bool expect_redzones) {
+  // Last byte of the left redzone, if present.
   assert((char *)__asan_region_is_poisoned(p - 1, sz + 1) ==
          (expect_redzones ? p - 1 : nullptr));
+  // The user memory.
   assert((char *)__asan_region_is_poisoned(p, sz) == nullptr);
+  // First byte of the right redzone, if present.
   assert((char *)__asan_region_is_poisoned(p, sz + 1) ==
          (expect_redzones ? p + sz : nullptr));
 }
@@ -46,11 +47,28 @@ void test_malloc_shadow(char *p, size_t sz, bool expect_redzones) {
 typedef void (*Fn)();
 
 int main(int argc, char *argv[]) {
+  constexpr unsigned nPtrs = 200;
+  char *ptrs[nPtrs];
+
   // Before activation: no redzones.
   for (size_t sz = 1; sz < nPtrs; ++sz) {
     ptrs[sz] = (char *)malloc(sz);
     test_malloc_shadow(ptrs[sz], sz, false);
   }
+
+  // Create a honey pot for the future, instrumented, allocations. Since the
+  // quarantine is disabled, chunks are going to be recycled right away and
+  // reused for the new allocations. New allocations must get the proper
+  // redzones anyway, whether it's a fresh or reused allocation.
+  constexpr size_t HoneyPotBlockSize = 4096;
+  constexpr int HoneyPotSize = 200;
+  char *honeyPot[HoneyPotSize];
+  for (int i = 1; i < HoneyPotSize; ++i) {
+    honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
+    test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, false);
+  }
+  for (int i = 1; i < HoneyPotSize; ++i)
+    free(honeyPot[i]);
 
   std::string path = std::string(argv[0]) + "-so.so";
   void *dso = dlopen(path.c_str(), RTLD_NOW);
@@ -67,11 +85,17 @@ int main(int argc, char *argv[]) {
   }
 
   // After activation: redzones.
+  for (int i = 1; i < HoneyPotSize; ++i) {
+    honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
+    test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, true);
+  }
   {
-    char *p = (char *)malloc(100);
-    test_malloc_shadow(p, 100, true);
+    char *p = (char *)malloc(HoneyPotBlockSize);
+    test_malloc_shadow(p, HoneyPotBlockSize, true);
     free(p);
   }
+  for (int i = 1; i < HoneyPotSize; ++i)
+    free(honeyPot[i]);
 
   // Pre-existing allocations got redzones, too.
   for (size_t sz = 1; sz < nPtrs; ++sz) {
@@ -93,7 +117,9 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+
 #else  // SHARED_LIB
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -101,6 +127,7 @@ extern "C" void do_another_bad_thing() {
   char *volatile p = (char *)malloc(100);
   printf("%hhx\n", p[105]);
 }
+
 #endif  // SHARED_LIB
 
 // help=1 in activation flags lists only flags are are supported at activation

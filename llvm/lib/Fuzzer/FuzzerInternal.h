@@ -82,6 +82,7 @@ public:
   static void StaticAlarmCallback();
   static void StaticCrashSignalCallback();
   static void StaticInterruptCallback();
+  static void StaticFileSizeExceedCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
   size_t RunOne(const uint8_t *Data, size_t Size);

@@ -49,3 +49,17 @@ define i32 @rem3(i32 %x, i32 %n) {
  %mod1 = urem i32 %mod, %n
  ret i32 %mod1
 }
+
+declare i32 @external()
+
+define i32 @rem4() {
+; CHECK-LABEL: @rem4(
+; CHECK:         [[CALL:%.*]] = call i32 @external(), !range !0
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = call i32 @external(), !range !0
+  %urem = urem i32 %call, 3
+  ret i32 %urem
+}
+
+!0 = !{i32 0, i32 3}

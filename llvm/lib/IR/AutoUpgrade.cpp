@@ -77,6 +77,11 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   switch (Name[0]) {
   default: break;
   case 'a': {
+    if (Name.startswith("arm.rbit") || Name.startswith("aarch64.rbit")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
+                                        F->arg_begin()->getType());
+      return true;
+    }
     if (Name.startswith("arm.neon.vclz")) {
       Type* args[2] = {
         F->arg_begin()->getType(),
@@ -296,6 +301,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.pmull.") || // Added in 4.0
          Name.startswith("avx512.mask.cvtdq2pd.") || // Added in 4.0
          Name.startswith("avx512.mask.cvtudq2pd.") || // Added in 4.0
+         Name.startswith("avx512.mask.pmul.dq.") || // Added in 4.0
+         Name.startswith("avx512.mask.pmulu.dq.") || // Added in 4.0
          Name == "avx512.mask.add.pd.128" || // Added in 4.0
          Name == "avx512.mask.add.pd.256" || // Added in 4.0
          Name == "avx512.mask.add.ps.128" || // Added in 4.0
@@ -340,8 +347,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name == "avx.cvt.ps2.pd.256" || // Added in 3.9
          Name.startswith("avx.vinsertf128.") || // Added in 3.7
          Name == "avx2.vinserti128" || // Added in 3.7
+         Name.startswith("avx512.mask.insert") || // Added in 4.0
          Name.startswith("avx.vextractf128.") || // Added in 3.7
          Name == "avx2.vextracti128" || // Added in 3.7
+         Name.startswith("avx512.mask.vextract") || // Added in 4.0
          Name.startswith("sse4a.movnt.") || // Added in 3.9
          Name.startswith("avx.movnt.") || // Added in 3.2
          Name.startswith("avx512.storent.") || // Added in 3.9
@@ -1148,21 +1157,25 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
       Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
     } else if (IsX86 && (Name.startswith("avx.vinsertf128.") ||
-                         Name == "avx2.vinserti128")) {
+                         Name == "avx2.vinserti128" ||
+                         Name.startswith("avx512.mask.insert"))) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      unsigned NumElts = VecTy->getNumElements();
+      unsigned DstNumElts = CI->getType()->getVectorNumElements();
+      unsigned SrcNumElts = Op1->getType()->getVectorNumElements();
+      unsigned Scale = DstNumElts / SrcNumElts;
 
       // Mask off the high bits of the immediate value; hardware ignores those.
-      Imm = Imm & 1;
+      Imm = Imm % Scale;
 
-      // Extend the second operand into a vector that is twice as big.
+      // Extend the second operand into a vector the size of the destination.
       Value *UndefV = UndefValue::get(Op1->getType());
-      SmallVector<uint32_t, 8> Idxs(NumElts);
-      for (unsigned i = 0; i != NumElts; ++i)
+      SmallVector<uint32_t, 8> Idxs(DstNumElts);
+      for (unsigned i = 0; i != SrcNumElts; ++i)
         Idxs[i] = i;
+      for (unsigned i = SrcNumElts; i != DstNumElts; ++i)
+        Idxs[i] = SrcNumElts;
       Rep = Builder.CreateShuffleVector(Op1, UndefV, Idxs);
 
       // Insert the second operand into the first operand.
@@ -1176,33 +1189,41 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Imm = 1  <i32 0, i32 1, i32 2,  i32 3,  i32 8, i32 9, i32 10, i32 11>
       // Imm = 0  <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6,  i32 7 >
 
-      // The low half of the result is either the low half of the 1st operand
-      // or the low half of the 2nd operand (the inserted vector).
-      for (unsigned i = 0; i != NumElts / 2; ++i)
-        Idxs[i] = Imm ? i : (i + NumElts);
-      // The high half of the result is either the low half of the 2nd operand
-      // (the inserted vector) or the high half of the 1st operand.
-      for (unsigned i = NumElts / 2; i != NumElts; ++i)
-        Idxs[i] = Imm ? (i + NumElts / 2) : i;
+      // First fill with identify mask.
+      for (unsigned i = 0; i != DstNumElts; ++i)
+        Idxs[i] = i;
+      // Then replace the elements where we need to insert.
+      for (unsigned i = 0; i != SrcNumElts; ++i)
+        Idxs[i + Imm * SrcNumElts] = i + DstNumElts;
       Rep = Builder.CreateShuffleVector(Op0, Rep, Idxs);
+
+      // If the intrinsic has a mask operand, handle that.
+      if (CI->getNumArgOperands() == 5)
+        Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+                            CI->getArgOperand(3));
     } else if (IsX86 && (Name.startswith("avx.vextractf128.") ||
-                         Name == "avx2.vextracti128")) {
+                         Name == "avx2.vextracti128" ||
+                         Name.startswith("avx512.mask.vextract"))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      VectorType *VecTy = cast<VectorType>(CI->getType());
-      unsigned NumElts = VecTy->getNumElements();
+      unsigned DstNumElts = CI->getType()->getVectorNumElements();
+      unsigned SrcNumElts = Op0->getType()->getVectorNumElements();
+      unsigned Scale = SrcNumElts / DstNumElts;
 
       // Mask off the high bits of the immediate value; hardware ignores those.
-      Imm = Imm & 1;
+      Imm = Imm % Scale;
 
-      // Get indexes for either the high half or low half of the input vector.
-      SmallVector<uint32_t, 4> Idxs(NumElts);
-      for (unsigned i = 0; i != NumElts; ++i) {
-        Idxs[i] = Imm ? (i + NumElts) : i;
+      // Get indexes for the subvector of the input vector.
+      SmallVector<uint32_t, 8> Idxs(DstNumElts);
+      for (unsigned i = 0; i != DstNumElts; ++i) {
+        Idxs[i] = i + (Imm * DstNumElts);
       }
+      Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
 
-      Value *UndefV = UndefValue::get(Op0->getType());
-      Rep = Builder.CreateShuffleVector(Op0, UndefV, Idxs);
+      // If the intrinsic has a mask operand, handle that.
+      if (CI->getNumArgOperands() == 4)
+        Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                            CI->getArgOperand(2));
     } else if (!IsX86 && Name == "stackprotectorcheck") {
       Rep = nullptr;
     } else if (IsX86 && (Name.startswith("avx512.mask.perm.df.") ||
@@ -1449,6 +1470,30 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         IID = Intrinsic::x86_avx2_pshuf_b;
       else if (VecTy->getPrimitiveSizeInBits() == 512)
         IID = Intrinsic::x86_avx512_pshuf_b_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               { CI->getArgOperand(0), CI->getArgOperand(1) });
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && (Name.startswith("avx512.mask.pmul.dq.") ||
+                         Name.startswith("avx512.mask.pmulu.dq."))) {
+      bool IsUnsigned = Name[16] == 'u';
+      VectorType *VecTy = cast<VectorType>(CI->getType());
+      Intrinsic::ID IID;
+      if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
+        IID = Intrinsic::x86_sse41_pmuldq;
+      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
+        IID = Intrinsic::x86_avx2_pmul_dq;
+      else if (!IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
+        IID = Intrinsic::x86_avx512_pmul_dq_512;
+      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 128)
+        IID = Intrinsic::x86_sse2_pmulu_dq;
+      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 256)
+        IID = Intrinsic::x86_avx2_pmulu_dq;
+      else if (IsUnsigned && VecTy->getPrimitiveSizeInBits() == 512)
+        IID = Intrinsic::x86_avx512_pmulu_dq_512;
       else
         llvm_unreachable("Unexpected intrinsic");
 
@@ -1720,6 +1765,11 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
+
+  case Intrinsic::bitreverse:
+    CI->replaceAllUsesWith(Builder.CreateCall(NewFn, {CI->getArgOperand(0)}));
+    CI->eraseFromParent();
+    return;
 
   case Intrinsic::ctlz:
   case Intrinsic::cttz:

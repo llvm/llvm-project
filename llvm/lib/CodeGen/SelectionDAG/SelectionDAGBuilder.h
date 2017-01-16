@@ -944,8 +944,8 @@ private:
 
   /// Return the appropriate SDDbgValue based on N.
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
-                          DIExpression *Expr, int64_t Offset, DebugLoc dl,
-                          unsigned DbgSDNodeOrder);
+                          DIExpression *Expr, int64_t Offset,
+                          const DebugLoc &dl, unsigned DbgSDNodeOrder);
 };
 
 /// RegsForValue - This struct represents the registers (physical or virtual)

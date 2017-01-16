@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -4751,7 +4752,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   else
     FuncInfo.ArgDbgValues.push_back(
         BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE))
-            .addOperand(*Op)
+            .add(*Op)
             .addImm(Offset)
             .addMetadata(Variable)
             .addMetadata(Expr));
@@ -4763,7 +4764,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DILocalVariable *Variable,
                                              DIExpression *Expr, int64_t Offset,
-                                             DebugLoc dl,
+                                             const DebugLoc &dl,
                                              unsigned DbgSDNodeOrder) {
   SDDbgValue *SDV;
   auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode());
@@ -4894,6 +4895,51 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
                                 isTC, MachinePointerInfo(I.getArgOperand(0)),
                                 MachinePointerInfo(I.getArgOperand(1)));
     updateDAGForMaybeTailCall(MM);
+    return nullptr;
+  }
+  case Intrinsic::memcpy_element_atomic: {
+    SDValue Dst = getValue(I.getArgOperand(0));
+    SDValue Src = getValue(I.getArgOperand(1));
+    SDValue NumElements = getValue(I.getArgOperand(2));
+    SDValue ElementSize = getValue(I.getArgOperand(3));
+
+    // Emit a library call.
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+    Entry.Node = Dst;
+    Args.push_back(Entry);
+
+    Entry.Node = Src;
+    Args.push_back(Entry);
+    
+    Entry.Ty = I.getArgOperand(2)->getType();
+    Entry.Node = NumElements;
+    Args.push_back(Entry);
+    
+    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    Entry.Node = ElementSize;
+    Args.push_back(Entry);
+
+    uint64_t ElementSizeConstant =
+        cast<ConstantInt>(I.getArgOperand(3))->getZExtValue();
+    RTLIB::Libcall LibraryCall =
+        RTLIB::getMEMCPY_ELEMENT_ATOMIC(ElementSizeConstant);
+    if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
+      report_fatal_error("Unsupported element size");
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(sdl)
+        .setChain(getRoot())
+        .setCallee(TLI.getLibcallCallingConv(LibraryCall),
+                   Type::getVoidTy(*DAG.getContext()),
+                   DAG.getExternalSymbol(
+                       TLI.getLibcallName(LibraryCall),
+                       TLI.getPointerTy(DAG.getDataLayout())),
+                   std::move(Args));
+
+    std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
+    DAG.setRoot(CallResult.second);
     return nullptr;
   }
   case Intrinsic::dbg_declare: {
@@ -5162,39 +5208,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     Res = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, sdl, DestVT,
                        DAG.getConstant(NewIntrinsic, sdl, MVT::i32),
                        getValue(I.getArgOperand(0)), ShAmt);
-    setValue(&I, Res);
-    return nullptr;
-  }
-  case Intrinsic::convertff:
-  case Intrinsic::convertfsi:
-  case Intrinsic::convertfui:
-  case Intrinsic::convertsif:
-  case Intrinsic::convertuif:
-  case Intrinsic::convertss:
-  case Intrinsic::convertsu:
-  case Intrinsic::convertus:
-  case Intrinsic::convertuu: {
-    ISD::CvtCode Code = ISD::CVT_INVALID;
-    switch (Intrinsic) {
-    default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-    case Intrinsic::convertff:  Code = ISD::CVT_FF; break;
-    case Intrinsic::convertfsi: Code = ISD::CVT_FS; break;
-    case Intrinsic::convertfui: Code = ISD::CVT_FU; break;
-    case Intrinsic::convertsif: Code = ISD::CVT_SF; break;
-    case Intrinsic::convertuif: Code = ISD::CVT_UF; break;
-    case Intrinsic::convertss:  Code = ISD::CVT_SS; break;
-    case Intrinsic::convertsu:  Code = ISD::CVT_SU; break;
-    case Intrinsic::convertus:  Code = ISD::CVT_US; break;
-    case Intrinsic::convertuu:  Code = ISD::CVT_UU; break;
-    }
-    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    const Value *Op1 = I.getArgOperand(0);
-    Res = DAG.getConvertRndSat(DestVT, sdl, getValue(Op1),
-                               DAG.getValueType(DestVT),
-                               DAG.getValueType(getValue(Op1).getValueType()),
-                               getValue(I.getArgOperand(1)),
-                               getValue(I.getArgOperand(2)),
-                               Code);
     setValue(&I, Res);
     return nullptr;
   }
@@ -7294,19 +7307,23 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
   if (!Range)
     return Op;
 
-  Constant *Lo = cast<ConstantAsMetadata>(Range->getOperand(0))->getValue();
-  if (!Lo->isNullValue())
+  ConstantRange CR = getConstantRangeFromMetadata(*Range);
+  if (CR.isFullSet() || CR.isEmptySet() || CR.isWrappedSet())
     return Op;
 
-  Constant *Hi = cast<ConstantAsMetadata>(Range->getOperand(1))->getValue();
-  unsigned Bits = cast<ConstantInt>(Hi)->getValue().logBase2();
+  APInt Lo = CR.getUnsignedMin();
+  if (!Lo.isMinValue())
+    return Op;
+
+  APInt Hi = CR.getUnsignedMax();
+  unsigned Bits = Hi.getActiveBits();
 
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
 
   SDLoc SL = getCurSDLoc();
 
-  SDValue ZExt = DAG.getNode(ISD::AssertZext, SL, Op.getValueType(),
-                             Op, DAG.getValueType(SmallVT));
+  SDValue ZExt = DAG.getNode(ISD::AssertZext, SL, Op.getValueType(), Op,
+                             DAG.getValueType(SmallVT));
   unsigned NumVals = Op.getNode()->getNumValues();
   if (NumVals == 1)
     return ZExt;

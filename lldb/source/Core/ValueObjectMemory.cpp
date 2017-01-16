@@ -165,8 +165,7 @@ bool ValueObjectMemory::UpdateValue() {
 
     switch (value_type) {
     default:
-      assert(!"Unhandled expression result value kind...");
-      break;
+      llvm_unreachable("Unhandled expression result value kind...");
 
     case Value::eValueTypeScalar:
       // The variable value is in the Scalar value inside the m_value.

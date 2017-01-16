@@ -17,23 +17,22 @@
 // GCC #defines PPC on Linux but we use it as our namespace name
 #undef PPC
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
-class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
 class raw_pwrite_stream;
-class raw_ostream;
 
 Target &getThePPC32Target();
 Target &getThePPC64Target();
@@ -83,7 +82,7 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
   return false;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
 // Generated files will use "namespace PPC". To avoid symbol clash,
 // undefine PPC here. PPC may be predefined on some hosts.
@@ -103,4 +102,4 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
 #define GET_SUBTARGETINFO_ENUM
 #include "PPCGenSubtargetInfo.inc"
 
-#endif
+#endif // LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCTARGETDESC_H

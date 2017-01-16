@@ -125,5 +125,5 @@ namespace BlockInLambda {
 }
 
 
-// ARC: attributes [[NUW]] = { nounwind{{.*}} }
-// MRC: attributes [[NUW]] = { nounwind{{.*}} }
+// ARC: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// MRC: attributes [[NUW]] = { noinline nounwind{{.*}} }

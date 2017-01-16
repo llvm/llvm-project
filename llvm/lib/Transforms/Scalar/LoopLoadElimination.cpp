@@ -415,7 +415,9 @@ public:
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
     Value *Initial =
-        new LoadInst(InitialPtr, "load_initial", PH->getTerminator());
+        new LoadInst(InitialPtr, "load_initial", /* isVolatile */ false,
+                     Cand.Load->getAlignment(), PH->getTerminator());
+
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());
     PHI->addIncoming(Initial, PH);

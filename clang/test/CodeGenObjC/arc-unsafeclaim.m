@@ -6,11 +6,11 @@
 
 //   Make sure it works on ARM.
 // RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED
-// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-optzns -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
+// RUN: %clang_cc1 -triple arm64-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
 
 //   Make sure it works on ARM64.
 // RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNOPTIMIZED -check-prefix=CHECK-MARKED
-// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-optzns -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
+// RUN: %clang_cc1 -triple armv7-apple-ios9 -fobjc-runtime=ios-9.0 -fobjc-arc -O -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-OPTIMIZED
 
 //   Make sure that it's implicitly disabled if the runtime version isn't high enough.
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -fobjc-arc -emit-llvm -o - %s | FileCheck %s -check-prefix=DISABLED

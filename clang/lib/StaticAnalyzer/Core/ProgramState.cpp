@@ -111,24 +111,29 @@ ProgramStateManager::removeDeadBindings(ProgramStateRef state,
   return ConstraintMgr->removeDeadBindings(Result, SymReaper);
 }
 
-ProgramStateRef ProgramState::bindLoc(Loc LV, SVal V, bool notifyChanges) const {
+ProgramStateRef ProgramState::bindLoc(Loc LV,
+                                      SVal V,
+                                      const LocationContext *LCtx,
+                                      bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
   ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
                                                              LV, V));
   const MemRegion *MR = LV.getAsRegion();
   if (MR && Mgr.getOwningEngine() && notifyChanges)
-    return Mgr.getOwningEngine()->processRegionChange(newState, MR);
+    return Mgr.getOwningEngine()->processRegionChange(newState, MR, LCtx);
 
   return newState;
 }
 
-ProgramStateRef ProgramState::bindDefault(SVal loc, SVal V) const {
+ProgramStateRef ProgramState::bindDefault(SVal loc,
+                                          SVal V,
+                                          const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   const StoreRef &newStore = Mgr.StoreMgr->BindDefault(getStore(), R, V);
   ProgramStateRef new_state = makeWithStore(newStore);
   return Mgr.getOwningEngine() ?
-           Mgr.getOwningEngine()->processRegionChange(new_state, R) :
+           Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx) :
            new_state;
 }
 
@@ -202,7 +207,7 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
     }
 
     return Eng->processRegionChanges(newState, IS, TopLevelInvalidated,
-                                     Invalidated, Call);
+                                     Invalidated, LCtx, Call);
   }
 
   const StoreRef &newStore =

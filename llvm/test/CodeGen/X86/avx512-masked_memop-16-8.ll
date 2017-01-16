@@ -20,8 +20,7 @@ define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
-; CHECK-NEXT:    vmovdqu8 (%rdi), %ymm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 %ymm1, %ymm0
+; CHECK-NEXT:    vpblendmb (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %res = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* %addr, i32 4, <32 x i1>%mask, <32 x i8> %val)
   ret <32 x i8> %res
@@ -33,8 +32,7 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k1
-; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vpblendmb (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %res = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* %addr, i32 4, <64 x i1>%mask, <64 x i8> %val)
   ret <64 x i8> %res
@@ -70,8 +68,7 @@ define <32 x i16> @test_mask_load_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
-; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm1 {%k1}
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
+; CHECK-NEXT:    vpblendmw (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %res = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* %addr, i32 4, <32 x i1>%mask, <32 x i16> %val)
   ret <32 x i16> %res

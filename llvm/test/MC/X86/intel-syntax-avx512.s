@@ -37936,17 +37936,17 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0x62,0xfd,0x49,0x93,0xac,0x91,0x00,0x04,0x00,0x00]
           vgatherqpd zmm29{k1},ZMMWORD PTR [rcx+zmm2*4+0x400]
 
-// CHECK: vgatherqps ymm18 {k1}, zmmword ptr [r14 + 8*zmm4 + 123]
+// CHECK: vgatherqps ymm18 {k1}, ymmword ptr [r14 + 8*zmm4 + 123]
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x49,0x93,0x94,0xe6,0x7b,0x00,0x00,0x00]
-          vgatherqps ymm18{k1},ZMMWORD PTR [r14+zmm4*8+0x7b]
+          vgatherqps ymm18{k1},YMMWORD PTR [r14+zmm4*8+0x7b]
 
-// CHECK: vgatherqps ymm18 {k1}, zmmword ptr [r9 + zmm4 + 256]
+// CHECK: vgatherqps ymm18 {k1}, ymmword ptr [r9 + zmm4 + 256]
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x49,0x93,0x54,0x21,0x40]
-          vgatherqps ymm18{k1},ZMMWORD PTR [r9+zmm4*1+0x100]
+          vgatherqps ymm18{k1},YMMWORD PTR [r9+zmm4*1+0x100]
 
-// CHECK: vgatherqps ymm18 {k1}, zmmword ptr [rcx + 4*zmm4 + 1024]
+// CHECK: vgatherqps ymm18 {k1}, ymmword ptr [rcx + 4*zmm4 + 1024]
 // CHECK:  encoding: [0x62,0xe2,0x7d,0x49,0x93,0x94,0xa1,0x00,0x04,0x00,0x00]
-          vgatherqps ymm18{k1},ZMMWORD PTR [rcx+zmm4*4+0x400]
+          vgatherqps ymm18{k1},YMMWORD PTR [rcx+zmm4*4+0x400]
 
 // CHECK: vpgatherdd zmm17 {k1}, zmmword ptr [r14 + 8*zmm11 + 123]
 // CHECK:  encoding: [0x62,0x82,0x7d,0x49,0x90,0x8c,0xde,0x7b,0x00,0x00,0x00]
@@ -37972,17 +37972,17 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0x32,0xfd,0x49,0x90,0x84,0xb1,0x00,0x04,0x00,0x00]
           vpgatherdq zmm8{k1},ZMMWORD PTR [rcx+ymm14*4+0x400]
 
-// CHECK: vpgatherqd ymm3 {k1}, zmmword ptr [r14 + 8*zmm17 + 123]
+// CHECK: vpgatherqd ymm3 {k1}, ymmword ptr [r14 + 8*zmm17 + 123]
 // CHECK:  encoding: [0x62,0xd2,0x7d,0x41,0x91,0x9c,0xce,0x7b,0x00,0x00,0x00]
-          vpgatherqd ymm3{k1},ZMMWORD PTR [r14+zmm17*8+0x7b]
+          vpgatherqd ymm3{k1},YMMWORD PTR [r14+zmm17*8+0x7b]
 
-// CHECK: vpgatherqd ymm3 {k1}, zmmword ptr [r9 + zmm17 + 256]
+// CHECK: vpgatherqd ymm3 {k1}, ymmword ptr [r9 + zmm17 + 256]
 // CHECK:  encoding: [0x62,0xd2,0x7d,0x41,0x91,0x5c,0x09,0x40]
-          vpgatherqd ymm3{k1},ZMMWORD PTR [r9+zmm17*1+0x100]
+          vpgatherqd ymm3{k1},YMMWORD PTR [r9+zmm17*1+0x100]
 
-// CHECK: vpgatherqd ymm3 {k1}, zmmword ptr [rcx + 4*zmm17 + 1024]
+// CHECK: vpgatherqd ymm3 {k1}, ymmword ptr [rcx + 4*zmm17 + 1024]
 // CHECK:  encoding: [0x62,0xf2,0x7d,0x41,0x91,0x9c,0x89,0x00,0x04,0x00,0x00]
-          vpgatherqd ymm3{k1},ZMMWORD PTR [rcx+zmm17*4+0x400]
+          vpgatherqd ymm3{k1},YMMWORD PTR [rcx+zmm17*4+0x400]
 
 // CHECK: vpgatherqq zmm17 {k1}, zmmword ptr [r14 + 8*zmm21 + 123]
 // CHECK:  encoding: [0x62,0xc2,0xfd,0x41,0x91,0x8c,0xee,0x7b,0x00,0x00,0x00]
@@ -38028,21 +38028,21 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0xf2,0xfd,0x49,0xa0,0xac,0xb1,0x00,0x04,0x00,0x00]
           vpscatterdq ZMMWORD PTR [rcx+ymm6*4+0x400]{k1},zmm5
 
-// CHECK: vpscatterqd zmmword ptr [r14 + 8*zmm2 + 123] {k1}, ymm20
+// CHECK: vpscatterqd ymmword ptr [r14 + 8*zmm2 + 123] {k1}, ymm20
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x49,0xa1,0xa4,0xd6,0x7b,0x00,0x00,0x00]
-          vpscatterqd ZMMWORD PTR [r14+zmm2*8+0x7b]{k1},ymm20
+          vpscatterqd YMMWORD PTR [r14+zmm2*8+0x7b]{k1},ymm20
 
-// CHECK: vpscatterqd zmmword ptr [r14 + 8*zmm2 + 123] {k1}, ymm20
+// CHECK: vpscatterqd ymmword ptr [r14 + 8*zmm2 + 123] {k1}, ymm20
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x49,0xa1,0xa4,0xd6,0x7b,0x00,0x00,0x00]
-          vpscatterqd ZMMWORD PTR [r14+zmm2*8+0x7b]{k1},ymm20
+          vpscatterqd YMMWORD PTR [r14+zmm2*8+0x7b]{k1},ymm20
 
-// CHECK: vpscatterqd zmmword ptr [r9 + zmm2 + 256] {k1}, ymm20
+// CHECK: vpscatterqd ymmword ptr [r9 + zmm2 + 256] {k1}, ymm20
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x49,0xa1,0x64,0x11,0x40]
-          vpscatterqd ZMMWORD PTR [r9+zmm2*1+0x100]{k1},ymm20
+          vpscatterqd YMMWORD PTR [r9+zmm2*1+0x100]{k1},ymm20
 
-// CHECK: vpscatterqd zmmword ptr [rcx + 4*zmm2 + 1024] {k1}, ymm20
+// CHECK: vpscatterqd ymmword ptr [rcx + 4*zmm2 + 1024] {k1}, ymm20
 // CHECK:  encoding: [0x62,0xe2,0x7d,0x49,0xa1,0xa4,0x91,0x00,0x04,0x00,0x00]
-          vpscatterqd ZMMWORD PTR [rcx+zmm2*4+0x400]{k1},ymm20
+          vpscatterqd YMMWORD PTR [rcx+zmm2*4+0x400]{k1},ymm20
 
 // CHECK: vpscatterqq zmmword ptr [r14 + 8*zmm20 + 123] {k1}, zmm14
 // CHECK:  encoding: [0x62,0x52,0xfd,0x41,0xa1,0xb4,0xe6,0x7b,0x00,0x00,0x00]
@@ -38108,21 +38108,21 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0xa2,0xfd,0x41,0xa3,0xb4,0xa1,0x00,0x04,0x00,0x00]
           vscatterqpd ZMMWORD PTR [rcx+zmm28*4+0x400]{k1},zmm22
 
-// CHECK: vscatterqps zmmword ptr [r14 + 8*zmm27 + 123] {k1}, ymm6
+// CHECK: vscatterqps ymmword ptr [r14 + 8*zmm27 + 123] {k1}, ymm6
 // CHECK:  encoding: [0x62,0x92,0x7d,0x41,0xa3,0xb4,0xde,0x7b,0x00,0x00,0x00]
-          vscatterqps ZMMWORD PTR [r14+zmm27*8+0x7b]{k1},ymm6
+          vscatterqps YMMWORD PTR [r14+zmm27*8+0x7b]{k1},ymm6
 
-// CHECK: vscatterqps zmmword ptr [r14 + 8*zmm27 + 123] {k1}, ymm6
+// CHECK: vscatterqps ymmword ptr [r14 + 8*zmm27 + 123] {k1}, ymm6
 // CHECK:  encoding: [0x62,0x92,0x7d,0x41,0xa3,0xb4,0xde,0x7b,0x00,0x00,0x00]
-          vscatterqps ZMMWORD PTR [r14+zmm27*8+0x7b]{k1},ymm6
+          vscatterqps YMMWORD PTR [r14+zmm27*8+0x7b]{k1},ymm6
 
-// CHECK: vscatterqps zmmword ptr [r9 + zmm27 + 256] {k1}, ymm6
+// CHECK: vscatterqps ymmword ptr [r9 + zmm27 + 256] {k1}, ymm6
 // CHECK:  encoding: [0x62,0x92,0x7d,0x41,0xa3,0x74,0x19,0x40]
-          vscatterqps ZMMWORD PTR [r9+zmm27*1+0x100]{k1},ymm6
+          vscatterqps YMMWORD PTR [r9+zmm27*1+0x100]{k1},ymm6
 
-// CHECK: vscatterqps zmmword ptr [rcx + 4*zmm27 + 1024] {k1}, ymm6
+// CHECK: vscatterqps ymmword ptr [rcx + 4*zmm27 + 1024] {k1}, ymm6
 // CHECK:  encoding: [0x62,0xb2,0x7d,0x41,0xa3,0xb4,0x99,0x00,0x04,0x00,0x00]
-          vscatterqps ZMMWORD PTR [rcx+zmm27*4+0x400]{k1},ymm6
+          vscatterqps YMMWORD PTR [rcx+zmm27*4+0x400]{k1},ymm6
 
 // CHECK: vscatterdpd zmmword ptr [r14 + 8*ymm27 - 123] {k1}, zmm18
 // CHECK:  encoding: [0x62,0x82,0xfd,0x41,0xa2,0x94,0xde,0x85,0xff,0xff,0xff]
@@ -38172,21 +38172,21 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0x32,0xfd,0x41,0xa3,0x84,0x89,0x00,0x04,0x00,0x00]
           vscatterqpd ZMMWORD PTR [rcx+zmm25*4+0x400]{k1},zmm8
 
-// CHECK: vscatterqps zmmword ptr [r14 + 8*zmm10 - 123] {k1}, ymm13
+// CHECK: vscatterqps ymmword ptr [r14 + 8*zmm10 - 123] {k1}, ymm13
 // CHECK:  encoding: [0x62,0x12,0x7d,0x49,0xa3,0xac,0xd6,0x85,0xff,0xff,0xff]
-          vscatterqps ZMMWORD PTR [r14+zmm10*8-0x7b]{k1},ymm13
+          vscatterqps YMMWORD PTR [r14+zmm10*8-0x7b]{k1},ymm13
 
-// CHECK: vscatterqps zmmword ptr [r14 + 8*zmm10 - 123] {k1}, ymm13
+// CHECK: vscatterqps ymmword ptr [r14 + 8*zmm10 - 123] {k1}, ymm13
 // CHECK:  encoding: [0x62,0x12,0x7d,0x49,0xa3,0xac,0xd6,0x85,0xff,0xff,0xff]
-          vscatterqps ZMMWORD PTR [r14+zmm10*8-0x7b]{k1},ymm13
+          vscatterqps YMMWORD PTR [r14+zmm10*8-0x7b]{k1},ymm13
 
-// CHECK: vscatterqps zmmword ptr [r9 + zmm10 + 256] {k1}, ymm13
+// CHECK: vscatterqps ymmword ptr [r9 + zmm10 + 256] {k1}, ymm13
 // CHECK:  encoding: [0x62,0x12,0x7d,0x49,0xa3,0x6c,0x11,0x40]
-          vscatterqps ZMMWORD PTR [r9+zmm10*1+0x100]{k1},ymm13
+          vscatterqps YMMWORD PTR [r9+zmm10*1+0x100]{k1},ymm13
 
-// CHECK: vscatterqps zmmword ptr [rcx + 4*zmm10 + 1024] {k1}, ymm13
+// CHECK: vscatterqps ymmword ptr [rcx + 4*zmm10 + 1024] {k1}, ymm13
 // CHECK:  encoding: [0x62,0x32,0x7d,0x49,0xa3,0xac,0x91,0x00,0x04,0x00,0x00]
-          vscatterqps ZMMWORD PTR [rcx+zmm10*4+0x400]{k1},ymm13
+          vscatterqps YMMWORD PTR [rcx+zmm10*4+0x400]{k1},ymm13
 
 // CHECK: vgatherdpd zmm30 {k1}, zmmword ptr [r14 + 8*ymm5 - 123]
 // CHECK:  encoding: [0x62,0x42,0xfd,0x49,0x92,0xb4,0xee,0x85,0xff,0xff,0xff]
@@ -38224,17 +38224,17 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0x22,0xfd,0x49,0x93,0x9c,0xa9,0x00,0x04,0x00,0x00]
           vgatherqpd zmm27{k1},ZMMWORD PTR [rcx+zmm13*4+0x400]
 
-// CHECK: vgatherqps ymm27 {k1}, zmmword ptr [r14 + 8*zmm14 - 123]
+// CHECK: vgatherqps ymm27 {k1}, ymmword ptr [r14 + 8*zmm14 - 123]
 // CHECK:  encoding: [0x62,0x02,0x7d,0x49,0x93,0x9c,0xf6,0x85,0xff,0xff,0xff]
-          vgatherqps ymm27{k1},ZMMWORD PTR [r14+zmm14*8-0x7b]
+          vgatherqps ymm27{k1},YMMWORD PTR [r14+zmm14*8-0x7b]
 
-// CHECK: vgatherqps ymm27 {k1}, zmmword ptr [r9 + zmm14 + 256]
+// CHECK: vgatherqps ymm27 {k1}, ymmword ptr [r9 + zmm14 + 256]
 // CHECK:  encoding: [0x62,0x02,0x7d,0x49,0x93,0x5c,0x31,0x40]
-          vgatherqps ymm27{k1},ZMMWORD PTR [r9+zmm14*1+0x100]
+          vgatherqps ymm27{k1},YMMWORD PTR [r9+zmm14*1+0x100]
 
-// CHECK: vgatherqps ymm27 {k1}, zmmword ptr [rcx + 4*zmm14 + 1024]
+// CHECK: vgatherqps ymm27 {k1}, ymmword ptr [rcx + 4*zmm14 + 1024]
 // CHECK:  encoding: [0x62,0x22,0x7d,0x49,0x93,0x9c,0xb1,0x00,0x04,0x00,0x00]
-          vgatherqps ymm27{k1},ZMMWORD PTR [rcx+zmm14*4+0x400]
+          vgatherqps ymm27{k1},YMMWORD PTR [rcx+zmm14*4+0x400]
 
 // CHECK: vpgatherdd zmm7 {k1}, zmmword ptr [r14 + 8*zmm16 - 123]
 // CHECK:  encoding: [0x62,0xd2,0x7d,0x41,0x90,0xbc,0xc6,0x85,0xff,0xff,0xff]
@@ -38260,17 +38260,17 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0x62,0xfd,0x49,0x90,0x8c,0xb9,0x00,0x04,0x00,0x00]
           vpgatherdq zmm25{k1},ZMMWORD PTR [rcx+ymm7*4+0x400]
 
-// CHECK: vpgatherqd ymm19 {k1}, zmmword ptr [r14 + 8*zmm17 - 123]
+// CHECK: vpgatherqd ymm19 {k1}, ymmword ptr [r14 + 8*zmm17 - 123]
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x41,0x91,0x9c,0xce,0x85,0xff,0xff,0xff]
-          vpgatherqd ymm19{k1},ZMMWORD PTR [r14+zmm17*8-0x7b]
+          vpgatherqd ymm19{k1},YMMWORD PTR [r14+zmm17*8-0x7b]
 
-// CHECK: vpgatherqd ymm19 {k1}, zmmword ptr [r9 + zmm17 + 256]
+// CHECK: vpgatherqd ymm19 {k1}, ymmword ptr [r9 + zmm17 + 256]
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x41,0x91,0x5c,0x09,0x40]
-          vpgatherqd ymm19{k1},ZMMWORD PTR [r9+zmm17*1+0x100]
+          vpgatherqd ymm19{k1},YMMWORD PTR [r9+zmm17*1+0x100]
 
-// CHECK: vpgatherqd ymm19 {k1}, zmmword ptr [rcx + 4*zmm17 + 1024]
+// CHECK: vpgatherqd ymm19 {k1}, ymmword ptr [rcx + 4*zmm17 + 1024]
 // CHECK:  encoding: [0x62,0xe2,0x7d,0x41,0x91,0x9c,0x89,0x00,0x04,0x00,0x00]
-          vpgatherqd ymm19{k1},ZMMWORD PTR [rcx+zmm17*4+0x400]
+          vpgatherqd ymm19{k1},YMMWORD PTR [rcx+zmm17*4+0x400]
 
 // CHECK: vpgatherqq zmm10 {k1}, zmmword ptr [r14 + 8*zmm13 - 123]
 // CHECK:  encoding: [0x62,0x12,0xfd,0x49,0x91,0x94,0xee,0x85,0xff,0xff,0xff]
@@ -38316,21 +38316,21 @@ vaddpd zmm1, zmm1, zmm2, {rz-sae}
 // CHECK:  encoding: [0x62,0xb2,0xfd,0x41,0xa0,0x8c,0x89,0x00,0x04,0x00,0x00]
           vpscatterdq ZMMWORD PTR [rcx+ymm25*4+0x400]{k1},zmm1
 
-// CHECK: vpscatterqd zmmword ptr [r14 + 8*zmm22 - 123] {k1}, ymm23
+// CHECK: vpscatterqd ymmword ptr [r14 + 8*zmm22 - 123] {k1}, ymm23
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x41,0xa1,0xbc,0xf6,0x85,0xff,0xff,0xff]
-          vpscatterqd ZMMWORD PTR [r14+zmm22*8-0x7b]{k1},ymm23
+          vpscatterqd YMMWORD PTR [r14+zmm22*8-0x7b]{k1},ymm23
 
-// CHECK: vpscatterqd zmmword ptr [r14 + 8*zmm22 - 123] {k1}, ymm23
+// CHECK: vpscatterqd ymmword ptr [r14 + 8*zmm22 - 123] {k1}, ymm23
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x41,0xa1,0xbc,0xf6,0x85,0xff,0xff,0xff]
-          vpscatterqd ZMMWORD PTR [r14+zmm22*8-0x7b]{k1},ymm23
+          vpscatterqd YMMWORD PTR [r14+zmm22*8-0x7b]{k1},ymm23
 
-// CHECK: vpscatterqd zmmword ptr [r9 + zmm22 + 256] {k1}, ymm23
+// CHECK: vpscatterqd ymmword ptr [r9 + zmm22 + 256] {k1}, ymm23
 // CHECK:  encoding: [0x62,0xc2,0x7d,0x41,0xa1,0x7c,0x31,0x40]
-          vpscatterqd ZMMWORD PTR [r9+zmm22*1+0x100]{k1},ymm23
+          vpscatterqd YMMWORD PTR [r9+zmm22*1+0x100]{k1},ymm23
 
-// CHECK: vpscatterqd zmmword ptr [rcx + 4*zmm22 + 1024] {k1}, ymm23
+// CHECK: vpscatterqd ymmword ptr [rcx + 4*zmm22 + 1024] {k1}, ymm23
 // CHECK:  encoding: [0x62,0xe2,0x7d,0x41,0xa1,0xbc,0xb1,0x00,0x04,0x00,0x00]
-          vpscatterqd ZMMWORD PTR [rcx+zmm22*4+0x400]{k1},ymm23
+          vpscatterqd YMMWORD PTR [rcx+zmm22*4+0x400]{k1},ymm23
 
 // CHECK: vpscatterqq zmmword ptr [r14 + 8*zmm8 - 123] {k1}, zmm2
 // CHECK:  encoding: [0x62,0x92,0xfd,0x49,0xa1,0x94,0xc6,0x85,0xff,0xff,0xff]

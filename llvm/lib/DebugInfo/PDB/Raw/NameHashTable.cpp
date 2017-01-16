@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -23,17 +24,11 @@ using namespace llvm::pdb;
 NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
 Error NameHashTable::load(StreamReader &Stream) {
-  struct Header {
-    support::ulittle32_t Signature;
-    support::ulittle32_t HashVersion;
-    support::ulittle32_t ByteSize;
-  };
-
-  const Header *H;
+  const NameHashTableHeader *H;
   if (auto EC = Stream.readObject(H))
     return EC;
 
-  if (H->Signature != 0xEFFEEFFE)
+  if (H->Signature != NameHashTableSignature)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid hash table signature");
   if (H->HashVersion != 1 && H->HashVersion != 2)

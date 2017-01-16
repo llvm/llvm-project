@@ -87,6 +87,13 @@ FunctionPass *createX86ExpandPseudoPass();
 FunctionPass *createX86FixupBWInsts();
 
 void initializeFixupBWInstPassPass(PassRegistry &);
+
+/// This pass replaces EVEX ecnoded of AVX-512 instructiosn by VEX 
+/// encoding when possible in order to reduce code size.
+FunctionPass *createX86EvexToVexInsts();
+
+void initializeEvexToVexInstPassPass(PassRegistry &);
+
 } // End llvm namespace
 
 #endif

@@ -116,6 +116,9 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
+  unsigned getRegisterByName(const char* RegName, EVT VT,
+                             SelectionDAG &DAG) const override;
+
 private:
   SDValue getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &AVRcc,
                     SelectionDAG &DAG, SDLoc dl) const;

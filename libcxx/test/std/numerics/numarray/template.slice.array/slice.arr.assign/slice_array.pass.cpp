@@ -45,7 +45,6 @@ int main()
     // Test return value of assignment.
     {
     int a1[] = {0, 1, 2};
-    int a2[] = {3, 4, 3};
     std::valarray<int> v1(a1, 3);
     std::slice_array<int> s1 = v1[std::slice(1, 1, 1)];
     std::slice_array<int> s2 = v1[std::slice(0, 1, 1)];

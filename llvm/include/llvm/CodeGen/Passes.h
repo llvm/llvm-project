@@ -60,7 +60,9 @@ namespace llvm {
   /// as if it was just created.
   /// If EmitFallbackDiag is true, the pass will emit a
   /// DiagnosticInfoISelFallback for every MachineFunction it resets.
-  MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag);
+  /// If AbortOnFailedISel is true, abort compilation instead of resetting.
+  MachineFunctionPass *createResetMachineFunctionPass(bool EmitFallbackDiag,
+                                                      bool AbortOnFailedISel);
 
   /// createCodeGenPreparePass - Transform the code to expose more pattern
   /// matching during instruction selection.

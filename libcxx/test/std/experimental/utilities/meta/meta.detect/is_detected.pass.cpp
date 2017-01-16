@@ -19,7 +19,7 @@ namespace ex = std::experimental;
 
 template <typename T>
   using copy_assign_t = decltype(std::declval<T&>() = std::declval<T const &>());
-  
+
 struct not_assignable {
     not_assignable & operator=(const not_assignable&) = delete;
 };

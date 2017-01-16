@@ -1,16 +1,18 @@
 ---
 MainSourceFile: source2.cpp
-Replacements:
-  - FilePath:        $(path)/common.h
-    Offset:          106
-    Length:          26
-    ReplacementText: 'int & elem : ints'
-  - FilePath:        $(path)/common.h
-    Offset:          140
-    Length:          7
-    ReplacementText: elem
-  - FilePath:        $(path)/common.h
-    Offset:          169
-    Length:          1
-    ReplacementText: nullptr
+Diagnostics:     
+  - DiagnosticName:  test-conflict
+    Replacements:
+      - FilePath:        $(path)/common.h
+        Offset:          106
+        Length:          26
+        ReplacementText: 'int & elem : ints'
+      - FilePath:        $(path)/common.h
+        Offset:          140
+        Length:          7
+        ReplacementText: elem
+      - FilePath:        $(path)/common.h
+        Offset:          169
+        Length:          1
+        ReplacementText: nullptr
 ...

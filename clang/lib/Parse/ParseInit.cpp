@@ -404,6 +404,10 @@ ExprResult Parser::ParseBraceInitializer() {
     return Actions.ActOnInitList(LBraceLoc, None, ConsumeBrace());
   }
 
+  // Enter an appropriate expression evaluation context for an initializer list.
+  EnterExpressionEvaluationContext EnterContext(
+      Actions, EnterExpressionEvaluationContext::InitList);
+
   bool InitExprsOk = true;
 
   while (1) {

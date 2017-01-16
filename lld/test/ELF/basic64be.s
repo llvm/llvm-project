@@ -38,7 +38,7 @@ _start:
 # CHECK-NEXT:   Version: 1
 # CHECK-NEXT:   Entry: 0x10020040
 # CHECK-NEXT:   ProgramHeaderOffset: 0x40
-# CHECK-NEXT:   SectionHeaderOffset: 0x200D8
+# CHECK-NEXT:   SectionHeaderOffset: 0x30080
 # CHECK-NEXT:   Flags [ (0x0)
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
@@ -85,24 +85,6 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 2
-# CHECK-NEXT:     Name: .got
-# CHECK-NEXT:     Type: SHT_PROGBITS
-# CHECK-NEXT:     Flags [
-# CHECK-NEXT:       SHF_ALLOC
-# CHECK-NEXT:       SHF_WRITE
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x10020000
-# CHECK-NEXT:     Offset: 0x20000
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Link: 0
-# CHECK-NEXT:     Info: 0
-# CHECK-NEXT:     AddressAlignment: 8
-# CHECK-NEXT:     EntrySize: 0
-# CHECK-NEXT:     SectionData (
-# CHECK-NEXT:     )
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 3
 # CHECK-NEXT:     Name: .toc
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x3)
@@ -122,7 +104,7 @@ _start:
 # CHECK-NEXT:     )
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 4
+# CHECK-NEXT:     Index: 3
 # CHECK-NEXT:     Name: .toc1
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x3)
@@ -142,7 +124,7 @@ _start:
 # CHECK-NEXT:     )
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 5
+# CHECK-NEXT:     Index: 4
 # CHECK-NEXT:     Name: .opd
 # CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
 # CHECK-NEXT:     Flags [ (0x3)
@@ -157,8 +139,26 @@ _start:
 # CHECK-NEXT:     AddressAlignment: 1
 # CHECK-NEXT:     EntrySize: 0
 # CHECK-NEXT:     SectionData (
-# CHECK-NEXT:       0000: 00000000 10010000 00000000 10028000 |................|
+# CHECK-NEXT:       0000: 00000000 10010000 00000000 10038000 |................|
 # CHECK-NEXT:       0010: 00000000 00000000                   |........|
+# CHECK-NEXT:     )
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 5
+# CHECK-NEXT:     Name: .got
+# CHECK-NEXT:     Type: SHT_PROGBITS
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:       SHF_ALLOC
+# CHECK-NEXT:       SHF_WRITE
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x10030000
+# CHECK-NEXT:     Offset: 0x30000
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 8
+# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:     SectionData (
 # CHECK-NEXT:     )
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
@@ -170,7 +170,7 @@ _start:
 # CHECK-NEXT:       SHF_STRINGS (0x20)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x20058
+# CHECK-NEXT:     Offset: 0x30000
 # CHECK-NEXT:     Size: 8
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
@@ -187,7 +187,7 @@ _start:
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x20060
+# CHECK-NEXT:     Offset: 0x30008
 # CHECK-NEXT:     Size: 48
 # CHECK-NEXT:     Link: 9
 # CHECK-NEXT:     Info: 1
@@ -203,7 +203,7 @@ _start:
 # CHECK-NEXT:     Flags [
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x20090
+# CHECK-NEXT:     Offset: 0x30038
 # CHECK-NEXT:     Size: 63
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
@@ -219,7 +219,7 @@ _start:
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x200CF
+# CHECK-NEXT:     Offset: 0x30077
 # CHECK-NEXT:     Size: 8
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
@@ -273,8 +273,8 @@ _start:
 # CHECK-NEXT:    Offset: 0x20000
 # CHECK-NEXT:    VirtualAddress: 0x10020000
 # CHECK-NEXT:    PhysicalAddress: 0x10020000
-# CHECK-NEXT:    FileSize: 88
-# CHECK-NEXT:    MemSize: 88
+# CHECK-NEXT:    FileSize: 65536
+# CHECK-NEXT:    MemSize: 65536
 # CHECK-NEXT:    Flags [ (0x6)
 # CHECK-NEXT:      PF_R (0x4)
 # CHECK-NEXT:      PF_W (0x2)
@@ -283,9 +283,9 @@ _start:
 # CHECK-NEXT:  }
 # CHECK-NEXT:  ProgramHeader {
 # CHECK-NEXT:    Type: PT_GNU_RELRO
-# CHECK-NEXT:    Offset: 0x20000
-# CHECK-NEXT:    VirtualAddress: 0x10020000
-# CHECK-NEXT:    PhysicalAddress: 0x10020000
+# CHECK-NEXT:    Offset: 0x30000
+# CHECK-NEXT:    VirtualAddress: 0x10030000
+# CHECK-NEXT:    PhysicalAddress: 0x10030000
 # CHECK-NEXT:    FileSize: 0
 # CHECK-NEXT:    MemSize: 0
 # CHECK-NEXT:    Flags [ (0x4)

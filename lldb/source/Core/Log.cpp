@@ -343,28 +343,13 @@ void Log::ListAllLogChannels(Stream *strm) {
   }
 }
 
-bool Log::GetVerbose() const {
-  // FIXME: This has to be centralized between the stream and the log...
-  if (m_options.Test(LLDB_LOG_OPTION_VERBOSE))
-    return true;
-
-  // Make a copy of our stream shared pointer in case someone disables our
-  // log while we are logging and releases the stream
-  StreamSP stream_sp(m_stream_sp);
-  if (stream_sp)
-    return stream_sp->GetVerbose();
-  return false;
-}
+bool Log::GetVerbose() const { return m_options.Test(LLDB_LOG_OPTION_VERBOSE); }
 
 //------------------------------------------------------------------
 // Returns true if the debug flag bit is set in this stream.
 //------------------------------------------------------------------
 bool Log::GetDebug() const {
-  // Make a copy of our stream shared pointer in case someone disables our
-  // log while we are logging and releases the stream
-  StreamSP stream_sp(m_stream_sp);
-  if (stream_sp)
-    return stream_sp->GetDebug();
+  // TODO: remove and clean up callers
   return false;
 }
 

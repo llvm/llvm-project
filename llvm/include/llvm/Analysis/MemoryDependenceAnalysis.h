@@ -70,7 +70,7 @@ class MemDepResult {
     ///   1. This could be a load or store for dependence queries on
     ///      load/store.  The value loaded or stored is the produced value.
     ///      Note that the pointer operand may be different than that of the
-    ///      queried pointer due to must aliases and phi translation.  Note
+    ///      queried pointer due to must aliases and phi translation. Note
     ///      that the def may not be the same type as the query, the pointers
     ///      may just be must aliases.
     ///   2. For loads and stores, this could be an allocation instruction. In
@@ -302,6 +302,10 @@ private:
     NonLocalPointerInfo() : Size(MemoryLocation::UnknownSize) {}
   };
 
+  /// Cache storing single nonlocal def for the instruction.
+  /// It is set when nonlocal def would be found in function returning only
+  /// local dependencies.
+  DenseMap<Instruction *, NonLocalDepResult> NonLocalDefsCache;
   /// This map stores the cached results of doing a pointer lookup at the
   /// bottom of a block.
   ///
@@ -349,6 +353,10 @@ public:
                           const TargetLibraryInfo &TLI,
                           DominatorTree &DT)
       : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
+
+  /// Handle invalidation in the new PM.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 
   /// Some methods limit the number of instructions they will examine.
   /// The return value of this method is the default limit that will be
@@ -437,9 +445,9 @@ public:
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
   /// find anything, and Def if it can be assumed that 2 instructions load or
-  /// store the same value.
-  /// FIXME: This analysis works only on single block because of restrictions
-  /// at the call site.
+  /// store the same value and NonLocal which indicate that non-local Def was
+  /// found, which can be retrieved by calling getNonLocalPointerDependency
+  /// with the same queried instruction.
   MemDepResult getInvariantGroupPointerDependency(LoadInst *LI, BasicBlock *BB);
 
   /// Looks at a memory location for a load (specified by MemLocBase, Offs, and

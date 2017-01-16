@@ -87,6 +87,7 @@ protected:
       EXPECT_TRUE(convStatus);
       return EnvStorage.back().c_str();
 #else
+      (void)this;
       return Var;
 #endif
     };

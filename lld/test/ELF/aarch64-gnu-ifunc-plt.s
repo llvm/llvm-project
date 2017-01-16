@@ -10,19 +10,19 @@
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rela.plt {
-// CHECK:     0x40018 R_AARCH64_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x40020 R_AARCH64_JUMP_SLOT zed2 0x0
-// CHECK-NEXT:     0x40028 R_AARCH64_IRELATIVE - 0x20000
-// CHECK-NEXT:     0x40030 R_AARCH64_IRELATIVE - 0x20004
+// CHECK:     0x30018 R_AARCH64_JUMP_SLOT bar2 0x0
+// CHECK-NEXT:     0x30020 R_AARCH64_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:     0x30028 R_AARCH64_IRELATIVE - 0x20000
+// CHECK-NEXT:     0x30030 R_AARCH64_IRELATIVE - 0x20004
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 // Check that .got.plt entries point back to PLT header
 // GOTPLT: Contents of section .got.plt:
-// GOTPLT-NEXT:  40000 00000000 00000000 00000000 00000000
-// GOTPLT-NEXT:  40010 00000000 00000000 20000200 00000000
-// GOTPLT-NEXT:  40020 20000200 00000000 20000200 00000000
-// GOTPLT-NEXT:  40030 20000200 00000000
+// GOTPLT-NEXT:  30000 00000000 00000000 00000000 00000000
+// GOTPLT-NEXT:  30010 00000000 00000000 20000200 00000000
+// GOTPLT-NEXT:  30020 20000200 00000000 20000200 00000000
+// GOTPLT-NEXT:  30030 20000200 00000000
 
 // Check that the PLTRELSZ tag includes the IRELATIVE relocations
 // CHECK: DynamicSection [
@@ -31,40 +31,40 @@
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:    20000:       c0 03 5f d6     ret
+// DISASM-NEXT:    20000: {{.*}} ret
 // DISASM:      bar:
-// DISASM-NEXT:    20004:       c0 03 5f d6     ret
+// DISASM-NEXT:    20004: {{.*}} ret
 // DISASM:      _start:
-// DISASM-NEXT:    20008:       16 00 00 94     bl      #88
-// DISASM-NEXT:    2000c:       19 00 00 94     bl      #100
-// DISASM-NEXT:    20010:       0c 00 00 94     bl      #48
-// DISASM-NEXT:    20014:       0f 00 00 94     bl      #60
+// DISASM-NEXT:    20008: {{.*}} bl      #88
+// DISASM-NEXT:    2000c: {{.*}} bl      #100
+// DISASM-NEXT:    20010: {{.*}} bl      #48
+// DISASM-NEXT:    20014: {{.*}} bl      #60
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    20020:       f0 7b bf a9     stp     x16, x30, [sp, #-16]!
-// DISASM-NEXT:    20024:       10 01 00 90     adrp    x16, #131072
-// DISASM-NEXT:    20028:       11 0a 40 f9     ldr     x17, [x16, #16]
-// DISASM-NEXT:    2002c:       10 42 00 91     add     x16, x16, #16
-// DISASM-NEXT:    20030:       20 02 1f d6     br      x17
-// DISASM-NEXT:    20034:       1f 20 03 d5     nop
-// DISASM-NEXT:    20038:       1f 20 03 d5     nop
-// DISASM-NEXT:    2003c:       1f 20 03 d5     nop
-// DISASM-NEXT:    20040:       10 01 00 90     adrp    x16, #131072
-// DISASM-NEXT:    20044:       11 0e 40 f9     ldr     x17, [x16, #24]
-// DISASM-NEXT:    20048:       10 62 00 91     add     x16, x16, #24
-// DISASM-NEXT:    2004c:       20 02 1f d6     br      x17
-// DISASM-NEXT:    20050:       10 01 00 90     adrp    x16, #131072
-// DISASM-NEXT:    20054:       11 12 40 f9     ldr     x17, [x16, #32]
-// DISASM-NEXT:    20058:       10 82 00 91     add     x16, x16, #32
-// DISASM-NEXT:    2005c:       20 02 1f d6     br      x17
-// DISASM-NEXT:    20060:       10 01 00 90     adrp    x16, #131072
-// DISASM-NEXT:    20064:       11 16 40 f9     ldr     x17, [x16, #40]
-// DISASM-NEXT:    20068:       10 a2 00 91     add     x16, x16, #40
-// DISASM-NEXT:    2006c:       20 02 1f d6     br      x17
-// DISASM-NEXT:    20070:       10 01 00 90     adrp    x16, #131072
-// DISASM-NEXT:    20074:       11 1a 40 f9     ldr     x17, [x16, #48]
-// DISASM-NEXT:    20078:       10 c2 00 91     add     x16, x16, #48
-// DISASM-NEXT:    2007c:       20 02 1f d6     br      x17
+// DISASM-NEXT:    20020: {{.*}} stp     x16, x30, [sp, #-16]!
+// DISASM-NEXT:    20024: {{.*}} adrp    x16, #65536
+// DISASM-NEXT:    20028: {{.*}} ldr     x17, [x16, #16]
+// DISASM-NEXT:    2002c: {{.*}} add     x16, x16, #16
+// DISASM-NEXT:    20030: {{.*}} br      x17
+// DISASM-NEXT:    20034: {{.*}} nop
+// DISASM-NEXT:    20038: {{.*}} nop
+// DISASM-NEXT:    2003c: {{.*}} nop
+// DISASM-NEXT:    20040: {{.*}} adrp    x16, #65536
+// DISASM-NEXT:    20044: {{.*}} ldr     x17, [x16, #24]
+// DISASM-NEXT:    20048: {{.*}} add     x16, x16, #24
+// DISASM-NEXT:    2004c: {{.*}} br      x17
+// DISASM-NEXT:    20050: {{.*}} adrp    x16, #65536
+// DISASM-NEXT:    20054: {{.*}} ldr     x17, [x16, #32]
+// DISASM-NEXT:    20058: {{.*}} add     x16, x16, #32
+// DISASM-NEXT:    2005c: {{.*}} br      x17
+// DISASM-NEXT:    20060: {{.*}} adrp    x16, #65536
+// DISASM-NEXT:    20064: {{.*}} ldr     x17, [x16, #40]
+// DISASM-NEXT:    20068: {{.*}} add     x16, x16, #40
+// DISASM-NEXT:    2006c: {{.*}} br      x17
+// DISASM-NEXT:    20070: {{.*}} adrp    x16, #65536
+// DISASM-NEXT:    20074: {{.*}} ldr     x17, [x16, #48]
+// DISASM-NEXT:    20078: {{.*}} add     x16, x16, #48
+// DISASM-NEXT:    2007c: {{.*}} br      x17
 
 .text
 .type foo STT_GNU_IFUNC

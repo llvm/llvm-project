@@ -55,6 +55,10 @@ enum OperandType {
   OPERAND_F32IMM,
   /// 64-bit floating-point immediates.
   OPERAND_F64IMM,
+  /// 32-bit unsigned function indices.
+  OPERAND_FUNCTION32,
+  /// 32-bit unsigned memory offsets.
+  OPERAND_OFFSET32,
   /// p2align immediate for load and store address alignment.
   OPERAND_P2ALIGN,
   /// signature immediate for block/loop.

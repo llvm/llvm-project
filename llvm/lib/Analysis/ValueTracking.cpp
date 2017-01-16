@@ -526,7 +526,10 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
 
   unsigned BitWidth = KnownZero.getBitWidth();
 
-  for (auto &AssumeVH : Q.AC->assumptions()) {
+  // Note that the patterns below need to be kept in sync with the code
+  // in AssumptionCache::updateAffectedValues.
+
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
     if (!AssumeVH)
       continue;
     CallInst *I = cast<CallInst>(AssumeVH);
@@ -1110,7 +1113,7 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
              APInt::getHighBitsSet(BitWidth, ShiftAmt);
     };
 
-    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
       return APIntOps::lshr(KnownOne, ShiftAmt);
     };
 
@@ -1121,11 +1124,11 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
   }
   case Instruction::AShr: {
     // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KZF = [BitWidth](const APInt &KnownZero, unsigned ShiftAmt) {
+    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
       return APIntOps::ashr(KnownZero, ShiftAmt);
     };
 
-    auto KOF = [BitWidth](const APInt &KnownOne, unsigned ShiftAmt) {
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
       return APIntOps::ashr(KnownOne, ShiftAmt);
     };
 
@@ -2542,9 +2545,6 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegZero();
 
-  // FIXME: Magic number! At the least, this should be given a name because it's
-  // used similarly in CannotBeOrderedLessThanZero(). A better fix may be to
-  // expose it as a parameter, so it can be used for testing / experimenting.
   if (Depth == MaxDepth)
     return false;  // Limit search depth.
 
@@ -2583,54 +2583,70 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
   return false;
 }
 
-bool llvm::CannotBeOrderedLessThanZero(const Value *V,
-                                       const TargetLibraryInfo *TLI,
-                                       unsigned Depth) {
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
-    return !CFP->getValueAPF().isNegative() || CFP->getValueAPF().isZero();
+/// If \p SignBitOnly is true, test for a known 0 sign bit rather than a
+/// standard ordered compare. e.g. make -0.0 olt 0.0 be true because of the sign
+/// bit despite comparing equal.
+static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
+                                            const TargetLibraryInfo *TLI,
+                                            bool SignBitOnly,
+                                            unsigned Depth) {
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
+    return !CFP->getValueAPF().isNegative() ||
+           (!SignBitOnly && CFP->getValueAPF().isZero());
+  }
 
-  // FIXME: Magic number! At the least, this should be given a name because it's
-  // used similarly in CannotBeNegativeZero(). A better fix may be to
-  // expose it as a parameter, so it can be used for testing / experimenting.
   if (Depth == MaxDepth)
-    return false;  // Limit search depth.
+    return false; // Limit search depth.
 
   const Operator *I = dyn_cast<Operator>(V);
-  if (!I) return false;
+  if (!I)
+    return false;
 
   switch (I->getOpcode()) {
-  default: break;
+  default:
+    break;
   // Unsigned integers are always nonnegative.
   case Instruction::UIToFP:
     return true;
   case Instruction::FMul:
     // x*x is always non-negative or a NaN.
-    if (I->getOperand(0) == I->getOperand(1))
+    if (I->getOperand(0) == I->getOperand(1) &&
+        (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
       return true;
+
     LLVM_FALLTHROUGH;
   case Instruction::FAdd:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1) &&
+           cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::Select:
-    return CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                           Depth + 1) &&
+           cannotBeOrderedLessThanZeroImpl(I->getOperand(2), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     // Widening/narrowing never change sign.
-    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1);
   case Instruction::Call:
     Intrinsic::ID IID = getIntrinsicForCallSite(cast<CallInst>(I), TLI);
     switch (IID) {
     default:
       break;
     case Intrinsic::maxnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) ||
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1) ||
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::minnum:
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1) &&
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::exp:
     case Intrinsic::exp2:
     case Intrinsic::fabs:
@@ -2642,16 +2658,28 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
         if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
           return true;
       }
-      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::fma:
     case Intrinsic::fmuladd:
       // x*x+y is non-negative if y is non-negative.
       return I->getOperand(0) == I->getOperand(1) &&
-             CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+             (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()) &&
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(2), TLI, SignBitOnly,
+                                             Depth + 1);
     }
     break;
   }
   return false;
+}
+
+bool llvm::CannotBeOrderedLessThanZero(const Value *V,
+                                       const TargetLibraryInfo *TLI) {
+  return cannotBeOrderedLessThanZeroImpl(V, TLI, false, 0);
+}
+
+bool llvm::SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI) {
+  return cannotBeOrderedLessThanZeroImpl(V, TLI, true, 0);
 }
 
 /// If the specified value can be set by repeating the same byte in memory,
@@ -3263,6 +3291,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
       case Intrinsic::dbg_value:
         return true;
 
+      case Intrinsic::bitreverse:
       case Intrinsic::bswap:
       case Intrinsic::ctlz:
       case Intrinsic::ctpop:
@@ -3368,6 +3397,8 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
                                                   const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() && "V must be pointer type");
   assert(!isa<ConstantData>(V) && "Did not expect ConstantPointerNull");
+  assert(CtxI && "Context instruction required for analysis");
+  assert(DT && "Dominator tree required for analysis");
 
   unsigned NumUsesExplored = 0;
   for (auto *U : V->users()) {
@@ -3410,7 +3441,10 @@ bool llvm::isKnownNonNullAt(const Value *V, const Instruction *CtxI,
   if (isKnownNonNull(V))
     return true;
 
-  return CtxI ? ::isKnownNonNullFromDominatingCondition(V, CtxI, DT) : false;
+  if (!CtxI || !DT)
+    return false;
+
+  return ::isKnownNonNullFromDominatingCondition(V, CtxI, DT);
 }
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
@@ -3651,12 +3685,27 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     return false;
 
   // Calls can throw, or contain an infinite loop, or kill the process.
-  if (CallSite CS = CallSite(const_cast<Instruction*>(I))) {
-    // Calls which don't write to arbitrary memory are safe.
-    // FIXME: Ignoring infinite loops without any side-effects is too aggressive,
-    // but it's consistent with other passes. See http://llvm.org/PR965 .
-    // FIXME: This isn't aggressive enough; a call which only writes to a
-    // global is guaranteed to return.
+  if (auto CS = ImmutableCallSite(I)) {
+    // Call sites that throw have implicit non-local control flow.
+    if (!CS.doesNotThrow())
+      return false;
+
+    // Non-throwing call sites can loop infinitely, call exit/pthread_exit
+    // etc. and thus not return.  However, LLVM already assumes that
+    //
+    //  - Thread exiting actions are modeled as writes to memory invisible to
+    //    the program.
+    //
+    //  - Loops that don't have side effects (side effects are volatile/atomic
+    //    stores and IO) always terminate (see http://llvm.org/PR965).
+    //    Furthermore IO itself is also modeled as writes to memory invisible to
+    //    the program.
+    //
+    // We rely on those assumptions here, and use the memory effects of the call
+    // target as a proxy for checking that it always returns.
+
+    // FIXME: This isn't aggressive enough; a call which only writes to a global
+    // is guaranteed to return.
     return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory() ||
            match(I, m_Intrinsic<Intrinsic::assume>());
   }

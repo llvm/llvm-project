@@ -410,8 +410,8 @@ bool TargetInfo::isValidGCCRegisterName(StringRef Name) const {
   return false;
 }
 
-StringRef
-TargetInfo::getNormalizedGCCRegisterName(StringRef Name) const {
+StringRef TargetInfo::getNormalizedGCCRegisterName(StringRef Name,
+                                                   bool ReturnCanonical) const {
   assert(isValidGCCRegisterName(Name) && "Invalid register passed in");
 
   // Get rid of any register prefix.
@@ -436,7 +436,7 @@ TargetInfo::getNormalizedGCCRegisterName(StringRef Name) const {
       // Make sure the register that the additional name is for is within
       // the bounds of the register names from above.
       if (AN == Name && ARN.RegNum < Names.size())
-        return Name;
+        return ReturnCanonical ? Names[ARN.RegNum] : Name;
     }
 
   // Now check aliases.

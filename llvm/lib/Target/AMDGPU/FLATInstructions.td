@@ -372,7 +372,7 @@ def : FlatAtomicPat <FLAT_ATOMIC_SMIN_RTN, atomic_min_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_UMIN_RTN, atomic_umin_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_OR_RTN, atomic_or_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SWAP_RTN, atomic_swap_global, i32>;
-def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_RTN, atomic_cmp_swap_global, i32, v2i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_RTN, AMDGPUatomic_cmp_swap_global, i32, v2i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_XOR_RTN, atomic_xor_global, i32>;
 
 def : FlatAtomicPat <FLAT_ATOMIC_ADD_X2_RTN, atomic_add_global, i64>;
@@ -386,7 +386,7 @@ def : FlatAtomicPat <FLAT_ATOMIC_SMIN_X2_RTN, atomic_min_global, i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_UMIN_X2_RTN, atomic_umin_global, i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_OR_X2_RTN, atomic_or_global, i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
-def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_X2_RTN, atomic_cmp_swap_global, i64, v2i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global, i64, v2i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 
 } // End Predicates = [isCIVI]

@@ -23,6 +23,12 @@ ASAN_FLAG(int, quarantine_size_mb, -1,
           "Size (in Mb) of quarantine used to detect use-after-free "
           "errors. Lower value may reduce memory usage but increase the "
           "chance of false negatives.")
+ASAN_FLAG(int, thread_local_quarantine_size_kb, -1,
+          "Size (in Kb) of thread local quarantine used to detect "
+          "use-after-free errors. Lower value may reduce memory usage but "
+          "increase the chance of false negatives. It is not advised to go "
+          "lower than 64Kb, otherwise frequent transfers to global quarantine "
+          "might affect performance.")
 ASAN_FLAG(int, redzone, 16,
           "Minimal size (in bytes) of redzones around heap objects. "
           "Requirement: redzone >= 16, is a power of two.")

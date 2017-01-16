@@ -9,6 +9,7 @@
 ; Test importing from archive library via gold, using jobs=1 to ensure
 ; output messages are not interleaved.
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=-print-imports \
 ; RUN:    --plugin-opt=jobs=1 \
@@ -16,6 +17,7 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-DAG: Import g
 declare void @g(...)

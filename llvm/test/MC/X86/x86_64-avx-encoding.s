@@ -4245,3 +4245,61 @@ _foo2:
 // CHECK: vmovsd %xmm8, %xmm0, %xmm0
 // CHECK: encoding: [0xc5,0x7b,0x11,0xc0]
           vmovsd %xmm8, %xmm0, %xmm0
+
+// CHECK: vpmaddwd %xmm3, %xmm2, %xmm1
+// CHECK: encoding: [0xc5,0xe9,0xf5,0xcb]
+          vpmaddwd %xmm3, %xmm2, %xmm1
+
+// CHECK: vpmaddwd  (%rcx), %xmm2, %xmm1
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x09]
+          vpmaddwd  (%rcx), %xmm2, %xmm1
+
+// CHECK: vpmaddwd  -4(%rsp), %xmm2, %xmm1
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x4c,0x24,0xfc]
+          vpmaddwd  -4(%rsp), %xmm2, %xmm1
+
+// CHECK: vpmaddwd  4(%rsp), %xmm2, %xmm1
+// CHECK: encoding: [0xc5,0xe9,0xf5,0x4c,0x24,0x04]
+          vpmaddwd  4(%rsp), %xmm2, %xmm1
+
+// CHECK: vpmaddwd  268435456(%rcx,%r14,8), %xmm2, %xmm1
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpmaddwd  268435456(%rcx,%r14,8), %xmm2, %xmm1
+
+// CHECK: vpmaddwd  -536870912(%rcx,%r14,8), %xmm2, %xmm1
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpmaddwd  -536870912(%rcx,%r14,8), %xmm2, %xmm1
+
+// CHECK: vpmaddwd  -536870910(%rcx,%r14,8), %xmm2, %xmm1
+// CHECK: encoding: [0xc4,0xa1,0x69,0xf5,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpmaddwd  -536870910(%rcx,%r14,8), %xmm2, %xmm1
+
+// CHECK: vpmaddwd %ymm3, %ymm2, %ymm1
+// CHECK: encoding: [0xc5,0xed,0xf5,0xcb]
+          vpmaddwd %ymm3, %ymm2, %ymm1
+
+// CHECK: vpmaddwd  (%rcx), %ymm2, %ymm1
+// CHECK: encoding: [0xc5,0xed,0xf5,0x09]
+          vpmaddwd  (%rcx), %ymm2, %ymm1
+
+// CHECK: vpmaddwd  -4(%rsp), %ymm2, %ymm1
+// CHECK: encoding: [0xc5,0xed,0xf5,0x4c,0x24,0xfc]
+          vpmaddwd  -4(%rsp), %ymm2, %ymm1
+
+// CHECK: vpmaddwd  4(%rsp), %ymm2, %ymm1
+// CHECK: encoding: [0xc5,0xed,0xf5,0x4c,0x24,0x04]
+          vpmaddwd  4(%rsp), %ymm2, %ymm1
+
+// CHECK: vpmaddwd  268435456(%rcx,%r14,8), %ymm2, %ymm1
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpmaddwd  268435456(%rcx,%r14,8), %ymm2, %ymm1
+
+// CHECK: vpmaddwd  -536870912(%rcx,%r14,8), %ymm2, %ymm1
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpmaddwd  -536870912(%rcx,%r14,8), %ymm2, %ymm1
+
+// CHECK: vpmaddwd  -536870910(%rcx,%r14,8), %ymm2, %ymm1
+// CHECK: encoding: [0xc4,0xa1,0x6d,0xf5,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpmaddwd  -536870910(%rcx,%r14,8), %ymm2, %ymm1
+
+

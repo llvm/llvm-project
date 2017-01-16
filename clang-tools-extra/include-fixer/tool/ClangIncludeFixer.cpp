@@ -179,30 +179,36 @@ createSymbolIndexManager(StringRef FilePath) {
             find_all_symbols::SymbolInfo::SymbolKind::Unknown,
             CommaSplits[I].trim(), 1, {}, /*NumOccurrences=*/E - I));
     }
-    SymbolIndexMgr->addSymbolIndex(
-        llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols));
+    SymbolIndexMgr->addSymbolIndex([=]() {
+      return llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols);
+    });
     break;
   }
   case yaml: {
-    llvm::ErrorOr<std::unique_ptr<include_fixer::YamlSymbolIndex>> DB(nullptr);
-    if (!Input.empty()) {
-      DB = include_fixer::YamlSymbolIndex::createFromFile(Input);
-    } else {
-      // If we don't have any input file, look in the directory of the first
-      // file and its parents.
-      SmallString<128> AbsolutePath(tooling::getAbsolutePath(FilePath));
-      StringRef Directory = llvm::sys::path::parent_path(AbsolutePath);
-      DB = include_fixer::YamlSymbolIndex::createFromDirectory(
-          Directory, "find_all_symbols_db.yaml");
-    }
+    auto CreateYamlIdx = [=]() -> std::unique_ptr<include_fixer::SymbolIndex> {
+      llvm::ErrorOr<std::unique_ptr<include_fixer::YamlSymbolIndex>> DB(
+          nullptr);
+      if (!Input.empty()) {
+        DB = include_fixer::YamlSymbolIndex::createFromFile(Input);
+      } else {
+        // If we don't have any input file, look in the directory of the
+        // first
+        // file and its parents.
+        SmallString<128> AbsolutePath(tooling::getAbsolutePath(FilePath));
+        StringRef Directory = llvm::sys::path::parent_path(AbsolutePath);
+        DB = include_fixer::YamlSymbolIndex::createFromDirectory(
+            Directory, "find_all_symbols_db.yaml");
+      }
 
-    if (!DB) {
-      llvm::errs() << "Couldn't find YAML db: " << DB.getError().message()
-                   << '\n';
-      return nullptr;
-    }
+      if (!DB) {
+        llvm::errs() << "Couldn't find YAML db: " << DB.getError().message()
+                     << '\n';
+        return nullptr;
+      }
+      return std::move(*DB);
+    };
 
-    SymbolIndexMgr->addSymbolIndex(std::move(*DB));
+    SymbolIndexMgr->addSymbolIndex(std::move(CreateYamlIdx));
     break;
   }
   }
@@ -326,7 +332,8 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Query symbol mode.
   if (!QuerySymbol.empty()) {
-    auto MatchedSymbols = SymbolIndexMgr->search(QuerySymbol);
+    auto MatchedSymbols = SymbolIndexMgr->search(
+        QuerySymbol, /*IsNestedSearch=*/true, SourceFilePath);
     for (auto &Symbol : MatchedSymbols) {
       std::string HeaderPath = Symbol.getFilePath().str();
       Symbol.SetFilePath(((HeaderPath[0] == '"' || HeaderPath[0] == '<')

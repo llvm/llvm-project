@@ -1715,7 +1715,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // Bitcasts with more than one def are not supported.
   if (Def->getDesc().getNumDefs() != 1)
     return ValueTrackerResult();
-  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
+  const MachineOperand DefOp = Def->getOperand(DefIdx);
+  if (DefOp.getSubReg() != DefSubReg)
     // If we look for a different subreg, it means we want a subreg of the src.
     // Bails as we do not support composing subregs yet.
     return ValueTrackerResult();
@@ -1735,6 +1736,14 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
       return ValueTrackerResult();
     SrcIdx = OpIdx;
   }
+
+  // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
+  // will break the assumed guarantees for the upper bits.
+  for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(DefOp.getReg())) {
+    if (UseMI.isSubregToReg())
+      return ValueTrackerResult();
+  }
+
   const MachineOperand &Src = Def->getOperand(SrcIdx);
   return ValueTrackerResult(Src.getReg(), Src.getSubReg());
 }

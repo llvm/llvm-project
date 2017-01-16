@@ -1,4 +1,5 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -inline | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 ; Check that we only inline when we have compatible target attributes.
 ; X86 has implemented a target attribute that will verify that the attribute
 ; sets are compatible.

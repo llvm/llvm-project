@@ -24,8 +24,8 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 #pragma omp target
 #pragma omp teams distribute parallel for simd collapse ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
-
     argv[0][i] = argv[0][i] - argv[0][i-ST];
+
 #pragma omp target
 #pragma omp teams distribute parallel for simd collapse () // expected-error {{expected expression}}
   for (int i = ST; i < N; i++)

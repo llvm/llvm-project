@@ -43,7 +43,7 @@ typedef int (^BarBlock)(int *);
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText block}{LeftParen (}{RightParen )} (35)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void (^)()}{TypedText block}{Equal  = }{Placeholder ^(void)} (38)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Foo}{TypedText blocker}{LeftParen (}{Placeholder int x}{Comma , }{Placeholder Foo y}{Comma , }{Placeholder ^(Foo *someParameter)foo}{RightParen )} (35)
-//CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Foo (^)(int, Foo, FooBlock)}{TypedText blocker}{Equal  = }{Placeholder ^Foo(int x, Foo y, FooBlock foo)} (38)
+//CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Foo (^)(int, Foo, FooBlock)}{TypedText blocker}{Equal  = }{Placeholder ^Foo(int x, Foo y, FooBlock foo)} (32)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText foo} (35)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText fooBlock}{LeftParen (}{Placeholder Foo *someParameter}{RightParen )} (35)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType Test *}{TypedText getObject}{LeftParen (}{Placeholder int index}{RightParen )} (35)

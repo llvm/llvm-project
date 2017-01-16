@@ -354,13 +354,13 @@ void SystemZLongBranch::splitBranchOnCount(MachineInstr *MI,
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
-    .addOperand(MI->getOperand(0))
-    .addOperand(MI->getOperand(1))
-    .addImm(-1);
+      .add(MI->getOperand(0))
+      .add(MI->getOperand(1))
+      .addImm(-1);
   MachineInstr *BRCL = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BRCL))
-    .addImm(SystemZ::CCMASK_ICMP)
-    .addImm(SystemZ::CCMASK_CMP_NE)
-    .addOperand(MI->getOperand(2));
+                           .addImm(SystemZ::CCMASK_ICMP)
+                           .addImm(SystemZ::CCMASK_CMP_NE)
+                           .add(MI->getOperand(2));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
   MI->eraseFromParent();
@@ -373,12 +373,12 @@ void SystemZLongBranch::splitCompareBranch(MachineInstr *MI,
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   BuildMI(*MBB, MI, DL, TII->get(CompareOpcode))
-    .addOperand(MI->getOperand(0))
-    .addOperand(MI->getOperand(1));
+      .add(MI->getOperand(0))
+      .add(MI->getOperand(1));
   MachineInstr *BRCL = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BRCL))
-    .addImm(SystemZ::CCMASK_ICMP)
-    .addOperand(MI->getOperand(2))
-    .addOperand(MI->getOperand(3));
+                           .addImm(SystemZ::CCMASK_ICMP)
+                           .add(MI->getOperand(2))
+                           .add(MI->getOperand(3));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
   MI->eraseFromParent();

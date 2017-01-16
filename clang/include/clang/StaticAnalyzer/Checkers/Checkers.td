@@ -278,6 +278,14 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 } // end: "optin.cplusplus"
 
+let ParentPackage = CplusplusAlpha in {
+
+def IteratorPastEndChecker : Checker<"IteratorPastEnd">,
+  HelpText<"Check iterators used past end">,
+  DescFile<"IteratorPastEndChecker.cpp">;
+
+} // end: "alpha.cplusplus"
+
 
 //===----------------------------------------------------------------------===//
 // Valist checkers.

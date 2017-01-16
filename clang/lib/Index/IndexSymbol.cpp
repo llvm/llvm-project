@@ -53,6 +53,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   assert(D);
   SymbolInfo Info;
   Info.Kind = SymbolKind::Unknown;
+  Info.SubKind = SymbolSubKind::None;
   Info.Properties = SymbolPropertySet();
   Info.Lang = SymbolLanguage::C;
 
@@ -151,10 +152,18 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::ObjC;
       break;
     case Decl::ObjCMethod:
-      if (cast<ObjCMethodDecl>(D)->isInstanceMethod())
+      if (cast<ObjCMethodDecl>(D)->isInstanceMethod()) {
+        const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
         Info.Kind = SymbolKind::InstanceMethod;
-      else
+        if (MD->isPropertyAccessor()) {
+          if (MD->param_size())
+            Info.SubKind = SymbolSubKind::AccessorSetter;
+          else
+            Info.SubKind = SymbolSubKind::AccessorGetter;
+        }
+      } else {
         Info.Kind = SymbolKind::ClassMethod;
+      }
       Info.Lang = SymbolLanguage::ObjC;
       if (isUnitTest(cast<ObjCMethodDecl>(D)))
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
@@ -183,10 +192,16 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::NamespaceAlias;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case Decl::CXXConstructor:
+    case Decl::CXXConstructor: {
       Info.Kind = SymbolKind::Constructor;
       Info.Lang = SymbolLanguage::CXX;
+      auto *CD = cast<CXXConstructorDecl>(D);
+      if (CD->isCopyConstructor())
+        Info.SubKind = SymbolSubKind::CXXCopyConstructor;
+      else if (CD->isMoveConstructor())
+        Info.SubKind = SymbolSubKind::CXXMoveConstructor;
       break;
+    }
     case Decl::CXXDestructor:
       Info.Kind = SymbolKind::Destructor;
       Info.Lang = SymbolLanguage::CXX;
@@ -282,6 +297,8 @@ void index::applyForEachSymbolRole(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationCalledBy);
   APPLY_FOR_ROLE(RelationExtendedBy);
   APPLY_FOR_ROLE(RelationAccessorOf);
+  APPLY_FOR_ROLE(RelationContainedBy);
+  APPLY_FOR_ROLE(RelationIBTypeOf);
 
 #undef APPLY_FOR_ROLE
 }
@@ -310,6 +327,8 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     case SymbolRole::RelationCalledBy: OS << "RelCall"; break;
     case SymbolRole::RelationExtendedBy: OS << "RelExt"; break;
     case SymbolRole::RelationAccessorOf: OS << "RelAcc"; break;
+    case SymbolRole::RelationContainedBy: OS << "RelCont"; break;
+    case SymbolRole::RelationIBTypeOf: OS << "RelIBType"; break;
     }
   });
 }
@@ -361,6 +380,17 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::ConversionFunction: return "coversion-func";
   }
   llvm_unreachable("invalid symbol kind");
+}
+
+StringRef index::getSymbolSubKindString(SymbolSubKind K) {
+  switch (K) {
+  case SymbolSubKind::None: return "<none>";
+  case SymbolSubKind::CXXCopyConstructor: return "cxx-copy-ctor";
+  case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
+  case SymbolSubKind::AccessorGetter: return "acc-get";
+  case SymbolSubKind::AccessorSetter: return "acc-set";
+  }
+  llvm_unreachable("invalid symbol subkind");
 }
 
 StringRef index::getSymbolLanguageString(SymbolLanguage K) {

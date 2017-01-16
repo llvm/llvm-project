@@ -83,7 +83,7 @@ public:
 namespace remote {
 
 class OrcRemoteTargetRPCAPI
-    : public rpc::SingleThreadedRPC<rpc::RawByteChannel> {
+    : public rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel> {
 protected:
   class ResourceIdMgr {
   public:
@@ -108,7 +108,7 @@ protected:
 public:
   // FIXME: Remove constructors once MSVC supports synthesizing move-ops.
   OrcRemoteTargetRPCAPI(rpc::RawByteChannel &C)
-      : rpc::SingleThreadedRPC<rpc::RawByteChannel>(C, true) {}
+      : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(C, true) {}
 
   class CallIntVoid
       : public rpc::Function<CallIntVoid, int32_t(JITTargetAddress Addr)> {

@@ -156,8 +156,8 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   unsigned TotalPieces = path.size();
   unsigned TotalNotePieces =
       std::count_if(path.begin(), path.end(),
-                    [](const IntrusiveRefCntPtr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticNotePiece>(p.get());
+                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
+                      return isa<PathDiagnosticNotePiece>(*p);
                     });
 
   unsigned TotalRegularPieces = TotalPieces - TotalNotePieces;
@@ -615,12 +615,13 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
         I!=E; ++I) {
 
     if (const PathDiagnosticMacroPiece *MP =
-          dyn_cast<PathDiagnosticMacroPiece>(*I)) {
+            dyn_cast<PathDiagnosticMacroPiece>(I->get())) {
       num = ProcessMacroPiece(os, *MP, num);
       continue;
     }
 
-    if (PathDiagnosticEventPiece *EP = dyn_cast<PathDiagnosticEventPiece>(*I)) {
+    if (PathDiagnosticEventPiece *EP =
+            dyn_cast<PathDiagnosticEventPiece>(I->get())) {
       os << "<div class=\"msg msgEvent\" style=\"width:94%; "
             "margin-left:5px\">"
             "<table class=\"msgT\"><tr>"

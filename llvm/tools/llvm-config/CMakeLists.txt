@@ -47,12 +47,13 @@ endif()
 set(LLVM_LDFLAGS "${CMAKE_CXX_LINK_FLAGS}")
 set(LLVM_BUILDMODE ${CMAKE_BUILD_TYPE})
 set(LLVM_SYSTEM_LIBS ${SYSTEM_LIBS})
-if(BUILD_SHARED_LIBS)
-  set(LLVM_ENABLE_SHARED ON)
-else()
-  set(LLVM_ENABLE_SHARED OFF)
-endif()
 string(REPLACE ";" " " LLVM_TARGETS_BUILT "${LLVM_TARGETS_TO_BUILD}")
+llvm_canonicalize_cmake_booleans(
+  LLVM_BUILD_LLVM_DYLIB
+  LLVM_LINK_LLVM_DYLIB
+  LLVM_HAS_RTTI
+  LLVM_HAS_GLOBAL_ISEL
+  BUILD_SHARED_LIBS)
 configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 
 # Set build-time environment(s).
@@ -69,7 +70,8 @@ if(CMAKE_CROSSCOMPILING)
     COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
     DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
     WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
-    COMMENT "Building native llvm-config...")
+    COMMENT "Building native llvm-config..."
+    USES_TERMINAL)
   add_custom_target(${project}NativeLLVMConfig DEPENDS ${${project}_LLVM_CONFIG_EXE})
   add_dependencies(${project}NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
 

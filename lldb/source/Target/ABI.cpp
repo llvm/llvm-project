@@ -189,8 +189,7 @@ bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
                              lldb::addr_t returnAddress, llvm::Type &returntype,
                              llvm::ArrayRef<ABI::CallArgument> args) const {
   // dummy prepare trivial call
-  assert(!"Should never get here!");
-  return false;
+  llvm_unreachable("Should never get here!");
 }
 
 bool ABI::GetFallbackRegisterLocation(

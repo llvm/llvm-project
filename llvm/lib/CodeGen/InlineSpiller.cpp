@@ -1124,7 +1124,7 @@ void HoistSpillHelper::rmRedundantSpills(
   // earlier spill with smaller SlotIndex.
   for (const auto CurrentSpill : Spills) {
     MachineBasicBlock *Block = CurrentSpill->getParent();
-    MachineDomTreeNode *Node = MDT.DT->getNode(Block);
+    MachineDomTreeNode *Node = MDT.getBase().getNode(Block);
     MachineInstr *PrevSpill = SpillBBToSpill[Node];
     if (PrevSpill) {
       SlotIndex PIdx = LIS.getInstructionIndex(*PrevSpill);
@@ -1132,9 +1132,9 @@ void HoistSpillHelper::rmRedundantSpills(
       MachineInstr *SpillToRm = (CIdx > PIdx) ? CurrentSpill : PrevSpill;
       MachineInstr *SpillToKeep = (CIdx > PIdx) ? PrevSpill : CurrentSpill;
       SpillsToRm.push_back(SpillToRm);
-      SpillBBToSpill[MDT.DT->getNode(Block)] = SpillToKeep;
+      SpillBBToSpill[MDT.getBase().getNode(Block)] = SpillToKeep;
     } else {
-      SpillBBToSpill[MDT.DT->getNode(Block)] = CurrentSpill;
+      SpillBBToSpill[MDT.getBase().getNode(Block)] = CurrentSpill;
     }
   }
   for (const auto SpillToRm : SpillsToRm)
@@ -1209,7 +1209,7 @@ void HoistSpillHelper::getVisitOrders(
   // Sort the nodes in WorkSet in top-down order and save the nodes
   // in Orders. Orders will be used for hoisting in runHoistSpills.
   unsigned idx = 0;
-  Orders.push_back(MDT.DT->getNode(Root));
+  Orders.push_back(MDT.getBase().getNode(Root));
   do {
     MachineDomTreeNode *Node = Orders[idx++];
     const std::vector<MachineDomTreeNode *> &Children = Node->getChildren();

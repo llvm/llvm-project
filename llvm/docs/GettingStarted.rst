@@ -52,6 +52,12 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/tools``
    * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
 
+#. Checkout LLD linker **[Optional]**:
+
+   * ``cd where-you-want-llvm-to-live``
+   * ``cd llvm/tools``
+   * ``svn co http://llvm.org/svn/llvm-project/lld/trunk lld``
+
 #. Checkout Compiler-RT (required to build the sanitizers) **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
@@ -732,7 +738,7 @@ to your path, you can push committed changes upstream with `git llvm push`.
 While this is using SVN under the hood, it does not require any interaction from
 you with git-svn.
 After a few minutes, `git pull` should get back the changes as they were
-commited. Note that a current limitation is that `git` does not directly record
+committed. Note that a current limitation is that `git` does not directly record
 file rename, and thus it is propagated to SVN as a combination of delete-add
 instead of a file rename.
 

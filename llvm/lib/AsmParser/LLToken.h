@@ -355,6 +355,7 @@ enum Kind {
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DwarfMacinfo,     // DW_MACINFO_foo
+  ChecksumKind,     // CSK_foo
 
   // Type valued tokens (TyVal).
   Type,

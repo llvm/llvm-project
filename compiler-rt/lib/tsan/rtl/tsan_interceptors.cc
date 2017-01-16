@@ -231,6 +231,8 @@ void InitializeLibIgnore() {
     if (0 == internal_strcmp(s->type, kSuppressionLib))
       libignore()->AddIgnoredLibrary(s->templ);
   }
+  if (flags()->ignore_noninstrumented_modules)
+    libignore()->IgnoreNoninstrumentedModules(true);
   libignore()->OnLibraryLoaded(0);
 }
 
@@ -252,31 +254,20 @@ static unsigned g_thread_finalize_key;
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
                                      uptr pc)
-    : thr_(thr)
-    , pc_(pc)
-    , in_ignored_lib_(false) {
+    : thr_(thr), pc_(pc), in_ignored_lib_(false), ignoring_(false) {
   Initialize(thr);
-  if (!thr_->is_inited)
-    return;
-  if (!thr_->ignore_interceptors)
-    FuncEntry(thr, pc);
+  if (!thr_->is_inited) return;
+  if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
   DPrintf("#%d: intercept %s()\n", thr_->tid, fname);
-  if (!thr_->in_ignored_lib && libignore()->IsIgnored(pc)) {
-    in_ignored_lib_ = true;
-    thr_->in_ignored_lib = true;
-    ThreadIgnoreBegin(thr_, pc_);
-  }
-  if (flags()->ignore_interceptors_accesses) ThreadIgnoreBegin(thr_, pc_);
+  ignoring_ =
+      !thr_->in_ignored_lib && (flags()->ignore_interceptors_accesses ||
+                                libignore()->IsIgnored(pc, &in_ignored_lib_));
+  EnableIgnores();
 }
 
 ScopedInterceptor::~ScopedInterceptor() {
-  if (!thr_->is_inited)
-    return;
-  if (flags()->ignore_interceptors_accesses) ThreadIgnoreEnd(thr_, pc_);
-  if (in_ignored_lib_) {
-    thr_->in_ignored_lib = false;
-    ThreadIgnoreEnd(thr_, pc_);
-  }
+  if (!thr_->is_inited) return;
+  DisableIgnores();
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
@@ -284,20 +275,24 @@ ScopedInterceptor::~ScopedInterceptor() {
   }
 }
 
-void ScopedInterceptor::UserCallbackStart() {
-  if (flags()->ignore_interceptors_accesses) ThreadIgnoreEnd(thr_, pc_);
-  if (in_ignored_lib_) {
-    thr_->in_ignored_lib = false;
-    ThreadIgnoreEnd(thr_, pc_);
+void ScopedInterceptor::EnableIgnores() {
+  if (ignoring_) {
+    ThreadIgnoreBegin(thr_, pc_);
+    if (in_ignored_lib_) {
+      DCHECK(!thr_->in_ignored_lib);
+      thr_->in_ignored_lib = true;
+    }
   }
 }
 
-void ScopedInterceptor::UserCallbackEnd() {
-  if (in_ignored_lib_) {
-    thr_->in_ignored_lib = true;
-    ThreadIgnoreBegin(thr_, pc_);
+void ScopedInterceptor::DisableIgnores() {
+  if (ignoring_) {
+    ThreadIgnoreEnd(thr_, pc_);
+    if (in_ignored_lib_) {
+      DCHECK(thr_->in_ignored_lib);
+      thr_->in_ignored_lib = false;
+    }
   }
-  if (flags()->ignore_interceptors_accesses) ThreadIgnoreBegin(thr_, pc_);
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)

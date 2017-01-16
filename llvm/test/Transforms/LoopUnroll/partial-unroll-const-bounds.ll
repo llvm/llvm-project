@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-dynamic-cost-savings-discount=0 | FileCheck %s
+; RUN: opt < %s -S -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-max-percent-threshold-boost=100 | FileCheck %s
 
 ; The Loop TripCount is 9. However unroll factors 3 or 9 exceed given threshold.
 ; The test checks that we choose a smaller, power-of-two, unroll count and do not give up on unrolling.
@@ -21,7 +21,7 @@ for.body:                                         ; preds = %for.body, %entry
   %st = trunc i64 %indvars.iv to i32
   store i32 %st, i32* %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 10
+  %exitcond = icmp eq i64 %indvars.iv.next, 20
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body

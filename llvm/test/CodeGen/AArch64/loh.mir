@@ -1,0 +1,193 @@
+# RUN: llc -o /dev/null %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -debug-only=aarch64-collect-loh 2>&1 | FileCheck %s
+# REQUIRES: asserts
+--- |
+  define void @func0() { ret void }
+
+  declare void @extfunc()
+
+  @g0 = external global i32
+  @g1 = external global i32
+  @g2 = external global i32
+  @g3 = external global i32
+  @g4 = external global i32
+  @g5 = external global i32
+...
+---
+# Check various LOH variants. Remember that the algorithms walks the basic
+# blocks backwards.
+# CHECK-LABEL: ********** AArch64 Collect LOH **********
+# CHECK-LABEL: Looking in function func0
+name: func0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: Adding MCLOH_AdrpAdrp:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdrp:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdrp:
+    ; CHECK-NEXT: %X0<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %X0<def> = ADRP <ga:@g1>
+    %x0 = ADRP target-flags(aarch64-page) @g0
+    %x0 = ADRP target-flags(aarch64-page) @g1
+    %x1 = ADRP target-flags(aarch64-page) @g2
+    %x1 = ADRP target-flags(aarch64-page) @g3
+    %x1 = ADRP target-flags(aarch64-page) @g4
+
+  bb.1:
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
+    ; CHECK-NEXT: %X20<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %X3<def> = ADDXri %X20, <ga:@g0>
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %X1<def> = ADDXri %X1, <ga:@g0>
+    %x1 = ADRP target-flags(aarch64-page) @g0
+    %x9 = SUBXri undef %x11, 5, 0 ; should not affect MCLOH formation
+    %x1 = ADDXri %x1, target-flags(aarch64-pageoff) @g0, 0
+    %x20 = ADRP target-flags(aarch64-page) @g0
+    BL @extfunc, csr_aarch64_aapcs ; should not clobber X20
+    %x3 = ADDXri %x20, target-flags(aarch64-pageoff) @g0, 0
+
+  bb.2:
+    ; CHECK-NOT: MCLOH_AdrpAdd
+    %x9 = ADRP target-flags(aarch64-page) @g0
+    BL @extfunc, csr_aarch64_aapcs ; clobbers x9
+    ; Verification requires the use of 'undef' in front of the clobbered %x9
+    %x9 = ADDXri undef %x9, target-flags(aarch64-pageoff) @g0, 0
+
+  bb.3:
+    ; CHECK-NOT: MCLOH_AdrpAdd
+    %x10 = ADRP target-flags(aarch64-page) @g0
+    HINT 0, implicit def %x10 ; clobbers x10
+    %x10 = ADDXri %x10, target-flags(aarch64-pageoff) @g0, 0
+
+  bb.4:
+    ; Cannot produce a LOH for multiple users
+    ; CHECK-NOT: MCLOH_AdrpAdd
+    %x10 = ADRP target-flags(aarch64-page) @g0
+    HINT 0, implicit def %x10 ; clobbers x10
+    %x11 = ADDXri %x10, target-flags(aarch64-pageoff) @g0, 0
+    %x12 = ADDXri %x10, target-flags(aarch64-pageoff) @g0, 0
+
+  bb.5:
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
+    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %S6<def> = LDRSui %X5, <ga:@g2>
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
+    ; CHECK-NEXT: %X4<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %X4<def> = LDRXui %X4, <ga:@g2>
+    %x4 = ADRP target-flags(aarch64-page) @g2
+    %x4 = LDRXui %x4, target-flags(aarch64-pageoff) @g2
+    %x5 = ADRP target-flags(aarch64-page) @g2
+    %s6 = LDRSui %x5, target-flags(aarch64-pageoff) @g2
+
+  bb.6:
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdrGot:
+    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %X6<def> = LDRXui %X5, <ga:@g2>
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdrGot:
+    ; CHECK-NEXT: %X4<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %X4<def> = LDRXui %X4, <ga:@g2>
+    %x4 = ADRP target-flags(aarch64-page, aarch64-got) @g2
+    %x4 = LDRXui %x4, target-flags(aarch64-pageoff, aarch64-got) @g2
+    %x5 = ADRP target-flags(aarch64-page, aarch64-got) @g2
+    %x6 = LDRXui %x5, target-flags(aarch64-pageoff, aarch64-got) @g2
+
+  bb.7:
+    ; CHECK-NOT: Adding MCLOH_AdrpLdrGot:
+    ; Loading a float value from a GOT table makes no sense so this should not
+    ; produce an LOH.
+    %x11 = ADRP target-flags(aarch64-page, aarch64-got) @g5
+    %s11 = LDRSui %x11, target-flags(aarch64-pageoff, aarch64-got) @g5
+
+  bb.8:
+    ; CHECK-NEXT: Adding MCLOH_AdrpAddLdr:
+    ; CHECK-NEXT: %X7<def> = ADRP <ga:@g3>[TF=1]
+    ; CHECK-NEXT: %X8<def> = ADDXri %X7, <ga:@g3>
+    ; CHECK-NEXT: %D1<def> = LDRDui %X8, 8
+    %x7 = ADRP target-flags(aarch64-page) @g3
+    %x8 = ADDXri %x7, target-flags(aarch64-pageoff) @g3, 0
+    %d1 = LDRDui %x8, 8
+
+  bb.9:
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
+    ; CHECK-NEXT: %X3<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %X3<def> = ADDXri %X3, <ga:@g3>
+    ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
+    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %X2<def> = ADDXri %X5, <ga:@g3>
+    ; CHECK-NEXT: Adding MCLOH_AdrpAddStr:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %X1<def> = ADDXri %X1, <ga:@g3>
+    ; CHECK-NEXT: STRXui %XZR, %X1, 16
+    %x1 = ADRP target-flags(aarch64-page) @g3
+    %x1 = ADDXri %x1, target-flags(aarch64-pageoff) @g3, 0
+    STRXui %xzr, %x1, 16
+
+    ; This sequence should just produce an AdrpAdd (not AdrpAddStr)
+    %x5 = ADRP target-flags(aarch64-page) @g3
+    %x2 = ADDXri %x5, target-flags(aarch64-pageoff) @g3, 0
+    STRXui %x2, undef %x11, 16
+
+    ; This sequence should just produce an AdrpAdd (not AdrpAddStr)
+    %x3 = ADRP target-flags(aarch64-page) @g3
+    %x3 = ADDXri %x3, target-flags(aarch64-pageoff) @g3, 0
+    STRXui %x3, %x3, 16
+
+  bb.10:
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
+    ; CHECK-NEXT: %X2<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %X2<def> = LDRXui %X2, <ga:@g3>
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdrGotLdr:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: %X1<def> = LDRXui %X1, <ga:@g4>
+    ; CHECK-NEXT: %X1<def> = LDRXui %X1, 24
+    %x1 = ADRP target-flags(aarch64-page, aarch64-got) @g4
+    %x1 = LDRXui %x1, target-flags(aarch64-pageoff, aarch64-got) @g4
+    %x1 = LDRXui %x1, 24
+    ; Should just produce a MCLOH_AdrpLdr (not MCLOH_AdrpLdrGotLdr)
+    %x2 = ADRP target-flags(aarch64-page) @g3
+    %x2 = LDRXui %x2, target-flags(aarch64-pageoff) @g3
+    %x2 = LDRXui %x2, 24
+
+  bb.11:
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdr
+    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g1>
+    ; CHECK-NEXT: %X5<def> = LDRXui %X5, <ga:@g1>
+    ; CHECK-NEXT: Adding MCLOH_AdrpLdrGotStr:
+    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: %X1<def> = LDRXui %X1, <ga:@g4>
+    ; CHECK-NEXT: STRXui %XZR, %X1, 32
+    %x1 = ADRP target-flags(aarch64-page, aarch64-got) @g4
+    %x1 = LDRXui %x1, target-flags(aarch64-pageoff, aarch64-got) @g4
+    STRXui %xzr, %x1, 32
+    ; Should just produce a MCLOH_AdrpLdr (not MCLOH_AdrpLdrGotStr)
+    %x5 = ADRP target-flags(aarch64-page) @g1
+    %x5 = LDRXui %x5, target-flags(aarch64-pageoff) @g1
+    STRXui undef %x11, %x5, 32
+
+  bb.12:
+    ; CHECK-NOT: MCLOH_AdrpAdrp
+    ; CHECK: Adding MCLOH_AdrpAddLdr
+    ; %X9<def> = ADRP <ga:@g4>
+    ; %X9<def> = ADDXri %X9, <ga:@g4>
+    ; %X5<def> = LDRXui %X9, 0
+    %x9 = ADRP target-flags(aarch64-page, aarch64-got) @g4
+    %x9 = ADDXri %x9, target-flags(aarch64-pageoff, aarch64-got) @g4, 0
+    %x5 = LDRXui %x9, 0
+    %x9 = ADRP target-flags(aarch64-page, aarch64-got) @g5
+
+  bb.13:
+    successors: %bb.14
+    ; Cannot produce a LOH for multiple users
+    ; CHECK-NOT: MCLOH_AdrpAdd
+    %x10 = ADRP target-flags(aarch64-page) @g0
+    %x11 = ADDXri %x10, target-flags(aarch64-pageoff) @g0, 0
+    B %bb.14
+
+  bb.14:
+    liveins: %x10
+    %x12 = ADDXri %x10, target-flags(aarch64-pageoff) @g0, 0
+...

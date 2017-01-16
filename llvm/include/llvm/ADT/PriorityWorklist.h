@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
@@ -107,6 +108,39 @@ public:
     return false;
   }
 
+  /// Insert a sequence of new elements into the PriorityWorklist.
+  template <typename SequenceT>
+  typename std::enable_if<!std::is_convertible<SequenceT, T>::value>::type
+  insert(SequenceT &&Input) {
+    if (std::begin(Input) == std::end(Input))
+      // Nothing to do for an empty input sequence.
+      return;
+
+    // First pull the input sequence into the vector as a bulk append
+    // operation.
+    ptrdiff_t StartIndex = V.size();
+    V.insert(V.end(), std::begin(Input), std::end(Input));
+    // Now walk backwards fixing up the index map and deleting any duplicates.
+    for (ptrdiff_t i = V.size() - 1; i >= StartIndex; --i) {
+      auto InsertResult = M.insert({V[i], i});
+      if (InsertResult.second)
+        continue;
+
+      // If the existing index is before this insert's start, nuke that one and
+      // move it up.
+      ptrdiff_t &Index = InsertResult.first->second;
+      if (Index < StartIndex) {
+        V[Index] = T();
+        Index = i;
+        continue;
+      }
+
+      // Otherwise the existing one comes first so just clear out the value in
+      // this slot.
+      V[i] = T();
+    }
+  }
+
   /// Remove the last element of the PriorityWorklist.
   void pop_back() {
     assert(!empty() && "Cannot remove an element when empty!");
@@ -168,6 +202,11 @@ public:
     V.erase(E, V.end());
     return true;
   }
+
+  /// Reverse the items in the PriorityWorklist.
+  ///
+  /// This does an in-place reversal. Other kinds of reverse aren't easy to
+  /// support in the face of the worklist semantics.
 
   /// Completely clear the PriorityWorklist
   void clear() {

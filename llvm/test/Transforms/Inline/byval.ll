@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; Inlining a byval struct should cause an explicit copy into an alloca.
 

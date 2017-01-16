@@ -290,7 +290,7 @@ public:
   }
 
   /// Returns extension attribute kind to be used for i32 parameters
-  /// correpsonding to C-level int or unsigned int.  May be zeroext, signext,
+  /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
   /// or none.
   Attribute::AttrKind getExtAttrForI32Param(bool Signed = true) const {
     if (Impl->ShouldExtI32Param)
@@ -301,7 +301,7 @@ public:
   }
 
   /// Returns extension attribute kind to be used for i32 return values
-  /// correpsonding to C-level int or unsigned int.  May be zeroext, signext,
+  /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
   /// or none.
   Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
     if (Impl->ShouldExtI32Return)

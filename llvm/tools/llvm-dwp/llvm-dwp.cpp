@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
@@ -334,21 +335,6 @@ writeIndex(MCStreamer &Out, MCSection *Section,
   writeIndexTable(Out, ContributionOffsets, IndexEntries,
                   &DWARFUnitIndex::Entry::SectionContribution::Length);
 }
-static bool consumeCompressedDebugSectionHeader(StringRef &data,
-                                                uint64_t &OriginalSize) {
-  // Consume "ZLIB" prefix.
-  if (!data.startswith("ZLIB"))
-    return false;
-  data = data.substr(4);
-  // Consume uncompressed section size (big-endian 8 bytes).
-  DataExtractor extractor(data, false, 8);
-  uint32_t Offset = 0;
-  OriginalSize = extractor.getU64(&Offset);
-  if (Offset == 0)
-    return false;
-  data = data.substr(Offset);
-  return true;
-}
 
 std::string buildDWODescription(StringRef Name, StringRef DWPName, StringRef DWOName) {
   std::string Text = "\'";
@@ -368,22 +354,29 @@ std::string buildDWODescription(StringRef Name, StringRef DWPName, StringRef DWO
   return Text;
 }
 
-static Error handleCompressedSection(
-    std::deque<SmallString<32>> &UncompressedSections, StringRef &Name,
-    StringRef &Contents) {
-  if (!Name.startswith("zdebug_"))
+static Error createError(StringRef Name, Error E) {
+  return make_error<DWPError>(
+      ("failure while decompressing compressed section: '" + Name + "', " +
+       llvm::toString(std::move(E)))
+          .str());
+}
+
+static Error
+handleCompressedSection(std::deque<SmallString<32>> &UncompressedSections,
+                        StringRef &Name, StringRef &Contents) {
+  if (!Decompressor::isGnuStyle(Name))
     return Error::success();
+
+  Expected<Decompressor> Dec =
+      Decompressor::create(Name, Contents, false /*IsLE*/, false /*Is64Bit*/);
+  if (!Dec)
+    return createError(Name, Dec.takeError());
+
   UncompressedSections.emplace_back();
-  uint64_t OriginalSize;
-  if (!zlib::isAvailable())
-    return make_error<DWPError>("zlib not available");
-  if (!consumeCompressedDebugSectionHeader(Contents, OriginalSize) ||
-      zlib::uncompress(Contents, UncompressedSections.back(), OriginalSize) !=
-          zlib::StatusOK)
-    return make_error<DWPError>(
-        ("failure while decompressing compressed section: '" + Name + "\'")
-            .str());
-  Name = Name.substr(1);
+  if (Error E = Dec->decompress(UncompressedSections.back()))
+    return createError(Name, std::move(E));
+
+  Name = Name.substr(2); // Drop ".z"
   Contents = UncompressedSections.back();
   return Error::success();
 }
@@ -409,14 +402,14 @@ static Error handleSection(
   if (std::error_code Err = Section.getName(Name))
     return errorCodeToError(Err);
 
-  Name = Name.substr(Name.find_first_not_of("._"));
-
   StringRef Contents;
   if (auto Err = Section.getContents(Contents))
     return errorCodeToError(Err);
 
   if (auto Err = handleCompressedSection(UncompressedSections, Name, Contents))
     return Err;
+
+  Name = Name.substr(Name.find_first_not_of("._"));
 
   auto SectionPair = KnownSections.find(Name);
   if (SectionPair == KnownSections.end())

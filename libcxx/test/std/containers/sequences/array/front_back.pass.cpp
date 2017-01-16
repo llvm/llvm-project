@@ -9,10 +9,10 @@
 
 // <array>
 
-// reference front();
-// reference back();
+// reference front();       // constexpr in C++17
+// reference back();        // constexpr in C++17
 // const_reference front(); // constexpr in C++14
-// const_reference back(); // constexpr in C++14
+// const_reference back();  // constexpr in C++14
 
 #include <array>
 #include <cassert>
@@ -22,6 +22,20 @@
 // std::array is explicitly allowed to be initialized with A a = { init-list };.
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
+
+#if TEST_STD_VER > 14
+constexpr bool check_front( double val )
+{ 
+    std::array<double, 3> arr = {1, 2, 3.5};
+	return arr.front() == val;
+}
+
+constexpr bool check_back( double val )
+{ 
+    std::array<double, 3> arr = {1, 2, 3.5};
+	return arr.back() == val;
+}
+#endif
 
 int main()
 {
@@ -65,4 +79,10 @@ int main()
     }
 #endif
 
+#if TEST_STD_VER > 14
+    {
+        static_assert (check_front(1),   "");
+        static_assert (check_back (3.5), "");
+    }
+#endif
 }

@@ -470,38 +470,62 @@ class DIFile : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  DIFile(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops)
-      : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops) {}
+public:
+  enum ChecksumKind {
+    CSK_None,
+    CSK_MD5,
+    CSK_SHA1,
+    CSK_Last = CSK_SHA1 // Should be last enumeration.
+  };
+
+private:
+  ChecksumKind CSKind;
+
+  DIFile(LLVMContext &C, StorageType Storage, ChecksumKind CSK,
+         ArrayRef<Metadata *> Ops)
+      : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
+        CSKind(CSK) {}
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
-                         StringRef Directory, StorageType Storage,
-                         bool ShouldCreate = true) {
+                         StringRef Directory, ChecksumKind CSK, StringRef CS,
+                         StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, getCanonicalMDString(Context, Filename),
-                   getCanonicalMDString(Context, Directory), Storage,
-                   ShouldCreate);
+                   getCanonicalMDString(Context, Directory), CSK,
+                   getCanonicalMDString(Context, CS), Storage, ShouldCreate);
   }
   static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
-                         MDString *Directory, StorageType Storage,
-                         bool ShouldCreate = true);
+                         MDString *Directory, ChecksumKind CSK, MDString *CS,
+                         StorageType Storage, bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
-    return getTemporary(getContext(), getFilename(), getDirectory());
+    return getTemporary(getContext(), getFilename(), getDirectory(),
+                        getChecksumKind(), getChecksum());
   }
 
 public:
-  DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory),
-                    (Filename, Directory))
-  DEFINE_MDNODE_GET(DIFile, (MDString * Filename, MDString *Directory),
-                    (Filename, Directory))
+  DEFINE_MDNODE_GET(DIFile, (StringRef Filename, StringRef Directory,
+                             ChecksumKind CSK = CSK_None,
+                             StringRef CS = StringRef()),
+                    (Filename, Directory, CSK, CS))
+  DEFINE_MDNODE_GET(DIFile, (MDString *Filename, MDString *Directory,
+                             ChecksumKind CSK = CSK_None,
+                             MDString *CS = nullptr),
+                    (Filename, Directory, CSK, CS))
 
   TempDIFile clone() const { return cloneImpl(); }
 
   StringRef getFilename() const { return getStringOperand(0); }
   StringRef getDirectory() const { return getStringOperand(1); }
+  StringRef getChecksum() const { return getStringOperand(2); }
+  ChecksumKind getChecksumKind() const { return CSKind; }
+  StringRef getChecksumKindAsString() const;
 
   MDString *getRawFilename() const { return getOperandAs<MDString>(0); }
   MDString *getRawDirectory() const { return getOperandAs<MDString>(1); }
+  MDString *getRawChecksum() const { return getOperandAs<MDString>(2); }
+
+  static ChecksumKind getChecksumKind(StringRef CSKindStr);
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIFileKind;
@@ -1271,16 +1295,12 @@ public:
   /// Check \c this can be discriminated from \c RHS in a linetable entry.
   /// Scope and inlined-at chains are not recorded in the linetable, so they
   /// cannot be used to distinguish basic blocks.
-  ///
-  /// The current implementation is weaker than it should be, since it just
-  /// checks filename and line.
-  ///
-  /// FIXME: Add a check for getDiscriminator().
-  /// FIXME: Add a check for getColumn().
-  /// FIXME: Change the getFilename() check to getFile() (or add one for
-  /// getDirectory()).
   bool canDiscriminate(const DILocation &RHS) const {
-    return getFilename() != RHS.getFilename() || getLine() != RHS.getLine();
+    return getLine() != RHS.getLine() ||
+           getColumn() != RHS.getColumn() ||
+           getDiscriminator() != RHS.getDiscriminator() ||
+           getFilename() != RHS.getFilename() ||
+           getDirectory() != RHS.getDirectory();
   }
 
   /// Get the DWARF discriminator.
@@ -1303,10 +1323,13 @@ public:
   /// represented in a single line entry.  In this case, no location
   /// should be set.
   ///
-  /// Currently this function is simply a stub, and no location will be
-  /// used for all cases.
-  static DILocation *getMergedLocation(const DILocation *LocA,
-                                       const DILocation *LocB) {
+  /// Currently the function does not create a new location. If the locations
+  /// are the same, or cannot be discriminated, the first location is returned.
+  /// Otherwise an empty location will be used.
+  static const DILocation *getMergedLocation(const DILocation *LocA,
+                                             const DILocation *LocB) {
+    if (LocA && LocB && (LocA == LocB || !LocA->canDiscriminate(*LocB)))
+      return LocA;
     return nullptr;
   }
 
@@ -1973,15 +1996,6 @@ public:
     return Elements[I];
   }
 
-  /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const;
-
-  /// Return the offset of this fragment in bits.
-  uint64_t getFragmentOffsetInBits() const;
-
-  /// Return the size of this fragment in bits.
-  uint64_t getFragmentSizeInBits() const;
-
   /// Determine whether this represents a standalone constant value.
   bool isConstant() const;
 
@@ -2085,6 +2099,24 @@ public:
   bool startsWithDeref() const {
     return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
   }
+
+  /// Holds the characteristics of one fragment of a larger variable.
+  struct FragmentInfo {
+    uint64_t SizeInBits;
+    uint64_t OffsetInBits;
+  };
+
+  /// Retrieve the details of this fragment expression.
+  static Optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
+						expr_op_iterator End);
+
+  /// Retrieve the details of this fragment expression.
+  Optional<FragmentInfo> getFragmentInfo() const {
+    return getFragmentInfo(expr_op_begin(), expr_op_end());
+  }
+
+  /// Return whether this is a piece of an aggregate variable.
+  bool isFragment() const { return getFragmentInfo().hasValue(); }
 };
 
 /// Global variables.

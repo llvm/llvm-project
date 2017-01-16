@@ -13,7 +13,9 @@ add_llvm_unittest(AnalysisTests
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
   LazyCallGraphTest.cpp
-  LoopPassManagerTest.cpp
+  LoopInfoTest.cpp
+  MemoryBuiltinsTest.cpp
+  ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   TBAATest.cpp
   ValueTrackingTest.cpp

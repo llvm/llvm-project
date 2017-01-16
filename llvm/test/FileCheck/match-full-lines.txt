@@ -1,0 +1,53 @@
+// RUN: not FileCheck -match-full-lines -input-file %s %s  2>&1 \
+// RUN:   | FileCheck --check-prefix=ERROR --implicit-check-not=error: %s
+// RUN: not FileCheck -match-full-lines -strict-whitespace -input-file %s %s  2>&1 \
+// RUN:   | FileCheck --check-prefix=ERROR-STRICT --check-prefix=ERROR --implicit-check-not=error: %s
+
+Label 1
+a line
+trailing whitespace   
+trailing more whitespace   
+Label 2
+a line
+   leading whitespace
+   leading more whitespace
+
+Label 3
+a line
+
+Label 4
+a line
+a random thing
+
+Label 5
+Label 66
+
+// CHECK-LABEL:Label 1
+// CHECK:a line
+// CHECK:trailing whitespace
+// CHECK:trailing more whitespace   
+// ERROR-STRICT:error: expected string not found in input
+// ERROR-STRICT:// {{C}}HECK:trailing whitespace
+
+// CHECK-LABEL:Label 2
+// CHECK:a line
+// CHECK-NEXT:leading whitespace
+// CHECK-NEXT:   leading more whitespace
+// ERROR-STRICT:error: expected string not found in input
+// ERROR-STRICT:// {{C}}HECK-NEXT:leading whitespace
+
+// CHECK-LABEL:Label 3
+// CHECK:line
+// ERROR:error: expected string not found in input
+// ERROR:// {{C}}HECK:line
+
+// CHECK-LABEL:Label 4
+// CHECK:a line
+// CHECK-NOT:random
+// ERROR:error: {{C}}HECK-NOT: string occurred!
+// ERROR:a random thing
+
+// CHECK-LABEL:Label 5
+// CHECK-LABEL:Label 6
+// ERROR:error: expected string not found in input
+// ERROR:{{C}}HECK-LABEL:Label 6

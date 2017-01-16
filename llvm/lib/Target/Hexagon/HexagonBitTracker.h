@@ -1,4 +1,4 @@
-//===--- HexagonBitTracker.h ----------------------------------------------===//
+//===--- HexagonBitTracker.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HEXAGONBITTRACKER_H
-#define HEXAGONBITTRACKER_H
+#ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONBITTRACKER_H
+#define LLVM_LIB_TARGET_HEXAGON_HEXAGONBITTRACKER_H
 
 #include "BitTracker.h"
 #include "llvm/ADT/DenseMap.h"
+#include <cstdint>
 
 namespace llvm {
-  class HexagonInstrInfo;
-  class HexagonRegisterInfo;
+
+class HexagonInstrInfo;
+class HexagonRegisterInfo;
 
 struct HexagonEvaluator : public BitTracker::MachineEvaluator {
   typedef BitTracker::CellMapType CellMapType;
@@ -49,10 +51,12 @@ private:
   // Type of formal parameter extension.
   struct ExtType {
     enum { SExt, ZExt };
-    char Type;
-    uint16_t Width;
-    ExtType() : Type(0), Width(0) {}
+
+    ExtType() = default;
     ExtType(char t, uint16_t w) : Type(t), Width(w) {}
+
+    char Type = 0;
+    uint16_t Width = 0;
   };
   // Map VR -> extension type.
   typedef DenseMap<unsigned, ExtType> RegExtMap;
@@ -61,4 +65,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONBITTRACKER_H

@@ -94,7 +94,7 @@ public:
     return HelperT::template Lookup<N>::TraitsT::getFromVoidPointer(getImpl());
   }
 
-  operator bool() const { return Value & HelperT::PointerMask; }
+  explicit operator bool() const { return Value & HelperT::PointerMask; }
   bool operator==(const PointerSumType &R) const { return Value == R.Value; }
   bool operator!=(const PointerSumType &R) const { return Value != R.Value; }
   bool operator<(const PointerSumType &R) const { return Value < R.Value; }

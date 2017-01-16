@@ -46,10 +46,6 @@ public:
   void TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
                            const uint8_t *Data2);
 
-  void TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits, uint64_t Val,
-                           size_t NumCases, uint64_t *Cases);
-  int TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
-                          size_t DataSize);
   int TryToAddDesiredData(const uint8_t *PresentData,
                           const uint8_t *DesiredData, size_t DataSize);
 
@@ -147,29 +143,6 @@ public:
   size_t AutoDictAdds = 0;
 };
 
-int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
-                                    size_t DataSize) {
-  if (NumMutations >= kMaxMutations || !WantToHandleOneMoreMutation()) return 0;
-  ScopedDoingMyOwnMemmem scoped_doing_my_own_memmem;
-  const uint8_t *UnitData;
-  auto UnitSize = F->GetCurrentUnitInFuzzingThead(&UnitData);
-  int Res = 0;
-  const uint8_t *Beg = UnitData;
-  const uint8_t *End = Beg + UnitSize;
-  for (const uint8_t *Cur = Beg; Cur < End; Cur++) {
-    Cur = (uint8_t *)SearchMemory(Cur, End - Cur, &PresentData, DataSize);
-    if (!Cur)
-      break;
-    size_t Pos = Cur - Beg;
-    assert(Pos < UnitSize);
-    AddMutation(Pos, DataSize, DesiredData);
-    AddMutation(Pos, DataSize, DesiredData + 1);
-    AddMutation(Pos, DataSize, DesiredData - 1);
-    Res++;
-  }
-  return Res;
-}
-
 int TraceState::TryToAddDesiredData(const uint8_t *PresentData,
                                     const uint8_t *DesiredData,
                                     size_t DataSize) {
@@ -203,26 +176,6 @@ void TraceState::TraceMemcmpCallback(size_t CmpSize, const uint8_t *Data1,
     if (Added1) PrintASCII(Data1, CmpSize);
     if (Added2) PrintASCII(Data2, CmpSize);
     Printf("\n");
-  }
-}
-
-void TraceState::TraceSwitchCallback(uintptr_t PC, size_t ValSizeInBits,
-                                     uint64_t Val, size_t NumCases,
-                                     uint64_t *Cases) {
-  if (F->InFuzzingThread()) return;
-  size_t ValSize = ValSizeInBits / 8;
-  bool TryShort = IsTwoByteData(Val);
-  for (size_t i = 0; i < NumCases; i++)
-    TryShort &= IsTwoByteData(Cases[i]);
-
-  if (Options.Verbosity >= 3)
-    Printf("TraceSwitch: %p %zd # %zd; TryShort %d\n", PC, Val, NumCases,
-           TryShort);
-
-  for (size_t i = 0; i < NumCases; i++) {
-    TryToAddDesiredData(Val, Cases[i], ValSize);
-    if (TryShort)
-      TryToAddDesiredData(Val, Cases[i], 2);
   }
 }
 

@@ -53,28 +53,36 @@
 //
 // The code below is intended to be fully target-independent.
 
+#include "BitTracker.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"
-
-#include "BitTracker.h"
+#include <iterator>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 typedef BitTracker BT;
 
 namespace {
+
   // Local trickery to pretty print a register (without the whole "%vreg"
   // business).
   struct printv {
     printv(unsigned r) : R(r) {}
+
     unsigned R;
   };
+
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
       OS << 'v' << TargetRegisterInfo::virtReg2Index(PV.R);
@@ -82,9 +90,11 @@ namespace {
       OS << 's';
     return OS;
   }
-}
+
+} // end anonymous namespace
 
 namespace llvm {
+
   raw_ostream &operator<<(raw_ostream &OS, const BT::BitValue &BV) {
     switch (BV.Type) {
       case BT::BitValue::Top:
@@ -167,13 +177,13 @@ namespace llvm {
 
     return OS;
   }
-}
+
+} // end namespace llvm
 
 void BitTracker::print_cells(raw_ostream &OS) const {
   for (CellMapType::iterator I = Map.begin(), E = Map.end(); I != E; ++I)
     dbgs() << PrintReg(I->first, &ME.TRI) << " -> " << I->second << "\n";
 }
-
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
     : Trace(false), ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType) {}
@@ -181,7 +191,6 @@ BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
 BitTracker::~BitTracker() {
   delete &Map;
 }
-
 
 // If we were allowed to update a cell for a part of a register, the meet
 // operation would need to be parametrized by the register number and the
@@ -200,7 +209,6 @@ bool BT::RegisterCell::meet(const RegisterCell &RC, unsigned SelfR) {
   }
   return Changed;
 }
-
 
 // Insert the entire cell RC into the current cell at position given by M.
 BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
@@ -224,7 +232,6 @@ BT::RegisterCell &BT::RegisterCell::insert(const BT::RegisterCell &RC,
   return *this;
 }
 
-
 BT::RegisterCell BT::RegisterCell::extract(const BitMask &M) const {
   uint16_t B = M.first(), E = M.last(), W = width();
   assert(B < W && E < W);
@@ -242,7 +249,6 @@ BT::RegisterCell BT::RegisterCell::extract(const BitMask &M) const {
     RC.Bits[i+(W-B)] = Bits[i];
   return RC;
 }
-
 
 BT::RegisterCell &BT::RegisterCell::rol(uint16_t Sh) {
   // Rotate left (i.e. towards increasing bit indices).
@@ -265,7 +271,6 @@ BT::RegisterCell &BT::RegisterCell::rol(uint16_t Sh) {
   return *this;
 }
 
-
 BT::RegisterCell &BT::RegisterCell::fill(uint16_t B, uint16_t E,
       const BitValue &V) {
   assert(B <= E);
@@ -273,7 +278,6 @@ BT::RegisterCell &BT::RegisterCell::fill(uint16_t B, uint16_t E,
     Bits[B++] = V;
   return *this;
 }
-
 
 BT::RegisterCell &BT::RegisterCell::cat(const RegisterCell &RC) {
   // Append the cell given as the argument to the "this" cell.
@@ -285,7 +289,6 @@ BT::RegisterCell &BT::RegisterCell::cat(const RegisterCell &RC) {
   return *this;
 }
 
-
 uint16_t BT::RegisterCell::ct(bool B) const {
   uint16_t W = width();
   uint16_t C = 0;
@@ -294,7 +297,6 @@ uint16_t BT::RegisterCell::ct(bool B) const {
     C++;
   return C;
 }
-
 
 uint16_t BT::RegisterCell::cl(bool B) const {
   uint16_t W = width();
@@ -305,7 +307,6 @@ uint16_t BT::RegisterCell::cl(bool B) const {
   return C;
 }
 
-
 bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
   uint16_t W = Bits.size();
   if (RC.Bits.size() != W)
@@ -315,7 +316,6 @@ bool BT::RegisterCell::operator== (const RegisterCell &RC) const {
       return false;
   return true;
 }
-
 
 uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   // The general problem is with finding a register class that corresponds
@@ -341,7 +341,6 @@ uint16_t BT::MachineEvaluator::getRegBitWidth(const RegisterRef &RR) const {
   uint16_t BW = RC->getSize()*8;
   return BW;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
       const CellMapType &M) const {
@@ -370,7 +369,6 @@ BT::RegisterCell BT::MachineEvaluator::getCell(const RegisterRef &RR,
   return RegisterCell::top(BW);
 }
 
-
 void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
       CellMapType &M) const {
   // While updating the cell map can be done in a meaningful way for
@@ -388,7 +386,6 @@ void BT::MachineEvaluator::putCell(const RegisterRef &RR, RegisterCell RC,
   M[RR.Reg] = RC;
 }
 
-
 // Check if the cell represents a compile-time integer value.
 bool BT::MachineEvaluator::isInt(const RegisterCell &A) const {
   uint16_t W = A.width();
@@ -397,7 +394,6 @@ bool BT::MachineEvaluator::isInt(const RegisterCell &A) const {
       return false;
   return true;
 }
-
 
 // Convert a cell to the integer value. The result must fit in uint64_t.
 uint64_t BT::MachineEvaluator::toInt(const RegisterCell &A) const {
@@ -410,7 +406,6 @@ uint64_t BT::MachineEvaluator::toInt(const RegisterCell &A) const {
   }
   return Val;
 }
-
 
 // Evaluator helper functions. These implement some common operation on
 // register cells that can be used to implement target-specific instructions
@@ -426,7 +421,6 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(int64_t V, uint16_t W) const {
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
   const APInt &A = CI->getValue();
   uint16_t BW = A.getBitWidth();
@@ -436,7 +430,6 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
     Res[i] = A[i];
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
       const RegisterCell &A2) const {
@@ -471,7 +464,6 @@ BT::RegisterCell BT::MachineEvaluator::eADD(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -505,28 +497,25 @@ BT::RegisterCell BT::MachineEvaluator::eSUB(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eMLS(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
-  uint16_t Z = A1.ct(0) + A2.ct(0);
+  uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
   Res.fill(0, Z, BitValue::Zero);
   Res.fill(Z, W, BitValue::self());
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eMLU(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width() + A2.width();
-  uint16_t Z = A1.ct(0) + A2.ct(0);
+  uint16_t Z = A1.ct(false) + A2.ct(false);
   RegisterCell Res(W);
   Res.fill(0, Z, BitValue::Zero);
   Res.fill(Z, W, BitValue::self());
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
       uint16_t Sh) const {
@@ -536,7 +525,6 @@ BT::RegisterCell BT::MachineEvaluator::eASL(const RegisterCell &A1,
   Res.fill(0, Sh, BitValue::Zero);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eLSR(const RegisterCell &A1,
       uint16_t Sh) const {
@@ -548,7 +536,6 @@ BT::RegisterCell BT::MachineEvaluator::eLSR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eASR(const RegisterCell &A1,
       uint16_t Sh) const {
   uint16_t W = A1.width();
@@ -559,7 +546,6 @@ BT::RegisterCell BT::MachineEvaluator::eASR(const RegisterCell &A1,
   Res.fill(W-Sh, W, Sign);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
       const RegisterCell &A2) const {
@@ -583,7 +569,6 @@ BT::RegisterCell BT::MachineEvaluator::eAND(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -606,7 +591,6 @@ BT::RegisterCell BT::MachineEvaluator::eORL(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eXOR(const RegisterCell &A1,
       const RegisterCell &A2) const {
   uint16_t W = A1.width();
@@ -627,7 +611,6 @@ BT::RegisterCell BT::MachineEvaluator::eXOR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eNOT(const RegisterCell &A1) const {
   uint16_t W = A1.width();
   RegisterCell Res(W);
@@ -643,7 +626,6 @@ BT::RegisterCell BT::MachineEvaluator::eNOT(const RegisterCell &A1) const {
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
       uint16_t BitN) const {
   assert(BitN < A1.width());
@@ -652,7 +634,6 @@ BT::RegisterCell BT::MachineEvaluator::eSET(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
       uint16_t BitN) const {
   assert(BitN < A1.width());
@@ -660,7 +641,6 @@ BT::RegisterCell BT::MachineEvaluator::eCLR(const RegisterCell &A1,
   Res[BitN] = BitValue::Zero;
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eCLB(const RegisterCell &A1, bool B,
       uint16_t W) const {
@@ -672,7 +652,6 @@ BT::RegisterCell BT::MachineEvaluator::eCLB(const RegisterCell &A1, bool B,
   return RegisterCell::self(0, W);
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
       uint16_t W) const {
   uint16_t C = A1.ct(B), AW = A1.width();
@@ -682,7 +661,6 @@ BT::RegisterCell BT::MachineEvaluator::eCTB(const RegisterCell &A1, bool B,
     return eIMM(C, W);
   return RegisterCell::self(0, W);
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eSXT(const RegisterCell &A1,
       uint16_t FromN) const {
@@ -695,7 +673,6 @@ BT::RegisterCell BT::MachineEvaluator::eSXT(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
       uint16_t FromN) const {
   uint16_t W = A1.width();
@@ -704,7 +681,6 @@ BT::RegisterCell BT::MachineEvaluator::eZXT(const RegisterCell &A1,
   Res.fill(FromN, W, BitValue::Zero);
   return Res;
 }
-
 
 BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1,
       uint16_t B, uint16_t E) const {
@@ -718,7 +694,6 @@ BT::RegisterCell BT::MachineEvaluator::eXTR(const RegisterCell &A1,
   return Res;
 }
 
-
 BT::RegisterCell BT::MachineEvaluator::eINS(const RegisterCell &A1,
       const RegisterCell &A2, uint16_t AtN) const {
   uint16_t W1 = A1.width(), W2 = A2.width();
@@ -730,7 +705,6 @@ BT::RegisterCell BT::MachineEvaluator::eINS(const RegisterCell &A1,
     Res.insert(RegisterCell::ref(A2), BT::BitMask(AtN, AtN+W2-1));
   return Res;
 }
-
 
 BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   assert(Sub == 0 && "Generic BitTracker::mask called for Sub != 0");
@@ -784,7 +758,6 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
 
   return true;
 }
-
 
 // Main W-Z implementation.
 
@@ -977,7 +950,6 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
   }
 }
 
-
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
     dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
@@ -997,16 +969,13 @@ void BT::visitUsesOf(unsigned Reg) {
   }
 }
 
-
 BT::RegisterCell BT::get(RegisterRef RR) const {
   return ME.getCell(RR, Map);
 }
 
-
 void BT::put(RegisterRef RR, const RegisterCell &RC) {
   ME.putCell(RR, RC, Map);
 }
-
 
 // Replace all references to bits from OldRR with the corresponding bits
 // in NewRR.
@@ -1033,7 +1002,6 @@ void BT::subst(RegisterRef OldRR, RegisterRef NewRR) {
   }
 }
 
-
 // Check if the block has been "executed" during propagation. (If not, the
 // block is dead, but it may still appear to be reachable.)
 bool BT::reached(const MachineBasicBlock *B) const {
@@ -1046,7 +1014,6 @@ bool BT::reached(const MachineBasicBlock *B) const {
   }
   return false;
 }
-
 
 // Visit an individual instruction. This could be a newly added instruction,
 // or one that has been modified by an optimization.
@@ -1061,13 +1028,11 @@ void BT::visit(const MachineInstr &MI) {
     FlowQ.pop();
 }
 
-
 void BT::reset() {
   EdgeExec.clear();
   InstrExec.clear();
   Map.clear();
 }
-
 
 void BT::run() {
   reset();
@@ -1141,4 +1106,3 @@ void BT::run() {
   if (Trace)
     print_cells(dbgs() << "Cells after propagation:\n");
 }
-

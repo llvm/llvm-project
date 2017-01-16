@@ -22,6 +22,12 @@
 using namespace llvm;
 using namespace object;
 
+static llvm::cl::opt<bool> IgnoreEmptyThinLTOIndexFile(
+    "ignore-empty-index-file", llvm::cl::ZeroOrMore,
+    llvm::cl::desc(
+        "Ignore an empty index file and perform non-ThinLTO compilation"),
+    llvm::cl::init(false));
+
 ModuleSummaryIndexObjectFile::ModuleSummaryIndexObjectFile(
     MemoryBufferRef Object, std::unique_ptr<ModuleSummaryIndex> I)
     : SymbolicFile(Binary::ID_ModuleSummaryIndex, Object), Index(std::move(I)) {
@@ -97,6 +103,8 @@ llvm::getModuleSummaryIndexForFile(StringRef Path) {
   if (EC)
     return errorCodeToError(EC);
   MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
+  if (IgnoreEmptyThinLTOIndexFile && !BufferRef.getBufferSize())
+    return nullptr;
   Expected<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
       object::ModuleSummaryIndexObjectFile::create(BufferRef);
   if (!ObjOrErr)

@@ -32,8 +32,11 @@ namespace PR6707 {
   static const unsigned char ten = 10;
   template<typename T, T Value, typename U>
   void f2(X<T, Value>, X<U, Value>);
+  // expected-note@-1 {{candidate template ignored: deduced values of conflicting types for parameter 'Value' (10 of type 'int' vs. 10 of type 'char')}}
+  // expected-note@-2 {{candidate template ignored: deduced values of conflicting types for parameter 'Value' (10 of type 'char' vs. 10 of type 'int')}}
 
   void g2() {
-    f2(X<int, 10>(), X<char, ten>());
+    f2(X<int, 10>(), X<char, ten>()); // expected-error {{no matching}}
+    f2(X<char, 10>(), X<int, ten>()); // expected-error {{no matching}}
   }
 }

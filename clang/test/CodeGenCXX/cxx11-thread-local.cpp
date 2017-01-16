@@ -6,18 +6,18 @@
 int f();
 int g();
 
-// LINUX: @a = thread_local global i32 0
-// DARWIN: @a = internal thread_local global i32 0
+// LINUX-DAG: @a = thread_local global i32 0
+// DARWIN-DAG: @a = internal thread_local global i32 0
 thread_local int a = f();
 extern thread_local int b;
-// CHECK: @c = global i32 0
+// CHECK-DAG: @c = global i32 0
 int c = b;
-// CHECK: @_ZL1d = internal thread_local global i32 0
+// CHECK-DAG: @_ZL1d = internal thread_local global i32 0
 static thread_local int d = g();
 
 struct U { static thread_local int m; };
-// LINUX: @_ZN1U1mE = thread_local global i32 0
-// DARWIN: @_ZN1U1mE = internal thread_local global i32 0
+// LINUX-DAG: @_ZN1U1mE = thread_local global i32 0
+// DARWIN-DAG: @_ZN1U1mE = internal thread_local global i32 0
 thread_local int U::m = f();
 
 namespace MismatchedInitType {
@@ -35,37 +35,64 @@ namespace MismatchedInitType {
 template<typename T> struct V { static thread_local int m; };
 template<typename T> thread_local int V<T>::m = g();
 
-// CHECK: @e = global i32 0
-int e = V<int>::m;
+template<typename T> struct W { static thread_local int m; };
+template<typename T> thread_local int W<T>::m = 123;
 
-// CHECK: @_ZN1VIiE1mE = linkonce_odr thread_local global i32 0
+struct Dtor { ~Dtor(); };
+template<typename T> struct X { static thread_local Dtor m; };
+template<typename T> thread_local Dtor X<T>::m;
 
-// CHECK: @_ZZ1fvE1n = internal thread_local global i32 0
+// CHECK-DAG: @e = global
+void *e = V<int>::m + W<int>::m + &X<int>::m;
 
-// CHECK: @_ZGVZ1fvE1n = internal thread_local global i8 0
+template thread_local int V<float>::m;
+template thread_local int W<float>::m;
+template thread_local Dtor X<float>::m;
 
-// CHECK: @_ZZ8tls_dtorvE1s = internal thread_local global
-// CHECK: @_ZGVZ8tls_dtorvE1s = internal thread_local global i8 0
+extern template thread_local int V<char>::m;
+extern template thread_local int W<char>::m;
+extern template thread_local Dtor X<char>::m;
 
-// CHECK: @_ZZ8tls_dtorvE1t = internal thread_local global
-// CHECK: @_ZGVZ8tls_dtorvE1t = internal thread_local global i8 0
+void *e2 = V<char>::m + W<char>::m + &X<char>::m;
 
-// CHECK: @_ZZ8tls_dtorvE1u = internal thread_local global
-// CHECK: @_ZGVZ8tls_dtorvE1u = internal thread_local global i8 0
-// CHECK: @_ZGRZ8tls_dtorvE1u_ = internal thread_local global
+// CHECK-DAG: @_ZN1VIiE1mE = linkonce_odr thread_local global i32 0
+// CHECK-DAG: @_ZN1WIiE1mE = linkonce_odr thread_local global i32 123
+// CHECK-DAG: @_ZN1XIiE1mE = linkonce_odr thread_local global {{.*}}
+// CHECK-DAG: @_ZN1VIfE1mE = weak_odr thread_local global i32 0
+// CHECK-DAG: @_ZN1WIfE1mE = weak_odr thread_local global i32 123
+// CHECK-DAG: @_ZN1XIfE1mE = weak_odr thread_local global {{.*}}
 
-// CHECK: @_ZGVN1VIiE1mE = linkonce_odr thread_local global i64 0
+// CHECK-DAG: @_ZZ1fvE1n = internal thread_local global i32 0
 
-// CHECK: @__tls_guard = internal thread_local global i8 0
+// CHECK-DAG: @_ZGVZ1fvE1n = internal thread_local global i8 0
 
-// CHECK: @llvm.global_ctors = appending global {{.*}} @[[GLOBAL_INIT:[^ ]*]]
+// CHECK-DAG: @_ZZ8tls_dtorvE1s = internal thread_local global
+// CHECK-DAG: @_ZGVZ8tls_dtorvE1s = internal thread_local global i8 0
 
-// LINUX: @_ZTH1a = alias void (), void ()* @__tls_init
-// DARWIN: @_ZTH1a = internal alias void (), void ()* @__tls_init
-// CHECK: @_ZTHL1d = internal alias void (), void ()* @__tls_init
-// LINUX: @_ZTHN1U1mE = alias void (), void ()* @__tls_init
-// DARWIN: @_ZTHN1U1mE = internal alias void (), void ()* @__tls_init
-// CHECK: @_ZTHN1VIiE1mE = linkonce_odr alias void (), void ()* @__tls_init
+// CHECK-DAG: @_ZZ8tls_dtorvE1t = internal thread_local global
+// CHECK-DAG: @_ZGVZ8tls_dtorvE1t = internal thread_local global i8 0
+
+// CHECK-DAG: @_ZZ8tls_dtorvE1u = internal thread_local global
+// CHECK-DAG: @_ZGVZ8tls_dtorvE1u = internal thread_local global i8 0
+// CHECK-DAG: @_ZGRZ8tls_dtorvE1u_ = internal thread_local global
+
+// CHECK-DAG: @_ZGVN1VIiE1mE = linkonce_odr thread_local global i64 0
+
+// CHECK-DAG: @__tls_guard = internal thread_local global i8 0
+
+// CHECK-DAG: @llvm.global_ctors = appending global {{.*}} @[[GLOBAL_INIT:[^ ]*]]
+
+// LINUX-DAG: @_ZTH1a = alias void (), void ()* @__tls_init
+// DARWIN-DAG: @_ZTH1a = internal alias void (), void ()* @__tls_init
+// CHECK-DAG: @_ZTHL1d = internal alias void (), void ()* @__tls_init
+// LINUX-DAG: @_ZTHN1U1mE = alias void (), void ()* @__tls_init
+// DARWIN-DAG: @_ZTHN1U1mE = internal alias void (), void ()* @__tls_init
+// CHECK-DAG: @_ZTHN1VIiE1mE = linkonce_odr alias void (), void ()* @[[V_M_INIT:[^, ]*]]
+// CHECK-NOT: @_ZTHN1WIiE1mE =
+// CHECK-DAG: @_ZTHN1XIiE1mE = linkonce_odr alias void (), void ()* @[[X_M_INIT:[^, ]*]]
+// CHECK-DAG: @_ZTHN1VIfE1mE = weak_odr alias void (), void ()* @[[VF_M_INIT:[^, ]*]]
+// CHECK-NOT: @_ZTHN1WIfE1mE =
+// CHECK-DAG: @_ZTHN1XIfE1mE = weak_odr alias void (), void ()* @[[XF_M_INIT:[^, ]*]]
 
 
 // Individual variable initialization functions:
@@ -118,7 +145,9 @@ int f() {
 // LINUX: call i32* @_ZTWN1VIiE1mE()
 // DARWIN: call cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
 // CHECK-NEXT: load i32, i32* %{{.*}}, align 4
-// CHECK-NEXT: store i32 %{{.*}}, i32* @e, align 4
+// LINUX: call {{.*}}* @_ZTWN1XIiE1mE()
+// DARWIN: call cxx_fast_tlscc {{.*}}* @_ZTWN1XIiE1mE()
+// CHECK: store {{.*}} @e
 
 // LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
 // DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
@@ -126,6 +155,64 @@ int f() {
 // DARWIN: call cxx_fast_tlscc void @_ZTHN1VIiE1mE()
 // CHECK: ret i32* @_ZN1VIiE1mE
 
+// LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1WIiE1mE()
+// DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc i32* @_ZTWN1WIiE1mE()
+// CHECK-NOT: call
+// CHECK: ret i32* @_ZN1WIiE1mE
+
+// LINUX-LABEL: define weak_odr hidden {{.*}}* @_ZTWN1XIiE1mE()
+// DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc {{.*}}* @_ZTWN1XIiE1mE()
+// LINUX: call void @_ZTHN1XIiE1mE()
+// DARWIN: call cxx_fast_tlscc void @_ZTHN1XIiE1mE()
+// CHECK: ret {{.*}}* @_ZN1XIiE1mE
+
+// CHECK: define internal {{.*}} @[[VF_M_INIT]]()
+// LINUX-SAME: comdat($_ZN1VIfE1mE)
+// DARWIN-NOT: comdat
+// CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
+// CHECK: %[[VF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
+// CHECK: br i1 %[[VF_M_INITIALIZED]],
+// need init:
+// CHECK: call i32 @_Z1gv()
+// CHECK: store i32 %{{.*}}, i32* @_ZN1VIfE1mE, align 4
+// CHECK: store i64 1, i64* @_ZGVN1VIfE1mE
+// CHECK: br label
+
+// CHECK: define internal {{.*}} @[[XF_M_INIT]]()
+// LINUX-SAME: comdat($_ZN1XIfE1mE)
+// DARWIN-NOT: comdat
+// CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
+// CHECK: %[[XF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
+// CHECK: br i1 %[[XF_M_INITIALIZED]],
+// need init:
+// LINUX: call {{.*}}__cxa_thread_atexit
+// DARWIN: call {{.*}}_tlv_atexit
+// CHECK: store i64 1, i64* @_ZGVN1XIfE1mE
+// CHECK: br label
+
+// LINUX: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
+// DARWIN: declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+
+// DARWIN: declare cxx_fast_tlscc i32* @_ZTWN1VIcE1mE()
+// LINUX: define weak_odr hidden i32* @_ZTWN1VIcE1mE()
+// LINUX-NOT: comdat
+// LINUX: br i1 icmp ne (void ()* @_ZTHN1VIcE1mE,
+// LINUX: call void @_ZTHN1VIcE1mE()
+// LINUX: ret i32* @_ZN1VIcE1mE
+
+// DARWIN: declare cxx_fast_tlscc i32* @_ZTWN1WIcE1mE()
+// LINUX: define weak_odr hidden i32* @_ZTWN1WIcE1mE()
+// LINUX-NOT: comdat
+// LINUX: br i1 icmp ne (void ()* @_ZTHN1WIcE1mE,
+// LINUX: call void @_ZTHN1WIcE1mE()
+// LINUX: ret i32* @_ZN1WIcE1mE
+
+// DARWIN: declare cxx_fast_tlscc {{.*}}* @_ZTWN1XIcE1mE()
+// LINUX: define weak_odr hidden {{.*}}* @_ZTWN1XIcE1mE()
+// LINUX-NOT: comdat
+// LINUX: br i1 icmp ne (void ()* @_ZTHN1XIcE1mE,
+// LINUX: call void @_ZTHN1XIcE1mE()
+// LINUX: ret {{.*}}* @_ZN1XIcE1mE
 
 struct S { S(); ~S(); };
 struct T { ~T(); };
@@ -154,9 +241,6 @@ void tls_dtor() {
   static thread_local const S &u = S();
 }
 
-// LINUX: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
-// DARWIN: declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
-
 // CHECK: define {{.*}} @_Z7PR15991v(
 int PR15991() {
   thread_local int n;
@@ -184,7 +268,9 @@ void set_anon_i() {
 // LINUX-LABEL: define internal i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 // DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWN12_GLOBAL__N_16anon_iE()
 
-// CHECK: define {{.*}} @[[V_M_INIT:.*]]()
+// CHECK: define internal {{.*}} @[[V_M_INIT]]()
+// LINUX-SAME: comdat($_ZN1VIiE1mE)
+// DARWIN-NOT: comdat
 // CHECK: load i8, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: %[[V_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[V_M_INITIALIZED]],
@@ -192,6 +278,18 @@ void set_anon_i() {
 // CHECK: call i32 @_Z1gv()
 // CHECK: store i32 %{{.*}}, i32* @_ZN1VIiE1mE, align 4
 // CHECK: store i64 1, i64* @_ZGVN1VIiE1mE
+// CHECK: br label
+
+// CHECK: define internal {{.*}} @[[X_M_INIT]]()
+// LINUX-SAME: comdat($_ZN1XIiE1mE)
+// DARWIN-NOT: comdat
+// CHECK: load i8, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)
+// CHECK: %[[X_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
+// CHECK: br i1 %[[X_M_INITIALIZED]],
+// need init:
+// LINUX: call {{.*}}__cxa_thread_atexit
+// DARWIN: call {{.*}}_tlv_atexit
+// CHECK: store i64 1, i64* @_ZGVN1XIiE1mE
 // CHECK: br label
 
 // CHECK: define {{.*}}@[[GLOBAL_INIT:.*]]()
@@ -205,10 +303,13 @@ void set_anon_i() {
 // CHECK: br i1 %[[NEED_TLS_INIT]],
 // init:
 // CHECK: store i8 1, i8* @__tls_guard
+// CHECK-NOT: call void @[[V_M_INIT]]()
 // CHECK: call void @[[A_INIT]]()
+// CHECK-NOT: call void @[[V_M_INIT]]()
 // CHECK: call void @[[D_INIT]]()
+// CHECK-NOT: call void @[[V_M_INIT]]()
 // CHECK: call void @[[U_M_INIT]]()
-// CHECK: call void @[[V_M_INIT]]()
+// CHECK-NOT: call void @[[V_M_INIT]]()
 
 
 // LIUNX: define weak_odr hidden i32* @_ZTW1a() {

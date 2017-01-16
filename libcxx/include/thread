@@ -148,7 +148,8 @@ class __thread_specific_ptr
     __thread_specific_ptr(const __thread_specific_ptr&);
     __thread_specific_ptr& operator=(const __thread_specific_ptr&);
 
-    static void __at_thread_exit(void*);
+    static void _LIBCPP_TLS_DESTRUCTOR_CC __at_thread_exit(void*);
+
 public:
     typedef _Tp* pointer;
 
@@ -164,7 +165,7 @@ public:
 };
 
 template <class _Tp>
-void
+void _LIBCPP_TLS_DESTRUCTOR_CC
 __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 {
     delete static_cast<pointer>(__p);
@@ -173,12 +174,10 @@ __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr()
 {
-    int __ec = __libcpp_tls_create(
-        &__key_,
-        &__thread_specific_ptr::__at_thread_exit);
-    if (__ec)
-        __throw_system_error(__ec,
-                           "__thread_specific_ptr construction failed");
+  int __ec =
+      __libcpp_tls_create(&__key_, &__thread_specific_ptr::__at_thread_exit);
+  if (__ec)
+    __throw_system_error(__ec, "__thread_specific_ptr construction failed");
 }
 
 template <class _Tp>
@@ -211,7 +210,7 @@ _LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
 
 template<> struct hash<__thread_id>;
 
-class _LIBCPP_TYPE_VIS_ONLY __thread_id
+class _LIBCPP_TEMPLATE_VIS __thread_id
 {
     // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
     // NULL is the no-thread value on Darwin.  Someone needs to check
@@ -254,11 +253,11 @@ private:
 
     friend __thread_id this_thread::get_id() _NOEXCEPT;
     friend class _LIBCPP_TYPE_VIS thread;
-    friend struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>;
+    friend struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>;
 };
 
 template<>
-struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>
+struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
     : public unary_function<__thread_id, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
@@ -291,7 +290,7 @@ public:
     typedef __libcpp_thread_t native_handle_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    thread() _NOEXCEPT : __t_(0) {}
+    thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Fp, class ..._Args,
               class = typename enable_if
@@ -307,7 +306,7 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
-    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = 0;}
+    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = _LIBCPP_NULL_THREAD;}
     _LIBCPP_INLINE_VISIBILITY
     thread& operator=(thread&& __t) _NOEXCEPT;
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -316,7 +315,7 @@ public:
     void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
 
     _LIBCPP_INLINE_VISIBILITY
-    bool joinable() const _NOEXCEPT {return __t_ != 0;}
+    bool joinable() const _NOEXCEPT {return !__libcpp_thread_isnull(&__t_);}
     void join();
     void detach();
     _LIBCPP_INLINE_VISIBILITY
@@ -410,10 +409,10 @@ inline
 thread&
 thread::operator=(thread&& __t) _NOEXCEPT
 {
-    if (__t_ != 0)
+    if (!__libcpp_thread_isnull(&__t_))
         terminate();
     __t_ = __t.__t_;
-    __t.__t_ = 0;
+    __t.__t_ = _LIBCPP_NULL_THREAD;
     return *this;
 }
 

@@ -28,7 +28,7 @@ int main()
     typedef std::try_to_lock_t T2;
     typedef std::adopt_lock_t T3;
 
-    T1 t1 = std::defer_lock;
-    T2 t2 = std::try_to_lock;
-    T3 t3 = std::adopt_lock;
+    T1 t1 = std::defer_lock; ((void)t1);
+    T2 t2 = std::try_to_lock; ((void)t2);
+    T3 t3 = std::adopt_lock; ((void)t3);
 }

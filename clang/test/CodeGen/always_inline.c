@@ -1,7 +1,7 @@
 // RUN: %clang -emit-llvm -S -o %t %s
 // RUN: not grep '@f0' %t
 // RUN: not grep 'call ' %t
-// RUN: %clang -mllvm -disable-llvm-optzns -emit-llvm -S -o %t %s
+// RUN: %clang -Xclang -disable-llvm-passes -emit-llvm -S -o %t %s
 // RUN: grep '@f0' %t | count 2
 
 //static int f0() { 

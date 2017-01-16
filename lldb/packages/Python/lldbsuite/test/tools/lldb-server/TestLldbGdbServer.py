@@ -20,10 +20,11 @@ import platform
 import signal
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbdwarf import *
 from lldbsuite.test import lldbutil
 
 
-class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
+class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -541,6 +542,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(reg_infos)
         self.assertTrue(len(reg_infos) > 0)
 
+        inferior_exe_path = os.path.abspath("a.out")
+        Target = self.dbg.CreateTarget(inferior_exe_path)
+        byte_order = Target.GetByteOrder()
+
         # Read value for each register.
         reg_index = 0
         for reg_info in reg_infos:
@@ -565,6 +570,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Verify the response length.
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
+
+            if "dynamic_size_dwarf_expr_bytes" in reg_info:
+                self.updateRegInfoBitsize(reg_info, byte_order)
             self.assertEqual(len(p_response), 2 * int(reg_info["bitsize"]) / 8)
 
             # Increment loop

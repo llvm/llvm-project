@@ -323,68 +323,114 @@ MemDepResult MemoryDependenceResults::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit) {
 
+  MemDepResult InvariantGroupDependency = MemDepResult::getUnknown();
   if (QueryInst != nullptr) {
     if (auto *LI = dyn_cast<LoadInst>(QueryInst)) {
-      MemDepResult invariantGroupDependency =
-          getInvariantGroupPointerDependency(LI, BB);
+      InvariantGroupDependency = getInvariantGroupPointerDependency(LI, BB);
 
-      if (invariantGroupDependency.isDef())
-        return invariantGroupDependency;
+      if (InvariantGroupDependency.isDef())
+        return InvariantGroupDependency;
     }
   }
-  return getSimplePointerDependencyFrom(MemLoc, isLoad, ScanIt, BB, QueryInst,
-                                        Limit);
+  MemDepResult SimpleDep = getSimplePointerDependencyFrom(
+      MemLoc, isLoad, ScanIt, BB, QueryInst, Limit);
+  if (SimpleDep.isDef())
+    return SimpleDep;
+  // Non-local invariant group dependency indicates there is non local Def
+  // (it only returns nonLocal if it finds nonLocal def), which is better than
+  // local clobber and everything else.
+  if (InvariantGroupDependency.isNonLocal())
+    return InvariantGroupDependency;
+
+  assert(InvariantGroupDependency.isUnknown() &&
+         "InvariantGroupDependency should be only unknown at this point");
+  return SimpleDep;
 }
 
 MemDepResult
 MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
                                                             BasicBlock *BB) {
-  Value *LoadOperand = LI->getPointerOperand();
-  // It's is not safe to walk the use list of global value, because function
-  // passes aren't allowed to look outside their functions.
-  if (isa<GlobalValue>(LoadOperand))
-    return MemDepResult::getUnknown();
 
   auto *InvariantGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group);
   if (!InvariantGroupMD)
     return MemDepResult::getUnknown();
 
-  MemDepResult Result = MemDepResult::getUnknown();
-  SmallSet<Value *, 14> Seen;
+  // Take the ptr operand after all casts and geps 0. This way we can search
+  // cast graph down only.
+  Value *LoadOperand = LI->getPointerOperand()->stripPointerCasts();
+
+  // It's is not safe to walk the use list of global value, because function
+  // passes aren't allowed to look outside their functions.
+  // FIXME: this could be fixed by filtering instructions from outside
+  // of current function.
+  if (isa<GlobalValue>(LoadOperand))
+    return MemDepResult::getUnknown();
+
   // Queue to process all pointers that are equivalent to load operand.
-  SmallVector<Value *, 8> LoadOperandsQueue;
+  SmallVector<const Value *, 8> LoadOperandsQueue;
   LoadOperandsQueue.push_back(LoadOperand);
+
+  Instruction *ClosestDependency = nullptr;
+  // Order of instructions in uses list is unpredictible. In order to always
+  // get the same result, we will look for the closest dominance.
+  auto GetClosestDependency = [this](Instruction *Best, Instruction *Other) {
+    assert(Other && "Must call it with not null instruction");
+    if (Best == nullptr || DT.dominates(Best, Other))
+      return Other;
+    return Best;
+  };
+
+
+  // FIXME: This loop is O(N^2) because dominates can be O(n) and in worst case
+  // we will see all the instructions. This should be fixed in MSSA.
   while (!LoadOperandsQueue.empty()) {
-    Value *Ptr = LoadOperandsQueue.pop_back_val();
-    if (isa<GlobalValue>(Ptr))
-      continue;
+    const Value *Ptr = LoadOperandsQueue.pop_back_val();
+    assert(Ptr && !isa<GlobalValue>(Ptr) &&
+           "Null or GlobalValue should not be inserted");
 
-    if (auto *BCI = dyn_cast<BitCastInst>(Ptr)) {
-      if (Seen.insert(BCI->getOperand(0)).second) {
-        LoadOperandsQueue.push_back(BCI->getOperand(0));
-      }
-    }
-
-    for (Use &Us : Ptr->uses()) {
+    for (const Use &Us : Ptr->uses()) {
       auto *U = dyn_cast<Instruction>(Us.getUser());
       if (!U || U == LI || !DT.dominates(U, LI))
         continue;
 
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        if (Seen.insert(BCI).second) {
-          LoadOperandsQueue.push_back(BCI);
-        }
+      // Bitcast or gep with zeros are using Ptr. Add to queue to check it's
+      // users.      U = bitcast Ptr
+      if (isa<BitCastInst>(U)) {
+        LoadOperandsQueue.push_back(U);
         continue;
       }
+      // Gep with zeros is equivalent to bitcast.
+      // FIXME: we are not sure if some bitcast should be canonicalized to gep 0
+      // or gep 0 to bitcast because of SROA, so there are 2 forms. When
+      // typeless pointers will be ready then both cases will be gone
+      // (and this BFS also won't be needed).
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
+        if (GEP->hasAllZeroIndices()) {
+          LoadOperandsQueue.push_back(U);
+          continue;
+        }
+
       // If we hit load/store with the same invariant.group metadata (and the
       // same pointer operand) we can assume that value pointed by pointer
       // operand didn't change.
-      if ((isa<LoadInst>(U) || isa<StoreInst>(U)) && U->getParent() == BB &&
+      if ((isa<LoadInst>(U) || isa<StoreInst>(U)) &&
           U->getMetadata(LLVMContext::MD_invariant_group) == InvariantGroupMD)
-        return MemDepResult::getDef(U);
+        ClosestDependency = GetClosestDependency(ClosestDependency, U);
     }
   }
-  return Result;
+
+  if (!ClosestDependency)
+    return MemDepResult::getUnknown();
+  if (ClosestDependency->getParent() == BB)
+    return MemDepResult::getDef(ClosestDependency);
+  // Def(U) can't be returned here because it is non-local. If local
+  // dependency won't be found then return nonLocal counting that the
+  // user will call getNonLocalPointerDependency, which will return cached
+  // result.
+  NonLocalDefsCache.try_emplace(
+      LI, NonLocalDepResult(ClosestDependency->getParent(),
+                            MemDepResult::getDef(ClosestDependency), nullptr));
+  return MemDepResult::getNonLocal();
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
@@ -868,7 +914,17 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   assert(Loc.Ptr->getType()->isPointerTy() &&
          "Can't get pointer deps of a non-pointer!");
   Result.clear();
-
+  {
+    // Check if there is cached Def with invariant.group. FIXME: cache might be
+    // invalid if cached instruction would be removed between call to
+    // getPointerDependencyFrom and this function.
+    auto NonLocalDefIt = NonLocalDefsCache.find(QueryInst);
+    if (NonLocalDefIt != NonLocalDefsCache.end()) {
+      Result.push_back(std::move(NonLocalDefIt->second));
+      NonLocalDefsCache.erase(NonLocalDefIt);
+      return;
+    }
+  }
   // This routine does not expect to deal with volatile instructions.
   // Doing so would require piping through the QueryInst all the way through.
   // TODO: volatiles can't be elided, but they can be reordered with other
@@ -1681,6 +1737,24 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequiredTransitive<AAResultsWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
+}
+
+bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &PA,
+                               FunctionAnalysisManager::Invalidator &Inv) {
+  // Check whether our analysis is preserved.
+  auto PAC = PA.getChecker<MemoryDependenceAnalysis>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    // If not, give up now.
+    return true;
+
+  // Check whether the analyses we depend on became invalid for any reason.
+  if (Inv.invalidate<AAManager>(F, PA) ||
+      Inv.invalidate<AssumptionAnalysis>(F, PA) ||
+      Inv.invalidate<DominatorTreeAnalysis>(F, PA))
+    return true;
+
+  // Otherwise this analysis result remains valid.
+  return false;
 }
 
 unsigned MemoryDependenceResults::getDefaultBlockScanLimit() const {

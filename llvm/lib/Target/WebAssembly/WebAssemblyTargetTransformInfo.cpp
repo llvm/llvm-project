@@ -46,7 +46,7 @@ unsigned WebAssemblyTTIImpl::getRegisterBitWidth(bool Vector) {
 unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args) {
 
   unsigned Cost = BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
       Opcode, Ty, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);

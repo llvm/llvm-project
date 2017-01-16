@@ -10,6 +10,7 @@ define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X32-NEXT:    andl $-32, %esp
 ; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    andl $7, %eax
 ; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movaps %xmm0, (%esp)
 ; X32-NEXT:    movl $1084227584, (%esp,%eax,4) ## imm = 0x40A00000
@@ -25,10 +26,11 @@ define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp
 ; X64-NEXT:    subq $64, %rsp
+; X64-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps %xmm0, (%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movl $1084227584, (%rsp,%rax,4) ## imm = 0x40A00000
+; X64-NEXT:    andl $7, %edi
+; X64-NEXT:    movl $1084227584, (%rsp,%rdi,4) ## imm = 0x40A00000
 ; X64-NEXT:    movaps (%rsp), %xmm0
 ; X64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; X64-NEXT:    movq %rbp, %rsp

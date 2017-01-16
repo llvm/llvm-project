@@ -117,7 +117,7 @@ struct AllocController {
     }
 
     template <class ...Args, class Alloc, class Tp>
-    void countConstruct(Alloc const& a, Tp *p) {
+    void countConstruct(Alloc const&, Tp *p) {
       ++construct_called;
       last_construct_pointer = p;
       last_construct_alloc = &makeTypeID<Alloc>();
@@ -126,7 +126,7 @@ struct AllocController {
     }
 
     template <class Alloc, class Tp>
-    void countDestroy(Alloc const& a, Tp *p) {
+    void countDestroy(Alloc const&, Tp *p) {
       ++destroy_called;
       last_destroy_alloc = &makeTypeID<Alloc>();
       last_destroy_type = &makeTypeID<Tp>();
@@ -263,7 +263,7 @@ public:
 
     template <class U, class ...Args>
     void construct(U *p, Args&&... args) {
-      auto *c = ::new ((void*)p) U(std::forward<Args>(args)...);
+      ::new ((void*)p) U(std::forward<Args>(args)...);
       P->countConstruct<Args&&...>(*this, p);
     }
 

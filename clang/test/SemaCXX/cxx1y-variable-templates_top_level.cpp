@@ -464,3 +464,8 @@ template <typename... Args> Variadic_t<Args...> Variadic;
 auto variadic1 = Variadic<>;
 auto variadic2 = Variadic<int, int>;
 #endif
+
+namespace VexingParse {
+  template <typename> int var; // expected-note {{declared here}}
+  int x(var); // expected-error {{cannot refer to variable template 'var' without a template argument list}}
+}

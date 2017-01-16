@@ -1,5 +1,8 @@
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
+; RUN: llvm-dis -o - %s.bc | llvm-as - | llvm-bcanalyzer -dump - | FileCheck %s --check-prefix=BC
 
+; BC: GLOBAL_VAR_EXPR
+; BC: GLOBAL_DECL_ATTACHMENT
 ; CHECK: @g = common global i32 0, align 4, !dbg ![[G:[0-9]+]]
 ; CHECK: @h = common global i32 0, align 4, !dbg ![[H:[0-9]+]]
 ; CHECK: ![[G]] = {{.*}}!DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: ![[GEXPR:[0-9]+]])

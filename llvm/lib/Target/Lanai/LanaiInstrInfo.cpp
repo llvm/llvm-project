@@ -518,7 +518,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
   const MCInstrDesc &DefDesc = DefMI->getDesc();
   for (unsigned i = 1, e = DefDesc.getNumOperands();
        i != e && !DefDesc.OpInfo[i].isPredicate(); ++i)
-    NewMI.addOperand(DefMI->getOperand(i));
+    NewMI.add(DefMI->getOperand(i));
 
   unsigned CondCode = MI.getOperand(3).getImm();
   if (Invert)
@@ -531,7 +531,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
   // register operand tied to the first def.  The tie makes the register
   // allocator ensure the FalseReg is allocated the same register as operand 0.
   FalseReg.setImplicit();
-  NewMI.addOperand(FalseReg);
+  NewMI.add(FalseReg);
   NewMI->tieOperands(0, NewMI->getNumOperands() - 1);
 
   // Update SeenMIs set: register newly created MI and erase removed DefMI.

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This checker models the behavior of un-inlined APIs from the the gtest
+// This checker models the behavior of un-inlined APIs from the gtest
 // unit-testing library to avoid false positives when using assertions from
 // that library.
 //
@@ -85,7 +85,7 @@ using namespace ento;
 // does not inline these since it does not yet reliably call temporary
 // destructors).
 //
-// This checker compensates for the missing inlining by propgagating the
+// This checker compensates for the missing inlining by propagating the
 // _success value across the bool and copy constructors so the assertion behaves
 // as expected.
 
@@ -102,7 +102,7 @@ public:
 
 private:
   void modelAssertionResultBoolConstructor(const CXXConstructorCall *Call,
-                                           CheckerContext &C) const;
+                                           bool IsRef, CheckerContext &C) const;
 
   void modelAssertionResultCopyConstructor(const CXXConstructorCall *Call,
                                            CheckerContext &C) const;
@@ -122,34 +122,24 @@ private:
 
 GTestChecker::GTestChecker() : AssertionResultII(nullptr), SuccessII(nullptr) {}
 
-/// Model a call to an un-inlined AssertionResult(boolean expression).
+/// Model a call to an un-inlined AssertionResult(bool) or
+/// AssertionResult(bool &, ...).
 /// To do so, constrain the value of the newly-constructed instance's 'success_'
 /// field to be equal to the passed-in boolean value.
+///
+/// \param IsRef Whether the boolean parameter is a reference or not.
 void GTestChecker::modelAssertionResultBoolConstructor(
-    const CXXConstructorCall *Call, CheckerContext &C) const {
-  assert(Call->getNumArgs() > 0);
+    const CXXConstructorCall *Call, bool IsRef, CheckerContext &C) const {
+  assert(Call->getNumArgs() >= 1 && Call->getNumArgs() <= 2);
 
-  // Depending on the version of gtest the constructor can be either of:
-  //
-  // v1.7 and earlier:
-  //      AssertionResult(bool success)
-  //
-  // v1.8 and greater:
-  //      template <typename T>
-  //      AssertionResult(const T& success,
-  //                      typename internal::EnableIf<
-  //                          !internal::ImplicitlyConvertible<T,
-  //                              AssertionResult>::value>::type*)
-
+  ProgramStateRef State = C.getState();
   SVal BooleanArgVal = Call->getArgSVal(0);
-  if (Call->getDecl()->getParamDecl(0)->getType()->getAs<ReferenceType>()) {
-    // We have v1.8+, so load the value from the reference.
+  if (IsRef) {
+    // The argument is a reference, so load from it to get the boolean value.
     if (!BooleanArgVal.getAs<Loc>())
       return;
     BooleanArgVal = C.getState()->getSVal(BooleanArgVal.castAs<Loc>());
   }
-
-  ProgramStateRef State = C.getState();
 
   SVal ThisVal = Call->getCXXThisVal();
 
@@ -169,7 +159,7 @@ void GTestChecker::modelAssertionResultBoolConstructor(
 /// 'success_' field.
 void GTestChecker::modelAssertionResultCopyConstructor(
     const CXXConstructorCall *Call, CheckerContext &C) const {
-  assert(Call->getNumArgs() > 0);
+  assert(Call->getNumArgs() == 1);
 
   // The first parameter of the the copy constructor must be the other
   // instance to initialize this instances fields from.
@@ -206,22 +196,44 @@ void GTestChecker::checkPostCall(const CallEvent &Call,
   if (CtorParent->getIdentifier() != AssertionResultII)
     return;
 
-  if (CtorDecl->getNumParams() == 0)
-    return;
+  unsigned ParamCount = CtorDecl->getNumParams();
 
+  // Call the appropriate modeling method based the parameters and their
+  // types.
 
-  // Call the appropriate modeling method based on the type of the first
-  // constructor parameter.
-  const ParmVarDecl *ParamDecl = CtorDecl->getParamDecl(0);
-  QualType ParamType = ParamDecl->getType();
-  if (CtorDecl->getNumParams() <= 2 &&
-      ParamType.getNonReferenceType()->getCanonicalTypeUnqualified() ==
-      C.getASTContext().BoolTy) {
-    // The first parameter is either a boolean or reference to a boolean
-    modelAssertionResultBoolConstructor(CtorCall, C);
-
-  } else if (CtorDecl->isCopyConstructor()) {
+  // We have AssertionResult(const &AssertionResult)
+  if (CtorDecl->isCopyConstructor() && ParamCount == 1) {
     modelAssertionResultCopyConstructor(CtorCall, C);
+    return;
+  }
+
+  // There are two possible boolean constructors, depending on which
+  // version of gtest is being used:
+  //
+  // v1.7 and earlier:
+  //      AssertionResult(bool success)
+  //
+  // v1.8 and greater:
+  //      template <typename T>
+  //      AssertionResult(const T& success,
+  //                      typename internal::EnableIf<
+  //                          !internal::ImplicitlyConvertible<T,
+  //                              AssertionResult>::value>::type*)
+  //
+  CanQualType BoolTy = C.getASTContext().BoolTy;
+  if (ParamCount == 1 && CtorDecl->getParamDecl(0)->getType() == BoolTy) {
+    // We have AssertionResult(bool)
+    modelAssertionResultBoolConstructor(CtorCall, /*IsRef=*/false, C);
+    return;
+  }
+  if (ParamCount == 2){
+    auto *RefTy = CtorDecl->getParamDecl(0)->getType()->getAs<ReferenceType>();
+    if (RefTy &&
+        RefTy->getPointeeType()->getCanonicalTypeUnqualified() == BoolTy) {
+      // We have AssertionResult(bool &, ...)
+      modelAssertionResultBoolConstructor(CtorCall, /*IsRef=*/true, C);
+      return;
+    }
   }
 }
 

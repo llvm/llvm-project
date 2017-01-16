@@ -1275,10 +1275,9 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
                            LLVMContext::MD_mem_parallel_loop_access};
     combineMetadata(I1, I2, KnownIDs);
 
-    // If the debug loc for I1 and I2 are different, as we are combining them
-    // into one instruction, we do not want to select debug loc randomly from 
-    // I1 or I2.
-    if (!isa<CallInst>(I1) &&  I1->getDebugLoc() != I2->getDebugLoc())
+    // I1 and I2 are being combined into a single instruction.  Its debug
+    // location is the merged locations of the original instructions.
+    if (!isa<CallInst>(I1))
       I1->setDebugLoc(
           DILocation::getMergedLocation(I1->getDebugLoc(), I2->getDebugLoc()));
  
@@ -1574,12 +1573,20 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I0->getOperandUse(O).set(NewOperands[O]);
   I0->moveBefore(&*BBEnd->getFirstInsertionPt());
 
-  // Update metadata and IR flags.
+  // The debug location for the "common" instruction is the merged locations of
+  // all the commoned instructions.  We start with the original location of the
+  // "common" instruction and iteratively merge each location in the loop below.
+  const DILocation *Loc = I0->getDebugLoc();
+
+  // Update metadata and IR flags, and merge debug locations.
   for (auto *I : Insts)
     if (I != I0) {
+      Loc = DILocation::getMergedLocation(Loc, I->getDebugLoc());
       combineMetadataForCSE(I0, I);
       I0->andIRFlags(I);
     }
+  if (!isa<CallInst>(I0))
+    I0->setDebugLoc(Loc);
 
   if (!isa<StoreInst>(I0)) {
     // canSinkLastInstruction checked that all instructions were used by

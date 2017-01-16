@@ -50,15 +50,14 @@ addl tls0@gotntpoff(%ebx),%eax
 movl %gs:0,%eax
 addl tls1@gotntpoff(%ebx),%eax
 
-// CHECK:      Index: 10
-// CHECK-NEXT: Name: .got
+// CHECK:      Name: .got (
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x2068
-// CHECK-NEXT: Offset: 0x2068
+// CHECK-NEXT: Address: 0x3068
+// CHECK-NEXT: Offset: 0x3068
 // CHECK-NEXT: Size: 32
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -67,13 +66,13 @@ addl tls1@gotntpoff(%ebx),%eax
 
 // CHECK: Relocations [
 // CHECK:      Section ({{.+}}) .rel.dyn {
-// CHECK-NEXT: 0x2078 R_386_TLS_DTPMOD32 - 0x0
-// CHECK-NEXT: 0x2068 R_386_TLS_DTPMOD32 tls0 0x0
-// CHECK-NEXT: 0x206C R_386_TLS_DTPOFF32 tls0 0x0
-// CHECK-NEXT: 0x2080 R_386_TLS_TPOFF tls0 0x0
-// CHECK-NEXT: 0x2070 R_386_TLS_DTPMOD32 tls1 0x0
-// CHECK-NEXT: 0x2074 R_386_TLS_DTPOFF32 tls1 0x0
-// CHECK-NEXT: 0x2084 R_386_TLS_TPOFF tls1 0x0
+// CHECK-NEXT: 0x3078 R_386_TLS_DTPMOD32 - 0x0
+// CHECK-NEXT: 0x3068 R_386_TLS_DTPMOD32 tls0 0x0
+// CHECK-NEXT: 0x306C R_386_TLS_DTPOFF32 tls0 0x0
+// CHECK-NEXT: 0x3080 R_386_TLS_TPOFF tls0 0x0
+// CHECK-NEXT: 0x3070 R_386_TLS_DTPMOD32 tls1 0x0
+// CHECK-NEXT: 0x3074 R_386_TLS_DTPOFF32 tls1 0x0
+// CHECK-NEXT: 0x3084 R_386_TLS_TPOFF tls1 0x0
 // CHECK-NEXT: }
 
 // DIS:      Disassembly of section .text:

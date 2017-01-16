@@ -1186,8 +1186,9 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   if (!eliminateDeadStores(F, AA, MD, DT, TLI))
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   PA.preserve<MemoryDependenceAnalysis>();
   return PA;

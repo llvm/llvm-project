@@ -20,9 +20,9 @@ struct N::M::A<T*> { };
 #endif
 
 // C++ [temp.class.spec]p9
-//   bullet 1
+//   bullet 1, as amended by DR1315
 template <int I, int J> struct A {}; 
-template <int I> struct A<I+5, I*2> {}; // expected-error{{depends on}} 
+template <int I> struct A<I+5, I*2> {}; // expected-error{{cannot be deduced}} expected-note {{'I'}}
 template <int I, int J> struct B {}; 
 template <int I> struct B<I, I> {}; //OK 
 
@@ -50,4 +50,4 @@ template<typename T = int, // expected-error{{default template argument}}
 
 template<typename T> struct Test1;
 template<typename T, typename U>  // expected-note{{non-deducible}}
-  struct Test1<T*> { }; // expected-warning{{never be used}}
+  struct Test1<T*> { }; // expected-error{{never be used}}

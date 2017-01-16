@@ -14,6 +14,8 @@
 #include <array>
 #include <cassert>
 
+#include "test_macros.h"
+
 // std::array is explicitly allowed to be initialized with A a = { init-list };.
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
@@ -36,4 +38,16 @@ int main()
         const T* p = c.data();
         (void)p; // to placate scan-build
     }
+#if TEST_STD_VER > 14
+    {
+        typedef std::array<int, 5> C;
+        constexpr C c1{0,1,2,3,4};
+        constexpr const C c2{0,1,2,3,4};
+
+        static_assert (  c1.data()  == &c1[0], "");
+        static_assert ( *c1.data()  ==  c1[0], "");
+        static_assert (  c2.data()  == &c2[0], "");
+        static_assert ( *c2.data()  ==  c2[0], "");
+    }
+#endif
 }

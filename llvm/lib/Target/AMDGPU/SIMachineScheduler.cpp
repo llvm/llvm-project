@@ -1114,28 +1114,15 @@ void SIScheduleBlockCreator::createBlocksForVariant(SISchedulerBlockCreatorVaria
 
 // Two functions taken from Codegen/MachineScheduler.cpp
 
-/// If this iterator is a debug value, increment until reaching the End or a
-/// non-debug instruction.
-static MachineBasicBlock::const_iterator
-nextIfDebug(MachineBasicBlock::const_iterator I,
-            MachineBasicBlock::const_iterator End) {
-  for(; I != End; ++I) {
-    if (!I->isDebugValue())
-      break;
-  }
-  return I;
-}
-
 /// Non-const version.
 static MachineBasicBlock::iterator
 nextIfDebug(MachineBasicBlock::iterator I,
             MachineBasicBlock::const_iterator End) {
-  // Cast the return value to nonconst MachineInstr, then cast to an
-  // instr_iterator, which does not check for null, finally return a
-  // bundle_iterator.
-  return MachineBasicBlock::instr_iterator(
-    const_cast<MachineInstr*>(
-      &*nextIfDebug(MachineBasicBlock::const_iterator(I), End)));
+  for (; I != End; ++I) {
+    if (!I->isDebugValue())
+      break;
+  }
+  return I;
 }
 
 void SIScheduleBlockCreator::topologicalSort() {

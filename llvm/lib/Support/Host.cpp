@@ -111,6 +111,7 @@ enum ProcessorTypes {
   AMDATHLON,
   AMDFAM14H,
   AMDFAM16H,
+  AMDFAM17H,
   CPU_TYPE_MAX
 };
 
@@ -149,6 +150,7 @@ enum ProcessorSubtypes {
   AMD_BTVER2,
   AMDFAM15H_BDVER3,
   AMDFAM15H_BDVER4,
+  AMDFAM17H_ZNVER1,
   CPU_SUBTYPE_MAX
 };
 
@@ -474,13 +476,23 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       break;
 
     // Skylake:
-    case 0x4e:
-      *Type = INTEL_COREI7; // "skylake-avx512"
-      *Subtype = INTEL_COREI7_SKYLAKE_AVX512;
-      break;
-    case 0x5e:
+    case 0x4e: // Skylake mobile
+    case 0x5e: // Skylake desktop
+    case 0x8e: // Kaby Lake mobile
+    case 0x9e: // Kaby Lake desktop
       *Type = INTEL_COREI7; // "skylake"
       *Subtype = INTEL_COREI7_SKYLAKE;
+      break;
+
+    // Skylake Xeon:
+    case 0x55:
+      *Type = INTEL_COREI7;
+      // Check that we really have AVX512
+      if (Features & (1 << FEATURE_AVX512)) {
+        *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      } else {
+        *Subtype = INTEL_COREI7_SKYLAKE; // "skylake"
+      }
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -732,6 +744,14 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     }
     *Subtype = AMD_BTVER2;
     break; // "btver2"
+  case 23:
+    *Type = AMDFAM17H;
+    if (Features & (1 << FEATURE_ADX)) {
+      *Subtype = AMDFAM17H_ZNVER1;
+      break; // "znver1"
+    }
+    *Subtype =  AMD_BTVER1;
+    break;
   default:
     break; // "generic"
   }
@@ -940,6 +960,15 @@ StringRef sys::getHostCPUName() {
       default:
         return "amdfam16";
       }
+    case AMDFAM17H:
+      switch (Subtype) {
+      case AMD_BTVER1:
+        return "btver1";
+      case AMDFAM17H_ZNVER1:
+        return "znver1";
+      default:
+        return "amdfam17";
+      }
     default:
       return "generic";
     }
@@ -1069,6 +1098,7 @@ StringRef sys::getHostCPUName() {
       .Case("POWER7", "pwr7")
       .Case("POWER8", "pwr8")
       .Case("POWER8E", "pwr8")
+      .Case("POWER8NVL", "pwr8")
       .Case("POWER9", "pwr9")
       .Default(generic);
 }

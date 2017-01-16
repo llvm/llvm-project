@@ -1,7 +1,9 @@
-//RUN: %clang_cc1 -cc1 -std=c++11 -analyze  -analyzer-checker=core,apiModeling.google.GTest -analyzer-eagerly-assume %s -verify
-//RUN: %clang_cc1 -cc1 -std=c++11 -analyze  -analyzer-checker=core,apiModeling.google.GTest -analyzer-eagerly-assume -DGTEST_VERSION_1_8_AND_LATER=1 %s -verify
+//RUN: %clang_cc1 -cc1 -std=c++11 -analyze  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -analyzer-eagerly-assume %s -verify
+//RUN: %clang_cc1 -cc1 -std=c++11 -analyze  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -analyzer-eagerly-assume -DGTEST_VERSION_1_8_AND_LATER=1 %s -verify
+//RUN: %clang_cc1 -cc1 -std=c++11 -analyze  -analyzer-checker=core,apiModeling.google.GTest,debug.ExprInspection -analyzer-eagerly-assume -analyzer-config cfg-temporary-dtors=true %s -verify
 
-// expected-no-diagnostics
+void clang_analyzer_eval(int);
+void clang_analyzer_warnIfReached();
 
 namespace std {
   class string {
@@ -139,4 +141,13 @@ void testAssertTrue(int *p) {
 void testAssertFalse(int *p) {
   ASSERT_FALSE(p == nullptr);
   EXPECT_TRUE(1 == *p); // no-warning
+}
+
+void testConstrainState(int p) {
+  ASSERT_TRUE(p == 7);
+
+  clang_analyzer_eval(p == 7); // expected-warning {{TRUE}}
+
+  ASSERT_TRUE(false);
+  clang_analyzer_warnIfReached(); // no-warning
 }

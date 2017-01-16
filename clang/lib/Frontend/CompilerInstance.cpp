@@ -66,8 +66,9 @@ CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
 }
 
-void CompilerInstance::setInvocation(CompilerInvocation *Value) {
-  Invocation = Value;
+void CompilerInstance::setInvocation(
+    std::shared_ptr<CompilerInvocation> Value) {
+  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -96,7 +97,9 @@ void CompilerInstance::setSourceManager(SourceManager *Value) {
   SourceMgr = Value;
 }
 
-void CompilerInstance::setPreprocessor(Preprocessor *Value) { PP = Value; }
+void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
+  PP = std::move(Value);
+}
 
 void CompilerInstance::setASTContext(ASTContext *Value) {
   Context = Value;
@@ -179,6 +182,26 @@ static void collectIncludePCH(CompilerInstance &CI,
             /*ValidateDiagnosticOptions=*/false))
       MDC->addFile(Dir->getName());
   }
+}
+
+static void collectVFSEntries(CompilerInstance &CI,
+                              std::shared_ptr<ModuleDependencyCollector> MDC) {
+  if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
+    return;
+
+  // Collect all VFS found.
+  SmallVector<vfs::YAMLVFSEntry, 16> VFSEntries;
+  for (const std::string &VFSFile : CI.getHeaderSearchOpts().VFSOverlayFiles) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
+        llvm::MemoryBuffer::getFile(VFSFile);
+    if (!Buffer)
+      return;
+    vfs::collectVFSFromYAML(std::move(Buffer.get()), /*DiagHandler*/ nullptr,
+                            VFSFile, VFSEntries);
+  }
+
+  for (auto &E : VFSEntries)
+    MDC->addFile(E.VPath, E.RPath);
 }
 
 // Diagnostics
@@ -345,14 +368,13 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     PTHMgr = PTHManager::Create(PPOpts.TokenCache, getDiagnostics());
 
   // Create the Preprocessor.
-  HeaderSearch *HeaderInfo = new HeaderSearch(&getHeaderSearchOpts(),
-                                              getSourceManager(),
-                                              getDiagnostics(),
-                                              getLangOpts(),
-                                              &getTarget());
-  PP = new Preprocessor(&getPreprocessorOpts(), getDiagnostics(), getLangOpts(),
-                        getSourceManager(), *HeaderInfo, *this, PTHMgr,
-                        /*OwnsHeaderSearch=*/true, TUKind);
+  HeaderSearch *HeaderInfo =
+      new HeaderSearch(getHeaderSearchOptsPtr(), getSourceManager(),
+                       getDiagnostics(), getLangOpts(), &getTarget());
+  PP = std::make_shared<Preprocessor>(
+      Invocation->getPreprocessorOptsPtr(), getDiagnostics(), getLangOpts(),
+      getSourceManager(), *HeaderInfo, *this, PTHMgr,
+      /*OwnsHeaderSearch=*/true, TUKind);
   PP->Initialize(getTarget(), getAuxTarget());
 
   // Note that this is different then passing PTHMgr to Preprocessor's ctor.
@@ -412,6 +434,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     addDependencyCollector(ModuleDepCollector);
     collectHeaderMaps(PP->getHeaderSearchInfo(), ModuleDepCollector);
     collectIncludePCH(*this, ModuleDepCollector);
+    collectVFSEntries(*this, ModuleDepCollector);
   }
 
   for (auto &Listener : DependencyCollectors)
@@ -477,7 +500,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
     const PCHContainerReader &PCHContainerRdr,
-    ArrayRef<IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
+    ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
@@ -997,8 +1020,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
     
   // Construct a compiler invocation for creating this module.
-  IntrusiveRefCntPtr<CompilerInvocation> Invocation
-    (new CompilerInvocation(ImportingInstance.getInvocation()));
+  auto Invocation =
+      std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
 
   PreprocessorOptions &PPOpts = Invocation->getPreprocessorOpts();
   
@@ -1028,7 +1051,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   PreprocessorOptions &ImportingPPOpts
     = ImportingInstance.getInvocation().getPreprocessorOpts();
   if (!ImportingPPOpts.FailedModules)
-    ImportingPPOpts.FailedModules = new PreprocessorOptions::FailedModulesSet;
+    ImportingPPOpts.FailedModules =
+        std::make_shared<PreprocessorOptions::FailedModulesSet>();
   PPOpts.FailedModules = ImportingPPOpts.FailedModules;
 
   // If there is a module map file, build the module using the module map.
@@ -1053,7 +1077,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // module.
   CompilerInstance Instance(ImportingInstance.getPCHContainerOperations(),
                             /*BuildingModule=*/true);
-  Instance.setInvocation(&*Invocation);
+  auto &Inv = *Invocation;
+  Instance.setInvocation(std::move(Invocation));
 
   Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
                                    ImportingInstance.getDiagnosticClient()),
@@ -1075,7 +1100,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // between all of the module CompilerInstances. Other than that, we don't
   // want to produce any dependency output from the module build.
   Instance.setModuleDepCollector(ImportingInstance.getModuleDepCollector());
-  Invocation->getDependencyOutputOpts() = DependencyOutputOptions();
+  Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   // Get or create the module map that we'll use to build this module.
   std::string InferredModuleMapContent;

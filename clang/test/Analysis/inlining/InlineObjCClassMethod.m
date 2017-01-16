@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config ipa=dynamic-bifurcate -verify %s
 
 void clang_analyzer_checkInlined(int);
+void clang_analyzer_eval(int);
 
 // Test inlining of ObjC class methods.
 
@@ -194,7 +195,9 @@ int foo2() {
 @implementation SelfUsedInParent
 + (int)getNum {return 5;}
 + (int)foo {
-  return [self getNum];
+  int r = [self getNum];
+  clang_analyzer_eval(r == 5); // expected-warning{{TRUE}}
+  return r;
 }
 @end
 @interface SelfUsedInParentChild : SelfUsedInParent
@@ -229,8 +232,80 @@ void rdar15037033() {
 + (void)forwardDeclaredVariadicMethod:(int)x, ... {
   clang_analyzer_checkInlined(0); // no-warning
 }
-
 @end
 
+@interface SelfClassTestParent : NSObject
+-(unsigned)returns10;
++(unsigned)returns20;
++(unsigned)returns30;
+@end
 
+@implementation SelfClassTestParent
+-(unsigned)returns10 { return 100; }
++(unsigned)returns20 { return 100; }
++(unsigned)returns30 { return 100; }
+@end
 
+@interface SelfClassTest : SelfClassTestParent
+-(unsigned)returns10;
++(unsigned)returns20;
++(unsigned)returns30;
+@end
+
+@implementation SelfClassTest
+-(unsigned)returns10 { return 10; }
++(unsigned)returns20 { return 20; }
++(unsigned)returns30 { return 30; }
++(void)classMethod {
+  unsigned result1 = [self returns20];
+  clang_analyzer_eval(result1 == 20); // expected-warning{{TRUE}}
+  unsigned result2 = [[self class] returns30];
+  clang_analyzer_eval(result2 == 30); // expected-warning{{TRUE}}
+  unsigned result3 = [[super class] returns30];
+  clang_analyzer_eval(result3 == 100); // expected-warning{{UNKNOWN}}
+}
+-(void)instanceMethod {
+  unsigned result0 = [self returns10];
+  clang_analyzer_eval(result0 == 10); // expected-warning{{TRUE}}
+  unsigned result2 = [[self class] returns30];
+  clang_analyzer_eval(result2 == 30); // expected-warning{{TRUE}}
+  unsigned result3 = [[super class] returns30];
+  clang_analyzer_eval(result3 == 100); // expected-warning{{UNKNOWN}}
+}
+@end
+
+@interface Parent : NSObject
++ (int)a;
++ (int)b;
+@end
+@interface Child : Parent
+@end
+@interface Other : NSObject
++(void)run;
+@end
+int main(int argc, const char * argv[]) {
+  @autoreleasepool {
+    [Other run];
+  }
+  return 0;
+}
+@implementation Other
++(void)run {
+  int result = [Child a];
+  // TODO: This should return 100.
+  clang_analyzer_eval(result == 12); // expected-warning{{TRUE}}
+}
+@end
+@implementation Parent
++ (int)a; {
+  return [self b];
+}
++ (int)b; {
+  return 12;
+}
+@end
+@implementation Child
++ (int)b; {
+  return 100;
+}
+@end

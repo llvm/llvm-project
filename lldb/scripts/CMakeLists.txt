@@ -11,8 +11,13 @@ set(SWIG_HEADERS
 
 include(FindPythonInterp)
 
-set(SWIG_PYTHON_DIR
-  ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+  set(SWIG_PYTHON_DIR
+    ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
+else()
+  set(SWIG_PYTHON_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/site-packages)
+endif()
+
 set(SWIG_INSTALL_DIR lib${LLVM_LIBDIR_SUFFIX})
 
 # Generating the LLDB framework correctly is a bit complicated because the
@@ -48,10 +53,8 @@ set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lldb.py PROPERTIES GENER
 
 add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
 
-# Install the LLDB python module on all operating systems (except Windows)
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})
-endif()
+# Install the LLDB python module
+install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})
 
 # build Python modules
 add_subdirectory(Python/modules)

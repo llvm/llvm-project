@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target triple = "x86_64-apple-darwin"
 
 ; In inliner, we assume that inline asm does not throw. This testing case makes

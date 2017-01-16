@@ -282,7 +282,7 @@ public:
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
       clang::EmitBackendOutput(
-          Diags, CodeGenOpts, TargetOpts, LangOpts,
+          Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
           Ctx.getTargetInfo().getDataLayout(), M.get(),
           BackendAction::Backend_EmitLL,
           llvm::make_unique<llvm::raw_svector_ostream>(Buffer));
@@ -290,9 +290,10 @@ public:
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
-                             Ctx.getTargetInfo().getDataLayout(), M.get(),
-                             BackendAction::Backend_EmitObj, std::move(OS));
+    clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
+                             LangOpts, Ctx.getTargetInfo().getDataLayout(),
+                             M.get(), BackendAction::Backend_EmitObj,
+                             std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;

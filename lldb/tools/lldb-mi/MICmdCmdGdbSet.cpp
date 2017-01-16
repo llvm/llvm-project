@@ -27,6 +27,7 @@ const CMICmdCmdGdbSet::MapGdbOptionNameToFnGdbOptionPtr_t
         // Example code if need to implement GDB set other options
         {"output-radix", &CMICmdCmdGdbSet::OptionFnOutputRadix},
         {"solib-search-path", &CMICmdCmdGdbSet::OptionFnSolibSearchPath},
+        {"disassembly-flavor", &CMICmdCmdGdbSet::OptionFnDisassemblyFlavor},
         {"fallback", &CMICmdCmdGdbSet::OptionFnFallback}};
 
 //++
@@ -393,6 +394,39 @@ bool CMICmdCmdGdbSet::OptionFnOutputRadix(
     return MIstatus::failure;
   }
   CMICmnLLDBDebugSessionInfoVarObj::VarObjSetFormat(format);
+
+  return MIstatus::success;
+}
+
+//++
+//------------------------------------------------------------------------------------
+// Details: Carry out work to complete the GDB set option 'disassembly-flavor'
+// to prepare
+//          and send back information asked for.
+// Type:    Method.
+// Args:    vrWords - (R) List of additional parameters used by this option.
+// Return:  MIstatus::success - Functional succeeded.
+//          MIstatus::failure - Functional failed.
+// Throws:  None.
+//--
+bool CMICmdCmdGdbSet::OptionFnDisassemblyFlavor(
+    const CMIUtilString::VecString_t &vrWords) {
+  // Check we have at least one argument
+  if (vrWords.size() < 1) {
+    m_bGbbOptionFnHasError = true;
+    // m_strGdbOptionFnError = MIRSRC(IDS_CMD_ERR_GDBSET_OPT_SOLIBSEARCHPATH);
+    return MIstatus::failure;
+  }
+  const CMIUtilString &rStrValDisasmFlavor(vrWords[0]);
+
+  lldb::SBDebugger &rDbgr = m_rLLDBDebugSessionInfo.GetDebugger();
+  lldb::SBError error = lldb::SBDebugger::SetInternalVariable(
+      "target.x86-disassembly-flavor", rStrValDisasmFlavor.c_str(),
+      rDbgr.GetInstanceName());
+  if (error.Fail()) {
+    m_strGdbOptionFnError = error.GetCString();
+    return MIstatus::failure;
+  }
 
   return MIstatus::success;
 }

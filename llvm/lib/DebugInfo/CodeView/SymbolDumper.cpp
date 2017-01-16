@@ -11,13 +11,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
+#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
-#include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -32,9 +32,9 @@ namespace {
 /// the visitor out of SymbolDumper.h.
 class CVSymbolDumperImpl : public SymbolVisitorCallbacks {
 public:
-  CVSymbolDumperImpl(CVTypeDumper &CVTD, SymbolDumpDelegate *ObjDelegate,
+  CVSymbolDumperImpl(TypeDatabase &TypeDB, SymbolDumpDelegate *ObjDelegate,
                      ScopedPrinter &W, bool PrintRecordBytes)
-      : CVTD(CVTD), ObjDelegate(ObjDelegate), W(W),
+      : TypeDB(TypeDB), ObjDelegate(ObjDelegate), W(W),
         PrintRecordBytes(PrintRecordBytes), InFunctionScope(false) {}
 
 /// CVSymbolVisitor overrides.
@@ -51,8 +51,9 @@ private:
   void printLocalVariableAddrRange(const LocalVariableAddrRange &Range,
                                    uint32_t RelocationOffset);
   void printLocalVariableAddrGap(ArrayRef<LocalVariableAddrGap> Gaps);
+  void printTypeIndex(StringRef FieldName, TypeIndex TI);
 
-  CVTypeDumper &CVTD;
+  TypeDatabase &TypeDB;
   SymbolDumpDelegate *ObjDelegate;
   ScopedPrinter &W;
 
@@ -78,6 +79,10 @@ void CVSymbolDumperImpl::printLocalVariableAddrGap(
     W.printHex("GapStartOffset", Gap.GapStartOffset);
     W.printHex("Range", Gap.Range);
   }
+}
+
+void CVSymbolDumperImpl::printTypeIndex(StringRef FieldName, TypeIndex TI) {
+  CVTypeDumper::printTypeIndex(W, FieldName, TI, TypeDB);
 }
 
 Error CVSymbolDumperImpl::visitSymbolBegin(CVSymbol &CVR) {
@@ -163,7 +168,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   DictScope S(W, "BPRelativeSym");
 
   W.printNumber("Offset", BPRel.Offset);
-  CVTD.printTypeIndex("Type", BPRel.Type);
+  printTypeIndex("Type", BPRel.Type);
   W.printString("VarName", BPRel.Name);
   return Error::success();
 }
@@ -187,7 +192,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                      CallSiteInfo.CodeOffset, &LinkageName);
   }
   W.printHex("Segment", CallSiteInfo.Segment);
-  CVTD.printTypeIndex("Type", CallSiteInfo.Type);
+  printTypeIndex("Type", CallSiteInfo.Type);
   if (!LinkageName.empty())
     W.printString("LinkageName", LinkageName);
   return Error::success();
@@ -278,7 +283,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            ConstantSym &Constant) {
   DictScope S(W, "Constant");
 
-  CVTD.printTypeIndex("Type", Constant.Type);
+  printTypeIndex("Type", Constant.Type);
   W.printNumber("Value", Constant.Value);
   W.printString("Name", Constant.Name);
   return Error::success();
@@ -293,7 +298,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, DataSym &Data) {
     ObjDelegate->printRelocatedField("DataOffset", Data.getRelocationOffset(),
                                      Data.DataOffset, &LinkageName);
   }
-  CVTD.printTypeIndex("Type", Data.Type);
+  printTypeIndex("Type", Data.Type);
   W.printString("DisplayName", Data.Name);
   if (!LinkageName.empty())
     W.printString("LinkageName", LinkageName);
@@ -445,7 +450,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(
   }
   W.printHex("Segment", HeapAllocSite.Segment);
   W.printHex("CallInstructionSize", HeapAllocSite.CallInstructionSize);
-  CVTD.printTypeIndex("Type", HeapAllocSite.Type);
+  printTypeIndex("Type", HeapAllocSite.Type);
   if (!LinkageName.empty())
     W.printString("LinkageName", LinkageName);
   return Error::success();
@@ -457,7 +462,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
   W.printHex("PtrParent", InlineSite.Parent);
   W.printHex("PtrEnd", InlineSite.End);
-  CVTD.printTypeIndex("Inlinee", InlineSite.Inlinee);
+  printTypeIndex("Inlinee", InlineSite.Inlinee);
 
   ListScope BinaryAnnotations(W, "BinaryAnnotations");
   for (auto &Annotation : InlineSite.annotations()) {
@@ -555,7 +560,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, LabelSym &Label) {
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, LocalSym &Local) {
   DictScope S(W, "Local");
 
-  CVTD.printTypeIndex("Type", Local.Type);
+  printTypeIndex("Type", Local.Type);
   W.printFlags("Flags", uint16_t(Local.Flags), getLocalFlagNames());
   W.printString("VarName", Local.Name);
   return Error::success();
@@ -586,7 +591,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, ProcSym &Proc) {
   W.printHex("CodeSize", Proc.CodeSize);
   W.printHex("DbgStart", Proc.DbgStart);
   W.printHex("DbgEnd", Proc.DbgEnd);
-  CVTD.printTypeIndex("FunctionType", Proc.FunctionType);
+  printTypeIndex("FunctionType", Proc.FunctionType);
   if (ObjDelegate) {
     ObjDelegate->printRelocatedField("CodeOffset", Proc.getRelocationOffset(),
                                      Proc.CodeOffset, &LinkageName);
@@ -616,7 +621,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
   ListScope S(W, CVR.kind() == S_CALLEES ? "Callees" : "Callers");
   for (auto FuncID : Caller.Indices)
-    CVTD.printTypeIndex("FuncID", FuncID);
+    printTypeIndex("FuncID", FuncID);
   return Error::success();
 }
 
@@ -625,7 +630,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   DictScope S(W, "RegRelativeSym");
 
   W.printHex("Offset", RegRel.Offset);
-  CVTD.printTypeIndex("Type", RegRel.Type);
+  printTypeIndex("Type", RegRel.Type);
   W.printHex("Register", RegRel.Register);
   W.printString("VarName", RegRel.Name);
   return Error::success();
@@ -640,7 +645,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
     ObjDelegate->printRelocatedField("DataOffset", Data.getRelocationOffset(),
                                      Data.DataOffset, &LinkageName);
   }
-  CVTD.printTypeIndex("Type", Data.Type);
+  printTypeIndex("Type", Data.Type);
   W.printString("DisplayName", Data.Name);
   if (!LinkageName.empty())
     W.printString("LinkageName", LinkageName);
@@ -649,7 +654,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, UDTSym &UDT) {
   DictScope S(W, "UDT");
-  CVTD.printTypeIndex("Type", UDT.Type);
+  printTypeIndex("Type", UDT.Type);
   W.printString("UDTName", UDT.Name);
   return Error::success();
 }
@@ -664,7 +669,7 @@ Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
 Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get());
-  CVSymbolDumperImpl Dumper(CVTD, ObjDelegate.get(), W, PrintRecordBytes);
+  CVSymbolDumperImpl Dumper(TypeDB, ObjDelegate.get(), W, PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
@@ -675,7 +680,7 @@ Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
 Error CVSymbolDumper::dump(const CVSymbolArray &Symbols) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get());
-  CVSymbolDumperImpl Dumper(CVTD, ObjDelegate.get(), W, PrintRecordBytes);
+  CVSymbolDumperImpl Dumper(TypeDB, ObjDelegate.get(), W, PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);

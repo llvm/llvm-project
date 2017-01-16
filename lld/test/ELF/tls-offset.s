@@ -15,7 +15,7 @@ _start:
         .align  16
         .zero 16
 
-        .data
+        .section        .data.rel.ro,"aw",@progbits
         .long 1
 
 
@@ -45,7 +45,7 @@ _start:
 // CHECK-NEXT: Offset: 0x2004
 // CHECK-NEXT: Size: 16
 
-// CHECK:      Name: .data
+// CHECK:      Name: .data.rel.ro
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC

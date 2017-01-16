@@ -1,16 +1,18 @@
 ---
 MainSourceFile: source1.cpp
-Replacements:
-  - FilePath:        $(path)/common.h
-    Offset:          106
-    Length:          26
-    ReplacementText: 'auto & i : ints'
-  - FilePath:        $(path)/common.h
-    Offset:          140
-    Length:          7
-    ReplacementText: i
-  - FilePath:        $(path)/common.h
-    Offset:          160
-    Length:          12
-    ReplacementText: ''
+Diagnostics:
+  - DiagnosticName: test-conflict
+    Replacements:
+      - FilePath:        $(path)/common.h
+        Offset:          106
+        Length:          26
+        ReplacementText: 'auto & i : ints'
+      - FilePath:        $(path)/common.h
+        Offset:          140
+        Length:          7
+        ReplacementText: i
+      - FilePath:        $(path)/common.h
+        Offset:          160
+        Length:          12
+        ReplacementText: ''
 ...

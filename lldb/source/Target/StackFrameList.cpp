@@ -541,8 +541,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
     if (m_frames.empty()) {
       // Why do we have a thread with zero frames, that should not ever
       // happen...
-      if (m_thread.IsValid())
-        assert("A valid thread has no frames.");
+      assert(!m_thread.IsValid() && "A valid thread has no frames.");
     } else {
       ResetCurrentInlinedDepth();
       frame_sp = m_frames[original_idx];

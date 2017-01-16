@@ -203,6 +203,11 @@ struct RSReductionDescriptor {
 };
 
 class RSModuleDescriptor {
+  std::string m_slang_version;
+  std::string m_bcc_version;
+
+  bool ParseVersionInfo(llvm::StringRef *, size_t n_lines);
+
   bool ParseExportForeachCount(llvm::StringRef *, size_t n_lines);
 
   bool ParseExportVarCount(llvm::StringRef *, size_t n_lines);
@@ -221,6 +226,8 @@ public:
   bool ParseRSInfo();
 
   void Dump(Stream &strm) const;
+
+  void WarnIfVersionMismatch(Stream *s) const;
 
   const lldb::ModuleSP m_module;
   std::vector<RSKernelDescriptor> m_kernels;

@@ -21,4 +21,5 @@ int main()
     typedef std::unordered_multimap<int, int> M2;
     M2::iterator i;
     M1::iterator j = i;
+    ((void)j);
 }

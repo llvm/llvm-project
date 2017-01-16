@@ -820,4 +820,267 @@ TEST_F(CGSCCPassManagerTest,
   // Two runs and 6 functions.
   EXPECT_EQ(2 * 6, FunctionAnalysisRuns);
 }
+
+/// A test CGSCC-level analysis pass which caches in its result another
+/// analysis pass and uses it to serve queries. This requires the result to
+/// invalidate itself when its dependency is invalidated.
+///
+/// FIXME: Currently this doesn't also depend on a function analysis, and if it
+/// did we would fail to invalidate it correctly.
+struct TestIndirectSCCAnalysis
+    : public AnalysisInfoMixin<TestIndirectSCCAnalysis> {
+  struct Result {
+    Result(TestSCCAnalysis::Result &SCCDep, TestModuleAnalysis::Result &MDep)
+        : SCCDep(SCCDep), MDep(MDep) {}
+    TestSCCAnalysis::Result &SCCDep;
+    TestModuleAnalysis::Result &MDep;
+
+    bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
+                    CGSCCAnalysisManager::Invalidator &Inv) {
+      auto PAC = PA.getChecker<TestIndirectSCCAnalysis>();
+      return !(PAC.preserved() ||
+               PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) ||
+             Inv.invalidate<TestSCCAnalysis>(C, PA);
+    }
+  };
+
+  TestIndirectSCCAnalysis(int &Runs) : Runs(Runs) {}
+
+  /// Run the analysis pass over the function and return a result.
+  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+             LazyCallGraph &CG) {
+    ++Runs;
+    auto &SCCDep = AM.getResult<TestSCCAnalysis>(C, CG);
+
+    auto &ModuleProxy = AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C, CG);
+    const ModuleAnalysisManager &MAM = ModuleProxy.getManager();
+    // For the test, we insist that the module analysis starts off in the
+    // cache.
+    auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(
+        *C.begin()->getFunction().getParent());
+    // Register the dependency as module analysis dependencies have to be
+    // pre-registered on the proxy.
+    ModuleProxy.registerOuterAnalysisInvalidation<TestModuleAnalysis,
+                                                  TestIndirectSCCAnalysis>();
+
+    return Result(SCCDep, MDep);
+  }
+
+private:
+  friend AnalysisInfoMixin<TestIndirectSCCAnalysis>;
+  static AnalysisKey Key;
+
+  int &Runs;
+};
+
+AnalysisKey TestIndirectSCCAnalysis::Key;
+
+/// A test analysis pass which caches in its result the result from the above
+/// indirect analysis pass.
+///
+/// This allows us to ensure that whenever an analysis pass is invalidated due
+/// to dependencies (especially dependencies across IR units that trigger
+/// asynchronous invalidation) we correctly detect that this may in turn cause
+/// other analysis to be invalidated.
+struct TestDoublyIndirectSCCAnalysis
+    : public AnalysisInfoMixin<TestDoublyIndirectSCCAnalysis> {
+  struct Result {
+    Result(TestIndirectSCCAnalysis::Result &IDep) : IDep(IDep) {}
+    TestIndirectSCCAnalysis::Result &IDep;
+
+    bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA,
+                    CGSCCAnalysisManager::Invalidator &Inv) {
+      auto PAC = PA.getChecker<TestDoublyIndirectSCCAnalysis>();
+      return !(PAC.preserved() ||
+               PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) ||
+             Inv.invalidate<TestIndirectSCCAnalysis>(C, PA);
+    }
+  };
+
+  TestDoublyIndirectSCCAnalysis(int &Runs) : Runs(Runs) {}
+
+  /// Run the analysis pass over the function and return a result.
+  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+             LazyCallGraph &CG) {
+    ++Runs;
+    auto &IDep = AM.getResult<TestIndirectSCCAnalysis>(C, CG);
+    return Result(IDep);
+  }
+
+private:
+  friend AnalysisInfoMixin<TestDoublyIndirectSCCAnalysis>;
+  static AnalysisKey Key;
+
+  int &Runs;
+};
+
+AnalysisKey TestDoublyIndirectSCCAnalysis::Key;
+
+/// A test analysis pass which caches results from three different IR unit
+/// layers and requires intermediate layers to correctly propagate the entire
+/// distance.
+struct TestIndirectFunctionAnalysis
+    : public AnalysisInfoMixin<TestIndirectFunctionAnalysis> {
+  struct Result {
+    Result(TestFunctionAnalysis::Result &FDep, TestModuleAnalysis::Result &MDep,
+           TestSCCAnalysis::Result &SCCDep)
+        : FDep(FDep), MDep(MDep), SCCDep(SCCDep) {}
+    TestFunctionAnalysis::Result &FDep;
+    TestModuleAnalysis::Result &MDep;
+    TestSCCAnalysis::Result &SCCDep;
+
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv) {
+      auto PAC = PA.getChecker<TestIndirectFunctionAnalysis>();
+      return !(PAC.preserved() ||
+               PAC.preservedSet<AllAnalysesOn<Function>>()) ||
+             Inv.invalidate<TestFunctionAnalysis>(F, PA);
+    }
+  };
+
+  TestIndirectFunctionAnalysis(int &Runs) : Runs(Runs) {}
+
+  /// Run the analysis pass over the function and return a result.
+  Result run(Function &F, FunctionAnalysisManager &AM) {
+    ++Runs;
+    auto &FDep = AM.getResult<TestFunctionAnalysis>(F);
+
+    auto &ModuleProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    const ModuleAnalysisManager &MAM = ModuleProxy.getManager();
+    // For the test, we insist that the module analysis starts off in the
+    // cache.
+    auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
+    // Register the dependency as module analysis dependencies have to be
+    // pre-registered on the proxy.
+    ModuleProxy.registerOuterAnalysisInvalidation<
+        TestModuleAnalysis, TestIndirectFunctionAnalysis>();
+
+    // For thet test we assume this is run inside a CGSCC pass manager.
+    const LazyCallGraph &CG =
+        *MAM.getCachedResult<LazyCallGraphAnalysis>(*F.getParent());
+    auto &CGSCCProxy = AM.getResult<CGSCCAnalysisManagerFunctionProxy>(F);
+    const CGSCCAnalysisManager &CGAM = CGSCCProxy.getManager();
+    // For the test, we insist that the CGSCC analysis starts off in the cache.
+    auto &SCCDep =
+        *CGAM.getCachedResult<TestSCCAnalysis>(*CG.lookupSCC(*CG.lookup(F)));
+    // Register the dependency as CGSCC analysis dependencies have to be
+    // pre-registered on the proxy.
+    CGSCCProxy.registerOuterAnalysisInvalidation<
+        TestSCCAnalysis, TestIndirectFunctionAnalysis>();
+
+    return Result(FDep, MDep, SCCDep);
+  }
+
+private:
+  friend AnalysisInfoMixin<TestIndirectFunctionAnalysis>;
+  static AnalysisKey Key;
+
+  int &Runs;
+};
+
+AnalysisKey TestIndirectFunctionAnalysis::Key;
+
+TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
+  int ModuleAnalysisRuns = 0;
+  MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
+
+  int SCCAnalysisRuns = 0, IndirectSCCAnalysisRuns = 0,
+      DoublyIndirectSCCAnalysisRuns = 0;
+  CGAM.registerPass([&] { return TestSCCAnalysis(SCCAnalysisRuns); });
+  CGAM.registerPass(
+      [&] { return TestIndirectSCCAnalysis(IndirectSCCAnalysisRuns); });
+  CGAM.registerPass([&] {
+    return TestDoublyIndirectSCCAnalysis(DoublyIndirectSCCAnalysisRuns);
+  });
+
+  int FunctionAnalysisRuns = 0, IndirectFunctionAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
+  FAM.registerPass([&] {
+    return TestIndirectFunctionAnalysis(IndirectFunctionAnalysisRuns);
+  });
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+
+  int FunctionCount = 0;
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+  // First just use the analysis to get the function count and preserve
+  // everything.
+  CGPM.addPass(
+      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &) {
+        auto &DoublyIndirectResult =
+            AM.getResult<TestDoublyIndirectSCCAnalysis>(C, CG);
+        auto &IndirectResult = DoublyIndirectResult.IDep;
+        FunctionCount += IndirectResult.SCCDep.FunctionCount;
+        return PreservedAnalyses::all();
+      }));
+  // Next, invalidate
+  //   - both analyses for the (f) and (x) SCCs,
+  //   - just the underlying (indirect) analysis for (g) SCC, and
+  //   - just the direct analysis for (h1,h2,h3) SCC.
+  CGPM.addPass(
+      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &) {
+        auto &DoublyIndirectResult =
+            AM.getResult<TestDoublyIndirectSCCAnalysis>(C, CG);
+        auto &IndirectResult = DoublyIndirectResult.IDep;
+        FunctionCount += IndirectResult.SCCDep.FunctionCount;
+        auto PA = PreservedAnalyses::none();
+        if (C.getName() == "(g)")
+          PA.preserve<TestSCCAnalysis>();
+        else if (C.getName() == "(h3, h1, h2)")
+          PA.preserve<TestIndirectSCCAnalysis>();
+        return PA;
+      }));
+  // Finally, use the analysis again on each function, forcing re-computation
+  // for all of them.
+  CGPM.addPass(
+      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &) {
+        auto &DoublyIndirectResult =
+            AM.getResult<TestDoublyIndirectSCCAnalysis>(C, CG);
+        auto &IndirectResult = DoublyIndirectResult.IDep;
+        FunctionCount += IndirectResult.SCCDep.FunctionCount;
+        return PreservedAnalyses::all();
+      }));
+
+  // Create a second CGSCC pass manager. This will cause the module-level
+  // invalidation to occur, which will force yet another invalidation of the
+  // indirect SCC-level analysis as the module analysis it depends on gets
+  // invalidated.
+  CGSCCPassManager CGPM2(/*DebugLogging*/ true);
+  CGPM2.addPass(
+      LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &) {
+        auto &DoublyIndirectResult =
+            AM.getResult<TestDoublyIndirectSCCAnalysis>(C, CG);
+        auto &IndirectResult = DoublyIndirectResult.IDep;
+        FunctionCount += IndirectResult.SCCDep.FunctionCount;
+        return PreservedAnalyses::all();
+      }));
+
+  // Add a requires pass to populate the module analysis and then our function
+  // pass pipeline.
+  MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  // Now require the module analysis again (it will have been invalidated once)
+  // and then use it again from a function pass manager.
+  MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
+  MPM.run(*M, MAM);
+
+  // There are generally two possible runs for each of the four SCCs. But
+  // for one SCC, we only invalidate the indirect analysis so the base one
+  // only gets run seven times.
+  EXPECT_EQ(7, SCCAnalysisRuns);
+  // The module analysis pass should be run twice here.
+  EXPECT_EQ(2, ModuleAnalysisRuns);
+  // The indirect analysis is invalidated (either directly or indirectly) three
+  // times for each of four SCCs.
+  EXPECT_EQ(3 * 4, IndirectSCCAnalysisRuns);
+  EXPECT_EQ(3 * 4, DoublyIndirectSCCAnalysisRuns);
+
+  // Four passes count each of six functions once (via SCCs).
+  EXPECT_EQ(4 * 6, FunctionCount);
+}
 }

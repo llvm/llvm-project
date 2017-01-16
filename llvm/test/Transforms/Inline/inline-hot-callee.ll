@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -inline-threshold=0 -inlinehint-threshold=100 -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -inlinehint-threshold=100 -S | FileCheck %s
 
 ; This tests that a hot callee gets the (higher) inlinehint-threshold even without
 ; inline hints and gets inlined because the cost is less than inlinehint-threshold.

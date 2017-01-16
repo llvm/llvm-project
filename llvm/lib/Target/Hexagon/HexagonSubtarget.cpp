@@ -188,6 +188,11 @@ void HexagonSubtarget::getPostRAMutations(
   Mutations.push_back(make_unique<HexagonSubtarget::HexagonDAGMutation>());
 }
 
+void HexagonSubtarget::getSMSMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(make_unique<HexagonSubtarget::HexagonDAGMutation>());
+}
+
 
 // Pin the vtable to this file.
 void HexagonSubtarget::anchor() {}

@@ -445,7 +445,7 @@ __func<_Fp, _Alloc, _Rp(_A0, _A1, _A2)>::target_type() const
 }  // __function
 
 template<class _Rp>
-class _LIBCPP_TYPE_VIS_ONLY function<_Rp()>
+class _LIBCPP_TEMPLATE_VIS function<_Rp()>
 {
     typedef __function::__base<_Rp()> __base;
     aligned_storage<3*sizeof(void*)>::type __buf_;
@@ -642,6 +642,8 @@ template<class _Rp>
 void
 function<_Rp()>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -718,7 +720,7 @@ function<_Rp()>::target() const
 #endif  // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0>
-class _LIBCPP_TYPE_VIS_ONLY function<_Rp(_A0)>
+class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0)>
     : public unary_function<_A0, _Rp>
 {
     typedef __function::__base<_Rp(_A0)> __base;
@@ -916,6 +918,8 @@ template<class _Rp, class _A0>
 void
 function<_Rp(_A0)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -992,7 +996,7 @@ function<_Rp(_A0)>::target() const
 #endif  // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0, class _A1>
-class _LIBCPP_TYPE_VIS_ONLY function<_Rp(_A0, _A1)>
+class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0, _A1)>
     : public binary_function<_A0, _A1, _Rp>
 {
     typedef __function::__base<_Rp(_A0, _A1)> __base;
@@ -1190,6 +1194,8 @@ template<class _Rp, class _A0, class _A1>
 void
 function<_Rp(_A0, _A1)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
@@ -1266,7 +1272,7 @@ function<_Rp(_A0, _A1)>::target() const
 #endif  // _LIBCPP_NO_RTTI
 
 template<class _Rp, class _A0, class _A1, class _A2>
-class _LIBCPP_TYPE_VIS_ONLY function<_Rp(_A0, _A1, _A2)>
+class _LIBCPP_TEMPLATE_VIS function<_Rp(_A0, _A1, _A2)>
 {
     typedef __function::__base<_Rp(_A0, _A1, _A2)> __base;
     aligned_storage<3*sizeof(void*)>::type __buf_;
@@ -1464,6 +1470,8 @@ template<class _Rp, class _A0, class _A1, class _A2>
 void
 function<_Rp(_A0, _A1, _A2)>::swap(function& __f)
 {
+    if (_VSTD::addressof(__f) == this)
+      return;
     if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;

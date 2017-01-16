@@ -65,22 +65,20 @@ if.then:                                          ; preds = %entry
   %vtable1 = load i8**, i8*** %1, align 8, !invariant.group !0
   %vtable2.cast = bitcast i8** %vtable1 to i32 (%struct.A*)**
   %call1 = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable2.cast, align 8
-; FIXME: those loads could be also direct, but right now the invariant.group
-; analysis works only on single block
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %callx = tail call i32 %call1(%struct.A* %0) #1
   
   %vtable2 = load i8**, i8*** %1, align 8, !invariant.group !0
   %vtable3.cast = bitcast i8** %vtable2 to i32 (%struct.A*)**
   %call4 = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable3.cast, align 8
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %cally = tail call i32 %call4(%struct.A* %0) #1
   
   %b = bitcast i8* %call to %struct.A**
   %vtable3 = load %struct.A*, %struct.A** %b, align 8, !invariant.group !0
   %vtable4.cast = bitcast %struct.A* %vtable3 to i32 (%struct.A*)**
   %vfun = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable4.cast, align 8
-; CHECK-NOT: call i32 @_ZN1A3fooEv(
+; CHECK: call i32 @_ZN1A3fooEv(
   %unknown = tail call i32 %vfun(%struct.A* %0) #1
   
   br label %if.end

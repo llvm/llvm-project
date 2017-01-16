@@ -3058,9 +3058,9 @@ parse_unnamed_type_name(const char* first, const char* last, C& db)
             }
             if (t0 == last || *t0 != 'E')
             {
-              if(!db.names.empty())
+              if (!db.names.empty())
                 db.names.pop_back();
-                return first;
+              return first;
             }
             ++t0;
             if (t0 == last)

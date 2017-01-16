@@ -44,7 +44,7 @@ namespace frontend {
 
 /// HeaderSearchOptions - Helper class for storing options related to the
 /// initialization of the HeaderSearch object.
-class HeaderSearchOptions : public RefCountedBase<HeaderSearchOptions> {
+class HeaderSearchOptions {
 public:
   struct Entry {
     std::string Path;

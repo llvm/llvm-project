@@ -65,4 +65,9 @@ void for_range() {
   }
 }
 
+int error_recovery() {
+  auto [foobar]; // expected-error {{requires an initializer}}
+  return foobar_; // expected-error {{undeclared identifier 'foobar_'}}
+}
+
 // FIXME: by-value array copies
