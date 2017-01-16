@@ -380,6 +380,7 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
+               -DLIBCXX_STANDALONE_BUILD=On
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1

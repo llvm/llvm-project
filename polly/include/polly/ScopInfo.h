@@ -233,7 +233,7 @@ public:
   /// @param S              The scop this array object belongs to.
   /// @param BaseName       The optional name of this memory reference.
   ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *IslCtx,
-                ArrayRef<const SCEV *> DimensionSizes, enum MemoryKind Kind,
+                ArrayRef<const SCEV *> DimensionSizes, MemoryKind Kind,
                 const DataLayout &DL, Scop *S, const char *BaseName = nullptr);
 
   ///  Update the element type of the ScopArrayInfo object.
@@ -320,7 +320,7 @@ public:
   __isl_give isl_id *getBasePtrId() const;
 
   /// Return what kind of memory this represents.
-  enum MemoryKind getKind() const { return Kind; }
+  MemoryKind getKind() const { return Kind; }
 
   /// Is this array info modeling an llvm::Value?
   bool isValueKind() const { return Kind == MemoryKind::Value; }
@@ -399,7 +399,7 @@ private:
   /// The type of this scop array info object.
   ///
   /// We distinguish between SCALAR, PHI and ARRAY objects.
-  enum MemoryKind Kind;
+  MemoryKind Kind;
 
   /// The data layout of the module.
   const DataLayout &DL;
@@ -1536,7 +1536,7 @@ private:
   /// The affinator used to translate SCEVs to isl expressions.
   SCEVAffinator Affinator;
 
-  typedef std::map<std::pair<AssertingVH<const Value>, enum MemoryKind>,
+  typedef std::map<std::pair<AssertingVH<const Value>, MemoryKind>,
                    std::unique_ptr<ScopArrayInfo>>
       ArrayInfoMapTy;
 
