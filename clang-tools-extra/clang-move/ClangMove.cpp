@@ -841,6 +841,12 @@ void ClangMoveTool::onEndOfTranslationUnit() {
       else if (Kind == Decl::Kind::ClassTemplate ||
                Kind == Decl::Kind::CXXRecord)
         Reporter->reportDeclaration(QualifiedName, "Class");
+      else if (Kind == Decl::Kind::Enum)
+        Reporter->reportDeclaration(QualifiedName, "Enum");
+      else if (Kind == Decl::Kind::Typedef ||
+               Kind == Decl::Kind::TypeAlias ||
+               Kind == Decl::Kind::TypeAliasTemplate)
+        Reporter->reportDeclaration(QualifiedName, "TypeAlias");
     }
     return;
   }

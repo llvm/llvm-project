@@ -466,17 +466,22 @@ private:
     return __result{{_VSTD::forward<_Fs>(__fs)...}};
   }
 
-  template <class _Fp, class... _Vs, size_t... _Is>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_dispatch(index_sequence<_Is...>) {
-    struct __dispatcher {
-      static constexpr decltype(auto) __dispatch(_Fp __f, _Vs... __vs) {
+  template <std::size_t... _Is>
+  struct __dispatcher {
+    template <class _Fp, class... _Vs>
+    inline _LIBCPP_INLINE_VISIBILITY
+    static constexpr decltype(auto) __dispatch(_Fp __f, _Vs... __vs) {
         return __invoke_constexpr(
             static_cast<_Fp>(__f),
             __access::__base::__get_alt<_Is>(static_cast<_Vs>(__vs))...);
-      }
-    };
-    return _VSTD::addressof(__dispatcher::__dispatch);
+    }
+  };
+
+  template <class _Fp, class... _Vs, size_t... _Is>
+  inline _LIBCPP_INLINE_VISIBILITY
+  static constexpr auto __make_dispatch(index_sequence<_Is...>) {
+    return _VSTD::addressof(
+        __dispatcher<_Is...>::template __dispatch<_Fp, _Vs...>);
   }
 
   template <size_t _Ip, class _Fp, class... _Vs>

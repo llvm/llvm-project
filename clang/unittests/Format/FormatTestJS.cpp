@@ -858,13 +858,25 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
                "return 1",
                "a = null\n"
                "  return   1");
+  // Below "class Y {}" should ideally be on its own line.
   verifyFormat(
       "x = {\n"
       "  a: 1\n"
-      "}\n"
-      "class Y {}",
+      "} class Y {}",
       "  x  =  {a  : 1}\n"
       "   class  Y {  }");
+  verifyFormat(
+      "if (x) {\n"
+      "}\n"
+      "return 1",
+      "if (x) {}\n"
+      " return   1");
+  verifyFormat(
+      "if (x) {\n"
+      "}\n"
+      "class X {}",
+      "if (x) {}\n"
+      " class X {}");
 }
 
 TEST_F(FormatTestJS, ImportExportASI) {
@@ -873,11 +885,17 @@ TEST_F(FormatTestJS, ImportExportASI) {
       "export function z() {}",
       "import   {x} from 'y'\n"
       "  export function z() {}");
+  // Below "class Y {}" should ideally be on its own line.
   verifyFormat(
-      "export {x}\n"
-      "class Y {}",
+      "export {x} class Y {}",
       "  export {x}\n"
       "  class  Y {\n}");
+  verifyFormat(
+      "if (x) {\n"
+      "}\n"
+      "export class Y {}",
+      "if ( x ) { }\n"
+      " export class Y {}");
 }
 
 TEST_F(FormatTestJS, ClosureStyleCasts) {

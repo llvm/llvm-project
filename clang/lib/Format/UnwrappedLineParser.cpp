@@ -746,8 +746,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
        Previous->isOneOf(tok::r_square, tok::r_paren, tok::plusplus,
                          tok::minusminus)))
     return addUnwrappedLine();
-  if ((PreviousMustBeValue || Previous->is(tok::r_brace)) &&
-      isJSDeclOrStmt(Keywords, Next))
+  if (PreviousMustBeValue && isJSDeclOrStmt(Keywords, Next))
     return addUnwrappedLine();
 }
 
