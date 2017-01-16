@@ -149,9 +149,13 @@ define void @zext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounw
 ; SI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN: s_movk_i32 [[K255:s[0-9]+]], 0xff
-; GCN-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], [[K255]]
 ; GCN-DAG: v_mov_b32_e32 [[VK255:v[0-9]+]], [[K255]]
-; GCN: v_cmp_ne_u32_e32 vcc, [[B]], [[VK255]]
+; SI-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], [[K255]]
+; SI: v_cmp_ne_u32_e32 vcc, [[B]], [[VK255]]
+
+; VI-DAG: v_and_b32_e32 [[B:v[0-9]+]], [[VALUE]], [[VK255]]
+; VI: v_cmp_ne_u16_e32 vcc, [[K255]], [[B]]
+
 ; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
 ; GCN: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm

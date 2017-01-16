@@ -511,6 +511,7 @@ public:
   getPreferredVectorAction(EVT VT) const override;
 
   bool allowFMA(MachineFunction &MF, CodeGenOpt::Level OptLevel) const;
+  bool allowUnsafeFPMath(MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(EVT) const override { return true; }
 
@@ -527,6 +528,7 @@ private:
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREi1(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTOREf16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;

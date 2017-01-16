@@ -32,6 +32,18 @@ AST_MATCHER(EnumConstantDecl, isInScopedEnum) {
   return false;
 }
 
+AST_POLYMORPHIC_MATCHER(isFullySpecialized,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl, VarDecl,
+                                                        CXXRecordDecl)) {
+  if (Node.getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
+    bool IsPartialSpecialization =
+        llvm::isa<VarTemplatePartialSpecializationDecl>(Node) ||
+        llvm::isa<ClassTemplatePartialSpecializationDecl>(Node);
+    return !IsPartialSpecialization;
+  }
+  return false;
+}
+
 std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
   std::vector<SymbolInfo::Context> Contexts;
   for (const auto *Context = ND->getDeclContext(); Context;
@@ -126,8 +138,7 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
   auto CCMatcher =
       allOf(HasNSOrTUCtxMatcher, unless(IsInSpecialization),
             unless(ast_matchers::isTemplateInstantiation()),
-            unless(isInstantiated()), unless(classTemplateSpecializationDecl()),
-            unless(isExplicitTemplateSpecialization()));
+            unless(isInstantiated()), unless(isFullySpecialized()));
 
   // Matchers specific to code in extern "C" {...}.
   auto ExternCMatcher = hasDeclContext(linkageSpecDecl());
@@ -156,8 +167,7 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
 
   // Matchers for C++ record declarations.
   auto CxxRecordDecl =
-      cxxRecordDecl(CommonFilter, CCMatcher, isDefinition(),
-                    unless(isExplicitTemplateSpecialization()));
+      cxxRecordDecl(CommonFilter, CCMatcher, isDefinition());
   MatchFinder->addMatcher(CxxRecordDecl.bind("decl"), this);
 
   // Matchers for function declarations.

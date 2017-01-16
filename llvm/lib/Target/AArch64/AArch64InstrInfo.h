@@ -162,6 +162,10 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  // This tells target independent code that it is okay to pass instructions
+  // with subreg operands to foldMemoryOperandImpl.
+  bool isSubregFoldable() const override { return true; }
+
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,

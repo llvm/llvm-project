@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -fms-extensions -O2 -disable-llvm-passes -emit-llvm -o - | FileCheck %s
 
 // Test optnone on both function declarations and function definitions.
 // Verify also that we don't generate invalid IR functions with

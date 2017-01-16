@@ -68,7 +68,7 @@ void test_barrier() {
   __builtin_arm_isb(3); //CHECK: call {{.*}} @llvm.arm.isb(i32 3)
 }
 
-// CHECK: call {{.*}} @llvm.arm.rbit(i32 %a)
+// CHECK: call {{.*}} @llvm.bitreverse.i32(i32 %a)
 
 unsigned rbit(unsigned a) {
   return __builtin_arm_rbit(a);

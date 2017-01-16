@@ -1,5 +1,5 @@
 ; RUN: opt < %s -basicaa -tbaa -licm -S | FileCheck %s
-; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 @X = global i32 7   ; <i32*> [#uses=4]
@@ -184,6 +184,198 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; CHECK: for.cond.for.end_crit_edge:
 ; CHECK-NEXT:  %[[LCSSAPHI:.*]] = phi i32 [ %inc
 ; CHECK-NEXT:  store i32 %[[LCSSAPHI]], i32* %gi, align 4, !tbaa !0
+}
+
+declare i32 @opaque(i32) argmemonly
+declare void @capture(i32*)
+
+; We can promote even if opaque may throw.
+define i32 @test7() {
+; CHECK-LABEL: @test7(
+; CHECK: entry:
+; CHECK-NEXT: %local = alloca
+; CHECK-NEXT: call void @capture(i32* %local)
+; CHECK-NEXT: load i32, i32* %local
+; CHECK-NEXT: br label %loop
+; CHECK: exit:
+; CHECK-NEXT: %[[LCSSAPHI:.*]] = phi i32 [ %x2, %loop ]
+; CHECK-NEXT: store i32 %[[LCSSAPHI]], i32* %local
+; CHECK-NEXT: %ret = load i32, i32* %local
+; CHECK-NEXT: ret i32 %ret
+entry:
+  %local = alloca i32
+  call void @capture(i32* %local)
+  br label %loop
+
+loop:
+  %j = phi i32 [ 0, %entry ], [ %next, %loop ]
+  %x = load i32, i32* %local
+  %x2 = call i32 @opaque(i32 %x) ; Note this does not capture %local
+  store i32 %x2, i32* %local
+  %next = add i32 %j, 1
+  %cond = icmp eq i32 %next, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %ret = load i32, i32* %local
+  ret i32 %ret
+}
+
+; Make sure we don't promote if the store is really control-flow dependent.
+define i32 @test7bad() {
+; CHECK-LABEL: @test7bad(
+; CHECK: entry:
+; CHECK-NEXT: %local = alloca
+; CHECK-NEXT: call void @capture(i32* %local)
+; CHECK-NEXT: br label %loop
+; CHECK: if:
+; CHECK-NEXT: store i32 %x2, i32* %local
+; CHECK-NEXT: br label %else
+; CHECK: exit:
+; CHECK-NEXT: %ret = load i32, i32* %local
+; CHECK-NEXT: ret i32 %ret
+entry:
+  %local = alloca i32
+  call void @capture(i32* %local)  
+  br label %loop
+loop:
+  %j = phi i32 [ 0, %entry ], [ %next, %else ]
+  %x = load i32, i32* %local
+  %x2 = call i32 @opaque(i32 %x) ; Note this does not capture %local
+  %cmp = icmp eq i32 %x2, 0
+  br i1 %cmp, label %if, label %else
+
+if:  
+  store i32 %x2, i32* %local
+  br label %else
+
+else:
+  %next = add i32 %j, 1
+  %cond = icmp eq i32 %next, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %ret = load i32, i32* %local
+  ret i32 %ret
+}
+
+; Even if neither the load nor the store or guaranteed to execute because
+; opaque() may throw, we can still promote - the load not being guaranteed
+; doesn't block us, because %local is always dereferenceable.
+define i32 @test8() {
+; CHECK-LABEL: @test8(
+; CHECK: entry:
+; CHECK-NEXT: %local = alloca
+; CHECK-NEXT: call void @capture(i32* %local)
+; CHECK-NEXT: load i32, i32* %local
+; CHECK-NEXT: br label %loop
+; CHECK: exit:
+; CHECK-NEXT: %[[LCSSAPHI:.*]] = phi i32 [ %x2, %loop ]
+; CHECK-NEXT: store i32 %[[LCSSAPHI]], i32* %local
+; CHECK-NEXT: %ret = load i32, i32* %local
+; CHECK-NEXT: ret i32 %ret
+entry:
+  %local = alloca i32
+  call void @capture(i32* %local)  
+  br label %loop
+
+loop:
+  %j = phi i32 [ 0, %entry ], [ %next, %loop ]
+  %throwaway = call i32 @opaque(i32 %j)
+  %x = load i32, i32* %local  
+  %x2 = call i32 @opaque(i32 %x)
+  store i32 %x2, i32* %local
+  %next = add i32 %j, 1
+  %cond = icmp eq i32 %next, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %ret = load i32, i32* %local
+  ret i32 %ret
+}
+
+
+; If the store is "guaranteed modulo exceptions", and the load depends on
+; control flow, we can only promote if the pointer is otherwise known to be
+; dereferenceable
+define i32 @test9() {
+; CHECK-LABEL: @test9(
+; CHECK: entry:
+; CHECK-NEXT: %local = alloca
+; CHECK-NEXT: call void @capture(i32* %local)
+; CHECK-NEXT: load i32, i32* %local
+; CHECK-NEXT: br label %loop
+; CHECK: exit:
+; CHECK-NEXT: %[[LCSSAPHI:.*]] = phi i32 [ %x2, %else ]
+; CHECK-NEXT: store i32 %[[LCSSAPHI]], i32* %local
+; CHECK-NEXT: %ret = load i32, i32* %local
+; CHECK-NEXT: ret i32 %ret
+entry:
+  %local = alloca i32
+  call void @capture(i32* %local)  
+  br label %loop
+
+loop:
+  %j = phi i32 [ 0, %entry ], [ %next, %else ]  
+  %j2 = call i32 @opaque(i32 %j)
+  %cmp = icmp eq i32 %j2, 0
+  br i1 %cmp, label %if, label %else
+
+if:  
+  %x = load i32, i32* %local
+  br label %else
+
+else:
+  %x2 = phi i32 [ 0, %loop ], [ %x, %if]
+  store i32 %x2, i32* %local
+  %next = add i32 %j, 1
+  %cond = icmp eq i32 %next, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %ret = load i32, i32* %local
+  ret i32 %ret
+}
+
+define i32 @test9bad(i32 %i) {
+; CHECK-LABEL: @test9bad(
+; CHECK: entry:
+; CHECK-NEXT: %local = alloca
+; CHECK-NEXT: call void @capture(i32* %local)
+; CHECK-NEXT: %notderef = getelementptr
+; CHECK-NEXT: br label %loop
+; CHECK: if:
+; CHECK-NEXT: load i32, i32* %notderef
+; CHECK-NEXT: br label %else
+; CHECK: exit:
+; CHECK-NEXT: %ret = load i32, i32* %notderef
+; CHECK-NEXT: ret i32 %ret
+entry:
+  %local = alloca i32
+  call void @capture(i32* %local)  
+  %notderef = getelementptr i32, i32* %local, i32 %i
+  br label %loop
+
+loop:
+  %j = phi i32 [ 0, %entry ], [ %next, %else ]  
+  %j2 = call i32 @opaque(i32 %j)
+  %cmp = icmp eq i32 %j2, 0
+  br i1 %cmp, label %if, label %else
+
+if:  
+  %x = load i32, i32* %notderef
+  br label %else
+
+else:
+  %x2 = phi i32 [ 0, %loop ], [ %x, %if]
+  store i32 %x2, i32* %notderef
+  %next = add i32 %j, 1
+  %cond = icmp eq i32 %next, 0
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  %ret = load i32, i32* %notderef
+  ret i32 %ret
 }
 
 !0 = !{!4, !4, i64 0}

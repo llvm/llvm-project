@@ -272,28 +272,10 @@ static const Value *getNoopInput(const Value *V,
                TLI.allowTruncateForTailCall(Op->getType(), I->getType())) {
       DataBits = std::min(DataBits, I->getType()->getPrimitiveSizeInBits());
       NoopInput = Op;
-    } else if (isa<CallInst>(I)) {
-      // Look through call (skipping callee)
-      for (User::const_op_iterator i = I->op_begin(), e = I->op_end() - 1;
-           i != e; ++i) {
-        unsigned attrInd = i - I->op_begin() + 1;
-        if (cast<CallInst>(I)->paramHasAttr(attrInd, Attribute::Returned) &&
-            isNoopBitcast((*i)->getType(), I->getType(), TLI)) {
-          NoopInput = *i;
-          break;
-        }
-      }
-    } else if (isa<InvokeInst>(I)) {
-      // Look through invoke (skipping BB, BB, Callee)
-      for (User::const_op_iterator i = I->op_begin(), e = I->op_end() - 3;
-           i != e; ++i) {
-        unsigned attrInd = i - I->op_begin() + 1;
-        if (cast<InvokeInst>(I)->paramHasAttr(attrInd, Attribute::Returned) &&
-            isNoopBitcast((*i)->getType(), I->getType(), TLI)) {
-          NoopInput = *i;
-          break;
-        }
-      }
+    } else if (auto CS = ImmutableCallSite(I)) {
+      const Value *ReturnedOp = CS.getReturnedArgOperand();
+      if (ReturnedOp && isNoopBitcast(ReturnedOp->getType(), I->getType(), TLI))
+        NoopInput = ReturnedOp;
     } else if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(V)) {
       // Value may come from either the aggregate or the scalar
       ArrayRef<unsigned> InsertLoc = IVI->getIndices();

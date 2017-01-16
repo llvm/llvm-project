@@ -78,7 +78,7 @@ define <16 x i32> @test_broadcast_8i32_16i32(<8 x i32> *%p) nounwind {
 define <32 x i16> @test_broadcast_16i16_32i16(<16 x i16> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_16i16_32i16:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %ymm1
+; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
@@ -91,7 +91,7 @@ define <32 x i16> @test_broadcast_16i16_32i16(<16 x i16> *%p) nounwind {
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_16i16_32i16:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %ymm1
+; X64-AVX512DQVL-NEXT:    vmovdqa (%rdi), %ymm1
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512DQVL-NEXT:    retq
@@ -104,7 +104,7 @@ define <32 x i16> @test_broadcast_16i16_32i16(<16 x i16> *%p) nounwind {
 define <64 x i8> @test_broadcast_32i8_64i8(<32 x i8> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_32i8_64i8:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %ymm1
+; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
@@ -117,7 +117,7 @@ define <64 x i8> @test_broadcast_32i8_64i8(<32 x i8> *%p) nounwind {
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_32i8_64i8:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %ymm1
+; X64-AVX512DQVL-NEXT:    vmovdqa (%rdi), %ymm1
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512DQVL-NEXT:    retq

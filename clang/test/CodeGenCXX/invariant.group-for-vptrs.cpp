@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -emit-llvm %s -fstrict-vtable-pointers -O1 -o - -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -emit-llvm %s -fstrict-vtable-pointers -O1 -o - -disable-llvm-passes | FileCheck %s
 
 struct A {
   virtual void foo();

@@ -24,7 +24,7 @@ define i1 @foo(i8* %p) {
 ; CHECK: @bar(i8* [[B0:%[^ ]*]])
 define i1 @bar(i8* %p) {
   ; CHECK: [[S0:%[^ ]*]] = ptrtoint i8* [[B0]] to i32
-  ; CHECK: [[S1:%[^ ]*]] = icmp eq i32 [[S0]], add (i32 ptrtoint ({ i32, [0 x i8], i32 }* [[G]] to i32), i32 4)
+  ; CHECK: [[S1:%[^ ]*]] = icmp eq i32 [[S0]],  ptrtoint (i8* getelementptr (i8, i8* bitcast ({ i32, [0 x i8], i32 }* [[G]] to i8*), i32 4) to i32)
   %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid3")
   ; CHECK: ret i1 [[S1]]
   ret i1 %x

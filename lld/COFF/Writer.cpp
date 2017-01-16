@@ -12,6 +12,7 @@
 #include "DLL.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "MapFile.h"
 #include "Memory.h"
 #include "PDB.h"
 #include "SymbolTable.h"
@@ -39,7 +40,6 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::coff;
 
-static const int PageSize = 4096;
 static const int SectorSize = 512;
 static const int DOSStubSize = 64;
 static const int NumberfOfDataDirectory = 16;
@@ -163,51 +163,6 @@ namespace coff {
 
 void writeResult(SymbolTable *T) { Writer(T).run(); }
 
-// OutputSection represents a section in an output file. It's a
-// container of chunks. OutputSection and Chunk are 1:N relationship.
-// Chunks cannot belong to more than one OutputSections. The writer
-// creates multiple OutputSections and assign them unique,
-// non-overlapping file offsets and RVAs.
-class OutputSection {
-public:
-  OutputSection(StringRef N) : Name(N), Header({}) {}
-  void setRVA(uint64_t);
-  void setFileOffset(uint64_t);
-  void addChunk(Chunk *C);
-  StringRef getName() { return Name; }
-  std::vector<Chunk *> &getChunks() { return Chunks; }
-  void addPermissions(uint32_t C);
-  void setPermissions(uint32_t C);
-  uint32_t getPermissions() { return Header.Characteristics & PermMask; }
-  uint32_t getCharacteristics() { return Header.Characteristics; }
-  uint64_t getRVA() { return Header.VirtualAddress; }
-  uint64_t getFileOff() { return Header.PointerToRawData; }
-  void writeHeaderTo(uint8_t *Buf);
-
-  // Returns the size of this section in an executable memory image.
-  // This may be smaller than the raw size (the raw size is multiple
-  // of disk sector size, so there may be padding at end), or may be
-  // larger (if that's the case, the loader reserves spaces after end
-  // of raw data).
-  uint64_t getVirtualSize() { return Header.VirtualSize; }
-
-  // Returns the size of the section in the output file.
-  uint64_t getRawSize() { return Header.SizeOfRawData; }
-
-  // Set offset into the string table storing this section name.
-  // Used only when the name is longer than 8 bytes.
-  void setStringTableOff(uint32_t V) { StringTableOff = V; }
-
-  // N.B. The section index is one based.
-  uint32_t SectionIndex = 0;
-
-private:
-  StringRef Name;
-  coff_section Header;
-  uint32_t StringTableOff = 0;
-  std::vector<Chunk *> Chunks;
-};
-
 void OutputSection::setRVA(uint64_t RVA) {
   Header.VirtualAddress = RVA;
   for (Chunk *C : Chunks)
@@ -304,7 +259,9 @@ void Writer::run() {
   writeBuildId();
 
   if (!Config->PDBPath.empty())
-    createPDB(Config->PDBPath, Symtab, SectionTable);
+    createPDB(Config->PDBPath, Symtab, SectionTable, BuildId->DI);
+
+  writeMapFile(OutputSections);
 
   if (auto EC = Buffer->commit())
     fatal(EC, "failed to write the output file");
@@ -828,7 +785,10 @@ void Writer::writeBuildId() {
 
   assert(BuildId->DI->Signature.CVSignature == OMF::Signature::PDB70 &&
          "only PDB 7.0 is supported");
-  memcpy(BuildId->DI->PDB70.Signature, Res, 16);
+  assert(sizeof(Res) == sizeof(BuildId->DI->PDB70.Signature) &&
+         "signature size mismatch");
+  memcpy(BuildId->DI->PDB70.Signature, Res,
+         sizeof(codeview::PDB70DebugInfo::Signature));
   // TODO(compnerd) track the Age
   BuildId->DI->PDB70.Age = 1;
 }

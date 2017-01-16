@@ -1,5 +1,4 @@
-# cpio fails on windows with "Function not implemented".
-# REQUIRES: shell
+# REQUIRES: x86, shell
 
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3
@@ -8,7 +7,7 @@
 # RUN: cd %t.dir/build1
 # RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
-# RUN: cpio -id < repro.cpio
+# RUN: tar xf repro.tar
 # RUN: diff %t.obj repro/%:t.obj
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
@@ -16,7 +15,7 @@
 # RUN: cd %t.dir/build2
 # RUN: lld-link %t.obj /libpath:%p/Inputs /defaultlib:std32 /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
-# RUN: cpio -id < repro.cpio
+# RUN: tar xf repro.tar
 # RUN: diff %t.obj repro/%:t.obj
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
@@ -24,7 +23,7 @@
 # RUN: cd %t.dir/build3
 # RUN: env LIB=%p/Inputs lld-link %t.obj /defaultlib:std32 /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
-# RUN: cpio -id < repro.cpio
+# RUN: tar xf repro.tar
 # RUN: diff %t.obj repro/%:t.obj
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt

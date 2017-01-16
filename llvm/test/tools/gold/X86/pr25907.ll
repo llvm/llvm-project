@@ -1,10 +1,12 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN:    -m elf_x86_64 \
 ; RUN:    -shared %t.o -o %t2
 ; RUN: llvm-nm %t2 | FileCheck %s
 ; CHECK: T main
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 @main.L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@main, %L1), i8* blockaddress(@main, %L2), i8* null], align 16
 

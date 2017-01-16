@@ -540,7 +540,7 @@ The bit vector lookup is probably too complex for a hardware implementation.
            Jump(kFailedCheckTarget);
   }
 
-An alternative and more compact enconding would not use `kFailedCheckTarget`,
+An alternative and more compact encoding would not use `kFailedCheckTarget`,
 and will trap on check failure instead.
 This will allow us to fit the instruction into **8-9 bytes**.
 The cross-DSO checks will be performed by a trap handler and

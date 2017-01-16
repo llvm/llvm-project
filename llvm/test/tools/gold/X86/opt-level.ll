@@ -1,11 +1,14 @@
 ; RUN: llvm-as -o %t.bc %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
+; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=O0 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
+; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=O1 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
+; RUN:    -m elf_x86_64 \
 ; RUN:    -plugin-opt=O2 -r -o %t.o %t.bc
 ; RUN: llvm-dis < %t.o.0.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s
 
@@ -14,6 +17,7 @@
 ; CHECK-O2-NOT: define internal void @foo(
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 define internal void @foo() {
   ret void

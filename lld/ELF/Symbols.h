@@ -123,6 +123,11 @@ public:
   // True if this symbol is in the Igot sub-section of the .got.plt or .got.
   unsigned IsInIgot : 1;
 
+  // True if this is a shared symbol in a read-only segment which requires a
+  // copy relocation. This causes space for the symbol to be allocated in the
+  // .bss.rel.ro section.
+  unsigned CopyIsInBssRelRo : 1;
+
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
@@ -236,7 +241,7 @@ public:
   const OutputSectionBase *Section;
 };
 
-class Undefined : public SymbolBody {
+template <class ELFT> class Undefined : public SymbolBody {
 public:
   Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
             InputFile *F);
@@ -245,6 +250,12 @@ public:
     return S->kind() == UndefinedKind;
   }
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol. When linking a DSO undefined
+  // symbols are implicitly imported, the symbol lookup will be performed by
+  // the dynamic loader. A call to an undefined symbol will be given a PLT
+  // entry and on ARM this may need a Thunk if the caller is in Thumb state.
+  Thunk<ELFT> *ThunkData = nullptr;
   InputFile *file() { return this->File; }
 };
 
@@ -276,13 +287,15 @@ public:
   // This field is a pointer to the symbol's version definition.
   const Elf_Verdef *Verdef;
 
-  // OffsetInBss is significant only when needsCopy() is true.
-  uintX_t OffsetInBss = 0;
+  // CopyOffset is significant only when needsCopy() is true.
+  uintX_t CopyOffset = 0;
 
   // If non-null the symbol has a Thunk that may be used as an alternative
   // destination for callers of this Symbol.
   Thunk<ELFT> *ThunkData = nullptr;
   bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
+
+  OutputSection<ELFT> *getBssSectionForCopy() const;
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -407,6 +420,7 @@ struct Symbol {
   unsigned InVersionScript : 1;
 
   bool includeInDynsym() const;
+  uint8_t computeBinding() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 
   // This field is used to store the Symbol's SymbolBody. This instantiation of
@@ -416,7 +430,8 @@ struct Symbol {
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
       DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
-      Undefined, SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Undefined<llvm::object::ELF64LE>, SharedSymbol<llvm::object::ELF64LE>,
+      LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }
@@ -446,10 +461,9 @@ inline Symbol *SymbolBody::symbol() {
   return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
                                     offsetof(Symbol, Body));
 }
-
-std::string toString(const SymbolBody &B);
-
 } // namespace elf
+
+std::string toString(const elf::SymbolBody &B);
 } // namespace lld
 
 #endif

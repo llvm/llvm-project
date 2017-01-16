@@ -36,6 +36,8 @@ using namespace llvm;
 #error "You shouldn't build this"
 #endif
 
+#include "AArch64GenGlobalISel.inc"
+
 AArch64InstructionSelector::AArch64InstructionSelector(
     const AArch64TargetMachine &TM, const AArch64Subtarget &STI,
     const AArch64RegisterBankInfo &RBI)
@@ -139,6 +141,7 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       case TargetOpcode::G_AND:
         return AArch64::ANDWrr;
       case TargetOpcode::G_ADD:
+        assert(OpSize != 32 && "s32 G_ADD should have been selected");
         return AArch64::ADDWrr;
       case TargetOpcode::G_SUB:
         return AArch64::SUBWrr;
@@ -163,7 +166,6 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::EORXrr;
       case TargetOpcode::G_AND:
         return AArch64::ANDXrr;
-      case TargetOpcode::G_ADD:
       case TargetOpcode::G_GEP:
         return AArch64::ADDXrr;
       case TargetOpcode::G_SUB:
@@ -527,15 +529,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return false;
   }
 
+  if (selectImpl(I))
+    return true;
+
   LLT Ty =
       I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg()) : LLT{};
 
   switch (Opcode) {
-  case TargetOpcode::G_BR: {
-    I.setDesc(TII.get(AArch64::B));
-    return true;
-  }
-
   case TargetOpcode::G_BRCOND: {
     if (Ty.getSizeInBits() > 32) {
       // We shouldn't need this on AArch64, but it would be implemented as an
@@ -1071,8 +1071,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
     }
 
-    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
-        (CmpInst::Predicate)I.getOperand(1).getPredicate());
+    // CSINC increments the result by one when the condition code is false.
+    // Therefore, we have to invert the predicate to get an increment by 1 when
+    // the predicate is true.
+    const AArch64CC::CondCode invCC =
+        changeICMPPredToAArch64CC(CmpInst::getInversePredicate(
+            (CmpInst::Predicate)I.getOperand(1).getPredicate()));
 
     MachineInstr &CmpMI = *BuildMI(MBB, I, I.getDebugLoc(), TII.get(CmpOpc))
                                .addDef(ZReg)
@@ -1084,7 +1088,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
              .addDef(I.getOperand(0).getReg())
              .addUse(AArch64::WZR)
              .addUse(AArch64::WZR)
-             .addImm(CC);
+             .addImm(invCC);
 
     constrainSelectedInstRegOperands(CmpMI, TII, TRI, RBI);
     constrainSelectedInstRegOperands(CSetMI, TII, TRI, RBI);

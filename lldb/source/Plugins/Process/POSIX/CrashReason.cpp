@@ -21,6 +21,7 @@ void AppendFaultAddr(std::string &str, lldb::addr_t addr) {
   str += ss.str();
 }
 
+#if defined(si_lower) && defined(si_upper)
 void AppendBounds(std::string &str, lldb::addr_t lower_bound,
                   lldb::addr_t upper_bound, lldb::addr_t addr) {
   llvm::raw_string_ostream stream(str);
@@ -37,6 +38,7 @@ void AppendBounds(std::string &str, lldb::addr_t lower_bound,
   stream << ")";
   stream.flush();
 }
+#endif
 
 CrashReason GetCrashReasonForSIGSEGV(const siginfo_t &info) {
   assert(info.si_signo == SIGSEGV);

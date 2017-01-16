@@ -11,6 +11,7 @@ set(GLOBAL_ISEL_FILES
       RegBankSelect.cpp
       RegisterBank.cpp
       RegisterBankInfo.cpp
+      Utils.cpp
       )
 
 # Add GlobalISel files to the dependencies if the user wants to build it.

@@ -21,7 +21,6 @@
 #include <vector>
 
 namespace llvm {
-class ModuleSummaryIndex;
 class Pass;
 class TargetLibraryInfoImpl;
 class TargetMachine;
@@ -132,6 +131,7 @@ public:
   bool LoopVectorize;
   bool RerollLoops;
   bool LoadCombine;
+  bool NewGVN;
   bool DisableGVNLoadPRE;
   bool VerifyInput;
   bool VerifyOutput;

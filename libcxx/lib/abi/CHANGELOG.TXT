@@ -16,6 +16,28 @@ New entries should be added directly below the "Version" header.
 Version 4.0
 -----------
 
+* r290651 - Add _LIBCPP_ASSERT debug handling functions
+
+  All Platforms
+  -------------
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC2ERKNS_19__libcpp_debug_infoE
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionD1Ev
+  Symbol added: _ZTINSt3__124__libcpp_debug_exceptionE
+  Symbol added: _ZNSt3__129__libcpp_throw_debug_functionERKNS_19__libcpp_debug_infoE
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionD2Ev
+  Symbol added: _ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC2ERKS0_
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC1Ev
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC1ERKNS_19__libcpp_debug_infoE
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC2Ev
+  Symbol added: _ZTSNSt3__124__libcpp_debug_exceptionE
+  Symbol added: _ZNSt3__123__libcpp_debug_functionE
+  Symbol added: _ZNKSt3__124__libcpp_debug_exception4whatEv
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionC1ERKS0_
+  Symbol added: _ZNSt3__124__libcpp_debug_exceptionD0Ev
+  Symbol added: _ZTVNSt3__124__libcpp_debug_exceptionE
+  Symbol added: _ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE
+
 * r288547 - Implement C++17 <variant>
 
   All Platforms

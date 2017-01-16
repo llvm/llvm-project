@@ -595,9 +595,9 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
           .addReg(SrcOp.getReg(), SrcState, SrcOp.getSubReg());
   } else {
     MIB = BuildMI(B, At, DL, HII->get(Opc))
-          .addReg(DstR, DstState, DstSR)
-          .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
-          .addOperand(SrcOp);
+              .addReg(DstR, DstState, DstSR)
+              .addReg(PredOp.getReg(), PredState, PredOp.getSubReg())
+              .add(SrcOp);
   }
 
   DEBUG(dbgs() << "created an initial copy: " << *MIB);
@@ -828,7 +828,7 @@ void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
   while (Ox < NP) {
     MachineOperand &MO = MI.getOperand(Ox);
     if (!MO.isReg() || !MO.isImplicit())
-      MB.addOperand(MO);
+      MB.add(MO);
     Ox++;
   }
 

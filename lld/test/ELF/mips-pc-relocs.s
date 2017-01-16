@@ -38,8 +38,8 @@ __start:
 #                                      ^-- %lo(0x20020-0x20014)
 
 # CHECK: Contents of section .data:
-# CHECK-NEXT: 40000 fffe0028 00000000 00000000 00000000
-#                   ^-- 0x20020 + 8 - 0x40000
+# CHECK-NEXT: 30000 ffff0028 00000000 00000000 00000000
+#                   ^-- 0x20020 + 8 - 0x30000
 
 # CHECK: 00020000         .text           00000000 __start
 # CHECK: 00020020         .text           00000000 _foo

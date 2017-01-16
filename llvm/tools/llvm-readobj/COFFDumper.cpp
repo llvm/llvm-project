@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
@@ -29,7 +30,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
@@ -64,8 +65,7 @@ class COFFDumper : public ObjDumper {
 public:
   friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj),
-        CVTD(&Writer, opts::CodeViewSubsectionBytes) {}
+      : ObjDumper(Writer), Obj(Obj), Writer(Writer) {}
 
   void printFileHeaders() override;
   void printSections() override;
@@ -99,7 +99,7 @@ private:
   void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
   void printTypeIndex(StringRef FieldName, TypeIndex TI) {
     // Forward to CVTypeDumper for simplicity.
-    CVTD.printTypeIndex(FieldName, TI);
+    CVTypeDumper::printTypeIndex(Writer, FieldName, TI, TypeDB);
   }
 
   void printCodeViewSymbolsSubsection(StringRef Subsection,
@@ -142,7 +142,8 @@ private:
   StringRef CVFileChecksumTable;
   StringRef CVStringTable;
 
-  CVTypeDumper CVTD;
+  ScopedPrinter &Writer;
+  TypeDatabase TypeDB;
 };
 
 class COFFObjectDumpDelegate : public SymbolDumpDelegate {
@@ -962,7 +963,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
   auto CODD = llvm::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
                                                         SectionContents);
 
-  CVSymbolDumper CVSD(W, CVTD, std::move(CODD), opts::CodeViewSubsectionBytes);
+  CVSymbolDumper CVSD(W, TypeDB, std::move(CODD),
+                      opts::CodeViewSubsectionBytes);
   ByteStream Stream(BinaryData);
   CVSymbolArray Symbols;
   StreamReader Reader(Stream);
@@ -1106,7 +1108,9 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
 
-  if (auto EC = CVTD.dump({Data.bytes_begin(), Data.bytes_end()})) {
+  CVTypeDumper CVTD(TypeDB);
+  TypeDumpVisitor TDV(TypeDB, &W, opts::CodeViewSubsectionBytes);
+  if (auto EC = CVTD.dump({Data.bytes_begin(), Data.bytes_end()}, TDV)) {
     W.flush();
     error(llvm::errorToErrorCode(std::move(EC)));
   }
@@ -1552,8 +1556,12 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
   CVTypes.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Record) {
     Buf.append(Record.begin(), Record.end());
   });
-  CVTypeDumper CVTD(&Writer, opts::CodeViewSubsectionBytes);
-  if (auto EC = CVTD.dump({Buf.str().bytes_begin(), Buf.str().bytes_end()})) {
+
+  TypeDatabase TypeDB;
+  CVTypeDumper CVTD(TypeDB);
+  TypeDumpVisitor TDV(TypeDB, &Writer, opts::CodeViewSubsectionBytes);
+  if (auto EC =
+          CVTD.dump({Buf.str().bytes_begin(), Buf.str().bytes_end()}, TDV)) {
     Writer.flush();
     error(llvm::errorToErrorCode(std::move(EC)));
   }

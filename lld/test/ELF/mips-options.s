@@ -17,11 +17,11 @@ __start:
     lui  $gp, %hi(%neg(%gp_rel(g1)))
 
 # CHECK:      Name: _gp
-# CHECK-NEXT: Value: 0x100008250
+# CHECK-NEXT: Value: 0x100008258
 
 # CHECK:      MIPS Options {
 # CHECK-NEXT:   ODK_REGINFO {
-# CHECK-NEXT:     GP: 0x100008250
+# CHECK-NEXT:     GP: 0x100008258
 # CHECK-NEXT:     General Mask: 0x10000001
 # CHECK-NEXT:     Co-Proc Mask0: 0x0
 # CHECK-NEXT:     Co-Proc Mask1: 0x0

@@ -226,6 +226,8 @@ static void addThunkARM(uint32_t Reloc, SymbolBody &S, InputSection<ELFT> &IS) {
     Sym->ThunkData = T;
   else if (auto *Sym = dyn_cast<SharedSymbol<ELFT>>(&S))
     Sym->ThunkData = T;
+  else if (auto *Sym = dyn_cast<Undefined<ELFT>>(&S))
+    Sym->ThunkData = T;
   else
     fatal("symbol not DefinedRegular or Shared");
 }

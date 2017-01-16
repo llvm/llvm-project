@@ -239,10 +239,7 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
     N *= 100.0;
 
   char Buf[32];
-  unsigned Len;
-  Len = format(Spec.c_str(), N).snprint(Buf, sizeof(Buf));
-  if (Style == FloatStyle::Percent)
-    ++Len;
+  format(Spec.c_str(), N).snprint(Buf, sizeof(Buf));
   S << Buf;
   if (Style == FloatStyle::Percent)
     S << '%';

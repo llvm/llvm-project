@@ -560,6 +560,22 @@ void atomic_signal_fence(memory_order m) noexcept;
 # define __cpp_lib_atomic_is_always_lock_free 201603L
 #endif
 
+#define _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m) \
+  _LIBCPP_DIAGNOSE_WARNING(__m == memory_order_consume || \
+                           __m == memory_order_acquire || \
+                           __m == memory_order_acq_rel,   \
+                        "memory order argument to atomic operation is invalid")
+
+#define _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m) \
+  _LIBCPP_DIAGNOSE_WARNING(__m == memory_order_release || \
+                           __m == memory_order_acq_rel,   \
+                        "memory order argument to atomic operation is invalid")
+
+#define _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__m, __f) \
+  _LIBCPP_DIAGNOSE_WARNING(__f == memory_order_release || \
+                           __f == memory_order_acq_rel,   \
+                        "memory order argument to atomic operation is invalid")
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 typedef enum memory_order
@@ -881,15 +897,19 @@ struct __atomic_base  // false
         {return static_cast<__atomic_base const volatile*>(this)->is_lock_free();}
     _LIBCPP_INLINE_VISIBILITY
     void store(_Tp __d, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT
+      _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
         {__c11_atomic_store(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     void store(_Tp __d, memory_order __m = memory_order_seq_cst) _NOEXCEPT
+      _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
         {__c11_atomic_store(&__a_, __d, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp load(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT
+      _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
         {return __c11_atomic_load(&__a_, __m);}
     _LIBCPP_INLINE_VISIBILITY
     _Tp load(memory_order __m = memory_order_seq_cst) const _NOEXCEPT
+      _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
         {return __c11_atomic_load(&__a_, __m);}
     _LIBCPP_INLINE_VISIBILITY
     operator _Tp() const volatile _NOEXCEPT {return load();}
@@ -904,18 +924,22 @@ struct __atomic_base  // false
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                                memory_order __s, memory_order __f) volatile _NOEXCEPT
+      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
         {return __c11_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
                                memory_order __s, memory_order __f) _NOEXCEPT
+      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
         {return __c11_atomic_compare_exchange_weak(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                                  memory_order __s, memory_order __f) volatile _NOEXCEPT
+      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
         {return __c11_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_strong(_Tp& __e, _Tp __d,
                                  memory_order __s, memory_order __f) _NOEXCEPT
+      _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
         {return __c11_atomic_compare_exchange_strong(&__a_, &__e, __d, __s, __f);}
     _LIBCPP_INLINE_VISIBILITY
     bool compare_exchange_weak(_Tp& __e, _Tp __d,
@@ -943,16 +967,16 @@ struct __atomic_base  // false
 
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     __atomic_base(const __atomic_base&) = delete;
     __atomic_base& operator=(const __atomic_base&) = delete;
     __atomic_base& operator=(const __atomic_base&) volatile = delete;
-#else  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#else
 private:
     __atomic_base(const __atomic_base&);
     __atomic_base& operator=(const __atomic_base&);
     __atomic_base& operator=(const __atomic_base&) volatile;
-#endif  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#endif
 };
 
 #if defined(__cpp_lib_atomic_is_always_lock_free)
@@ -1181,6 +1205,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void
 atomic_store_explicit(volatile atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
 {
     __o->store(__d, __m);
 }
@@ -1189,6 +1214,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void
 atomic_store_explicit(atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
 {
     __o->store(__d, __m);
 }
@@ -1217,6 +1243,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp
 atomic_load_explicit(const volatile atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
 {
     return __o->load(__m);
 }
@@ -1225,6 +1252,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp
 atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
+  _LIBCPP_CHECK_LOAD_MEMORY_ORDER(__m)
 {
     return __o->load(__m);
 }
@@ -1309,6 +1337,7 @@ bool
 atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, _Tp* __e,
                                       _Tp __d,
                                       memory_order __s, memory_order __f) _NOEXCEPT
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
     return __o->compare_exchange_weak(*__e, __d, __s, __f);
 }
@@ -1318,6 +1347,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 atomic_compare_exchange_weak_explicit(atomic<_Tp>* __o, _Tp* __e, _Tp __d,
                                       memory_order __s, memory_order __f) _NOEXCEPT
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
     return __o->compare_exchange_weak(*__e, __d, __s, __f);
 }
@@ -1330,6 +1360,7 @@ bool
 atomic_compare_exchange_strong_explicit(volatile atomic<_Tp>* __o,
                                         _Tp* __e, _Tp __d,
                                         memory_order __s, memory_order __f) _NOEXCEPT
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
     return __o->compare_exchange_strong(*__e, __d, __s, __f);
 }
@@ -1340,6 +1371,7 @@ bool
 atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, _Tp* __e,
                                         _Tp __d,
                                         memory_order __s, memory_order __f) _NOEXCEPT
+  _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
     return __o->compare_exchange_strong(*__e, __d, __s, __f);
 }
@@ -1699,16 +1731,16 @@ typedef struct atomic_flag
     _LIBCPP_INLINE_VISIBILITY
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     atomic_flag(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
-#else  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#else
 private:
     atomic_flag(const atomic_flag&);
     atomic_flag& operator=(const atomic_flag&);
     atomic_flag& operator=(const atomic_flag&) volatile;
-#endif  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#endif
 } atomic_flag;
 
 inline _LIBCPP_INLINE_VISIBILITY

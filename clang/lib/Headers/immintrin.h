@@ -84,11 +84,11 @@
 ///    A 256-bit vector containing 32-bit single-precision float values to be
 ///    converted to 16-bit half-precision float values.
 /// \param imm
-///    An immediate value controlling rounding using bits [2:0]:
-///    000: Nearest
-///    001: Down
-///    010: Up
-///    011: Truncate
+///    An immediate value controlling rounding using bits [2:0]: \n
+///    000: Nearest \n
+///    001: Down \n
+///    010: Up \n
+///    011: Truncate \n
 ///    1XX: Use MXCSR.RC for rounding
 /// \returns A 128-bit vector containing the converted 16-bit half-precision
 ///    float values.

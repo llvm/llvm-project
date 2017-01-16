@@ -128,8 +128,12 @@ Committing a change
 -------------------
 
 Once a patch has been reviewed and approved on Phabricator it can then be
-committed to trunk.  There are multiple workflows to achieve this. Whichever
-method you follow it is recommend that your commit message ends with the line:
+committed to trunk. If you do not have commit access, someone has to
+commit the change for you (with attribution). It is sufficient to add
+a comment to the approved review indicating you cannot commit the patch
+yourself. If you have commit access, there are multiple workflows to commit the
+change. Whichever method you follow it is recommended that your commit message
+ends with the line:
 
 ::
 

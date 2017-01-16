@@ -33,11 +33,7 @@ public:
   /// \a m_flags bit values.
   //------------------------------------------------------------------
   enum {
-    eVerbose = (1 << 0),   ///< If set, verbose logging is enabled
-    eDebug = (1 << 1),     ///< If set, debug logging is enabled
-    eAddPrefix = (1 << 2), ///< Add number prefixes for binary, octal and hex
-                           ///when eBinary is clear
-    eBinary = (1 << 3) ///< Get and put data as binary instead of as the default
+    eBinary = (1 << 0) ///< Get and put data as binary instead of as the default
                        ///string mode.
   };
 
@@ -385,15 +381,6 @@ public:
   uint32_t GetAddressByteSize() const;
 
   //------------------------------------------------------------------
-  /// Test if debug logging is enabled.
-  ///
-  /// @return
-  //      \b true if the debug flag bit is set in this stream, \b
-  //      false otherwise.
-  //------------------------------------------------------------------
-  bool GetDebug() const;
-
-  //------------------------------------------------------------------
   /// The flags accessor.
   ///
   /// @return
@@ -424,15 +411,6 @@ public:
   ///     The current indentation level as an integer.
   //------------------------------------------------------------------
   int GetIndentLevel() const;
-
-  //------------------------------------------------------------------
-  /// Test if verbose logging is enabled.
-  ///
-  /// @return
-  //      \b true if the verbose flag bit is set in this stream, \b
-  //      false otherwise.
-  //------------------------------------------------------------------
-  bool GetVerbose() const;
 
   //------------------------------------------------------------------
   /// Indent the current line in the stream.

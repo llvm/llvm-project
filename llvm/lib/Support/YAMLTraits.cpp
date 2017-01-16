@@ -118,6 +118,18 @@ void Input::beginMapping() {
   }
 }
 
+std::vector<StringRef> Input::keys() {
+  MapHNode *MN = dyn_cast<MapHNode>(CurrentNode);
+  std::vector<StringRef> Ret;
+  if (!MN) {
+    setError(CurrentNode, "not a mapping");
+    return Ret;
+  }
+  for (auto &P : MN->Mapping)
+    Ret.push_back(P.first());
+  return Ret;
+}
+
 bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
                          void *&SaveInfo) {
   UseDefault = false;
@@ -163,7 +175,7 @@ void Input::endMapping() {
   if (!MN)
     return;
   for (const auto &NN : MN->Mapping) {
-    if (!MN->isValidKey(NN.first())) {
+    if (!is_contained(MN->ValidKeys, NN.first())) {
       setError(NN.second.get(), Twine("unknown key '") + NN.first() + "'");
       break;
     }
@@ -373,14 +385,6 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
   }
 }
 
-bool Input::MapHNode::isValidKey(StringRef Key) {
-  for (const char *K : ValidKeys) {
-    if (Key.equals(K))
-      return true;
-  }
-  return false;
-}
-
 void Input::setError(const Twine &Message) {
   this->setError(CurrentNode, Message);
 }
@@ -449,6 +453,10 @@ bool Output::mapTag(StringRef Tag, bool Use) {
 
 void Output::endMapping() {
   StateStack.pop_back();
+}
+
+std::vector<StringRef> Output::keys() {
+  report_fatal_error("invalid call");
 }
 
 bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,

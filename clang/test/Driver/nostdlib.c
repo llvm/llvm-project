@@ -13,12 +13,12 @@
 // In the presence of -nostdlib, the standard libraries should not be
 // passed down to link line
 // RUN: %clang -no-canonical-prefixes %s -### -Wno-liblto -o %t.o 2>&1 \
-// RUN:     -target i686-pc-linux-gnu -nostdlib --rtlib=compiler-rt \
+// RUN:     -target i686-pc-linux-gnu -nostdlib --rtlib=compiler-rt -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir -lclang_rt.builtins-i686 \
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-NOSTDLIB %s
 //
 // RUN: %clang -no-canonical-prefixes %s -### -Wno-liblto -o %t.o 2>&1 \
-// RUN:     -target i686-pc-linux-gnu --rtlib=compiler-rt -nostdlib \
+// RUN:     -target i686-pc-linux-gnu --rtlib=compiler-rt -nostdlib -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir -lclang_rt.builtins-i686 \
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-NOSTDLIB %s
 //

@@ -1,4 +1,4 @@
-; RUN: llvm-as <%s | llvm-bcanalyzer -dump | FileCheck %s
+; RUN: llvm-as <%s -bitcode-mdindex-threshold=0 | llvm-bcanalyzer -dump | FileCheck %s
 ; Check that distinct nodes break uniquing cycles, so that uniqued subgraphs
 ; are always in post-order.
 ;
@@ -21,6 +21,10 @@
 
 ; CHECK-NEXT:  <NODE op0=2/>
 !3 = !{!2}
+
+; Before the named records we emit the index containing the position of the
+; previously emitted records
+; CHECK-NEXT:   <INDEX {{.*}} (offset match)
 
 ; Note: named metadata nodes are not cannot reference null so their operands
 ; are numbered off-by-one.

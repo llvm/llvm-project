@@ -1534,14 +1534,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       // template type parameter.
       Result = QualType(CorrespondingTemplateParam->getTypeForDecl(), 0);
     } else {
-      // If auto appears in the declaration of a template parameter, treat
-      // the parameter as type-dependent.
-      bool IsDependent =
-        S.getLangOpts().CPlusPlus1z &&
-        declarator.getContext() == Declarator::TemplateParamContext;
-      Result = Context.getAutoType(QualType(),
-                                   AutoTypeKeyword::Auto,
-                                   IsDependent);
+      Result = Context.getAutoType(QualType(), AutoTypeKeyword::Auto, false);
     }
     break;
 
@@ -5270,7 +5263,7 @@ namespace {
         ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
         TL.setParam(tpi++, Param);
       }
-      // FIXME: exception specs
+      TL.setExceptionSpecRange(FTI.getExceptionSpecRange());
     }
     void VisitParenTypeLoc(ParenTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::Paren);

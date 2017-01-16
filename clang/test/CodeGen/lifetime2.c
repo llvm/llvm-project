@@ -1,4 +1,6 @@
 // RUN: %clang -S -emit-llvm -o - -O2 %s | FileCheck %s -check-prefixes=CHECK,O2
+// RUN: %clang -S -emit-llvm -o - -O2 -Xclang -disable-lifetime-markers %s \
+// RUN:       | FileCheck %s -check-prefixes=CHECK,O0
 // RUN: %clang -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=CHECK,O0
 
 extern int bar(char *A, int n);

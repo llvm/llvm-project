@@ -66,7 +66,7 @@ static cl::opt<std::string>
                    cl::init("LLVM"), cl::cat(FormattingCategory));
 
 namespace {
-// Helper object to remove the TUReplacement files (triggered by
+// Helper object to remove the TUReplacement and TUDiagnostic (triggered by
 // "remove-change-desc-files" command line option) when exiting current scope.
 class ScopedFileRemover {
 public:
@@ -211,11 +211,16 @@ int main(int argc, char **argv) {
   if (DoFormat)
     FormatStyle = format::getStyle(FormatStyleOpt, FormatStyleConfig, "LLVM");
 
-  TUReplacements TUs;
-  TUReplacementFiles TURFiles;
+  TUReplacements TURs;
+  TUReplacementFiles TUFiles;
 
   std::error_code ErrorCode =
-      collectReplacementsFromDirectory(Directory, TUs, TURFiles, Diagnostics);
+      collectReplacementsFromDirectory(Directory, TURs, TUFiles, Diagnostics);
+
+  TUDiagnostics TUDs;
+  TUFiles.clear();
+  ErrorCode =
+      collectReplacementsFromDirectory(Directory, TUDs, TUFiles, Diagnostics);
 
   if (ErrorCode) {
     errs() << "Trouble iterating over directory '" << Directory
@@ -227,13 +232,15 @@ int main(int argc, char **argv) {
   // command line option) when exiting main().
   std::unique_ptr<ScopedFileRemover> Remover;
   if (RemoveTUReplacementFiles)
-    Remover.reset(new ScopedFileRemover(TURFiles, Diagnostics));
+    Remover.reset(new ScopedFileRemover(TUFiles, Diagnostics));
 
   FileManager Files((FileSystemOptions()));
   SourceManager SM(Diagnostics, Files);
 
   FileToReplacementsMap GroupedReplacements;
-  if (!mergeAndDeduplicate(TUs, GroupedReplacements, SM))
+  if (!mergeAndDeduplicate(TURs, GroupedReplacements, SM))
+    return 1;
+  if (!mergeAndDeduplicate(TUDs, GroupedReplacements, SM))
     return 1;
 
   Rewriter ReplacementsRewriter(SM, LangOptions());

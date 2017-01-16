@@ -22,4 +22,5 @@ int main()
     typedef std::wstring_convert<Codecvt> Myconv;
     Myconv myconv;
     std::mbstate_t s = myconv.state();
+    ((void)s);
 }

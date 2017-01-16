@@ -316,6 +316,14 @@ public:
     BuiltinIncludeDir = Dir;
   }
 
+  /// \brief Get the directory that contains Clang-supplied include files.
+  const DirectoryEntry *getBuiltinDir() const {
+    return BuiltinIncludeDir;
+  }
+
+  /// \brief Is this a compiler builtin header?
+  static bool isBuiltinHeader(StringRef FileName);
+
   /// \brief Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {
     Callbacks.push_back(std::move(Callback));

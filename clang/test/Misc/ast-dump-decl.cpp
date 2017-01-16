@@ -336,7 +336,6 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:       ClassTemplateDecl{{.*}} TestClassTemplate
   // CHECK-NEXT:         TemplateTypeParmDecl
   // CHECK-NEXT:         CXXRecordDecl{{.*}} class TestClassTemplate
-  // CHECK-NEXT:         ClassTemplateSpecialization{{.*}} 'TestClassTemplate'
   // CHECK-NEXT:   ClassTemplateSpecializationDecl{{.*}} class TestClassTemplate
   // CHECK-NEXT:     TemplateArgument{{.*}}A
   // CHECK-NEXT:     CXXRecordDecl{{.*}} class TestClassTemplate

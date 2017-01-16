@@ -12,14 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "BPFMCTargetDesc.h"
-#include "BPFMCAsmInfo.h"
 #include "InstPrinter/BPFInstPrinter.h"
+#include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #define GET_INSTRINFO_MC_DESC
@@ -64,7 +63,7 @@ static MCInstPrinter *createBPFMCInstPrinter(const Triple &T,
                                              const MCRegisterInfo &MRI) {
   if (SyntaxVariant == 0)
     return new BPFInstPrinter(MAI, MII, MRI);
-  return 0;
+  return nullptr;
 }
 
 extern "C" void LLVMInitializeBPFTargetMC() {

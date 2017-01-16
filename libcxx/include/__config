@@ -27,7 +27,7 @@
 #define _GNUC_VER 0
 #endif
 
-#define _LIBCPP_VERSION 4000
+#define _LIBCPP_VERSION 5000
 
 #ifndef _LIBCPP_ABI_VERSION
 #define _LIBCPP_ABI_VERSION 1
@@ -48,7 +48,20 @@
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
+// Don't use a nullptr_t simulation type in C++03 instead using C++11 nullptr
+// provided under the alternate keyword __nullptr, which changes the mangling
+// of nullptr_t. This option is ABI incompatible with GCC in C++03 mode.
+#define _LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR
+// Define the `pointer_safety` enum as a C++11 strongly typed enumeration
+// instead of as a class simulating an enum. If this option is enabled
+// `pointer_safety` and `get_pointer_safety()` will no longer be available
+// in C++03.
+#define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
 #elif _LIBCPP_ABI_VERSION == 1
+#if !defined(_WIN32)
+// Enable compiling a definition of error_category() into the libc++ dylib.
+#define _LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR
+#endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #if defined(__FreeBSD__)
@@ -86,6 +99,27 @@
 // the compiler and '1' otherwise.
 #ifndef __is_identifier
 #define __is_identifier(__x) 1
+#endif
+
+#define __has_keyword(__x) !(__is_identifier(__x))
+
+#if defined(__clang__)
+#define _LIBCPP_COMPILER_CLANG
+#elif defined(__GNUC__)
+#define _LIBCPP_COMPILER_GCC
+#elif defined(_MSC_VER)
+#define _LIBCPP_COMPILER_MSVC
+#elif defined(__IBMCPP__)
+#define _LIBCPP_COMPILER_IBM
+#endif
+
+// FIXME: ABI detection should be done via compiler builtin macros. This
+// is just a placeholder until Clang implements such macros. For now assume
+// that Windows compilers pretending to be MSVC++ target the microsoft ABI.
+#if defined(_WIN32) && defined(_MSC_VER)
+# define _LIBCPP_ABI_MICROSOFT
+#else
+# define _LIBCPP_ABI_ITANIUM
 #endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -146,24 +180,20 @@
 # define _LIBCPP_HAS_QUICK_EXIT
 #endif  // __NetBSD__
 
-#ifdef _WIN32
+#if defined(_WIN32)
+#  define _LIBCPP_WIN32API      1
 #  define _LIBCPP_LITTLE_ENDIAN 1
 #  define _LIBCPP_BIG_ENDIAN    0
-// Compiler intrinsics (MSVC)
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#    define _LIBCPP_HAS_IS_BASE_OF
-#  endif
-#  if defined(_MSC_VER) && !defined(__clang__)
-#    define _LIBCPP_MSVC // Using Microsoft Visual C++ compiler
-#    define _LIBCPP_TOSTRING2(x) #x
-#    define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
-#    define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
-#  endif
-#  // If mingw not explicitly detected, assume using MS C runtime only.
+#  define _LIBCPP_SHORT_WCHAR   1
+
+// If mingw not explicitly detected, assume using MS C runtime only.
 #  ifndef __MINGW32__
 #    define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
 #  endif
-#endif  // _WIN32
+#  if (defined(_M_AMD64) || defined(__x86_64__)) || (defined(_M_ARM) || defined(__arm__))
+#    define _LIBCPP_HAS_BITSCAN64
+#  endif
+#endif // defined(_WIN32)
 
 #ifdef __sun__
 # include <sys/isa_defs.h>
@@ -187,7 +217,7 @@
   // including accesses to the special files under /dev. C++11's
   // std::random_device is instead exposed through a NaCl syscall.
 # define _LIBCPP_USING_NACL_RANDOM
-#elif defined(_WIN32)
+#elif defined(_LIBCPP_WIN32API)
 # define _LIBCPP_USING_WIN32_RANDOM
 #else
 # define _LIBCPP_USING_DEV_RANDOM
@@ -212,7 +242,7 @@
 #define _LIBCPP_NO_CFI
 #endif
 
-#if defined(__clang__)
+#if defined(_LIBCPP_COMPILER_CLANG)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
 // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT left here for backward compatibility.
@@ -257,16 +287,16 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_NORETURN __attribute__ ((noreturn))
 #endif
 
-#if !(__has_feature(cxx_deleted_functions))
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
-#endif  // !(__has_feature(cxx_deleted_functions))
-
 #if !(__has_feature(cxx_lambdas))
 #define _LIBCPP_HAS_NO_LAMBDAS
 #endif
 
 #if !(__has_feature(cxx_nullptr))
-#define _LIBCPP_HAS_NO_NULLPTR
+# if (__has_extension(cxx_nullptr) || __has_keyword(__nullptr)) && defined(_LIBCPP_ABI_ALWAYS_USE_CXX11_NULLPTR)
+#   define nullptr __nullptr
+# else
+#   define _LIBCPP_HAS_NO_NULLPTR
+# endif
 #endif
 
 #if !(__has_feature(cxx_rvalue_references))
@@ -368,7 +398,16 @@ namespace std {
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
-#elif defined(__GNUC__)
+// A constexpr version of __builtin_memcmp was added in clang 4.0
+#if __has_builtin(__builtin_memcmp)
+# ifdef __apple_build_version__
+// No shipping version of Apple's clang has constexpr __builtin_memcmp
+# elif __clang_major__ > 3
+#  define _LIBCPP_BUILTIN_MEMCMP_ISCONSTEXPR
+# endif
+#endif
+
+#elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
@@ -409,7 +448,6 @@ namespace std {
 
 #ifndef __GXX_EXPERIMENTAL_CXX0X__
 #define _LIBCPP_HAS_NO_DECLTYPE
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
@@ -426,7 +464,6 @@ namespace std {
 
 #if _GNUC_VER < 404
 #define _LIBCPP_HAS_NO_DECLTYPE
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
@@ -453,13 +490,23 @@ using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
 #define _LIBCPP_HAS_NO_ASAN
 #endif
 
-#elif defined(_LIBCPP_MSVC)
+#elif defined(_LIBCPP_COMPILER_MSVC)
 
+#define _LIBCPP_TOSTRING2(x) #x
+#define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+#define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
+
+#if _MSC_VER < 1900
+#error "MSVC versions prior to Visual Studio 2015 are not supported"
+#endif
+
+#define _LIBCPP_HAS_IS_BASE_OF
 #define _LIBCPP_HAS_NO_CONSTEXPR
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
+#if _MSC_VER <= 1800
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
-#define _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#endif
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #define __alignof__ __alignof
 #define _LIBCPP_NORETURN __declspec(noreturn)
@@ -476,7 +523,7 @@ namespace std {
 
 #define _LIBCPP_HAS_NO_ASAN
 
-#elif defined(__IBMCPP__)
+#elif defined(_LIBCPP_COMPILER_IBM)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
@@ -506,10 +553,17 @@ namespace std {
 
 #define _LIBCPP_HAS_NO_ASAN
 
-#endif // __clang__ || __GNUC__ || _MSC_VER || __IBMCPP__
+#endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
 
+#if defined(__ELF__)
+#define _LIBCPP_OBJECT_FORMAT_ELF   1
+#elif defined(__MACH__)
+#define _LIBCPP_OBJECT_FORMAT_MACHO 1
+#else
+#define _LIBCPP_OBJECT_FORMAT_COFF  1
+#endif
 
-#ifdef _WIN32
+#if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 #if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 # define _LIBCPP_DLL_VIS
 # define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
@@ -531,10 +585,11 @@ namespace std {
 #define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
 #define _LIBCPP_HIDDEN
-#define _LIBCPP_TYPE_VIS_ONLY
+#define _LIBCPP_TEMPLATE_VIS
 #define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
-#if defined(_LIBCPP_MSVC)
+
+#if defined(_LIBCPP_COMPILER_MSVC)
 # define _LIBCPP_INLINE_VISIBILITY __forceinline
 # define _LIBCPP_ALWAYS_INLINE     __forceinline
 # define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
@@ -543,7 +598,7 @@ namespace std {
 # define _LIBCPP_ALWAYS_INLINE     __attribute__ ((__always_inline__))
 # define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__ ((__always_inline__))
 #endif
-#endif // _WIN32
+#endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #ifndef _LIBCPP_HIDDEN
 #if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
@@ -573,8 +628,8 @@ namespace std {
 #  endif
 #endif
 
-#ifndef _LIBCPP_TYPE_VIS_ONLY
-# define _LIBCPP_TYPE_VIS_ONLY _LIBCPP_TYPE_VIS
+#ifndef _LIBCPP_TEMPLATE_VIS
+# define _LIBCPP_TEMPLATE_VIS _LIBCPP_TYPE_VIS
 #endif
 
 #ifndef _LIBCPP_FUNC_VIS_ONLY
@@ -651,6 +706,17 @@ namespace std {
 #  define _NOEXCEPT_(x)
 #endif
 
+#if defined(_LIBCPP_DEBUG_USE_EXCEPTIONS)
+# if !defined(_LIBCPP_DEBUG)
+#   error cannot use _LIBCPP_DEBUG_USE_EXCEPTIONS unless _LIBCPP_DEBUG is defined
+# endif
+# define _NOEXCEPT_DEBUG noexcept(false)
+# define _NOEXCEPT_DEBUG_(x) noexcept(false)
+#else
+# define _NOEXCEPT_DEBUG _NOEXCEPT
+# define _NOEXCEPT_DEBUG_(x) _NOEXCEPT_(x)
+#endif
+
 #ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef unsigned short char16_t;
 typedef unsigned int   char32_t;
@@ -677,7 +743,7 @@ template <unsigned> struct __static_assert_check {};
 
 #ifdef _LIBCPP_HAS_NO_DECLTYPE
 // GCC 4.6 provides __decltype in all standard modes.
-#if !__is_identifier(__decltype) || _GNUC_VER >= 406
+#if __has_keyword(__decltype) || _GNUC_VER >= 406
 #  define decltype(__x) __decltype(__x)
 #else
 #  define decltype(__x) __typeof__(__x)
@@ -696,7 +762,7 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_DEFAULT = default;
 #endif
 
-#ifdef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifdef _LIBCPP_CXX03_LANG
 #define _LIBCPP_EQUAL_DELETE
 #else
 #define _LIBCPP_EQUAL_DELETE = delete
@@ -708,7 +774,8 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
-#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__)
+#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
+    (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
 #   define _LIBCPP_EXPLICIT explicit
 #else
 #   define _LIBCPP_EXPLICIT
@@ -754,14 +821,14 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_NONUNIQUE_RTTI_BIT (1ULL << 63)
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_WIN32) || \
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT) ||   \
     defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
-#if !defined(_WIN32) && !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
+#if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_CATOPEN 1
 #endif
 #endif
@@ -826,7 +893,7 @@ template <unsigned> struct __static_assert_check {};
 #endif
 
 #ifndef _LIBCPP_HAS_NO_ASAN
-extern "C" void __sanitizer_annotate_contiguous_container(
+_LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
   const void *, const void *, const void *, const void *);
 #endif
 
@@ -848,8 +915,7 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Thread API
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
-    !defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && \
-    !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
+    !defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # if defined(__FreeBSD__) || \
     defined(__Fuchsia__) || \
     defined(__NetBSD__) || \
@@ -857,7 +923,9 @@ extern "C" void __sanitizer_annotate_contiguous_container(
     defined(__APPLE__) || \
     defined(__CloudABI__) || \
     defined(__sun__)
-#  define _LIBCPP_HAS_THREAD_API_PTHREAD
+#   define _LIBCPP_HAS_THREAD_API_PTHREAD
+# elif defined(_LIBCPP_WIN32API)
+#  define _LIBCPP_HAS_THREAD_API_WIN32
 # else
 #  error "No thread API"
 # endif // _LIBCPP_HAS_THREAD_API
@@ -898,13 +966,13 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 
-// Thread-unsafe functions such as strtok(), mbtowc() and localtime()
+// Thread-unsafe functions such as strtok() and localtime()
 // are not available.
 #ifdef __CloudABI__
 #define _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
 #endif
 
-#if __has_feature(cxx_atomic) || __has_extension(c_atomic)
+#if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
 #define _LIBCPP_HAS_C_ATOMIC_IMP
 #elif _GNUC_VER > 407
 #define _LIBCPP_HAS_GCC_ATOMIC_IMP
@@ -935,9 +1003,19 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_OFF_T_FUNCTIONS)
-#if defined(_WIN32) || defined(_NEWLIB_VERSION)
+#if defined(_LIBCPP_MSVCRT) || defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_NO_OFF_T_FUNCTIONS
 #endif
+#endif
+
+#if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+# define _LIBCPP_DIAGNOSE_WARNING(...) \
+    __attribute__((diagnose_if(__VA_ARGS__, "warning")))
+# define _LIBCPP_DIAGNOSE_ERROR(...) \
+    __attribute__((diagnose_if(__VA_ARGS__, "error")))
+#else
+# define _LIBCPP_DIAGNOSE_WARNING(...)
+# define _LIBCPP_DIAGNOSE_ERROR(...)
 #endif
 
 #endif // __cplusplus

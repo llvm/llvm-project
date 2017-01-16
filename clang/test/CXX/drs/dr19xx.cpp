@@ -138,27 +138,31 @@ namespace dr1959 { // dr1959: 3.9
   struct c;
   struct a {
     a() = default;
-    a(const a &) = delete; // expected-note 2{{deleted}}
+    a(const a &) = delete; // expected-note {{deleted}}
     a(const b &) = delete; // not inherited
-    a(c &&) = delete; // expected-note {{deleted}}
-    template<typename T> a(T) = delete;
+    a(c &&) = delete; // expected-note {{not viable}}
+    template<typename T> a(T) = delete; // expected-note {{would take its own class type by value}}
   };
 
-  struct b : a { // expected-note {{copy constructor of 'b' is implicitly deleted because base class 'dr1959::a' has a deleted copy constructor}}
-    using a::a;
+  struct b : a { // expected-note {{cannot bind}} expected-note {{deleted because}}
+    using a::a; // expected-note 2{{inherited here}}
   };
 
   a x;
-  b y = x; // expected-error {{deleted}}
+  // FIXME: As a resolution to an open DR against P0136R0, we disallow
+  // use of inherited constructors to construct from a single argument
+  // where the base class is reference-related to the argument type.
+  b y = x; // expected-error {{no viable conversion}}
   b z = z; // expected-error {{deleted}}
 
-  // FIXME: It's not really clear that this matches the intent, but it's
-  // consistent with the behavior for assignment operators.
   struct c : a {
     using a::a;
     c(const c &);
   };
-  c q(static_cast<c&&>(q)); // expected-error {{call to deleted}}
+  // FIXME: As a resolution to an open DR against P0136R0, we disallow
+  // use of inherited constructors to construct from a single argument
+  // where the base class is reference-related to the argument type.
+  c q(static_cast<c&&>(q));
 #endif
 }
 

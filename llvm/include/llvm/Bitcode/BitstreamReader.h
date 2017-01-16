@@ -16,7 +16,6 @@
 #define LLVM_BITCODE_BITSTREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitCodes.h"
 #include "llvm/Support/Endian.h"
@@ -42,7 +41,7 @@ public:
   /// describe abbreviations that all blocks of the specified ID inherit.
   struct BlockInfo {
     unsigned BlockID;
-    std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> Abbrevs;
+    std::vector<std::shared_ptr<BitCodeAbbrev>> Abbrevs;
     std::string Name;
     std::vector<std::pair<unsigned, std::string> > RecordNames;
   };
@@ -316,11 +315,11 @@ class BitstreamCursor : SimpleBitstreamCursor {
   unsigned CurCodeSize = 2;
 
   /// Abbrevs installed at in this block.
-  std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> CurAbbrevs;
+  std::vector<std::shared_ptr<BitCodeAbbrev>> CurAbbrevs;
 
   struct Block {
     unsigned PrevCodeSize;
-    std::vector<IntrusiveRefCntPtr<BitCodeAbbrev>> PrevAbbrevs;
+    std::vector<std::shared_ptr<BitCodeAbbrev>> PrevAbbrevs;
 
     explicit Block(unsigned PCS) : PrevCodeSize(PCS) {}
   };
@@ -478,8 +477,8 @@ public:
     return CurAbbrevs[AbbrevNo].get();
   }
 
-  /// Read the current record and discard it.
-  void skipRecord(unsigned AbbrevID);
+  /// Read the current record and discard it, returning the code for the record.
+  unsigned skipRecord(unsigned AbbrevID);
 
   unsigned readRecord(unsigned AbbrevID, SmallVectorImpl<uint64_t> &Vals,
                       StringRef *Blob = nullptr);

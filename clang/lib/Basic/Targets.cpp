@@ -1751,30 +1751,57 @@ class NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const Builtin::Info BuiltinInfo[];
   CudaArch GPU;
+  std::unique_ptr<TargetInfo> HostTarget;
 
 public:
-  NVPTXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+  NVPTXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts,
+                  unsigned TargetPointerWidth)
       : TargetInfo(Triple) {
+    assert((TargetPointerWidth == 32 || TargetPointerWidth == 64) &&
+           "NVPTX only supports 32- and 64-bit modes.");
+
     TLSSupported = false;
-    LongWidth = LongAlign = 64;
     AddrSpaceMap = &NVPTXAddrSpaceMap;
     UseAddrSpaceMapMangling = true;
+
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
     GPU = CudaArch::SM_20;
 
+    if (TargetPointerWidth == 32)
+      resetDataLayout("e-p:32:32-i64:64-v16:16-v32:32-n16:32:64");
+    else
+      resetDataLayout("e-i64:64-v16:16-v32:32-n16:32:64");
+
     // If possible, get a TargetInfo for our host triple, so we can match its
     // types.
     llvm::Triple HostTriple(Opts.HostTriple);
-    if (HostTriple.isNVPTX())
-      return;
-    std::unique_ptr<TargetInfo> HostTarget(
-        AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+    if (!HostTriple.isNVPTX())
+      HostTarget.reset(AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+
+    // If no host target, make some guesses about the data layout and return.
     if (!HostTarget) {
+      LongWidth = LongAlign = TargetPointerWidth;
+      PointerWidth = PointerAlign = TargetPointerWidth;
+      switch (TargetPointerWidth) {
+      case 32:
+        SizeType = TargetInfo::UnsignedInt;
+        PtrDiffType = TargetInfo::SignedInt;
+        IntPtrType = TargetInfo::SignedInt;
+        break;
+      case 64:
+        SizeType = TargetInfo::UnsignedLong;
+        PtrDiffType = TargetInfo::SignedLong;
+        IntPtrType = TargetInfo::SignedLong;
+        break;
+      default:
+        llvm_unreachable("TargetPointerWidth must be 32 or 64");
+      }
       return;
     }
 
+    // Copy properties from host target.
     PointerWidth = HostTarget->getPointerWidth(/* AddrSpace = */ 0);
     PointerAlign = HostTarget->getPointerAlign(/* AddrSpace = */ 0);
     BoolWidth = HostTarget->getBoolWidth();
@@ -1935,6 +1962,16 @@ public:
     Opts.support("cl_khr_local_int32_base_atomics");
     Opts.support("cl_khr_local_int32_extended_atomics");
   }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    // CUDA compilations support all of the host's calling conventions.
+    //
+    // TODO: We should warn if you apply a non-default CC to anything other than
+    // a host function.
+    if (HostTarget)
+      return HostTarget->checkCallingConvention(CC);
+    return CCCR_Warning;
+  }
 };
 
 const Builtin::Info NVPTXTargetInfo::BuiltinInfo[] = {
@@ -1952,31 +1989,6 @@ const char *const NVPTXTargetInfo::GCCRegNames[] = {"r0"};
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::makeArrayRef(GCCRegNames);
 }
-
-class NVPTX32TargetInfo : public NVPTXTargetInfo {
-public:
-  NVPTX32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : NVPTXTargetInfo(Triple, Opts) {
-    LongWidth = LongAlign = 32;
-    PointerWidth = PointerAlign = 32;
-    SizeType = TargetInfo::UnsignedInt;
-    PtrDiffType = TargetInfo::SignedInt;
-    IntPtrType = TargetInfo::SignedInt;
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v32:32-n16:32:64");
-  }
-};
-
-class NVPTX64TargetInfo : public NVPTXTargetInfo {
-public:
-  NVPTX64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : NVPTXTargetInfo(Triple, Opts) {
-    PointerWidth = PointerAlign = 64;
-    SizeType = TargetInfo::UnsignedLong;
-    PtrDiffType = TargetInfo::SignedLong;
-    IntPtrType = TargetInfo::SignedLong;
-    resetDataLayout("e-i64:64-v16:16-v32:32-n16:32:64");
-  }
-};
 
 static const unsigned AMDGPUAddrSpaceMap[] = {
   1,    // opencl_global
@@ -2651,6 +2663,12 @@ class X86TargetInfo : public TargetInfo {
     CK_BDVER4,
     //@}
 
+    /// \name zen
+    /// Zen architecture processors.
+    //@{
+    CK_ZNVER1,
+    //@}
+
     /// This specification is deprecated and will be removed in the future.
     /// Users should prefer \see CK_K8.
     // FIXME: Warn on this when the CPU is set to it.
@@ -2732,6 +2750,7 @@ class X86TargetInfo : public TargetInfo {
         .Case("bdver2", CK_BDVER2)
         .Case("bdver3", CK_BDVER3)
         .Case("bdver4", CK_BDVER4)
+        .Case("znver1", CK_ZNVER1)
         .Case("x86-64", CK_x86_64)
         .Case("geode", CK_Geode)
         .Default(CK_Generic);
@@ -2789,6 +2808,40 @@ public:
   const char *getClobbers() const override {
     return "~{dirflag},~{fpsr},~{flags}";
   }
+
+  StringRef getConstraintRegister(const StringRef &Constraint,
+                                  const StringRef &Expression) const override {
+    StringRef::iterator I, E;
+    for (I = Constraint.begin(), E = Constraint.end(); I != E; ++I) {
+      if (isalpha(*I))
+        break;
+    }
+    if (I == E)
+      return "";
+    switch (*I) {
+    // For the register constraints, return the matching register name
+    case 'a':
+      return "ax";
+    case 'b':
+      return "bx";
+    case 'c':
+      return "cx";
+    case 'd':
+      return "dx";
+    case 'S':
+      return "si";
+    case 'D':
+      return "di";
+    // In case the constraint is 'r' we need to return Expression
+    case 'r':
+      return Expression;
+    default:
+      // Default value if there is no constraint for the register
+      return "";
+    }
+    return "";
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
   static void setSSELevel(llvm::StringMap<bool> &Features, X86SSEEnum Level,
@@ -2897,6 +2950,7 @@ public:
     case CK_BDVER2:
     case CK_BDVER3:
     case CK_BDVER4:
+    case CK_ZNVER1:
     case CK_x86_64:
       return true;
     }
@@ -3143,6 +3197,33 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
+    break;
+  case CK_ZNVER1:
+    setFeatureEnabledImpl(Features, "adx", true);
+    setFeatureEnabledImpl(Features, "aes", true);
+    setFeatureEnabledImpl(Features, "avx2", true);
+    setFeatureEnabledImpl(Features, "bmi", true);
+    setFeatureEnabledImpl(Features, "bmi2", true);
+    setFeatureEnabledImpl(Features, "clflushopt", true);
+    setFeatureEnabledImpl(Features, "cx16", true);
+    setFeatureEnabledImpl(Features, "f16c", true);
+    setFeatureEnabledImpl(Features, "fma", true);
+    setFeatureEnabledImpl(Features, "fsgsbase", true);
+    setFeatureEnabledImpl(Features, "fxsr", true);
+    setFeatureEnabledImpl(Features, "lzcnt", true);
+    setFeatureEnabledImpl(Features, "mwaitx", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
+    setFeatureEnabledImpl(Features, "pclmul", true);
+    setFeatureEnabledImpl(Features, "popcnt", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
+    setFeatureEnabledImpl(Features, "rdrnd", true);
+    setFeatureEnabledImpl(Features, "rdseed", true);
+    setFeatureEnabledImpl(Features, "sha", true);
+    setFeatureEnabledImpl(Features, "sse4a", true);
+    setFeatureEnabledImpl(Features, "xsave", true);
+    setFeatureEnabledImpl(Features, "xsavec", true);
+    setFeatureEnabledImpl(Features, "xsaveopt", true);
+    setFeatureEnabledImpl(Features, "xsaves", true);
     break;
   case CK_BDVER4:
     setFeatureEnabledImpl(Features, "avx2", true);
@@ -3694,6 +3775,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_BDVER4:
     defineCPUMacros(Builder, "bdver4");
+    break;
+  case CK_ZNVER1:
+    defineCPUMacros(Builder, "znver1");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
@@ -5391,6 +5475,8 @@ public:
         Builder.defineMacro("__ARM_VFPV3__");
       if (FPU & VFP4FPU)
         Builder.defineMacro("__ARM_VFPV4__");
+      if (FPU & FPARMV8)
+        Builder.defineMacro("__ARM_FPV5__");
     }
 
     // This only gets set when Neon instructions are actually available, unlike
@@ -8349,6 +8435,107 @@ public:
   }
 };
 
+
+// AVR Target
+class AVRTargetInfo : public TargetInfo {
+public:
+  AVRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+      : TargetInfo(Triple) {
+    TLSSupported = false;
+    PointerWidth = 16;
+    PointerAlign = 8;
+    IntWidth = 16;
+    IntAlign = 8;
+    LongWidth = 32;
+    LongAlign = 8;
+    LongLongWidth = 64;
+    LongLongAlign = 8;
+    SuitableAlign = 8;
+    DefaultAlignForAttributeAligned = 8;
+    HalfWidth = 16;
+    HalfAlign = 8;
+    FloatWidth = 32;
+    FloatAlign = 8;
+    DoubleWidth = 32;
+    DoubleAlign = 8;
+    DoubleFormat = &llvm::APFloat::IEEEsingle();
+    LongDoubleWidth = 32;
+    LongDoubleAlign = 8;
+    LongDoubleFormat = &llvm::APFloat::IEEEsingle();
+    SizeType = UnsignedInt;
+    PtrDiffType = SignedInt;
+    IntPtrType = SignedInt;
+    Char16Type = UnsignedInt;
+    WCharType = SignedInt;
+    WIntType = SignedInt;
+    Char32Type = UnsignedLong;
+    SigAtomicType = SignedChar;
+    resetDataLayout("e-p:16:16:16-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
+		    "-f32:32:32-f64:64:64-n8");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override {
+    Builder.defineMacro("__AVR__");
+  }
+
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return None;
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::VoidPtrBuiltinVaList;
+  }
+
+  const char *getClobbers() const override {
+    return "";
+  }
+
+  ArrayRef<const char *> getGCCRegNames() const override {
+    static const char * const GCCRegNames[] = {
+      "r0",   "r1",   "r2",   "r3",   "r4",   "r5",   "r6",   "r7",
+      "r8",   "r9",   "r10",  "r11",  "r12",  "r13",  "r14",  "r15",
+      "r16",  "r17",  "r18",  "r19",  "r20",  "r21",  "r22",  "r23",
+      "r24",  "r25",  "X",    "Y",    "Z",    "SP"
+    };
+    return llvm::makeArrayRef(GCCRegNames);
+  }
+
+  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
+    return None;
+  }
+
+  ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override {
+    static const TargetInfo::AddlRegName AddlRegNames[] = {
+      { { "r26", "r27"}, 26 },
+      { { "r28", "r29"}, 27 },
+      { { "r30", "r31"}, 28 },
+      { { "SPL", "SPH"}, 29 },
+    };
+    return llvm::makeArrayRef(AddlRegNames);
+  }
+
+  bool validateAsmConstraint(const char *&Name,
+                             TargetInfo::ConstraintInfo &Info) const override {
+    return false;
+  }
+
+  IntType getIntTypeByWidth(unsigned BitWidth,
+                            bool IsSigned) const final {
+    // AVR prefers int for 16-bit integers.
+    return BitWidth == 16 ? (IsSigned ? SignedInt : UnsignedInt)
+                          : TargetInfo::getIntTypeByWidth(BitWidth, IsSigned);
+  }
+
+  IntType getLeastIntTypeByWidth(unsigned BitWidth,
+                                 bool IsSigned) const final {
+    // AVR uses int for int_least16_t and int_fast16_t.
+    return BitWidth == 16
+               ? (IsSigned ? SignedInt : UnsignedInt)
+               : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -8471,6 +8658,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new ARMbeTargetInfo(Triple, Opts);
     }
 
+  case llvm::Triple::avr:
+    return new AVRTargetInfo(Triple, Opts);
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return new BPFTargetInfo(Triple, Opts);
@@ -8596,9 +8785,9 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::nvptx:
-    return new NVPTX32TargetInfo(Triple, Opts);
+    return new NVPTXTargetInfo(Triple, Opts, /*TargetPointerWidth=*/32);
   case llvm::Triple::nvptx64:
-    return new NVPTX64TargetInfo(Triple, Opts);
+    return new NVPTXTargetInfo(Triple, Opts, /*TargetPointerWidth=*/64);
 
   case llvm::Triple::amdgcn:
   case llvm::Triple::r600:

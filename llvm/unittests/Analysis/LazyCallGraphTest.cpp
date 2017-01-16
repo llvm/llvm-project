@@ -1496,7 +1496,7 @@ TEST(LazyCallGraphTest, InternalEdgeMutation) {
   // Switch the call edge from 'b' to 'c' to a ref edge. This will break the
   // call cycle and cause us to form more SCCs. The RefSCC will remain the same
   // though.
-  RC.switchInternalEdgeToRef(B, C);
+  auto NewCs = RC.switchInternalEdgeToRef(B, C);
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
   EXPECT_EQ(&RC, CG.lookupRefSCC(C));
@@ -1508,6 +1508,10 @@ TEST(LazyCallGraphTest, InternalEdgeMutation) {
   EXPECT_EQ(&*J++, CG.lookupSCC(A));
   EXPECT_EQ(&*J++, CG.lookupSCC(C));
   EXPECT_EQ(RC.end(), J);
+  // And the returned range must be the slice of this sequence containing new
+  // SCCs.
+  EXPECT_EQ(RC.begin(), NewCs.begin());
+  EXPECT_EQ(std::prev(RC.end()), NewCs.end());
 
   // Test turning the ref edge from A to C into a call edge. This will form an
   // SCC out of A and C. Since we previously had a call edge from C to A, the
@@ -1600,6 +1604,84 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   EXPECT_EQ(E, J);
 }
 
+TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
+  LLVMContext Context;
+  // A graph with a single cycle formed both from call and reference edges
+  // which makes the reference edges trivial to delete. The graph looks like:
+  //
+  // Reference edges: a -> b -> c -> a
+  //      Call edges: a -> c -> b -> a
+  std::unique_ptr<Module> M = parseAssembly(
+      Context, "define void @a(i8** %ptr) {\n"
+               "entry:\n"
+               "  call void @b(i8** %ptr)\n"
+               "  store i8* bitcast (void(i8**)* @c to i8*), i8** %ptr\n"
+               "  ret void\n"
+               "}\n"
+               "define void @b(i8** %ptr) {\n"
+               "entry:\n"
+               "  store i8* bitcast (void(i8**)* @a to i8*), i8** %ptr\n"
+               "  call void @c(i8** %ptr)\n"
+               "  ret void\n"
+               "}\n"
+               "define void @c(i8** %ptr) {\n"
+               "entry:\n"
+               "  call void @a(i8** %ptr)\n"
+               "  store i8* bitcast (void(i8**)* @b to i8*), i8** %ptr\n"
+               "  ret void\n"
+               "}\n");
+  LazyCallGraph CG(*M);
+
+  // Force the graph to be fully expanded.
+  auto I = CG.postorder_ref_scc_begin(), E = CG.postorder_ref_scc_end();
+  LazyCallGraph::RefSCC &RC = *I;
+  EXPECT_EQ(E, std::next(I));
+
+  LazyCallGraph::SCC &C = *RC.begin();
+  EXPECT_EQ(RC.end(), std::next(RC.begin()));
+
+  LazyCallGraph::Node &AN = *CG.lookup(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = *CG.lookup(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = *CG.lookup(lookupFunction(*M, "c"));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&C, CG.lookupSCC(AN));
+  EXPECT_EQ(&C, CG.lookupSCC(BN));
+  EXPECT_EQ(&C, CG.lookupSCC(CN));
+
+  // Remove the edge from a -> c which doesn't change anything.
+  SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
+      RC.removeInternalRefEdge(AN, CN);
+  EXPECT_EQ(0u, NewRCs.size());
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&C, CG.lookupSCC(AN));
+  EXPECT_EQ(&C, CG.lookupSCC(BN));
+  EXPECT_EQ(&C, CG.lookupSCC(CN));
+  auto J = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(&RC, &*J);
+  EXPECT_EQ(E, std::next(J));
+
+  // Remove the edge from b -> a and c -> b; again this doesn't change
+  // anything.
+  NewRCs = RC.removeInternalRefEdge(BN, AN);
+  NewRCs = RC.removeInternalRefEdge(CN, BN);
+  EXPECT_EQ(0u, NewRCs.size());
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&C, CG.lookupSCC(AN));
+  EXPECT_EQ(&C, CG.lookupSCC(BN));
+  EXPECT_EQ(&C, CG.lookupSCC(CN));
+  J = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(&RC, &*J);
+  EXPECT_EQ(E, std::next(J));
+}
+
 TEST(LazyCallGraphTest, InternalCallEdgeToRef) {
   LLVMContext Context;
   // A nice fully connected (including self-edges) SCC (and RefSCC)
@@ -1632,54 +1714,59 @@ TEST(LazyCallGraphTest, InternalCallEdgeToRef) {
   EXPECT_EQ(CG.postorder_ref_scc_end(), I);
 
   EXPECT_EQ(1, RC.size());
-  LazyCallGraph::SCC &CallC = *RC.begin();
+  LazyCallGraph::SCC &AC = *RC.begin();
 
-  LazyCallGraph::Node &A = *CG.lookup(lookupFunction(*M, "a"));
-  LazyCallGraph::Node &B = *CG.lookup(lookupFunction(*M, "b"));
-  LazyCallGraph::Node &C = *CG.lookup(lookupFunction(*M, "c"));
-  EXPECT_EQ(&CallC, CG.lookupSCC(A));
-  EXPECT_EQ(&CallC, CG.lookupSCC(B));
-  EXPECT_EQ(&CallC, CG.lookupSCC(C));
+  LazyCallGraph::Node &AN = *CG.lookup(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = *CG.lookup(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = *CG.lookup(lookupFunction(*M, "c"));
+  EXPECT_EQ(&AC, CG.lookupSCC(AN));
+  EXPECT_EQ(&AC, CG.lookupSCC(BN));
+  EXPECT_EQ(&AC, CG.lookupSCC(CN));
 
   // Remove the call edge from b -> a to a ref edge, which should leave the
   // 3 functions still in a single connected component because of a -> b ->
   // c -> a.
-  RC.switchInternalEdgeToRef(B, A);
+  auto NewCs = RC.switchInternalEdgeToRef(BN, AN);
+  EXPECT_EQ(NewCs.begin(), NewCs.end());
   EXPECT_EQ(1, RC.size());
-  EXPECT_EQ(&CallC, CG.lookupSCC(A));
-  EXPECT_EQ(&CallC, CG.lookupSCC(B));
-  EXPECT_EQ(&CallC, CG.lookupSCC(C));
+  EXPECT_EQ(&AC, CG.lookupSCC(AN));
+  EXPECT_EQ(&AC, CG.lookupSCC(BN));
+  EXPECT_EQ(&AC, CG.lookupSCC(CN));
 
   // Remove the edge from c -> a, which should leave 'a' in the original SCC
   // and form a new SCC for 'b' and 'c'.
-  RC.switchInternalEdgeToRef(C, A);
+  NewCs = RC.switchInternalEdgeToRef(CN, AN);
+  EXPECT_EQ(1, std::distance(NewCs.begin(), NewCs.end()));
   EXPECT_EQ(2, RC.size());
-  EXPECT_EQ(&CallC, CG.lookupSCC(A));
-  LazyCallGraph::SCC &BCallC = *CG.lookupSCC(B);
-  EXPECT_NE(&BCallC, &CallC);
-  EXPECT_EQ(&BCallC, CG.lookupSCC(C));
-  auto J = RC.find(CallC);
-  EXPECT_EQ(&CallC, &*J);
+  EXPECT_EQ(&AC, CG.lookupSCC(AN));
+  LazyCallGraph::SCC &BC = *CG.lookupSCC(BN);
+  EXPECT_NE(&BC, &AC);
+  EXPECT_EQ(&BC, CG.lookupSCC(CN));
+  auto J = RC.find(AC);
+  EXPECT_EQ(&AC, &*J);
   --J;
-  EXPECT_EQ(&BCallC, &*J);
+  EXPECT_EQ(&BC, &*J);
   EXPECT_EQ(RC.begin(), J);
+  EXPECT_EQ(J, NewCs.begin());
 
   // Remove the edge from c -> b, which should leave 'b' in the original SCC
   // and form a new SCC for 'c'. It shouldn't change 'a's SCC.
-  RC.switchInternalEdgeToRef(C, B);
+  NewCs = RC.switchInternalEdgeToRef(CN, BN);
+  EXPECT_EQ(1, std::distance(NewCs.begin(), NewCs.end()));
   EXPECT_EQ(3, RC.size());
-  EXPECT_EQ(&CallC, CG.lookupSCC(A));
-  EXPECT_EQ(&BCallC, CG.lookupSCC(B));
-  LazyCallGraph::SCC &CCallC = *CG.lookupSCC(C);
-  EXPECT_NE(&CCallC, &CallC);
-  EXPECT_NE(&CCallC, &BCallC);
-  J = RC.find(CallC);
-  EXPECT_EQ(&CallC, &*J);
+  EXPECT_EQ(&AC, CG.lookupSCC(AN));
+  EXPECT_EQ(&BC, CG.lookupSCC(BN));
+  LazyCallGraph::SCC &CC = *CG.lookupSCC(CN);
+  EXPECT_NE(&CC, &AC);
+  EXPECT_NE(&CC, &BC);
+  J = RC.find(AC);
+  EXPECT_EQ(&AC, &*J);
   --J;
-  EXPECT_EQ(&BCallC, &*J);
+  EXPECT_EQ(&BC, &*J);
   --J;
-  EXPECT_EQ(&CCallC, &*J);
+  EXPECT_EQ(&CC, &*J);
   EXPECT_EQ(RC.begin(), J);
+  EXPECT_EQ(J, NewCs.begin());
 }
 
 TEST(LazyCallGraphTest, InternalRefEdgeToCall) {
@@ -1849,11 +1936,11 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallNoCycleInterleaved) {
 
   // Several call edges are initially present to force a particual post-order.
   // Remove them now, leaving an interleaved post-order pattern.
-  RC.switchInternalEdgeToRef(B3, C3);
-  RC.switchInternalEdgeToRef(C2, B3);
-  RC.switchInternalEdgeToRef(B2, C2);
-  RC.switchInternalEdgeToRef(C1, B2);
-  RC.switchInternalEdgeToRef(B1, C1);
+  RC.switchTrivialInternalEdgeToRef(B3, C3);
+  RC.switchTrivialInternalEdgeToRef(C2, B3);
+  RC.switchTrivialInternalEdgeToRef(B2, C2);
+  RC.switchTrivialInternalEdgeToRef(C1, B2);
+  RC.switchTrivialInternalEdgeToRef(B1, C1);
 
   // Check the initial post-order. We ensure this order with the extra edges
   // that are nuked above.
@@ -1976,8 +2063,8 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   LazyCallGraph::SCC &GC = *CG.lookupSCC(G);
 
   // Remove the extra edges that were used to force a particular post-order.
-  RC.switchInternalEdgeToRef(C, D);
-  RC.switchInternalEdgeToRef(D, E);
+  RC.switchTrivialInternalEdgeToRef(C, D);
+  RC.switchTrivialInternalEdgeToRef(D, E);
 
   // Check the initial post-order. We ensure this order with the extra edges
   // that are nuked above.
@@ -2014,6 +2101,37 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   EXPECT_EQ(&BC, &RC[2]);
   EXPECT_EQ(&EC, &RC[3]);
   EXPECT_EQ(&AC, &RC[4]);
+}
+
+// Test for IR containing constants using blockaddress constant expressions.
+// These are truly unique constructs: constant expressions with non-constant
+// operands.
+TEST(LazyCallGraphTest, HandleBlockAddress) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @f() {\n"
+                             "entry:\n"
+                             "  ret void\n"
+                             "bb:\n"
+                             "  unreachable\n"
+                             "}\n"
+                             "define void @g(i8** %ptr) {\n"
+                             "entry:\n"
+                             "  store i8* blockaddress(@f, %bb), i8** %ptr\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG(*M);
+
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &FRC = *I++;
+  LazyCallGraph::RefSCC &GRC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  LazyCallGraph::Node &F = *CG.lookup(lookupFunction(*M, "f"));
+  LazyCallGraph::Node &G = *CG.lookup(lookupFunction(*M, "g"));
+  EXPECT_EQ(&FRC, CG.lookupRefSCC(F));
+  EXPECT_EQ(&GRC, CG.lookupRefSCC(G));
+  EXPECT_TRUE(GRC.isParentOf(FRC));
 }
 
 }

@@ -24,25 +24,28 @@
 ; CHECK-NEXT:    Name: E
 ; CHECK-NEXT:  }
 
+source_filename = "test/DebugInfo/COFF/enum.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-@"\01?e@@3W4E@@A" = global i32 0, align 4, !dbg !9
+@"\01?e@@3W4E@@A" = global i32 0, align 4, !dbg !0
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!10, !11}
-!llvm.ident = !{!12}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!11, !12}
+!llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !8)
-!1 = !DIFile(filename: "-", directory: "/")
-!2 = !{!3}
-!3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !4, line: 1, baseType: !5, size: 32, align: 32, elements: !6)
-!4 = !DIFile(filename: "<stdin>", directory: "/")
-!5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = !{!7}
-!7 = !DIEnumerator(name: "BLAH", value: 0)
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "e", linkageName: "\01?e@@3W4E@@A", scope: !2, file: !6, line: 2, type: !5, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !10)
+!3 = !DIFile(filename: "-", directory: "/")
+!4 = !{!5}
+!5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "E", file: !6, line: 1, baseType: !7, size: 32, align: 32, elements: !8)
+!6 = !DIFile(filename: "<stdin>", directory: "/")
+!7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !{!9}
-!9 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "e", linkageName: "\01?e@@3W4E@@A", scope: !0, file: !4, line: 2, type: !3, isLocal: false, isDefinition: true))
-!10 = !{i32 2, !"CodeView", i32 1}
-!11 = !{i32 2, !"Debug Info Version", i32 3}
-!12 = !{!"clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)"}
+!9 = !DIEnumerator(name: "BLAH", value: 0)
+!10 = !{!0}
+!11 = !{i32 2, !"CodeView", i32 1}
+!12 = !{i32 2, !"Debug Info Version", i32 3}
+!13 = !{!"clang version 3.9.0 (trunk 272790) (llvm/trunk 272813)"}
+

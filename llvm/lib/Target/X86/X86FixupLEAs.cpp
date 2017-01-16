@@ -120,8 +120,8 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
         BuildMI(*MF, MI.getDebugLoc(),
                 TII->get(MI.getOpcode() == X86::MOV32rr ? X86::LEA32r
                                                         : X86::LEA64r))
-            .addOperand(Dest)
-            .addOperand(Src)
+            .add(Dest)
+            .add(Src)
             .addImm(1)
             .addReg(0)
             .addImm(0)
@@ -287,8 +287,8 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
 
     MachineInstr *NewMI =
         BuildMI(*MFI, I, MI.getDebugLoc(), TII->get(NewOpcode))
-            .addOperand(MI.getOperand(0))
-            .addOperand(MI.getOperand(1));
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(1));
     MFI->erase(I);
     I = static_cast<MachineBasicBlock::iterator>(NewMI);
     return true;
@@ -377,9 +377,9 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     const MachineOperand &Src1 = MI.getOperand(SrcR1 == DstR ? 1 : 3);
     const MachineOperand &Src2 = MI.getOperand(SrcR1 == DstR ? 3 : 1);
     NewMI = BuildMI(*MF, MI.getDebugLoc(), TII->get(addrr_opcode))
-                .addOperand(Dst)
-                .addOperand(Src1)
-                .addOperand(Src2);
+                .add(Dst)
+                .add(Src1)
+                .add(Src2);
     MFI->insert(I, NewMI);
     DEBUG(NewMI->dump(););
   }
@@ -387,8 +387,8 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
   if (MI.getOperand(4).getImm() != 0) {
     const MachineOperand &SrcR = MI.getOperand(SrcR1 == DstR ? 1 : 3);
     NewMI = BuildMI(*MF, MI.getDebugLoc(), TII->get(addri_opcode))
-                .addOperand(Dst)
-                .addOperand(SrcR)
+                .add(Dst)
+                .add(SrcR)
                 .addImm(MI.getOperand(4).getImm());
     MFI->insert(I, NewMI);
     DEBUG(NewMI->dump(););

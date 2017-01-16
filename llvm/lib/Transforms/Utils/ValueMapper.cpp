@@ -681,6 +681,7 @@ void MDNodeMapper::mapNodesInPOT(UniquedGraph &G) {
     remapOperands(*ClonedN, [this, &D, &G](Metadata *Old) {
       if (Optional<Metadata *> MappedOp = getMappedOp(Old))
         return *MappedOp;
+      (void)D;
       assert(G.Info[Old].ID > D.ID && "Expected a forward reference");
       return &G.getFwdReference(*cast<MDNode>(Old));
     });

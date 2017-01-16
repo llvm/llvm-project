@@ -145,3 +145,46 @@ define i1 @shl_i1(i1 %a, i1 %b) {
   ret i1 %shl
 }
 
+; Simplify count leading/trailing zeros to zero if all valid bits are shifted out.
+
+declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
+declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
+declare <2 x i8> @llvm.cttz.v2i8(<2 x i8>, i1) nounwind readnone
+declare <2 x i8> @llvm.ctlz.v2i8(<2 x i8>, i1) nounwind readnone
+
+define i32 @lshr_ctlz_zero_is_undef(i32 %x) {
+; CHECK-LABEL: @lshr_ctlz_zero_is_undef(
+; CHECK-NEXT:    ret i32 0
+;
+  %ct = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %sh = lshr i32 %ct, 5
+  ret i32 %sh
+}
+
+define i32 @lshr_cttz_zero_is_undef(i32 %x) {
+; CHECK-LABEL: @lshr_cttz_zero_is_undef(
+; CHECK-NEXT:    ret i32 0
+;
+  %ct = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %sh = lshr i32 %ct, 5
+  ret i32 %sh
+}
+
+define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_ctlz_zero_is_undef_splat_vec(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
+  %sh = lshr <2 x i8> %ct, <i8 3, i8 3>
+  ret <2 x i8> %sh
+}
+
+define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
+  %sh = lshr <2 x i8> %ct, <i8 3, i8 3>
+  ret <2 x i8> %sh
+}
+

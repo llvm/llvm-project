@@ -77,7 +77,8 @@ bool testDereferencing() {
 namespace testPointerToMemberFunction {
   struct A {
     virtual int foo() { return 1; }
-    int bar() { return 2;  }
+    int bar() { return 2; }
+    int static staticMemberFunction(int p) { return p + 1; };
   };
 
   struct B : public A {
@@ -111,11 +112,19 @@ namespace testPointerToMemberFunction {
 
     clang_analyzer_eval((APtr->*AFP)() == 3); // expected-warning{{TRUE}}
   }
+
+  void testPointerToStaticMemberCall() {
+    int (*fPtr)(int) = &A::staticMemberFunction;
+    if (fPtr != 0) { // no-crash
+      clang_analyzer_eval(fPtr(2) == 3); // expected-warning{{TRUE}}
+    }
+  }
 } // end of testPointerToMemberFunction namespace
 
 namespace testPointerToMemberData {
   struct A {
     int i;
+    static int j;
   };
 
   void testPointerToMemberData() {
@@ -126,6 +135,13 @@ namespace testPointerToMemberData {
     a.*AMdPointer += 1;
 
     clang_analyzer_eval(a.i == 43); // expected-warning{{TRUE}}
+
+    int *ptrToStaticField = &A::j;
+    if (ptrToStaticField != 0) {
+      *ptrToStaticField = 7;
+      clang_analyzer_eval(*ptrToStaticField == 7); // expected-warning{{TRUE}}
+      clang_analyzer_eval(A::j == 7); // expected-warning{{TRUE}}
+    }
   }
 } // end of testPointerToMemberData namespace
 

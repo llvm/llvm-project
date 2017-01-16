@@ -1,7 +1,7 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -pgo-instr-gen -S | FileCheck --check-prefixes COMMON,ELFONLY %s
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=pgo-instr-gen -S | FileCheck --check-prefixes COMMON,ELFONLY %s
-; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -pgo-instr-gen -S | FileCheck --check-prefixes COMMON,COFFONLY %s
-; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -passes=pgo-instr-gen -S | FileCheck --check-prefixes COMMON,COFFONLY %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -pgo-instr-gen -do-comdat-renaming=true -S | FileCheck --check-prefixes COMMON,ELFONLY %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=pgo-instr-gen -do-comdat-renaming=true -S | FileCheck --check-prefixes COMMON,ELFONLY %s
+; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -pgo-instr-gen -do-comdat-renaming=true -S | FileCheck --check-prefixes COMMON,COFFONLY %s
+; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -passes=pgo-instr-gen -do-comdat-renaming=true -S | FileCheck --check-prefixes COMMON,COFFONLY %s
 
 ; Rename Comdat group and its function.
 $f = comdat any
@@ -38,22 +38,10 @@ define linkonce void @tf2() comdat($tf) {
   ret void
 }
 
-; Renaming Comdat with aliases.
-$f_with_alias = comdat any
-; COMMON: $f_with_alias.[[SINGLEBB_HASH]] = comdat any
-@af = alias void (...), bitcast (void ()* @f_with_alias to void (...)*)
-; COFFONLY: @af.[[SINGLEBB_HASH]] = alias void (...), bitcast (void ()* @f_with_alias.[[SINGLEBB_HASH]] to
-; ELFONLY-DAG: @af.[[SINGLEBB_HASH]] = alias void (...), bitcast (void ()* @f_with_alias.[[SINGLEBB_HASH]] to
-define linkonce_odr void @f_with_alias() comdat($f_with_alias) {
-  ret void
-}
-
 ; Rename AvailableExternallyLinkage functions
 ; ELFONLY-DAG: $aef.[[SINGLEBB_HASH]] = comdat any
 
 ; ELFONLY: @f = weak alias void (), void ()* @f.[[SINGLEBB_HASH]]
-; ELFONLY: @f_with_alias = weak alias void (), void ()* @f_with_alias.[[SINGLEBB_HASH]]
-; ELFONLY: @af = weak alias void (...), void (...)* @af.[[SINGLEBB_HASH]]
 ; ELFONLY: @aef = weak alias void (), void ()* @aef.[[SINGLEBB_HASH]]
 
 define available_externally void @aef() {

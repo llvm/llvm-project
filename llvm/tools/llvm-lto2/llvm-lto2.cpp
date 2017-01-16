@@ -18,6 +18,7 @@
 
 #include "llvm/LTO/Caching.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
@@ -63,7 +64,7 @@ static cl::opt<bool>
                                        "import files for the "
                                        "distributed backend case"));
 
-static cl::opt<int> Threads("-thinlto-threads",
+static cl::opt<int> Threads("thinlto-threads",
                             cl::init(llvm::heavyweight_hardware_concurrency()));
 
 static cl::list<std::string> SymbolResolutions(
@@ -157,7 +158,10 @@ int main(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
-  Conf.DiagHandler = [](const DiagnosticInfo &) {
+  Conf.DiagHandler = [](const DiagnosticInfo &DI) {
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
     exit(1);
   };
 

@@ -549,7 +549,7 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
 void ValueEnumerator::dropFunctionFromMetadata(
     MetadataMapType::value_type &FirstMD) {
   SmallVector<const MDNode *, 64> Worklist;
-  auto push = [this, &Worklist](MetadataMapType::value_type &MD) {
+  auto push = [&Worklist](MetadataMapType::value_type &MD) {
     auto &Entry = MD.second;
 
     // Nothing to do if this metadata isn't tagged.

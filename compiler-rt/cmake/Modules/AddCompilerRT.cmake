@@ -94,7 +94,7 @@ endfunction()
 #                         OS <os list>
 #                         SOURCES <source files>
 #                         CFLAGS <compile flags>
-#                         LINKFLAGS <linker flags>
+#                         LINK_FLAGS <linker flags>
 #                         DEFS <compile definitions>
 #                         LINK_LIBS <linked libraries> (only for shared library)
 #                         OBJECT_LIBS <object libraries to use as sources>
@@ -107,7 +107,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINKFLAGS;DEFS;LINK_LIBS;OBJECT_LIBS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;LINK_LIBS;OBJECT_LIBS"
     ${ARGN})
   set(libnames)
   if(APPLE)
@@ -116,7 +116,7 @@ function(add_compiler_rt_runtime name type)
         set(libname "${name}_${os}")
       else()
         set(libname "${name}_${os}_dynamic")
-        set(extra_linkflags_${libname} ${DARWIN_${os}_LINKFLAGS} ${LIB_LINKFLAGS})
+        set(extra_link_flags_${libname} ${DARWIN_${os}_LINK_FLAGS} ${LIB_LINK_FLAGS})
       endif()
       list_intersect(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
       if(LIB_ARCHS_${libname})
@@ -139,7 +139,7 @@ function(add_compiler_rt_runtime name type)
       else()
         set(libname "${name}-dynamic-${arch}")
         set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${LIB_CFLAGS})
-        set(extra_linkflags_${libname} ${TARGET_${arch}_LINKFLAGS} ${LIB_LINKFLAGS})
+        set(extra_link_flags_${libname} ${TARGET_${arch}_LINK_FLAGS} ${LIB_LINK_FLAGS})
         if(WIN32)
           set(output_name_${libname} ${name}_dynamic-${arch}${COMPILER_RT_OS_SUFFIX})
         else()
@@ -188,7 +188,7 @@ function(add_compiler_rt_runtime name type)
 
     add_library(${libname} ${type} ${sources_${libname}})
     set_target_compile_flags(${libname} ${extra_cflags_${libname}})
-    set_target_link_flags(${libname} ${extra_linkflags_${libname}})
+    set_target_link_flags(${libname} ${extra_link_flags_${libname}})
     set_property(TARGET ${libname} APPEND PROPERTY
                 COMPILE_DEFINITIONS ${LIB_DEFS})
     set_target_output_directories(${libname} ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
@@ -243,7 +243,7 @@ endfunction()
 # when cross compiling, COMPILER_RT_TEST_COMPILER_CFLAGS help
 # in compilation and linking of unittests.
 string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
-set(COMPILER_RT_UNITTEST_LINKFLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
 
 # Unittests support.
 set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
@@ -256,6 +256,7 @@ set(COMPILER_RT_GTEST_CFLAGS
 )
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
+append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 
 if(MSVC)
   # clang doesn't support exceptions on Windows yet.
@@ -379,6 +380,7 @@ macro(add_custom_libcxx name prefix)
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
+               -DLIBCXX_STANDALONE_BUILD=On
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1

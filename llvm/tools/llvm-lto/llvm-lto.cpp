@@ -247,7 +247,7 @@ static void error(const ErrorOr<T> &V, const Twine &Prefix) {
 }
 
 static void maybeVerifyModule(const Module &Mod) {
-  if (!DisableVerify && verifyModule(Mod))
+  if (!DisableVerify && verifyModule(Mod, &errs()))
     error("Broken Module");
 }
 

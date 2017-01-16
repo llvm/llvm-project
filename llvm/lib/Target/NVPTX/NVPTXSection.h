@@ -1,4 +1,4 @@
-//===- NVPTXSection.h - NVPTX-specific section representation -*- C++ -*-===//
+//===- NVPTXSection.h - NVPTX-specific section representation ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,18 +14,20 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXSECTION_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXSECTION_H
 
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/SectionKind.h"
 
 namespace llvm {
+
 /// Represents a section in PTX PTX does not have sections. We create this class
 /// in order to use the ASMPrint interface.
 ///
 class NVPTXSection final : public MCSection {
   virtual void anchor();
+
 public:
   NVPTXSection(SectionVariant V, SectionKind K) : MCSection(V, K, nullptr) {}
-  ~NVPTXSection() {}
+  ~NVPTXSection() = default;
 
   /// Override this as NVPTX has its own way of printing switching
   /// to a section.
@@ -40,4 +42,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_NVPTX_NVPTXSECTION_H

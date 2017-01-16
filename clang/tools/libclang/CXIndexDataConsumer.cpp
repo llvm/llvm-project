@@ -410,8 +410,8 @@ void CXIndexDataConsumer::setASTContext(ASTContext &ctx) {
   cxtu::getASTUnit(CXTU)->setASTContext(&ctx);
 }
 
-void CXIndexDataConsumer::setPreprocessor(Preprocessor &PP) {
-  cxtu::getASTUnit(CXTU)->setPreprocessor(&PP);
+void CXIndexDataConsumer::setPreprocessor(std::shared_ptr<Preprocessor> PP) {
+  cxtu::getASTUnit(CXTU)->setPreprocessor(std::move(PP));
 }
 
 bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {

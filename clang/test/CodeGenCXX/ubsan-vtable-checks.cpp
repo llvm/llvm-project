@@ -21,7 +21,7 @@ int get_v(T* t) {
   // CHECK-NULL-NOT: load {{.*}} (%struct.T*{{.*}})**, {{.*}} (%struct.T*{{.*}})***
   // CHECK-NULL: [[UBSAN_CMP_RES:%[0-9]+]] = icmp ne %struct.T* %{{[_a-z0-9]+}}, null
   // CHECK-NULL-NEXT: br i1 [[UBSAN_CMP_RES]], label %{{.*}}, label %{{.*}}
-  // CHECK-NULL: call void @__ubsan_handle_type_mismatch_abort
+  // CHECK-NULL: call void @__ubsan_handle_type_mismatch_v1_abort
   // Second, we check that vtable is actually loaded once the type check is done.
   // CHECK-NULL: load {{.*}} (%struct.T*{{.*}})**, {{.*}} (%struct.T*{{.*}})***
   return t->v();

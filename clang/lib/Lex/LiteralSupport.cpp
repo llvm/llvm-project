@@ -1708,3 +1708,12 @@ unsigned StringLiteralParser::getOffsetOfStringByte(const Token &Tok,
 
   return SpellingPtr-SpellingStart;
 }
+
+/// Determine whether a suffix is a valid ud-suffix. We avoid treating reserved
+/// suffixes as ud-suffixes, because the diagnostic experience is better if we
+/// treat it as an invalid suffix.
+bool StringLiteralParser::isValidUDSuffix(const LangOptions &LangOpts,
+                                          StringRef Suffix) {
+  return NumericLiteralParser::isValidUDSuffix(LangOpts, Suffix) ||
+         Suffix == "sv";
+}

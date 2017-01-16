@@ -41,7 +41,7 @@ public:
 
 
 TEST(CodeGenTest, TestNullCodeGen) {
-  CompilerInvocation *Invocation = new CompilerInvocation;
+  auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("").release());
@@ -50,7 +50,7 @@ TEST(CodeGenTest, TestNullCodeGen) {
   Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
-  Compiler.setInvocation(Invocation);
+  Compiler.setInvocation(std::move(Invocation));
   Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 

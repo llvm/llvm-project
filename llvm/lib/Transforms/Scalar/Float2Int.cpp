@@ -516,11 +516,10 @@ FunctionPass *createFloat2IntPass() { return new Float2IntLegacyPass(); }
 PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &) {
   if (!runImpl(F))
     return PreservedAnalyses::all();
-  else {
-    // FIXME: This should also 'preserve the CFG'.
-    PreservedAnalyses PA;
-    PA.preserve<GlobalsAA>();
-    return PA;
-  }
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 } // End namespace llvm

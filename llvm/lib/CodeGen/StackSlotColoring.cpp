@@ -381,7 +381,6 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
        I != E; ++I) {
     if (DCELimit != -1 && (int)NumDead >= DCELimit)
       break;
-
     int FirstSS, SecondSS;
     if (TII->isStackSlotCopy(*I, FirstSS, SecondSS) && FirstSS == SecondSS &&
         FirstSS != -1) {
@@ -392,12 +391,18 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     }
 
     MachineBasicBlock::iterator NextMI = std::next(I);
-    if (NextMI == MBB->end()) continue;
+    MachineBasicBlock::iterator ProbableLoadMI = I;
 
     unsigned LoadReg = 0;
     unsigned StoreReg = 0;
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS)))
       continue;
+    // Skip the ...pseudo debugging... instructions between a load and store.
+    while ((NextMI != E) && NextMI->isDebugValue()) {
+      ++NextMI;
+      ++I;
+    }
+    if (NextMI == E) continue;
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS)))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1) continue;
@@ -407,7 +412,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     if (NextMI->findRegisterUseOperandIdx(LoadReg, true, nullptr) != -1) {
       ++NumDead;
-      toErase.push_back(&*I);
+      toErase.push_back(&*ProbableLoadMI);
     }
 
     toErase.push_back(&*NextMI);

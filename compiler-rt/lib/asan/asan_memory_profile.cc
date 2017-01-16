@@ -32,9 +32,56 @@ struct AllocationSite {
 class HeapProfile {
  public:
   HeapProfile() : allocations_(1024) {}
+
+  void ProcessChunk(const AsanChunkView& cv) {
+    if (cv.IsAllocated()) {
+      total_allocated_user_size_ += cv.UsedSize();
+      total_allocated_count_++;
+      u32 id = cv.GetAllocStackId();
+      if (id)
+        Insert(id, cv.UsedSize());
+    } else if (cv.IsQuarantined()) {
+      total_quarantined_user_size_ += cv.UsedSize();
+      total_quarantined_count_++;
+    } else {
+      total_other_count_++;
+    }
+  }
+
+  void Print(uptr top_percent) {
+    InternalSort(&allocations_, allocations_.size(),
+                 [](const AllocationSite &a, const AllocationSite &b) {
+                   return a.total_size > b.total_size;
+                 });
+    CHECK(total_allocated_user_size_);
+    uptr total_shown = 0;
+    Printf("Live Heap Allocations: %zd bytes in %zd chunks; quarantined: "
+           "%zd bytes in %zd chunks; %zd other chunks; total chunks: %zd; "
+           "showing top %zd%%\n",
+           total_allocated_user_size_, total_allocated_count_,
+           total_quarantined_user_size_, total_quarantined_count_,
+           total_other_count_, total_allocated_count_ +
+           total_quarantined_count_ + total_other_count_, top_percent);
+    for (uptr i = 0; i < allocations_.size(); i++) {
+      auto &a = allocations_[i];
+      Printf("%zd byte(s) (%zd%%) in %zd allocation(s)\n", a.total_size,
+             a.total_size * 100 / total_allocated_user_size_, a.count);
+      StackDepotGet(a.id).Print();
+      total_shown += a.total_size;
+      if (total_shown * 100 / total_allocated_user_size_ > top_percent)
+        break;
+    }
+  }
+
+ private:
+  uptr total_allocated_user_size_ = 0;
+  uptr total_allocated_count_ = 0;
+  uptr total_quarantined_user_size_ = 0;
+  uptr total_quarantined_count_ = 0;
+  uptr total_other_count_ = 0;
+  InternalMmapVector<AllocationSite> allocations_;
+
   void Insert(u32 id, uptr size) {
-    total_allocated_ += size;
-    total_count_++;
     // Linear lookup will be good enough for most cases (although not all).
     for (uptr i = 0; i < allocations_.size(); i++) {
       if (allocations_[i].id == id) {
@@ -45,40 +92,11 @@ class HeapProfile {
     }
     allocations_.push_back({id, size, 1});
   }
-
-  void Print(uptr top_percent) {
-    InternalSort(&allocations_, allocations_.size(),
-                 [](const AllocationSite &a, const AllocationSite &b) {
-                   return a.total_size > b.total_size;
-                 });
-    CHECK(total_allocated_);
-    uptr total_shown = 0;
-    Printf("Live Heap Allocations: %zd bytes from %zd allocations; "
-           "showing top %zd%%\n", total_allocated_, total_count_, top_percent);
-    for (uptr i = 0; i < allocations_.size(); i++) {
-      auto &a = allocations_[i];
-      Printf("%zd byte(s) (%zd%%) in %zd allocation(s)\n", a.total_size,
-             a.total_size * 100 / total_allocated_, a.count);
-      StackDepotGet(a.id).Print();
-      total_shown += a.total_size;
-      if (total_shown * 100 / total_allocated_ > top_percent)
-        break;
-    }
-  }
-
- private:
-  uptr total_allocated_ = 0;
-  uptr total_count_ = 0;
-  InternalMmapVector<AllocationSite> allocations_;
 };
 
 static void ChunkCallback(uptr chunk, void *arg) {
-  HeapProfile *hp = reinterpret_cast<HeapProfile*>(arg);
-  AsanChunkView cv = FindHeapChunkByAllocBeg(chunk);
-  if (!cv.IsAllocated()) return;
-  u32 id = cv.GetAllocStackId();
-  if (!id) return;
-  hp->Insert(id, cv.UsedSize());
+  reinterpret_cast<HeapProfile*>(arg)->ProcessChunk(
+      FindHeapChunkByAllocBeg(chunk));
 }
 
 static void MemoryProfileCB(const SuspendedThreadsList &suspended_threads_list,

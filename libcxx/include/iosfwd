@@ -97,47 +97,47 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS ios_base;
 
-template<class _CharT>  struct _LIBCPP_TYPE_VIS_ONLY char_traits;
-template<class _Tp>     class _LIBCPP_TYPE_VIS_ONLY allocator;
+template<class _CharT>  struct _LIBCPP_TEMPLATE_VIS char_traits;
+template<class _Tp>     class _LIBCPP_TEMPLATE_VIS allocator;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_ios;
+    class _LIBCPP_TEMPLATE_VIS basic_ios;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_streambuf;
+    class _LIBCPP_TEMPLATE_VIS basic_streambuf;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_istream;
+    class _LIBCPP_TEMPLATE_VIS basic_istream;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_ostream;
+    class _LIBCPP_TEMPLATE_VIS basic_ostream;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_iostream;
+    class _LIBCPP_TEMPLATE_VIS basic_iostream;
 
 template <class _CharT, class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_stringbuf;
+    class _LIBCPP_TEMPLATE_VIS basic_stringbuf;
 template <class _CharT, class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_istringstream;
+    class _LIBCPP_TEMPLATE_VIS basic_istringstream;
 template <class _CharT, class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_ostringstream;
+    class _LIBCPP_TEMPLATE_VIS basic_ostringstream;
 template <class _CharT, class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_stringstream;
+    class _LIBCPP_TEMPLATE_VIS basic_stringstream;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_filebuf;
+    class _LIBCPP_TEMPLATE_VIS basic_filebuf;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_ifstream;
+    class _LIBCPP_TEMPLATE_VIS basic_ifstream;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_ofstream;
+    class _LIBCPP_TEMPLATE_VIS basic_ofstream;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_fstream;
+    class _LIBCPP_TEMPLATE_VIS basic_fstream;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY istreambuf_iterator;
+    class _LIBCPP_TEMPLATE_VIS istreambuf_iterator;
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY ostreambuf_iterator;
+    class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator;
 
 typedef basic_ios<char>              ios;
 typedef basic_ios<wchar_t>           wios;
@@ -172,7 +172,7 @@ typedef basic_ifstream<wchar_t>      wifstream;
 typedef basic_ofstream<wchar_t>      wofstream;
 typedef basic_fstream<wchar_t>       wfstream;
 
-template <class _State>             class _LIBCPP_TYPE_VIS_ONLY fpos;
+template <class _State>             class _LIBCPP_TEMPLATE_VIS fpos;
 typedef fpos<mbstate_t>    streampos;
 typedef fpos<mbstate_t>    wstreampos;
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
@@ -190,14 +190,14 @@ typedef long long streamoff;        // for char_traits in <string>
 template <class _CharT,             // for <stdexcept>
           class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TYPE_VIS_ONLY basic_string;
+    class _LIBCPP_TEMPLATE_VIS basic_string;
 typedef basic_string<char, char_traits<char>, allocator<char> > string;
 typedef basic_string<wchar_t, char_traits<wchar_t>, allocator<wchar_t> > wstring;
 
 
 // Include other forward declarations here
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TYPE_VIS_ONLY vector;
+class _LIBCPP_TEMPLATE_VIS vector;
 
 _LIBCPP_END_NAMESPACE_STD
 

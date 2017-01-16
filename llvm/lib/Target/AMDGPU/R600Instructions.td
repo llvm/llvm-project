@@ -1268,6 +1268,17 @@ let Predicates = [isR600] in {
 
 defm R600_ : RegisterLoadStore <R600_Reg32, FRAMEri, ADDRIndirect>;
 
+// Hardcode channel to 0
+// NOTE: LSHR is not available here. LSHR is per family instruction
+def : Pat <
+  (i32 (load_private ADDRIndirect:$addr) ),
+  (R600_RegisterLoad FRAMEri:$addr, (i32 0))
+>;
+def : Pat <
+  (store_private i32:$val, ADDRIndirect:$addr),
+  (R600_RegisterStore i32:$val, FRAMEri:$addr, (i32 0))
+>;
+
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions

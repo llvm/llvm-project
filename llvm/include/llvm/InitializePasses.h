@@ -252,7 +252,7 @@ void initializeModuleDebugInfoPrinterPass(PassRegistry&);
 void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
 void initializeNameAnonGlobalLegacyPassPass(PassRegistry &);
 void initializeNaryReassociateLegacyPassPass(PassRegistry &);
-void initializeNoAAPass(PassRegistry&);
+void initializeNewGVNPass(PassRegistry&);
 void initializeObjCARCAAWrapperPassPass(PassRegistry&);
 void initializeObjCARCAPElimPass(PassRegistry&);
 void initializeObjCARCContractPass(PassRegistry&);

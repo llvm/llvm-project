@@ -13,15 +13,13 @@
 
 #include "BPF.h"
 #include "BPFInstrInfo.h"
-#include "BPFSubtarget.h"
-#include "BPFTargetMachine.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <iterator>
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "BPFGenInstrInfo.inc"
@@ -109,11 +107,11 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       while (std::next(I) != MBB.end())
         std::next(I)->eraseFromParent();
       Cond.clear();
-      FBB = 0;
+      FBB = nullptr;
 
       // Delete the J if it's equivalent to a fall-through.
       if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
-        TBB = 0;
+        TBB = nullptr;
         I->eraseFromParent();
         I = MBB.end();
         continue;

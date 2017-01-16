@@ -1,16 +1,20 @@
 ; This test ensures that inlining an "empty" function does not destroy the CFG
 ;
-; RUN: opt < %s -inline -S | not grep br
+; RUN: opt < %s -inline -S | FileCheck %s
 
 define i32 @func(i32 %i) {
-        ret i32 %i
+  ret i32 %i
 }
 
-declare void @bar()
 
-define i32 @main(i32 %argc) {
-Entry:
-        %X = call i32 @func( i32 7 )            ; <i32> [#uses=1]
-        ret i32 %X
+define i32 @main() {
+; CHECK-LABEL: define i32 @main()
+entry:
+  %X = call i32 @func(i32 7)
+; CHECK-NOT: call
+; CHECK-NOT: br
+
+  ret i32 %X
+; CHECK: ret i32 7
 }
 

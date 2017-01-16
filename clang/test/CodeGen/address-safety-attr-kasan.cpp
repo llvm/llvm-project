@@ -8,31 +8,31 @@
 int HasSanitizeAddress() {
   return 1;
 }
-// CHECK-NOASAN: {{Function Attrs: nounwind$}}
-// CHECK-ASAN: Function Attrs: nounwind sanitize_address
-// CHECK-KASAN: Function Attrs: nounwind sanitize_address
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-ASAN: Function Attrs: noinline nounwind sanitize_address
+// CHECK-KASAN: Function Attrs: noinline nounwind sanitize_address
 
 __attribute__((no_sanitize("address")))
 int NoSanitizeQuoteAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: nounwind$}}
-// CHECK-ASAN: {{Function Attrs: nounwind$}}
-// CHECK-KASAN: {{Function Attrs: nounwind sanitize_address$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
 
 __attribute__((no_sanitize_address))
 int NoSanitizeAddress() {
   return 0;
 }
-// CHECK-NOASAN: {{Function Attrs: nounwind$}}
-// CHECK-ASAN: {{Function Attrs: nounwind$}}
-// CHECK-KASAN: {{Function Attrs: nounwind sanitize_address$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
 
 __attribute__((no_sanitize("kernel-address")))
 int NoSanitizeKernelAddress() {
   return 0;
 }
 
-// CHECK-NOASAN: {{Function Attrs: nounwind$}}
-// CHECK-ASAN: {{Function Attrs: nounwind sanitize_address$}}
-// CHECK-KASAN: {{Function Attrs: nounwind$}}
+// CHECK-NOASAN: {{Function Attrs: noinline nounwind$}}
+// CHECK-ASAN: {{Function Attrs: noinline nounwind sanitize_address$}}
+// CHECK-KASAN: {{Function Attrs: noinline nounwind$}}

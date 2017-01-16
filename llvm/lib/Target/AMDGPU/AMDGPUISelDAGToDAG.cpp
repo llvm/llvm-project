@@ -608,6 +608,10 @@ bool AMDGPUDAGToDAGISel::SelectADDRIndirect(SDValue Addr, SDValue &Base,
   if ((C = dyn_cast<ConstantSDNode>(Addr))) {
     Base = CurDAG->getRegister(AMDGPU::INDIRECT_BASE_ADDR, MVT::i32);
     Offset = CurDAG->getTargetConstant(C->getZExtValue(), DL, MVT::i32);
+  } else if ((Addr.getOpcode() == AMDGPUISD::DWORDADDR) &&
+             (C = dyn_cast<ConstantSDNode>(Addr.getOperand(0)))) {
+    Base = CurDAG->getRegister(AMDGPU::INDIRECT_BASE_ADDR, MVT::i32);
+    Offset = CurDAG->getTargetConstant(C->getZExtValue(), DL, MVT::i32);
   } else if ((Addr.getOpcode() == ISD::ADD || Addr.getOpcode() == ISD::OR) &&
             (C = dyn_cast<ConstantSDNode>(Addr.getOperand(1)))) {
     Base = Addr.getOperand(0);

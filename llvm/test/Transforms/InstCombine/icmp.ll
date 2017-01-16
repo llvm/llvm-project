@@ -1183,12 +1183,11 @@ define i1 @icmp_sext8trunc(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
+; Vectors should fold the same way.
 define <2 x i1> @icmp_sext8trunc_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_sext8trunc_vec(
-; CHECK-NEXT:    [[SEXT1:%.*]] = shl <2 x i32> %x, <i32 24, i32 24>
-; CHECK-NEXT:    [[SEXT:%.*]] = ashr <2 x i32> [[SEXT:%.*]]1, <i32 24, i32 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SEXT]], <i32 36, i32 36>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i8>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[TMP1]], <i8 36, i8 36>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %trunc = trunc <2 x i32> %x to <2 x i8>
@@ -1241,69 +1240,6 @@ define i1 @icmp_shl24(i32 %x) {
   %shl = shl i32 %x, 24
   %cmp = icmp slt i32 %shl, 603979776
   ret i1 %cmp
-}
-
-; If the (shl x, C) preserved the sign and this is a sign test,
-; compare the LHS operand instead
-define i1 @icmp_shl_nsw_sgt(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sgt i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @icmp_shl_nsw_sge0(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, -1
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sge i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @icmp_shl_nsw_sge1(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %shl = shl nsw i32 %x, 21
-  %cmp = icmp sge i32 %shl, 1
-  ret i1 %cmp
-}
-
-define <2 x i1> @icmp_shl_nsw_sge1_vec(<2 x i32> %x) {
-; CHECK-LABEL: @icmp_shl_nsw_sge1_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> %x, zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
-;
-  %shl = shl nsw <2 x i32> %x, <i32 21, i32 21>
-  %cmp = icmp sge <2 x i32> %shl, <i32 1, i32 1>
-  ret <2 x i1> %cmp
-}
-
-; Checks for icmp (eq|ne) (shl x, C), 0
-define i1 @icmp_shl_nsw_eq(i32 %x) {
-; CHECK-LABEL: @icmp_shl_nsw_eq(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %x, 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %mul = shl nsw i32 %x, 5
-  %cmp = icmp eq i32 %mul, 0
-  ret i1 %cmp
-}
-
-define <2 x i1> @icmp_shl_nsw_eq_vec(<2 x i32> %x) {
-; CHECK-LABEL: @icmp_shl_nsw_eq_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %x, zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
-;
-  %mul = shl nsw <2 x i32> %x, <i32 5, i32 5>
-  %cmp = icmp eq <2 x i32> %mul, zeroinitializer
-  ret <2 x i1> %cmp
 }
 
 define i1 @icmp_shl_eq(i32 %x) {
@@ -2488,6 +2424,10 @@ define i1 @f10(i16 %p) {
   ret i1 %cmp580
 }
 
+; Note: fptosi is used in various tests below to ensure that operand complexity
+; canonicalization does not kick in, which would make some of the tests
+; equivalent to one another.
+
 define i1 @cmp_sgt_rhs_dec(float %x, i32 %i) {
 ; CHECK-LABEL: @cmp_sgt_rhs_dec(
 ; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
@@ -2773,4 +2713,144 @@ define i1 @or_ptrtoint_mismatch(i8* %p, i32* %q) {
   %o = or i64 %pp, %qq
   %b = icmp eq i64 %o, 0
   ret i1 %b
+}
+
+define i1 @icmp_add1_ugt(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_add1_ugt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 %x, %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nuw i32 %x, 1
+  %cmp = icmp ugt i32 %add, %y
+  ret i1 %cmp
+}
+
+define i1 @icmp_add1_ule(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_add1_ule(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 %x, %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add nuw i32 %x, 1
+  %cmp = icmp ule i32 %add, %y
+  ret i1 %cmp
+}
+
+define i1 @cmp_uge_rhs_inc(float %x, i32 %i) {
+; CHECK-LABEL: @cmp_uge_rhs_inc(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CONV]], %i
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %inc = add nuw i32 %i, 1
+  %cmp = icmp uge i32 %conv, %inc
+  ret i1 %cmp
+}
+
+define i1 @cmp_ult_rhs_inc(float %x, i32 %i) {
+; CHECK-LABEL: @cmp_ult_rhs_inc(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[CONV]], %i
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %inc = add nuw i32 %i, 1
+  %cmp = icmp ult i32 %conv, %inc
+  ret i1 %cmp
+}
+
+define i1 @cmp_sge_lhs_inc(i32 %x, i32 %y) {
+; CHECK-LABEL: @cmp_sge_lhs_inc(
+; CHECK-NEXT:    [[INC:%.*]] = add
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[INC]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inc = add nsw i32 %x, 1
+  %cmp = icmp sge i32 %inc, %y
+  ret i1 %cmp
+}
+
+define i1 @cmp_uge_lhs_inc(i32 %x, i32 %y) {
+; CHECK-LABEL: @cmp_uge_lhs_inc(
+; CHECK-NEXT:    [[INC:%.*]] = add
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[INC]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %inc = add nuw i32 %x, 1
+  %cmp = icmp uge i32 %inc, %y
+  ret i1 %cmp
+}
+
+define i1 @cmp_sgt_lhs_dec(i32 %x, i32 %y) {
+; CHECK-LABEL: @cmp_sgt_lhs_dec(
+; CHECK-NEXT:    [[DEC:%.*]] = {{add|sub}}
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[DEC]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %dec = sub nsw i32 %x, 1
+  %cmp = icmp sgt i32 %dec, %y
+  ret i1 %cmp
+}
+
+define i1 @cmp_ugt_lhs_dec(i32 %x, i32 %y) {
+; CHECK-LABEL: @cmp_ugt_lhs_dec(
+; CHECK-NEXT:    [[DEC:%.*]] = {{add|sub}}
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC]], %y
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %dec = sub nuw i32 %x, 1
+  %cmp = icmp ugt i32 %dec, %y
+  ret i1 %cmp
+}
+
+define i1 @cmp_sle_rhs_inc(float %x, i32 %y) {
+; CHECK-LABEL: @cmp_sle_rhs_inc(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[INC:%.*]] = add
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CONV]], [[INC]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %inc = add nsw i32 %y, 1
+  %cmp = icmp sle i32 %conv, %inc
+  ret i1 %cmp
+}
+
+define i1 @cmp_ule_rhs_inc(float %x, i32 %y) {
+; CHECK-LABEL: @cmp_ule_rhs_inc(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[INC:%.*]] = add
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[CONV]], [[INC]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %inc = add nuw i32 %y, 1
+  %cmp = icmp ule i32 %conv, %inc
+  ret i1 %cmp
+}
+
+define i1 @cmp_slt_rhs_dec(float %x, i32 %y) {
+; CHECK-LABEL: @cmp_slt_rhs_dec(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[DEC:%.*]] = {{add|sub}}
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[DEC]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %dec = sub nsw i32 %y, 1
+  %cmp = icmp slt i32 %conv, %dec
+  ret i1 %cmp
+}
+
+define i1 @cmp_ult_rhs_dec(float %x, i32 %y) {
+; CHECK-LABEL: @cmp_ult_rhs_dec(
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float %x to i32
+; CHECK-NEXT:    [[DEC:%.*]] = {{add|sub}}
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], [[DEC]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %conv = fptosi float %x to i32
+  %dec = sub nuw i32 %y, 1
+  %cmp = icmp ult i32 %conv, %dec
+  ret i1 %cmp
 }

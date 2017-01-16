@@ -825,7 +825,7 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
 ; CHECK-ALL: strh
 ; CHECK-ALL: mov
 ; CHECK-ALL-DAG: ldrh
-; CHECK-ALL-DAG: add
+; CHECK-ALL-DAG: orr
 ; CHECK-ALL: strh
 ; CHECK-ALL: ldrh
 ; CHECK-ALL: strh
@@ -855,7 +855,7 @@ define void @test_insertelement(half* %p, <4 x half>* %q, i32 %i) #0 {
 ; CHECK-VFP: orr
 ; CHECK-VFP: str
 ; CHECK-VFP: mov
-; CHECK-VFP: add
+; CHECK-VFP: orr
 ; CHECK-VFP: ldrh
 ; CHECK-VFP: strh
 ; CHECK-VFP: add sp, sp, #8

@@ -29,7 +29,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : 0 <= i0 < N and 4*floor((2 + i0)/4) <= i0 };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : 0 <= i0 < N and 4*floor((i0)/4) >= -1 + i0  };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> [i0, 3] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]

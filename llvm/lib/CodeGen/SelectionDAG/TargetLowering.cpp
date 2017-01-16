@@ -3706,7 +3706,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   return Result;
 }
 
-SDValue 
+SDValue
 TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
                                        const SDLoc &DL, EVT DataVT,
                                        SelectionDAG &DAG,
@@ -3736,6 +3736,49 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
     Increment = DAG.getConstant(DataVT.getSizeInBits() / 8, DL, AddrVT);
 
   return DAG.getNode(ISD::ADD, DL, AddrVT, Addr, Increment);
+}
+
+static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
+                                       SDValue Idx,
+                                       EVT VecVT,
+                                       const SDLoc &dl) {
+  if (isa<ConstantSDNode>(Idx))
+    return Idx;
+
+  EVT IdxVT = Idx.getValueType();
+  unsigned NElts = VecVT.getVectorNumElements();
+  if (isPowerOf2_32(NElts)) {
+    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
+                                     Log2_32(NElts));
+    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
+                       DAG.getConstant(Imm, dl, IdxVT));
+  }
+
+  return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
+                     DAG.getConstant(NElts - 1, dl, IdxVT));
+}
+
+SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
+                                                SDValue VecPtr, EVT VecVT,
+                                                SDValue Index) const {
+  SDLoc dl(Index);
+  // Make sure the index type is big enough to compute in.
+  Index = DAG.getZExtOrTrunc(Index, dl, getPointerTy(DAG.getDataLayout()));
+
+  EVT EltVT = VecVT.getVectorElementType();
+
+  // Calculate the element offset and add it to the pointer.
+  unsigned EltSize = EltVT.getSizeInBits() / 8; // FIXME: should be ABI size.
+  assert(EltSize * 8 == EltVT.getSizeInBits() &&
+         "Converting bits to bytes lost precision");
+
+  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl);
+
+  EVT IdxVT = Index.getValueType();
+
+  Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
+                      DAG.getConstant(EltSize, dl, IdxVT));
+  return DAG.getNode(ISD::ADD, dl, IdxVT, Index, VecPtr);
 }
 
 //===----------------------------------------------------------------------===//

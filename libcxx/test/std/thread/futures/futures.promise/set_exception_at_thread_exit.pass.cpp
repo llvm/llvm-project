@@ -22,7 +22,6 @@
 
 void func(std::promise<int> p)
 {
-    const int i = 5;
     p.set_exception_at_thread_exit(std::make_exception_ptr(3));
 }
 

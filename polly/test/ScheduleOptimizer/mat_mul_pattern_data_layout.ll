@@ -1,4 +1,13 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-througput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-cache-level-associativity=8,8 -polly-target-cache-level-sizes=32768,262144 -polly-optimized-scops < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: -polly-target-throughput-vector-fma=1 \
+; RUN: -polly-target-latency-vector-fma=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-2nd-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-size=32768 \
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-optimized-scops \
+; RUN: -polly-target-vector-register-bitwidth=256 \
+; RUN: < %s 2>&1 | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -9,14 +18,14 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
-; CHECK:        double Packed_B[ { [] -> [(2)] } ][ { [] -> [(256)] } ][ { [] -> [(8)] } ]; // Element size 8
+; CHECK:        double Packed_B[ { [] -> [(256)] } ][ { [] -> [(256)] } ][ { [] -> [(8)] } ];
 ; CHECK-NEXT:        double Packed_A[ { [] -> [(24)] } ][ { [] -> [(256)] } ][ { [] -> [(4)] } ]; // Element size 8
 ;
 ; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg6[i0, i2] };
 ; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_A[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 4*floor((-i0 + o2)/4) = -i0 + o2 and 0 <= o1 <= 255 and 0 <= o2 <= 3 and -3 + i0 - 4o0 <= 96*floor((i0)/96) <= i0 - 4o0 };
 ;
 ; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o1 <= 255 and 0 <= o2 <= 7 and -7 + i1 - 8o0 <= 16*floor((i1)/16) <= i1 - 8o0 };
+; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o1 <= 255 and 0 <= o2 <= 7 and -7 + i1 - 8o0 <= 2048*floor((i1)/2048) <= i1 - 8o0 };
 ;
 ; CHECK:    	CopyStmt_0
 ; CHECK-NEXT:            Domain :=
@@ -25,7 +34,7 @@
 ; CHECK-NEXT:                ;
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                null;
-; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> Packed_B[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o1 <= 255 and 0 <= o2 <= 7 and -7 + i1 - 8o0 <= 16*floor((i1)/16) <= i1 - 8o0 };
+; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> Packed_B[o0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o1 <= 255 and 0 <= o2 <= 7 and -7 + i1 - 8o0 <= 2048*floor((i1)/2048) <= i1 - 8o0 };
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                null;
 ; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };

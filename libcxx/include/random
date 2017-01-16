@@ -1813,7 +1813,7 @@ struct __lce_ta<__a, __c, __m, (unsigned short)(~0), __b>
 };
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TYPE_VIS_ONLY linear_congruential_engine;
+class _LIBCPP_TEMPLATE_VIS linear_congruential_engine;
 
 template <class _CharT, class _Traits,
           class _Up, _Up _Ap, _Up _Cp, _Up _Np>
@@ -1829,7 +1829,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
            linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TYPE_VIS_ONLY linear_congruential_engine
+class _LIBCPP_TEMPLATE_VIS linear_congruential_engine
 {
 public:
     // types
@@ -2011,7 +2011,7 @@ typedef minstd_rand                                       default_random_engine;
 template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
           _UIntType __a, size_t __u, _UIntType __d, size_t __s,
           _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
-class _LIBCPP_TYPE_VIS_ONLY mersenne_twister_engine;
+class _LIBCPP_TEMPLATE_VIS mersenne_twister_engine;
 
 template <class _UI, size_t _Wp, size_t _Np, size_t _Mp, size_t _Rp,
           _UI _Ap, size_t _Up, _UI _Dp, size_t _Sp,
@@ -2053,7 +2053,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 template <class _UIntType, size_t __w, size_t __n, size_t __m, size_t __r,
           _UIntType __a, size_t __u, _UIntType __d, size_t __s,
           _UIntType __b, size_t __t, _UIntType __c, size_t __l, _UIntType __f>
-class _LIBCPP_TYPE_VIS_ONLY mersenne_twister_engine
+class _LIBCPP_TEMPLATE_VIS mersenne_twister_engine
 {
 public:
     // types
@@ -2499,7 +2499,7 @@ typedef mersenne_twister_engine<uint_fast64_t, 64, 312, 156, 31,
 // subtract_with_carry_engine
 
 template<class _UIntType, size_t __w, size_t __s, size_t __r>
-class _LIBCPP_TYPE_VIS_ONLY subtract_with_carry_engine;
+class _LIBCPP_TEMPLATE_VIS subtract_with_carry_engine;
 
 template<class _UI, size_t _Wp, size_t _Sp, size_t _Rp>
 bool
@@ -2527,7 +2527,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
            subtract_with_carry_engine<_UI, _Wp, _Sp, _Rp>& __x);
 
 template<class _UIntType, size_t __w, size_t __s, size_t __r>
-class _LIBCPP_TYPE_VIS_ONLY subtract_with_carry_engine
+class _LIBCPP_TEMPLATE_VIS subtract_with_carry_engine
 {
 public:
     // types
@@ -2810,13 +2810,14 @@ typedef subtract_with_carry_engine<uint_fast64_t, 48,  5, 12>     ranlux48_base;
 // discard_block_engine
 
 template<class _Engine, size_t __p, size_t __r>
-class _LIBCPP_TYPE_VIS_ONLY discard_block_engine
+class _LIBCPP_TEMPLATE_VIS discard_block_engine
 {
     _Engine __e_;
     int     __n_;
 
     static_assert(  0 <  __r, "discard_block_engine invalid parameters");
     static_assert(__r <= __p, "discard_block_engine invalid parameters");
+    static_assert(__r <= INT_MAX, "discard_block_engine invalid parameters");
 public:
     // types
     typedef typename _Engine::result_type result_type;
@@ -2918,7 +2919,7 @@ template<class _Engine, size_t __p, size_t __r>
 typename discard_block_engine<_Engine, __p, __r>::result_type
 discard_block_engine<_Engine, __p, __r>::operator()()
 {
-    if (__n_ >= __r)
+    if (__n_ >= static_cast<int>(__r))
     {
         __e_.discard(__p - __r);
         __n_ = 0;
@@ -2983,7 +2984,7 @@ typedef discard_block_engine<ranlux48_base, 389, 11> ranlux48;
 // independent_bits_engine
 
 template<class _Engine, size_t __w, class _UIntType>
-class _LIBCPP_TYPE_VIS_ONLY independent_bits_engine
+class _LIBCPP_TEMPLATE_VIS independent_bits_engine
 {
     template <class _UI, _UI _R0, size_t _Wp, size_t _Mp>
     class __get_n
@@ -3247,7 +3248,7 @@ public:
 };
 
 template<class _Engine, size_t __k>
-class _LIBCPP_TYPE_VIS_ONLY shuffle_order_engine
+class _LIBCPP_TEMPLATE_VIS shuffle_order_engine
 {
     static_assert(0 < __k, "shuffle_order_engine invalid parameters");
 public:
@@ -3510,7 +3511,7 @@ private:
 
 // seed_seq
 
-class _LIBCPP_TYPE_VIS_ONLY seed_seq
+class _LIBCPP_TEMPLATE_VIS seed_seq
 {
 public:
     // types
@@ -3687,13 +3688,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // uniform_real_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY uniform_real_distribution
+class _LIBCPP_TEMPLATE_VIS uniform_real_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __a_;
         result_type __b_;
@@ -3808,13 +3809,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 
 // bernoulli_distribution
 
-class _LIBCPP_TYPE_VIS_ONLY bernoulli_distribution
+class _LIBCPP_TEMPLATE_VIS bernoulli_distribution
 {
 public:
     // types
     typedef bool result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         double __p_;
     public:
@@ -3917,13 +3918,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bernoulli_distribution& __x)
 // binomial_distribution
 
 template<class _IntType = int>
-class _LIBCPP_TYPE_VIS_ONLY binomial_distribution
+class _LIBCPP_TEMPLATE_VIS binomial_distribution
 {
 public:
     // types
     typedef _IntType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __t_;
         double __p_;
@@ -4085,13 +4086,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // exponential_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY exponential_distribution
+class _LIBCPP_TEMPLATE_VIS exponential_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __lambda_;
     public:
@@ -4200,13 +4201,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // normal_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY normal_distribution
+class _LIBCPP_TEMPLATE_VIS normal_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __mean_;
         result_type __stddev_;
@@ -4368,13 +4369,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // lognormal_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY lognormal_distribution
+class _LIBCPP_TEMPLATE_VIS lognormal_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         normal_distribution<result_type> __nd_;
     public:
@@ -4493,13 +4494,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // poisson_distribution
 
 template<class _IntType = int>
-class _LIBCPP_TYPE_VIS_ONLY poisson_distribution
+class _LIBCPP_TEMPLATE_VIS poisson_distribution
 {
 public:
     // types
     typedef _IntType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         double __mean_;
         double __s_;
@@ -4724,13 +4725,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // weibull_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY weibull_distribution
+class _LIBCPP_TEMPLATE_VIS weibull_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __a_;
         result_type __b_;
@@ -4838,13 +4839,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 }
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY extreme_value_distribution
+class _LIBCPP_TEMPLATE_VIS extreme_value_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __a_;
         result_type __b_;
@@ -4959,13 +4960,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // gamma_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY gamma_distribution
+class _LIBCPP_TEMPLATE_VIS gamma_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __alpha_;
         result_type __beta_;
@@ -5131,13 +5132,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // negative_binomial_distribution
 
 template<class _IntType = int>
-class _LIBCPP_TYPE_VIS_ONLY negative_binomial_distribution
+class _LIBCPP_TEMPLATE_VIS negative_binomial_distribution
 {
 public:
     // types
     typedef _IntType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __k_;
         double __p_;
@@ -5266,13 +5267,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // geometric_distribution
 
 template<class _IntType = int>
-class _LIBCPP_TYPE_VIS_ONLY geometric_distribution
+class _LIBCPP_TEMPLATE_VIS geometric_distribution
 {
 public:
     // types
     typedef _IntType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         double __p_;
     public:
@@ -5368,13 +5369,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // chi_squared_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY chi_squared_distribution
+class _LIBCPP_TEMPLATE_VIS chi_squared_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __n_;
     public:
@@ -5474,13 +5475,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // cauchy_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY cauchy_distribution
+class _LIBCPP_TEMPLATE_VIS cauchy_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __a_;
         result_type __b_;
@@ -5597,13 +5598,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // fisher_f_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY fisher_f_distribution
+class _LIBCPP_TEMPLATE_VIS fisher_f_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __m_;
         result_type __n_;
@@ -5719,13 +5720,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // student_t_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY student_t_distribution
+class _LIBCPP_TEMPLATE_VIS student_t_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         result_type __n_;
     public:
@@ -5832,13 +5833,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // discrete_distribution
 
 template<class _IntType = int>
-class _LIBCPP_TYPE_VIS_ONLY discrete_distribution
+class _LIBCPP_TEMPLATE_VIS discrete_distribution
 {
 public:
     // types
     typedef _IntType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         vector<double> __p_;
     public:
@@ -6060,13 +6061,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // piecewise_constant_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY piecewise_constant_distribution
+class _LIBCPP_TEMPLATE_VIS piecewise_constant_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         vector<result_type> __b_;
         vector<result_type> __densities_;
@@ -6383,13 +6384,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is,
 // piecewise_linear_distribution
 
 template<class _RealType = double>
-class _LIBCPP_TYPE_VIS_ONLY piecewise_linear_distribution
+class _LIBCPP_TEMPLATE_VIS piecewise_linear_distribution
 {
 public:
     // types
     typedef _RealType result_type;
 
-    class _LIBCPP_TYPE_VIS_ONLY param_type
+    class _LIBCPP_TEMPLATE_VIS param_type
     {
         vector<result_type> __b_;
         vector<result_type> __densities_;

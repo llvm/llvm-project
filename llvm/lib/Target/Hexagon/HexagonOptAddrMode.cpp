@@ -333,17 +333,17 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
       short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
-      MIB.addOperand(OldMI->getOperand(0));
-      MIB.addOperand(OldMI->getOperand(2));
-      MIB.addOperand(OldMI->getOperand(3));
-      MIB.addOperand(ImmOp);
+      MIB.add(OldMI->getOperand(0));
+      MIB.add(OldMI->getOperand(2));
+      MIB.add(OldMI->getOperand(3));
+      MIB.add(ImmOp);
       OpStart = 4;
       Changed = true;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
       short NewOpCode = HII->getAbsoluteForm(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode))
-                .addOperand(OldMI->getOperand(0));
+                .add(OldMI->getOperand(0));
       const GlobalValue *GV = ImmOp.getGlobal();
       int64_t Offset = ImmOp.getOffset() + OldMI->getOperand(2).getImm();
 
@@ -359,9 +359,9 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
     short NewOpCode = HII->xformRegToImmOffset(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
-    MIB.addOperand(OldMI->getOperand(0));
-    MIB.addOperand(OldMI->getOperand(1));
-    MIB.addOperand(ImmOp);
+    MIB.add(OldMI->getOperand(0));
+    MIB.add(OldMI->getOperand(1));
+    MIB.add(ImmOp);
     OpStart = 4;
     Changed = true;
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
@@ -370,7 +370,7 @@ bool HexagonOptAddrMode::changeLoad(MachineInstr *OldMI, MachineOperand ImmOp,
 
   if (Changed)
     for (unsigned i = OpStart; i < OpEnd; ++i)
-      MIB.addOperand(OldMI->getOperand(i));
+      MIB.add(OldMI->getOperand(i));
 
   return Changed;
 }
@@ -390,10 +390,10 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       short NewOpCode = HII->getBaseWithLongOffset(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
       MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
-      MIB.addOperand(OldMI->getOperand(1));
-      MIB.addOperand(OldMI->getOperand(2));
-      MIB.addOperand(ImmOp);
-      MIB.addOperand(OldMI->getOperand(3));
+      MIB.add(OldMI->getOperand(1));
+      MIB.add(OldMI->getOperand(2));
+      MIB.add(ImmOp);
+      MIB.add(OldMI->getOperand(3));
       OpStart = 4;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
       short NewOpCode = HII->getAbsoluteForm(*OldMI);
@@ -402,7 +402,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       const GlobalValue *GV = ImmOp.getGlobal();
       int64_t Offset = ImmOp.getOffset() + OldMI->getOperand(1).getImm();
       MIB.addGlobalAddress(GV, Offset, ImmOp.getTargetFlags());
-      MIB.addOperand(OldMI->getOperand(2));
+      MIB.add(OldMI->getOperand(2));
       OpStart = 3;
     }
     Changed = true;
@@ -412,9 +412,9 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
     short NewOpCode = HII->xformRegToImmOffset(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
     MIB = BuildMI(*BB, InsertPt, OldMI->getDebugLoc(), HII->get(NewOpCode));
-    MIB.addOperand(OldMI->getOperand(0));
-    MIB.addOperand(ImmOp);
-    MIB.addOperand(OldMI->getOperand(1));
+    MIB.add(OldMI->getOperand(0));
+    MIB.add(ImmOp);
+    MIB.add(OldMI->getOperand(1));
     OpStart = 2;
     Changed = true;
     DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
@@ -422,7 +422,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
   }
   if (Changed)
     for (unsigned i = OpStart; i < OpEnd; ++i)
-      MIB.addOperand(OldMI->getOperand(i));
+      MIB.add(OldMI->getOperand(i));
 
   return Changed;
 }
@@ -473,26 +473,26 @@ bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,
         BuildMI(*BB, InsertPt, UseMI->getDebugLoc(), HII->get(NewOpCode));
     // change mem(Rs + # ) -> mem(Rt << # + ##)
     if (UseMID.mayLoad()) {
-      MIB.addOperand(UseMI->getOperand(0));
-      MIB.addOperand(AddAslMI->getOperand(2));
-      MIB.addOperand(AddAslMI->getOperand(3));
+      MIB.add(UseMI->getOperand(0));
+      MIB.add(AddAslMI->getOperand(2));
+      MIB.add(AddAslMI->getOperand(3));
       const GlobalValue *GV = ImmOp.getGlobal();
       MIB.addGlobalAddress(GV, UseMI->getOperand(2).getImm(),
                            ImmOp.getTargetFlags());
       OpStart = 3;
     } else if (UseMID.mayStore()) {
-      MIB.addOperand(AddAslMI->getOperand(2));
-      MIB.addOperand(AddAslMI->getOperand(3));
+      MIB.add(AddAslMI->getOperand(2));
+      MIB.add(AddAslMI->getOperand(3));
       const GlobalValue *GV = ImmOp.getGlobal();
       MIB.addGlobalAddress(GV, UseMI->getOperand(1).getImm(),
                            ImmOp.getTargetFlags());
-      MIB.addOperand(UseMI->getOperand(2));
+      MIB.add(UseMI->getOperand(2));
       OpStart = 3;
     } else
       llvm_unreachable("Unhandled instruction");
 
     for (unsigned i = OpStart; i < OpEnd; ++i)
-      MIB.addOperand(UseMI->getOperand(i));
+      MIB.add(UseMI->getOperand(i));
 
     Deleted.insert(UseMI);
   }

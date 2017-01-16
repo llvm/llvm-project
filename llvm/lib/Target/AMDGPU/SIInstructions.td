@@ -678,6 +678,37 @@ def : Pat <
 >;
 
 def : Pat <
+  (fcopysign f16:$src0, f16:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00007fff)), $src0, $src1)
+>;
+
+def : Pat <
+  (fcopysign f32:$src0, f16:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)), $src0,
+             (V_LSHLREV_B32_e64 (i32 16), $src1))
+>;
+
+def : Pat <
+  (fcopysign f64:$src0, f16:$src1),
+  (REG_SEQUENCE SReg_64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (V_BFI_B32 (S_MOV_B32 (i32 0x7fffffff)), (i32 (EXTRACT_SUBREG $src0, sub1)),
+               (V_LSHLREV_B32_e64 (i32 16), $src1)), sub1)
+>;
+
+def : Pat <
+  (fcopysign f16:$src0, f32:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00007fff)), $src0,
+             (V_LSHRREV_B32_e64 (i32 16), $src1))
+>;
+
+def : Pat <
+  (fcopysign f16:$src0, f64:$src1),
+  (V_BFI_B32 (S_MOV_B32 (i32 0x00007fff)), $src0,
+             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
+>;
+
+def : Pat <
   (fneg f16:$src),
   (V_XOR_B32_e32 $src, (V_MOV_B32_e32 (i32 0x00008000)))
 >;
@@ -871,6 +902,11 @@ def : Pat <
 >;
 
 def : Pat <
+  (i16 (sext_inreg i16:$src, i1)),
+  (S_BFE_I32 $src, (i32 0x00010000)) // 0 | 1 << 16
+>;
+
+def : Pat <
   (i16 (sext_inreg i16:$src, i8)),
   (S_BFE_I32 $src, (i32 0x80000)) // 0 | 8 << 16
 >;
@@ -1020,6 +1056,11 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 // FIXME: defm : BFMPatterns <i64, S_BFM_B64, S_MOV_B64>;
 
 def : BFEPattern <V_BFE_U32, S_MOV_B32>;
+
+def : Pat<
+  (fcanonicalize f16:$src),
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), 0, $src, 0, 0)
+>;
 
 def : Pat<
   (fcanonicalize f32:$src),

@@ -44,25 +44,22 @@ public:
 ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
                                          llvm::StringRef Prefix,
                                          llvm::StringRef ProblemFilesListPath)
-  : InputFilePaths(InputPaths),
-    HeaderPrefix(Prefix),
-    ProblemFilesPath(ProblemFilesListPath),
-    HasModuleMap(false),
-    MissingHeaderCount(0),
-    // Init clang stuff needed for loading the module map and preprocessing.
-    LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
-    DiagnosticOpts(new DiagnosticOptions()),
-    DC(llvm::errs(), DiagnosticOpts.get()),
-    Diagnostics(
-    new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
-    TargetOpts(new ModuleMapTargetOptions()),
-    Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
-    FileMgr(new FileManager(FileSystemOpts)),
-    SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
-    HeaderSearchOpts(new HeaderSearchOptions()),
-    HeaderInfo(new HeaderSearch(HeaderSearchOpts, *SourceMgr, *Diagnostics,
-    *LangOpts, Target.get())) {
-}
+    : InputFilePaths(InputPaths), HeaderPrefix(Prefix),
+      ProblemFilesPath(ProblemFilesListPath), HasModuleMap(false),
+      MissingHeaderCount(0),
+      // Init clang stuff needed for loading the module map and preprocessing.
+      LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
+      DiagnosticOpts(new DiagnosticOptions()),
+      DC(llvm::errs(), DiagnosticOpts.get()),
+      Diagnostics(
+          new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
+      TargetOpts(new ModuleMapTargetOptions()),
+      Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
+      FileMgr(new FileManager(FileSystemOpts)),
+      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
+      HeaderInfo(new HeaderSearch(std::make_shared<HeaderSearchOptions>(),
+                                  *SourceMgr, *Diagnostics, *LangOpts,
+                                  Target.get())) {}
 
 // Create instance of ModularizeUtilities, to simplify setting up
 // subordinate objects.

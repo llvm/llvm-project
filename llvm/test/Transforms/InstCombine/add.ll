@@ -507,3 +507,15 @@ define i1 @test40(i32 %a, i32 %b) {
   %cmp = icmp eq i32 %add, %b
   ret i1 %cmp
 }
+
+define i64 @test41(i32 %a) {
+; CHECK-LABEL: @test41(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 %a, 15
+; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %add = add nuw i32 %a, 16
+  %zext = zext i32 %add to i64
+  %sub = add i64 %zext, -1
+  ret i64 %sub
+}

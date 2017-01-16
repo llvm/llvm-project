@@ -259,6 +259,8 @@ public:
     return UDSuffixOffset;
   }
 
+  static bool isValidUDSuffix(const LangOptions &LangOpts, StringRef Suffix);
+
 private:
   void init(ArrayRef<Token> StringToks);
   bool CopyStringFragment(const Token &Tok, const char *TokBegin,

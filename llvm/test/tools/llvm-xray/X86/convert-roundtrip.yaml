@@ -1,0 +1,28 @@
+#RUN: llvm-xray convert %s -f=raw -o %t && llvm-xray convert %t -f=yaml -o - | FileCheck %s
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 2601000000
+records:
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter,
+    tsc: 10001 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,
+    tsc: 10100 }
+...
+
+#CHECK:       ---
+#CHECK-NEXT:  header:
+#CHECK-NEXT:    version: 1
+#CHECK-NEXT:    type: 0
+#CHECK-NEXT:    constant-tsc: true
+#CHECK-NEXT:    nonstop-tsc: true
+#CHECK-NEXT:    cycle-frequency: 2601000000
+#CHECK-NEXT:  records:
+#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-enter,
+#CHECK-NEXT:      tsc: 10001 }
+#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-exit,
+#CHECK-NEXT:      tsc: 10100 }
+#CHECK-NEXT:  ...

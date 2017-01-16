@@ -19,9 +19,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -215,15 +215,10 @@ bool LoopDeletionPass::runImpl(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   return Changed;
 }
 
-PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM) {
-  auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
-  Function *F = L.getHeader()->getParent();
-
-  auto &DT = *FAM.getCachedResult<DominatorTreeAnalysis>(*F);
-  auto &SE = *FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
-  auto &LI = *FAM.getCachedResult<LoopAnalysis>(*F);
-
-  bool Changed = runImpl(&L, DT, SE, LI);
+PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
+                                        LoopStandardAnalysisResults &AR,
+                                        LPMUpdater &) {
+  bool Changed = runImpl(&L, AR.DT, AR.SE, AR.LI);
   if (!Changed)
     return PreservedAnalyses::all();
 

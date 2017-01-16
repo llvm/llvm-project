@@ -379,9 +379,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _Cp, class _Hash,
-          bool = is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value
-         >
+template <class _Key, class _Cp, class _Hash, bool _IsEmpty>
 class __unordered_map_hasher
     : private _Hash
 {
@@ -449,9 +447,7 @@ swap(__unordered_map_hasher<_Key, _Cp, _Hash, __b>& __x,
     __x.swap(__y);
 }
 
-template <class _Key, class _Cp, class _Pred,
-          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
-         >
+template <class _Key, class _Cp, class _Pred, bool _IsEmpty>
 class __unordered_map_equal
     : private _Pred
 {
@@ -641,7 +637,7 @@ private:
 #endif
 
 template <class _HashIterator>
-class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator
+class _LIBCPP_TEMPLATE_VIS __hash_map_iterator
 {
     _HashIterator __i_;
 
@@ -682,15 +678,15 @@ public:
         bool operator!=(const __hash_map_iterator& __x, const __hash_map_iterator& __y)
         {return __x.__i_ != __y.__i_;}
 
-    template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_map;
-    template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_multimap;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator;
+    template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+    template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
 };
 
 template <class _HashIterator>
-class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator
+class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator
 {
     _HashIterator __i_;
 
@@ -736,15 +732,15 @@ public:
         bool operator!=(const __hash_map_const_iterator& __x, const __hash_map_const_iterator& __y)
         {return __x.__i_ != __y.__i_;}
 
-    template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_map;
-    template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_multimap;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator;
+    template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+    template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
 };
 
 template <class _Key, class _Tp, class _Hash = hash<_Key>, class _Pred = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TYPE_VIS_ONLY unordered_map
+class _LIBCPP_TEMPLATE_VIS unordered_map
 {
 public:
     // types
@@ -922,6 +918,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::insert(const_iterator, const value_type&) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__p);
 #endif
         return insert(__x).first;
     }
@@ -946,6 +944,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::insert(const_iterator, const value_type&) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__p);
 #endif
         return __table_.__insert_unique(_VSTD::move(__x)).first;
     }
@@ -965,6 +965,8 @@ public:
             _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
                 "unordered_map::insert(const_iterator, value_type&&) called with an iterator not"
                 " referring to this unordered_map");
+#else
+          ((void)__p);
 #endif
             return insert(_VSTD::forward<_Pp>(__x)).first;
         }
@@ -982,6 +984,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
             "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+          ((void)__p);
 #endif
         return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
     }
@@ -1015,8 +1019,10 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__h);
 #endif
-            return try_emplace(__k, _VSTD::forward<_Args>(__args)...).first;
+        return try_emplace(__k, _VSTD::forward<_Args>(__args)...).first;
     }
 
     template <class... _Args>
@@ -1027,6 +1033,8 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
             "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
             " referring to this unordered_map");
+#else
+        ((void)__h);
 #endif
         return try_emplace(_VSTD::move(__k), _VSTD::forward<_Args>(__args)...).first;
     }
@@ -1057,15 +1065,17 @@ public:
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
-        iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v)
+        iterator insert_or_assign(const_iterator, const key_type& __k, _Vp&& __v)
      {
+          // FIXME: Add debug mode checking for the iterator input
           return insert_or_assign(__k, _VSTD::forward<_Vp>(__v)).first;
      }
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
-        iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v)
+        iterator insert_or_assign(const_iterator, key_type&& __k, _Vp&& __v)
      {
+        // FIXME: Add debug mode checking for the iterator input
         return insert_or_assign(_VSTD::move(__k), _VSTD::forward<_Vp>(__v)).first;
      }
 #endif
@@ -1085,7 +1095,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void swap(unordered_map& __u)
         _NOEXCEPT_(__is_nothrow_swappable<__table>::value)
-        {__table_.swap(__u.__table_);}
+        { __table_.swap(__u.__table_);}
 
     _LIBCPP_INLINE_VISIBILITY
     hasher hash_function() const
@@ -1499,7 +1509,7 @@ operator!=(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 
 template <class _Key, class _Tp, class _Hash = hash<_Key>, class _Pred = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TYPE_VIS_ONLY unordered_multimap
+class _LIBCPP_TEMPLATE_VIS unordered_multimap
 {
 public:
     // types

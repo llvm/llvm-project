@@ -5,25 +5,8 @@
 
 target datalayout = "e-p:64:64"
 
-; X64:      module asm "f = .cfi.jumptable + 0"
-
-; X64:      module asm ".cfi.jumptable:"
-; X64-NEXT: module asm "jmp f.cfi@plt"
-; X64-NEXT: module asm "int3"
-; X64-NEXT: module asm "int3"
-; X64-NEXT: module asm "int3"
-
-; X64:      module asm "g = .cfi.jumptable.1 + 0"
-
-; X64:      module asm ".cfi.jumptable.1:"
-; X64-NEXT: module asm "jmp g.cfi@plt"
-; X64-NEXT: module asm "int3"
-; X64-NEXT: module asm "int3"
-; X64-NEXT: module asm "int3"
-
-
-; X64: @.cfi.jumptable = external hidden constant [1 x [8 x i8]]
-; X64: @.cfi.jumptable.1 = external hidden constant [1 x [8 x i8]]
+; X64: @f = alias void (), void ()* @[[JT0:.*]]
+; X64: @g = alias void (), void ()* @[[JT1:.*]]
 
 ; WASM32: private constant [0 x i8] zeroinitializer
 @0 = private unnamed_addr constant [2 x void ()*] [void ()* @f, void ()* @g], align 16
@@ -46,18 +29,21 @@ define void @g() !type !1 {
 declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
 
 define i1 @foo(i8* %p) {
-  ; X64: icmp eq i64 {{.*}}, ptrtoint ([1 x [8 x i8]]* @.cfi.jumptable to i64)
-  ; WASM32: icmp eq i64 {{.*}}, 1
+  ; X64: icmp eq i64 {{.*}}, ptrtoint (void ()* @[[JT0]] to i64)
+  ; WASM32: icmp eq i64 {{.*}}, ptrtoint (i8* getelementptr (i8, i8* null, i64 1) to i64)
   %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
-  ; X64: icmp eq i64 {{.*}}, ptrtoint ([1 x [8 x i8]]* @.cfi.jumptable.1 to i64)
-  ; WASM32: icmp eq i64 {{.*}}, 2
+  ; X64: icmp eq i64 {{.*}}, ptrtoint (void ()* @[[JT1]] to i64)
+  ; WASM32: icmp eq i64 {{.*}}, mul (i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64), i64 2)
   %y = call i1 @llvm.type.test(i8* %p, metadata !"typeid2")
   %z = add i1 %x, %y
   ret i1 %z
 }
 
-; X64: declare void @f()
-; X64: declare void @g()
+; X64: define private void @[[JT0]]() #{{.*}} section ".text.cfi" align 8 {
+; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(void ()* @f.cfi)
+
+; X64: define private void @[[JT1]]() #{{.*}} section ".text.cfi" align 8 {
+; X64:   call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(void ()* @g.cfi)
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

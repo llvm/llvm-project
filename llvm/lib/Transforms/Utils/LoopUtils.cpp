@@ -869,8 +869,13 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
     return false;
   }
 
-  assert(TheLoop->getHeader() == Phi->getParent() &&
-         "PHI is an AddRec for a different loop?!");
+  if (AR->getLoop() != TheLoop) {
+    // FIXME: We should treat this as a uniform. Unfortunately, we
+    // don't currently know how to handled uniform PHIs.
+    DEBUG(dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
+    return false;    
+  }
+
   Value *StartValue =
     Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
   const SCEV *Step = AR->getStepRecurrence(*SE);

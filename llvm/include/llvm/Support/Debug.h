@@ -51,6 +51,12 @@ bool isCurrentDebugType(const char *Type);
 ///
 void setCurrentDebugType(const char *Type);
 
+/// setCurrentDebugTypes - Set the current debug type, as if the
+/// -debug-only=X,Y,Z option were specified. Note that DebugFlag
+/// also needs to be set to true for debug output to be produced.
+///
+void setCurrentDebugTypes(const char **Types, unsigned Count);
+
 /// DEBUG_WITH_TYPE macro - This macro should be used by passes to emit debug
 /// information.  In the '-debug' option is specified on the commandline, and if
 /// this is a debug build, then the code specified as the option to the macro
@@ -67,6 +73,7 @@ void setCurrentDebugType(const char *Type);
 #else
 #define isCurrentDebugType(X) (false)
 #define setCurrentDebugType(X)
+#define setCurrentDebugTypes(X, N)
 #define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 

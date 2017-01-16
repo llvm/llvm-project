@@ -76,8 +76,7 @@ static void AddResultToArray(CFCMutableArray &parent_array,
   } break;
 
   default:
-    assert(!"unhandled result");
-    break;
+    llvm_unreachable("unhandled result");
   }
 }
 
@@ -125,8 +124,7 @@ static void AddResultToDictionary(CFCMutableDictionary &parent_dict,
                                result->GetAsUnsigned()->GetValue(), true);
   } break;
   default:
-    assert(!"unhandled result");
-    break;
+    llvm_unreachable("unhandled result");
   }
 }
 void Results::Write(const char *out_path) {

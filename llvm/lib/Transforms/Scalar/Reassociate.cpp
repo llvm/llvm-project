@@ -2236,8 +2236,8 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   ValueRankMap.clear();
 
   if (MadeChange) {
-    // FIXME: This should also 'preserve the CFG'.
-    auto PA = PreservedAnalyses();
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
     PA.preserve<GlobalsAA>();
     return PA;
   }

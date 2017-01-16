@@ -1,5 +1,5 @@
 ; RUN: opt -S -licm < %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
 
 declare void @use_nothrow(i64 %a) nounwind
 declare void @use(i64 %a)

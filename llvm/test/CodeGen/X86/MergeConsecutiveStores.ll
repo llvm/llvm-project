@@ -371,6 +371,40 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 }
 
 ; Make sure that we merge the consecutive load/store sequence below and use a
+; word (16 bit) instead of a byte copy for complicated address calculation.
+; .
+; CHECK-LABEL: MergeLoadStoreBaseIndexOffsetComplicated:
+; BWON: movzwl   (%{{.*}},%{{.*}}), %e[[REG:[a-z]+]]
+; BWOFF: movw    (%{{.*}},%{{.*}}), %[[REG:[a-z]+]]
+; CHECK: movw    %[[REG]], (%{{.*}})
+define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i64 %n) {
+  br label %1
+
+; <label>:1
+  %.09 = phi i64 [ 0, %0 ], [ %13, %1 ]
+  %.08 = phi i8* [ %b, %0 ], [ %12, %1 ]
+  %2 = load i8, i8* %.08, align 1
+  %3 = sext i8 %2 to i64
+  %4 = getelementptr inbounds i8, i8* %c, i64 %3
+  %5 = load i8, i8* %4, align 1
+  %6 = add nsw i64 %3, 1
+  %7 = getelementptr inbounds i8, i8* %c, i64 %6
+  %8 = load i8, i8* %7, align 1
+  %9 = getelementptr inbounds i8, i8* %a, i64 %.09
+  store i8 %5, i8* %9, align 1
+  %10 = or i64 %.09, 1
+  %11 = getelementptr inbounds i8, i8* %a, i64 %10
+  store i8 %8, i8* %11, align 1
+  %12 = getelementptr inbounds i8, i8* %.08, i64 1
+  %13 = add nuw nsw i64 %.09, 2
+  %14 = icmp slt i64 %13, %n
+  br i1 %14, label %1, label %15
+
+; <label>:15
+  ret void
+}
+
+; Make sure that we merge the consecutive load/store sequence below and use a
 ; word (16 bit) instead of a byte copy even if there are intermediate sign
 ; extensions.
 ; CHECK-LABEL: MergeLoadStoreBaseIndexOffsetSext:

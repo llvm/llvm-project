@@ -5,7 +5,6 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
 
-// ToDo: VOP2b (see vop_dpp.s)
 // ToDo: intrinsics
 
 //---------------------------------------------------------------------------//
@@ -512,6 +511,30 @@ v_min_i16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_se
 // VI: v_ldexp_f16_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x66,0x02,0x06,0x05,0x02]
 v_ldexp_f16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
+// NOSICI: error:
+// VI: v_add_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x32,0x02,0x06,0x05,0x02]
+v_add_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// VI: v_sub_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x34,0x02,0x06,0x05,0x02]
+v_sub_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// VI: v_subrev_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x36,0x02,0x06,0x05,0x02]
+v_subrev_i32_sdwa v1, vcc, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// VI: v_addc_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x38,0x02,0x06,0x05,0x02]
+v_addc_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// VI: v_subb_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3a,0x02,0x06,0x05,0x02]
+v_subb_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// VI: v_subbrev_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x3c,0x02,0x06,0x05,0x02]
+v_subbrev_u32_sdwa v1, vcc, v2, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
 //===----------------------------------------------------------------------===//
 // Check VOPC opcodes
 //===----------------------------------------------------------------------===//
@@ -571,3 +594,39 @@ v_cmp_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
 // NOSICI: error:
 // VI: v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x22,0x7c,0x01,0x16,0x02,0x04]
 v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+//===----------------------------------------------------------------------===//
+// Check that immideates and scalar regs are not supported
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_mov_b32 v0, 1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_and_b32 v0, 42, v1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_add_f32 v0, v1, 345 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_cmpx_class_f32 vcc, -1, 200 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_mov_b32 v0, s1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_and_b32 v0, s42, v1 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_add_f32 v0, v1, s45 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// NOVI: error: invalid operand for instruction
+v_cmpx_class_f32 vcc, s1, s2 src0_sel:BYTE_2 src1_sel:WORD_0

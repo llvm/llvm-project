@@ -58,7 +58,6 @@ int main()
     {
         G g;
         std::thread t0(g, 5, 5.5);
-        std::thread::id id = t0.get_id();
         std::thread t1;
         t0 = std::move(t1);
         assert(false);

@@ -65,11 +65,11 @@ _cvtsh_ss(unsigned short __a)
 ///    A 32-bit single-precision float value to be converted to a 16-bit
 ///    half-precision float value.
 /// \param imm
-///    An immediate value controlling rounding using bits [2:0]:
-///    000: Nearest
-///    001: Down
-///    010: Up
-///    011: Truncate
+///    An immediate value controlling rounding using bits [2:0]: \n
+///    000: Nearest \n
+///    001: Down \n
+///    010: Up \n
+///    011: Truncate \n
 ///    1XX: Use MXCSR.RC for rounding
 /// \returns The converted 16-bit half-precision float value.
 #define _cvtss_sh(a, imm)  \
@@ -90,11 +90,11 @@ _cvtsh_ss(unsigned short __a)
 /// \param a
 ///    A 128-bit vector containing 32-bit float values.
 /// \param imm
-///    An immediate value controlling rounding using bits [2:0]:
-///    000: Nearest
-///    001: Down
-///    010: Up
-///    011: Truncate
+///    An immediate value controlling rounding using bits [2:0]: \n
+///    000: Nearest \n
+///    001: Down \n
+///    010: Up \n
+///    011: Truncate \n
 ///    1XX: Use MXCSR.RC for rounding
 /// \returns A 128-bit vector containing converted 16-bit half-precision float
 ///    values. The lower 64 bits are used to store the converted 16-bit

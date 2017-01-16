@@ -194,8 +194,8 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
         // Jump over the long branch on the opposite condition
         TII->reverseBranchCondition(Cond);
         MI = BuildMI(*MBB, MI, dl, TII->get(MSP430::JCC))
-                             .addMBB(NextMBB)
-                             .addOperand(Cond[0]);
+                 .addMBB(NextMBB)
+                 .add(Cond[0]);
         InstrSizeDiff += TII->getInstSizeInBytes(*MI);
         ++MI;
       }

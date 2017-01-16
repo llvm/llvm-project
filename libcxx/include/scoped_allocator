@@ -384,7 +384,7 @@ struct __outermost<_Alloc, true>
 };
 
 template <class _OuterAlloc, class... _InnerAllocs>
-class _LIBCPP_TYPE_VIS_ONLY scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>
+class _LIBCPP_TEMPLATE_VIS scoped_allocator_adaptor<_OuterAlloc, _InnerAllocs...>
     : public __scoped_allocator_storage<_OuterAlloc, _InnerAllocs...>
 {
     typedef __scoped_allocator_storage<_OuterAlloc, _InnerAllocs...> base;

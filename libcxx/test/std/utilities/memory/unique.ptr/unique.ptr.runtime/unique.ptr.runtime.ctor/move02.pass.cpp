@@ -38,7 +38,7 @@ source1()
     return std::unique_ptr<A[]>(new A[3]);
 }
 
-void sink1(std::unique_ptr<A[]> p)
+void sink1(std::unique_ptr<A[]>)
 {
 }
 
@@ -48,7 +48,7 @@ source2()
     return std::unique_ptr<A[], Deleter<A[]> >(new A[3]);
 }
 
-void sink2(std::unique_ptr<A[], Deleter<A[]> > p)
+void sink2(std::unique_ptr<A[], Deleter<A[]> >)
 {
 }
 
@@ -59,7 +59,7 @@ source3()
     return std::unique_ptr<A[], NCDeleter<A[]>&>(new A[3], d);
 }
 
-void sink3(std::unique_ptr<A[], NCDeleter<A[]>&> p)
+void sink3(std::unique_ptr<A[], NCDeleter<A[]>&>)
 {
 }
 

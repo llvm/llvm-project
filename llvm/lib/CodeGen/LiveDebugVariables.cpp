@@ -944,7 +944,7 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex Idx,
             IsIndirect, Loc.getReg(), offset, Variable, Expression);
   else
     BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
-        .addOperand(Loc)
+        .add(Loc)
         .addImm(offset)
         .addMetadata(Variable)
         .addMetadata(Expression);

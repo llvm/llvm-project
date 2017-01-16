@@ -108,10 +108,10 @@ namespace PR9021b {
 
 namespace PartialSpecialization {
   template<typename T, typename U, typename V = U>
-  struct X0; // expected-note{{template is declared here}}
+  struct X0; // expected-note 2{{template is declared here}}
 
   template<typename ...Ts>
-  struct X0<Ts...> {
+  struct X0<Ts...> { // expected-error {{class template partial specialization is not more specialized than the primary template}}
   };
 
   X0<int> x0i; // expected-error{{too few template arguments for class template 'X0'}}

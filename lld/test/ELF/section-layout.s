@@ -34,11 +34,13 @@ _start:
 // CHECK: Name: c
 // CHECK: Name: d
 
+// Writable sections appear before TLS and other relro sections.
+// CHECK: Name: i
+
 // TLS sections are only sorted on NOBITS.
 // CHECK: Name: e
 // CHECK: Name: g
 
-// CHECK: Name: i
 // CHECK: Name: j
 // CHECK: Name: k
 // CHECK: Name: l

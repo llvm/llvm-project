@@ -59,3 +59,11 @@ void test4() {
   i = (int *)&s.s0;
   i = (int *)a;
 }
+
+// No warnings.
+typedef int (*FnTy)(void);
+unsigned int func5(void);
+
+FnTy test5(void) {
+  return (FnTy)&func5;
+}

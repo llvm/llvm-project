@@ -32,12 +32,27 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleOutOfTreeLLVM)
 endif()
 
+if (LIBCXX_STANDALONE_BUILD)
+  include(FindPythonInterp)
+  if( NOT PYTHONINTERP_FOUND )
+    message(WARNING "Failed to find python interpreter. "
+                    "The libc++ test suite will be disabled.")
+    set(LLVM_INCLUDE_TESTS OFF)
+  endif()
+endif()
+
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
 MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  "${PROJECT_NAME} requires an out of source build. Please create a separate
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
+
+if (MSVC)
+  set(LIBCXX_TARGETING_MSVC ON)
+else()
+  set(LIBCXX_TARGETING_MSVC OFF)
+endif()
 
 #===============================================================================
 # Setup CMake Options
@@ -87,13 +102,22 @@ if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
 endif()
 
 # ABI Library options ---------------------------------------------------------
-set(LIBCXX_CXX_ABI "${LIBCXX_CXX_ABI}" CACHE STRING
-    "Specify C++ ABI library to use." FORCE)
-set(CXXABIS none libcxxabi libcxxrt libstdc++ libsupc++)
+set(LIBCXX_CXX_ABI "default" CACHE STRING
+    "Specify C++ ABI library to use.")
+set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
+# FIXME: This is a temporary hack to force LLVM buildbots to store
+# the fixed cache entry instead of the previous cache entry. This is needed
+# because some LLVM buildbots don't clear their cache. It will be removed
+# once all LLVM bots have been run.
+if (LIBCXX_CXX_ABI STREQUAL "")
+  set(LIBCXX_CXX_ABI "default" CACHE STRING
+      "Specify the C++ ABI library to use." FORCE)
+endif()
+
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
-if (NOT LIBCXX_CXX_ABI)
+if (LIBCXX_CXX_ABI STREQUAL "default")
   find_path(
     LIBCXX_LIBCXXABI_INCLUDES_INTERNAL
     cxxabi.h
@@ -101,13 +125,18 @@ if (NOT LIBCXX_CXX_ABI)
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
     NO_DEFAULT_PATH
   )
-  if (NOT DEFINED LIBCXX_STANDALONE_BUILD AND
+  if ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
       IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
   else()
-    set(LIBCXX_CXX_ABI_LIBNAME "none")
+    if (WIN32 AND NOT MINGW)
+      # FIXME: Figure out how to configure the ABI library on Windows.
+      set(LIBCXX_CXX_ABI_LIBNAME "none")
+    else()
+      set(LIBCXX_CXX_ABI_LIBNAME "default")
+    endif()
   endif()
 else()
   set(LIBCXX_CXX_ABI_LIBNAME "${LIBCXX_CXX_ABI}")
@@ -125,6 +154,7 @@ option(LIBCXX_ENABLE_STATIC_ABI_LIBRARY "Statically link the ABI library" OFF)
 set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_ENABLE_STATIC_ABI_LIBRARY
       AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"
+      AND NOT LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"
       AND PYTHONINTERP_FOUND
       AND LIBCXX_ENABLE_SHARED)
     set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
@@ -159,6 +189,9 @@ option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread AP
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
+option(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY
+    "Build libc++ with an externalized threading library.
+     This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON" OFF)
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
@@ -211,14 +244,33 @@ if(LIBCXX_ENABLE_THREADS AND NOT LIBCXX_ENABLE_MONOTONIC_CLOCK)
                       " when LIBCXX_ENABLE_THREADS is also set to OFF.")
 endif()
 
-if(LIBCXX_HAS_PTHREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if(NOT LIBCXX_ENABLE_THREADS)
+  if(LIBCXX_HAS_PTHREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
+  if(LIBCXX_HAS_EXTERNAL_THREAD_API)
+    message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
+                        " when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
+  if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
+    message(FATAL_ERROR "LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY can only be set "
+                        "to ON when LIBCXX_ENABLE_THREADS is also set to ON.")
+  endif()
+
 endif()
 
-if(LIBCXX_HAS_EXTERNAL_THREAD_API AND NOT LIBCXX_ENABLE_THREADS)
-  message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
-                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
+if (LIBCXX_HAS_EXTERNAL_THREAD_API)
+  if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
+    message(FATAL_ERROR "The options LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY and "
+                        "LIBCXX_HAS_EXTERNAL_THREAD_API cannot both be ON at "
+                        "the same time")
+  endif()
+  if (LIBCXX_HAS_PTHREAD_API)
+    message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
+                        "and LIBCXX_HAS_PTHREAD_API cannot be both"
+                        "set to ON at the same time.")
+  endif()
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
@@ -326,6 +378,11 @@ if (LIBCXX_GENERATE_COVERAGE)
 endif()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
+if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  set(LIBCXX_DEBUG_BUILD ON)
+else()
+  set(LIBCXX_DEBUG_BUILD OFF)
+endif()
 
 #===============================================================================
 # Setup Compiler Flags
@@ -339,6 +396,11 @@ if (NOT LIBCXX_STANDALONE_BUILD)
                -lc++abi -m32)
 endif()
 remove_flags(-stdlib=libc++ -stdlib=libstdc++)
+
+# FIXME: Remove all debug flags and flags that change which Windows
+# default libraries are linked. Currently we only support linking the
+# non-debug DLLs
+remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
@@ -354,8 +416,10 @@ if (LIBCXX_HAS_MUSL_LIBC)
 endif()
 add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
 mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
-if (NOT MSVC AND NOT ${SUPPORTS_DIALECT_NAME})
-  message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+if(NOT ${SUPPORTS_DIALECT_NAME})
+  if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
+  endif()
 endif()
 
 # On all systems the system c++ standard library headers need to be excluded.
@@ -422,7 +486,7 @@ if (NOT LIBCXX_ENABLE_RTTI)
 endif()
 
 # Threading flags =============================================================
-if (LIBCXX_HAS_EXTERNAL_THREAD_API AND LIBCXX_ENABLE_SHARED)
+if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXX_ENABLE_SHARED)
   # Need to allow unresolved symbols if this is to work with shared library builds
   if (APPLE)
     add_link_flags("-undefined dynamic_lookup")
@@ -435,13 +499,11 @@ endif()
 # Assertion flags =============================================================
 define_if(LIBCXX_ENABLE_ASSERTIONS -UNDEBUG)
 define_if_not(LIBCXX_ENABLE_ASSERTIONS -DNDEBUG)
-if (LIBCXX_ENABLE_ASSERTIONS)
+define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
+if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
-  define_if_not(MSVC -D_DEBUG)
+  define_if_not(LIBCXX_TARGETING_MSVC -D_DEBUG)
 endif()
-
-# Feature flags ===============================================================
-define_if(MSVC -D_CRT_SECURE_NO_WARNINGS)
 
 # Modules flags ===============================================================
 # FIXME The libc++ sources are fundamentally non-modular. They need special
@@ -504,6 +566,7 @@ config_define_if_not(LIBCXX_ENABLE_THREAD_UNSAFE_C_FUNCTIONS _LIBCPP_HAS_NO_THRE
 
 config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
+config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 
 # By default libc++ on Windows expects to use a shared library, which requires
@@ -515,13 +578,17 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
 endif()
 
 if (LIBCXX_NEEDS_SITE_CONFIG)
-  configure_file(
-    include/__config_site.in
-    ${LIBCXX_BINARY_DIR}/__config_site
-    @ONLY)
+  configure_file("include/__config_site.in"
+                 "${LIBCXX_BINARY_DIR}/__config_site"
+                 @ONLY)
+
   # Provide the config definitions by included the generated __config_site
   # file at compile time.
-  add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    add_compile_flags("/FI\"${LIBCXX_BINARY_DIR}/__config_site\"")
+  else()
+    add_compile_flags("-include ${LIBCXX_BINARY_DIR}/__config_site")
+  endif()
 endif()
 
 #===============================================================================

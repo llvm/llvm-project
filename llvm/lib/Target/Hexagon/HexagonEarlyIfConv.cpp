@@ -680,12 +680,12 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
     MachineInstrBuilder MIB = BuildMI(*ToB, At, DL, HII->get(COpc));
     MachineInstr::mop_iterator MOI = MI->operands_begin();
     if (HII->isPostIncrement(*MI)) {
-      MIB.addOperand(*MOI);
+      MIB.add(*MOI);
       ++MOI;
     }
     MIB.addReg(PredR);
     for (const MachineOperand &MO : make_range(MOI, MI->operands_end()))
-      MIB.addOperand(MO);
+      MIB.add(MO);
 
     // Set memory references.
     MachineInstr::mmo_iterator MMOBegin = MI->memoperands_begin();

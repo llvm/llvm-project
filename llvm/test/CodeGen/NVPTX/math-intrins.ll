@@ -21,6 +21,8 @@ declare float @llvm.minnum.f32(float, float) #0
 declare double @llvm.minnum.f64(double, double) #0
 declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.maxnum.f64(double, double) #0
+declare float @llvm.fma.f32(float, float, float) #0
+declare double @llvm.fma.f64(double, double, double) #0
 
 ; ---- ceil ----
 
@@ -254,6 +256,29 @@ define float @max_float_ftz(float %a, float %b) #1 {
 define double @max_double(double %a, double %b) {
   ; CHECK: max.f64
   %x = call double @llvm.maxnum.f64(double %a, double %b)
+  ret double %x
+}
+
+; ---- fma ----
+
+; CHECK-LABEL: @fma_float
+define float @fma_float(float %a, float %b, float %c) {
+  ; CHECK: fma.rn.f32
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %x
+}
+
+; CHECK-LABEL: @fma_float_ftz
+define float @fma_float_ftz(float %a, float %b, float %c) #1 {
+  ; CHECK: fma.rn.ftz.f32
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %x
+}
+
+; CHECK-LABEL: @fma_double
+define double @fma_double(double %a, double %b, double %c) {
+  ; CHECK: fma.rn.f64
+  %x = call double @llvm.fma.f64(double %a, double %b, double %c)
   ret double %x
 }
 

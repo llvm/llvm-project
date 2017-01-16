@@ -20,6 +20,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -37,7 +38,7 @@ namespace replace {
 
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUReplacements &TUs,
-    TUReplacementFiles &TURFiles, clang::DiagnosticsEngine &Diagnostics) {
+    TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
   using namespace llvm::sys::fs;
   using namespace llvm::sys::path;
 
@@ -54,7 +55,7 @@ std::error_code collectReplacementsFromDirectory(
     if (extension(I->path()) != ".yaml")
       continue;
 
-    TURFiles.push_back(I->path());
+    TUFiles.push_back(I->path());
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> Out =
         MemoryBuffer::getFile(I->path());
@@ -66,6 +67,51 @@ std::error_code collectReplacementsFromDirectory(
 
     yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
     tooling::TranslationUnitReplacements TU;
+    YIn >> TU;
+    if (YIn.error()) {
+      // File doesn't appear to be a header change description. Ignore it.
+      continue;
+    }
+
+    // Only keep files that properly parse.
+    TUs.push_back(TU);
+  }
+
+  return ErrorCode;
+}
+
+std::error_code
+collectReplacementsFromDirectory(const llvm::StringRef Directory,
+                                 TUDiagnostics &TUs, TUReplacementFiles &TUFiles,
+                                 clang::DiagnosticsEngine &Diagnostics) {
+  using namespace llvm::sys::fs;
+  using namespace llvm::sys::path;
+
+  std::error_code ErrorCode;
+
+  for (recursive_directory_iterator I(Directory, ErrorCode), E;
+       I != E && !ErrorCode; I.increment(ErrorCode)) {
+    if (filename(I->path())[0] == '.') {
+      // Indicate not to descend into directories beginning with '.'
+      I.no_push();
+      continue;
+    }
+
+    if (extension(I->path()) != ".yaml")
+      continue;
+
+    TUFiles.push_back(I->path());
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> Out =
+        MemoryBuffer::getFile(I->path());
+    if (std::error_code BufferError = Out.getError()) {
+      errs() << "Error reading " << I->path() << ": " << BufferError.message()
+             << "\n";
+      continue;
+    }
+
+    yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
+    tooling::TranslationUnitDiagnostics TU;
     YIn >> TU;
     if (YIn.error()) {
       // File doesn't appear to be a header change description. Ignore it.
@@ -249,6 +295,34 @@ bool mergeAndDeduplicate(const TUReplacements &TUs,
         continue;
       }
       GroupedReplacements[Entry].push_back(R);
+    }
+  }
+
+  // Ask clang to deduplicate and report conflicts.
+  return !deduplicateAndDetectConflicts(GroupedReplacements, SM);
+}
+
+bool mergeAndDeduplicate(const TUDiagnostics &TUs,
+                         FileToReplacementsMap &GroupedReplacements,
+                         clang::SourceManager &SM) {
+
+  // Group all replacements by target file.
+  std::set<StringRef> Warned;
+  for (const auto &TU : TUs) {
+    for (const auto &D : TU.Diagnostics) {
+      for (const auto &Fix : D.Fix) {
+        for (const tooling::Replacement &R : Fix.second) {
+          // Use the file manager to deduplicate paths. FileEntries are
+          // automatically canonicalized.
+          const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath());
+          if (!Entry && Warned.insert(R.getFilePath()).second) {
+            errs() << "Described file '" << R.getFilePath()
+                   << "' doesn't exist. Ignoring...\n";
+            continue;
+          }
+          GroupedReplacements[Entry].push_back(R);
+        }
+      }
     }
   }
 

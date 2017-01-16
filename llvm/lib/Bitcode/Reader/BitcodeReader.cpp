@@ -801,12 +801,12 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   RawFlags = RawFlags >> 4;
-  bool NoRename = RawFlags & 0x1;
-  bool IsNotViableToInline = RawFlags & 0x2;
-  bool HasInlineAsmMaybeReferencingInternal = RawFlags & 0x4;
-  return GlobalValueSummary::GVFlags(Linkage, NoRename,
-                                     HasInlineAsmMaybeReferencingInternal,
-                                     IsNotViableToInline);
+  bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
+  // The LiveRoot flag wasn't introduced until version 3. For dead stripping
+  // to work correctly on earlier versions, we must conservatively treat all
+  // values as live.
+  bool LiveRoot = (RawFlags & 0x2) || Version < 3;
+  return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, LiveRoot);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -4838,15 +4838,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (!IsOldProfileFormat && Version != 2)
+  if (Version < 1 || Version > 3)
     return error("Invalid summary version " + Twine(Version) +
-                 ", 1 or 2 expected");
+                 ", 1, 2 or 3 expected");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
+  std::vector<GlobalValue::GUID> PendingTypeTests;
 
   while (true) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
@@ -4912,7 +4913,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Calls));
+          Flags, InstCount, std::move(Refs), std::move(Calls),
+          std::move(PendingTypeTests));
+      PendingTypeTests.clear();
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setModulePath(TheIndex.addModulePath(ModulePath, 0)->first());
       FS->setOriginalName(GUID.second);
@@ -4985,7 +4988,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
           IsOldProfileFormat, HasProfile);
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, std::move(Refs), std::move(Edges));
+          Flags, InstCount, std::move(Refs), std::move(Edges),
+          std::move(PendingTypeTests));
+      PendingTypeTests.clear();
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(GUID, std::move(FS));
@@ -5041,6 +5046,13 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(
       LastSeenSummary->setOriginalName(OriginalName);
       // Reset the LastSeenSummary
       LastSeenSummary = nullptr;
+      break;
+    }
+    case bitc::FS_TYPE_TESTS: {
+      assert(PendingTypeTests.empty());
+      PendingTypeTests.insert(PendingTypeTests.end(), Record.begin(),
+                              Record.end());
+      break;
     }
     }
   }

@@ -26,10 +26,7 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 
-#if SANITIZER_ANDROID || SANITIZER_FREEBSD
 #include <dlfcn.h>  // for dlsym()
-#endif
-
 #include <link.h>
 #include <pthread.h>
 #include <signal.h>

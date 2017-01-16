@@ -23,9 +23,8 @@ add_compiler_rt_object_libraries(RTLSanCommon
     CFLAGS ${LSAN_CFLAGS})
 
 if(COMPILER_RT_HAS_LSAN)
+  add_compiler_rt_component(lsan)
   foreach(arch ${LSAN_SUPPORTED_ARCH})
-    add_compiler_rt_component(lsan)
-    
     add_compiler_rt_runtime(clang_rt.lsan
       STATIC
       ARCHS ${arch}

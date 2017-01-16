@@ -87,14 +87,12 @@ define <2 x i64> @var_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm4
 ; X32-SSE-NEXT:    psllq %xmm3, %xmm4
-; X32-SSE-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm3
 ; X32-SSE-NEXT:    psllq %xmm1, %xmm3
 ; X32-SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,0,1]
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlq %xmm3, %xmm1
-; X32-SSE-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
 ; X32-SSE-NEXT:    psrlq %xmm2, %xmm0
 ; X32-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; X32-SSE-NEXT:    orpd %xmm4, %xmm1

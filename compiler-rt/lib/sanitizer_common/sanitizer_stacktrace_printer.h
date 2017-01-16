@@ -57,7 +57,8 @@ void RenderSourceLocation(InternalScopedString *buffer, const char *file,
                           const char *strip_path_prefix);
 
 void RenderModuleLocation(InternalScopedString *buffer, const char *module,
-                          uptr offset, const char *strip_path_prefix);
+                          uptr offset, ModuleArch arch,
+                          const char *strip_path_prefix);
 
 // Same as RenderFrame, but for data section (global variables).
 // Accepts %s, %l from above.

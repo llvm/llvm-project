@@ -3,15 +3,21 @@
 
 // Make it possible to pass NULL through variadic functions on platforms where
 // NULL has an integer type that is more narrow than a pointer. On such
-// platforms we widen null pointer constants to a pointer-sized integer.
+// platforms we widen null pointer constants passed to variadic functions to a
+// pointer-sized integer. We don't apply this special case to K&R-style
+// unprototyped functions, because MSVC doesn't either.
 
 #define NULL 0
 
 void v(const char *f, ...);
+void kr();
 void f(const char *f) {
   v(f, 1, 2, 3, NULL);
+  kr(f, 1, 2, 3, 0);
 }
 // WINDOWS: define void @f(i8* %f)
 // WINDOWS: call void (i8*, ...) @v(i8* {{.*}}, i32 1, i32 2, i32 3, i64 0)
+// WINDOWS: call void bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32)*)(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
 // LINUX: define void @f(i8* %f)
 // LINUX: call void (i8*, ...) @v(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
+// LINUX: call void (i8*, i32, i32, i32, i32, ...) bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32, ...)*)(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)

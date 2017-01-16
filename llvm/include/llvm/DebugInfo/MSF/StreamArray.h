@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_MSF_STREAMARRAY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
@@ -107,7 +108,10 @@ private:
   Extractor E;
 };
 
-template <typename ValueType, typename Extractor> class VarStreamArrayIterator {
+template <typename ValueType, typename Extractor>
+class VarStreamArrayIterator
+    : public iterator_facade_base<VarStreamArrayIterator<ValueType, Extractor>,
+                                  std::forward_iterator_tag, ValueType> {
   typedef VarStreamArrayIterator<ValueType, Extractor> IterType;
   typedef VarStreamArray<ValueType, Extractor> ArrayType;
 
@@ -144,8 +148,6 @@ public:
     return false;
   }
 
-  bool operator!=(const IterType &R) { return !(*this == R); }
-
   const ValueType &operator*() const {
     assert(Array && !HasError);
     return ThisValue;
@@ -171,12 +173,6 @@ public:
       }
     }
     return *this;
-  }
-
-  IterType operator++(int) {
-    IterType Original = *this;
-    ++*this;
-    return Original;
   }
 
 private:
@@ -211,6 +207,16 @@ public:
     assert(Stream.getLength() % sizeof(T) == 0);
   }
 
+  bool operator==(const FixedStreamArray<T> &Other) const {
+    return Stream == Other.Stream;
+  }
+
+  bool operator!=(const FixedStreamArray<T> &Other) const {
+    return !(*this == Other);
+  }
+
+  FixedStreamArray &operator=(const FixedStreamArray &) = default;
+
   const T &operator[](uint32_t Index) const {
     assert(Index < size());
     uint32_t Off = Index * sizeof(T);
@@ -226,6 +232,8 @@ public:
 
   uint32_t size() const { return Stream.getLength() / sizeof(T); }
 
+  bool empty() const { return size() == 0; }
+
   FixedStreamArrayIterator<T> begin() const {
     return FixedStreamArrayIterator<T>(*this, 0);
   }
@@ -240,36 +248,53 @@ private:
   ReadableStreamRef Stream;
 };
 
-template <typename T> class FixedStreamArrayIterator {
+template <typename T>
+class FixedStreamArrayIterator
+    : public iterator_facade_base<FixedStreamArrayIterator<T>,
+                                  std::random_access_iterator_tag, T> {
+
 public:
   FixedStreamArrayIterator(const FixedStreamArray<T> &Array, uint32_t Index)
       : Array(Array), Index(Index) {}
 
-  bool operator==(const FixedStreamArrayIterator<T> &R) {
-    assert(&Array == &R.Array);
-    return Index == R.Index;
-  }
-
-  bool operator!=(const FixedStreamArrayIterator<T> &R) {
-    return !(*this == R);
+  FixedStreamArrayIterator<T> &
+  operator=(const FixedStreamArrayIterator<T> &Other) {
+    Array = Other.Array;
+    Index = Other.Index;
+    return *this;
   }
 
   const T &operator*() const { return Array[Index]; }
 
-  FixedStreamArrayIterator<T> &operator++() {
-    assert(Index < Array.size());
-    ++Index;
+  bool operator==(const FixedStreamArrayIterator<T> &R) const {
+    assert(Array == R.Array);
+    return (Index == R.Index) && (Array == R.Array);
+  }
+
+  FixedStreamArrayIterator<T> &operator+=(std::ptrdiff_t N) {
+    Index += N;
     return *this;
   }
 
-  FixedStreamArrayIterator<T> operator++(int) {
-    FixedStreamArrayIterator<T> Original = *this;
-    ++*this;
-    return Original;
+  FixedStreamArrayIterator<T> &operator-=(std::ptrdiff_t N) {
+    assert(Index >= N);
+    Index -= N;
+    return *this;
+  }
+
+  std::ptrdiff_t operator-(const FixedStreamArrayIterator<T> &R) const {
+    assert(Array == R.Array);
+    assert(Index >= R.Index);
+    return Index - R.Index;
+  }
+
+  bool operator<(const FixedStreamArrayIterator<T> &RHS) const {
+    assert(Array == RHS.Array);
+    return Index < RHS.Index;
   }
 
 private:
-  const FixedStreamArray<T> &Array;
+  FixedStreamArray<T> Array;
   uint32_t Index;
 };
 

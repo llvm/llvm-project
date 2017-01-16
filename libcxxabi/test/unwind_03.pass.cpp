@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif
+
 struct A
 {
     static int count;

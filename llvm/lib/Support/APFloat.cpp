@@ -76,8 +76,12 @@ namespace llvm {
      compile-time arithmetic on PPC double-double numbers, it is not able
      to represent all possible values held by a PPC double-double number,
      for example: (long double) 1.0 + (long double) 0x1p-106
-     Should this be replaced by a full emulation of PPC double-double?  */
-  static const fltSemantics semPPCDoubleDouble = {0, 0, 0, 0};
+     Should this be replaced by a full emulation of PPC double-double?
+
+     Note: we need to make the value different from semBogus as otherwise
+     an unsafe optimization may collapse both values to a single address,
+     and we heavily rely on them having distinct addresses.             */
+  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 0};
 
   /* There are temporary semantics for the real PPCDoubleDouble implementation.
      Currently, APFloat of PPCDoubleDouble holds one PPCDoubleDoubleImpl as the

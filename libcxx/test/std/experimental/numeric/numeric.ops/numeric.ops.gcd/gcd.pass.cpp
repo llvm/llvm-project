@@ -44,7 +44,7 @@ constexpr bool test0(Input1 in1, Input2 in2, Output out)
 
 
 template <typename Input1, typename Input2 = Input1>
-constexpr bool do_test(int dummy = 0)
+constexpr bool do_test(int = 0)
 {
     using S1 = typename std::make_signed<Input1>::type;
     using S2 = typename std::make_signed<Input2>::type;

@@ -71,6 +71,7 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case Falkor:
     MaxInterleaveFactor = 4;
+    VectorInsertExtractBaseCost = 2;
     break;
   case Kryo:
     MaxInterleaveFactor = 4;

@@ -467,6 +467,8 @@ static Stmt *createObjCPropertyGetter(ASTContext &Ctx,
   ASTMaker M(Ctx);
 
   const VarDecl *selfVar = Prop->getGetterMethodDecl()->getSelfDecl();
+  if (!selfVar)
+    return nullptr;
 
   Expr *loadedIVar =
     M.makeObjCIvarRef(

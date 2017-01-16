@@ -19,7 +19,7 @@ namespace ex = std::experimental;
 
 template <typename T>
   using callFoo = decltype(std::declval<T&>().Foo());
-  
+
 struct yesFoo {
     int Foo() { return 0; }
 };

@@ -52,23 +52,23 @@ _start:
 // DSO-NEXT:    1024:        04 e0 9f e5    ldr     lr, [pc, #4]
 // DSO-NEXT:    1028:        0e e0 8f e0    add     lr, pc, lr
 // DSO-NEXT:    102c:        08 f0 be e5    ldr     pc, [lr, #8]!
-// 0x1028 + 8 + 1fd0 = 0x3000
-// DSO-NEXT:    1030:        d0 1f 00 00
+// 0x1028 + 8 + 0fd0 = 0x2000
+// DSO-NEXT:    1030:        d0 0f 00 00
 // DSO-NEXT:    1034:        04 c0 9f e5    ldr     r12, [pc, #4]
 // DSO-NEXT:    1038:        0f c0 8c e0    add     r12, r12, pc
 // DSO-NEXT:    103c:        00 f0 9c e5    ldr     pc, [r12]
-// 0x1038 + 8 + 1fcc = 0x300c
-// DSO-NEXT:    1040:        cc 1f 00 00
+// 0x1038 + 8 + 0fcc = 0x200c
+// DSO-NEXT:    1040:        cc 0f 00 00
 // DSO-NEXT:    1044:        04 c0 9f e5    ldr     r12, [pc, #4]
 // DSO-NEXT:    1048:        0f c0 8c e0    add     r12, r12, pc
 // DSO-NEXT:    104c:        00 f0 9c e5    ldr     pc, [r12]
-// 0x1048 + 8 + 1fc0 = 0x3010
-// DSO-NEXT:    1050:        c0 1f 00 00
+// 0x1048 + 8 + 0fc0 = 0x2010
+// DSO-NEXT:    1050:        c0 0f 00 00
 // DSO-NEXT:    1054:        04 c0 9f e5    ldr     r12, [pc, #4]
 // DSO-NEXT:    1058:        0f c0 8c e0    add     r12, r12, pc
 // DSO-NEXT:    105c:        00 f0 9c e5    ldr     pc, [r12]
-// 0x1058 + 8 + 1fb4 = 0x3014
-// DSO-NEXT:    1060:       b4 1f 00 00
+// 0x1058 + 8 + 0fb4 = 0x2014
+// DSO-NEXT:    1060:       b4 0f 00 00
 
 // DSOREL:    Name: .got.plt
 // DSOREL-NEXT:    Type: SHT_PROGBITS
@@ -76,7 +76,7 @@ _start:
 // DSOREL-NEXT:      SHF_ALLOC
 // DSOREL-NEXT:      SHF_WRITE
 // DSOREL-NEXT:    ]
-// DSOREL-NEXT:    Address: 0x3000
+// DSOREL-NEXT:    Address: 0x2000
 // DSOREL-NEXT:    Offset:
 // DSOREL-NEXT:    Size: 24
 // DSOREL-NEXT:    Link:
@@ -85,6 +85,6 @@ _start:
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
 // DSOREL-NEXT:  Section (4) .rel.plt {
-// DSOREL-NEXT:    0x300C R_ARM_JUMP_SLOT func1 0x0
-// DSOREL-NEXT:    0x3010 R_ARM_JUMP_SLOT func2 0x0
-// DSOREL-NEXT:    0x3014 R_ARM_JUMP_SLOT func3 0x0
+// DSOREL-NEXT:    0x200C R_ARM_JUMP_SLOT func1 0x0
+// DSOREL-NEXT:    0x2010 R_ARM_JUMP_SLOT func2 0x0
+// DSOREL-NEXT:    0x2014 R_ARM_JUMP_SLOT func3 0x0

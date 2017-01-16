@@ -48,7 +48,7 @@ void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT
     std::free(p);
 }
 
-void operator delete [] (void* p, std::align_val_t a) TEST_NOEXCEPT
+void operator delete [] (void* p, std::align_val_t) TEST_NOEXCEPT
 {
     ++aligned_delete_called;
     std::free(p);

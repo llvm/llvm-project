@@ -17,7 +17,6 @@
 
 // I doubt this test is portable
 
-// XFAIL: linux
 
 #include <locale>
 #include <cassert>
@@ -28,10 +27,11 @@
 int main()
 {
     {
-        std::locale l(LOCALE_en_US_UTF_8);
+        std::locale l;
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F(LOCALE_en_US_UTF_8));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.widen(' ') == L' ');
             assert(f.widen('A') == L'A');
@@ -43,10 +43,11 @@ int main()
         }
     }
     {
-        std::locale l("C");
+        std::locale l;
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F("C"));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.widen(' ') == L' ');
             assert(f.widen('A') == L'A');
@@ -54,7 +55,11 @@ int main()
             assert(f.widen('.') == L'.');
             assert(f.widen('a') == L'a');
             assert(f.widen('1') == L'1');
-            assert(f.widen(char(-5)) == wchar_t(251));
+#ifdef __APPLE__
+            assert(f.widen(char(-5)) == L'\u00fb');
+#else
+            assert(f.widen(char(-5)) == wchar_t(-1));
+#endif
         }
     }
 }

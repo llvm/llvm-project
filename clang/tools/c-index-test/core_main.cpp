@@ -140,8 +140,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
   ArgsWithProgName.append(Args.begin(), Args.end());
   IntrusiveRefCntPtr<DiagnosticsEngine>
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
-  IntrusiveRefCntPtr<CompilerInvocation>
-    CInvok(createInvocationFromCommandLine(ArgsWithProgName, Diags));
+  auto CInvok = createInvocationFromCommandLine(ArgsWithProgName, Diags);
   if (!CInvok)
     return true;
 
@@ -153,7 +152,7 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
-      CInvok.get(), PCHContainerOps, Diags, IndexAction.get()));
+      std::move(CInvok), PCHContainerOps, Diags, IndexAction.get()));
 
   if (!Unit)
     return true;
@@ -167,6 +166,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
 
 static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS) {
   OS << getSymbolKindString(SymInfo.Kind);
+  if (SymInfo.SubKind != SymbolSubKind::None)
+    OS << '/' << getSymbolSubKindString(SymInfo.SubKind);
   if (SymInfo.Properties) {
     OS << '(';
     printSymbolProperties(SymInfo.Properties, OS);

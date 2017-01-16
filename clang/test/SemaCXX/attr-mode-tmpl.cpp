@@ -45,7 +45,7 @@ void CheckMachineMode() {
 
 // Check attributes on function parameters.
 template <class T1, class T2>
-void CheckParameters(T1 __attribute__((mode(SI)))   paramSI,     // expected-note2{{ignored: substitution failure}}
+void CheckParameters(T1 __attribute__((mode(SI)))   paramSI,     // expected-note{{ignored: substitution failure}} expected-note-re{{not viable: no known conversion from '{{.*}}' (vector of 4 '{{.*}}' values) to 'EnumType' for 2nd argument}}
                      T1 __attribute__((mode(V4DI))) paramV4DI,   // expected-warning{{deprecated}}
                      T2 __attribute__((mode(SF)))   paramSF,
                      T2 __attribute__((mode(V4DF))) paramV4DF) { // expected-warning{{deprecated}}

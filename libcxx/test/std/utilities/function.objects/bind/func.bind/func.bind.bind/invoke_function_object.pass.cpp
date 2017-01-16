@@ -29,7 +29,7 @@ struct DummyUnaryFunction
 struct BadUnaryFunction
 {
     template <typename S>
-    constexpr int operator()(S const & s) const
+    constexpr int operator()(S const &) const
     {
         // Trigger a compile error if this function is instantiated.
         // The constexpr is needed so that it is instantiated while checking

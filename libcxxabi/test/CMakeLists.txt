@@ -17,6 +17,7 @@ pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_ENABLE_THREADS)
 pythonize_bool(LIBCXXABI_ENABLE_EXCEPTIONS)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
+pythonize_bool(LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
 set(LIBCXXABI_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING
     "TargetInfo to use when setting up test environment.")
 set(LIBCXXABI_EXECUTOR "None" CACHE STRING
@@ -32,6 +33,10 @@ if (LIBCXXABI_ENABLE_SHARED)
   set(LIBCXXABI_TEST_DEPS cxxabi_shared)
 else()
   set(LIBCXXABI_TEST_DEPS cxxabi_static)
+endif()
+
+if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
+  list(APPEND LIBCXXABI_TEST_DEPS cxx_external_threads)
 endif()
 
 if (NOT LIBCXXABI_STANDALONE_BUILD)

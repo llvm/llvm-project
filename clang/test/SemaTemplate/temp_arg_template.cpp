@@ -6,11 +6,12 @@ template<template<typename T> class X> struct A; // expected-note 2{{previous te
 
 template<template<typename T, int I> class X> struct B; // expected-note{{previous template template parameter is here}}
 
-template<template<int I> class X> struct C;  // expected-note{{previous non-type template parameter with type 'int' is here}}
+template<template<int I> class X> struct C;  // expected-note 2{{previous non-type template parameter with type 'int' is here}}
 
 template<class> struct X; // expected-note{{too few template parameters in template template argument}}
 template<int N> struct Y; // expected-note{{template parameter has a different kind in template argument}}
 template<long N> struct Ylong; // expected-note{{template non-type parameter has a different type 'long' in template argument}}
+template<const int &N> struct Yref; // expected-note{{template non-type parameter has a different type 'const int &' in template argument}}
 
 namespace N {
   template<class> struct Z;
@@ -27,6 +28,7 @@ A<TooMany> *a5; // expected-error{{template template argument has different temp
 B<X> *a6; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
 C<Y> *a7;
 C<Ylong> *a8; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
+C<Yref> *a9; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
 
 template<typename T> void f(int);
 
@@ -97,4 +99,10 @@ struct S : public template_tuple<identity, identity> {
 
 void foo() {
   f7<identity>();
+}
+
+namespace CheckDependentNonTypeParamTypes {
+  template<template<typename T, typename U, T v> class> struct A {}; // expected-note {{previous}}
+  template<typename T, typename U, U v> struct B {}; // expected-note {{different type}}
+  A<B> ab; // expected-error {{different template parameters}}
 }
