@@ -1183,12 +1183,11 @@ define i1 @icmp_sext8trunc(i32 %x) {
   ret i1 %cmp
 }
 
-; FIXME: Vectors should fold the same way.
+; Vectors should fold the same way.
 define <2 x i1> @icmp_sext8trunc_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_sext8trunc_vec(
-; CHECK-NEXT:    [[SEXT1:%.*]] = shl <2 x i32> %x, <i32 24, i32 24>
-; CHECK-NEXT:    [[SEXT:%.*]] = ashr <2 x i32> [[SEXT:%.*]]1, <i32 24, i32 24>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SEXT]], <i32 36, i32 36>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> %x to <2 x i8>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[TMP1]], <i8 36, i8 36>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %trunc = trunc <2 x i32> %x to <2 x i8>

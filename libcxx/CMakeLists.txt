@@ -32,6 +32,15 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleOutOfTreeLLVM)
 endif()
 
+if (LIBCXX_STANDALONE_BUILD)
+  include(FindPythonInterp)
+  if( NOT PYTHONINTERP_FOUND )
+    message(WARNING "Failed to find python interpreter. "
+                    "The libc++ test suite will be disabled.")
+    set(LLVM_INCLUDE_TESTS OFF)
+  endif()
+endif()
+
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
 MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
@@ -116,7 +125,7 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
     NO_DEFAULT_PATH
   )
-  if (NOT DEFINED LIBCXX_STANDALONE_BUILD AND
+  if ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
       IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")

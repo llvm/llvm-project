@@ -161,9 +161,8 @@ define i8 @test9(i8 %A) {
   ret i8 %C
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 7) << 7 === A & 128
-;; The shl may be valuable to scalar evolution.
+
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 %A, -128
@@ -1046,7 +1045,7 @@ define <2 x i65> @test_63(<2 x i64> %t) {
 ; CHECK-LABEL: @test_63(
 ; CHECK-NEXT:    [[A:%.*]] = zext <2 x i64> %t to <2 x i65>
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i65> [[A]], <i65 33, i65 33>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i65> [[SEXT]], <i65 33, i65 33>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i65> [[SEXT]], <i65 33, i65 33>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
   %a = zext <2 x i64> %t to <2 x i65>

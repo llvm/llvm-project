@@ -96,13 +96,6 @@ macro(configure_out_of_tree_llvm)
   endif()
 
   # LLVM Options --------------------------------------------------------------
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(WARNING "Failed to find python interpreter. "
-                    "The libc++ test suite will be disabled.")
-    set(LLVM_INCLUDE_TESTS OFF)
-  endif()
-
   if (NOT DEFINED LLVM_INCLUDE_TESTS)
     set(LLVM_INCLUDE_TESTS ${LLVM_FOUND})
   endif()

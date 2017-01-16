@@ -1475,21 +1475,13 @@ static int readModRM(struct InternalInstruction* insn) {
       return prefix##_EAX + index;                        \
     case TYPE_R64:                                        \
       return prefix##_RAX + index;                        \
-    case TYPE_XMM512:                                     \
+    case TYPE_ZMM:                                        \
       return prefix##_ZMM0 + index;                       \
-    case TYPE_XMM256:                                     \
+    case TYPE_YMM:                                        \
       return prefix##_YMM0 + index;                       \
-    case TYPE_XMM128:                                     \
-    case TYPE_XMM64:                                      \
-    case TYPE_XMM32:                                      \
+    case TYPE_XMM:                                        \
       return prefix##_XMM0 + index;                       \
-    case TYPE_VK1:                                        \
-    case TYPE_VK2:                                        \
-    case TYPE_VK4:                                        \
-    case TYPE_VK8:                                        \
-    case TYPE_VK16:                                       \
-    case TYPE_VK32:                                       \
-    case TYPE_VK64:                                       \
+    case TYPE_VK:                                         \
       if (index > 7)                                      \
         *valid = 0;                                       \
       return prefix##_K0 + index;                         \
@@ -1562,6 +1554,7 @@ static int fixupReg(struct InternalInstruction *insn,
       return -1;
     break;
   CASE_ENCODING_RM:
+  CASE_ENCODING_VSIB:
     if (insn->eaBase >= insn->eaRegBase) {
       insn->eaBase = (EABase)fixupRMValue(insn,
                                           (OperandType)op->type,
@@ -1753,6 +1746,18 @@ static int readOperands(struct InternalInstruction* insn) {
     case ENCODING_SI:
     case ENCODING_DI:
       break;
+    CASE_ENCODING_VSIB:
+      // VSIB can use the V2 bit so check only the other bits.
+      if (needVVVV)
+        needVVVV = hasVVVV & ((insn->vvvv & 0xf) != 0);
+      if (readModRM(insn))
+        return -1;
+      if (fixupReg(insn, &Op))
+        return -1;
+      // Apply the AVX512 compressed displacement scaling factor.
+      if (Op.encoding != ENCODING_REG && insn->eaDisplacement == EA_DISP_8)
+        insn->displacement *= 1 << (Op.encoding - ENCODING_VSIB);
+      break;
     case ENCODING_REG:
     CASE_ENCODING_RM:
       if (readModRM(insn))
@@ -1774,8 +1779,7 @@ static int readOperands(struct InternalInstruction* insn) {
       }
       if (readImmediate(insn, 1))
         return -1;
-      if (Op.type == TYPE_XMM128 ||
-          Op.type == TYPE_XMM256)
+      if (Op.type == TYPE_XMM || Op.type == TYPE_YMM)
         sawRegImm = 1;
       break;
     case ENCODING_IW:

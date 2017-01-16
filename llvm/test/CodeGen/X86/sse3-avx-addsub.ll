@@ -119,10 +119,10 @@ define <16 x float> @test5(<16 x float> %A, <16 x float> %B) {
 ;
 ; AVX512-LABEL: test5:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vsubps %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vsubps %zmm1, %zmm0, %zmm2 {%k1}
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm2 {%k1}
 ; AVX512-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %add = fadd <16 x float> %A, %B

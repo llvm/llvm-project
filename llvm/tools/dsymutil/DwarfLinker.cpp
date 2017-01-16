@@ -211,6 +211,8 @@ public:
                              *Lang == dwarf::DW_LANG_C_plus_plus_11 ||
                              *Lang == dwarf::DW_LANG_C_plus_plus_14 ||
                              *Lang == dwarf::DW_LANG_ObjC_plus_plus);
+    else
+      HasODR = false;
   }
 
   DWARFUnit &getOrigUnit() const { return OrigUnit; }

@@ -323,6 +323,14 @@ int X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
 
   static const CostTblEntry AVX512BWCostTable[] = {
+    { ISD::SHL,   MVT::v8i16,      1 }, // vpsllvw
+    { ISD::SRL,   MVT::v8i16,      1 }, // vpsrlvw
+    { ISD::SRA,   MVT::v8i16,      1 }, // vpsravw
+
+    { ISD::SHL,   MVT::v16i16,     1 }, // vpsllvw
+    { ISD::SRL,   MVT::v16i16,     1 }, // vpsrlvw
+    { ISD::SRA,   MVT::v16i16,     1 }, // vpsravw
+
     { ISD::SHL,   MVT::v32i16,     1 }, // vpsllvw
     { ISD::SRL,   MVT::v32i16,     1 }, // vpsrlvw
     { ISD::SRA,   MVT::v32i16,     1 }, // vpsravw

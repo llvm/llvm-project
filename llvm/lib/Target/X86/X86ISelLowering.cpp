@@ -8436,7 +8436,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
       MVT IntegerType =
           MVT::getIntegerVT(std::max((int)VT.getVectorNumElements(), 8));
       SDValue MaskNode = DAG.getConstant(BlendMask, DL, IntegerType);
-      return getVectorMaskingNode(V1, MaskNode, V2, Subtarget, DAG);
+      return getVectorMaskingNode(V2, MaskNode, V1, Subtarget, DAG);
     }
 
     // Attempt to lower to a bitmask if we can. VPAND is faster than VPBLENDVB.
@@ -8485,7 +8485,7 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     MVT IntegerType =
         MVT::getIntegerVT(std::max((int)VT.getVectorNumElements(), 8));
     SDValue MaskNode = DAG.getConstant(BlendMask, DL, IntegerType);
-    return getVectorMaskingNode(V1, MaskNode, V2, Subtarget, DAG);
+    return getVectorMaskingNode(V2, MaskNode, V1, Subtarget, DAG);
   }
   default:
     llvm_unreachable("Not a supported integer vector type!");

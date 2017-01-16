@@ -1179,17 +1179,16 @@ define <8 x i64> @shuffle_v8i64_81a3c5e7(<8 x i64> %a, <8 x i64> %b) {
 ;
 ; AVX512F-LABEL: shuffle_v8i64_81a3c5e7:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:   movb $-86, %al
-; AVX512F-NEXT:   kmovw %eax, %k1
-; AVX512F-NEXT:   vmovdqa64 %zmm1, %zmm0 {%k1}
-; AVX512F-NEXT:   retq  
-;
+; AVX512F-NEXT:    movb $-86, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: shuffle_v8i64_81a3c5e7:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    movb $-86, %al
 ; AVX512F-32-NEXT:    kmovw %eax, %k1
-; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; AVX512F-32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-32-NEXT:    retl
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
   ret <8 x i64> %shuffle

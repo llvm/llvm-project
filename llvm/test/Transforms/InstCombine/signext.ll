@@ -61,6 +61,10 @@ define i32 @test5(i32 %x) {
   ret i32 %tmp.4
 }
 
+;  If the shift amount equals the difference in width of the destination
+;  and source scalar types:
+;  ashr (shl (zext X), C), C --> sext X
+
 define i32 @test6(i16 %P) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP_5:%.*]] = sext i16 %P to i32
@@ -72,11 +76,11 @@ define i32 @test6(i16 %P) {
   ret i32 %tmp.5
 }
 
+; Vectors should get the same fold as above.
+
 define <2 x i32> @test6_splat_vec(<2 x i12> %P) {
 ; CHECK-LABEL: @test6_splat_vec(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i12> %P to <2 x i32>
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[Z]], <i32 20, i32 20>
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[SHL]], <i32 20, i32 20>
+; CHECK-NEXT:    [[ASHR:%.*]] = sext <2 x i12> %P to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[ASHR]]
 ;
   %z = zext <2 x i12> %P to <2 x i32>

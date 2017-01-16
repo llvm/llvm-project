@@ -110,10 +110,9 @@ define <32 x i16> @shuffle_v32i16_1_1_0_0_5_5_4_4_9_9_11_11_13_13_12_12_17_17_19
 define <32 x i16> @shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<32 x i16> %a) {
 ; ALL-LABEL: shuffle_v32i16_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; ALL:       # BB#0:
-; ALL-NEXT:    movl	$1, %eax
-; ALL-NEXT:    kmovd	%eax, %k0
-; ALL-NEXT:    knotd	%k0, %k1
-; ALL-NEXT:    vmovdqu16	%zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    movl $1, %eax
+; ALL-NEXT:    kmovd %eax, %k1
+; ALL-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <32 x i16> %a, <32 x i16> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i16> %shuffle

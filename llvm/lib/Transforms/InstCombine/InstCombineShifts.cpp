@@ -109,19 +109,17 @@ static bool canEvaluateShiftedShift(unsigned FirstShiftAmt,
   return false;
 }
 
-/// See if we can compute the specified value, but shifted
-/// logically to the left or right by some number of bits.  This should return
-/// true if the expression can be computed for the same cost as the current
-/// expression tree.  This is used to eliminate extraneous shifting from things
-/// like:
+/// See if we can compute the specified value, but shifted logically to the left
+/// or right by some number of bits. This should return true if the expression
+/// can be computed for the same cost as the current expression tree. This is
+/// used to eliminate extraneous shifting from things like:
 ///      %C = shl i128 %A, 64
 ///      %D = shl i128 %B, 96
 ///      %E = or i128 %C, %D
 ///      %F = lshr i128 %E, 64
-/// where the client will ask if E can be computed shifted right by 64-bits.  If
-/// this succeeds, the GetShiftedValue function will be called to produce the
-/// value.
-static bool CanEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+/// where the client will ask if E can be computed shifted right by 64-bits. If
+/// this succeeds, getShiftedValue() will be called to produce the value.
+static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
                                InstCombiner &IC, Instruction *CxtI) {
   // We can always evaluate constants shifted.
   if (isa<Constant>(V))
@@ -165,8 +163,8 @@ static bool CanEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
   case Instruction::Or:
   case Instruction::Xor:
     // Bitwise operators can all arbitrarily be arbitrarily evaluated shifted.
-    return CanEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC, I) &&
-           CanEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, I);
+    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC, I) &&
+           canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, I);
 
   case Instruction::Shl:
   case Instruction::LShr:
@@ -176,8 +174,8 @@ static bool CanEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
     SelectInst *SI = cast<SelectInst>(I);
     Value *TrueVal = SI->getTrueValue();
     Value *FalseVal = SI->getFalseValue();
-    return CanEvaluateShifted(TrueVal, NumBits, IsLeftShift, IC, SI) &&
-           CanEvaluateShifted(FalseVal, NumBits, IsLeftShift, IC, SI);
+    return canEvaluateShifted(TrueVal, NumBits, IsLeftShift, IC, SI) &&
+           canEvaluateShifted(FalseVal, NumBits, IsLeftShift, IC, SI);
   }
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -185,16 +183,16 @@ static bool CanEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
     // instructions with a single use.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!CanEvaluateShifted(IncValue, NumBits, IsLeftShift, IC, PN))
+      if (!canEvaluateShifted(IncValue, NumBits, IsLeftShift, IC, PN))
         return false;
     return true;
   }
   }
 }
 
-/// When CanEvaluateShifted returned true for an expression,
-/// this value inserts the new computation that produces the shifted value.
-static Value *GetShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
+/// When canEvaluateShifted() returns true for an expression, this function
+/// inserts the new computation that produces the shifted value.
+static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
                               InstCombiner &IC, const DataLayout &DL) {
   // We can always evaluate constants shifted.
   if (Constant *C = dyn_cast<Constant>(V)) {
@@ -220,9 +218,9 @@ static Value *GetShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   case Instruction::Xor:
     // Bitwise operators can all arbitrarily be arbitrarily evaluated shifted.
     I->setOperand(
-        0, GetShiftedValue(I->getOperand(0), NumBits, isLeftShift, IC, DL));
+        0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift, IC, DL));
     I->setOperand(
-        1, GetShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
+        1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
     return I;
 
   case Instruction::Shl: {
@@ -311,9 +309,9 @@ static Value *GetShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
 
   case Instruction::Select:
     I->setOperand(
-        1, GetShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
+        1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
     I->setOperand(
-        2, GetShiftedValue(I->getOperand(2), NumBits, isLeftShift, IC, DL));
+        2, getShiftedValue(I->getOperand(2), NumBits, isLeftShift, IC, DL));
     return I;
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -321,7 +319,7 @@ static Value *GetShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     // instructions with a single use.
     PHINode *PN = cast<PHINode>(I);
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      PN->setIncomingValue(i, GetShiftedValue(PN->getIncomingValue(i), NumBits,
+      PN->setIncomingValue(i, getShiftedValue(PN->getIncomingValue(i), NumBits,
                                               isLeftShift, IC, DL));
     return PN;
   }
@@ -508,12 +506,12 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
   // See if we can propagate this shift into the input, this covers the trivial
   // cast of lshr(shl(x,c1),c2) as well as other more complex cases.
   if (I.getOpcode() != Instruction::AShr &&
-      CanEvaluateShifted(Op0, COp1->getZExtValue(), isLeftShift, *this, &I)) {
+      canEvaluateShifted(Op0, COp1->getZExtValue(), isLeftShift, *this, &I)) {
     DEBUG(dbgs() << "ICE: GetShiftedValue propagating shift through expression"
               " to eliminate shift:\n  IN: " << *Op0 << "\n  SH: " << I <<"\n");
 
     return replaceInstUsesWith(
-        I, GetShiftedValue(Op0, COp1->getZExtValue(), isLeftShift, *this, DL));
+        I, getShiftedValue(Op0, COp1->getZExtValue(), isLeftShift, *this, DL));
   }
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -814,11 +812,12 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
     return R;
 
   unsigned BitWidth = I.getType()->getScalarSizeInBits();
-  if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
-    unsigned ShAmt = Op1C->getZExtValue();
+  const APInt *ShAmtAPInt;
+  if (match(Op1, m_APInt(ShAmtAPInt))) {
+    unsigned ShAmt = ShAmtAPInt->getZExtValue();
 
     // If the shift amount equals the difference in width of the destination
-    // and source types:
+    // and source scalar types:
     // ashr (shl (zext X), C), C --> sext X
     Value *X;
     if (match(Op0, m_Shl(m_ZExt(m_Value(X)), m_Specific(Op1))) &&

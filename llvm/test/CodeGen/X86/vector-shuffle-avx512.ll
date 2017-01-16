@@ -595,7 +595,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movabsq $-6148914691236517206, %rax # imm = 0xAAAAAAAAAAAAAAAA
 ; SKX64-NEXT:    kmovq %rax, %k1
-; SKX64-NEXT:    vmovdqu8 %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vpblendmb %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi8:
@@ -610,7 +610,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ; SKX32-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SKX32-NEXT:    kmovd %eax, %k0
 ; SKX32-NEXT:    kunpckdq %k0, %k0, %k1
-; SKX32-NEXT:    vmovdqu8 %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vpblendmb %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi8:
@@ -641,7 +641,7 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SKX64-NEXT:    kmovd %eax, %k1
-; SKX64-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi16:
@@ -654,7 +654,7 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SKX32-NEXT:    kmovd %eax, %k1
-; SKX32-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vpblendmw %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi16:
@@ -684,28 +684,28 @@ define <16 x i32> @test_mm512_mask_blend_epi32(<16 x i32> %A, <16 x i32> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX64-NEXT:    kmovw %eax, %k1
-; SKX64-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi32:
 ; KNL64:       # BB#0: # %entry
 ; KNL64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL64-NEXT:    kmovw %eax, %k1
-; KNL64-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; KNL64-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_mm512_mask_blend_epi32:
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX32-NEXT:    kmovw %eax, %k1
-; SKX32-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi32:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL32-NEXT:    kmovw %eax, %k1
-; KNL32-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; KNL32-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <16 x i32> %A, <16 x i32> %W, <16 x i32>  <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
@@ -717,28 +717,28 @@ define <8 x i64> @test_mm512_mask_blend_epi64(<8 x i64> %A, <8 x i64> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movb $-86, %al
 ; SKX64-NEXT:    kmovb %eax, %k1
-; SKX64-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi64:
 ; KNL64:       # BB#0: # %entry
 ; KNL64-NEXT:    movb $-86, %al
 ; KNL64-NEXT:    kmovw %eax, %k1
-; KNL64-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; KNL64-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_mm512_mask_blend_epi64:
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movb $-86, %al
 ; SKX32-NEXT:    kmovb %eax, %k1
-; SKX32-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi64:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    movb $-86, %al
 ; KNL32-NEXT:    kmovw %eax, %k1
-; KNL32-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1}
+; KNL32-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <8 x i64> %A, <8 x i64> %W, <8 x i32>  <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
@@ -750,28 +750,28 @@ define <16 x float> @test_mm512_mask_blend_ps(<16 x float> %A, <16 x float> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX64-NEXT:    kmovw %eax, %k1
-; SKX64-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_ps:
 ; KNL64:       # BB#0: # %entry
 ; KNL64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL64-NEXT:    kmovw %eax, %k1
-; KNL64-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; KNL64-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_mm512_mask_blend_ps:
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX32-NEXT:    kmovw %eax, %k1
-; SKX32-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_ps:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL32-NEXT:    kmovw %eax, %k1
-; KNL32-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; KNL32-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <16 x float> %A, <16 x float> %W, <16 x i32>  <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
@@ -783,28 +783,28 @@ define <8 x double> @test_mm512_mask_blend_pd(<8 x double> %A, <8 x double> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movb $-88, %al
 ; SKX64-NEXT:    kmovb %eax, %k1
-; SKX64-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; SKX64-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_pd:
 ; KNL64:       # BB#0: # %entry
 ; KNL64-NEXT:    movb $-88, %al
 ; KNL64-NEXT:    kmovw %eax, %k1
-; KNL64-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; KNL64-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_mm512_mask_blend_pd:
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movb $-88, %al
 ; SKX32-NEXT:    kmovb %eax, %k1
-; SKX32-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; SKX32-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_pd:
 ; KNL32:       # BB#0: # %entry
 ; KNL32-NEXT:    movb $-88, %al
 ; KNL32-NEXT:    kmovw %eax, %k1
-; KNL32-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; KNL32-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <8 x double> %A, <8 x double> %W, <8 x i32>  <i32 8, i32 9, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
@@ -817,7 +817,7 @@ define <32 x i8> @test_mm256_mask_blend_epi8(<32 x i8> %A, <32 x i8> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SKX64-NEXT:    kmovd %eax, %k1
-; SKX64-NEXT:    vmovdqu8 %ymm1, %ymm0 {%k1}
+; SKX64-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm256_mask_blend_epi8:
@@ -830,7 +830,7 @@ define <32 x i8> @test_mm256_mask_blend_epi8(<32 x i8> %A, <32 x i8> %W){
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movl $-1431655766, %eax # imm = 0xAAAAAAAA
 ; SKX32-NEXT:    kmovd %eax, %k1
-; SKX32-NEXT:    vmovdqu8 %ymm1, %ymm0 {%k1}
+; SKX32-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm256_mask_blend_epi8:
@@ -848,7 +848,7 @@ define <16 x i8> @test_mm_mask_blend_epi8(<16 x i8> %A, <16 x i8> %W){
 ; SKX64:       # BB#0: # %entry
 ; SKX64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX64-NEXT:    kmovw %eax, %k1
-; SKX64-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; SKX64-NEXT:    vpblendmb %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: test_mm_mask_blend_epi8:
@@ -861,7 +861,7 @@ define <16 x i8> @test_mm_mask_blend_epi8(<16 x i8> %A, <16 x i8> %W){
 ; SKX32:       # BB#0: # %entry
 ; SKX32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX32-NEXT:    kmovw %eax, %k1
-; SKX32-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
+; SKX32-NEXT:    vpblendmb %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: test_mm_mask_blend_epi8:

@@ -122,8 +122,9 @@ void elf::writeMapFile(ArrayRef<OutputSectionBase *> OutputSections) {
   std::error_code EC;
   raw_fd_ostream OS(Config->MapFile, EC, sys::fs::F_None);
   if (EC)
-    fatal("cannot open " + Config->MapFile + ": " + EC.message());
-  writeMapFile2<ELFT>(OS, OutputSections);
+    error("cannot open " + Config->MapFile + ": " + EC.message());
+  else
+    writeMapFile2<ELFT>(OS, OutputSections);
 }
 
 template void elf::writeMapFile<ELF32LE>(ArrayRef<OutputSectionBase *>);
