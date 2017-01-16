@@ -2175,19 +2175,15 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
 
   // Create local scope for C++17 if init-stmt if one exists.
-  if (Stmt *Init = I->getInit()) {
-    LocalScope::const_iterator BeginScopePos = ScopePos;
+  if (Stmt *Init = I->getInit())
     addLocalScopeForStmt(Init);
-    addAutomaticObjDtors(ScopePos, BeginScopePos, I);
-  }
 
   // Create local scope for possible condition variable.
   // Store scope position. Add implicit destructor.
-  if (VarDecl *VD = I->getConditionVariable()) {
-    LocalScope::const_iterator BeginScopePos = ScopePos;
+  if (VarDecl *VD = I->getConditionVariable())
     addLocalScopeForVarDecl(VD);
-    addAutomaticObjDtors(ScopePos, BeginScopePos, I);
-  }
+
+  addAutomaticObjDtors(ScopePos, save_scope_pos.get(), I);
 
   // The block we were processing is now finished.  Make it the successor
   // block.
@@ -2256,36 +2252,39 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   // removes infeasible paths from the control-flow graph by having the
   // control-flow transfer of '&&' or '||' go directly into the then/else
   // blocks directly.
-  if (!I->getConditionVariable())
-    if (BinaryOperator *Cond =
-            dyn_cast<BinaryOperator>(I->getCond()->IgnoreParens()))
-      if (Cond->isLogicalOp())
-        return VisitLogicalOperator(Cond, I, ThenBlock, ElseBlock).first;
+  BinaryOperator *Cond =
+      I->getConditionVariable()
+          ? nullptr
+          : dyn_cast<BinaryOperator>(I->getCond()->IgnoreParens());
+  CFGBlock *LastBlock;
+  if (Cond && Cond->isLogicalOp())
+    LastBlock = VisitLogicalOperator(Cond, I, ThenBlock, ElseBlock).first;
+  else {
+    // Now create a new block containing the if statement.
+    Block = createBlock(false);
 
-  // Now create a new block containing the if statement.
-  Block = createBlock(false);
+    // Set the terminator of the new block to the If statement.
+    Block->setTerminator(I);
 
-  // Set the terminator of the new block to the If statement.
-  Block->setTerminator(I);
+    // See if this is a known constant.
+    const TryResult &KnownVal = tryEvaluateBool(I->getCond());
 
-  // See if this is a known constant.
-  const TryResult &KnownVal = tryEvaluateBool(I->getCond());
+    // Add the successors.  If we know that specific branches are
+    // unreachable, inform addSuccessor() of that knowledge.
+    addSuccessor(Block, ThenBlock, /* isReachable = */ !KnownVal.isFalse());
+    addSuccessor(Block, ElseBlock, /* isReachable = */ !KnownVal.isTrue());
 
-  // Add the successors.  If we know that specific branches are
-  // unreachable, inform addSuccessor() of that knowledge.
-  addSuccessor(Block, ThenBlock, /* isReachable = */ !KnownVal.isFalse());
-  addSuccessor(Block, ElseBlock, /* isReachable = */ !KnownVal.isTrue());
+    // Add the condition as the last statement in the new block.  This may
+    // create new blocks as the condition may contain control-flow.  Any newly
+    // created blocks will be pointed to be "Block".
+    LastBlock = addStmt(I->getCond());
 
-  // Add the condition as the last statement in the new block.  This may create
-  // new blocks as the condition may contain control-flow.  Any newly created
-  // blocks will be pointed to be "Block".
-  CFGBlock *LastBlock = addStmt(I->getCond());
-
-  // If the IfStmt contains a condition variable, add it and its
-  // initializer to the CFG.
-  if (const DeclStmt* DS = I->getConditionVariableDeclStmt()) {
-    autoCreateBlock();
-    LastBlock = addStmt(const_cast<DeclStmt *>(DS));
+    // If the IfStmt contains a condition variable, add it and its
+    // initializer to the CFG.
+    if (const DeclStmt* DS = I->getConditionVariableDeclStmt()) {
+      autoCreateBlock();
+      LastBlock = addStmt(const_cast<DeclStmt *>(DS));
+    }
   }
 
   // Finally, if the IfStmt contains a C++17 init-stmt, add it to the CFG.
@@ -3078,19 +3077,15 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
 
   // Create local scope for C++17 switch init-stmt if one exists.
-  if (Stmt *Init = Terminator->getInit()) {
-    LocalScope::const_iterator BeginScopePos = ScopePos;
+  if (Stmt *Init = Terminator->getInit())
     addLocalScopeForStmt(Init);
-    addAutomaticObjDtors(ScopePos, BeginScopePos, Terminator);
-  }
 
   // Create local scope for possible condition variable.
   // Store scope position. Add implicit destructor.
-  if (VarDecl *VD = Terminator->getConditionVariable()) {
-    LocalScope::const_iterator SwitchBeginScopePos = ScopePos;
+  if (VarDecl *VD = Terminator->getConditionVariable())
     addLocalScopeForVarDecl(VD);
-    addAutomaticObjDtors(ScopePos, SwitchBeginScopePos, Terminator);
-  }
+
+  addAutomaticObjDtors(ScopePos, save_scope_pos.get(), Terminator);
 
   if (Block) {
     if (badCFG)

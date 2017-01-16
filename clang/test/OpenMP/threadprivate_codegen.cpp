@@ -179,9 +179,9 @@ struct S5 {
 // CHECK-TLS-DAG:  @__dso_handle = external global i8
 // CHECK-TLS-DAG:  [[GS1_TLS_INIT:@_ZTHL3gs1]] = internal alias void (), void ()* @__tls_init
 // CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] = alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_INT_ST_TLS_INIT:@_ZTHN2STIiE2stE]] = linkonce_odr alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_FLOAT_ST_TLS_INIT:@_ZTHN2STIfE2stE]] = linkonce_odr alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* @__tls_init
+
+
+// CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* [[ST_S4_ST_CXX_INIT:@[^, ]*]]
 
 struct Static {
   static S3 s;
@@ -640,11 +640,11 @@ int main() {
 // CHECK-TLS:   ret [2 x [3 x [[S1]]]]* [[ARR_X]]
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}} i32* [[ST_INT_ST_TLS_INITD]] {{#[0-9]+}} {
-// CHECK-TLS:   call void [[ST_INT_ST_TLS_INIT]]
+// CHECK-TLS-NOT:   call
 // CHECK-TLS:   ret i32* [[ST_INT_ST]]
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}} float* [[ST_FLOAT_ST_TLS_INITD]] {{#[0-9]+}} {
-// CHECK-TLS:   call void [[ST_FLOAT_ST_TLS_INIT]]
+// CHECK-TLS-NOT:   call
 // CHECK-TLS:   ret float* [[ST_FLOAT_ST]]
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}} [[S4]]* [[ST_S4_ST_TLS_INITD]] {{#[0-9]+}} {
@@ -923,7 +923,7 @@ int foobar() {
 // CHECK-TLS: define {{.*}}void [[SM_CTOR2]]([[SMAIN]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[SM_DTOR2]]([[SMAIN]]* {{.*}})
 
-// CHECK-TLS: define internal void [[ST_S4_ST_CXX_INIT:@.*]]()
+// CHECK-TLS: define internal void [[ST_S4_ST_CXX_INIT]]()
 // CHECK-TLS: call void [[ST_S4_ST_CTOR1:@.*]]([[S4]]* [[ST_S4_ST]], i32 23)
 // CHECK-TLS: call i32 @__cxa_thread_atexit(void (i8*)* bitcast (void ([[S4]]*)* [[ST_S4_ST_DTOR1:.*]] to void (i8*)*), i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*)
 // CHECK-TLS: }
@@ -945,7 +945,7 @@ int foobar() {
 // CHECK-TLS:      call void [[GS1_CXX_INIT]]
 // CHECK-TLS-NOT:  call void [[GS2_CXX_INIT]]
 // CHECK-TLS:      call void [[ARR_X_CXX_INIT]]
-// CHECK-TLS:      call void [[ST_S4_ST_CXX_INIT]]
+// CHECK-TLS-NOT:  call void [[ST_S4_ST_CXX_INIT]]
 // CHECK-TLS:      [[DONE_LABEL]]
 
 // CHECK-TLS-DAG:      declare {{.*}} void [[GS3_TLS_INIT]]

@@ -679,7 +679,7 @@ namespace dr258 { // dr258: yes
   } f; // expected-error {{abstract}}
 }
 
-namespace dr259 { // dr259: 4.0
+namespace dr259 { // dr259: 4
   template<typename T> struct A {};
   template struct A<int>; // expected-note {{previous}}
   template struct A<int>; // expected-error {{duplicate explicit instantiation}}

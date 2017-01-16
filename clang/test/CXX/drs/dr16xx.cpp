@@ -86,7 +86,7 @@ namespace dr1645 { // dr1645: 3.9
 #endif
 }
 
-namespace dr1653 { // dr1653: 4.0 c++17
+namespace dr1653 { // dr1653: 4 c++17
   void f(bool b) {
     ++b;
     b++;

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1213 { // dr1213: 4.0
+namespace dr1213 { // dr1213: 4
 #if __cplusplus >= 201103L
   using T = int[3];
   int &&r = T{}[1];
@@ -26,7 +26,7 @@ struct Derived : Base {
 };
 } // dr1250
 
-namespace dr1295 {  // dr1295: 4.0
+namespace dr1295 {  // dr1295: 4
   struct X {
     unsigned bitfield : 4;
   };
