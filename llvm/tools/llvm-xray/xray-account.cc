@@ -463,7 +463,7 @@ static CommandRegistration Unused(&Account, []() -> Error {
         return make_error<StringError>(
             Twine("Failed accounting function calls in file '") + AccountInput +
                 "'.",
-            std::make_error_code(std::errc::bad_message));
+            std::make_error_code(std::errc::executable_format_error));
     }
     switch (AccountOutputFormat) {
     case AccountOutputFormats::TEXT:

@@ -26,11 +26,6 @@ have questions or comments, the `LLVM Developer's Mailing List
 <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
-Note that if you are reading this file from a Subversion checkout or the main
-LLVM web page, this document applies to the *next* release, not the current
-one.  To see the release notes for a specific release, please see the `releases
-page <http://llvm.org/releases/>`_.
-
 Non-comprehensive list of changes in this release
 =================================================
 * The C API functions LLVMAddFunctionAttr, LLVMGetFunctionAttr,
@@ -57,6 +52,9 @@ Non-comprehensive list of changes in this release
   the previously used names should become descriptions and a short name in the
   style of a programming language identifier should be added.
 
+* LLVM now handles invariant.group across different basic blocks, which makes
+  it possible to devirtualize virtual calls inside loops.
+
 * ... next change ...
 
 .. NOTE
@@ -68,6 +66,14 @@ Non-comprehensive list of changes in this release
    -------------------
 
    Makes programs 10x faster by doing Special New Thing.
+
+   Improvements to ThinLTO (-flto=thin)
+   ------------------------------------
+   * Integration with profile data (PGO). When available, profile data 
+     enables more accurate function importing decisions, as well as 
+     cross-module indirect call promotion.
+   * Significant build-time and binary-size improvements when compiling with 
+     debug info (-g).
 
 Changes to the LLVM IR
 ----------------------
