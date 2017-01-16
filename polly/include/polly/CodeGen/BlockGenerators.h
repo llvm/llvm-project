@@ -854,8 +854,8 @@ private:
   /// leaving the subregion because the exiting block as an edge back into the
   /// subregion.
   ///
-  /// @param MA    The WRITE of MK_PHI/MK_ExitPHI for a PHI in the subregion's
-  ///              exit block.
+  /// @param MA    The WRITE of MemoryKind::PHI/MemoryKind::ExitPHI for a PHI in
+  ///              the subregion's exit block.
   /// @param LTS   Virtual induction variable mapping.
   /// @param BBMap A mapping from old values to their new values in this block.
   /// @param L     Loop surrounding this region statement.

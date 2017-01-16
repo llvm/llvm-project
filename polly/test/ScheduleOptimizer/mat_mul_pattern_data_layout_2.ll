@@ -1,4 +1,12 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-target-throughput-vector-fma=1 -polly-target-latency-vector-fma=8 -polly-target-1st-cache-level-associativity=8 -polly-target-2nd-cache-level-associativity=8 -polly-target-1st-cache-level-size=32768 -polly-target-2nd-cache-level-size=262144 -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: -polly-target-throughput-vector-fma=1 \
+; RUN: -polly-target-latency-vector-fma=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-2nd-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-size=32768 \
+; RUN: -polly-target-2nd-cache-level-size=262144 -polly-ast \
+; RUN: -polly-target-vector-register-bitwidth=256 \
+; RUN:  -analyze < %s | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    /* _PB_NK % Kc != 0 */

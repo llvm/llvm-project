@@ -484,8 +484,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
-  Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
-  Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
+  Config->ExportDynamic =
+      getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false);
+  Config->FatalWarnings =
+      getArg(Args, OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasArg(OPT_gdb_index);
   Config->ICF = Args.hasArg(OPT_icf);
@@ -512,6 +514,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Init = getString(Args, OPT_init, "_init");
   Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->MapFile = getString(Args, OPT_Map);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
@@ -541,6 +544,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SortSection = getSortKind(Args);
   Config->Target2 = getTarget2Option(Args);
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+
+  if (Args.hasArg(OPT_print_map))
+    Config->MapFile = "-";
 
   // --omagic is an option to create old-fashioned executables in which
   // .text segments are writable. Today, the option is still in use to

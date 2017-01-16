@@ -482,7 +482,7 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
     BasicBlock *BB, Instruction *Inst, MemoryAccess::AccessType AccType,
     Value *BaseAddress, Type *ElementType, bool Affine, Value *AccessValue,
     ArrayRef<const SCEV *> Subscripts, ArrayRef<const SCEV *> Sizes,
-    ScopArrayInfo::MemoryKind Kind) {
+    MemoryKind Kind) {
   ScopStmt *Stmt = scop->getStmtFor(BB);
 
   // Do not create a memory access for anything not in the SCoP. It would be
@@ -501,9 +501,10 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
 
   if (Stmt->isRegionStmt()) {
     // Accesses that dominate the exit block of a non-affine region are always
-    // executed. In non-affine regions there may exist MK_Values that do not
-    // dominate the exit. MK_Values will always dominate the exit and MK_PHIs
-    // only if there is at most one PHI_WRITE in the non-affine region.
+    // executed. In non-affine regions there may exist MemoryKind::Values that
+    // do not dominate the exit. MemoryKind::Values will always dominate the
+    // exit and MemoryKind::PHIs only if there is at most one PHI_WRITE in the
+    // non-affine region.
     if (DT.dominates(BB, Stmt->getRegion()->getExit()))
       isKnownMustAccess = true;
   }
@@ -511,7 +512,7 @@ MemoryAccess *ScopBuilder::addMemoryAccess(
   // Non-affine PHI writes do not "happen" at a particular instruction, but
   // after exiting the statement. Therefore they are guaranteed to execute and
   // overwrite the old value.
-  if (Kind == ScopArrayInfo::MK_PHI || Kind == ScopArrayInfo::MK_ExitPHI)
+  if (Kind == MemoryKind::PHI || Kind == MemoryKind::ExitPHI)
     isKnownMustAccess = true;
 
   if (!isKnownMustAccess && AccType == MemoryAccess::MUST_WRITE)
@@ -533,7 +534,7 @@ void ScopBuilder::addArrayAccess(
   ArrayBasePointers.insert(BaseAddress);
   addMemoryAccess(MemAccInst->getParent(), MemAccInst, AccType, BaseAddress,
                   ElementType, IsAffine, AccessValue, Subscripts, Sizes,
-                  ScopArrayInfo::MK_Array);
+                  MemoryKind::Array);
 }
 
 void ScopBuilder::ensureValueWrite(Instruction *Inst) {
@@ -549,7 +550,7 @@ void ScopBuilder::ensureValueWrite(Instruction *Inst) {
 
   addMemoryAccess(Inst->getParent(), Inst, MemoryAccess::MUST_WRITE, Inst,
                   Inst->getType(), true, Inst, ArrayRef<const SCEV *>(),
-                  ArrayRef<const SCEV *>(), ScopArrayInfo::MK_Value);
+                  ArrayRef<const SCEV *>(), MemoryKind::Value);
 }
 
 void ScopBuilder::ensureValueRead(Value *V, BasicBlock *UserBB) {
@@ -598,7 +599,7 @@ void ScopBuilder::ensureValueRead(Value *V, BasicBlock *UserBB) {
 
   addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, V, V->getType(), true, V,
                   ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  ScopArrayInfo::MK_Value);
+                  MemoryKind::Value);
   if (ValueInst)
     ensureValueWrite(ValueInst);
 }
@@ -610,7 +611,7 @@ void ScopBuilder::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
   // and would be created later anyway.
   if (IsExitBlock)
     scop->getOrCreateScopArrayInfo(PHI, PHI->getType(), {},
-                                   ScopArrayInfo::MK_ExitPHI);
+                                   MemoryKind::ExitPHI);
 
   ScopStmt *IncomingStmt = scop->getStmtFor(IncomingBlock);
   if (!IncomingStmt)
@@ -630,11 +631,11 @@ void ScopBuilder::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
     return;
   }
 
-  MemoryAccess *Acc = addMemoryAccess(
-      IncomingStmt->getEntryBlock(), PHI, MemoryAccess::MUST_WRITE, PHI,
-      PHI->getType(), true, PHI, ArrayRef<const SCEV *>(),
-      ArrayRef<const SCEV *>(),
-      IsExitBlock ? ScopArrayInfo::MK_ExitPHI : ScopArrayInfo::MK_PHI);
+  MemoryAccess *Acc =
+      addMemoryAccess(IncomingStmt->getEntryBlock(), PHI,
+                      MemoryAccess::MUST_WRITE, PHI, PHI->getType(), true, PHI,
+                      ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
+                      IsExitBlock ? MemoryKind::ExitPHI : MemoryKind::PHI);
   assert(Acc);
   Acc->addIncoming(IncomingBlock, IncomingValue);
 }
@@ -642,7 +643,7 @@ void ScopBuilder::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
 void ScopBuilder::addPHIReadAccess(PHINode *PHI) {
   addMemoryAccess(PHI->getParent(), PHI, MemoryAccess::READ, PHI,
                   PHI->getType(), true, PHI, ArrayRef<const SCEV *>(),
-                  ArrayRef<const SCEV *>(), ScopArrayInfo::MK_PHI);
+                  ArrayRef<const SCEV *>(), MemoryKind::PHI);
 }
 
 void ScopBuilder::buildScop(Region &R) {

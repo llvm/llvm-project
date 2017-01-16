@@ -1245,7 +1245,7 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   IDToSAI.clear();
   Annotator.resetAlternativeAliasBases();
   for (auto &BasePtr : LocalArrays)
-    S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
+    S.invalidateScopArrayInfo(BasePtr, MemoryKind::Array);
   LocalArrays.clear();
 
   std::string ASMString = finalizeKernelFunction();
@@ -1347,7 +1347,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
       Sizes.push_back(SE.getSCEV(V));
     }
     const ScopArrayInfo *SAIRep =
-        S.getOrCreateScopArrayInfo(Val, EleTy, Sizes, ScopArrayInfo::MK_Array);
+        S.getOrCreateScopArrayInfo(Val, EleTy, Sizes, MemoryKind::Array);
     LocalArrays.push_back(Val);
 
     isl_ast_build_free(Build);
@@ -1526,8 +1526,8 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
     } else {
       llvm_unreachable("unknown variable type");
     }
-    SAI = S.getOrCreateScopArrayInfo(Allocation, EleTy, Sizes,
-                                     ScopArrayInfo::MK_Array);
+    SAI =
+        S.getOrCreateScopArrayInfo(Allocation, EleTy, Sizes, MemoryKind::Array);
     Id = isl_id_alloc(S.getIslCtx(), Var.name, nullptr);
     IDToValue[Id] = Allocation;
     LocalArrays.push_back(Allocation);

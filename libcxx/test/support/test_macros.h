@@ -13,6 +13,11 @@
 
 #include <ciso646> // Get STL specific macros like _LIBCPP_VERSION
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#endif
+
 #define TEST_CONCAT1(X, Y) X##Y
 #define TEST_CONCAT(X, Y) TEST_CONCAT1(X, Y)
 
@@ -175,6 +180,11 @@ struct is_same<T, T> { enum {value = 1}; };
 #include <stdlib.h>
 #define TEST_THROW(...) ::abort()
 #endif
+#endif
+
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

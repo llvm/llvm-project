@@ -68,6 +68,7 @@ class Configuration(object):
         self.cxx_runtime_root = None
         self.abi_library_root = None
         self.link_shared = self.get_lit_bool('enable_shared', default=True)
+        self.debug_build = self.get_lit_bool('debug_build',   default=False)
         self.exec_env = {}
         self.use_target = False
         self.use_system_cxx_lib = False
@@ -148,6 +149,7 @@ class Configuration(object):
         self.lit_config.note('Using available_features: %s' %
                              list(self.config.available_features))
         self.lit_config.note('Using environment: %r' % self.exec_env)
+        sys.stderr.flush()  # Force flushing to avoid broken output on Windows
 
     def get_test_format(self):
         return LibcxxTestFormat(
@@ -219,7 +221,7 @@ class Configuration(object):
         # FIXME: don't hardcode the target
         flags = ['--target=i686-pc-windows']
         compile_flags = []
-        link_flags = ['-fuse-ld=lld']
+        link_flags = []
         if 'INCLUDE' in os.environ:
             compile_flags += ['-isystem %s' % p.strip()
                               for p in os.environ['INCLUDE'].split(';')
@@ -380,6 +382,9 @@ class Configuration(object):
         if '__cpp_structured_bindings' not in macros:
             self.config.available_features.add('libcpp-no-structured-bindings')
 
+        if self.is_windows:
+            self.config.available_features.add('windows')
+
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:
@@ -438,13 +443,20 @@ class Configuration(object):
                     ['-target', self.config.target_triple]):
                 self.lit_config.warning('use_target is true but -target is '\
                         'not supported by the compiler')
+        if self.is_windows and self.debug_build:
+            self.cxx.compile_flags += ['-D_DEBUG']
 
     def configure_compile_flags_header_includes(self):
-        support_path = os.path.join(self.libcxx_src_root, 'test/support')
+        support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
         if self.cxx_stdlib_under_test != 'libstdc++' and \
            not self.is_windows:
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path, 'nasty_macros.hpp')]
+        if self.is_windows and self.debug_build:
+            self.cxx.compile_flags += [
+                '-include', os.path.join(support_path,
+                                         'set_windows_crt_report_mode.h')
+            ]
         self.configure_config_site_header()
         cxx_headers = self.get_lit_conf('cxx_headers')
         if cxx_headers == '' or (cxx_headers is None
@@ -667,7 +679,8 @@ class Configuration(object):
             self.cxx.link_flags += ['-lcxxrt']
         elif cxx_abi == 'none' or cxx_abi == 'default':
             if self.is_windows:
-                self.cxx.link_flags += ['-lmsvcrtd']
+                debug_suffix = 'd' if self.debug_build else ''
+                self.cxx.link_flags += ['-lmsvcrt%s' % debug_suffix]
         else:
             self.lit_config.fatal(
                 'C++ ABI setting %s unsupported for tests' % cxx_abi)
@@ -712,33 +725,35 @@ class Configuration(object):
                 ['c++11', 'c++14', 'c++1z'])) != 0
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
-        if enable_warnings:
-            self.cxx.useWarnings(True)
-            self.cxx.warning_flags += [
-                '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
-                '-Wall', '-Wextra', '-Werror'
-            ]
-            self.cxx.addWarningFlagIfSupported('-Wshadow')
-            self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
-            self.cxx.addWarningFlagIfSupported('-Wno-attributes')
-            self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
-            self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
-            self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
-            # These warnings should be enabled in order to support the MSVC
-            # team using the test suite; They enable the warnings below and
-            # expect the test suite to be clean.
-            self.cxx.addWarningFlagIfSupported('-Wsign-compare')
-            self.cxx.addWarningFlagIfSupported('-Wunused-variable')
-            self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
-            self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
-            # FIXME: Enable the two warnings below.
-            self.cxx.addWarningFlagIfSupported('-Wno-conversion')
+        self.cxx.useWarnings(enable_warnings)
+        self.cxx.warning_flags += [
+            '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
+            '-Wall', '-Wextra', '-Werror'
+        ]
+        if self.cxx.hasWarningFlag('-Wuser-defined-warnings'):
+            self.cxx.warning_flags += ['-Wuser-defined-warnings']
+            self.config.available_features.add('diagnose-if-support')
+        self.cxx.addWarningFlagIfSupported('-Wshadow')
+        self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
+        self.cxx.addWarningFlagIfSupported('-Wno-attributes')
+        self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
+        self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
+        self.cxx.addWarningFlagIfSupported('-Wno-user-defined-literals')
+        # These warnings should be enabled in order to support the MSVC
+        # team using the test suite; They enable the warnings below and
+        # expect the test suite to be clean.
+        self.cxx.addWarningFlagIfSupported('-Wsign-compare')
+        self.cxx.addWarningFlagIfSupported('-Wunused-variable')
+        self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
+        self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
+        # FIXME: Enable the two warnings below.
+        self.cxx.addWarningFlagIfSupported('-Wno-conversion')
+        self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
+        std = self.get_lit_conf('std', None)
+        if std in ['c++98', 'c++03']:
+            # The '#define static_assert' provided by libc++ in C++03 mode
+            # causes an unused local typedef whenever it is used.
             self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
-            std = self.get_lit_conf('std', None)
-            if std in ['c++98', 'c++03']:
-                # The '#define static_assert' provided by libc++ in C++03 mode
-                # causes an unused local typedef whenever it is used.
-                self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
 
     def configure_sanitizer(self):
         san = self.get_lit_conf('use_sanitizer', '').strip()

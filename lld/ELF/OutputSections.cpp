@@ -139,6 +139,13 @@ void OutputSection<ELFT>::addSection(InputSectionData *C) {
     this->Entsize = S->Entsize;
 }
 
+template <class ELFT>
+void OutputSection<ELFT>::forEachInputSection(
+    std::function<void(InputSectionData *)> F) {
+  for (InputSection<ELFT> *S : Sections)
+    F(S);
+}
+
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
 template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
@@ -264,6 +271,13 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 EhOutputSection<ELFT>::EhOutputSection()
     : OutputSectionBase(".eh_frame", SHT_PROGBITS, SHF_ALLOC) {}
+
+template <class ELFT>
+void EhOutputSection<ELFT>::forEachInputSection(
+    std::function<void(InputSectionData *)> F) {
+  for (EhInputSection<ELFT> *S : Sections)
+    F(S);
+}
 
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents

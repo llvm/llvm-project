@@ -81,6 +81,7 @@ public:
   OutputSectionBase *FirstInPtLoad = nullptr;
 
   virtual void finalize() {}
+  virtual void forEachInputSection(std::function<void(InputSectionData *)> F) {}
   virtual void assignOffsets() {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
@@ -116,6 +117,7 @@ public:
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
+  void forEachInputSection(std::function<void(InputSectionData *)> F) override;
   void assignOffsets() override;
   Kind getKind() const override { return Regular; }
   static bool classof(const OutputSectionBase *B) {
@@ -168,6 +170,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
   bool empty() const { return Sections.empty(); }
+  void forEachInputSection(std::function<void(InputSectionData *)> F) override;
 
   void addSection(InputSectionData *S) override;
   Kind getKind() const override { return EHFrame; }

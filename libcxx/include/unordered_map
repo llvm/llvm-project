@@ -379,9 +379,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _Cp, class _Hash,
-          bool = is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value
-         >
+template <class _Key, class _Cp, class _Hash, bool _IsEmpty>
 class __unordered_map_hasher
     : private _Hash
 {
@@ -449,9 +447,7 @@ swap(__unordered_map_hasher<_Key, _Cp, _Hash, __b>& __x,
     __x.swap(__y);
 }
 
-template <class _Key, class _Cp, class _Pred,
-          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
-         >
+template <class _Key, class _Cp, class _Pred, bool _IsEmpty>
 class __unordered_map_equal
     : private _Pred
 {

@@ -182,22 +182,23 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
     return nullptr;
 
   return S->getScopArrayInfo(OriginBaseSCEVUnknown->getValue(),
-                             ScopArrayInfo::MK_Array);
+                             MemoryKind::Array);
 }
 
 ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
-                             ArrayRef<const SCEV *> Sizes, enum MemoryKind Kind,
+                             ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
                              const DataLayout &DL, Scop *S,
                              const char *BaseName)
     : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S) {
   std::string BasePtrName =
-      BaseName ? BaseName : getIslCompatibleName("MemRef_", BasePtr,
-                                                 Kind == MK_PHI ? "__phi" : "");
+      BaseName ? BaseName
+               : getIslCompatibleName("MemRef_", BasePtr,
+                                      Kind == MemoryKind::PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
 
-  if (!BasePtr || Kind != MK_Array) {
+  if (!BasePtr || Kind != MemoryKind::Array) {
     BasePtrOriginSAI = nullptr;
     return;
   }
@@ -884,7 +885,7 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
                            Type *ElementType, bool Affine,
                            ArrayRef<const SCEV *> Subscripts,
                            ArrayRef<const SCEV *> Sizes, Value *AccessValue,
-                           ScopArrayInfo::MemoryKind Kind, StringRef BaseName)
+                           MemoryKind Kind, StringRef BaseName)
     : Kind(Kind), AccType(AccType), RedType(RT_NONE), Statement(Stmt),
       InvalidDomain(nullptr), BaseAddr(BaseAddress), BaseName(BaseName),
       ElementType(ElementType), Sizes(Sizes.begin(), Sizes.end()),
@@ -901,10 +902,9 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
 
 MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
                            __isl_take isl_map *AccRel)
-    : Kind(ScopArrayInfo::MemoryKind::MK_Array), AccType(AccType),
-      RedType(RT_NONE), Statement(Stmt), InvalidDomain(nullptr),
-      AccessInstruction(nullptr), IsAffine(true), AccessRelation(nullptr),
-      NewAccessRelation(AccRel) {
+    : Kind(MemoryKind::Array), AccType(AccType), RedType(RT_NONE),
+      Statement(Stmt), InvalidDomain(nullptr), AccessInstruction(nullptr),
+      IsAffine(true), AccessRelation(nullptr), NewAccessRelation(AccRel) {
   auto *ArrayInfoId = isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
   auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
   Sizes.push_back(nullptr);
@@ -1146,15 +1146,15 @@ void ScopStmt::buildAccessRelations() {
   for (MemoryAccess *Access : MemAccs) {
     Type *ElementType = Access->getElementType();
 
-    ScopArrayInfo::MemoryKind Ty;
+    MemoryKind Ty;
     if (Access->isPHIKind())
-      Ty = ScopArrayInfo::MK_PHI;
+      Ty = MemoryKind::PHI;
     else if (Access->isExitPHIKind())
-      Ty = ScopArrayInfo::MK_ExitPHI;
+      Ty = MemoryKind::ExitPHI;
     else if (Access->isValueKind())
-      Ty = ScopArrayInfo::MK_Value;
+      Ty = MemoryKind::Value;
     else
-      Ty = ScopArrayInfo::MK_Array;
+      Ty = MemoryKind::Array;
 
     auto *SAI = S.getOrCreateScopArrayInfo(Access->getBaseAddr(), ElementType,
                                            Access->Sizes, Ty);
@@ -1734,12 +1734,12 @@ void ScopStmt::print(raw_ostream &OS) const {
 void ScopStmt::dump() const { print(dbgs()); }
 
 void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
-  // Remove the memory accesses from this statement
-  // together with all scalar accesses that were caused by it.
-  // MK_Value READs have no access instruction, hence would not be removed by
-  // this function. However, it is only used for invariant LoadInst accesses,
-  // its arguments are always affine, hence synthesizable, and therefore there
-  // are no MK_Value READ accesses to be removed.
+  // Remove the memory accesses from this statement together with all scalar
+  // accesses that were caused by it. MemoryKind::Value READs have no access
+  // instruction, hence would not be removed by this function. However, it is
+  // only used for invariant LoadInst accesses, its arguments are always affine,
+  // hence synthesizable, and therefore there are no MemoryKind::Value READ
+  // accesses to be removed.
   auto Predicate = [&](MemoryAccess *Acc) {
     return Acc->getAccessInstruction() == MA->getAccessInstruction();
   };
@@ -3344,7 +3344,7 @@ void Scop::updateAccessDimensionality() {
       if (!Access->isArrayKind())
         continue;
       auto &SAI = ScopArrayInfoMap[std::make_pair(Access->getBaseAddr(),
-                                                  ScopArrayInfo::MK_Array)];
+                                                  MemoryKind::Array)];
       if (SAI->getNumberOfDimensions() != 1)
         continue;
       unsigned DivisibleSize = SAI->getElemSizeInBytes();
@@ -3688,9 +3688,10 @@ void Scop::hoistInvariantLoads() {
   isl_union_map_free(Writes);
 }
 
-const ScopArrayInfo *Scop::getOrCreateScopArrayInfo(
-    Value *BasePtr, Type *ElementType, ArrayRef<const SCEV *> Sizes,
-    ScopArrayInfo::MemoryKind Kind, const char *BaseName) {
+const ScopArrayInfo *
+Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
+                               ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
+                               const char *BaseName) {
   assert((BasePtr || BaseName) &&
          "BasePtr and BaseName can not be nullptr at the same time.");
   assert(!(BasePtr && BaseName) && "BaseName is redundant.");
@@ -3723,14 +3724,12 @@ Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
     else
       SCEVSizes.push_back(nullptr);
 
-  auto *SAI =
-      getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,
-                               ScopArrayInfo::MK_Array, BaseName.c_str());
+  auto *SAI = getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,
+                                       MemoryKind::Array, BaseName.c_str());
   return SAI;
 }
 
-const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr,
-                                            ScopArrayInfo::MemoryKind Kind) {
+const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, MemoryKind Kind) {
   auto *SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)].get();
   assert(SAI && "No ScopArrayInfo available for this base pointer");
   return SAI;

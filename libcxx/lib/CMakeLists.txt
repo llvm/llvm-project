@@ -102,7 +102,25 @@ endif()
 if (NOT WIN32)
   add_flags_if_supported(-fPIC)
 endif()
+
 add_link_flags_if_supported(-nodefaultlibs)
+
+if (LIBCXX_TARGETING_MSVC)
+  if (LIBCXX_DEBUG_BUILD)
+    set(LIB_SUFFIX "d")
+  else()
+    set(LIB_SUFFIX "")
+  endif()
+  add_compile_flags(/Zl)
+  add_link_flags(/nodefaultlib)
+
+  add_library_flags(ucrt${LIB_SUFFIX}) # Universal C runtime
+  add_library_flags(vcruntime${LIB_SUFFIX}) # C++ runtime
+  add_library_flags(msvcrt${LIB_SUFFIX}) # C runtime startup files
+  # Required for standards-complaint wide character formatting functions
+  # (e.g. `printfw`/`scanfw`)
+  add_library_flags(iso_stdio_wide_specifiers)
+endif()
 
 if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
@@ -229,7 +247,8 @@ if (LIBCXX_ENABLE_STATIC)
     if (LIBCXX_CXX_ABI_LIBRARY_PATH)
       set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
     endif()
-    if (TARGET ${LIBCXX_CXX_ABI_LIBRARY})
+    if ((TARGET ${LIBCXX_CXX_ABI_LIBRARY}) OR
+        (${LIBCXX_CXX_ABI_LIBRARY} STREQUAL "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI))
       set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_ABI_LIBRARY}>")
     else()
       set(MERGE_ARCHIVES_ABI_TARGET
@@ -300,7 +319,9 @@ if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   set(LIBCXX_INTERFACE_LIBRARY_NAMES)
   foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
     # FIXME: Handle cxxabi_static and unwind_static.
-    if (TARGET ${lib})
+    if (TARGET ${lib} OR
+        (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
+        (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
     else()
       list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")

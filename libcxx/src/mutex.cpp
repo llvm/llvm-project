@@ -37,7 +37,7 @@ mutex::lock()
 bool
 mutex::try_lock() _NOEXCEPT
 {
-    return __libcpp_mutex_trylock(&__m_) == 0;
+    return __libcpp_mutex_trylock(&__m_);
 }
 
 void
@@ -83,7 +83,7 @@ recursive_mutex::unlock() _NOEXCEPT
 bool
 recursive_mutex::try_lock() _NOEXCEPT
 {
-    return __libcpp_recursive_mutex_trylock(&__m_) == 0;
+    return __libcpp_recursive_mutex_trylock(&__m_);
 }
 
 // timed_mutex

@@ -102,7 +102,7 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m);
@@ -114,7 +114,7 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_mutex_lock(__libcpp_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m);
@@ -221,9 +221,9 @@ int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m)
   return pthread_mutex_lock(__m);
 }
 
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
 {
-  return pthread_mutex_trylock(__m);
+  return pthread_mutex_trylock(__m) == 0;
 }
 
 int __libcpp_recursive_mutex_unlock(__libcpp_mutex_t *__m)
@@ -241,9 +241,9 @@ int __libcpp_mutex_lock(__libcpp_mutex_t *__m)
   return pthread_mutex_lock(__m);
 }
 
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
 {
-  return pthread_mutex_trylock(__m);
+  return pthread_mutex_trylock(__m) == 0;
 }
 
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m)
@@ -371,10 +371,9 @@ int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m)
   return 0;
 }
 
-int __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
+bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m)
 {
-  TryEnterCriticalSection(__m);
-  return 0;
+  return TryEnterCriticalSection(__m) != 0;
 }
 
 int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m)
@@ -395,10 +394,9 @@ int __libcpp_mutex_lock(__libcpp_mutex_t *__m)
   return 0;
 }
 
-int __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
+bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m)
 {
-  TryAcquireSRWLockExclusive(__m);
-  return 0;
+  return TryAcquireSRWLockExclusive(__m) != 0;
 }
 
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m)
@@ -497,25 +495,28 @@ struct __libcpp_beginthreadex_thunk_data
   void *__arg;
 };
 
-static inline _LIBCPP_ALWAYS_INLINE unsigned int WINAPI
-__libcpp_beginthreadex_thunk(void *__data)
+static inline _LIBCPP_ALWAYS_INLINE unsigned WINAPI
+__libcpp_beginthreadex_thunk(void *__raw_data)
 {
-  __libcpp_beginthreadex_thunk_data data =
-      *reinterpret_cast<__libcpp_beginthreadex_thunk_data *>(__data);
-  delete reinterpret_cast<__libcpp_beginthreadex_thunk_data *>(__data);
-  return reinterpret_cast<unsigned int>(data.__func(data.__arg));
+  auto *__data =
+      static_cast<__libcpp_beginthreadex_thunk_data *>(__raw_data);
+  auto *__func = __data->__func;
+  void *__arg = __data->__arg;
+  delete __data;
+  return static_cast<unsigned>(reinterpret_cast<uintptr_t>(__func(__arg)));
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
-  auto *data = new __libcpp_beginthreadex_thunk_data;
-  data->__func = __func;
-  data->__arg = __arg;
+  auto *__data = new __libcpp_beginthreadex_thunk_data;
+  __data->__func = __func;
+  __data->__arg = __arg;
 
-  *__t = reinterpret_cast<HANDLE>(_beginthreadex(NULL, 0,
+  *__t = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0,
                                                  __libcpp_beginthreadex_thunk,
-                                                 data, 0, NULL));
+                                                 __data, 0, nullptr));
+
   if (*__t)
     return 0;
   return GetLastError();

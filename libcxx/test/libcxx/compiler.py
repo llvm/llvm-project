@@ -287,7 +287,8 @@ class CXXCompiler(object):
         # TODO(EricWF): Are there other flags we need to worry about?
         if '-v' in cmd:
             cmd.remove('-v')
-        out, err, rc = lit.util.executeCommand(cmd, input='#error\n')
+        out, err, rc = lit.util.executeCommand(
+            cmd, input=lit.util.to_bytes('#error\n'))
 
         assert rc != 0
         if flag in err:
@@ -296,7 +297,7 @@ class CXXCompiler(object):
 
     def addWarningFlagIfSupported(self, flag):
         if self.hasWarningFlag(flag):
-            assert flag not in self.warning_flags
-            self.warning_flags += [flag]
+            if flag not in self.warning_flags:
+                self.warning_flags += [flag]
             return True
         return False
