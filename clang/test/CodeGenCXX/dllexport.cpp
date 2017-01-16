@@ -732,12 +732,26 @@ USEMEMFUNC(ExplicitInstantiationDeclExportedDefTemplate<int>, f);
 // M32-DAG: define weak_odr dllexport x86_thiscallcc %struct.ExplicitInstantiationDeclExportedDefTemplate* @"\01??0?$ExplicitInstantiationDeclExportedDefTemplate@H@@QAE@XZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN44ExplicitInstantiationDeclExportedDefTemplateIiE1fEv
 
-template <typename T> struct ImplicitInstantiationExplicitInstantiationDefExportedTemplate { void f() {} };
+template <typename T> struct ImplicitInstantiationExportedExplicitInstantiationDefTemplate { virtual void f() {} };
+ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int> ImplicitInstantiationExportedExplicitInstantiationDefTemplateInstance;
+template struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int>;
+USEMEMFUNC(ImplicitInstantiationExportedExplicitInstantiationDefTemplate<int>, f);
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExportedExplicitInstantiationDefTemplate@H@@UAEXXZ"
+// G32-DAG: define weak_odr x86_thiscallcc void @_ZN61ImplicitInstantiationExportedExplicitInstantiationDefTemplateIiE1fEv
+
+template <typename T> struct __declspec(dllexport) ImplicitInstantiationExplicitInstantiationDefExportedTemplate { virtual void f() {} };
 ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int> ImplicitInstantiationExplicitInstantiationDefExportedTemplateInstance;
-template class __declspec(dllexport) ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int>;
+template struct ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int>;
 USEMEMFUNC(ImplicitInstantiationExplicitInstantiationDefExportedTemplate<int>, f);
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExplicitInstantiationDefExportedTemplate@H@@QAEXXZ"
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExplicitInstantiationDefExportedTemplate@H@@UAEXXZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN61ImplicitInstantiationExplicitInstantiationDefExportedTemplateIiE1fEv
+
+template <typename T> struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate { virtual void f() {} };
+ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int> ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplateInstance;
+template struct __declspec(dllexport) ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int>;
+USEMEMFUNC(ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate<int>, f);
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplate@H@@UAEXXZ"
+// G32-DAG: define weak_odr x86_thiscallcc void @_ZN69ImplicitInstantiationExportedExplicitInstantiationDefExportedTemplateIiE1fEv
 
 namespace { struct InternalLinkageType {}; }
 struct __declspec(dllexport) PR23308 {

@@ -535,7 +535,7 @@
 // RUN:     -fno-ms-compatibility \
 // RUN:     -fms-extensions \
 // RUN:     -fno-ms-extensions \
-// RUN:     -mllvm -disable-llvm-passes \
+// RUN:     -Xclang -disable-llvm-passes \
 // RUN:     -resource-dir asdf \
 // RUN:     -resource-dir=asdf \
 // RUN:     -Wunused-variable \

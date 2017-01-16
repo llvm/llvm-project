@@ -31,7 +31,7 @@ namespace dr1315 { // dr1315: partial
   // expected-error@-1 {{type of specialized non-type template argument depends on a template parameter of the partial specialization}}
 }
 
-namespace dr1330 { // dr1330: 4.0 c++11
+namespace dr1330 { // dr1330: 4 c++11
   // exception-specifications are parsed in a context where the class is complete.
   struct A {
     void f() throw(T) {} // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
@@ -175,7 +175,7 @@ namespace dr1359 { // dr1359: 3.5
 #endif
 }
 
-namespace dr1388 { // dr1388: 4.0
+namespace dr1388 { // dr1388: 4
   template<typename A, typename ...T> void f(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
   template<typename ...T> void g(T..., int); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
   template<typename ...T, typename A> void h(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
