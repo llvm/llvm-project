@@ -51,6 +51,7 @@ Major New Features
   Clang devirtualizes across different basic blocks, like loops:
 
   .. code-block:: c++
+
        struct A {
            virtual void foo();
        };
