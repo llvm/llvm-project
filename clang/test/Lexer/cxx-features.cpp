@@ -9,7 +9,6 @@
 
 // expected-no-diagnostics
 
-// FIXME using `defined` in a macro has undefined behavior.
 #if __cplusplus < 201103L
 #define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx98 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx98
 #elif __cplusplus < 201402L

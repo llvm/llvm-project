@@ -679,13 +679,6 @@ def warn_header_guard : Warning<
 def note_header_guard : Note<
   "%0 is defined here; did you mean %1?">;
 
-def warn_defined_in_object_type_macro : Warning<
-  "macro expansion producing 'defined' has undefined behavior">,
-  InGroup<ExpansionToUndefined>;
-def warn_defined_in_function_type_macro : Extension<
-  "macro expansion producing 'defined' has undefined behavior">,
-  InGroup<ExpansionToUndefined>;
-
 let CategoryName = "Nullability Issue" in {
 
 def err_pp_assume_nonnull_syntax : Error<"expected 'begin' or 'end'">;
