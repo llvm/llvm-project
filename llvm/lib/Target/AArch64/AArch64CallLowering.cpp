@@ -97,7 +97,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
                      CCAssignFn *AssignFnVarArg)
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
-        AssignFnVarArg(AssignFnVarArg) {}
+        AssignFnVarArg(AssignFnVarArg), StackSize(0) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -113,6 +113,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
+    StackSize = std::max(StackSize, Size + Offset);
     return AddrReg;
   }
 
@@ -141,6 +142,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
 
   MachineInstrBuilder MIB;
   CCAssignFn *AssignFnVarArg;
+  uint64_t StackSize;
 };
 
 void AArch64CallLowering::splitToValueTypes(
@@ -275,6 +277,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFnVarArg =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/true);
 
+  auto CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
+
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
   auto MIB = MIRBuilder.buildInstrNoInsert(Callee.isReg() ? AArch64::BLR
@@ -328,6 +332,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!RegOffsets.empty())
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
   }
+
+  CallSeqStart.addImm(Handler.StackSize);
+  MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
+      .addImm(Handler.StackSize)
+      .addImm(0);
 
   return true;
 }
