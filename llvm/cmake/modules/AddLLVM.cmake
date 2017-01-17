@@ -462,11 +462,9 @@ function(llvm_add_library name)
     if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
       set_target_properties(${name}
         PROPERTIES
-		# Concatenate the version numbers since ldconfig expects exactly
-		# one component indicating the ABI version, while LLVM uses
-		# major+minor for that.
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
+        # Since 4.0.0, the ABI version is indicated by the major version
+        SOVERSION ${LLVM_VERSION_MAJOR}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 
