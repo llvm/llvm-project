@@ -791,7 +791,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
     return true;
 
   Triple TT(M.getTargetTriple());
-  if (!TT.isOSBinFormatELF())
+  if (!TT.isOSBinFormatELF() && !TT.isOSBinFormatWasm())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile
