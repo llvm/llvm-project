@@ -916,54 +916,54 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::nvvm_reflect:
     return (NumParams == 1 && isa<PointerType>(FTy.getParamType(0)));
 
-  case LibFunc::sin:
-  case LibFunc::sinf:
-  case LibFunc::sinl:
+  case LibFunc::ceil:
+  case LibFunc::ceilf:
+  case LibFunc::ceill:
   case LibFunc::cos:
   case LibFunc::cosf:
   case LibFunc::cosl:
-  case LibFunc::tan:
-  case LibFunc::tanf:
-  case LibFunc::tanl:
-  case LibFunc::exp:
-  case LibFunc::expf:
-  case LibFunc::expl:
   case LibFunc::exp2:
   case LibFunc::exp2f:
   case LibFunc::exp2l:
-  case LibFunc::log:
-  case LibFunc::logf:
-  case LibFunc::logl:
-  case LibFunc::log10:
-  case LibFunc::log10f:
-  case LibFunc::log10l:
-  case LibFunc::log2:
-  case LibFunc::log2f:
-  case LibFunc::log2l:
+  case LibFunc::exp:
+  case LibFunc::expf:
+  case LibFunc::expl:
   case LibFunc::fabs:
   case LibFunc::fabsf:
   case LibFunc::fabsl:
   case LibFunc::floor:
   case LibFunc::floorf:
   case LibFunc::floorl:
-  case LibFunc::ceil:
-  case LibFunc::ceilf:
-  case LibFunc::ceill:
-  case LibFunc::trunc:
-  case LibFunc::truncf:
-  case LibFunc::truncl:
-  case LibFunc::rint:
-  case LibFunc::rintf:
-  case LibFunc::rintl:
+  case LibFunc::log10:
+  case LibFunc::log10f:
+  case LibFunc::log10l:
+  case LibFunc::log2:
+  case LibFunc::log2f:
+  case LibFunc::log2l:
+  case LibFunc::log:
+  case LibFunc::logf:
+  case LibFunc::logl:
   case LibFunc::nearbyint:
   case LibFunc::nearbyintf:
   case LibFunc::nearbyintl:
+  case LibFunc::rint:
+  case LibFunc::rintf:
+  case LibFunc::rintl:
   case LibFunc::round:
   case LibFunc::roundf:
   case LibFunc::roundl:
+  case LibFunc::sin:
+  case LibFunc::sinf:
+  case LibFunc::sinl:
   case LibFunc::sqrt:
   case LibFunc::sqrtf:
   case LibFunc::sqrtl:
+  case LibFunc::tan:
+  case LibFunc::tanf:
+  case LibFunc::tanl:
+  case LibFunc::trunc:
+  case LibFunc::truncf:
+  case LibFunc::truncl:
     return (NumParams == 1 && FTy.getReturnType()->isFloatingPointTy() &&
             FTy.getReturnType() == FTy.getParamType(0));
 
