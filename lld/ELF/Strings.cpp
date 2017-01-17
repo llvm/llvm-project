@@ -91,9 +91,9 @@ bool elf::isValidCIdentifier(StringRef S) {
 
 // Returns the demangled C++ symbol name for Name.
 Optional<std::string> elf::demangle(StringRef Name) {
-  // __cxa_demangle can be used to demangle strings other than symbol
+  // itaniumDemangle can be used to demangle strings other than symbol
   // names which do not necessarily start with "_Z". Name can be
-  // either a C or C++ symbol. Don't call __cxa_demangle if the name
+  // either a C or C++ symbol. Don't call itaniumDemangle if the name
   // does not look like a C++ symbol name to avoid getting unexpected
   // result for a C symbol that happens to match a mangled type name.
   if (!Name.startswith("_Z"))

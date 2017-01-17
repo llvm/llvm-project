@@ -140,6 +140,7 @@ class LibcxxTestFormat(object):
                 # We can't run ShTest tests with a executor yet.
                 # For now, bail on trying to run them
                 return lit.Test.UNSUPPORTED, 'ShTest format not yet supported'
+            test.config.enviroment = dict(self.exec_env)
             return lit.TestRunner._runShTest(test, lit_config,
                                              self.execute_external, script,
                                              tmpBase)

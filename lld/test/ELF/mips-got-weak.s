@@ -47,16 +47,16 @@
 # NOSYM-NEXT: 0x70000013 MIPS_GOTSYM          0x1
 
 # NOSYM:      Primary GOT {
-# NOSYM-NEXT:   Canonical gp value: 0x37FF0
+# NOSYM-NEXT:   Canonical gp value:
 # NOSYM-NEXT:   Reserved entries [
 # NOSYM-NEXT:     Entry {
-# NOSYM-NEXT:       Address: 0x30000
+# NOSYM-NEXT:       Address:
 # NOSYM-NEXT:       Access: -32752
 # NOSYM-NEXT:       Initial: 0x0
 # NOSYM-NEXT:       Purpose: Lazy resolver
 # NOSYM-NEXT:     }
 # NOSYM-NEXT:     Entry {
-# NOSYM-NEXT:       Address: 0x30004
+# NOSYM-NEXT:       Address:
 # NOSYM-NEXT:       Access: -32748
 # NOSYM-NEXT:       Initial: 0x80000000
 # NOSYM-NEXT:       Purpose: Module pointer (GNU extension)
@@ -66,7 +66,7 @@
 # NOSYM-NEXT:   ]
 # NOSYM-NEXT:   Global entries [
 # NOSYM-NEXT:     Entry {
-# NOSYM-NEXT:       Address: 0x30008
+# NOSYM-NEXT:       Address:
 # NOSYM-NEXT:       Access: -32744
 # NOSYM-NEXT:       Initial: 0x20000
 # NOSYM-NEXT:       Value: 0x20000
@@ -75,7 +75,7 @@
 # NOSYM-NEXT:       Name: foo
 # NOSYM-NEXT:     }
 # NOSYM-NEXT:     Entry {
-# NOSYM-NEXT:       Address: 0x3000C
+# NOSYM-NEXT:       Address:
 # NOSYM-NEXT:       Access: -32740
 # NOSYM-NEXT:       Initial: 0x0
 # NOSYM-NEXT:       Value: 0x0
@@ -84,7 +84,7 @@
 # NOSYM-NEXT:       Name: bar
 # NOSYM-NEXT:     }
 # NOSYM-NEXT:     Entry {
-# NOSYM-NEXT:       Address: 0x30010
+# NOSYM-NEXT:       Address:
 # NOSYM-NEXT:       Access: -32736
 # NOSYM-NEXT:       Initial: 0x20004
 # NOSYM-NEXT:       Value: 0x20004
@@ -115,16 +115,16 @@
 # SYM-NEXT: 0x70000013 MIPS_GOTSYM          0x3
 
 # SYM:      Primary GOT {
-# SYM-NEXT:   Canonical gp value: 0x37FF0
+# SYM-NEXT:   Canonical gp value:
 # SYM-NEXT:   Reserved entries [
 # SYM-NEXT:     Entry {
-# SYM-NEXT:       Address: 0x30000
+# SYM-NEXT:       Address:
 # SYM-NEXT:       Access: -32752
 # SYM-NEXT:       Initial: 0x0
 # SYM-NEXT:       Purpose: Lazy resolver
 # SYM-NEXT:     }
 # SYM-NEXT:     Entry {
-# SYM-NEXT:       Address: 0x30004
+# SYM-NEXT:       Address:
 # SYM-NEXT:       Access: -32748
 # SYM-NEXT:       Initial: 0x80000000
 # SYM-NEXT:       Purpose: Module pointer (GNU extension)
@@ -132,19 +132,19 @@
 # SYM-NEXT:   ]
 # SYM-NEXT:   Local entries [
 # SYM-NEXT:     Entry {
-# SYM-NEXT:       Address: 0x30008
+# SYM-NEXT:       Address:
 # SYM-NEXT:       Access: -32744
 # SYM-NEXT:       Initial: 0x20000
 # SYM-NEXT:     }
 # SYM-NEXT:     Entry {
-# SYM-NEXT:       Address: 0x3000C
+# SYM-NEXT:       Address:
 # SYM-NEXT:       Access: -32740
 # SYM-NEXT:       Initial: 0x20004
 # SYM-NEXT:     }
 # SYM-NEXT:   ]
 # SYM-NEXT:   Global entries [
 # SYM-NEXT:     Entry {
-# SYM-NEXT:       Address: 0x30010
+# SYM-NEXT:       Address:
 # SYM-NEXT:       Access: -32736
 # SYM-NEXT:       Initial: 0x0
 # SYM-NEXT:       Value: 0x0

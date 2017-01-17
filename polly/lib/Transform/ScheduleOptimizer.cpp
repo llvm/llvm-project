@@ -174,10 +174,12 @@ static cl::opt<int> FirstLevelDefaultTileSize(
              " --polly-tile-sizes)"),
     cl::Hidden, cl::init(32), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::list<int> FirstLevelTileSizes(
-    "polly-tile-sizes", cl::desc("A tile size for each loop dimension, filled "
+static cl::list<int>
+    FirstLevelTileSizes("polly-tile-sizes",
+                        cl::desc("A tile size for each loop dimension, filled "
                                  "with --polly-default-tile-size"),
-    cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+                        cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
+                        cl::cat(PollyCategory));
 
 static cl::opt<bool>
     SecondLevelTiling("polly-2nd-level-tiling",
@@ -1064,8 +1066,9 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(
     return true;
   auto *NewScheduleMap = isl_schedule_get_map(NewSchedule);
   isl_union_map *OldSchedule = S.getSchedule();
-  assert(OldSchedule && "Only IslScheduleOptimizer can insert extension nodes "
-                        "that make Scop::getSchedule() return nullptr.");
+  assert(OldSchedule &&
+         "Only IslScheduleOptimizer can insert extension nodes "
+         "that make Scop::getSchedule() return nullptr.");
   bool changed = !isl_union_map_is_equal(OldSchedule, NewScheduleMap);
   isl_union_map_free(OldSchedule);
   isl_union_map_free(NewScheduleMap);

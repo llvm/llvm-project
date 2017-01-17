@@ -18,6 +18,7 @@
 #   abidirs   : A list of relative paths to create under an include directory
 #               in the libc++ build directory.
 #
+
 macro(setup_abi_lib abidefines abilib abifiles abidirs)
   list(APPEND LIBCXX_COMPILE_FLAGS ${abidefines})
   set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_CXX_ABI_INCLUDE_PATHS}"
@@ -32,11 +33,10 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
   set(LIBCXX_ABILIB_FILES ${abifiles})
 
   # The place in the build tree where we store out-of-source headers.
-  set(LIBCXX_BUILD_HEADERS_ROOT "${CMAKE_BINARY_DIR}/include/c++-build")
   file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}")
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/c++/v1")
   foreach(_d ${abidirs})
-    file(MAKE_DIRECTORY "${LIBCXX_BUILD_HEADERS_ROOT}/${_d}")
+    file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}/${_d}")
     file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/include/c++/v1/${_d}")
   endforeach()
 
@@ -48,19 +48,19 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
         get_filename_component(dstdir ${fpath} PATH)
         get_filename_component(ifile ${fpath} NAME)
         file(COPY "${incpath}/${fpath}"
-          DESTINATION "${LIBCXX_BUILD_HEADERS_ROOT}/${dstdir}"
+          DESTINATION "${LIBCXX_BINARY_INCLUDE_DIR}/${dstdir}"
           )
         file(COPY "${incpath}/${fpath}"
           DESTINATION "${CMAKE_BINARY_DIR}/include/c++/v1/${dstdir}"
           )
         if (LIBCXX_INSTALL_HEADERS)
-          install(FILES "${LIBCXX_BUILD_HEADERS_ROOT}/${fpath}"
+          install(FILES "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}"
             DESTINATION include/c++/v1/${dstdir}
             COMPONENT libcxx
             PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
             )
         endif()
-        list(APPEND abilib_headers "${LIBCXX_BUILD_HEADERS_ROOT}/${fpath}")
+        list(APPEND abilib_headers "${LIBCXX_BINARY_INCLUDE_DIR}/${fpath}")
       endif()
     endforeach()
     if (NOT found)
@@ -68,7 +68,7 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
     endif()
   endforeach()
 
-  include_directories("${LIBCXX_BUILD_HEADERS_ROOT}")
+  include_directories("${LIBCXX_BINARY_INCLUDE_DIR}")
 endmacro()
 
 
@@ -110,6 +110,8 @@ elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxrt")
   setup_abi_lib("-DLIBCXXRT"
     "cxxrt" "cxxabi.h;unwind.h;unwind-arm.h;unwind-itanium.h" ""
     )
+elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "vcruntime")
+ # Nothing TODO
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "none")
   list(APPEND LIBCXX_COMPILE_FLAGS "-D_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY")
 elseif ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default")

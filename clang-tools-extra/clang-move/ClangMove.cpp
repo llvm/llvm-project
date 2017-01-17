@@ -31,6 +31,8 @@ namespace {
 // FIXME: Move to ASTMatchers.
 AST_MATCHER(VarDecl, isStaticDataMember) { return Node.isStaticDataMember(); }
 
+AST_MATCHER(NamedDecl, notInMacro) { return !Node.getLocation().isMacroID(); }
+
 AST_MATCHER_P(Decl, hasOutermostEnclosingClass,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   const auto *Context = Node.getDeclContext();
@@ -525,12 +527,12 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Matching using decls/type alias decls which are in named/anonymous/global
   // namespace, these decls are always copied to new.h/cc. Those in classes,
   // functions are covered in other matchers.
-  Finder->addMatcher(
-      namedDecl(anyOf(usingDecl(IsOldCCTopLevelDecl),
-                      usingDirectiveDecl(IsOldCCTopLevelDecl),
-                      typeAliasDecl(IsOldCCTopLevelDecl)))
-          .bind("using_decl"),
-      this);
+  Finder->addMatcher(namedDecl(anyOf(usingDecl(IsOldCCTopLevelDecl),
+                                     usingDirectiveDecl(IsOldCCTopLevelDecl),
+                                     typeAliasDecl(IsOldCCTopLevelDecl)),
+                               notInMacro())
+                         .bind("using_decl"),
+                     this);
 
   // Match static functions/variable definitions which are defined in named
   // namespaces.
@@ -556,9 +558,11 @@ void ClangMoveTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
       allOf(DefinitionInOldCC, anyOf(isStaticStorageClass(), InAnonymousNS));
   // Match helper classes separately with helper functions/variables since we
   // want to reuse these matchers in finding helpers usage below.
-  auto HelperFuncOrVar = namedDecl(anyOf(functionDecl(IsOldCCHelperDefinition),
-                                         varDecl(IsOldCCHelperDefinition)));
-  auto HelperClasses = cxxRecordDecl(DefinitionInOldCC, InAnonymousNS);
+  auto HelperFuncOrVar =
+      namedDecl(notInMacro(), anyOf(functionDecl(IsOldCCHelperDefinition),
+                                    varDecl(IsOldCCHelperDefinition)));
+  auto HelperClasses =
+      cxxRecordDecl(notInMacro(), DefinitionInOldCC, InAnonymousNS);
   // Save all helper declarations in old.cc.
   Finder->addMatcher(
       namedDecl(anyOf(HelperFuncOrVar, HelperClasses)).bind("helper_decls"),
@@ -742,10 +746,13 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     // Ignore replacements for new.h/cc.
     if (SI == FilePathToFileID.end()) continue;
     llvm::StringRef Code = SM.getBufferData(SI->second);
-    format::FormatStyle Style =
-        format::getStyle("file", FilePath, Context->FallbackStyle);
+    auto Style = format::getStyle("file", FilePath, Context->FallbackStyle);
+    if (!Style) {
+      llvm::errs() << llvm::toString(Style.takeError()) << "\n";
+      continue;
+    }
     auto CleanReplacements = format::cleanupAroundReplacements(
-        Code, Context->FileToReplacements[FilePath], Style);
+        Code, Context->FileToReplacements[FilePath], *Style);
 
     if (!CleanReplacements) {
       llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";

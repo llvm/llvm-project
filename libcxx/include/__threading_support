@@ -61,6 +61,8 @@ typedef pthread_once_t __libcpp_exec_once_flag;
 typedef pthread_t __libcpp_thread_id;
 
 // Thread
+#define _LIBCPP_NULL_THREAD 0U
+
 typedef pthread_t __libcpp_thread_t;
 
 // Thrad Local Storage
@@ -86,6 +88,8 @@ typedef INIT_ONCE __libcpp_exec_once_flag;
 typedef DWORD __libcpp_thread_id;
 
 // Thread
+#define _LIBCPP_NULL_THREAD 0U
+
 typedef HANDLE __libcpp_thread_t;
 
 // Thread Local Storage
@@ -157,6 +161,9 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2);
 
 // Thread
+_LIBCPP_THREAD_ABI_VISIBILITY
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t);
+
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg);
@@ -309,6 +316,10 @@ bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 }
 
 // Thread
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
+  return *__t == 0;
+}
+
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
                            void *__arg)
 {
@@ -504,6 +515,10 @@ __libcpp_beginthreadex_thunk(void *__raw_data)
   void *__arg = __data->__arg;
   delete __data;
   return static_cast<unsigned>(reinterpret_cast<uintptr_t>(__func(__arg)));
+}
+
+bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
+  return *__t == 0;
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
