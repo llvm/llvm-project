@@ -77,9 +77,9 @@ int outer_weak(int a) { return inner_weak_a(a); }
 // CHECKCC: call arm_aapcs_vfpcc  i32 @inner_weak(i32 %{{.*}})
 // CHECKCC: define internal arm_aapcs_vfpcc i32 @inner_weak(i32 %a) [[NUW]] {
 
-// CHECKBASIC: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECKBASIC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
-// CHECKCC: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECKCC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
 void test8_bar() {}
 void test8_foo() __attribute__((weak, alias("test8_bar")));

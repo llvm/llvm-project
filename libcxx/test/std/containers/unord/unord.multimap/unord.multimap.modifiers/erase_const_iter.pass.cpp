@@ -47,7 +47,10 @@ int main()
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
         C::const_iterator i = c.find(2);
+        C::const_iterator i_next = i;
+        ++i_next;
         C::iterator j = c.erase(i);
+        assert(j == i_next);
 
         assert(c.size() == 5);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
@@ -93,7 +96,10 @@ int main()
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
         C::const_iterator i = c.find(2);
+        C::const_iterator i_next = i;
+        ++i_next;
         C::iterator j = c.erase(i);
+        assert(j == i_next);
 
         assert(c.size() == 5);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;

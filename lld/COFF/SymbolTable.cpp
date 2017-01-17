@@ -345,17 +345,6 @@ SymbolBody *SymbolTable::addUndefined(StringRef Name) {
   return addUndefined(Name, nullptr, false)->body();
 }
 
-void SymbolTable::printMap(llvm::raw_ostream &OS) {
-  for (ObjectFile *File : ObjectFiles) {
-    OS << toString(File) << ":\n";
-    for (SymbolBody *Body : File->getSymbols())
-      if (auto *R = dyn_cast<DefinedRegular>(Body))
-        if (R->getChunk()->isLive())
-          OS << Twine::utohexstr(Config->ImageBase + R->getRVA())
-             << " " << R->getName() << "\n";
-  }
-}
-
 void SymbolTable::addCombinedLTOObjects() {
   if (BitcodeFiles.empty())
     return;

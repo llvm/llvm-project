@@ -584,8 +584,7 @@ Error OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
 }
 
 lldb::OptionValueSP OptionValueProperties::DeepCopy() const {
-  assert(!"this shouldn't happen");
-  return lldb::OptionValueSP();
+  llvm_unreachable("this shouldn't happen");
 }
 
 const Property *OptionValueProperties::GetPropertyAtPath(

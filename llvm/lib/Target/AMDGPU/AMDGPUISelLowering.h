@@ -84,6 +84,7 @@ protected:
   SDValue performCtlzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
                              SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
@@ -313,6 +314,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   SENDMSG,
+  SENDMSGHALT,
   INTERP_MOV,
   INTERP_P1,
   INTERP_P2,

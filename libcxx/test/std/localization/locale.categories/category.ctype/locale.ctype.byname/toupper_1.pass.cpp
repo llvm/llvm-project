@@ -17,7 +17,7 @@
 
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
-// XFAIL: linux
+
 
 #include <locale>
 #include <cassert>
@@ -27,10 +27,11 @@
 int main()
 {
     {
-        std::locale l(LOCALE_en_US_UTF_8);
+        std::locale l;
         {
-            typedef std::ctype<char> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<char> F;
+            std::locale ll(l, new F(LOCALE_en_US_UTF_8));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.toupper(' ') == ' ');
             assert(f.toupper('A') == 'A');
@@ -39,14 +40,15 @@ int main()
             assert(f.toupper('a') == 'A');
             assert(f.toupper('1') == '1');
             assert(f.toupper('\xDA') == '\xDA');
-            assert(f.toupper('\xFA') == '\xDA');
+            assert(f.toupper('c') == 'C');
         }
     }
     {
-        std::locale l("C");
+        std::locale l;
         {
-            typedef std::ctype<char> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<char> F;
+            std::locale ll(l, new F("C"));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.toupper(' ') == ' ');
             assert(f.toupper('A') == 'A');
@@ -59,10 +61,11 @@ int main()
         }
     }
     {
-        std::locale l(LOCALE_en_US_UTF_8);
+        std::locale l;
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F(LOCALE_en_US_UTF_8));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.toupper(L' ') == L' ');
             assert(f.toupper(L'A') == L'A');
@@ -75,10 +78,11 @@ int main()
         }
     }
     {
-        std::locale l("C");
+        std::locale l;
         {
-            typedef std::ctype<wchar_t> F;
-            const F& f = std::use_facet<F>(l);
+            typedef std::ctype_byname<wchar_t> F;
+            std::locale ll(l, new F("C"));
+            const F& f = std::use_facet<F>(ll);
 
             assert(f.toupper(L' ') == L' ');
             assert(f.toupper(L'A') == L'A');

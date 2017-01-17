@@ -7,6 +7,7 @@
 #
 #===----------------------------------------------------------------------===##
 
+import platform
 import os
 
 from libcxx.test import tracing
@@ -34,6 +35,7 @@ class Executor(object):
 class LocalExecutor(Executor):
     def __init__(self):
         super(LocalExecutor, self).__init__()
+        self.is_windows = platform.system() == 'Windows'
 
     def run(self, exe_path, cmd=None, work_dir='.', file_deps=None, env=None):
         cmd = cmd or [exe_path]
@@ -43,9 +45,30 @@ class LocalExecutor(Executor):
             env_cmd += ['%s=%s' % (k, v) for k, v in env.items()]
         if work_dir == '.':
             work_dir = os.getcwd()
-        out, err, rc = executeCommand(env_cmd + cmd, cwd=work_dir)
+        if not self.is_windows:
+            out, err, rc = executeCommand(env_cmd + cmd, cwd=work_dir)
+        else:
+            out, err, rc = executeCommand(cmd, cwd=work_dir,
+                                          env=self._build_windows_env(env))
         return (env_cmd + cmd, out, err, rc)
 
+    def _build_windows_env(self, exec_env):
+        # FIXME: Finding Windows DLL's at runtime requires modifying the
+        #   PATH environment variables. However we don't want to print out
+        #   the entire PATH as part of the diagnostic for every failing test.
+        #   Therefore this hack builds a new executable environment that
+        #   merges the current environment and the supplied environment while
+        #   still only printing the supplied environment in diagnostics.
+        if not self.is_windows or exec_env is None:
+            return None
+        new_env = dict(os.environ)
+        for key, value in exec_env.items():
+            if key == 'PATH':
+                assert value.strip() != '' and "expected non-empty path"
+                new_env['PATH'] = "%s;%s" % (value, os.environ['PATH'])
+            else:
+                new_env[key] = value
+        return new_env
 
 class PrefixExecutor(Executor):
     """Prefix an executor with some other command wrapper.

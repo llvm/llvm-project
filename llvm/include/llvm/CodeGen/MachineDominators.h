@@ -59,6 +59,9 @@ class MachineDominatorTree : public MachineFunctionPass {
   /// such as BB == elt.NewBB.
   mutable SmallSet<MachineBasicBlock *, 32> NewBBs;
 
+  /// The DominatorTreeBase that is used to compute a normal dominator tree
+  DominatorTreeBase<MachineBasicBlock>* DT;
+
   /// \brief Apply all the recorded critical edges to the DT.
   /// This updates the underlying DT information in a way that uses
   /// the fast query path of DT as much as possible.
@@ -68,7 +71,6 @@ class MachineDominatorTree : public MachineFunctionPass {
 
 public:
   static char ID; // Pass ID, replacement for typeid
-  DominatorTreeBase<MachineBasicBlock>* DT;
 
   MachineDominatorTree();
 

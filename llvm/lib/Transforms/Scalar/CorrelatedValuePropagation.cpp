@@ -481,9 +481,14 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
 static bool runImpl(Function &F, LazyValueInfo *LVI) {
   bool FnChanged = false;
 
-  for (BasicBlock &BB : F) {
+  // Visiting in a pre-order depth-first traversal causes us to simplify early
+  // blocks before querying later blocks (which require us to analyze early
+  // blocks).  Eagerly simplifying shallow blocks means there is strictly less
+  // work to do for deep blocks.  This also means we don't visit unreachable
+  // blocks. 
+  for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
     bool BBChanged = false;
-    for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
+    for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
       Instruction *II = &*BI++;
       switch (II->getOpcode()) {
       case Instruction::Select:
@@ -519,7 +524,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI) {
       }
     }
 
-    Instruction *Term = BB.getTerminator();
+    Instruction *Term = BB->getTerminator();
     switch (Term->getOpcode()) {
     case Instruction::Switch:
       BBChanged |= processSwitch(cast<SwitchInst>(Term), LVI);

@@ -216,9 +216,7 @@ bool SystemZElimCompare::convertToBRCT(
     Branch->RemoveOperand(0);
   Branch->setDesc(TII->get(BRCT));
   MachineInstrBuilder MIB(*Branch->getParent()->getParent(), Branch);
-  MIB.addOperand(MI.getOperand(0))
-     .addOperand(MI.getOperand(1))
-     .addOperand(Target);
+  MIB.add(MI.getOperand(0)).add(MI.getOperand(1)).add(Target);
   // Add a CC def to BRCT(G), since we may have to split them again if the
   // branch displacement overflows.  BRCTH has a 32-bit displacement, so
   // this is not necessary there.
@@ -261,10 +259,10 @@ bool SystemZElimCompare::convertToLoadAndTrap(
     Branch->RemoveOperand(0);
   Branch->setDesc(TII->get(LATOpcode));
   MachineInstrBuilder(*Branch->getParent()->getParent(), Branch)
-      .addOperand(MI.getOperand(0))
-      .addOperand(MI.getOperand(1))
-      .addOperand(MI.getOperand(2))
-      .addOperand(MI.getOperand(3));
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(1))
+      .add(MI.getOperand(2))
+      .add(MI.getOperand(3));
   MI.eraseFromParent();
   return true;
 }
@@ -502,15 +500,15 @@ bool SystemZElimCompare::fuseCompareOperations(
   Branch->setDesc(TII->get(FusedOpcode));
   MachineInstrBuilder MIB(*Branch->getParent()->getParent(), Branch);
   for (unsigned I = 0; I < SrcNOps; I++)
-    MIB.addOperand(Compare.getOperand(I));
-  MIB.addOperand(CCMask);
+    MIB.add(Compare.getOperand(I));
+  MIB.add(CCMask);
 
   if (Type == SystemZII::CompareAndBranch) {
     // Only conditional branches define CC, as they may be converted back
     // to a non-fused branch because of a long displacement.  Conditional
     // returns don't have that problem.
-    MIB.addOperand(Target)
-       .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
+    MIB.add(Target).addReg(SystemZ::CC,
+                           RegState::ImplicitDefine | RegState::Dead);
   }
 
   if (Type == SystemZII::CompareAndSibcall)

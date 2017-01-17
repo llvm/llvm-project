@@ -130,6 +130,10 @@ public:
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
       const override;
 
+  void getSMSMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
+      const override;
+
   /// \brief Perform target specific adjustments to the latency of a schedule
   /// dependency.
   void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;

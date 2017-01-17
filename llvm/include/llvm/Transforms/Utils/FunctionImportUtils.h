@@ -40,8 +40,19 @@ class FunctionImportGlobalProcessing {
   /// as part of a different backend compilation process.
   bool HasExportedFunctions = false;
 
+  /// Set of llvm.*used values, in order to validate that we don't try
+  /// to promote any non-renamable values.
+  SmallPtrSet<GlobalValue *, 8> Used;
+
   /// Check if we should promote the given local value to global scope.
   bool shouldPromoteLocalToGlobal(const GlobalValue *SGV);
+
+#ifndef NDEBUG
+  /// Check if the given value is a local that can't be renamed (promoted).
+  /// Only used in assertion checking, and disabled under NDEBUG since the Used
+  /// set will not be populated.
+  bool isNonRenamableLocal(const GlobalValue &GV) const;
+#endif
 
   /// Helper methods to check if we are importing from or potentially
   /// exporting from the current source module.
@@ -82,6 +93,13 @@ public:
     // may be exported to another backend compilation.
     if (!GlobalsToImport)
       HasExportedFunctions = ImportIndex.hasExportedFunctions(M);
+
+#ifndef NDEBUG
+    // First collect those in the llvm.used set.
+    collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
+    // Next collect those in the llvm.compiler.used set.
+    collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ true);
+#endif
   }
 
   bool run();

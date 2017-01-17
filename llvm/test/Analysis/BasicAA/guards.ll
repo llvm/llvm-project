@@ -14,8 +14,8 @@ define void @test1(i8* %P, i8* %Q) {
 
 ; CHECK:  Just Ref:  Ptr: i8* %P	<->  tail call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
 ; CHECK:  Just Ref:  Ptr: i8* %Q	<->  tail call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
-; CHECK:  Both ModRef:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
-; CHECK:  Both ModRef:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+; CHECK:  Just Mod:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+; CHECK:  Just Ref:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 ; CHECK:  Just Ref:   tail call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ] <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 ; CHECK:  Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
 }

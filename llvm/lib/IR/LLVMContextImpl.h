@@ -26,6 +26,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -503,17 +504,26 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
 template <> struct MDNodeKeyImpl<DIFile> {
   MDString *Filename;
   MDString *Directory;
+  DIFile::ChecksumKind CSKind;
+  MDString *Checksum;
 
-  MDNodeKeyImpl(MDString *Filename, MDString *Directory)
-      : Filename(Filename), Directory(Directory) {}
+  MDNodeKeyImpl(MDString *Filename, MDString *Directory,
+                DIFile::ChecksumKind CSKind, MDString *Checksum)
+      : Filename(Filename), Directory(Directory), CSKind(CSKind),
+        Checksum(Checksum) {}
   MDNodeKeyImpl(const DIFile *N)
-      : Filename(N->getRawFilename()), Directory(N->getRawDirectory()) {}
+      : Filename(N->getRawFilename()), Directory(N->getRawDirectory()),
+        CSKind(N->getChecksumKind()), Checksum(N->getRawChecksum()) {}
 
   bool isKeyOf(const DIFile *RHS) const {
     return Filename == RHS->getRawFilename() &&
-           Directory == RHS->getRawDirectory();
+           Directory == RHS->getRawDirectory() &&
+           CSKind == RHS->getChecksumKind() &&
+           Checksum == RHS->getRawChecksum();
   }
-  unsigned getHashValue() const { return hash_combine(Filename, Directory); }
+  unsigned getHashValue() const {
+    return hash_combine(Filename, Directory, CSKind, Checksum);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DISubprogram> {
@@ -1184,6 +1194,12 @@ public:
 
   /// Collection of per-GlobalObject metadata used in this context.
   DenseMap<const GlobalObject *, MDGlobalAttachmentMap> GlobalObjectMetadata;
+
+  /// Collection of per-GlobalObject sections used in this context.
+  DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
+
+  /// Stable collection of section strings.
+  StringSet<> SectionStrings;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to

@@ -79,20 +79,22 @@ target triple = "i686-pc-windows-msvc19.0.23918"
 
 %struct.A = type { i8 }
 
-@"\01?a@@3UA@@A" = global %struct.A zeroinitializer, align 1, !dbg !4
+@"\01?a@@3UA@@A" = global %struct.A zeroinitializer, align 1, !dbg !0
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!8, !9}
-!llvm.ident = !{!10}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!9, !10}
+!llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
-!1 = !DIFile(filename: "hello.cpp", directory: "D:\5Csrc\5Chello")
-!2 = !{}
-!3 = !{!4}
-!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", linkageName: "\01?a@@3UA@@A", scope: !0, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true))
-!5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !1, line: 1, size: 8, align: 8, elements: !6, identifier: ".?AUA@@")
-!6 = !{!7}
-!7 = !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !5, file: !1, line: 2, size: 8, align: 8, flags: DIFlagFwdDecl, identifier: ".?AUNested@A@@")
-!8 = !{i32 2, !"CodeView", i32 1}
-!9 = !{i32 2, !"Debug Info Version", i32 3}
-!10 = !{!"clang version 3.9.0 "}
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "a", linkageName: "\01?a@@3UA@@A", scope: !2, file: !3, line: 3, type: !6, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!3 = !DIFile(filename: "hello.cpp", directory: "D:\5Csrc\5Chello")
+!4 = !{}
+!5 = !{!0}
+!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !3, line: 1, size: 8, align: 8, elements: !7, identifier: ".?AUA@@")
+!7 = !{!8}
+!8 = !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !6, file: !3, line: 2, size: 8, align: 8, flags: DIFlagFwdDecl, identifier: ".?AUNested@A@@")
+!9 = !{i32 2, !"CodeView", i32 1}
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !{!"clang version 3.9.0 "}
+

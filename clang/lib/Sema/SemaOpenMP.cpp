@@ -1089,7 +1089,7 @@ void Sema::EndOpenMPDSABlock(Stmt *CurDirective) {
             auto *VDPrivate = buildVarDecl(
                 *this, DE->getExprLoc(), Type.getUnqualifiedType(),
                 VD->getName(), VD->hasAttrs() ? &VD->getAttrs() : nullptr);
-            ActOnUninitializedDecl(VDPrivate, /*TypeMayContainAuto=*/false);
+            ActOnUninitializedDecl(VDPrivate);
             if (VDPrivate->isInvalidDecl())
               continue;
             PrivateCopies.push_back(buildDeclRefExpr(
@@ -1698,7 +1698,11 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
   case OMPD_teams_distribute_parallel_for_simd:
-  case OMPD_teams_distribute_parallel_for: {
+  case OMPD_teams_distribute_parallel_for:
+  case OMPD_target_teams_distribute:
+  case OMPD_target_teams_distribute_parallel_for:
+  case OMPD_target_teams_distribute_parallel_for_simd:
+  case OMPD_target_teams_distribute_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
@@ -1758,8 +1762,7 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   if (!WithInit)
     CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C, SourceRange()));
   S.CurContext->addHiddenDecl(CED);
-  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
-                         /*TypeMayContainAuto=*/true);
+  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false);
   return CED;
 }
 
@@ -2424,6 +2427,28 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_target_teams:
     Res = ActOnOpenMPTargetTeamsDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
+    AllowedNameModifiers.push_back(OMPD_target);
+    break;
+  case OMPD_target_teams_distribute:
+    Res = ActOnOpenMPTargetTeamsDistributeDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    AllowedNameModifiers.push_back(OMPD_target);
+    break;
+  case OMPD_target_teams_distribute_parallel_for:
+    Res = ActOnOpenMPTargetTeamsDistributeParallelForDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    AllowedNameModifiers.push_back(OMPD_target);
+    AllowedNameModifiers.push_back(OMPD_parallel);
+    break;
+  case OMPD_target_teams_distribute_parallel_for_simd:
+    Res = ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    AllowedNameModifiers.push_back(OMPD_target);
+    AllowedNameModifiers.push_back(OMPD_parallel);
+    break;
+  case OMPD_target_teams_distribute_simd:
+    Res = ActOnOpenMPTargetTeamsDistributeSimdDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_target);
     break;
   case OMPD_declare_target:
@@ -3950,33 +3975,32 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // Lower bound variable, initialized with zero.
     VarDecl *LBDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.lb");
     LB = buildDeclRefExpr(SemaRef, LBDecl, VType, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        LBDecl, SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(LBDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
+                                 /*DirectInit*/ false);
 
     // Upper bound variable, initialized with last iteration number.
     VarDecl *UBDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.ub");
     UB = buildDeclRefExpr(SemaRef, UBDecl, VType, InitLoc);
     SemaRef.AddInitializerToDecl(UBDecl, LastIteration.get(),
-                                 /*DirectInit*/ false,
-                                 /*TypeMayContainAuto*/ false);
+                                 /*DirectInit*/ false);
 
     // A 32-bit variable-flag where runtime returns 1 for the last iteration.
     // This will be used to implement clause 'lastprivate'.
     QualType Int32Ty = SemaRef.Context.getIntTypeForBitwidth(32, true);
     VarDecl *ILDecl = buildVarDecl(SemaRef, InitLoc, Int32Ty, ".omp.is_last");
     IL = buildDeclRefExpr(SemaRef, ILDecl, Int32Ty, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        ILDecl, SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(ILDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 0).get(),
+                                 /*DirectInit*/ false);
 
     // Stride variable returned by runtime (we initialize it to 1 by default).
     VarDecl *STDecl =
         buildVarDecl(SemaRef, InitLoc, StrideVType, ".omp.stride");
     ST = buildDeclRefExpr(SemaRef, STDecl, StrideVType, InitLoc);
-    SemaRef.AddInitializerToDecl(
-        STDecl, SemaRef.ActOnIntegerConstant(InitLoc, 1).get(),
-        /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
+    SemaRef.AddInitializerToDecl(STDecl,
+                                 SemaRef.ActOnIntegerConstant(InitLoc, 1).get(),
+                                 /*DirectInit*/ false);
 
     // Build expression: UB = min(UB, LastIteration)
     // It is necessary for CodeGen of directives with static scheduling.
@@ -6283,6 +6307,164 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDirective(ArrayRef<OMPClause *> Clauses,
                                          AStmt);
 }
 
+StmtResult Sema::ActOnOpenMPTargetTeamsDistributeDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' with number of loops, it will
+  // define the nested loops number.
+  auto NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_teams_distribute,
+      getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target teams distribute loop exprs were not built");
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetTeamsDistributeDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
+StmtResult Sema::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' with number of loops, it will
+  // define the nested loops number.
+  auto NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_teams_distribute_parallel_for,
+      getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target teams distribute parallel for loop exprs were not built");
+
+  if (!CurContext->isDependentContext()) {
+    // Finalize the clauses that need pre-built expressions for CodeGen.
+    for (auto C : Clauses) {
+      if (auto *LC = dyn_cast<OMPLinearClause>(C))
+        if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                     B.NumIterations, *this, CurScope,
+                                     DSAStack))
+          return StmtError();
+    }
+  }
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetTeamsDistributeParallelForDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
+StmtResult Sema::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' with number of loops, it will
+  // define the nested loops number.
+  auto NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_teams_distribute_parallel_for_simd,
+      getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target teams distribute parallel for simd loop exprs were not "
+         "built");
+
+  if (!CurContext->isDependentContext()) {
+    // Finalize the clauses that need pre-built expressions for CodeGen.
+    for (auto C : Clauses) {
+      if (auto *LC = dyn_cast<OMPLinearClause>(C))
+        if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                     B.NumIterations, *this, CurScope,
+                                     DSAStack))
+          return StmtError();
+    }
+  }
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetTeamsDistributeParallelForSimdDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
+StmtResult Sema::ActOnOpenMPTargetTeamsDistributeSimdDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  auto *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' with number of loops, it will
+  // define the nested loops number.
+  auto NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_teams_distribute_simd, getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target teams distribute simd loop exprs were not built");
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetTeamsDistributeSimdDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                              SourceLocation StartLoc,
                                              SourceLocation LParenLoc,
@@ -7303,7 +7485,13 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // A list item cannot appear in both a map clause and a data-sharing
     // attribute clause on the same construct
     if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
-        CurrDir == OMPD_target_teams) {
+        CurrDir == OMPD_target_teams || 
+        CurrDir == OMPD_target_teams_distribute ||
+        CurrDir == OMPD_target_teams_distribute_parallel_for ||
+        CurrDir == OMPD_target_teams_distribute_parallel_for_simd ||
+        CurrDir == OMPD_target_teams_distribute_simd ||
+        CurrDir == OMPD_target_parallel_for_simd ||
+        CurrDir == OMPD_target_parallel_for) {
       OpenMPClauseKind ConflictKind;
       if (DSAStack->checkMappableExprComponentListsForDecl(
               VD, /*CurrentRegionOnly=*/true,
@@ -7333,7 +7521,7 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     Type = Type.getUnqualifiedType();
     auto VDPrivate = buildVarDecl(*this, ELoc, Type, D->getName(),
                                   D->hasAttrs() ? &D->getAttrs() : nullptr);
-    ActOnUninitializedDecl(VDPrivate, /*TypeMayContainAuto=*/false);
+    ActOnUninitializedDecl(VDPrivate);
     if (VDPrivate->isInvalidDecl())
       continue;
     auto VDPrivateRefExpr = buildDeclRefExpr(
@@ -7561,7 +7749,13 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
       if (CurrDir == OMPD_target || CurrDir == OMPD_target_parallel ||
-          CurrDir == OMPD_target_teams) {
+          CurrDir == OMPD_target_teams || 
+          CurrDir == OMPD_target_teams_distribute ||
+          CurrDir == OMPD_target_teams_distribute_parallel_for ||
+          CurrDir == OMPD_target_teams_distribute_parallel_for_simd ||
+          CurrDir == OMPD_target_teams_distribute_simd ||
+          CurrDir == OMPD_target_parallel_for_simd ||
+          CurrDir == OMPD_target_parallel_for) {
         OpenMPClauseKind ConflictKind;
         if (DSAStack->checkMappableExprComponentListsForDecl(
                 VD, /*CurrentRegionOnly=*/true,
@@ -7633,7 +7827,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
                                        RefExpr->getExprLoc());
       AddInitializerToDecl(VDPrivate,
                            DefaultLvalueConversion(VDInitRefExpr).get(),
-                           /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                           /*DirectInit=*/false);
     }
     if (VDPrivate->isInvalidDecl()) {
       if (IsImplicitClause) {
@@ -8483,10 +8677,9 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
       }
     }
     if (Init && DeclareReductionRef.isUnset()) {
-      AddInitializerToDecl(RHSVD, Init, /*DirectInit=*/false,
-                           /*TypeMayContainAuto=*/false);
+      AddInitializerToDecl(RHSVD, Init, /*DirectInit=*/false);
     } else if (!Init)
-      ActOnUninitializedDecl(RHSVD, /*TypeMayContainAuto=*/false);
+      ActOnUninitializedDecl(RHSVD);
     if (RHSVD->isInvalidDecl())
       continue;
     if (!RHSVD->hasInit() && DeclareReductionRef.isUnset()) {
@@ -8735,7 +8928,7 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     else
       InitExpr = VD ? SimpleRefExpr : Ref;
     AddInitializerToDecl(Init, DefaultLvalueConversion(InitExpr).get(),
-                         /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                         /*DirectInit=*/false);
     auto InitRef = buildDeclRefExpr(*this, Init, Type, ELoc);
 
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
@@ -10077,7 +10270,11 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
-      if ((DKind == OMPD_target || DKind == OMPD_target_teams) && VD) {
+      if ((DKind == OMPD_target || DKind == OMPD_target_teams ||
+           DKind == OMPD_target_teams_distribute ||
+           DKind == OMPD_target_teams_distribute_parallel_for ||
+           DKind == OMPD_target_teams_distribute_parallel_for_simd ||
+           DKind == OMPD_target_teams_distribute_simd) && VD) {
         auto DVar = DSAS->getTopDSA(VD, false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
@@ -10809,7 +11006,7 @@ OMPClause *Sema::ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            RefExpr->getExprLoc());
     AddInitializerToDecl(VDPrivate,
                          DefaultLvalueConversion(VDInitRefExpr).get(),
-                         /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+                         /*DirectInit=*/false);
 
     // If required, build a capture to implement the privatization initialized
     // with the current list item value.

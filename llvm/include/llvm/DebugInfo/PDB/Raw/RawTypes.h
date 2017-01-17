@@ -263,7 +263,7 @@ struct ModuleInfoHeader {
 /// is abstracted here for the purposes of non-Windows platforms that don't have
 /// the GUID structure defined.
 struct PDB_UniqueId {
-  char Guid[16];
+  uint8_t Guid[16];
 };
 
 // The header preceeding the global TPI stream.
@@ -301,6 +301,15 @@ struct InfoStreamHeader {
   support::ulittle32_t Age;
   PDB_UniqueId Guid;
 };
+
+/// The header preceeding the /names stream.
+struct NameHashTableHeader {
+  support::ulittle32_t Signature;
+  support::ulittle32_t HashVersion;
+  support::ulittle32_t ByteSize;
+};
+
+const uint32_t NameHashTableSignature = 0xEFFEEFFE;
 
 } // namespace pdb
 } // namespace llvm

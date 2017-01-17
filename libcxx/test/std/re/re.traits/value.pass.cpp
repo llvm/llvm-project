@@ -82,15 +82,15 @@ int main()
         }
         for (wchar_t c = '0'; c < '8'; ++c)
         {
-            assert(t.value(c, 8) == c - '0');
-            assert(t.value(c, 10) == c - '0');
-            assert(t.value(c, 16) == c - '0');
+            assert(t.value(c, 8) ==  static_cast<int>(c - '0'));
+            assert(t.value(c, 10) == static_cast<int>(c - '0'));
+            assert(t.value(c, 16) == static_cast<int>(c - '0'));
         }
         for (wchar_t c = '8'; c < ':'; ++c)
         {
             assert(t.value(c, 8) == -1);
-            assert(t.value(c, 10) == c - '0');
-            assert(t.value(c, 16) == c - '0');
+            assert(t.value(c, 10) == static_cast<int>(c - '0'));
+            assert(t.value(c, 16) == static_cast<int>(c - '0'));
         }
         for (wchar_t c = ':'; c < 'A'; ++c)
         {
@@ -102,7 +102,7 @@ int main()
         {
             assert(t.value(c, 8) == -1);
             assert(t.value(c, 10) == -1);
-            assert(t.value(c, 16) == c - 'A' +10);
+            assert(t.value(c, 16) == static_cast<int>(c - 'A' +10));
         }
         for (wchar_t c = 'G'; c < 'a'; ++c)
         {
@@ -114,7 +114,7 @@ int main()
         {
             assert(t.value(c, 8) == -1);
             assert(t.value(c, 10) == -1);
-            assert(t.value(c, 16) == c - 'a' +10);
+            assert(t.value(c, 16) == static_cast<int>(c - 'a' +10));
         }
         for (wchar_t c = 'g'; c < 0xFFFF; ++c)
         {

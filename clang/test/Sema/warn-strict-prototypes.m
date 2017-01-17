@@ -14,7 +14,8 @@ void foo() {
   void (^block)() = // expected-warning {{this function declaration is not a prototype}}
                     ^void(int arg) { // no warning
   };
-  void (^block2)(void) = // no warning
-                         ^void() { // expected-warning {{this function declaration is not a prototype}}
+  void (^block2)(void) = ^void() { // no warning
+  };
+  void (^block3)(void) = ^ { // no warning
   };
 }

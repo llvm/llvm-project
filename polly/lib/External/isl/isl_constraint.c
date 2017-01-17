@@ -473,7 +473,8 @@ const char *isl_constraint_get_dim_name(__isl_keep isl_constraint *constraint,
 	    isl_local_space_get_dim_name(constraint->ls, type, pos) : NULL;
 }
 
-void isl_constraint_get_constant(struct isl_constraint *constraint, isl_int *v)
+void isl_constraint_get_constant(__isl_keep isl_constraint *constraint,
+	isl_int *v)
 {
 	if (!constraint)
 		return;

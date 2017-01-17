@@ -1106,6 +1106,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
             dyn_cast<CapturingScopeInfo>(FunctionScopes[idx])) {
       if (CSI->CXXThisCaptureIndex != 0) {
         // 'this' is already being captured; there isn't anything more to do.
+        CSI->Captures[CSI->CXXThisCaptureIndex - 1].markUsed(BuildAndDiagnose);
         break;
       }
       LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI);
@@ -1504,14 +1505,12 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                   SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
                   SourceLocation PlacementRParen, SourceRange TypeIdParens,
                   Declarator &D, Expr *Initializer) {
-  bool TypeContainsAuto = D.getDeclSpec().containsPlaceholderType();
-
   Expr *ArraySize = nullptr;
   // If the specified type is an array, unwrap it and save the expression.
   if (D.getNumTypeObjects() > 0 &&
       D.getTypeObject(0).Kind == DeclaratorChunk::Array) {
-     DeclaratorChunk &Chunk = D.getTypeObject(0);
-    if (TypeContainsAuto)
+    DeclaratorChunk &Chunk = D.getTypeObject(0);
+    if (D.getDeclSpec().containsPlaceholderType())
       return ExprError(Diag(Chunk.Loc, diag::err_new_array_of_auto)
         << D.getSourceRange());
     if (Chunk.Arr.hasStatic)
@@ -1588,8 +1587,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                      TInfo,
                      ArraySize,
                      DirectInitRange,
-                     Initializer,
-                     TypeContainsAuto);
+                     Initializer);
 }
 
 static bool isLegalArrayNewInitializer(CXXNewExpr::InitializationStyle Style,
@@ -1621,8 +1619,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                   TypeSourceInfo *AllocTypeInfo,
                   Expr *ArraySize,
                   SourceRange DirectInitRange,
-                  Expr *Initializer,
-                  bool TypeMayContainAuto) {
+                  Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
 
@@ -1648,7 +1645,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   }
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
-  if (TypeMayContainAuto && AllocType->isUndeducedType()) {
+  if (AllocType->isUndeducedType()) {
     if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
@@ -3875,6 +3872,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Zero_Event_Conversion:
     From = ImpCastExprToType(From, ToType,
                              CK_ZeroToOCLEvent,
+                             From->getValueKind()).get();
+    break;
+
+  case ICK_Zero_Queue_Conversion:
+    From = ImpCastExprToType(From, ToType,
+                             CK_ZeroToOCLQueue,
                              From->getValueKind()).get();
     break;
 
@@ -7256,6 +7259,8 @@ public:
     while (TypoCorrection TC = State.Consumer->getNextCorrection()) {
       if (InitDecl && TC.getFoundDecl() == InitDecl)
         continue;
+      // FIXME: If we would typo-correct to an invalid declaration, it's
+      // probably best to just suppress all errors from this typo correction.
       ExprResult NE = State.RecoveryHandler ?
           State.RecoveryHandler(SemaRef, E, TC) :
           attemptRecovery(SemaRef, *State.Consumer, TC);

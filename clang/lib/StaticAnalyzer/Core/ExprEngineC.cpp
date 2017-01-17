@@ -227,12 +227,13 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
 
       if (capturedR != originalR) {
         SVal originalV;
+        const LocationContext *LCtx = Pred->getLocationContext();
         if (copyExpr) {
-          originalV = State->getSVal(copyExpr, Pred->getLocationContext());
+          originalV = State->getSVal(copyExpr, LCtx);
         } else {
           originalV = State->getSVal(loc::MemRegionVal(originalR));
         }
-        State = State->bindLoc(loc::MemRegionVal(capturedR), originalV);
+        State = State->bindLoc(loc::MemRegionVal(capturedR), originalV, LCtx);
       }
     }
   }
@@ -397,6 +398,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_AnyPointerToBlockPointerCast:
       case CK_ObjCObjectLValueCast:
       case CK_ZeroToOCLEvent:
+      case CK_ZeroToOCLQueue:
       case CK_IntToOCLSampler:
       case CK_LValueBitCast: {
         state =
@@ -533,7 +535,7 @@ void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
   } else {
     assert(isa<InitListExpr>(Init));
     Loc CLLoc = State->getLValue(CL, LCtx);
-    State = State->bindLoc(CLLoc, V);
+    State = State->bindLoc(CLLoc, V, LCtx);
 
     if (CL->isGLValue())
       V = CLLoc;
@@ -665,23 +667,13 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     if (RHSVal.isUndef()) {
       X = RHSVal;
     } else {
-      DefinedOrUnknownSVal DefinedRHS = RHSVal.castAs<DefinedOrUnknownSVal>();
-      ProgramStateRef StTrue, StFalse;
-      std::tie(StTrue, StFalse) = N->getState()->assume(DefinedRHS);
-      if (StTrue) {
-        if (StFalse) {
-          // We can't constrain the value to 0 or 1.
-          // The best we can do is a cast.
-          X = getSValBuilder().evalCast(RHSVal, B->getType(), RHS->getType());
-        } else {
-          // The value is known to be true.
-          X = getSValBuilder().makeIntVal(1, B->getType());
-        }
-      } else {
-        // The value is known to be false.
-        assert(StFalse && "Infeasible path!");
-        X = getSValBuilder().makeIntVal(0, B->getType());
-      }
+      // We evaluate "RHSVal != 0" expression which result in 0 if the value is
+      // known to be false, 1 if the value is known to be true and a new symbol
+      // when the assumption is unknown.
+      nonloc::ConcreteInt Zero(getBasicVals().getValue(0, B->getType()));
+      X = evalBinOp(N->getState(), BO_NE, 
+                    svalBuilder.evalCast(RHSVal, B->getType(), RHS->getType()),
+                    Zero, B->getType());
     }
   }
   Bldr.generateNode(B, Pred, state->BindExpr(B, Pred->getLocationContext(), X));

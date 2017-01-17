@@ -216,7 +216,7 @@ protected:
   /// 32-bit divisions and should be used when possible.
   bool HasSlowDivide32;
 
-  /// True if 16-bit divides are significantly faster than
+  /// True if 32-bit divides are significantly faster than
   /// 64-bit divisions and should be used when possible.
   bool HasSlowDivide64;
 

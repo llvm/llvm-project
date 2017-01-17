@@ -69,7 +69,7 @@ define i1 @foo(i32* %p) {
   ; CHECK: [[R3:%[^ ]*]] = lshr i32 [[R2]], 2
   ; CHECK: [[R4:%[^ ]*]] = shl i32 [[R2]], 30
   ; CHECK: [[R5:%[^ ]*]] = or i32 [[R3]], [[R4]]
-  ; CHECK: [[R6:%[^ ]*]] = icmp ult i32 [[R5]], 68
+  ; CHECK: [[R6:%[^ ]*]] = icmp ule i32 [[R5]], 67
   ; CHECK: br i1 [[R6]]
 
   ; CHECK: [[R8:%[^ ]*]] = getelementptr i8, i8* @bits_use.{{[0-9]*}}, i32 [[R5]]
@@ -92,11 +92,11 @@ define i1 @bar(i32* %p) {
   ; CHECK: [[S0:%[^ ]*]] = bitcast i32* [[B0]] to i8*
   %pi8 = bitcast i32* %p to i8*
   ; CHECK: [[S1:%[^ ]*]] = ptrtoint i8* [[S0]] to i32
-  ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], add (i32 ptrtoint ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]] to i32), i32 4)
+  ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], ptrtoint (i8* getelementptr (i8, i8* bitcast ({ i32, [0 x i8], [63 x i32], [4 x i8], i32, [0 x i8], [2 x i32] }* [[G]] to i8*), i32 4) to i32)
   ; CHECK: [[S3:%[^ ]*]] = lshr i32 [[S2]], 8
   ; CHECK: [[S4:%[^ ]*]] = shl i32 [[S2]], 24
   ; CHECK: [[S5:%[^ ]*]] = or i32 [[S3]], [[S4]]
-  ; CHECK: [[S6:%[^ ]*]] = icmp ult i32 [[S5]], 2
+  ; CHECK: [[S6:%[^ ]*]] = icmp ule i32 [[S5]], 1
   %x = call i1 @llvm.type.test(i8* %pi8, metadata !"typeid2")
 
   ; CHECK: ret i1 [[S6]]
@@ -112,7 +112,7 @@ define i1 @baz(i32* %p) {
   ; CHECK: [[T3:%[^ ]*]] = lshr i32 [[T2]], 2
   ; CHECK: [[T4:%[^ ]*]] = shl i32 [[T2]], 30
   ; CHECK: [[T5:%[^ ]*]] = or i32 [[T3]], [[T4]]
-  ; CHECK: [[T6:%[^ ]*]] = icmp ult i32 [[T5]], 66
+  ; CHECK: [[T6:%[^ ]*]] = icmp ule i32 [[T5]], 65
   ; CHECK: br i1 [[T6]]
 
   ; CHECK: [[T8:%[^ ]*]] = getelementptr i8, i8* @bits_use{{(\.[0-9]*)?}}, i32 [[T5]]

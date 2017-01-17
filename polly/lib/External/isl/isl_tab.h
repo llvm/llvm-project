@@ -201,6 +201,7 @@ int isl_tab_detect_implicit_equalities(struct isl_tab *tab) WARN_UNUSED;
 __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 	__isl_take isl_basic_map *bmap);
 int isl_tab_detect_redundant(struct isl_tab *tab) WARN_UNUSED;
+isl_stat isl_tab_restore_redundant(struct isl_tab *tab);
 #define ISL_TAB_SAVE_DUAL	(1 << 0)
 enum isl_lp_result isl_tab_min(struct isl_tab *tab,
 	isl_int *f, isl_int denom, isl_int *opt, isl_int *opt_denom,
@@ -316,6 +317,8 @@ int isl_tab_save_samples(struct isl_tab *tab) WARN_UNUSED;
 
 struct isl_tab *isl_tab_detect_equalities(struct isl_tab *tab,
 	struct isl_tab *tab_cone) WARN_UNUSED;
+isl_bool isl_tab_is_constant(struct isl_tab *tab, int var, isl_int *value);
+isl_stat isl_tab_detect_constants(struct isl_tab *tab);
 
 int isl_tab_push_callback(struct isl_tab *tab,
 	struct isl_tab_callback *callback) WARN_UNUSED;

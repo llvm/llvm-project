@@ -58,6 +58,7 @@ LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo) {
       if (HandlerOpt->HandleFpe)
         Fuzzer::StaticCrashSignalCallback();
       break;
+    // TODO: handle (Options.HandleXfsz)
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }

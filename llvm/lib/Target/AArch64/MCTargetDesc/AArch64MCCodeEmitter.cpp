@@ -15,15 +15,23 @@
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mccodeemitter"
@@ -37,13 +45,12 @@ class AArch64MCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
   const MCInstrInfo &MCII;
 
-  AArch64MCCodeEmitter(const AArch64MCCodeEmitter &); // DO NOT IMPLEMENT
-  void operator=(const AArch64MCCodeEmitter &);     // DO NOT IMPLEMENT
 public:
   AArch64MCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : Ctx(ctx), MCII(mcii) {}
-
-  ~AArch64MCCodeEmitter() override {}
+  AArch64MCCodeEmitter(const AArch64MCCodeEmitter &) = delete;
+  void operator=(const AArch64MCCodeEmitter &) = delete;
+  ~AArch64MCCodeEmitter() override = default;
 
   // getBinaryCodeForInstr - TableGen'erated function for getting the
   // binary encoding for an instruction.
@@ -180,12 +187,6 @@ private:
 };
 
 } // end anonymous namespace
-
-MCCodeEmitter *llvm::createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
-                                                const MCRegisterInfo &MRI,
-                                                MCContext &Ctx) {
-  return new AArch64MCCodeEmitter(MCII, Ctx);
-}
 
 /// getMachineOpValue - Return binary encoding of operand. If the machine
 /// operand requires relocation, record the relocation and return zero.
@@ -601,3 +602,9 @@ unsigned AArch64MCCodeEmitter::fixOneOperandFPComparison(
 
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "AArch64GenMCCodeEmitter.inc"
+
+MCCodeEmitter *llvm::createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
+                                                const MCRegisterInfo &MRI,
+                                                MCContext &Ctx) {
+  return new AArch64MCCodeEmitter(MCII, Ctx);
+}

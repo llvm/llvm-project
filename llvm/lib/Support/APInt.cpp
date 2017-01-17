@@ -205,7 +205,7 @@ APInt& APInt::operator++() {
 
 /// This function subtracts a single "digit" (64-bit word), y, from
 /// the multi-digit integer array, x[], propagating the borrowed 1 value until
-/// no further borrowing is neeeded or it runs out of "digits" in x.  The result
+/// no further borrowing is needed or it runs out of "digits" in x.  The result
 /// is 1 if "borrowing" exhausted the digits in x, or 0 if x was not exhausted.
 /// In other words, if y > x then this function returns 1, otherwise 0.
 /// @returns the borrow out of the subtraction

@@ -13,4 +13,4 @@ int f3(void) { return 0; }
 unsigned int f4(void) { return 0; }
 // CHECK: define zeroext i32 @f4() [[NUW]]
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

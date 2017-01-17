@@ -53,8 +53,8 @@ struct Xorshift128Plus {
   u64 State[2];
 };
 
-// Software CRC32 functions, to be used when SSE 4.2 support is not detected.
-u32 computeCRC32(u32 Crc, uptr Data);
+// Software CRC32 functions, to be used when hardware support is not detected.
+u32 computeSoftwareCRC32(u32 Crc, uptr Data);
 
 }  // namespace __scudo
 

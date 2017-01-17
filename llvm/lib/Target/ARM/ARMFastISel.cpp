@@ -256,17 +256,13 @@ ARMFastISel::AddOptionalDefs(const MachineInstrBuilder &MIB) {
   // Are we NEON in ARM mode and have a predicate operand? If so, I know
   // we're not predicable but add it anyways.
   if (isARMNEONPred(MI))
-    AddDefaultPred(MIB);
+    MIB.add(predOps(ARMCC::AL));
 
   // Do we optionally set a predicate?  Preds is size > 0 iff the predicate
   // defines CPSR. All other OptionalDefines in ARM are the CCR register.
   bool CPSR = false;
-  if (DefinesOptionalPredicate(MI, &CPSR)) {
-    if (CPSR)
-      AddDefaultT1CC(MIB);
-    else
-      AddDefaultCC(MIB);
-  }
+  if (DefinesOptionalPredicate(MI, &CPSR))
+    MIB.add(CPSR ? t1CondCodeOp() : condCodeOp());
   return MIB;
 }
 
@@ -2230,7 +2226,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
                                     DbgLoc, TII.get(CallOpc));
   // BL / BLX don't take a predicate, but tBL / tBLX do.
   if (isThumb2)
-    AddDefaultPred(MIB);
+    MIB.add(predOps(ARMCC::AL));
   if (Subtarget->genLongCalls())
     MIB.addReg(CalleeReg);
   else
@@ -2373,7 +2369,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
 
   // ARM calls don't take a predicate, but tBL / tBLX do.
   if(isThumb2)
-    AddDefaultPred(MIB);
+    MIB.add(predOps(ARMCC::AL));
   if (UseReg)
     MIB.addReg(CalleeReg);
   else if (!IntrMemName)
@@ -2687,9 +2683,11 @@ unsigned ARMFastISel::ARMEmitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT,
     if (setsCPSR)
       MIB.addReg(ARM::CPSR, RegState::Define);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    AddDefaultPred(MIB.addReg(SrcReg, isKill * RegState::Kill).addImm(ImmEnc));
+    MIB.addReg(SrcReg, isKill * RegState::Kill)
+        .addImm(ImmEnc)
+        .add(predOps(ARMCC::AL));
     if (hasS)
-      AddDefaultCC(MIB);
+      MIB.add(condCodeOp());
     // Second instruction consumes the first's result.
     SrcReg = ResultReg;
   }
@@ -2933,7 +2931,7 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
           .addConstantPoolIndex(Idx);
   if (Opc == ARM::LDRcp)
     MIB.addImm(0);
-  AddDefaultPred(MIB);
+  MIB.add(predOps(ARMCC::AL));
 
   // Fix the address by adding pc.
   unsigned DestReg = createResultReg(TLI.getRegClassFor(VT));
@@ -2944,7 +2942,7 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
             .addReg(TempReg)
             .addImm(ARMPCLabelIndex);
   if (!Subtarget->isThumb())
-    AddDefaultPred(MIB);
+    MIB.add(predOps(ARMCC::AL));
 
   if (UseGOT_PREL && Subtarget->isThumb()) {
     unsigned NewDestReg = createResultReg(TLI.getRegClassFor(VT));

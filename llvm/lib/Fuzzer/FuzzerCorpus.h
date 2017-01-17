@@ -17,6 +17,7 @@
 #include "FuzzerRandom.h"
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
+#include <algorithm>
 #include <numeric>
 #include <random>
 #include <unordered_set>
@@ -57,6 +58,12 @@ class InputCorpus {
     size_t Res = 0;
     for (auto II : Inputs)
       Res += !II->U.empty();
+    return Res;
+  }
+  size_t MaxInputSize() const {
+    size_t Res = 0;
+    for (auto II : Inputs)
+        Res = std::max(Res, II->U.size());
     return Res;
   }
   bool empty() const { return Inputs.empty(); }

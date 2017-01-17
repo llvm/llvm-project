@@ -20,7 +20,7 @@ if(POLICY CMP0057)
 endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 4)
+  set(LLVM_VERSION_MAJOR 5)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -878,7 +878,7 @@ if( LLVM_INCLUDE_TESTS )
   endif()
   add_subdirectory(test)
   add_subdirectory(unittests)
-  if (MSVC)
+  if (WIN32)
     # This utility is used to prevent crashing tests from calling Dr. Watson on
     # Windows.
     add_subdirectory(utils/KillTheDoctor)

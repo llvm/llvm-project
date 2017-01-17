@@ -183,11 +183,9 @@ unsigned WebAssemblyInstrInfo::insertBranch(MachineBasicBlock &MBB,
   assert(Cond.size() == 2 && "Expected a flag and a successor block");
 
   if (Cond[0].getImm()) {
-    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).addOperand(Cond[1]);
+    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
   } else {
-    BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS))
-        .addMBB(TBB)
-        .addOperand(Cond[1]);
+    BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS)).addMBB(TBB).add(Cond[1]);
   }
   if (!FBB)
     return 1;

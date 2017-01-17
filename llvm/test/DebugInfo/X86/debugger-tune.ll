@@ -14,7 +14,6 @@
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-readobj -sections - | FileCheck --check-prefix=LLDB %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce < %s | llvm-readobj -sections - | FileCheck --check-prefix=SCE %s
 
-
 ; GDB-NOT: apple_names
 ; GDB: debug_pubnames
 ; GDB-NOT: apple_names
@@ -26,19 +25,22 @@
 ; SCE-NOT: debug_pubnames
 ; SCE-NOT: apple_names
 
+source_filename = "test/DebugInfo/X86/debugger-tune.ll"
 
-@globalvar = global i32 0, align 4, !dbg !4
+@globalvar = global i32 0, align 4, !dbg !0
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!6, !7}
-!llvm.ident = !{!8}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!7, !8}
+!llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.7.0 (trunk 238808)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
-!1 = !DIFile(filename: "debugger-tune.cpp", directory: "/home/probinson/projects/scratch")
-!2 = !{}
-!3 = !{!4}
-!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "globalvar", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true))
-!5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = !{i32 2, !"Dwarf Version", i32 4}
-!7 = !{i32 2, !"Debug Info Version", i32 3}
-!8 = !{!"clang version 3.7.0 (trunk 238808)"}
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "globalvar", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.7.0 (trunk 238808)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
+!3 = !DIFile(filename: "debugger-tune.cpp", directory: "/home/probinson/projects/scratch")
+!4 = !{}
+!5 = !{!0}
+!6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!7 = !{i32 2, !"Dwarf Version", i32 4}
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+!9 = !{!"clang version 3.7.0 (trunk 238808)"}
+

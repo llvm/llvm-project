@@ -18,7 +18,6 @@
 
 int main()
 {
-    wchar_t s1[] = {1, 2, 3};
     wchar_t s2[3] = {0};
     assert(std::char_traits<wchar_t>::assign(s2, 3, wchar_t(5)) == s2);
     assert(s2[0] == wchar_t(5));

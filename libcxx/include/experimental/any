@@ -292,7 +292,7 @@ namespace __any_imp
 {
 
   template <class _Tp>
-  struct _LIBCPP_TYPE_VIS_ONLY _SmallHandler
+  struct _LIBCPP_TEMPLATE_VIS _SmallHandler
   {
      _LIBCPP_INLINE_VISIBILITY
      static void* __handle(_Action __act, any const * __this, any * __other,
@@ -373,7 +373,7 @@ namespace __any_imp
   };
 
   template <class _Tp>
-  struct _LIBCPP_TYPE_VIS_ONLY _LargeHandler
+  struct _LIBCPP_TEMPLATE_VIS _LargeHandler
   {
     _LIBCPP_INLINE_VISIBILITY
     static void* __handle(_Action __act, any const * __this, any * __other,

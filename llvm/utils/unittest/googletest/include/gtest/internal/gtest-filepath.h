@@ -61,11 +61,7 @@ class GTEST_API_ FilePath {
   FilePath() : pathname_("") { }
   FilePath(const FilePath& rhs) : pathname_(rhs.pathname_) { }
 
-  explicit FilePath(const char* pathname) : pathname_(pathname) {
-    Normalize();
-  }
-
-  explicit FilePath(const String& pathname) : pathname_(pathname) {
+  explicit FilePath(const std::string& pathname) : pathname_(pathname) {
     Normalize();
   }
 
@@ -78,7 +74,7 @@ class GTEST_API_ FilePath {
     pathname_ = rhs.pathname_;
   }
 
-  String ToString() const { return pathname_; }
+  const std::string& string() const { return pathname_; }
   const char* c_str() const { return pathname_.c_str(); }
 
   // Returns the current working directory, or "" if unsuccessful.
@@ -111,8 +107,8 @@ class GTEST_API_ FilePath {
                                          const FilePath& base_name,
                                          const char* extension);
 
-  // Returns true iff the path is NULL or "".
-  bool IsEmpty() const { return c_str() == NULL || *c_str() == '\0'; }
+  // Returns true iff the path is "".
+  bool IsEmpty() const { return pathname_.empty(); }
 
   // If input name has a trailing separator character, removes it and returns
   // the name, otherwise return the name string unmodified.
@@ -196,12 +192,12 @@ class GTEST_API_ FilePath {
 
   void Normalize();
 
-  // Returns a pointer to the last occurrence of a valid path separator in
+  // Returns a pointer to the last occurence of a valid path separator in
   // the FilePath. On Windows, for example, both '/' and '\' are valid path
   // separators. Returns NULL if no path separator was found.
   const char* FindLastPathSeparator() const;
 
-  String pathname_;
+  std::string pathname_;
 };  // class FilePath
 
 }  // namespace internal

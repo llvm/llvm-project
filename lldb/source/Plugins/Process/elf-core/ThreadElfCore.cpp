@@ -202,7 +202,6 @@ ELFLinuxPrStatus::ELFLinuxPrStatus() {
 
 Error ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
   Error error;
-  ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
         "NT_PRSTATUS size should be %zu, but the remaining bytes are: %" PRIu64,
@@ -210,50 +209,36 @@ Error ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
     return error;
   }
 
-  switch (arch.GetCore()) {
-  case ArchSpec::eCore_s390x_generic:
-  case ArchSpec::eCore_x86_64_x86_64:
-    data.ExtractBytes(0, sizeof(ELFLinuxPrStatus), byteorder, this);
-    break;
-  case ArchSpec::eCore_x86_32_i386:
-  case ArchSpec::eCore_x86_32_i486: {
-    // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-    // properly, because the struct is for the 64 bit version
-    offset_t offset = 0;
-    si_signo = data.GetU32(&offset);
-    si_code = data.GetU32(&offset);
-    si_errno = data.GetU32(&offset);
+  // Read field by field to correctly account for endianess
+  // of both the core dump and the platform running lldb.
+  offset_t offset = 0;
+  si_signo = data.GetU32(&offset);
+  si_code = data.GetU32(&offset);
+  si_errno = data.GetU32(&offset);
 
-    pr_cursig = data.GetU16(&offset);
-    offset += 2; // pad
+  pr_cursig = data.GetU16(&offset);
+  offset += 2; // pad
 
-    pr_sigpend = data.GetU32(&offset);
-    pr_sighold = data.GetU32(&offset);
+  pr_sigpend = data.GetPointer(&offset);
+  pr_sighold = data.GetPointer(&offset);
 
-    pr_pid = data.GetU32(&offset);
-    pr_ppid = data.GetU32(&offset);
-    pr_pgrp = data.GetU32(&offset);
-    pr_sid = data.GetU32(&offset);
+  pr_pid = data.GetU32(&offset);
+  pr_ppid = data.GetU32(&offset);
+  pr_pgrp = data.GetU32(&offset);
+  pr_sid = data.GetU32(&offset);
 
-    pr_utime.tv_sec = data.GetU32(&offset);
-    pr_utime.tv_usec = data.GetU32(&offset);
+  pr_utime.tv_sec = data.GetPointer(&offset);
+  pr_utime.tv_usec = data.GetPointer(&offset);
 
-    pr_stime.tv_sec = data.GetU32(&offset);
-    pr_stime.tv_usec = data.GetU32(&offset);
+  pr_stime.tv_sec = data.GetPointer(&offset);
+  pr_stime.tv_usec = data.GetPointer(&offset);
 
-    pr_cutime.tv_sec = data.GetU32(&offset);
-    pr_cutime.tv_usec = data.GetU32(&offset);
+  pr_cutime.tv_sec = data.GetPointer(&offset);
+  pr_cutime.tv_usec = data.GetPointer(&offset);
 
-    pr_cstime.tv_sec = data.GetU32(&offset);
-    pr_cstime.tv_usec = data.GetU32(&offset);
+  pr_cstime.tv_sec = data.GetPointer(&offset);
+  pr_cstime.tv_usec = data.GetPointer(&offset);
 
-    break;
-  }
-  default:
-    error.SetErrorStringWithFormat("ELFLinuxPrStatus::%s Unknown architecture",
-                                   __FUNCTION__);
-    break;
-  }
 
   return error;
 }
@@ -274,48 +259,36 @@ Error ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
         GetSize(arch), data.GetByteSize());
     return error;
   }
+  size_t size = 0;
+  offset_t offset = 0;
 
-  switch (arch.GetCore()) {
-  case ArchSpec::eCore_s390x_generic:
-  case ArchSpec::eCore_x86_64_x86_64:
-    data.ExtractBytes(0, sizeof(ELFLinuxPrPsInfo), byteorder, this);
-    break;
-  case ArchSpec::eCore_x86_32_i386:
-  case ArchSpec::eCore_x86_32_i486: {
-    // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-    // properly, because the struct is for the 64 bit version
-    size_t size = 0;
-    offset_t offset = 0;
-
-    pr_state = data.GetU8(&offset);
-    pr_sname = data.GetU8(&offset);
-    pr_zomb = data.GetU8(&offset);
-    pr_nice = data.GetU8(&offset);
-
-    pr_flag = data.GetU32(&offset);
-    pr_uid = data.GetU16(&offset);
-    pr_gid = data.GetU16(&offset);
-
-    pr_pid = data.GetU32(&offset);
-    pr_ppid = data.GetU32(&offset);
-    pr_pgrp = data.GetU32(&offset);
-    pr_sid = data.GetU32(&offset);
-
-    size = 16;
-    data.ExtractBytes(offset, size, byteorder, pr_fname);
-    offset += size;
-
-    size = 80;
-    data.ExtractBytes(offset, size, byteorder, pr_psargs);
-    offset += size;
-
-    break;
+  pr_state = data.GetU8(&offset);
+  pr_sname = data.GetU8(&offset);
+  pr_zomb = data.GetU8(&offset);
+  pr_nice = data.GetU8(&offset);
+  if (data.GetAddressByteSize() == 8) {
+    // Word align the next field on 64 bit.
+    offset += 4;
   }
-  default:
-    error.SetErrorStringWithFormat("ELFLinuxPrPsInfo::%s Unknown architecture",
-                                   __FUNCTION__);
-    break;
-  }
+
+  pr_flag = data.GetPointer(&offset);
+
+  // 16 bit on 32 bit platforms, 32 bit on 64 bit platforms
+  pr_uid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
+  pr_gid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
+
+  pr_pid = data.GetU32(&offset);
+  pr_ppid = data.GetU32(&offset);
+  pr_pgrp = data.GetU32(&offset);
+  pr_sid = data.GetU32(&offset);
+
+  size = 16;
+  data.ExtractBytes(offset, size, byteorder, pr_fname);
+  offset += size;
+
+  size = 80;
+  data.ExtractBytes(offset, size, byteorder, pr_psargs);
+  offset += size;
 
   return error;
 }
@@ -329,7 +302,6 @@ ELFLinuxSigInfo::ELFLinuxSigInfo() {
 
 Error ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
   Error error;
-  ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
@@ -337,27 +309,12 @@ Error ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
     return error;
   }
 
-  switch (arch.GetCore()) {
-  case ArchSpec::eCore_x86_64_x86_64:
-    data.ExtractBytes(0, sizeof(ELFLinuxPrStatus), byteorder, this);
-    break;
-  case ArchSpec::eCore_s390x_generic:
-  case ArchSpec::eCore_x86_32_i386:
-  case ArchSpec::eCore_x86_32_i486: {
-    // Parsing from a 32 bit ELF core file, and populating/reusing the structure
-    // properly, because the struct is for the 64 bit version
-    offset_t offset = 0;
-    si_signo = data.GetU32(&offset);
-    si_code = data.GetU32(&offset);
-    si_errno = data.GetU32(&offset);
-
-    break;
-  }
-  default:
-    error.SetErrorStringWithFormat("ELFLinuxSigInfo::%s Unknown architecture",
-                                   __FUNCTION__);
-    break;
-  }
+  // Parsing from a 32 bit ELF core file, and populating/reusing the structure
+  // properly, because the struct is for the 64 bit version
+  offset_t offset = 0;
+  si_signo = data.GetU32(&offset);
+  si_code = data.GetU32(&offset);
+  si_errno = data.GetU32(&offset);
 
   return error;
 }

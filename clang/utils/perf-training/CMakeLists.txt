@@ -40,7 +40,7 @@ if(LLVM_BUILD_INSTRUMENTED)
 endif()
 
 find_program(DTRACE dtrace)
-if(DTRACE)
+if(APPLE AND DTRACE)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/order-files.lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/lit.site.cfg
@@ -55,6 +55,10 @@ if(DTRACE)
   add_custom_target(clear-dtrace-logs
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py clean ${CMAKE_CURRENT_BINARY_DIR} dtrace
     COMMENT "Clearing old dtrace data")
+
+  if(NOT CLANG_ORDER_FILE)
+    message(FATAL_ERROR "Output clang order file is not set")
+  endif()
 
   add_custom_target(generate-order-file
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py gen-order-file --binary $<TARGET_FILE:clang> --output ${CLANG_ORDER_FILE} ${CMAKE_CURRENT_BINARY_DIR}

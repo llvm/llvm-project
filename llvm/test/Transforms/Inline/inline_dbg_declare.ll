@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -inline | FileCheck %s
+; RUN: opt < %s -S -passes='cgscc(inline)' | FileCheck %s
 ;
 ; The purpose of this test is to check that inline pass preserves debug info
 ; for variable using the dbg.declare intrinsic.

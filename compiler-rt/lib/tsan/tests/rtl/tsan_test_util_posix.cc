@@ -60,11 +60,11 @@ bool OnReport(const ReportDesc *rep, bool suppressed) {
     if (rep->typ != expect_report_type) {
       printf("Expected report of type %d, got type %d\n",
              (int)expect_report_type, (int)rep->typ);
-      EXPECT_FALSE("Wrong report type");
+      EXPECT_TRUE(false) << "Wrong report type";
       return false;
     }
   } else {
-    EXPECT_FALSE("Unexpected report");
+    EXPECT_TRUE(false) << "Unexpected report";
     return false;
   }
   expect_report_reported = true;
@@ -323,7 +323,7 @@ void ScopedThread::Impl::HandleEvent(Event *ev) {
   }
   if (expect_report && !expect_report_reported) {
     printf("Missed expected report of type %d\n", (int)ev->report_type);
-    EXPECT_FALSE("Missed expected race");
+    EXPECT_TRUE(false) << "Missed expected race";
   }
   expect_report = false;
 }

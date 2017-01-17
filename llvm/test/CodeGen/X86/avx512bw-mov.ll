@@ -26,7 +26,7 @@ define <64 x i8> @test3(i8 * %addr, <64 x i8> %old, <64 x i8> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpcmpneqb %zmm2, %zmm1, %k1
-; CHECK-NEXT:    vpblendmb (%rdi), %zmm0, %zmm0 {%k1}
+; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <64 x i8> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <64 x i8>*
@@ -74,7 +74,7 @@ define <32 x i16> @test7(i8 * %addr, <32 x i16> %old, <32 x i16> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; CHECK-NEXT:    vpcmpneqw %zmm2, %zmm1, %k1
-; CHECK-NEXT:    vpblendmw (%rdi), %zmm0, %zmm0 {%k1}
+; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <32 x i16> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <32 x i16>*

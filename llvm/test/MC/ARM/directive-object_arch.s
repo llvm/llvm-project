@@ -14,7 +14,7 @@
 @ CHECK:   }
 @ CHECK:   Attribute {
 @ CHECK:     Tag: 6
-@ CHEKC:     Value: 1
+@ CHECK:     Value: 1
 @ CHECK:     TagName: CPU_arch
 @ CHECK:     Description: ARM v4
 @ CHECK:   }

@@ -16,7 +16,7 @@ registers:
 body: |
   bb.0:
     liveins: %w0
-    ; ERR: generic virtual registers must have a size
+    ; ERR: generic virtual registers must have a type
     ; ERR-NEXT: %0
     ; ERR: Unable to initialize machine function
     %0 = G_ADD i32 %w0, %w0

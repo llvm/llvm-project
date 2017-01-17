@@ -52,13 +52,20 @@ class DIEAbbrevData {
   /// Dwarf form code.
   dwarf::Form Form;
 
+  /// Dwarf attribute value for DW_FORM_implicit_const
+  int64_t Value;
+
 public:
-  DIEAbbrevData(dwarf::Attribute A, dwarf::Form F) : Attribute(A), Form(F) {}
+  DIEAbbrevData(dwarf::Attribute A, dwarf::Form F)
+      : Attribute(A), Form(F), Value(0) {}
+  DIEAbbrevData(dwarf::Attribute A, int64_t V)
+      : Attribute(A), Form(dwarf::DW_FORM_implicit_const), Value(V) {}
 
   /// Accessors.
   /// @{
   dwarf::Attribute getAttribute() const { return Attribute; }
   dwarf::Form getForm() const { return Form; }
+  int64_t getValue() const { return Value; }
   /// @}
 
   /// Used to gather unique data for the abbreviation folding set.
@@ -100,6 +107,11 @@ public:
   /// Adds another set of attribute information to the abbreviation.
   void AddAttribute(dwarf::Attribute Attribute, dwarf::Form Form) {
     Data.push_back(DIEAbbrevData(Attribute, Form));
+  }
+
+  /// Adds attribute with DW_FORM_implicit_const value
+  void AddImplicitConstAttribute(dwarf::Attribute Attribute, int64_t Value) {
+    Data.push_back(DIEAbbrevData(Attribute, Value));
   }
 
   /// Used to gather unique data for the abbreviation folding set.
@@ -651,6 +663,9 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   unsigned AbbrevNumber = ~0u;
   /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
+  /// Set to true to force a DIE to emit an abbreviation that says it has
+  /// children even when it doesn't. This is used for unit testing purposes.
+  bool ForceChildren;
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -659,7 +674,8 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   PointerUnion<DIE *, DIEUnit *> Owner;
 
   DIE() = delete;
-  explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag) {}
+  explicit DIE(dwarf::Tag Tag) : Offset(0), Size(0), Tag(Tag),
+      ForceChildren(false) {}
 
 public:
   static DIE *get(BumpPtrAllocator &Alloc, dwarf::Tag Tag) {
@@ -677,7 +693,8 @@ public:
   /// Get the compile/type unit relative offset of this DIE.
   unsigned getOffset() const { return Offset; }
   unsigned getSize() const { return Size; }
-  bool hasChildren() const { return !Children.empty(); }
+  bool hasChildren() const { return ForceChildren || !Children.empty(); }
+  void setForceChildren(bool B) { ForceChildren = B; }
 
   typedef IntrusiveBackList<DIE>::iterator child_iterator;
   typedef IntrusiveBackList<DIE>::const_iterator const_child_iterator;

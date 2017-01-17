@@ -2990,6 +2990,18 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   return RTRange;
 }
 
+SourceRange FunctionDecl::getExceptionSpecSourceRange() const {
+  const TypeSourceInfo *TSI = getTypeSourceInfo();
+  if (!TSI)
+    return SourceRange();
+  FunctionTypeLoc FTL =
+    TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  if (!FTL)
+    return SourceRange();
+
+  return FTL.getExceptionSpecRange();
+}
+
 const Attr *FunctionDecl::getUnusedResultAttr() const {
   QualType RetType = getReturnType();
   if (RetType->isRecordType()) {

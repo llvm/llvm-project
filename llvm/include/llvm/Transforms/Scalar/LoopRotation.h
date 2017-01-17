@@ -15,16 +15,20 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPROTATION_H
 
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
 
 /// A simple loop rotation transformation.
 class LoopRotatePass : public PassInfoMixin<LoopRotatePass> {
 public:
-  LoopRotatePass();
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM);
+  LoopRotatePass(bool EnableHeaderDuplication = true);
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+
+private:
+  const bool EnableHeaderDuplication;
 };
 }
 

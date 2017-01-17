@@ -273,12 +273,12 @@ define void @combine_to_mad_fsub_1_f32_2use(float addrspace(1)* noalias %out, fl
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; SI-STD: v_mad_f32 [[RESULT:v[0-9]+]], -[[A]], [[B]], -[[C]]
+; SI-STD: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
 
 ; SI-DENORM: v_fma_f32 [[RESULT:v[0-9]+]], -[[A]], [[B]], -[[C]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_sub_f32_e64 [[RESULT:v[0-9]+]], -[[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e64 [[TMP:v[0-9]+]], [[A]], -[[B]]
+; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
 
 ; SI: buffer_store_dword [[RESULT]]
 define void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
@@ -306,15 +306,15 @@ define void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %out, float a
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; SI-STD-DAG: v_mad_f32 [[RESULT0:v[0-9]+]], -[[A]], [[B]], -[[C]]
-; SI-STD-DAG: v_mad_f32 [[RESULT1:v[0-9]+]], -[[A]], [[B]], -[[D]]
+; SI-STD-DAG: v_mad_f32 [[RESULT0:v[0-9]+]], [[A]], -[[B]], -[[C]]
+; SI-STD-DAG: v_mad_f32 [[RESULT1:v[0-9]+]], [[A]], -[[B]], -[[D]]
 
 ; SI-DENORM-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], -[[A]], [[B]], -[[C]]
 ; SI-DENORM-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], -[[A]], [[B]], -[[D]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e64 [[RESULT0:v[0-9]+]], -[[TMP]], [[C]]
-; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e64 [[RESULT1:v[0-9]+]], -[[TMP]], [[D]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e64 [[TMP:v[0-9]+]], [[A]], -[[B]]
+; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT0:v[0-9]+]], [[C]], [[TMP]]
+; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[D]], [[TMP]]
 
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}

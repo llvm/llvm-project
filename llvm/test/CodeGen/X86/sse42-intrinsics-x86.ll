@@ -52,7 +52,7 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; SKX-NEXT:    vmovdqu8 (%eax), %xmm0 ## encoding: [0x62,0xf1,0x7f,0x08,0x6f,0x00]
+; SKX-NEXT:    vmovdqu (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x6f,0x00]
 ; SKX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SKX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; SKX-NEXT:    vpcmpestri $7, (%ecx), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0x01,0x07]
@@ -292,7 +292,7 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
-; SKX-NEXT:    vmovdqu8 (%ecx), %xmm0 ## encoding: [0x62,0xf1,0x7f,0x08,0x6f,0x01]
+; SKX-NEXT:    vmovdqu (%ecx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x6f,0x01]
 ; SKX-NEXT:    vpcmpistri $7, (%eax), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0x00,0x07]
 ; SKX-NEXT:    movl %ecx, %eax ## encoding: [0x89,0xc8]
 ; SKX-NEXT:    retl ## encoding: [0xc3]

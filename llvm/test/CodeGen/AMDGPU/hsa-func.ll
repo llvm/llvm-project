@@ -30,11 +30,10 @@
 ; ELF: Type: Function (0x2)
 ; ELF: }
 
+; HSA: .text
 ; HSA: .hsa_code_object_version 2,1
 ; HSA-CI: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 ; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
-
-; HSA: .text
 
 ; HSA-NOT: .amdgpu_hsa_kernel simple
 ; HSA: {{^}}simple:

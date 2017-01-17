@@ -97,8 +97,7 @@ for.end:                                          ; preds = %entry
 ; CHECK: ret void
 }
 
-
-;; TODO: We should be able to promote this memset.  Not yet though.
+; Make sure the first store in the loop is turned into a memset.
 define void @test4(i8* %Base) nounwind ssp {
 bb.nph:                                           ; preds = %entry
   %Base100 = getelementptr i8, i8* %Base, i64 1000
@@ -118,9 +117,8 @@ for.body:                                         ; preds = %bb.nph, %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
-; CHECK-TODO-LABEL: @test4(
-; CHECK-TODO: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i32 1, i1 false)
-; CHECK-TODO-NOT: store
+; CHECK-LABEL: @test4(
+; CHECK: call void @llvm.memset.p0i8.i64(i8* %Base, i8 0, i64 100, i32 1, i1 false)
 }
 
 ; This can't be promoted: the memset is a store of a loop variant value.

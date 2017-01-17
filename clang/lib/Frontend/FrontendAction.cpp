@@ -224,7 +224,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     // file, otherwise the CompilerInstance will happily destroy them.
     CI.setFileManager(&AST->getFileManager());
     CI.setSourceManager(&AST->getSourceManager());
-    CI.setPreprocessor(&AST->getPreprocessor());
+    CI.setPreprocessor(AST->getPreprocessorPtr());
     CI.setASTContext(&AST->getASTContext());
 
     setCurrentInput(Input, std::move(AST));

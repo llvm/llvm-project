@@ -143,13 +143,13 @@ int global2 = *(int*)((char*)&global1+1);
 // BLFUNC: @__cxx_global_var_init{{.*}}[[WITH]]
 // ASAN: @__cxx_global_var_init{{.*}}[[WITH]]
 
-// WITHOUT: attributes [[NOATTR]] = { nounwind{{.*}} }
+// WITHOUT: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// BLFILE: attributes [[WITH]] = { nounwind sanitize_address{{.*}} }
-// BLFILE: attributes [[NOATTR]] = { nounwind{{.*}} }
+// BLFILE: attributes [[WITH]] = { noinline nounwind sanitize_address{{.*}} }
+// BLFILE: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// BLFUNC: attributes [[WITH]] = { nounwind sanitize_address{{.*}} }
-// BLFUNC: attributes [[NOATTR]] = { nounwind{{.*}} }
+// BLFUNC: attributes [[WITH]] = { noinline nounwind sanitize_address{{.*}} }
+// BLFUNC: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// ASAN: attributes [[WITH]] = { nounwind sanitize_address{{.*}} }
-// ASAN: attributes [[NOATTR]] = { nounwind{{.*}} }
+// ASAN: attributes [[WITH]] = { noinline nounwind sanitize_address{{.*}} }
+// ASAN: attributes [[NOATTR]] = { noinline nounwind{{.*}} }

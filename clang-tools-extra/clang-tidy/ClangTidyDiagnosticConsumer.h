@@ -13,6 +13,7 @@
 #include "ClangTidyOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -32,18 +33,6 @@ class CompilationDatabase;
 
 namespace tidy {
 
-/// \brief A message from a clang-tidy check.
-///
-/// Note that this is independent of a \c SourceManager.
-struct ClangTidyMessage {
-  ClangTidyMessage(StringRef Message = "");
-  ClangTidyMessage(StringRef Message, const SourceManager &Sources,
-                   SourceLocation Loc);
-  std::string Message;
-  std::string FilePath;
-  unsigned FileOffset;
-};
-
 /// \brief A detected error complete with information to display diagnostic and
 /// automatic fix.
 ///
@@ -51,31 +40,10 @@ struct ClangTidyMessage {
 /// dependency on a SourceManager.
 ///
 /// FIXME: Make Diagnostics flexible enough to support this directly.
-struct ClangTidyError {
-  enum Level {
-    Warning = DiagnosticsEngine::Warning,
-    Error = DiagnosticsEngine::Error
-  };
+struct ClangTidyError : tooling::Diagnostic {
+  ClangTidyError(StringRef CheckName, Level DiagLevel, StringRef BuildDirectory,
+                 bool IsWarningAsError);
 
-  ClangTidyError(StringRef CheckName, Level DiagLevel, bool IsWarningAsError,
-                 StringRef BuildDirectory);
-
-  std::string CheckName;
-  ClangTidyMessage Message;
-  // Fixes grouped by file path.
-  llvm::StringMap<tooling::Replacements> Fix;
-  SmallVector<ClangTidyMessage, 1> Notes;
-
-  // A build directory of the diagnostic source file.
-  //
-  // It's an absolute path which is `directory` field of the source file in
-  // compilation database. If users don't specify the compilation database
-  // directory, it is the current directory where clang-tidy runs.
-  //
-  // Note: it is empty in unittest.
-  std::string BuildDirectory;
-
-  Level DiagLevel;
   bool IsWarningAsError;
 };
 

@@ -282,3 +282,53 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK: testl
 ; CHECK: setne
 }
+
+define i32 @test21(i64 %val) {
+  %and = and i64 %val, -2199023255552 ; 0xFFFFFE0000000000
+  %cmp = icmp ne i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+
+; CHECK-LABEL: test21
+; CHECK: shrq $41, %rdi
+; CHECK-NOT: test
+; CHECK: setne %al
+; CHECK: retq
+}
+
+; AND-to-SHR transformation is enabled for eq/ne condition codes only.
+define i32 @test22(i64 %val) {
+  %and = and i64 %val, -2199023255552 ; 0xFFFFFE0000000000
+  %cmp = icmp ult i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+
+; CHECK-LABEL: test22
+; CHECK-NOT: shrq $41
+; CHECK: retq
+}
+
+define i32 @test23(i64 %val) {
+  %and = and i64 %val, -1048576 ; 0xFFFFFFFFFFF00000
+  %cmp = icmp ne i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+
+; CHECK-LABEL: test23
+; CHECK: testq $-1048576, %rdi
+; CHECK: setne %al
+; CHECK: retq
+}
+
+define i32 @test24(i64 %val) {
+  %and = and i64 %val, 281474976710655 ; 0x0000FFFFFFFFFFFF
+  %cmp = icmp ne i64 %and, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+
+; CHECK-LABEL: test24
+; CHECK: shlq $16, %rdi
+; CHECK-NOT: test
+; CHECK: setne %al
+; CHECK: retq
+}

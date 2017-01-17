@@ -29,11 +29,10 @@ using namespace clang;
 using namespace ento;
 
 bool PathDiagnosticMacroPiece::containsEvent() const {
-  for (PathPieces::const_iterator I = subPieces.begin(), E = subPieces.end();
-       I!=E; ++I) {
-    if (isa<PathDiagnosticEventPiece>(*I))
+  for (auto &P : subPieces) {
+    if (isa<PathDiagnosticEventPiece>(*P))
       return true;
-    if (PathDiagnosticMacroPiece *MP = dyn_cast<PathDiagnosticMacroPiece>(*I))
+    if (auto *MP = dyn_cast<PathDiagnosticMacroPiece>(P.get()))
       if (MP->containsEvent())
         return true;
   }
@@ -64,33 +63,27 @@ PathDiagnosticNotePiece::~PathDiagnosticNotePiece() {}
 
 void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
                            bool ShouldFlattenMacros) const {
-  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
-    PathDiagnosticPiece *Piece = I->get();
-
+  for (auto &Piece : *this) {
     switch (Piece->getKind()) {
     case PathDiagnosticPiece::Call: {
-      PathDiagnosticCallPiece *Call = cast<PathDiagnosticCallPiece>(Piece);
-      IntrusiveRefCntPtr<PathDiagnosticEventPiece> CallEnter =
-        Call->getCallEnterEvent();
-      if (CallEnter)
-        Current.push_back(CallEnter);
-      Call->path.flattenTo(Primary, Primary, ShouldFlattenMacros);
-      IntrusiveRefCntPtr<PathDiagnosticEventPiece> callExit =
-        Call->getCallExitEvent();
-      if (callExit)
-        Current.push_back(callExit);
+      auto &Call = cast<PathDiagnosticCallPiece>(*Piece);
+      if (auto CallEnter = Call.getCallEnterEvent())
+        Current.push_back(std::move(CallEnter));
+      Call.path.flattenTo(Primary, Primary, ShouldFlattenMacros);
+      if (auto callExit = Call.getCallExitEvent())
+        Current.push_back(std::move(callExit));
       break;
     }
     case PathDiagnosticPiece::Macro: {
-      PathDiagnosticMacroPiece *Macro = cast<PathDiagnosticMacroPiece>(Piece);
+      auto &Macro = cast<PathDiagnosticMacroPiece>(*Piece);
       if (ShouldFlattenMacros) {
-        Macro->subPieces.flattenTo(Primary, Primary, ShouldFlattenMacros);
+        Macro.subPieces.flattenTo(Primary, Primary, ShouldFlattenMacros);
       } else {
         Current.push_back(Piece);
         PathPieces NewPath;
-        Macro->subPieces.flattenTo(Primary, NewPath, ShouldFlattenMacros);
+        Macro.subPieces.flattenTo(Primary, NewPath, ShouldFlattenMacros);
         // FIXME: This probably shouldn't mutate the original path piece.
-        Macro->subPieces = NewPath;
+        Macro.subPieces = NewPath;
       }
       break;
     }
@@ -143,7 +136,7 @@ getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
   // Check if the last piece in the callee path is a call to a function outside
   // of the main file.
   if (PathDiagnosticCallPiece *CPInner =
-      dyn_cast<PathDiagnosticCallPiece>(Path.back())) {
+          dyn_cast<PathDiagnosticCallPiece>(Path.back().get())) {
     return getFirstStackedCallToHeaderFile(CPInner, SMgr);
   }
 
@@ -890,24 +883,26 @@ void PathDiagnosticLocation::flatten() {
 // Manipulation of PathDiagnosticCallPieces.
 //===----------------------------------------------------------------------===//
 
-PathDiagnosticCallPiece *
-PathDiagnosticCallPiece::construct(const ExplodedNode *N,
-                                   const CallExitEnd &CE,
+std::shared_ptr<PathDiagnosticCallPiece>
+PathDiagnosticCallPiece::construct(const ExplodedNode *N, const CallExitEnd &CE,
                                    const SourceManager &SM) {
   const Decl *caller = CE.getLocationContext()->getDecl();
   PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),
                                                     CE.getLocationContext(),
                                                     SM);
-  return new PathDiagnosticCallPiece(caller, pos);
+  return std::shared_ptr<PathDiagnosticCallPiece>(
+      new PathDiagnosticCallPiece(caller, pos));
 }
 
 PathDiagnosticCallPiece *
 PathDiagnosticCallPiece::construct(PathPieces &path,
                                    const Decl *caller) {
-  PathDiagnosticCallPiece *C = new PathDiagnosticCallPiece(path, caller);
+  std::shared_ptr<PathDiagnosticCallPiece> C(
+      new PathDiagnosticCallPiece(path, caller));
   path.clear();
-  path.push_front(C);
-  return C;
+  auto *R = C.get();
+  path.push_front(std::move(C));
+  return R;
 }
 
 void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
@@ -989,7 +984,7 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
   return true;
 }
 
-IntrusiveRefCntPtr<PathDiagnosticEventPiece>
+std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallEnterEvent() const {
   if (!Callee)
     return nullptr;
@@ -1001,10 +996,10 @@ PathDiagnosticCallPiece::getCallEnterEvent() const {
   describeCodeDecl(Out, Callee, /*ExtendedDescription=*/true);
 
   assert(callEnter.asLocation().isValid());
-  return new PathDiagnosticEventPiece(callEnter, Out.str());
+  return std::make_shared<PathDiagnosticEventPiece>(callEnter, Out.str());
 }
 
-IntrusiveRefCntPtr<PathDiagnosticEventPiece>
+std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallEnterWithinCallerEvent() const {
   if (!callEnterWithin.asLocation().isValid())
     return nullptr;
@@ -1020,10 +1015,10 @@ PathDiagnosticCallPiece::getCallEnterWithinCallerEvent() const {
   Out << "Entered call";
   describeCodeDecl(Out, Caller, /*ExtendedDescription=*/false, " from ");
 
-  return new PathDiagnosticEventPiece(callEnterWithin, Out.str());
+  return std::make_shared<PathDiagnosticEventPiece>(callEnterWithin, Out.str());
 }
 
-IntrusiveRefCntPtr<PathDiagnosticEventPiece>
+std::shared_ptr<PathDiagnosticEventPiece>
 PathDiagnosticCallPiece::getCallExitEvent() const {
   if (NoExit)
     return nullptr;
@@ -1042,7 +1037,7 @@ PathDiagnosticCallPiece::getCallExitEvent() const {
   }
 
   assert(callReturn.asLocation().isValid());
-  return new PathDiagnosticEventPiece(callReturn, Out.str());
+  return std::make_shared<PathDiagnosticEventPiece>(callReturn, Out.str());
 }
 
 static void compute_path_size(const PathPieces &pieces, unsigned &size) {

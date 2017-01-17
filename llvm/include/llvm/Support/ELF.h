@@ -1143,6 +1143,11 @@ enum {
   DT_VERNEED = 0X6FFFFFFE,    // The address of the version Dependency table.
   DT_VERNEEDNUM = 0X6FFFFFFF, // The number of entries in DT_VERNEED.
 
+  // Hexagon specific dynamic table entries
+  DT_HEXAGON_SYMSZ = 0x70000000,
+  DT_HEXAGON_VER = 0x70000001,
+  DT_HEXAGON_PLT = 0x70000002,
+
   // Mips specific dynamic table entry tags.
   DT_MIPS_RLD_VERSION = 0x70000001,    // 32 bit version number for runtime
                                        // linker interface.

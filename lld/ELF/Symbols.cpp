@@ -35,11 +35,11 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
-    auto &D = cast<DefinedSynthetic<ELFT>>(Body);
+    auto &D = cast<DefinedSynthetic>(Body);
     const OutputSectionBase *Sec = D.Section;
     if (!Sec)
       return D.Value;
-    if (D.Value == DefinedSynthetic<ELFT>::SectionEnd)
+    if (D.Value == uintX_t(-1))
       return Sec->Addr + Sec->Size;
     return Sec->Addr + D.Value;
   }
@@ -81,7 +81,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       return 0;
     if (SS.isFunc())
       return Body.getPltVA<ELFT>();
-    return Out<ELFT>::Bss->Addr + SS.OffsetInBss;
+    return SS.getBssSectionForCopy()->Addr + SS.CopyOffset;
   }
   case SymbolBody::UndefinedKind:
     return 0;
@@ -97,7 +97,8 @@ SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
                        uint8_t Type)
     : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(IsLocal),
       IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-      IsInIgot(false), Type(Type), StOther(StOther), Name(Name) {}
+      IsInIgot(false), CopyIsInBssRelRo(false), Type(Type), StOther(StOther),
+      Name(Name) {}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -173,6 +174,8 @@ template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
     return DR->ThunkData->getVA();
   if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
     return S->ThunkData->getVA();
+  if (const auto *S = dyn_cast<Undefined<ELFT>>(this))
+    return S->ThunkData->getVA();
   fatal("getThunkVA() not supported for Symbol class\n");
 }
 
@@ -199,6 +202,10 @@ void SymbolBody::parseSymbolVersion() {
 
   // Truncate the symbol name so that it doesn't include the version string.
   Name = {S.data(), Pos};
+
+  // If this is an undefined or shared symbol it is not a definition.
+  if (isUndefined() || isShared())
+    return;
 
   // '@@' in a symbol name means the default version.
   // It is usually the most recent one.
@@ -232,18 +239,18 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
          (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
-                     uint8_t Type, InputFile *File)
+template <typename ELFT>
+Undefined<ELFT>::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
+                           uint8_t Type, InputFile *File)
     : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {
   this->File = File;
 }
 
 template <typename ELFT>
-DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef Name, uintX_t Value,
-                                         const OutputSectionBase *Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, Name, /*IsLocal=*/false,
-              STV_HIDDEN, 0 /* Type */),
-      Value(Value), Section(Section) {}
+OutputSection<ELFT> *SharedSymbol<ELFT>::getBssSectionForCopy() const {
+  assert(needsCopy());
+  return CopyIsInBssRelRo ? Out<ELFT>::BssRelRo : Out<ELFT>::Bss;
+}
 
 DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint64_t Alignment,
                              uint8_t StOther, uint8_t Type, InputFile *File)
@@ -287,10 +294,22 @@ InputFile *LazyObject::fetch() {
   return createObjectFile(MBRef);
 }
 
-bool Symbol::includeInDynsym() const {
+uint8_t Symbol::computeBinding() const {
+  if (Config->Relocatable)
+    return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
+    return STB_LOCAL;
+  if (VersionId == VER_NDX_LOCAL && !body()->isUndefined())
+    return STB_LOCAL;
+  if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
+  return Binding;
+}
+
+bool Symbol::includeInDynsym() const {
+  if (computeBinding() == STB_LOCAL)
     return false;
-  return (ExportDynamic && VersionId != VER_NDX_LOCAL) || body()->isShared() ||
+  return ExportDynamic || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
 
@@ -309,7 +328,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
 }
 
 // Returns a symbol for an error message.
-std::string elf::toString(const SymbolBody &B) {
+std::string lld::toString(const SymbolBody &B) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangle(B.getName()))
       return *S;
@@ -361,12 +380,17 @@ template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
 
+template class elf::Undefined<ELF32LE>;
+template class elf::Undefined<ELF32BE>;
+template class elf::Undefined<ELF64LE>;
+template class elf::Undefined<ELF64BE>;
+
+template class elf::SharedSymbol<ELF32LE>;
+template class elf::SharedSymbol<ELF32BE>;
+template class elf::SharedSymbol<ELF64LE>;
+template class elf::SharedSymbol<ELF64BE>;
+
 template class elf::DefinedRegular<ELF32LE>;
 template class elf::DefinedRegular<ELF32BE>;
 template class elf::DefinedRegular<ELF64LE>;
 template class elf::DefinedRegular<ELF64BE>;
-
-template class elf::DefinedSynthetic<ELF32LE>;
-template class elf::DefinedSynthetic<ELF32BE>;
-template class elf::DefinedSynthetic<ELF64LE>;
-template class elf::DefinedSynthetic<ELF64BE>;

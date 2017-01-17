@@ -42,15 +42,15 @@ source_filename = "t.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.0.23918"
 
-@"\01?fptr@@3P6IHHH@ZA" = global i32 (i32, i32)* @"\01?f@@YIHHH@Z", align 4, !dbg !4
+@"\01?fptr@@3P6IHHH@ZA" = global i32 (i32, i32)* @"\01?f@@YIHHH@Z", align 4, !dbg !0
 
 ; Function Attrs: nounwind readnone
-define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !12 {
+define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !13 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !14, metadata !16), !dbg !17
-  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !15, metadata !16), !dbg !18
-  %add = add nsw i32 %b, %a, !dbg !19
-  ret i32 %add, !dbg !20
+  tail call void @llvm.dbg.value(metadata i32 %b, i64 0, metadata !15, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata i32 %a, i64 0, metadata !16, metadata !17), !dbg !19
+  %add = add nsw i32 %b, %a, !dbg !20
+  ret i32 %add, !dbg !21
 }
 
 ; Function Attrs: nounwind readnone
@@ -59,28 +59,30 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9, !10}
-!llvm.ident = !{!11}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!10, !11}
+!llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 272067)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
-!1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
-!2 = !{}
-!3 = !{!4}
-!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "fptr", linkageName: "\01?fptr@@3P6IHHH@ZA", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true))
-!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 32, align: 32)
-!6 = !DISubroutineType(cc: DW_CC_BORLAND_msfastcall, types: !7)
-!7 = !{!8, !8, !8}
-!8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = !{i32 2, !"Dwarf Version", i32 4}
-!10 = !{i32 2, !"Debug Info Version", i32 3}
-!11 = !{!"clang version 3.9.0 (trunk 272067)"}
-!12 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YIHHH@Z", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !13)
-!13 = !{!14, !15}
-!14 = !DILocalVariable(name: "b", arg: 2, scope: !12, file: !1, line: 1, type: !8)
-!15 = !DILocalVariable(name: "a", arg: 1, scope: !12, file: !1, line: 1, type: !8)
-!16 = !DIExpression()
-!17 = !DILocation(line: 1, column: 29, scope: !12)
-!18 = !DILocation(line: 1, column: 22, scope: !12)
-!19 = !DILocation(line: 1, column: 43, scope: !12)
-!20 = !DILocation(line: 1, column: 34, scope: !12)
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "fptr", linkageName: "\01?fptr@@3P6IHHH@ZA", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 272067)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
+!4 = !{}
+!5 = !{!0}
+!6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 32, align: 32)
+!7 = !DISubroutineType(cc: DW_CC_BORLAND_msfastcall, types: !8)
+!8 = !{!9, !9, !9}
+!9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Dwarf Version", i32 4}
+!11 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = !{!"clang version 3.9.0 (trunk 272067)"}
+!13 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YIHHH@Z", scope: !3, file: !3, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !14)
+!14 = !{!15, !16}
+!15 = !DILocalVariable(name: "b", arg: 2, scope: !13, file: !3, line: 1, type: !9)
+!16 = !DILocalVariable(name: "a", arg: 1, scope: !13, file: !3, line: 1, type: !9)
+!17 = !DIExpression()
+!18 = !DILocation(line: 1, column: 29, scope: !13)
+!19 = !DILocation(line: 1, column: 22, scope: !13)
+!20 = !DILocation(line: 1, column: 43, scope: !13)
+!21 = !DILocation(line: 1, column: 34, scope: !13)
+

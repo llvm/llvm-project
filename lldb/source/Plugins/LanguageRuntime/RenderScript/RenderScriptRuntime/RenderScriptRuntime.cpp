@@ -2854,6 +2854,11 @@ bool RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp) {
       module_desc.reset(new RSModuleDescriptor(module_sp));
       if (module_desc->ParseRSInfo()) {
         m_rsmodules.push_back(module_desc);
+        module_desc->WarnIfVersionMismatch(GetProcess()
+                                               ->GetTarget()
+                                               .GetDebugger()
+                                               .GetAsyncOutputStream()
+                                               .get());
         module_loaded = true;
       }
       if (module_loaded) {
@@ -2920,6 +2925,25 @@ void RenderScriptRuntime::Update() {
     if (!m_initiated) {
       Initiate();
     }
+  }
+}
+
+void RSModuleDescriptor::WarnIfVersionMismatch(lldb_private::Stream *s) const {
+  if (!s)
+    return;
+
+  if (m_slang_version.empty() || m_bcc_version.empty()) {
+    s->PutCString("WARNING: Unknown bcc or slang (llvm-rs-cc) version; debug "
+                  "experience may be unreliable");
+    s->EOL();
+  } else if (m_slang_version != m_bcc_version) {
+    s->Printf("WARNING: The debug info emitted by the slang frontend "
+              "(llvm-rs-cc) used to build this module (%s) does not match the "
+              "version of bcc used to generate the debug information (%s). "
+              "This is an unsupported configuration and may result in a poor "
+              "debugging experience; proceed with caution",
+              m_slang_version.c_str(), m_bcc_version.c_str());
+    s->EOL();
   }
 }
 
@@ -2990,6 +3014,22 @@ bool RSModuleDescriptor::ParseExportReduceCount(llvm::StringRef *lines,
   return true;
 }
 
+bool RSModuleDescriptor::ParseVersionInfo(llvm::StringRef *lines,
+                                          size_t n_lines) {
+  // Skip the versionInfo line
+  ++lines;
+  for (; n_lines--; ++lines) {
+    // We're only interested in bcc and slang versions, and ignore all other
+    // versionInfo lines
+    const auto kv_pair = lines->split(" - ");
+    if (kv_pair.first == "slang")
+      m_slang_version = kv_pair.second.str();
+    else if (kv_pair.first == "bcc")
+      m_bcc_version = kv_pair.second.str();
+  }
+  return true;
+}
+
 bool RSModuleDescriptor::ParseExportForeachCount(llvm::StringRef *lines,
                                                  size_t n_lines) {
   // Skip the exportForeachCount line
@@ -3054,7 +3094,8 @@ bool RSModuleDescriptor::ParseRSInfo() {
     eExportReduce,
     ePragma,
     eBuildChecksum,
-    eObjectSlot
+    eObjectSlot,
+    eVersionInfo,
   };
 
   const auto rs_info_handler = [](llvm::StringRef name) -> int {
@@ -3070,6 +3111,7 @@ bool RSModuleDescriptor::ParseRSInfo() {
         // script
         .Case("pragmaCount", ePragma)
         .Case("objectSlotCount", eObjectSlot)
+        .Case("versionInfo", eVersionInfo)
         .Default(-1);
   };
 
@@ -3107,6 +3149,9 @@ bool RSModuleDescriptor::ParseRSInfo() {
       break;
     case ePragma:
       success = ParsePragmaCount(line, n_lines);
+      break;
+    case eVersionInfo:
+      success = ParseVersionInfo(line, n_lines);
       break;
     default: {
       if (log)

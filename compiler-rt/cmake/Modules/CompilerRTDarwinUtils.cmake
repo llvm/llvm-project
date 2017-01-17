@@ -66,7 +66,7 @@ function(darwin_test_archs os valid_archs)
     file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main() { printf(__FILE__); return 0; }\n")
   
     set(os_linker_flags)
-    foreach(flag ${DARWIN_${os}_LINKFLAGS})
+    foreach(flag ${DARWIN_${os}_LINK_FLAGS})
       set(os_linker_flags "${os_linker_flags} ${flag}")
     endforeach()
   endif()

@@ -102,6 +102,10 @@ public:
     recalculate(F);
   }
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   /// \brief Returns *false* if the other dominator tree matches this dominator
   /// tree.
   inline bool compare(const DominatorTree &Other) const {

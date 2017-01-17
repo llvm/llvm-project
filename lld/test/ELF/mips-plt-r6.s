@@ -18,7 +18,7 @@
 #
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-NEXT: .plt:
-# CHECK-NEXT:   20010:       3c 1c 00 04     aui     $zero, $gp, 4
+# CHECK-NEXT:   20010:       3c 1c 00 03     aui     $zero, $gp, 3
 # CHECK-NEXT:   20014:       8f 99 00 04     lw      $25, 4($gp)
 # CHECK-NEXT:   20018:       27 9c 00 04     addiu   $gp, $gp, 4
 # CHECK-NEXT:   2001c:       03 1c c0 23     subu    $24, $24, $gp
@@ -27,7 +27,7 @@
 # CHECK-NEXT:   20028:       03 20 f8 09     jalr    $25
 # CHECK-NEXT:   2002c:       27 18 ff fe     addiu   $24, $24, -2
 
-# CHECK-NEXT:   20030:       3c 0f 00 04     aui     $zero, $15, 4
+# CHECK-NEXT:   20030:       3c 0f 00 03     aui     $zero, $15, 3
 # CHECK-NEXT:   20034:       8d f9 00 0c     lw      $25, 12($15)
 # CHECK-NEXT:   20038:       03 20 00 09     jr      $25
 # CHECK-NEXT:   2003c:       25 f8 00 0c     addiu   $24, $15, 12

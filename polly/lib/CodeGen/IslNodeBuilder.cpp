@@ -74,6 +74,11 @@ static cl::opt<bool> PollyGenerateExpressions(
     cl::desc("Generate AST expressions for unmodified and modified accesses"),
     cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<int> PollyTargetFirstLevelCacheLineSize(
+    "polly-target-first-level-cache-line-size",
+    cl::desc("The size of the first level cache line size specified in bytes."),
+    cl::Hidden, cl::init(64), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 __isl_give isl_ast_expr *
 IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
                               ICmpInst::Predicate &Predicate) {
@@ -1269,8 +1274,8 @@ void IslNodeBuilder::allocateNewArrays() {
 
     auto InstIt =
         Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator();
-    Value *CreatedArray =
-        new AllocaInst(NewArrayType, SAI->getName(), &*InstIt);
+    auto *CreatedArray = new AllocaInst(NewArrayType, SAI->getName(), &*InstIt);
+    CreatedArray->setAlignment(PollyTargetFirstLevelCacheLineSize);
     SAI->setBasePtr(CreatedArray);
   }
 }

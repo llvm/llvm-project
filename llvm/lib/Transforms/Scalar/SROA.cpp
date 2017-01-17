@@ -1825,6 +1825,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     // Rank the remaining candidate vector types. This is easy because we know
     // they're all integer vectors. We sort by ascending number of elements.
     auto RankVectorTypes = [&DL](VectorType *RHSTy, VectorType *LHSTy) {
+      (void)DL;
       assert(DL.getTypeSizeInBits(RHSTy) == DL.getTypeSizeInBits(LHSTy) &&
              "Cannot have vector types of different sizes!");
       assert(RHSTy->getElementType()->isIntegerTy() &&
@@ -4026,13 +4027,13 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       if (Fragment.Size < AllocaSize || Expr->isFragment()) {
         // If this alloca is already a scalar replacement of a larger aggregate,
         // Fragment.Offset describes the offset inside the scalar.
-        uint64_t Offset =
-            Expr->isFragment() ? Expr->getFragmentOffsetInBits() : 0;
+        auto ExprFragment = Expr->getFragmentInfo();
+        uint64_t Offset = ExprFragment ? ExprFragment->OffsetInBits : 0;
         uint64_t Start = Offset + Fragment.Offset;
         uint64_t Size = Fragment.Size;
-        if (Expr->isFragment()) {
+        if (ExprFragment) {
           uint64_t AbsEnd =
-              Expr->getFragmentOffsetInBits() + Expr->getFragmentSizeInBits();
+	    ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
           if (Start >= AbsEnd)
             // No need to describe a SROAed padding.
             continue;
@@ -4234,9 +4235,8 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  // FIXME: Even when promoting allocas we should preserve some abstract set of
-  // CFG-specific analyses.
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
 }

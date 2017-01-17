@@ -136,6 +136,8 @@ PreservedAnalyses InstSimplifierPass::run(Function &F,
   bool Changed = runImpl(F, &DT, &TLI, &AC);
   if (!Changed)
     return PreservedAnalyses::all();
-  // FIXME: This should also 'preserve the CFG'.
-  return PreservedAnalyses::none();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

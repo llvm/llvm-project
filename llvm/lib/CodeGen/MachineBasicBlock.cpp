@@ -286,7 +286,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (!livein_empty()) {
     if (Indexes) OS << '\t';
     OS << "    Live Ins:";
-    for (const auto &LI : make_range(livein_begin(), livein_end())) {
+    for (const auto &LI : LiveIns) {
       OS << ' ' << PrintReg(LI.PhysReg, TRI);
       if (!LI.LaneMask.all())
         OS << ':' << PrintLaneMask(LI.LaneMask);
@@ -1291,4 +1291,11 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
 
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
+}
+
+MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
+  assert(getParent()->getProperties().hasProperty(
+      MachineFunctionProperties::Property::TracksLiveness) &&
+      "Liveness information is accurate");
+  return LiveIns.begin();
 }

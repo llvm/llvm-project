@@ -689,7 +689,8 @@ static struct isl_basic_set *compress_variables(
 			isl_mat_free(*T2);
 			*T2 = NULL;
 		}
-		return isl_basic_set_set_to_empty(bset);
+		bset = isl_basic_set_set_to_empty(bset);
+		return return_with_identity(bset, T, T2);
 	}
 
 	bset = isl_basic_set_preimage(bset, T ? isl_mat_copy(TC) : TC);

@@ -1,5 +1,5 @@
 ; RUN: opt -S -basicaa -licm %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
 declare i32 @foo() readonly argmemonly nounwind
 declare i32 @foo2() readonly nounwind
 declare i32 @bar(i32* %loc2) readonly argmemonly nounwind

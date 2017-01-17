@@ -34,6 +34,8 @@ __isl_give isl_val *isl_val_rat_from_isl_int(isl_ctx *ctx,
 	isl_int n, isl_int d);
 __isl_give isl_val *isl_val_cow(__isl_take isl_val *val);
 
+int isl_val_get_num_isl_int(__isl_keep isl_val *v, isl_int *n);
+
 int isl_val_involves_dims(__isl_keep isl_val *v, enum isl_dim_type type,
 	unsigned first, unsigned n);
 __isl_give isl_val *isl_val_insert_dims(__isl_take isl_val *v,

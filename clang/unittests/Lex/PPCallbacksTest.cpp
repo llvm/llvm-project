@@ -162,13 +162,12 @@ protected:
 
     VoidModuleLoader ModLoader;
 
-    IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts = new HeaderSearchOptions();
-    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts,
-                            Target.get());
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
-    IntrusiveRefCntPtr<PreprocessorOptions> PPOpts = new PreprocessorOptions();
-    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
@@ -199,11 +198,12 @@ protected:
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
     VoidModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(new HeaderSearchOptions, SourceMgr, Diags, 
-                            OpenCLLangOpts, Target.get());
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, OpenCLLangOpts, Target.get());
 
-    Preprocessor PP(new PreprocessorOptions(), Diags, OpenCLLangOpts, SourceMgr,
-                    HeaderInfo, ModLoader, /*IILookup =*/nullptr,
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags,
+                    OpenCLLangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup =*/nullptr,
                     /*OwnsHeaderSearch =*/false);
     PP.Initialize(*Target);
 

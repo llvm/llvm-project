@@ -306,6 +306,11 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                         IsVisibleInNewNs)
                          .bind("using_namespace"),
                      this);
+  // Match namespace alias declarations.
+  Finder->addMatcher(namespaceAliasDecl(isExpansionInFileMatching(FilePattern),
+                                        IsVisibleInNewNs)
+                         .bind("namespace_alias"),
+                     this);
 
   // Match old namespace blocks.
   Finder->addMatcher(
@@ -429,6 +434,10 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<UsingDirectiveDecl>(
                      "using_namespace")) {
     UsingNamespaceDecls.insert(UsingNamespace);
+  } else if (const auto *NamespaceAlias =
+                 Result.Nodes.getNodeAs<NamespaceAliasDecl>(
+                     "namespace_alias")) {
+    NamespaceAliasDecls.insert(NamespaceAlias);
   } else if (const auto *NsDecl =
                  Result.Nodes.getNodeAs<NamespaceDecl>("old_ns")) {
     moveOldNamespace(Result, NsDecl);
@@ -546,17 +555,16 @@ void ChangeNamespaceTool::moveOldNamespace(
   if (Decl::castToDeclContext(NsDecl)->decls_empty())
     return;
 
+  const SourceManager &SM = *Result.SourceManager;
   // Get the range of the code in the old namespace.
-  SourceLocation Start = getLocAfterNamespaceLBrace(
-      NsDecl, *Result.SourceManager, Result.Context->getLangOpts());
+  SourceLocation Start =
+      getLocAfterNamespaceLBrace(NsDecl, SM, Result.Context->getLangOpts());
   assert(Start.isValid() && "Can't find l_brace for namespace.");
-  SourceLocation End = NsDecl->getRBraceLoc().getLocWithOffset(-1);
-  // Create a replacement that deletes the code in the old namespace merely for
-  // retrieving offset and length from it.
-  const auto R = createReplacement(Start, End, "", *Result.SourceManager);
   MoveNamespace MoveNs;
-  MoveNs.Offset = R.getOffset();
-  MoveNs.Length = R.getLength();
+  MoveNs.Offset = SM.getFileOffset(Start);
+  // The range of the moved namespace is from the location just past the left
+  // brace to the location right before the right brace.
+  MoveNs.Length = SM.getFileOffset(NsDecl->getRBraceLoc()) - MoveNs.Offset;
 
   // Insert the new namespace after `DiffOldNamespace`. For example, if
   // `OldNamespace` is "a::b::c" and `NewNamespace` is `a::x::y`, then
@@ -568,18 +576,16 @@ void ChangeNamespaceTool::moveOldNamespace(
   const NamespaceDecl *OuterNs = getOuterNamespace(NsDecl, DiffOldNamespace);
   SourceLocation InsertionLoc = Start;
   if (OuterNs) {
-    SourceLocation LocAfterNs =
-        getStartOfNextLine(OuterNs->getRBraceLoc(), *Result.SourceManager,
-                           Result.Context->getLangOpts());
+    SourceLocation LocAfterNs = getStartOfNextLine(
+        OuterNs->getRBraceLoc(), SM, Result.Context->getLangOpts());
     assert(LocAfterNs.isValid() &&
            "Failed to get location after DiffOldNamespace");
     InsertionLoc = LocAfterNs;
   }
-  MoveNs.InsertionOffset = Result.SourceManager->getFileOffset(
-      Result.SourceManager->getSpellingLoc(InsertionLoc));
-  MoveNs.FID = Result.SourceManager->getFileID(Start);
+  MoveNs.InsertionOffset = SM.getFileOffset(SM.getSpellingLoc(InsertionLoc));
+  MoveNs.FID = SM.getFileID(Start);
   MoveNs.SourceMgr = Result.SourceManager;
-  MoveNamespaces[R.getFilePath()].push_back(MoveNs);
+  MoveNamespaces[SM.getFilename(Start)].push_back(MoveNs);
 }
 
 // Removes a class forward declaration from the code in the moved namespace and
@@ -685,6 +691,38 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       FromDeclNameRef = FromDeclNameRef.drop_front(2);
       if (FromDeclNameRef.size() < ReplaceName.size())
         ReplaceName = FromDeclNameRef;
+    }
+  }
+  // Checks if there is any namespace alias declarations that can shorten the
+  // qualified name.
+  for (const auto *NamespaceAlias : NamespaceAliasDecls) {
+    if (!isDeclVisibleAtLocation(*Result.SourceManager, NamespaceAlias, DeclCtx,
+                                 Start))
+      continue;
+    StringRef FromDeclNameRef = FromDeclName;
+    if (FromDeclNameRef.consume_front(
+            NamespaceAlias->getNamespace()->getQualifiedNameAsString() +
+            "::")) {
+      std::string AliasName = NamespaceAlias->getNameAsString();
+      std::string AliasQualifiedName =
+          NamespaceAlias->getQualifiedNameAsString();
+      // We only consider namespace aliases define in the global namepspace or
+      // in namespaces that are directly visible from the reference, i.e.
+      // ancestor of the `OldNs`. Note that declarations in ancestor namespaces
+      // but not visible in the new namespace is filtered out by
+      // "IsVisibleInNewNs" matcher.
+      if (AliasQualifiedName != AliasName) {
+        // The alias is defined in some namespace.
+        assert(StringRef(AliasQualifiedName).endswith("::" + AliasName));
+        llvm::StringRef AliasNs =
+            StringRef(AliasQualifiedName).drop_back(AliasName.size() + 2);
+        if (!llvm::StringRef(OldNs).startswith(AliasNs))
+          continue;
+      }
+      std::string NameWithAliasNamespace =
+          (AliasName + "::" + FromDeclNameRef).str();
+      if (NameWithAliasNamespace.size() < ReplaceName.size())
+        ReplaceName = NameWithAliasNamespace;
     }
   }
   // Checks if there is any using shadow declarations that can shorten the

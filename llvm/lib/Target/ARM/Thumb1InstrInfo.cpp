@@ -50,8 +50,9 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (st.hasV6Ops() || ARM::hGPRRegClass.contains(SrcReg)
       || !ARM::tGPRRegClass.contains(DestReg))
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc)));
+    BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .add(predOps(ARMCC::AL));
   else {
     // FIXME: The performance consequences of this are going to be atrocious.
     // Some things to try that should be better:
@@ -60,10 +61,12 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // See: http://lists.llvm.org/pipermail/llvm-dev/2014-August/075998.html
 
     // 'MOV lo, lo' is unpredictable on < v6, so use the stack to do it
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tPUSH)))
-      .addReg(SrcReg, getKillRegState(KillSrc));
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tPOP)))
-      .addReg(DestReg, getDefRegState(true));
+    BuildMI(MBB, I, DL, get(ARM::tPUSH))
+        .add(predOps(ARMCC::AL))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, I, DL, get(ARM::tPOP))
+        .add(predOps(ARMCC::AL))
+        .addReg(DestReg, getDefRegState(true));
   }
 }
 
@@ -87,9 +90,12 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tSTRspi))
-                   .addReg(SrcReg, getKillRegState(isKill))
-                   .addFrameIndex(FI).addImm(0).addMemOperand(MMO));
+    BuildMI(MBB, I, DL, get(ARM::tSTRspi))
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .add(predOps(ARMCC::AL));
   }
 }
 
@@ -113,8 +119,11 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
-    AddDefaultPred(BuildMI(MBB, I, DL, get(ARM::tLDRspi), DestReg)
-                   .addFrameIndex(FI).addImm(0).addMemOperand(MMO));
+    BuildMI(MBB, I, DL, get(ARM::tLDRspi), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .add(predOps(ARMCC::AL));
   }
 }
 

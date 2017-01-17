@@ -91,6 +91,8 @@ int main() {
     }
     {
         std::tuple<A&&> t(std::forward_as_tuple(A{}));
+        ((void)t);
         std::tuple<ExplicitA&&> t2(std::forward_as_tuple(ExplicitA{}));
+        ((void)t2);
     }
 }

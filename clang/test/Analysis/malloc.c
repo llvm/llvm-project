@@ -1763,6 +1763,17 @@ void testConstEscapeThroughAnotherField() {
   constEscape(&(s.x)); // could free s->p!
 } // no-warning
 
+// PR15623
+int testNoCheckerDataPropogationFromLogicalOpOperandToOpResult(void) {
+   char *param = malloc(10);
+   char *value = malloc(10);
+   int ok = (param && value);
+   free(param);
+   free(value);
+   // Previously we ended up with 'Use of memory after it is freed' on return.
+   return ok; // no warning
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 

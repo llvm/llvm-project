@@ -3,6 +3,8 @@
 ; Eg: zext(or(setcc(cmp), setcc(cmp))) -> shr(or(lzcnt, lzcnt))
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=btver2 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=btver2 -mattr=-fast-lzcnt | FileCheck --check-prefix=NOFASTLZCNT %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver1 -mattr=-fast-lzcnt | FileCheck --check-prefix=NOFASTLZCNT %s
 
 ; Test one 32-bit input, output is 32-bit, no transformations expected.
 define i32 @test_zext_cmp0(i32 %a) {

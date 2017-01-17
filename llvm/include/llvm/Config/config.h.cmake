@@ -39,7 +39,7 @@
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
-#cmakedefine01 HAVE_DIA_SDK
+#cmakedefine01 LLVM_ENABLE_DIA_SDK
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */

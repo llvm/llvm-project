@@ -986,7 +986,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
                         OriginalBaseLValue);
         // Store the address of the original variable associated with the LHS
         // implicit variable.
-        PrivateScope.addPrivate(LHSVD, [this, OASELValueLB]() -> Address {
+        PrivateScope.addPrivate(LHSVD, [OASELValueLB]() -> Address {
           return OASELValueLB.getAddress();
         });
         // Emit reduction copy.
@@ -1040,9 +1040,8 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
             *this, OrigVD->getType(), ASELValue.getType(), OriginalBaseLValue);
         // Store the address of the original variable associated with the LHS
         // implicit variable.
-        PrivateScope.addPrivate(LHSVD, [this, ASELValue]() -> Address {
-          return ASELValue.getAddress();
-        });
+        PrivateScope.addPrivate(
+            LHSVD, [ASELValue]() -> Address { return ASELValue.getAddress(); });
         // Emit reduction copy.
         bool IsRegistered = PrivateScope.addPrivate(
             OrigVD, [this, OrigVD, PrivateVD, BaseLValue, ASELValue,
@@ -2005,9 +2004,50 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
 
 void CodeGenFunction::EmitOMPTargetTeamsDirective(
     const OMPTargetTeamsDirective &S) {
-  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_target_teams,
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_teams, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDistributeDirective(
+    const OMPTargetTeamsDistributeDirective &S) {
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_teams_distribute,
       [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-        CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDirective(
+    const OMPTargetTeamsDistributeParallelForDirective &S) {
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_teams_distribute_parallel_for,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForSimdDirective(
+    const OMPTargetTeamsDistributeParallelForSimdDirective &S) {
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_teams_distribute_parallel_for_simd,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDistributeSimdDirective(
+    const OMPTargetTeamsDistributeSimdDirective &S) {
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_teams_distribute_simd,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
       });
 }
 
@@ -2592,7 +2632,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
   for (const auto *C : S.getClausesOfKind<OMPDependClause>())
     for (auto *IRef : C->varlists())
       Data.Dependences.push_back(std::make_pair(C->getDependencyKind(), IRef));
-  auto &&CodeGen = [PartId, &S, &Data, CS, &BodyGen, &LastprivateDstsOrigs](
+  auto &&CodeGen = [&Data, CS, &BodyGen, &LastprivateDstsOrigs](
       CodeGenFunction &CGF, PrePostActionTy &Action) {
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
@@ -2739,6 +2779,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPDistributeDirective &S) {
 
   auto &RT = CGM.getOpenMPRuntime();
 
+  bool HasLastprivateClause = false;
   // Check pre-condition.
   {
     OMPLoopScope PreInitScope(*this, S);
@@ -2772,6 +2813,16 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPDistributeDirective &S) {
           EmitOMPHelperVar(*this, cast<DeclRefExpr>(S.getIsLastIterVariable()));
 
       OMPPrivateScope LoopScope(*this);
+      if (EmitOMPFirstprivateClause(S, LoopScope)) {
+        // Emit implicit barrier to synchronize threads and avoid data races on
+        // initialization of firstprivate variables and post-update of
+        // lastprivate variables.
+        CGM.getOpenMPRuntime().emitBarrierCall(
+          *this, S.getLocStart(), OMPD_unknown, /*EmitChecks=*/false,
+          /*ForceSimpleCall=*/true);
+      }
+      EmitOMPPrivateClause(S, LoopScope);
+      HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();
 
@@ -2828,6 +2879,13 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPDistributeDirective &S) {
                             LB.getAddress(), UB.getAddress(), ST.getAddress(),
                             IL.getAddress(), Chunk);
       }
+
+      // Emit final copy of the lastprivate variables if IsLastIter != 0.
+      if (HasLastprivateClause)
+        EmitOMPLastprivateClauseFinal(
+            S, /*NoFinals=*/false,
+            Builder.CreateIsNotNull(
+                EmitLoadOfScalar(IL, S.getLocStart())));
     }
 
     // We're now done with the loop, so jump to the continuation block.
@@ -3191,7 +3249,7 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
     NewVValType = XRValExpr->getType();
     auto *ERValExpr = IsXLHSInRHSPart ? RHS : LHS;
     auto &&Gen = [&CGF, &NewVVal, UE, ExprRValue, XRValExpr, ERValExpr,
-                  IsSeqCst, IsPostfixUpdate](RValue XRValue) -> RValue {
+                  IsPostfixUpdate](RValue XRValue) -> RValue {
       CodeGenFunction::OpaqueValueMapping MapExpr(CGF, ERValExpr, ExprRValue);
       CodeGenFunction::OpaqueValueMapping MapX(CGF, XRValExpr, XRValue);
       RValue Res = CGF.EmitAnyExpr(UE);
@@ -3218,7 +3276,7 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
     NewVValType = X->getType().getNonReferenceType();
     ExprRValue = convertToType(CGF, ExprRValue, E->getType(),
                                X->getType().getNonReferenceType(), Loc);
-    auto &&Gen = [&CGF, &NewVVal, ExprRValue](RValue XRValue) -> RValue {
+    auto &&Gen = [&NewVVal, ExprRValue](RValue XRValue) -> RValue {
       NewVVal = XRValue;
       return ExprRValue;
     };

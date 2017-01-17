@@ -175,8 +175,8 @@ inline bool operator==(const DebugLocEntry::Value &A,
 /// Compare two fragments based on their offset.
 inline bool operator<(const DebugLocEntry::Value &A,
                       const DebugLocEntry::Value &B) {
-  return A.getExpression()->getFragmentOffsetInBits() <
-         B.getExpression()->getFragmentOffsetInBits();
+  return A.getExpression()->getFragmentInfo()->OffsetInBits <
+         B.getExpression()->getFragmentInfo()->OffsetInBits;
 }
 
 }

@@ -33,6 +33,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
 #include <memory>
@@ -202,19 +203,20 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
 }
 
 /// Import any functions requested via the -import option.
-static bool importFunctions(const char *argv0, LLVMContext &Context,
-                            Linker &L) {
+static bool importFunctions(const char *argv0, Module &DestModule) {
   if (SummaryIndex.empty())
     return true;
   std::unique_ptr<ModuleSummaryIndex> Index =
       ExitOnErr(llvm::getModuleSummaryIndexForFile(SummaryIndex));
 
   // Map of Module -> List of globals to import from the Module
-  std::map<StringRef, DenseSet<const GlobalValue *>> ModuleToGlobalsToImportMap;
-  auto ModuleLoader = [&Context](const char *argv0,
-                                 const std::string &Identifier) {
-    return loadFile(argv0, Identifier, Context, false);
+  FunctionImporter::ImportMapTy ImportList;
+
+  auto ModuleLoader = [&DestModule](const char *argv0,
+                                    const std::string &Identifier) {
+    return loadFile(argv0, Identifier, DestModule.getContext(), false);
   };
+
   ModuleLazyLoaderCache ModuleLoaderCache(ModuleLoader);
   for (const auto &Import : Imports) {
     // Identify the requested function and its bitcode source file.
@@ -253,35 +255,14 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    auto &Entry = ModuleToGlobalsToImportMap[SrcModule.getModuleIdentifier()];
-    Entry.insert(F);
-
-    ExitOnErr(F->materialize());
+    auto &Entry = ImportList[FileName];
+    Entry.insert(std::make_pair(F->getGUID(), /* (Unused) threshold */ 1.0));
   }
-
-  // Do the actual import of globals now, one Module at a time
-  for (auto &GlobalsToImportPerModule : ModuleToGlobalsToImportMap) {
-    // Get the module for the import
-    auto &GlobalsToImport = GlobalsToImportPerModule.second;
-    std::unique_ptr<Module> SrcModule =
-        ModuleLoaderCache.takeModule(GlobalsToImportPerModule.first);
-    assert(&Context == &SrcModule->getContext() && "Context mismatch");
-
-    // If modules were created with lazy metadata loading, materialize it
-    // now, before linking it (otherwise this will be a noop).
-    ExitOnErr(SrcModule->materializeMetadata());
-    UpgradeDebugInfo(*SrcModule);
-
-    // Linkage Promotion and renaming
-    if (renameModuleForThinLTO(*SrcModule, *Index, &GlobalsToImport))
-      return true;
-
-    // Instruct the linker to not automatically import linkonce defintion.
-    unsigned Flags = Linker::Flags::DontForceLinkLinkonceODR;
-
-    if (L.linkInModule(std::move(SrcModule), Flags, &GlobalsToImport))
-      return false;
-  }
+  auto CachedModuleLoader = [&](StringRef Identifier) {
+    return ModuleLoaderCache.takeModule(Identifier);
+  };
+  FunctionImporter Importer(*Index, CachedModuleLoader);
+  ExitOnErr(Importer.importFunctions(DestModule, ImportList));
 
   return true;
 }
@@ -374,7 +355,7 @@ int main(int argc, char **argv) {
     return 1;
 
   // Import any functions requested via -import
-  if (!importFunctions(argv[0], Context, L))
+  if (!importFunctions(argv[0], *Composite))
     return 1;
 
   if (DumpAsm) errs() << "Here's the assembly:\n" << *Composite;

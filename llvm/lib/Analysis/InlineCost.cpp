@@ -636,29 +636,26 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   else if (Caller->optForSize())
     Threshold = MinIfValid(Threshold, Params.OptSizeThreshold);
 
-  bool HotCallsite = false;
-  uint64_t TotalWeight;
-  if (PSI && CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
-      PSI->isHotCount(TotalWeight)) {
-    HotCallsite = true;
+  // Adjust the threshold based on inlinehint attribute and profile based
+  // hotness information if the caller does not have MinSize attribute.
+  if (!Caller->optForMinSize()) {
+    if (Callee.hasFnAttribute(Attribute::InlineHint))
+      Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+    if (PSI) {
+      uint64_t TotalWeight;
+      if (CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
+          PSI->isHotCount(TotalWeight)) {
+        Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
+      } else if (PSI->isFunctionEntryHot(&Callee)) {
+        // If callsite hotness can not be determined, we may still know
+        // that the callee is hot and treat it as a weaker hint for threshold
+        // increase.
+        Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+      } else if (PSI->isFunctionEntryCold(&Callee)) {
+        Threshold = MinIfValid(Threshold, Params.ColdThreshold);
+      }
+    }
   }
-
-  // Listen to the inlinehint attribute or profile based hotness information
-  // when it would increase the threshold and the caller does not need to
-  // minimize its size.
-  bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
-                    (PSI && PSI->isFunctionEntryHot(&Callee));
-  if (InlineHint && !Caller->optForMinSize())
-    Threshold = MaxIfValid(Threshold, Params.HintThreshold);
-
-  if (HotCallsite && !Caller->optForMinSize())
-    Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
-
-  bool ColdCallee = PSI && PSI->isFunctionEntryCold(&Callee);
-  // For cold callees, use the ColdThreshold knob if it is available and reduces
-  // the threshold.
-  if (ColdCallee)
-    Threshold = MinIfValid(Threshold, Params.ColdThreshold);
 
   // Finally, take the target-specific inlining threshold multiplier into
   // account.

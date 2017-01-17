@@ -599,3 +599,37 @@ define i1 @test_constant_class_snan_test_pinf_f64() nounwind {
   %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000001, i32 512)
   ret i1 %val
 }
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.cos
+; --------------------------------------------------------------------
+declare float @llvm.amdgcn.cos.f32(float) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
+
+; CHECK-LABEL: @cos_fneg_f32(
+; CHECK: %cos = call float @llvm.amdgcn.cos.f32(float %x)
+; CHECK-NEXT: ret float %cos
+define float @cos_fneg_f32(float %x) {
+  %x.fneg = fsub float -0.0, %x
+  %cos = call float @llvm.amdgcn.cos.f32(float %x.fneg)
+  ret float %cos
+}
+
+; CHECK-LABEL: @cos_fabs_f32(
+; CHECK-NEXT: %cos = call float @llvm.amdgcn.cos.f32(float %x)
+; CHECK-NEXT: ret float %cos
+define float @cos_fabs_f32(float %x) {
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %cos = call float @llvm.amdgcn.cos.f32(float %x.fabs)
+  ret float %cos
+}
+
+; CHECK-LABEL: @cos_fabs_fneg_f32(
+; CHECK-NEXT: %cos = call float @llvm.amdgcn.cos.f32(float %x)
+; CHECK-NEXT: ret float %cos
+define float @cos_fabs_fneg_f32(float %x) {
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fsub float -0.0, %x.fabs
+  %cos = call float @llvm.amdgcn.cos.f32(float %x.fabs.fneg)
+  ret float %cos
+}

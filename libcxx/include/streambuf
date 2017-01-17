@@ -119,7 +119,7 @@ protected:
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_streambuf
+class _LIBCPP_TEMPLATE_VIS basic_streambuf
 {
 public:
     // types:

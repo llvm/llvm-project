@@ -206,7 +206,8 @@ CreateStackTrace(ValueObjectSP o,
   StructuredData::Array *trace = new StructuredData::Array();
   ValueObjectSP trace_value_object =
       o->GetValueForExpressionPath(trace_item_name.c_str());
-  for (int j = 0; j < 8; j++) {
+  size_t count = trace_value_object->GetNumChildren();
+  for (size_t j = 0; j < count; j++) {
     addr_t trace_addr =
         trace_value_object->GetChildAtIndex(j, true)->GetValueAsUnsigned(0);
     if (trace_addr == 0)

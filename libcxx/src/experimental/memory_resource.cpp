@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
 // new_delete_resource()
 
-class _LIBCPP_TYPE_VIS_ONLY __new_delete_memory_resource_imp
+class _LIBCPP_TYPE_VIS __new_delete_memory_resource_imp
     : public memory_resource
 {
 public:
@@ -34,7 +34,7 @@ protected:
         { return __allocate(__size); }
 
     virtual void do_deallocate(void * __p, size_t, size_t)
-        { __deallocate(__p); }
+        { _VSTD::__libcpp_deallocate(__p); }
 
     virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT
         { return &__other == this; }
@@ -42,7 +42,7 @@ protected:
 
 // null_memory_resource()
 
-class _LIBCPP_TYPE_VIS_ONLY __null_memory_resource_imp
+class _LIBCPP_TYPE_VIS __null_memory_resource_imp
     : public memory_resource
 {
 public:

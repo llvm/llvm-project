@@ -196,8 +196,8 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
     llvm::AllocaInst *new_func_ptr =
         new llvm::AllocaInst(new_func_ptr_type, "new_func_ptr", call_inst);
     // store the new_func_cast to the newly allocated space
-    (void)new llvm::StoreInst(new_func_cast, new_func_ptr,
-                              "new_func_ptr_load_cast", call_inst);
+    (new llvm::StoreInst(new_func_cast, new_func_ptr, call_inst))
+        ->setName("new_func_ptr_load_cast");
     // load the new function address ready for a jump
     llvm::LoadInst *new_func_addr_load =
         new llvm::LoadInst(new_func_ptr, "load_func_pointer", call_inst);

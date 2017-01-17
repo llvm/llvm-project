@@ -66,7 +66,8 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
-#pragma omp distribute collapse (S) // expected-error {{'S' does not refer to a value}}
+#pragma omp target
+#pragma omp teams distribute collapse (S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 

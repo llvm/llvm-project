@@ -127,23 +127,46 @@ static cl::opt<int> LatencyVectorFma(
              "instructions."),
     cl::Hidden, cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::opt<int> ThrougputVectorFma(
-    "polly-target-througput-vector-fma",
+static cl::opt<int> ThroughputVectorFma(
+    "polly-target-throughput-vector-fma",
     cl::desc("A throughput of the processor floating-point arithmetic units "
              "expressed in the number of vector fused multiply-add "
              "instructions per clock cycle."),
     cl::Hidden, cl::init(1), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::list<int>
-    CacheLevelAssociativity("polly-target-cache-level-associativity",
-                            cl::desc("The associativity of each cache level."),
-                            cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
-                            cl::cat(PollyCategory));
+// This option, along with --polly-target-2nd-cache-level-associativity,
+// --polly-target-1st-cache-level-size, and --polly-target-2st-cache-level-size
+// represent the parameters of the target cache, which do not have typical
+// values that can be used by default. However, to apply the pattern matching
+// optimizations, we use the values of the parameters of Intel Core i7-3820
+// SandyBridge in case the parameters are not specified. Such an approach helps
+// also to attain the high-performance on IBM POWER System S822 and IBM Power
+// 730 Express server.
+static cl::opt<int> FirstCacheLevelAssociativity(
+    "polly-target-1st-cache-level-associativity",
+    cl::desc("The associativity of the first cache level."), cl::Hidden,
+    cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
 
-static cl::list<int> CacheLevelSizes(
-    "polly-target-cache-level-sizes",
-    cl::desc("The size of each cache level specified in bytes."), cl::Hidden,
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+static cl::opt<int> SecondCacheLevelAssociativity(
+    "polly-target-2nd-cache-level-associativity",
+    cl::desc("The associativity of the second cache level."), cl::Hidden,
+    cl::init(8), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> FirstCacheLevelSize(
+    "polly-target-1st-cache-level-size",
+    cl::desc("The size of the first cache level specified in bytes."),
+    cl::Hidden, cl::init(32768), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> SecondCacheLevelSize(
+    "polly-target-2nd-cache-level-size",
+    cl::desc("The size of the second level specified in bytes."), cl::Hidden,
+    cl::init(262144), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> VectorRegisterBitwidth(
+    "polly-target-vector-register-bitwidth",
+    cl::desc("The size in bits of a vector register (if not set, this "
+             "information is taken from LLVM's target information."),
+    cl::Hidden, cl::init(-1), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<int> FirstLevelDefaultTileSize(
     "polly-default-tile-size",
@@ -184,6 +207,12 @@ static cl::opt<int> RegisterDefaultTileSize(
     cl::desc("The default register tile size (if not enough were provided by"
              " --polly-register-tile-sizes)"),
     cl::Hidden, cl::init(2), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> PollyPatternMatchingNcQuotient(
+    "polly-pattern-matching-nc-quotient",
+    cl::desc("Quotient that is obtained by dividing Nc, the parameter of the"
+             "macro-kernel, by Nr, the parameter of the micro-kernel"),
+    cl::Hidden, cl::init(256), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::list<int>
     RegisterTileSizes("polly-register-tile-sizes",
@@ -576,12 +605,16 @@ getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
   // by a vector register. Use 2 by default.
-  auto Nvec = TTI->getRegisterBitWidth(true) / 64;
+  long RegisterBitwidth = VectorRegisterBitwidth;
+
+  if (RegisterBitwidth == -1)
+    RegisterBitwidth = TTI->getRegisterBitWidth(true);
+  auto Nvec = RegisterBitwidth / 64;
   if (Nvec == 0)
     Nvec = 2;
   int Nr =
-      ceil(sqrt(Nvec * LatencyVectorFma * ThrougputVectorFma) / Nvec) * Nvec;
-  int Mr = ceil(Nvec * LatencyVectorFma * ThrougputVectorFma / Nr);
+      ceil(sqrt(Nvec * LatencyVectorFma * ThroughputVectorFma) / Nvec) * Nvec;
+  int Mr = ceil(Nvec * LatencyVectorFma * ThroughputVectorFma / Nr);
   return {Mr, Nr};
 }
 
@@ -606,19 +639,21 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
   // degree of a cache level is greater than two. Otherwise, another algorithm
   // for determination of the parameters should be used.
   if (!(MicroKernelParams.Mr > 0 && MicroKernelParams.Nr > 0 &&
-        CacheLevelSizes.size() >= 2 && CacheLevelAssociativity.size() >= 2 &&
-        CacheLevelSizes[0] > 0 && CacheLevelSizes[1] > 0 &&
-        CacheLevelAssociativity[0] > 2 && CacheLevelAssociativity[1] > 2))
+        FirstCacheLevelSize > 0 && SecondCacheLevelSize > 0 &&
+        FirstCacheLevelAssociativity > 2 && SecondCacheLevelAssociativity > 2))
+    return {1, 1, 1};
+  // The quotient should be greater than zero.
+  if (PollyPatternMatchingNcQuotient <= 0)
     return {1, 1, 1};
   int Car = floor(
-      (CacheLevelAssociativity[0] - 1) /
+      (FirstCacheLevelAssociativity - 1) /
       (1 + static_cast<double>(MicroKernelParams.Nr) / MicroKernelParams.Mr));
-  int Kc = (Car * CacheLevelSizes[0]) /
-           (MicroKernelParams.Mr * CacheLevelAssociativity[0] * 8);
-  double Cac = static_cast<double>(Kc * 8 * CacheLevelAssociativity[1]) /
-               CacheLevelSizes[1];
-  int Mc = floor((CacheLevelAssociativity[1] - 2) / Cac);
-  int Nc = floor(1 / Cac);
+  int Kc = (Car * FirstCacheLevelSize) /
+           (MicroKernelParams.Mr * FirstCacheLevelAssociativity * 8);
+  double Cac = static_cast<double>(Kc * 8 * SecondCacheLevelAssociativity) /
+               SecondCacheLevelSize;
+  int Mc = floor((SecondCacheLevelAssociativity - 2) / Cac);
+  int Nc = PollyPatternMatchingNcQuotient * MicroKernelParams.Nr;
   return {Mc, Nc, Kc};
 }
 
@@ -785,8 +820,8 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 ///        the matrix multiplication pattern.
 ///
 /// Create an access relation of the following form:
-/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [O5 + K * OI, OJ],
-/// where K is @p Coeff, I is @p FirstDim, J is @p SecondDim.
+/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [OI, O5, OJ]
+/// where I is @p FirstDim, J is @p SecondDim.
 ///
 /// It can be used, for example, to create relations that helps to consequently
 /// access elements of operands of a matrix multiplication after creation of
@@ -804,25 +839,17 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 /// @param MapOldIndVar The relation, which maps original induction variables
 ///                     to the ones, which are produced by schedule
 ///                     transformations.
-/// @param Coeff The coefficient that is used to define the specified access
-///              relation.
 /// @param FirstDim, SecondDim The input dimensions that are used to define
 ///        the specified access relation.
 /// @return The specified access relation.
 __isl_give isl_map *getMatMulAccRel(__isl_take isl_map *MapOldIndVar,
-                                    unsigned Coeff, unsigned FirstDim,
-                                    unsigned SecondDim) {
+                                    unsigned FirstDim, unsigned SecondDim) {
   auto *Ctx = isl_map_get_ctx(MapOldIndVar);
-  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 2);
-  auto *AccessRel = isl_map_universe(isl_space_copy(AccessRelSpace));
-  auto *ConstrSpace = isl_local_space_from_space(AccessRelSpace);
-  auto *Constr = isl_constraint_alloc_equality(ConstrSpace);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 0, -1);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_in, 5, 1);
-  Constr =
-      isl_constraint_set_coefficient_si(Constr, isl_dim_in, FirstDim, Coeff);
-  AccessRel = isl_map_add_constraint(AccessRel, Constr);
-  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 1);
+  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 3);
+  auto *AccessRel = isl_map_universe(AccessRelSpace);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, FirstDim, isl_dim_out, 0);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, 5, isl_dim_out, 1);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 2);
   return isl_map_apply_range(MapOldIndVar, AccessRel);
 }
 
@@ -869,12 +896,13 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
   Node = isl_schedule_node_parent(Node);
   Node = isl_schedule_node_child(isl_schedule_node_band_split(Node, 2), 0);
-  auto *AccRel =
-      getMatMulAccRel(isl_map_copy(MapOldIndVar), MacroParams.Kc, 3, 7);
-  unsigned FirstDimSize = MacroParams.Nc * MacroParams.Kc / MicroParams.Nr;
-  unsigned SecondDimSize = MicroParams.Nr;
+  auto *AccRel = getMatMulAccRel(isl_map_copy(MapOldIndVar), 3, 7);
+  unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
+  unsigned SecondDimSize = MacroParams.Kc;
+  unsigned ThirdDimSize = MicroParams.Nr;
   auto *SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessB->getElementType(), "Packed_B", {FirstDimSize, SecondDimSize});
+      MemAccessB->getElementType(), "Packed_B",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
   auto *OldAcc = MemAccessB->getAccessRelation();
   MemAccessB->setNewAccessRelation(AccRel);
@@ -898,11 +926,12 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   // Create a copy statement that corresponds to the memory access
   // to the matrix A, the first operand of the matrix multiplication.
   Node = isl_schedule_node_child(Node, 0);
-  AccRel = getMatMulAccRel(MapOldIndVar, MacroParams.Kc, 4, 6);
-  FirstDimSize = MacroParams.Mc * MacroParams.Kc / MicroParams.Mr;
-  SecondDimSize = MicroParams.Mr;
+  AccRel = getMatMulAccRel(MapOldIndVar, 4, 6);
+  FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  ThirdDimSize = MicroParams.Mr;
   SAI = Stmt->getParent()->createScopArrayInfo(
-      MemAccessA->getElementType(), "Packed_A", {FirstDimSize, SecondDimSize});
+      MemAccessA->getElementType(), "Packed_A",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
   OldAcc = MemAccessA->getAccessRelation();
   MemAccessA->setNewAccessRelation(AccRel);

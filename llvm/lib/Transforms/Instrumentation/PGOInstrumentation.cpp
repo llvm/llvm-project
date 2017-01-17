@@ -119,7 +119,7 @@ static cl::opt<unsigned> MaxNumAnnotations(
 // Command line option to control appending FunctionHash to the name of a COMDAT
 // function. This is to avoid the hash mismatch caused by the preinliner.
 static cl::opt<bool> DoComdatRenaming(
-    "do-comdat-renaming", cl::init(true), cl::Hidden,
+    "do-comdat-renaming", cl::init(false), cl::Hidden,
     cl::desc("Append function hash to the name of COMDAT function to avoid "
              "function hash mismatch due to the preinliner"));
 
@@ -133,6 +133,12 @@ static cl::opt<bool> PGOWarnMissing("pgo-warn-missing-function",
 // the profile data.
 static cl::opt<bool> NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false),
                                        cl::Hidden);
+
+// Command line option to enable/disable the warning about a hash mismatch in
+// the profile data for Comdat functions, which often turns out to be false
+// positive due to the pre-instrumentation inline.
+static cl::opt<bool> NoPGOWarnMismatchComdat("no-pgo-warn-mismatch-comdat",
+                                             cl::init(true), cl::Hidden);
 
 // Command line option to enable/disable select instruction instrumentation.
 static cl::opt<bool> PGOInstrSelect("pgo-instr-select", cl::init(true),
@@ -407,20 +413,8 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
 static bool canRenameComdat(
     Function &F,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers) {
-  if (F.getName().empty())
+  if (!DoComdatRenaming || !canRenameComdatFunc(F, true))
     return false;
-  if (!needsComdatForCounter(F, *(F.getParent())))
-    return false;
-  // Only safe to do if this function may be discarded if it is not used
-  // in the compilation unit.
-  if (!GlobalValue::isDiscardableIfUnused(F.getLinkage()))
-    return false;
-
-  // For AvailableExternallyLinkage functions.
-  if (!F.hasComdat()) {
-    assert(F.getLinkage() == GlobalValue::AvailableExternallyLinkage);
-    return true;
-  }
 
   // FIXME: Current only handle those Comdat groups that only containing one
   // function and function aliases.
@@ -803,7 +797,11 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
       } else if (Err == instrprof_error::hash_mismatch ||
                  Err == instrprof_error::malformed) {
         NumOfPGOMismatch++;
-        SkipWarning = NoPGOWarnMismatch;
+        SkipWarning =
+            NoPGOWarnMismatch ||
+            (NoPGOWarnMismatchComdat &&
+             (F.hasComdat() ||
+              F.getLinkage() == GlobalValue::AvailableExternallyLinkage));
       }
 
       if (SkipWarning)

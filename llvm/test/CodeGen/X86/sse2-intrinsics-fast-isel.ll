@@ -1257,15 +1257,12 @@ define i32 @test_mm_cvtsi128_si32(<2 x i64> %a0) nounwind {
 define <2 x double> @test_mm_cvtsi32_sd(<2 x double> %a0, i32 %a1) nounwind {
 ; X32-LABEL: test_mm_cvtsi32_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    cvtsi2sdl %eax, %xmm1
-; X32-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X32-NEXT:    cvtsi2sdl {{[0-9]+}}(%esp), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtsi32_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    cvtsi2sdl %edi, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-NEXT:    cvtsi2sdl %edi, %xmm0
 ; X64-NEXT:    retq
   %cvt = sitofp i32 %a1 to double
   %res = insertelement <2 x double> %a0, double %cvt, i32 0
@@ -1293,14 +1290,12 @@ define <2 x i64> @test_mm_cvtsi32_si128(i32 %a0) nounwind {
 define <2 x double> @test_mm_cvtss_sd(<2 x double> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cvtss_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    cvtss2sd %xmm1, %xmm1
-; X32-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X32-NEXT:    cvtss2sd %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtss_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    cvtss2sd %xmm1, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-NEXT:    cvtss2sd %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ext = extractelement <4 x float> %a1, i32 0
   %cvt = fpext float %ext to double

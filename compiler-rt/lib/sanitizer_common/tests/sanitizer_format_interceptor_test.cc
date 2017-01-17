@@ -256,4 +256,8 @@ TEST(SanitizerCommonInterceptors, Printf) {
 
   // Checks for wide-character strings are not implemented yet.
   testPrintf("%ls", 1, 0);
+
+  testPrintf("%m", 0);
+  testPrintf("%m%s", 1, test_buf_size);
+  testPrintf("%s%m%s", 2, test_buf_size, test_buf_size);
 }

@@ -269,7 +269,7 @@ unsigned encodeLgkmcnt(IsaVersion Version, unsigned Waitcnt, unsigned Lgkmcnt) {
 
 unsigned encodeWaitcnt(IsaVersion Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt) {
-  unsigned Waitcnt = getWaitcntBitMask(Version);;
+  unsigned Waitcnt = getWaitcntBitMask(Version);
   Waitcnt = encodeVmcnt(Version, Waitcnt, Vmcnt);
   Waitcnt = encodeExpcnt(Version, Waitcnt, Expcnt);
   Waitcnt = encodeLgkmcnt(Version, Waitcnt, Lgkmcnt);

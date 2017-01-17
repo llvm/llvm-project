@@ -9,19 +9,17 @@
 ; ModuleID = './csmith107.i.debug.ll'
 source_filename = "./csmith107.i.debug.ll"
 
-@a = global i16 0, !dbg !4
-@b = global i32 0, !dbg !6
-@c = global i16* null, !dbg !10
+@a = global i16 0, !dbg !0
+@b = global i32 0, !dbg !4
+@c = global i16* null, !dbg !9
 
-
-; Function Attrs: nounwind
-define i16 @fn1() #3 !dbg !15 {
+define i16 @fn1() !dbg !17 {
 bb2:
   store i32 -1, i32* @b, align 1
-  %_tmp1.pre = load i16, i16* @a, align 1, !dbg !19
+  %_tmp1.pre = load i16, i16* @a, align 1, !dbg !20
   %_tmp2.pre = load i16*, i16** @c, align 1
   tail call void @llvm.dbg.value(metadata i16 6, i64 0, metadata !22, metadata !23), !dbg !24
-  tail call void @llvm.dbg.value(metadata i16 %_tmp1.pre, i64 0, metadata !25, metadata !23), !dbg !19
+  tail call void @llvm.dbg.value(metadata i16 %_tmp1.pre, i64 0, metadata !25, metadata !23), !dbg !20
   %_tmp3 = load i16, i16* %_tmp2.pre, align 1
   %_tmp4 = icmp ne i16 %_tmp3, 0
   %_tmp6 = icmp ne i16 %_tmp1.pre, 0
@@ -37,32 +35,37 @@ bb5:                                              ; preds = %bb1, %bb2
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #4
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!12, !13}
+attributes #0 = { nounwind readnone }
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "FlexC Compiler v6.36 (LLVM)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3)
-!1 = !DIFile(filename: "csmith107.i.c", directory: "/tmp")
-!2 = !{}
-!3 = !{!4, !6, !10}
-!4 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", scope: null, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true))
-!5 = !DIBasicType(name: "int", size: 16, align: 16, encoding: DW_ATE_signed)
-!6 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "b", scope: null, file: !1, line: 3, type: !7, isLocal: false, isDefinition: true))
-!7 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !1, line: 1, baseType: !8)
-!8 = !DIDerivedType(tag: DW_TAG_typedef, name: "__u32_t", file: !1, baseType: !9)
-!9 = !DIBasicType(name: "unsigned long", size: 32, align: 16, encoding: DW_ATE_unsigned)
-!10 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "c", scope: null, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true))
-!11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 16, align: 16)
-!12 = !{i32 2, !"Dwarf Version", i32 4}
-!13 = !{i32 2, !"Debug Info Version", i32 3}
-!15 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 5, type: !16, isLocal: false, isDefinition: true, scopeLine: 5, isOptimized: false, unit: !0, variables: !2)
-!16 = !DISubroutineType(types: !17)
-!17 = !{!5}
-!19 = !DILocation(line: 8, column: 16, scope: !20)
-!20 = !DILexicalBlock(scope: !15, file: !1, line: 7, column: 29)
-!22 = !DILocalVariable(name: "d", scope: !20, line: 8, type: !5)
+!llvm.dbg.cu = !{!12}
+!llvm.module.flags = !{!15, !16}
+
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "csmith107.i.c", directory: "/tmp")
+!3 = !DIBasicType(name: "int", size: 16, align: 16, encoding: DW_ATE_signed)
+!4 = !DIGlobalVariableExpression(var: !5)
+!5 = !DIGlobalVariable(name: "b", scope: null, file: !2, line: 3, type: !6, isLocal: false, isDefinition: true)
+!6 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !2, line: 1, baseType: !7)
+!7 = !DIDerivedType(tag: DW_TAG_typedef, name: "__u32_t", file: !2, baseType: !8)
+!8 = !DIBasicType(name: "unsigned long", size: 32, align: 16, encoding: DW_ATE_unsigned)
+!9 = !DIGlobalVariableExpression(var: !10)
+!10 = !DIGlobalVariable(name: "c", scope: null, file: !2, line: 4, type: !11, isLocal: false, isDefinition: true)
+!11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 16, align: 16)
+!12 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "FlexC Compiler v6.36 (LLVM)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !13, retainedTypes: !13, globals: !14)
+!13 = !{}
+!14 = !{!0, !4, !9}
+!15 = !{i32 2, !"Dwarf Version", i32 4}
+!16 = !{i32 2, !"Debug Info Version", i32 3}
+!17 = distinct !DISubprogram(name: "fn1", scope: !2, file: !2, line: 5, type: !18, isLocal: false, isDefinition: true, scopeLine: 5, isOptimized: false, unit: !12, variables: !13)
+!18 = !DISubroutineType(types: !19)
+!19 = !{!3}
+!20 = !DILocation(line: 8, column: 16, scope: !21)
+!21 = !DILexicalBlock(scope: !17, file: !2, line: 7, column: 29)
+!22 = !DILocalVariable(name: "d", scope: !21, line: 8, type: !3)
 !23 = !DIExpression()
-!24 = !DILocation(line: 8, column: 9, scope: !20)
-!25 = !DILocalVariable(name: "e", scope: !20, line: 8, type: !5)
+!24 = !DILocation(line: 8, column: 9, scope: !21)
+!25 = !DILocalVariable(name: "e", scope: !21, line: 8, type: !3)
 

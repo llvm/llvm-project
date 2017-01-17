@@ -13,6 +13,8 @@
 
 #include "llvm/ADT/PriorityWorklist.h"
 #include "gtest/gtest.h"
+#include <list>
+#include <vector>
 
 namespace {
 
@@ -70,6 +72,51 @@ TYPED_TEST(PriorityWorklistTest, Basic) {
   EXPECT_EQ(17, W.pop_back_val());
   EXPECT_EQ(21, W.pop_back_val());
   EXPECT_TRUE(W.empty());
+}
+
+TYPED_TEST(PriorityWorklistTest, InsertSequence) {
+  TypeParam W;
+  ASSERT_TRUE(W.insert(2));
+  ASSERT_TRUE(W.insert(4));
+  ASSERT_TRUE(W.insert(7));
+  // Insert a sequence that has internal duplicates and a duplicate among
+  // existing entries.
+  W.insert(std::vector<int>({42, 13, 42, 7, 8}));
+  EXPECT_EQ(8, W.pop_back_val());
+  EXPECT_EQ(7, W.pop_back_val());
+  EXPECT_EQ(42, W.pop_back_val());
+  EXPECT_EQ(13, W.pop_back_val());
+  EXPECT_EQ(4, W.pop_back_val());
+  EXPECT_EQ(2, W.pop_back_val());
+  ASSERT_TRUE(W.empty());
+
+  // Simpler tests with various other input types.
+  ASSERT_TRUE(W.insert(2));
+  ASSERT_TRUE(W.insert(7));
+  // Use a non-random-access container.
+  W.insert(std::list<int>({7, 5}));
+  EXPECT_EQ(5, W.pop_back_val());
+  EXPECT_EQ(7, W.pop_back_val());
+  EXPECT_EQ(2, W.pop_back_val());
+  ASSERT_TRUE(W.empty());
+
+  ASSERT_TRUE(W.insert(2));
+  ASSERT_TRUE(W.insert(7));
+  // Use a raw array.
+  int A[] = {7, 5};
+  W.insert(A);
+  EXPECT_EQ(5, W.pop_back_val());
+  EXPECT_EQ(7, W.pop_back_val());
+  EXPECT_EQ(2, W.pop_back_val());
+  ASSERT_TRUE(W.empty());
+
+  ASSERT_TRUE(W.insert(2));
+  ASSERT_TRUE(W.insert(7));
+  // Inserting an empty sequence does nothing.
+  W.insert(std::vector<int>());
+  EXPECT_EQ(7, W.pop_back_val());
+  EXPECT_EQ(2, W.pop_back_val());
+  ASSERT_TRUE(W.empty());
 }
 
 TYPED_TEST(PriorityWorklistTest, EraseIf) {

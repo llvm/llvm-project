@@ -176,4 +176,84 @@ entry:
   ret i8 %tmp2
 }
 
+define i8 @test_add_1_cmov_cmov(i64* %p, i8* %q) #0 {
+; TODO: It's possible to use "lock inc" here, but both cmovs need to be updated.
+; CHECK-LABEL: test_add_1_cmov_cmov:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq   %rax, %rax
+entry:
+  %add = atomicrmw add i64* %p, i64 1 seq_cst
+  %cmp = icmp slt i64 %add, 0
+  %s1 = select i1 %cmp, i8 12, i8 34
+  store i8 %s1, i8* %q
+  %s2 = select i1 %cmp, i8 56, i8 78
+  ret i8 %s2
+}
+
+define i8 @test_sub_1_setcc_eq(i64* %p) #0 {
+; CHECK-LABEL: test_sub_1_setcc_eq:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
+  %tmp1 = icmp eq i64 %tmp0, 1
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_add_5_setcc_ne(i64* %p) #0 {
+; CHECK-LABEL: test_add_5_setcc_ne:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    lock addq $5, (%rdi)
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw add i64* %p, i64 5 seq_cst
+  %tmp1 = icmp ne i64 %tmp0, -5
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+define i8 @test_add_5_setcc_ne_comparand_mismatch(i64* %p) #0 {
+; CHECK-LABEL: test_add_5_setcc_ne_comparand_mismatch:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    movl $5, %eax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+entry:
+  %tmp0 = atomicrmw add i64* %p, i64 5 seq_cst
+  %tmp1 = icmp ne i64 %tmp0, 0
+  %tmp2 = zext i1 %tmp1 to i8
+  ret i8 %tmp2
+}
+
+declare void @g()
+define zeroext i1 @test_sub_1_setcc_jcc(i64* %p) local_unnamed_addr #0 {
+; TODO: It's possible to use "lock dec" here, but both uses of the cmp need to
+; be updated.
+; CHECK-LABEL: test_sub_1_setcc_jcc:
+; CHECK:       # BB#0: # %entry
+; CHECK:	     movq $-1, %rax
+; CHECK-NEXT:  lock xaddq %rax, (%rdi)
+; CHECK-NEXT:  cmpq $1, %rax
+; CHECK-NEXT:  sete %bl
+; CHECK-NEXT:  jne
+entry:
+  %add = atomicrmw volatile add i64* %p, i64 -1 seq_cst
+  %cmp = icmp ne i64 %add, 1
+  %not = xor i1 %cmp, true
+  br i1 %cmp, label %else, label %then
+then:
+  tail call void @g()
+  br label %else
+else:
+  ret i1 %not
+}
+
 attributes #0 = { nounwind }

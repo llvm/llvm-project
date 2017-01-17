@@ -33,7 +33,8 @@ CFBundle::CFBundle(const CFBundle &rhs)
 // CFBundle copy constructor
 //----------------------------------------------------------------------
 CFBundle &CFBundle::operator=(const CFBundle &rhs) {
-  *this = rhs;
+  if (this != &rhs)
+    *this = rhs;
   return *this;
 }
 

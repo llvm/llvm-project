@@ -187,7 +187,7 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
                         S.Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
     S.CheckVariableDeclarationType(ScopeInfo->CoroutinePromise);
     if (!ScopeInfo->CoroutinePromise->isInvalidDecl())
-      S.ActOnUninitializedDecl(ScopeInfo->CoroutinePromise, false);
+      S.ActOnUninitializedDecl(ScopeInfo->CoroutinePromise);
   }
 
   return ScopeInfo;
@@ -577,17 +577,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
         << (isa<CoawaitExpr>(First) ? 0 :
             isa<CoyieldExpr>(First) ? 1 : 2);
   }
-
-  bool AnyCoawaits = false;
-  bool AnyCoyields = false;
-  for (auto *CoroutineStmt : Fn->CoroutineStmts) {
-    AnyCoawaits |= isa<CoawaitExpr>(CoroutineStmt);
-    AnyCoyields |= isa<CoyieldExpr>(CoroutineStmt);
-  }
-
-  if (!AnyCoawaits && !AnyCoyields)
-    Diag(Fn->CoroutineStmts.front()->getLocStart(),
-         diag::ext_coroutine_without_co_await_co_yield);
 
   SourceLocation Loc = FD->getLocation();
 

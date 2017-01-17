@@ -362,7 +362,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   unsigned OpndIdx = 0;
   for (unsigned OpndEnd = MBBI->getNumOperands() - 1; OpndIdx < OpndEnd;
        ++OpndIdx)
-    MIB.addOperand(MBBI->getOperand(OpndIdx));
+    MIB.add(MBBI->getOperand(OpndIdx));
 
   assert(MBBI->getOperand(OpndIdx).getImm() == 0 &&
          "Unexpected immediate offset in first/last callee-save save/restore "

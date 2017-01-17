@@ -45,7 +45,7 @@ public:
   }
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {
-    assert(!"Not implemented");
+    llvm_unreachable("Not implemented");
   }
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;

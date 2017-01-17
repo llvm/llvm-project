@@ -60,7 +60,7 @@ public:
     Z(Z&&) {TEST_THROW(7);}
 
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
-    friend void swap(Z& x, Z& y) {TEST_THROW(6);}
+    friend void swap(Z&, Z&) {TEST_THROW(6);}
 };
 
 struct ConstSwappable {

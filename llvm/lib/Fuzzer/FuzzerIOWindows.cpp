@@ -277,6 +277,8 @@ std::string DirName(const std::string &FileName) {
   return FileName.substr(0, LocationLen + DirLen);
 }
 
+std::string TmpDir() { return "TODO: implement TmpDir"; }
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_WINDOWS

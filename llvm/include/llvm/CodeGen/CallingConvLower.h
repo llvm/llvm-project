@@ -296,6 +296,12 @@ public:
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn);
 
+  /// The function will invoke AnalyzeFormalArguments.
+  void AnalyzeArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                        CCAssignFn Fn) {
+    AnalyzeFormalArguments(Ins, Fn);
+  }
+
   /// AnalyzeReturn - Analyze the returned values of a return,
   /// incorporating info about the result values into this state.
   void AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -318,10 +324,21 @@ public:
                            SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
                            CCAssignFn Fn);
 
+  /// The function will invoke AnalyzeCallOperands.
+  void AnalyzeArguments(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        CCAssignFn Fn) {
+    AnalyzeCallOperands(Outs, Fn);
+  }
+
   /// AnalyzeCallResult - Analyze the return values of a call,
   /// incorporating info about the passed values into this state.
   void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
                          CCAssignFn Fn);
+
+  /// A shadow allocated register is a register that was allocated
+  /// but wasn't added to the location list (Locs).
+  /// \returns true if the register was allocated as shadow or false otherwise.
+  bool IsShadowAllocatedReg(unsigned Reg) const;
 
   /// AnalyzeCallResult - Same as above except it's specialized for calls which
   /// produce a single value.
@@ -520,6 +537,37 @@ public:
                                 LLVMContext &C,
                                 const SmallVectorImpl<ISD::InputArg> &Ins,
                                 CCAssignFn CalleeFn, CCAssignFn CallerFn);
+
+  /// The function runs an additional analysis pass over function arguments.
+  /// It will mark each argument with the attribute flag SecArgPass.
+  /// After running, it will sort the locs list.
+  template <class T>
+  void AnalyzeArgumentsSecondPass(const SmallVectorImpl<T> &Args,
+                                  CCAssignFn Fn) {
+    unsigned NumFirstPassLocs = Locs.size();
+
+    /// Creates similar argument list to \p Args in which each argument is
+    /// marked using SecArgPass flag.
+    SmallVector<T, 16> SecPassArg;
+    // SmallVector<ISD::InputArg, 16> SecPassArg;
+    for (auto Arg : Args) {
+      Arg.Flags.setSecArgPass();
+      SecPassArg.push_back(Arg);
+    }
+
+    // Run the second argument pass
+    AnalyzeArguments(SecPassArg, Fn);
+
+    // Sort the locations of the arguments according to their original position.
+    SmallVector<CCValAssign, 16> TmpArgLocs;
+    std::swap(TmpArgLocs, Locs);
+    auto B = TmpArgLocs.begin(), E = TmpArgLocs.end();
+    std::merge(B, B + NumFirstPassLocs, B + NumFirstPassLocs, E,
+               std::back_inserter(Locs),
+               [](const CCValAssign &A, const CCValAssign &B) -> bool {
+                 return A.getValNo() < B.getValNo();
+               });
+  }
 
 private:
   /// MarkAllocated - Mark a register and all of its aliases as allocated.

@@ -43,7 +43,13 @@ class GoogleTest(TestFormat):
 
         nested_tests = []
         for ln in lines:
-            if not ln.strip():
+            # The test name list includes trailing comments beginning with
+            # a '#' on some lines, so skip those. We don't support test names
+            # that use escaping to embed '#' into their name as the names come
+            # from C++ class and method names where such things are hard and
+            # uninteresting to support.
+            ln = ln.split('#', 1)[0].rstrip()
+            if not ln.lstrip():
                 continue
 
             if 'Running main() from gtest_main.cc' in ln:

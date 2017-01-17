@@ -56,30 +56,30 @@ using namespace lld::elf;
 LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
-template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
+template <class ELFT> static SymbolBody *addRegular(SymbolAssignment *Cmd) {
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, Visibility, STT_NOTYPE,
-                                            0, 0, STB_GLOBAL, nullptr, nullptr);
-  Cmd->Sym = Sym->body();
+  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
+      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
+      /*Type*/ 0,
+      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 
-  // If we have no SECTIONS then we don't have '.' and don't call
-  // assignAddresses(). We calculate symbol value immediately in this case.
-  if (!ScriptConfig->HasSections)
-    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Cmd->Expression(0);
+  replaceBody<DefinedRegular<ELFT>>(Sym, Cmd->Name, /*IsLocal=*/false,
+                                    Visibility, STT_NOTYPE, 0, 0, nullptr,
+                                    nullptr);
+  return Sym->body();
 }
 
-template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
-  // If we have SECTIONS block then output sections haven't been created yet.
+template <class ELFT> static SymbolBody *addSynthetic(SymbolAssignment *Cmd) {
+  uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   const OutputSectionBase *Sec =
       ScriptConfig->HasSections ? nullptr : Cmd->Expression.Section();
-  Symbol *Sym = Symtab<ELFT>::X->addSynthetic(
-      Cmd->Name, Sec, 0, Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
-  Cmd->Sym = Sym->body();
+  Symbol *Sym = Symtab<ELFT>::X->addUndefined(
+      Cmd->Name, /*IsLocal=*/false, STB_GLOBAL, Visibility,
+      /*Type*/ 0,
+      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 
-  // If we already know section then we can calculate symbol value immediately.
-  if (Sec)
-    cast<DefinedSynthetic<ELFT>>(Cmd->Sym)->Value =
-        Cmd->Expression(0) - Sec->Addr;
+  replaceBody<DefinedSynthetic>(Sym, Cmd->Name, 0, Sec);
+  return Sym->body();
 }
 
 static bool isUnderSysroot(StringRef Path) {
@@ -91,21 +91,39 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
-  if (Cmd->Expression.IsAbsolute())
-    addRegular<ELFT>(Cmd);
-  else
-    addSynthetic<ELFT>(Cmd);
+template <class ELFT> static void assignSymbol(SymbolAssignment *Cmd) {
+  // If there are sections, then let the value be assigned later in
+  // `assignAddresses`.
+  if (ScriptConfig->HasSections)
+    return;
+
+  uint64_t Value = Cmd->Expression(0);
+  if (Cmd->Expression.IsAbsolute()) {
+    cast<DefinedRegular<ELFT>>(Cmd->Sym)->Value = Value;
+  } else {
+    const OutputSectionBase *Sec = Cmd->Expression.Section();
+    if (Sec)
+      cast<DefinedSynthetic>(Cmd->Sym)->Value = Value - Sec->Addr;
+  }
 }
-// If a symbol was in PROVIDE(), we need to define it only when
-// it is an undefined symbol.
-template <class ELFT> static bool shouldDefine(SymbolAssignment *Cmd) {
+
+template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
   if (Cmd->Name == ".")
-    return false;
-  if (!Cmd->Provide)
-    return true;
+    return;
+
+  // If a symbol was in PROVIDE(), we need to define it only when
+  // it is a referenced undefined symbol.
   SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
-  return B && B->isUndefined();
+  if (Cmd->Provide && (!B || B->isDefined()))
+    return;
+
+  // Otherwise, create a new symbol if one does not exist or an
+  // undefined one does exist.
+  if (Cmd->Expression.IsAbsolute())
+    Cmd->Sym = addRegular<ELFT>(Cmd);
+  else
+    Cmd->Sym = addSynthetic<ELFT>(Cmd);
+  assignSymbol<ELFT>(Cmd);
 }
 
 bool SymbolAssignment::classof(const BaseCommand *C) {
@@ -265,42 +283,12 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
 }
 
 template <class ELFT>
-static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
-                                            StringRef OutsecName) {
-  // When using linker script the merge rules are different.
-  // Unfortunately, linker scripts are name based. This means that expressions
-  // like *(.foo*) can refer to multiple input sections that would normally be
-  // placed in different output sections. We cannot put them in different
-  // output sections or we would produce wrong results for
-  // start = .; *(.foo.*) end = .; *(.bar)
-  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
-  // another. The problem is that there is no way to layout those output
-  // sections such that the .foo sections are the only thing between the
-  // start and end symbols.
-
-  // An extra annoyance is that we cannot simply disable merging of the contents
-  // of SHF_MERGE sections, but our implementation requires one output section
-  // per "kind" (string or not, which size/aligment).
-  // Fortunately, creating symbols in the middle of a merge section is not
-  // supported by bfd or gold, so we can just create multiple section in that
-  // case.
-  typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
-
-  uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
-
-  return SectionKey<ELFT::Is64Bits>{OutsecName, /*Type*/ 0, Flags, Alignment};
-}
-
-template <class ELFT>
 void LinkerScript<ELFT>::addSection(OutputSectionFactory<ELFT> &Factory,
                                     InputSectionBase<ELFT> *Sec,
                                     StringRef Name) {
   OutputSectionBase *OutSec;
   bool IsNew;
-  std::tie(OutSec, IsNew) = Factory.create(createKey(Sec, Name), Sec);
+  std::tie(OutSec, IsNew) = Factory.create(Sec, Name);
   if (IsNew)
     OutputSections->push_back(OutSec);
   OutSec->addSection(Sec);
@@ -314,8 +302,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
 
     // Handle symbol assignments outside of any output section.
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
-      if (shouldDefine<ELFT>(Cmd))
-        addSymbol<ELFT>(Cmd);
+      addSymbol<ELFT>(Cmd);
       continue;
     }
 
@@ -357,8 +344,7 @@ void LinkerScript<ELFT>::processCommands(OutputSectionFactory<ELFT> &Factory) {
       // ".foo : { ...; bar = .; }". Handle them.
       for (const std::unique_ptr<BaseCommand> &Base : Cmd->Commands)
         if (auto *OutCmd = dyn_cast<SymbolAssignment>(Base.get()))
-          if (shouldDefine<ELFT>(OutCmd))
-            addSymbol<ELFT>(OutCmd);
+          addSymbol<ELFT>(OutCmd);
 
       // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
       // is given, input sections are aligned to that value, whether the
@@ -395,7 +381,7 @@ static void assignSectionSymbol(SymbolAssignment *Cmd,
   if (!Cmd->Sym)
     return;
 
-  if (auto *Body = dyn_cast<DefinedSynthetic<ELFT>>(Cmd->Sym)) {
+  if (auto *Body = dyn_cast<DefinedSynthetic>(Cmd->Sym)) {
     Body->Section = Cmd->Expression.Section();
     Body->Value = Cmd->Expression(Value) - Body->Section->Addr;
     return;
@@ -902,10 +888,11 @@ template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
   return elf::getHeaderSize<ELFT>();
 }
 
-template <class ELFT> uint64_t LinkerScript<ELFT>::getSymbolValue(StringRef S) {
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::getSymbolValue(const Twine &Loc, StringRef S) {
   if (SymbolBody *B = Symtab<ELFT>::X->find(S))
     return B->getVA<ELFT>();
-  error("symbol not found: " + S);
+  error(Loc + ": symbol not found: " + S);
   return 0;
 }
 
@@ -933,7 +920,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
 
   if (auto *DR = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
     return DR->Section ? DR->Section->OutSec : nullptr;
-  if (auto *DS = dyn_cast_or_null<DefinedSynthetic<ELFT>>(Sym))
+  if (auto *DS = dyn_cast_or_null<DefinedSynthetic>(Sym))
     return DS->Section;
 
   return nullptr;
@@ -1027,10 +1014,10 @@ private:
   void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef VerStr);
   std::vector<SymbolVersion> readSymbols();
+  void readLocals();
 
   ScriptConfiguration &Opt = *ScriptConfig;
   bool IsUnderSysroot;
-  std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 
 void ScriptParser::readDynamicList() {
@@ -1173,15 +1160,22 @@ void ScriptParser::readGroup() {
 }
 
 void ScriptParser::readInclude() {
-  StringRef Tok = next();
-  auto MBOrErr = MemoryBuffer::getFile(unquote(Tok));
-  if (!MBOrErr) {
-    setError("cannot open " + Tok);
+  StringRef Tok = unquote(next());
+
+  // https://sourceware.org/binutils/docs/ld/File-Commands.html:
+  // The file will be searched for in the current directory, and in any
+  // directory specified with the -L option.
+  if (sys::fs::exists(Tok)) {
+    if (Optional<MemoryBufferRef> MB = readFile(Tok))
+      tokenize(*MB);
     return;
   }
-  std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  tokenize(MB->getMemBufferRef());
-  OwningMBs.push_back(std::move(MB));
+  if (Optional<std::string> Path = findFromSearchPaths(Tok)) {
+    if (Optional<MemoryBufferRef> MB = readFile(*Path))
+      tokenize(*MB);
+    return;
+  }
+  setError("cannot open " + Tok);
 }
 
 void ScriptParser::readOutput() {
@@ -1520,10 +1514,10 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
   return Cmd;
 }
 
-static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
+static uint64_t getSymbolValue(const Twine &Loc, StringRef S, uint64_t Dot) {
   if (S == ".")
     return Dot;
-  return ScriptBase->getSymbolValue(S);
+  return ScriptBase->getSymbolValue(Loc, S);
 }
 
 static bool isAbsolute(StringRef S) {
@@ -1544,8 +1538,12 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   } else {
     E = readExpr();
   }
-  if (Op == "+=")
-    E = [=](uint64_t Dot) { return getSymbolValue(Name, Dot) + E(Dot); };
+  if (Op == "+=") {
+    std::string Loc = getCurrentLocation();
+    E = [=](uint64_t Dot) {
+      return getSymbolValue(Loc, Name, Dot) + E(Dot);
+    };
+  }
   return new SymbolAssignment(Name, E);
 }
 
@@ -1797,7 +1795,7 @@ Expr ScriptParser::readPrimary() {
   // Tok is a symbol name.
   if (Tok != "." && !isValidCIdentifier(Tok))
     setError("malformed number: " + Tok);
-  return {[=](uint64_t Dot) { return getSymbolValue(Tok, Dot); },
+  return {[=](uint64_t Dot) { return getSymbolValue(Location, Tok, Dot); },
           [=] { return isAbsolute(Tok); },
           [=] { return ScriptBase->getSymbolSection(Tok); }};
 }
@@ -1864,17 +1862,22 @@ void ScriptParser::readAnonymousDeclaration() {
   if (consume("global:") || peek() != "local:")
     Config->VersionScriptGlobals = readSymbols();
 
-  // Next, read local symbols.
-  if (consume("local:")) {
-    if (consume("*")) {
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-      expect(";");
-    } else {
-      setError("local symbol list for anonymous version is not supported");
-    }
-  }
+  readLocals();
   expect("}");
   expect(";");
+}
+
+void ScriptParser::readLocals() {
+  if (!consume("local:"))
+    return;
+  std::vector<SymbolVersion> Locals = readSymbols();
+  for (SymbolVersion V : Locals) {
+    if (V.Name == "*") {
+      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
+      continue;
+    }
+    Config->VersionScriptLocals.push_back(V);
+  }
 }
 
 // Reads a list of symbols, e.g. "VerStr { global: foo; bar; local: *; };".
@@ -1888,16 +1891,7 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   if (consume("global:") || peek() != "local:")
     Config->VersionDefinitions.back().Globals = readSymbols();
 
-  // Read local symbols.
-  if (consume("local:")) {
-    if (consume("*")) {
-      Config->DefaultSymbolVersion = VER_NDX_LOCAL;
-      expect(";");
-    } else {
-      for (SymbolVersion V : readSymbols())
-        Config->VersionScriptLocals.push_back(V);
-    }
-  }
+  readLocals();
   expect("}");
 
   // Each version may have a parent version. For example, "Ver2"

@@ -28,30 +28,30 @@ void my_dealloc2 ( void *p ) {
     std::free ( p ); 
     }
 
-void my_dealloc3 ( void *p, size_t   sz   ) {
+void my_dealloc3 ( void *p, size_t ) {
 //  std::printf ( "Freeing %lx (size %ld)\n", (unsigned long) p, sz );  
     std::free ( p ); 
     }
 
-void my_construct ( void *p ) {
+void my_construct ( void *) {
 //  std::printf ( "Constructing %lx\n", (unsigned long) p );
     }
 
-void my_destruct  ( void *p ) {
+void my_destruct  ( void *) {
 //  std::printf ( "Destructing  %lx\n", (unsigned long) p );
     }
 
 int gCounter;
-void count_construct ( void *p ) { ++gCounter; }
-void count_destruct  ( void *p ) { --gCounter; }
+void count_construct ( void * ) { ++gCounter; }
+void count_destruct  ( void * ) { --gCounter; }
 
 
 int gConstructorCounter;
 int gConstructorThrowTarget;
 int gDestructorCounter;
 int gDestructorThrowTarget;
-void throw_construct ( void *p ) { if ( gConstructorCounter   == gConstructorThrowTarget ) throw 1; ++gConstructorCounter; }
-void throw_destruct  ( void *p ) { if ( ++gDestructorCounter  == gDestructorThrowTarget  ) throw 2; }
+void throw_construct ( void * ) { if ( gConstructorCounter   == gConstructorThrowTarget ) throw 1; ++gConstructorCounter; }
+void throw_destruct  ( void * ) { if ( ++gDestructorCounter  == gDestructorThrowTarget  ) throw 2; }
 
 struct vec_on_stack {
     void *storage;
@@ -78,7 +78,7 @@ void test_exception_in_destructor ( ) {
 
 
 
-int main ( int argc, char *argv [] ) {
+int main () {
     std::set_terminate ( my_terminate );
     test_exception_in_destructor ();
     return 1;       // we failed if we get here

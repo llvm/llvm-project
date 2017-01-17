@@ -7,21 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <vector>
 
 // template <class... Args> iterator emplace(const_iterator pos, Args&&... args);
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <vector>
 #include <cassert>
+
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 class A
 {
@@ -55,11 +53,8 @@ public:
     double getd() const {return d_;}
 };
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         std::vector<A> c;
         std::vector<A>::iterator i = c.emplace(c.cbegin(), 2, 3.5);
@@ -114,15 +109,6 @@ int main()
         assert(c.back().getd() == 4.5);
         assert(is_contiguous_container_asan_correct(c));
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::vector<A> c1;
-        std::vector<A> c2;
-        std::vector<A>::iterator i = c1.emplace(c2.cbegin(), 2, 3.5);
-        assert(false);
-    }
-#endif
-#if TEST_STD_VER >= 11
     {
         std::vector<A, min_allocator<A>> c;
         std::vector<A, min_allocator<A>>::iterator i = c.emplace(c.cbegin(), 2, 3.5);
@@ -147,14 +133,4 @@ int main()
         assert(c.back().geti() == 3);
         assert(c.back().getd() == 4.5);
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::vector<A, min_allocator<A>> c1;
-        std::vector<A, min_allocator<A>> c2;
-        std::vector<A, min_allocator<A>>::iterator i = c1.emplace(c2.cbegin(), 2, 3.5);
-        assert(false);
-    }
-#endif
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

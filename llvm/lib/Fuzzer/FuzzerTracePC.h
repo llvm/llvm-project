@@ -85,6 +85,7 @@ class TracePC {
   TableOfRecentCompares<uint64_t, kTORCSize> TORC8;
 
   void PrintNewPCs();
+  void InitializePrintNewPCs();
   size_t GetNumPCs() const { return Min(kNumPCs, NumGuards + 1); }
   uintptr_t GetPC(size_t Idx) {
     assert(Idx < GetNumPCs());

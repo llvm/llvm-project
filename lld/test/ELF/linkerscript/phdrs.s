@@ -93,7 +93,7 @@
 
 ## Check the numetic values for PHDRS.
 # RUN: echo "PHDRS {text PT_LOAD FILEHDR PHDRS; foo 0x11223344; } \
-# RUN:       SECTIONS { . = SIZEOF_HEADERS; .foo : { *(.*) } : text : foo}" > %t1.script
+# RUN:       SECTIONS { . = SIZEOF_HEADERS; .foo : { *(.foo* .text*) } : text : foo}" > %t1.script
 # RUN: ld.lld -o %t2 --script %t1.script %t
 # RUN: llvm-readobj -program-headers %t2 | FileCheck --check-prefix=INT-PHDRS %s
 

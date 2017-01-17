@@ -37,21 +37,6 @@ TEST_CASE(test_signatures)
 
 TEST_CASE(test_error_reporting)
 {
-    auto checkThrow = [](path const& f, path const& t, const std::error_code& ec)
-    {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-        try {
-            fs::create_directory_symlink(f, t);
-            return true;
-        } catch (filesystem_error const& err) {
-            return err.path1() == f
-                && err.code() == ec;
-        }
-#else
-        return true;
-#endif
-    };
-
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path file2 = env.create_file("file2", 55);

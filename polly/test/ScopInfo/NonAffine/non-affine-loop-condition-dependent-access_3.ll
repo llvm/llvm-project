@@ -95,9 +95,9 @@
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 4294967295 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 4294967295 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2147483647 };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A) {

@@ -162,22 +162,38 @@ protected:
   /// return true, otherwise return false.  This is hidden from the client so
   /// that the derived class can check that the right type of pointer is passed
   /// in.
-  bool erase_imp(const void * Ptr);
+  bool erase_imp(const void * Ptr) {
+    const void *const *P = find_imp(Ptr);
+    if (P == EndPointer())
+      return false;
+    
+    const void ** Loc = const_cast<const void **>(P);
+    assert(*Loc == Ptr && "broken find!");
+    *Loc = getTombstoneMarker();
+    NumTombstones++;
+    return true;
+  }
 
-  bool count_imp(const void * Ptr) const {
+  /// Returns the raw pointer needed to construct an iterator.  If element not
+  /// found, this will be EndPointer.  Otherwise, it will be a pointer to the
+  /// slot which stores Ptr;
+  const void *const * find_imp(const void * Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
       for (const void *const *APtr = SmallArray,
                       *const *E = SmallArray + NumNonEmpty; APtr != E; ++APtr)
         if (*APtr == Ptr)
-          return true;
-      return false;
+          return APtr;
+      return EndPointer();
     }
 
     // Big set case.
-    return *FindBucketFor(Ptr) == Ptr;
+    auto *Bucket = FindBucketFor(Ptr);
+    if (*Bucket == Ptr)
+      return Bucket;
+    return EndPointer();
   }
-
+  
 private:
   bool isSmall() const { return CurArray == SmallArray; }
 
@@ -290,12 +306,6 @@ public:
 
   SmallPtrSetIterator operator++(int) {        // Postincrement
     SmallPtrSetIterator tmp = *this;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (ReverseIterate<bool>::value) {
-      --*this;
-      return tmp;
-    }
-#endif
     ++*this;
     return tmp;
   }
@@ -368,7 +378,11 @@ public:
 
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
   size_type count(PtrType Ptr) const {
-    return count_imp(PtrTraits::getAsVoidPointer(Ptr)) ? 1 : 0;
+    return find(Ptr) != endPtr() ? 1 : 0;
+  }
+  iterator find(PtrType Ptr) const {
+    auto *P = find_imp(PtrTraits::getAsVoidPointer(Ptr));
+    return iterator(P, EndPointer());
   }
 
   template <typename IterT>

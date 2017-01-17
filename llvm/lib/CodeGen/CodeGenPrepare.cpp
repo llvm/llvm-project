@@ -131,6 +131,10 @@ static cl::opt<unsigned> FreqRatioToSkipMerge(
     cl::desc("Skip merging empty blocks if (frequency of empty block) / "
              "(frequency of destination block) is greater than this ratio"));
 
+static cl::opt<bool> ForceSplitStore(
+    "force-split-store", cl::Hidden, cl::init(false),
+    cl::desc("Force store splitting no matter what the target query says."));
+
 namespace {
 typedef SmallPtrSet<Instruction *, 16> SetOfInstrs;
 typedef PointerIntPair<Type *, 1, bool> TypeIsSExt;
@@ -5358,6 +5362,117 @@ bool CodeGenPrepare::optimizeExtractElementInst(Instruction *Inst) {
   return false;
 }
 
+/// For the instruction sequence of store below, F and I values
+/// are bundled together as an i64 value before being stored into memory.
+/// Sometimes it is more efficent to generate separate stores for F and I,
+/// which can remove the bitwise instructions or sink them to colder places.
+///
+///   (store (or (zext (bitcast F to i32) to i64),
+///              (shl (zext I to i64), 32)), addr)  -->
+///   (store F, addr) and (store I, addr+4)
+///
+/// Similarly, splitting for other merged store can also be beneficial, like:
+/// For pair of {i32, i32}, i64 store --> two i32 stores.
+/// For pair of {i32, i16}, i64 store --> two i32 stores.
+/// For pair of {i16, i16}, i32 store --> two i16 stores.
+/// For pair of {i16, i8},  i32 store --> two i16 stores.
+/// For pair of {i8, i8},   i16 store --> two i8 stores.
+///
+/// We allow each target to determine specifically which kind of splitting is
+/// supported.
+///
+/// The store patterns are commonly seen from the simple code snippet below
+/// if only std::make_pair(...) is sroa transformed before inlined into hoo.
+///   void goo(const std::pair<int, float> &);
+///   hoo() {
+///     ...
+///     goo(std::make_pair(tmp, ftmp));
+///     ...
+///   }
+///
+/// Although we already have similar splitting in DAG Combine, we duplicate
+/// it in CodeGenPrepare to catch the case in which pattern is across
+/// multiple BBs. The logic in DAG Combine is kept to catch case generated
+/// during code expansion.
+static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
+                                const TargetLowering &TLI) {
+  // Handle simple but common cases only.
+  Type *StoreType = SI.getValueOperand()->getType();
+  if (DL.getTypeStoreSizeInBits(StoreType) != DL.getTypeSizeInBits(StoreType) ||
+      DL.getTypeSizeInBits(StoreType) == 0)
+    return false;
+
+  unsigned HalfValBitSize = DL.getTypeSizeInBits(StoreType) / 2;
+  Type *SplitStoreType = Type::getIntNTy(SI.getContext(), HalfValBitSize);
+  if (DL.getTypeStoreSizeInBits(SplitStoreType) !=
+      DL.getTypeSizeInBits(SplitStoreType))
+    return false;
+
+  // Match the following patterns:
+  // (store (or (zext LValue to i64),
+  //            (shl (zext HValue to i64), 32)), HalfValBitSize)
+  //  or
+  // (store (or (shl (zext HValue to i64), 32)), HalfValBitSize)
+  //            (zext LValue to i64),
+  // Expect both operands of OR and the first operand of SHL have only
+  // one use.
+  Value *LValue, *HValue;
+  if (!match(SI.getValueOperand(),
+             m_c_Or(m_OneUse(m_ZExt(m_Value(LValue))),
+                    m_OneUse(m_Shl(m_OneUse(m_ZExt(m_Value(HValue))),
+                                   m_SpecificInt(HalfValBitSize))))))
+    return false;
+
+  // Check LValue and HValue are int with size less or equal than 32.
+  if (!LValue->getType()->isIntegerTy() ||
+      DL.getTypeSizeInBits(LValue->getType()) > HalfValBitSize ||
+      !HValue->getType()->isIntegerTy() ||
+      DL.getTypeSizeInBits(HValue->getType()) > HalfValBitSize)
+    return false;
+
+  // If LValue/HValue is a bitcast instruction, use the EVT before bitcast
+  // as the input of target query.
+  auto *LBC = dyn_cast<BitCastInst>(LValue);
+  auto *HBC = dyn_cast<BitCastInst>(HValue);
+  EVT LowTy = LBC ? EVT::getEVT(LBC->getOperand(0)->getType())
+                  : EVT::getEVT(LValue->getType());
+  EVT HighTy = HBC ? EVT::getEVT(HBC->getOperand(0)->getType())
+                   : EVT::getEVT(HValue->getType());
+  if (!ForceSplitStore && !TLI.isMultiStoresCheaperThanBitsMerge(LowTy, HighTy))
+    return false;
+
+  // Start to split store.
+  IRBuilder<> Builder(SI.getContext());
+  Builder.SetInsertPoint(&SI);
+
+  // If LValue/HValue is a bitcast in another BB, create a new one in current
+  // BB so it may be merged with the splitted stores by dag combiner.
+  if (LBC && LBC->getParent() != SI.getParent())
+    LValue = Builder.CreateBitCast(LBC->getOperand(0), LBC->getType());
+  if (HBC && HBC->getParent() != SI.getParent())
+    HValue = Builder.CreateBitCast(HBC->getOperand(0), HBC->getType());
+
+  auto CreateSplitStore = [&](Value *V, bool Upper) {
+    V = Builder.CreateZExtOrBitCast(V, SplitStoreType);
+    Value *Addr = Builder.CreateBitCast(
+        SI.getOperand(1),
+        SplitStoreType->getPointerTo(SI.getPointerAddressSpace()));
+    if (Upper)
+      Addr = Builder.CreateGEP(
+          SplitStoreType, Addr,
+          ConstantInt::get(Type::getInt32Ty(SI.getContext()), 1));
+    Builder.CreateAlignedStore(
+        V, Addr, Upper ? SI.getAlignment() / 2 : SI.getAlignment());
+  };
+
+  CreateSplitStore(LValue, false);
+  CreateSplitStore(HValue, true);
+
+  // Delete the old store.
+  SI.eraseFromParent();
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, bool& ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -5422,6 +5537,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool& ModifiedDT) {
   }
 
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+    if (TLI && splitMergedValStore(*SI, *DL, *TLI))
+      return true;
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     if (TLI) {
       unsigned AS = SI->getPointerAddressSpace();

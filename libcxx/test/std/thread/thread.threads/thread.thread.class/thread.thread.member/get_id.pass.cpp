@@ -50,7 +50,8 @@ int main()
         std::thread::id id0 = t0.get_id();
         std::thread t1;
         std::thread::id id1 = t1.get_id();
-        assert(t0.get_id() != id1);
+        assert(t0.get_id() == id0);
+        assert(id0 != id1);
         assert(t1.get_id() == std::thread::id());
         t0.join();
     }

@@ -8,12 +8,18 @@
 //===----------------------------------------------------------------------===//
 #include <stdlib.h>
 
-#if defined(__APPLE__) || defined(LIBCXXRT) ||                                 \
-    defined(LIBCXX_BUILDING_LIBCXXABI)
+#if !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY) && \
+    (defined(__APPLE__) || defined(LIBCXXRT) || defined(LIBCXX_BUILDING_LIBCXXABI))
 #include <cxxabi.h>
 #endif
 
 #include "typeinfo"
+
+#if defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
+std::type_info::~type_info()
+{
+}
+#endif
 
 #if !defined(LIBCXXRT) && !defined(_LIBCPPABI_VERSION)
 
@@ -47,7 +53,7 @@ std::bad_typeid::what() const _NOEXCEPT
   return "std::bad_typeid";
 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
   // On Darwin, the cxa_bad_* functions cannot be in the lower level library
   // because bad_cast and bad_typeid are defined in his higher level library
   void __cxxabiv1::__cxa_bad_typeid()

@@ -137,8 +137,8 @@ define void @constant_sextload_v1i16_to_v1i32(<1 x i32> addrspace(1)* %out, <1 x
 
 ; v2i16 is naturally 4 byte aligned
 ; EG: VTX_READ_32 [[DST:T[0-9]\.[XYZW]]], [[DST]], 0, #1
-; TODO: This should use DST, but for some there are redundant MOVs
-; EG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
+; EG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, [[DST]], literal
+; EG: 16
 ; EG: 16
 define void @constant_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(2)* %in) #0 {
   %load = load <2 x i16>, <2 x i16> addrspace(2)* %in
@@ -153,11 +153,11 @@ define void @constant_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x
 ; GCN-DAG: s_sext_i32_i16
 
 ; v2i16 is naturally 4 byte aligned
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST:T[0-9]]].XY, {{T[0-9].[XYZW]}},
 ; EG: VTX_READ_32 [[DST:T[0-9]\.[XYZW]]], [[DST]], 0, #1
-; TODO: These should use DST, but for some there are redundant MOVs
-; TODO: We should also use ASHR instead of LSHR + BFE
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].X, [[DST]], 0.0, literal
+; TODO: We should use ASHR instead of LSHR + BFE
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].Y, {{PV\.[XYZW]}}, 0.0, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
 define void @constant_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(2)* %in) #0 {
@@ -167,16 +167,23 @@ define void @constant_sextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x
   ret void
 }
 
-; FUNC-LABEL: {{^}}constant_constant_zextload_v3i16_to_v3i32:
+; FUNC-LABEL: {{^}}constant_zextload_v3i16_to_v3i32:
 ; GCN: s_load_dwordx2
 
 ; v3i16 is naturally 8 byte aligned
-; EG-DAG: VTX_READ_32 [[DST_HI:T[0-9]\.[XYZW]]], [[DST_HI]], 0, #1
-; EG-DAG: VTX_READ_16 [[DST_LO:T[0-9]\.[XYZW]]], [[DST_LO]], 4, #1
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9].[XYZW]}},
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9].[XYZW]}},
+; EG: CF_END
+; EG-DAG: VTX_READ_32 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 0, #1
+; EG-DAG: VTX_READ_16 [[DST_HI:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 4, #1
 ; TODO: This should use DST, but for some there are redundant MOVs
-; EG: LSHR {{[* ]*}}{{T[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
-; EG: 16
-define void @constant_constant_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(2)* %in) {
+; EG-DAG: LSHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: 16
+; EG-DAG: AND_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST_HI]].X, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: 65535
+; EG-DAG: 65535
+define void @constant_zextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(2)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(2)* %in
   %ext = zext <3 x i16> %ld to <3 x i32>
@@ -184,19 +191,20 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}constant_constant_sextload_v3i16_to_v3i32:
+; FUNC-LABEL: {{^}}constant_sextload_v3i16_to_v3i32:
 ; GCN: s_load_dwordx2
 
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XY, {{T[0-9].[XYZW]}},
+; EG-DAG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].X, {{T[0-9].[XYZW]}},
 ; v3i16 is naturally 8 byte aligned
-; EG-DAG: VTX_READ_32 [[DST_HI:T[0-9]\.[XYZW]]], [[DST_HI]], 0, #1
-; EG-DAG: VTX_READ_16 [[DST_LO:T[0-9]\.[XYZW]]], [[DST_LO]], 4, #1
-; TODO: These should use DST, but for some there are redundant MOVs
-; EG-DAG: ASHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, 0.0, literal
+; EG-DAG: VTX_READ_32 [[DST_HI:T[0-9]\.[XYZW]]], [[PTR:T[0-9]\.[XYZW]]], 0, #1
+; EG-DAG: VTX_READ_16 [[DST_LO:T[0-9]\.[XYZW]]], {{T[0-9]\.[XYZW]}}, 4, #1
+; EG-DAG: ASHR {{[* ]*}}[[ST_LO]].Y, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, {{T[0-9]\.[XYZW]}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].X, {{T[0-9]\.[XYZW]}}, 0.0, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
-define void @constant_constant_sextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(2)* %in) {
+define void @constant_sextload_v3i16_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i16> addrspace(2)* %in) {
 entry:
   %ld = load <3 x i16>, <3 x i16> addrspace(2)* %in
   %ext = sext <3 x i16> %ld to <3 x i32>
@@ -204,20 +212,24 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}constant_constant_zextload_v4i16_to_v4i32:
+; FUNC-LABEL: {{^}}constant_zextload_v4i16_to_v4i32:
 ; GCN: s_load_dwordx2
 ; GCN-DAG: s_and_b32
 ; GCN-DAG: s_lshr_b32
 
 ; v4i16 is naturally 8 byte aligned
-; EG: VTX_READ_64 [[DST:T[0-9]\.XY]], {{T[0-9].[XYZW]}}, 0, #1
-; TODO: These should use DST, but for some there are redundant MOVs
-; EG-DAG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST:T[0-9]]].XYZW, {{T[0-9].[XYZW]}}
+; EG: VTX_READ_64 [[LD:T[0-9]]].XY, {{T[0-9].[XYZW]}}, 0, #1
+; TODO: This should use LD, but for some there are redundant MOVs
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST]].Y, {{.*\.[XYZW]}}, literal
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST]].W, {{.*\.[XYZW]}}, literal
 ; EG-DAG: 16
-; EG-DAG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
-; EG-DAG: AND_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
 ; EG-DAG: 16
-define void @constant_constant_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(2)* %in) #0 {
+; EG-DAG: AND_INT {{[* ]*}}[[ST]].X, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST]].Z, {{T[0-9]\.[XYZW]}}, literal
+; EG-DAG: 65535
+; EG-DAG: 65535
+define void @constant_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(2)* %in) #0 {
   %load = load <4 x i16>, <4 x i16> addrspace(2)* %in
   %ext = zext <4 x i16> %load to <4 x i32>
   store <4 x i32> %ext, <4 x i32> addrspace(1)* %out
@@ -230,13 +242,14 @@ define void @constant_constant_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %
 ; GCN-DAG: s_sext_i32_i16
 
 ; v4i16 is naturally 8 byte aligned
-; EG: VTX_READ_64 [[DST:T[0-9]\.XY]], {{T[0-9].[XYZW]}}, 0, #1
-; TODO: These should use DST, but for some there are redundant MOVs
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST:T[0-9]]].XYZW, {{T[0-9]\.[XYZW]}},
+; EG: VTX_READ_64 [[DST:T[0-9]]].XY, {{T[0-9].[XYZW]}}, 0, #1
+; TODO: This should use LD, but for some there are redundant MOVs
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].X, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].Z, {{.*}}, 0.0, literal
 ; TODO: We should use ASHR instead of LSHR + BFE
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].Y, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST]].W, {{.*}}, 0.0, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
 ; EG-DAG: 16
@@ -254,24 +267,27 @@ define void @constant_sextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x
 ; GCN-DAG: s_lshr_b32
 
 ; v8i16 is naturally 16 byte aligned
-; EG: VTX_READ_128 [[DST:T[0-9]\.XYZW]], {{T[0-9].[XYZW]}}, 0, #1
-; TODO: These should use DST, but for some there are redundant MOVs
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, literal
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].XYZW, {{T[0-9]+.[XYZW]}},
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XYZW, {{T[0-9]+.[XYZW]}},
+; EG: VTX_READ_128 [[DST:T[0-9]]].XYZW, {{T[0-9].[XYZW]}}, 0, #1
+; TODO: These should use LSHR instead of BFE_UINT
+; TODO: This should use DST, but for some there are redundant MOVs
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST_LO]].Y, {{.*}}, literal
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST_LO]].W, {{.*}}, literal
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST_HI]].Y, {{.*}}, literal
+; EG-DAG: BFE_UINT {{[* ]*}}[[ST_HI]].W, {{.*}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST_LO]].X, {{.*}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST_LO]].Z, {{.*}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST_HI]].X, {{.*}}, literal
+; EG-DAG: AND_INT {{[* ]*}}[[ST_HI]].Z, {{.*}}, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
 ; EG-DAG: 16
 ; EG-DAG: 16
-; EG-DAG: 16
-; EG-DAG: 16
-; EG-DAG: 16
-; EG-DAG: 16
+; EG-DAG: 65535
+; EG-DAG: 65535
+; EG-DAG: 65535
+; EG-DAG: 65535
 define void @constant_zextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i16> addrspace(2)* %in) #0 {
   %load = load <8 x i16>, <8 x i16> addrspace(2)* %in
   %ext = zext <8 x i16> %load to <8 x i32>
@@ -285,17 +301,19 @@ define void @constant_zextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x
 ; GCN-DAG: s_sext_i32_i16
 
 ; v8i16 is naturally 16 byte aligned
-; EG: VTX_READ_128 [[DST:T[0-9]\.XYZW]], {{T[0-9].[XYZW]}}, 0, #1
-; TODO: These should use DST, but for some there are redundant MOVs
-; TODO: We should use ASHR instead of LSHR + BFE
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_HI:T[0-9]]].XYZW, {{T[0-9]+.[XYZW]}},
+; EG: MEM_RAT_CACHELESS STORE_RAW [[ST_LO:T[0-9]]].XYZW, {{T[0-9]+.[XYZW]}},
+; EG: VTX_READ_128 [[DST:T[0-9]]].XYZW, {{T[0-9].[XYZW]}}, 0, #1
+; TODO: 4 of these should use ASHR instead of LSHR + BFE_INT
+; TODO: This should use DST, but for some there are redundant MOVs
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].Y, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].W, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].Y, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].W, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].X, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_LO]].Z, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].X, {{.*}}, 0.0, literal
+; EG-DAG: BFE_INT {{[* ]*}}[[ST_HI]].Z, {{.*}}, 0.0, literal
 ; EG-DAG: 16
 ; EG-DAG: 16
 ; EG-DAG: 16
@@ -444,7 +462,7 @@ define void @constant_zextload_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(
 
 ; EG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
 ; EG: ASHR {{\**}} {{T[0-9]\.[XYZW]}}, {{.*}}, literal
-; TODO: Why not 15 ?
+; TODO: These could be expanded earlier using ASHR 15
 ; EG: 31
 define void @constant_sextload_i16_to_i64(i64 addrspace(1)* %out, i16 addrspace(2)* %in) #0 {
   %a = load i16, i16 addrspace(2)* %in
@@ -468,7 +486,7 @@ define void @constant_zextload_v1i16_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x
 
 ; EG: VTX_READ_16 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0, #1
 ; EG: ASHR {{\**}} {{T[0-9]\.[XYZW]}}, {{.*}}, literal
-; TODO: Why not 15 ?
+; TODO: These could be expanded earlier using ASHR 15
 ; EG: 31
 define void @constant_sextload_v1i16_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x i16> addrspace(2)* %in) #0 {
   %load = load <1 x i16>, <1 x i16> addrspace(2)* %in

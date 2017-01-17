@@ -61,23 +61,26 @@ public:
         Input = Arg.substr(strlen("-input="));
     }
 
-    llvm::ErrorOr<std::unique_ptr<include_fixer::YamlSymbolIndex>> SymbolIdx(
-        nullptr);
-    if (DB == "yaml") {
-      if (!Input.empty()) {
-        SymbolIdx = include_fixer::YamlSymbolIndex::createFromFile(Input);
-      } else {
-        // If we don't have any input file, look in the directory of the first
-        // file and its parents.
-        const FrontendOptions &FO = CI.getFrontendOpts();
-        SmallString<128> AbsolutePath(
-            tooling::getAbsolutePath(FO.Inputs[0].getFile()));
-        StringRef Directory = llvm::sys::path::parent_path(AbsolutePath);
-        SymbolIdx = include_fixer::YamlSymbolIndex::createFromDirectory(
-            Directory, "find_all_symbols_db.yaml");
+    std::string InputFile = CI.getFrontendOpts().Inputs[0].getFile();
+    auto CreateYamlIdx = [=]() -> std::unique_ptr<include_fixer::SymbolIndex> {
+      llvm::ErrorOr<std::unique_ptr<include_fixer::YamlSymbolIndex>> SymbolIdx(
+          nullptr);
+      if (DB == "yaml") {
+        if (!Input.empty()) {
+          SymbolIdx = include_fixer::YamlSymbolIndex::createFromFile(Input);
+        } else {
+          // If we don't have any input file, look in the directory of the first
+          // file and its parents.
+          SmallString<128> AbsolutePath(tooling::getAbsolutePath(InputFile));
+          StringRef Directory = llvm::sys::path::parent_path(AbsolutePath);
+          SymbolIdx = include_fixer::YamlSymbolIndex::createFromDirectory(
+              Directory, "find_all_symbols_db.yaml");
+        }
       }
-    }
-    SymbolIndexMgr->addSymbolIndex(std::move(*SymbolIdx));
+      return std::move(*SymbolIdx);
+    };
+
+    SymbolIndexMgr->addSymbolIndex(std::move(CreateYamlIdx));
     return true;
   }
 

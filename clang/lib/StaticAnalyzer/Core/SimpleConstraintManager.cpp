@@ -254,6 +254,19 @@ ProgramStateRef SimpleConstraintManager::assumeSymRel(ProgramStateRef State,
   assert(BinaryOperator::isComparisonOp(Op) &&
          "Non-comparison ops should be rewritten as comparisons to zero.");
 
+  SymbolRef Sym = LHS;
+
+  // Simplification: translate an assume of a constraint of the form
+  // "(exp comparison_op expr) != 0" to true into an assume of 
+  // "exp comparison_op expr" to true. (And similarly, an assume of the form
+  // "(exp comparison_op expr) == 0" to true into an assume of
+  // "exp comparison_op expr" to false.)
+  if (Int == 0 && (Op == BO_EQ || Op == BO_NE)) {
+    if (const BinarySymExpr *SE = dyn_cast<BinarySymExpr>(Sym))
+      if (BinaryOperator::isComparisonOp(SE->getOpcode()))
+        return assume(State, nonloc::SymbolVal(Sym), (Op == BO_NE ? true : false));
+  }
+
   // Get the type used for calculating wraparound.
   BasicValueFactory &BVF = getBasicVals();
   APSIntType WraparoundType = BVF.getAPSIntType(LHS->getType());
@@ -265,7 +278,6 @@ ProgramStateRef SimpleConstraintManager::assumeSymRel(ProgramStateRef State,
   // x < 4 has the solution [0, 3]. x+2 < 4 has the solution [0-2, 3-2], which
   // in modular arithmetic is [0, 1] U [UINT_MAX-1, UINT_MAX]. It's up to
   // the subclasses of SimpleConstraintManager to handle the adjustment.
-  SymbolRef Sym = LHS;
   llvm::APSInt Adjustment = WraparoundType.getZeroValue();
   computeAdjustment(Sym, Adjustment);
 

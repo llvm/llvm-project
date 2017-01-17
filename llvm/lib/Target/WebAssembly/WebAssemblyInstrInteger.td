@@ -37,11 +37,11 @@ defm SHL : BinaryInt<shl, "shl ", 0x74, 0x86>;
 defm SHR_S : BinaryInt<sra, "shr_s", 0x75, 0x87>;
 defm SHR_U : BinaryInt<srl, "shr_u", 0x76, 0x88>;
 defm ROTL : BinaryInt<rotl, "rotl", 0x77, 0x89>;
-defm ROTR : BinaryInt<rotr, "rotr", 0x78, 0x90>;
+defm ROTR : BinaryInt<rotr, "rotr", 0x78, 0x8a>;
 
 let isCommutable = 1 in {
-defm EQ : ComparisonInt<SETEQ, "eq  ", 0x46, 0x68>;
-defm NE : ComparisonInt<SETNE, "ne  ", 0x47, 0x69>;
+defm EQ : ComparisonInt<SETEQ, "eq  ", 0x46, 0x51>;
+defm NE : ComparisonInt<SETNE, "ne  ", 0x47, 0x52>;
 } // isCommutable = 1
 defm LT_S : ComparisonInt<SETLT,  "lt_s", 0x48, 0x53>;
 defm LT_U : ComparisonInt<SETULT, "lt_u", 0x49, 0x54>;

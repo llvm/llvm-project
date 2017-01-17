@@ -36,7 +36,7 @@ val:
 // CHECK-NEXT:      SHF_ALLOC
 // CHECK-NEXT:      SHF_WRITE
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x12000
+// CHECK-NEXT:    Address: 0x13000
 // CHECK-NEXT:    Offset:
 // CHECK-NEXT:    Size: 4
 // CHECK-NEXT:    Link:
@@ -45,7 +45,7 @@ val:
 // CHECK-NEXT:    EntrySize:
 
 // SYMBOLS:    Name: val
-// SYMBOLS-NEXT:    Value: 0x13000
+// SYMBOLS-NEXT:    Value: 0x12000
 // SYMBOLS-NEXT:    Size: 4
 // SYMBOLS-NEXT:    Binding: Global
 // SYMBOLS-NEXT:    Type: Object
@@ -59,5 +59,5 @@ val:
 // CODE-NEXT:   11008:  00 00 90 e5     ldr     r0, [r0]
 // CODE-NEXT:   1100c:  1e ff 2f e1     bx      lr
 // CODE: $d.1:
-// 0x11004 + 0x0ff4 + 8 = 0x12000 = .got
-// CODE-NEXT:   11010:  f4 0f 00 00
+// 0x11004 + 0x1ff4 + 8 = 0x13000 = .got
+// CODE-NEXT:   11010:  f4 1f 00 00

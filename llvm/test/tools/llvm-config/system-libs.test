@@ -1,4 +1,5 @@
-RUN: llvm-config --system-libs 2>&1 | FileCheck %s
+RUN: llvm-config --link-static --system-libs 2>&1 | FileCheck %s
+REQUIRES: static-libs
 UNSUPPORTED: system-windows
 CHECK: -l
 CHECK-NOT: error

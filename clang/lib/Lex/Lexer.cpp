@@ -1713,9 +1713,9 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
                                          getLangOpts());
         if (!isIdentifierBody(Next)) {
           // End of suffix. Check whether this is on the whitelist.
-          IsUDSuffix = (Chars == 1 && Buffer[0] == 's') ||
-                       NumericLiteralParser::isValidUDSuffix(
-                           getLangOpts(), StringRef(Buffer, Chars));
+          const StringRef CompleteSuffix(Buffer, Chars);
+          IsUDSuffix = StringLiteralParser::isValidUDSuffix(getLangOpts(),
+                                                            CompleteSuffix);
           break;
         }
 

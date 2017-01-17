@@ -81,8 +81,10 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form, const void *P,
   auto &DG = CU->getGenerator();
   DIEBlock *Block = new (DG.getAllocator()) DIEBlock;
   for (size_t I = 0; I < S; ++I)
-    Block->addValue(DG.getAllocator(), (dwarf::Attribute)0,
-                    dwarf::DW_FORM_data1, DIEInteger(((uint8_t *)P)[I]));
+    Block->addValue(
+        DG.getAllocator(), (dwarf::Attribute)0, dwarf::DW_FORM_data1,
+        DIEInteger(
+            (const_cast<uint8_t *>(static_cast<const uint8_t *>(P)))[I]));
 
   Block->ComputeSize(DG.getAsmPrinter());
   Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
@@ -104,6 +106,10 @@ dwarfgen::DIE dwarfgen::DIE::addChild(dwarf::Tag Tag) {
 
 dwarfgen::DIE dwarfgen::CompileUnit::getUnitDIE() {
   return dwarfgen::DIE(this, &DU.getUnitDie());
+}
+
+void dwarfgen::DIE::setForceChildren() {
+  Die->setForceChildren(true);
 }
 
 //===----------------------------------------------------------------------===//

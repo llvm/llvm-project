@@ -41,11 +41,8 @@ private:
   friend RegisterBankInfo;
 
 public:
-  /// The default constructor will leave the object in
-  /// an invalid state. I.e. isValid() == false.
-  /// The fields must be updated to fix that and only
-  /// RegisterBankInfo instances are allowed to do that
-  RegisterBank();
+  RegisterBank(unsigned ID, const char *Name, unsigned Size,
+               const uint32_t *ContainedRegClasses);
 
   /// Get the identifier of this register bank.
   unsigned getID() const { return ID; }

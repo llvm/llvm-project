@@ -1,14 +1,18 @@
 ; RUN: llc -mtriple=aarch64-eabi %s -o - | FileCheck %s
 
-; These tests just check that the plumbing is in place for @llvm.bitreverse. The
-; actual output is massive at the moment as llvm.bitreverse is not yet legal.
+; These tests just check that the plumbing is in place for @llvm.bitreverse.
 
 declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 
 define <2 x i16> @f(<2 x i16> %a) {
 ; CHECK-LABEL: f:
-; CHECK: rev32
-; CHECK: ushr
+; CHECK: fmov [[REG1:w[0-9]+]], s0
+; CHECK-DAG: rbit [[REG2:w[0-9]+]], [[REG1]]
+; CHECK-DAG: fmov s0, [[REG2]]
+; CHECK-DAG: mov [[REG3:w[0-9]+]], v0.s[1]
+; CHECK-DAG: rbit [[REG4:w[0-9]+]], [[REG3]]
+; CHECK-DAG: ins v0.s[1], [[REG4]]
+; CHECK-DAG: ushr v0.2s, v0.2s, #16
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
 }
@@ -17,26 +21,9 @@ declare i8 @llvm.bitreverse.i8(i8) readnone
 
 define i8 @g(i8 %a) {
 ; CHECK-LABEL: g:
-; CHECK-DAG: rev [[RV:w.*]], w0
-; CHECK-DAG: and [[L4:w.*]], [[RV]], #0xf0f0f0f
-; CHECK-DAG: and [[H4:w.*]], [[RV]], #0xf0f0f0f0
-; CHECK-DAG: lsr [[S4:w.*]], [[H4]], #4
-; CHECK-DAG: orr [[R4:w.*]], [[S4]], [[L4]], lsl #4
-
-; CHECK-DAG: and [[L2:w.*]], [[R4]], #0x33333333
-; CHECK-DAG: and [[H2:w.*]], [[R4]], #0xcccccccc
-; CHECK-DAG: lsr [[S2:w.*]], [[H2]], #2
-; CHECK-DAG: orr [[R2:w.*]], [[S2]], [[L2]], lsl #2
-
-; CHECK-DAG: mov [[P1:w.*]], #1426063360
-; CHECK-DAG: mov [[N1:w.*]], #-1442840576
-; CHECK-DAG: and [[L1:w.*]], [[R2]], [[P1]]
-; CHECK-DAG: and [[H1:w.*]], [[R2]], [[N1]]
-; CHECK-DAG: lsr [[S1:w.*]], [[H1]], #1
-; CHECK-DAG: orr [[R1:w.*]], [[S1]], [[L1]], lsl #1
-
-; CHECK-DAG: lsr w0, [[R1]], #24
-; CHECK-DAG: ret
+; CHECK: rbit [[REG:w[0-9]+]], w0
+; CHECK-NEXT: lsr w0, [[REG]], #24
+; CHECK-NEXT: ret
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
 }

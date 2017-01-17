@@ -10,7 +10,7 @@ define <16 x i16> @test_x86_avx2_packssdw(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_packssdw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x6b,0xc1]
+; AVX512VL-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6b,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a0, <8 x i32> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -26,7 +26,7 @@ define <32 x i8> @test_x86_avx2_packsswb(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_packsswb:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x63,0xc1]
+; AVX512VL-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x63,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.packsswb(<16 x i16> %a0, <16 x i16> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -42,7 +42,7 @@ define <32 x i8> @test_x86_avx2_packuswb(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_packuswb:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x67,0xc1]
+; AVX512VL-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x67,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.packuswb(<16 x i16> %a0, <16 x i16> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -58,7 +58,7 @@ define <32 x i8> @test_x86_avx2_padds_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_padds_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpaddsb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xec,0xc1]
+; AVX512VL-NEXT:    vpaddsb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xec,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -74,7 +74,7 @@ define <16 x i16> @test_x86_avx2_padds_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_padds_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpaddsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xed,0xc1]
+; AVX512VL-NEXT:    vpaddsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xed,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -90,7 +90,7 @@ define <32 x i8> @test_x86_avx2_paddus_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_paddus_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xdc,0xc1]
+; AVX512VL-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdc,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -106,7 +106,7 @@ define <16 x i16> @test_x86_avx2_paddus_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_paddus_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xdd,0xc1]
+; AVX512VL-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdd,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -122,7 +122,7 @@ define <32 x i8> @test_x86_avx2_pavg_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pavg_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe0,0xc1]
+; AVX512VL-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe0,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pavg.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -138,7 +138,7 @@ define <16 x i16> @test_x86_avx2_pavg_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pavg_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe3,0xc1]
+; AVX512VL-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe3,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pavg.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -154,7 +154,7 @@ define <8 x i32> @test_x86_avx2_pmadd_wd(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmadd_wd:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xf5,0xc1]
+; AVX512VL-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf5,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a0, <16 x i16> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -170,7 +170,7 @@ define <16 x i16> @test_x86_avx2_pmaxs_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxs_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xee,0xc1]
+; AVX512VL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xee,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmaxs.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -186,7 +186,7 @@ define <32 x i8> @test_x86_avx2_pmaxu_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxu_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xde,0xc1]
+; AVX512VL-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xde,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pmaxu.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -202,7 +202,7 @@ define <16 x i16> @test_x86_avx2_pmins_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmins_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xea,0xc1]
+; AVX512VL-NEXT:    vpminsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xea,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmins.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -218,7 +218,7 @@ define <32 x i8> @test_x86_avx2_pminu_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pminu_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminub %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xda,0xc1]
+; AVX512VL-NEXT:    vpminub %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xda,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pminu.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -251,7 +251,7 @@ define <16 x i16> @test_x86_avx2_pmulh_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmulh_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe5,0xc1]
+; AVX512VL-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe5,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -267,7 +267,7 @@ define <16 x i16> @test_x86_avx2_pmulhu_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmulhu_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe4,0xc1]
+; AVX512VL-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe4,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -283,7 +283,7 @@ define <4 x i64> @test_x86_avx2_pmulu_dq(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmulu_dq:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xf4,0xc1]
+; AVX512VL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf4,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.pmulu.dq(<8 x i32> %a0, <8 x i32> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -299,7 +299,7 @@ define <4 x i64> @test_x86_avx2_psad_bw(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psad_bw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xf6,0xc1]
+; AVX512VL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf6,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> %a0, <32 x i8> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -315,7 +315,7 @@ define <8 x i32> @test_x86_avx2_psll_d(<8 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psll_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpslld %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xf2,0xc1]
+; AVX512VL-NEXT:    vpslld %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf2,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psll.d(<8 x i32> %a0, <4 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -331,7 +331,7 @@ define <4 x i64> @test_x86_avx2_psll_q(<4 x i64> %a0, <2 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psll_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllq %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xf3,0xc1]
+; AVX512VL-NEXT:    vpsllq %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf3,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psll.q(<4 x i64> %a0, <2 x i64> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -347,7 +347,7 @@ define <16 x i16> @test_x86_avx2_psll_w(<16 x i16> %a0, <8 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psll_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllw %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xf1,0xc1]
+; AVX512VL-NEXT:    vpsllw %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xf1,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psll.w(<16 x i16> %a0, <8 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -363,7 +363,7 @@ define <8 x i32> @test_x86_avx2_pslli_d(<8 x i32> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pslli_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpslld $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x72,0xf0,0x07]
+; AVX512VL-NEXT:    vpslld $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x72,0xf0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pslli.d(<8 x i32> %a0, i32 7) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -379,7 +379,7 @@ define <4 x i64> @test_x86_avx2_pslli_q(<4 x i64> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pslli_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllq $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x73,0xf0,0x07]
+; AVX512VL-NEXT:    vpsllq $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x73,0xf0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.pslli.q(<4 x i64> %a0, i32 7) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -395,7 +395,7 @@ define <16 x i16> @test_x86_avx2_pslli_w(<16 x i16> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pslli_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllw $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x71,0xf0,0x07]
+; AVX512VL-NEXT:    vpsllw $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x71,0xf0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pslli.w(<16 x i16> %a0, i32 7) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -411,7 +411,7 @@ define <8 x i32> @test_x86_avx2_psra_d(<8 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psra_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrad %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe2,0xc1]
+; AVX512VL-NEXT:    vpsrad %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe2,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psra.d(<8 x i32> %a0, <4 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -427,7 +427,7 @@ define <16 x i16> @test_x86_avx2_psra_w(<16 x i16> %a0, <8 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psra_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsraw %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe1,0xc1]
+; AVX512VL-NEXT:    vpsraw %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe1,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psra.w(<16 x i16> %a0, <8 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -443,7 +443,7 @@ define <8 x i32> @test_x86_avx2_psrai_d(<8 x i32> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrai_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrad $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x72,0xe0,0x07]
+; AVX512VL-NEXT:    vpsrad $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x72,0xe0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrai.d(<8 x i32> %a0, i32 7) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -459,7 +459,7 @@ define <16 x i16> @test_x86_avx2_psrai_w(<16 x i16> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrai_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsraw $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x71,0xe0,0x07]
+; AVX512VL-NEXT:    vpsraw $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x71,0xe0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psrai.w(<16 x i16> %a0, i32 7) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -475,7 +475,7 @@ define <8 x i32> @test_x86_avx2_psrl_d(<8 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrl_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrld %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xd2,0xc1]
+; AVX512VL-NEXT:    vpsrld %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd2,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrl.d(<8 x i32> %a0, <4 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -491,7 +491,7 @@ define <4 x i64> @test_x86_avx2_psrl_q(<4 x i64> %a0, <2 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrl_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xd3,0xc1]
+; AVX512VL-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd3,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %a0, <2 x i64> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -507,7 +507,7 @@ define <16 x i16> @test_x86_avx2_psrl_w(<16 x i16> %a0, <8 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrl_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xd1,0xc1]
+; AVX512VL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd1,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psrl.w(<16 x i16> %a0, <8 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -523,7 +523,7 @@ define <8 x i32> @test_x86_avx2_psrli_d(<8 x i32> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrli_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrld $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x72,0xd0,0x07]
+; AVX512VL-NEXT:    vpsrld $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x72,0xd0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrli.d(<8 x i32> %a0, i32 7) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -539,7 +539,7 @@ define <4 x i64> @test_x86_avx2_psrli_q(<4 x i64> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrli_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlq $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x73,0xd0,0x07]
+; AVX512VL-NEXT:    vpsrlq $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x73,0xd0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %a0, i32 7) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -555,7 +555,7 @@ define <16 x i16> @test_x86_avx2_psrli_w(<16 x i16> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrli_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlw $7, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x71,0xd0,0x07]
+; AVX512VL-NEXT:    vpsrlw $7, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x71,0xd0,0x07]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psrli.w(<16 x i16> %a0, i32 7) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -571,7 +571,7 @@ define <32 x i8> @test_x86_avx2_psubs_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psubs_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe8,0xc1]
+; AVX512VL-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe8,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -587,7 +587,7 @@ define <16 x i16> @test_x86_avx2_psubs_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psubs_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xe9,0xc1]
+; AVX512VL-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe9,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -603,7 +603,7 @@ define <32 x i8> @test_x86_avx2_psubus_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psubus_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xd8,0xc1]
+; AVX512VL-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd8,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -619,7 +619,7 @@ define <16 x i16> @test_x86_avx2_psubus_w(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psubus_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0xd9,0xc1]
+; AVX512VL-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd9,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -635,7 +635,7 @@ define <32 x i8> @test_x86_avx2_pabs_b(<32 x i8> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pabs_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpabsb %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x1c,0xc0]
+; AVX512VL-NEXT:    vpabsb %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1c,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %a0) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -651,7 +651,7 @@ define <8 x i32> @test_x86_avx2_pabs_d(<8 x i32> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pabs_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpabsd %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x1e,0xc0]
+; AVX512VL-NEXT:    vpabsd %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1e,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32> %a0) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -667,7 +667,7 @@ define <16 x i16> @test_x86_avx2_pabs_w(<16 x i16> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pabs_w:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpabsw %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x1d,0xc0]
+; AVX512VL-NEXT:    vpabsw %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x1d,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16> %a0) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -749,7 +749,7 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmadd_ub_sw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x04,0xc1]
+; AVX512VL-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x04,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %a0, <32 x i8> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -768,8 +768,8 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw_load_op0(<32 x i8>* %ptr, <32 x i8>
 ; AVX512VL-LABEL: test_x86_avx2_pmadd_ub_sw_load_op0:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmovdqu8 (%eax), %ymm1 ## encoding: [0x62,0xf1,0x7f,0x28,0x6f,0x08]
-; AVX512VL-NEXT:    vpmaddubsw %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf2,0x75,0x28,0x04,0xc0]
+; AVX512VL-NEXT:    vmovdqu (%eax), %ymm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfe,0x6f,0x08]
+; AVX512VL-NEXT:    vpmaddubsw %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x04,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a0 = load <32 x i8>, <32 x i8>* %ptr
   %res = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %a0, <32 x i8> %a1) ; <<16 x i16>> [#uses=1]
@@ -784,7 +784,7 @@ define <16 x i16> @test_x86_avx2_pmul_hr_sw(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmul_hr_sw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x0b,0xc1]
+; AVX512VL-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x0b,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -800,7 +800,7 @@ define <32 x i8> @test_x86_avx2_pshuf_b(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pshuf_b:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x00,0xc1]
+; AVX512VL-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x00,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> %a1) ; <<16 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -851,7 +851,7 @@ define <4 x i64> @test_x86_avx2_movntdqa(i8* %a0) {
 ; AVX512VL-LABEL: test_x86_avx2_movntdqa:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmovntdqa (%eax), %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x2a,0x00]
+; AVX512VL-NEXT:    vmovntdqa (%eax), %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x2a,0x00]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.movntdqa(i8* %a0) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -878,7 +878,7 @@ define <16 x i16> @test_x86_avx2_packusdw(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_packusdw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x2b,0xc1]
+; AVX512VL-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x2b,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -917,7 +917,7 @@ define <32 x i8> @test_x86_avx2_pmaxsb(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxsb:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3c,0xc1]
+; AVX512VL-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3c,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pmaxs.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -933,7 +933,7 @@ define <8 x i32> @test_x86_avx2_pmaxsd(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxsd:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxsd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3d,0xc1]
+; AVX512VL-NEXT:    vpmaxsd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3d,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pmaxs.d(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -949,7 +949,7 @@ define <8 x i32> @test_x86_avx2_pmaxud(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxud:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3f,0xc1]
+; AVX512VL-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3f,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pmaxu.d(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -965,7 +965,7 @@ define <16 x i16> @test_x86_avx2_pmaxuw(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pmaxuw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3e,0xc1]
+; AVX512VL-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3e,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pmaxu.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -981,7 +981,7 @@ define <32 x i8> @test_x86_avx2_pminsb(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pminsb:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminsb %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x38,0xc1]
+; AVX512VL-NEXT:    vpminsb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x38,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <32 x i8> @llvm.x86.avx2.pmins.b(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
@@ -997,7 +997,7 @@ define <8 x i32> @test_x86_avx2_pminsd(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pminsd:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminsd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x39,0xc1]
+; AVX512VL-NEXT:    vpminsd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x39,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pmins.d(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1013,7 +1013,7 @@ define <8 x i32> @test_x86_avx2_pminud(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pminud:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminud %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3b,0xc1]
+; AVX512VL-NEXT:    vpminud %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3b,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.pminu.d(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1029,7 +1029,7 @@ define <16 x i16> @test_x86_avx2_pminuw(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_pminuw:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpminuw %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x3a,0xc1]
+; AVX512VL-NEXT:    vpminuw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x3a,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i16> @llvm.x86.avx2.pminu.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
   ret <16 x i16> %res
@@ -1079,7 +1079,7 @@ define <8 x i32> @test_x86_avx2_permd(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_permd:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf2,0x75,0x28,0x36,0xc0]
+; AVX512VL-NEXT:    vpermd %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x36,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1098,7 +1098,7 @@ define <8 x float> @test_x86_avx2_permps(<8 x float> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_permps:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf2,0x75,0x28,0x16,0xc0]
+; AVX512VL-NEXT:    vpermps %ymm0, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x75,0x16,0xc0]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> %a1) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
@@ -1236,7 +1236,7 @@ define <4 x i32> @test_x86_avx2_psllv_d(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psllv_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x47,0xc1]
+; AVX512VL-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x47,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32> %a0, <4 x i32> %a1) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -1252,7 +1252,7 @@ define <8 x i32> @test_x86_avx2_psllv_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psllv_d_256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x47,0xc1]
+; AVX512VL-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x47,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1268,7 +1268,7 @@ define <2 x i64> @test_x86_avx2_psllv_q(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psllv_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x47,0xc1]
+; AVX512VL-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0x47,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %a0, <2 x i64> %a1) ; <<2 x i64>> [#uses=1]
   ret <2 x i64> %res
@@ -1284,7 +1284,7 @@ define <4 x i64> @test_x86_avx2_psllv_q_256(<4 x i64> %a0, <4 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psllv_q_256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0xfd,0x28,0x47,0xc1]
+; AVX512VL-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xfd,0x47,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %a0, <4 x i64> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -1300,7 +1300,7 @@ define <4 x i32> @test_x86_avx2_psrlv_d(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrlv_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x45,0xc1]
+; AVX512VL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x45,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.psrlv.d(<4 x i32> %a0, <4 x i32> %a1) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -1316,7 +1316,7 @@ define <8 x i32> @test_x86_avx2_psrlv_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrlv_d_256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x45,0xc1]
+; AVX512VL-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x45,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrlv.d.256(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1332,7 +1332,7 @@ define <2 x i64> @test_x86_avx2_psrlv_q(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrlv_q:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x45,0xc1]
+; AVX512VL-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0x45,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %a0, <2 x i64> %a1) ; <<2 x i64>> [#uses=1]
   ret <2 x i64> %res
@@ -1348,7 +1348,7 @@ define <4 x i64> @test_x86_avx2_psrlv_q_256(<4 x i64> %a0, <4 x i64> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrlv_q_256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0xfd,0x28,0x45,0xc1]
+; AVX512VL-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xfd,0x45,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %a0, <4 x i64> %a1) ; <<4 x i64>> [#uses=1]
   ret <4 x i64> %res
@@ -1364,7 +1364,7 @@ define <4 x i32> @test_x86_avx2_psrav_d(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsravd %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x46,0xc1]
+; AVX512VL-NEXT:    vpsravd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x46,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> %a0, <4 x i32> %a1) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
@@ -1382,11 +1382,11 @@ define <4 x i32> @test_x86_avx2_psrav_d_const(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d_const:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} xmm0 = [2,9,4294967284,23]
-; AVX512VL-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x08,0x6f,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI91_0, kind: FK_Data_4
-; AVX512VL-NEXT:    vpsravd LCPI91_1, %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x46,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI91_1, kind: FK_Data_4
+; AVX512VL-NEXT:    vmovdqa LCPI91_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [2,9,4294967284,23]
+; AVX512VL-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: LCPI91_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpsravd LCPI91_1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x46,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 5, value: LCPI91_1, kind: FK_Data_4
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> <i32 2, i32 9, i32 -12, i32 23>, <4 x i32> <i32 1, i32 18, i32 35, i32 52>)
   ret <4 x i32> %res
@@ -1401,7 +1401,7 @@ define <8 x i32> @test_x86_avx2_psrav_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d_256:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0xc1]
+; AVX512VL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x46,0xc1]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
   ret <8 x i32> %res
@@ -1419,11 +1419,11 @@ define <8 x i32> @test_x86_avx2_psrav_d_256_const(<8 x i32> %a0, <8 x i32> %a1) 
 ;
 ; AVX512VL-LABEL: test_x86_avx2_psrav_d_256_const:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
-; AVX512VL-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI93_0, kind: FK_Data_4
-; AVX512VL-NEXT:    vpsravd LCPI93_1, %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 6, value: LCPI93_1, kind: FK_Data_4
+; AVX512VL-NEXT:    vmovdqa LCPI93_0, %ymm0 ## EVEX TO VEX Compression ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; AVX512VL-NEXT:    ## encoding: [0xc5,0xfd,0x6f,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: LCPI93_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpsravd LCPI93_1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x46,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 5, value: LCPI93_1, kind: FK_Data_4
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>)
   ret <8 x i32> %res
@@ -1667,10 +1667,10 @@ define <8 x float>  @test_gather_mask(<8 x float> %a0, float* %a, <8 x i32> %idx
 ; AVX512VL-LABEL: test_gather_mask:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmovaps %ymm2, %ymm3 ## encoding: [0x62,0xf1,0x7c,0x28,0x28,0xda]
+; AVX512VL-NEXT:    vmovaps %ymm2, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xda]
 ; AVX512VL-NEXT:    vgatherdps %ymm3, (%eax,%ymm1,4), %ymm0 ## encoding: [0xc4,0xe2,0x65,0x92,0x04,0x88]
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
-; AVX512VL-NEXT:    vmovups %ymm2, (%eax) ## encoding: [0x62,0xf1,0x7c,0x28,0x11,0x10]
+; AVX512VL-NEXT:    vmovups %ymm2, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x10]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a_i8 = bitcast float* %a to i8*
   %res = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> %a0,

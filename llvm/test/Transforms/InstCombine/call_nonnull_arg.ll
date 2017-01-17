@@ -31,3 +31,20 @@ dead:
   unreachable
 }
 
+; FIXME: The nonnull attribute in the 'bar' declaration could be 
+; propagated to the parameters of the 'baz' callsite. 
+
+declare void @bar(i8*, i8* nonnull)
+declare void @baz(i8*, i8*)
+
+define void @deduce_nonnull_from_another_call(i8* %a, i8* %b) {
+; CHECK-LABEL: @deduce_nonnull_from_another_call(
+; CHECK-NEXT:    call void @bar(i8* %a, i8* %b)
+; CHECK-NEXT:    call void @baz(i8* %b, i8* %b)
+; CHECK-NEXT:    ret void
+;
+  call void @bar(i8* %a, i8* %b)
+  call void @baz(i8* %b, i8* %b)
+  ret void
+}
+

@@ -11,6 +11,7 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -51,11 +52,17 @@ public:
   bool PreserveAsmComments : 1;
 
   int DwarfVersion;
+
   /// getABIName - If this returns a non-empty string this represents the
   /// textual name of the ABI that we want the backend to use, e.g. o32, or
   /// aapcs-linux.
   StringRef getABIName() const;
   std::string ABIName;
+
+  /// Additional paths to search for `.include` directives when using the
+  /// integrated assembler.
+  std::vector<std::string> IASSearchPaths;
+
   MCTargetOptions();
 };
 
@@ -75,7 +82,8 @@ inline bool operator==(const MCTargetOptions &LHS, const MCTargetOptions &RHS) {
           ARE_EQUAL(ShowMCInst) &&
           ARE_EQUAL(AsmVerbose) &&
           ARE_EQUAL(DwarfVersion) &&
-          ARE_EQUAL(ABIName));
+          ARE_EQUAL(ABIName) &&
+          ARE_EQUAL(IASSearchPaths));
 #undef ARE_EQUAL
 }
 

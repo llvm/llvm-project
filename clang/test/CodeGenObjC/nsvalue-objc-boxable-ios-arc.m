@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs -triple armv7-apple-ios8.0.0 -emit-llvm -fobjc-arc -O2 -disable-llvm-optzns -o - %s | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs -triple armv7-apple-ios8.0.0 -emit-llvm -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #import "nsvalue-boxed-expressions-support.h"
 

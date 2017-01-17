@@ -116,7 +116,7 @@ ento::createCheckerManager(AnalyzerOptions &opts, const LangOptions &langOpts,
                            ArrayRef<std::string> plugins,
                            DiagnosticsEngine &diags) {
   std::unique_ptr<CheckerManager> checkerMgr(
-      new CheckerManager(langOpts, &opts));
+      new CheckerManager(langOpts, opts));
 
   SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
 

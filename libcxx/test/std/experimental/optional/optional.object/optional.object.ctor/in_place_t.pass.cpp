@@ -55,7 +55,7 @@ public:
 class Z
 {
 public:
-    Z(int i) {TEST_THROW(6);}
+    Z(int) {TEST_THROW(6);}
 };
 
 

@@ -11,10 +11,11 @@ define <4 x i32> @var_insert(<4 x i32> %x, i32 %val, i32 %idx) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl 8(%ebp), %eax
-; X32-NEXT:    movl 12(%ebp), %ecx
+; X32-NEXT:    movl 12(%ebp), %eax
+; X32-NEXT:    andl $3, %eax
+; X32-NEXT:    movl 8(%ebp), %ecx
 ; X32-NEXT:    movaps %xmm0, (%esp)
-; X32-NEXT:    movl %eax, (%esp,%ecx,4)
+; X32-NEXT:    movl %ecx, (%esp,%eax,4)
 ; X32-NEXT:    movaps (%esp), %xmm0
 ; X32-NEXT:    movl %ebp, %esp
 ; X32-NEXT:    popl %ebp
@@ -22,9 +23,10 @@ define <4 x i32> @var_insert(<4 x i32> %x, i32 %val, i32 %idx) nounwind {
 ;
 ; X64-LABEL: var_insert:
 ; X64:       # BB#0: # %entry
+; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %esi, %rax
-; X64-NEXT:    movl %edi, -24(%rsp,%rax,4)
+; X64-NEXT:    andl $3, %esi
+; X64-NEXT:    movl %edi, -24(%rsp,%rsi,4)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -40,6 +42,7 @@ define i32 @var_extract(<4 x i32> %x, i32 %idx) nounwind {
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
 ; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movaps %xmm0, (%esp)
 ; X32-NEXT:    movl (%esp,%eax,4), %eax
 ; X32-NEXT:    movl %ebp, %esp
@@ -48,9 +51,10 @@ define i32 @var_extract(<4 x i32> %x, i32 %idx) nounwind {
 ;
 ; X64-LABEL: var_extract:
 ; X64:       # BB#0: # %entry
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movl -24(%rsp,%rax,4), %eax
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    movl -24(%rsp,%rdi,4), %eax
 ; X64-NEXT:    retq
 entry:
   %tmp3 = extractelement <4 x i32> %x, i32 %idx

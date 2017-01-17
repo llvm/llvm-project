@@ -141,6 +141,10 @@ public:
   typedef DominanceFrontierBase<BasicBlock>::DomSetType DomSetType;
   typedef DominanceFrontierBase<BasicBlock>::iterator iterator;
   typedef DominanceFrontierBase<BasicBlock>::const_iterator const_iterator;
+
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 };
 
 class DominanceFrontierWrapperPass : public FunctionPass {

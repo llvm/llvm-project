@@ -155,6 +155,13 @@ define ptx_device i32 @test_nctaid_x() {
 	ret i32 %x
 }
 
+define ptx_device i32 @test_already_has_range_md() {
+; CHECK: mov.u32 %r{{[0-9]+}}, %nctaid.x;
+; RANGE: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x(), !range ![[ALREADY:[0-9]+]]
+	%x = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x(), !range !0
+	ret i32 %x
+}
+
 
 define ptx_device i32 @test_nctaid_w() {
 ; CHECK: mov.u32 %r{{[0-9]+}}, %nctaid.w;
@@ -311,6 +318,9 @@ declare i32 @llvm.nvvm.read.ptx.sreg.pm3()
 
 declare void @llvm.nvvm.bar.sync(i32 %i)
 
+!0 = !{i32 0, i32 19}
+; RANGE-DAG: ![[ALREADY]] = !{i32 0, i32 19}
+; RANGE-DAG: ![[BLK_IDX_XY]] = !{i32 0, i32 1024}
 ; RANGE-DAG: ![[BLK_IDX_XY]] = !{i32 0, i32 1024}
 ; RANGE-DAG: ![[BLK_IDX_Z]] = !{i32 0, i32 64}
 ; RANGE-DAG: ![[BLK_SIZE_XY]] = !{i32 1, i32 1025}

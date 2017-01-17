@@ -27,7 +27,7 @@ class CLCompileFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
   Group<cl_compile_Group>, Flags<[CLOption, DriverOption]>;
 
 class CLIgnoredFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
-  Group<cl_ignored_Group>, Flags<[CLOption, DriverOption, HelpHidden]>;
+  Group<cl_ignored_Group>, Flags<[CLOption, DriverOption]>;
 
 class CLJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
   Group<cl_Group>, Flags<[CLOption, DriverOption]>;
@@ -299,7 +299,7 @@ def _SLASH_d2Zi_PLUS : CLIgnoredFlag<"d2Zi+">;
 def _SLASH_errorReport : CLIgnoredJoined<"errorReport">;
 def _SLASH_FC : CLIgnoredFlag<"FC">;
 def _SLASH_Fd : CLIgnoredJoined<"Fd">;
-def _SLASH_FS : CLIgnoredFlag<"FS">, HelpText<"Force synchronous PDB writes">;
+def _SLASH_FS : CLIgnoredFlag<"FS">;
 def _SLASH_GF : CLIgnoredFlag<"GF">;
 def _SLASH_kernel_ : CLIgnoredFlag<"kernel-">;
 def _SLASH_nologo : CLIgnoredFlag<"nologo">;
@@ -308,7 +308,8 @@ def _SLASH_openmp_ : CLIgnoredFlag<"openmp-">;
 def _SLASH_RTC : CLIgnoredJoined<"RTC">;
 def _SLASH_sdl : CLIgnoredFlag<"sdl">;
 def _SLASH_sdl_ : CLIgnoredFlag<"sdl-">;
-def _SLASH_utf8 : CLIgnoredFlag<"utf-8">;
+def _SLASH_utf8 : CLIgnoredFlag<"utf-8">,
+  HelpText<"Set source and runtime encoding to UTF-8 (default)">;
 def _SLASH_w : CLIgnoredJoined<"w">;
 def _SLASH_Zc_auto : CLIgnoredFlag<"Zc:auto">;
 def _SLASH_Zc_forScope : CLIgnoredFlag<"Zc:forScope">;

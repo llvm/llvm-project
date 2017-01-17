@@ -25,9 +25,10 @@
 #include <vector>
 #include <initializer_list>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#if TEST_STD_VER >= 11
 #define DELETE_FUNCTION = delete
 #else
 #define DELETE_FUNCTION

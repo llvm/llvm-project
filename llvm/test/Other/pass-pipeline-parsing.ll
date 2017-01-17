@@ -144,10 +144,10 @@
 ; CHECK-TWO-NOOP-LOOP: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-TWO-NOOP-LOOP: Starting llvm::Function pass manager run
 ; CHECK-TWO-NOOP-LOOP: Running pass: FunctionToLoopPassAdaptor
-; CHECK-TWO-NOOP-LOOP: Starting llvm::Loop pass manager run
+; CHECK-TWO-NOOP-LOOP: Starting Loop pass manager run
 ; CHECK-TWO-NOOP-LOOP: Running pass: NoOpLoopPass
 ; CHECK-TWO-NOOP-LOOP: Running pass: NoOpLoopPass
-; CHECK-TWO-NOOP-LOOP: Finished llvm::Loop pass manager run
+; CHECK-TWO-NOOP-LOOP: Finished Loop pass manager run
 ; CHECK-TWO-NOOP-LOOP: Finished llvm::Function pass manager run
 ; CHECK-TWO-NOOP-LOOP: Finished llvm::Module pass manager run
 
@@ -167,9 +167,9 @@
 ; CHECK-NESTED-FP-LP: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-NESTED-FP-LP: Starting llvm::Function pass manager run
 ; CHECK-NESTED-FP-LP: Running pass: FunctionToLoopPassAdaptor
-; CHECK-NESTED-FP-LP: Starting llvm::Loop pass manager run
+; CHECK-NESTED-FP-LP: Starting Loop pass manager run
 ; CHECK-NESTED-FP-LP: Running pass: NoOpLoopPass
-; CHECK-NESTED-FP-LP: Finished llvm::Loop pass manager run
+; CHECK-NESTED-FP-LP: Finished Loop pass manager run
 ; CHECK-NESTED-FP-LP: Finished llvm::Function pass manager run
 ; CHECK-NESTED-FP-LP: Finished llvm::Module pass manager run
 
