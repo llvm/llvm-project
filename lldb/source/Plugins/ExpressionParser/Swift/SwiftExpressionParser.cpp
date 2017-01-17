@@ -161,7 +161,7 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
 
 // Gets the full module name from the module passed in.
 
-static void GetNameFromModule(swift::Module *module, std::string &result) {
+static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
   result.clear();
   if (module) {
     const char *name = module->getName().get();
@@ -198,14 +198,14 @@ bool SwiftExpressionParser::PerformAutoImport(swift::SourceFile &source_file,
   if (compile_unit)
     cu_modules = &compile_unit->GetImportedModules();
 
-  llvm::SmallVector<swift::Module::ImportedModule, 2> imported_modules;
-  llvm::SmallVector<std::pair<swift::Module::ImportedModule,
+  llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> imported_modules;
+  llvm::SmallVector<std::pair<swift::ModuleDecl::ImportedModule,
                               swift::SourceFile::ImportOptions>,
                     2>
       additional_imports;
 
   source_file.getImportedModules(imported_modules,
-                                 swift::Module::ImportFilter::All);
+                                 swift::ModuleDecl::ImportFilter::All);
 
   std::set<ConstString> loaded_modules;
 
@@ -261,10 +261,10 @@ bool SwiftExpressionParser::PerformAutoImport(swift::SourceFile &source_file,
     }
 
     additional_imports.push_back(std::make_pair(
-        std::make_pair(swift::Module::AccessPathTy(), swift_module),
+        std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
         swift::SourceFile::ImportOptions()));
     imported_modules.push_back(
-        std::make_pair(swift::Module::AccessPathTy(), swift_module));
+        std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module));
 
     return true;
   };
@@ -280,10 +280,10 @@ bool SwiftExpressionParser::PerformAutoImport(swift::SourceFile &source_file,
       }
     }
   } else {
-    llvm::SmallVector<swift::Module::ImportedModule, 2> parsed_imports;
+    llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> parsed_imports;
 
     source_file.getImportedModules(parsed_imports,
-                                   swift::Module::ImportFilter::All);
+                                   swift::ModuleDecl::ImportFilter::All);
 
     SwiftPersistentExpressionState *persistent_expression_state =
         llvm::cast<SwiftPersistentExpressionState>(
@@ -1220,7 +1220,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
            m_options.GetExpressionNumber());
 
   swift::Identifier module_id(ast_context->getIdentifier(expr_name_buf));
-  swift::ModuleDecl *module = swift::Module::create(module_id, *ast_context);
+  swift::ModuleDecl *module = swift::ModuleDecl::create(module_id, *ast_context);
   const swift::SourceFile::ImplicitModuleImportKind implicit_import_kind =
       swift::SourceFile::ImplicitModuleImportKind::Stdlib;
 

@@ -286,6 +286,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
+    COMPONENT lldb_headers
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"

@@ -83,7 +83,7 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
     )
 endif ()
 
-add_lldb_executable(lldb-mi ${LLDB_MI_SOURCES})
+add_lldb_tool(lldb-mi ${LLDB_MI_SOURCES})
 
 target_link_libraries(lldb-mi liblldb)
 if ( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" )
@@ -93,6 +93,3 @@ endif ()
 llvm_config(lldb-mi ${LLVM_LINK_COMPONENTS})
 
 set_target_properties(lldb-mi PROPERTIES VERSION ${LLDB_VERSION})
-
-install(TARGETS lldb-mi
-  RUNTIME DESTINATION bin)
