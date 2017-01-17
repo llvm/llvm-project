@@ -47,7 +47,7 @@ Major New Features
   user-specified conditions.
 
 - Enhanced devirtualization with
-  `-fstrict-vtable-pointers <http://clang.llvm.org/docs/UsersManual.html#cmdoption-fstrict-vtable-pointers>`_.
+  `-fstrict-vtable-pointers <UsersManual.html#cmdoption-fstrict-vtable-pointers>`_.
   Clang devirtualizes across different basic blocks, like loops:
 
   .. code-block:: c++
