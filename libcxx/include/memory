@@ -3681,6 +3681,39 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 
 #endif // _LIBCPP_STD_VER > 14
 
+// NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
+// should be sufficient for thread safety.
+// See https://llvm.org/bugs/show_bug.cgi?id=22803
+#if defined(__clang__) && __has_builtin(__atomic_add_fetch)          \
+                       && defined(__ATOMIC_RELAXED)                  \
+                       && defined(__ATOMIC_ACQ_REL)
+#   define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
+#elif !defined(__clang__) && defined(_GNUC_VER) && _GNUC_VER >= 407
+#   define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
+#endif
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY _Tp
+__libcpp_atomic_refcount_increment(_Tp& __t) _NOEXCEPT
+{
+#if defined(_LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT) && !defined(_LIBCPP_HAS_NO_THREADS)
+    return __atomic_add_fetch(&__t, 1, __ATOMIC_RELAXED);
+#else
+    return __t += 1;
+#endif
+}
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY _Tp
+__libcpp_atomic_refcount_decrement(_Tp& __t) _NOEXCEPT
+{
+#if defined(_LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT) && !defined(_LIBCPP_HAS_NO_THREADS)
+    return __atomic_add_fetch(&__t, -1, __ATOMIC_ACQ_REL);
+#else
+    return __t -= 1;
+#endif
+}
+
 class _LIBCPP_EXCEPTION_ABI bad_weak_ptr
     : public std::exception
 {
@@ -3717,8 +3750,24 @@ public:
     explicit __shared_count(long __refs = 0) _NOEXCEPT
         : __shared_owners_(__refs) {}
 
+#if defined(_LIBCPP_BUILDING_MEMORY) && \
+    defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
     void __add_shared() _NOEXCEPT;
     bool __release_shared() _NOEXCEPT;
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    void __add_shared() _NOEXCEPT {
+      __libcpp_atomic_refcount_increment(__shared_owners_);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    bool __release_shared() _NOEXCEPT {
+      if (__libcpp_atomic_refcount_decrement(__shared_owners_) == -1) {
+        __on_zero_shared();
+        return true;
+      }
+      return false;
+    }
+#endif
     _LIBCPP_INLINE_VISIBILITY
     long use_count() const _NOEXCEPT {
         return __libcpp_relaxed_load(&__shared_owners_) + 1;
@@ -3739,9 +3788,26 @@ protected:
     virtual ~__shared_weak_count();
 
 public:
+#if defined(_LIBCPP_BUILDING_MEMORY) && \
+    defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
     void __add_shared() _NOEXCEPT;
     void __add_weak() _NOEXCEPT;
     void __release_shared() _NOEXCEPT;
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    void __add_shared() _NOEXCEPT {
+      __shared_count::__add_shared();
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    void __add_weak() _NOEXCEPT {
+      __libcpp_atomic_refcount_increment(__shared_weak_owners_);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    void __release_shared() _NOEXCEPT {
+      if (__shared_count::__release_shared())
+        __release_weak();
+    }
+#endif
     void __release_weak() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     long use_count() const _NOEXCEPT {return __shared_count::use_count();}

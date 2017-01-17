@@ -1248,6 +1248,22 @@ ConstString FileSpec::GetLastPathComponent() const {
   return ConstString();
 }
 
+static std::string
+join_path_components(FileSpec::PathSyntax syntax,
+                     const std::vector<llvm::StringRef> components) {
+  std::string result;
+  for (size_t i = 0; i < components.size(); ++i) {
+    if (components[i].empty())
+      continue;
+    result += components[i];
+    if (i != components.size() - 1 &&
+        !IsPathSeparator(components[i].back(), syntax))
+      result += GetPreferredPathSeparator(syntax);
+  }
+
+  return result;
+}
+
 void FileSpec::PrependPathComponent(llvm::StringRef component) {
   if (component.empty())
     return;
@@ -1258,17 +1274,10 @@ void FileSpec::PrependPathComponent(llvm::StringRef component) {
     return;
   }
 
-  char sep = GetPreferredPathSeparator(m_syntax);
-  std::string result;
-  if (m_filename.IsEmpty())
-    result = llvm::join_items(sep, component, m_directory.GetStringRef());
-  else if (m_directory.IsEmpty())
-    result = llvm::join_items(sep, component, m_filename.GetStringRef());
-  else
-    result = llvm::join_items(sep, component, m_directory.GetStringRef(),
-                              m_filename.GetStringRef());
-
-  SetFile(result, resolve);
+  std::string result =
+      join_path_components(m_syntax, {component, m_directory.GetStringRef(),
+                                      m_filename.GetStringRef()});
+  SetFile(result, resolve, m_syntax);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {
@@ -1279,23 +1288,12 @@ void FileSpec::AppendPathComponent(llvm::StringRef component) {
   if (component.empty())
     return;
 
-  std::string result;
-  if (!m_directory.IsEmpty()) {
-    result += m_directory.GetStringRef();
-    if (!IsPathSeparator(m_directory.GetStringRef().back(), m_syntax))
-      result += GetPreferredPathSeparator(m_syntax);
-  }
-
-  if (!m_filename.IsEmpty()) {
-    result += m_filename.GetStringRef();
-    if (!IsPathSeparator(m_filename.GetStringRef().back(), m_syntax))
-      result += GetPreferredPathSeparator(m_syntax);
-  }
-
   component = component.drop_while(
       [this](char c) { return IsPathSeparator(c, m_syntax); });
 
-  result += component;
+  std::string result =
+      join_path_components(m_syntax, {m_directory.GetStringRef(),
+                                      m_filename.GetStringRef(), component});
 
   SetFile(result, false, m_syntax);
 }

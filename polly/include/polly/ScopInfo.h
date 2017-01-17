@@ -2270,6 +2270,12 @@ public:
     return isl_set_is_empty(InvalidContext);
   }
 
+  /// A vector of memory accesses that belong to an alias group.
+  typedef SmallVector<MemoryAccess *, 4> AliasGroupTy;
+
+  /// A vector of alias groups.
+  typedef SmallVector<Scop::AliasGroupTy, 4> AliasGroupVectorTy;
+
   /// Build the alias checks for this SCoP.
   bool buildAliasChecks(AliasAnalysis &AA);
 
@@ -2277,6 +2283,40 @@ public:
   ///
   /// @returns True if __no__ error occurred, false otherwise.
   bool buildAliasGroups(AliasAnalysis &AA);
+
+  /// Build alias groups for all memory accesses in the Scop.
+  ///
+  /// Using the alias analysis and an alias set tracker we build alias sets
+  /// for all memory accesses inside the Scop. For each alias set we then map
+  /// the aliasing pointers back to the memory accesses we know, thus obtain
+  /// groups of memory accesses which might alias. We also collect the set of
+  /// base pointers through which memory is written.
+  ///
+  /// @param AA A reference to the alias analysis.
+  ///
+  /// @returns A pair consistent of a vector of alias groups and a set of values
+  ///          that are used as base pointers for write accesses.
+  std::tuple<AliasGroupVectorTy, DenseSet<Value *>>
+  buildAliasGroupsForAccesses(AliasAnalysis &AA);
+
+  ///  Split alias groups by iteration domains.
+  ///
+  ///  We split each group based on the domains of the minimal/maximal accesses.
+  ///  That means two minimal/maximal accesses are only in a group if their
+  ///  access domains intersect. Otherwise, they are in different groups.
+  ///
+  ///  @param AliasGroups The alias groups to split
+  void splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups);
+
+  /// Build a given alias group and its access data.
+  ///
+  /// @param AliasGroup     The alias group to build.
+  /// @param HasWriteAccess A set of base pointer values for through which
+  ///                       memory is not only read, but also written.
+  ///
+  /// @returns True if __no__ error occurred, false otherwise.
+  bool buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
+                       DenseSet<Value *> HasWriteAccess);
 
   /// Return all alias groups for this SCoP.
   const MinMaxVectorPairVectorTy &getAliasGroups() const {

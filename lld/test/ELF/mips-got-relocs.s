@@ -45,21 +45,21 @@ v1:
   .word 0
 
 # EXE_SYM: Sections:
-# EXE_SYM: .got 0000000c 0000000000040000 DATA
+# EXE_SYM: .got 0000000c 0000000000030010 DATA
 # EXE_SYM: SYMBOL TABLE:
-# EXE_SYM: 00047ff0         *ABS*    00000000 .hidden _gp
+# EXE_SYM: 00038000         *ABS*    00000000 .hidden _gp
 #          ^-- .got + GP offset (0x7ff0)
 # EXE_SYM: 00030000 g       .data		 00000004 v1
 
 
 # EXE_GOT_BE: Contents of section .got:
-# EXE_GOT_BE:  40000 00000000 80000000 00030000
+# EXE_GOT_BE:  30010 00000000 80000000 00030000
 #                    ^        ^        ^-- v1 (0x30000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
 # EXE_GOT_EL: Contents of section .got:
-# EXE_GOT_EL:  40000 00000000 00000080 00000300
+# EXE_GOT_EL:  30010 00000000 00000080 00000300
 #                    ^        ^        ^-- v1 (0x30000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
@@ -69,20 +69,20 @@ v1:
 # EXE_DIS_EL:  20000:  18 80 02 3c  lui $2, 32792
 
 # DSO_SYM: Sections:
-# DSO_SYM: .got 0000000c 0000000000030000 DATA
+# DSO_SYM: .got 0000000c 0000000000020010 DATA
 # DSO_SYM: SYMBOL TABLE:
-# DSO_SYM: 00037ff0         *ABS*    00000000 .hidden _gp
+# DSO_SYM: 00028000         *ABS*    00000000 .hidden _gp
 #          ^-- .got + GP offset (0x7ff0)
 # DSO_SYM: 00020000 g       .data		 00000004 v1
 
 # DSO_GOT_BE: Contents of section .got:
-# DSO_GOT_BE:  30000 00000000 80000000 00020000
+# DSO_GOT_BE:  20010 00000000 80000000 00020000
 #                    ^        ^        ^-- v1 (0x20000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)
 
 # DSO_GOT_EL: Contents of section .got:
-# DSO_GOT_EL:  30000 00000000 00000080 00000200
+# DSO_GOT_EL:  20010 00000000 00000080 00000200
 #                    ^        ^        ^-- v1 (0x20000)
 #                    |        +-- Module pointer (0x80000000)
 #                    +-- Lazy resolver (0x0)

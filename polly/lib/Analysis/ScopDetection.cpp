@@ -218,8 +218,9 @@ STATISTIC(NumProfScopsDepthFour,
           "Number of scops with maximal loop depth 4 (profitable scops only)");
 STATISTIC(NumProfScopsDepthFive,
           "Number of scops with maximal loop depth 5 (profitable scops only)");
-STATISTIC(NumProfScopsDepthLarger, "Number of scops with maximal loop depth 6 "
-                                   "and larger (profitable scops only)");
+STATISTIC(NumProfScopsDepthLarger,
+          "Number of scops with maximal loop depth 6 and larger "
+          "(profitable scops only)");
 
 class DiagnosticScopFound : public DiagnosticInfo {
 private:

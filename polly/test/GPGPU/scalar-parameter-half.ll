@@ -2,8 +2,6 @@
 
 ; REQUIRES: pollyacc
 
-; XFAIL: *
-
 ; This fails today with "unexpected type" in the LLVM PTX backend.
 
 ;    void foo(half A[], half b) {

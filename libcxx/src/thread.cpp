@@ -40,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 thread::~thread()
 {
-    if (__t_ != 0)
+    if (!__libcpp_thread_isnull(&__t_))
         terminate();
 }
 
@@ -48,11 +48,11 @@ void
 thread::join()
 {
     int ec = EINVAL;
-    if (__t_ != 0)
+    if (!__libcpp_thread_isnull(&__t_))
     {
         ec = __libcpp_thread_join(&__t_);
         if (ec == 0)
-            __t_ = 0;
+            __t_ = _LIBCPP_NULL_THREAD;
     }
 
     if (ec)
@@ -63,11 +63,11 @@ void
 thread::detach()
 {
     int ec = EINVAL;
-    if (__t_ != 0)
+    if (!__libcpp_thread_isnull(&__t_))
     {
         ec = __libcpp_thread_detach(&__t_);
         if (ec == 0)
-            __t_ = 0;
+            __t_ = _LIBCPP_NULL_THREAD;
     }
 
     if (ec)

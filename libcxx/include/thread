@@ -290,7 +290,7 @@ public:
     typedef __libcpp_thread_t native_handle_type;
 
     _LIBCPP_INLINE_VISIBILITY
-    thread() _NOEXCEPT : __t_(0) {}
+    thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Fp, class ..._Args,
               class = typename enable_if
@@ -306,7 +306,7 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
-    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = 0;}
+    thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {__t.__t_ = _LIBCPP_NULL_THREAD;}
     _LIBCPP_INLINE_VISIBILITY
     thread& operator=(thread&& __t) _NOEXCEPT;
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -315,7 +315,7 @@ public:
     void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
 
     _LIBCPP_INLINE_VISIBILITY
-    bool joinable() const _NOEXCEPT {return __t_ != 0;}
+    bool joinable() const _NOEXCEPT {return !__libcpp_thread_isnull(&__t_);}
     void join();
     void detach();
     _LIBCPP_INLINE_VISIBILITY
@@ -409,10 +409,10 @@ inline
 thread&
 thread::operator=(thread&& __t) _NOEXCEPT
 {
-    if (__t_ != 0)
+    if (!__libcpp_thread_isnull(&__t_))
         terminate();
     __t_ = __t.__t_;
-    __t.__t_ = 0;
+    __t.__t_ = _LIBCPP_NULL_THREAD;
     return *this;
 }
 

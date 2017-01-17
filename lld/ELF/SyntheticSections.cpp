@@ -434,7 +434,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 MipsGotSection<ELFT>::MipsGotSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL,
-                             SHT_PROGBITS, Target->GotEntrySize, ".got") {}
+                             SHT_PROGBITS, 16, ".got") {}
 
 template <class ELFT>
 void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, uintX_t Addend,

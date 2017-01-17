@@ -742,10 +742,13 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     // Ignore replacements for new.h/cc.
     if (SI == FilePathToFileID.end()) continue;
     llvm::StringRef Code = SM.getBufferData(SI->second);
-    format::FormatStyle Style =
-        format::getStyle("file", FilePath, Context->FallbackStyle);
+    auto Style = format::getStyle("file", FilePath, Context->FallbackStyle);
+    if (!Style) {
+      llvm::errs() << llvm::toString(Style.takeError()) << "\n";
+      continue;
+    }
     auto CleanReplacements = format::cleanupAroundReplacements(
-        Code, Context->FileToReplacements[FilePath], Style);
+        Code, Context->FileToReplacements[FilePath], *Style);
 
     if (!CleanReplacements) {
       llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";

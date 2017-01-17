@@ -20,7 +20,7 @@
 #                                                    ^-- %lo(0x17ff0)
 
 # CHECK:      Contents of section .rodata:
-# CHECK-NEXT:  10190 ffffffff fffe8014
+# CHECK-NEXT:  10158 ffffffff fffe8014
 #                    ^-- 0x20004 - 0x37ff0 = 0xfffffffffffe8014
 
 # CHECK: 0000000000020004   .text   00000000 loc

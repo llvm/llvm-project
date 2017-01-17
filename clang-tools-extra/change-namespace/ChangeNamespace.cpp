@@ -883,11 +883,14 @@ void ChangeNamespaceTool::onEndOfTranslationUnit() {
     // Add replacements referring to the changed code to existing replacements,
     // which refers to the original code.
     Replaces = Replaces.merge(NewReplacements);
-    format::FormatStyle Style =
-        format::getStyle("file", FilePath, FallbackStyle);
+    auto Style = format::getStyle("file", FilePath, FallbackStyle);
+    if (!Style) {
+      llvm::errs() << llvm::toString(Style.takeError()) << "\n";
+      continue;
+    }
     // Clean up old namespaces if there is nothing in it after moving.
     auto CleanReplacements =
-        format::cleanupAroundReplacements(Code, Replaces, Style);
+        format::cleanupAroundReplacements(Code, Replaces, *Style);
     if (!CleanReplacements) {
       llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
       continue;
