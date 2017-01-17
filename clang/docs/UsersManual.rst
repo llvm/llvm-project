@@ -1099,6 +1099,7 @@ are listed below.
 
 
 .. option:: -fstrict-vtable-pointers
+
    Enable optimizations based on the strict rules for overwriting polymorphic
    C++ objects, i.e. the vptr is invariant during an object's lifetime.
    This enables better devirtualization. Turned off by default, because it is
