@@ -101,12 +101,15 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   bit IsPCRelativeLoad = 0; // Load instruction with implicit source register
                             // ($pc) and with explicit offset and destination
                             // register
+  bit hasFCCRegOperand = 0; // Instruction uses $fcc<X> register and is
+                            // present in MIPS-I to MIPS-III.
 
-  // TSFlags layout should be kept in sync with MipsInstrInfo.h.
+  // TSFlags layout should be kept in sync with MCTargetDesc/MipsBaseInfo.h.
   let TSFlags{3-0}   = FormBits;
   let TSFlags{4}     = isCTI;
   let TSFlags{5}     = hasForbiddenSlot;
   let TSFlags{6}     = IsPCRelativeLoad;
+  let TSFlags{7}     = hasFCCRegOperand;
 
   let DecoderNamespace = "Mips";
 
@@ -829,6 +832,7 @@ class BC1F_FM<bit nd, bit tf> : StdArch {
 class CEQS_FM<bits<5> fmt> : StdArch {
   bits<5> fs;
   bits<5> ft;
+  bits<3> fcc;
   bits<4> cond;
 
   bits<32> Inst;
@@ -837,7 +841,7 @@ class CEQS_FM<bits<5> fmt> : StdArch {
   let Inst{25-21} = fmt;
   let Inst{20-16} = ft;
   let Inst{15-11} = fs;
-  let Inst{10-8} = 0; // cc
+  let Inst{10-8} = fcc;
   let Inst{7-4} = 0x3;
   let Inst{3-0} = cond;
 }

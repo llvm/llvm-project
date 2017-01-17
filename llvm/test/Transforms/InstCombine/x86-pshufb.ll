@@ -469,15 +469,12 @@ define <64 x i8> @fold_with_allundef_elts_avx512(<64 x i8> %InVec) {
 }
 
 ; Demanded elts tests.
-; FIXME: Missed opportunities to pass demanded elts through the pshufb shuffle mask
 
 define <16 x i8> @demanded_elts_insertion(<16 x i8> %InVec, <16 x i8> %BaseMask, i8 %M0, i8 %M15) {
 ; CHECK-LABEL: @demanded_elts_insertion(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> %BaseMask, i8 %M0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 %M15, i32 15
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP3]], <16 x i8> undef, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 undef>
-; CHECK-NEXT:    ret <16 x i8> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> %BaseMask)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <16 x i32> <i32 undef, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 undef>
+; CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 ;
   %1 = insertelement <16 x i8> %BaseMask, i8 %M0, i32 0
   %2 = insertelement <16 x i8> %1, i8 %M15, i32 15
@@ -489,9 +486,8 @@ define <16 x i8> @demanded_elts_insertion(<16 x i8> %InVec, <16 x i8> %BaseMask,
 define <32 x i8> @demanded_elts_insertion_avx2(<32 x i8> %InVec, <32 x i8> %BaseMask, i8 %M0, i8 %M22) {
 ; CHECK-LABEL: @demanded_elts_insertion_avx2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <32 x i8> %BaseMask, i8 %M0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <32 x i8> [[TMP1]], i8 %M22, i32 22
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> [[TMP2]])
-; CHECK-NEXT:    ret <32 x i8> [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> [[TMP1]])
+; CHECK-NEXT:    ret <32 x i8> [[TMP2]]
 ;
   %1 = insertelement <32 x i8> %BaseMask, i8 %M0, i32 0
   %2 = insertelement <32 x i8> %1, i8 %M22, i32 22
@@ -502,11 +498,10 @@ define <32 x i8> @demanded_elts_insertion_avx2(<32 x i8> %InVec, <32 x i8> %Base
 
 define <64 x i8> @demanded_elts_insertion_avx512(<64 x i8> %InVec, <64 x i8> %BaseMask, i8 %M0, i8 %M30) {
 ; CHECK-LABEL: @demanded_elts_insertion_avx512(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <64 x i8> %BaseMask, i8 %M0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <64 x i8> [[TMP1]], i8 %M30, i32 30
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %InVec, <64 x i8> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <64 x i8> [[TMP3]], <64 x i8> undef, <64 x i32> zeroinitializer
-; CHECK-NEXT:    ret <64 x i8> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <64 x i8> undef, i8 %M0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <64 x i8> @llvm.x86.avx512.pshuf.b.512(<64 x i8> %InVec, <64 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <64 x i8> [[TMP2]], <64 x i8> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:    ret <64 x i8> [[TMP3]]
 ;
   %1 = insertelement <64 x i8> %BaseMask, i8 %M0, i32 0
   %2 = insertelement <64 x i8> %1, i8 %M30, i32 30

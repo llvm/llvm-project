@@ -9,6 +9,8 @@
 ; in such situations. This test case was added to demonstrate what needs to be
 ; resolved to support such access functions.
 
+; CHECK: %polly.access.polly.access.X.load = getelementptr float, float* %polly.access.X.load, i64 %polly.indvar
+
 define void @invariant_base_ptr(float* noalias %Array, float** noalias %X,
                                 float* noalias %C) {
 

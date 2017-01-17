@@ -10,7 +10,8 @@
 ; DO-SIMPLIFY: call float @roundf(
 ; DO-SIMPLIFY: call float @nearbyintf(
 ; DO-SIMPLIFY: call float @truncf(
-; DO-SIMPLIFY: call float @fabsf(
+; DO-SIMPLIFY: call float @llvm.fabs.f32(
+; DO-SIMPLIFY: call fast float @llvm.fabs.f32(
 
 ; C89-SIMPLIFY: call float @floorf(
 ; C89-SIMPLIFY: call float @ceilf(
@@ -22,7 +23,10 @@
 ; DONT-SIMPLIFY: call double @round(
 ; DONT-SIMPLIFY: call double @nearbyint(
 ; DONT-SIMPLIFY: call double @trunc(
-; DONT-SIMPLIFY: call double @fabs(
+
+; This is replaced with the intrinsic, which does the right thing on
+; all platforms.
+; DONT-SIMPLIFY: call float @llvm.fabs.f32(
 
 declare double @floor(double)
 declare double @ceil(double)
@@ -30,6 +34,7 @@ declare double @round(double)
 declare double @nearbyint(double)
 declare double @trunc(double)
 declare double @fabs(double)
+declare double @llvm.fabs.f64(double)
 
 define float @test_floor(float %C) {
   %D = fpext float %C to double
@@ -75,6 +80,15 @@ define float @test_fabs(float %C) {
   %D = fpext float %C to double
   ; --> fabsf
   %E = call double @fabs(double %D)
+  %F = fptrunc double %E to float
+  ret float %F
+}
+
+; Make sure fast math flags are preserved
+define float @test_fabs_fast(float %C) {
+  %D = fpext float %C to double
+  ; --> fabsf
+  %E = call fast double @fabs(double %D)
   %F = fptrunc double %E to float
   ret float %F
 }

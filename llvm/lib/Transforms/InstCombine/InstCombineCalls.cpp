@@ -1631,6 +1631,18 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return SelectInst::Create(Cond, Call0, Call1);
     }
 
+    Value *ExtSrc;
+    if (match(II->getArgOperand(0), m_FPExt(m_Value(ExtSrc))) &&
+        II->getArgOperand(0)->hasOneUse()) {
+      // fabs (fpext x) -> fpext (fabs x)
+      Value *F = Intrinsic::getDeclaration(II->getModule(), Intrinsic::fabs,
+                                           { ExtSrc->getType() });
+      CallInst *NewFabs = Builder->CreateCall(F, ExtSrc);
+      NewFabs->copyFastMathFlags(II);
+      NewFabs->takeName(II);
+      return new FPExtInst(NewFabs, II->getType());
+    }
+
     break;
   }
   case Intrinsic::cos:
@@ -2315,10 +2327,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
-  case Intrinsic::x86_avx512_pshuf_b_512:
+  case Intrinsic::x86_avx512_pshuf_b_512: {
     if (Value *V = simplifyX86pshufb(*II, *Builder))
       return replaceInstUsesWith(*II, V);
+
+    unsigned VWidth = II->getType()->getVectorNumElements();
+    APInt UndefElts(VWidth, 0);
+    APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+    if (Value *V = SimplifyDemandedVectorElts(II, DemandedElts, UndefElts)) {
+      if (V != II)
+        return replaceInstUsesWith(*II, V);
+      return II;
+    }
     break;
+  }
 
   case Intrinsic::x86_avx_vpermilvar_ps:
   case Intrinsic::x86_avx_vpermilvar_ps_256:

@@ -29081,7 +29081,7 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
       return false;
     MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
     // Only change element size, not type.
-    if (VT.isInteger() != OpEltVT.isInteger())
+    if (EltVT.isInteger() != OpEltVT.isInteger())
       return false;
     uint64_t Imm = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
     Imm = (Imm * OpEltVT.getSizeInBits()) / EltSize;
@@ -29104,7 +29104,7 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
       return false;
     MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
     // Only change element size, not type.
-    if (VT.isInteger() != OpEltVT.isInteger())
+    if (EltVT.isInteger() != OpEltVT.isInteger())
       return false;
     uint64_t Imm = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
     Imm = (Imm * OpEltVT.getSizeInBits()) / EltSize;
@@ -29117,6 +29117,22 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
     DCI.CombineTo(OrigOp.getNode(),
                   DAG.getNode(Opcode, DL, VT, Op0,
                               DAG.getConstant(Imm, DL, MVT::i8)));
+    return true;
+  }
+  case X86ISD::SUBV_BROADCAST: {
+    unsigned EltSize = EltVT.getSizeInBits();
+    if (EltSize != 32 && EltSize != 64)
+      return false;
+    // Only change element size, not type.
+    if (VT.isInteger() != Op.getSimpleValueType().isInteger())
+      return false;
+    SDValue Op0 = Op.getOperand(0);
+    MVT Op0VT = MVT::getVectorVT(EltVT,
+                            Op0.getSimpleValueType().getSizeInBits() / EltSize);
+    Op0 = DAG.getBitcast(Op0VT, Op.getOperand(0));
+    DCI.AddToWorklist(Op0.getNode());
+    DCI.CombineTo(OrigOp.getNode(),
+                  DAG.getNode(Opcode, DL, VT, Op0));
     return true;
   }
   }

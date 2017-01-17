@@ -531,3 +531,20 @@ define <4 x float> @knownbits_mask_umax_shuffle_uitofp(<4 x i32> %a0) {
   %4 = uitofp <4 x i32> %3 to <4 x float>
   ret <4 x float> %4
 }
+
+define <4 x i32> @knownbits_mask_bitreverse_ashr(<4 x i32> %a0) {
+; X32-LABEL: knownbits_mask_bitreverse_ashr:
+; X32:       # BB#0:
+; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_bitreverse_ashr:
+; X64:       # BB#0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -2, i32 -2, i32 -2, i32 -2>
+  %2 = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %1)
+  %3 = ashr <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %3
+}
+declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) nounwind readnone

@@ -696,9 +696,6 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                 ArrayRef<MachineOperand> Cond,
                 unsigned TrueReg, unsigned FalseReg,
                 int &CondCycles, int &TrueCycles, int &FalseCycles) const {
-  if (!Subtarget.hasISEL())
-    return false;
-
   if (Cond.size() != 2)
     return false;
 
@@ -739,9 +736,6 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
                                 unsigned FalseReg) const {
   assert(Cond.size() == 2 &&
          "PPC branch conditions have two components!");
-
-  assert(Subtarget.hasISEL() &&
-         "Cannot insert select on target without ISEL support");
 
   // Get the register classes.
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();

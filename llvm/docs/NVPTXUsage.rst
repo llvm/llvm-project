@@ -331,6 +331,7 @@ of your pass manager; just use the following code when setting up your pass
 manager:
 
 .. code-block:: c++
+
     std::unique_ptr<TargetMachine> TM = ...;
     PassManagerBuilder PMBuilder(...);
     PMBuilder.addExtension(

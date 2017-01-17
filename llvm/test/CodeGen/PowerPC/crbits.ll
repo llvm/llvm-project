@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -19,6 +20,12 @@ entry:
 ; CHECK: crnor
 ; CHECK: crnand [[REG4:[0-9]+]],
 ; CHECK: isel 3, 0, [[REG1]], [[REG4]]
+; CHECK-NO-ISEL-LABEL: @test1
+; CHECK-NO-ISEL: bc 12, 20, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL-NEXT: blr
+; CHECK-NO-ISEL-NEXT: [[TRUE]]
+; CHECK-NO-ISEL-NEXT: addi 3, 0, 0
+; CHECK-NO-ISEL-NEXT: blr
 ; CHECK: blr
 }
 

@@ -9060,7 +9060,7 @@ multiclass SIMDLdSt4SingleAliases<string asm> {
 // AdvSIMD v8.1 Rounding Double Multiply Add/Subtract
 //----------------------------------------------------------------------------
 
-let Predicates = [HasNEON, HasV8_1a] in {
+let Predicates = [HasNEON, HasRDM] in {
 
 class BaseSIMDThreeSameVectorTiedR0<bit Q, bit U, bits<2> size, bits<5> opcode,
                                     RegisterOperand regtype, string asm, 
@@ -9221,7 +9221,7 @@ multiclass SIMDIndexedSQRDMLxHSDTied<bit U, bits<4> opc, string asm,
     let Inst{21} = idx{0};
   }
 }
-} // let Predicates = [HasNeon, HasV8_1a]
+} // let Predicates = [HasNeon, HasRDM]
 
 //----------------------------------------------------------------------------
 // Crypto extensions

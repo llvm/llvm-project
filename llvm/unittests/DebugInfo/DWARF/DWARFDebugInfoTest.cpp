@@ -1527,9 +1527,9 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   // in the DIE returns nothing.
   EXPECT_FALSE(FuncDie.find({DW_AT_low_pc, DW_AT_entry_pc}).hasValue());
 
-  ArrayRef<dwarf::Attribute>
-      Attrs = { DW_AT_linkage_name, DW_AT_MIPS_linkage_name };
-  
+  const dwarf::Attribute Attrs[] = {DW_AT_linkage_name,
+                                    DW_AT_MIPS_linkage_name};
+
   // Make sure we can't extract the linkage name attributes when using
   // DWARFDie::find() since it won't check the DW_AT_specification DIE.
   EXPECT_FALSE(FuncDie.find(Attrs).hasValue());

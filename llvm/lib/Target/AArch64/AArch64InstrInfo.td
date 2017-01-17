@@ -30,6 +30,8 @@ def HasLSE           : Predicate<"Subtarget->hasLSE()">,
                                  AssemblerPredicate<"FeatureLSE", "lse">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
                                  AssemblerPredicate<"FeatureRAS", "ras">;
+def HasRDM           : Predicate<"Subtarget->hasRDM()">,
+                                 AssemblerPredicate<"FeatureRDM", "rdm">;
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
@@ -3284,7 +3286,7 @@ defm UQSHL    : SIMDThreeScalarBHSD<1, 0b01001, "uqshl", int_aarch64_neon_uqshl>
 defm UQSUB    : SIMDThreeScalarBHSD<1, 0b00101, "uqsub", int_aarch64_neon_uqsub>;
 defm URSHL    : SIMDThreeScalarD<   1, 0b01010, "urshl", int_aarch64_neon_urshl>;
 defm USHL     : SIMDThreeScalarD<   1, 0b01000, "ushl", int_aarch64_neon_ushl>;
-let Predicates = [HasV8_1a] in {
+let Predicates = [HasRDM] in {
   defm SQRDMLAH : SIMDThreeScalarHSTied<1, 0, 0b10000, "sqrdmlah">;
   defm SQRDMLSH : SIMDThreeScalarHSTied<1, 0, 0b10001, "sqrdmlsh">;
   def : Pat<(i32 (int_aarch64_neon_sqadd

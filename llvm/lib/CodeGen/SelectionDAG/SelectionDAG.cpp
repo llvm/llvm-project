@@ -2673,6 +2673,13 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     }
     break;
   }
+  case ISD::BITREVERSE: {
+    computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
+    KnownZero = KnownZero2.reverseBits();
+    KnownOne = KnownOne2.reverseBits();
+    break;
+  }
   case ISD::BSWAP: {
     computeKnownBits(Op.getOperand(0), KnownZero2, KnownOne2, DemandedElts,
                      Depth + 1);
@@ -3206,6 +3213,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
         return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
       break;
+    case ISD::BITREVERSE:
+      return getConstant(Val.reverseBits(), DL, VT, C->isTargetOpcode(),
+                         C->isOpaque());
     case ISD::BSWAP:
       return getConstant(Val.byteSwap(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
@@ -3303,6 +3313,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::TRUNCATE:
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP:
+      case ISD::BITREVERSE:
       case ISD::BSWAP:
       case ISD::CTLZ:
       case ISD::CTLZ_ZERO_UNDEF:

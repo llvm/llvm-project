@@ -15,7 +15,7 @@ define double @test(double %X) {
 
 define double @test1(double %X) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[Y:%.*]] = call double @fabs(double %X)
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.fabs.f64(double %X)
 ; CHECK-NEXT:    ret double [[Y]]
 ;
   %Y = call double @fabs(double %X)
