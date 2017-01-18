@@ -10,6 +10,30 @@ Classes:
         MethodKind:      Instance
         NullabilityOfRet: N
         Nullability:      [ N, S ]
+      - Selector: "implicitGetOnlyInstance"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "getter gone"
+      - Selector: "implicitGetOnlyClass"
+        MethodKind:      Class
+        Availability:    none
+        AvailabilityMsg: "getter gone"
+      - Selector: "implicitGetSetInstance"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "getter gone"
+      - Selector: "implicitGetSetClass"
+        MethodKind:      Class
+        Availability:    none
+        AvailabilityMsg: "getter gone"
+      - Selector: "setImplicitGetSetInstance:"
+        MethodKind:      Instance
+        Availability:    none
+        AvailabilityMsg: "setter gone"
+      - Selector: "setImplicitGetSetClass:"
+        MethodKind:      Class
+        Availability:    none
+        AvailabilityMsg: "setter gone"
     Properties:
       - Name: intValue
         PropertyKind:    Instance
