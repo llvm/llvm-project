@@ -87,7 +87,7 @@ CPUIDRegs getCPUFeatures() {
 
 bool testCPUFeature(CPUFeature Feature)
 {
-  static CPUIDRegs FeaturesRegs = getCPUFeatures();
+  CPUIDRegs FeaturesRegs = getCPUFeatures();
 
   switch (Feature) {
     case CRC32CPUFeature:  // CRC32 is provided by SSE 4.2.
