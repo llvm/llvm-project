@@ -464,6 +464,14 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
 }
 
 template <class ELFT>
+SymbolBody *SymbolTable<ELFT>::findDefined(StringRef Name) {
+  if (SymbolBody *S = find(Name))
+    if (S->isDefined() && !S->isShared())
+      return S;
+  return nullptr;
+}
+
+template <class ELFT>
 void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
                                        const object::Archive::Symbol Sym) {
   Symbol *S;

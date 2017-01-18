@@ -82,6 +82,7 @@ public:
   void scanVersionScript();
 
   SymbolBody *find(StringRef Name);
+  SymbolBody *findDefined(StringRef Name);
 
   void trace(StringRef Name);
   void wrap(StringRef Name);

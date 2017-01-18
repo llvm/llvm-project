@@ -17,11 +17,22 @@
 // RUN: ld.lld -shared %t -o %t2 -init=_foo -fini=_bar
 // RUN: llvm-readobj -dynamic-table %t2 | FileCheck --check-prefix=OVR %s
 
-// Should add a dynamic table entry even if a given symbol stay undefined
+// Don't add an entry for undef. The freebsd dynamic linker doesn't
+// check if the value is null. If it is, it will just call the
+// load address.
 // RUN: ld.lld -shared %t -o %t2 -init=_undef -fini=_undef
 // RUN: llvm-readobj -dynamic-table %t2 | FileCheck --check-prefix=UNDEF %s
-// UNDEF: INIT 0x0
-// UNDEF: FINI 0x0
+// UNDEF-NOT: INIT
+// UNDEF-NOT: FINI
+
+// Don't add an entry for shared. For the same reason as undef.
+// RUN: ld.lld -shared %t -o %t.so
+// RUN: echo > %t.s
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t2.o
+// RUN: ld.lld -shared %t2.o %t.so -o %t2
+// RUN: llvm-readobj -dynamic-table %t2 | FileCheck --check-prefix=SHARED %s
+// SHARED-NOT: INIT
+// SHARED-NOT: FINI
 
 // Should not add new entries to the symbol table
 // and should not require given symbols to be resolved
