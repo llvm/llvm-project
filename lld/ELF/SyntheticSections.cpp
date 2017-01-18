@@ -883,9 +883,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
-  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Init))
+  if (SymbolBody *B = Symtab<ELFT>::X->findInCurrentDSO(Config->Init))
     add({DT_INIT, B});
-  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Fini))
+  if (SymbolBody *B = Symtab<ELFT>::X->findInCurrentDSO(Config->Fini))
     add({DT_FINI, B});
 
   bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;

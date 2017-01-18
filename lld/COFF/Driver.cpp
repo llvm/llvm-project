@@ -55,8 +55,13 @@ BumpPtrAllocator BAlloc;
 StringSaver Saver{BAlloc};
 std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 
-bool link(ArrayRef<const char *> Args) {
+bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
+  ErrorCount = 0;
+  ErrorOS = &Diag;
+  Argv0 = Args[0];
   Config = make<Configuration>();
+  Config->ColorDiagnostics =
+      (ErrorOS == &llvm::errs() && Process::StandardErrHasColors());
   Driver = make<LinkerDriver>();
   Driver->link(Args);
   return true;

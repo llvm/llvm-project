@@ -44,6 +44,8 @@ TABLE_FUNCTION_DECL(float2, log2_tbl);
 TABLE_FUNCTION_DECL(uint4,  pibits_tbl);
 TABLE_FUNCTION_DECL(float2, sinhcosh_tbl);
 TABLE_FUNCTION_DECL(float2, cbrt_tbl);
+TABLE_FUNCTION_DECL(float, exp_tbl);
+TABLE_FUNCTION_DECL(float2, exp_tbl_ep);
 
 #ifdef cl_khr_fp64
 

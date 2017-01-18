@@ -217,6 +217,9 @@ template <class ELFT> void Writer<ELFT>::run() {
     fixAbsoluteSymbols();
   }
 
+  // It does not make sense try to open the file if we have error already.
+  if (ErrorCount)
+    return;
   // Write the result down to a file.
   openFile();
   if (ErrorCount)
@@ -234,7 +237,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  // Handle -Map option.
   writeMapFile<ELFT>(OutputSections);
+  if (ErrorCount)
+    return;
+
   if (auto EC = Buffer->commit())
     error("failed to write to the output file: " + EC.message());
 
@@ -661,7 +668,7 @@ static void addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
                                  typename ELFT::uint Val,
                                  uint8_t StOther = STV_HIDDEN) {
   if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
-    if (S->isUndefined() || S->isShared())
+    if (!S->isInCurrentDSO())
       Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
@@ -681,7 +688,7 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase<ELFT> *IS,
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
-  if (!S->isUndefined() && !S->isShared())
+  if (S->isInCurrentDSO())
     return S->symbol();
   return addRegular(Name, IS, Value);
 }

@@ -759,8 +759,6 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
     assert(MA->isAffine() &&
            "Only affine memory accesses can be code generated");
-    assert(!MA->getLatestScopArrayInfo()->getBasePtrOriginSAI() &&
-           "Generating new index expressions to indirect arrays not working");
 
     auto Schedule = isl_ast_build_get_schedule(Build);
 

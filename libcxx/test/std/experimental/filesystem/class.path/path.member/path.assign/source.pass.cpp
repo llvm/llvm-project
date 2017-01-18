@@ -15,6 +15,7 @@
 
 // template <class Source>
 //      path& operator=(Source const&);
+//  path& operator=(string_type&&);
 // template <class Source>
 //      path& assign(Source const&);
 // template <class InputIterator>
@@ -213,12 +214,29 @@ void test_sfinae() {
   }
 }
 
+void RunStringMoveTest(const char* Expect) {
+  using namespace fs;
+  std::string ss(Expect);
+  path p;
+  {
+    DisableAllocationGuard g; ((void)g);
+    path& pr = (p = std::move(ss));
+    assert(&pr == &p);
+  }
+  assert(p == Expect);
+  {
+    // Signature test
+    ASSERT_NOEXCEPT(p = std::move(ss));
+  }
+}
+
 int main() {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
     RunTestCase<wchar_t>(MS);
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
+    RunStringMoveTest(MS);
   }
   test_sfinae();
 }

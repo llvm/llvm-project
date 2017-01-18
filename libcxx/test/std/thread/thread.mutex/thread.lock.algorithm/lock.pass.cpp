@@ -9,10 +9,10 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// This test hangs forever when built against libstdc++. In order to allow
+// This test hangs forever when built against libstdc++ and MSVC. In order to allow
 // validation of the test suite against other STLs we have to mark it
 // unsupported.
-// UNSUPPORTED: libstdc++
+// UNSUPPORTED: libstdc++, msvc
 
 // <mutex>
 

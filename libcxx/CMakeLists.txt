@@ -395,7 +395,7 @@ include(HandleLibCXXABI) # Setup the ABI library flags
 if (NOT LIBCXX_STANDALONE_BUILD)
   # Remove flags that may have snuck in.
   remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
-               -lc++abi -m32)
+               -lc++abi)
 endif()
 remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 
@@ -404,7 +404,7 @@ remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 # non-debug DLLs
 remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 
-# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
+# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEqDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
 # so they don't get transformed into -Wno and -errors respectivly.
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
