@@ -239,19 +239,9 @@ private:
   /// modifications done through the command-line.
   struct DiagStatePoint {
     DiagState *State;
-    FullSourceLoc Loc;
-    DiagStatePoint(DiagState *State, FullSourceLoc Loc)
+    SourceLocation Loc;
+    DiagStatePoint(DiagState *State, SourceLocation Loc)
       : State(State), Loc(Loc) { } 
-    
-    bool operator<(const DiagStatePoint &RHS) const {
-      // If Loc is invalid it means it came from <command-line>, in which case
-      // we regard it as coming before any valid source location.
-      if (RHS.Loc.isInvalid())
-        return false;
-      if (Loc.isInvalid())
-        return true;
-      return Loc.isBeforeInTranslationUnitThan(RHS.Loc);
-    }
   };
 
   /// \brief A sorted vector of all DiagStatePoints representing changes in
@@ -271,16 +261,7 @@ private:
     return DiagStatePoints.back().State;
   }
 
-  void PushDiagStatePoint(DiagState *State, SourceLocation L) {
-    FullSourceLoc Loc(L, getSourceManager());
-    // Make sure that DiagStatePoints is always sorted according to Loc.
-    assert(Loc.isValid() && "Adding invalid loc point");
-    assert(!DiagStatePoints.empty() &&
-           (DiagStatePoints.back().Loc.isInvalid() ||
-            DiagStatePoints.back().Loc.isBeforeInTranslationUnitThan(Loc)) &&
-           "Previous point loc comes after or is the same as new one");
-    DiagStatePoints.push_back(DiagStatePoint(State, Loc));
-  }
+  void PushDiagStatePoint(DiagState *State, SourceLocation L);
 
   /// \brief Finds the DiagStatePoint that contains the diagnostic state of
   /// the given source location.
@@ -390,7 +371,11 @@ public:
     assert(SourceMgr && "SourceManager not set!");
     return *SourceMgr;
   }
-  void setSourceManager(SourceManager *SrcMgr) { SourceMgr = SrcMgr; }
+  void setSourceManager(SourceManager *SrcMgr) {
+    assert(DiagStatePoints.size() == 1 && DiagStatePoints[0].Loc.isInvalid() &&
+           "Leftover diag state from a different SourceManager.");
+    SourceMgr = SrcMgr;
+  }
 
   //===--------------------------------------------------------------------===//
   //  DiagnosticsEngine characterization methods, used by a client to customize
