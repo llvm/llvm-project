@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include <sanitizer/allocator_interface.h>
 #include <sanitizer/asan_interface.h>
 
@@ -399,7 +400,7 @@ static void ErrorReportCallbackOneToZ(const char *report) {
 
 TEST(AddressSanitizerInterface, SetErrorReportCallbackTest) {
   __asan_set_error_report_callback(ErrorReportCallbackOneToZ);
-  EXPECT_DEATH(__asan_report_error(0, 0, 0, 0, true, 1),
+  EXPECT_DEATH(__asan_report_error((void *)GET_CALLER_PC(), 0, 0, 0, true, 1),
                ASAN_PCRE_DOTALL "ABCDEF.*AddressSanitizer.*WRITE.*ABCDEF");
   __asan_set_error_report_callback(NULL);
 }

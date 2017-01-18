@@ -7,7 +7,6 @@
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx_asan -O0 %s %libdl -o %t
 // RUN: %env_asan_opts=symbolize=0 not %run %t 2>&1 | %asan_symbolize | FileCheck %s
-// UNSUPPORTED: x86_64h-darwin,x86_64-darwin
 // REQUIRES: stable-runtime
 
 #if !defined(SHARED_LIB)

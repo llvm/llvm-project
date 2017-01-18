@@ -1340,3 +1340,8 @@ include "llvm/Target/TargetCallingConv.td"
 // Pull in the common support for DAG isel generation.
 //
 include "llvm/Target/TargetSelectionDAG.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for Global ISel generation.
+//
+include "llvm/Target/TargetGlobalISel.td"

@@ -161,6 +161,8 @@ def ext_old_implicitly_unsigned_long_cxx : ExtWarn<
   InGroup<CXX11Compat>;
 def ext_clang_enable_if : Extension<"'enable_if' is a clang extension">,
                           InGroup<GccCompat>;
+def ext_clang_diagnose_if : Extension<"'diagnose_if' is a clang extension">,
+                            InGroup<GccCompat>;
 
 // SEH
 def err_seh_expected_handler : Error<

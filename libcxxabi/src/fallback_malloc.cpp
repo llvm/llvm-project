@@ -10,7 +10,7 @@
 #include "fallback_malloc.h"
 
 #include "config.h"
-#include "threading_support.h"
+#include <__threading_support>
 
 #include <cstdlib> // for malloc, calloc, free
 #include <cstring> // for memset
@@ -29,7 +29,8 @@ namespace {
 
 // When POSIX threads are not available, make the mutex operations a nop
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-static __libcxxabi_mutex_t heap_mutex = _LIBCXXABI_MUTEX_INITIALIZER;
+_LIBCPP_SAFE_STATIC
+static std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
 #else
 static void * heap_mutex = 0;
 #endif
@@ -37,8 +38,10 @@ static void * heap_mutex = 0;
 class mutexor {
 public:
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-    mutexor ( __libcxxabi_mutex_t *m ) : mtx_(m) { __libcxxabi_mutex_lock ( mtx_ ); }
-    ~mutexor () { __libcxxabi_mutex_unlock ( mtx_ ); }
+    mutexor ( std::__libcpp_mutex_t *m ) : mtx_(m) {
+      std::__libcpp_mutex_lock ( mtx_ );
+    }
+    ~mutexor () { std::__libcpp_mutex_unlock ( mtx_ ); }
 #else
     mutexor ( void * ) {}
     ~mutexor () {}
@@ -47,9 +50,9 @@ private:
     mutexor ( const mutexor &rhs );
     mutexor & operator = ( const mutexor &rhs );
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-    __libcxxabi_mutex_t *mtx_;
+    std::__libcpp_mutex_t *mtx_;
 #endif
-    };
+};
 
 
 static const size_t HEAP_SIZE = 512;

@@ -103,17 +103,6 @@ void *AsanDlSymNext(const char *sym);
 
 void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name);
 
-// Platform-specific options.
-#if SANITIZER_MAC
-bool PlatformHasDifferentMemcpyAndMemmove();
-# define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE \
-    (PlatformHasDifferentMemcpyAndMemmove())
-#elif SANITIZER_WINDOWS64
-# define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE false
-#else
-# define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE true
-#endif  // SANITIZER_MAC
-
 // Add convenient macro for interface functions that may be represented as
 // weak hooks.
 #define ASAN_MALLOC_HOOK(ptr, size)                                   \

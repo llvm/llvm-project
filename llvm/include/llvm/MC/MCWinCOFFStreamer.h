@@ -52,7 +52,7 @@ public:
   void EndCOFFSymbolDef() override;
   void EmitCOFFSafeSEH(MCSymbol const *Symbol) override;
   void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
-  void EmitCOFFSecRel32(MCSymbol const *Symbol) override;
+  void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,

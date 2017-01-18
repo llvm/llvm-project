@@ -22,7 +22,8 @@
 
 ...
 ---
-name:            test
+name: test
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: bb.0.body:
   ; CHECK-NEXT:    liveins: %edi, %esi
@@ -33,7 +34,8 @@ body: |
     RETQ %eax
 ...
 ---
-name:            test2
+name: test2
+tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test2
   ; Verify that we can have multiple lists of liveins that will be merged into
@@ -48,7 +50,8 @@ body: |
     RETQ %eax
 ...
 ---
-name:            test3
+name: test3
+tracksRegLiveness: true
 body: |
   ; Verify that we can have an empty list of liveins.
   ; CHECK-LABEL: name: test3

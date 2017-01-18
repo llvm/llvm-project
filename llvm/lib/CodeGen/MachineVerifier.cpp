@@ -566,7 +566,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
 
   if (!MF->getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoPHIs)) {
+      MachineFunctionProperties::Property::NoPHIs) && MRI->tracksLiveness()) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -741,14 +741,16 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   }
 
   regsLive.clear();
-  for (const auto &LI : MBB->liveins()) {
-    if (!TargetRegisterInfo::isPhysicalRegister(LI.PhysReg)) {
-      report("MBB live-in list contains non-physical register", MBB);
-      continue;
+  if (MRI->tracksLiveness()) {
+    for (const auto &LI : MBB->liveins()) {
+      if (!TargetRegisterInfo::isPhysicalRegister(LI.PhysReg)) {
+        report("MBB live-in list contains non-physical register", MBB);
+        continue;
+      }
+      for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
+           SubRegs.isValid(); ++SubRegs)
+        regsLive.insert(*SubRegs);
     }
-    for (MCSubRegIterator SubRegs(LI.PhysReg, TRI, /*IncludeSelf=*/true);
-         SubRegs.isValid(); ++SubRegs)
-      regsLive.insert(*SubRegs);
   }
   regsLiveInButUnused = regsLive;
 
@@ -1023,7 +1025,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
             return;
           }
 
-          // The gvreg must have a size and it must not have a SubIdx.
+          // The gvreg must have a type and it must not have a SubIdx.
           LLT Ty = MRI->getType(Reg);
           if (!Ty.isValid()) {
             report("Generic virtual register must have a valid type", MO,
@@ -1056,6 +1058,21 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
                    MONum);
             return;
           }
+
+          // If this is a target specific instruction and this operand
+          // has register class constraint, the virtual register must
+          // comply to it.
+          if (!isPreISelGenericOpcode(MCID.getOpcode()) &&
+              TII->getRegClass(MCID, MONum, TRI, *MF)) {
+            report("Virtual register does not match instruction constraint", MO,
+                   MONum);
+            errs() << "Expect register class "
+                   << TRI->getRegClassName(
+                          TII->getRegClass(MCID, MONum, TRI, *MF))
+                   << " but got nothing\n";
+            return;
+          }
+
           break;
         }
         if (SubIdx) {

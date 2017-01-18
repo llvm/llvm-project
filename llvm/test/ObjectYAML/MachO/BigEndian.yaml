@@ -1,0 +1,99 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+IsLittleEndian:  false
+FileHeader:      
+  magic:           0xFEEDFACE
+  cputype:         0x00000012
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           3
+  sizeofcmds:      368
+  flags:           0x00002000
+LoadCommands:    
+  - cmd:             LC_SEGMENT
+    cmdsize:         328
+    segname:         ''
+    vmaddr:          0
+    vmsize:          236
+    fileoff:         476
+    filesize:        236
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            188
+        offset:          0x000001DC
+        align:           4
+        reloff:          0x000002C8
+        nreloc:          9
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __textcoal_nt
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            0
+        offset:          0x00000298
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x8000000B
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __picsymbolstub1
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            0
+        offset:          0x00000298
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000008
+        reserved1:       0x00000000
+        reserved2:       0x00000020
+        reserved3:       0x00000000
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            48
+        offset:          0x00000298
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658432
+    sdk:             0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          784
+    nsyms:           0
+    stroff:          808
+    strsize:         36
+LinkEditData:
+  StringTable:     
+    - ''
+    - _compilerrt_abort_impl
+    - ___absvdi2
+    - ''
+...
+
+#CHECK: FileHeader:      
+#CHECK:   magic:           0xFEEDFACE
+#CHECK:   cputype:         0x00000012
+#CHECK:   cpusubtype:      0x00000000
+#CHECK:   filetype:        0x00000001
+#CHECK:   ncmds:           3
+#CHECK:   sizeofcmds:      368
+#CHECK:   flags:           0x00002000

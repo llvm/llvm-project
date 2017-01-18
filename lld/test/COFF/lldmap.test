@@ -4,7 +4,8 @@
 # RUN: lld-link /out:%T/bar.exe /entry:main /lldmap %t.obj
 # RUN: FileCheck %s < %T/bar.map
 
-# CHECK: .obj:
-# CHECK-NEXT: 140001000 .text$mn
-# CHECK-NEXT: 140001000 .data
-# CHECK-NEXT: 140001000 main
+# CHECK:      Address  Size     Align Out     In      File    Symbol
+# CHECK-NEXT: 00001000 00000006  1000 .text  
+# CHECK-NEXT: 00001000 00000006    10         .text$mn
+# CHECK-NEXT: 00001000 00000006    10                 {{.*}}lldmap.test.tmp.obj
+# CHECK-NEXT: 00001000 00000006     0                         main   

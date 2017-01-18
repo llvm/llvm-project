@@ -6,5 +6,5 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#define _LIBCPP_BUILDING_EXTERNAL_THREADS
+#define _LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL
 #include <__threading_support>

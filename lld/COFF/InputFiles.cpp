@@ -372,6 +372,8 @@ MachineTypes BitcodeFile::getMachineType() {
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }
 }
+} // namespace coff
+} // namespace lld
 
 // Returns the last element of a path, which is supposed to be a filename.
 static StringRef getBasename(StringRef Path) {
@@ -382,7 +384,7 @@ static StringRef getBasename(StringRef Path) {
 }
 
 // Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
-std::string toString(InputFile *File) {
+std::string lld::toString(coff::InputFile *File) {
   if (!File)
     return "(internal)";
   if (File->ParentName.empty())
@@ -393,6 +395,3 @@ std::string toString(InputFile *File) {
           .str();
   return StringRef(Res).lower();
 }
-
-} // namespace coff
-} // namespace lld

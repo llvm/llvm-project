@@ -484,3 +484,51 @@ TEST_F(MemorySSATest, WalkerReopt) {
   EXPECT_EQ(Walker->getClobberingMemoryAccess(NewLoadAccess), LoadClobber);
   EXPECT_EQ(NewLoadAccess->getDefiningAccess(), LoadClobber);
 }
+
+// Test out MemorySSA::spliceMemoryAccessAbove.
+TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  B.SetInsertPoint(BasicBlock::Create(C, "", F));
+
+  Type *Int8 = Type::getInt8Ty(C);
+  Value *A = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  Value *B_ = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
+  Value *C = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "C");
+
+  StoreInst *StoreA0 = B.CreateStore(ConstantInt::get(Int8, 0), A);
+  StoreInst *StoreB = B.CreateStore(ConstantInt::get(Int8, 0), B_);
+  LoadInst *LoadB = B.CreateLoad(B_);
+  StoreInst *StoreA1 = B.CreateStore(ConstantInt::get(Int8, 4), A);
+  // splice this above StoreB
+  StoreInst *StoreC = B.CreateStore(ConstantInt::get(Int8, 4), C);
+  StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 4), A);
+  LoadInst *LoadC = B.CreateLoad(C);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker &Walker = *Analyses->Walker;
+
+  StoreC->moveBefore(StoreB);
+  MSSA.spliceMemoryAccessAbove(cast<MemoryDef>(MSSA.getMemoryAccess(StoreB)),
+                               MSSA.getMemoryAccess(StoreC));
+
+  MSSA.verifyMemorySSA();
+
+  EXPECT_EQ(MSSA.getMemoryAccess(StoreB)->getDefiningAccess(),
+            MSSA.getMemoryAccess(StoreC));
+  EXPECT_EQ(MSSA.getMemoryAccess(StoreC)->getDefiningAccess(),
+            MSSA.getMemoryAccess(StoreA0));
+  EXPECT_EQ(MSSA.getMemoryAccess(StoreA2)->getDefiningAccess(),
+            MSSA.getMemoryAccess(StoreA1));
+  EXPECT_EQ(Walker.getClobberingMemoryAccess(LoadB),
+            MSSA.getMemoryAccess(StoreB));
+  EXPECT_EQ(Walker.getClobberingMemoryAccess(LoadC),
+            MSSA.getMemoryAccess(StoreC));
+
+  // exercise block numbering
+  EXPECT_TRUE(MSSA.locallyDominates(MSSA.getMemoryAccess(StoreC),
+                                    MSSA.getMemoryAccess(StoreB)));
+  EXPECT_TRUE(MSSA.locallyDominates(MSSA.getMemoryAccess(StoreA1),
+                                    MSSA.getMemoryAccess(StoreA2)));
+}

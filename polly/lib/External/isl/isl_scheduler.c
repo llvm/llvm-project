@@ -2,6 +2,7 @@
  * Copyright 2011      INRIA Saclay
  * Copyright 2012-2014 Ecole Normale Superieure
  * Copyright 2015-2016 Sven Verdoolaege
+ * Copyright 2016      INRIA Paris
  *
  * Use of this software is governed by the MIT license
  *
@@ -9,6 +10,8 @@
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
  * 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
+ * and Centre de Recherche Inria de Paris, 2 rue Simone Iff - Voie DQ12,
+ * CS 42112, 75589 Paris Cedex 12, France
  */
 
 #include <isl_ctx_private.h>

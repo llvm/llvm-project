@@ -18,7 +18,7 @@
 #include <cstdarg> // va_ macros
 // "builtins" not implemented here for Clang or GCC as they provide
 // implementations. Assuming required for elsewhere else, certainly MSVC.
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_COMPILER_MSVC)
 #include <intrin.h>
 #endif
 #if defined(_LIBCPP_MSVCRT)
@@ -49,7 +49,7 @@ size_t wcsnrtombs(char *__restrict dst, const wchar_t **__restrict src,
 #define _Exit _exit
 #endif
 
-#if defined(_LIBCPP_MSVC)
+#if defined(_LIBCPP_COMPILER_MSVC)
 
 // Bit builtin's make these assumptions when calling _BitScanForward/Reverse
 // etc. These assumptions are expected to be true for Win32/Win64 which this
@@ -110,10 +110,11 @@ _LIBCPP_ALWAYS_INLINE int __builtin_ctzll(unsigned long long mask)
   unsigned long where;
 // Search from LSB to MSB for first set bit.
 // Returns zero if no set bit is found.
-#if defined(_WIN64)
+#if defined(_LIBCPP_HAS_BITSCAN64)
+    (defined(_M_AMD64) || defined(__x86_64__))
   if (_BitScanForward64(&where, mask))
     return static_cast<int>(where);
-#elif defined(_WIN32)
+#else
   // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
   // Scan the Low Word.
   if (_BitScanForward(&where, static_cast<unsigned long>(mask)))
@@ -121,8 +122,6 @@ _LIBCPP_ALWAYS_INLINE int __builtin_ctzll(unsigned long long mask)
   // Scan the High Word.
   if (_BitScanForward(&where, static_cast<unsigned long>(mask >> 32)))
     return static_cast<int>(where + 32); // Create a bit offset from the LSB.
-#else
-#error "Implementation of __builtin_ctzll required"
 #endif
   return 64;
 }
@@ -152,10 +151,10 @@ _LIBCPP_ALWAYS_INLINE int __builtin_clzll(unsigned long long mask)
   unsigned long where;
 // BitScanReverse scans from MSB to LSB for first set bit.
 // Returns 0 if no set bit is found.
-#if defined(_WIN64)
+#if defined(_LIBCPP_HAS_BITSCAN64)
   if (_BitScanReverse64(&where, mask))
     return static_cast<int>(63 - where);
-#elif defined(_WIN32)
+#else
   // Scan the high 32 bits.
   if (_BitScanReverse(&where, static_cast<unsigned long>(mask >> 32)))
     return static_cast<int>(63 -
@@ -163,8 +162,6 @@ _LIBCPP_ALWAYS_INLINE int __builtin_clzll(unsigned long long mask)
   // Scan the low 32 bits.
   if (_BitScanReverse(&where, static_cast<unsigned long>(mask)))
     return static_cast<int>(63 - where);
-#else
-#error "Implementation of __builtin_clzll required"
 #endif
   return 64; // Undefined Behavior.
 }

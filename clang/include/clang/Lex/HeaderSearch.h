@@ -147,7 +147,7 @@ class HeaderSearch {
   };
 
   /// \brief Header-search options used to initialize this header search.
-  IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts;
+  std::shared_ptr<HeaderSearchOptions> HSOpts;
 
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
@@ -248,7 +248,7 @@ class HeaderSearch {
   friend class DirectoryLookup;
   
 public:
-  HeaderSearch(IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts,
+  HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                const LangOptions &LangOpts, const TargetInfo *Target);
   ~HeaderSearch();
@@ -406,7 +406,8 @@ public:
   /// \return false if \#including the file will have no effect or true
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
-                              bool isImport, Module *CorrespondingModule);
+                              bool isImport, bool ModulesEnabled,
+                              Module *CorrespondingModule);
 
   /// \brief Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.

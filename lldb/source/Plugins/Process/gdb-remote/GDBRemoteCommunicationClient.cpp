@@ -2599,10 +2599,7 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
       thread_ids.push_back(1);
     }
   } else {
-#if defined(LLDB_CONFIGURATION_DEBUG)
-// assert(!"ProcessGDBRemote::UpdateThreadList() failed due to not getting the
-// sequence mutex");
-#else
+#if !defined(LLDB_CONFIGURATION_DEBUG)
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
                                                            GDBR_LOG_PACKETS));
     if (log)
@@ -3246,7 +3243,7 @@ GDBRemoteCommunicationClient::GetModulesInfo(
     JSONObject::SP module_sp = std::make_shared<JSONObject>();
     module_array_sp->AppendObject(module_sp);
     module_sp->SetObject(
-        "file", std::make_shared<JSONString>(module_file_spec.GetPath()));
+        "file", std::make_shared<JSONString>(module_file_spec.GetPath(false)));
     module_sp->SetObject("triple",
                          std::make_shared<JSONString>(triple.getTriple()));
   }

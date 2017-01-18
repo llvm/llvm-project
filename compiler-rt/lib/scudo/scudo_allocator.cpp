@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "scudo_allocator.h"
+#include "scudo_crc32.h"
 #include "scudo_utils.h"
 
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -24,22 +25,6 @@
 #include <pthread.h>
 
 #include <cstring>
-
-// Hardware CRC32 is supported at compilation via the following:
-// - for i386 & x86_64: -msse4.2
-// - for ARM & AArch64: -march=armv8-a+crc
-// An additional check must be performed at runtime as well to make sure the
-// emitted instructions are valid on the target host.
-#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
-# ifdef __SSE4_2__
-#  include <smmintrin.h>
-#  define HW_CRC32 FIRST_32_SECOND_64(_mm_crc32_u32, _mm_crc32_u64)
-# endif
-# ifdef __ARM_FEATURE_CRC32
-#  include <arm_acle.h>
-#  define HW_CRC32 FIRST_32_SECOND_64(__crc32cw, __crc32cd)
-# endif
-#endif
 
 namespace __scudo {
 
@@ -84,10 +69,6 @@ static thread_local Xorshift128Plus Prng;
 // Global static cookie, initialized at start-up.
 static uptr Cookie;
 
-enum : u8 {
-  CRC32Software = 0,
-  CRC32Hardware = 1,
-};
 // We default to software CRC32 if the alternatives are not supported, either
 // at compilation or at runtime.
 static atomic_uint8_t HashAlgorithm = { CRC32Software };
@@ -97,17 +78,9 @@ static atomic_uint8_t HashAlgorithm = { CRC32Software };
 // the checksumming function if available.
 INLINE u32 hashUptrs(uptr Pointer, uptr *Array, uptr ArraySize, u8 HashType) {
   u32 Crc;
-#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
-  if (HashType == CRC32Hardware) {
-    Crc = HW_CRC32(Cookie, Pointer);
-    for (uptr i = 0; i < ArraySize; i++)
-      Crc = HW_CRC32(Crc, Array[i]);
-    return Crc;
-  }
-#endif
-  Crc = computeCRC32(Cookie, Pointer);
+  Crc = computeCRC32(Cookie, Pointer, HashType);
   for (uptr i = 0; i < ArraySize; i++)
-    Crc = computeCRC32(Crc, Array[i]);
+    Crc = computeCRC32(Crc, Array[i], HashType);
   return Crc;
 }
 

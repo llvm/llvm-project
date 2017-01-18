@@ -103,6 +103,8 @@ void checkThrows(any& a)
     } catch (...) {
         assert(false);
     }
+#else
+    ((void)a);
 #endif
 }
 

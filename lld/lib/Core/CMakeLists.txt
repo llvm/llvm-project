@@ -12,6 +12,6 @@ add_lld_library(lldCore
   ADDITIONAL_HEADER_DIRS
   ${LLD_INCLUDE_DIR}/lld/Core
 
-  LINK_LIBS
-    LLVMSupport
+  LINK_COMPONENTS
+    Support
   )

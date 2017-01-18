@@ -324,7 +324,6 @@ static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv) {
 bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   Type *Ty = FDiv.getType();
 
-  // TODO: Handle half
   if (!Ty->getScalarType()->isFloatTy())
     return false;
 

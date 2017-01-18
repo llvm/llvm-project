@@ -100,6 +100,8 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   }
 
   SourceMgr SrcMgr;
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+
   SrcMgrDiagInfo DiagInfo;
 
   // If the current LLVMContext has an inline asm handler, set it in SourceMgr.

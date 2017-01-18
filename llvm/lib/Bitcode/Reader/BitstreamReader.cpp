@@ -93,20 +93,29 @@ static void skipAbbreviatedField(BitstreamCursor &Cursor,
 }
 
 /// skipRecord - Read the current record and discard it.
-void BitstreamCursor::skipRecord(unsigned AbbrevID) {
+unsigned BitstreamCursor::skipRecord(unsigned AbbrevID) {
   // Skip unabbreviated records by reading past their entries.
   if (AbbrevID == bitc::UNABBREV_RECORD) {
     unsigned Code = ReadVBR(6);
-    (void)Code;
     unsigned NumElts = ReadVBR(6);
     for (unsigned i = 0; i != NumElts; ++i)
       (void)ReadVBR64(6);
-    return;
+    return Code;
   }
 
   const BitCodeAbbrev *Abbv = getAbbrev(AbbrevID);
+  const BitCodeAbbrevOp &CodeOp = Abbv->getOperandInfo(0);
+  unsigned Code;
+  if (CodeOp.isLiteral())
+    Code = CodeOp.getLiteralValue();
+  else {
+    if (CodeOp.getEncoding() == BitCodeAbbrevOp::Array ||
+        CodeOp.getEncoding() == BitCodeAbbrevOp::Blob)
+      report_fatal_error("Abbreviation starts with an Array or a Blob");
+    Code = readAbbreviatedField(*this, CodeOp);
+  }
 
-  for (unsigned i = 0, e = Abbv->getNumOperandInfos(); i != e; ++i) {
+  for (unsigned i = 1, e = Abbv->getNumOperandInfos(); i < e; ++i) {
     const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i);
     if (Op.isLiteral())
       continue;
@@ -164,6 +173,7 @@ void BitstreamCursor::skipRecord(unsigned AbbrevID) {
     // Skip over the blob.
     JumpToBit(NewEnd);
   }
+  return Code;
 }
 
 unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
@@ -273,7 +283,7 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
 }
 
 void BitstreamCursor::ReadAbbrevRecord() {
-  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
   unsigned NumOpInfo = ReadVBR(5);
   for (unsigned i = 0; i != NumOpInfo; ++i) {
     bool IsLiteral = Read(1);
@@ -307,7 +317,7 @@ void BitstreamCursor::ReadAbbrevRecord() {
 
   if (Abbv->getNumOperandInfos() == 0)
     report_fatal_error("Abbrev record with no operands");
-  CurAbbrevs.push_back(Abbv);
+  CurAbbrevs.push_back(std::move(Abbv));
 }
 
 Optional<BitstreamBlockInfo>

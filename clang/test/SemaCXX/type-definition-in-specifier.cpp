@@ -59,10 +59,8 @@ struct s19018b {
 };
 
 struct pr18963 {
-  short bar5 (struct foo4 {} bar2); // expected-error{{'foo4' cannot be defined in a parameter type}} \
-                                    // expected-note{{declared here}}
-
-  long foo5 (float foo6 = foo4);  // expected-error{{'foo4' does not refer to a value}}
+  short bar5 (struct foo4 {} bar2); // expected-error{{'foo4' cannot be defined in a parameter type}}
+  long foo5 (float foo6 = foo4);
 };
 
 // expected-error@+2 {{cannot be defined in a parameter type}}

@@ -533,7 +533,8 @@ AST_MATCHER(FieldDecl, isBitField) {
   return Node.isBitField();
 }
 
-/// \brief Matches non-static data members that are bit-fields.
+/// \brief Matches non-static data members that are bit-fields of the specified
+/// bit width.
 ///
 /// Given
 /// \code
@@ -543,11 +544,32 @@ AST_MATCHER(FieldDecl, isBitField) {
 ///     int c : 2;
 ///   };
 /// \endcode
-/// fieldDecl(isBitField())
+/// fieldDecl(hasBitWidth(2))
 ///   matches 'int a;' and 'int c;' but not 'int b;'.
 AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
   return Node.isBitField() &&
          Node.getBitWidthValue(Finder->getASTContext()) == Width;
+}
+
+/// \brief Matches non-static data members that have an in-class initializer.
+///
+/// Given
+/// \code
+///   class C {
+///     int a = 2;
+///     int b = 3;
+///     int c;
+///   };
+/// \endcode
+/// fieldDecl(hasInClassInitializer(integerLiteral(equals(2))))
+///   matches 'int a;' but not 'int b;'.
+/// fieldDecl(hasInClassInitializer(anything()))
+///   matches 'int a;' and 'int b;' but not 'int c;'.
+AST_MATCHER_P(FieldDecl, hasInClassInitializer, internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *Initializer = Node.getInClassInitializer();
+  return (Initializer != nullptr &&
+          InnerMatcher.matches(*Initializer, Finder, Builder));
 }
 
 /// \brief Matches a declaration that has been implicitly added

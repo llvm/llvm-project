@@ -72,45 +72,45 @@ void test_copy_ctor_sfinae() {
 void test_copy_ctor_basic() {
   {
     constexpr std::variant<int> v(std::in_place_index<0>, 42);
-    static_assert(v.index() == 0);
+    static_assert(v.index() == 0, "");
     constexpr std::variant<int> v2 = v;
-    static_assert(v2.index() == 0);
-    static_assert(std::get<0>(v2) == 42);
+    static_assert(v2.index() == 0, "");
+    static_assert(std::get<0>(v2) == 42, "");
   }
   {
     constexpr std::variant<int, long> v(std::in_place_index<1>, 42);
-    static_assert(v.index() == 1);
+    static_assert(v.index() == 1, "");
     constexpr std::variant<int, long> v2 = v;
-    static_assert(v2.index() == 1);
-    static_assert(std::get<1>(v2) == 42);
+    static_assert(v2.index() == 1, "");
+    static_assert(std::get<1>(v2) == 42, "");
   }
   {
     constexpr std::variant<TCopy> v(std::in_place_index<0>, 42);
-    static_assert(v.index() == 0);
+    static_assert(v.index() == 0, "");
     constexpr std::variant<TCopy> v2(v);
-    static_assert(v2.index() == 0);
-    static_assert(std::get<0>(v2).value == 42);
+    static_assert(v2.index() == 0, "");
+    static_assert(std::get<0>(v2).value == 42, "");
   }
   {
     constexpr std::variant<int, TCopy> v(std::in_place_index<1>, 42);
-    static_assert(v.index() == 1);
+    static_assert(v.index() == 1, "");
     constexpr std::variant<int, TCopy> v2(v);
-    static_assert(v2.index() == 1);
-    static_assert(std::get<1>(v2).value == 42);
+    static_assert(v2.index() == 1, "");
+    static_assert(std::get<1>(v2).value == 42, "");
   }
   {
     constexpr std::variant<TCopyNTMove> v(std::in_place_index<0>, 42);
-    static_assert(v.index() == 0);
+    static_assert(v.index() == 0, "");
     constexpr std::variant<TCopyNTMove> v2(v);
-    static_assert(v2.index() == 0);
-    static_assert(std::get<0>(v2).value == 42);
+    static_assert(v2.index() == 0, "");
+    static_assert(std::get<0>(v2).value == 42, "");
   }
   {
     constexpr std::variant<int, TCopyNTMove> v(std::in_place_index<1>, 42);
-    static_assert(v.index() == 1);
+    static_assert(v.index() == 1, "");
     constexpr std::variant<int, TCopyNTMove> v2(v);
-    static_assert(v2.index() == 1);
-    static_assert(std::get<1>(v2).value == 42);
+    static_assert(v2.index() == 1, "");
+    static_assert(std::get<1>(v2).value == 42, "");
   }
 }
 

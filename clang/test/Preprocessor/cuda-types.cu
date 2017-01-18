@@ -28,3 +28,19 @@
 // RUN:   | grep 'define __[^ ]*\(TYPE\|MAX\|SIZEOF|WIDTH\)\|define __GCC_ATOMIC' \
 // RUN:   | grep -v '__LDBL\|_LONG_DOUBLE' > %T/powerpc64-device-defines-filtered
 // RUN: diff %T/powerpc64-host-defines-filtered %T/powerpc64-device-defines-filtered
+
+// RUN: %clang --cuda-host-only -nocudainc -target i386-windows-msvc -x cuda -E -dM -o - /dev/null \
+// RUN:   | grep 'define __[^ ]*\(TYPE\|MAX\|SIZEOF|WIDTH\)\|define __GCC_ATOMIC' \
+// RUN:   | grep -v '__LDBL\|_LONG_DOUBLE' > %T/i386-msvc-host-defines-filtered
+// RUN: %clang --cuda-device-only -nocudainc -nocudalib -target i386-windows-msvc -x cuda -E -dM -o - /dev/null \
+// RUN:   | grep 'define __[^ ]*\(TYPE\|MAX\|SIZEOF|WIDTH\)\|define __GCC_ATOMIC' \
+// RUN:   | grep -v '__LDBL\|_LONG_DOUBLE' > %T/i386-msvc-device-defines-filtered
+// RUN: diff %T/i386-msvc-host-defines-filtered %T/i386-msvc-device-defines-filtered
+
+// RUN: %clang --cuda-host-only -nocudainc -target x86_64-windows-msvc -x cuda -E -dM -o - /dev/null \
+// RUN:   | grep 'define __[^ ]*\(TYPE\|MAX\|SIZEOF|WIDTH\)\|define __GCC_ATOMIC' \
+// RUN:   | grep -v '__LDBL\|_LONG_DOUBLE' > %T/x86_64-msvc-host-defines-filtered
+// RUN: %clang --cuda-device-only -nocudainc -nocudalib -target x86_64-windows-msvc -x cuda -E -dM -o - /dev/null \
+// RUN:   | grep 'define __[^ ]*\(TYPE\|MAX\|SIZEOF|WIDTH\)\|define __GCC_ATOMIC' \
+// RUN:   | grep -v '__LDBL\|_LONG_DOUBLE' > %T/x86_64-msvc-device-defines-filtered
+// RUN: diff %T/x86_64-msvc-host-defines-filtered %T/x86_64-msvc-device-defines-filtered

@@ -11,20 +11,13 @@
 
 // void pop_back();
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <vector>
 #include <cassert>
+
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-#if _LIBCPP_DEBUG >= 1
-#include <cstdlib>
-#include <exception>
-
-#endif
 
 int main()
 {
@@ -34,10 +27,7 @@ int main()
         assert(c.size() == 1);
         c.pop_back();
         assert(c.size() == 0);
-#if _LIBCPP_DEBUG >= 1
-        c.pop_back();
-        assert(false);
-#endif
+
     }
 #if TEST_STD_VER >= 11
     {
@@ -46,10 +36,6 @@ int main()
         assert(c.size() == 1);
         c.pop_back();
         assert(c.size() == 0);
-#if _LIBCPP_DEBUG >= 1
-        c.pop_back();
-        assert(false);
-#endif
     }
 #endif
 }

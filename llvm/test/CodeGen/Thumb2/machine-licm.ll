@@ -85,10 +85,9 @@ define zeroext i16 @t3(i8 zeroext %data, i16 zeroext %crc) nounwind readnone {
 ; CHECK-LABEL: t3:
 bb.nph:
 ; CHECK: bb.nph
-; CHECK: movw {{(r[0-9])|(lr)}}, #32768
+; CHECK: movw {{(r[0-9]+)|(lr)}}, #32768
 ; CHECK: movs {{(r[0-9]+)|(lr)}}, #0
 ; CHECK: movw [[REGISTER:(r[0-9]+)|(lr)]], #16386
-; CHECK: movw {{(r[0-9]+)|(lr)}}, #65534
 ; CHECK: movt {{(r[0-9]+)|(lr)}}, #65535
   br label %bb
 
@@ -97,7 +96,6 @@ bb:                                               ; preds = %bb, %bb.nph
 ; CHECK: eor.w
 ; CHECK: eorne.w {{(r[0-9])|(lr)}}, {{(r[0-9])|(lr)}}, [[REGISTER]]
 ; CHECK-NOT: eor
-; CHECK: and
   %data_addr.013 = phi i8 [ %data, %bb.nph ], [ %8, %bb ] ; <i8> [#uses=2]
   %crc_addr.112 = phi i16 [ %crc, %bb.nph ], [ %crc_addr.2, %bb ] ; <i16> [#uses=3]
   %i.011 = phi i8 [ 0, %bb.nph ], [ %7, %bb ]     ; <i8> [#uses=1]

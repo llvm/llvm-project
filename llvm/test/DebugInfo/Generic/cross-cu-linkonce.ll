@@ -25,17 +25,19 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG_subprogram
 
-@x = global i32 (i32)* @_Z4funci, align 8, !dbg !11
-@y = global i32 (i32)* @_Z4funci, align 8, !dbg !16
+source_filename = "test/DebugInfo/Generic/cross-cu-linkonce.ll"
+
+@x = global i32 (i32)* @_Z4funci, align 8, !dbg !0
+@y = global i32 (i32)* @_Z4funci, align 8, !dbg !7
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr i32 @_Z4funci(i32 %i) #0 !dbg !4 {
+define linkonce_odr i32 @_Z4funci(i32 %i) #0 !dbg !19 {
   %1 = alloca i32, align 4
   store i32 %i, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !20, metadata !DIExpression()), !dbg !21
-  %2 = load i32, i32* %1, align 4, !dbg !22
-  %3 = mul nsw i32 %2, 2, !dbg !22
-  ret i32 %3, !dbg !22
+  call void @llvm.dbg.declare(metadata i32* %1, metadata !20, metadata !21), !dbg !22
+  %2 = load i32, i32* %1, align 4, !dbg !23
+  %3 = mul nsw i32 %2, 2, !dbg !23
+  ret i32 %3, !dbg !23
 }
 
 ; Function Attrs: nounwind readnone
@@ -44,30 +46,32 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 attributes #0 = { inlinehint nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
-!llvm.dbg.cu = !{!0, !13}
-!llvm.module.flags = !{!17, !18}
-!llvm.ident = !{!19, !19}
+!llvm.dbg.cu = !{!9, !13}
+!llvm.module.flags = !{!16, !17}
+!llvm.ident = !{!18, !18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !10, imports: !2)
-!1 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo")
-!2 = !{}
-!4 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !5, scope: !6, type: !7, variables: !2)
-!5 = !DIFile(filename: "func.h", directory: "/tmp/dbginfo")
-!6 = !DIFile(filename: "func.h", directory: "/tmp/dbginfo")
-!7 = !DISubroutineType(types: !8)
-!8 = !{!9, !9}
-!9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = !{!11}
-!11 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12))
-!12 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !7)
-!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !14, enums: !2, retainedTypes: !2, globals: !15, imports: !2)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "x", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "func.h", directory: "/tmp/dbginfo")
+!3 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64, align: 64)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6, !6}
+!6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!7 = !DIGlobalVariableExpression(var: !8)
+!8 = !DIGlobalVariable(name: "y", scope: null, file: !2, line: 4, type: !3, isLocal: false, isDefinition: true)
+!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !10, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !11, retainedTypes: !11, globals: !12, imports: !11)
+!10 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo")
+!11 = !{}
+!12 = !{!0}
+!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !14, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !11, retainedTypes: !11, globals: !15, imports: !11)
 !14 = !DIFile(filename: "b.cpp", directory: "/tmp/dbginfo")
-!15 = !{!16}
-!16 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "y", line: 4, isLocal: false, isDefinition: true, scope: null, file: !6, type: !12))
-!17 = !{i32 2, !"Dwarf Version", i32 4}
-!18 = !{i32 1, !"Debug Info Version", i32 3}
-!19 = !{!"clang version 3.5.0 "}
-!20 = !DILocalVariable(name: "i", line: 1, arg: 1, scope: !4, file: !6, type: !9)
-!21 = !DILocation(line: 1, scope: !4)
-!22 = !DILocation(line: 2, scope: !4)
-!24 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !13, scopeLine: 1, file: !5, scope: !6, type: !7, variables: !2)
+!15 = !{!7}
+!16 = !{i32 2, !"Dwarf Version", i32 4}
+!17 = !{i32 1, !"Debug Info Version", i32 3}
+!18 = !{!"clang version 3.5.0 "}
+!19 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", scope: !2, file: !2, line: 1, type: !4, isLocal: false, isDefinition: true, scopeLine: 1, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !9, variables: !11)
+!20 = !DILocalVariable(name: "i", arg: 1, scope: !19, file: !2, line: 1, type: !6)
+!21 = !DIExpression()
+!22 = !DILocation(line: 1, scope: !19)
+!23 = !DILocation(line: 2, scope: !19)
+

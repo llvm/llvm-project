@@ -21,8 +21,9 @@
 # CHECK: LDRWui %x0, 0
 # CHECK: LDRWui %x0, 1
 # CHECK: STRWui %w1, %x0, 2
-name:            load_imp-def
-body:             |
+name: load_imp-def
+tracksRegLiveness: true
+body: |
   bb.0.entry:
     liveins: %w1, %x0
     %w8 = LDRWui %x0, 1, implicit-def %x8  :: (load 4 from %ir.0)

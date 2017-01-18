@@ -22,32 +22,27 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
+#include <memory>
+#include <vector>
 
 namespace llvm {
 
-class Module;
+class AllocaInst;
+class BasicBlock;
+class CallInst;
+class CallGraph;
+class DominatorTree;
 class Function;
 class Instruction;
-class Pass;
-class LPPassManager;
-class BasicBlock;
-class Value;
-class CallInst;
 class InvokeInst;
-class ReturnInst;
-class CallSite;
-class Trace;
-class CallGraph;
-class DataLayout;
 class Loop;
 class LoopInfo;
-class AllocaInst;
-class AssumptionCacheTracker;
-class DominatorTree;
+class Module;
+class ReturnInst;
 
 /// Return an exact copy of the specified module
 ///
@@ -67,20 +62,20 @@ CloneModule(const Module *M, ValueToValueMapTy &VMap,
 struct ClonedCodeInfo {
   /// ContainsCalls - This is set to true if the cloned code contains a normal
   /// call instruction.
-  bool ContainsCalls;
+  bool ContainsCalls = false;
 
   /// ContainsDynamicAllocas - This is set to true if the cloned code contains
   /// a 'dynamic' alloca.  Dynamic allocas are allocas that are either not in
   /// the entry block or they are in the entry block but are not a constant
   /// size.
-  bool ContainsDynamicAllocas;
+  bool ContainsDynamicAllocas = false;
 
   /// All cloned call sites that have operand bundles attached are appended to
   /// this vector.  This vector may contain nulls or undefs if some of the
   /// originally inserted callsites were DCE'ed after they were cloned.
   std::vector<WeakVH> OperandBundleCallSites;
 
-  ClonedCodeInfo() : ContainsCalls(false), ContainsDynamicAllocas(false) {}
+  ClonedCodeInfo() = default;
 };
 
 /// CloneBasicBlock - Return a copy of the specified basic block, but without
@@ -245,6 +240,6 @@ Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
 void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
                                ValueToValueMapTy &VMap);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_CLONING_H

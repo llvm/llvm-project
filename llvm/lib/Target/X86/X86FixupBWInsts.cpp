@@ -226,7 +226,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
-    MIB.addOperand(MI->getOperand(i));
+    MIB.add(MI->getOperand(i));
 
   MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
 
@@ -264,7 +264,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   // Drop imp-defs/uses that would be redundant with the new def/use.
   for (auto &Op : MI->implicit_operands())
     if (Op.getReg() != (Op.isDef() ? NewDestReg : NewSrcReg))
-      MIB.addOperand(Op);
+      MIB.add(Op);
 
   return MIB;
 }

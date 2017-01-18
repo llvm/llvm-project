@@ -1572,6 +1572,13 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 
   // Assign value numbers to the new instructions.
   for (Instruction *I : NewInsts) {
+    // Instructions that have been inserted in predecessor(s) to materialize
+    // the load address do not retain their original debug locations. Doing
+    // so could lead to confusing (but correct) source attributions.
+    // FIXME: How do we retain source locations without causing poor debugging
+    // behavior?
+    I->setDebugLoc(DebugLoc());
+
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into
     // ordering issues.  If a block hasn't been processed yet, we would be
@@ -1601,8 +1608,11 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     if (auto *RangeMD = LI->getMetadata(LLVMContext::MD_range))
       NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
 
-    // Transfer DebugLoc.
-    NewLoad->setDebugLoc(LI->getDebugLoc());
+    // We do not propagate the old load's debug location, because the new
+    // load now lives in a different BB, and we want to avoid a jumpy line
+    // table.
+    // FIXME: How do we retain source locations without causing poor debugging
+    // behavior?
 
     // Add the newly created load.
     ValuesPerBlock.push_back(AvailableValueInBlock::get(UnavailablePred,

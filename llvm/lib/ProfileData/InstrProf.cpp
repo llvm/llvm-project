@@ -811,4 +811,47 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
 
   return true;
 }
+
+// Check if INSTR_PROF_RAW_VERSION_VAR is defined.
+bool isIRPGOFlagSet(const Module *M) {
+  auto IRInstrVar =
+      M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  if (!IRInstrVar || IRInstrVar->isDeclaration() ||
+      IRInstrVar->hasLocalLinkage())
+    return false;
+
+  // Check if the flag is set.
+  if (!IRInstrVar->hasInitializer())
+    return false;
+
+  const Constant *InitVal = IRInstrVar->getInitializer();
+  if (!InitVal)
+    return false;
+
+  return (dyn_cast<ConstantInt>(InitVal)->getZExtValue() &
+          VARIANT_MASK_IR_PROF) != 0;
+}
+
+// Check if we can safely rename this Comdat function.
+bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
+  if (F.getName().empty())
+    return false;
+  if (!needsComdatForCounter(F, *(F.getParent())))
+    return false;
+  // Unsafe to rename the address-taken function (which can be used in
+  // function comparison).
+  if (CheckAddressTaken && F.hasAddressTaken())
+    return false;
+  // Only safe to do if this function may be discarded if it is not used
+  // in the compilation unit.
+  if (!GlobalValue::isDiscardableIfUnused(F.getLinkage()))
+    return false;
+
+  // For AvailableExternallyLinkage functions.
+  if (!F.hasComdat()) {
+    assert(F.getLinkage() == GlobalValue::AvailableExternallyLinkage);
+    return true;
+  }
+  return true;
+}
 } // end namespace llvm

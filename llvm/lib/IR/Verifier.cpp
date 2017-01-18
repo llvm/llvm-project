@@ -961,6 +961,8 @@ void Verifier::visitDISubroutineType(const DISubroutineType &N) {
 
 void Verifier::visitDIFile(const DIFile &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_file_type, "invalid tag", &N);
+  AssertDI((N.getChecksumKind() != DIFile::CSK_None ||
+            N.getChecksum().empty()), "invalid checksum kind", &N);
 }
 
 void Verifier::visitDICompileUnit(const DICompileUnit &N) {
@@ -3950,6 +3952,32 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            CS);
     break;
   }
+  case Intrinsic::memcpy_element_atomic: {
+    ConstantInt *ElementSizeCI = dyn_cast<ConstantInt>(CS.getArgOperand(3));
+    Assert(ElementSizeCI, "element size of the element-wise atomic memory "
+                          "intrinsic must be a constant int",
+           CS);
+    const APInt &ElementSizeVal = ElementSizeCI->getValue();
+    Assert(ElementSizeVal.isPowerOf2(),
+           "element size of the element-wise atomic memory intrinsic "
+           "must be a power of 2",
+           CS);
+
+    auto IsValidAlignment = [&](uint64_t Alignment) {
+      return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
+    };
+    
+    uint64_t DstAlignment = CS.getParamAlignment(1),
+             SrcAlignment = CS.getParamAlignment(2);
+
+    Assert(IsValidAlignment(DstAlignment),
+           "incorrect alignment of the destination argument",
+           CS);
+    Assert(IsValidAlignment(SrcAlignment),
+           "incorrect alignment of the source argument",
+           CS);
+    break;
+  }
   case Intrinsic::gcroot:
   case Intrinsic::gcwrite:
   case Intrinsic::gcread:
@@ -4344,7 +4372,8 @@ void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
     return;
 
   // Nothing to do if this isn't a bit piece expression.
-  if (!E->isFragment())
+  auto Fragment = E->getFragmentInfo();
+  if (!Fragment)
     return;
 
   // The frontend helps out GDB by emitting the members of local anonymous
@@ -4362,8 +4391,8 @@ void Verifier::verifyFragmentExpression(const DbgInfoIntrinsic &I) {
   if (!VarSize)
     return;
 
-  unsigned FragSize = E->getFragmentSizeInBits();
-  unsigned FragOffset = E->getFragmentOffsetInBits();
+  unsigned FragSize = Fragment->SizeInBits;
+  unsigned FragOffset = Fragment->OffsetInBits;
   AssertDI(FragSize + FragOffset <= VarSize,
          "fragment is larger than or outside of variable", &I, V, E);
   AssertDI(FragSize != VarSize, "fragment covers entire variable", &I, V, E);
@@ -4504,7 +4533,7 @@ template <typename... Tys> void TBAAVerifier::CheckFailed(Tys &&... Args) {
 /// TBAA scheme.  This means \p BaseNode is either a scalar node, or a
 /// struct-type node describing an aggregate data structure (like a struct).
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNode(Instruction &I, MDNode *BaseNode) {
+TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode) {
   if (BaseNode->getNumOperands() < 2) {
     CheckFailed("Base nodes must have at least two operands", &I, BaseNode);
     return {true, ~0u};
@@ -4522,30 +4551,24 @@ TBAAVerifier::verifyTBAABaseNode(Instruction &I, MDNode *BaseNode) {
 }
 
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, MDNode *BaseNode) {
+TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode) {
   const TBAAVerifier::TBAABaseNodeSummary InvalidNode = {true, ~0u};
 
   if (BaseNode->getNumOperands() == 2) {
-    // This is a scalar base node.
-    if (!BaseNode->getOperand(0) || !BaseNode->getOperand(1)) {
-      CheckFailed("Null operands in scalar type nodes!", &I, BaseNode);
-      return InvalidNode;
-    }
-    if (!isa<MDNode>(BaseNode->getOperand(1))) {
-      CheckFailed("Invalid parent operand in scalar TBAA node", &I, BaseNode);
-      return InvalidNode;
-    }
-    if (!isa<MDString>(BaseNode->getOperand(0))) {
-      CheckFailed("Invalid name operand in scalar TBAA node", &I, BaseNode);
-      return InvalidNode;
-    }
-
     // Scalar nodes can only be accessed at offset 0.
-    return {false, 0};
+    return isValidScalarTBAANode(BaseNode)
+               ? TBAAVerifier::TBAABaseNodeSummary({false, 0})
+               : InvalidNode;
   }
 
   if (BaseNode->getNumOperands() % 2 != 1) {
     CheckFailed("Struct tag nodes must have an odd number of operands!",
+                BaseNode);
+    return InvalidNode;
+  }
+
+  if (!isa<MDString>(BaseNode->getOperand(0))) {
+    CheckFailed("Struct tag nodes have a string as their first operand",
                 BaseNode);
     return InvalidNode;
   }
@@ -4611,24 +4634,35 @@ static bool IsRootTBAANode(const MDNode *MD) {
 
 static bool IsScalarTBAANodeImpl(const MDNode *MD,
                                  SmallPtrSetImpl<const MDNode *> &Visited) {
-  if (MD->getNumOperands() == 2)
-    return true;
-
-  if (MD->getNumOperands() != 3)
+  if (MD->getNumOperands() != 2 && MD->getNumOperands() != 3)
     return false;
 
-  auto *Offset = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
-  if (!(Offset && Offset->isZero() && isa<MDString>(MD->getOperand(0))))
+  if (!isa<MDString>(MD->getOperand(0)))
     return false;
 
-  auto *Parent = dyn_cast<MDNode>(MD->getOperand(1));
-  return Visited.insert(Parent).second &&
+  if (MD->getNumOperands() == 3) {
+    auto *Offset = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
+    if (!(Offset && Offset->isZero() && isa<MDString>(MD->getOperand(0))))
+      return false;
+  }
+
+  auto *Parent = dyn_cast_or_null<MDNode>(MD->getOperand(1));
+  return Parent && Visited.insert(Parent).second &&
          (IsRootTBAANode(Parent) || IsScalarTBAANodeImpl(Parent, Visited));
 }
 
-static bool IsScalarTBAANode(const MDNode *MD) {
+bool TBAAVerifier::isValidScalarTBAANode(const MDNode *MD) {
+  auto ResultIt = TBAAScalarNodes.find(MD);
+  if (ResultIt != TBAAScalarNodes.end())
+    return ResultIt->second;
+
   SmallPtrSet<const MDNode *, 4> Visited;
-  return IsScalarTBAANodeImpl(MD, Visited);
+  bool Result = IsScalarTBAANodeImpl(MD, Visited);
+  auto InsertResult = TBAAScalarNodes.insert({MD, Result});
+  (void)InsertResult;
+  assert(InsertResult.second && "Just checked!");
+
+  return Result;
 }
 
 /// Returns the field node at the offset \p Offset in \p BaseNode.  Update \p
@@ -4636,7 +4670,7 @@ static bool IsScalarTBAANode(const MDNode *MD) {
 ///
 /// We assume we've okayed \p BaseNode via \c verifyTBAABaseNode.
 MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
-                                                   MDNode *BaseNode,
+                                                   const MDNode *BaseNode,
                                                    APInt &Offset) {
   assert(BaseNode->getNumOperands() >= 2 && "Invalid base node!");
 
@@ -4670,10 +4704,10 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
   return cast<MDNode>(BaseNode->getOperand(BaseNode->getNumOperands() - 2));
 }
 
-bool TBAAVerifier::visitTBAAMetadata(Instruction &I, MDNode *MD) {
+bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   AssertTBAA(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
-             isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
-             isa<AtomicCmpXchgInst>(I),
+                 isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
+                 isa<AtomicCmpXchgInst>(I),
              "TBAA is only for loads, stores and calls!", &I);
 
   bool IsStructPathTBAA =
@@ -4706,8 +4740,9 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, MDNode *MD) {
              "should be non-null and point to Metadata nodes",
              &I, MD, BaseNode, AccessType);
 
-  AssertTBAA(IsScalarTBAANode(AccessType), "Access type node must be scalar",
-             &I, MD, AccessType);
+  AssertTBAA(isValidScalarTBAANode(AccessType),
+             "Access type node must be a valid scalar type", &I, MD,
+             AccessType);
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));
   AssertTBAA(OffsetCI, "Offset must be constant integer", &I, MD);
@@ -4735,7 +4770,7 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, MDNode *MD) {
 
     SeenAccessTypeInPath |= BaseNode == AccessType;
 
-    if (IsScalarTBAANode(BaseNode) || BaseNode == AccessType)
+    if (isValidScalarTBAANode(BaseNode) || BaseNode == AccessType)
       AssertTBAA(Offset == 0, "Offset not zero at the point of scalar access",
                  &I, MD, &Offset);
 

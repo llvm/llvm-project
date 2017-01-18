@@ -8,15 +8,17 @@ add_lld_library(lldDriver
   ADDITIONAL_HEADER_DIRS
   ${LLD_INCLUDE_DIR}/lld/Driver
 
+  LINK_COMPONENTS
+    Object
+    Option
+    Support
+
   LINK_LIBS
     lldConfig
     lldMachO
     lldCore
     lldReaderWriter
     lldYAML
-    LLVMObject
-    LLVMOption
-    LLVMSupport
   )
 
 add_dependencies(lldDriver DriverOptionsTableGen)

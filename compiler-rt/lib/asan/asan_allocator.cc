@@ -207,6 +207,7 @@ QuarantineCache *GetQuarantineCache(AsanThreadLocalMallocStorage *ms) {
 
 void AllocatorOptions::SetFrom(const Flags *f, const CommonFlags *cf) {
   quarantine_size_mb = f->quarantine_size_mb;
+  thread_local_quarantine_size_kb = f->thread_local_quarantine_size_kb;
   min_redzone = f->redzone;
   max_redzone = f->max_redzone;
   may_return_null = cf->allocator_may_return_null;
@@ -216,6 +217,7 @@ void AllocatorOptions::SetFrom(const Flags *f, const CommonFlags *cf) {
 
 void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
   f->quarantine_size_mb = quarantine_size_mb;
+  f->thread_local_quarantine_size_kb = thread_local_quarantine_size_kb;
   f->redzone = min_redzone;
   f->max_redzone = max_redzone;
   cf->allocator_may_return_null = may_return_null;
@@ -226,13 +228,6 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
 struct Allocator {
   static const uptr kMaxAllowedMallocSize =
       FIRST_32_SECOND_64(3UL << 30, 1ULL << 40);
-  static const uptr kMaxThreadLocalQuarantine =
-      // It is not advised to go lower than 64Kb, otherwise quarantine batches
-      // pushed from thread local quarantine to global one will create too much
-      // overhead. One quarantine batch size is 8Kb and it  holds up to 1021
-      // chunk, which amounts to 1/8 memory overhead per batch when thread local
-      // quarantine is set to 64Kb.
-      (ASAN_LOW_MEMORY) ? 1 << 16 : FIRST_32_SECOND_64(1 << 18, 1 << 20);
 
   AsanAllocator allocator;
   AsanQuarantine quarantine;
@@ -261,7 +256,7 @@ struct Allocator {
   void SharedInitCode(const AllocatorOptions &options) {
     CheckOptions(options);
     quarantine.Init((uptr)options.quarantine_size_mb << 20,
-                    kMaxThreadLocalQuarantine);
+                    (uptr)options.thread_local_quarantine_size_kb << 10);
     atomic_store(&alloc_dealloc_mismatch, options.alloc_dealloc_mismatch,
                  memory_order_release);
     atomic_store(&min_redzone, options.min_redzone, memory_order_release);
@@ -274,24 +269,24 @@ struct Allocator {
   }
 
   void RePoisonChunk(uptr chunk) {
-    // This could a user-facing chunk (with redzones), or some internal
+    // This could be a user-facing chunk (with redzones), or some internal
     // housekeeping chunk, like TransferBatch. Start by assuming the former.
     AsanChunk *ac = GetAsanChunk((void *)chunk);
     uptr allocated_size = allocator.GetActuallyAllocatedSize((void *)ac);
     uptr beg = ac->Beg();
     uptr end = ac->Beg() + ac->UsedSize(true);
     uptr chunk_end = chunk + allocated_size;
-    if (chunk < beg && beg < end && end <= chunk_end) {
-      // Looks like a valid AsanChunk. Or maybe not. Be conservative and only
-      // poison the redzones.
+    if (chunk < beg && beg < end && end <= chunk_end &&
+        ac->chunk_state == CHUNK_ALLOCATED) {
+      // Looks like a valid AsanChunk in use, poison redzones only.
       PoisonShadow(chunk, beg - chunk, kAsanHeapLeftRedzoneMagic);
       uptr end_aligned_down = RoundDownTo(end, SHADOW_GRANULARITY);
       FastPoisonShadowPartialRightRedzone(
           end_aligned_down, end - end_aligned_down,
           chunk_end - end_aligned_down, kAsanHeapLeftRedzoneMagic);
     } else {
-      // This can not be an AsanChunk. Poison everything. It may be reused as
-      // AsanChunk later.
+      // This is either not an AsanChunk or freed or quarantined AsanChunk.
+      // In either case, poison everything.
       PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
     }
   }
@@ -315,6 +310,7 @@ struct Allocator {
 
   void GetOptions(AllocatorOptions *options) const {
     options->quarantine_size_mb = quarantine.GetSize() >> 20;
+    options->thread_local_quarantine_size_kb = quarantine.GetCacheSize() >> 10;
     options->min_redzone = atomic_load(&min_redzone, memory_order_acquire);
     options->max_redzone = atomic_load(&max_redzone, memory_order_acquire);
     options->may_return_null = allocator.MayReturnNull();
@@ -685,6 +681,7 @@ struct Allocator {
 
   void PrintStats() {
     allocator.PrintStats();
+    quarantine.PrintStats();
   }
 
   void ForceLock() {
@@ -704,18 +701,21 @@ static AsanAllocator &get_allocator() {
   return instance.allocator;
 }
 
-bool AsanChunkView::IsValid() {
+bool AsanChunkView::IsValid() const {
   return chunk_ && chunk_->chunk_state != CHUNK_AVAILABLE;
 }
-bool AsanChunkView::IsAllocated() {
+bool AsanChunkView::IsAllocated() const {
   return chunk_ && chunk_->chunk_state == CHUNK_ALLOCATED;
 }
-uptr AsanChunkView::Beg() { return chunk_->Beg(); }
-uptr AsanChunkView::End() { return Beg() + UsedSize(); }
-uptr AsanChunkView::UsedSize() { return chunk_->UsedSize(); }
-uptr AsanChunkView::AllocTid() { return chunk_->alloc_tid; }
-uptr AsanChunkView::FreeTid() { return chunk_->free_tid; }
-AllocType AsanChunkView::GetAllocType() {
+bool AsanChunkView::IsQuarantined() const {
+  return chunk_ && chunk_->chunk_state == CHUNK_QUARANTINE;
+}
+uptr AsanChunkView::Beg() const { return chunk_->Beg(); }
+uptr AsanChunkView::End() const { return Beg() + UsedSize(); }
+uptr AsanChunkView::UsedSize() const { return chunk_->UsedSize(); }
+uptr AsanChunkView::AllocTid() const { return chunk_->alloc_tid; }
+uptr AsanChunkView::FreeTid() const { return chunk_->free_tid; }
+AllocType AsanChunkView::GetAllocType() const {
   return (AllocType)chunk_->alloc_type;
 }
 
@@ -726,14 +726,14 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
-u32 AsanChunkView::GetAllocStackId() { return chunk_->alloc_context_id; }
-u32 AsanChunkView::GetFreeStackId() { return chunk_->free_context_id; }
+u32 AsanChunkView::GetAllocStackId() const { return chunk_->alloc_context_id; }
+u32 AsanChunkView::GetFreeStackId() const { return chunk_->free_context_id; }
 
-StackTrace AsanChunkView::GetAllocStack() {
+StackTrace AsanChunkView::GetAllocStack() const {
   return GetStackTraceFromId(GetAllocStackId());
 }
 
-StackTrace AsanChunkView::GetFreeStack() {
+StackTrace AsanChunkView::GetFreeStack() const {
   return GetStackTraceFromId(GetFreeStackId());
 }
 

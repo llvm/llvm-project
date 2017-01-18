@@ -323,24 +323,22 @@ define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpmuludq %xmm2, %xmm3, %xmm4
+; CHECK-NEXT:    vpsrlq $32, %xmm3, %xmm4
+; CHECK-NEXT:    vpmuludq %xmm2, %xmm4, %xmm4
 ; CHECK-NEXT:    vpsrlq $32, %xmm2, %xmm5
 ; CHECK-NEXT:    vpmuludq %xmm5, %xmm3, %xmm5
-; CHECK-NEXT:    vpsllq $32, %xmm5, %xmm5
-; CHECK-NEXT:    vpaddq %xmm5, %xmm4, %xmm4
-; CHECK-NEXT:    vpsrlq $32, %xmm3, %xmm3
+; CHECK-NEXT:    vpaddq %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpsllq $32, %xmm4, %xmm4
 ; CHECK-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpsllq $32, %xmm2, %xmm2
-; CHECK-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vpmuludq %xmm1, %xmm0, %xmm3
+; CHECK-NEXT:    vpaddq %xmm4, %xmm2, %xmm2
+; CHECK-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; CHECK-NEXT:    vpmuludq %xmm1, %xmm3, %xmm3
 ; CHECK-NEXT:    vpsrlq $32, %xmm1, %xmm4
 ; CHECK-NEXT:    vpmuludq %xmm4, %xmm0, %xmm4
-; CHECK-NEXT:    vpsllq $32, %xmm4, %xmm4
-; CHECK-NEXT:    vpaddq %xmm4, %xmm3, %xmm3
-; CHECK-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpsllq $32, %xmm3, %xmm3
 ; CHECK-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpsllq $32, %xmm0, %xmm0
-; CHECK-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
+; CHECK-NEXT:    vpaddq %xmm3, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %x = mul <4 x i64> %i, %j

@@ -113,7 +113,7 @@ void __throw_bad_any_cast()
 }
 
 // Forward declarations
-class _LIBCPP_TYPE_VIS_ONLY any;
+class _LIBCPP_TEMPLATE_VIS any;
 
 template <class _ValueType>
 _LIBCPP_INLINE_VISIBILITY
@@ -148,7 +148,7 @@ namespace __any_imp
   template <class _Tp> struct _LargeHandler;
 
   template <class _Tp>
-  struct  _LIBCPP_TYPE_VIS_ONLY __unique_typeinfo { static constexpr int __id = 0; };
+  struct  _LIBCPP_TEMPLATE_VIS __unique_typeinfo { static constexpr int __id = 0; };
   template <class _Tp> constexpr int __unique_typeinfo<_Tp>::__id;
 
   template <class _Tp>
@@ -176,7 +176,7 @@ namespace __any_imp
 
 } // namespace __any_imp
 
-class _LIBCPP_TYPE_VIS_ONLY any
+class _LIBCPP_TEMPLATE_VIS any
 {
 public:
   // construct/destruct
@@ -338,7 +338,7 @@ private:
 namespace __any_imp
 {
   template <class _Tp>
-  struct _LIBCPP_TYPE_VIS_ONLY _SmallHandler
+  struct _LIBCPP_TEMPLATE_VIS _SmallHandler
   {
      _LIBCPP_INLINE_VISIBILITY
      static void* __handle(_Action __act, any const * __this, any * __other,
@@ -412,7 +412,7 @@ namespace __any_imp
   };
 
   template <class _Tp>
-  struct _LIBCPP_TYPE_VIS_ONLY _LargeHandler
+  struct _LIBCPP_TEMPLATE_VIS _LargeHandler
   {
     _LIBCPP_INLINE_VISIBILITY
     static void* __handle(_Action __act, any const * __this,

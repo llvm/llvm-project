@@ -165,11 +165,9 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  PA.preserve<TargetLibraryAnalysis>();
   return PA;
 }
 

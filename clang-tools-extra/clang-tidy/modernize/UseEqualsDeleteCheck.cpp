@@ -22,6 +22,9 @@ static const char SpecialFunction[] = "SpecialFunction";
 static const char DeletedNotPublic[] = "DeletedNotPublic";
 
 void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto PrivateSpecialFn = cxxMethodDecl(
       isPrivate(),
       anyOf(cxxConstructorDecl(anyOf(isDefaultConstructor(),

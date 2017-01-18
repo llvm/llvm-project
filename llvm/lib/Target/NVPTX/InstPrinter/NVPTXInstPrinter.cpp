@@ -61,6 +61,9 @@ void NVPTXInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   case 6:
     OS << "%fd";
     break;
+  case 7:
+    OS << "%h";
+    break;
   }
 
   unsigned VReg = RegNo & 0x0FFFFFFF;
@@ -247,8 +250,12 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
         O << "s";
       else if (Imm == NVPTX::PTXLdStInstCode::Unsigned)
         O << "u";
-      else
+      else if (Imm == NVPTX::PTXLdStInstCode::Untyped)
+        O << "b";
+      else if (Imm == NVPTX::PTXLdStInstCode::Float)
         O << "f";
+      else
+        llvm_unreachable("Unknown register type");
     } else if (!strcmp(Modifier, "vec")) {
       if (Imm == NVPTX::PTXLdStInstCode::V2)
         O << ".v2";

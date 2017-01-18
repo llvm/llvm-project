@@ -289,7 +289,7 @@ template <class _Tp> constexpr add_const_t<_Tp>& as_const(_Tp& __t) noexcept { r
 template <class _Tp>                        void as_const(const _Tp&&) = delete;
 #endif
 
-struct _LIBCPP_TYPE_VIS_ONLY piecewise_construct_t { };
+struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { };
 #if defined(_LIBCPP_HAS_NO_CONSTEXPR) || defined(_LIBCPP_BUILDING_UTILITY)
 extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_t();
 #else
@@ -306,7 +306,7 @@ struct __non_trivially_copyable_base {
 #endif
 
 template <class _T1, class _T2>
-struct _LIBCPP_TYPE_VIS_ONLY pair
+struct _LIBCPP_TEMPLATE_VIS pair
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
 : private __non_trivially_copyable_base
 #endif
@@ -648,18 +648,18 @@ make_pair(_T1 __x, _T2 __y)
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _T1, class _T2>
-  class _LIBCPP_TYPE_VIS_ONLY tuple_size<pair<_T1, _T2> >
+  class _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
     : public integral_constant<size_t, 2> {};
 
 template <class _T1, class _T2>
-class _LIBCPP_TYPE_VIS_ONLY tuple_element<0, pair<_T1, _T2> >
+class _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> >
 {
 public:
     typedef _T1 type;
 };
 
 template <class _T1, class _T2>
-class _LIBCPP_TYPE_VIS_ONLY tuple_element<1, pair<_T1, _T2> >
+class _LIBCPP_TEMPLATE_VIS tuple_element<1, pair<_T1, _T2> >
 {
 public:
     typedef _T2 type;
@@ -829,7 +829,7 @@ constexpr _T1 const && get(pair<_T2, _T1> const&& __p) _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
 
 template<class _Tp, _Tp... _Ip>
-struct _LIBCPP_TYPE_VIS_ONLY integer_sequence
+struct _LIBCPP_TEMPLATE_VIS integer_sequence
 {
     typedef _Tp value_type;
     static_assert( is_integral<_Tp>::value,

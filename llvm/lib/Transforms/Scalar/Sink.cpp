@@ -262,9 +262,8 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!iterativelySinkInstructions(F, DT, LI, AA))
     return PreservedAnalyses::all();
 
-  auto PA = PreservedAnalyses();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<LoopAnalysis>();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 

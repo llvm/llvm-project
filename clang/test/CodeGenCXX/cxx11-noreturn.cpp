@@ -7,4 +7,4 @@ int g();
   while (g()) {}
 }
 
-// CHECK: attributes [[NR]] = { noreturn nounwind{{.*}} }
+// CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }

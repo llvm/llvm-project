@@ -180,4 +180,4 @@ void bar_long_long(void) {
 // CHECK: %[[VAR77:[A-Za-z0-9.]+]] = load i64, i64* %[[VAR76]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call i64 @foo_long_long(i64 %[[VAR75]], i64 %[[VAR77]])
 
-// CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }

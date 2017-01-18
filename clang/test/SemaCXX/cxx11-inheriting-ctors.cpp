@@ -56,9 +56,9 @@ namespace InvalidConstruction {
 }
 
 namespace ExplicitConv {
-  struct B {}; // expected-note 2{{candidate}}
+  struct B {};
   struct D : B { // expected-note 3{{candidate}}
-    using B::B; // expected-note 2{{inherited}}
+    using B::B;
   };
   struct X { explicit operator B(); } x;
   struct Y { explicit operator D(); } y;
@@ -68,19 +68,40 @@ namespace ExplicitConv {
 }
 
 namespace NestedListInit {
-  struct B { B(); } b; // expected-note 5{{candidate}}
-  struct D : B { // expected-note 3{{candidate}}
-    using B::B; // expected-note 2{{inherited}}
+  struct B { B(); } b; // expected-note 3{{candidate}}
+  struct D : B { // expected-note 14{{not viable}}
+    using B::B;
   };
   // This is a bit weird. We're allowed one pair of braces for overload
   // resolution, and one more pair of braces due to [over.ics.list]/2.
   B b1 = {b};
   B b2 = {{b}};
   B b3 = {{{b}}}; // expected-error {{no match}}
-  // This is the same, but we get one call to D's version of B::B(const B&)
-  // before the two permitted calls to D::D(D&&).
-  D d1 = {b};
-  D d2 = {{b}};
-  D d3 = {{{b}}};
+  // Per a proposed defect resolution, we don't get to call
+  // D's version of B::B(const B&) here.
+  D d0 = b; // expected-error {{no viable conversion}}
+  D d1 = {b}; // expected-error {{no match}}
+  D d2 = {{b}}; // expected-error {{no match}}
+  D d3 = {{{b}}}; // expected-error {{no match}}
   D d4 = {{{{b}}}}; // expected-error {{no match}}
+}
+
+namespace PR31606 {
+  // PR31606: as part of a proposed defect resolution, do not consider
+  // inherited constructors that would be copy constructors for any class
+  // between the declaring class and the constructed class (inclusive).
+  struct Base {};
+
+  struct A : Base {
+    using Base::Base;
+    bool operator==(A const &) const; // expected-note {{no known conversion from 'PR31606::B' to 'const PR31606::A' for 1st argument}}
+  };
+
+  struct B : Base {
+    using Base::Base;
+  };
+
+  bool a = A{} == A{};
+  // Note, we do *not* allow operator=='s argument to use the inherited A::A(Base&&) constructor to construct from B{}.
+  bool b = A{} == B{}; // expected-error {{invalid operands}}
 }

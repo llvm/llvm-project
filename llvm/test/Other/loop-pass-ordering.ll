@@ -8,11 +8,12 @@
 ;      /      \        \
 ; loop.0.0  loop.0.1  loop.1.0
 ;
-; CHECK: Running pass: NoOpLoopPass on loop.1.0
-; CHECK: Running pass: NoOpLoopPass on loop.1
-; CHECK: Running pass: NoOpLoopPass on loop.0.0
-; CHECK: Running pass: NoOpLoopPass on loop.0.1
-; CHECK: Running pass: NoOpLoopPass on loop.0
+; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.0.0
+; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.0.1
+; CHECK: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop.0
+; CHECK: Running pass: NoOpLoopPass on Loop at depth 2 containing: %loop.1.0
+; CHECK: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop.1
+
 define void @f() {
 entry:
   br label %loop.0

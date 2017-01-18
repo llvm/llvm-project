@@ -36,8 +36,8 @@ append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros ASAN_U
 
 # This will ensure the target linker is used
 # during cross compilation
-set(ASAN_UNITTEST_COMMON_LINKFLAGS
-  ${COMPILER_RT_UNITTEST_LINKFLAGS})
+set(ASAN_UNITTEST_COMMON_LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 
 # -gline-tables-only must be enough for ASan, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
@@ -48,7 +48,7 @@ endif()
 if(MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gcodeview)
 endif()
-list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -g)
+list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -g)
 
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
@@ -58,7 +58,12 @@ list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
 
 if(APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS ${DARWIN_osx_CFLAGS})
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS ${DARWIN_osx_LINKFLAGS})
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
+
+  add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS})
 endif()
 
 if(MSVC)
@@ -77,41 +82,41 @@ if(CAN_TARGET_x86_64 OR CAN_TARGET_i386)
 endif()
 
 if(NOT MSVC)
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS --driver-mode=g++)
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS --driver-mode=g++)
 endif()
 
 # x86_64 FreeBSD 9.2 additionally requires libc++ to build the tests.
 if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS "-lc++")
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS "-lc++")
 endif()
 
 # Unit tests on Mac depend on Foundation.
 if(APPLE)
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -framework Foundation)
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -framework Foundation)
 endif()
 if(ANDROID)
-  list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -pie)
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -pie)
 endif()
 
-set(ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS
-  ${ASAN_UNITTEST_COMMON_LINKFLAGS})
-list(APPEND ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS -fsanitize=address)
+set(ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS
+  ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
+list(APPEND ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS -fsanitize=address)
 
-set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS
-  ${ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS}
+set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS
+  ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS}
   -shared-libasan)
 
 set(ASAN_UNITTEST_INSTRUMENTED_LIBS)
 # NDK r10 requires -latomic almost always.
 append_list_if(ANDROID atomic ASAN_UNITTEST_INSTRUMENTED_LIBS)
 
-set(ASAN_UNITTEST_NOINST_LINKFLAGS ${ASAN_UNITTEST_COMMON_LINKFLAGS})
+set(ASAN_UNITTEST_NOINST_LINK_FLAGS ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
 if(NOT APPLE)
-  append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINKFLAGS)
-  append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINKFLAGS)
-  append_list_if(COMPILER_RT_HAS_LIBRT -lrt ASAN_UNITTEST_NOINST_LINKFLAGS)
-  append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_UNITTEST_NOINST_LINKFLAGS)
-  append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBRT -lrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS)
 endif()
 
 # TODO(eugenis): move all -l flags above to _LIBS?
@@ -143,7 +148,7 @@ endmacro()
 # Link ASan unit test for a given architecture from a set
 # of objects in with given linker flags.
 macro(add_asan_test test_suite test_name arch kind)
-  cmake_parse_arguments(TEST "WITH_TEST_RUNTIME" "" "OBJECTS;LINKFLAGS;SUBDIR" ${ARGN})
+  cmake_parse_arguments(TEST "WITH_TEST_RUNTIME" "" "OBJECTS;LINK_FLAGS;SUBDIR" ${ARGN})
   get_target_flags_for_arch(${arch} TARGET_LINK_FLAGS)
   set(TEST_DEPS ${TEST_OBJECTS})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
@@ -167,7 +172,7 @@ macro(add_asan_test test_suite test_name arch kind)
                        SUBDIR ${TEST_SUBDIR}
                        OBJECTS ${TEST_OBJECTS}
                        DEPS ${TEST_DEPS}
-                       LINK_FLAGS ${TEST_LINKFLAGS}
+                       LINK_FLAGS ${TEST_LINK_FLAGS}
                                   ${TARGET_LINK_FLAGS})
 endmacro()
 
@@ -232,8 +237,8 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
     endforeach()
     # Clang links the static CRT by default. Override that to use the dynamic
     # CRT.
-    set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS
-      ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS}
+    set(ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS
+      ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
       -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames)
   else()
     set(ASAN_INST_DYNAMIC_TEST_OBJECTS ${ASAN_INST_TEST_OBJECTS})
@@ -251,7 +256,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Test"
                 ${arch} ${kind} SUBDIR "default"
                 OBJECTS ${ASAN_INST_TEST_OBJECTS}
-                LINKFLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS})
+                LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
   if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
     # Create the 'dynamic' folder where ASAN tests are produced.
     if(CMAKE_CONFIGURATION_TYPES)
@@ -265,7 +270,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
     add_asan_test(AsanDynamicUnitTests "Asan-${arch}${kind}-Dynamic-Test"
                   ${arch} ${kind} SUBDIR "dynamic"
                   OBJECTS ${ASAN_INST_DYNAMIC_TEST_OBJECTS}
-                  LINKFLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINKFLAGS})
+                  LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS})
   endif()
 
   # Add static ASan runtime that will be linked with uninstrumented tests.
@@ -302,7 +307,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Noinst-Test"
                 ${arch} ${kind} SUBDIR "default"
                 OBJECTS ${ASAN_NOINST_TEST_OBJECTS}
-                LINKFLAGS ${ASAN_UNITTEST_NOINST_LINKFLAGS}
+                LINK_FLAGS ${ASAN_UNITTEST_NOINST_LINK_FLAGS}
                 WITH_TEST_RUNTIME)
 
   # Benchmarks.
@@ -314,7 +319,7 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   add_asan_test(AsanBenchmarks "Asan-${arch}${kind}-Benchmark"
                 ${arch} ${kind} SUBDIR "default"
                 OBJECTS ${ASAN_BENCHMARKS_OBJECTS}
-                LINKFLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS})
+                LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
@@ -342,7 +347,7 @@ if(ANDROID)
       ${COMPILER_RT_GTEST_SOURCE}
       ${ASAN_NOINST_TEST_SOURCES})
     set_target_compile_flags(AsanNoinstTest ${ASAN_UNITTEST_COMMON_CFLAGS})
-    set_target_link_flags(AsanNoinstTest ${ASAN_UNITTEST_NOINST_LINKFLAGS})
+    set_target_link_flags(AsanNoinstTest ${ASAN_UNITTEST_NOINST_LINK_FLAGS})
     target_link_libraries(AsanNoinstTest ${ASAN_UNITTEST_NOINST_LIBS})
 
     # Test with ASan instrumentation. Link with ASan dynamic runtime.
@@ -350,7 +355,7 @@ if(ANDROID)
       ${COMPILER_RT_GTEST_SOURCE}
       ${ASAN_INST_TEST_SOURCES})
     set_target_compile_flags(AsanTest ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS})
-    set_target_link_flags(AsanTest ${ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS})
+    set_target_link_flags(AsanTest ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
     target_link_libraries(AsanTest ${ASAN_UNITTEST_INSTRUMENTED_LIBS})
 
     # Setup correct output directory and link flags.

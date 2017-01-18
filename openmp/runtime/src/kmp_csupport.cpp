@@ -121,9 +121,9 @@ waiting for work.
 kmp_int32
 __kmpc_global_num_threads(ident_t *loc)
 {
-    KC_TRACE( 10, ("__kmpc_global_num_threads: num_threads = %d\n", __kmp_nth ) );
+    KC_TRACE(10,("__kmpc_global_num_threads: num_threads = %d\n", __kmp_all_nth));
 
-    return TCR_4(__kmp_nth);
+    return TCR_4(__kmp_all_nth);
 }
 
 /*!

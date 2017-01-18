@@ -26,4 +26,4 @@ void f1() {
   [I1 alloc];
 }
 
-// CHECK: attributes [[F0]] = { ssp{{.*}} }
+// CHECK: attributes [[F0]] = { noinline ssp{{.*}} }

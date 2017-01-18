@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 < %s -triple %itanium_abi_triple -fms-extensions -emit-llvm -x c++ | FileCheck %s
+// RUN: %clang_cc1 < %s -triple %itanium_abi_triple -fms-extensions -O2 -disable-llvm-passes -emit-llvm -x c++ | FileCheck %s
 
 // Test attribute 'optnone' on methods:
 //  -- member functions;

@@ -3,9 +3,12 @@
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t3.bc %t.bc %p/Inputs/autoupgrade.bc
 
-; RUN: llvm-lto -thinlto-action=import %t.bc -thinlto-index=%t3.bc -o - | llvm-bcanalyzer -dump | FileCheck %s
-
 ; We can't use llvm-dis here, because it would do the autoupgrade itself.
+
+; RUN: llvm-link  -summary-index=%t3.bc \
+; RUN:            -import=globalfunc1:%p/Inputs/autoupgrade.bc %t.bc \
+; RUN:     | llvm-bcanalyzer -dump | FileCheck %s
+
 
 ; CHECK-NOT: 'llvm.invariant.start'
 ; CHECK: record string = 'llvm.invariant.start.p0i8'

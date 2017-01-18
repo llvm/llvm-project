@@ -402,3 +402,32 @@ define i32* @select_icmp_pointers(i32* %x, i32* %y) {
   ret i32* %sel
 }
 
+; If the condition is known, we don't need to select, but we're not
+; doing this fold here to avoid compile-time cost.
+
+declare void @llvm.assume(i1)
+
+define i8 @assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @assume_sel_cond(
+; CHECK-NEXT:    call void @llvm.assume(i1 %cond)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %cond, i8 %x, i8 %y
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  call void @llvm.assume(i1 %cond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+
+define i8 @do_not_assume_sel_cond(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @do_not_assume_sel_cond(
+; CHECK-NEXT:    [[NOTCOND:%.*]] = icmp eq i1 %cond, false
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %cond, i8 %x, i8 %y
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %notcond = icmp eq i1 %cond, false
+  call void @llvm.assume(i1 %notcond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+

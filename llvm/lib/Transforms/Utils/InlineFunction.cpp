@@ -760,7 +760,7 @@ static void PropagateParallelLoopAccessMetadata(CallSite CS,
 
 /// When inlining a function that contains noalias scope metadata,
 /// this metadata needs to be cloned so that the inlined blocks
-/// have different "unqiue scopes" at every call site. Were this not done, then
+/// have different "unique scopes" at every call site. Were this not done, then
 /// aliasing scopes from a function inlined into a caller multiple times could
 /// not be differentiated (and this would lead to miscompiles because the
 /// non-aliasing property communicated by the metadata could have
@@ -1097,9 +1097,8 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
 static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
   if (!PreserveAlignmentAssumptions || !IFI.GetAssumptionCache)
     return;
-  AssumptionCache *AC = IFI.GetAssumptionCache
-                            ? &(*IFI.GetAssumptionCache)(*CS.getCaller())
-                            : nullptr;
+
+  AssumptionCache *AC = &(*IFI.GetAssumptionCache)(*CS.getCaller());
   auto &DL = CS.getCaller()->getParent()->getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
@@ -1127,8 +1126,7 @@ static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
 
       CallInst *NewAssumption = IRBuilder<>(CS.getInstruction())
                                     .CreateAlignmentAssumption(DL, Arg, Align);
-      if (AC)
-        AC->registerAssumption(NewAssumption);
+      AC->registerAssumption(NewAssumption);
     }
   }
 }
@@ -1644,16 +1642,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
 
     // Update the callgraph if requested.
-    if (IFI.CG) {
+    if (IFI.CG)
       UpdateCallGraphAfterInlining(CS, FirstNewBlock, VMap, IFI);
-    } else {
-      // Otherwise just collect the raw call sites that were inlined.
-      for (BasicBlock &NewBB :
-           make_range(FirstNewBlock->getIterator(), Caller->end()))
-        for (Instruction &I : NewBB)
-          if (auto CS = CallSite(&I))
-            IFI.InlinedCallSites.push_back(CS);
-    }
 
     // For 'nodebug' functions, the associated DISubprogram is always null.
     // Conservatively avoid propagating the callsite debug location to
@@ -2016,6 +2006,20 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     // Leave behind the normal returns so we can merge control flow.
     std::swap(Returns, NormalReturns);
+  }
+
+  // Now that all of the transforms on the inlined code have taken place but
+  // before we splice the inlined code into the CFG and lose track of which
+  // blocks were actually inlined, collect the call sites. We only do this if
+  // call graph updates weren't requested, as those provide value handle based
+  // tracking of inlined call sites instead.
+  if (InlinedFunctionInfo.ContainsCalls && !IFI.CG) {
+    // Otherwise just collect the raw call sites that were inlined.
+    for (BasicBlock &NewBB :
+         make_range(FirstNewBlock->getIterator(), Caller->end()))
+      for (Instruction &I : NewBB)
+        if (auto CS = CallSite(&I))
+          IFI.InlinedCallSites.push_back(CS);
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a

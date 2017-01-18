@@ -1274,7 +1274,7 @@ static void addFunctionPointerConversion(Sema &S,
                                 ConvTy, 
                                 ConvTSI,
                                 /*isInline=*/true, /*isExplicit=*/false,
-                                /*isConstexpr=*/false, 
+                                /*isConstexpr=*/S.getLangOpts().CPlusPlus1z, 
                                 CallOperator->getBody()->getLocEnd());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
@@ -1384,7 +1384,7 @@ static void addBlockPointerConversion(Sema &S,
 }
 
 static ExprResult performLambdaVarCaptureInitialization(
-    Sema &S, LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
+    Sema &S, const LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
   assert(Capture.isVariableCapture() && "not a variable capture");
 
   auto *Var = Capture.getVariable();
@@ -1438,6 +1438,21 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
   llvm_unreachable("Unknown implicit capture style");
 }
 
+void Sema::DiagnoseUnusedLambdaCapture(const LambdaScopeInfo::Capture &From) {
+  if (!From.isVLATypeCapture()) {
+    Expr *Init = From.getInitExpr();
+    if (Init && Init->HasSideEffects(Context))
+      return;
+  }
+
+  auto diag = Diag(From.getLocation(), diag::warn_unused_lambda_capture);
+  if (From.isThisCapture())
+    diag << "'this'";
+  else
+    diag << From.getVariable();
+  diag << From.isNonODRUsed();
+}
+
 ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                  LambdaScopeInfo *LSI) {
   // Collect information from the lambda scope.
@@ -1476,9 +1491,13 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // Translate captures.
     auto CurField = Class->field_begin();
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I, ++CurField) {
-      LambdaScopeInfo::Capture From = LSI->Captures[I];
+      const LambdaScopeInfo::Capture &From = LSI->Captures[I];
       assert(!From.isBlockCapture() && "Cannot capture __block variables");
       bool IsImplicit = I >= LSI->NumExplicitCaptures;
+
+      // Warn about unused explicit captures.
+      if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed())
+        DiagnoseUnusedLambdaCapture(From);
 
       // Handle 'this' capture.
       if (From.isThisCapture()) {
@@ -1565,6 +1584,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     //   A lambda-expression shall not appear in an unevaluated operand
     //   (Clause 5).
     case Unevaluated:
+    case UnevaluatedList:
     case UnevaluatedAbstract:
     // C++1y [expr.const]p2:
     //   A conditional-expression e is a core constant expression unless the

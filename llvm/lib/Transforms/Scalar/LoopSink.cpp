@@ -38,7 +38,6 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
@@ -47,6 +46,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
@@ -283,8 +283,10 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   // sinked.
   for (auto II = Preheader->rbegin(), E = Preheader->rend(); II != E;) {
     Instruction *I = &*II++;
-    if (!L.hasLoopInvariantOperands(I) ||
-        !canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, nullptr))
+    // No need to check for instruction's operands are loop invariant.
+    assert(L.hasLoopInvariantOperands(I) &&
+           "Insts in a loop's preheader should have loop invariant operands!");
+    if (!canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, nullptr))
       continue;
     if (sinkInstruction(L, *I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI))
       Changed = true;

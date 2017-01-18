@@ -951,10 +951,7 @@ def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
 
 defm CLS    : OneOperandData<0b101, "cls">;
 defm CLZ    : OneOperandData<0b100, "clz", ctlz>;
-defm RBIT   : OneOperandData<0b000, "rbit">;
-
-def : Pat<(int_aarch64_rbit GPR32:$Rn), (RBITWr $Rn)>;
-def : Pat<(int_aarch64_rbit GPR64:$Rn), (RBITXr $Rn)>;
+defm RBIT   : OneOperandData<0b000, "rbit", bitreverse>;
 
 def  REV16Wr : OneWRegData<0b001, "rev16",
                                   UnOpFrag<(rotr (bswap node:$LHS), (i64 16))>>;

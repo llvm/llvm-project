@@ -30,17 +30,23 @@ namespace {
     /// Tells whether or not this pass should emit a fallback
     /// diagnostic when it resets a function.
     bool EmitFallbackDiag;
+    /// Whether we should abort immediately instead of resetting the function.
+    bool AbortOnFailedISel;
 
   public:
     static char ID; // Pass identification, replacement for typeid
-    ResetMachineFunction(bool EmitFallbackDiag = false)
-        : MachineFunctionPass(ID), EmitFallbackDiag(EmitFallbackDiag) {}
+    ResetMachineFunction(bool EmitFallbackDiag = false,
+                         bool AbortOnFailedISel = false)
+        : MachineFunctionPass(ID), EmitFallbackDiag(EmitFallbackDiag),
+          AbortOnFailedISel(AbortOnFailedISel) {}
 
     StringRef getPassName() const override { return "ResetMachineFunction"; }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       if (MF.getProperties().hasProperty(
               MachineFunctionProperties::Property::FailedISel)) {
+        if (AbortOnFailedISel)
+          report_fatal_error("Instruction selection failed");
         DEBUG(dbgs() << "Reseting: " << MF.getName() << '\n');
         ++NumFunctionsReset;
         MF.reset();
@@ -62,6 +68,7 @@ INITIALIZE_PASS(ResetMachineFunction, DEBUG_TYPE,
                 "reset machine function if ISel failed", false, false)
 
 MachineFunctionPass *
-llvm::createResetMachineFunctionPass(bool EmitFallbackDiag = false) {
-  return new ResetMachineFunction(EmitFallbackDiag);
+llvm::createResetMachineFunctionPass(bool EmitFallbackDiag = false,
+                                     bool AbortOnFailedISel = false) {
+  return new ResetMachineFunction(EmitFallbackDiag, AbortOnFailedISel);
 }

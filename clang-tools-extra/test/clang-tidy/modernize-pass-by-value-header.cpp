@@ -3,6 +3,6 @@
 // RUN: FileCheck -input-file=%T/pass-by-value-header.h %s -check-prefix=CHECK-FIXES
 
 #include "pass-by-value-header.h"
-// CHECK-MESSAGES: :5:5: warning: pass by value and use std::move [modernize-pass-by-value]
+// CHECK-MESSAGES: :8:5: warning: pass by value and use std::move [modernize-pass-by-value]
 // CHECK-FIXES: #include <utility>
 // CHECK-FIXES: A(ThreadId tid) : threadid(std::move(tid)) {}

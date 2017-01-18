@@ -5395,6 +5395,44 @@ static void ReferenceDllExportedMethods(Sema &S, CXXRecordDecl *Class) {
   }
 }
 
+static void checkForMultipleExportedDefaultConstructors(Sema &S,
+                                                        CXXRecordDecl *Class) {
+  // Only the MS ABI has default constructor closures, so we don't need to do
+  // this semantic checking anywhere else.
+  if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
+    return;
+
+  CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
+  for (Decl *Member : Class->decls()) {
+    // Look for exported default constructors.
+    auto *CD = dyn_cast<CXXConstructorDecl>(Member);
+    if (!CD || !CD->isDefaultConstructor())
+      continue;
+    auto *Attr = CD->getAttr<DLLExportAttr>();
+    if (!Attr)
+      continue;
+
+    // If the class is non-dependent, mark the default arguments as ODR-used so
+    // that we can properly codegen the constructor closure.
+    if (!Class->isDependentContext()) {
+      for (ParmVarDecl *PD : CD->parameters()) {
+        (void)S.CheckCXXDefaultArgExpr(Attr->getLocation(), CD, PD);
+        S.DiscardCleanupsInEvaluationContext();
+      }
+    }
+
+    if (LastExportedDefaultCtor) {
+      S.Diag(LastExportedDefaultCtor->getLocation(),
+             diag::err_attribute_dll_ambiguous_default_ctor)
+          << Class;
+      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
+          << CD->getDeclName();
+      return;
+    }
+    LastExportedDefaultCtor = CD;
+  }
+}
+
 /// \brief Check class-level dllimport/dllexport attribute.
 void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   Attr *ClassAttr = getDLLAttr(Class);
@@ -9115,6 +9153,16 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
   // invalid).
   if (R.empty() &&
       NameInfo.getName().getNameKind() != DeclarationName::CXXConstructorName) {
+    // HACK: Work around a bug in libstdc++'s detection of ::gets. Sometimes
+    // it will believe that glibc provides a ::gets in cases where it does not,
+    // and will try to pull it into namespace std with a using-declaration.
+    // Just ignore the using-declaration in that case.
+    auto *II = NameInfo.getName().getAsIdentifierInfo();
+    if (getLangOpts().CPlusPlus14 && II && II->isStr("gets") &&
+        CurContext->isStdNamespace() &&
+        isa<TranslationUnitDecl>(LookupContext) &&
+        getSourceManager().isInSystemHeader(UsingLoc))
+      return nullptr;
     if (TypoCorrection Corrected = CorrectTypo(
             R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
             llvm::make_unique<UsingValidatorCCC>(
@@ -9808,9 +9856,14 @@ Sema::ComputeDefaultedDefaultCtorExceptionSpec(SourceLocation Loc,
   }
 
   // Field constructors.
-  for (const auto *F : ClassDecl->fields()) {
+  for (auto *F : ClassDecl->fields()) {
     if (F->hasInClassInitializer()) {
-      if (Expr *E = F->getInClassInitializer())
+      Expr *E = F->getInClassInitializer();
+      if (!E)
+        // FIXME: It's a little wasteful to build and throw away a
+        // CXXDefaultInitExpr here.
+        E = BuildCXXDefaultInitExpr(Loc, F).get();
+      if (E)
         ExceptSpec.CalledExpr(E);
     } else if (const RecordType *RecordTy
               = Context.getBaseElementType(F->getType())->getAs<RecordType>()) {
@@ -10362,64 +10415,11 @@ void Sema::ActOnFinishCXXMemberDecls() {
       DelayedExceptionSpecChecks.clear();
       return;
     }
-  }
-}
-
-static void checkDefaultArgExprsForConstructors(Sema &S, CXXRecordDecl *Class) {
-  // Don't do anything for template patterns.
-  if (Class->getDescribedClassTemplate())
-    return;
-
-  CallingConv ExpectedCallingConv = S.Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/true);
-
-  CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
-  for (Decl *Member : Class->decls()) {
-    auto *CD = dyn_cast<CXXConstructorDecl>(Member);
-    if (!CD) {
-      // Recurse on nested classes.
-      if (auto *NestedRD = dyn_cast<CXXRecordDecl>(Member))
-        checkDefaultArgExprsForConstructors(S, NestedRD);
-      continue;
-    } else if (!CD->isDefaultConstructor() || !CD->hasAttr<DLLExportAttr>()) {
-      continue;
-    }
-
-    CallingConv ActualCallingConv =
-        CD->getType()->getAs<FunctionProtoType>()->getCallConv();
-
-    // Skip default constructors with typical calling conventions and no default
-    // arguments.
-    unsigned NumParams = CD->getNumParams();
-    if (ExpectedCallingConv == ActualCallingConv && NumParams == 0)
-      continue;
-
-    if (LastExportedDefaultCtor) {
-      S.Diag(LastExportedDefaultCtor->getLocation(),
-             diag::err_attribute_dll_ambiguous_default_ctor) << Class;
-      S.Diag(CD->getLocation(), diag::note_entity_declared_at)
-          << CD->getDeclName();
-      return;
-    }
-    LastExportedDefaultCtor = CD;
-
-    for (unsigned I = 0; I != NumParams; ++I) {
-      (void)S.CheckCXXDefaultArgExpr(Class->getLocation(), CD,
-                                     CD->getParamDecl(I));
-      S.DiscardCleanupsInEvaluationContext();
-    }
+    checkForMultipleExportedDefaultConstructors(*this, Record);
   }
 }
 
 void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
-  auto *RD = dyn_cast<CXXRecordDecl>(D);
-
-  // Default constructors that are annotated with __declspec(dllexport) which
-  // have default arguments or don't use the standard calling convention are
-  // wrapped with a thunk called the default constructor closure.
-  if (RD && Context.getTargetInfo().getCXXABI().isMicrosoft())
-    checkDefaultArgExprsForConstructors(*this, RD);
-
   referenceDLLExportedClassMethods();
 }
 
@@ -12324,6 +12324,10 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   if (Field->getInClassInitializer())
     return CXXDefaultInitExpr::Create(Context, Loc, Field);
 
+  // If we might have already tried and failed to instantiate, don't try again.
+  if (Field->isInvalidDecl())
+    return ExprError();
+
   // Maybe we haven't instantiated the in-class initializer. Go check the
   // pattern FieldDecl to see if it has one.
   CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(Field->getParent());
@@ -12353,8 +12357,11 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     }
 
     if (InstantiateInClassInitializer(Loc, Field, Pattern,
-                                      getTemplateInstantiationArgs(Field)))
+                                      getTemplateInstantiationArgs(Field))) {
+      // Don't diagnose this again.
+      Field->setInvalidDecl();
       return ExprError();
+    }
     return CXXDefaultInitExpr::Create(Context, Loc, Field);
   }
 
@@ -12377,6 +12384,8 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       << OutermostClass << Field;
   Diag(Field->getLocEnd(), diag::note_in_class_initializer_not_yet_parsed);
 
+  // Don't diagnose this again.
+  Field->setInvalidDecl();
   return ExprError();
 }
 
@@ -12913,7 +12922,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
     //   Literal suffix identifiers that do not start with an underscore
     //   are reserved for future standardization.
     Diag(FnDecl->getLocation(), diag::warn_user_literal_reserved)
-      << NumericLiteralParser::isValidUDSuffix(getLangOpts(), LiteralName);
+      << StringLiteralParser::isValidUDSuffix(getLangOpts(), LiteralName);
   }
 
   return false;

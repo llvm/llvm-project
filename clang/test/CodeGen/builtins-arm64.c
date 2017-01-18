@@ -10,12 +10,12 @@ void *tp (void) {
 // CHECK: call {{.*}} @llvm.thread.pointer()
 }
 
-// CHECK: call {{.*}} @llvm.aarch64.rbit.i32(i32 %a)
+// CHECK: call {{.*}} @llvm.bitreverse.i32(i32 %a)
 unsigned rbit(unsigned a) {
   return __builtin_arm_rbit(a);
 }
 
-// CHECK: call {{.*}} @llvm.aarch64.rbit.i64(i64 %a)
+// CHECK: call {{.*}} @llvm.bitreverse.i64(i64 %a)
 unsigned long long rbit64(unsigned long long a) {
   return __builtin_arm_rbit64(a);
 }

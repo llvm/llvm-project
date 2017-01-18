@@ -1450,6 +1450,20 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // If we can compute the condition, there's no need for a select.
+  // Like the above fold, we are attempting to reduce compile-time cost by
+  // putting this fold here with limitations rather than in InstSimplify.
+  // The motivation for this call into value tracking is to take advantage of
+  // the assumption cache, so make sure that is populated.
+  if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
+    APInt KnownOne(1, 0), KnownZero(1, 0);
+    computeKnownBits(CondVal, KnownZero, KnownOne, 0, &SI);
+    if (KnownOne == 1)
+      return replaceInstUsesWith(SI, TrueVal);
+    if (KnownZero == 1)
+      return replaceInstUsesWith(SI, FalseVal);
+  }
+
   if (Instruction *BitCastSel = foldSelectCmpBitcasts(SI, *Builder))
     return BitCastSel;
 

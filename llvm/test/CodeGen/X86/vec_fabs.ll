@@ -17,7 +17,7 @@ define <2 x double> @fabs_v2f64(<2 x double> %p) {
 ;
 ; X32_AVX512VL-LABEL: fabs_v2f64:
 ; X32_AVX512VL:       # BB#0:
-; X32_AVX512VL-NEXT:    vpandq {{\.LCPI.*}}, %xmm0, %xmm0
+; X32_AVX512VL-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32_AVX512VL-NEXT:    retl
 ;
 ; X32_AVX512VLDQ-LABEL: fabs_v2f64:
@@ -32,7 +32,7 @@ define <2 x double> @fabs_v2f64(<2 x double> %p) {
 ;
 ; X64_AVX512VL-LABEL: fabs_v2f64:
 ; X64_AVX512VL:       # BB#0:
-; X64_AVX512VL-NEXT:    vpandq {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512VL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; X64_AVX512VL-NEXT:    retq
 ;
 ; X64_AVX512VLDQ-LABEL: fabs_v2f64:

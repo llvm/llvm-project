@@ -3536,7 +3536,7 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
 
   // Initialize the base class ClassHierarchyDescriptor.
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, 0), // Unknown
+      llvm::ConstantInt::get(CGM.IntTy, 0), // reserved by the runtime
       llvm::ConstantInt::get(CGM.IntTy, Flags),
       llvm::ConstantInt::get(CGM.IntTy, Classes.size()),
       ABI.getImageRelativeConstant(llvm::ConstantExpr::getInBoundsGetElementPtr(

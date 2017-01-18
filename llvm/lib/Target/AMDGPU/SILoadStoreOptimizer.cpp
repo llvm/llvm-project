@@ -360,25 +360,24 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
   unsigned DestReg = MRI->createVirtualRegister(SuperRC);
 
   DebugLoc DL = I->getDebugLoc();
-  MachineInstrBuilder Read2
-    = BuildMI(*MBB, Paired, DL, Read2Desc, DestReg)
-    .addOperand(*AddrReg) // addr
-    .addImm(NewOffset0) // offset0
-    .addImm(NewOffset1) // offset1
-    .addImm(0) // gds
-    .addMemOperand(*I->memoperands_begin())
-    .addMemOperand(*Paired->memoperands_begin());
+  MachineInstrBuilder Read2 = BuildMI(*MBB, Paired, DL, Read2Desc, DestReg)
+                                  .add(*AddrReg)      // addr
+                                  .addImm(NewOffset0) // offset0
+                                  .addImm(NewOffset1) // offset1
+                                  .addImm(0)          // gds
+                                  .addMemOperand(*I->memoperands_begin())
+                                  .addMemOperand(*Paired->memoperands_begin());
   (void)Read2;
 
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
 
   // Copy to the old destination registers.
   BuildMI(*MBB, Paired, DL, CopyDesc)
-    .addOperand(*Dest0) // Copy to same destination including flags and sub reg.
-    .addReg(DestReg, 0, SubRegIdx0);
+      .add(*Dest0) // Copy to same destination including flags and sub reg.
+      .addReg(DestReg, 0, SubRegIdx0);
   MachineInstr *Copy1 = BuildMI(*MBB, Paired, DL, CopyDesc)
-    .addOperand(*Dest1)
-    .addReg(DestReg, RegState::Kill, SubRegIdx1);
+                            .add(*Dest1)
+                            .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
   moveInstsAfter(Copy1, InstsToMove);
 
@@ -436,16 +435,15 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
   const MCInstrDesc &Write2Desc = TII->get(Opc);
   DebugLoc DL = I->getDebugLoc();
 
-  MachineInstrBuilder Write2
-    = BuildMI(*MBB, Paired, DL, Write2Desc)
-    .addOperand(*Addr) // addr
-    .addOperand(*Data0) // data0
-    .addOperand(*Data1) // data1
-    .addImm(NewOffset0) // offset0
-    .addImm(NewOffset1) // offset1
-    .addImm(0) // gds
-    .addMemOperand(*I->memoperands_begin())
-    .addMemOperand(*Paired->memoperands_begin());
+  MachineInstrBuilder Write2 = BuildMI(*MBB, Paired, DL, Write2Desc)
+                                   .add(*Addr)         // addr
+                                   .add(*Data0)        // data0
+                                   .add(*Data1)        // data1
+                                   .addImm(NewOffset0) // offset0
+                                   .addImm(NewOffset1) // offset1
+                                   .addImm(0)          // gds
+                                   .addMemOperand(*I->memoperands_begin())
+                                   .addMemOperand(*Paired->memoperands_begin());
 
   moveInstsAfter(Write2, InstsToMove);
 

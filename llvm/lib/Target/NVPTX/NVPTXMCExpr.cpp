@@ -27,6 +27,13 @@ void NVPTXFloatMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
   switch (Kind) {
   default: llvm_unreachable("Invalid kind!");
+  case VK_NVPTX_HALF_PREC_FLOAT:
+    // ptxas does not have a way to specify half-precision floats.
+    // Instead we have to print and load fp16 constants as .b16
+    OS << "0x";
+    NumHex = 4;
+    APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
+    break;
   case VK_NVPTX_SINGLE_PREC_FLOAT:
     OS << "0f";
     NumHex = 8;

@@ -346,8 +346,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
     ExprResult address_of_expr =
         m_sema->CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, last_expr);
     if (address_of_expr.get())
-      m_sema->AddInitializerToDecl(result_decl, address_of_expr.get(), true,
-                                   false);
+      m_sema->AddInitializerToDecl(result_decl, address_of_expr.get(), true);
     else
       return false;
   } else {
@@ -359,7 +358,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
     if (!result_decl)
       return false;
 
-    m_sema->AddInitializerToDecl(result_decl, last_expr, true, false);
+    m_sema->AddInitializerToDecl(result_decl, last_expr, true);
   }
 
   DC->addDecl(result_decl);

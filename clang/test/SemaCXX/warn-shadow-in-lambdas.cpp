@@ -137,3 +137,11 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
   auto g3 = [param] // expected-note {{variable 'param' is explicitly captured here}}
    (auto param) { ; }; // expected-warning {{declaration shadows a local variable}}
 }
+
+void avoidWarningWhenRedefining() {
+  int a = 1;
+  auto l = [b = a] { // expected-note {{previous definition is here}}
+    // Don't warn on redefinitions.
+    int b = 0; // expected-error {{redefinition of 'b'}}
+  };
+}

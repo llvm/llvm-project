@@ -24,5 +24,6 @@ int main()
     {
         B b;
         std::mbstate_t s = b.state();
+        ((void)s);
     }
 }

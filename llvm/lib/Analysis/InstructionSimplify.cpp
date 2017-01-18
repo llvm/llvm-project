@@ -1106,6 +1106,16 @@ static Value *SimplifyUDivInst(Value *Op0, Value *Op1, const Query &Q,
   if (Value *V = SimplifyDiv(Instruction::UDiv, Op0, Op1, Q, MaxRecurse))
     return V;
 
+  // udiv %V, C -> 0 if %V < C
+  if (MaxRecurse) {
+    if (Constant *C = dyn_cast_or_null<Constant>(SimplifyICmpInst(
+            ICmpInst::ICMP_ULT, Op0, Op1, Q, MaxRecurse - 1))) {
+      if (C->isAllOnesValue()) {
+        return Constant::getNullValue(Op0->getType());
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -1246,6 +1256,16 @@ static Value *SimplifyURemInst(Value *Op0, Value *Op1, const Query &Q,
                                unsigned MaxRecurse) {
   if (Value *V = SimplifyRem(Instruction::URem, Op0, Op1, Q, MaxRecurse))
     return V;
+
+  // urem %V, C -> %V if %V < C
+  if (MaxRecurse) {
+    if (Constant *C = dyn_cast_or_null<Constant>(SimplifyICmpInst(
+            ICmpInst::ICMP_ULT, Op0, Op1, Q, MaxRecurse - 1))) {
+      if (C->isAllOnesValue()) {
+        return Op0;
+      }
+    }
+  }
 
   return nullptr;
 }
@@ -3563,7 +3583,7 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
         *Y == *C)
       return TrueWhenUnset ? TrueVal : FalseVal;
   }
-  
+
   return nullptr;
 }
 
@@ -3575,7 +3595,7 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *TrueVal,
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
   if (!BitWidth)
     return nullptr;
-  
+
   APInt MinSignedValue;
   Value *X;
   if (match(CmpLHS, m_Trunc(m_Value(X))) && (X == TrueVal || X == FalseVal)) {
@@ -4232,14 +4252,37 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
                                 const Query &Q, unsigned MaxRecurse) {
   Intrinsic::ID IID = F->getIntrinsicID();
   unsigned NumOperands = std::distance(ArgBegin, ArgEnd);
-  Type *ReturnType = F->getReturnType();
+
+  // Unary Ops
+  if (NumOperands == 1) {
+    // Perform idempotent optimizations
+    if (IsIdempotent(IID)) {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(*ArgBegin)) {
+        if (II->getIntrinsicID() == IID)
+          return II;
+      }
+    }
+
+    switch (IID) {
+    case Intrinsic::fabs: {
+      if (SignBitMustBeZero(*ArgBegin, Q.TLI))
+        return *ArgBegin;
+      return nullptr;
+    }
+    default:
+      return nullptr;
+    }
+  }
 
   // Binary Ops
   if (NumOperands == 2) {
     Value *LHS = *ArgBegin;
     Value *RHS = *(ArgBegin + 1);
-    if (IID == Intrinsic::usub_with_overflow ||
-        IID == Intrinsic::ssub_with_overflow) {
+    Type *ReturnType = F->getReturnType();
+
+    switch (IID) {
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow: {
       // X - X -> { 0, false }
       if (LHS == RHS)
         return Constant::getNullValue(ReturnType);
@@ -4248,17 +4291,19 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
       // undef - X -> undef
       if (isa<UndefValue>(LHS) || isa<UndefValue>(RHS))
         return UndefValue::get(ReturnType);
-    }
 
-    if (IID == Intrinsic::uadd_with_overflow ||
-        IID == Intrinsic::sadd_with_overflow) {
+      return nullptr;
+    }
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow: {
       // X + undef -> undef
       if (isa<UndefValue>(RHS))
         return UndefValue::get(ReturnType);
-    }
 
-    if (IID == Intrinsic::umul_with_overflow ||
-        IID == Intrinsic::smul_with_overflow) {
+      return nullptr;
+    }
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow: {
       // X * 0 -> { 0, false }
       if (match(RHS, m_Zero()))
         return Constant::getNullValue(ReturnType);
@@ -4266,34 +4311,34 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
       // X * undef -> { 0, false }
       if (match(RHS, m_Undef()))
         return Constant::getNullValue(ReturnType);
-    }
 
-    if (IID == Intrinsic::load_relative && isa<Constant>(LHS) &&
-        isa<Constant>(RHS))
-      return SimplifyRelativeLoad(cast<Constant>(LHS), cast<Constant>(RHS),
-                                  Q.DL);
+      return nullptr;
+    }
+    case Intrinsic::load_relative: {
+      Constant *C0 = dyn_cast<Constant>(LHS);
+      Constant *C1 = dyn_cast<Constant>(RHS);
+      if (C0 && C1)
+        return SimplifyRelativeLoad(C0, C1, Q.DL);
+      return nullptr;
+    }
+    default:
+      return nullptr;
+    }
   }
 
   // Simplify calls to llvm.masked.load.*
-  if (IID == Intrinsic::masked_load) {
+  switch (IID) {
+  case Intrinsic::masked_load: {
     Value *MaskArg = ArgBegin[2];
     Value *PassthruArg = ArgBegin[3];
     // If the mask is all zeros or undef, the "passthru" argument is the result.
     if (maskIsAllZeroOrUndef(MaskArg))
       return PassthruArg;
-  }
-
-  // Perform idempotent optimizations
-  if (!IsIdempotent(IID))
     return nullptr;
-
-  // Unary Ops
-  if (NumOperands == 1)
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(*ArgBegin))
-      if (II->getIntrinsicID() == IID)
-        return II;
-
-  return nullptr;
+  }
+  default:
+    return nullptr;
+  }
 }
 
 template <typename IterTy>

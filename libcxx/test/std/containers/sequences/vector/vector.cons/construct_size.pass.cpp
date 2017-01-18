@@ -32,6 +32,9 @@ test2(typename C::size_type n, typename C::allocator_type const& a = typename C:
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
         assert(*i == typename C::value_type());
+#else
+    ((void)n);
+    ((void)a);
 #endif
 }
 

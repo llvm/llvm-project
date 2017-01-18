@@ -25,8 +25,7 @@ define <16 x i1> @test2(<16 x i1>%a, <16 x i1>%b) {
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
@@ -48,8 +47,7 @@ define <16 x i1> @test2(<16 x i1>%a, <16 x i1>%b) {
 ; KNL_X32-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL_X32-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; KNL_X32-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL_X32-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL_X32-NEXT:    retl
   %c = and <16 x i1>%a, %b
@@ -65,8 +63,7 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
@@ -88,8 +85,7 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL_X32-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
-; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL_X32-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL_X32-NEXT:    retl
   %c = and <8 x i1>%a, %b
@@ -180,8 +176,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-NEXT:  Lcfi1:
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    callq _func16xi1
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
@@ -210,8 +205,7 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; KNL_X32-NEXT:  Lcfi1:
 ; KNL_X32-NEXT:    .cfi_def_cfa_offset 16
 ; KNL_X32-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
-; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL_X32-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL_X32-NEXT:    calll _func16xi1
 ; KNL_X32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
@@ -285,8 +279,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    movb $85, %al
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
@@ -322,8 +315,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    movb $85, %al
 ; KNL_X32-NEXT:    kmovw %eax, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
-; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; KNL_X32-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl

@@ -221,6 +221,12 @@ struct NegativeNotDefaultInt
   int i;
 };
 
+struct NegativeDefaultArg
+{
+  NegativeDefaultArg(int i = 4) : i(i) {}
+  int i;
+};
+
 struct ExistingChar {
   ExistingChar(short) : e1(), e2(), e3(), e4() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: member initializer for 'e1' is redundant [modernize-use-default-member-init]

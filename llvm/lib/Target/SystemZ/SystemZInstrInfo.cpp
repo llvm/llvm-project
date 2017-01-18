@@ -780,10 +780,11 @@ bool SystemZInstrInfo::PredicateInstruction(
     MI.RemoveOperand(0);
     MI.setDesc(get(SystemZ::CallBRCL));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-      .addImm(CCValid).addImm(CCMask)
-      .addOperand(FirstOp)
-      .addRegMask(RegMask)
-      .addReg(SystemZ::CC, RegState::Implicit);
+        .addImm(CCValid)
+        .addImm(CCMask)
+        .add(FirstOp)
+        .addRegMask(RegMask)
+        .addReg(SystemZ::CC, RegState::Implicit);
     return true;
   }
   if (Opcode == SystemZ::CallBR) {
@@ -976,12 +977,12 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(
       MachineInstrBuilder MIB(
           *MF, MF->CreateMachineInstr(get(ThreeOperandOpcode), MI.getDebugLoc(),
                                       /*NoImplicit=*/true));
-      MIB.addOperand(Dest);
+      MIB.add(Dest);
       // Keep the kill state, but drop the tied flag.
       MIB.addReg(Src.getReg(), getKillRegState(Src.isKill()), Src.getSubReg());
       // Keep the remaining operands as-is.
       for (unsigned I = 2; I < NumOps; ++I)
-        MIB.addOperand(MI.getOperand(I));
+        MIB.add(MI.getOperand(I));
       MBB->insert(MI, MIB);
       return finishConvertToThreeAddress(&MI, MIB, LV);
     }
@@ -1009,7 +1010,7 @@ MachineInstr *SystemZInstrInfo::convertToThreeAddress(
       MachineOperand &Src = MI.getOperand(1);
       MachineInstrBuilder MIB =
           BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpcode))
-              .addOperand(Dest)
+              .add(Dest)
               .addReg(0)
               .addReg(Src.getReg(), getKillRegState(Src.isKill()),
                       Src.getSubReg())
@@ -1091,7 +1092,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       unsigned StoreOpcode = Op1IsGPR ? SystemZ::STG : SystemZ::STD;
       return BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(),
                      get(StoreOpcode))
-          .addOperand(MI.getOperand(1))
+          .add(MI.getOperand(1))
           .addFrameIndex(FrameIndex)
           .addImm(0)
           .addReg(0);
@@ -1132,7 +1133,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
             .addFrameIndex(FrameIndex)
             .addImm(0)
             .addImm(Size)
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(MI.getOperand(2).getImm())
             .addMemOperand(MMO);
       }
@@ -1140,7 +1141,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       if (isSimpleBD12Move(&MI, SystemZII::SimpleBDXStore)) {
         return BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(),
                        get(SystemZ::MVC))
-            .addOperand(MI.getOperand(1))
+            .add(MI.getOperand(1))
             .addImm(MI.getOperand(2).getImm())
             .addImm(Size)
             .addFrameIndex(FrameIndex)
@@ -1164,7 +1165,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
                                         MI.getDebugLoc(), get(MemOpcode));
       for (unsigned I = 0; I < OpNum; ++I)
-        MIB.addOperand(MI.getOperand(I));
+        MIB.add(MI.getOperand(I));
       MIB.addFrameIndex(FrameIndex).addImm(Offset);
       if (MemDesc.TSFlags & SystemZII::HasIndex)
         MIB.addReg(0);

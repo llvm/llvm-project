@@ -35,6 +35,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "inline"
@@ -668,8 +669,7 @@ bool LegacyInlinerBase::doFinalization(CallGraph &CG) {
 bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
                                             bool AlwaysInlineOnly) {
   SmallVector<CallGraphNode *, 16> FunctionsToRemove;
-  SmallVector<CallGraphNode *, 16> DeadFunctionsInComdats;
-  SmallDenseMap<const Comdat *, int, 16> ComdatEntriesAlive;
+  SmallVector<Function *, 16> DeadFunctionsInComdats;
 
   auto RemoveCGN = [&](CallGraphNode *CGN) {
     // Remove any call graph edges from the function to its callees.
@@ -710,9 +710,8 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
     // The inliner doesn't visit non-function entities which are in COMDAT
     // groups so it is unsafe to do so *unless* the linkage is local.
     if (!F->hasLocalLinkage()) {
-      if (const Comdat *C = F->getComdat()) {
-        --ComdatEntriesAlive[C];
-        DeadFunctionsInComdats.push_back(CGN);
+      if (F->hasComdat()) {
+        DeadFunctionsInComdats.push_back(F);
         continue;
       }
     }
@@ -720,32 +719,11 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
     RemoveCGN(CGN);
   }
   if (!DeadFunctionsInComdats.empty()) {
-    // Count up all the entities in COMDAT groups
-    auto ComdatGroupReferenced = [&](const Comdat *C) {
-      auto I = ComdatEntriesAlive.find(C);
-      if (I != ComdatEntriesAlive.end())
-        ++(I->getSecond());
-    };
-    for (const Function &F : CG.getModule())
-      if (const Comdat *C = F.getComdat())
-        ComdatGroupReferenced(C);
-    for (const GlobalVariable &GV : CG.getModule().globals())
-      if (const Comdat *C = GV.getComdat())
-        ComdatGroupReferenced(C);
-    for (const GlobalAlias &GA : CG.getModule().aliases())
-      if (const Comdat *C = GA.getComdat())
-        ComdatGroupReferenced(C);
-    for (CallGraphNode *CGN : DeadFunctionsInComdats) {
-      Function *F = CGN->getFunction();
-      const Comdat *C = F->getComdat();
-      int NumAlive = ComdatEntriesAlive[C];
-      // We can remove functions in a COMDAT group if the entire group is dead.
-      assert(NumAlive >= 0);
-      if (NumAlive > 0)
-        continue;
-
-      RemoveCGN(CGN);
-    }
+    // Filter out the functions whose comdats remain alive.
+    filterDeadComdatFunctions(CG.getModule(), DeadFunctionsInComdats);
+    // Remove the rest.
+    for (Function *F : DeadFunctionsInComdats)
+      RemoveCGN(CG[F]);
   }
 
   if (FunctionsToRemove.empty())
@@ -790,7 +768,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
   // Setup the data structure used to plumb customization into the
   // `InlineFunction` routine.
-  InlineFunctionInfo IFI(/*cg=*/nullptr);
+  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
 
   auto GetInlineCost = [&](CallSite CS) {
     Function &Callee = *CS.getCalledFunction();
@@ -810,7 +788,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // We also use a secondary worklist of call sites within a particular node to
   // allow quickly continuing to inline through newly inlined call sites where
   // possible.
-  SmallVector<CallSite, 16> Calls;
+  SmallVector<std::pair<CallSite, int>, 16> Calls;
+
+  // When inlining a callee produces new call sites, we want to keep track of
+  // the fact that they were inlined from the callee.  This allows us to avoid
+  // infinite inlining in some obscure cases.  To represent this, we use an
+  // index into the InlineHistory vector.
+  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
 
   // Track a set vector of inlined callees so that we can augment the caller
   // with all of their edges in the call graph before pruning out the ones that
@@ -842,12 +826,18 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       if (auto CS = CallSite(&I))
         if (Function *Callee = CS.getCalledFunction())
           if (!Callee->isDeclaration())
-            Calls.push_back(CS);
+            Calls.push_back({CS, -1});
 
     bool DidInline = false;
     while (!Calls.empty()) {
-      CallSite CS = Calls.pop_back_val();
+      int InlineHistoryID;
+      CallSite CS;
+      std::tie(CS, InlineHistoryID) = Calls.pop_back_val();
       Function &Callee = *CS.getCalledFunction();
+
+      if (InlineHistoryID != -1 &&
+          InlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory))
+        continue;
 
       // Check whether we want to inline this callsite.
       if (!shouldInline(CS, GetInlineCost, ORE))
@@ -859,10 +849,17 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       InlinedCallees.insert(&Callee);
 
       // Add any new callsites to defined functions to the worklist.
-      for (CallSite &CS : reverse(IFI.InlinedCallSites))
-        if (Function *NewCallee = CS.getCalledFunction())
-          if (!NewCallee->isDeclaration())
-            Calls.push_back(CS);
+      if (!IFI.InlinedCallSites.empty()) {
+        int NewHistoryID = InlineHistory.size();
+        InlineHistory.push_back({&Callee, InlineHistoryID});
+        for (CallSite &CS : reverse(IFI.InlinedCallSites))
+          if (Function *NewCallee = CS.getCalledFunction())
+            if (!NewCallee->isDeclaration())
+              Calls.push_back({CS, NewHistoryID});
+      }
+
+      // Merge the attributes based on the inlining.
+      AttributeFuncs::mergeAttributesForInlining(F, Callee);
 
       // For local functions, check whether this makes the callee trivially
       // dead. In that case, we can drop the body of the function eagerly
@@ -889,16 +886,18 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       continue;
     Changed = true;
 
-    // Add all the inlined callees' edges to the caller. These are by
-    // definition trivial edges as we already had a transitive call edge to the
-    // callee.
+    // Add all the inlined callees' edges as ref edges to the caller. These are
+    // by definition trivial edges as we always have *some* transitive ref edge
+    // chain. While in some cases these edges are direct calls inside the
+    // callee, they have to be modeled in the inliner as reference edges as
+    // there may be a reference edge anywhere along the chain from the current
+    // caller to the callee that causes the whole thing to appear like
+    // a (transitive) reference edge that will require promotion to a call edge
+    // below.
     for (Function *InlinedCallee : InlinedCallees) {
       LazyCallGraph::Node &CalleeN = *CG.lookup(*InlinedCallee);
       for (LazyCallGraph::Edge &E : CalleeN)
-        if (E.isCall())
-          RC->insertTrivialCallEdge(N, *E.getNode());
-        else
-          RC->insertTrivialRefEdge(N, *E.getNode());
+        RC->insertTrivialRefEdge(N, *E.getNode());
     }
     InlinedCallees.clear();
 

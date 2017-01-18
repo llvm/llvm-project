@@ -347,14 +347,34 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
+static const char *ChecksumKindName[DIFile::CSK_Last + 1] = {
+  "CSK_None",
+  "CSK_MD5",
+  "CSK_SHA1"
+};
+
+DIFile::ChecksumKind DIFile::getChecksumKind(StringRef CSKindStr) {
+  return StringSwitch<DIFile::ChecksumKind>(CSKindStr)
+      .Case("CSK_MD5", DIFile::CSK_MD5)
+      .Case("CSK_SHA1", DIFile::CSK_SHA1)
+      .Default(DIFile::CSK_None);
+}
+
+StringRef DIFile::getChecksumKindAsString() const {
+  assert(CSKind <= DIFile::CSK_Last && "Invalid checksum kind");
+  return ChecksumKindName[CSKind];
+}
+
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
-                        MDString *Directory, StorageType Storage,
+                        MDString *Directory, DIFile::ChecksumKind CSKind,
+                        MDString *Checksum, StorageType Storage,
                         bool ShouldCreate) {
   assert(isCanonical(Filename) && "Expected canonical MDString");
   assert(isCanonical(Directory) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory));
-  Metadata *Ops[] = {Filename, Directory};
-  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIFile, Ops);
+  assert(isCanonical(Checksum) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory, CSKind, Checksum));
+  Metadata *Ops[] = {Filename, Directory, Checksum};
+  DEFINE_GETIMPL_STORE(DIFile, (CSKind), Ops);
 }
 
 DICompileUnit *DICompileUnit::getImpl(
@@ -601,22 +621,14 @@ bool DIExpression::isValid() const {
   return true;
 }
 
-bool DIExpression::isFragment() const {
-  assert(isValid() && "Expected valid expression");
-  if (unsigned N = getNumElements())
-    if (N >= 3)
-      return getElement(N - 3) == dwarf::DW_OP_LLVM_fragment;
-  return false;
-}
-
-uint64_t DIExpression::getFragmentOffsetInBits() const {
-  assert(isFragment() && "Expected fragment");
-  return getElement(getNumElements() - 2);
-}
-
-uint64_t DIExpression::getFragmentSizeInBits() const {
-  assert(isFragment() && "Expected fragment");
-  return getElement(getNumElements() - 1);
+Optional<DIExpression::FragmentInfo>
+DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
+  for (auto I = Start; I != End; ++I)
+    if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
+      DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
+      return Info;
+    }
+  return None;
 }
 
 bool DIExpression::isConstant() const {

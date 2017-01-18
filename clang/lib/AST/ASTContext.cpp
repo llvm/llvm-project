@@ -704,8 +704,8 @@ static const LangAS::Map *getAddressSpaceMap(const TargetInfo &T,
     // language-specific address space.
     static const unsigned FakeAddrSpaceMap[] = {
       1, // opencl_global
-      2, // opencl_local
-      3, // opencl_constant
+      3, // opencl_local
+      2, // opencl_constant
       4, // opencl_generic
       5, // cuda_device
       6, // cuda_constant
@@ -1458,7 +1458,9 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
         T = getPointerType(RT->getPointeeType());
     }
     QualType BaseT = getBaseElementType(T);
-    if (!BaseT->isIncompleteType() && !T->isFunctionType()) {
+    if (T->isFunctionType())
+      Align = getTypeInfoImpl(T.getTypePtr()).Align;
+    else if (!BaseT->isIncompleteType()) {
       // Adjust alignments of declarations with array type by the
       // large-array alignment on the target.
       if (const ArrayType *arrayType = getAsArrayType(T)) {
@@ -3870,6 +3872,44 @@ ASTContext::getDependentTemplateSpecializationType(
   Types.push_back(T);
   DependentTemplateSpecializationTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
+}
+
+void
+ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
+                                    SmallVectorImpl<TemplateArgument> &Args) {
+  Args.reserve(Args.size() + Params->size());
+
+  for (NamedDecl *Param : *Params) {
+    TemplateArgument Arg;
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      QualType ArgType = getTypeDeclType(TTP);
+      if (TTP->isParameterPack())
+        ArgType = getPackExpansionType(ArgType, None);
+
+      Arg = TemplateArgument(ArgType);
+    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      Expr *E = new (*this) DeclRefExpr(
+          NTTP, /*enclosing*/false,
+          NTTP->getType().getNonLValueExprType(*this),
+          Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
+
+      if (NTTP->isParameterPack())
+        E = new (*this) PackExpansionExpr(DependentTy, E, NTTP->getLocation(),
+                                          None);
+      Arg = TemplateArgument(E);
+    } else {
+      auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+      if (TTP->isParameterPack())
+        Arg = TemplateArgument(TemplateName(TTP), Optional<unsigned>());
+      else
+        Arg = TemplateArgument(TemplateName(TTP));
+    }
+
+    if (Param->isTemplateParameterPack())
+      Arg = TemplateArgument::CreatePackCopy(*this, Arg);
+
+    Args.push_back(Arg);
+  }
 }
 
 QualType ASTContext::getPackExpansionType(QualType Pattern,

@@ -244,7 +244,7 @@ bool ToolInvocation::run() {
   const char *const BinaryName = Argv[0];
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   unsigned MissingArgIndex, MissingArgCount;
-  std::unique_ptr<llvm::opt::OptTable> Opts(driver::createDriverOptTable());
+  std::unique_ptr<llvm::opt::OptTable> Opts = driver::createDriverOptTable();
   llvm::opt::InputArgList ParsedArgs = Opts->ParseArgs(
       ArrayRef<const char *>(Argv).slice(1), MissingArgIndex, MissingArgCount);
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
@@ -275,13 +275,13 @@ bool ToolInvocation::run() {
     Invocation->getPreprocessorOpts().addRemappedFile(It.getKey(),
                                                       Input.release());
   }
-  return runInvocation(BinaryName, Compilation.get(), Invocation.release(),
+  return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
                        std::move(PCHContainerOps));
 }
 
 bool ToolInvocation::runInvocation(
     const char *BinaryName, clang::driver::Compilation *Compilation,
-    clang::CompilerInvocation *Invocation,
+    std::shared_ptr<clang::CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   // Show the invocation, with -v.
   if (Invocation->getHeaderSearchOpts().Verbose) {
@@ -290,17 +290,17 @@ bool ToolInvocation::runInvocation(
     llvm::errs() << "\n";
   }
 
-  return Action->runInvocation(Invocation, Files, std::move(PCHContainerOps),
-                               DiagConsumer);
+  return Action->runInvocation(std::move(Invocation), Files,
+                               std::move(PCHContainerOps), DiagConsumer);
 }
 
 bool FrontendActionFactory::runInvocation(
-    CompilerInvocation *Invocation, FileManager *Files,
+    std::shared_ptr<CompilerInvocation> Invocation, FileManager *Files,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
   clang::CompilerInstance Compiler(std::move(PCHContainerOps));
-  Compiler.setInvocation(Invocation);
+  Compiler.setInvocation(std::move(Invocation));
   Compiler.setFileManager(Files);
 
   // The FrontendAction can have lifetime requirements for Compiler or its
@@ -474,7 +474,8 @@ class ASTBuilderAction : public ToolAction {
 public:
   ASTBuilderAction(std::vector<std::unique_ptr<ASTUnit>> &ASTs) : ASTs(ASTs) {}
 
-  bool runInvocation(CompilerInvocation *Invocation, FileManager *Files,
+  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+                     FileManager *Files,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(

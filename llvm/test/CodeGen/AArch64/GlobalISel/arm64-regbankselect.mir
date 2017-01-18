@@ -219,7 +219,7 @@ body: |
 
     %0 = LDRWui killed %x0, 0 :: (load 4 from %ir.src)
     %5(s32) = COPY %0
-    %1 = COPY %x1
+    %1(p0) = COPY %x1
     %2 = COPY %w2
     TBNZW killed %2, 0, %bb.2.end
 
@@ -229,7 +229,7 @@ body: |
 
   bb.2.end:
     %4(s32) = PHI %0, %bb.0.entry, %3, %bb.1.then
-    STRWui killed %4, killed %1, 0 :: (store 4 into %ir.dst)
+    G_STORE killed %4, killed %1 :: (store 4 into %ir.dst)
     RET_ReallyLR
 ...
 

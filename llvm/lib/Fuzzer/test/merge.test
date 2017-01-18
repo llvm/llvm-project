@@ -44,3 +44,11 @@ MERGE_WITH_CRASH: MERGE-OUTER: 3 new files
 # Check that we actually limit the size with max_len
 RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2  -max_len=5 2>&1 | FileCheck %s --check-prefix=MERGE_LEN5
 MERGE_LEN5: MERGE-OUTER: succesfull in 1 attempt(s)
+
+# Check that we honor TMPDIR
+RUN: TMPDIR=DIR_DOES_NOT_EXIST not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=TMPDIR
+TMPDIR: MERGE-OUTER: failed to write to the control file: DIR_DOES_NOT_EXIST/libFuzzerTemp
+
+# Check that we can report an error if file size exceeded
+RUN: (ulimit -f 1; not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
+SIGXFSZ: ERROR: libFuzzer: file size exceeded

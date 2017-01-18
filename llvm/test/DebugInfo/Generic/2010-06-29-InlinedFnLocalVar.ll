@@ -5,56 +5,60 @@
 ; CHECK:	DW_TAG_structure_type
 ; CHECK-NEXT:	DW_AT_name
 
+source_filename = "test/DebugInfo/Generic/2010-06-29-InlinedFnLocalVar.ll"
 
-@i = common global i32 0, !dbg !16                          ; <i32*> [#uses=2]
+@i = common global i32 0, !dbg !0
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
+; Function Attrs: nounwind readnone
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
+; Function Attrs: nounwind readnone
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
 
-define i32 @bar() nounwind ssp !dbg !6 {
+; Function Attrs: nounwind ssp
+define i32 @bar() #1 !dbg !8 {
 entry:
-  %0 = load i32, i32* @i, align 4, !dbg !17            ; <i32> [#uses=2]
-  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !59, metadata !DIExpression()), !dbg !19
-  tail call void @llvm.dbg.declare(metadata !29, metadata !60, metadata !DIExpression()), !dbg !21
-  %1 = mul nsw i32 %0, %0, !dbg !22               ; <i32> [#uses=2]
-  store i32 %1, i32* @i, align 4, !dbg !17
-  ret i32 %1, !dbg !23
+  %0 = load i32, i32* @i, align 4, !dbg !11
+  tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !13, metadata !24), !dbg !25
+  tail call void @llvm.dbg.declare(metadata !5, metadata !18, metadata !24), !dbg !26
+  %1 = mul nsw i32 %0, %0, !dbg !27
+  store i32 %1, i32* @i, align 4, !dbg !11
+  ret i32 %1, !dbg !28
 }
 
-!llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!28}
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind ssp }
 
-!0 = distinct !DISubprogram(name: "foo", line: 9, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, scopeLine: 9, file: !27, scope: !1, type: !3, variables: !24)
-!1 = !DIFile(filename: "bar.c", directory: "/tmp/")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !27, enums: !20, retainedTypes: !20, globals: !26, imports:  !20)
-!3 = !DISubroutineType(types: !4)
-!4 = !{!5, !5}
-!5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !27, scope: !1, type: !7)
-!7 = !DISubroutineType(types: !8)
-!8 = !{!5}
-!9 = !DILocalVariable(name: "j", line: 9, arg: 1, scope: !0, file: !1, type: !5)
-!10 = !DILocalVariable(name: "xyz", line: 10, scope: !11, file: !1, type: !12)
+!llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!7}
 
-!59 = !DILocalVariable(name: "j", line: 9, arg: 1, scope: !0, file: !1, type: !5)
-!60 = !DILocalVariable(name: "xyz", line: 10, scope: !11, file: !1, type: !12)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "i", scope: !2, file: !2, line: 5, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "bar.c", directory: "/tmp/")
+!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!4 = distinct !DICompileUnit(language: DW_LANG_C89, file: !2, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5)
+!5 = !{}
+!6 = !{!0}
+!7 = !{i32 1, !"Debug Info Version", i32 3}
+!8 = distinct !DISubprogram(name: "bar", linkageName: "bar", scope: !2, file: !2, line: 14, type: !9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !4)
+!9 = !DISubroutineType(types: !10)
+!10 = !{!3}
+!11 = !DILocation(line: 15, scope: !12)
+!12 = distinct !DILexicalBlock(scope: !8, file: !2, line: 14)
+!13 = !DILocalVariable(name: "j", arg: 1, scope: !14, file: !2, line: 9, type: !3)
+!14 = distinct !DISubprogram(name: "foo", scope: !2, file: !2, line: 9, type: !15, isLocal: true, isDefinition: true, scopeLine: 9, virtualIndex: 6, isOptimized: true, unit: !4, variables: !17)
+!15 = !DISubroutineType(types: !16)
+!16 = !{!3, !3}
+!17 = !{!13, !18}
+!18 = !DILocalVariable(name: "xyz", scope: !19, file: !2, line: 10, type: !20)
+!19 = distinct !DILexicalBlock(scope: !14, file: !2, line: 9)
+!20 = !DICompositeType(tag: DW_TAG_structure_type, name: "X", scope: !14, file: !2, line: 10, size: 64, align: 32, elements: !21)
+!21 = !{!22, !23}
+!22 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !20, file: !2, line: 10, baseType: !3, size: 32, align: 32)
+!23 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !20, file: !2, line: 10, baseType: !3, size: 32, align: 32, offset: 32)
+!24 = !DIExpression()
+!25 = !DILocation(line: 9, scope: !14, inlinedAt: !11)
+!26 = !DILocation(line: 9, scope: !19, inlinedAt: !11)
+!27 = !DILocation(line: 11, scope: !19, inlinedAt: !11)
+!28 = !DILocation(line: 16, scope: !12)
 
-!11 = distinct !DILexicalBlock(line: 9, column: 0, file: !1, scope: !0)
-!12 = !DICompositeType(tag: DW_TAG_structure_type, name: "X", line: 10, size: 64, align: 32, file: !27, scope: !0, elements: !13)
-!13 = !{!14, !15}
-!14 = !DIDerivedType(tag: DW_TAG_member, name: "a", line: 10, size: 32, align: 32, file: !27, scope: !12, baseType: !5)
-!15 = !DIDerivedType(tag: DW_TAG_member, name: "b", line: 10, size: 32, align: 32, offset: 32, file: !27, scope: !12, baseType: !5)
-!16 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !5))
-!17 = !DILocation(line: 15, scope: !18)
-!18 = distinct !DILexicalBlock(line: 14, column: 0, file: !1, scope: !6)
-!19 = !DILocation(line: 9, scope: !0, inlinedAt: !17)
-!20 = !{}
-!21 = !DILocation(line: 9, scope: !11, inlinedAt: !17)
-!22 = !DILocation(line: 11, scope: !11, inlinedAt: !17)
-!23 = !DILocation(line: 16, scope: !18)
-!24 = !{!9, !10}
-!26 = !{!16}
-!27 = !DIFile(filename: "bar.c", directory: "/tmp/")
-!28 = !{i32 1, !"Debug Info Version", i32 3}
-!29 = !{null}

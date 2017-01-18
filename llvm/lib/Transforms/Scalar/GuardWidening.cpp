@@ -658,8 +658,12 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  bool Changed = GuardWideningImpl(DT, PDT, LI).run();
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!GuardWideningImpl(DT, PDT, LI).run())
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {

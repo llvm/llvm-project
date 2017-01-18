@@ -40,6 +40,7 @@ int main ()
 #endif
         Derived &d = test_bad_cast(gB);
         assert(false);
+        ((void)d);
 #ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
     } catch (std::bad_cast) {
         // success

@@ -209,9 +209,9 @@ def FeatureLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
 def FeatureSlowDivide32 : SubtargetFeature<"idivl-to-divb",
                                      "HasSlowDivide32", "true",
                                      "Use 8-bit divide for positive values less than 256">;
-def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divw",
+def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
                                      "HasSlowDivide64", "true",
-                                     "Use 16-bit divide for positive values less than 65536">;
+                                     "Use 32-bit divide for positive values less than 2^32">;
 def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "PadShortFunctions", "true",
                                      "Pad short functions">;
@@ -461,6 +461,7 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
   FeatureAES,
+  FeatureSlowDivide64,
   FeaturePCLMUL,
   FeatureXSAVE,
   FeatureXSAVEOPT,
@@ -759,6 +760,42 @@ def : Proc<"bdver4", [
   FeatureLAHFSAHF,
   FeatureMWAITX
 ]>;
+
+// TODO: The scheduler model falls to BTVER2 model.
+// The znver1 model has to be put in place.
+// Zen
+def: ProcessorModel<"znver1", BtVer2Model, [
+  FeatureADX,
+  FeatureAES,
+  FeatureAVX2,
+  FeatureBMI,
+  FeatureBMI2,
+  FeatureCLFLUSHOPT,
+  FeatureCMPXCHG16B,
+  FeatureF16C,
+  FeatureFMA,
+  FeatureFSGSBase,
+  FeatureFXSR,
+  FeatureFastLZCNT,
+  FeatureLAHFSAHF,
+  FeatureLZCNT,
+  FeatureMMX,
+  FeatureMOVBE,
+  FeatureMWAITX,
+  FeaturePCLMUL,
+  FeaturePOPCNT,
+  FeaturePRFCHW,
+  FeatureRDRAND,
+  FeatureRDSEED,
+  FeatureSHA,
+  FeatureSMAP,
+  FeatureSSE4A,
+  FeatureSlowSHLD,
+  FeatureX87,
+  FeatureXSAVE,
+  FeatureXSAVEC,
+  FeatureXSAVEOPT,
+  FeatureXSAVES]>;
 
 def : Proc<"geode",           [FeatureX87, FeatureSlowUAMem16, Feature3DNowA]>;
 

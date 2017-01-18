@@ -126,7 +126,7 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
         err = process_sp->GetMemoryRegionInfo(
             region_info.GetRange().GetRangeEnd(), region_info);
         if (err.Fail()) {
-          lldbassert(!"GetMemoryRegionInfo() succeeded, then failed");
+          lldbassert(0 && "GetMemoryRegionInfo() succeeded, then failed");
           ret = LLDB_INVALID_ADDRESS;
           break;
         }

@@ -242,7 +242,8 @@ void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
 
 /// \brief Serializes replacements into YAML and writes them to the specified
 /// output stream.
-void exportReplacements(const std::vector<ClangTidyError> &Errors,
+void exportReplacements(StringRef MainFilePath,
+                        const std::vector<ClangTidyError> &Errors,
                         raw_ostream &OS);
 
 } // end namespace tidy

@@ -45,21 +45,21 @@ define fp128 @test_multf3(fp128 %a, fp128 %b) #0 {
 }
 
 define float @test_subsf3(float %a, float %b) #0 {
-  ; CHCEK-LABEL:  test_subsf3:
+  ; CHECK-LABEL:  test_subsf3:
   ; CHECK:        call __subsf3
   %sub = fsub float %a, %b
   ret float %sub
 }
 
 define double @test_subdf3(double %a, double %b) #0 {
-  ; CHCEK-LABEL:  test_subdf3:
+  ; CHECK-LABEL:  test_subdf3:
   ; CHECK:        call __subdf3
   %sub = fsub double %a, %b
   ret double %sub
 }
 
 define fp128 @test_subtf3(fp128 %a, fp128 %b) #0 {
-  ; CHCEK-LABEL:  test_subtf3:
+  ; CHECK-LABEL:  test_subtf3:
   ; CHECK:        call __subtf3
   %sub = fsub fp128 %a, %b
   ret fp128 %sub

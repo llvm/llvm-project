@@ -26,7 +26,7 @@
 //  * etc...
 //
 // Note that this analysis specifically identifies *Loops* not cycles or SCCs
-// in the CFG.  There can be strongly connected compontents in the CFG which
+// in the CFG.  There can be strongly connected components in the CFG which
 // this analysis will not recognize and that will not be represented by a Loop
 // instance.  In particular, a Loop might be inside such a non-loop SCC, or a
 // non-loop SCC might contain a sub-SCC which is a Loop. 
@@ -364,7 +364,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
-/// in the CFG are neccessarily loops.
+/// in the CFG are necessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// \brief A range representing the start and end location of a loop.
@@ -469,7 +469,7 @@ public:
   /// the loop that branches to the loop header.
   ///
   /// The LoopID metadata node should have one or more operands and the first
-  /// operand should should be the node itself.
+  /// operand should be the node itself.
   void setLoopID(MDNode *LoopID) const;
 
   /// Return true if no exit block for the loop has a predecessor that is
@@ -682,6 +682,10 @@ public:
     return *this;
   }
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   // Most of the public interface is provided via LoopInfoBase.
 
   /// Update LoopInfo after removing the last backedge from a loop. This updates
@@ -853,17 +857,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
-/// \brief Pass for printing a loop's contents as LLVM's text IR assembly.
-class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
-  raw_ostream &OS;
-  std::string Banner;
-
-public:
-  PrintLoopPass();
-  PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
-
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &);
-};
+/// Function to print a loop's contents as LLVM's text IR assembly.
+void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
 
 } // End llvm namespace
 

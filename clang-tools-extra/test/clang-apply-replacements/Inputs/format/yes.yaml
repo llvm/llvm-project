@@ -2,21 +2,23 @@
 # so that formatting happens correctly.
 ---
 MainSourceFile:  yes.cpp
-Replacements:    
-  - FilePath:        $(path)/yes.cpp
-    Offset:          494
-    Length:          1
-    ReplacementText: nullptr
-  - FilePath:        $(path)/yes.cpp
-    Offset:          410
-    Length:          1
-    ReplacementText: nullptr
-  - FilePath:        $(path)/yes.cpp
-    Offset:          454
-    Length:          1
-    ReplacementText: nullptr
-  - FilePath:        $(path)/yes.cpp
-    Offset:          108
-    Length:          38
-    ReplacementText: 'auto '
+Diagnostics:     
+  - DiagnosticName:  test-yes
+    Replacements:    
+      - FilePath:        $(path)/yes.cpp
+        Offset:          494
+        Length:          1
+        ReplacementText: nullptr
+      - FilePath:        $(path)/yes.cpp
+        Offset:          410
+        Length:          1
+        ReplacementText: nullptr
+      - FilePath:        $(path)/yes.cpp
+        Offset:          454
+        Length:          1
+        ReplacementText: nullptr
+      - FilePath:        $(path)/yes.cpp
+        Offset:          108
+        Length:          38
+        ReplacementText: 'auto '
 ...

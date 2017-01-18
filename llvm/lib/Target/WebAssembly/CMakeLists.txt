@@ -17,6 +17,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyExplicitLocals.cpp
   WebAssemblyFastISel.cpp
   WebAssemblyFixIrreducibleControlFlow.cpp
+  WebAssemblyFixFunctionBitcasts.cpp
   WebAssemblyFrameLowering.cpp
   WebAssemblyISelDAGToDAG.cpp
   WebAssemblyISelLowering.cpp

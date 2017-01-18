@@ -190,6 +190,7 @@ TEST_P(DerivedTest, DoesBlah) {
 // inside #if GTEST_HAS_PARAM_TEST.
 #include "gtest/internal/gtest-internal.h"
 #include "gtest/internal/gtest-param-util.h"
+#include "gtest/internal/gtest-param-util-generated.h"
 
 #if GTEST_HAS_PARAM_TEST
 
@@ -323,12 +324,6 @@ internal::ParamGenerator<typename Container::value_type> ValuesIn(
     const Container& container) {
   return ValuesIn(container.begin(), container.end());
 }
-
-} // namespace testing
-
-#include <gtest/internal/gtest-param-util-generated.h>
-
-namespace testing {
 
 // Values() allows generating tests from explicitly specified list of
 // parameters.
@@ -1262,7 +1257,7 @@ inline internal::ParamGenerator<bool> Bool() {
 // Boolean flags:
 //
 // class FlagDependentTest
-//     : public testing::TestWithParam<tuple(bool, bool)> > {
+//     : public testing::TestWithParam<tuple<bool, bool> > {
 //   virtual void SetUp() {
 //     // Assigns external_flag_1 and external_flag_2 values from the tuple.
 //     tie(external_flag_1, external_flag_2) = GetParam();
@@ -1392,14 +1387,17 @@ internal::CartesianProductHolder10<Generator1, Generator2, Generator3,
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
-              #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
-                  #test_case_name, \
-                  #test_name, \
-                  new ::testing::internal::TestMetaFactory< \
-                      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+              #test_case_name, \
+              ::testing::internal::CodeLocation(\
+                  __FILE__, __LINE__))->AddTestPattern(\
+                      #test_case_name, \
+                      #test_name, \
+                      new ::testing::internal::TestMetaFactory< \
+                          GTEST_TEST_CLASS_NAME_(\
+                              test_case_name, test_name)>()); \
       return 0; \
     } \
-    static int gtest_registering_dummy_; \
+    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_; \
     GTEST_DISALLOW_COPY_AND_ASSIGN_(\
         GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
   }; \
@@ -1408,16 +1406,36 @@ internal::CartesianProductHolder10<Generator1, Generator2, Generator3,
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
-# define INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
+// The optional last argument to INSTANTIATE_TEST_CASE_P allows the user
+// to specify a function or functor that generates custom test name suffixes
+// based on the test parameters. The function should accept one argument of
+// type testing::TestParamInfo<class ParamType>, and return std::string.
+//
+// testing::PrintToStringParamName is a builtin test suffix generator that
+// returns the value of testing::PrintToString(GetParam()). It does not work
+// for std::string or C strings.
+//
+// Note: test names must be non-empty, unique, and may only contain ASCII
+// alphanumeric characters or underscore.
+
+# define INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator, ...) \
   ::testing::internal::ParamGenerator<test_case_name::ParamType> \
       gtest_##prefix##test_case_name##_EvalGenerator_() { return generator; } \
-  int gtest_##prefix##test_case_name##_dummy_ = \
+  ::std::string gtest_##prefix##test_case_name##_EvalGenerateName_( \
+      const ::testing::TestParamInfo<test_case_name::ParamType>& info) { \
+    return ::testing::internal::GetParamNameGen<test_case_name::ParamType> \
+        (__VA_ARGS__)(info); \
+  } \
+  int gtest_##prefix##test_case_name##_dummy_ GTEST_ATTRIBUTE_UNUSED_ = \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
-              #test_case_name, __FILE__, __LINE__)->AddTestCaseInstantiation(\
-                  #prefix, \
-                  &gtest_##prefix##test_case_name##_EvalGenerator_, \
-                  __FILE__, __LINE__)
+              #test_case_name, \
+              ::testing::internal::CodeLocation(\
+                  __FILE__, __LINE__))->AddTestCaseInstantiation(\
+                      #prefix, \
+                      &gtest_##prefix##test_case_name##_EvalGenerator_, \
+                      &gtest_##prefix##test_case_name##_EvalGenerateName_, \
+                      __FILE__, __LINE__)
 
 }  // namespace testing
 

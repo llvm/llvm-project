@@ -2493,10 +2493,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *LHS = vectorizeTree(LHSVL);
       Value *RHS = vectorizeTree(RHSVL);
 
-      if (LHS == RHS && isa<Instruction>(LHS)) {
-        assert((VL0->getOperand(0) == VL0->getOperand(1)) && "Invalid order");
-      }
-
       if (Value *V = alreadyVectorized(E->Scalars))
         return V;
 
@@ -3268,7 +3264,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
   struct ScheduleDataCompare {
-    bool operator()(ScheduleData *SD1, ScheduleData *SD2) {
+    bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
       return SD2->SchedulingPriority < SD1->SchedulingPriority;
     }
   };
@@ -3649,9 +3645,9 @@ PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &A
   bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB);
   if (!Changed)
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
-  PA.preserve<LoopAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<AAManager>();
   PA.preserve<GlobalsAA>();
   return PA;

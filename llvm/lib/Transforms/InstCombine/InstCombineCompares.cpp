@@ -1903,7 +1903,7 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
     return foldICmpShlOne(Cmp, Shl, C);
 
   // Check that the shift amount is in range. If not, don't perform undefined
-  // shifts. When the shift is visited it will be simplified.
+  // shifts. When the shift is visited, it will be simplified.
   unsigned TypeBits = C->getBitWidth();
   if (ShiftAmt->uge(TypeBits))
     return nullptr;
@@ -1923,7 +1923,7 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, LShrC);
 
     if (Shl->hasOneUse()) {
-      // Otherwise strength reduce the shift into an and.
+      // Otherwise, strength reduce the shift into an and.
       Constant *Mask = ConstantInt::get(Shl->getType(),
           APInt::getLowBitsSet(TypeBits, TypeBits - ShiftAmt->getZExtValue()));
 
@@ -1951,7 +1951,7 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   }
 
   // When the shift is nuw and pred is >u or <=u, comparison only really happens
-  // in the pre-shifted bits. Since InstSimplify canoncalizes <=u into <u, the
+  // in the pre-shifted bits. Since InstSimplify canonicalizes <=u into <u, the
   // <=u case can be further converted to match <u (see below).
   if (Shl->hasNoUnsignedWrap() &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT)) {
@@ -1970,9 +1970,9 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   // Transform (icmp pred iM (shl iM %v, N), C)
   // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (C>>N))
   // Transform the shl to a trunc if (trunc (C>>N)) has no loss and M-N.
-  // This enables us to get rid of the shift in favor of a trunc which can be
+  // This enables us to get rid of the shift in favor of a trunc that may be
   // free on the target. It has the additional benefit of comparing to a
-  // smaller constant, which will be target friendly.
+  // smaller constant that may be more target-friendly.
   unsigned Amt = ShiftAmt->getLimitedValue(TypeBits - 1);
   if (Shl->hasOneUse() && Amt != 0 && C->countTrailingZeros() >= Amt &&
       DL.isLegalInteger(TypeBits - Amt)) {
@@ -2842,6 +2842,31 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   // icmp slt X, (Y + 1) -> icmp sle X, Y
   if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SLT && match(D, m_One()))
     return new ICmpInst(CmpInst::ICMP_SLE, Op0, C);
+
+  // TODO: The subtraction-related identities shown below also hold, but
+  // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
+  // wouldn't happen even if they were implemented.
+  //
+  // icmp ult (X - 1), Y -> icmp ule X, Y
+  // icmp uge (X - 1), Y -> icmp ugt X, Y
+  // icmp ugt X, (Y - 1) -> icmp uge X, Y
+  // icmp ule X, (Y - 1) -> icmp ult X, Y
+
+  // icmp ule (X + 1), Y -> icmp ult X, Y
+  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_ULE && match(B, m_One()))
+    return new ICmpInst(CmpInst::ICMP_ULT, A, Op1);
+
+  // icmp ugt (X + 1), Y -> icmp uge X, Y
+  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_UGT && match(B, m_One()))
+    return new ICmpInst(CmpInst::ICMP_UGE, A, Op1);
+
+  // icmp uge X, (Y + 1) -> icmp ugt X, Y
+  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_UGE && match(D, m_One()))
+    return new ICmpInst(CmpInst::ICMP_UGT, Op0, C);
+
+  // icmp ult X, (Y + 1) -> icmp ule X, Y
+  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_ULT && match(D, m_One()))
+    return new ICmpInst(CmpInst::ICMP_ULE, Op0, C);
 
   // if C1 has greater magnitude than C2:
   //  icmp (X + C1), (Y + C2) -> icmp (X + C3), Y

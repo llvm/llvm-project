@@ -498,7 +498,7 @@ entry:
 define %shifttypec16i8 @shift16i8c(%shifttypec16i8 %a, %shifttypec16i8 %b) {
 entry:
   ; SSE2: shift16i8c
-  ; SSE2: cost of 1 {{.*}} lshr
+  ; SSE2: cost of 2 {{.*}} lshr
   ; SSE2-CODEGEN: shift16i8c
   ; SSE2-CODEGEN: psrlw $3
 
@@ -513,7 +513,7 @@ entry:
 define %shifttypec32i8 @shift32i8c(%shifttypec32i8 %a, %shifttypec32i8 %b) {
 entry:
   ; SSE2: shift32i8c
-  ; SSE2: cost of 2 {{.*}} lshr
+  ; SSE2: cost of 4 {{.*}} lshr
   ; SSE2-CODEGEN: shift32i8c
   ; SSE2-CODEGEN: psrlw $3
 

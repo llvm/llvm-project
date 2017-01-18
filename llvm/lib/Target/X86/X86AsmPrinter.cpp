@@ -70,7 +70,7 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   EmitFunctionBody();
 
   // Emit the XRay table for this function.
-  EmitXRayTable();
+  emitXRayTable();
 
   // We didn't modify anything.
   return false;

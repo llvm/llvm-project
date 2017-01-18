@@ -26,7 +26,7 @@ bool DWARFTypeUnit::extractImpl(DataExtractor debug_info,
 
 void DWARFTypeUnit::dump(raw_ostream &OS, bool SummarizeTypes) {
   DWARFDie TD = getDIEForOffset(TypeOffset + getOffset());
-  const char *Name = TD.getAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
+  const char *Name = TD.getName(DINameKind::ShortName);
 
   if (SummarizeTypes) {
     OS << "name = '" << Name << "'"

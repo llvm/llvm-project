@@ -112,7 +112,7 @@ protected:
                   TII->get(TargetOpcode::SUBREG_TO_REG), NewVReg)
               .addImm(1) // add 1, not 0, because there is no implicit clearing
                          // of the high bits.
-              .addOperand(SrcMO)
+              .add(SrcMO)
               .addImm(PPC::sub_64);
 
           // The source of the original copy is now the new virtual register.
@@ -132,7 +132,7 @@ protected:
           unsigned NewVReg = MRI.createVirtualRegister(DstRC);
           BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
                   NewVReg)
-              .addOperand(SrcMO);
+              .add(SrcMO);
 
           // Transform the original copy into a subregister extraction copy.
           SrcMO.setReg(NewVReg);

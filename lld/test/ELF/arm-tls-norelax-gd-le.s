@@ -33,5 +33,5 @@ x:
 
 // CHECK:       Contents of section .got:
 // Module index is always 1 for executable
-// CHECK-NEXT:  12060 01000000 00000000
+// CHECK-NEXT:  13060 01000000 00000000
 

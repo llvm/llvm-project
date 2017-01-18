@@ -25,11 +25,12 @@ namespace test1 {
     }
     void helper() {
         static int a = increment();
+        ((void)a);
     }
     void test() {
-        static int a = increment();
+        static int a = increment(); ((void)a);
         assert(run_count == 1);
-        static int b = increment();
+        static int b = increment(); ((void)b);
         assert(run_count == 2);
         helper();
         assert(run_count == 3);
@@ -50,7 +51,8 @@ namespace test2 {
     void helper() {
         try {
             static int a = increment();
-            assert(0);
+            assert(false);
+            ((void)a);
         } catch (...) {}
     }
     void test() {
@@ -71,12 +73,12 @@ namespace test3 {
     }
 
     int one() {
-        static int b = zero();
+        static int b = zero(); ((void)b);
         return 0;
     }
 
     void test() {
-        static int a = one();
+        static int a = one(); ((void)a);
     }
 }
 
@@ -91,7 +93,7 @@ namespace test4 {
     }
 
     void helper() {
-        static int a = increment();
+        static int a = increment(); ((void)a);
     }
 
     void test() {
@@ -112,16 +114,16 @@ namespace test5 {
     }
 
     int one() {
-        static int b = zero();
+        static int b = zero(); ((void)b);
         return 0;
     }
 
     void another_helper() {
-        static int a = one();
+        static int a = one(); ((void)a);
     }
 
     void helper() {
-        static int a = one();
+        static int a = one(); ((void)a);
         std::thread t(another_helper);
         t.join();
     }

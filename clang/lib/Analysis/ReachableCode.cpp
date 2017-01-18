@@ -218,11 +218,21 @@ static bool isConfigurationValue(const Stmt *S,
     }
     case Stmt::UnaryOperatorClass: {
       const UnaryOperator *UO = cast<UnaryOperator>(S);
-      if (SilenceableCondVal) 
-        *SilenceableCondVal = UO->getSourceRange();      
-      return UO->getOpcode() == UO_LNot &&
-             isConfigurationValue(UO->getSubExpr(), PP, SilenceableCondVal,
-                                  IncludeIntegers, WrappedInParens);
+      if (UO->getOpcode() != UO_LNot)
+        return false;
+      bool SilenceableCondValNotSet =
+          SilenceableCondVal && SilenceableCondVal->getBegin().isInvalid();
+      bool IsSubExprConfigValue =
+          isConfigurationValue(UO->getSubExpr(), PP, SilenceableCondVal,
+                               IncludeIntegers, WrappedInParens);
+      // Update the silenceable condition value source range only if the range
+      // was set directly by the child expression.
+      if (SilenceableCondValNotSet &&
+          SilenceableCondVal->getBegin().isValid() &&
+          *SilenceableCondVal ==
+              UO->getSubExpr()->IgnoreCasts()->getSourceRange())
+        *SilenceableCondVal = UO->getSourceRange();
+      return IsSubExprConfigValue;
     }
     default:
       return false;

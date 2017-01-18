@@ -970,7 +970,7 @@ void __throw_regex_error()
 }
 
 template <class _CharT>
-struct _LIBCPP_TYPE_VIS_ONLY regex_traits
+struct _LIBCPP_TEMPLATE_VIS regex_traits
 {
 public:
     typedef _CharT                  char_type;
@@ -1287,11 +1287,11 @@ regex_traits<_CharT>::__regex_traits_value(wchar_t __ch, int __radix) const
 
 template <class _CharT> class __node;
 
-template <class _BidirectionalIterator> class _LIBCPP_TYPE_VIS_ONLY sub_match;
+template <class _BidirectionalIterator> class _LIBCPP_TEMPLATE_VIS sub_match;
 
 template <class _BidirectionalIterator,
           class _Allocator = allocator<sub_match<_BidirectionalIterator> > >
-class _LIBCPP_TYPE_VIS_ONLY match_results;
+class _LIBCPP_TEMPLATE_VIS match_results;
 
 template <class _CharT>
 struct __state
@@ -2472,7 +2472,7 @@ __exit:
 template <class _CharT, class _Traits> class __lookahead;
 
 template <class _CharT, class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TYPE_VIS_ONLY basic_regex
+class _LIBCPP_TEMPLATE_VIS basic_regex
 {
 public:
     // types:
@@ -4314,7 +4314,8 @@ basic_regex<_CharT, _Traits>::__parse_decimal_escape(_ForwardIterator __first,
         else if ('1' <= *__first && *__first <= '9')
         {
             unsigned __v = *__first - '0';
-            for (++__first; '0' <= *__first && *__first <= '9'; ++__first)
+            for (++__first;
+                    __first != __last && '0' <= *__first && *__first <= '9'; ++__first)
                 __v = 10 * __v + *__first - '0';
             if (__v > mark_count())
                 __throw_regex_error<regex_constants::error_backref>();
@@ -4764,7 +4765,7 @@ typedef basic_regex<wchar_t> wregex;
 // sub_match
 
 template <class _BidirectionalIterator>
-class _LIBCPP_TYPE_VIS_ONLY sub_match
+class _LIBCPP_TEMPLATE_VIS sub_match
     : public pair<_BidirectionalIterator, _BidirectionalIterator>
 {
 public:
@@ -5187,7 +5188,7 @@ operator<<(basic_ostream<_CharT, _ST>& __os, const sub_match<_BiIter>& __m)
 }
 
 template <class _BidirectionalIterator, class _Allocator>
-class _LIBCPP_TYPE_VIS_ONLY match_results
+class _LIBCPP_TEMPLATE_VIS match_results
 {
 public:
     typedef _Allocator                                        allocator_type;
@@ -5261,15 +5262,15 @@ public:
     // format:
     template <class _OutputIter>
         _OutputIter
-        format(_OutputIter __out, const char_type* __fmt_first,
+        format(_OutputIter __output, const char_type* __fmt_first,
                const char_type* __fmt_last,
                regex_constants::match_flag_type __flags = regex_constants::format_default) const;
     template <class _OutputIter, class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         _OutputIter
-        format(_OutputIter __out, const basic_string<char_type, _ST, _SA>& __fmt,
+        format(_OutputIter __output, const basic_string<char_type, _ST, _SA>& __fmt,
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
-            {return format(__out, __fmt.data(), __fmt.data() + __fmt.size(), __flags);}
+            {return format(__output, __fmt.data(), __fmt.data() + __fmt.size(), __flags);}
     template <class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         basic_string<char_type, _ST, _SA>
@@ -5381,7 +5382,7 @@ match_results<_BidirectionalIterator, _Allocator>::__init(unsigned __s,
 template <class _BidirectionalIterator, class _Allocator>
 template <class _OutputIter>
 _OutputIter
-match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
+match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
         const char_type* __fmt_first, const char_type* __fmt_last,
         regex_constants::match_flag_type __flags) const
 {
@@ -5390,27 +5391,27 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
         for (; __fmt_first != __fmt_last; ++__fmt_first)
         {
             if (*__fmt_first == '&')
-                __out = _VSTD::copy(__matches_[0].first, __matches_[0].second,
-                                   __out);
+                __output = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                                   __output);
             else if (*__fmt_first == '\\' && __fmt_first + 1 != __fmt_last)
             {
                 ++__fmt_first;
                 if ('0' <= *__fmt_first && *__fmt_first <= '9')
                 {
                     size_t __i = *__fmt_first - '0';
-                    __out = _VSTD::copy((*this)[__i].first,
-                                        (*this)[__i].second, __out);
+                    __output = _VSTD::copy((*this)[__i].first,
+                                        (*this)[__i].second, __output);
                 }
                 else
                 {
-                    *__out = *__fmt_first;
-                    ++__out;
+                    *__output = *__fmt_first;
+                    ++__output;
                 }
             }
             else
             {
-                *__out = *__fmt_first;
-                ++__out;
+                *__output = *__fmt_first;
+                ++__output;
             }
         }
     }
@@ -5423,21 +5424,21 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
                 switch (__fmt_first[1])
                 {
                 case '$':
-                    *__out = *++__fmt_first;
-                    ++__out;
+                    *__output = *++__fmt_first;
+                    ++__output;
                     break;
                 case '&':
                     ++__fmt_first;
-                    __out = _VSTD::copy(__matches_[0].first, __matches_[0].second,
-                                       __out);
+                    __output = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                                       __output);
                     break;
                 case '`':
                     ++__fmt_first;
-                    __out = _VSTD::copy(__prefix_.first, __prefix_.second, __out);
+                    __output = _VSTD::copy(__prefix_.first, __prefix_.second, __output);
                     break;
                 case '\'':
                     ++__fmt_first;
-                    __out = _VSTD::copy(__suffix_.first, __suffix_.second, __out);
+                    __output = _VSTD::copy(__suffix_.first, __suffix_.second, __output);
                     break;
                 default:
                     if ('0' <= __fmt_first[1] && __fmt_first[1] <= '9')
@@ -5450,25 +5451,25 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
                             ++__fmt_first;
                             __i = 10 * __i + *__fmt_first - '0';
                         }
-                        __out = _VSTD::copy((*this)[__i].first,
-                                            (*this)[__i].second, __out);
+                        __output = _VSTD::copy((*this)[__i].first,
+                                            (*this)[__i].second, __output);
                     }
                     else
                     {
-                        *__out = *__fmt_first;
-                        ++__out;
+                        *__output = *__fmt_first;
+                        ++__output;
                     }
                     break;
                 }
             }
             else
             {
-                *__out = *__fmt_first;
-                ++__out;
+                *__output = *__fmt_first;
+                ++__output;
             }
         }
     }
-    return __out;
+    return __output;
 }
 
 template <class _BidirectionalIterator, class _Allocator>
@@ -6051,7 +6052,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
 template <class _BidirectionalIterator,
           class _CharT = typename iterator_traits<_BidirectionalIterator>::value_type,
           class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TYPE_VIS_ONLY regex_iterator
+class _LIBCPP_TEMPLATE_VIS regex_iterator
 {
 public:
     typedef basic_regex<_CharT, _Traits>          regex_type;
@@ -6170,7 +6171,7 @@ typedef regex_iterator<wstring::const_iterator> wsregex_iterator;
 template <class _BidirectionalIterator,
           class _CharT = typename iterator_traits<_BidirectionalIterator>::value_type,
           class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TYPE_VIS_ONLY regex_token_iterator
+class _LIBCPP_TEMPLATE_VIS regex_token_iterator
 {
 public:
     typedef basic_regex<_CharT, _Traits>      regex_type;
@@ -6186,7 +6187,7 @@ private:
     _Position         __position_;
     const value_type* __result_;
     value_type        __suffix_;
-    ptrdiff_t         _N_;
+    ptrdiff_t         __n_;
     vector<int>       __subs_;
 
 public:
@@ -6269,10 +6270,10 @@ public:
 private:
     void __init(_BidirectionalIterator __a, _BidirectionalIterator __b);
     void __establish_result () {
-        if (__subs_[_N_] == -1)
+        if (__subs_[__n_] == -1)
             __result_ = &__position_->prefix();
         else
-            __result_ = &(*__position_)[__subs_[_N_]];
+            __result_ = &(*__position_)[__subs_[__n_]];
         }       
 };
 
@@ -6281,7 +6282,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
     regex_token_iterator()
     : __result_(nullptr),
       __suffix_(),
-      _N_(0)
+      __n_(0)
 {
 }
 
@@ -6292,7 +6293,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
 {
     if (__position_ != _Position())
         __establish_result ();
-    else if (__subs_[_N_] == -1)
+    else if (__subs_[__n_] == -1)
     {
         __suffix_.matched = true;
         __suffix_.first = __a;
@@ -6309,7 +6310,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
                          const regex_type& __re, int __submatch,
                          regex_constants::match_flag_type __m)
     : __position_(__a, __b, __re, __m),
-      _N_(0),
+      __n_(0),
       __subs_(1, __submatch)
 {
     __init(__a, __b);
@@ -6321,7 +6322,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
                          const regex_type& __re, const vector<int>& __submatches,
                          regex_constants::match_flag_type __m)
     : __position_(__a, __b, __re, __m),
-      _N_(0),
+      __n_(0),
       __subs_(__submatches)
 {
     __init(__a, __b);
@@ -6336,7 +6337,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
                          initializer_list<int> __submatches,
                          regex_constants::match_flag_type __m)
     : __position_(__a, __b, __re, __m),
-      _N_(0),
+      __n_(0),
       __subs_(__submatches)
 {
     __init(__a, __b);
@@ -6352,7 +6353,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
                              const int (&__submatches)[_Np],
                              regex_constants::match_flag_type __m)
     : __position_(__a, __b, __re, __m),
-      _N_(0),
+      __n_(0),
       __subs_(__submatches, __submatches + _Np)
 {
     __init(__a, __b);
@@ -6364,7 +6365,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
     : __position_(__x.__position_),
       __result_(__x.__result_),
       __suffix_(__x.__suffix_),
-      _N_(__x._N_),
+      __n_(__x.__n_),
       __subs_(__x.__subs_)
 {
     if (__x.__result_ == &__x.__suffix_)
@@ -6386,7 +6387,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
         else
             __result_ = __x.__result_;
         __suffix_ = __x.__suffix_;
-        _N_ = __x._N_;
+        __n_ = __x.__n_;
         __subs_ = __x.__subs_;
 
         if ( __result_ != nullptr && __result_ != &__suffix_ )
@@ -6409,7 +6410,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
         return false;
     if (__result_ == &__suffix_ || __x.__result_ == &__x.__suffix_)
         return false;
-    return __position_ == __x.__position_ && _N_ == __x._N_ &&
+    return __position_ == __x.__position_ && __n_ == __x.__n_ &&
            __subs_ == __x.__subs_;
 }
 
@@ -6420,14 +6421,14 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
     _Position __prev = __position_;
     if (__result_ == &__suffix_)
         __result_ = nullptr;
-    else if (_N_ + 1 < __subs_.size())
+    else if (static_cast<size_t>(__n_ + 1) < __subs_.size())
     {
-        ++_N_;
+        ++__n_;
         __establish_result();
     }
     else
     {
-        _N_ = 0;
+        __n_ = 0;
         ++__position_;
         if (__position_ != _Position())
             __establish_result();
@@ -6458,7 +6459,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
 _OutputIterator
-regex_replace(_OutputIterator __out,
+regex_replace(_OutputIterator __output,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
@@ -6469,7 +6470,7 @@ regex_replace(_OutputIterator __out,
     if (__i == __eof)
     {
         if (!(__flags & regex_constants::format_no_copy))
-            __out = _VSTD::copy(__first, __last, __out);
+            __output = _VSTD::copy(__first, __last, __output);
     }
     else
     {
@@ -6477,29 +6478,29 @@ regex_replace(_OutputIterator __out,
         for (size_t __len = char_traits<_CharT>::length(__fmt); __i != __eof; ++__i)
         {
             if (!(__flags & regex_constants::format_no_copy))
-                __out = _VSTD::copy(__i->prefix().first, __i->prefix().second, __out);
-            __out = __i->format(__out, __fmt, __fmt + __len, __flags);
+                __output = _VSTD::copy(__i->prefix().first, __i->prefix().second, __output);
+            __output = __i->format(__output, __fmt, __fmt + __len, __flags);
             __lm = __i->suffix();
             if (__flags & regex_constants::format_first_only)
                 break;
         }
         if (!(__flags & regex_constants::format_no_copy))
-            __out = _VSTD::copy(__lm.first, __lm.second, __out);
+            __output = _VSTD::copy(__lm.first, __lm.second, __output);
     }
-    return __out;
+    return __output;
 }
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-regex_replace(_OutputIterator __out,
+regex_replace(_OutputIterator __output,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e,
               const basic_string<_CharT, _ST, _SA>& __fmt,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_replace(__out, __first, __last, __e, __fmt.c_str(), __flags);
+    return _VSTD::regex_replace(__output, __first, __last, __e, __fmt.c_str(), __flags);
 }
 
 template <class _Traits, class _CharT, class _ST, class _SA, class _FST,

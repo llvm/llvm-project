@@ -393,11 +393,11 @@ _LIBCPP_DECLARE_STRONG_ENUM(io_errc)
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(io_errc)
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY is_error_code_enum<io_errc> : public true_type { };
+struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<io_errc> : public true_type { };
 
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY is_error_code_enum<io_errc::__lx> : public true_type { };
+struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<io_errc::__lx> : public true_type { };
 #endif
 
 _LIBCPP_FUNC_VIS
@@ -572,8 +572,15 @@ ios_base::exceptions(iostate __iostate)
     clear(__rdstate_);
 }
 
+#if defined(_LIBCPP_CXX03_LANG)
+struct _LIBCPP_TYPE_VIS __cxx03_bool {
+  typedef void (__cxx03_bool::*__bool_type)();
+  void __true_value() {}
+};
+#endif
+
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_ios
+class _LIBCPP_TEMPLATE_VIS basic_ios
     : public ios_base
 {
 public:
@@ -585,9 +592,19 @@ public:
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
 
+  // __true_value will generate undefined references when linking unless
+  // we give it internal linkage.
+
+#if defined(_LIBCPP_CXX03_LANG)
     _LIBCPP_ALWAYS_INLINE
-        _LIBCPP_EXPLICIT
-        operator bool() const {return !fail();}
+    operator __cxx03_bool::__bool_type() const {
+        return !fail() ? &__cxx03_bool::__true_value : nullptr;
+    }
+#else
+    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_EXPLICIT operator bool() const {return !fail();}
+#endif
+
     _LIBCPP_ALWAYS_INLINE bool operator!() const    {return  fail();}
     _LIBCPP_ALWAYS_INLINE iostate rdstate() const   {return ios_base::rdstate();}
     _LIBCPP_ALWAYS_INLINE void clear(iostate __state = goodbit) {ios_base::clear(__state);}

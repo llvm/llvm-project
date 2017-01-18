@@ -31,8 +31,11 @@ define void @test_simple_arg(i32 %in) {
 }
 
 ; CHECK-LABEL: name: test_indirect_call
-; CHECK: [[FUNC:%[0-9]+]](p0) = COPY %x0
-; CHECK: BLR [[FUNC]](p0), csr_aarch64_aapcs, implicit-def %lr, implicit %sp
+; CHECK: registers:
+; Make sure the register feeding the indirect call is properly constrained.
+; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64 }
+; CHECK: %[[FUNC]](p0) = COPY %x0
+; CHECK: BLR %[[FUNC]](p0), csr_aarch64_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: RET_ReallyLR
 define void @test_indirect_call(void()* %func) {
   call void %func()

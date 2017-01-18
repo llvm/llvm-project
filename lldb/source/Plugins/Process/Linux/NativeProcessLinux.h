@@ -119,7 +119,7 @@ private:
   ArchSpec m_arch;
 
   LazyBool m_supports_mem_region;
-  std::vector<MemoryRegionInfo> m_mem_region_cache;
+  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   lldb::tid_t m_pending_notification_tid;
 
@@ -217,6 +217,8 @@ private:
   void ThreadWasCreated(NativeThreadLinux &thread);
 
   void SigchldHandler();
+
+  Error PopulateMemoryRegionCache();
 };
 
 } // namespace process_linux

@@ -297,7 +297,7 @@ __stdoutbuf<_CharT>::overflow(int_type __c)
                         return traits_type::eof();
                     if (__r == codecvt_base::partial)
                     {
-                        pbase = (char_type*)__e;
+                        pbase = const_cast<char_type*>(__e);
                     }
                 }
                 else

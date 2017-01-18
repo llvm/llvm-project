@@ -6,16 +6,16 @@
 // CHECK-UBSAN: @[[INT:.*]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
 
 // FIXME: When we only emit each type once, use [[INT]] more below.
-// CHECK-UBSAN: @[[LINE_100:.*]] = private unnamed_addr global {{.*}}, i32 100, i32 5 {{.*}} @[[INT]], i64 4, i8 1
-// CHECK-UBSAN: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 10 {{.*}}, i64 4, i8 0
+// CHECK-UBSAN: @[[LINE_100:.*]] = private unnamed_addr global {{.*}}, i32 100, i32 5 {{.*}} @[[INT]], i8 2, i8 1
+// CHECK-UBSAN: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 10 {{.*}}, i8 2, i8 0
 // CHECK-UBSAN: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 12 {{.*}} @{{.*}}, {{.*}} @{{.*}}
 // CHECK-UBSAN: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 12 {{.*}} @{{.*}}, {{.*}} @{{.*}}
-// CHECK-UBSAN: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 10 {{.*}} @{{.*}}, i64 4, i8 0 }
-// CHECK-UBSAN: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 3 {{.*}} @{{.*}}, i64 4, i8 1 }
+// CHECK-UBSAN: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 10 {{.*}} @{{.*}}, i8 2, i8 0 }
+// CHECK-UBSAN: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 3 {{.*}} @{{.*}}, i8 2, i8 1 }
 
 // CHECK-UBSAN: @[[STRUCT_S:.*]] = private unnamed_addr constant { i16, i16, [11 x i8] } { i16 -1, i16 0, [11 x i8] c"'struct S'\00" }
 
-// CHECK-UBSAN: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 14 {{.*}} @[[STRUCT_S]], i64 4, i8 3 }
+// CHECK-UBSAN: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 14 {{.*}} @[[STRUCT_S]], i8 2, i8 3 }
 // CHECK-UBSAN: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 12 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 11 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_1000:.*]] = {{.*}}, i32 1000, i32 10 {{.*}} @{{.*}} }
@@ -54,7 +54,7 @@ void foo() {
   // CHECK-TRAP:  br i1 %[[OK]], {{.*}}
 
   // CHECK-UBSAN:      %[[ARG:.*]] = ptrtoint {{.*}} %[[PTR]] to i64
-  // CHECK-UBSAN-NEXT: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), i64 %[[ARG]])
+  // CHECK-UBSAN-NEXT: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), i64 %[[ARG]])
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW:#[0-9]+]]
   // CHECK-TRAP-NEXT: unreachable
@@ -62,7 +62,7 @@ void foo() {
   // With -fsanitize=null, only perform the null check.
   // CHECK-NULL: %[[NULL:.*]] = icmp ne {{.*}}, null
   // CHECK-NULL: br i1 %[[NULL]]
-  // CHECK-NULL: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), i64 %{{.*}})
+  // CHECK-NULL: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), i64 %{{.*}})
 #line 100
   u.i=1;
 }
@@ -77,7 +77,7 @@ int bar(int *a) {
   // CHECK-COMMON-NEXT: icmp eq i64 %[[MISALIGN]], 0
 
   // CHECK-UBSAN:      %[[ARG:.*]] = ptrtoint
-  // CHECK-UBSAN-NEXT: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_200]] to i8*), i64 %[[ARG]])
+  // CHECK-UBSAN-NEXT: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_200]] to i8*), i64 %[[ARG]])
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
   // CHECK-TRAP-NEXT: unreachable
@@ -145,7 +145,7 @@ int rsh_inbounds(int a, int b) {
 
 // CHECK-COMMON-LABEL: @load
 int load(int *p) {
-  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_500]] to i8*), i64 %{{.*}})
+  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_500]] to i8*), i64 %{{.*}})
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
   // CHECK-TRAP-NEXT: unreachable
@@ -155,7 +155,7 @@ int load(int *p) {
 
 // CHECK-COMMON-LABEL: @store
 void store(int *p, int q) {
-  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_600]] to i8*), i64 %{{.*}})
+  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_600]] to i8*), i64 %{{.*}})
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
   // CHECK-TRAP-NEXT: unreachable
@@ -167,7 +167,7 @@ struct S { int k; };
 
 // CHECK-COMMON-LABEL: @member_access
 int *member_access(struct S *p) {
-  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch(i8* bitcast ({{.*}} @[[LINE_700]] to i8*), i64 %{{.*}})
+  // CHECK-UBSAN: call void @__ubsan_handle_type_mismatch_v1(i8* bitcast ({{.*}} @[[LINE_700]] to i8*), i64 %{{.*}})
 
   // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
   // CHECK-TRAP-NEXT: unreachable

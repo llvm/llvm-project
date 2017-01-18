@@ -128,11 +128,11 @@ class ModuleDependencyCollector : public DependencyCollector {
   llvm::StringMap<std::string> SymLinkMap;
 
   bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
-  std::error_code copyToRoot(StringRef Src);
+  std::error_code copyToRoot(StringRef Src, StringRef Dst = "");
 public:
   StringRef getDest() { return DestDir; }
   bool insertSeen(StringRef Filename) { return Seen.insert(Filename).second; }
-  void addFile(StringRef Filename);
+  void addFile(StringRef Filename, StringRef FileDst = "");
   void addFileMapping(StringRef VPath, StringRef RPath) {
     VFSWriter.addFileMapping(VPath, RPath);
   }
@@ -184,10 +184,10 @@ createChainedIncludesSource(CompilerInstance &CI,
 ///
 /// \return A CompilerInvocation, or 0 if none was built for the given
 /// argument vector.
-CompilerInvocation *
+std::unique_ptr<CompilerInvocation>
 createInvocationFromCommandLine(ArrayRef<const char *> Args,
-                            IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-                                IntrusiveRefCntPtr<DiagnosticsEngine>());
+                                IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+                                    IntrusiveRefCntPtr<DiagnosticsEngine>());
 
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.

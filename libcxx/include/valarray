@@ -348,7 +348,6 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <new>
 
 #include <__undef_min_max>
-#include <__undef___deallocate>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -356,9 +355,9 @@ template <class T> unspecified2 end(const valarray<T>& v);
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template<class _Tp> class _LIBCPP_TYPE_VIS_ONLY valarray;
+template<class _Tp> class _LIBCPP_TEMPLATE_VIS valarray;
 
-class _LIBCPP_TYPE_VIS_ONLY slice
+class _LIBCPP_TEMPLATE_VIS slice
 {
     size_t __start_;
     size_t __size_;
@@ -383,11 +382,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY size_t stride() const {return __stride_;}
 };
 
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY slice_array;
+template <class _Tp> class _LIBCPP_TEMPLATE_VIS slice_array;
 class _LIBCPP_TYPE_VIS gslice;
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY gslice_array;
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY mask_array;
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY indirect_array;
+template <class _Tp> class _LIBCPP_TEMPLATE_VIS gslice_array;
+template <class _Tp> class _LIBCPP_TEMPLATE_VIS mask_array;
+template <class _Tp> class _LIBCPP_TEMPLATE_VIS indirect_array;
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
@@ -673,7 +672,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __size_;}
 
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY valarray;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS valarray;
 };
 
 template <class _ValExpr>
@@ -788,7 +787,7 @@ template<class _Tp>
 struct __is_val_expr<valarray<_Tp> > : true_type {};
 
 template<class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY valarray
+class _LIBCPP_TEMPLATE_VIS valarray
 {
 public:
     typedef _Tp value_type;
@@ -1028,12 +1027,12 @@ public:
     void     resize(size_t __n, value_type __x = value_type());
 
 private:
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY valarray;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY slice_array;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY gslice_array;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY mask_array;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS valarray;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS slice_array;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS gslice_array;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS mask_array;
     template <class> friend class __mask_expr;
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY indirect_array;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS indirect_array;
     template <class> friend class __indirect_expr;
     template <class> friend class __val_expr;
 
@@ -1147,7 +1146,7 @@ struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> >
 // slice_array
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY slice_array
+class _LIBCPP_TEMPLATE_VIS slice_array
 {
 public:
     typedef _Tp value_type;
@@ -1531,7 +1530,7 @@ private:
 // gslice_array
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY gslice_array
+class _LIBCPP_TEMPLATE_VIS gslice_array
 {
 public:
     typedef _Tp value_type;
@@ -1869,7 +1868,7 @@ gslice_array<_Tp>::operator=(const value_type& __x) const
 // mask_array
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY mask_array
+class _LIBCPP_TEMPLATE_VIS mask_array
 {
 public:
     typedef _Tp value_type;
@@ -2227,7 +2226,7 @@ public:
 // indirect_array
 
 template <class _Tp>
-class _LIBCPP_TYPE_VIS_ONLY indirect_array
+class _LIBCPP_TEMPLATE_VIS indirect_array
 {
 public:
     typedef _Tp value_type;
@@ -2591,7 +2590,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __1d_.size();}
 
-    template <class> friend class _LIBCPP_TYPE_VIS_ONLY valarray;
+    template <class> friend class _LIBCPP_TEMPLATE_VIS valarray;
 };
 
 template<class _ValExpr>
@@ -3697,7 +3696,7 @@ valarray<_Tp>::resize(size_t __n, value_type __x)
     {
         while (__end_ != __begin_)
             (--__end_)->~value_type();
-        _VSTD::__deallocate(__begin_);
+        _VSTD::__libcpp_deallocate(__begin_);
         __begin_ = __end_ = nullptr;
     }
     if (__n)

@@ -83,6 +83,15 @@ RegionInfo::~RegionInfo() {
 
 }
 
+bool RegionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                            FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<RegionInfoAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 void RegionInfo::updateStatistics(Region *R) {
   ++numRegions;
 

@@ -58,7 +58,9 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                                       hasType(pointsTo(ValidContainer)),
                                       hasType(references(ValidContainer))))
                                .bind("STLObject")),
-                        callee(cxxMethodDecl(hasName("size"))), WrongUse)
+                        callee(cxxMethodDecl(hasName("size"))), WrongUse,
+                        unless(hasAncestor(cxxMethodDecl(
+                            ofClass(equalsBoundNode("container"))))))
           .bind("SizeCallExpr"),
       this);
 }

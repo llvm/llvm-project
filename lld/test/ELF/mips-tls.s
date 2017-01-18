@@ -23,24 +23,24 @@
 # DIS-NEXT:    20010:   24 62 80 34   addiu   $2, $3, -32716
 
 # DIS:      Contents of section .got:
-# DIS-NEXT:  30008 00000000 80000000 00000000 00000000
-# DIS-NEXT:  30018 00000000 00000001 00000000 00000001
-# DIS-NEXT:  30028 ffff8004 ffff9004
+# DIS-NEXT:  40008 00000000 80000000 00000000 00000000
+# DIS-NEXT:  40018 00000000 00000001 00000000 00000001
+# DIS-NEXT:  40028 ffff8004 ffff9004
 
-# DIS: 00030000 l       .tdata          00000000 .tdata
-# DIS: 00030000 l       .tdata          00000000 loc
+# DIS: 00040000 l       .tdata          00000000 .tdata
+# DIS: 00040000 l       .tdata          00000000 loc
 # DIS: 00000004 g       .tdata          00000000 bar
 # DIS: 00000000 g       *UND*           00000000 foo
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rel.dyn {
-# CHECK-NEXT:     0x30010 R_MIPS_TLS_DTPMOD32 foo 0x0
-# CHECK-NEXT:     0x30014 R_MIPS_TLS_DTPREL32 foo 0x0
-# CHECK-NEXT:     0x30018 R_MIPS_TLS_TPREL32 foo 0x0
+# CHECK-NEXT:     0x40010 R_MIPS_TLS_DTPMOD32 foo 0x0
+# CHECK-NEXT:     0x40014 R_MIPS_TLS_DTPREL32 foo 0x0
+# CHECK-NEXT:     0x40018 R_MIPS_TLS_TPREL32 foo 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: Primary GOT {
-# CHECK-NEXT:   Canonical gp value: 0x37FF8
+# CHECK-NEXT:   Canonical gp value: 0x47FF8
 # CHECK-NEXT:   Reserved entries [
 # CHECK:        ]
 # CHECK-NEXT:   Local entries [

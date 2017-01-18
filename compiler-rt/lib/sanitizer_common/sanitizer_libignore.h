@@ -30,6 +30,9 @@ class LibIgnore {
 
   // Must be called during initialization.
   void AddIgnoredLibrary(const char *name_templ);
+  void IgnoreNoninstrumentedModules(bool enable) {
+    track_instrumented_libs_ = enable;
+  }
 
   // Must be called after a new dynamic library is loaded.
   void OnLibraryLoaded(const char *name);
@@ -37,8 +40,14 @@ class LibIgnore {
   // Must be called after a dynamic library is unloaded.
   void OnLibraryUnloaded();
 
-  // Checks whether the provided PC belongs to one of the ignored libraries.
-  bool IsIgnored(uptr pc) const;
+  // Checks whether the provided PC belongs to one of the ignored libraries or
+  // the PC should be ignored because it belongs to an non-instrumented module
+  // (when ignore_noninstrumented_modules=1). Also returns true via
+  // "pc_in_ignored_lib" if the PC is in an ignored library, false otherwise.
+  bool IsIgnored(uptr pc, bool *pc_in_ignored_lib) const;
+
+  // Checks whether the provided PC belongs to an instrumented module.
+  bool IsPcInstrumented(uptr pc) const;
 
  private:
   struct Lib {
@@ -53,26 +62,48 @@ class LibIgnore {
     uptr end;
   };
 
+  inline bool IsInRange(uptr pc, const LibCodeRange &range) const {
+    return (pc >= range.begin && pc < range.end);
+  }
+
   static const uptr kMaxLibs = 128;
 
   // Hot part:
-  atomic_uintptr_t loaded_count_;
-  LibCodeRange code_ranges_[kMaxLibs];
+  atomic_uintptr_t ignored_ranges_count_;
+  LibCodeRange ignored_code_ranges_[kMaxLibs];
+
+  atomic_uintptr_t instrumented_ranges_count_;
+  LibCodeRange instrumented_code_ranges_[kMaxLibs];
 
   // Cold part:
   BlockingMutex mutex_;
   uptr count_;
   Lib libs_[kMaxLibs];
+  bool track_instrumented_libs_;
 
   // Disallow copying of LibIgnore objects.
   LibIgnore(const LibIgnore&);  // not implemented
   void operator = (const LibIgnore&);  // not implemented
 };
 
-inline bool LibIgnore::IsIgnored(uptr pc) const {
-  const uptr n = atomic_load(&loaded_count_, memory_order_acquire);
+inline bool LibIgnore::IsIgnored(uptr pc, bool *pc_in_ignored_lib) const {
+  const uptr n = atomic_load(&ignored_ranges_count_, memory_order_acquire);
   for (uptr i = 0; i < n; i++) {
-    if (pc >= code_ranges_[i].begin && pc < code_ranges_[i].end)
+    if (IsInRange(pc, ignored_code_ranges_[i])) {
+      *pc_in_ignored_lib = true;
+      return true;
+    }
+  }
+  *pc_in_ignored_lib = false;
+  if (track_instrumented_libs_ && !IsPcInstrumented(pc))
+    return true;
+  return false;
+}
+
+inline bool LibIgnore::IsPcInstrumented(uptr pc) const {
+  const uptr n = atomic_load(&instrumented_ranges_count_, memory_order_acquire);
+  for (uptr i = 0; i < n; i++) {
+    if (IsInRange(pc, instrumented_code_ranges_[i]))
       return true;
   }
   return false;

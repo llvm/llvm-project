@@ -320,7 +320,7 @@ void Value::takeName(Value *V) {
     ST->reinsertValue(this);
 }
 
-void Value::assertModuleIsMaterialized() const {
+void Value::assertModuleIsMaterializedImpl() const {
 #ifndef NDEBUG
   const GlobalValue *GV = dyn_cast<GlobalValue>(this);
   if (!GV)

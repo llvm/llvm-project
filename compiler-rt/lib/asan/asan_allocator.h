@@ -33,6 +33,7 @@ struct AsanChunk;
 
 struct AllocatorOptions {
   u32 quarantine_size_mb;
+  u32 thread_local_quarantine_size_kb;
   u16 min_redzone;
   u16 max_redzone;
   u8 may_return_null;
@@ -50,28 +51,29 @@ void GetAllocatorOptions(AllocatorOptions *options);
 class AsanChunkView {
  public:
   explicit AsanChunkView(AsanChunk *chunk) : chunk_(chunk) {}
-  bool IsValid();        // Checks if AsanChunkView points to a valid allocated
-                         // or quarantined chunk.
-  bool IsAllocated();    // Checks if the memory is currently allocated.
-  uptr Beg();            // First byte of user memory.
-  uptr End();            // Last byte of user memory.
-  uptr UsedSize();       // Size requested by the user.
-  uptr AllocTid();
-  uptr FreeTid();
+  bool IsValid() const;        // Checks if AsanChunkView points to a valid
+                               // allocated or quarantined chunk.
+  bool IsAllocated() const;    // Checks if the memory is currently allocated.
+  bool IsQuarantined() const;  // Checks if the memory is currently quarantined.
+  uptr Beg() const;            // First byte of user memory.
+  uptr End() const;            // Last byte of user memory.
+  uptr UsedSize() const;       // Size requested by the user.
+  uptr AllocTid() const;
+  uptr FreeTid() const;
   bool Eq(const AsanChunkView &c) const { return chunk_ == c.chunk_; }
-  u32 GetAllocStackId();
-  u32 GetFreeStackId();
-  StackTrace GetAllocStack();
-  StackTrace GetFreeStack();
-  AllocType GetAllocType();
-  bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) {
+  u32 GetAllocStackId() const;
+  u32 GetFreeStackId() const;
+  StackTrace GetAllocStack() const;
+  StackTrace GetFreeStack() const;
+  AllocType GetAllocType() const;
+  bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) const {
     if (addr >= Beg() && (addr + access_size) <= End()) {
       *offset = addr - Beg();
       return true;
     }
     return false;
   }
-  bool AddrIsAtLeft(uptr addr, uptr access_size, sptr *offset) {
+  bool AddrIsAtLeft(uptr addr, uptr access_size, sptr *offset) const {
     (void)access_size;
     if (addr < Beg()) {
       *offset = Beg() - addr;
@@ -79,7 +81,7 @@ class AsanChunkView {
     }
     return false;
   }
-  bool AddrIsAtRight(uptr addr, uptr access_size, sptr *offset) {
+  bool AddrIsAtRight(uptr addr, uptr access_size, sptr *offset) const {
     if (addr + access_size > End()) {
       *offset = addr - End();
       return true;

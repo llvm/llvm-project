@@ -19,7 +19,7 @@ public:
   X<double>::y c;
 
   template<> struct X<float> {}; // expected-note {{previous definition is here}}
-  template<> struct X<float> {}; // expected-error {{redefinition of 'A::X<float>'}}
+  template<> struct X<float> {}; // expected-error {{redefinition of 'X<float>'}}
 };
 
 A::X<void>::x axv;

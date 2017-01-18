@@ -207,11 +207,15 @@ define void @dynamic_insertelement_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16>
 ; GCN: buffer_load_ushort v{{[0-9]+}}, off
 ; GCN: buffer_load_ushort v{{[0-9]+}}, off
 
+; GCN-DAG: v_mov_b32_e32 [[BASE_FI:v[0-9]+]], 0{{$}}
+; GCN-DAG: s_and_b32 [[MASK_IDX:s[0-9]+]], s{{[0-9]+}}, 3{{$}}
+; GCN-DAG: v_or_b32_e32 [[IDX:v[0-9]+]], [[MASK_IDX]], [[BASE_FI]]{{$}}
+
 ; GCN-DAG: buffer_store_short v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:6
 ; GCN-DAG: buffer_store_short v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:4
 ; GCN-DAG: buffer_store_short v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:2
-; GCN-DAG: buffer_store_short v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}{{$}}
-; GCN: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
+; GCN: buffer_store_short v{{[0-9]+}}, [[IDX]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
 
 ; GCN: s_waitcnt
 

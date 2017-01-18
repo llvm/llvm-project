@@ -104,7 +104,9 @@ terminate() _NOEXCEPT
 
 // In the future this will become:
 // std::atomic<std::new_handler>  __cxa_new_handler(0);
-extern "C" _LIBCXXABI_DATA_VIS new_handler __cxa_new_handler = 0;
+extern "C" {
+_LIBCXXABI_DATA_VIS new_handler __cxa_new_handler = 0;
+}
 
 new_handler
 set_new_handler(new_handler handler) _NOEXCEPT

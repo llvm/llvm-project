@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=aarch64-apple-ios -run-pass=simple-register-coalescing %s -o - | FileCheck %s
 --- |
+  declare void @f2()
+
   define void @func() { ret void }
 ...
 ---
@@ -14,6 +16,7 @@ registers:
   - { id: 4, class: gpr64 }
   - { id: 5, class: gpr32 }
   - { id: 6, class: xseqpairsclass }
+  - { id: 7, class: gpr64 }
 body: |
   bb.0:
     ; We usually should not coalesce copies from allocatable physregs.
@@ -64,4 +67,16 @@ body: |
     ; CHECK: HINT 0, implicit %6
     %6 = COPY %xzr_x0
     HINT 0, implicit %6
+
+    ; It is not fine to coalesce copies from reserved physregs when they are
+    ; clobbered by the regmask on a call.
+    ; CHECK: %7 = COPY %x18
+    ; CHECK: BL @f2, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    ; CHECK: STRXui %7, %x1, 0
+
+    ; Need a def of x18 so that it's not deduced as "constant".
+    %x18 = COPY %xzr
+    %7 = COPY %x18
+    BL @f2, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    STRXui %7, %x1, 0
 ...

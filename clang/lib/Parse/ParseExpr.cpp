@@ -198,7 +198,7 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   //   An expression is potentially evaluated unless it appears where an
   //   integral constant expression is required (see 5.19) [...].
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
-  EnterExpressionEvaluationContext Unevaluated(Actions,
+  EnterExpressionEvaluationContext ConstantEvaluated(Actions,
                                                Sema::ConstantEvaluated);
 
   ExprResult LHS(ParseCastExpression(false, false, isTypeCast));
@@ -1652,9 +1652,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       if (Tok.is(tok::code_completion)) {
         // Code completion for a member access expression.
-        Actions.CodeCompleteMemberReferenceExpr(
-            getCurScope(), LHS.get(), OpLoc, OpKind == tok::arrow,
-            ExprStatementTokLoc == LHS.get()->getLocStart());
+        if (Expr *Base = LHS.get())
+          Actions.CodeCompleteMemberReferenceExpr(
+              getCurScope(), Base, OpLoc, OpKind == tok::arrow,
+              ExprStatementTokLoc == Base->getLocStart());
 
         cutOffParsing();
         return ExprError();
@@ -2751,6 +2752,7 @@ void Parser::ParseBlockId(SourceLocation CaretLoc) {
 
   // Parse the block-declarator.
   Declarator DeclaratorInfo(DS, Declarator::BlockLiteralContext);
+  DeclaratorInfo.setFunctionDefinitionKind(FDK_Definition);
   ParseDeclarator(DeclaratorInfo);
 
   MaybeParseGNUAttributes(DeclaratorInfo);
@@ -2789,6 +2791,7 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   // Parse the return type if present.
   DeclSpec DS(AttrFactory);
   Declarator ParamInfo(DS, Declarator::BlockLiteralContext);
+  ParamInfo.setFunctionDefinitionKind(FDK_Definition);
   // FIXME: Since the return type isn't actually parsed, it can't be used to
   // fill ParamInfo with an initial valid range, so do it manually.
   ParamInfo.SetSourceRange(SourceRange(Tok.getLocation(), Tok.getLocation()));

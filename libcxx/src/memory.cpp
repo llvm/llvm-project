@@ -220,11 +220,12 @@ undeclare_no_pointers(char*, size_t)
 {
 }
 
-pointer_safety
-get_pointer_safety() _NOEXCEPT
+#if !defined(_LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE)
+pointer_safety get_pointer_safety() _NOEXCEPT
 {
     return pointer_safety::relaxed;
 }
+#endif
 
 void*
 __undeclare_reachable(void* p)

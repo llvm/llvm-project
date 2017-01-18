@@ -110,23 +110,11 @@ define <2 x i64> @bar(<2 x i65> %t) {
   ret <2 x i64> %b
 }
 
-define <2 x i65> @foos(<2 x i64> %t) {
-; CHECK-LABEL: @foos(
-; CHECK-NEXT:    [[A:%.*]] = zext <2 x i64> %t to <2 x i65>
-; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i65> [[A]], <i65 33, i65 33>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i65> [[SEXT]], <i65 33, i65 33>
-; CHECK-NEXT:    ret <2 x i65> [[B]]
-;
-  %a = trunc <2 x i64> %t to <2 x i32>
-  %b = sext <2 x i32> %a to <2 x i65>
-  ret <2 x i65> %b
-}
-
 define <2 x i64> @bars(<2 x i65> %t) {
 ; CHECK-LABEL: @bars(
 ; CHECK-NEXT:    [[A:%.*]] = trunc <2 x i65> %t to <2 x i64>
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[A]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i65> %t to <2 x i32>
@@ -137,7 +125,7 @@ define <2 x i64> @bars(<2 x i65> %t) {
 define <2 x i64> @quxs(<2 x i64> %t) {
 ; CHECK-LABEL: @quxs(
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> %t, <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -148,7 +136,7 @@ define <2 x i64> @quxs(<2 x i64> %t) {
 define <2 x i64> @quxt(<2 x i64> %t) {
 ; CHECK-LABEL: @quxt(
 ; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> %t, <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[A]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[A]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = shl <2 x i64> %t, <i64 32, i64 32>

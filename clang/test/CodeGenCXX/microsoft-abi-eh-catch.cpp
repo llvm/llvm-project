@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc \
 // RUN:     -mconstructor-aliases -fexceptions -fcxx-exceptions \
-// RUN:     -O1 -disable-llvm-optzns \
+// RUN:     -O1 -disable-llvm-passes \
 // RUN:     | FileCheck -check-prefix WIN64 %s
 
 extern "C" void might_throw();

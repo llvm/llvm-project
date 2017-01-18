@@ -187,8 +187,15 @@ public:
     return *this;
   }
 
-  const MachineInstrBuilder &addOperand(const MachineOperand &MO) const {
+  const MachineInstrBuilder &add(const MachineOperand &MO) const {
     MI->addOperand(*MF, MO);
+    return *this;
+  }
+
+  const MachineInstrBuilder &add(ArrayRef<MachineOperand> MOs) const {
+    for (const MachineOperand &MO : MOs) {
+      MI->addOperand(*MF, MO);
+    }
     return *this;
   }
 

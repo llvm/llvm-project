@@ -24,7 +24,10 @@
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -50,6 +53,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   ErrorCount = 0;
   ErrorOS = &Error;
   Argv0 = Args[0];
+  Tar = nullptr;
 
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();
@@ -122,7 +126,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
-    OwningMBs.push_back(std::move(MB));
+    make<std::unique_ptr<MemoryBuffer>>(std::move(MB));
 
   return V;
 }
@@ -167,25 +171,6 @@ void LinkerDriver::addFile(StringRef Path) {
     else
       Files.push_back(createObjectFile(MBRef));
   }
-}
-
-Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
-  if (Config->Verbose)
-    outs() << Path << "\n";
-
-  auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (auto EC = MBOrErr.getError()) {
-    error(EC, "cannot open " + Path);
-    return None;
-  }
-  std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
-  MemoryBufferRef MBRef = MB->getMemBufferRef();
-  OwningMBs.push_back(std::move(MB)); // take MB ownership
-
-  if (Cpio)
-    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
-
-  return MBRef;
 }
 
 // Add a given library by searching it from input search paths.
@@ -309,14 +294,17 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
-    ErrorOr<CpioFile *> F = CpioFile::create(Path);
-    if (F) {
-      Cpio.reset(*F);
-      Cpio->append("response.txt", createResponseFile(Args));
-      Cpio->append("version.txt", getLLDVersion() + "\n");
-    } else
-      error(F.getError(),
-            Twine("--reproduce: failed to open ") + Path + ".cpio");
+    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
+        TarWriter::create(Path, path::stem(Path));
+    if (ErrOrWriter) {
+      Tar = ErrOrWriter->get();
+      Tar->append("response.txt", createResponseFile(Args));
+      Tar->append("version.txt", getLLDVersion() + "\n");
+      make<std::unique_ptr<TarWriter>>(std::move(*ErrOrWriter));
+    } else {
+      error(Twine("--reproduce: failed to open ") + Path + ": " +
+            toString(ErrOrWriter.takeError()));
+    }
   }
 
   readConfigs(Args);
@@ -423,7 +411,7 @@ static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
   if (S.startswith("0x"))
     S = S.drop_front(2);
   if (S.getAsInteger(16, VA))
-    error("invalid argument: " + stringize(Arg));
+    error("invalid argument: " + toString(Arg));
   return VA;
 }
 
@@ -496,8 +484,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
-  Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
-  Config->FatalWarnings = Args.hasArg(OPT_fatal_warnings);
+  Config->ExportDynamic =
+      getArg(Args, OPT_export_dynamic, OPT_no_export_dynamic, false);
+  Config->FatalWarnings =
+      getArg(Args, OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->GcSections = getArg(Args, OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasArg(OPT_gdb_index);
   Config->ICF = Args.hasArg(OPT_icf);
@@ -524,6 +514,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Init = getString(Args, OPT_init, "_init");
   Config->LTOAAPipeline = getString(Args, OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = getString(Args, OPT_lto_newpm_passes);
+  Config->MapFile = getString(Args, OPT_Map);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
@@ -553,6 +544,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SortSection = getSortKind(Args);
   Config->Target2 = getTarget2Option(Args);
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+
+  if (Args.hasArg(OPT_print_map))
+    Config->MapFile = "-";
 
   // --omagic is an option to create old-fashioned executables in which
   // .text segments are writable. Today, the option is still in use to
@@ -828,7 +822,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
           [](InputSectionBase<ELFT> *S) {
             if (!S->Live)
               return;
-            if (S->isCompressed())
+            if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
               S->uncompress();
             if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
               MS->splitIntoPieces();

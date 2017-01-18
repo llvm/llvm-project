@@ -142,7 +142,7 @@ namespace dr615 { // dr615: yes
   static int n = f();
 }
 
-namespace dr616 { // dr616: 4.0
+namespace dr616 { // dr616: 4
 #if __cplusplus >= 201103L
   struct S { int n; } s;
   S f();

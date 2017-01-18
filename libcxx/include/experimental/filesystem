@@ -1218,14 +1218,18 @@ private:
 
 template <class... _Args>
 _LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+#ifndef _LIBCPP_NO_EXCEPTIONS
 void __throw_filesystem_error(_Args && ...__args)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
     throw filesystem_error(std::forward<_Args>(__args)...);
-#else
-    _VSTD::abort();
-#endif
 }
+#else
+void __throw_filesystem_error(_Args&&...)
+{
+    _VSTD::abort();
+}
+#endif
+
 
 // operational functions
 

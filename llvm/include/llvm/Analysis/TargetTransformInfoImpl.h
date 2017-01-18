@@ -15,6 +15,7 @@
 #ifndef LLVM_ANALYSIS_TARGETTRANSFORMINFOIMPL_H
 #define LLVM_ANALYSIS_TARGETTRANSFORMINFOIMPL_H
 
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -305,7 +306,8 @@ public:
                                   TTI::OperandValueKind Opd1Info,
                                   TTI::OperandValueKind Opd2Info,
                                   TTI::OperandValueProperties Opd1PropInfo,
-                                  TTI::OperandValueProperties Opd2PropInfo) {
+                                  TTI::OperandValueProperties Opd2PropInfo,
+                                  ArrayRef<const Value *> Args) {
     return 1;
   }
 
@@ -370,7 +372,10 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) { return 0; }
 
-  unsigned getAddressComputationCost(Type *Tp, bool) { return 0; }
+  unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *,
+                                     const SCEV *) {
+    return 0; 
+  }
 
   unsigned getReductionCost(unsigned, Type *, bool) { return 1; }
 
@@ -421,6 +426,87 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const {
     return VF;
+  }
+protected:
+  // Obtain the minimum required size to hold the value (without the sign)
+  // In case of a vector it returns the min required size for one element.
+  unsigned minRequiredElementSize(const Value* Val, bool &isSigned) {
+    if (isa<ConstantDataVector>(Val) || isa<ConstantVector>(Val)) {
+      const auto* VectorValue = cast<Constant>(Val);
+
+      // In case of a vector need to pick the max between the min
+      // required size for each element
+      auto *VT = cast<VectorType>(Val->getType());
+
+      // Assume unsigned elements
+      isSigned = false;
+
+      // The max required size is the total vector width divided by num
+      // of elements in the vector
+      unsigned MaxRequiredSize = VT->getBitWidth() / VT->getNumElements();
+
+      unsigned MinRequiredSize = 0;
+      for(unsigned i = 0, e = VT->getNumElements(); i < e; ++i) {
+        if (auto* IntElement =
+              dyn_cast<ConstantInt>(VectorValue->getAggregateElement(i))) {
+          bool signedElement = IntElement->getValue().isNegative();
+          // Get the element min required size.
+          unsigned ElementMinRequiredSize =
+            IntElement->getValue().getMinSignedBits() - 1;
+          // In case one element is signed then all the vector is signed.
+          isSigned |= signedElement;
+          // Save the max required bit size between all the elements.
+          MinRequiredSize = std::max(MinRequiredSize, ElementMinRequiredSize);
+        }
+        else {
+          // not an int constant element
+          return MaxRequiredSize;
+        }
+      }
+      return MinRequiredSize;
+    }
+
+    if (const auto* CI = dyn_cast<ConstantInt>(Val)) {
+      isSigned = CI->getValue().isNegative();
+      return CI->getValue().getMinSignedBits() - 1;
+    }
+
+    if (const auto* Cast = dyn_cast<SExtInst>(Val)) {
+      isSigned = true;
+      return Cast->getSrcTy()->getScalarSizeInBits() - 1;
+    }
+
+    if (const auto* Cast = dyn_cast<ZExtInst>(Val)) {
+      isSigned = false;
+      return Cast->getSrcTy()->getScalarSizeInBits();
+    }
+
+    isSigned = false;
+    return Val->getType()->getScalarSizeInBits();
+  }
+
+  bool isStridedAccess(const SCEV *Ptr) {
+    return Ptr && isa<SCEVAddRecExpr>(Ptr);
+  }
+
+  const SCEVConstant *getConstantStrideStep(ScalarEvolution *SE,
+                                            const SCEV *Ptr) {
+    if (!isStridedAccess(Ptr))
+      return nullptr;
+    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(Ptr);
+    return dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(*SE));
+  }
+
+  bool isConstantStridedAccessLessThan(ScalarEvolution *SE, const SCEV *Ptr,
+                                       int64_t MergeDistance) {
+    const SCEVConstant *Step = getConstantStrideStep(SE, Ptr);
+    if (!Step)
+      return false;
+    APInt StrideVal = Step->getAPInt();
+    if (StrideVal.getBitWidth() > 64)
+      return false;
+    // FIXME: need to take absolute value for negtive stride case  
+    return StrideVal.getSExtValue() < MergeDistance;
   }
 };
 

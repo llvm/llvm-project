@@ -57,7 +57,7 @@ define i32 @test_x86_sse_comieq_ss(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_comieq_ss:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc1]
+; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc1]
 ; SKX-NEXT:    setnp %al ## encoding: [0x0f,0x9b,0xc0]
 ; SKX-NEXT:    sete %cl ## encoding: [0x0f,0x94,0xc1]
 ; SKX-NEXT:    andb %al, %cl ## encoding: [0x20,0xc1]
@@ -87,7 +87,7 @@ define i32 @test_x86_sse_comige_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_comige_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc1]
+; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc1]
 ; SKX-NEXT:    setae %al ## encoding: [0x0f,0x93,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.comige.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -114,7 +114,7 @@ define i32 @test_x86_sse_comigt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_comigt_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc1]
+; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc1]
 ; SKX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.comigt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -141,7 +141,7 @@ define i32 @test_x86_sse_comile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_comile_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vcomiss %xmm0, %xmm1 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc8]
+; SKX-NEXT:    vcomiss %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc8]
 ; SKX-NEXT:    setae %al ## encoding: [0x0f,0x93,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.comile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -168,7 +168,7 @@ define i32 @test_x86_sse_comilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_comilt_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vcomiss %xmm0, %xmm1 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc8]
+; SKX-NEXT:    vcomiss %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc8]
 ; SKX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.comilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -198,7 +198,7 @@ define i32 @test_x86_sse_comineq_ss(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_comineq_ss:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2f,0xc1]
+; SKX-NEXT:    vcomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2f,0xc1]
 ; SKX-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
 ; SKX-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
 ; SKX-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
@@ -226,7 +226,7 @@ define <4 x float> @test_x86_sse_cvtsi2ss(<4 x float> %a0) {
 ; SKX-LABEL: test_x86_sse_cvtsi2ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
-; SKX-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0x2a,0xc0]
+; SKX-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2a,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float> %a0, i32 7) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -247,7 +247,7 @@ define i32 @test_x86_sse_cvtss2si(<4 x float> %a0) {
 ;
 ; SKX-LABEL: test_x86_sse_cvtss2si:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcvtss2si %xmm0, %eax ## encoding: [0x62,0xf1,0x7e,0x08,0x2d,0xc0]
+; SKX-NEXT:    vcvtss2si %xmm0, %eax ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2d,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.cvtss2si(<4 x float> %a0) ; <i32> [#uses=1]
   ret i32 %res
@@ -268,7 +268,7 @@ define i32 @test_x86_sse_cvttss2si(<4 x float> %a0) {
 ;
 ; SKX-LABEL: test_x86_sse_cvttss2si:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vcvttss2si %xmm0, %eax ## encoding: [0x62,0xf1,0x7e,0x08,0x2c,0xc0]
+; SKX-NEXT:    vcvttss2si %xmm0, %eax ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2c,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.cvttss2si(<4 x float> %a0) ; <i32> [#uses=1]
   ret i32 %res
@@ -308,7 +308,7 @@ define <4 x float> @test_x86_sse_max_ps(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_max_ps:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x5f,0xc1]
+; SKX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5f,0xc1]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -345,7 +345,7 @@ define <4 x float> @test_x86_sse_min_ps(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_min_ps:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vminps %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x5d,0xc1]
+; SKX-NEXT:    vminps %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5d,0xc1]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %a0, <4 x float> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
@@ -531,7 +531,7 @@ define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_ucomieq_ss:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc1]
+; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc1]
 ; SKX-NEXT:    setnp %al ## encoding: [0x0f,0x9b,0xc0]
 ; SKX-NEXT:    sete %cl ## encoding: [0x0f,0x94,0xc1]
 ; SKX-NEXT:    andb %al, %cl ## encoding: [0x20,0xc1]
@@ -561,7 +561,7 @@ define i32 @test_x86_sse_ucomige_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_ucomige_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc1]
+; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc1]
 ; SKX-NEXT:    setae %al ## encoding: [0x0f,0x93,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.ucomige.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -588,7 +588,7 @@ define i32 @test_x86_sse_ucomigt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_ucomigt_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc1]
+; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc1]
 ; SKX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -615,7 +615,7 @@ define i32 @test_x86_sse_ucomile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_ucomile_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vucomiss %xmm0, %xmm1 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc8]
+; SKX-NEXT:    vucomiss %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc8]
 ; SKX-NEXT:    setae %al ## encoding: [0x0f,0x93,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -642,7 +642,7 @@ define i32 @test_x86_sse_ucomilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-LABEL: test_x86_sse_ucomilt_ss:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; SKX-NEXT:    vucomiss %xmm0, %xmm1 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc8]
+; SKX-NEXT:    vucomiss %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc8]
 ; SKX-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -672,7 +672,7 @@ define i32 @test_x86_sse_ucomineq_ss(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse_ucomineq_ss:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x2e,0xc1]
+; SKX-NEXT:    vucomiss %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc1]
 ; SKX-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
 ; SKX-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
 ; SKX-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]

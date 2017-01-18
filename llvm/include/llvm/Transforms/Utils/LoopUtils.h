@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/LoopUtils.h - Loop utilities -*- C++ -*-=========//
+//===- llvm/Transforms/Utils/LoopUtils.h - Loop utilities -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,22 +14,29 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Casting.h"
 
 namespace llvm {
+
 class AliasSet;
 class AliasSetTracker;
-class AssumptionCache;
 class BasicBlock;
 class DataLayout;
-class DominatorTree;
 class Loop;
 class LoopInfo;
-class Pass;
+class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
@@ -39,12 +46,13 @@ class TargetLibraryInfo;
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
 struct LoopSafetyInfo {
-  bool MayThrow;       // The current loop contains an instruction which
-                       // may throw.
-  bool HeaderMayThrow; // Same as previous, but specific to loop header
+  bool MayThrow = false;       // The current loop contains an instruction which
+                               // may throw.
+  bool HeaderMayThrow = false; // Same as previous, but specific to loop header
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
-  LoopSafetyInfo() : MayThrow(false), HeaderMayThrow(false) {}
+
+  LoopSafetyInfo() = default;
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -60,7 +68,6 @@ struct LoopSafetyInfo {
 
 /// This struct holds information about recurrence variables.
 class RecurrenceDescriptor {
-
 public:
   /// This enum represents the kinds of recurrences that we support.
   enum RecurrenceKind {
@@ -87,10 +94,7 @@ public:
     MRK_FloatMax
   };
 
-  RecurrenceDescriptor()
-      : StartValue(nullptr), LoopExitInstr(nullptr), Kind(RK_NoRecurrence),
-        MinMaxKind(MRK_Invalid), UnsafeAlgebraInst(nullptr),
-        RecurrenceType(nullptr), IsSigned(false) {}
+  RecurrenceDescriptor() = default;
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurrenceKind K,
                        MinMaxRecurrenceKind MK, Instruction *UAI, Type *RT,
@@ -102,7 +106,6 @@ public:
 
   /// This POD struct holds information about a potential recurrence operation.
   class InstDesc {
-
   public:
     InstDesc(bool IsRecur, Instruction *I, Instruction *UAI = nullptr)
         : IsRecurrence(IsRecur), PatternLastInst(I), MinMaxKind(MRK_Invalid),
@@ -241,17 +244,17 @@ private:
   // It does not have to be zero!
   TrackingVH<Value> StartValue;
   // The instruction who's value is used outside the loop.
-  Instruction *LoopExitInstr;
+  Instruction *LoopExitInstr = nullptr;
   // The kind of the recurrence.
-  RecurrenceKind Kind;
+  RecurrenceKind Kind = RK_NoRecurrence;
   // If this a min/max recurrence the kind of recurrence.
-  MinMaxRecurrenceKind MinMaxKind;
+  MinMaxRecurrenceKind MinMaxKind = MRK_Invalid;
   // First occurrence of unasfe algebra in the PHI's use-chain.
-  Instruction *UnsafeAlgebraInst;
+  Instruction *UnsafeAlgebraInst = nullptr;
   // The type of the recurrence.
-  Type *RecurrenceType;
+  Type *RecurrenceType = nullptr;
   // True if all source operands of the recurrence are SExtInsts.
-  bool IsSigned;
+  bool IsSigned = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
 };
@@ -269,9 +272,7 @@ public:
 
 public:
   /// Default constructor - creates an invalid induction.
-  InductionDescriptor()
-    : StartValue(nullptr), IK(IK_NoInduction), Step(nullptr),
-    InductionBinOp(nullptr) {}
+  InductionDescriptor() = default;
 
   /// Get the consecutive direction. Returns:
   ///   0 - unknown or non-consecutive.
@@ -349,11 +350,11 @@ private:
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.
-  InductionKind IK;
+  InductionKind IK = IK_NoInduction;
   /// Step value.
-  const SCEV *Step;
+  const SCEV *Step = nullptr;
   // Instruction that advances induction variable.
-  BinaryOperator *InductionBinOp;
+  BinaryOperator *InductionBinOp = nullptr;
 };
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
@@ -404,11 +405,11 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree,
 /// DataLayout, TargetLibraryInfo, Loop, AliasSet information for all
-/// instructions of the loop and loop safety information as arguments.
-/// It returns changed status.
+/// instructions of the loop and loop safety information as
+/// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LoopSafetyInfo *);
+                LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -416,10 +417,11 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
 /// Takes DomTreeNode, AliasAnalysis, LoopInfo, DominatorTree, DataLayout,
 /// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
-/// loop and loop safety information as arguments. It returns changed status.
+/// loop and loop safety information as arguments. Diagnostics is emitted via \p
+/// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 LoopSafetyInfo *);
+                 LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
@@ -427,12 +429,14 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// loop invariant. It takes AliasSet, Loop exit blocks vector, loop exit blocks
 /// insertion point vector, PredIteratorCache, LoopInfo, DominatorTree, Loop,
 /// AliasSet information for all instructions of the loop and loop safety
-/// information as arguments. It returns changed status.
+/// information as arguments. Diagnostics is emitted via \p ORE. It returns
+/// changed status.
 bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
                                   SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *, LoopSafetyInfo *);
+                                  Loop *, AliasSetTracker *, LoopSafetyInfo *,
+                                  OptimizationRemarkEmitter *);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw
@@ -478,11 +482,13 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// preheader to loop body (no speculation).
 /// If SafetyInfo is not null, we are checking for hoisting/sinking
 /// instructions from loop body to preheader/exit. Check if the instruction
-/// can execute specultatively.
-///
+/// can execute speculatively.
+/// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
-                        LoopSafetyInfo *SafetyInfo);
-}
+                        LoopSafetyInfo *SafetyInfo,
+                        OptimizationRemarkEmitter *ORE = nullptr);
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H

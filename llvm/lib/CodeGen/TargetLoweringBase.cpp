@@ -361,6 +361,11 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::MEMCPY] = "memcpy";
   Names[RTLIB::MEMMOVE] = "memmove";
   Names[RTLIB::MEMSET] = "memset";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_1] = "__llvm_memcpy_element_atomic_1";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_2] = "__llvm_memcpy_element_atomic_2";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_4] = "__llvm_memcpy_element_atomic_4";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_8] = "__llvm_memcpy_element_atomic_8";
+  Names[RTLIB::MEMCPY_ELEMENT_ATOMIC_16] = "__llvm_memcpy_element_atomic_16";
   Names[RTLIB::UNWIND_RESUME] = "_Unwind_Resume";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_1] = "__sync_val_compare_and_swap_1";
   Names[RTLIB::SYNC_VAL_COMPARE_AND_SWAP_2] = "__sync_val_compare_and_swap_2";
@@ -761,6 +766,24 @@ RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
 #undef OP_TO_LIBCALL
 
   return UNKNOWN_LIBCALL;
+}
+
+RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_ATOMIC(uint64_t ElementSize) {
+  switch (ElementSize) {
+  case 1:
+    return MEMCPY_ELEMENT_ATOMIC_1;
+  case 2:
+    return MEMCPY_ELEMENT_ATOMIC_2;
+  case 4:
+    return MEMCPY_ELEMENT_ATOMIC_4;
+  case 8:
+    return MEMCPY_ELEMENT_ATOMIC_8;
+  case 16:
+    return MEMCPY_ELEMENT_ATOMIC_16;
+  default:
+    return UNKNOWN_LIBCALL;
+  }
+
 }
 
 /// InitCmpLibcallCCs - Set default comparison libcall CC.
@@ -1204,7 +1227,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
 
     // Copy operands before the frame-index.
     for (unsigned i = 0; i < OperIdx; ++i)
-      MIB.addOperand(MI->getOperand(i));
+      MIB.add(MI->getOperand(i));
     // Add frame index operands recognized by stackmaps.cpp
     if (MFI.isStatepointSpillSlotObjectIndex(FI)) {
       // indirect-mem-ref tag, size, #FI, offset.
@@ -1214,18 +1237,18 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
       assert(MI->getOpcode() == TargetOpcode::STATEPOINT && "sanity");
       MIB.addImm(StackMaps::IndirectMemRefOp);
       MIB.addImm(MFI.getObjectSize(FI));
-      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.add(MI->getOperand(OperIdx));
       MIB.addImm(0);
     } else {
       // direct-mem-ref tag, #FI, offset.
       // Used by patchpoint, and direct alloca arguments to statepoints
       MIB.addImm(StackMaps::DirectMemRefOp);
-      MIB.addOperand(MI->getOperand(OperIdx));
+      MIB.add(MI->getOperand(OperIdx));
       MIB.addImm(0);
     }
     // Copy the operands after the frame index.
     for (unsigned i = OperIdx + 1; i != MI->getNumOperands(); ++i)
-      MIB.addOperand(MI->getOperand(i));
+      MIB.add(MI->getOperand(i));
 
     // Inherit previous memory operands.
     MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
@@ -1895,11 +1918,7 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 /// override the target defaults.
 static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
   const Function *F = MF.getFunction();
-  StringRef RecipAttrName = "reciprocal-estimates";
-  if (!F->hasFnAttribute(RecipAttrName))
-    return StringRef();
-
-  return F->getFnAttribute(RecipAttrName).getValueAsString();
+  return F->getFnAttribute("reciprocal-estimates").getValueAsString();
 }
 
 /// Construct a string for the given reciprocal operation of the given type.

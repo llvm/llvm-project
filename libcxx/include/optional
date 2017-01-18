@@ -167,7 +167,6 @@ public:
     bad_optional_access() : logic_error("bad optional access") {}
 
     // Get the key function ~bad_optional_access() into the dylib
-    _LIBCPP_FUNC_VIS
     virtual ~bad_optional_access() _NOEXCEPT;
 };
 
@@ -1080,7 +1079,7 @@ operator<=(const optional<_Tp>& __x, nullopt_t) noexcept
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
 bool
-operator<=(nullopt_t, const optional<_Tp>& __x) noexcept
+operator<=(nullopt_t, const optional<_Tp>&) noexcept
 {
     return true;
 }
@@ -1096,7 +1095,7 @@ operator>(const optional<_Tp>& __x, nullopt_t) noexcept
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY constexpr
 bool
-operator>(nullopt_t, const optional<_Tp>& __x) noexcept
+operator>(nullopt_t, const optional<_Tp>&) noexcept
 {
     return false;
 }
@@ -1296,7 +1295,7 @@ optional<_Tp> make_optional(initializer_list<_Up> __il,  _Args&&... __args)
 }
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<optional<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<optional<_Tp> >
 {
     typedef optional<_Tp> argument_type;
     typedef size_t        result_type;

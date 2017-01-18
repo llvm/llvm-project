@@ -234,26 +234,26 @@ define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
 define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X64-AVX512VL-LABEL: PR29088:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vpxord %ymm1, %ymm1, %ymm1
-; X64-AVX512VL-NEXT:    vmovdqa32 %ymm1, (%rsi)
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-AVX512VL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX512VL-NEXT:    vmovdqa %ymm1, (%rsi)
+; X64-AVX512VL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: PR29088:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vpxord %ymm1, %ymm1, %ymm1
-; X64-AVX512BWVL-NEXT:    vmovdqa32 %ymm1, (%rsi)
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-AVX512BWVL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; X64-AVX512BWVL-NEXT:    vmovdqa %ymm1, (%rsi)
+; X64-AVX512BWVL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: PR29088:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
+; X64-AVX512DQVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-AVX512DQVL-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; X64-AVX512DQVL-NEXT:    vmovaps %ymm1, (%rsi)
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; X64-AVX512DQVL-NEXT:    retq
   %ld = load <4 x i32>, <4 x i32>* %p0
   store <8 x float> zeroinitializer, <8 x float>* %p1

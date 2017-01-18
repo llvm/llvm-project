@@ -171,7 +171,7 @@ template <class charT, class traits, class T>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_istream
+class _LIBCPP_TEMPLATE_VIS basic_istream
     : virtual public basic_ios<_CharT, _Traits>
 {
     streamsize __gc_;
@@ -205,19 +205,14 @@ protected:
       basic_ios<char_type, traits_type>::swap(__rhs);
     }
 
-#if _LIBCPP_STD_VER > 11
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     basic_istream           (const basic_istream& __rhs) = delete;
     basic_istream& operator=(const basic_istream& __rhs) = delete;
-#else
-    basic_istream           (const basic_istream& __rhs); // not defined
-    basic_istream& operator=(const basic_istream& __rhs); // not defined
-#endif
 #endif
 public:
 
     // 27.7.1.1.3 Prefix/suffix:
-    class _LIBCPP_TYPE_VIS_ONLY sentry;
+    class _LIBCPP_TEMPLATE_VIS sentry;
 
     // 27.7.1.2 Formatted input:
     inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
@@ -294,7 +289,7 @@ public:
 };
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_istream<_CharT, _Traits>::sentry
+class _LIBCPP_TEMPLATE_VIS basic_istream<_CharT, _Traits>::sentry
 {
     bool __ok_;
 
@@ -1443,7 +1438,7 @@ operator>>(basic_istream<_CharT, _Traits>&& __is, _Tp&& __x)
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_iostream
+class _LIBCPP_TEMPLATE_VIS basic_iostream
     : public basic_istream<_CharT, _Traits>,
       public basic_ostream<_CharT, _Traits>
 {
@@ -1647,7 +1642,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x)
         {
             basic_string<_CharT, _Traits> __str;
             const ctype<_CharT>& __ct = use_facet<ctype<_CharT> >(__is.getloc());
-            streamsize __c = 0;
+            size_t __c = 0;
             ios_base::iostate __err = ios_base::goodbit;
             _CharT __zero = __ct.widen('0');
             _CharT __one = __ct.widen('1');

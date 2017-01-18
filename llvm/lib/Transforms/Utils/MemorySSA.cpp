@@ -1623,6 +1623,29 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
   return NewAccess;
 }
 
+void MemorySSA::spliceMemoryAccessAbove(MemoryDef *Where,
+                                        MemoryUseOrDef *What) {
+  assert(What != getLiveOnEntryDef() &&
+         Where != getLiveOnEntryDef() && "Can't splice (above) LOE.");
+  assert(dominates(Where, What) && "Only upwards splices are permitted.");
+
+  if (Where == What)
+    return;
+  if (isa<MemoryDef>(What)) {
+    // TODO: possibly use removeMemoryAccess' more efficient RAUW
+    What->replaceAllUsesWith(What->getDefiningAccess());
+    What->setDefiningAccess(Where->getDefiningAccess());
+    Where->setDefiningAccess(What);
+  }
+  AccessList *Src = getWritableBlockAccesses(What->getBlock());
+  AccessList *Dest = getWritableBlockAccesses(Where->getBlock());
+  Dest->splice(AccessList::iterator(Where), *Src, What);
+
+  BlockNumberingValid.erase(What->getBlock());
+  if (What->getBlock() != Where->getBlock())
+    BlockNumberingValid.erase(Where->getBlock());
+}
+
 /// \brief Helper function to create new memory accesses
 MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // The assume intrinsic has a control dependency which we model by claiming

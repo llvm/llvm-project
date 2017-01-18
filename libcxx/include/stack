@@ -91,7 +91,7 @@ template <class T, class Container>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Container = deque<_Tp> > class _LIBCPP_TYPE_VIS_ONLY stack;
+template <class _Tp, class _Container = deque<_Tp> > class _LIBCPP_TEMPLATE_VIS stack;
 
 template <class _Tp, class _Container>
 _LIBCPP_INLINE_VISIBILITY
@@ -104,7 +104,7 @@ bool
 operator< (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y);
 
 template <class _Tp, class _Container /*= deque<_Tp>*/>
-class _LIBCPP_TYPE_VIS_ONLY stack
+class _LIBCPP_TEMPLATE_VIS stack
 {
 public:
     typedef _Container                               container_type;
@@ -286,7 +286,7 @@ swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<stack<_Tp, _Container>, _Alloc>
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<stack<_Tp, _Container>, _Alloc>
     : public uses_allocator<_Container, _Alloc>
 {
 };

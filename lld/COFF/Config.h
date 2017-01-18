@@ -135,6 +135,9 @@ struct Configuration {
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;
 
+  // Used for /lldmap.
+  std::string MapFile;
+
   uint64_t ImageBase = -1;
   uint64_t StackReserve = 1024 * 1024;
   uint64_t StackCommit = 4096;

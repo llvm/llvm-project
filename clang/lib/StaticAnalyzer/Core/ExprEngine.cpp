@@ -254,7 +254,7 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
       break;
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
-      State->bindDefault(Reg, UnknownVal());
+      State->bindDefault(Reg, UnknownVal(), LC);
       return State;
     }
   }
@@ -265,7 +265,7 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
                                           currBldrCtx->blockCount());
   // Bind the value of the expression to the sub-object region, and then bind
   // the sub-object region to our expression.
-  State = State->bindLoc(Reg, V);
+  State = State->bindLoc(Reg, V, LC);
   State = State->BindExpr(Result, LC, Reg);
   return State;
 }
@@ -286,9 +286,11 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                  const InvalidatedSymbols *invalidated,
                                  ArrayRef<const MemRegion *> Explicits,
                                  ArrayRef<const MemRegion *> Regions,
+                                 const LocationContext *LCtx,
                                  const CallEvent *Call) {
   return getCheckerManager().runCheckersForRegionChanges(state, invalidated,
-                                                      Explicits, Regions, Call);
+                                                         Explicits, Regions,
+                                                         LCtx, Call);
 }
 
 void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
@@ -515,8 +517,9 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
           Init = ASE->getBase()->IgnoreImplicit();
 
         SVal LValue = State->getSVal(Init, stackFrame);
-        if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
-          InitVal = State->getSVal(*LValueLoc);
+        if (!Field->getType()->isReferenceType())
+          if (Optional<Loc> LValueLoc = LValue.getAs<Loc>())
+            InitVal = State->getSVal(*LValueLoc);
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
@@ -867,6 +870,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
     case Stmt::OMPTargetTeamsDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+    case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
       llvm_unreachable("Stmt should not be in analyzer evaluation loop");
 
     case Stmt::ObjCSubscriptRefExprClass:
@@ -1245,7 +1252,14 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Expr::MaterializeTemporaryExprClass: {
       Bldr.takeNodes(Pred);
       const MaterializeTemporaryExpr *MTE = cast<MaterializeTemporaryExpr>(S);
-      CreateCXXTemporaryObject(MTE, Pred, Dst);
+      ExplodedNodeSet dstPrevisit;
+      getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, MTE, *this);
+      ExplodedNodeSet dstExpr;
+      for (ExplodedNodeSet::iterator i = dstPrevisit.begin(),
+                                     e = dstPrevisit.end(); i != e ; ++i) {
+        CreateCXXTemporaryObject(MTE, *i, dstExpr);
+      }
+      getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, MTE, *this);
       Bldr.addNodes(Dst);
       break;
     }
@@ -2153,7 +2167,9 @@ public:
 // (3) We are binding to a MemRegion with stack storage that the store
 //     does not understand.
 ProgramStateRef ExprEngine::processPointerEscapedOnBind(ProgramStateRef State,
-                                                        SVal Loc, SVal Val) {
+                                                        SVal Loc,
+                                                        SVal Val,
+                                                        const LocationContext *LCtx) {
   // Are we storing to something that causes the value to "escape"?
   bool escapes = true;
 
@@ -2169,7 +2185,7 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(ProgramStateRef State,
       // same state.
       SVal StoredVal = State->getSVal(regionLoc->getRegion());
       if (StoredVal != Val)
-        escapes = (State == (State->bindLoc(*regionLoc, Val)));
+        escapes = (State == (State->bindLoc(*regionLoc, Val, LCtx)));
     }
   }
 
@@ -2266,7 +2282,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     const ProgramPoint L = PostStore(StoreE, LC, /*Loc*/nullptr,
                                      /*tag*/nullptr);
     ProgramStateRef state = Pred->getState();
-    state = processPointerEscapedOnBind(state, location, Val);
+    state = processPointerEscapedOnBind(state, location, Val, LC);
     Bldr.generateNode(L, state, Pred);
     return;
   }
@@ -2276,13 +2292,13 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     ExplodedNode *PredI = *I;
     ProgramStateRef state = PredI->getState();
 
-    state = processPointerEscapedOnBind(state, location, Val);
+    state = processPointerEscapedOnBind(state, location, Val, LC);
 
     // When binding the value, pass on the hint that this is a initialization.
     // For initializations, we do not need to inform clients of region
     // changes.
     state = state->bindLoc(location.castAs<Loc>(),
-                           Val, /* notifyChanges = */ !atDeclInit);
+                           Val, LC, /* notifyChanges = */ !atDeclInit);
 
     const MemRegion *LocReg = nullptr;
     if (Optional<loc::MemRegionVal> LocRegVal =
@@ -2508,7 +2524,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     assert (!X.getAs<NonLoc>());  // Should be an Lval, or unknown, undef.
 
     if (Optional<Loc> LV = X.getAs<Loc>())
-      state = state->bindLoc(*LV, UnknownVal());
+      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
   }
 
   Bldr.generateNode(A, Pred, state);

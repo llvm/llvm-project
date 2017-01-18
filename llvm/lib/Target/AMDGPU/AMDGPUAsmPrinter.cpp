@@ -176,12 +176,14 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   SetupMachineFunction(MF);
 
-  MCContext &Context = getObjFileLowering().getContext();
-  MCSectionELF *ConfigSection =
-      Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
-  OutStreamer->SwitchSection(ConfigSection);
-
   const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
+  MCContext &Context = getObjFileLowering().getContext();
+  if (!STM.isAmdHsaOS()) {
+    MCSectionELF *ConfigSection =
+        Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
+    OutStreamer->SwitchSection(ConfigSection);
+  }
+
   SIProgramInfo KernelInfo;
   if (STM.getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
     getSIProgramInfo(KernelInfo, MF);

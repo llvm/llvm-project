@@ -230,6 +230,15 @@ class InstrProfSymtab;
 /// bytes. This method decodes the string and populates the \c Symtab.
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
 
+/// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
+/// set in IR PGO compilation.
+bool isIRPGOFlagSet(const Module *M);
+
+/// Check if we can safely rename this Comdat function. Instances of the same
+/// comdat function may have different control flows thus can not share the
+/// same counter variable.
+bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken = false);
+
 enum InstrProfValueKind : uint32_t {
 #define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
 #include "llvm/ProfileData/InstrProfData.inc"

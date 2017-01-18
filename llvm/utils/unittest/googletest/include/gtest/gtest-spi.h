@@ -68,15 +68,14 @@ class GTEST_API_ ScopedFakeTestPartResultReporter
                                    TestPartResultArray* result);
 
   // The d'tor restores the previous test part result reporter.
-  ~ScopedFakeTestPartResultReporter() override;
+  virtual ~ScopedFakeTestPartResultReporter();
 
   // Appends the TestPartResult object to the TestPartResultArray
   // received in the constructor.
   //
   // This method is from the TestPartResultReporterInterface
   // interface.
-  void ReportTestPartResult(const TestPartResult &result) override;
-
+  virtual void ReportTestPartResult(const TestPartResult& result);
  private:
   void Init();
 
@@ -224,7 +223,7 @@ class GTEST_API_ SingleFailureChecker {
         (substr));\
     {\
       ::testing::ScopedFakeTestPartResultReporter gtest_reporter(\
-          ::testing::ScopedFakeTestPartResultReporter::INTERCEPT_ALL_THREADS,\
+          ::testing::ScopedFakeTestPartResultReporter::INTERCEPT_ALL_THREADS, \
           &gtest_failures);\
       if (::testing::internal::AlwaysTrue()) { statement; }\
     }\

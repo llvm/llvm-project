@@ -18,7 +18,11 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__negsf2vfp)
+#if defined(COMPILER_RT_ARMHF_TARGET)
+	vneg.f32 s0, s0
+#else
 	eor	r0, r0, #-2147483648	// flip sign bit on float in r0
+#endif
 	bx	lr
 END_COMPILERRT_FUNCTION(__negsf2vfp)
 

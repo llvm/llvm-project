@@ -883,9 +883,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
+  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Init))
     add({DT_INIT, B});
-  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Fini))
+  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Fini))
     add({DT_FINI, B});
 
   bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;
@@ -1060,18 +1060,6 @@ static bool sortMipsSymbols(const SymbolBody *L, const SymbolBody *R) {
   return L->GotIndex < R->GotIndex;
 }
 
-static uint8_t getSymbolBinding(SymbolBody *Body) {
-  Symbol *S = Body->symbol();
-  if (Config->Relocatable)
-    return S->Binding;
-  uint8_t Visibility = S->Visibility;
-  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
-    return STB_LOCAL;
-  if (Config->NoGnuUnique && S->Binding == STB_GNU_UNIQUE)
-    return STB_GLOBAL;
-  return S->Binding;
-}
-
 template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   this->OutSec->Link = this->Link = StrTabSec.OutSec->SectionIndex;
   this->OutSec->Info = this->Info = NumLocals + 1;
@@ -1085,11 +1073,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   }
 
   if (!StrTabSec.isDynamic()) {
-    std::stable_sort(Symbols.begin(), Symbols.end(),
-                     [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
-                       return getSymbolBinding(L.Symbol) == STB_LOCAL &&
-                              getSymbolBinding(R.Symbol) != STB_LOCAL;
-                     });
+    std::stable_sort(
+        Symbols.begin(), Symbols.end(),
+        [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+          return L.Symbol->symbol()->computeBinding() == STB_LOCAL &&
+                 R.Symbol->symbol()->computeBinding() != STB_LOCAL;
+        });
     return;
   }
   if (In<ELFT>::GnuHashTab)
@@ -1159,7 +1148,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     uint8_t Type = Body->Type;
     uintX_t Size = Body->getSize<ELFT>();
 
-    ESym->setBindingAndType(getSymbolBinding(Body), Type);
+    ESym->setBindingAndType(Body->symbol()->computeBinding(), Type);
     ESym->st_size = Size;
     ESym->st_name = StrOff;
     ESym->setVisibility(Body->symbol()->Visibility);
@@ -1201,10 +1190,12 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   }
   case SymbolBody::DefinedCommonKind:
     return In<ELFT>::Common->OutSec;
-  case SymbolBody::SharedKind:
-    if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
-      return Out<ELFT>::Bss;
+  case SymbolBody::SharedKind: {
+    auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
+    if (SS.needsCopy())
+      return SS.getBssSectionForCopy();
     break;
+  }
   case SymbolBody::UndefinedKind:
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:

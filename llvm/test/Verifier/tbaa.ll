@@ -22,14 +22,20 @@ define void @f_0(i32* %ptr) {
 ; CHECK: Malformed struct tag metadata:  base and access-type should be non-null and point to Metadata nodes
 ; CHECK-NEXT:  store i32 4, i32* %ptr, !tbaa !{{[0-9]+}}
 
-; CHECK: Access type node must be scalar
+; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 5, i32* %ptr, !tbaa !{{[0-9]+}}
 
 ; CHECK: Access bit-width not the same as description bit-width
 ; CHECK-NEXT:  store i32 6, i32* %ptr, !tbaa !{{[0-9]+}}
 
-; CHECK: Access type node must be scalar
+; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 7, i32* %ptr, !tbaa !{{[0-9]+}}
+
+; CHECK: Struct tag nodes have a string as their first operand
+; CHECK-NEXT:  !{{[0-9]+}} = !{!{{[0-9]+}}, !{{[0-9]+}}, i64 0}
+
+; CHECK: Access type node must be a valid scalar type
+; CHECK-NEXT:  store i32 9, i32* %ptr, !tbaa !{{[0-9]+}}
 
   store i32 0, i32* %ptr, !tbaa !{!3, !2, i64 40, i64 0, i64 1, i64 2}
   store i32 1, i32* %ptr, !tbaa !{!3, !2, i64 40, !"immutable"}
@@ -39,6 +45,8 @@ define void @f_0(i32* %ptr) {
   store i32 5, i32* %ptr, !tbaa !{!3, !3, !"40", i64 0}
   store i32 6, i32* %ptr, !tbaa !{!3, !2, i32 40, i64 0}
   store i32 7, i32* %ptr, !tbaa !{!3, !12, i32 40, i64 0}, !metadata !42
+  store i32 8, i32* %ptr, !tbaa !{!13, !1, i64 0}
+  store i32 9, i32* %ptr, !tbaa !{!14, !14, i64 0}
   ret void
 }
 !42 = !{!"Do no strip this!"}
@@ -61,13 +69,13 @@ define void @f_1(i32* %ptr) {
 ; CHECK: Did not see access type in access path!
 ; CHECK-NEXT:  store i32 3, i32* %ptr, !tbaa !{{[0-9]+}}
 
-; CHECK: Invalid parent operand in scalar TBAA node
+; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 4, i32* %ptr, !tbaa !{{[0-9]+}}
 
-; CHECK: Invalid name operand in scalar TBAA node
+; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 5, i32* %ptr, !tbaa !{{[0-9]+}}
 
-; CHECK: Null operands in scalar type nodes!
+; CHECK: Access type node must be a valid scalar type
 ; CHECK-NEXT:  store i32 6, i32* %ptr, !tbaa !{{[0-9]+}}
 
 ; CHECK: Struct tag nodes must have an odd number of operands!
@@ -111,3 +119,5 @@ define void @f_1(i32* %ptr) {
 !10 = !{!"bad-struct-type-2", !1, i64 40, !1, i32 56}
 !11 = !{!"bad-struct-type-2", !1, i64 80, !1, i64 56}
 !12 = !{!"bad-scalar-2", !3, i64 0}
+!13 = !{!1, !1, i64 0}
+!14 = !{!"bad-scalar-2", !13}

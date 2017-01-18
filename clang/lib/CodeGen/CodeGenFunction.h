@@ -120,7 +120,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
-  SANITIZER_CHECK(TypeMismatch, type_mismatch, 0)                              \
+  SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
   SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
 
 enum SanitizerHandler {
@@ -1499,7 +1499,6 @@ public:
   //===--------------------------------------------------------------------===//
 
   llvm::Value *EmitBlockLiteral(const BlockExpr *);
-  llvm::Value *EmitBlockLiteral(const CGBlockInfo &Info);
   static void destroyBlockInfos(CGBlockInfo *info);
 
   llvm::Function *GenerateBlockFunction(GlobalDecl GD,
@@ -2696,6 +2695,14 @@ public:
   void EmitOMPTeamsDistributeParallelForDirective(
       const OMPTeamsDistributeParallelForDirective &S);
   void EmitOMPTargetTeamsDirective(const OMPTargetTeamsDirective &S);
+  void EmitOMPTargetTeamsDistributeDirective(
+      const OMPTargetTeamsDistributeDirective &S);
+  void EmitOMPTargetTeamsDistributeParallelForDirective(
+      const OMPTargetTeamsDistributeParallelForDirective &S);
+  void EmitOMPTargetTeamsDistributeParallelForSimdDirective(
+      const OMPTargetTeamsDistributeParallelForSimdDirective &S);
+  void EmitOMPTargetTeamsDistributeSimdDirective(
+      const OMPTargetTeamsDistributeSimdDirective &S);
 
   /// Emit outlined function for the target directive.
   static std::pair<llvm::Function * /*OutlinedFn*/,
@@ -2726,6 +2733,9 @@ public:
                                   OMPPrivateScope &LoopScope);
 
 private:
+  /// Helpers for blocks
+  llvm::Value *EmitBlockLiteral(const CGBlockInfo &Info);
+
   /// Helpers for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
   void EmitOMPSimdInit(const OMPLoopDirective &D, bool IsMonotonic = false);
@@ -3563,7 +3573,7 @@ public:
 
     // If we still have any arguments, emit them using the type of the argument.
     for (auto *A : llvm::make_range(Arg, ArgRange.end()))
-      ArgTypes.push_back(getVarArgType(A));
+      ArgTypes.push_back(CallArgTypeInfo ? getVarArgType(A) : A->getType());
 
     EmitCallArgs(Args, ArgTypes, ArgRange, CalleeDecl, ParamsToSkip, Order);
   }
