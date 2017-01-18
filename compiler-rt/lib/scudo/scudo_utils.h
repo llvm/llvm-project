@@ -53,7 +53,11 @@ struct Xorshift128Plus {
   u64 State[2];
 };
 
-// Software CRC32 functions, to be used when hardware support is not detected.
+enum : u8 {
+  CRC32Software = 0,
+  CRC32Hardware = 1,
+};
+
 u32 computeSoftwareCRC32(u32 Crc, uptr Data);
 
 }  // namespace __scudo

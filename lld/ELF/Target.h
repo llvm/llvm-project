@@ -56,7 +56,7 @@ public:
   // R_THUNK_PC if thunk is required and expression is pc rel
   // R_THUNK_PLT_PC if thunk is required to PLT entry and expression is pc rel
   virtual RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
-                               const InputFile &File,
+                               const InputFile *File,
                                const SymbolBody &S) const;
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;

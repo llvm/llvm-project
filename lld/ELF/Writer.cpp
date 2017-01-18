@@ -158,12 +158,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->Relocatable)
     addReservedSymbols();
 
-  // Some architectures use small displacements for jump instructions.
-  // It is linker's responsibility to create thunks containing long
-  // jump instructions if jump targets are too far. Create thunks.
-  if (Target->NeedsThunks)
-    forEachRelSec(createThunks<ELFT>);
-
   // Create output sections.
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
@@ -1087,6 +1081,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     addPtArmExid(Phdrs);
     fixHeaders();
   }
+
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
+  if (Target->NeedsThunks)
+    createThunks<ELFT>(OutputSections);
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
