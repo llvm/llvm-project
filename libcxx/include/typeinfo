@@ -95,12 +95,13 @@ protected:
     uintptr_t __type_name;
 
     _LIBCPP_INLINE_VISIBILITY
-    type_info(const char* __n) : __type_name(reinterpret_cast<uintptr_t>(__n)) {}
+    explicit type_info(const char* __n)
+      : __type_name(reinterpret_cast<uintptr_t>(__n)) {}
 #else
     const char *__type_name;
 
     _LIBCPP_INLINE_VISIBILITY
-    type_info(const char* __n) : __type_name(__n) {}
+    explicit type_info(const char* __n) : __type_name(__n) {}
 #endif
 
 public:
