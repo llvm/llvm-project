@@ -31,6 +31,13 @@
 #include "SIInstrInfo.h"
 using namespace llvm;
 
+// Option to enable fneg combines.
+static cl::opt<bool> EnableFnegCombines(
+  "amdgpu-enable-fneg-combines",
+  cl::desc("Enable fneg combines"),
+  cl::init(false),
+  cl::Hidden);
+
 static bool allocateKernArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
@@ -2837,6 +2844,9 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
 
 SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
+  if (!EnableFnegCombines)
+    return SDValue();
+
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
