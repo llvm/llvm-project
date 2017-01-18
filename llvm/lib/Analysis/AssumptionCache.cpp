@@ -47,9 +47,11 @@ void AssumptionCache::updateAffectedValues(CallInst *CI) {
     } else if (auto *I = dyn_cast<Instruction>(V)) {
       Affected.push_back(I);
 
-      if (I->getOpcode() == Instruction::BitCast ||
-          I->getOpcode() == Instruction::PtrToInt) {
-        auto *Op = I->getOperand(0);
+      // Peek through unary operators to find the source of the condition.
+      Value *Op;
+      if (match(I, m_BitCast(m_Value(Op))) ||
+          match(I, m_PtrToInt(m_Value(Op))) ||
+          match(I, m_Not(m_Value(Op)))) {
         if (isa<Instruction>(Op) || isa<Argument>(Op))
           Affected.push_back(Op);
       }

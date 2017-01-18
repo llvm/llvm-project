@@ -3061,6 +3061,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op) const {
   if (getTarget().Options.NoNaNsFPMath)
     return true;
 
+  if (const BinaryWithFlagsSDNode *BF = dyn_cast<BinaryWithFlagsSDNode>(Op))
+    return BF->Flags.hasNoNaNs();
+
   // If the value is a constant, we can obviously see if it is a NaN or not.
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
     return !C->getValueAPF().isNaN();

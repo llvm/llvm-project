@@ -725,7 +725,7 @@ Or a combination of multiple projects:
 
   % cd $TOP_LEVEL_DIR
   % mkdir clang-build && cd clang-build
-  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;compiler-rt"
+  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"
 
 A helper script is provided in `llvm/utils/git-svn/git-llvm`. After you add it
 to your path, you can push committed changes upstream with `git llvm push`.

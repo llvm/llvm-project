@@ -436,3 +436,49 @@ define i64 @test35(i32 %X) {
   %res = and i64 %zsub, 240
   ret i64 %res
 }
+
+define i64 @test36(i32 %X) {
+; CHECK-LABEL: @test36(
+; CHECK-NEXT:  %[[sub:.*]] = add i32 %X, 7
+; CHECK-NEXT:  %[[and:.*]] = and i32 %[[sub]], 240
+; CHECK-NEXT:  %[[cst:.*]] = zext i32 %[[and]] to i64
+; CHECK-NEXT:  ret i64 %[[cst]]
+  %zext = zext i32 %X to i64
+  %zsub = add i64 %zext, 7
+  %res = and i64 %zsub, 240
+  ret i64 %res
+}
+
+define i64 @test37(i32 %X) {
+; CHECK-LABEL: @test37(
+; CHECK-NEXT:  %[[sub:.*]] = mul i32 %X, 7
+; CHECK-NEXT:  %[[and:.*]] = and i32 %[[sub]], 240
+; CHECK-NEXT:  %[[cst:.*]] = zext i32 %[[and]] to i64
+; CHECK-NEXT:  ret i64 %[[cst]]
+  %zext = zext i32 %X to i64
+  %zsub = mul i64 %zext, 7
+  %res = and i64 %zsub, 240
+  ret i64 %res
+}
+
+define i64 @test38(i32 %X) {
+; CHECK-LABEL: @test38(
+; CHECK-NEXT:  %[[and:.*]] = and i32 %X, 240
+; CHECK-NEXT:  %[[cst:.*]] = zext i32 %[[and]] to i64
+; CHECK-NEXT:  ret i64 %[[cst]]
+  %zext = zext i32 %X to i64
+  %zsub = xor i64 %zext, 7
+  %res = and i64 %zsub, 240
+  ret i64 %res
+}
+
+define i64 @test39(i32 %X) {
+; CHECK-LABEL: @test39(
+; CHECK-NEXT:  %[[and:.*]] = and i32 %X, 240
+; CHECK-NEXT:  %[[cst:.*]] = zext i32 %[[and]] to i64
+; CHECK-NEXT:  ret i64 %[[cst]]
+  %zext = zext i32 %X to i64
+  %zsub = or i64 %zext, 7
+  %res = and i64 %zsub, 240
+  ret i64 %res
+}

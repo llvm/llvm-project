@@ -221,13 +221,11 @@ define <8 x double> @undef_test_vpermilvar_pd_512(<8 x double> %v) {
   ret <8 x double> %a
 }
 
-; TODO: Simplify demanded elts
+; Simplify demanded elts
 
 define <4 x float> @elts_test_vpermilvar_ps(<4 x float> %a0, i32 %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_ps(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 undef>, i32 %a1, i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <4 x float> [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> %a0
 ;
   %1 = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %a1, i32 3
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> %1)
@@ -237,9 +235,8 @@ define <4 x float> @elts_test_vpermilvar_ps(<4 x float> %a0, i32 %a1) {
 
 define <8 x float> @elts_test_vpermilvar_ps_256(<8 x float> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <8 x float> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> %a0, <8 x float> undef, <8 x i32> <i32 undef, i32 0, i32 undef, i32 1, i32 undef, i32 6, i32 undef, i32 7>
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = shufflevector <8 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> %1)
@@ -249,9 +246,8 @@ define <8 x float> @elts_test_vpermilvar_ps_256(<8 x float> %a0, <8 x i32> %a1) 
 
 define <16 x float> @elts_test_vpermilvar_ps_512(<16 x float> %a0, <16 x i32> %a1, i32 %a2) {
 ; CHECK-LABEL: @elts_test_vpermilvar_ps_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> %a1, i32 %a2, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %a0, <16 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <16 x float> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %a0, <16 x i32> %a1)
+; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %1 = insertelement <16 x i32> %a1, i32 %a2, i32 0
   %2 = tail call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> %a0, <16 x i32> %1)
@@ -261,9 +257,7 @@ define <16 x float> @elts_test_vpermilvar_ps_512(<16 x float> %a0, <16 x i32> %a
 
 define <2 x double> @elts_test_vpermilvar_pd(<2 x double> %a0, i64 %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_pd(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 0, i64 undef>, i64 %a1, i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> %a0
 ;
   %1 = insertelement <2 x i64> <i64 0, i64 2>, i64 %a1, i32 1
   %2 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> %1)
@@ -273,9 +267,8 @@ define <2 x double> @elts_test_vpermilvar_pd(<2 x double> %a0, i64 %a1) {
 
 define <4 x double> @elts_test_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_pd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> <i64 undef, i64 2, i64 0, i64 2>, <4 x i64> %a1, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <4 x double> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> %a0, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 undef>
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = shufflevector <4 x i64> <i64 0, i64 2, i64 0, i64 2>, <4 x i64> %a1, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   %2 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> %1)
@@ -285,7 +278,7 @@ define <4 x double> @elts_test_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> %a1
 
 define <8 x double> @elts_test_vpermilvar_pd_512(<8 x double> %a0, <8 x i64> %a1, i64 %a2) {
 ; CHECK-LABEL: @elts_test_vpermilvar_pd_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> %a1, i64 %a2, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> undef, i64 %a2, i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x double> @llvm.x86.avx512.vpermilvar.pd.512(<8 x double> %a0, <8 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x double> [[TMP3]]

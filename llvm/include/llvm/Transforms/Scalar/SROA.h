@@ -21,17 +21,21 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+#include <vector>
 
 namespace llvm {
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.
 namespace sroa LLVM_LIBRARY_VISIBILITY {
+
 class AllocaSliceRewriter;
 class AllocaSlices;
 class Partition;
 class SROALegacyPass;
-}
+
+} // end namespace sroa
 
 /// \brief An optimization pass providing Scalar Replacement of Aggregates.
 ///
@@ -52,9 +56,9 @@ class SROALegacyPass;
 ///    this form. By doing so, it will enable promotion of vector aggregates to
 ///    SSA vector values.
 class SROA : public PassInfoMixin<SROA> {
-  LLVMContext *C;
-  DominatorTree *DT;
-  AssumptionCache *AC;
+  LLVMContext *C = nullptr;
+  DominatorTree *DT = nullptr;
+  AssumptionCache *AC = nullptr;
 
   /// \brief Worklist of alloca instructions to simplify.
   ///
@@ -99,7 +103,7 @@ class SROA : public PassInfoMixin<SROA> {
   SetVector<SelectInst *, SmallVector<SelectInst *, 2>> SpeculatableSelects;
 
 public:
-  SROA() : C(nullptr), DT(nullptr), AC(nullptr) {}
+  SROA() = default;
 
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -122,6 +126,6 @@ private:
   bool promoteAllocas(Function &F);
 };
 
-}
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_SCALAR_SROA_H

@@ -216,3 +216,141 @@ define <2 x i1> @icmp_sgt11_vec(<2 x i8> %x) {
 
 ; Known bits analysis returns false for compares with >=0.
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Repeat the shl nsw + sgt tests with predicate changed to 'sle'.
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Known bits analysis turns this into an equality predicate.
+
+define i1 @icmp_sle1(i8 %x) {
+; CHECK-LABEL: @icmp_sle1(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 %x, 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL_MASK]], 64
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, -128
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle2(i8 %x) {
+; CHECK-LABEL: @icmp_sle2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], -126
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, -127
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle3(i8 %x) {
+; CHECK-LABEL: @icmp_sle3(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], -15
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, -16
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle4(i8 %x) {
+; CHECK-LABEL: @icmp_sle4(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, -2
+  ret i1 %cmp
+}
+
+; x <=s -1 is a sign bit test.
+; x <=s 0 is a sign bit test.
+
+define i1 @icmp_sle5(i8 %x) {
+; CHECK-LABEL: @icmp_sle5(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, 1
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle6(i8 %x) {
+; CHECK-LABEL: @icmp_sle6(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], 17
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, 16
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle7(i8 %x) {
+; CHECK-LABEL: @icmp_sle7(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], 125
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, 124
+  ret i1 %cmp
+}
+
+; Known bits analysis turns this into an equality predicate.
+
+define i1 @icmp_sle8(i8 %x) {
+; CHECK-LABEL: @icmp_sle8(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 %x, 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SHL_MASK]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp sle i8 %shl, 125
+  ret i1 %cmp
+}
+
+; Compares with 126 and 127 are recognized as always true.
+
+; Known bits analysis turns this into an equality predicate.
+
+define i1 @icmp_sle9(i8 %x) {
+; CHECK-LABEL: @icmp_sle9(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 %x, 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SHL_MASK]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 7
+  %cmp = icmp sle i8 %shl, -128
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle10(i8 %x) {
+; CHECK-LABEL: @icmp_sle10(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], -126
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 7
+  %cmp = icmp sle i8 %shl, -127
+  ret i1 %cmp
+}
+
+define i1 @icmp_sle11(i8 %x) {
+; CHECK-LABEL: @icmp_sle11(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 %x, 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 7
+  %cmp = icmp sle i8 %shl, -2
+  ret i1 %cmp
+}
+

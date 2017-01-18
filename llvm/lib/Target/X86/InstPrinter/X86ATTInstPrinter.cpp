@@ -61,6 +61,17 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     OS << "\tcallq\t";
     printPCRelImm(MI, 0, OS);
   }
+  // data16 and data32 both have the same encoding of 0x66. While data32 is
+  // valid only in 16 bit systems, data16 is valid in the rest.
+  // There seems to be some lack of support of the Requires clause that causes
+  // 0x66 to be interpreted as "data16" by the asm printer.
+  // Thus we add an adjustment here in order to print the "right" instruction.
+  else if (MI->getOpcode() == X86::DATA16_PREFIX &&
+    (STI.getFeatureBits()[X86::Mode16Bit])) {
+    MCInst Data32MI(*MI);
+    Data32MI.setOpcode(X86::DATA32_PREFIX);
+    printInstruction(&Data32MI, OS);
+  }
   // Try to print any aliases first.
   else if (!printAliasInstr(MI, OS))
     printInstruction(MI, OS);

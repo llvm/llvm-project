@@ -2347,10 +2347,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx512_vpermilvar_ps_512:
   case Intrinsic::x86_avx_vpermilvar_pd:
   case Intrinsic::x86_avx_vpermilvar_pd_256:
-  case Intrinsic::x86_avx512_vpermilvar_pd_512:
+  case Intrinsic::x86_avx512_vpermilvar_pd_512: {
     if (Value *V = simplifyX86vpermilvar(*II, *Builder))
       return replaceInstUsesWith(*II, V);
+
+    unsigned VWidth = II->getType()->getVectorNumElements();
+    APInt UndefElts(VWidth, 0);
+    APInt DemandedElts = APInt::getAllOnesValue(VWidth);
+    if (Value *V = SimplifyDemandedVectorElts(II, DemandedElts, UndefElts)) {
+      if (V != II)
+        return replaceInstUsesWith(*II, V);
+      return II;
+    }
     break;
+  }
 
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:

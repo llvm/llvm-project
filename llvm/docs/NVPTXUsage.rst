@@ -356,6 +356,7 @@ The value of this flag is determined by the "nvvm-reflect-ftz" module flag.
 The following sets the ftz flag to 1.
 
 .. code-block:: llvm
+
     !llvm.module.flag = !{!0}
     !0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 

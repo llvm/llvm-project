@@ -17,6 +17,6 @@ let TargetPrefix = "wasm" in {  // All intrinsics start with "llvm.wasm.".
 // Note that current_memory is not IntrNoMem because it must be sequenced with
 // respect to grow_memory calls.
 def int_wasm_current_memory : Intrinsic<[llvm_anyint_ty], [], [IntrReadMem]>;
-def int_wasm_grow_memory : Intrinsic<[], [llvm_anyint_ty], []>;
+def int_wasm_grow_memory : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], []>;
 
 }

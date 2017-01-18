@@ -673,9 +673,9 @@ def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                          Requires<[HasAddr32]>;
 
 // Grow memory.
-def GROW_MEMORY_I32 : I<(outs), (ins i32imm:$flags, I32:$delta),
+def GROW_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                         [],
-                        "grow_memory\t$delta", 0x40>,
+                        "grow_memory\t$dst, $delta", 0x40>,
                       Requires<[HasAddr32]>;
 
 } // Defs = [ARGUMENTS]

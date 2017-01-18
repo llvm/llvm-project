@@ -401,7 +401,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.MutateDepth = Flags.mutate_depth;
   Options.UseCounters = Flags.use_counters;
   Options.UseIndirCalls = Flags.use_indir_calls;
-  Options.UseMemcmp = Flags.use_memcmp;
   Options.UseMemmem = Flags.use_memmem;
   Options.UseCmp = Flags.use_cmp;
   Options.UseValueProfile = Flags.use_value_profile;

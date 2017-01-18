@@ -1177,9 +1177,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1) == SizeTTy && FTy.getParamType(2) == SizeTTy);
 
   case LibFunc::NumLibFuncs:
-    llvm_unreachable("Invalid sentinel libfunc value");
+    break;
   }
 
+  llvm_unreachable("Invalid libfunc");
 }
 
 bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,

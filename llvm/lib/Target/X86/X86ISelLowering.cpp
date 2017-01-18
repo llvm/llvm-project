@@ -29515,19 +29515,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Combine brcond/cmov/setcc/.. based on comparing the result of
-/// atomic_load_add to use EFLAGS produced by the addition
-/// directly if possible. For example:
-///
-///   (setcc (cmp (atomic_load_add x, -C) C), COND_E)
-/// becomes:
-///   (setcc (LADD x, -C), COND_E)
-///
-/// and
+/// Combine:
 ///   (brcond/cmov/setcc .., (cmp (atomic_load_add x, 1), 0), COND_S)
-/// becomes:
+/// to:
 ///   (brcond/cmov/setcc .., (LADD x, 1), COND_LE)
-///
+/// i.e., reusing the EFLAGS produced by the LOCKed instruction.
 /// Note that this is only legal for some op/cc combinations.
 static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
                                        SelectionDAG &DAG) {
@@ -29542,7 +29534,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   if (!Cmp.hasOneUse())
     return SDValue();
 
-  // This applies to variations of the common case:
+  // This only applies to variations of the common case:
   //   (icmp slt x, 0) -> (icmp sle (add x, 1), 0)
   //   (icmp sge x, 0) -> (icmp sgt (add x, 1), 0)
   //   (icmp sle x, 0) -> (icmp slt (sub x, 1), 0)
@@ -29561,9 +29553,8 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
     return SDValue();
 
   auto *CmpRHSC = dyn_cast<ConstantSDNode>(CmpRHS);
-  if (!CmpRHSC)
+  if (!CmpRHSC || CmpRHSC->getZExtValue() != 0)
     return SDValue();
-  APInt Comparand = CmpRHSC->getAPIntValue();
 
   const unsigned Opc = CmpLHS.getOpcode();
 
@@ -29579,19 +29570,16 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   if (Opc == ISD::ATOMIC_LOAD_SUB)
     Addend = -Addend;
 
-  if (Comparand == -Addend) {
-    // No change to CC.
-  } else if (CC == X86::COND_S && Comparand == 0 && Addend == 1) {
+  if (CC == X86::COND_S && Addend == 1)
     CC = X86::COND_LE;
-  } else if (CC == X86::COND_NS && Comparand == 0 && Addend == 1) {
+  else if (CC == X86::COND_NS && Addend == 1)
     CC = X86::COND_G;
-  } else if (CC == X86::COND_G && Comparand == 0 && Addend == -1) {
+  else if (CC == X86::COND_G && Addend == -1)
     CC = X86::COND_GE;
-  } else if (CC == X86::COND_LE && Comparand == 0 && Addend == -1) {
+  else if (CC == X86::COND_LE && Addend == -1)
     CC = X86::COND_L;
-  } else {
+  else
     return SDValue();
-  }
 
   SDValue LockOp = lowerAtomicArithWithLOCK(CmpLHS, DAG);
   DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),
@@ -30268,22 +30256,37 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   }
 
   if (!NewMul) {
-    assert(MulAmt != 0 && MulAmt != (VT == MVT::i64 ? UINT64_MAX : UINT32_MAX)
-           && "Both cases that could cause potential overflows should have "
-              "already been handled.");
-    if (isPowerOf2_64(MulAmt - 1))
-      // (mul x, 2^N + 1) => (add (shl x, N), x)
-      NewMul = DAG.getNode(ISD::ADD, DL, VT, N->getOperand(0),
-                                DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                DAG.getConstant(Log2_64(MulAmt - 1), DL,
-                                MVT::i8)));
-
-    else if (isPowerOf2_64(MulAmt + 1))
-      // (mul x, 2^N - 1) => (sub (shl x, N), x)
-      NewMul = DAG.getNode(ISD::SUB, DL, VT, DAG.getNode(ISD::SHL, DL, VT,
-                                N->getOperand(0),
-                                DAG.getConstant(Log2_64(MulAmt + 1),
-                                DL, MVT::i8)), N->getOperand(0));
+    assert(MulAmt != 0 &&
+           MulAmt != (VT == MVT::i64 ? UINT64_MAX : UINT32_MAX) &&
+           "Both cases that could cause potential overflows should have "
+           "already been handled.");
+    int64_t SignMulAmt = C->getSExtValue();
+    if ((SignMulAmt != INT64_MIN) && (SignMulAmt != INT64_MAX) &&
+        (SignMulAmt != -INT64_MAX)) {
+      int NumSign = SignMulAmt > 0 ? 1 : -1;
+      bool IsPowerOf2_64PlusOne = isPowerOf2_64(NumSign * SignMulAmt - 1);
+      bool IsPowerOf2_64MinusOne = isPowerOf2_64(NumSign * SignMulAmt + 1);
+      if (IsPowerOf2_64PlusOne) {
+        // (mul x, 2^N + 1) => (add (shl x, N), x)
+        NewMul = DAG.getNode(
+            ISD::ADD, DL, VT, N->getOperand(0),
+            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                        DAG.getConstant(Log2_64(NumSign * SignMulAmt - 1), DL,
+                                        MVT::i8)));
+      } else if (IsPowerOf2_64MinusOne) {
+        // (mul x, 2^N - 1) => (sub (shl x, N), x)
+        NewMul = DAG.getNode(
+            ISD::SUB, DL, VT,
+            DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                        DAG.getConstant(Log2_64(NumSign * SignMulAmt + 1), DL,
+                                        MVT::i8)),
+            N->getOperand(0));
+      }
+      // To negate, subtract the number from zero
+      if ((IsPowerOf2_64PlusOne || IsPowerOf2_64MinusOne) && NumSign == -1)
+        NewMul =
+            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
+    }
   }
 
   if (NewMul)

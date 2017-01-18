@@ -43,10 +43,10 @@ private:
   /// This keeps track of which value to use on a per-block basis. When we
   /// insert PHI nodes, we keep track of them here.
   //typedef DenseMap<BasicBlock*, Value*> AvailableValsTy;
-  void *AV;
+  void *AV = nullptr;
 
   /// ProtoType holds the type of the values being rewritten.
-  Type *ProtoType;
+  Type *ProtoType = nullptr;
 
   /// PHI nodes are given a name based on ProtoName.
   std::string ProtoName;
