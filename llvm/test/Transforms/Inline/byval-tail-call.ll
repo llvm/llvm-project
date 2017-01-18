@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -tailcallelim -inline -instcombine -dse -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='function(tailcallelim),cgscc(inline,function(instcombine,dse))' -S | FileCheck %s
 ; PR7272
 
 ; Calls that capture byval parameters cannot be marked as tail calls. Other

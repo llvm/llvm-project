@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wall -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -std=c++1z -verify %s
 
 // definitions for std::move
 namespace std {
@@ -1436,4 +1436,14 @@ void array_capture(bool b) {
   } else {
     [fname]{};
   }
+}
+
+void if_switch_init_stmt(int k) {
+  if (int n = 0; (n == k || k > 5)) {}
+
+  if (int n; (n == k || k > 5)) {} // expected-warning {{uninitialized}} expected-note {{initialize}}
+
+  switch (int n = 0; (n == k || k > 5)) {} // expected-warning {{boolean}}
+
+  switch (int n; (n == k || k > 5)) {} // expected-warning {{uninitialized}} expected-note {{initialize}} expected-warning {{boolean}}
 }

@@ -603,6 +603,12 @@ class XForm_17<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = 0;
 }
 
+class XForm_17a<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+               InstrItinClass itin>
+  : XForm_17<opcode, xo, OOL, IOL, asmstr, itin > {
+  let FRA = 0;
+}
+
 // Used for QPX
 class XForm_18<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>

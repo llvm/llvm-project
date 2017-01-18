@@ -49,14 +49,8 @@ void g() {
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
-  // FIXME: This should be valid, but we incorrectly match the template template
-  // argument against both template template parameters.
-  template_param_kinds_3<Tmpl_T_T_A>(); // expected-error {{ambiguous}}
-  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
-  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
-  template_param_kinds_3<Tmpl_T_T_B>(); // expected-error {{ambiguous}}
-  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
-  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
+  template_param_kinds_3<Tmpl_T_T_A>();
+  template_param_kinds_3<Tmpl_T_T_B>();
 
   // Trigger the instantiation of a template in 'a' that uses a type defined in
   // 'common'. That type is not visible here.
@@ -195,8 +189,8 @@ namespace hidden_specializations {
     cls<void>::nested_cls_t<int> *nk2; // ok
     cls<void>::nested_cls_t<char> *nk3; // ok
     cls<int> uk1; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
-    cls<int*> uk3; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}} expected-error 1+{{definition of}}
-    cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}} expected-error 1+{{definition of}}
+    cls<int*> uk3; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}} expected-error 1+{{definition of}}
+    cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls unk1; // expected-error 1+{{explicit specialization of 'nested_cls' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls_t<int> unk2; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}}
@@ -211,8 +205,8 @@ namespace hidden_specializations {
     (void)sizeof(var<void>); // ok
     (void)sizeof(var<char>); // ok
     (void)sizeof(var<int>); // expected-error 1+{{explicit specialization of 'var<int>' must be imported}}
-    (void)sizeof(var<int*>); // expected-error 1+{{partial specialization of 'var<type-parameter-0-0 *>' must be imported}}
-    (void)sizeof(var<char*>); // expected-error 1+{{partial specialization of 'var<type-parameter-0-0 *>' must be imported}}
+    (void)sizeof(var<int*>); // expected-error 1+{{partial specialization of 'var<T *>' must be imported}}
+    (void)sizeof(var<char*>); // expected-error 1+{{partial specialization of 'var<T *>' must be imported}}
     (void)sizeof(cls<void>::nested_var); // ok
     (void)cls<void>::nested_var; // expected-error 1+{{explicit specialization of 'nested_var' must be imported}}
     (void)sizeof(cls<void>::nested_var_t<int>); // expected-error 1+{{explicit specialization of 'nested_var_t' must be imported}}
@@ -224,10 +218,10 @@ namespace hidden_specializations {
   int cls<int>::nested_var; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
   enum cls<int>::nested_enum : int {}; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
 
-  template<typename T> void cls<T*>::nested_fn() {} // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
-  template<typename T> struct cls<T*>::nested_cls {}; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
-  template<typename T> int cls<T*>::nested_var; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
-  template<typename T> enum cls<T*>::nested_enum : int {}; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
+  template<typename T> void cls<T*>::nested_fn() {} // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}}
+  template<typename T> struct cls<T*>::nested_cls {}; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}}
+  template<typename T> int cls<T*>::nested_var; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}}
+  template<typename T> enum cls<T*>::nested_enum : int {}; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}}
 }
 
 namespace Std {

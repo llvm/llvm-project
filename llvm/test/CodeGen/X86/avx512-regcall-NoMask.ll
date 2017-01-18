@@ -341,13 +341,13 @@ define x86_regcallcc <4 x i32> @test_argRet128Vector(<4 x i32> %a, <4 x i32> %b)
 ; X32-LABEL:  test_CallargRet128Vector:
 ; X32:        vmov{{.*}}  %xmm0, {{%xmm([0-7])}}
 ; X32:        call{{.*}}   {{.*}}test_argRet128Vector
-; X32:        vpblend{{.*}}  {{%xmm([0-7])}}, %xmm0, %xmm0
+; X32:        vmovdqa{{.*}}  {{%xmm([0-7])}}, %xmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_CallargRet128Vector:
 ; WIN64:        vmov{{.*}}  %xmm0, {{%xmm([0-9]+)}}
 ; WIN64:        call{{.*}}   {{.*}}test_argRet128Vector
-; WIN64:        vpblend{{.*}}  {{%xmm([0-9]+)}}, %xmm0, %xmm0
+; WIN64:        vmovdqa{{.*}}  {{%xmm([0-9]+)}}, %xmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when passing/retrieving 128 bit vector
@@ -374,13 +374,13 @@ define x86_regcallcc <8 x i32> @test_argRet256Vector(<8 x i32> %a, <8 x i32> %b)
 ; X32-LABEL:  test_CallargRet256Vector:
 ; X32:        vmov{{.*}}  %ymm0, %ymm1
 ; X32:        call{{.*}}   {{.*}}test_argRet256Vector
-; X32:        vpblend{{.*}}  %ymm1, %ymm0, %ymm0
+; X32:        vmovdqa{{.*}}  %ymm1, %ymm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_CallargRet256Vector:
 ; WIN64:        vmov{{.*}}  %ymm0, %ymm1
 ; WIN64:        call{{.*}}   {{.*}}test_argRet256Vector
-; WIN64:        vpblend{{.*}}  %ymm1, %ymm0, %ymm0
+; WIN64:        vmovdqa{{.*}}  %ymm1, %ymm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when passing/retrieving 256 bit vector
@@ -407,13 +407,13 @@ define x86_regcallcc <16 x i32> @test_argRet512Vector(<16 x i32> %a, <16 x i32> 
 ; X32-LABEL:  test_CallargRet512Vector:
 ; X32:        vmov{{.*}}  %zmm0, %zmm1
 ; X32:        call{{.*}}   {{.*}}test_argRet512Vector
-; X32:        vpblend{{.*}}  %zmm1, %zmm0, %zmm0
+; X32:        movdqa{{.*}}  %zmm1, %zmm0
 ; X32:        ret{{.*}}
 
 ; WIN64-LABEL:  test_CallargRet512Vector:
 ; WIN64:        vmov{{.*}}  %zmm0, %zmm1
 ; WIN64:        call{{.*}}   {{.*}}test_argRet512Vector
-; WIN64:        vpblend{{.*}}  %zmm1, %zmm0, %zmm0
+; WIN64:        vmovdqa{{.*}}  %zmm1, %zmm0
 ; WIN64:        ret{{.*}}
 
 ; Test regcall when passing/retrieving 512 bit vector

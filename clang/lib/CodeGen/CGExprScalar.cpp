@@ -1593,6 +1593,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return llvm::Constant::getNullValue(ConvertType(DestTy));
   }
 
+  case CK_ZeroToOCLQueue: {
+    assert(DestTy->isQueueT() && "CK_ZeroToOCLQueue cast on non queue_t type");
+    return llvm::Constant::getNullValue(ConvertType(DestTy));
+  }
+
   case CK_IntToOCLSampler:
     return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
 

@@ -1,4 +1,5 @@
 ; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline)' < %s | FileCheck %s
 ; Make sure that soft float implementations are calculated as being more expensive
 ; to the inliner.
 

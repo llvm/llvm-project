@@ -39,6 +39,6 @@ public:
 
 }
 
-OptTable *clang::driver::createDriverOptTable() {
-  return new DriverOptTable();
+std::unique_ptr<OptTable> clang::driver::createDriverOptTable() {
+  return llvm::make_unique<DriverOptTable>();
 }

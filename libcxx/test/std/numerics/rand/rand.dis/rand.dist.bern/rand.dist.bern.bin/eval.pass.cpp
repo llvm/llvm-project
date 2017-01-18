@@ -187,7 +187,7 @@ test4()
         kurtosis += d2 * d2;
     }
     var /= u.size();
-    double dev = std::sqrt(var);
+    //double dev = std::sqrt(var);
     // In this case:
     //   skew     computes to 0./0. == nan
     //   kurtosis computes to 0./0. == nan
@@ -236,7 +236,7 @@ test5()
         kurtosis += d2 * d2;
     }
     var /= u.size();
-    double dev = std::sqrt(var);
+//    double dev = std::sqrt(var);
     // In this case:
     //   skew     computes to 0./0. == nan
     //   kurtosis computes to 0./0. == nan
@@ -389,7 +389,7 @@ test9()
         kurtosis += d2 * d2;
     }
     var /= u.size();
-    double dev = std::sqrt(var);
+//    double dev = std::sqrt(var);
     // In this case:
     //   skew     computes to 0./0. == nan
     //   kurtosis computes to 0./0. == nan
@@ -438,7 +438,7 @@ test10()
         kurtosis += d2 * d2;
     }
     var /= u.size();
-    double dev = std::sqrt(var);
+//    double dev = std::sqrt(var);
     // In this case:
     //   skew     computes to 0./0. == nan
     //   kurtosis computes to 0./0. == nan
@@ -487,7 +487,7 @@ test11()
         kurtosis += d2 * d2;
     }
     var /= u.size();
-    double dev = std::sqrt(var);
+//    double dev = std::sqrt(var);
     // In this case:
     //   skew     computes to 0./0. == nan
     //   kurtosis computes to 0./0. == nan

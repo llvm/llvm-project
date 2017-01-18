@@ -19,9 +19,13 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__ltsf2vfp)
+#if defined(COMPILER_RT_ARMHF_TARGET)
+	vcmp.f32 s0, s1
+#else
 	vmov	s14, r0     // move from GPR 0 to float register
 	vmov	s15, r1     // move from GPR 1 to float register
 	vcmp.f32 s14, s15
+#endif
 	vmrs	apsr_nzcv, fpscr
 	movmi	r0, #1      // set result register to 1 if equal
 	movpl	r0, #0

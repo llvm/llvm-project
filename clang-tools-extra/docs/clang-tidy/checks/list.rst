@@ -81,9 +81,11 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-sizeof-expression
    misc-static-assert
+   misc-string-compare
    misc-string-constructor
    misc-string-integer-assignment
    misc-string-literal-with-embedded-nul
+   misc-suspicious-enum-usage
    misc-suspicious-missing-comma
    misc-suspicious-semicolon
    misc-suspicious-string-compare
@@ -130,6 +132,7 @@ Clang-Tidy Checks
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
    readability-container-size-empty
+   readability-delete-null-pointer
    readability-deleted-default
    readability-else-after-return
    readability-function-size

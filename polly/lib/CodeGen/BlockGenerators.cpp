@@ -1366,8 +1366,8 @@ Value *RegionGenerator::getExitScalar(MemoryAccess *MA, LoopToScevMapT &LTS,
     return buildExitPHI(MA, LTS, BBMap, L);
   }
 
-  // MK_Value accesses leaving the subregion must dominate the exit block; just
-  // pass the copied value
+  // MemoryKind::Value accesses leaving the subregion must dominate the exit
+  // block; just pass the copied value.
   Value *OldVal = MA->getAccessValue();
   return getNewValue(*Stmt, OldVal, BBMap, LTS, L);
 }

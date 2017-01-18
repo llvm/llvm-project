@@ -73,10 +73,10 @@ public:
       : ReceiverSymbol(ReceiverSymbol),
         Satisfied(false) {}
 
-  PathDiagnosticPiece *VisitNode(const ExplodedNode *Succ,
-                                 const ExplodedNode *Pred,
-                                 BugReporterContext &BRC,
-                                 BugReport &BR) override;
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
+                                                 const ExplodedNode *Pred,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.Add(ReceiverSymbol);
@@ -249,10 +249,10 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
   return M.getSelector() == SELdealloc;
 }
 
-PathDiagnosticPiece *SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                                      const ExplodedNode *Pred,
-                                                      BugReporterContext &BRC,
-                                                      BugReport &BR) {
+std::shared_ptr<PathDiagnosticPiece>
+SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                 const ExplodedNode *Pred,
+                                 BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
     return nullptr;
 
@@ -275,7 +275,7 @@ PathDiagnosticPiece *SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (!L.isValid() || !L.asLocation().isValid())
       return nullptr;
 
-    return new PathDiagnosticEventPiece(
+    return std::make_shared<PathDiagnosticEventPiece>(
         L, "[super dealloc] called here");
   }
 

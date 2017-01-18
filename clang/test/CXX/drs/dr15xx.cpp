@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1512 { // dr1512: 4.0
+namespace dr1512 { // dr1512: 4
   void f(char *p) {
     if (p > 0) {} // expected-error {{ordered comparison between pointer and zero}}
 #if __cplusplus >= 201103L
@@ -135,7 +135,7 @@ namespace dr1512 { // dr1512: 4.0
   }
 }
 
-namespace dr1518 { // dr1518: 4.0
+namespace dr1518 { // dr1518: 4
 #if __cplusplus >= 201103L
 struct Z0 { // expected-note 0+ {{candidate}}
   explicit Z0() = default; // expected-note 0+ {{here}}

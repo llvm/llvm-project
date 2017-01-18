@@ -480,8 +480,7 @@ Error ProcessKDP::DoResume() {
 
     default:
       // The only valid thread resume states are listed above
-      assert(!"invalid thread resume state");
-      break;
+      llvm_unreachable("invalid thread resume state");
     }
   }
 

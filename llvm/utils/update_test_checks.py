@@ -64,11 +64,13 @@ LLC_FUNCTION_RE = re.compile(
     flags=(re.M | re.S))
 OPT_FUNCTION_RE = re.compile(
     r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
-    r'(\s+)?[^{]*\{\n(?P<body>.*?)\}',
+    r'(\s+)?[^)]*[^{]*\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
-CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')
+CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?=(\S+)')
 CHECK_RE = re.compile(r'^\s*;\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
-IR_VALUE_DEF_RE = re.compile(r'\s+%(.*) =')
+# Match things that look at identifiers, but only if they are followed by
+# spaces, commas, paren, or end of the string
+IR_VALUE_RE = re.compile(r'(\s+)%([\w\.]+?)([,\s\(\)]|\Z)')
 
 
 # Invoke the tool that is being tested.
@@ -156,33 +158,34 @@ def get_value_definition(var):
 def get_value_use(var):
   return '[[' + get_value_name(var) + ']]'
 
-
 # Replace IR value defs and uses with FileCheck variables.
 def genericize_check_lines(lines):
+  # This gets called for each match that occurs in
+  # a line. We transform variables we haven't seen
+  # into defs, and variables we have seen into uses.
+  def transform_line_vars(match):
+    var = match.group(2)
+    if var in vars_seen:
+      rv = get_value_use(var)
+    else:
+      vars_seen.add(var)
+      rv = get_value_definition(var)
+    # re.sub replaces the entire regex match
+    # with whatever you return, so we have
+    # to make sure to hand it back everything
+    # including the commas and spaces.
+    return match.group(1) + rv + match.group(3)
+
+  vars_seen = set()
   lines_with_def = []
-  vars_seen = []
-  for line in lines:
+
+  for i, line in enumerate(lines):
     # An IR variable named '%.' matches the FileCheck regex string.
     line = line.replace('%.', '%dot')
-    m = IR_VALUE_DEF_RE.match(line)
-    if m:
-      vars_seen.append(m.group(1))
-      line = line.replace('%' + m.group(1), get_value_definition(m.group(1)))
-
-    lines_with_def.append(line)
-
-  # A single def isn't worth replacing?
-  #if len(vars_seen) < 2:
-  #  return lines
-
-  output_lines = []
-  vars_seen.sort(key=len, reverse=True)
-  for line in lines_with_def:
-    for var in vars_seen:
-      line = line.replace('%' + var, get_value_use(var))
-    output_lines.append(line)
-
-  return output_lines
+    # Ignore any comments, since the check lines will too.
+    scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
+    lines[i] =  IR_VALUE_RE.sub(transform_line_vars, scrubbed_line)
+  return lines
 
 
 def add_checks(output_lines, prefix_list, func_dict, func_name, tool_basename):
@@ -292,8 +295,15 @@ def main():
     with open(test) as f:
       input_lines = [l.rstrip() for l in f]
 
-    run_lines = [m.group(1)
+    raw_lines = [m.group(1)
                  for m in [RUN_LINE_RE.match(l) for l in input_lines] if m]
+    run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
+    for l in raw_lines[1:]:
+      if run_lines[-1].endswith("\\"):
+        run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
+      else:
+        run_lines.append(l)
+
     if args.verbose:
       print >>sys.stderr, 'Found %d RUN lines:' % (len(run_lines),)
       for l in run_lines:
@@ -314,8 +324,8 @@ def main():
       tool_cmd_args = tool_cmd[len(tool_basename):].strip()
       tool_cmd_args = tool_cmd_args.replace('< %s', '').replace('%s', '').strip()
 
-      check_prefixes = [m.group(1)
-                        for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)]
+      check_prefixes = [item for m in CHECK_PREFIX_RE.finditer(filecheck_cmd)
+                               for item in m.group(1).split(',')]
       if not check_prefixes:
         check_prefixes = ['CHECK']
 

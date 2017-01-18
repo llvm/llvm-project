@@ -27,6 +27,7 @@ void test1 ( std::experimental::basic_string_view<CharT> sv, size_t n, size_t po
         try {
             std::experimental::basic_string_view<CharT> sv1 = sv.substr(pos, n);
             assert(false);
+            ((void)sv1);
         } catch (const std::out_of_range&) {
             return;
         } catch (...) {

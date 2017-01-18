@@ -1332,3 +1332,30 @@ define <4 x i32> @cannot_canonicalize_to_shuffle2(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %sel
 }
 
+declare void @llvm.assume(i1)
+
+define i8 @assume_cond_true(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @assume_cond_true(
+; CHECK-NEXT:    call void @llvm.assume(i1 %cond)
+; CHECK-NEXT:    ret i8 %x
+;
+  call void @llvm.assume(i1 %cond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+
+; FIXME: computeKnownBitsFromAssume() should understand the 'not' of an assumed condition.
+
+define i8 @assume_cond_false(i1 %cond, i8 %x, i8 %y) {
+; CHECK-LABEL: @assume_cond_false(
+; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 %cond, true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %cond, i8 %x, i8 %y
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %notcond = xor i1 %cond, true
+  call void @llvm.assume(i1 %notcond)
+  %sel = select i1 %cond, i8 %x, i8 %y
+  ret i8 %sel
+}
+

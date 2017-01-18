@@ -11,7 +11,7 @@ void __attribute__((nomips16)) nofoo (void) {
 
 // CHECK: define void @nofoo() [[NOMIPS16:#[0-9]+]]
 
-// CHECK: attributes [[MIPS16]] = { nounwind {{.*}} "mips16" {{.*}} }
+// CHECK: attributes [[MIPS16]] = { noinline nounwind {{.*}} "mips16" {{.*}} }
 
-// CHECK: attributes [[NOMIPS16]]  = { nounwind {{.*}} "nomips16" {{.*}} }
+// CHECK: attributes [[NOMIPS16]]  = { noinline nounwind {{.*}} "nomips16" {{.*}} }
 

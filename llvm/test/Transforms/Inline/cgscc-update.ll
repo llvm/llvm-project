@@ -143,3 +143,42 @@ exit:
   call void @test3_maybe_unknown(i1 false)
   ret void
 }
+
+
+; The 'test4_' prefixed functions are designed to trigger forming a new direct
+; call in the inlined body of the function similar to 'test1_'. However, after
+; that we continue to inline another edge of the graph forcing us to do a more
+; interesting call graph update for the new call edge. Eventually, we still
+; form a new SCC and should use that can deduce precise function attrs.
+
+; This function should have had 'readnone' deduced for its SCC.
+; CHECK: Function Attrs: noinline readnone
+; CHECK-NEXT: define void @test4_f1()
+define void @test4_f1() noinline {
+entry:
+  call void @test4_h()
+  ret void
+}
+
+; CHECK-NOT: @test4_f2
+define internal void @test4_f2() {
+entry:
+  call void @test4_f1()
+  ret void
+}
+
+; CHECK-NOT: @test4_g
+define internal void @test4_g(void()* %p) {
+entry:
+  call void %p()
+  ret void
+}
+
+; This function should have had 'readnone' deduced for its SCC.
+; CHECK: Function Attrs: noinline readnone
+; CHECK-NEXT: define void @test4_h()
+define void @test4_h() noinline {
+entry:
+  call void @test4_g(void()* @test4_f2)
+  ret void
+}

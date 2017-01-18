@@ -57,7 +57,7 @@ template <> struct ScalarTraits<llvm::pdb::PDB_UniqueId> {
         Scalar[24] != '-')
       return "GUID sections are not properly delineated with dashes";
 
-    char *OutBuffer = S.Guid;
+    uint8_t *OutBuffer = S.Guid;
     for (auto Iter = Scalar.begin(); Iter != Scalar.end();) {
       if (*Iter == '-' || *Iter == '{' || *Iter == '}') {
         ++Iter;

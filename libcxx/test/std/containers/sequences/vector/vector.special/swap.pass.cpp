@@ -162,8 +162,6 @@ int main()
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
-#ifndef _LIBCPP_DEBUG_LEVEL
-// This test known to result in undefined behavior detected by _LIBCPP_DEBUG_LEVEL >= 1
     {
         int a1[] = {1, 3, 7, 9, 10};
         int a2[] = {0, 2, 4, 5, 6, 8, 11};
@@ -180,6 +178,5 @@ int main()
         assert(is_contiguous_container_asan_correct(c1));
         assert(is_contiguous_container_asan_correct(c2));
     }
-#endif
 #endif
 }

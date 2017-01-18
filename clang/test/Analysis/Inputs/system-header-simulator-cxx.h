@@ -10,6 +10,29 @@ typedef unsigned char uint8_t;
 typedef __typeof__(sizeof(int)) size_t;
 void *memmove(void *s1, const void *s2, size_t n);
 
+template <typename T, typename Ptr, typename Ref> struct __iterator {
+  typedef __iterator<T, T *, T &> iterator;
+  typedef __iterator<T, const T *, const T &> const_iterator;
+
+  __iterator(const Ptr p) : ptr(p) {}
+
+  __iterator<T, Ptr, Ref> operator++() { return *this; }
+  __iterator<T, Ptr, Ref> operator++(int) { return *this; }
+  __iterator<T, Ptr, Ref> operator--() { return *this; }
+  __iterator<T, Ptr, Ref> operator--(int) { return *this; }
+  Ref operator*() const { return *ptr; }
+  Ptr operator->() const { return *ptr; }
+
+  bool operator==(const iterator &rhs) const { return ptr == rhs.ptr; }
+  bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
+
+  bool operator!=(const iterator &rhs) const { return ptr != rhs.ptr; }
+  bool operator!=(const const_iterator &rhs) const { return ptr != rhs.ptr; }
+
+private:
+  Ptr ptr;
+};
+
 namespace std {
   template <class T1, class T2>
   struct pair {
@@ -27,6 +50,9 @@ namespace std {
   
   template<typename T>
   class vector {
+    typedef __iterator<T, T *, T &> iterator;
+    typedef __iterator<T, const T *, const T &> const_iterator;
+
     T *_start;
     T *_finish;
     T *_end_of_storage;
@@ -49,11 +75,10 @@ namespace std {
       return _start[n];
     }
     
-    T *begin() { return _start; }
-    const T *begin() const { return _start; }
-
-    T *end() { return _finish; }
-    const T *end() const { return _finish; }
+    iterator begin() { return iterator(_start); }
+    const_iterator begin() const { return const_iterator(_start); }
+    iterator end() { return iterator(_finish); }
+    const_iterator end() const { return const_iterator(_finish); }
   };
   
   class exception {
@@ -222,6 +247,35 @@ namespace std {
   OutputIter copy_backward(InputIter II, InputIter IE, OutputIter OI) {
     return __copy_backward(II, IE, OI);
   }
+
+  template <class InputIterator, class T>
+  InputIterator find(InputIterator first, InputIterator last, const T &val);
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 find_end(ForwardIterator1 first1, ForwardIterator1 last1,
+                            ForwardIterator2 first2, ForwardIterator2 last2);
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 find_first_of(ForwardIterator1 first1,
+                                 ForwardIterator1 last1,
+                                 ForwardIterator2 first2,
+                                 ForwardIterator2 last2);
+  template <class InputIterator, class UnaryPredicate>
+  InputIterator find_if(InputIterator first, InputIterator last,
+                        UnaryPredicate pred);
+  template <class InputIterator, class UnaryPredicate>
+  InputIterator find_if_not(InputIterator first, InputIterator last,
+                            UnaryPredicate pred);
+  template <class InputIterator, class T>
+  InputIterator lower_bound(InputIterator first, InputIterator last,
+                            const T &val);
+  template <class InputIterator, class T>
+  InputIterator upper_bound(InputIterator first, InputIterator last,
+                            const T &val);
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 search(ForwardIterator1 first1, ForwardIterator1 last1,
+                          ForwardIterator2 first2, ForwardIterator2 last2);
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 search_n(ForwardIterator1 first1, ForwardIterator1 last1,
+                            ForwardIterator2 first2, ForwardIterator2 last2);
 
   struct input_iterator_tag { };
   struct output_iterator_tag { };

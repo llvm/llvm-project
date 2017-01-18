@@ -80,6 +80,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/Verifier.h"
@@ -783,6 +784,10 @@ protected:
   // Similarly, we create a new latch condition when setting up the structure
   // of the new loop, so the old one can become dead.
   SmallPtrSet<Instruction *, 4> DeadInstructions;
+
+  // Holds the end values for each induction variable. We save the end values
+  // so we can later fix-up the external users of the induction variables.
+  DenseMap<PHINode *, Value *> IVEndValues;
 };
 
 class InnerLoopUnroller : public InnerLoopVectorizer {
@@ -1878,13 +1883,6 @@ public:
   /// are the selected vectorization factor and the cost of the selected VF.
   unsigned selectInterleaveCount(bool OptForSize, unsigned VF,
                                  unsigned LoopCost);
-
-  /// \return The most profitable unroll factor.
-  /// This method finds the best unroll-factor based on register pressure and
-  /// other parameters. VF and LoopCost are the selected vectorization factor
-  /// and the cost of the selected VF.
-  unsigned computeInterleaveCount(bool OptForSize, unsigned VF,
-                                  unsigned LoopCost);
 
   /// \brief A struct that represents some properties of the register usage
   /// of a loop.
@@ -3424,7 +3422,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
     // Create phi nodes to merge from the  backedge-taken check block.
     PHINode *BCResumeVal = PHINode::Create(
         OrigPhi->getType(), 3, "bc.resume.val", ScalarPH->getTerminator());
-    Value *EndValue;
+    Value *&EndValue = IVEndValues[OrigPhi];
     if (OrigPhi == OldInduction) {
       // We know what the end value is.
       EndValue = CountRoundDown;
@@ -3442,9 +3440,6 @@ void InnerLoopVectorizer::createEmptyLoop() {
     // The new PHI merges the original incoming value, in case of a bypass,
     // or the value at the end of the vectorized loop.
     BCResumeVal->addIncoming(EndValue, MiddleBlock);
-
-    // Fix up external users of the induction variable.
-    fixupIVUsers(OrigPhi, II, CountRoundDown, EndValue, MiddleBlock);
 
     // Fix the scalar body counter (PHI node).
     unsigned BlockIdx = OrigPhi->getBasicBlockIndex(ScalarPH);
@@ -4116,11 +4111,23 @@ void InnerLoopVectorizer::vectorizeLoop() {
     Phi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
   } // end of for each Phi in PHIsToFix.
 
-  fixLCSSAPHIs();
-
-  // Make sure DomTree is updated.
+  // Update the dominator tree.
+  //
+  // FIXME: After creating the structure of the new loop, the dominator tree is
+  //        no longer up-to-date, and it remains that way until we update it
+  //        here. An out-of-date dominator tree is problematic for SCEV,
+  //        because SCEVExpander uses it to guide code generation. The
+  //        vectorizer use SCEVExpanders in several places. Instead, we should
+  //        keep the dominator tree up-to-date as we go.
   updateAnalysis();
 
+  // Fix-up external users of the induction variables.
+  for (auto &Entry : *Legal->getInductionVars())
+    fixupIVUsers(Entry.first, Entry.second,
+                 getOrCreateVectorTripCount(LI->getLoopFor(LoopVectorBody)),
+                 IVEndValues[Entry.first], LoopMiddleBlock);
+
+  fixLCSSAPHIs();
   predicateInstructions();
 
   // Remove redundant induction instructions.
@@ -6785,22 +6792,19 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
   return Cost;
 }
 
-/// \brief Check whether the address computation for a non-consecutive memory
-/// access looks like an unlikely candidate for being merged into the indexing
-/// mode.
+/// \brief Gets Address Access SCEV after verifying that the access pattern
+/// is loop invariant except the induction variable dependence.
 ///
-/// We look for a GEP which has one index that is an induction variable and all
-/// other indices are loop invariant. If the stride of this access is also
-/// within a small bound we decide that this address computation can likely be
-/// merged into the addressing mode.
-/// In all other cases, we identify the address computation as complex.
-static bool isLikelyComplexAddressComputation(Value *Ptr,
-                                              LoopVectorizationLegality *Legal,
-                                              ScalarEvolution *SE,
-                                              const Loop *TheLoop) {
+/// This SCEV can be sent to the Target in order to estimate the address
+/// calculation cost.
+static const SCEV *getAddressAccessSCEV(
+              Value *Ptr,
+              LoopVectorizationLegality *Legal,
+              ScalarEvolution *SE,
+              const Loop *TheLoop) {
   auto *Gep = dyn_cast<GetElementPtrInst>(Ptr);
   if (!Gep)
-    return true;
+    return nullptr;
 
   // We are looking for a gep with all loop invariant indices except for one
   // which should be an induction variable.
@@ -6809,33 +6813,11 @@ static bool isLikelyComplexAddressComputation(Value *Ptr,
     Value *Opd = Gep->getOperand(i);
     if (!SE->isLoopInvariant(SE->getSCEV(Opd), TheLoop) &&
         !Legal->isInductionVariable(Opd))
-      return true;
+      return nullptr;
   }
 
-  // Now we know we have a GEP ptr, %inv, %ind, %inv. Make sure that the step
-  // can likely be merged into the address computation.
-  unsigned MaxMergeDistance = 64;
-
-  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Ptr));
-  if (!AddRec)
-    return true;
-
-  // Check the step is constant.
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  // Calculate the pointer stride and check if it is consecutive.
-  const auto *C = dyn_cast<SCEVConstant>(Step);
-  if (!C)
-    return true;
-
-  const APInt &APStepVal = C->getAPInt();
-
-  // Huge step value - give up.
-  if (APStepVal.getBitWidth() > 64)
-    return true;
-
-  int64_t StepVal = APStepVal.getSExtValue();
-
-  return StepVal > MaxMergeDistance;
+  // Now we know we have a GEP ptr, %inv, %ind, %inv. return the Ptr SCEV.
+  return SE->getSCEV(Ptr);
 }
 
 static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
@@ -6968,9 +6950,9 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     } else if (Legal->isUniform(Op2)) {
       Op2VK = TargetTransformInfo::OK_UniformValue;
     }
-
-    return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK, Op2VK,
-                                      Op1VP, Op2VP);
+    SmallVector<const Value *, 4> Operands(I->operand_values()); 
+    return TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK,
+                                      Op2VK, Op1VP, Op2VP, Operands);
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
@@ -7063,12 +7045,12 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       unsigned Cost = 0;
       Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
 
-      // True if the memory instruction's address computation is complex.
-      bool IsComplexComputation =
-          isLikelyComplexAddressComputation(Ptr, Legal, SE, TheLoop);
+      // Figure out whether the access is strided and get the stride value
+      // if it's known in compile time
+      const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, SE, TheLoop); 
 
       // Get the cost of the scalar memory instruction and address computation.
-      Cost += VF * TTI.getAddressComputationCost(PtrTy, IsComplexComputation);
+      Cost += VF * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
       Cost += VF *
               TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
                                   Alignment, AS);
@@ -7660,7 +7642,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &TTI = AM.getResult<TargetIRAnalysis>(F);
     auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
     auto &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
-    auto *TLI = AM.getCachedResult<TargetLibraryAnalysis>(F);
+    auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
     auto &AA = AM.getResult<AAManager>(F);
     auto &AC = AM.getResult<AssumptionAnalysis>(F);
     auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
@@ -7669,10 +7651,11 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & {
-      return LAM.getResult<LoopAccessAnalysis>(L);
+      LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI};
+      return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
     bool Changed =
-        runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA, ORE);
+        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE);
     if (!Changed)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;

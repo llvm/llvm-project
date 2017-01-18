@@ -342,4 +342,32 @@ namespace dr1490 {  // dr1490: 3.7 c++11
   char s[4]{"abc"};                   // Ok
   std::initializer_list<char>{"abc"}; // expected-error {{expected unqualified-id}}}
 } // dr190
+
+namespace dr1495 { // dr1495: 4
+  // Deduction succeeds in both directions.
+  template<typename T, typename U> struct A {}; // expected-note {{template is declared here}}
+  template<typename T, typename U> struct A<U, T> {}; // expected-error {{class template partial specialization is not more specialized}}
+
+  // Primary template is more specialized.
+  template<typename, typename...> struct B {}; // expected-note {{template is declared here}}
+  template<typename ...Ts> struct B<Ts...> {}; // expected-error {{not more specialized}}
+
+  // Deduction fails in both directions.
+  template<int, typename, typename ...> struct C {}; // expected-note {{template is declared here}}
+  template<typename ...Ts> struct C<0, Ts...> {}; // expected-error {{not more specialized}}
+
+#if __cplusplus >= 201402L
+  // Deduction succeeds in both directions.
+  template<typename T, typename U> int a; // expected-note {{template is declared here}}
+  template<typename T, typename U> int a<U, T>; // expected-error {{variable template partial specialization is not more specialized}}
+
+  // Primary template is more specialized.
+  template<typename, typename...> int b; // expected-note {{template is declared here}}
+  template<typename ...Ts> int b<Ts...>; // expected-error {{not more specialized}}
+
+  // Deduction fails in both directions.
+  template<int, typename, typename ...> int c; // expected-note {{template is declared here}}
+  template<typename ...Ts> int c<0, Ts...>; // expected-error {{not more specialized}}
+#endif
+}
 #endif

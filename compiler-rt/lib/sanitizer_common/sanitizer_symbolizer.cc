@@ -33,9 +33,11 @@ void AddressInfo::Clear() {
   function_offset = kUnknown;
 }
 
-void AddressInfo::FillModuleInfo(const char *mod_name, uptr mod_offset) {
+void AddressInfo::FillModuleInfo(const char *mod_name, uptr mod_offset,
+                                 ModuleArch mod_arch) {
   module = internal_strdup(mod_name);
   module_offset = mod_offset;
+  module_arch = mod_arch;
 }
 
 SymbolizedStack::SymbolizedStack() : next(nullptr), info() {}

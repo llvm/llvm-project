@@ -116,7 +116,7 @@ define void @test_zero_v4f32(<4 x float>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4f32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x float> zeroinitializer, <4 x float>* %dst, align 16, !nontemporal !1
@@ -138,7 +138,7 @@ define void @test_zero_v4i32(<4 x i32>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4i32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x i32> zeroinitializer, <4 x i32>* %dst, align 16, !nontemporal !1
@@ -161,7 +161,7 @@ define void @test_zero_v2f64(<2 x double>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v2f64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <2 x double> zeroinitializer, <2 x double>* %dst, align 16, !nontemporal !1
@@ -183,7 +183,7 @@ define void @test_zero_v2i64(<2 x i64>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v2i64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <2 x i64> zeroinitializer, <2 x i64>* %dst, align 16, !nontemporal !1
@@ -205,7 +205,7 @@ define void @test_zero_v8i16(<8 x i16>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v8i16:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <8 x i16> zeroinitializer, <8 x i16>* %dst, align 16, !nontemporal !1
@@ -227,7 +227,7 @@ define void @test_zero_v16i8(<16 x i8>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v16i8:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %xmm0, %xmm0, %xmm0
+; VLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; VLX-NEXT:    vmovntdq %xmm0, (%rdi)
 ; VLX-NEXT:    retq
   store <16 x i8> zeroinitializer, <16 x i8>* %dst, align 16, !nontemporal !1
@@ -253,7 +253,7 @@ define void @test_zero_v8f32(<8 x float>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v8f32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <8 x float> zeroinitializer, <8 x float>* %dst, align 32, !nontemporal !1
@@ -277,7 +277,7 @@ define void @test_zero_v8i32(<8 x i32>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v8i32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <8 x i32> zeroinitializer, <8 x i32>* %dst, align 32, !nontemporal !1
@@ -301,7 +301,7 @@ define void @test_zero_v4f64(<4 x double>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4f64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x double> zeroinitializer, <4 x double>* %dst, align 32, !nontemporal !1
@@ -325,7 +325,7 @@ define void @test_zero_v4i64(<4 x i64>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v4i64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x i64> zeroinitializer, <4 x i64>* %dst, align 32, !nontemporal !1
@@ -349,7 +349,7 @@ define void @test_zero_v16i16(<16 x i16>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v16i16:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <16 x i16> zeroinitializer, <16 x i16>* %dst, align 32, !nontemporal !1
@@ -373,7 +373,7 @@ define void @test_zero_v32i8(<32 x i8>* %dst) {
 ;
 ; VLX-LABEL: test_zero_v32i8:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vpxord %ymm0, %ymm0, %ymm0
+; VLX-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <32 x i8> zeroinitializer, <32 x i8>* %dst, align 32, !nontemporal !1

@@ -382,6 +382,10 @@ private:
     /// The unmangled name of the global.
     std::string IRName;
 
+    /// Keep track if the symbol is visible outside of ThinLTO (i.e. in
+    /// either a regular object or the regular LTO partition).
+    bool VisibleOutsideThinLTO = false;
+
     bool UnnamedAddr = true;
 
     /// This field keeps track of the partition number of this global. The
@@ -405,6 +409,9 @@ private:
       /// This global is either used by more than one partition or has an
       /// external reference, and therefore cannot be internalized.
       External = -2u,
+
+      /// The RegularLTO partition
+      RegularLTO = 0,
     };
   };
 

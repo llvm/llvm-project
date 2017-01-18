@@ -57,6 +57,7 @@ TEST_CASE(test_error_reporting)
                 && err.code() == ec;
         }
 #else
+        ((void)f); ((void)ec);
         return true;
 #endif
     };

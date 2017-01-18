@@ -1477,7 +1477,9 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   // add it to the island.
   U.HighWaterMark = NewIsland;
   U.CPEMI = BuildMI(NewIsland, DebugLoc(), CPEMI->getDesc())
-                .addImm(ID).addOperand(CPEMI->getOperand(1)).addImm(Size);
+                .addImm(ID)
+                .add(CPEMI->getOperand(1))
+                .addImm(Size);
   CPEntries[CPI].push_back(CPEntry(U.CPEMI, ID, 1));
   ++NumCPEs;
 
@@ -1709,8 +1711,8 @@ bool ARMConstantIslands::undoLRSpillRestore() {
         MI->getNumExplicitOperands() == 3) {
       // Create the new insn and copy the predicate from the old.
       BuildMI(MI->getParent(), MI->getDebugLoc(), TII->get(ARM::tBX_RET))
-        .addOperand(MI->getOperand(0))
-        .addOperand(MI->getOperand(1));
+          .add(MI->getOperand(0))
+          .add(MI->getOperand(1));
       MI->eraseFromParent();
       MadeChange = true;
     }

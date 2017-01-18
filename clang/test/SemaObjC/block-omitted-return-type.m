@@ -24,7 +24,7 @@
     return;
   };
   void (^simpleBlock5)() = ^ const void { //expected-error {{incompatible block pointer types initializing 'void (^)()' with an expression of type 'const void (^)(void)'}}
-    return;
+    return; // expected-warning@-1 {{function cannot return qualified void type 'const void'}}
   };
   void (^simpleBlock6)() = ^ const (void) { //expected-warning {{'const' qualifier on omitted return type '<dependent type>' has no effect}}
     return;

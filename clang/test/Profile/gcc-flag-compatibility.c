@@ -18,14 +18,14 @@
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir/some/path
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility.proftext -o %t.dir/some/path/default.profdata
-// RUN: %clang %s -o - -mllvm -disable-llvm-optzns -emit-llvm -S -fprofile-use=%t.dir/some/path | FileCheck -check-prefix=PROFILE-USE-2 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path | FileCheck -check-prefix=PROFILE-USE-2 %s
 // PROFILE-USE-2: = !{!"branch_weights", i32 101, i32 2}
 
 // Check that -fprofile-use=some/path/file.prof reads some/path/file.prof
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir/some/path
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility.proftext -o %t.dir/some/path/file.prof
-// RUN: %clang %s -o - -mllvm -disable-llvm-optzns -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-3 %s
+// RUN: %clang %s -o - -Xclang -disable-llvm-passes -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-3 %s
 // PROFILE-USE-3: = !{!"branch_weights", i32 101, i32 2}
 
 int X = 0;

@@ -340,16 +340,6 @@ uint32_t Stream::GetAddressByteSize() const { return m_addr_size; }
 void Stream::SetAddressByteSize(uint32_t addr_size) { m_addr_size = addr_size; }
 
 //------------------------------------------------------------------
-// Returns true if the verbose flag bit is set in this stream.
-//------------------------------------------------------------------
-bool Stream::GetVerbose() const { return m_flags.Test(eVerbose); }
-
-//------------------------------------------------------------------
-// Returns true if the debug flag bit is set in this stream.
-//------------------------------------------------------------------
-bool Stream::GetDebug() const { return m_flags.Test(eDebug); }
-
-//------------------------------------------------------------------
 // The flags get accessor
 //------------------------------------------------------------------
 Flags &Stream::GetFlags() { return m_flags; }
@@ -400,7 +390,7 @@ size_t Stream::PrintfAsRawHex8(const char *format, ...) {
 size_t Stream::PutNHex8(size_t n, uint8_t uvalue) {
   size_t bytes_written = 0;
   for (size_t i = 0; i < n; ++i)
-    bytes_written += _PutHex8(uvalue, m_flags.Test(eAddPrefix));
+    bytes_written += _PutHex8(uvalue, false);
   return bytes_written;
 }
 
@@ -423,23 +413,19 @@ size_t Stream::_PutHex8(uint8_t uvalue, bool add_prefix) {
   return bytes_written;
 }
 
-size_t Stream::PutHex8(uint8_t uvalue) {
-  return _PutHex8(uvalue, m_flags.Test(eAddPrefix));
-}
+size_t Stream::PutHex8(uint8_t uvalue) { return _PutHex8(uvalue, false); }
 
 size_t Stream::PutHex16(uint16_t uvalue, ByteOrder byte_order) {
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  bool add_prefix = m_flags.Test(eAddPrefix);
   size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
-    for (size_t byte = 0; byte < sizeof(uvalue); ++byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
-    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue);
-         --byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
   return bytes_written;
 }
@@ -448,15 +434,13 @@ size_t Stream::PutHex32(uint32_t uvalue, ByteOrder byte_order) {
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  bool add_prefix = m_flags.Test(eAddPrefix);
   size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
-    for (size_t byte = 0; byte < sizeof(uvalue); ++byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
-    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue);
-         --byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
   return bytes_written;
 }
@@ -465,15 +449,13 @@ size_t Stream::PutHex64(uint64_t uvalue, ByteOrder byte_order) {
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  bool add_prefix = m_flags.Test(eAddPrefix);
   size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
-    for (size_t byte = 0; byte < sizeof(uvalue); ++byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
-    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue);
-         --byte, add_prefix = false)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), add_prefix);
+    for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
+      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
   return bytes_written;
 }

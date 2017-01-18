@@ -52,9 +52,9 @@
 #include <system_error>
 
 // These includes must be last.
-#include <Windows.h>
-#include <WinError.h>
-#include <Dbghelp.h>
+#include <windows.h>
+#include <winerror.h>
+#include <dbghelp.h>
 #include <psapi.h>
 
 using namespace llvm;
@@ -349,7 +349,7 @@ int main(int argc, char **argv) {
   ::_set_error_mode(_OUT_TO_STDERR);
 
   BOOL success = ::CreateProcessA(ProgramToRun.c_str(),
-                            LPSTR(CommandLine.c_str()),
+                                  const_cast<LPSTR>(CommandLine.c_str()),
                                   NULL,
                                   NULL,
                                   FALSE,

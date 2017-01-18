@@ -27,8 +27,8 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x2000
-// CHECK-NEXT: Offset: 0x2000
+// CHECK-NEXT: Address: 0x1000
+// CHECK-NEXT: Offset: 0x1000
 // CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0

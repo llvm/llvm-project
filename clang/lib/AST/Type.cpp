@@ -1560,60 +1560,73 @@ TagDecl *Type::getAsTagDecl() const {
 
 namespace {
   class GetContainedAutoVisitor :
-    public TypeVisitor<GetContainedAutoVisitor, AutoType*> {
+    public TypeVisitor<GetContainedAutoVisitor, Type*> {
+    bool Syntactic;
   public:
-    using TypeVisitor<GetContainedAutoVisitor, AutoType*>::Visit;
-    AutoType *Visit(QualType T) {
+    GetContainedAutoVisitor(bool Syntactic = false) : Syntactic(Syntactic) {}
+
+    using TypeVisitor<GetContainedAutoVisitor, Type*>::Visit;
+    Type *Visit(QualType T) {
       if (T.isNull())
         return nullptr;
       return Visit(T.getTypePtr());
     }
 
     // The 'auto' type itself.
-    AutoType *VisitAutoType(const AutoType *AT) {
+    Type *VisitAutoType(const AutoType *AT) {
       return const_cast<AutoType*>(AT);
     }
 
     // Only these types can contain the desired 'auto' type.
-    AutoType *VisitPointerType(const PointerType *T) {
+    Type *VisitPointerType(const PointerType *T) {
       return Visit(T->getPointeeType());
     }
-    AutoType *VisitBlockPointerType(const BlockPointerType *T) {
+    Type *VisitBlockPointerType(const BlockPointerType *T) {
       return Visit(T->getPointeeType());
     }
-    AutoType *VisitReferenceType(const ReferenceType *T) {
+    Type *VisitReferenceType(const ReferenceType *T) {
       return Visit(T->getPointeeTypeAsWritten());
     }
-    AutoType *VisitMemberPointerType(const MemberPointerType *T) {
+    Type *VisitMemberPointerType(const MemberPointerType *T) {
       return Visit(T->getPointeeType());
     }
-    AutoType *VisitArrayType(const ArrayType *T) {
+    Type *VisitArrayType(const ArrayType *T) {
       return Visit(T->getElementType());
     }
-    AutoType *VisitDependentSizedExtVectorType(
+    Type *VisitDependentSizedExtVectorType(
       const DependentSizedExtVectorType *T) {
       return Visit(T->getElementType());
     }
-    AutoType *VisitVectorType(const VectorType *T) {
+    Type *VisitVectorType(const VectorType *T) {
       return Visit(T->getElementType());
     }
-    AutoType *VisitFunctionType(const FunctionType *T) {
+    Type *VisitFunctionProtoType(const FunctionProtoType *T) {
+      if (Syntactic && T->hasTrailingReturn())
+        return const_cast<FunctionProtoType*>(T);
+      return VisitFunctionType(T);
+    }
+    Type *VisitFunctionType(const FunctionType *T) {
       return Visit(T->getReturnType());
     }
-    AutoType *VisitParenType(const ParenType *T) {
+    Type *VisitParenType(const ParenType *T) {
       return Visit(T->getInnerType());
     }
-    AutoType *VisitAttributedType(const AttributedType *T) {
+    Type *VisitAttributedType(const AttributedType *T) {
       return Visit(T->getModifiedType());
     }
-    AutoType *VisitAdjustedType(const AdjustedType *T) {
+    Type *VisitAdjustedType(const AdjustedType *T) {
       return Visit(T->getOriginalType());
     }
   };
 }
 
 AutoType *Type::getContainedAutoType() const {
-  return GetContainedAutoVisitor().Visit(this);
+  return cast_or_null<AutoType>(GetContainedAutoVisitor().Visit(this));
+}
+
+bool Type::hasAutoForTrailingReturnType() const {
+  return dyn_cast_or_null<FunctionType>(
+      GetContainedAutoVisitor(true).Visit(this));
 }
 
 bool Type::hasIntegerRepresentation() const {

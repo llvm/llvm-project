@@ -182,22 +182,23 @@ static const ScopArrayInfo *identifyBasePtrOriginSAI(Scop *S, Value *BasePtr) {
     return nullptr;
 
   return S->getScopArrayInfo(OriginBaseSCEVUnknown->getValue(),
-                             ScopArrayInfo::MK_Array);
+                             MemoryKind::Array);
 }
 
 ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
-                             ArrayRef<const SCEV *> Sizes, enum MemoryKind Kind,
+                             ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
                              const DataLayout &DL, Scop *S,
                              const char *BaseName)
     : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S) {
   std::string BasePtrName =
-      BaseName ? BaseName : getIslCompatibleName("MemRef_", BasePtr,
-                                                 Kind == MK_PHI ? "__phi" : "");
+      BaseName ? BaseName
+               : getIslCompatibleName("MemRef_", BasePtr,
+                                      Kind == MemoryKind::PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
 
-  if (!BasePtr || Kind != MK_Array) {
+  if (!BasePtr || Kind != MemoryKind::Array) {
     BasePtrOriginSAI = nullptr;
     return;
   }
@@ -884,7 +885,7 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
                            Type *ElementType, bool Affine,
                            ArrayRef<const SCEV *> Subscripts,
                            ArrayRef<const SCEV *> Sizes, Value *AccessValue,
-                           ScopArrayInfo::MemoryKind Kind, StringRef BaseName)
+                           MemoryKind Kind, StringRef BaseName)
     : Kind(Kind), AccType(AccType), RedType(RT_NONE), Statement(Stmt),
       InvalidDomain(nullptr), BaseAddr(BaseAddress), BaseName(BaseName),
       ElementType(ElementType), Sizes(Sizes.begin(), Sizes.end()),
@@ -901,10 +902,9 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
 
 MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
                            __isl_take isl_map *AccRel)
-    : Kind(ScopArrayInfo::MemoryKind::MK_Array), AccType(AccType),
-      RedType(RT_NONE), Statement(Stmt), InvalidDomain(nullptr),
-      AccessInstruction(nullptr), IsAffine(true), AccessRelation(nullptr),
-      NewAccessRelation(AccRel) {
+    : Kind(MemoryKind::Array), AccType(AccType), RedType(RT_NONE),
+      Statement(Stmt), InvalidDomain(nullptr), AccessInstruction(nullptr),
+      IsAffine(true), AccessRelation(nullptr), NewAccessRelation(AccRel) {
   auto *ArrayInfoId = isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
   auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
   Sizes.push_back(nullptr);
@@ -1146,15 +1146,15 @@ void ScopStmt::buildAccessRelations() {
   for (MemoryAccess *Access : MemAccs) {
     Type *ElementType = Access->getElementType();
 
-    ScopArrayInfo::MemoryKind Ty;
+    MemoryKind Ty;
     if (Access->isPHIKind())
-      Ty = ScopArrayInfo::MK_PHI;
+      Ty = MemoryKind::PHI;
     else if (Access->isExitPHIKind())
-      Ty = ScopArrayInfo::MK_ExitPHI;
+      Ty = MemoryKind::ExitPHI;
     else if (Access->isValueKind())
-      Ty = ScopArrayInfo::MK_Value;
+      Ty = MemoryKind::Value;
     else
-      Ty = ScopArrayInfo::MK_Array;
+      Ty = MemoryKind::Array;
 
     auto *SAI = S.getOrCreateScopArrayInfo(Access->getBaseAddr(), ElementType,
                                            Access->Sizes, Ty);
@@ -1734,12 +1734,12 @@ void ScopStmt::print(raw_ostream &OS) const {
 void ScopStmt::dump() const { print(dbgs()); }
 
 void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
-  // Remove the memory accesses from this statement
-  // together with all scalar accesses that were caused by it.
-  // MK_Value READs have no access instruction, hence would not be removed by
-  // this function. However, it is only used for invariant LoadInst accesses,
-  // its arguments are always affine, hence synthesizable, and therefore there
-  // are no MK_Value READ accesses to be removed.
+  // Remove the memory accesses from this statement together with all scalar
+  // accesses that were caused by it. MemoryKind::Value READs have no access
+  // instruction, hence would not be removed by this function. However, it is
+  // only used for invariant LoadInst accesses, its arguments are always affine,
+  // hence synthesizable, and therefore there are no MemoryKind::Value READ
+  // accesses to be removed.
   auto Predicate = [&](MemoryAccess *Acc) {
     return Acc->getAccessInstruction() == MA->getAccessInstruction();
   };
@@ -2037,10 +2037,10 @@ void Scop::realignParams() {
 static __isl_give isl_set *
 simplifyAssumptionContext(__isl_take isl_set *AssumptionContext,
                           const Scop &S) {
-  // If we modelt all blocks in the SCoP that have side effects we can simplify
-  // the context with the constraints that are needed for anything to be
-  // executed at all. However, if we have error blocks in the SCoP we already
-  // assumed some parameter combinations cannot occure and removed them from the
+  // If we have modeled all blocks in the SCoP that have side effects we can
+  // simplify the context with the constraints that are needed for anything to
+  // be executed at all. However, if we have error blocks in the SCoP we already
+  // assumed some parameter combinations cannot occur and removed them from the
   // domains, thus we cannot use the remaining domain to simplify the
   // assumptions.
   if (!S.hasErrorBlock()) {
@@ -2456,7 +2456,7 @@ void Scop::propagateDomainConstraintsToRegionExit(
 
   auto &BoxedLoops = getBoxedLoops();
   // Do not propagate the domain if there is a loop backedge inside the region
-  // that would prevent the exit block from beeing executed.
+  // that would prevent the exit block from being executed.
   auto *L = BBLoop;
   while (L && contains(L)) {
     SmallVector<BasicBlock *, 4> LatchBBs;
@@ -3052,7 +3052,7 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
                                        MinMaxAccessesNonReadOnly);
 
     // Bail out if the number of values we need to compare is too large.
-    // This is important as the number of comparisions grows quadratically with
+    // This is important as the number of comparisons grows quadratically with
     // the number of values we need to compare.
     if (!Valid || (MinMaxAccessesNonReadOnly.size() + ReadOnlyPairs.size() >
                    RunTimeChecksMaxArraysPerGroup))
@@ -3211,8 +3211,6 @@ void Scop::foldSizeConstantsToRight() {
       continue;
     }
 
-    isl_map_dump(Transform);
-
     for (auto &Access : AccessFunctions)
       if (Access->getScopArrayInfo() == Array)
         Access->setAccessRelation(isl_map_apply_range(
@@ -3330,7 +3328,7 @@ Scop::~Scop() {
     isl_set_free(IAClass.ExecutionContext);
 
   // Explicitly release all Scop objects and the underlying isl objects before
-  // we relase the isl context.
+  // we release the isl context.
   Stmts.clear();
   ScopArrayInfoSet.clear();
   ScopArrayInfoMap.clear();
@@ -3346,7 +3344,7 @@ void Scop::updateAccessDimensionality() {
       if (!Access->isArrayKind())
         continue;
       auto &SAI = ScopArrayInfoMap[std::make_pair(Access->getBaseAddr(),
-                                                  ScopArrayInfo::MK_Array)];
+                                                  MemoryKind::Array)];
       if (SAI->getNumberOfDimensions() != 1)
         continue;
       unsigned DivisibleSize = SAI->getElemSizeInBytes();
@@ -3459,7 +3457,7 @@ static bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
     return true;
 
   // Even if the statement is not modeled precisely we can hoist the load if it
-  // does not involve any parameters that might have been specilized by the
+  // does not involve any parameters that might have been specialized by the
   // statement domain.
   for (unsigned u = 0, e = MA->getNumSubscripts(); u < e; u++)
     if (!isa<SCEVConstant>(MA->getSubscript(u)))
@@ -3690,9 +3688,10 @@ void Scop::hoistInvariantLoads() {
   isl_union_map_free(Writes);
 }
 
-const ScopArrayInfo *Scop::getOrCreateScopArrayInfo(
-    Value *BasePtr, Type *ElementType, ArrayRef<const SCEV *> Sizes,
-    ScopArrayInfo::MemoryKind Kind, const char *BaseName) {
+const ScopArrayInfo *
+Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
+                               ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
+                               const char *BaseName) {
   assert((BasePtr || BaseName) &&
          "BasePtr and BaseName can not be nullptr at the same time.");
   assert(!(BasePtr && BaseName) && "BaseName is redundant.");
@@ -3725,14 +3724,12 @@ Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
     else
       SCEVSizes.push_back(nullptr);
 
-  auto *SAI =
-      getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,
-                               ScopArrayInfo::MK_Array, BaseName.c_str());
+  auto *SAI = getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,
+                                       MemoryKind::Array, BaseName.c_str());
   return SAI;
 }
 
-const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr,
-                                            ScopArrayInfo::MemoryKind Kind) {
+const ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, MemoryKind Kind) {
   auto *SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)].get();
   assert(SAI && "No ScopArrayInfo available for this base pointer");
   return SAI;
@@ -3976,7 +3973,7 @@ void Scop::addRecordedAssumptions() {
     //                     _              _____
     //   Dom => S   <==>   A v B   <==>   A - B
     //
-    // To avoid the complement we will register A - B as a restricton not an
+    // To avoid the complement we will register A - B as a restriction not an
     // assumption.
     isl_set *S = AS.Set;
     if (AS.Sign == AS_RESTRICTION)
@@ -4107,7 +4104,7 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
-  // handling cdoe to all users of this function.
+  // handling code to all users of this function.
   auto PWAC = Affinator.getPwAff(E, BB);
   if (PWAC.first) {
     // TODO: We could use a heuristic and either use:

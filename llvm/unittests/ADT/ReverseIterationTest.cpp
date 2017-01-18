@@ -31,9 +31,22 @@ TEST(ReverseIterationTest, SmallPtrSetTest) {
   for (const auto &Tuple : zip(Set, Ptrs))
     ASSERT_EQ(std::get<0>(Tuple), std::get<1>(Tuple));
 
+  // Check operator++ (post-increment) in forward iteration.
+  int i = 0;
+  for (auto begin = Set.begin(), end = Set.end();
+             begin != end; i++)
+    ASSERT_EQ(*begin++, Ptrs[i]);
+
   // Check reverse iteration.
   ReverseIterate<bool>::value = true;
   for (const auto &Tuple : zip(Set, ReversePtrs))
     ASSERT_EQ(std::get<0>(Tuple), std::get<1>(Tuple));
+
+  // Check operator++ (post-increment) in reverse iteration. 
+  i = 0;
+  for (auto begin = Set.begin(), end = Set.end();
+             begin != end; i++)
+    ASSERT_EQ(*begin++, ReversePtrs[i]);
+
 }
 #endif

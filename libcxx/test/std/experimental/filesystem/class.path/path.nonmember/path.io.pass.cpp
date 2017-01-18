@@ -40,7 +40,6 @@ void doIOTest() {
   using namespace fs;
   using Ptr = const CharT*;
   using StrStream = std::basic_stringstream<CharT>;
-  const char* const InCStr = InStr;
   const Ptr E = OutStr;
   const path p((const char*)InStr);
   StrStream ss;

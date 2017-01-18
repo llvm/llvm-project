@@ -482,8 +482,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         if (isInt<8>(Val))
           PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
       }
-      Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
-                 .addOperand(PushOp);
+      Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
       break;
     case X86::MOV32mr:
     case X86::MOV64mr:
@@ -496,9 +495,9 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::INSERT_SUBREG), Reg)
-          .addReg(UndefReg)
-          .addOperand(PushOp)
-          .addImm(X86::sub_32bit);
+            .addReg(UndefReg)
+            .add(PushOp)
+            .addImm(X86::sub_32bit);
       }
 
       // If PUSHrmm is not slow on this target, try to fold the source of the

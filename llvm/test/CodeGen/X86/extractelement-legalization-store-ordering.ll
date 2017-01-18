@@ -16,11 +16,11 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 ; CHECK-NEXT: movl 20(%esp), %edx
 ; CHECK-NEXT: paddd (%edx), %xmm0
 ; CHECK-NEXT: movdqa %xmm0, (%edx)
-; CHECK-NEXT: shll $4, %ecx
-; CHECK-NEXT: movl (%ecx,%edx), %esi
-; CHECK-NEXT: movl 12(%ecx,%edx), %edi
-; CHECK-NEXT: movl 8(%ecx,%edx), %ebx
-; CHECK-NEXT: movl 4(%ecx,%edx), %edx
+; CHECK-NEXT: movl (%edx), %esi
+; CHECK-NEXT: movl 12(%edx), %edi
+; CHECK-NEXT: movl 8(%edx), %ebx
+; CHECK-NEXT: movl 4(%edx), %edx
+; CHECK-NEXT: shll	$4, %ecx
 ; CHECK-NEXT: movl %esi, 12(%eax,%ecx)
 ; CHECK-NEXT: movl %edx, (%eax,%ecx)
 ; CHECK-NEXT: movl %ebx, 8(%eax,%ecx)

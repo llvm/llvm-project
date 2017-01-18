@@ -115,7 +115,6 @@
 		23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */; };
 		23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5161D903689006F38BB /* ArchSpecTest.cpp */; };
 		23E2E5271D903782006F38BB /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E51A1D9036F2006F38BB /* MinidumpParserTest.cpp */; };
-		23E2E5291D9037D9006F38BB /* SymbolFilePDBTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15141D66CF8700EDDDE1 /* SymbolFilePDBTests.cpp */; };
 		23E2E52B1D9037E6006F38BB /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB15011D66CD8400EDDDE1 /* ModuleCacheTest.cpp */; };
 		23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E52D1D90382B006F38BB /* BreakpointIDTest.cpp */; };
 		23E2E5441D904913006F38BB /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E2E5371D9048FB006F38BB /* MinidumpParser.cpp */; };
@@ -6920,7 +6919,6 @@
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
 				AF248A4D1DA71C77000B814D /* TestArm64InstEmulation.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
-				23E2E5291D9037D9006F38BB /* SymbolFilePDBTests.cpp in Sources */,
 				23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */,
@@ -8997,6 +8995,7 @@
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
+					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",

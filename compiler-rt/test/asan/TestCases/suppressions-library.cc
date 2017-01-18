@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
+// RUN: %clangxx_asan -O0 -DSHARED_LIB %s %fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe
 
 // Check that without suppressions, we catch the issue.

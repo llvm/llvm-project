@@ -863,7 +863,7 @@ namespace dr580 { // dr580: partial
 
 // dr582: na
 
-namespace dr583 { // dr583: 4.0
+namespace dr583 { // dr583: 4
   // see n3624
   int *p;
   bool b1 = p < 0; // expected-error {{ordered comparison between pointer and zero}}

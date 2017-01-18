@@ -338,14 +338,17 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);
 }
 
-int ARMTTIImpl::getAddressComputationCost(Type *Ty, bool IsComplex) {
+int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+                                          const SCEV *Ptr) {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
   // extra micro-ops can significantly decrease throughput.
   unsigned NumVectorInstToHideOverhead = 10;
+  int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && IsComplex)
+  if (Ty->isVectorTy() && SE && 
+      !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 
   // In many cases the address computation is not merged into the instruction
@@ -430,7 +433,8 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 int ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo) {
+    TTI::OperandValueProperties Opd2PropInfo,
+    ArrayRef<const Value *> Args) {
 
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);

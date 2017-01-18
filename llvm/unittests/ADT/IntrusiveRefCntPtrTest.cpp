@@ -10,30 +10,31 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "gtest/gtest.h"
 
-namespace {
-struct VirtualRefCounted : public llvm::RefCountedBaseVPTR {
-  virtual void f() {}
-};
-}
-
 namespace llvm {
 
-// Run this test with valgrind to detect memory leaks.
-TEST(IntrusiveRefCntPtr, RefCountedBaseVPTRCopyDoesNotLeak) {
-  VirtualRefCounted *V1 = new VirtualRefCounted;
-  IntrusiveRefCntPtr<VirtualRefCounted> R1 = V1;
-  VirtualRefCounted *V2 = new VirtualRefCounted(*V1);
-  IntrusiveRefCntPtr<VirtualRefCounted> R2 = V2;
-}
+namespace {
+struct SimpleRefCounted : public RefCountedBase<SimpleRefCounted> {
+  SimpleRefCounted() { ++NumInstances; }
+  SimpleRefCounted(const SimpleRefCounted &) : RefCountedBase() {
+    ++NumInstances;
+  }
+  ~SimpleRefCounted() { --NumInstances; }
 
-struct SimpleRefCounted : public RefCountedBase<SimpleRefCounted> {};
+  static int NumInstances;
+};
+int SimpleRefCounted::NumInstances = 0;
+} // anonymous namespace
 
-// Run this test with valgrind to detect memory leaks.
 TEST(IntrusiveRefCntPtr, RefCountedBaseCopyDoesNotLeak) {
-  SimpleRefCounted *S1 = new SimpleRefCounted;
-  IntrusiveRefCntPtr<SimpleRefCounted> R1 = S1;
-  SimpleRefCounted *S2 = new SimpleRefCounted(*S1);
-  IntrusiveRefCntPtr<SimpleRefCounted> R2 = S2;
+  EXPECT_EQ(0, SimpleRefCounted::NumInstances);
+  {
+    SimpleRefCounted *S1 = new SimpleRefCounted;
+    IntrusiveRefCntPtr<SimpleRefCounted> R1 = S1;
+    SimpleRefCounted *S2 = new SimpleRefCounted(*S1);
+    IntrusiveRefCntPtr<SimpleRefCounted> R2 = S2;
+    EXPECT_EQ(2, SimpleRefCounted::NumInstances);
+  }
+  EXPECT_EQ(0, SimpleRefCounted::NumInstances);
 }
 
 struct InterceptRefCounted : public RefCountedBase<InterceptRefCounted> {

@@ -148,7 +148,7 @@ template <class charT, class traits, class T>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_ostream
+class _LIBCPP_TEMPLATE_VIS basic_ostream
     : virtual public basic_ios<_CharT, _Traits>
 {
 public:
@@ -179,7 +179,7 @@ protected:
     void swap(basic_ostream& __rhs)
     { basic_ios<char_type, traits_type>::swap(__rhs); }
 
-#ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#ifndef _LIBCPP_CXX03_LANG
     basic_ostream           (const basic_ostream& __rhs) = delete;
     basic_ostream& operator=(const basic_ostream& __rhs) = delete;
 #else
@@ -189,7 +189,7 @@ protected:
 public:
 
     // 27.7.2.4 Prefix/suffix:
-    class _LIBCPP_TYPE_VIS_ONLY sentry;
+    class _LIBCPP_TEMPLATE_VIS sentry;
 
     // 27.7.2.6 Formatted output:
     inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
@@ -239,7 +239,7 @@ protected:
 };
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TYPE_VIS_ONLY basic_ostream<_CharT, _Traits>::sentry
+class _LIBCPP_TEMPLATE_VIS basic_ostream<_CharT, _Traits>::sentry
 {
     bool __ok_;
     basic_ostream<_CharT, _Traits>& __os_;

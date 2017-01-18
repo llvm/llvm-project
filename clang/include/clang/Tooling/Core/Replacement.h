@@ -329,12 +329,6 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
 struct TranslationUnitReplacements {
   /// Name of the main source for the translation unit.
   std::string MainSourceFile;
-
-  /// A freeform chunk of text to describe the context of the replacements.
-  /// Will be printed, for example, when detecting conflicts during replacement
-  /// deduplication.
-  std::string Context;
-
   std::vector<Replacement> Replacements;
 };
 

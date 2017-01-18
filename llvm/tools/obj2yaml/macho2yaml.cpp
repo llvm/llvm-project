@@ -36,7 +36,7 @@ class MachODumper {
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpDebugAbbrev(DWARFContextInMemory &DCtx,
-                        std::unique_ptr<MachOYAML::Object> &Y);
+                       std::unique_ptr<MachOYAML::Object> &Y);
   void dumpDebugStrings(DWARFContextInMemory &DCtx,
                         std::unique_ptr<MachOYAML::Object> &Y);
 
@@ -165,12 +165,13 @@ const char *MachODumper::processLoadCommandData<MachO::rpath_command>(
 
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = make_unique<MachOYAML::Object>();
+  Y->IsLittleEndian = Obj.isLittleEndian();
   dumpHeader(Y);
   dumpLoadCommands(Y);
   dumpLinkEdit(Y);
 
   DWARFContextInMemory DICtx(Obj);
-  if(auto Err = dwarf2yaml(DICtx, Y->DWARF))
+  if (auto Err = dwarf2yaml(DICtx, Y->DWARF))
     return errorCodeToError(Err);
   return std::move(Y);
 }
@@ -451,12 +452,11 @@ void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
 
   for (auto Symbol : Obj.symbols()) {
     MachOYAML::NListEntry NLE =
-        Obj.is64Bit() ? constructNameList<MachO::nlist_64>(
-                            *reinterpret_cast<const MachO::nlist_64 *>(
-                                Symbol.getRawDataRefImpl().p))
-                      : constructNameList<MachO::nlist>(
-                            *reinterpret_cast<const MachO::nlist *>(
-                                Symbol.getRawDataRefImpl().p));
+        Obj.is64Bit()
+            ? constructNameList<MachO::nlist_64>(
+                  Obj.getSymbol64TableEntry(Symbol.getRawDataRefImpl()))
+            : constructNameList<MachO::nlist>(
+                  Obj.getSymbolTableEntry(Symbol.getRawDataRefImpl()));
     LEData.NameList.push_back(NLE);
   }
 
@@ -529,6 +529,6 @@ std::error_code macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
     }
     return obj2yaml_error::success;
   }
-  
+
   return obj2yaml_error::unsupported_obj_file_format;
 }

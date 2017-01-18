@@ -139,8 +139,8 @@ void test7() {
 
 void f4(int m) __attribute__((enable_if(0, "")));
 void test8() {
-  void (*p1)(int) = &f4; // expected-error{{cannot take address of function 'f4' becuase it has one or more non-tautological enable_if conditions}}
-  void (*p2)(int) = f4; // expected-error{{cannot take address of function 'f4' becuase it has one or more non-tautological enable_if conditions}}
+  void (*p1)(int) = &f4; // expected-error{{cannot take address of function 'f4' because it has one or more non-tautological enable_if conditions}}
+  void (*p2)(int) = f4; // expected-error{{cannot take address of function 'f4' because it has one or more non-tautological enable_if conditions}}
 }
 
 void regular_enable_if(int a) __attribute__((enable_if(a, ""))); // expected-note 3{{declared here}}

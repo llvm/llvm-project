@@ -446,11 +446,11 @@ AlignmentFromAssumptionsPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   if (!Changed)
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<AAManager>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<GlobalsAA>();
-  PA.preserve<LoopAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }

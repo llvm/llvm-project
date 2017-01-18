@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -disable-llvm-optzns -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O1 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 #define M if (x) goto L1;
 #define M10 M M M M M M M M M M

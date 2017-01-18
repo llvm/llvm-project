@@ -368,32 +368,49 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
 
   bool isBranch = false;
   uint64_t pcrel = 0;
-  if (type == TYPE_RELv) {
+  if (type == TYPE_REL) {
     isBranch = true;
     pcrel = insn.startLocation +
             insn.immediateOffset + insn.immediateSize;
-    switch (insn.displacementSize) {
+    switch (operand.encoding) {
     default:
       break;
-    case 1:
+    case ENCODING_Iv:
+      switch (insn.displacementSize) {
+      default:
+        break;
+      case 1:
+        if(immediate & 0x80)
+          immediate |= ~(0xffull);
+        break;
+      case 2:
+        if(immediate & 0x8000)
+          immediate |= ~(0xffffull);
+        break;
+      case 4:
+        if(immediate & 0x80000000)
+          immediate |= ~(0xffffffffull);
+        break;
+      case 8:
+        break;
+      }
+      break;
+    case ENCODING_IB:
       if(immediate & 0x80)
         immediate |= ~(0xffull);
       break;
-    case 2:
+    case ENCODING_IW:
       if(immediate & 0x8000)
         immediate |= ~(0xffffull);
       break;
-    case 4:
+    case ENCODING_ID:
       if(immediate & 0x80000000)
         immediate |= ~(0xffffffffull);
-      break;
-    case 8:
       break;
     }
   }
   // By default sign-extend all X86 immediates based on their encoding.
-  else if (type == TYPE_IMM8 || type == TYPE_IMM16 || type == TYPE_IMM32 ||
-           type == TYPE_IMM64 || type == TYPE_IMMv) {
+  else if (type == TYPE_IMM) {
     switch (operand.encoding) {
     default:
       break;
@@ -620,38 +637,17 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
   }
 
   switch (type) {
-  case TYPE_XMM32:
-  case TYPE_XMM64:
-  case TYPE_XMM128:
+  case TYPE_XMM:
     mcInst.addOperand(MCOperand::createReg(X86::XMM0 + (immediate >> 4)));
     return;
-  case TYPE_XMM256:
+  case TYPE_YMM:
     mcInst.addOperand(MCOperand::createReg(X86::YMM0 + (immediate >> 4)));
     return;
-  case TYPE_XMM512:
+  case TYPE_ZMM:
     mcInst.addOperand(MCOperand::createReg(X86::ZMM0 + (immediate >> 4)));
     return;
   case TYPE_BNDR:
     mcInst.addOperand(MCOperand::createReg(X86::BND0 + (immediate >> 4)));
-  case TYPE_REL8:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if (immediate & 0x80)
-      immediate |= ~(0xffull);
-    break;
-  case TYPE_REL16:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if (immediate & 0x8000)
-      immediate |= ~(0xffffull);
-    break;
-  case TYPE_REL32:
-  case TYPE_REL64:
-    isBranch = true;
-    pcrel = insn.startLocation + insn.immediateOffset + insn.immediateSize;
-    if(immediate & 0x80000000)
-      immediate |= ~(0xffffffffull);
-    break;
   default:
     // operand is 64 bits wide.  Do nothing.
     break;
@@ -662,8 +658,7 @@ static void translateImmediate(MCInst &mcInst, uint64_t immediate,
                                mcInst, Dis))
     mcInst.addOperand(MCOperand::createImm(immediate));
 
-  if (type == TYPE_MOFFS8 || type == TYPE_MOFFS16 ||
-      type == TYPE_MOFFS32 || type == TYPE_MOFFS64) {
+  if (type == TYPE_MOFFS) {
     MCOperand segmentReg;
     segmentReg = MCOperand::createReg(segmentRegnums[insn.segmentOverride]);
     mcInst.addOperand(segmentReg);
@@ -767,7 +762,27 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
                        Opcode == X86::VPGATHERDQYrm ||
                        Opcode == X86::VPGATHERQQrm ||
                        Opcode == X86::VPGATHERDDrm ||
-                       Opcode == X86::VPGATHERQDrm);
+                       Opcode == X86::VPGATHERQDrm ||
+                       Opcode == X86::VGATHERDPDZ128rm ||
+                       Opcode == X86::VGATHERDPDZ256rm ||
+                       Opcode == X86::VGATHERDPSZ128rm ||
+                       Opcode == X86::VGATHERQPDZ128rm ||
+                       Opcode == X86::VGATHERQPSZ128rm ||
+                       Opcode == X86::VPGATHERDDZ128rm ||
+                       Opcode == X86::VPGATHERDQZ128rm ||
+                       Opcode == X86::VPGATHERDQZ256rm ||
+                       Opcode == X86::VPGATHERQDZ128rm ||
+                       Opcode == X86::VPGATHERQQZ128rm ||
+                       Opcode == X86::VSCATTERDPDZ128mr ||
+                       Opcode == X86::VSCATTERDPDZ256mr ||
+                       Opcode == X86::VSCATTERDPSZ128mr ||
+                       Opcode == X86::VSCATTERQPDZ128mr ||
+                       Opcode == X86::VSCATTERQPSZ128mr ||
+                       Opcode == X86::VPSCATTERDDZ128mr ||
+                       Opcode == X86::VPSCATTERDQZ128mr ||
+                       Opcode == X86::VPSCATTERDQZ256mr ||
+                       Opcode == X86::VPSCATTERQDZ128mr ||
+                       Opcode == X86::VPSCATTERQQZ128mr);
     bool IndexIs256 = (Opcode == X86::VGATHERQPDYrm ||
                        Opcode == X86::VGATHERDPSYrm ||
                        Opcode == X86::VGATHERQPSYrm ||
@@ -775,13 +790,49 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
                        Opcode == X86::VPGATHERDQZrm ||
                        Opcode == X86::VPGATHERQQYrm ||
                        Opcode == X86::VPGATHERDDYrm ||
-                       Opcode == X86::VPGATHERQDYrm);
+                       Opcode == X86::VPGATHERQDYrm ||
+                       Opcode == X86::VGATHERDPSZ256rm ||
+                       Opcode == X86::VGATHERQPDZ256rm ||
+                       Opcode == X86::VGATHERQPSZ256rm ||
+                       Opcode == X86::VPGATHERDDZ256rm ||
+                       Opcode == X86::VPGATHERQQZ256rm ||
+                       Opcode == X86::VPGATHERQDZ256rm ||
+                       Opcode == X86::VSCATTERDPDZmr ||
+                       Opcode == X86::VPSCATTERDQZmr ||
+                       Opcode == X86::VSCATTERDPSZ256mr ||
+                       Opcode == X86::VSCATTERQPDZ256mr ||
+                       Opcode == X86::VSCATTERQPSZ256mr ||
+                       Opcode == X86::VPSCATTERDDZ256mr ||
+                       Opcode == X86::VPSCATTERQQZ256mr ||
+                       Opcode == X86::VPSCATTERQDZ256mr ||
+                       Opcode == X86::VGATHERPF0DPDm ||
+                       Opcode == X86::VGATHERPF1DPDm ||
+                       Opcode == X86::VSCATTERPF0DPDm ||
+                       Opcode == X86::VSCATTERPF1DPDm);
     bool IndexIs512 = (Opcode == X86::VGATHERQPDZrm ||
                        Opcode == X86::VGATHERDPSZrm ||
                        Opcode == X86::VGATHERQPSZrm ||
                        Opcode == X86::VPGATHERQQZrm ||
                        Opcode == X86::VPGATHERDDZrm ||
-                       Opcode == X86::VPGATHERQDZrm);
+                       Opcode == X86::VPGATHERQDZrm ||
+                       Opcode == X86::VSCATTERQPDZmr ||
+                       Opcode == X86::VSCATTERDPSZmr ||
+                       Opcode == X86::VSCATTERQPSZmr ||
+                       Opcode == X86::VPSCATTERQQZmr ||
+                       Opcode == X86::VPSCATTERDDZmr ||
+                       Opcode == X86::VPSCATTERQDZmr ||
+                       Opcode == X86::VGATHERPF0DPSm ||
+                       Opcode == X86::VGATHERPF0QPDm ||
+                       Opcode == X86::VGATHERPF0QPSm ||
+                       Opcode == X86::VGATHERPF1DPSm ||
+                       Opcode == X86::VGATHERPF1QPDm ||
+                       Opcode == X86::VGATHERPF1QPSm ||
+                       Opcode == X86::VSCATTERPF0DPSm ||
+                       Opcode == X86::VSCATTERPF0QPDm ||
+                       Opcode == X86::VSCATTERPF0QPSm ||
+                       Opcode == X86::VSCATTERPF1DPSm ||
+                       Opcode == X86::VSCATTERPF1QPDm ||
+                       Opcode == X86::VSCATTERPF1QPSm);
     if (IndexIs128 || IndexIs256 || IndexIs512) {
       unsigned IndexOffset = insn.sibIndex -
                          (insn.addressSize == 8 ? SIB_INDEX_RAX:SIB_INDEX_EAX);
@@ -909,38 +960,15 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_R64:
   case TYPE_Rv:
   case TYPE_MM64:
-  case TYPE_XMM32:
-  case TYPE_XMM64:
-  case TYPE_XMM128:
-  case TYPE_XMM256:
-  case TYPE_XMM512:
-  case TYPE_VK1:
-  case TYPE_VK2:
-  case TYPE_VK4:
-  case TYPE_VK8:
-  case TYPE_VK16:
-  case TYPE_VK32:
-  case TYPE_VK64:
+  case TYPE_XMM:
+  case TYPE_YMM:
+  case TYPE_ZMM:
+  case TYPE_VK:
   case TYPE_DEBUGREG:
   case TYPE_CONTROLREG:
   case TYPE_BNDR:
     return translateRMRegister(mcInst, insn);
   case TYPE_M:
-  case TYPE_M8:
-  case TYPE_M16:
-  case TYPE_M32:
-  case TYPE_M64:
-  case TYPE_M128:
-  case TYPE_M256:
-  case TYPE_M512:
-  case TYPE_Mv:
-  case TYPE_M32FP:
-  case TYPE_M64FP:
-  case TYPE_M80FP:
-  case TYPE_M1616:
-  case TYPE_M1632:
-  case TYPE_M1664:
-  case TYPE_LEA:
     return translateRMMemory(mcInst, insn, Dis);
   }
 }
@@ -992,6 +1020,7 @@ static bool translateOperand(MCInst &mcInst, const OperandSpecifier &operand,
   case ENCODING_WRITEMASK:
     return translateMaskRegister(mcInst, insn.writemask);
   CASE_ENCODING_RM:
+  CASE_ENCODING_VSIB:
     return translateRM(mcInst, operand, insn, Dis);
   case ENCODING_IB:
   case ENCODING_IW:

@@ -609,7 +609,7 @@ materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addFrameIndex(FrameIdx).addImm(Offset);
 
   if (!AFI->isThumb1OnlyFunction())
-    AddDefaultCC(AddDefaultPred(MIB));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
 }
 
 void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,

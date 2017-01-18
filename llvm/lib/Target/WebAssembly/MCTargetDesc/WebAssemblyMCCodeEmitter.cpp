@@ -46,7 +46,7 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          const MCSubtargetInfo &STI) const override;
 
 public:
-  WebAssemblyMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
+  explicit WebAssemblyMCCodeEmitter(const MCInstrInfo &mcii) : MCII(mcii) {}
 };
 } // end anonymous namespace
 

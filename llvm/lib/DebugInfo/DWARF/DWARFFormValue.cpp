@@ -153,7 +153,7 @@ static Optional<uint8_t> getFixedByteSize(dwarf::Form Form, const T *U) {
       return 16;
 
     case DW_FORM_implicit_const:
-      // The implicit value is stored in the abbreviation as a ULEB128, any
+      // The implicit value is stored in the abbreviation as a SLEB128, and
       // there no data in debug info.
       return 0;
 
@@ -280,6 +280,8 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   case DW_FORM_GNU_str_index:
   case DW_FORM_GNU_strp_alt:
     return (FC == FC_String);
+  case DW_FORM_implicit_const:
+    return (FC == FC_Constant);
   default:
     break;
   }
@@ -398,7 +400,9 @@ bool DWARFFormValue::extractValue(const DataExtractor &data,
       Value.uval = data.getULEB128(offset_ptr);
       break;
     default:
-      return false;
+      // DWARFFormValue::skipValue() will have caught this and caused all
+      // DWARF DIEs to fail to be parsed, so this code is not be reachable.
+      llvm_unreachable("unsupported form");
     }
   } while (indirect);
 
@@ -659,5 +663,17 @@ Optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
   if (!isFormClass(FC_Block) && !isFormClass(FC_Exprloc))
     return None;
   return makeArrayRef(Value.data, Value.uval);
+}
+
+Optional<uint64_t> DWARFFormValue::getAsCStringOffset() const {
+  if (!isFormClass(FC_String) && Form == DW_FORM_string)
+    return None;
+  return Value.uval;
+}
+
+Optional<uint64_t> DWARFFormValue::getAsReferenceUVal() const {
+  if (!isFormClass(FC_Reference))
+    return None;
+  return Value.uval;
 }
 

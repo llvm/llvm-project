@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -inline | FileCheck %s
+; RUN: opt < %s -S -passes='cgscc(inline)' | FileCheck %s
 
 ; Make sure that profile and unpredictable  metadata is preserved when cloning a select.
 

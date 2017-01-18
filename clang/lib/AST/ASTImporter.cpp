@@ -4671,8 +4671,7 @@ Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   ClassTemplateDecl *D2 = ClassTemplateDecl::Create(Importer.getToContext(), DC, 
                                                     Loc, Name, TemplateParams, 
-                                                    D2Templated, 
-                                                    /*PrevDecl=*/nullptr);
+                                                    D2Templated);
   D2Templated->setDescribedClassTemplate(D2);    
   
   D2->setAccess(D->getAccess());

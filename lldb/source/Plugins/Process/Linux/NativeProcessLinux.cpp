@@ -1689,68 +1689,14 @@ Error NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // Assume proc maps entries are in ascending order.
   // FIXME assert if we find differently.
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  Error error;
-
   if (m_supports_mem_region == LazyBool::eLazyBoolNo) {
     // We're done.
-    error.SetErrorString("unsupported");
-    return error;
+    return Error("unsupported");
   }
 
-  // If our cache is empty, pull the latest.  There should always be at least
-  // one memory region
-  // if memory region handling is supported.
-  if (m_mem_region_cache.empty()) {
-    error = ProcFileReader::ProcessLineByLine(
-        GetID(), "maps", [&](const std::string &line) -> bool {
-          MemoryRegionInfo info;
-          const Error parse_error =
-              ParseMemoryRegionInfoFromProcMapsLine(line, info);
-          if (parse_error.Success()) {
-            m_mem_region_cache.push_back(info);
-            return true;
-          } else {
-            if (log)
-              log->Printf("NativeProcessLinux::%s failed to parse proc maps "
-                          "line '%s': %s",
-                          __FUNCTION__, line.c_str(), error.AsCString());
-            return false;
-          }
-        });
-
-    // If we had an error, we'll mark unsupported.
-    if (error.Fail()) {
-      m_supports_mem_region = LazyBool::eLazyBoolNo;
-      return error;
-    } else if (m_mem_region_cache.empty()) {
-      // No entries after attempting to read them.  This shouldn't happen if
-      // /proc/{pid}/maps
-      // is supported.  Assume we don't support map entries via procfs.
-      if (log)
-        log->Printf("NativeProcessLinux::%s failed to find any procfs maps "
-                    "entries, assuming no support for memory region metadata "
-                    "retrieval",
-                    __FUNCTION__);
-      m_supports_mem_region = LazyBool::eLazyBoolNo;
-      error.SetErrorString("not supported");
-      return error;
-    }
-
-    if (log)
-      log->Printf("NativeProcessLinux::%s read %" PRIu64
-                  " memory region entries from /proc/%" PRIu64 "/maps",
-                  __FUNCTION__,
-                  static_cast<uint64_t>(m_mem_region_cache.size()), GetID());
-
-    // We support memory retrieval, remember that.
-    m_supports_mem_region = LazyBool::eLazyBoolYes;
-  } else {
-    if (log)
-      log->Printf("NativeProcessLinux::%s reusing %" PRIu64
-                  " cached memory region entries",
-                  __FUNCTION__,
-                  static_cast<uint64_t>(m_mem_region_cache.size()));
+  Error error = PopulateMemoryRegionCache();
+  if (error.Fail()) {
+    return error;
   }
 
   lldb::addr_t prev_base_address = 0;
@@ -1760,7 +1706,7 @@ Error NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
   // There can be a ton of regions on pthreads apps with lots of threads.
   for (auto it = m_mem_region_cache.begin(); it != m_mem_region_cache.end();
        ++it) {
-    MemoryRegionInfo &proc_entry_info = *it;
+    MemoryRegionInfo &proc_entry_info = it->first;
 
     // Sanity check assumption that /proc/{pid}/maps entries are ascending.
     assert((proc_entry_info.GetRange().GetRangeBase() >= prev_base_address) &&
@@ -1801,6 +1747,67 @@ Error NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
   range_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
   range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
   return error;
+}
+
+Error NativeProcessLinux::PopulateMemoryRegionCache() {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // If our cache is empty, pull the latest.  There should always be at least
+  // one memory region if memory region handling is supported.
+  if (!m_mem_region_cache.empty()) {
+    if (log)
+      log->Printf("NativeProcessLinux::%s reusing %" PRIu64
+                  " cached memory region entries",
+                  __FUNCTION__,
+                  static_cast<uint64_t>(m_mem_region_cache.size()));
+    return Error();
+  }
+
+  Error error = ProcFileReader::ProcessLineByLine(
+      GetID(), "maps", [&](const std::string &line) -> bool {
+        MemoryRegionInfo info;
+        const Error parse_error =
+            ParseMemoryRegionInfoFromProcMapsLine(line, info);
+        if (parse_error.Success()) {
+          m_mem_region_cache.emplace_back(
+              info, FileSpec(info.GetName().GetCString(), true));
+          return true;
+        } else {
+          if (log)
+            log->Printf("NativeProcessLinux::%s failed to parse proc maps "
+                        "line '%s': %s",
+                        __FUNCTION__, line.c_str(), parse_error.AsCString());
+          return false;
+        }
+      });
+
+  // If we had an error, we'll mark unsupported.
+  if (error.Fail()) {
+    m_supports_mem_region = LazyBool::eLazyBoolNo;
+    return error;
+  } else if (m_mem_region_cache.empty()) {
+    // No entries after attempting to read them.  This shouldn't happen if
+    // /proc/{pid}/maps is supported. Assume we don't support map entries
+    // via procfs.
+    if (log)
+      log->Printf("NativeProcessLinux::%s failed to find any procfs maps "
+                  "entries, assuming no support for memory region metadata "
+                  "retrieval",
+                  __FUNCTION__);
+    m_supports_mem_region = LazyBool::eLazyBoolNo;
+    error.SetErrorString("not supported");
+    return error;
+  }
+
+  if (log)
+    log->Printf("NativeProcessLinux::%s read %" PRIu64
+                " memory region entries from /proc/%" PRIu64 "/maps",
+                __FUNCTION__, static_cast<uint64_t>(m_mem_region_cache.size()),
+                GetID());
+
+  // We support memory retrieval, remember that.
+  m_supports_mem_region = LazyBool::eLazyBoolYes;
+  return Error();
 }
 
 void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
@@ -2463,60 +2470,38 @@ Error NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
 
 Error NativeProcessLinux::GetLoadedModuleFileSpec(const char *module_path,
                                                   FileSpec &file_spec) {
+  Error error = PopulateMemoryRegionCache();
+  if (error.Fail())
+    return error;
+
   FileSpec module_file_spec(module_path, true);
 
-  bool found = false;
   file_spec.Clear();
-  ProcFileReader::ProcessLineByLine(
-      GetID(), "maps", [&](const std::string &line) {
-        SmallVector<StringRef, 16> columns;
-        StringRef(line).split(columns, " ", -1, false);
-        if (columns.size() < 6)
-          return true; // continue searching
-
-        FileSpec this_file_spec(columns[5].str(), false);
-        if (this_file_spec.GetFilename() != module_file_spec.GetFilename())
-          return true; // continue searching
-
-        file_spec = this_file_spec;
-        found = true;
-        return false; // we are done
-      });
-
-  if (!found)
-    return Error("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
-                 module_file_spec.GetFilename().AsCString(), GetID());
-
-  return Error();
+  for (const auto &it : m_mem_region_cache) {
+    if (it.second.GetFilename() == module_file_spec.GetFilename()) {
+      file_spec = it.second;
+      return Error();
+    }
+  }
+  return Error("Module file (%s) not found in /proc/%" PRIu64 "/maps file!",
+               module_file_spec.GetFilename().AsCString(), GetID());
 }
 
 Error NativeProcessLinux::GetFileLoadAddress(const llvm::StringRef &file_name,
                                              lldb::addr_t &load_addr) {
   load_addr = LLDB_INVALID_ADDRESS;
-  Error error = ProcFileReader::ProcessLineByLine(
-      GetID(), "maps", [&](const std::string &line) -> bool {
-        StringRef maps_row(line);
+  Error error = PopulateMemoryRegionCache();
+  if (error.Fail())
+    return error;
 
-        SmallVector<StringRef, 16> maps_columns;
-        maps_row.split(maps_columns, StringRef(" "), -1, false);
-
-        if (maps_columns.size() < 6) {
-          // Return true to continue reading the proc file
-          return true;
-        }
-
-        if (maps_columns[5] == file_name) {
-          StringExtractor addr_extractor(maps_columns[0].str().c_str());
-          load_addr = addr_extractor.GetHexMaxU64(false, LLDB_INVALID_ADDRESS);
-
-          // Return false to stop reading the proc file further
-          return false;
-        }
-
-        // Return true to continue reading the proc file
-        return true;
-      });
-  return error;
+  FileSpec file(file_name, false);
+  for (const auto &it : m_mem_region_cache) {
+    if (it.second == file) {
+      load_addr = it.first.GetRange().GetRangeBase();
+      return Error();
+    }
+  }
+  return Error("No load address found for specified file.");
 }
 
 NativeThreadLinuxSP NativeProcessLinux::GetThreadByID(lldb::tid_t tid) {

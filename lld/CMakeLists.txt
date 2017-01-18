@@ -12,6 +12,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   execute_process(COMMAND "${LLVM_CONFIG_PATH}" "--obj-root" "--includedir"
+                          "--cmakedir"
                   RESULT_VARIABLE HAD_ERROR
                   OUTPUT_VARIABLE LLVM_CONFIG_OUTPUT
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -23,12 +24,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   list(GET LLVM_CONFIG_OUTPUT 0 OBJ_ROOT)
   list(GET LLVM_CONFIG_OUTPUT 1 MAIN_INCLUDE_DIR)
+  list(GET LLVM_CONFIG_OUTPUT 2 LLVM_CMAKE_PATH)
 
   set(LLVM_OBJ_ROOT ${OBJ_ROOT} CACHE PATH "path to LLVM build tree")
   set(LLVM_MAIN_INCLUDE_DIR ${MAIN_INCLUDE_DIR} CACHE PATH "path to llvm/include")
 
   file(TO_CMAKE_PATH ${LLVM_OBJ_ROOT} LLVM_BINARY_DIR)
-  set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 
   if(NOT EXISTS "${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
     message(FATAL_ERROR "LLVMConfig.cmake not found")
@@ -106,6 +107,8 @@ endif()
 
 list (APPEND CMAKE_MODULE_PATH "${LLD_SOURCE_DIR}/cmake/modules")
 
+include(AddLLD)
+
 option(LLD_USE_VTUNE
        "Enable VTune user task tracking."
        OFF)
@@ -118,6 +121,8 @@ if (LLD_USE_VTUNE)
   endif()
 endif()
 
+option(LLD_BUILD_TOOLS
+  "Build the lld tools. If OFF, just generate build targets." ON)
 
 if (MSVC)
   add_definitions(-wd4530) # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
@@ -137,12 +142,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN ".svn" EXCLUDE
     )
 endif()
-
-macro(add_lld_library name)
-  add_llvm_library(${name} ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "lld libraries")
-endmacro(add_lld_library)
-
 
 add_subdirectory(lib)
 add_subdirectory(tools/lld)

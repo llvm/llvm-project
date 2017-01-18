@@ -28,7 +28,7 @@ bool bad_array_new_length_test() {
     return false;
 }
 
-int main(int argc, char *argv []) {
+int main() {
     int ret_val = 0;
 
     if ( !bad_array_new_length_test ()) {

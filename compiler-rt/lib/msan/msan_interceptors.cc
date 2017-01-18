@@ -45,6 +45,8 @@ using __sanitizer::atomic_uintptr_t;
 
 DECLARE_REAL(SIZE_T, strlen, const char *s)
 DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
+DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
+DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
 
 #if SANITIZER_FREEBSD
 #define __errno_location __error
@@ -152,10 +154,6 @@ INTERCEPTOR(SSIZE_T, readlink, const char *path, char *buf, SIZE_T bufsiz) {
   return res;
 }
 
-INTERCEPTOR(void *, memcpy, void *dest, const void *src, SIZE_T n) {
-  return __msan_memcpy(dest, src, n);
-}
-
 INTERCEPTOR(void *, mempcpy, void *dest, const void *src, SIZE_T n) {
   return (char *)__msan_memcpy(dest, src, n) + n;
 }
@@ -168,14 +166,6 @@ INTERCEPTOR(void *, memccpy, void *dest, const void *src, int c, SIZE_T n) {
   CHECK_UNPOISONED(src, sz);
   __msan_unpoison(dest, sz);
   return res;
-}
-
-INTERCEPTOR(void *, memmove, void *dest, const void *src, SIZE_T n) {
-  return __msan_memmove(dest, src, n);
-}
-
-INTERCEPTOR(void *, memset, void *s, int c, SIZE_T n) {
-  return __msan_memset(s, c, n);
 }
 
 INTERCEPTOR(void *, bcopy, const void *src, void *dest, SIZE_T n) {
@@ -1354,11 +1344,23 @@ int OnExit() {
     *begin = *end = 0;                                                         \
   }
 
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
+  {                                                         \
+    (void)ctx;                                              \
+    return __msan_memset(block, c, size);                   \
+  }
+#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
+  {                                                          \
+    (void)ctx;                                               \
+    return __msan_memmove(to, from, size);                   \
+  }
+#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
+  {                                                         \
+    (void)ctx;                                              \
+    return __msan_memcpy(to, from, size);                   \
+  }
+
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
-// Msan needs custom handling of these:
-#undef SANITIZER_INTERCEPT_MEMSET
-#undef SANITIZER_INTERCEPT_MEMMOVE
-#undef SANITIZER_INTERCEPT_MEMCPY
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 #define COMMON_SYSCALL_PRE_READ_RANGE(p, s) CHECK_UNPOISONED(p, s)
@@ -1514,11 +1516,8 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(fread);
   MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED;
   INTERCEPT_FUNCTION(readlink);
-  INTERCEPT_FUNCTION(memcpy);
   INTERCEPT_FUNCTION(memccpy);
   INTERCEPT_FUNCTION(mempcpy);
-  INTERCEPT_FUNCTION(memset);
-  INTERCEPT_FUNCTION(memmove);
   INTERCEPT_FUNCTION(bcopy);
   INTERCEPT_FUNCTION(wmemset);
   INTERCEPT_FUNCTION(wmemcpy);

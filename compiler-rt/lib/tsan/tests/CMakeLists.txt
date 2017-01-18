@@ -76,14 +76,18 @@ macro(add_tsan_unittest testname)
           ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         list(APPEND TEST_OBJECTS lib${TSAN_TEST_RUNTIME}.a)
         list(APPEND TEST_DEPS ${TSAN_TEST_RUNTIME})
+
+        add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)
+        add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+
         # Intentionally do *not* link with `-fsanitize=thread`. We already link
         # against a static version of the runtime, and we don't want the dynamic
         # one.
         add_compiler_rt_test(TsanUnitTests "${testname}-${arch}-Test"
                 OBJECTS ${TEST_OBJECTS}
                 DEPS ${TEST_DEPS}
-                LINK_FLAGS ${TARGET_LINK_FLAGS} ${DARWIN_osx_LINKFLAGS}
-                           -lc++)
+                LINK_FLAGS ${TARGET_LINK_FLAGS} ${DARWIN_osx_LINK_FLAGS}
+                           ${WEAK_SYMBOL_LINK_FLAGS} -lc++)
       endif()
     endforeach()
   endif()

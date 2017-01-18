@@ -189,33 +189,34 @@
 ; OBJ: ]
 
 ; ModuleID = 't.cpp'
+source_filename = "test/DebugInfo/COFF/register-variables.ll"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-@x = internal global i32 0, align 4, !dbg !23
+@x = internal global i32 0, align 4, !dbg !0
 
 ; Function Attrs: nounwind uwtable
-define void @f(i32 %p) #0 !dbg !4 {
+define void @f(i32 %p) #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 %p, i64 0, metadata !9, metadata !29), !dbg !30
-  %tobool = icmp eq i32 %p, 0, !dbg !31
-  %call2 = tail call i32 @getint() #3, !dbg !32
-  br i1 %tobool, label %if.else, label %if.then, !dbg !33
+  tail call void @llvm.dbg.value(metadata i32 %p, i64 0, metadata !16, metadata !23), !dbg !24
+  %tobool = icmp eq i32 %p, 0, !dbg !25
+  %call2 = tail call i32 @getint() #3, !dbg !26
+  br i1 %tobool, label %if.else, label %if.then, !dbg !27
 
 if.then:                                          ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !10, metadata !29), !dbg !34
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !20, metadata !29), !dbg !35
+  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !17, metadata !23), !dbg !28
+  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !29, metadata !23), !dbg !35
   %add.i = add nsw i32 %call2, 1, !dbg !37
-  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !21, metadata !29), !dbg !38
+  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !34, metadata !23), !dbg !38
   %0 = load volatile i32, i32* @x, align 4, !dbg !39, !tbaa !40
   %inc.i = add nsw i32 %0, 1, !dbg !39
   store volatile i32 %inc.i, i32* @x, align 4, !dbg !39, !tbaa !40
-  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !13, metadata !29), !dbg !44
+  tail call void @llvm.dbg.value(metadata i32 %add.i, i64 0, metadata !20, metadata !23), !dbg !44
   tail call void @putint(i32 %add.i) #3, !dbg !45
   br label %if.end, !dbg !46
 
 if.else:                                          ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !14, metadata !29), !dbg !47
+  tail call void @llvm.dbg.value(metadata i32 %call2, i64 0, metadata !21, metadata !23), !dbg !47
   tail call void @putint(i32 %call2) #3, !dbg !48
   br label %if.end
 
@@ -235,56 +236,58 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!25, !26, !27}
-!llvm.ident = !{!28}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!8, !9, !10}
+!llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !22)
-!1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
-!2 = !{}
-!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
-!5 = !DISubroutineType(types: !6)
-!6 = !{null, !7}
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!3 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
+!4 = !{}
+!5 = !{!0}
+!6 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = !{!9, !10, !13, !14}
-!9 = !DILocalVariable(name: "p", arg: 1, scope: !4, file: !1, line: 9, type: !7)
-!10 = !DILocalVariable(name: "a", scope: !11, file: !1, line: 11, type: !7)
-!11 = distinct !DILexicalBlock(scope: !12, file: !1, line: 10, column: 10)
-!12 = distinct !DILexicalBlock(scope: !4, file: !1, line: 10, column: 7)
-!13 = !DILocalVariable(name: "b", scope: !11, file: !1, line: 12, type: !7)
-!14 = !DILocalVariable(name: "c", scope: !15, file: !1, line: 15, type: !7)
-!15 = distinct !DILexicalBlock(scope: !12, file: !1, line: 14, column: 10)
-!16 = distinct !DISubprogram(name: "inlineinc", scope: !1, file: !1, line: 4, type: !17, isLocal: true, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !19)
-!17 = !DISubroutineType(types: !18)
-!18 = !{!7, !7}
-!19 = !{!20, !21}
-!20 = !DILocalVariable(name: "a", arg: 1, scope: !16, file: !1, line: 4, type: !7)
-!21 = !DILocalVariable(name: "b", scope: !16, file: !1, line: 5, type: !7)
-!22 = !{!23}
-!23 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !24, isLocal: false, isDefinition: true))
-!24 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)
-!25 = !{i32 2, !"CodeView", i32 1}
-!26 = !{i32 2, !"Debug Info Version", i32 3}
-!27 = !{i32 1, !"PIC Level", i32 2}
-!28 = !{!"clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)"}
-!29 = !DIExpression()
-!30 = !DILocation(line: 9, column: 12, scope: !4)
-!31 = !DILocation(line: 10, column: 7, scope: !12)
-!32 = !DILocation(line: 15, column: 13, scope: !15)
-!33 = !DILocation(line: 10, column: 7, scope: !4)
-!34 = !DILocation(line: 11, column: 9, scope: !11)
-!35 = !DILocation(line: 4, column: 33, scope: !16, inlinedAt: !36)
-!36 = distinct !DILocation(line: 12, column: 13, scope: !11)
-!37 = !DILocation(line: 5, column: 13, scope: !16, inlinedAt: !36)
-!38 = !DILocation(line: 5, column: 7, scope: !16, inlinedAt: !36)
-!39 = !DILocation(line: 6, column: 3, scope: !16, inlinedAt: !36)
+!8 = !{i32 2, !"CodeView", i32 1}
+!9 = !{i32 2, !"Debug Info Version", i32 3}
+!10 = !{i32 1, !"PIC Level", i32 2}
+!11 = !{!"clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)"}
+!12 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 9, type: !13, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !15)
+!13 = !DISubroutineType(types: !14)
+!14 = !{null, !7}
+!15 = !{!16, !17, !20, !21}
+!16 = !DILocalVariable(name: "p", arg: 1, scope: !12, file: !3, line: 9, type: !7)
+!17 = !DILocalVariable(name: "a", scope: !18, file: !3, line: 11, type: !7)
+!18 = distinct !DILexicalBlock(scope: !19, file: !3, line: 10, column: 10)
+!19 = distinct !DILexicalBlock(scope: !12, file: !3, line: 10, column: 7)
+!20 = !DILocalVariable(name: "b", scope: !18, file: !3, line: 12, type: !7)
+!21 = !DILocalVariable(name: "c", scope: !22, file: !3, line: 15, type: !7)
+!22 = distinct !DILexicalBlock(scope: !19, file: !3, line: 14, column: 10)
+!23 = !DIExpression()
+!24 = !DILocation(line: 9, column: 12, scope: !12)
+!25 = !DILocation(line: 10, column: 7, scope: !19)
+!26 = !DILocation(line: 15, column: 13, scope: !22)
+!27 = !DILocation(line: 10, column: 7, scope: !12)
+!28 = !DILocation(line: 11, column: 9, scope: !18)
+!29 = !DILocalVariable(name: "a", arg: 1, scope: !30, file: !3, line: 4, type: !7)
+!30 = distinct !DISubprogram(name: "inlineinc", scope: !3, file: !3, line: 4, type: !31, isLocal: true, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !2, variables: !33)
+!31 = !DISubroutineType(types: !32)
+!32 = !{!7, !7}
+!33 = !{!29, !34}
+!34 = !DILocalVariable(name: "b", scope: !30, file: !3, line: 5, type: !7)
+!35 = !DILocation(line: 4, column: 33, scope: !30, inlinedAt: !36)
+!36 = distinct !DILocation(line: 12, column: 13, scope: !18)
+!37 = !DILocation(line: 5, column: 13, scope: !30, inlinedAt: !36)
+!38 = !DILocation(line: 5, column: 7, scope: !30, inlinedAt: !36)
+!39 = !DILocation(line: 6, column: 3, scope: !30, inlinedAt: !36)
 !40 = !{!41, !41, i64 0}
 !41 = !{!"int", !42, i64 0}
 !42 = !{!"omnipotent char", !43, i64 0}
 !43 = !{!"Simple C/C++ TBAA"}
-!44 = !DILocation(line: 12, column: 9, scope: !11)
-!45 = !DILocation(line: 13, column: 5, scope: !11)
-!46 = !DILocation(line: 14, column: 3, scope: !11)
-!47 = !DILocation(line: 15, column: 9, scope: !15)
-!48 = !DILocation(line: 16, column: 5, scope: !15)
-!49 = !DILocation(line: 18, column: 1, scope: !4)
+!44 = !DILocation(line: 12, column: 9, scope: !18)
+!45 = !DILocation(line: 13, column: 5, scope: !18)
+!46 = !DILocation(line: 14, column: 3, scope: !18)
+!47 = !DILocation(line: 15, column: 9, scope: !22)
+!48 = !DILocation(line: 16, column: 5, scope: !22)
+!49 = !DILocation(line: 18, column: 1, scope: !12)
+

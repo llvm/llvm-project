@@ -179,10 +179,15 @@ GdbIndexBuilder<ELFT>::readAddressArea(size_t CurrentCU) {
   return Ret;
 }
 
+// We return file offset as load address for allocatable sections. That is
+// currently used for collecting address ranges in readAddressArea(). We are
+// able then to find section index that range belongs to.
 template <class ELFT>
 uint64_t GdbIndexBuilder<ELFT>::getSectionLoadAddress(
     const object::SectionRef &Sec) const {
-  return static_cast<const ELFSectionRef &>(Sec).getOffset();
+  if (static_cast<const ELFSectionRef &>(Sec).getFlags() & ELF::SHF_ALLOC)
+    return static_cast<const ELFSectionRef &>(Sec).getOffset();
+  return 0;
 }
 
 template <class ELFT>

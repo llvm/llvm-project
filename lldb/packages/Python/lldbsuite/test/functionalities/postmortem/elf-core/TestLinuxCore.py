@@ -26,6 +26,14 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_regions = 5
     _s390x_regions = 2
 
+    def setUp(self):
+        super(LinuxCoreTestCase, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(LinuxCoreTestCase, self).tearDown()
+
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_i386(self):
@@ -38,9 +46,7 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions)
 
-    # This seems to hang on non-s390x platforms for some reason.  Disabling
-    # for now.
-    @skipIf(archs=no_match(['s390x']))
+    @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""

@@ -489,7 +489,7 @@ void test_swap_sfinae() {
     // but is still swappable via the generic swap algorithm, since the
     // variant is move constructible and move assignable.
     using V = std::variant<int, NotSwappable>;
-    LIBCPP_STATIC_ASSERT(!has_swap_member<V>());
+    LIBCPP_STATIC_ASSERT(!has_swap_member<V>(), "");
     static_assert(std::is_swappable_v<V>, "");
   }
   {
@@ -569,7 +569,7 @@ void test_swap_noexcept() {
     // but is still swappable via the generic swap algorithm, since the
     // variant is move constructible and move assignable.
     using V = std::variant<int, NotSwappable>;
-    LIBCPP_STATIC_ASSERT(!has_swap_member<V>());
+    LIBCPP_STATIC_ASSERT(!has_swap_member<V>(), "");
     static_assert(std::is_swappable_v<V>, "");
     static_assert(std::is_nothrow_swappable_v<V>, "");
     V v1, v2;

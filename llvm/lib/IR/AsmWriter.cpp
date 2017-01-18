@@ -1408,6 +1408,7 @@ struct MDFieldPrinter {
   }
   void printTag(const DINode *N);
   void printMacinfoType(const DIMacroNode *N);
+  void printChecksumKind(const DIFile *N);
   void printString(StringRef Name, StringRef Value,
                    bool ShouldSkipEmpty = true);
   void printMetadata(StringRef Name, const Metadata *MD,
@@ -1439,6 +1440,13 @@ void MDFieldPrinter::printMacinfoType(const DIMacroNode *N) {
     Out << Type;
   else
     Out << N->getMacinfoType();
+}
+
+void MDFieldPrinter::printChecksumKind(const DIFile *N) {
+  if (N->getChecksumKind() == DIFile::CSK_None)
+    // Skip CSK_None checksum kind.
+    return;
+  Out << FS << "checksumkind: " << N->getChecksumKindAsString();
 }
 
 void MDFieldPrinter::printString(StringRef Name, StringRef Value,
@@ -1653,6 +1661,8 @@ static void writeDIFile(raw_ostream &Out, const DIFile *N, TypePrinting *,
                       /* ShouldSkipEmpty */ false);
   Printer.printString("directory", N->getDirectory(),
                       /* ShouldSkipEmpty */ false);
+  Printer.printChecksumKind(N);
+  Printer.printString("checksum", N->getChecksum(), /* ShouldSkipEmpty */ true);
   Out << ")";
 }
 
@@ -3003,7 +3013,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     }
 
     Operand = CI->getCalledValue();
-    FunctionType *FTy = cast<FunctionType>(CI->getFunctionType());
+    FunctionType *FTy = CI->getFunctionType();
     Type *RetTy = FTy->getReturnType();
     const AttributeSet &PAL = CI->getAttributes();
 
@@ -3040,7 +3050,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
   } else if (const InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
     Operand = II->getCalledValue();
-    FunctionType *FTy = cast<FunctionType>(II->getFunctionType());
+    FunctionType *FTy = II->getFunctionType();
     Type *RetTy = FTy->getReturnType();
     const AttributeSet &PAL = II->getAttributes();
 

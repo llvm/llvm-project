@@ -32,7 +32,7 @@
 # define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
 #endif
 
-#if (SANITIZER_LINUX || SANITIZER_WINDOWS) && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_WINDOWS) && !SANITIZER_GO
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 1
 #else
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 0
@@ -289,8 +289,8 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 
 #if !defined(_MSC_VER) || defined(__clang__)
-# define GET_CALLER_PC() (uptr)__builtin_return_address(0)
-# define GET_CURRENT_FRAME() (uptr)__builtin_frame_address(0)
+#define GET_CALLER_PC() (__sanitizer::uptr) __builtin_return_address(0)
+#define GET_CURRENT_FRAME() (__sanitizer::uptr) __builtin_frame_address(0)
 inline void Trap() {
   __builtin_trap();
 }
@@ -299,9 +299,10 @@ extern "C" void* _ReturnAddress(void);
 extern "C" void* _AddressOfReturnAddress(void);
 # pragma intrinsic(_ReturnAddress)
 # pragma intrinsic(_AddressOfReturnAddress)
-# define GET_CALLER_PC() (uptr)_ReturnAddress()
+#define GET_CALLER_PC() (__sanitizer::uptr) _ReturnAddress()
 // CaptureStackBackTrace doesn't need to know BP on Windows.
-# define GET_CURRENT_FRAME() (((uptr)_AddressOfReturnAddress()) + sizeof(uptr))
+#define GET_CURRENT_FRAME() \
+  (((__sanitizer::uptr)_AddressOfReturnAddress()) + sizeof(__sanitizer::uptr))
 
 extern "C" void __ud2(void);
 # pragma intrinsic(__ud2)
@@ -319,11 +320,11 @@ inline void Trap() {
   }
 
 // Forces the compiler to generate a frame pointer in the function.
-#define ENABLE_FRAME_POINTER                                       \
-  do {                                                             \
-    volatile uptr enable_fp;                                       \
-    enable_fp = GET_CURRENT_FRAME();                               \
-    (void)enable_fp;                                               \
+#define ENABLE_FRAME_POINTER              \
+  do {                                    \
+    volatile __sanitizer::uptr enable_fp; \
+    enable_fp = GET_CURRENT_FRAME();      \
+    (void)enable_fp;                      \
   } while (0)
 
 }  // namespace __sanitizer

@@ -25,6 +25,7 @@
 
 namespace llvm {
 
+template <typename IRUnitT> class AllAnalysesOn;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 class Invalidator;
 class PreservedAnalyses;
@@ -191,7 +192,9 @@ struct AnalysisResultModel<IRUnitT, PassT, ResultT, PreservedAnalysesT,
   // ones that use the trivial behavior.
   bool invalidate(IRUnitT &, const PreservedAnalysesT &PA,
                   InvalidatorT &) override {
-    return !PA.preserved(PassT::ID());
+    auto PAC = PA.template getChecker<PassT>();
+    return !PAC.preserved() &&
+           !PAC.template preservedSet<AllAnalysesOn<IRUnitT>>();
   }
 
   ResultT Result;

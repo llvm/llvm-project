@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline,function(instcombine))' -S | FileCheck %s
 
 ; We can't inline this thunk yet, but one day we will be able to.  And when we
 ; do, this test case will be ready.

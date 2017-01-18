@@ -3,7 +3,45 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1330 { // dr1330: 4.0 c++11
+__extension__ typedef __SIZE_TYPE__ size_t;
+
+namespace std {
+  template<typename T> struct initializer_list {
+    const T *ptr;
+    size_t n;
+    initializer_list(const T*, size_t);
+  };
+}
+
+namespace dr1315 { // dr1315: partial
+  template <int I, int J> struct A {};
+  template <int I> // expected-note {{non-deducible template parameter 'I'}}
+    struct A<I + 5, I * 2> {}; // expected-error {{contains a template parameter that cannot be deduced}}
+  template <int I> struct A<I, I> {};
+
+  template <int I, int J, int K> struct B;
+  template <int I, int K> struct B<I, I * 2, K> {}; // expected-note {{matches}}
+  B<1, 2, 3> b1;
+
+  // Multiple declarations with the same dependent expression are equivalent
+  // for partial ordering purposes.
+  template <int I> struct B<I, I * 2, 2> { typedef int type; };
+  B<1, 2, 2>::type b2;
+
+  // Multiple declarations with differing dependent expressions are unordered.
+  template <int I, int K> struct B<I, I + 1, K> {}; // expected-note {{matches}}
+  B<1, 2, 4> b3; // expected-error {{ambiguous}}
+
+  // FIXME: Under dr1315, this is perhaps valid, but that is not clear: this
+  // fails the "more specialized than the primary template" test because the
+  // dependent type of T::value is not the same as 'int'.
+  // A core issue will be opened to decide what is supposed to happen here.
+  template <typename T, int I> struct C;
+  template <typename T> struct C<T, T::value>;
+  // expected-error@-1 {{type of specialized non-type template argument depends on a template parameter of the partial specialization}}
+}
+
+namespace dr1330 { // dr1330: 4 c++11
   // exception-specifications are parsed in a context where the class is complete.
   struct A {
     void f() throw(T) {} // expected-error 0-1{{C++1z}} expected-note 0-1{{noexcept}}
@@ -131,6 +169,15 @@ namespace dr1346 { // dr1346: 3.5
 #endif
 }
 
+namespace dr1347 { // dr1347: yes
+  auto x = 5, *y = &x; // expected-error 0-1{{extension}}
+  auto z = y, *q = y; // expected-error {{'auto' deduced as 'int *' in declaration of 'z' and deduced as 'int' in declaration of 'q'}} expected-error 0-1{{extension}}
+#if __cplusplus >= 201103L
+  auto a = 5, b = {1, 2}; // expected-error {{'auto' deduced as 'int' in declaration of 'a' and deduced as 'std::initializer_list<int>' in declaration of 'b'}}
+  auto (*fp)(int) -> int, i = 0; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
+#endif
+}
+
 namespace dr1359 { // dr1359: 3.5
 #if __cplusplus >= 201103L
   union A { constexpr A() = default; };
@@ -145,4 +192,134 @@ namespace dr1359 { // dr1359: 3.5
   constexpr X x = X();
   constexpr Y y = Y(); // expected-error {{no matching}}
 #endif
+}
+
+namespace dr1388 { // dr1388: 4
+  template<typename A, typename ...T> void f(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
+  template<typename ...T> void g(T..., int); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
+  template<typename ...T, typename A> void h(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
+
+  void test_f() { 
+    f(0); // ok, trailing parameter pack deduced to empty
+    f(0, 0); // expected-error {{no matching}}
+    f<int>(0);
+    f<int>(0, 0); // expected-error {{no matching}}
+    f<int, int>(0, 0);
+    f<int, int, int>(0, 0); // expected-error {{no matching}}
+
+    g(0);
+    g(0, 0); // expected-error {{no matching}}
+    g<>(0);
+    g<int>(0); // expected-error {{no matching}}
+    g<int>(0, 0);
+
+    h(0);
+    h(0, 0); // expected-error {{no matching}}
+    h<int>(0, 0);
+    h<int, int>(0, 0); // expected-error {{no matching}}
+  }
+
+  // A non-trailing parameter pack is still a non-deduced context, even though
+  // we know exactly how many arguments correspond to it.
+  template<typename T, typename U> struct pair {};
+  template<typename ...T> struct tuple { typedef char type; }; // expected-error 0-2{{C++11}}
+  template<typename ...T, typename ...U> void f_pair_1(pair<T, U>..., int); // expected-error 0-2{{C++11}} expected-note {{different lengths (2 vs. 0)}}
+  template<typename ...T, typename U> void f_pair_2(pair<T, char>..., U); // expected-error 0-2{{C++11}}
+  template<typename ...T, typename ...U> void f_pair_3(pair<T, U>..., tuple<U...>); // expected-error 0-2{{C++11}} expected-note {{different lengths (2 vs. 1)}}
+  template<typename ...T> void f_pair_4(pair<T, char>..., T...); // expected-error 0-2{{C++11}} expected-note {{<int, long> vs. <int, long, const char *>}}
+  void g(pair<int, char> a, pair<long, char> b, tuple<char, char> c) {
+    f_pair_1<int, long>(a, b, 0); // expected-error {{no match}}
+    f_pair_2<int, long>(a, b, 0);
+    f_pair_3<int, long>(a, b, c);
+    f_pair_3<int, long>(a, b, tuple<char>()); // expected-error {{no match}}
+    f_pair_4<int, long>(a, b, 0, 0L);
+    f_pair_4<int, long>(a, b, 0, 0L, "foo"); // expected-error {{no match}}
+  }
+}
+
+namespace dr1391 { // dr1391: partial
+  struct A {}; struct B : A {};
+  template<typename T> struct C { C(int); typename T::error error; }; // expected-error 2{{'::'}}
+  template<typename T> struct D {};
+
+  // No deduction is performed for parameters with no deducible template-parameters, therefore types do not need to match.
+  template<typename T> void a(T, int T::*);
+  void test_a(int A::*p) { a(A(), p); } // ok, type of second parameter does not need to match
+
+  namespace dr_example_1 {
+    template<typename T, typename U> void f(C<T>);
+    template<typename T> void f(D<T>);
+
+    void g(D<int> d) {
+      f(d); // ok, first 'f' eliminated by deduction failure
+      f<int>(d); // ok, first 'f' eliminated because 'U' cannot be deduced
+    }
+  }
+
+  namespace dr_example_2 {
+    template<typename T> typename C<T>::error f(int, T);
+    template<typename T> T f(T, T);
+
+    void g(A a) {
+      f(a, a); // ok, no conversion from A to int for first parameter of first candidate
+    }
+  }
+
+  namespace std_example {
+    template<typename T> struct Z {
+      typedef typename T::x xx;
+    };
+    template<typename T> typename Z<T>::xx f(void *, T);
+    template<typename T> void f(int, T);
+    struct A {} a;
+    void g() { f(1, a); }
+  }
+
+  template<typename T> void b(C<int> ci, T *p);
+  void b(...);
+  void test_b() {
+    b(0, 0); // ok, deduction fails prior to forming a conversion sequence and instantiating C<int>
+    // FIXME: The "while substituting" note should point at the overload candidate.
+    b<int>(0, 0); // expected-note {{instantiation of}} expected-note {{while substituting}}
+  }
+
+  template<typename T> struct Id { typedef T type; };
+  template<typename T> void c(T, typename Id<C<T> >::type);
+  void test_c() {
+    // Implicit conversion sequences for dependent types are checked later.
+    c(0.0, 0); // expected-note {{instantiation of}}
+  }
+
+  namespace partial_ordering {
+    // FIXME: Second template should be considered more specialized because non-dependent parameter is ignored.
+    template<typename T> int a(T, short) = delete; // expected-error 0-1{{extension}} expected-note {{candidate}}
+    template<typename T> int a(T*, char); // expected-note {{candidate}}
+    int test_a = a((int*)0, 0); // FIXME: expected-error {{ambiguous}}
+
+    // FIXME: Second template should be considered more specialized:
+    // deducing #1 from #2 ignores the second P/A pair, so deduction succeeds,
+    // deducing #2 from #1 fails to deduce T, so deduction fails.
+    template<typename T> int b(T, int) = delete; // expected-error 0-1{{extension}} expected-note {{candidate}}
+    template<typename T, typename U> int b(T*, U); // expected-note {{candidate}}
+    int test_b = b((int*)0, 0); // FIXME: expected-error {{ambiguous}}
+
+    // Unintended consequences: because partial ordering does not consider
+    // explicit template arguments, and deduction from a non-dependent type
+    // vacuously succeeds, a non-dependent template is less specialized than
+    // anything else!
+    // According to DR1391, this is ambiguous!
+    template<typename T> int c(int);
+    template<typename T> int c(T);
+    int test_c1 = c(0); // ok
+    int test_c2 = c<int>(0); // FIXME: apparently ambiguous
+  }
+}
+
+namespace dr1399 { // dr1399: dup 1388
+  template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
+  void g() {
+    f(0);
+    f<int>(0, 0, 0);
+    f(0, 0, 0); // expected-error {{no match}}
+  }
 }

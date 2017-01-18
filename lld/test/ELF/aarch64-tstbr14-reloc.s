@@ -35,8 +35,8 @@
 #DSOREL-NEXT:     SHF_ALLOC
 #DSOREL-NEXT:     SHF_WRITE
 #DSOREL-NEXT:   ]
-#DSOREL-NEXT:   Address: 0x30000
-#DSOREL-NEXT:   Offset: 0x30000
+#DSOREL-NEXT:   Address: 0x20000
+#DSOREL-NEXT:   Offset: 0x20000
 #DSOREL-NEXT:   Size: 40
 #DSOREL-NEXT:   Link: 0
 #DSOREL-NEXT:   Info: 0
@@ -45,8 +45,8 @@
 #DSOREL-NEXT:  }
 #DSOREL:      Relocations [
 #DSOREL-NEXT:  Section ({{.*}}) .rela.plt {
-#DSOREL-NEXT:    0x30018 R_AARCH64_JUMP_SLOT _foo
-#DSOREL-NEXT:    0x30020 R_AARCH64_JUMP_SLOT _bar
+#DSOREL-NEXT:    0x20018 R_AARCH64_JUMP_SLOT _foo
+#DSOREL-NEXT:    0x20020 R_AARCH64_JUMP_SLOT _bar
 #DSOREL-NEXT:  }
 #DSOREL-NEXT:]
 
@@ -72,18 +72,18 @@
 #DSO-NEXT: Disassembly of section .plt:
 #DSO-NEXT: .plt:
 #DSO-NEXT:  10030: {{.*}} stp x16, x30, [sp, #-16]!
-#DSO-NEXT:  10034: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10034: {{.*}} adrp x16, #65536
 #DSO-NEXT:  10038: {{.*}} ldr x17, [x16, #16]
 #DSO-NEXT:  1003c: {{.*}} add x16, x16, #16
 #DSO-NEXT:  10040: {{.*}} br x17
 #DSO-NEXT:  10044: {{.*}} nop
 #DSO-NEXT:  10048: {{.*}} nop
 #DSO-NEXT:  1004c: {{.*}} nop
-#DSO-NEXT:  10050: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10050: {{.*}} adrp x16, #65536
 #DSO-NEXT:  10054: {{.*}} ldr x17, [x16, #24]
 #DSO-NEXT:  10058: {{.*}} add x16, x16, #24
 #DSO-NEXT:  1005c: {{.*}} br x17
-#DSO-NEXT:  10060: {{.*}} adrp x16, #131072
+#DSO-NEXT:  10060: {{.*}} adrp x16, #65536
 #DSO-NEXT:  10064: {{.*}} ldr x17, [x16, #32]
 #DSO-NEXT:  10068: {{.*}} add x16, x16, #32
 #DSO-NEXT:  1006c: {{.*}} br x17

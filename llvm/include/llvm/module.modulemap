@@ -151,6 +151,7 @@ module LLVM_intrinsic_gen {
   module IR_NoFolder { header "IR/NoFolder.h" export * }
   module IR_Module { header "IR/Module.h" export * }
   module IR_ModuleSummaryIndex { header "IR/ModuleSummaryIndex.h" export * }
+  module IR_ModuleSummaryIndexYAML { header "IR/ModuleSummaryIndexYAML.h" export * }
   module IR_Function { header "IR/Function.h" export * }
   module IR_InstrTypes { header "IR/InstrTypes.h" export * }
   module IR_Instructions { header "IR/Instructions.h" export * }

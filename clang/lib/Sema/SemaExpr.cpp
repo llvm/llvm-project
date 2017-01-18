@@ -342,6 +342,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
   }
 
   // See if this is a deleted function.
+  SmallVector<DiagnoseIfAttr *, 4> DiagnoseIfWarnings;
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isDeleted()) {
       auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
@@ -363,6 +364,12 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
 
     if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
       return true;
+
+    if (const DiagnoseIfAttr *A =
+            checkArgIndependentDiagnoseIf(FD, DiagnoseIfWarnings)) {
+      emitDiagnoseIfDiagnostic(Loc, A);
+      return true;
+    }
   }
 
   // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions
@@ -377,6 +384,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
     Diag(D->getLocation(), diag::note_entity_declared_at) << D;
     return true;
   }
+
+  for (const auto *W : DiagnoseIfWarnings)
+    emitDiagnoseIfDiagnostic(Loc, W);
+
   DiagnoseAvailabilityOfDecl(*this, D, Loc, UnknownObjCClass,
                              ObjCPropertyAccess);
 
@@ -2777,6 +2788,9 @@ bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
 /// were not overloaded, and it doesn't promise that the declaration
 /// will in fact be used.
 static bool CheckDeclInExpr(Sema &S, SourceLocation Loc, NamedDecl *D) {
+  if (D->isInvalidDecl())
+    return true;
+
   if (isa<TypedefNameDecl>(D)) {
     S.Diag(Loc, diag::err_unexpected_typedef) << D->getDeclName();
     return true;
@@ -5151,12 +5165,40 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   return OverloadDecl;
 }
 
-static bool isNumberOfArgsValidForCall(Sema &S, const FunctionDecl *Callee,
-                                       std::size_t NumArgs) {
-  if (S.TooManyArguments(Callee->getNumParams(), NumArgs,
-                         /*PartialOverloading=*/false))
-    return Callee->isVariadic();
-  return Callee->getMinRequiredArguments() <= NumArgs;
+static void checkDirectCallValidity(Sema &S, const Expr *Fn,
+                                    FunctionDecl *Callee,
+                                    MultiExprArg ArgExprs) {
+  // `Callee` (when called with ArgExprs) may be ill-formed. enable_if (and
+  // similar attributes) really don't like it when functions are called with an
+  // invalid number of args.
+  if (S.TooManyArguments(Callee->getNumParams(), ArgExprs.size(),
+                         /*PartialOverloading=*/false) &&
+      !Callee->isVariadic())
+    return;
+  if (Callee->getMinRequiredArguments() > ArgExprs.size())
+    return;
+
+  if (const EnableIfAttr *Attr = S.CheckEnableIf(Callee, ArgExprs, true)) {
+    S.Diag(Fn->getLocStart(),
+           isa<CXXMethodDecl>(Callee)
+               ? diag::err_ovl_no_viable_member_function_in_call
+               : diag::err_ovl_no_viable_function_in_call)
+        << Callee << Callee->getSourceRange();
+    S.Diag(Callee->getLocation(),
+           diag::note_ovl_candidate_disabled_by_function_cond_attr)
+        << Attr->getCond()->getSourceRange() << Attr->getMessage();
+    return;
+  }
+
+  SmallVector<DiagnoseIfAttr *, 4> Nonfatal;
+  if (const DiagnoseIfAttr *Attr = S.checkArgDependentDiagnoseIf(
+          Callee, ArgExprs, Nonfatal, /*MissingImplicitThis=*/true)) {
+    S.emitDiagnoseIfDiagnostic(Fn->getLocStart(), Attr);
+    return;
+  }
+
+  for (const auto *W : Nonfatal)
+    S.emitDiagnoseIfDiagnostic(Fn->getLocStart(), W);
 }
 
 /// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
@@ -5291,26 +5333,8 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     if (getLangOpts().OpenCL && checkOpenCLDisabledDecl(*FD, *Fn))
       return ExprError();
-    
-    // CheckEnableIf assumes that the we're passing in a sane number of args for
-    // FD, but that doesn't always hold true here. This is because, in some
-    // cases, we'll emit a diag about an ill-formed function call, but then
-    // we'll continue on as if the function call wasn't ill-formed. So, if the
-    // number of args looks incorrect, don't do enable_if checks; we should've
-    // already emitted an error about the bad call.
-    if (FD->hasAttr<EnableIfAttr>() &&
-        isNumberOfArgsValidForCall(*this, FD, ArgExprs.size())) {
-      if (const EnableIfAttr *Attr = CheckEnableIf(FD, ArgExprs, true)) {
-        Diag(Fn->getLocStart(),
-             isa<CXXMethodDecl>(FD)
-                 ? diag::err_ovl_no_viable_member_function_in_call
-                 : diag::err_ovl_no_viable_function_in_call)
-            << FD << FD->getSourceRange();
-        Diag(FD->getLocation(),
-             diag::note_ovl_candidate_disabled_by_enable_if_attr)
-            << Attr->getCond()->getSourceRange() << Attr->getMessage();
-      }
-    }
+
+    checkDirectCallValidity(*this, Fn, FD, ArgExprs);
   }
 
   return BuildResolvedCallExpr(Fn, NDecl, LParenLoc, ArgExprs, RParenLoc,
@@ -9635,6 +9659,18 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     return ResultTy;
   }
 
+  if (getLangOpts().OpenCLVersion >= 200) {
+    if (LHSIsNull && RHSType->isQueueT()) {
+      LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
+      return ResultTy;
+    }
+
+    if (LHSType->isQueueT() && RHSIsNull) {
+      RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
+      return ResultTy;
+    }
+  }
+
   return InvalidOperands(Loc, LHS, RHS);
 }
 
@@ -13082,8 +13118,16 @@ void Sema::PopExpressionEvaluationContext() {
         //   evaluate [...] a lambda-expression.
         D = diag::err_lambda_in_constant_expression;
       }
-      for (const auto *L : Rec.Lambdas)
-        Diag(L->getLocStart(), D);
+
+      // C++1z allows lambda expressions as core constant expressions.
+      // FIXME: In C++1z, reinstate the restrictions on lambda expressions (CWG
+      // 1607) from appearing within template-arguments and array-bounds that
+      // are part of function-signatures.  Be mindful that P0315 (Lambdas in
+      // unevaluated contexts) might lift some of these restrictions in a 
+      // future version.
+      if (Rec.Context != ConstantEvaluated || !getLangOpts().CPlusPlus1z)
+        for (const auto *L : Rec.Lambdas)
+          Diag(L->getLocStart(), D);
     } else {
       // Mark the capture expressions odr-used. This was deferred
       // during lambda expression creation.
@@ -13135,39 +13179,61 @@ ExprResult Sema::HandleExprEvaluationContextForTypeof(Expr *E) {
   return TransformToPotentiallyEvaluated(E);
 }
 
-static bool IsPotentiallyEvaluatedContext(Sema &SemaRef) {
-  // Do not mark anything as "used" within a dependent context; wait for
-  // an instantiation.
-  if (SemaRef.CurContext->isDependentContext())
-    return false;
-
+/// Are we within a context in which some evaluation could be performed (be it
+/// constant evaluation or runtime evaluation)? Sadly, this notion is not quite
+/// captured by C++'s idea of an "unevaluated context".
+static bool isEvaluatableContext(Sema &SemaRef) {
   switch (SemaRef.ExprEvalContexts.back().Context) {
     case Sema::Unevaluated:
     case Sema::UnevaluatedAbstract:
-      // We are in an expression that is not potentially evaluated; do nothing.
-      // (Depending on how you read the standard, we actually do need to do
-      // something here for null pointer constants, but the standard's
-      // definition of a null pointer constant is completely crazy.)
-      return false;
-
     case Sema::DiscardedStatement:
-      // These are technically a potentially evaluated but they have the effect
-      // of suppressing use marking.
+      // Expressions in this context are never evaluated.
       return false;
 
+    case Sema::UnevaluatedList:
     case Sema::ConstantEvaluated:
     case Sema::PotentiallyEvaluated:
-      // We are in a potentially evaluated expression (or a constant-expression
-      // in C++03); we need to do implicit template instantiation, implicitly
-      // define class members, and mark most declarations as used.
+      // Expressions in this context could be evaluated.
       return true;
 
     case Sema::PotentiallyEvaluatedIfUsed:
       // Referenced declarations will only be used if the construct in the
-      // containing expression is used.
+      // containing expression is used, at which point we'll be given another
+      // turn to mark them.
       return false;
   }
   llvm_unreachable("Invalid context");
+}
+
+/// Are we within a context in which references to resolved functions or to
+/// variables result in odr-use?
+static bool isOdrUseContext(Sema &SemaRef, bool SkipDependentUses = true) {
+  // An expression in a template is not really an expression until it's been
+  // instantiated, so it doesn't trigger odr-use.
+  if (SkipDependentUses && SemaRef.CurContext->isDependentContext())
+    return false;
+
+  switch (SemaRef.ExprEvalContexts.back().Context) {
+    case Sema::Unevaluated:
+    case Sema::UnevaluatedList:
+    case Sema::UnevaluatedAbstract:
+    case Sema::DiscardedStatement:
+      return false;
+
+    case Sema::ConstantEvaluated:
+    case Sema::PotentiallyEvaluated:
+      return true;
+
+    case Sema::PotentiallyEvaluatedIfUsed:
+      return false;
+  }
+  llvm_unreachable("Invalid context");
+}
+
+static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
+  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
+  return Func->isConstexpr() &&
+         (Func->isImplicitlyInstantiable() || (MD && !MD->isUserProvided()));
 }
 
 /// \brief Mark a function referenced, and check whether it is odr-used
@@ -13185,7 +13251,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //
   // We (incorrectly) mark overload resolution as an unevaluated context, so we
   // can just check that here.
-  bool OdrUse = MightBeOdrUse && IsPotentiallyEvaluatedContext(*this);
+  bool OdrUse = MightBeOdrUse && isOdrUseContext(*this);
 
   // Determine whether we require a function definition to exist, per
   // C++11 [temp.inst]p3:
@@ -13194,27 +13260,11 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //   specialization is implicitly instantiated when the specialization is
   //   referenced in a context that requires a function definition to exist.
   //
-  // We consider constexpr function templates to be referenced in a context
-  // that requires a definition to exist whenever they are referenced.
-  //
-  // FIXME: This instantiates constexpr functions too frequently. If this is
-  // really an unevaluated context (and we're not just in the definition of a
-  // function template or overload resolution or other cases which we
-  // incorrectly consider to be unevaluated contexts), and we're not in a
-  // subexpression which we actually need to evaluate (for instance, a
-  // template argument, array bound or an expression in a braced-init-list),
-  // we are not permitted to instantiate this constexpr function definition.
-  //
-  // FIXME: This also implicitly defines special members too frequently. They
-  // are only supposed to be implicitly defined if they are odr-used, but they
-  // are not odr-used from constant expressions in unevaluated contexts.
-  // However, they cannot be referenced if they are deleted, and they are
-  // deleted whenever the implicit definition of the special member would
-  // fail (with very few exceptions).
-  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
+  // That is either when this is an odr-use, or when a usage of a constexpr
+  // function occurs within an evaluatable context.
   bool NeedDefinition =
-      OdrUse || (Func->isConstexpr() && (Func->isImplicitlyInstantiable() ||
-                                         (MD && !MD->isUserProvided())));
+      OdrUse || (isEvaluatableContext(*this) &&
+                 isImplicitlyDefinableConstexprFunction(Func));
 
   // C++14 [temp.expl.spec]p6:
   //   If a template [...] is explicitly specialized then that specialization
@@ -13866,8 +13916,10 @@ bool Sema::tryCaptureVariable(
 
     // Check whether we've already captured it.
     if (isVariableAlreadyCapturedInScopeInfo(CSI, Var, Nested, CaptureType, 
-                                             DeclRefType)) 
+                                             DeclRefType)) {
+      CSI->getCapture(Var).markUsed(BuildAndDiagnose);
       break;
+    }
     // If we are instantiating a generic lambda call operator body, 
     // we do not want to capture new variables.  What was captured
     // during either a lambdas transformation or initial parsing
@@ -14108,47 +14160,11 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   Var->setReferenced();
 
   TemplateSpecializationKind TSK = Var->getTemplateSpecializationKind();
-  bool MarkODRUsed = true;
 
-  // If the context is not potentially evaluated, this is not an odr-use and
-  // does not trigger instantiation.
-  if (!IsPotentiallyEvaluatedContext(SemaRef)) {
-    if (SemaRef.isUnevaluatedContext())
-      return;
-
-    // If we don't yet know whether this context is going to end up being an
-    // evaluated context, and we're referencing a variable from an enclosing
-    // scope, add a potential capture.
-    //
-    // FIXME: Is this necessary? These contexts are only used for default
-    // arguments, where local variables can't be used.
-    const bool RefersToEnclosingScope =
-        (SemaRef.CurContext != Var->getDeclContext() &&
-         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
-    if (RefersToEnclosingScope) {
-      if (LambdaScopeInfo *const LSI =
-              SemaRef.getCurLambda(/*IgnoreCapturedRegions=*/true)) {
-        // If a variable could potentially be odr-used, defer marking it so
-        // until we finish analyzing the full expression for any
-        // lvalue-to-rvalue
-        // or discarded value conversions that would obviate odr-use.
-        // Add it to the list of potential captures that will be analyzed
-        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
-        // unless the variable is a reference that was initialized by a constant
-        // expression (this will never need to be captured or odr-used).
-        assert(E && "Capture variable should be used in an expression.");
-        if (!Var->getType()->isReferenceType() ||
-            !IsVariableNonDependentAndAConstantExpression(Var, SemaRef.Context))
-          LSI->addPotentialCapture(E->IgnoreParens());
-      }
-    }
-
-    if (!isTemplateInstantiation(TSK))
-      return;
-
-    // Instantiate, but do not mark as odr-used, variable templates.
-    MarkODRUsed = false;
-  }
+  bool OdrUseContext = isOdrUseContext(SemaRef);
+  bool NeedDefinition =
+      OdrUseContext || (isEvaluatableContext(SemaRef) &&
+                        Var->isUsableInConstantExpressions(SemaRef.Context));
 
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
@@ -14158,14 +14174,15 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // If this might be a member specialization of a static data member, check
   // the specialization is visible. We already did the checks for variable
   // template specializations when we created them.
-  if (TSK != TSK_Undeclared && !isa<VarTemplateSpecializationDecl>(Var))
+  if (NeedDefinition && TSK != TSK_Undeclared &&
+      !isa<VarTemplateSpecializationDecl>(Var))
     SemaRef.checkSpecializationVisibility(Loc, Var);
 
   // Perform implicit instantiation of static data members, static data member
   // templates of class templates, and variable template specializations. Delay
   // instantiations of variable templates, except for those that could be used
   // in a constant expression.
-  if (isTemplateInstantiation(TSK)) {
+  if (NeedDefinition && isTemplateInstantiation(TSK)) {
     bool TryInstantiating = TSK == TSK_ImplicitInstantiation;
 
     if (TryInstantiating && !isa<VarTemplateSpecializationDecl>(Var)) {
@@ -14204,9 +14221,6 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
-  if (!MarkODRUsed)
-    return;
-
   // Per C++11 [basic.def.odr], a variable is odr-used "unless it satisfies
   // the requirements for appearing in a constant expression (5.19) and, if
   // it is an object, the lvalue-to-rvalue conversion (4.1)
@@ -14215,14 +14229,41 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // Note that we use the C++11 definition everywhere because nothing in
   // C++03 depends on whether we get the C++03 version correct. The second
   // part does not apply to references, since they are not objects.
-  if (E && IsVariableAConstantExpression(Var, SemaRef.Context)) {
+  if (OdrUseContext && E &&
+      IsVariableAConstantExpression(Var, SemaRef.Context)) {
     // A reference initialized by a constant expression can never be
     // odr-used, so simply ignore it.
     if (!Var->getType()->isReferenceType())
       SemaRef.MaybeODRUseExprs.insert(E);
-  } else
+  } else if (OdrUseContext) {
     MarkVarDeclODRUsed(Var, Loc, SemaRef,
                        /*MaxFunctionScopeIndex ptr*/ nullptr);
+  } else if (isOdrUseContext(SemaRef, /*SkipDependentUses*/false)) {
+    // If this is a dependent context, we don't need to mark variables as
+    // odr-used, but we may still need to track them for lambda capture.
+    // FIXME: Do we also need to do this inside dependent typeid expressions
+    // (which are modeled as unevaluated at this point)?
+    const bool RefersToEnclosingScope =
+        (SemaRef.CurContext != Var->getDeclContext() &&
+         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
+    if (RefersToEnclosingScope) {
+      if (LambdaScopeInfo *const LSI =
+              SemaRef.getCurLambda(/*IgnoreCapturedRegions=*/true)) {
+        // If a variable could potentially be odr-used, defer marking it so
+        // until we finish analyzing the full expression for any
+        // lvalue-to-rvalue
+        // or discarded value conversions that would obviate odr-use.
+        // Add it to the list of potential captures that will be analyzed
+        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
+        // unless the variable is a reference that was initialized by a constant
+        // expression (this will never need to be captured or odr-used).
+        assert(E && "Capture variable should be used in an expression.");
+        if (!Var->getType()->isReferenceType() ||
+            !IsVariableNonDependentAndAConstantExpression(Var, SemaRef.Context))
+          LSI->addPotentialCapture(E->IgnoreParens());
+      }
+    }
+  }
 }
 
 /// \brief Mark a variable referenced, and check whether it is odr-used
@@ -14318,9 +14359,13 @@ void Sema::MarkAnyDeclReferenced(SourceLocation Loc, Decl *D,
 }
 
 namespace {
-  // Mark all of the declarations referenced
+  // Mark all of the declarations used by a type as referenced.
   // FIXME: Not fully implemented yet! We need to have a better understanding
-  // of when we're entering
+  // of when we're entering a context we should not recurse into.
+  // FIXME: This is and EvaluatedExprMarker are more-or-less equivalent to
+  // TreeTransforms rebuilding the type in a new context. Rather than
+  // duplicating the TreeTransform logic, we should consider reusing it here.
+  // Currently that causes problems when rebuilding LambdaExprs.
   class MarkReferencedDecls : public RecursiveASTVisitor<MarkReferencedDecls> {
     Sema &S;
     SourceLocation Loc;
@@ -14331,33 +14376,28 @@ namespace {
     MarkReferencedDecls(Sema &S, SourceLocation Loc) : S(S), Loc(Loc) { }
 
     bool TraverseTemplateArgument(const TemplateArgument &Arg);
-    bool TraverseRecordType(RecordType *T);
   };
 }
 
 bool MarkReferencedDecls::TraverseTemplateArgument(
     const TemplateArgument &Arg) {
-  if (Arg.getKind() == TemplateArgument::Declaration) {
-    if (Decl *D = Arg.getAsDecl())
-      S.MarkAnyDeclReferenced(Loc, D, true);
+  {
+    // A non-type template argument is a constant-evaluated context.
+    EnterExpressionEvaluationContext Evaluated(S, Sema::ConstantEvaluated);
+    if (Arg.getKind() == TemplateArgument::Declaration) {
+      if (Decl *D = Arg.getAsDecl())
+        S.MarkAnyDeclReferenced(Loc, D, true);
+    } else if (Arg.getKind() == TemplateArgument::Expression) {
+      S.MarkDeclarationsReferencedInExpr(Arg.getAsExpr(), false);
+    }
   }
 
   return Inherited::TraverseTemplateArgument(Arg);
 }
 
-bool MarkReferencedDecls::TraverseRecordType(RecordType *T) {
-  if (ClassTemplateSpecializationDecl *Spec
-                  = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl())) {
-    const TemplateArgumentList &Args = Spec->getTemplateArgs();
-    return TraverseTemplateArguments(Args.data(), Args.size());
-  }
-
-  return true;
-}
-
 void Sema::MarkDeclarationsReferencedInType(SourceLocation Loc, QualType T) {
   MarkReferencedDecls Marker(*this, Loc);
-  Marker.TraverseType(Context.getCanonicalType(T));
+  Marker.TraverseType(T);
 }
 
 namespace {
@@ -14464,6 +14504,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   switch (ExprEvalContexts.back().Context) {
   case Unevaluated:
+  case UnevaluatedList:
   case UnevaluatedAbstract:
   case DiscardedStatement:
     // The argument will never be evaluated, so don't complain.

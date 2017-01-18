@@ -68,6 +68,7 @@ public:
                        const InvalidatedSymbols *,
                        ArrayRef<const MemRegion *> ExplicitRegions,
                        ArrayRef<const MemRegion *> Regions,
+                       const LocationContext *LCtx,
                        const CallEvent *Call) const;
 
   typedef void (CStringChecker::*FnCheck)(CheckerContext &,
@@ -1943,8 +1944,12 @@ void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
     // Overwrite the search string pointer. The new value is either an address
     // further along in the same string, or NULL if there are no more tokens.
     State = State->bindLoc(*SearchStrLoc,
-                           SVB.conjureSymbolVal(getTag(), CE, LCtx, CharPtrTy,
-                                                C.blockCount()));
+                           SVB.conjureSymbolVal(getTag(),
+                                                CE,
+                                                LCtx,
+                                                CharPtrTy,
+                                                C.blockCount()),
+                           LCtx);
   } else {
     assert(SearchStrVal.isUnknown());
     // Conjure a symbolic value. It's the best we can do.
@@ -2116,6 +2121,7 @@ CStringChecker::checkRegionChanges(ProgramStateRef state,
                                    const InvalidatedSymbols *,
                                    ArrayRef<const MemRegion *> ExplicitRegions,
                                    ArrayRef<const MemRegion *> Regions,
+                                   const LocationContext *LCtx,
                                    const CallEvent *Call) const {
   CStringLengthTy Entries = state->get<CStringLength>();
   if (Entries.isEmpty())

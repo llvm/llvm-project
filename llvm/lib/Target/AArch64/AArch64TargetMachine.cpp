@@ -15,24 +15,35 @@
 #include "AArch64InstructionSelector.h"
 #include "AArch64LegalizerInfo.h"
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetTransformInfo.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
+#include <memory>
+#include <string>
+
 using namespace llvm;
 
 static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
@@ -154,9 +165,9 @@ extern "C" void LLVMInitializeAArch64Target() {
 //===----------------------------------------------------------------------===//
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO())
-    return make_unique<AArch64_MachoTargetObjectFile>();
+    return llvm::make_unique<AArch64_MachoTargetObjectFile>();
 
-  return make_unique<AArch64_ELFTargetObjectFile>();
+  return llvm::make_unique<AArch64_ELFTargetObjectFile>();
 }
 
 // Helper function to build a DataLayout string
@@ -202,29 +213,35 @@ AArch64TargetMachine::AArch64TargetMachine(
   initAsmInfo();
 }
 
-AArch64TargetMachine::~AArch64TargetMachine() {}
+AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 #ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
+
 struct AArch64GISelActualAccessor : public GISelAccessor {
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
+
   const InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
+
   const LegalizerInfo *getLegalizerInfo() const override {
     return Legalizer.get();
   }
+
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
   }
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
 #endif
 
 const AArch64Subtarget *
@@ -287,6 +304,7 @@ AArch64beTargetMachine::AArch64beTargetMachine(
     : AArch64TargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 namespace {
+
 /// AArch64 Code Generator Pass Configuration Options.
 class AArch64PassConfig : public TargetPassConfig {
 public:
@@ -324,7 +342,8 @@ public:
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
-} // namespace
+
+} // end anonymous namespace
 
 TargetIRAnalysis AArch64TargetMachine::getTargetIRAnalysis() {
   return TargetIRAnalysis([this](const Function &F) {
@@ -414,14 +433,17 @@ bool AArch64PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
 }
+
 bool AArch64PassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
 }
+
 bool AArch64PassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
 }
+
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;

@@ -1491,6 +1491,8 @@ public:
 
   void print(raw_ostream &OS) const;
   void verify() const;
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 
   /// Collect parametric terms occurring in step expressions (first step of
   /// delinearization).

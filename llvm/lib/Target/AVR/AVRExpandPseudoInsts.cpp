@@ -74,6 +74,7 @@ private:
   bool expandArith(unsigned OpLo, unsigned OpHi, Block &MBB, BlockIt MBBI);
   bool expandLogic(unsigned Op, Block &MBB, BlockIt MBBI);
   bool expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI);
+  bool isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const;
 
   template<typename Func>
   bool expandAtomic(Block &MBB, BlockIt MBBI, Func f);
@@ -200,6 +201,20 @@ expandLogic(unsigned Op, Block &MBB, BlockIt MBBI) {
 }
 
 bool AVRExpandPseudo::
+  isLogicImmOpRedundant(unsigned Op, unsigned ImmVal) const {
+
+  // ANDI Rd, 0xff is redundant.
+  if (Op == AVR::ANDIRdK && ImmVal == 0xff)
+    return true;
+
+  // ORI Rd, 0x0 is redundant.
+  if (Op == AVR::ORIRdK && ImmVal == 0x0)
+    return true;
+
+  return false;
+}
+
+bool AVRExpandPseudo::
 expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned DstLoReg, DstHiReg;
@@ -212,21 +227,25 @@ expandLogicImm(unsigned Op, Block &MBB, BlockIt MBBI) {
   unsigned Hi8 = (Imm >> 8) & 0xff;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
-  auto MIBLO = buildMI(MBB, MBBI, Op)
-    .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstLoReg, getKillRegState(SrcIsKill))
-    .addImm(Lo8);
+  if (!isLogicImmOpRedundant(Op, Lo8)) {
+    auto MIBLO = buildMI(MBB, MBBI, Op)
+      .addReg(DstLoReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstLoReg, getKillRegState(SrcIsKill))
+      .addImm(Lo8);
 
-  // SREG is always implicitly dead
-  MIBLO->getOperand(3).setIsDead();
+    // SREG is always implicitly dead
+    MIBLO->getOperand(3).setIsDead();
+  }
 
-  auto MIBHI = buildMI(MBB, MBBI, Op)
-    .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstHiReg, getKillRegState(SrcIsKill))
-    .addImm(Hi8);
+  if (!isLogicImmOpRedundant(Op, Hi8)) {
+    auto MIBHI = buildMI(MBB, MBBI, Op)
+      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(DstHiReg, getKillRegState(SrcIsKill))
+      .addImm(Hi8);
 
-  if (ImpIsDead)
-    MIBHI->getOperand(3).setIsDead();
+    if (ImpIsDead)
+      MIBHI->getOperand(3).setIsDead();
+  }
 
   MI.eraseFromParent();
   return true;
@@ -490,8 +509,8 @@ bool AVRExpandPseudo::expand<AVR::LDIWRdK>(Block &MBB, BlockIt MBBI) {
     const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
     unsigned TF = MI.getOperand(1).getTargetFlags();
 
-    MIBLO.addOperand(MachineOperand::CreateBA(BA, TF | AVRII::MO_LO));
-    MIBHI.addOperand(MachineOperand::CreateBA(BA, TF | AVRII::MO_HI));
+    MIBLO.add(MachineOperand::CreateBA(BA, TF | AVRII::MO_LO));
+    MIBHI.add(MachineOperand::CreateBA(BA, TF | AVRII::MO_HI));
     break;
   }
   case MachineOperand::MO_Immediate: {
@@ -766,9 +785,8 @@ bool AVRExpandPseudo::expandAtomicBinaryOp(unsigned Opcode,
       auto Op1 = MI.getOperand(0);
       auto Op2 = MI.getOperand(1);
 
-      MachineInstr &NewInst = *buildMI(MBB, MBBI, Opcode)
-        .addOperand(Op1).addOperand(Op2)
-        .getInstr();
+      MachineInstr &NewInst =
+          *buildMI(MBB, MBBI, Opcode).add(Op1).add(Op2).getInstr();
       f(NewInst);
   });
 }
@@ -791,15 +809,13 @@ bool AVRExpandPseudo::expandAtomicArithmeticOp(unsigned Width,
       unsigned StoreOpcode = (Width == 8) ? AVR::STPtrRr : AVR::STWPtrRr;
 
       // Create the load
-      buildMI(MBB, MBBI, LoadOpcode).addOperand(Op1).addOperand(Op2);
+      buildMI(MBB, MBBI, LoadOpcode).add(Op1).add(Op2);
 
       // Create the arithmetic op
-      buildMI(MBB, MBBI, ArithOpcode)
-        .addOperand(Op1).addOperand(Op1)
-        .addOperand(Op2);
+      buildMI(MBB, MBBI, ArithOpcode).add(Op1).add(Op1).add(Op2);
 
       // Create the store
-      buildMI(MBB, MBBI, StoreOpcode).addOperand(Op2).addOperand(Op1);
+      buildMI(MBB, MBBI, StoreOpcode).add(Op2).add(Op1);
   });
 }
 

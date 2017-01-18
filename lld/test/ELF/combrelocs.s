@@ -7,31 +7,31 @@
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 # CHECK-NEXT:     Relocation {
-# CHECK-NEXT:       Offset: 0x2000
+# CHECK-NEXT:       Offset: 0x1000
 # CHECK-NEXT:       Type: R_X86_64_64
 # CHECK-NEXT:       Symbol: aaa (1)
 # CHECK-NEXT:       Addend: 0x0
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
-# CHECK-NEXT:       Offset: 0x2018
+# CHECK-NEXT:       Offset: 0x1018
 # CHECK-NEXT:       Type: R_X86_64_64
 # CHECK-NEXT:       Symbol: aaa (1)
 # CHECK-NEXT:       Addend: 0x0
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
-# CHECK-NEXT:       Offset: 0x2010
+# CHECK-NEXT:       Offset: 0x1010
 # CHECK-NEXT:       Type: R_X86_64_64
 # CHECK-NEXT:       Symbol: bbb (2)
 # CHECK-NEXT:       Addend: 0x0
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
-# CHECK-NEXT:       Offset: 0x2008
+# CHECK-NEXT:       Offset: 0x1008
 # CHECK-NEXT:       Type: R_X86_64_64
 # CHECK-NEXT:       Symbol: ccc (3)
 # CHECK-NEXT:       Addend: 0x0
 # CHECK-NEXT:     }
 # CHECK-NEXT:     Relocation {
-# CHECK-NEXT:       Offset: 0x2020
+# CHECK-NEXT:       Offset: 0x1020
 # CHECK-NEXT:       Type: R_X86_64_64
 # CHECK-NEXT:       Symbol: ddd (4)
 # CHECK-NEXT:       Addend: 0x0
@@ -49,31 +49,31 @@
 # NOCOMB:      Relocations [
 # NOCOMB-NEXT:    Section ({{.*}}) .rela.dyn {
 # NOCOMB-NEXT:     Relocation {
-# NOCOMB-NEXT:       Offset: 0x2000
+# NOCOMB-NEXT:       Offset: 0x1000
 # NOCOMB-NEXT:       Type: R_X86_64_64
 # NOCOMB-NEXT:       Symbol: aaa (1)
 # NOCOMB-NEXT:       Addend: 0x0
 # NOCOMB-NEXT:     }
 # NOCOMB-NEXT:     Relocation {
-# NOCOMB-NEXT:       Offset: 0x2008
+# NOCOMB-NEXT:       Offset: 0x1008
 # NOCOMB-NEXT:       Type: R_X86_64_64
 # NOCOMB-NEXT:       Symbol: ccc (3)
 # NOCOMB-NEXT:       Addend: 0x0
 # NOCOMB-NEXT:     }
 # NOCOMB-NEXT:     Relocation {
-# NOCOMB-NEXT:       Offset: 0x2010
+# NOCOMB-NEXT:       Offset: 0x1010
 # NOCOMB-NEXT:       Type: R_X86_64_64
 # NOCOMB-NEXT:       Symbol: bbb (2)
 # NOCOMB-NEXT:       Addend: 0x0
 # NOCOMB-NEXT:     }
 # NOCOMB-NEXT:     Relocation {
-# NOCOMB-NEXT:       Offset: 0x2018
+# NOCOMB-NEXT:       Offset: 0x1018
 # NOCOMB-NEXT:       Type: R_X86_64_64
 # NOCOMB-NEXT:       Symbol: aaa (1)
 # NOCOMB-NEXT:       Addend: 0x0
 # NOCOMB-NEXT:     }
 # NOCOMB-NEXT:     Relocation {
-# NOCOMB-NEXT:       Offset: 0x2020
+# NOCOMB-NEXT:       Offset: 0x1020
 # NOCOMB-NEXT:       Type: R_X86_64_64
 # NOCOMB-NEXT:       Symbol: ddd (4)
 # NOCOMB-NEXT:       Addend: 0x0

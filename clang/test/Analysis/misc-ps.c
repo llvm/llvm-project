@@ -191,3 +191,13 @@ static void PR16131(int x) {
   clang_analyzer_eval(*ip == 42); // expected-warning{{TRUE}}
   clang_analyzer_eval(*(int *)&v == 42); // expected-warning{{TRUE}}
 }
+
+// PR15623: Currently the analyzer doesn't handle symbolic expressions of the
+// form "(exp comparison_op expr) != 0" very well. We perform a simplification
+// translating an assume of a constraint of the form "(exp comparison_op expr)
+// != 0" to true into an assume of "exp comparison_op expr" to true.
+void PR15623(int n) {
+  if ((n == 0) != 0) {
+    clang_analyzer_eval(n == 0); // expected-warning{{TRUE}}
+  }
+}

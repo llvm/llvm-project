@@ -29,7 +29,33 @@ using namespace llvm;
 // into an ARMGenRegisterBankInfo.def (similar to AArch64).
 namespace llvm {
 namespace ARM {
-RegisterBank GPRRegBank;
+const uint32_t GPRCoverageData[] = {
+    // Classes 0-31
+    (1u << ARM::GPRRegClassID) | (1u << ARM::GPRwithAPSRRegClassID) |
+        (1u << ARM::GPRnopcRegClassID) | (1u << ARM::rGPRRegClassID) |
+        (1u << ARM::hGPRRegClassID) | (1u << ARM::tGPRRegClassID) |
+        (1u << ARM::GPRnopc_and_hGPRRegClassID) |
+        (1u << ARM::hGPR_and_rGPRRegClassID) | (1u << ARM::tcGPRRegClassID) |
+        (1u << ARM::tGPR_and_tcGPRRegClassID) | (1u << ARM::GPRspRegClassID) |
+        (1u << ARM::hGPR_and_tcGPRRegClassID),
+    // Classes 32-63
+    0,
+    // Classes 64-96
+    0,
+    // FIXME: Some of the entries below this point can be safely removed once
+    // this is tablegenerated. It's only needed because of the hardcoded
+    // register class limit.
+    // Classes 97-128
+    0,
+    // Classes 129-160
+    0,
+    // Classes 161-192
+    0,
+    // Classes 193-224
+    0,
+};
+
+RegisterBank GPRRegBank(ARM::GPRRegBankID, "GPRB", 32, ARM::GPRCoverageData);
 RegisterBank *RegBanks[] = {&GPRRegBank};
 
 RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
@@ -51,14 +77,11 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
     return;
   AlreadyInit = true;
 
-  // Initialize the GPR bank.
-  createRegisterBank(ARM::GPRRegBankID, "GPRB");
-
-  addRegBankCoverage(ARM::GPRRegBankID, ARM::GPRRegClassID, TRI);
-  addRegBankCoverage(ARM::GPRRegBankID, ARM::GPRwithAPSRRegClassID, TRI);
   const RegisterBank &RBGPR = getRegBank(ARM::GPRRegBankID);
   (void)RBGPR;
   assert(&ARM::GPRRegBank == &RBGPR && "The order in RegBanks is messed up");
+
+  // Initialize the GPR bank.
   assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRRegClassID)) &&
          "Subclass not added?");
   assert(RBGPR.covers(*TRI.getRegClass(ARM::GPRwithAPSRRegClassID)) &&

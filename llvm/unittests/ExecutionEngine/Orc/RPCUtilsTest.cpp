@@ -108,8 +108,7 @@ namespace rpc {
 } // end namespace orc
 } // end namespace llvm
 
-class DummyRPCAPI {
-public:
+namespace DummyRPCAPI {
 
   class VoidBool : public Function<VoidBool, void(bool)> {
   public:
@@ -135,13 +134,12 @@ public:
     static const char* getName() { return "CustomType"; }
   };
 
-};
+}
 
-class DummyRPCEndpoint : public DummyRPCAPI,
-                         public SingleThreadedRPC<QueueChannel> {
+class DummyRPCEndpoint : public SingleThreadedRPCEndpoint<QueueChannel> {
 public:
   DummyRPCEndpoint(Queue &Q1, Queue &Q2)
-      : SingleThreadedRPC(C, true), C(Q1, Q2) {}
+      : SingleThreadedRPCEndpoint(C, true), C(Q1, Q2) {}
 private:
   QueueChannel C;
 };
@@ -382,6 +380,126 @@ TEST(DummyRPC, TestWithAltCustomType) {
     auto Err = Client.handleOne();
     EXPECT_FALSE(!!Err)
       << "Client failed to handle response from RPCFoo(RPCFoo)";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestParallelCallGroup) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread([&]() {
+      Server.addHandler<DummyRPCAPI::IntInt>(
+          [](int X) -> int {
+            return 2 * X;
+          });
+
+      // Handle the negotiate, plus three calls.
+      for (unsigned I = 0; I != 4; ++I) {
+        auto Err = Server.handleOne();
+        EXPECT_FALSE(!!Err) << "Server failed to handle call to int(int)";
+      }
+    });
+
+  {
+    int A, B, C;
+    ParallelCallGroup<DummyRPCEndpoint> PCG(Client);
+
+    {
+      auto Err = PCG.appendCall<DummyRPCAPI::IntInt>(
+        [&A](Expected<int> Result) {
+          EXPECT_TRUE(!!Result) << "Async int(int) response handler failed";
+          A = *Result;
+          return Error::success();
+        }, 1);
+      EXPECT_FALSE(!!Err) << "First parallel call failed for int(int)";
+    }
+
+    {
+      auto Err = PCG.appendCall<DummyRPCAPI::IntInt>(
+        [&B](Expected<int> Result) {
+          EXPECT_TRUE(!!Result) << "Async int(int) response handler failed";
+          B = *Result;
+          return Error::success();
+        }, 2);
+      EXPECT_FALSE(!!Err) << "Second parallel call failed for int(int)";
+    }
+
+    {
+      auto Err = PCG.appendCall<DummyRPCAPI::IntInt>(
+        [&C](Expected<int> Result) {
+          EXPECT_TRUE(!!Result) << "Async int(int) response handler failed";
+          C = *Result;
+          return Error::success();
+        }, 3);
+      EXPECT_FALSE(!!Err) << "Third parallel call failed for int(int)";
+    }
+
+    // Handle the three int(int) results.
+    for (unsigned I = 0; I != 3; ++I) {
+      auto Err = Client.handleOne();
+      EXPECT_FALSE(!!Err) << "Client failed to handle response from void(bool)";
+    }
+
+    {
+      auto Err = PCG.wait();
+      EXPECT_FALSE(!!Err) << "Third parallel call failed for int(int)";
+    }
+
+    EXPECT_EQ(A, 2) << "First parallel call returned bogus result";
+    EXPECT_EQ(B, 4) << "Second parallel call returned bogus result";
+    EXPECT_EQ(C, 6) << "Third parallel call returned bogus result";
+  }
+
+  ServerThread.join();
+}
+
+TEST(DummyRPC, TestAPICalls) {
+
+  using DummyCalls1 = APICalls<DummyRPCAPI::VoidBool, DummyRPCAPI::IntInt>;
+  using DummyCalls2 = APICalls<DummyRPCAPI::AllTheTypes>;
+  using DummyCalls3 = APICalls<DummyCalls1, DummyRPCAPI::CustomType>;
+  using DummyCallsAll = APICalls<DummyCalls1, DummyCalls2, DummyRPCAPI::CustomType>;
+
+  static_assert(DummyCalls1::Contains<DummyRPCAPI::VoidBool>::value,
+                "Contains<Func> template should return true here");
+  static_assert(!DummyCalls1::Contains<DummyRPCAPI::CustomType>::value,
+                "Contains<Func> template should return false here");
+
+  Queue Q1, Q2;
+  DummyRPCEndpoint Client(Q1, Q2);
+  DummyRPCEndpoint Server(Q2, Q1);
+
+  std::thread ServerThread(
+    [&]() {
+      Server.addHandler<DummyRPCAPI::VoidBool>([](bool b) { });
+      Server.addHandler<DummyRPCAPI::IntInt>([](int x) { return x; });
+      Server.addHandler<DummyRPCAPI::CustomType>([](RPCFoo F) {});
+
+      for (unsigned I = 0; I < 4; ++I) {
+        auto Err = Server.handleOne();
+        (void)!!Err;
+      }
+    });
+
+  {
+    auto Err = DummyCalls1::negotiate(Client);
+    EXPECT_FALSE(!!Err) << "DummyCalls1::negotiate failed";
+  }
+
+  {
+    auto Err = DummyCalls3::negotiate(Client);
+    EXPECT_FALSE(!!Err) << "DummyCalls3::negotiate failed";
+  }
+
+  {
+    auto Err = DummyCallsAll::negotiate(Client);
+    EXPECT_EQ(errorToErrorCode(std::move(Err)).value(),
+              static_cast<int>(OrcErrorCode::UnknownRPCFunction))
+      << "Expected 'UnknownRPCFunction' error for attempted negotiate of "
+         "unsupported function";
   }
 
   ServerThread.join();

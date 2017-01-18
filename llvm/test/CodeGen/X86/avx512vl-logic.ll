@@ -8,7 +8,7 @@ define <8 x i32> @vpandd256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpandd256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; CHECK-NEXT:    vpandd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -35,7 +35,7 @@ define <8 x i32> @vpord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone
 ; CHECK-LABEL: vpord256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; CHECK-NEXT:    vpord %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -48,7 +48,7 @@ define <8 x i32> @vpxord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpxord256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; CHECK-NEXT:    vpxord %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -61,7 +61,7 @@ define <4 x i64> @vpandq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpandq256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; CHECK-NEXT:    vpandq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -88,7 +88,7 @@ define <4 x i64> @vporq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone
 ; CHECK-LABEL: vporq256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; CHECK-NEXT:    vporq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -101,7 +101,7 @@ define <4 x i64> @vpxorq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpxorq256:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; CHECK-NEXT:    vpxorq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -116,7 +116,7 @@ define <4 x i32> @vpandd128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpandd128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-NEXT:    vpandd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -143,7 +143,7 @@ define <4 x i32> @vpord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone
 ; CHECK-LABEL: vpord128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-NEXT:    vpord %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -156,7 +156,7 @@ define <4 x i32> @vpxord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpxord128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-NEXT:    vpxord %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -169,7 +169,7 @@ define <2 x i64> @vpandq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpandq128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vpandq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -196,7 +196,7 @@ define <2 x i64> @vporq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone
 ; CHECK-LABEL: vporq128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vporq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -209,7 +209,7 @@ define <2 x i64> @vpxorq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnon
 ; CHECK-LABEL: vpxorq128:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-NEXT:    vpxorq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.

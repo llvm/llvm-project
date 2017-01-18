@@ -82,8 +82,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 0);
-    static_assert(result.value == 42);
+    static_assert(result.index == 0, "");
+    static_assert(result.value == 42, "");
   }
   {
     struct {
@@ -94,8 +94,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value == 42);
+    static_assert(result.index == 1, "");
+    static_assert(result.value == 42, "");
   }
   {
     struct {
@@ -106,8 +106,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 0);
-    static_assert(result.value.value == 42);
+    static_assert(result.index == 0, "");
+    static_assert(result.value.value == 42, "");
   }
   {
     struct {
@@ -118,8 +118,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value.value == 42);
+    static_assert(result.index == 1, "");
+    static_assert(result.value.value == 42, "");
   }
   {
     struct {
@@ -130,8 +130,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 0);
-    static_assert(result.value.value == 42);
+    static_assert(result.index == 0, "");
+    static_assert(result.value.value == 42, "");
   }
   {
     struct {
@@ -142,8 +142,8 @@ void test_move_ctor_basic() {
       }
     } test;
     constexpr auto result = test();
-    static_assert(result.index == 1);
-    static_assert(result.value.value == 42);
+    static_assert(result.index == 1, "");
+    static_assert(result.value.value == 42, "");
   }
 }
 

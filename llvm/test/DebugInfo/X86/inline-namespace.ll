@@ -22,19 +22,21 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 @_ZN6normal7inlined1iE = global i32 0, align 4, !dbg !0
 
-!llvm.dbg.cu = !{!5}
-!llvm.module.flags = !{!8, !9, !10}
-!llvm.ident = !{!11}
+!llvm.dbg.cu = !{!6}
+!llvm.module.flags = !{!9, !10, !11}
+!llvm.ident = !{!12}
 
-!0 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !1, file: !2, line: 1, type: !4, isLocal: false, isDefinition: true))
-!1 = !DINamespace(name: "inlined", scope: !3, file: !2, line: 1, exportSymbols: true)
-!2 = !DIFile(filename: "namespace.cpp", directory: "/")
-!3 = !DINamespace(name: "normal", scope: null, file: !2, line: 1)
-!4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 4.0.0 (trunk 285825) (llvm/trunk 285822)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !6, globals: !7)
-!6 = !{}
-!7 = !{!0}
-!8 = !{i32 2, !"Dwarf Version", i32 5}
-!9 = !{i32 2, !"Debug Info Version", i32 3}
-!10 = !{i32 1, !"PIC Level", i32 2}
-!11 = !{!"clang version 4.0.0 (trunk 285825) (llvm/trunk 285822)"}
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "i", linkageName: "_ZN6normal7inlined1iE", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
+!2 = !DINamespace(name: "inlined", scope: !4, file: !3, line: 1, exportSymbols: true)
+!3 = !DIFile(filename: "namespace.cpp", directory: "/")
+!4 = !DINamespace(name: "normal", scope: null, file: !3, line: 1)
+!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!6 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 4.0.0 (trunk 285825) (llvm/trunk 285822)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !7, globals: !8)
+!7 = !{}
+!8 = !{!0}
+!9 = !{i32 2, !"Dwarf Version", i32 5}
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !{i32 1, !"PIC Level", i32 2}
+!12 = !{!"clang version 4.0.0 (trunk 285825) (llvm/trunk 285822)"}
+

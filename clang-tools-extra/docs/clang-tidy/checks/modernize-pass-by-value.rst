@@ -150,7 +150,7 @@ Example:
 
   For more information about the pass-by-value idiom, read: `Want Speed? Pass by Value`_.
 
-  .. _Want Speed? Pass by Value: http://cpp-next.com/archive/2009/08/want-speed-pass-by-value/
+  .. _Want Speed? Pass by Value: https://web.archive.org/web/20140205194657/http://cpp-next.com/archive/2009/08/want-speed-pass-by-value/
 
 Options
 -------

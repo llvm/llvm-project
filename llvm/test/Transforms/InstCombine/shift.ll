@@ -161,9 +161,8 @@ define i8 @test9(i8 %A) {
   ret i8 %C
 }
 
-;; This transformation is deferred to DAGCombine:
 ;; (A >> 7) << 7 === A & 128
-;; The shl may be valuable to scalar evolution.
+
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 %A, -128
@@ -455,7 +454,7 @@ define i32 @test25(i32 %tmp.2, i32 %AA) {
 define <2 x i32> @test25_vector(<2 x i32> %tmp.2, <2 x i32> %AA) {
 ; CHECK-LABEL: @test25_vector(
 ; CHECK-NEXT:    [[TMP_3:%.*]] = lshr <2 x i32> %tmp.2, <i32 17, i32 17>
-; CHECK-NEXT:    [[TMP_51:%.*]] = shl <2 x i32> [[TMP_3]], <i32 17, i32 17>
+; CHECK-NEXT:    [[TMP_51:%.*]] = shl nuw <2 x i32> [[TMP_3]], <i32 17, i32 17>
 ; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[TMP_51]], %AA
 ; CHECK-NEXT:    [[TMP_6:%.*]] = and <2 x i32> [[X2]], <i32 -131072, i32 -131072>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_6]]
@@ -640,30 +639,25 @@ define <2 x i1> @test35vec(<2 x i32> %X) {
 
 define i128 @test36(i128 %A, i128 %B) {
 ; CHECK-LABEL: @test36(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP231:%.*]] = or i128 %B, %A
 ; CHECK-NEXT:    [[INS:%.*]] = and i128 [[TMP231]], 18446744073709551615
 ; CHECK-NEXT:    ret i128 [[INS]]
 ;
-entry:
   %tmp27 = shl i128 %A, 64
   %tmp23 = shl i128 %B, 64
   %ins = or i128 %tmp23, %tmp27
   %tmp45 = lshr i128 %ins, 64
   ret i128 %tmp45
-
 }
 
 define i64 @test37(i128 %A, i32 %B) {
 ; CHECK-LABEL: @test37(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 %B to i128
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i128 [[TMP22]], 32
 ; CHECK-NEXT:    [[INS:%.*]] = or i128 [[TMP23]], %A
 ; CHECK-NEXT:    [[TMP46:%.*]] = trunc i128 [[INS]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP46]]
 ;
-entry:
   %tmp27 = shl i128 %A, 64
   %tmp22 = zext i32 %B to i128
   %tmp23 = shl i128 %tmp22, 96
@@ -671,7 +665,17 @@ entry:
   %tmp45 = lshr i128 %ins, 64
   %tmp46 = trunc i128 %tmp45 to i64
   ret i64 %tmp46
+}
 
+define <2 x i32> @shl_nuw_nsw_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @shl_nuw_nsw_splat_vec(
+; CHECK-NEXT:    [[T2:%.*]] = zext <2 x i8> %x to <2 x i32>
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw <2 x i32> [[T2]], <i32 17, i32 17>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t2 = zext <2 x i8> %x to <2 x i32>
+  %t3 = shl <2 x i32> %t2, <i32 17, i32 17>
+  ret <2 x i32> %t3
 }
 
 define i32 @test38(i32 %x) nounwind readnone {
@@ -1041,7 +1045,7 @@ define <2 x i65> @test_63(<2 x i64> %t) {
 ; CHECK-LABEL: @test_63(
 ; CHECK-NEXT:    [[A:%.*]] = zext <2 x i64> %t to <2 x i65>
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i65> [[A]], <i65 33, i65 33>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i65> [[SEXT]], <i65 33, i65 33>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i65> [[SEXT]], <i65 33, i65 33>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
   %a = zext <2 x i64> %t to <2 x i65>
@@ -1049,3 +1053,29 @@ define <2 x i65> @test_63(<2 x i64> %t) {
   %b = ashr <2 x i65> %sext, <i65 33, i65 33>
   ret <2 x i65> %b
 }
+
+define i64 @test_64(i32 %t) {
+; CHECK-LABEL: @test_64(
+; CHECK-NEXT: [[SHL:%.*]] = shl i32 %t, 8
+; CHECK-NEXT: [[EXT:%.*]] = zext i32 [[SHL]] to i64
+; CHECK-NEXT: ret i64 [[EXT]]
+
+  %and = and i32 %t, 16777215
+  %ext = zext i32 %and to i64
+  %shl = shl i64 %ext, 8
+  ret i64 %shl
+}
+
+define <2 x i64> @test_64_splat_vec(<2 x i32> %t) {
+; CHECK-LABEL: @test_64_splat_vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %t, <i32 16777215, i32 16777215>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i32> [[AND]], <i32 8, i32 8>
+; CHECK-NEXT:    [[SHL:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[SHL]]
+;
+  %and = and <2 x i32> %t, <i32 16777215, i32 16777215>
+  %ext = zext <2 x i32> %and to <2 x i64>
+  %shl = shl <2 x i64> %ext, <i64 8, i64 8>
+  ret <2 x i64> %shl
+}
+

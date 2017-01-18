@@ -162,8 +162,7 @@ llvm::Error LoadBinaryInstrELF(
               "'.",
           std::make_error_code(std::errc::executable_format_error));
     }
-    auto AlwaysInstrument = Extractor.getU8(&OffsetPtr);
-    Entry.AlwaysInstrument = AlwaysInstrument != 0;
+    Entry.AlwaysInstrument = Extractor.getU8(&OffsetPtr) != 0;
 
     // We replicate the function id generation scheme implemented in the runtime
     // here. Ideally we should be able to break it out, or output this map from
@@ -185,29 +184,81 @@ llvm::Error LoadBinaryInstrELF(
   return llvm::Error::success();
 }
 
+Error LoadYAMLInstrMap(
+    StringRef Filename, std::deque<SledEntry> &Sleds,
+    InstrumentationMapExtractor::FunctionAddressMap &InstrMap,
+    InstrumentationMapExtractor::FunctionAddressReverseMap &FunctionIds) {
+  int Fd;
+  if (auto EC = sys::fs::openFileForRead(Filename, Fd))
+    return make_error<StringError>(
+        Twine("Failed opening file '") + Filename + "' for reading.", EC);
+
+  uint64_t FileSize;
+  if (auto EC = sys::fs::file_size(Filename, FileSize))
+    return make_error<StringError>(
+        Twine("Failed getting size of file '") + Filename + "'.", EC);
+
+  std::error_code EC;
+  sys::fs::mapped_file_region MappedFile(
+      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+  if (EC)
+    return make_error<StringError>(
+        Twine("Failed memory-mapping file '") + Filename + "'.", EC);
+
+  std::vector<YAMLXRaySledEntry> YAMLSleds;
+  Input In(StringRef(MappedFile.data(), MappedFile.size()));
+  In >> YAMLSleds;
+  if (In.error())
+    return make_error<StringError>(
+        Twine("Failed loading YAML document from '") + Filename + "'.",
+        In.error());
+
+  for (const auto &Y : YAMLSleds) {
+    InstrMap[Y.FuncId] = Y.Function;
+    FunctionIds[Y.Function] = Y.FuncId;
+    Sleds.push_back(
+        SledEntry{Y.Address, Y.Function, Y.Kind, Y.AlwaysInstrument});
+  }
+  return Error::success();
+}
+
 } // namespace
 
 InstrumentationMapExtractor::InstrumentationMapExtractor(std::string Filename,
                                                          InputFormats Format,
                                                          Error &EC) {
   ErrorAsOutParameter ErrAsOutputParam(&EC);
+  if (Filename.empty()) {
+    EC = Error::success();
+    return;
+  }
   switch (Format) {
   case InputFormats::ELF: {
     EC = handleErrors(
         LoadBinaryInstrELF(Filename, Sleds, FunctionAddresses, FunctionIds),
-        [](std::unique_ptr<ErrorInfoBase> E) {
+        [&](std::unique_ptr<ErrorInfoBase> E) {
           return joinErrors(
               make_error<StringError>(
                   Twine("Cannot extract instrumentation map from '") +
-                      ExtractInput + "'.",
+                      Filename + "'.",
                   std::make_error_code(std::errc::executable_format_error)),
               std::move(E));
         });
     break;
   }
-  default:
-    llvm_unreachable("Input format type not supported yet.");
+  case InputFormats::YAML: {
+    EC = handleErrors(
+        LoadYAMLInstrMap(Filename, Sleds, FunctionAddresses, FunctionIds),
+        [&](std::unique_ptr<ErrorInfoBase> E) {
+          return joinErrors(
+              make_error<StringError>(
+                  Twine("Cannot load YAML instrumentation map from '") +
+                      Filename + "'.",
+                  std::make_error_code(std::errc::executable_format_error)),
+              std::move(E));
+        });
     break;
+  }
   }
 }
 

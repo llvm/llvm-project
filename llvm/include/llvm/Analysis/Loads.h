@@ -23,10 +23,9 @@ namespace llvm {
 class DataLayout;
 class MDNode;
 
-/// isDereferenceablePointer - Return true if this is always a dereferenceable
-/// pointer. If the context instruction is specified perform context-sensitive
-/// analysis and return true if the pointer is dereferenceable at the
-/// specified instruction.
+/// Return true if this is always a dereferenceable pointer. If the context
+/// instruction is specified perform context-sensitive analysis and return true
+/// if the pointer is dereferenceable at the specified instruction.
 bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
                               const Instruction *CtxI = nullptr,
                               const DominatorTree *DT = nullptr);
@@ -40,8 +39,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr);
 
-/// isSafeToLoadUnconditionally - Return true if we know that executing a load
-/// from this value cannot trap.
+/// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive
 /// analysis and returns true if it is safe to load immediately before ScanFrom.
@@ -54,12 +52,12 @@ bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
                                  Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr);
 
-/// DefMaxInstsToScan - the default number of maximum instructions
-/// to scan in the block, used by FindAvailableLoadedValue().
+/// The default number of maximum instructions to scan in the block, used by
+/// FindAvailableLoadedValue().
 extern cl::opt<unsigned> DefMaxInstsToScan;
 
-/// \brief Scan backwards to see if we have the value of the given load
-/// available locally within a small number of instructions.
+/// Scan backwards to see if we have the value of the given load available
+/// locally within a small number of instructions.
 ///
 /// You can use this function to scan across multiple blocks: after you call
 /// this function, if ScanFrom points at the beginning of the block, it's safe

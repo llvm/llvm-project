@@ -123,7 +123,9 @@ namespace MipsII {
     HasForbiddenSlot = 1 << 5,
     /// IsPCRelativeLoad - A Load instruction with implicit source register
     ///                    ($pc) with explicit offset and destination register
-    IsPCRelativeLoad = 1 << 6
+    IsPCRelativeLoad = 1 << 6,
+    /// HasFCCRegOperand - Instruction uses an $fcc<x> register.
+    HasFCCRegOperand = 1 << 7
 
   };
 }

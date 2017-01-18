@@ -26,9 +26,9 @@ config.executor                 = "@LIBCXX_EXECUTOR@"
 config.llvm_unwinder            = "@LIBCXXABI_USE_LLVM_UNWINDER@"
 config.has_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
 config.use_libatomic            = "@LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@"
-
+config.debug_build              = "@LIBCXX_DEBUG_BUILD@"
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
-config.libcxx_external_thread_api  = "@LIBCXX_HAS_EXTERNAL_THREAD_API@"
+config.cxx_ext_threads          = "@LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY@"
 
 # Let the main config do the real work.
 config.loaded_site_config = True

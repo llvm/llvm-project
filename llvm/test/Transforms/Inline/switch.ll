@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -inline-threshold=20 -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=20 -S | FileCheck %s
 
 define i32 @callee(i32 %a) {
   switch i32 %a, label %sw.default [

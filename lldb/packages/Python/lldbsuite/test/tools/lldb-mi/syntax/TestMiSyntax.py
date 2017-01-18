@@ -97,6 +97,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Run all commands simultaneously
         self.runCmd("-unknown-command")
+        self.runCmd("-interpreter-exec command help")
         self.runCmd("-file-exec-and-symbols %s" % self.myexe)
         self.runCmd("-break-insert -f main")
         self.runCmd("-gdb-set target-async off")

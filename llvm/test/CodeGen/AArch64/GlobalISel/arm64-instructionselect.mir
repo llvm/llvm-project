@@ -2836,13 +2836,13 @@ registers:
 
 # CHECK:  body:
 # CHECK:    %wzr = SUBSWrr %0, %0, implicit-def %nzcv
-# CHECK:    %1 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
+# CHECK:    %1 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
 
 # CHECK:    %xzr = SUBSXrr %2, %2, implicit-def %nzcv
-# CHECK:    %3 = CSINCWr %wzr, %wzr, 2, implicit %nzcv
+# CHECK:    %3 = CSINCWr %wzr, %wzr, 3, implicit %nzcv
 
 # CHECK:    %xzr = SUBSXrr %4, %4, implicit-def %nzcv
-# CHECK:    %5 = CSINCWr %wzr, %wzr, 1, implicit %nzcv
+# CHECK:    %5 = CSINCWr %wzr, %wzr, 0, implicit %nzcv
 
 body:             |
   bb.0:

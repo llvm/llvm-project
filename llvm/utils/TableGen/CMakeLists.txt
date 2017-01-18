@@ -22,6 +22,7 @@ add_tablegen(llvm-tblgen LLVM
   DisassemblerEmitter.cpp
   FastISelEmitter.cpp
   FixedLenDecoderEmitter.cpp
+  GlobalISelEmitter.cpp
   InstrInfoEmitter.cpp
   IntrinsicEmitter.cpp
   OptParserEmitter.cpp

@@ -481,9 +481,9 @@ private:
   bool processNode(DomTreeNode *Node);
 
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
-    if (LoadInst *LI = dyn_cast<LoadInst>(Inst))
+    if (auto *LI = dyn_cast<LoadInst>(Inst))
       return LI;
-    else if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
+    if (auto *SI = dyn_cast<StoreInst>(Inst))
       return SI->getValueOperand();
     assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
     return TTI.getOrCreateResultFromMemIntrinsic(cast<IntrinsicInst>(Inst),
@@ -967,10 +967,8 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   if (!CSE.run())
     return PreservedAnalyses::all();
 
-  // CSE preserves the dominator tree because it doesn't mutate the CFG.
-  // FIXME: Bundle this with other CFG-preservation.
   PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();

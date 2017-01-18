@@ -134,6 +134,19 @@ define void @test_overflow(i8** %p, i32* %r) {
   ret void
 }
 
+; CHECK-LABEL: define void @test_nobuiltin
+; We had a bug where `nobuiltin` would cause `allocsize` to be ignored in
+; @llvm.objectsize calculations.
+define void @test_nobuiltin(i8** %p, i64* %r) {
+  %1 = call i8* @my_malloc(i8* null, i32 100) nobuiltin
+  store i8* %1, i8** %p, align 8
+
+  %2 = call i64 @llvm.objectsize.i64.p0i8(i8* %1, i1 false)
+  ; CHECK: store i64 100
+  store i64 %2, i64* %r, align 8
+  ret void
+}
+
 attributes #0 = { allocsize(1) }
 attributes #1 = { allocsize(2, 3) }
 

@@ -51,7 +51,7 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          bool DefaultDiagColor = true,
                          bool DefaultShowOpt = true);
 
-class CompilerInvocationBase : public RefCountedBase<CompilerInvocation> {
+class CompilerInvocationBase {
   void operator=(const CompilerInvocationBase &) = delete;
 
 public:
@@ -65,10 +65,10 @@ public:
   IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
-  IntrusiveRefCntPtr<HeaderSearchOptions> HeaderSearchOpts;
+  std::shared_ptr<HeaderSearchOptions> HeaderSearchOpts;
 
   /// Options controlling the preprocessor (aside from \#include handling).
-  IntrusiveRefCntPtr<PreprocessorOptions> PreprocessorOpts;
+  std::shared_ptr<PreprocessorOptions> PreprocessorOpts;
 
   CompilerInvocationBase();
   ~CompilerInvocationBase();
@@ -89,7 +89,13 @@ public:
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return *HeaderSearchOpts;
   }
+  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
+    return HeaderSearchOpts;
+  }
 
+  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
+    return PreprocessorOpts;
+  }
   PreprocessorOptions &getPreprocessorOpts() { return *PreprocessorOpts; }
   const PreprocessorOptions &getPreprocessorOpts() const {
     return *PreprocessorOpts;

@@ -21,5 +21,5 @@
 // CHECK-IR: {{call.*objc_msgSend}}
 // CHECK-IR: ret void
 
-// CHECK-IR: attributes #0 = { nounwind {{.*}} }
+// CHECK-IR: attributes #0 = { noinline nounwind {{.*}} }
 // CHECK-IR: attributes #1 = { nonlazybind }

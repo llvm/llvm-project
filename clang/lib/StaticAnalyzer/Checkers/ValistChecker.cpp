@@ -91,10 +91,10 @@ private:
       return llvm::make_unique<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
     }
-    PathDiagnosticPiece *VisitNode(const ExplodedNode *N,
-                                   const ExplodedNode *PrevN,
-                                   BugReporterContext &BRC,
-                                   BugReport &BR) override;
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
 
   private:
     const MemRegion *Reg;
@@ -335,7 +335,7 @@ void ValistChecker::checkVAListEndCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-PathDiagnosticPiece *ValistChecker::ValistBugVisitor::VisitNode(
+std::shared_ptr<PathDiagnosticPiece> ValistChecker::ValistBugVisitor::VisitNode(
     const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
     BugReport &BR) {
   ProgramStateRef State = N->getState();
@@ -358,7 +358,7 @@ PathDiagnosticPiece *ValistChecker::ValistBugVisitor::VisitNode(
 
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return new PathDiagnosticEventPiece(Pos, Msg, true);
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
 }
 
 #define REGISTER_CHECKER(name)                                                 \

@@ -200,6 +200,8 @@ void DwarfUnit::addUInt(DIEValueList &Die, dwarf::Attribute Attribute,
                         Optional<dwarf::Form> Form, uint64_t Integer) {
   if (!Form)
     Form = DIEInteger::BestForm(false, Integer);
+  assert(Form != dwarf::DW_FORM_implicit_const &&
+         "DW_FORM_implicit_const is used only for signed integers");
   Die.addValue(DIEValueAllocator, Attribute, *Form, DIEInteger(Integer));
 }
 

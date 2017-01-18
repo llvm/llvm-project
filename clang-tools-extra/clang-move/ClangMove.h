@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_MOVE_CLANGMOVE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_MOVE_CLANGMOVE_H
 
+#include "HelperDeclRefGraph.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -88,11 +89,18 @@ struct ClangMoveContext {
 };
 
 // This tool is used to move class/function definitions from the given source
-// files (old.h/cc) to new files (new.h/cc). When moving a class, all its
-// members are also moved. In addition, all helper functions (anonymous
-// namespace declarations, static declarations, using declarations) in old.cc
-// and forward class declarations in old.h are copied to the new files.
-// The goal of this tool is to make the new files as compliable as possible.
+// files (old.h/cc) to new files (new.h/cc).
+// The goal of this tool is to make the new/old files as compilable as possible.
+//
+// When moving a symbol,all used helper declarations (e.g. static
+// functions/variables definitions in global/named namespace,
+// functions/variables/classes definitions in anonymous namespace) used by the
+// moved symbol in old.cc are moved to the new.cc. In addition, all
+// using-declarations in old.cc are also moved to new.cc; forward class
+// declarations in old.h are also moved to new.h.
+//
+// The remaining helper declarations which are unused by non-moved symbols in
+// old.cc will be removed.
 //
 // Note: When all declarations in old header are being moved, all code in
 // old.h/cc will be moved, which means old.h/cc are empty. This ignores symbols
@@ -148,8 +156,10 @@ private:
   // Stores all MatchCallbacks created by this tool.
   std::vector<std::unique_ptr<ast_matchers::MatchFinder::MatchCallback>>
       MatchCallbacks;
-  // All declarations (the class decl being moved, forward decls) that need to
-  // be moved/copy to the new files, saving in an AST-visited order.
+  // Store all potential declarations (decls being moved, forward decls) that
+  // might need to move to new.h/cc. It includes all helper declarations
+  // (include unused ones) by default. The unused ones will be filtered out in
+  // the last stage. Saving in an AST-visited order.
   std::vector<const NamedDecl *> MovedDecls;
   // The declarations that needs to be removed in old.cc/h.
   std::vector<const NamedDecl *> RemovedDecls;
@@ -157,6 +167,10 @@ private:
   std::vector<std::string> HeaderIncludes;
   // The #includes in old_cc.cc.
   std::vector<std::string> CCIncludes;
+  // Records all helper declarations (function/variable/class definitions in
+  // anonymous namespaces, static function/variable definitions in global/named
+  // namespaces) in old.cc. saving in an AST-visited order.
+  std::vector<const NamedDecl *> HelperDeclarations;
   // The unmoved named declarations in old header.
   llvm::SmallPtrSet<const NamedDecl*, 8> UnremovedDeclsInOldHeader;
   /// The source range for the written file name in #include (i.e. "old.h" for
@@ -170,6 +184,8 @@ private:
   ClangMoveContext *const Context;
   /// A reporter to report all declarations from old header. It is not owned.
   DeclarationReporter *const Reporter;
+  /// Builder for helper declarations reference graph.
+  HelperDeclRGBuilder RGBuilder;
 };
 
 class ClangMoveAction : public clang::ASTFrontendAction {

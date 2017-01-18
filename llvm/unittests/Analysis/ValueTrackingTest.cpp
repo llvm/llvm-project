@@ -188,3 +188,54 @@ TEST_F(MatchSelectPatternTest, DoubleCastBad) {
   // The cast types here aren't the same, so we cannot match an UMIN.
   expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
+
+TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
+  StringRef Assembly =
+      "declare void @nounwind_readonly(i32*) nounwind readonly "
+      "declare void @nounwind_argmemonly(i32*) nounwind argmemonly "
+      "declare void @throws_but_readonly(i32*) readonly "
+      "declare void @throws_but_argmemonly(i32*) argmemonly "
+      " "
+      "declare void @unknown(i32*) "
+      " "
+      "define void @f(i32* %p) { "
+      "  call void @nounwind_readonly(i32* %p) "
+      "  call void @nounwind_argmemonly(i32* %p) "
+      "  call void @throws_but_readonly(i32* %p) "
+      "  call void @throws_but_argmemonly(i32* %p) "
+      "  call void @unknown(i32* %p) nounwind readonly "
+      "  call void @unknown(i32* %p) nounwind argmemonly "
+      "  call void @unknown(i32* %p) readonly "
+      "  call void @unknown(i32* %p) argmemonly "
+      "  ret void "
+      "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto &BB = F->getEntryBlock();
+  ArrayRef<bool> ExpectedAnswers = {
+      true,  // call void @nounwind_readonly(i32* %p)
+      true,  // call void @nounwind_argmemonly(i32* %p)
+      false, // call void @throws_but_readonly(i32* %p)
+      false, // call void @throws_but_argmemonly(i32* %p)
+      true,  // call void @unknown(i32* %p) nounwind readonly
+      true,  // call void @unknown(i32* %p) nounwind argmemonly
+      false, // call void @unknown(i32* %p) readonly
+      false, // call void @unknown(i32* %p) argmemonly
+      false, // ret void
+  };
+
+  int Index = 0;
+  for (auto &I : BB) {
+    EXPECT_EQ(isGuaranteedToTransferExecutionToSuccessor(&I),
+              ExpectedAnswers[Index])
+        << "Incorrect answer at instruction " << Index << " = " << I;
+    Index++;
+  }
+}

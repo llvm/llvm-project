@@ -2369,6 +2369,68 @@ TEST(YAMLIO, TestMapWithContext) {
   out.clear();
 }
 
+LLVM_YAML_IS_STRING_MAP(int)
+
+TEST(YAMLIO, TestCustomMapping) {
+  std::map<std::string, int> x;
+  x["foo"] = 1;
+  x["bar"] = 2;
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  xout << x;
+  ostr.flush();
+  EXPECT_EQ("---\n"
+            "bar:             2\n"
+            "foo:             1\n"
+            "...\n",
+            out);
+
+  Input yin(out);
+  std::map<std::string, int> y;
+  yin >> y;
+  EXPECT_EQ(2ul, y.size());
+  EXPECT_EQ(1, y["foo"]);
+  EXPECT_EQ(2, y["bar"]);
+}
+
+LLVM_YAML_IS_STRING_MAP(FooBar)
+
+TEST(YAMLIO, TestCustomMappingStruct) {
+  std::map<std::string, FooBar> x;
+  x["foo"].foo = 1;
+  x["foo"].bar = 2;
+  x["bar"].foo = 3;
+  x["bar"].bar = 4;
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  xout << x;
+  ostr.flush();
+  EXPECT_EQ("---\n"
+            "bar:             \n"
+            "  foo:             3\n"
+            "  bar:             4\n"
+            "foo:             \n"
+            "  foo:             1\n"
+            "  bar:             2\n"
+            "...\n",
+            out);
+
+  Input yin(out);
+  std::map<std::string, FooBar> y;
+  yin >> y;
+  EXPECT_EQ(2ul, y.size());
+  EXPECT_EQ(1, y["foo"].foo);
+  EXPECT_EQ(2, y["foo"].bar);
+  EXPECT_EQ(3, y["bar"].foo);
+  EXPECT_EQ(4, y["bar"].bar);
+}
+
 TEST(YAMLIO, InvalidInput) {
   // polluting 1 value in the sequence
   Input yin("---\n- foo:  3\n  bar:  5\n1\n- foo:  3\n  bar:  5\n...\n");

@@ -38,7 +38,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK-NEXT: insertelement
 ; CHECK-NEXT: fadd <2 x double>
 ; CHECK-NEXT: insertelement
-; CHECK-NEXT: insertelement
+; CHECK-NEXT: shufflevector
 ; CHECK-NEXT: fadd <2 x double>
 ; CHECK-NEXT: insertelement
 ; CHECK-NEXT: fmul <2 x double>

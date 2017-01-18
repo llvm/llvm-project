@@ -17,15 +17,12 @@
 
 namespace llvm {
 
-class MCInst;
-class raw_ostream;
-
 class AArch64Disassembler : public MCDisassembler {
 public:
   AArch64Disassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
     : MCDisassembler(STI, Ctx) {}
 
-  ~AArch64Disassembler() {}
+  ~AArch64Disassembler() override = default;
 
   MCDisassembler::DecodeStatus
   getInstruction(MCInst &Instr, uint64_t &Size, ArrayRef<uint8_t> Bytes,
@@ -33,6 +30,6 @@ public:
                  raw_ostream &CStream) const override;
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AARCH64_DISASSEMBLER_AARCH64DISASSEMBLER_H

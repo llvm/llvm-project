@@ -10,17 +10,27 @@
 // This file contains the declarations of the HexagonTargetAsmInfo properties.
 //
 //===----------------------------------------------------------------------===//
+
 #define DEBUG_TYPE "hexagon-sdata"
 
-#include "HexagonTargetMachine.h"
 #include "HexagonTargetObjectFile.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -44,13 +54,21 @@ static cl::opt<bool> TraceGVPlacement("trace-gv-placement",
 // (e.g. -debug and -debug-only=globallayout)
 #define TRACE_TO(s, X) s << X
 #ifdef NDEBUG
-#define TRACE(X) do { if (TraceGVPlacement) { TRACE_TO(errs(), X); } } while (0)
+#define TRACE(X)                                                               \
+  do {                                                                         \
+    if (TraceGVPlacement) {                                                    \
+      TRACE_TO(errs(), X);                                                     \
+    }                                                                          \
+  } while (false)
 #else
-#define TRACE(X) \
-  do { \
-    if (TraceGVPlacement) { TRACE_TO(errs(), X); } \
-    else { DEBUG( TRACE_TO(dbgs(), X) ); } \
-  } while (0)
+#define TRACE(X)                                                               \
+  do {                                                                         \
+    if (TraceGVPlacement) {                                                    \
+      TRACE_TO(errs(), X);                                                     \
+    } else {                                                                   \
+      DEBUG(TRACE_TO(dbgs(), X));                                              \
+    }                                                                          \
+  } while (false)
 #endif
 
 // Returns true if the section name is such that the symbol will be put
@@ -68,7 +86,6 @@ static bool isSmallDataSection(StringRef Sec) {
          Sec.find(".sbss.") != StringRef::npos ||
          Sec.find(".scommon.") != StringRef::npos;
 }
-
 
 static const char *getSectionSuffixForSize(unsigned Size) {
   switch (Size) {
@@ -163,7 +180,6 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
   return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, Kind, TM);
 }
 
-
 /// Return true if this global value should be placed into small data/bss
 /// section.
 bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
@@ -232,16 +248,13 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
   return true;
 }
 
-
 bool HexagonTargetObjectFile::isSmallDataEnabled() const {
   return SmallDataThreshold > 0;
 }
 
-
 unsigned HexagonTargetObjectFile::getSmallDataSize() const {
   return SmallDataThreshold;
 }
-
 
 /// Descends any type down to "elementary" components,
 /// discovering the smallest addressable one.

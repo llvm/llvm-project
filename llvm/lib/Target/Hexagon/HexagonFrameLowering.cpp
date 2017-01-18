@@ -1473,8 +1473,7 @@ bool HexagonFrameLowering::expandCopy(MachineBasicBlock &B,
     return false;
 
   unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR)
-    .addOperand(MI->getOperand(1));
+  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR).add(MI->getOperand(1));
   BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), DstR)
     .addReg(TmpR, RegState::Kill);
 
@@ -1985,9 +1984,9 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   // class HaveRC and a new class NewRC. Return nullptr if a common class
   // cannot be found, otherwise return the resulting class. If HaveRC is
   // nullptr, assume that it is still unset.
-  auto getCommonRC = [&HRI] (const TargetRegisterClass *HaveRC,
-                             const TargetRegisterClass *NewRC)
-        -> const TargetRegisterClass* {
+  auto getCommonRC =
+      [](const TargetRegisterClass *HaveRC,
+         const TargetRegisterClass *NewRC) -> const TargetRegisterClass * {
     if (HaveRC == nullptr || HaveRC == NewRC)
       return NewRC;
     // Different classes, both non-null. Pick the more general one.
@@ -2221,7 +2220,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         if (SrcRR.Reg != FoundR || SrcRR.Sub != 0) {
           const DebugLoc &DL = SI.getDebugLoc();
           CopyIn = BuildMI(B, StartIt, DL, HII.get(TargetOpcode::COPY), FoundR)
-                      .addOperand(SrcOp);
+                       .add(SrcOp);
         }
 
         ++StartIt;

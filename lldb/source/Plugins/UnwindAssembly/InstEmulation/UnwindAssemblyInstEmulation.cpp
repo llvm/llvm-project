@@ -442,15 +442,14 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
   case EmulateInstruction::eContextPushRegisterOnStack: {
     uint32_t reg_num = LLDB_INVALID_REGNUM;
     uint32_t generic_regnum = LLDB_INVALID_REGNUM;
-    if (context.info_type ==
-        EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset) {
-      const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
-      reg_num = context.info.RegisterToRegisterPlusOffset.data_reg
-                    .kinds[unwind_reg_kind];
-      generic_regnum = context.info.RegisterToRegisterPlusOffset.data_reg
-                           .kinds[eRegisterKindGeneric];
-    } else
-      assert(!"unhandled case, add code to handle this!");
+    assert(context.info_type ==
+               EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset &&
+           "unhandled case, add code to handle this!");
+    const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
+    reg_num = context.info.RegisterToRegisterPlusOffset.data_reg
+                  .kinds[unwind_reg_kind];
+    generic_regnum = context.info.RegisterToRegisterPlusOffset.data_reg
+                         .kinds[eRegisterKindGeneric];
 
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {

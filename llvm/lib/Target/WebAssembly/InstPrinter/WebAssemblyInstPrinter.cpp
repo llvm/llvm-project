@@ -57,7 +57,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       // FIXME: For CALL_INDIRECT_VOID, don't print a leading comma, because
       // we have an extra flags operand which is not currently printed, for
       // compatiblity reasons.
-      if (i != 0 && 
+      if (i != 0 &&
           (MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID ||
            i != Desc.getNumOperands()))
         OS << ", ";
@@ -94,9 +94,9 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     unsigned NumFixedOperands = Desc.NumOperands;
     SmallSet<uint64_t, 8> Printed;
     for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
-      const MCOperandInfo &Info = Desc.OpInfo[i];
       if (!(i < NumFixedOperands
-                ? (Info.OperandType == WebAssembly::OPERAND_BASIC_BLOCK)
+                ? (Desc.OpInfo[i].OperandType ==
+                   WebAssembly::OPERAND_BASIC_BLOCK)
                 : (Desc.TSFlags & WebAssemblyII::VariableOpImmediateIsLabel)))
         continue;
       uint64_t Depth = MI->getOperand(i).getImm();
@@ -113,7 +113,8 @@ static std::string toString(const APFloat &FP) {
   // Print NaNs with custom payloads specially.
   if (FP.isNaN() &&
       !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
-      !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
+      !FP.bitwiseIsEqual(
+          APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
     APInt AI = FP.bitcastToAPInt();
     return
         std::string(AI.isNegative() ? "-" : "") + "nan:0x" +

@@ -531,3 +531,42 @@ define <4 x float> @knownbits_mask_umax_shuffle_uitofp(<4 x i32> %a0) {
   %4 = uitofp <4 x i32> %3 to <4 x float>
   ret <4 x float> %4
 }
+
+define <4 x i32> @knownbits_mask_bitreverse_ashr(<4 x i32> %a0) {
+; X32-LABEL: knownbits_mask_bitreverse_ashr:
+; X32:       # BB#0:
+; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X32-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; X32-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; X32-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; X32-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; X32-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; X32-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; X32-NEXT:    vpsrad $31, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_bitreverse_ashr:
+; X64:       # BB#0:
+; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; X64-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
+; X64-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; X64-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; X64-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; X64-NEXT:    vpsrad $31, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 -2, i32 -2, i32 -2, i32 -2>
+  %2 = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %1)
+  %3 = ashr <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %3
+}
+declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) nounwind readnone

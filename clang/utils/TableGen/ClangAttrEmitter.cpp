@@ -133,10 +133,9 @@ static StringRef NormalizeNameForSpellingComparison(StringRef Name) {
   return Name.trim("_");
 }
 
-// Normalize attribute spelling only if the spelling has both leading
-// and trailing underscores. For example, __ms_struct__ will be 
-// normalized to "ms_struct"; __cdecl will remain intact.
-static StringRef NormalizeAttrSpelling(StringRef AttrSpelling) {
+// Normalize the spelling of a GNU attribute (i.e. "x" in "__attribute__((x))"),
+// removing "__" if it appears at the beginning and end of the attribute's name.
+static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
   if (AttrSpelling.startswith("__") && AttrSpelling.endswith("__")) {
     AttrSpelling = AttrSpelling.substr(2, AttrSpelling.size() - 4);
   }
@@ -3045,7 +3044,11 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
         assert(Matches && "Unsupported spelling variety found");
 
-        Spelling += NormalizeAttrSpelling(RawSpelling);
+        if (Variety == "GNU")
+          Spelling += NormalizeGNUAttrSpelling(RawSpelling);
+        else
+          Spelling += RawSpelling;
+
         if (SemaHandler)
           Matches->push_back(StringMatcher::StringPair(Spelling,
                               "return AttributeList::AT_" + AttrName + ";"));

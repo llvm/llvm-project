@@ -390,6 +390,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   FuzzingOptions Options;
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
+  Options.ExperimentalLenControl = Flags.experimental_len_control;
+  if (Flags.experimental_len_control && Flags.max_len == 64)
+    Options.MaxLen = 1 << 20;
   Options.UnitTimeoutSec = Flags.timeout;
   Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
@@ -442,8 +445,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   unsigned Seed = Flags.seed;
   // Initialize Seed.
   if (Seed == 0)
-    Seed = (std::chrono::system_clock::now().time_since_epoch().count() << 10) +
-           GetPid();
+    Seed =
+        std::chrono::system_clock::now().time_since_epoch().count() + GetPid();
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
@@ -465,6 +468,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleInt = Flags.handle_int;
   Options.HandleSegv = Flags.handle_segv;
   Options.HandleTerm = Flags.handle_term;
+  Options.HandleXfsz = Flags.handle_xfsz;
   SetSignalHandler(Options);
 
   if (Flags.minimize_crash_internal_step)

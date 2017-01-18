@@ -44,6 +44,10 @@ using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
+std::string lld::toString(uint32_t Type) {
+  return getELFRelocationTypeName(elf::Config->EMachine, Type);
+}
+
 namespace lld {
 namespace elf {
 
@@ -51,10 +55,6 @@ TargetInfo *Target;
 
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 static void or32be(uint8_t *P, int32_t V) { write32be(P, read32be(P) | V); }
-
-std::string toString(uint32_t Type) {
-  return getELFRelocationTypeName(Config->EMachine, Type);
-}
 
 template <class ELFT> static std::string getErrorLoc(uint8_t *Loc) {
   for (InputSectionData *D : Symtab<ELFT>::X->Sections) {
@@ -356,7 +356,9 @@ X86TargetInfo::X86TargetInfo() {
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
-  default:
+  case R_386_16:
+  case R_386_32:
+  case R_386_TLS_LDO_32:
     return R_ABS;
   case R_386_TLS_GD:
     return R_TLSGD;
@@ -381,6 +383,12 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLS;
   case R_386_TLS_LE_32:
     return R_NEG_TLS;
+  case R_386_NONE:
+    return R_HINT;
+  default:
+    error("do not know how to handle relocation '" + toString(Type) + "' (" +
+          Twine(Type) + ")");
+    return R_HINT;
   }
 }
 
@@ -623,7 +631,11 @@ template <class ELFT>
 RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                            const SymbolBody &S) const {
   switch (Type) {
-  default:
+  case R_X86_64_32:
+  case R_X86_64_32S:
+  case R_X86_64_64:
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_DTPOFF64:
     return R_ABS;
   case R_X86_64_TPOFF32:
     return R_TLS;
@@ -648,6 +660,10 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_NONE:
+    return R_HINT;
+  default:
+    error("do not know how to handle relocation '" + toString(Type) + "' (" +
+          Twine(Type) + ")");
     return R_HINT;
   }
 }
@@ -799,7 +815,7 @@ void X86_64TargetInfo<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
     memcpy(Inst, "\x48\xc7", 2);
     *RegSlot = 0xc0 | Reg;
   } else {
-    fatal(getErrorLocation(Loc - 3) +
+    error(getErrorLocation(Loc - 3) +
           "R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
   }
 
@@ -870,7 +886,7 @@ void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write64le(Loc, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unexpected relocation");
   }
 }
 
@@ -1039,7 +1055,7 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32be(Loc, Val & 0x3FFFFFC);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1217,7 +1233,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   }
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1468,7 +1484,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32AArch64Imm(Loc, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1578,7 +1594,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32le(Loc, Val >> 32);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1730,8 +1746,11 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
                                     const InputFile &File,
                                     const SymbolBody &S) const {
-  // If S is an undefined weak symbol we don't need a Thunk
-  if (S.isUndefined())
+  // If S is an undefined weak symbol in an executable we don't need a Thunk.
+  // In a DSO calls to undefined symbols, including weak ones get PLT entries
+  // which may need a thunk.
+  if (S.isUndefined() && !S.isLocal() && S.symbol()->isWeak()
+      && !Config->Shared)
     return Expr;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
@@ -1888,7 +1907,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                   (Val & 0x00ff));           // imm8
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -2336,7 +2355,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     applyMipsPcReloc<E, 32, 0>(Loc, Type, Val);
     break;
   default:
-    fatal(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
 }
 

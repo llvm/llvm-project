@@ -40,36 +40,37 @@ target triple = "x86_64-pc-windows-msvc"
 
 $"\01??_DUseCompleteType@@QEAA@XZ" = comdat any
 
-@"\01?force_fwd_decl@@3UGetFwdDecl@@A" = global %struct.GetFwdDecl zeroinitializer, align 1, !dbg !4
-@"\01?require_complete@@3UUseCompleteType@@A" = global %struct.UseCompleteType zeroinitializer, align 8, !dbg !10
+@"\01?force_fwd_decl@@3UGetFwdDecl@@A" = global %struct.GetFwdDecl zeroinitializer, align 1, !dbg !0
+@"\01?require_complete@@3UUseCompleteType@@A" = global %struct.UseCompleteType zeroinitializer, align 8, !dbg !6
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_t.cpp, i8* null }]
 
 ; Function Attrs: nounwind
-define internal void @"\01??__Erequire_complete@@YAXXZ"() #0 !dbg !25 {
+define internal void @"\01??__Erequire_complete@@YAXXZ"() #0 !dbg !27 {
 entry:
-  %call = call %struct.UseCompleteType* @"\01??0UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !28
-  %0 = call i32 @atexit(void ()* @"\01??__Frequire_complete@@YAXXZ") #2, !dbg !28
-  ret void, !dbg !28
+  %call = call %struct.UseCompleteType* @"\01??0UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !30
+  %0 = call i32 @atexit(void ()* @"\01??__Frequire_complete@@YAXXZ") #2, !dbg !30
+  ret void, !dbg !30
 }
 
 declare %struct.UseCompleteType* @"\01??0UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* returned) unnamed_addr #1
 
 ; Function Attrs: nounwind
-define linkonce_odr void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this) unnamed_addr #0 comdat align 2 !dbg !29 {
+define linkonce_odr void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this) unnamed_addr #0 comdat align 2 !dbg !31 {
 entry:
   %this.addr = alloca %struct.UseCompleteType*, align 8
   store %struct.UseCompleteType* %this, %struct.UseCompleteType** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.UseCompleteType** %this.addr, metadata !30, metadata !32), !dbg !33
+  call void @llvm.dbg.declare(metadata %struct.UseCompleteType** %this.addr, metadata !32, metadata !34), !dbg !35
   %this1 = load %struct.UseCompleteType*, %struct.UseCompleteType** %this.addr, align 8
-  call void @"\01??1UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this1), !dbg !34
-  ret void, !dbg !34
+  call void @"\01??1UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* %this1), !dbg !36
+  ret void, !dbg !36
 }
 
 ; Function Attrs: nounwind
-define internal void @"\01??__Frequire_complete@@YAXXZ"() #0 !dbg !35 {
+
+define internal void @"\01??__Frequire_complete@@YAXXZ"() #0 !dbg !37 {
 entry:
-  call void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !36
-  ret void, !dbg !37
+  call void @"\01??_DUseCompleteType@@QEAA@XZ"(%struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A"), !dbg !38
+  ret void, !dbg !39
 }
 
 ; Function Attrs: nounwind
@@ -81,9 +82,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 declare void @"\01??1UseCompleteType@@QEAA@XZ"(%struct.UseCompleteType*) unnamed_addr #1
 
 ; Function Attrs: nounwind
-define internal void @_GLOBAL__sub_I_t.cpp() #0 !dbg !39 {
+define internal void @_GLOBAL__sub_I_t.cpp() #0 !dbg !41 {
 entry:
-  call void @"\01??__Erequire_complete@@YAXXZ"(), !dbg !41
+  call void @"\01??__Erequire_complete@@YAXXZ"(), !dbg !43
   ret void
 }
 
@@ -92,49 +93,52 @@ attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-
 attributes #2 = { nounwind }
 attributes #3 = { nounwind readnone }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!22, !23}
-!llvm.ident = !{!24}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!24, !25}
+!llvm.ident = !{!26}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 4.0.0 (trunk 281056) (llvm/trunk 281051)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
-!1 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
-!2 = !{}
-!3 = !{!4, !10}
-!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "force_fwd_decl", linkageName: "\01?force_fwd_decl@@3UGetFwdDecl@@A", scope: !0, file: !5, line: 5, type: !6, isLocal: false, isDefinition: true))
-!5 = !DIFile(filename: "t.cpp", directory: "C:\5Csrc\5Cllvm\5Cbuild")
-!6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "GetFwdDecl", file: !5, line: 2, size: 8, align: 8, elements: !7, identifier: ".?AUGetFwdDecl@@")
-!7 = !{!8}
-!8 = !DIDerivedType(tag: DW_TAG_member, name: "format", scope: !6, file: !5, line: 3, baseType: !9, flags: DIFlagStaticMember)
-!9 = !DICompositeType(tag: DW_TAG_structure_type, name: "UnicodeString", file: !5, line: 1, flags: DIFlagFwdDecl, identifier: ".?AUUnicodeString@@")
-!10 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "require_complete", linkageName: "\01?require_complete@@3UUseCompleteType@@A", scope: !0, file: !5, line: 15, type: !11, isLocal: false, isDefinition: true))
-!11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "UseCompleteType", file: !5, line: 10, size: 64, align: 64, elements: !12, identifier: ".?AUUseCompleteType@@")
-!12 = !{!13, !17, !21}
-!13 = !DIDerivedType(tag: DW_TAG_member, name: "currencySpcAfterSym", scope: !11, file: !5, line: 13, baseType: !14, size: 64, align: 64)
-!14 = !DICompositeType(tag: DW_TAG_array_type, baseType: !9, size: 64, align: 64, elements: !15)
-!15 = !{!16}
-!16 = !DISubrange(count: 1)
-!17 = !DISubprogram(name: "UseCompleteType", scope: !11, file: !5, line: 11, type: !18, isLocal: false, isDefinition: false, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false)
-!18 = !DISubroutineType(types: !19)
-!19 = !{null, !20}
-!20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
-!21 = !DISubprogram(name: "~UseCompleteType", scope: !11, file: !5, line: 12, type: !18, isLocal: false, isDefinition: false, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: false)
-!22 = !{i32 2, !"CodeView", i32 1}
-!23 = !{i32 2, !"Debug Info Version", i32 3}
-!24 = !{!"clang version 4.0.0 (trunk 281056) (llvm/trunk 281051)"}
-!25 = distinct !DISubprogram(name: "??__Erequire_complete@@YAXXZ", scope: !5, file: !5, line: 15, type: !26, isLocal: true, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!26 = !DISubroutineType(types: !27)
-!27 = !{null}
-!28 = !DILocation(line: 15, scope: !25)
-!29 = distinct !DISubprogram(name: "~UseCompleteType", linkageName: "\01??_DUseCompleteType@@QEAA@XZ", scope: !11, file: !5, line: 12, type: !18, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !21, variables: !2)
-!30 = !DILocalVariable(name: "this", arg: 1, scope: !29, type: !31, flags: DIFlagArtificial | DIFlagObjectPointer)
-!31 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64, align: 64)
-!32 = !DIExpression()
-!33 = !DILocation(line: 0, scope: !29)
-!34 = !DILocation(line: 15, scope: !29)
-!35 = distinct !DISubprogram(name: "??__Frequire_complete@@YAXXZ", scope: !1, file: !1, line: 15, type: !26, isLocal: true, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!36 = !DILocation(line: 15, scope: !35)
-!37 = !DILocation(line: 15, scope: !38)
-!38 = !DILexicalBlockFile(scope: !35, file: !5, discriminator: 0)
-!39 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_t.cpp", scope: !1, file: !1, type: !40, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, variables: !2)
-!40 = !DISubroutineType(types: !2)
-!41 = !DILocation(line: 0, scope: !39)
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "force_fwd_decl", linkageName: "\01?force_fwd_decl@@3UGetFwdDecl@@A", scope: !2, file: !8, line: 5, type: !21, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 4.0.0 (trunk 281056) (llvm/trunk 281051)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!3 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
+!4 = !{}
+!5 = !{!0, !6}
+!6 = distinct !DIGlobalVariableExpression(var: !7)
+!7 = !DIGlobalVariable(name: "require_complete", linkageName: "\01?require_complete@@3UUseCompleteType@@A", scope: !2, file: !8, line: 15, type: !9, isLocal: false, isDefinition: true)
+!8 = !DIFile(filename: "t.cpp", directory: "C:\5Csrc\5Cllvm\5Cbuild")
+!9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "UseCompleteType", file: !8, line: 10, size: 64, align: 64, elements: !10, identifier: ".?AUUseCompleteType@@")
+!10 = !{!11, !16, !20}
+!11 = !DIDerivedType(tag: DW_TAG_member, name: "currencySpcAfterSym", scope: !9, file: !8, line: 13, baseType: !12, size: 64, align: 64)
+!12 = !DICompositeType(tag: DW_TAG_array_type, baseType: !13, size: 64, align: 64, elements: !14)
+!13 = !DICompositeType(tag: DW_TAG_structure_type, name: "UnicodeString", file: !8, line: 1, flags: DIFlagFwdDecl, identifier: ".?AUUnicodeString@@")
+!14 = !{!15}
+!15 = !DISubrange(count: 1)
+!16 = !DISubprogram(name: "UseCompleteType", scope: !9, file: !8, line: 11, type: !17, isLocal: false, isDefinition: false, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: false)
+!17 = !DISubroutineType(types: !18)
+!18 = !{null, !19}
+!19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!20 = !DISubprogram(name: "~UseCompleteType", scope: !9, file: !8, line: 12, type: !17, isLocal: false, isDefinition: false, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: false)
+!21 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "GetFwdDecl", file: !8, line: 2, size: 8, align: 8, elements: !22, identifier: ".?AUGetFwdDecl@@")
+!22 = !{!23}
+!23 = !DIDerivedType(tag: DW_TAG_member, name: "format", scope: !21, file: !8, line: 3, baseType: !13, flags: DIFlagStaticMember)
+!24 = !{i32 2, !"CodeView", i32 1}
+!25 = !{i32 2, !"Debug Info Version", i32 3}
+!26 = !{!"clang version 4.0.0 (trunk 281056) (llvm/trunk 281051)"}
+!27 = distinct !DISubprogram(name: "??__Erequire_complete@@YAXXZ", scope: !8, file: !8, line: 15, type: !28, isLocal: true, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!28 = !DISubroutineType(types: !29)
+!29 = !{null}
+!30 = !DILocation(line: 15, scope: !27)
+!31 = distinct !DISubprogram(name: "~UseCompleteType", linkageName: "\01??_DUseCompleteType@@QEAA@XZ", scope: !9, file: !8, line: 12, type: !17, isLocal: false, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !2, declaration: !20, variables: !4)
+!32 = !DILocalVariable(name: "this", arg: 1, scope: !31, type: !33, flags: DIFlagArtificial | DIFlagObjectPointer)
+!33 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64, align: 64)
+!34 = !DIExpression()
+!35 = !DILocation(line: 0, scope: !31)
+!36 = !DILocation(line: 15, scope: !31)
+!37 = distinct !DISubprogram(name: "??__Frequire_complete@@YAXXZ", scope: !3, file: !3, line: 15, type: !28, isLocal: true, isDefinition: true, scopeLine: 15, flags: DIFlagPrototyped, isOptimized: false, unit: !2, variables: !4)
+!38 = !DILocation(line: 15, scope: !37)
+!39 = !DILocation(line: 15, scope: !40)
+!40 = !DILexicalBlockFile(scope: !37, file: !8, discriminator: 0)
+!41 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_t.cpp", scope: !3, file: !3, type: !42, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !2, variables: !4)
+!42 = !DISubroutineType(types: !4)
+!43 = !DILocation(line: 0, scope: !41)
+

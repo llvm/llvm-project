@@ -277,9 +277,10 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
 int TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
     OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
-    OperandValueProperties Opd2PropInfo) const {
+    OperandValueProperties Opd2PropInfo,
+    ArrayRef<const Value *> Args) const {
   int Cost = TTIImpl->getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                             Opd1PropInfo, Opd2PropInfo);
+                                             Opd1PropInfo, Opd2PropInfo, Args);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -389,8 +390,9 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
 }
 
 int TargetTransformInfo::getAddressComputationCost(Type *Tp,
-                                                   bool IsComplex) const {
-  int Cost = TTIImpl->getAddressComputationCost(Tp, IsComplex);
+                                                   ScalarEvolution *SE,
+                                                   const SCEV *Ptr) const {
+  int Cost = TTIImpl->getAddressComputationCost(Tp, SE, Ptr);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

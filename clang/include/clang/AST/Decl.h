@@ -2061,6 +2061,10 @@ public:
   /// limited representation in the AST.
   SourceRange getReturnTypeSourceRange() const;
 
+  /// \brief Attempt to compute an informative source range covering the
+  /// function exception specification, if any.
+  SourceRange getExceptionSpecSourceRange() const;
+
   /// \brief Determine the type of an expression that calls this function.
   QualType getCallResultType() const {
     assert(getType()->getAs<FunctionType>() && "Expected a FunctionType!");

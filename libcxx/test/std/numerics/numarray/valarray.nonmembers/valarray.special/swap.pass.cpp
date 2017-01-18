@@ -43,7 +43,6 @@ int main()
         typedef int T;
         T a1[] = {1, 2, 3, 4, 5};
         const unsigned N1 = sizeof(a1)/sizeof(a1[0]);
-        const unsigned N2 = 0;
         std::valarray<T> v1(a1, N1);
         std::valarray<T> v2;
         std::valarray<T> v1_save = v1;
@@ -59,7 +58,6 @@ int main()
     {
         typedef int T;
         T a2[] = {6, 7, 8, 9, 10, 11, 12};
-        const unsigned N1 = 0;
         const unsigned N2 = sizeof(a2)/sizeof(a2[0]);
         std::valarray<T> v1;
         std::valarray<T> v2(a2, N2);
@@ -75,8 +73,6 @@ int main()
     }
     {
         typedef int T;
-        const unsigned N1 = 0;
-        const unsigned N2 = 0;
         std::valarray<T> v1;
         std::valarray<T> v2;
         std::valarray<T> v1_save = v1;

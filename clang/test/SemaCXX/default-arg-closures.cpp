@@ -4,16 +4,15 @@
 // instantiating and checking the semantics of default arguments. Make sure we
 // do that right.
 
-// FIXME: Don't diagnose this issue twice.
 template <typename T>
-struct DependentDefaultCtorArg { // expected-note {{in instantiation of default function argument}}
-  // expected-error@+1 2 {{type 'int' cannot be used prior to '::' because it has no members}}
+struct DependentDefaultCtorArg {
+  // expected-error@+1 {{type 'int' cannot be used prior to '::' because it has no members}}
   DependentDefaultCtorArg(int n = T::error);
 };
 struct
 __declspec(dllexport) // expected-note {{due to 'ExportDefaultCtorClosure' being dllexported}}
-ExportDefaultCtorClosure // expected-note {{implicit default constructor for 'ExportDefaultCtorClosure' first required here}}
-: DependentDefaultCtorArg<int> // expected-note {{in instantiation of template class}}
+ExportDefaultCtorClosure // expected-note {{in instantiation of default function argument expression for 'DependentDefaultCtorArg<int>' required here}} expected-note {{implicit default constructor for 'ExportDefaultCtorClosure' first required here}}
+: DependentDefaultCtorArg<int>
 {};
 
 template <typename T>

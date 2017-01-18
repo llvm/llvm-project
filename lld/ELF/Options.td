@@ -39,8 +39,13 @@ def allow_multiple_definition: F<"allow-multiple-definition">,
 def as_needed: F<"as-needed">,
   HelpText<"Only set DT_NEEDED for shared libraries if used">;
 
-def color_diagnostics: S<"color-diagnostics">,
+def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
+
+def color_diagnostics_eq: J<"color-diagnostics=">,
+  HelpText<"Use colors in diagnostics">;
+
+def demangle: F<"demangle">, HelpText<"Demangle symbol names">;
 
 def disable_new_dtags: F<"disable-new-dtags">,
   HelpText<"Disable new dynamic tags">;
@@ -118,6 +123,8 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
+def Map: JS<"Map">, HelpText<"Print a link map to the specified file">;
+
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
@@ -129,6 +136,9 @@ def no_color_diagnostics: F<"no-color-diagnostics">,
 
 def no_demangle: F<"no-demangle">,
   HelpText<"Do not demangle symbol names">;
+
+def no_export_dynamic: F<"no-export-dynamic">;
+def no_fatal_warnings: F<"no-fatal-warnings">;
 
 def no_gc_sections: F<"no-gc-sections">,
   HelpText<"Disable garbage collection of unused sections">;
@@ -168,6 +178,9 @@ def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,
   HelpText<"List removed unused sections">;
+
+def print_map: F<"print-map">,
+  HelpText<"Print a link map to the standard output">;
 
 def reproduce: S<"reproduce">,
   HelpText<"Dump linker invocation and input files for debugging">;
@@ -252,7 +265,6 @@ def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: F<"non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: F<"static">, Alias<Bstatic>;
 def alias_L__library_path: J<"library-path=">, Alias<L>;
-def alias_color_diagnostics: J<"color-diagnostics=">, Alias<color_diagnostics>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;
@@ -267,10 +279,12 @@ def alias_format_b: S<"b">, Alias<format>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
+def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
+def alias_print_map_M: Flag<["-"], "M">, Alias<print_map>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
 def alias_retain_symbols_file: S<"retain-symbols-file">, Alias<retain_symbols_file>;
 def alias_rpath_R: JoinedOrSeparate<["-"], "R">, Alias<rpath>;
@@ -319,17 +333,13 @@ def plugin_opt_eq: J<"plugin-opt=">;
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def cref: Flag<["--"], "cref">;
 def define_common: F<"define-common">;
-def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def g: Flag<["-"], "g">;
-def M: Flag<["-"], "M">;
-def Map: JS<"Map">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
   Alias<no_add_needed>;
 def no_dynamic_linker: F<"no-dynamic-linker">;
-def no_fatal_warnings: F<"no-fatal-warnings">;
 def no_mmap_output_file: F<"no-mmap-output-file">;
 def no_warn_common: F<"no-warn-common">;
 def no_warn_mismatch: F<"no-warn-mismatch">;
@@ -348,7 +358,6 @@ def Qy : F<"Qy">;
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
 def alias_define_common_dc: F<"dc">, Alias<define_common>;
 def alias_define_common_dp: F<"dp">, Alias<define_common>;
-def alias_Map_eq: J<"Map=">, Alias<Map>;
 def alias_version_script_version_script: J<"version-script=">,
   Alias<version_script>;
 

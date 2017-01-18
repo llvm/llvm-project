@@ -1,11 +1,13 @@
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o.0.2.internalize.bc -o - | FileCheck %s
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck ---check-prefix=NONAME %s
@@ -25,6 +27,7 @@
 ; NONAME:  ret i32 %3
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 @GlobalValueName = global i32 0
 

@@ -65,8 +65,7 @@ bool DWARFDebugRanges::Extract(SymbolFileDWARF *dwarf2Data,
       break;
 
     default:
-      assert(!"DWARFRangeList::Extract() unsupported address size.");
-      break;
+      llvm_unreachable("DWARFRangeList::Extract() unsupported address size.");
     }
 
     // Filter out empty ranges
@@ -83,7 +82,6 @@ void DWARFDebugRanges::Dump(Stream &s,
                             lldb::offset_t *offset_ptr,
                             dw_addr_t cu_base_addr) {
   uint32_t addr_size = s.GetAddressByteSize();
-  bool verbose = s.GetVerbose();
 
   dw_addr_t base_addr = cu_base_addr;
   while (
@@ -96,10 +94,6 @@ void DWARFDebugRanges::Dump(Stream &s,
       begin = LLDB_INVALID_ADDRESS;
 
     s.Indent();
-    if (verbose) {
-      s.AddressRange(begin, end, sizeof(dw_addr_t), " offsets = ");
-    }
-
     if (begin == 0 && end == 0) {
       s.PutCString(" End");
       break;
@@ -112,8 +106,7 @@ void DWARFDebugRanges::Dump(Stream &s,
       dw_addr_t begin_addr = begin + base_addr;
       dw_addr_t end_addr = end + base_addr;
 
-      s.AddressRange(begin_addr, end_addr, sizeof(dw_addr_t),
-                     verbose ? " ==> addrs = " : NULL);
+      s.AddressRange(begin_addr, end_addr, sizeof(dw_addr_t), NULL);
     }
   }
 }

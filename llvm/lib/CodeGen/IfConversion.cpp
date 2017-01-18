@@ -1495,16 +1495,18 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
     if (TII->reverseBranchCondition(Cond))
       llvm_unreachable("Unable to reverse branch condition!");
 
-  // Initialize liveins to the first BB. These are potentiall redefined by
-  // predicated instructions.
   Redefs.init(*TRI);
-  Redefs.addLiveIns(CvtMBB);
-  Redefs.addLiveIns(NextMBB);
-
-  // Compute a set of registers which must not be killed by instructions in
-  // BB1: This is everything live-in to BB2.
   DontKill.init(*TRI);
-  DontKill.addLiveIns(NextMBB);
+
+  if (MRI->tracksLiveness()) {
+    // Initialize liveins to the first BB. These are potentiall redefined by
+    // predicated instructions.
+    Redefs.addLiveIns(CvtMBB);
+    Redefs.addLiveIns(NextMBB);
+    // Compute a set of registers which must not be killed by instructions in
+    // BB1: This is everything live-in to BB2.
+    DontKill.addLiveIns(NextMBB);
+  }
 
   if (CvtMBB.pred_size() > 1) {
     BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
@@ -1602,8 +1604,10 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   // Initialize liveins to the first BB. These are potentially redefined by
   // predicated instructions.
   Redefs.init(*TRI);
-  Redefs.addLiveIns(CvtMBB);
-  Redefs.addLiveIns(NextMBB);
+  if (MRI->tracksLiveness()) {
+    Redefs.addLiveIns(CvtMBB);
+    Redefs.addLiveIns(NextMBB);
+  }
 
   DontKill.clear();
 
@@ -1766,8 +1770,10 @@ bool IfConverter::IfConvertDiamondCommon(
   //   instructions. We start with BB1 live-ins so we have the live-out regs
   //   after tracking the BB1 instructions.
   Redefs.init(*TRI);
-  Redefs.addLiveIns(MBB1);
-  Redefs.addLiveIns(MBB2);
+  if (MRI->tracksLiveness()) {
+    Redefs.addLiveIns(MBB1);
+    Redefs.addLiveIns(MBB2);
+  }
 
   // Remove the duplicated instructions at the beginnings of both paths.
   // Skip dbg_value instructions
@@ -1792,12 +1798,14 @@ bool IfConverter::IfConvertDiamondCommon(
   // This is everything used+live in BB2 after the duplicated instructions. We
   // can compute this set by simulating liveness backwards from the end of BB2.
   DontKill.init(*TRI);
-  for (const MachineInstr &MI : make_range(MBB2.rbegin(), ++DI2.getReverse()))
-    DontKill.stepBackward(MI);
+  if (MRI->tracksLiveness()) {
+    for (const MachineInstr &MI : make_range(MBB2.rbegin(), ++DI2.getReverse()))
+      DontKill.stepBackward(MI);
 
-  for (const MachineInstr &MI : make_range(MBB1.begin(), DI1)) {
-    SmallVector<std::pair<unsigned, const MachineOperand*>, 4> IgnoredClobbers;
-    Redefs.stepForward(MI, IgnoredClobbers);
+    for (const MachineInstr &MI : make_range(MBB1.begin(), DI1)) {
+      SmallVector<std::pair<unsigned, const MachineOperand*>, 4> Dummy;
+      Redefs.stepForward(MI, Dummy);
+    }
   }
   BBI.BB->splice(BBI.BB->end(), &MBB1, MBB1.begin(), DI1);
   MBB2.erase(MBB2.begin(), DI2);

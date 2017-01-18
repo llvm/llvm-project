@@ -646,7 +646,7 @@ bool FastISel::selectStackmap(const CallInst *I) {
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                     TII.get(TargetOpcode::STACKMAP));
   for (auto const &MO : Ops)
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   // Issue CALLSEQ_END
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
@@ -826,7 +826,7 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
                                     TII.get(TargetOpcode::PATCHPOINT));
 
   for (auto &MO : Ops)
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   MIB->setPhysRegsDeadExcept(CLI.InRegs, TRI);
 
@@ -1149,7 +1149,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       } else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(TargetOpcode::DBG_VALUE))
-            .addOperand(*Op)
+            .add(*Op)
             .addImm(0)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());

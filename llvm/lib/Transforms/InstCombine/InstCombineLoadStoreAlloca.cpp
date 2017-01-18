@@ -850,20 +850,10 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   // separated by a few arithmetic operations.
   BasicBlock::iterator BBI(LI);
   bool IsLoadCSE = false;
-  if (Value *AvailableVal =
-      FindAvailableLoadedValue(&LI, LI.getParent(), BBI,
-                               DefMaxInstsToScan, AA, &IsLoadCSE)) {
-    if (IsLoadCSE) {
-      LoadInst *NLI = cast<LoadInst>(AvailableVal);
-      unsigned KnownIDs[] = {
-          LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
-          LLVMContext::MD_noalias,         LLVMContext::MD_range,
-          LLVMContext::MD_invariant_load,  LLVMContext::MD_nonnull,
-          LLVMContext::MD_invariant_group, LLVMContext::MD_align,
-          LLVMContext::MD_dereferenceable,
-          LLVMContext::MD_dereferenceable_or_null};
-      combineMetadata(NLI, &LI, KnownIDs);
-    };
+  if (Value *AvailableVal = FindAvailableLoadedValue(
+          &LI, LI.getParent(), BBI, DefMaxInstsToScan, AA, &IsLoadCSE)) {
+    if (IsLoadCSE)
+      combineMetadataForCSE(cast<LoadInst>(AvailableVal), &LI);
 
     return replaceInstUsesWith(
         LI, Builder->CreateBitOrPointerCast(AvailableVal, LI.getType(),

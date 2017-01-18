@@ -87,6 +87,7 @@ void test_implicit()
             using T = ImplicitThrow;
             optional<T> t = 42;
             assert(false);
+            ((void)t);
         } catch (int) {
         }
     }

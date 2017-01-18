@@ -47,9 +47,9 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple& Triple,
+MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
-  : ToolChain(D, Triple, Args) {
+    : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
@@ -92,6 +92,15 @@ bool MSVCToolChain::isPIEDefault() const {
 
 bool MSVCToolChain::isPICDefaultForced() const {
   return getArch() == llvm::Triple::x86_64;
+}
+
+void MSVCToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+}
+
+void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
+  CudaInstallation.print(OS);
 }
 
 #ifdef USE_WIN32

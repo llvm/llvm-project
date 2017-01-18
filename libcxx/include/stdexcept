@@ -191,7 +191,8 @@ void __throw_logic_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw logic_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -201,7 +202,8 @@ void __throw_domain_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw domain_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -211,7 +213,8 @@ void __throw_invalid_argument(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw invalid_argument(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -221,7 +224,8 @@ void __throw_length_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw length_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -231,7 +235,8 @@ void __throw_out_of_range(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw out_of_range(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -241,7 +246,8 @@ void __throw_range_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw range_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+	  _VSTD::abort();
 #endif
 }
 
@@ -251,7 +257,8 @@ void __throw_overflow_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw overflow_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+    _VSTD::abort();
 #endif
 }
 
@@ -261,7 +268,8 @@ void __throw_underflow_error(const char*__msg)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw underflow_error(__msg);
 #else
-	_VSTD::abort();
+    ((void)__msg);
+    _VSTD::abort();
 #endif
 }
 

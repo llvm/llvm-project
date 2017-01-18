@@ -65,10 +65,12 @@ MCSymbol *DebugHandlerBase::getLabelAfterInsn(const MachineInstr *MI) {
 
 int DebugHandlerBase::fragmentCmp(const DIExpression *P1,
                                   const DIExpression *P2) {
-  unsigned l1 = P1->getFragmentOffsetInBits();
-  unsigned l2 = P2->getFragmentOffsetInBits();
-  unsigned r1 = l1 + P1->getFragmentSizeInBits();
-  unsigned r2 = l2 + P2->getFragmentSizeInBits();
+  auto Fragment1 = *P1->getFragmentInfo();
+  auto Fragment2 = *P2->getFragmentInfo();
+  unsigned l1 = Fragment1.OffsetInBits;
+  unsigned l2 = Fragment2.OffsetInBits;
+  unsigned r1 = l1 + Fragment1.SizeInBits;
+  unsigned r2 = l2 + Fragment2.SizeInBits;
   if (r1 <= l2)
     return -1;
   else if (r2 <= l1)

@@ -80,6 +80,7 @@ struct Configuration {
   llvm::StringRef Init;
   llvm::StringRef LTOAAPipeline;
   llvm::StringRef LTONewPmPasses;
+  llvm::StringRef MapFile;
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;

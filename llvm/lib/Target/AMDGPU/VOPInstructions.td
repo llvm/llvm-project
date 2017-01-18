@@ -118,6 +118,9 @@ class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
+  let Constraints     = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
+
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
@@ -204,6 +207,22 @@ class VOP3be_vi <bits<10> op, VOPProfile P> : VOP3be<P> {
   let Inst{15}    = !if(P.HasClamp, clamp{0}, 0);
 }
 
+def SDWA {
+  // sdwa_sel
+  int BYTE_0 = 0;
+  int BYTE_1 = 1;
+  int BYTE_2 = 2;
+  int BYTE_3 = 3;
+  int WORD_0 = 4;
+  int WORD_1 = 5;
+  int DWORD = 6;
+
+  // dst_unused
+  int UNUSED_PAD = 0;
+  int UNUSED_SEXT = 1;
+  int UNUSED_PRESERVE = 2;
+}
+
 class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
@@ -214,37 +233,74 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<2> dst_unused;
   bits<1> clamp;
 
-  bits<3> SDWA_DWORD = 6;
-  bits<2> SDWA_UNUSED_PRESERVE = 2;
-
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
-  let Inst{42-40} = !if(P.EmitDst, dst_sel{2-0}, SDWA_DWORD{2-0});
-  let Inst{44-43} = !if(P.EmitDst, dst_unused{1-0}, SDWA_UNUSED_PRESERVE{1-0});
+  let Inst{42-40} = !if(P.EmitDst, dst_sel{2-0}, SDWA.DWORD);
+  let Inst{44-43} = !if(P.EmitDst, dst_unused{1-0}, SDWA.UNUSED_PRESERVE);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
-  let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, SDWA_DWORD{2-0});
+  let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, SDWA.DWORD);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
-  let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, SDWA_DWORD{2-0});
+  let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, SDWA.DWORD);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
   let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
 }
 
-class VOP_SDWA <string OpName, VOPProfile P> :
-  InstSI <P.OutsSDWA, P.InsSDWA, OpName#P.AsmSDWA, []>,
-  VOP_SDWAe<P> {
+class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
+  InstSI <P.OutsSDWA, P.InsSDWA, "", pattern>,
+  VOP <opName>,
+  SIMCInstr <opName#"_sdwa", SIEncodingFamily.NONE>,
+  MnemonicAlias <opName#"_sdwa", opName> {
+  
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let UseNamedOperandTable = 1;
+
+  string Mnemonic = opName;
+  string AsmOperands = P.AsmSDWA;
+
+  let Size = 8;
   let mayLoad = 0;
   let mayStore = 0;
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;  
+
   let VALU = 1;
   let SDWA = 1;
-  let Size = 8;
-
+  let Uses = [EXEC];
+  
   let SubtargetPredicate = isVI;
   let AssemblerPredicate = !if(P.HasExt, isVI, DisableInst);
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.SDWA,
                                      AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
+
+  VOPProfile Pfl = P;
+}
+
+class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
+  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
+
+  let isPseudo = 0;
+  let isCodeGenOnly = 0;
+
+  let Defs = ps.Defs;
+  let Uses = ps.Uses;
+  let SchedRW = ps.SchedRW;
+  let hasSideEffects = ps.hasSideEffects;
+
+  let Constraints     = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
+
+  // Copy relevant pseudo op flags
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AssemblerPredicate   = ps.AssemblerPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let AsmVariantName       = ps.AsmVariantName;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let DecoderNamespace     = ps.DecoderNamespace;
+  let Constraints          = ps.Constraints;
+  let DisableEncoding      = ps.DisableEncoding;
+  let TSFlags              = ps.TSFlags;
 }
 
 class VOP_DPPe<VOPProfile P> : Enc64 {

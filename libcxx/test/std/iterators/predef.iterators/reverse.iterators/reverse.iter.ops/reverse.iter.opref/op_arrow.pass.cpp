@@ -113,4 +113,7 @@ int main()
         static_assert(it1->get() == gC.get(), "");
     }
 #endif
+    {
+        ((void)gC);
+    }
 }

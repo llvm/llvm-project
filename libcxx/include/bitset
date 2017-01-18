@@ -646,11 +646,11 @@ __bitset<0, 0>::__bitset(unsigned long long) _NOEXCEPT
 {
 }
 
-template <size_t _Size> class _LIBCPP_TYPE_VIS_ONLY bitset;
+template <size_t _Size> class _LIBCPP_TEMPLATE_VIS bitset;
 template <size_t _Size> struct hash<bitset<_Size> >;
 
 template <size_t _Size>
-class _LIBCPP_TYPE_VIS_ONLY bitset
+class _LIBCPP_TEMPLATE_VIS bitset
     : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size>
 {
 public:
@@ -1072,7 +1072,7 @@ operator^(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 }
 
 template <size_t _Size>
-struct _LIBCPP_TYPE_VIS_ONLY hash<bitset<_Size> >
+struct _LIBCPP_TEMPLATE_VIS hash<bitset<_Size> >
     : public unary_function<bitset<_Size>, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY

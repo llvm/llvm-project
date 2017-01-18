@@ -22,6 +22,6 @@ void g() {
 // NO-TSS-NOT: call void @__cxa_guard_release
 // NO-TSS: ret void
 
-// WITH-TSS: attributes [[NUW]] = { nounwind{{.*}} }
+// WITH-TSS: attributes [[NUW]] = { noinline nounwind{{.*}} }
 
-// NO-TSS: attributes [[NUW]] = { nounwind{{.*}} }
+// NO-TSS: attributes [[NUW]] = { noinline nounwind{{.*}} }

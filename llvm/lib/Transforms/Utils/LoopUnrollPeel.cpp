@@ -335,10 +335,12 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
 
   uint64_t TrueWeight, FalseWeight;
-  uint64_t ExitWeight = 0, BackEdgeWeight = 0;
+  uint64_t ExitWeight = 0, CurHeaderWeight = 0;
   if (LatchBR->extractProfMetadata(TrueWeight, FalseWeight)) {
     ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
-    BackEdgeWeight = HeaderIdx ? FalseWeight : TrueWeight;
+    // The # of times the loop body executes is the sum of the exit block
+    // weight and the # of times the backedges are taken.
+    CurHeaderWeight = TrueWeight + FalseWeight;
   }
 
   // For each peeled-off iteration, make a copy of the loop.
@@ -346,15 +348,14 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     SmallVector<BasicBlock *, 8> NewBlocks;
     ValueToValueMapTy VMap;
 
-    // The exit weight of the previous iteration is the header entry weight
-    // of the current iteration. So this is exactly how many dynamic iterations
-    // the current peeled-off static iteration uses up.
+    // Subtract the exit weight from the current header weight -- the exit
+    // weight is exactly the weight of the previous iteration's header.
     // FIXME: due to the way the distribution is constructed, we need a
     // guard here to make sure we don't end up with non-positive weights.
-    if (ExitWeight < BackEdgeWeight)
-      BackEdgeWeight -= ExitWeight;
+    if (ExitWeight < CurHeaderWeight)
+      CurHeaderWeight -= ExitWeight;
     else
-      BackEdgeWeight = 1;
+      CurHeaderWeight = 1;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
                     NewBlocks, LoopBlocks, VMap, LVMap, LI);
@@ -388,6 +389,14 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   // Adjust the branch weights on the loop exit.
   if (ExitWeight) {
+    // The backedge count is the difference of current header weight and
+    // current loop exit weight. If the current header weight is smaller than
+    // the current loop exit weight, we mark the loop backedge weight as 1.
+    uint64_t BackEdgeWeight = 0;
+    if (ExitWeight < CurHeaderWeight)
+      BackEdgeWeight = CurHeaderWeight - ExitWeight;
+    else
+      BackEdgeWeight = 1;
     MDBuilder MDB(LatchBR->getContext());
     MDNode *WeightNode =
         HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)

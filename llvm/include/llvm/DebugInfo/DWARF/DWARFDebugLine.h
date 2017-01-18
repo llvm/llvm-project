@@ -116,12 +116,12 @@ public:
     // An unsigned integer indicating the identity of the source file
     // corresponding to a machine instruction.
     uint16_t File;
-    // An unsigned integer whose value encodes the applicable instruction set
-    // architecture for the current instruction.
-    uint8_t Isa;
     // An unsigned integer representing the DWARF path discriminator value
     // for this location.
     uint32_t Discriminator;
+    // An unsigned integer whose value encodes the applicable instruction set
+    // architecture for the current instruction.
+    uint8_t Isa;
     // A boolean indicating that the current instruction is the beginning of a
     // statement.
     uint8_t IsStmt:1,

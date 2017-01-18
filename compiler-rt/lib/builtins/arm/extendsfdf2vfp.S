@@ -19,9 +19,13 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__extendsfdf2vfp)
+#if defined(COMPILER_RT_ARMHF_TARGET)
+	vcvt.f64.f32 d0, s0
+#else
 	vmov	s15, r0      // load float register from R0
 	vcvt.f64.f32 d7, s15 // convert single to double
 	vmov	r0, r1, d7   // return result in r0/r1 pair
+#endif
 	bx	lr
 END_COMPILERRT_FUNCTION(__extendsfdf2vfp)
 

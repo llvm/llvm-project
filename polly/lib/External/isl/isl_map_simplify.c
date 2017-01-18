@@ -5304,6 +5304,8 @@ __isl_give isl_basic_map *isl_basic_map_shift_div(
 	int i;
 	unsigned total;
 
+	if (isl_int_is_zero(shift))
+		return bmap;
 	if (!bmap)
 		return NULL;
 

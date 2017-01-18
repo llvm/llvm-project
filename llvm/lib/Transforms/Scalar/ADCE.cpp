@@ -644,8 +644,8 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   if (!AggressiveDeadCodeElimination(F, PDT).performDeadCodeElimination())
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  auto PA = PreservedAnalyses();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
 }

@@ -110,9 +110,9 @@ protected:
   CodeGenModule &CGM;
 
   /// \brief Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr and size \a Size.
+  /// address \a Addr, size \a Size, and flags \a Flags.
   virtual void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                                  uint64_t Size);
+                                  uint64_t Size, int32_t Flags = 0);
 
   /// \brief Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
@@ -129,6 +129,35 @@ protected:
                                                 llvm::Constant *&OutlinedFnID,
                                                 bool IsOffloadEntry,
                                                 const RegionCodeGenTy &CodeGen);
+
+  /// \brief Emits code for OpenMP 'if' clause using specified \a CodeGen
+  /// function. Here is the logic:
+  /// if (Cond) {
+  ///   ThenGen();
+  /// } else {
+  ///   ElseGen();
+  /// }
+  void emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
+                       const RegionCodeGenTy &ThenGen,
+                       const RegionCodeGenTy &ElseGen);
+
+  /// \brief Emits object of ident_t type with info for source location.
+  /// \param Flags Flags for OpenMP location.
+  ///
+  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
+                                  unsigned Flags = 0);
+
+  /// \brief Returns pointer to ident_t type.
+  llvm::Type *getIdentTyPointerTy();
+
+  /// \brief Gets thread id value for the current thread.
+  ///
+  llvm::Value *getThreadID(CodeGenFunction &CGF, SourceLocation Loc);
+
+  /// \brief Get the function name of an outlined region.
+  //  The name can be customized depending on the target.
+  //
+  virtual StringRef getOutlinedHelperName() const { return ".omp_outlined."; }
 
 private:
   /// \brief Default const ident_t object used for initialization of all other
@@ -245,10 +274,10 @@ private:
     unsigned OffloadingEntriesNum;
 
   public:
-    /// \brief Base class of the entries info.
+    /// Base class of the entries info.
     class OffloadEntryInfo {
     public:
-      /// \brief Kind of a given entry. Currently, only target regions are
+      /// Kind of a given entry. Currently, only target regions are
       /// supported.
       enum OffloadingEntryInfoKinds : unsigned {
         // Entry is a target region.
@@ -257,17 +286,24 @@ private:
         OFFLOAD_ENTRY_INFO_INVALID = ~0u
       };
 
-      OffloadEntryInfo() : Order(~0u), Kind(OFFLOAD_ENTRY_INFO_INVALID) {}
-      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order)
-          : Order(Order), Kind(Kind) {}
+      OffloadEntryInfo()
+          : Flags(0), Order(~0u), Kind(OFFLOAD_ENTRY_INFO_INVALID) {}
+      explicit OffloadEntryInfo(OffloadingEntryInfoKinds Kind, unsigned Order,
+                                int32_t Flags)
+          : Flags(Flags), Order(Order), Kind(Kind) {}
 
       bool isValid() const { return Order != ~0u; }
       unsigned getOrder() const { return Order; }
       OffloadingEntryInfoKinds getKind() const { return Kind; }
+      int32_t getFlags() const { return Flags; }
+      void setFlags(int32_t NewFlags) { Flags = NewFlags; }
       static bool classof(const OffloadEntryInfo *Info) { return true; }
 
-    protected:
-      // \brief Order this entry was emitted.
+    private:
+      /// Flags associated with the device global.
+      int32_t Flags;
+
+      /// Order this entry was emitted.
       unsigned Order;
 
       OffloadingEntryInfoKinds Kind;
@@ -292,12 +328,13 @@ private:
 
     public:
       OffloadEntryInfoTargetRegion()
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, ~0u),
+          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, ~0u,
+                             /*Flags=*/0),
             Addr(nullptr), ID(nullptr) {}
       explicit OffloadEntryInfoTargetRegion(unsigned Order,
                                             llvm::Constant *Addr,
-                                            llvm::Constant *ID)
-          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, Order),
+                                            llvm::Constant *ID, int32_t Flags)
+          : OffloadEntryInfo(OFFLOAD_ENTRY_INFO_TARGET_REGION, Order, Flags),
             Addr(Addr), ID(ID) {}
 
       llvm::Constant *getAddress() const { return Addr; }
@@ -321,8 +358,8 @@ private:
     /// \brief Register target region entry.
     void registerTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
                                        StringRef ParentName, unsigned LineNum,
-                                       llvm::Constant *Addr,
-                                       llvm::Constant *ID);
+                                       llvm::Constant *Addr, llvm::Constant *ID,
+                                       int32_t Flags);
     /// \brief Return true if a target region entry with the provided
     /// information exists.
     bool hasTargetRegionEntryInfo(unsigned DeviceID, unsigned FileID,
@@ -380,15 +417,6 @@ private:
   /// \brief Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
 
-  /// \brief Emits object of ident_t type with info for source location.
-  /// \param Flags Flags for OpenMP location.
-  ///
-  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
-                                  unsigned Flags = 0);
-
-  /// \brief Returns pointer to ident_t type.
-  llvm::Type *getIdentTyPointerTy();
-
   /// \brief Returns pointer to kmpc_micro type.
   llvm::Type *getKmpc_MicroPointerTy();
 
@@ -423,10 +451,6 @@ private:
   /// \brief Emits address of the word in a memory where current thread id is
   /// stored.
   virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
-
-  /// \brief Gets thread id value for the current thread.
-  ///
-  llvm::Value *getThreadID(CodeGenFunction &CGF, SourceLocation Loc);
 
   /// \brief Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has

@@ -482,7 +482,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
       MIB->RemoveOperand(0);
 
     for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J) {
-      MIB.addOperand(I->getOperand(J));
+      MIB.add(I->getOperand(J));
     }
 
     MIB.addImm(0);
@@ -492,7 +492,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
       if (BranchWithZeroOperand && (unsigned)ZeroOperandPosition == J)
         continue;
 
-      MIB.addOperand(I->getOperand(J));
+      MIB.add(I->getOperand(J));
     }
   }
 

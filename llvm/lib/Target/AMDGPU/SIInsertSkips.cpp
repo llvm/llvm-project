@@ -195,8 +195,8 @@ void SIInsertSkips::kill(MachineInstr &MI) {
     }
   } else {
     BuildMI(MBB, &MI, DL, TII->get(AMDGPU::V_CMPX_LE_F32_e32))
-      .addImm(0)
-      .addOperand(Op);
+        .addImm(0)
+        .add(Op);
   }
 }
 

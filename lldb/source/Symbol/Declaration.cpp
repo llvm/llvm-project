@@ -42,7 +42,7 @@ void Declaration::Dump(Stream *s, bool show_fullpaths) const {
 
 bool Declaration::DumpStopContext(Stream *s, bool show_fullpaths) const {
   if (m_file) {
-    if (show_fullpaths || s->GetVerbose())
+    if (show_fullpaths)
       *s << m_file;
     else
       m_file.GetFilename().Dump(s);

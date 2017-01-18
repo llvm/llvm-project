@@ -12,16 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "BPFRegisterInfo.h"
 #include "BPFSubtarget.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
-
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -36,14 +35,15 @@ class BPFDisassembler : public MCDisassembler {
 public:
   BPFDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~BPFDisassembler() {}
+  ~BPFDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
-}
+
+} // end anonymous namespace
 
 static MCDisassembler *createBPFDisassembler(const Target &T,
                                              const MCSubtargetInfo &STI,
