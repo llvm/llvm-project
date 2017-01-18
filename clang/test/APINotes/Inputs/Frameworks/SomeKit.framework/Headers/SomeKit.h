@@ -49,4 +49,12 @@ __attribute__((objc_root_class))
 @property int *intPropertyToMangle;
 @end
 
+@interface A(ImplicitGetterSetters)
+@property (nonatomic, readonly, retain) A *implicitGetOnlyInstance;
+@property (class, nonatomic, readonly, retain) A *implicitGetOnlyClass;
+
+@property (nonatomic, readwrite, retain) A *implicitGetSetInstance;
+@property (class, nonatomic, readwrite, retain) A *implicitGetSetClass;
+@end
+
 #endif
