@@ -89,6 +89,7 @@
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -256,6 +257,9 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   /// must be deleted when the pass is finished.
   SmallPtrSet<MachineInstr *, 4> NewMIs;
 
+  /// Ordered list of DAG postprocessing steps.
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
+
   /// Helper class to implement Johnson's circuit finding algorithm.
   class Circuits {
     std::vector<SUnit> &SUnits;
@@ -287,7 +291,9 @@ public:
                     const RegisterClassInfo &rci)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), MII(0),
         Scheduled(false), Loop(L), LIS(lis), RegClassInfo(rci),
-        Topo(SUnits, &ExitSU) {}
+        Topo(SUnits, &ExitSU) {
+    P.MF->getSubtarget().getSMSMutations(Mutations);
+  }
 
   void schedule() override;
   void finishBlock() override;
@@ -370,6 +376,10 @@ public:
     return 0;
   }
 
+  void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
+    Mutations.push_back(std::move(Mutation));
+  }
+
 private:
   void addLoopCarriedDependences(AliasAnalysis *AA);
   void updatePhiDependences();
@@ -438,6 +448,7 @@ private:
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
+  void postprocessDAG();
 };
 
 /// A NodeSet contains a set of SUnit DAG nodes with additional information
@@ -847,6 +858,7 @@ void SwingSchedulerDAG::schedule() {
   addLoopCarriedDependences(AA);
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
+  postprocessDAG();
   changeDependences();
   DEBUG({
     for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
@@ -2676,7 +2688,7 @@ void SwingSchedulerDAG::generateExistingPhis(
               replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS);
             continue;
           }
-        } else if (StageDiff > 0 &&
+        } else if (InKernel && StageDiff > 0 &&
                    VRMap[CurStageNum - StageDiff - np].count(LoopVal))
           PhiOp2 = VRMap[CurStageNum - StageDiff - np][LoopVal];
       }
@@ -3216,7 +3228,7 @@ unsigned SwingSchedulerDAG::getPrevMapVal(unsigned StageNum, unsigned PhiStage,
       // The previous name is defined in the current stage when the instruction
       // order is swapped.
       PrevVal = VRMap[StageNum][LoopVal];
-    else if (!LoopInst->isPHI())
+    else if (!LoopInst->isPHI() || LoopInst->getParent() != BB)
       // The loop value hasn't yet been scheduled.
       PrevVal = LoopVal;
     else if (StageNum == PhiStage + 1)
@@ -3472,6 +3484,11 @@ bool SwingSchedulerDAG::isLoopCarriedOrder(SUnit *Source, const SDep &Dep,
     return OffsetD + AccessSizeD > DeltaD;
 
   return true;
+}
+
+void SwingSchedulerDAG::postprocessDAG() {
+  for (auto &M : Mutations)
+    M->apply(this);
 }
 
 /// Try to schedule the node at the specified StartCycle and continue

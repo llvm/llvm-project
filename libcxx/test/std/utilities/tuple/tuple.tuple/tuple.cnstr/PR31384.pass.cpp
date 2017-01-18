@@ -47,30 +47,30 @@ struct ExplicitDerived : std::tuple<T> {
 
 int main() {
   {
-    std::tuple<Explicit> foo = Derived<int>{42};
+    std::tuple<Explicit> foo = Derived<int>{42}; ((void)foo);
     assert(count == 1);
-    std::tuple<Explicit> bar(Derived<int>{42});
+    std::tuple<Explicit> bar(Derived<int>{42}); ((void)bar);
     assert(count == 2);
   }
   count = 0;
   {
-    std::tuple<Implicit> foo = Derived<int>{42};
+    std::tuple<Implicit> foo = Derived<int>{42}; ((void)foo);
     assert(count == 1);
-    std::tuple<Implicit> bar(Derived<int>{42});
+    std::tuple<Implicit> bar(Derived<int>{42}); ((void)bar);
     assert(count == 2);
   }
   count = 0;
   {
     static_assert(!std::is_convertible<
         ExplicitDerived<int>, std::tuple<Explicit>>::value, "");
-    std::tuple<Explicit> bar(ExplicitDerived<int>{42});
+    std::tuple<Explicit> bar(ExplicitDerived<int>{42}); ((void)bar);
     assert(count == 1);
   }
   count = 0;
   {
     // FIXME: Libc++ incorrectly rejects this code.
 #ifndef _LIBCPP_VERSION
-    std::tuple<Implicit> foo = ExplicitDerived<int>{42};
+    std::tuple<Implicit> foo = ExplicitDerived<int>{42}; ((void)foo);
     static_assert(std::is_convertible<
         ExplicitDerived<int>, std::tuple<Implicit>>::value,
         "correct STLs accept this");
@@ -80,7 +80,7 @@ int main() {
         "libc++ incorrectly rejects this");
 #endif
     assert(count == 0);
-    std::tuple<Implicit> bar(ExplicitDerived<int>{42});
+    std::tuple<Implicit> bar(ExplicitDerived<int>{42}); ((void)bar);
     assert(count == 1);
   }
   count = 0;

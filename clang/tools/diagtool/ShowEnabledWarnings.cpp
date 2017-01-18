@@ -67,8 +67,8 @@ createDiagnostics(unsigned int argc, char **argv) {
   SmallVector<const char *, 4> Args;
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
-  std::unique_ptr<CompilerInvocation> Invocation(
-      createInvocationFromCommandLine(Args, InterimDiags));
+  std::unique_ptr<CompilerInvocation> Invocation =
+      createInvocationFromCommandLine(Args, InterimDiags);
   if (!Invocation)
     return nullptr;
 

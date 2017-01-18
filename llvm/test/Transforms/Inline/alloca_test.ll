@@ -3,6 +3,7 @@
 ; function are moved to the top of the function they are inlined into.
 ;
 ; RUN: opt -S -inline < %s | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline)' < %s | FileCheck %s
 
 define i32 @func(i32 %i) {
   %X = alloca i32

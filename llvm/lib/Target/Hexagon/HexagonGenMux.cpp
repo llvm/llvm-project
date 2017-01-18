@@ -324,9 +324,9 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     if (!MxOpc)
       continue;
     BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
-      .addReg(MX.PredR)
-      .addOperand(*MX.SrcT)
-      .addOperand(*MX.SrcF);
+        .addReg(MX.PredR)
+        .add(*MX.SrcT)
+        .add(*MX.SrcF);
     B.erase(MX.Def1);
     B.erase(MX.Def2);
     Changed = true;

@@ -11,22 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCMCTargetDesc.h"
 #include "InstPrinter/PPCInstPrinter.h"
-#include "PPCMCAsmInfo.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPCTargetStreamer.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -41,8 +48,9 @@ using namespace llvm;
 #include "PPCGenRegisterInfo.inc"
 
 // Pin the vtable to this file.
-PPCTargetStreamer::~PPCTargetStreamer() {}
 PPCTargetStreamer::PPCTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
+
+PPCTargetStreamer::~PPCTargetStreamer() = default;
 
 static MCInstrInfo *createPPCMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -96,12 +104,14 @@ static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
 }
 
 namespace {
+
 class PPCTargetAsmStreamer : public PPCTargetStreamer {
   formatted_raw_ostream &OS;
 
 public:
   PPCTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : PPCTargetStreamer(S), OS(OS) {}
+
   void emitTCEntry(const MCSymbol &S) override {
     OS << "\t.tc ";
     OS << S.getName();
@@ -109,12 +119,15 @@ public:
     OS << S.getName();
     OS << '\n';
   }
+
   void emitMachine(StringRef CPU) override {
     OS << "\t.machine " << CPU << '\n';
   }
+
   void emitAbiVersion(int AbiVersion) override {
     OS << "\t.abiversion " << AbiVersion << '\n';
   }
+
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
 
@@ -129,18 +142,22 @@ public:
 class PPCTargetELFStreamer : public PPCTargetStreamer {
 public:
   PPCTargetELFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
+
   MCELFStreamer &getStreamer() {
     return static_cast<MCELFStreamer &>(Streamer);
   }
+
   void emitTCEntry(const MCSymbol &S) override {
     // Creates a R_PPC64_TOC relocation
     Streamer.EmitValueToAlignment(8);
     Streamer.EmitSymbolValue(&S, 8);
   }
+
   void emitMachine(StringRef CPU) override {
     // FIXME: Is there anything to do in here or does this directive only
     // limit the parser?
   }
+
   void emitAbiVersion(int AbiVersion) override {
     MCAssembler &MCA = getStreamer().getAssembler();
     unsigned Flags = MCA.getELFHeaderEFlags();
@@ -148,6 +165,7 @@ public:
     Flags |= (AbiVersion & ELF::EF_PPC64_ABI);
     MCA.setELFHeaderEFlags(Flags);
   }
+
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
     MCAssembler &MCA = getStreamer().getAssembler();
 
@@ -170,6 +188,7 @@ public:
     if ((Flags & ELF::EF_PPC64_ABI) == 0)
       MCA.setELFHeaderEFlags(Flags | 2);
   }
+
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
     auto *Symbol = cast<MCSymbolELF>(S);
     // When encoding an assignment to set symbol A to symbol B, also copy
@@ -188,21 +207,26 @@ public:
 class PPCTargetMachOStreamer : public PPCTargetStreamer {
 public:
   PPCTargetMachOStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
+
   void emitTCEntry(const MCSymbol &S) override {
     llvm_unreachable("Unknown pseudo-op: .tc");
   }
+
   void emitMachine(StringRef CPU) override {
     // FIXME: We should update the CPUType, CPUSubType in the Object file if
     // the new values are different from the defaults.
   }
+
   void emitAbiVersion(int AbiVersion) override {
     llvm_unreachable("Unknown pseudo-op: .abiversion");
   }
+
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
     llvm_unreachable("Unknown pseudo-op: .localentry");
   }
 };
-}
+
+} // end anonymous namespace
 
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,

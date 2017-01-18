@@ -238,7 +238,7 @@ define void @test12(float* %base, <4 x float> %V, <4 x i1> %mask) {
 define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) {
 ; SKX-LABEL: test13:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k0
 ; SKX-NEXT:    kshiftlb $6, %k0, %k0
@@ -268,7 +268,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 define void @test14(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SKX-LABEL: test14:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k0
 ; SKX-NEXT:    kshiftlb $6, %k0, %k0
@@ -314,7 +314,7 @@ define <16 x double> @test16(double* %base, <16 x double> %src0, <16 x i32> %tri
 ; SKX-LABEL: test16:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    vextracti32x8 $1, %zmm2, %ymm3
-; SKX-NEXT:    vpxord %ymm4, %ymm4, %ymm4
+; SKX-NEXT:    vpxor %ymm4, %ymm4, %ymm4
 ; SKX-NEXT:    vpcmpeqd %ymm4, %ymm3, %k1
 ; SKX-NEXT:    vpcmpeqd %ymm4, %ymm2, %k2
 ; SKX-NEXT:    kmovb %k2, %eax

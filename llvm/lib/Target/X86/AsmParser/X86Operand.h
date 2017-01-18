@@ -271,6 +271,9 @@ struct X86Operand : public MCParsedAsmOperand {
   bool isMem256_RC256X() const {
     return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM31);
   }
+  bool isMem256_RC512() const {
+    return isMem256() && isMemIndexReg(X86::ZMM0, X86::ZMM31);
+  }
   bool isMem512_RC256X() const {
     return isMem512() && isMemIndexReg(X86::YMM0, X86::YMM31);
   }

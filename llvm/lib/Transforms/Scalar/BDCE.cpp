@@ -80,8 +80,8 @@ PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!bitTrackingDCE(F, DB))
     return PreservedAnalyses::all();
 
-  // FIXME: This should also 'preserve the CFG'.
-  auto PA = PreservedAnalyses();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
 }

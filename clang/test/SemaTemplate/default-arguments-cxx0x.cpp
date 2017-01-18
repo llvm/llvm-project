@@ -50,6 +50,8 @@ namespace PR16975 {
     bar(T);
   };
 
+  bar<> foo{0};
+
   struct baz : public bar<> {
     using bar::bar;
   };

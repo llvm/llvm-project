@@ -60,7 +60,7 @@ class ModuleFileExtensionWriter;
 /// compiled module files (.pcm) and precompiled headers (.pch) via a
 /// custom writer that can then be accessed via a custom reader when
 /// the module file or precompiled header is loaded.
-class ModuleFileExtension : public llvm::RefCountedBase<ModuleFileExtension> {
+class ModuleFileExtension {
 public:
   virtual ~ModuleFileExtension();
 

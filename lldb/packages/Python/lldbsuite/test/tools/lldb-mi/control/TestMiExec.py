@@ -111,24 +111,25 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
         # Check argc and argv to see if arg passed
+        # Note that exactly=True is needed to avoid extra escaping for re
         self.runCmd("-data-evaluate-expression argc")
         self.expect("\^done,value=\"5\"")
         #self.runCmd("-data-evaluate-expression argv[1]")
         # self.expect("\^done,value=\"--arg1\"")
         self.runCmd("-interpreter-exec command \"print argv[1]\"")
-        self.expect("\"--arg1\"")
+        self.expect("\\\"--arg1\\\"", exactly=True)
         #self.runCmd("-data-evaluate-expression argv[2]")
         #self.expect("\^done,value=\"2nd arg\"")
         self.runCmd("-interpreter-exec command \"print argv[2]\"")
-        self.expect("\"2nd arg\"")
+        self.expect("\\\"2nd arg\\\"", exactly=True)
         #self.runCmd("-data-evaluate-expression argv[3]")
         # self.expect("\^done,value=\"third_arg\"")
         self.runCmd("-interpreter-exec command \"print argv[3]\"")
-        self.expect("\"third_arg\"")
+        self.expect("\\\"third_arg\\\"", exactly=True)
         #self.runCmd("-data-evaluate-expression argv[4]")
         #self.expect("\^done,value=\"fourth=\\\\\\\"4th arg\\\\\\\"\"")
         self.runCmd("-interpreter-exec command \"print argv[4]\"")
-        self.expect("\"fourth=\\\\\\\"4th arg\\\\\\\"\"")
+        self.expect("\\\"fourth=\\\\\\\"4th arg\\\\\\\"\\\"", exactly=True)
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races

@@ -1,4 +1,5 @@
 ; RUN: opt -always-inline -S < %s | FileCheck %s
+; RUN: opt -passes=always-inline -S < %s | FileCheck %s
 
 ; We used to misclassify inalloca as a static alloca in the inliner. This only
 ; arose with for alwaysinline functions, because the normal inliner refuses to
@@ -54,10 +55,11 @@ entry:
 }
 
 ; CHECK: define void @f()
-; CHECK:   %inalloca.save.i = call i8* @llvm.stacksave()
-; CHECK:   alloca inalloca <{ %struct.Foo }>, align 4
-; CHECK:   %call.i = call x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* %0)
-; CHECK:   %o.i.i = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %argmem.i, i32 0, i32 0
-; CHECK:   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo* %o.i.i)
-; CHECK:   call void @llvm.stackrestore(i8* %inalloca.save.i)
+; CHECK:   %[[STACKSAVE:.*]] = call i8* @llvm.stacksave()
+; CHECK:   %[[ARGMEM:.*]] = alloca inalloca <{ %struct.Foo }>, align 4
+; CHECK:   %[[GEP1:.*]] = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %[[ARGMEM]], i32 0, i32 0
+; CHECK:   %[[CALL:.*]] = call x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* %[[GEP1]])
+; CHECK:   %[[GEP2:.*]] = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %[[ARGMEM]], i32 0, i32 0
+; CHECK:   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo* %[[GEP2]])
+; CHECK:   call void @llvm.stackrestore(i8* %[[STACKSAVE]])
 ; CHECK:   ret void

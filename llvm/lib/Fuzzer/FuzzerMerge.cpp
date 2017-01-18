@@ -220,8 +220,8 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
     ListFilesInDirRecursive(Corpora[i], nullptr, &AllFiles, /*TopDir*/true);
   Printf("MERGE-OUTER: %zd files, %zd in the initial corpus\n",
          AllFiles.size(), NumFilesInFirstCorpus);
-  std::string CFPath =
-      "libFuzzerTemp." + std::to_string(GetPid()) + ".txt";
+  auto CFPath = DirPlusFile(TmpDir(),
+                       "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
   // Write the control file.
   RemoveFile(CFPath);
   std::ofstream ControlFile(CFPath);
@@ -229,6 +229,11 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   ControlFile << NumFilesInFirstCorpus << "\n";
   for (auto &Path: AllFiles)
     ControlFile << Path << "\n";
+  if (!ControlFile) {
+    Printf("MERGE-OUTER: failed to write to the control file: %s\n",
+           CFPath.c_str());
+    exit(1);
+  }
   ControlFile.close();
 
   // Execute the inner process untill it passes.
@@ -246,6 +251,9 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   // Read the control file and do the merge.
   Merger M;
   std::ifstream IF(CFPath);
+  IF.seekg(0, IF.end);
+  Printf("MERGE-OUTER: the control file has %zd bytes\n", (size_t)IF.tellg());
+  IF.seekg(0, IF.beg);
   M.ParseOrExit(IF, true);
   IF.close();
   std::vector<std::string> NewFiles;

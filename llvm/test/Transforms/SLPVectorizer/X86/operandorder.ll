@@ -26,7 +26,7 @@ define void @shuffle_operands1(double * noalias %from, double * noalias %to,
 
 ; CHECK-LABEL: shuffle_preserve_broadcast
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {
@@ -51,7 +51,7 @@ ext:
 
 ; CHECK-LABEL: shuffle_preserve_broadcast2
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast2(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {
@@ -76,7 +76,7 @@ ext:
 
 ; CHECK-LABEL: shuffle_preserve_broadcast3
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast3(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {
@@ -102,7 +102,7 @@ ext:
 
 ; CHECK-LABEL: shuffle_preserve_broadcast4
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast4(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {
@@ -127,7 +127,7 @@ ext:
 
 ; CHECK-LABEL: shuffle_preserve_broadcast5
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast5(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {
@@ -153,7 +153,7 @@ ext:
 
 ; CHECK-LABEL: shuffle_preserve_broadcast6
 ; CHECK: %[[BCAST:[a-z0-9]+]] = insertelement <2 x double> undef, double %v0_1
-; CHECK:                      = insertelement <2 x double> %[[BCAST]], double %v0_1
+; CHECK:                      = shufflevector <2 x double> %[[BCAST]], <2 x double> undef, <2 x i32> zeroinitializer
 define void @shuffle_preserve_broadcast6(double * noalias %from,
                                         double * noalias %to,
                                         double %v1, double %v2) {

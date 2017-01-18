@@ -606,6 +606,28 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
   return DeletedSCCs;
 }
 
+void LazyCallGraph::RefSCC::switchTrivialInternalEdgeToRef(Node &SourceN,
+                                                           Node &TargetN) {
+  assert(SourceN[TargetN].isCall() && "Must start with a call edge!");
+
+#ifndef NDEBUG
+  // In a debug build, verify the RefSCC is valid to start with and when this
+  // routine finishes.
+  verify();
+  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+#endif
+
+  assert(G->lookupRefSCC(SourceN) == this &&
+         "Source must be in this RefSCC.");
+  assert(G->lookupRefSCC(TargetN) == this &&
+         "Target must be in this RefSCC.");
+  assert(G->lookupSCC(SourceN) != G->lookupSCC(TargetN) &&
+         "Source and Target must be in separate SCCs for this to be trivial!");
+
+  // Set the edge kind.
+  SourceN.setEdgeKind(TargetN.getFunction(), Edge::Ref);
+}
+
 iterator_range<LazyCallGraph::RefSCC::iterator>
 LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
   assert(SourceN[TargetN].isCall() && "Must start with a call edge!");
@@ -617,21 +639,18 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
   auto VerifyOnExit = make_scope_exit([&]() { verify(); });
 #endif
 
-  SCC &SourceSCC = *G->lookupSCC(SourceN);
-  SCC &TargetSCC = *G->lookupSCC(TargetN);
-
-  assert(&SourceSCC.getOuterRefSCC() == this &&
+  assert(G->lookupRefSCC(SourceN) == this &&
          "Source must be in this RefSCC.");
-  assert(&TargetSCC.getOuterRefSCC() == this &&
+  assert(G->lookupRefSCC(TargetN) == this &&
          "Target must be in this RefSCC.");
+
+  SCC &TargetSCC = *G->lookupSCC(TargetN);
+  assert(G->lookupSCC(SourceN) == &TargetSCC && "Source and Target must be in "
+                                                "the same SCC to require the "
+                                                "full CG update.");
 
   // Set the edge kind.
   SourceN.setEdgeKind(TargetN.getFunction(), Edge::Ref);
-
-  // If this call edge is just connecting two separate SCCs within this RefSCC,
-  // there is nothing to do.
-  if (&SourceSCC != &TargetSCC)
-    return make_range(SCCs.end(), SCCs.end());
 
   // Otherwise we are removing a call edge from a single SCC. This may break
   // the cycle. In order to compute the new set of SCCs, we need to do a small
@@ -1117,6 +1136,13 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
   if (&SourceN == &TargetN)
     return Result;
 
+  // If this ref edge is within an SCC then there are sufficient other edges to
+  // form a cycle without this edge so removing it is a no-op.
+  SCC &SourceC = *G->lookupSCC(SourceN);
+  SCC &TargetC = *G->lookupSCC(TargetN);
+  if (&SourceC == &TargetC)
+    return Result;
+
   // We build somewhat synthetic new RefSCCs by providing a postorder mapping
   // for each inner SCC. We also store these associated with *nodes* rather
   // than SCCs because this saves a round-trip through the node->SCC map and in
@@ -1139,7 +1165,6 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN, Node &TargetN) {
   // and handle participants in that cycle without walking all the edges that
   // form the connections, and instead by relying on the fundamental guarantee
   // coming into this operation.
-  SCC &TargetC = *G->lookupSCC(TargetN);
   for (Node &N : TargetC)
     PostOrderMapping[&N] = RootPostOrderNumber;
 

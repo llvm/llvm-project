@@ -83,12 +83,17 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 %s
 
-// CHECK: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
-// CHECK-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
+// CHECK98: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
+// CHECK98-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
+// CHECK11: call {{.+}} @_ZN1BD1Ev(%class.B* %b){{.*}}, !dbg ![[EXCEPTLOC:.*]]
+
 // CHECK: store i32 0, i32* %{{.+}}, !dbg ![[RETLOC:.*]]
 
 // CHECK: [[F:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "F"
@@ -122,6 +127,7 @@ int main(int argc, char **argv) {
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
+// CHECK-NOT:              size:
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS1D"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"

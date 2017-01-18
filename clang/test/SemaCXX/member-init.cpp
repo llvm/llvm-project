@@ -13,10 +13,10 @@ public:
 
 bool b();
 int k;
-struct Recurse { // expected-error {{initializer for 'n' needed}}
+struct Recurse {
   int &n = // expected-note {{declared here}}
       b() ?
-      Recurse().n : // expected-note {{implicit default constructor for 'Recurse' first required here}}
+      Recurse().n : // expected-error {{initializer for 'n' needed}}
       k;
 };
 
@@ -128,21 +128,19 @@ A::A() {}
 namespace template_default_ctor {
 struct A {
   template <typename T>
-  struct B { // expected-error {{initializer for 'm1' needed}}
+  struct B {
     int m1 = 0; // expected-note {{declared here}}
   };
-  // expected-note@+1 {{implicit default constructor for 'template_default_ctor::A::B<int>' first required here}}
-  enum { NOE = noexcept(B<int>()) };
+  enum { NOE = noexcept(B<int>()) }; // expected-error {{initializer for 'm1' needed}}
 };
 }
 
 namespace default_ctor {
 struct A {
-  struct B { // expected-error {{initializer for 'm1' needed}}
+  struct B {
     int m1 = 0; // expected-note {{declared here}}
   };
-  // expected-note@+1 {{implicit default constructor for 'default_ctor::A::B' first required here}}
-  enum { NOE = noexcept(B()) };
+  enum { NOE = noexcept(B()) }; // expected-error {{initializer for 'm1' needed}}
 };
 }
 
@@ -150,19 +148,17 @@ namespace member_template {
 struct A {
   template <typename T>
   struct B {
-    struct C { // expected-error {{initializer for 'm1' needed}}
+    struct C {
       int m1 = 0; // expected-note {{declared here}}
     };
     template <typename U>
-    struct D { // expected-error {{initializer for 'm1' needed}}
+    struct D {
       int m1 = 0; // expected-note {{declared here}}
     };
   };
   enum {
-    // expected-note@+1 {{implicit default constructor for 'member_template::A::B<int>::C' first required here}}
-    NOE1 = noexcept(B<int>::C()),
-    // expected-note@+1 {{implicit default constructor for 'member_template::A::B<int>::D<int>' first required here}}
-    NOE2 = noexcept(B<int>::D<int>())
+    NOE1 = noexcept(B<int>::C()), // expected-error {{initializer for 'm1' needed}}
+    NOE2 = noexcept(B<int>::D<int>()) // expected-error {{initializer for 'm1' needed}}
   };
 };
 }

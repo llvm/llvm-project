@@ -99,12 +99,12 @@ define i64 @ashr1(i64 %X) {
   ret i64 %B
 }
 
-; FIXME: The ashr should be exact (like it is in the preceding test).
+; The vector ashr should be exact (like it is in the preceding test).
 
 define <2 x i64> @ashr1_vec(<2 x i64> %X) {
 ; CHECK-LABEL: @ashr1_vec(
 ; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> %X, <i64 8, i64 8>
-; CHECK-NEXT:    [[B:%.*]] = ashr <2 x i64> [[A]], <i64 2, i64 2>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[A]], <i64 2, i64 2>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %A = shl <2 x i64> %X, <i64 8, i64 8>

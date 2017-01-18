@@ -1382,8 +1382,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         Pred->getInstList().splice(BI->getIterator(), Succ->getInstList(),
                                    Succ->begin(), Succ->end());
         LPM->deleteSimpleAnalysisValue(BI, L);
-        BI->eraseFromParent();
         RemoveFromWorklist(BI, Worklist);
+        BI->eraseFromParent();
 
         // Remove Succ from the loop tree.
         LI->removeBlock(Succ);

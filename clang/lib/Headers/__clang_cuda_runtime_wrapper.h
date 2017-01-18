@@ -232,6 +232,11 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 // hardware, seems to generate faster machine code because ptxas can more easily
 // reason about our code.
 
+#if CUDA_VERSION >= 8000
+#include "sm_60_atomic_functions.hpp"
+#include "sm_61_intrinsics.hpp"
+#endif
+
 #undef __MATH_FUNCTIONS_HPP__
 
 // math_functions.hpp defines ::signbit as a __host__ __device__ function.  This

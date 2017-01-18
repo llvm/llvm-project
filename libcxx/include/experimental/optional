@@ -721,7 +721,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr
 bool
-operator<=(nullopt_t, const optional<_Tp>& __x) noexcept
+operator<=(nullopt_t, const optional<_Tp>&) noexcept
 {
     return true;
 }
@@ -739,7 +739,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr
 bool
-operator>(nullopt_t, const optional<_Tp>& __x) noexcept
+operator>(nullopt_t, const optional<_Tp>&) noexcept
 {
     return false;
 }
@@ -894,7 +894,7 @@ _LIBCPP_END_NAMESPACE_LFTS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY hash<std::experimental::optional<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<std::experimental::optional<_Tp> >
 {
     typedef std::experimental::optional<_Tp> argument_type;
     typedef size_t        result_type;

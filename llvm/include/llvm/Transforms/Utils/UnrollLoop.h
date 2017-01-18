@@ -33,6 +33,12 @@ class Pass;
 class OptimizationRemarkEmitter;
 class ScalarEvolution;
 
+typedef SmallDenseMap<const Loop *, Loop *, 4> NewLoopsMap;
+
+const Loop* addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
+                                     BasicBlock *ClonedBB, LoopInfo *LI,
+                                     NewLoopsMap &NewLoops);
+
 bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                 bool AllowRuntime, bool AllowExpensiveTripCount,
                 bool PreserveCondBr, bool PreserveOnlyFirst,

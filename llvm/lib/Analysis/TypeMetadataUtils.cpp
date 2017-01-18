@@ -69,8 +69,7 @@ void llvm::findDevirtualizableCallsForTypeTest(
 
   // Find llvm.assume intrinsics for this llvm.type.test call.
   for (const Use &CIU : CI->uses()) {
-    auto AssumeCI = dyn_cast<CallInst>(CIU.getUser());
-    if (AssumeCI) {
+    if (auto *AssumeCI = dyn_cast<CallInst>(CIU.getUser())) {
       Function *F = AssumeCI->getCalledFunction();
       if (F && F->getIntrinsicID() == Intrinsic::assume)
         Assumes.push_back(AssumeCI);

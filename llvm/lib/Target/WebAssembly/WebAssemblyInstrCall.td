@@ -26,7 +26,7 @@ def ADJCALLSTACKUP : I<(outs), (ins i32imm:$amt, i32imm:$amt2),
 } // isCodeGenOnly = 1
 
 multiclass CALL<WebAssemblyRegClass vt, string prefix> {
-  def CALL_#vt : I<(outs vt:$dst), (ins i32imm:$callee, variable_ops),
+  def CALL_#vt : I<(outs vt:$dst), (ins function32_op:$callee, variable_ops),
                    [(set vt:$dst, (WebAssemblycall1 (i32 imm:$callee)))],
                    !strconcat(prefix, "call\t$dst, $callee"),
                    0x10>;
@@ -43,7 +43,7 @@ multiclass CALL<WebAssemblyRegClass vt, string prefix> {
 }
 
 multiclass SIMD_CALL<ValueType vt, string prefix> {
-  def CALL_#vt : SIMD_I<(outs V128:$dst), (ins i32imm:$callee, variable_ops),
+  def CALL_#vt : SIMD_I<(outs V128:$dst), (ins function32_op:$callee, variable_ops),
                          [(set (vt V128:$dst),
                                (WebAssemblycall1 (i32 imm:$callee)))],
                          !strconcat(prefix, "call\t$dst, $callee"),
@@ -73,7 +73,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
   defm : SIMD_CALL<v4i32, "i32x4.">;
   defm : SIMD_CALL<v4f32, "f32x4.">;
 
-  def CALL_VOID : I<(outs), (ins i32imm:$callee, variable_ops),
+  def CALL_VOID : I<(outs), (ins function32_op:$callee, variable_ops),
                     [(WebAssemblycall0 (i32 imm:$callee))],
                     "call    \t$callee", 0x10>;
   let isCodeGenOnly = 1 in {

@@ -3720,9 +3720,17 @@ static void AddObjCProperties(
       Builder.AddPlaceholderChunk(
           Builder.getAllocator().CopyString(PlaceholderStr));
 
+      // When completing blocks properties that return void the default
+      // property completion result should show up before the setter,
+      // otherwise the setter completion should show up before the default
+      // property completion, as we normally want to use the result of the
+      // call.
       Results.MaybeAddResult(
           Result(Builder.TakeString(), P,
-                 Results.getBasePriority(P) + CCD_BlockPropertySetter),
+                 Results.getBasePriority(P) +
+                     (BlockLoc.getTypePtr()->getReturnType()->isVoidType()
+                          ? CCD_BlockPropertySetter
+                          : -CCD_BlockPropertySetter)),
           CurContext);
     }
   };
@@ -7471,6 +7479,23 @@ void Sema::CodeCompleteObjCMethodDeclSelector(Scope *S,
   }
   
   Results.ExitScope();
+
+  if (!AtParameterName && !SelIdents.empty() &&
+      SelIdents.front()->getName().startswith("init")) {
+    for (const auto &M : PP.macros()) {
+      if (M.first->getName() != "NS_DESIGNATED_INITIALIZER")
+        continue;
+      Results.EnterNewScope();
+      CodeCompletionBuilder Builder(Results.getAllocator(),
+                                    Results.getCodeCompletionTUInfo());
+      Builder.AddTypedTextChunk(
+          Builder.getAllocator().CopyString(M.first->getName()));
+      Results.AddResult(CodeCompletionResult(Builder.TakeString(), CCP_Macro,
+                                             CXCursor_MacroDefinition));
+      Results.ExitScope();
+    }
+  }
+
   HandleCodeCompleteResults(this, CodeCompleter, 
                             CodeCompletionContext::CCC_Other,
                             Results.data(),Results.size());

@@ -455,13 +455,26 @@ bool COFFAsmParser::ParseDirectiveSecRel32(StringRef, SMLoc) {
   if (getParser().parseIdentifier(SymbolID))
     return TokError("expected identifier in directive");
 
+  int64_t Offset = 0;
+  SMLoc OffsetLoc;
+  if (getLexer().is(AsmToken::Plus)) {
+    OffsetLoc = getLexer().getLoc();
+    if (getParser().parseAbsoluteExpression(Offset))
+      return true;
+  }
+
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+
+  if (Offset < 0 || Offset > UINT32_MAX)
+    return Error(OffsetLoc,
+                 "invalid '.secrel32' directive offset, can't be less "
+                 "than zero or greater than UINT32_MAX");
 
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitCOFFSecRel32(Symbol);
+  getStreamer().EmitCOFFSecRel32(Symbol, Offset);
   return false;
 }
 

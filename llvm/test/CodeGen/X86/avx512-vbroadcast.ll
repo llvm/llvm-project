@@ -218,8 +218,7 @@ define <16 x i32> @test_vbroadcast() {
 ; ALL:       # BB#0: # %entry
 ; ALL-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; ALL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
-; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
-; ALL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    knotw %k1, %k1
 ; ALL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq

@@ -1860,26 +1860,6 @@ public:
   }
 };
 
-/// NOTE: avoid using this node as this may disappear in the
-/// future and most targets don't support it.
-class CvtRndSatSDNode : public SDNode {
-  ISD::CvtCode CvtCode;
-
-  friend class SelectionDAG;
-
-  explicit CvtRndSatSDNode(EVT VT, unsigned Order, const DebugLoc &dl,
-                           ISD::CvtCode Code)
-      : SDNode(ISD::CONVERT_RNDSAT, Order, dl, getSDVTList(VT)), CvtCode(Code) {
-  }
-
-public:
-  ISD::CvtCode getCvtCode() const { return CvtCode; }
-
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::CONVERT_RNDSAT;
-  }
-};
-
 /// This class is used to represent EVT's, which are used
 /// to parameterize some operations.
 class VTSDNode : public SDNode {
@@ -2041,7 +2021,7 @@ public:
   friend class SelectionDAG;
 
   MaskedStoreSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                    bool isTrunc, bool isCompressing, EVT MemVT, 
+                    bool isTrunc, bool isCompressing, EVT MemVT,
                     MachineMemOperand *MMO)
       : MaskedLoadStoreSDNode(ISD::MSTORE, Order, dl, VTs, MemVT, MMO) {
     StoreSDNodeBits.IsTruncating = isTrunc;
@@ -2054,8 +2034,8 @@ public:
   bool isTruncatingStore() const { return StoreSDNodeBits.IsTruncating; }
 
   /// Returns true if the op does a compression to the vector before storing.
-  /// The node contiguously stores the active elements (integers or floats) 
-  /// in src (those with their respective bit set in writemask k) to unaligned 
+  /// The node contiguously stores the active elements (integers or floats)
+  /// in src (those with their respective bit set in writemask k) to unaligned
   /// memory at base_addr.
   bool isCompressingStore() const { return StoreSDNodeBits.IsCompressing; }
 

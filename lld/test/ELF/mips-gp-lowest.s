@@ -36,7 +36,7 @@ foo:
 # CHECK-NEXT:     SHF_MIPS_GPREL
 # CHECK-NEXT:     SHF_WRITE
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0xE4
+# CHECK-NEXT:   Address: 0xF0
 # CHECK:      }
 
 # CHECK:      Name: _gp (5)

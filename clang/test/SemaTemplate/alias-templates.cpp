@@ -244,3 +244,24 @@ namespace redecl {
   template<typename = void> using A = int;
   A<> a; // ok
 }
+
+namespace PR31514 {
+  template<typename T, typename> using EnableTupleSize = T;
+
+  template<typename T> struct tuple_size { static const int value = 0; };
+  template<typename T> struct tuple_size<EnableTupleSize<const T, decltype(tuple_size<T>::value)>> {};
+  template<typename T> struct tuple_size<EnableTupleSize<volatile T, decltype(tuple_size<T>::value)>> {};
+
+  tuple_size<const int> t;
+}
+
+namespace an_alias_template_is_not_a_class_template {
+  template<typename T> using Foo = int; // expected-note 2{{here}}
+  Foo x; // expected-error {{use of alias template 'Foo' requires template arguments}}
+  Foo<> y; // expected-error {{too few template arguments for alias template 'Foo'}}
+
+  template<template<typename> class Bar> void f() { // expected-note 2{{here}}
+    Bar x; // expected-error {{use of template template parameter 'Bar' requires template arguments}}
+    Bar<> y; // expected-error {{too few template arguments for template template parameter 'Bar'}}
+  }
+}

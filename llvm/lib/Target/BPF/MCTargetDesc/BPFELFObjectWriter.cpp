@@ -10,28 +10,29 @@
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
+
 class BPFELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   BPFELFObjectWriter(uint8_t OSABI);
-
-  ~BPFELFObjectWriter() override;
+  ~BPFELFObjectWriter() override = default;
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
 };
-}
+
+} // end anonymous namespace
 
 BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_BPF,
                               /*HasRelocationAddend*/ false) {}
-
-BPFELFObjectWriter::~BPFELFObjectWriter() {}
 
 unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,

@@ -206,6 +206,44 @@ to enforce the provided alignment assumption.
   }];
 }
 
+def AllocSizeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``alloc_size`` attribute can be placed on functions that return pointers in
+order to hint to the compiler how many bytes of memory will be available at the
+returned poiner. ``alloc_size`` takes one or two arguments.
+
+- ``alloc_size(N)`` implies that argument number N equals the number of
+  available bytes at the returned pointer.
+- ``alloc_size(N, M)`` implies that the product of argument number N and
+  argument number M equals the number of available bytes at the returned
+  pointer.
+
+Argument numbers are 1-based.
+
+An example of how to use ``alloc_size``
+
+.. code-block:: c
+
+  void *my_malloc(int a) __attribute__((alloc_size(1)));
+  void *my_calloc(int a, int b) __attribute__((alloc_size(1, 2)));
+
+  int main() {
+    void *const p = my_malloc(100);
+    assert(__builtin_object_size(p, 0) == 100);
+    void *const a = my_calloc(20, 5);
+    assert(__builtin_object_size(a, 0) == 100);
+  }
+
+.. Note:: This attribute works differently in clang than it does in GCC.
+  Specifically, clang will only trace ``const`` pointers (as above); we give up
+  on pointers that are not marked as ``const``. In the vast majority of cases,
+  this is unimportant, because LLVM has support for the ``alloc_size``
+  attribute. However, this may cause mildly unintuitive behavior when used with
+  other attributes, such as ``enable_if``.
+  }];
+}
+
 def EnableIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -337,6 +375,66 @@ This is because, in ``bar``, ``foo`` is resolved prior to template
 instantiation, so the value for ``I`` isn't known (thus, both ``enable_if``
 conditions for ``foo`` fail). However, in ``baz``, ``foo`` is resolved during
 template instantiation, so the value for ``T::number`` is known.
+  }];
+}
+
+def DiagnoseIfDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``diagnose_if`` attribute can be placed on function declarations to emit
+warnings or errors at compile-time if calls to the attributed function meet
+certain user-defined criteria. For example:
+
+.. code-block:: c
+
+  void abs(int a)
+    __attribute__((diagnose_if(a >= 0, "Redundant abs call", "warning")));
+  void must_abs(int a)
+    __attribute__((diagnose_if(a >= 0, "Redundant abs call", "error")));
+
+  int val = abs(1); // warning: Redundant abs call
+  int val2 = must_abs(1); // error: Redundant abs call
+  int val3 = abs(val);
+  int val4 = must_abs(val); // Because run-time checks are not emitted for
+                            // diagnose_if attributes, this executes without
+                            // issue.
+
+
+``diagnose_if`` is closely related to ``enable_if``, with a few key differences:
+
+* Overload resolution is not aware of ``diagnose_if`` attributes: they're
+  considered only after we select the best candidate from a given candidate set.
+* Function declarations that differ only in their ``diagnose_if`` attributes are
+  considered to be redeclarations of the same function (not overloads).
+* If the condition provided to ``diagnose_if`` cannot be evaluated, no
+  diagnostic will be emitted.
+
+Otherwise, ``diagnose_if`` is essentially the logical negation of ``enable_if``.
+
+As a result of bullet number two, ``diagnose_if`` attributes will stack on the
+same function. For example:
+
+.. code-block:: c
+
+  int foo() __attribute__((diagnose_if(1, "diag1", "warning")));
+  int foo() __attribute__((diagnose_if(1, "diag2", "warning")));
+
+  int bar = foo(); // warning: diag1
+                   // warning: diag2
+  int (*fooptr)(void) = foo; // warning: diag1
+                             // warning: diag2
+
+  constexpr int supportsAPILevel(int N) { return N < 5; }
+  int baz(int a)
+    __attribute__((diagnose_if(!supportsAPILevel(10),
+                               "Upgrade to API level 10 to use baz", "error")));
+  int baz(int a)
+    __attribute__((diagnose_if(!a, "0 is not recommended.", "warning")));
+
+  int (*bazptr)(int) = baz; // error: Upgrade to API level 10 to use baz
+  int v = baz(0); // error: Upgrade to API level 10 to use baz
+
+Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 

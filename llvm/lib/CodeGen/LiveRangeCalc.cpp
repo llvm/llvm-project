@@ -289,8 +289,7 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
   if (UndefOnEntry[BN])
     return false;
 
-  auto MarkDefined =
-        [this,BN,&DefOnEntry,&UndefOnEntry] (MachineBasicBlock &B) -> bool {
+  auto MarkDefined = [BN, &DefOnEntry](MachineBasicBlock &B) -> bool {
     for (MachineBasicBlock *S : B.successors())
       DefOnEntry[S->getNumber()] = true;
     DefOnEntry[BN] = true;

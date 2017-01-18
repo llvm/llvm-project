@@ -10,9 +10,22 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cassert>
 
 using namespace llvm;
 
@@ -175,13 +188,9 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
   return false;
 }
 
+GlobalStatus::GlobalStatus() = default;
+
 bool GlobalStatus::analyzeGlobal(const Value *V, GlobalStatus &GS) {
   SmallPtrSet<const PHINode *, 16> PhiUsers;
   return analyzeGlobalAux(V, GS, PhiUsers);
 }
-
-GlobalStatus::GlobalStatus()
-    : IsCompared(false), IsLoaded(false), StoredType(NotStored),
-      StoredOnceValue(nullptr), AccessingFunction(nullptr),
-      HasMultipleAccessingFunctions(false), HasNonInstructionUser(false),
-      Ordering(AtomicOrdering::NotAtomic) {}

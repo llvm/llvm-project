@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__config>
+
 #if defined(_LIBCPP_USING_WIN32_RANDOM)
 // Must be defined before including stdlib.h to enable rand_s().
 #define _CRT_RAND_S

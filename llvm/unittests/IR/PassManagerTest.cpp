@@ -168,37 +168,224 @@ public:
                            "}\n")) {}
 };
 
-TEST_F(PassManagerTest, BasicPreservedAnalyses) {
+TEST(PreservedAnalysesTest, Basic) {
   PreservedAnalyses PA1 = PreservedAnalyses();
-  EXPECT_FALSE(PA1.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA1.preserved<TestModuleAnalysis>());
-  PreservedAnalyses PA2 = PreservedAnalyses::none();
-  EXPECT_FALSE(PA2.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA2.preserved<TestModuleAnalysis>());
-  PreservedAnalyses PA3 = PreservedAnalyses::all();
-  EXPECT_TRUE(PA3.preserved<TestFunctionAnalysis>());
-  EXPECT_TRUE(PA3.preserved<TestModuleAnalysis>());
+  {
+    auto PAC = PA1.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
+  {
+    auto PAC = PA1.getChecker<TestModuleAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Module>>());
+  }
+  auto PA2 = PreservedAnalyses::none();
+  {
+    auto PAC = PA2.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
+  auto PA3 = PreservedAnalyses::all();
+  {
+    auto PAC = PA3.getChecker<TestFunctionAnalysis>();
+    EXPECT_TRUE(PAC.preserved());
+    EXPECT_TRUE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
   PreservedAnalyses PA4 = PA1;
-  EXPECT_FALSE(PA4.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA4.preserved<TestModuleAnalysis>());
+  {
+    auto PAC = PA4.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
   PA4 = PA3;
-  EXPECT_TRUE(PA4.preserved<TestFunctionAnalysis>());
-  EXPECT_TRUE(PA4.preserved<TestModuleAnalysis>());
+  {
+    auto PAC = PA4.getChecker<TestFunctionAnalysis>();
+    EXPECT_TRUE(PAC.preserved());
+    EXPECT_TRUE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
   PA4 = std::move(PA2);
-  EXPECT_FALSE(PA4.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA4.preserved<TestModuleAnalysis>());
-  PA4.preserve<TestFunctionAnalysis>();
-  EXPECT_TRUE(PA4.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA4.preserved<TestModuleAnalysis>());
-  PA1.preserve<TestModuleAnalysis>();
-  EXPECT_FALSE(PA1.preserved<TestFunctionAnalysis>());
-  EXPECT_TRUE(PA1.preserved<TestModuleAnalysis>());
+  {
+    auto PAC = PA4.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
+  }
+}
+
+TEST(PreservedAnalysesTest, Preserve) {
+  auto PA = PreservedAnalyses::none();
+  PA.preserve<TestFunctionAnalysis>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(PA.getChecker<TestModuleAnalysis>().preserved());
+  PA.preserve<TestModuleAnalysis>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_TRUE(PA.getChecker<TestModuleAnalysis>().preserved());
+
+  // Redundant calls are fine.
+  PA.preserve<TestFunctionAnalysis>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_TRUE(PA.getChecker<TestModuleAnalysis>().preserved());
+}
+
+TEST(PreservedAnalysesTest, PreserveSets) {
+  auto PA = PreservedAnalyses::none();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>()
+                  .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(PA.getChecker<TestModuleAnalysis>()
+                   .preservedSet<AllAnalysesOn<Module>>());
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>()
+                  .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_TRUE(PA.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Mixing is fine.
+  PA.preserve<TestFunctionAnalysis>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>()
+                  .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_TRUE(PA.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Redundant calls are fine.
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  EXPECT_TRUE(PA.getChecker<TestFunctionAnalysis>()
+                  .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_TRUE(PA.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+}
+
+TEST(PreservedAnalysisTest, Intersect) {
+  // Setup the initial sets.
+  auto PA1 = PreservedAnalyses::none();
   PA1.preserve<TestFunctionAnalysis>();
-  EXPECT_TRUE(PA1.preserved<TestFunctionAnalysis>());
-  EXPECT_TRUE(PA1.preserved<TestModuleAnalysis>());
-  PA1.intersect(PA4);
-  EXPECT_TRUE(PA1.preserved<TestFunctionAnalysis>());
-  EXPECT_FALSE(PA1.preserved<TestModuleAnalysis>());
+  PA1.preserveSet<AllAnalysesOn<Module>>();
+  auto PA2 = PreservedAnalyses::none();
+  PA2.preserve<TestFunctionAnalysis>();
+  PA2.preserveSet<AllAnalysesOn<Function>>();
+  PA2.preserve<TestModuleAnalysis>();
+  PA2.preserveSet<AllAnalysesOn<Module>>();
+  auto PA3 = PreservedAnalyses::none();
+  PA3.preserve<TestModuleAnalysis>();
+  PA3.preserveSet<AllAnalysesOn<Function>>();
+
+  // Self intersection is a no-op.
+  auto Intersected = PA1;
+  Intersected.intersect(PA1);
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting with all is a no-op.
+  Intersected.intersect(PreservedAnalyses::all());
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting a narrow set with a more broad set is the narrow set.
+  Intersected.intersect(PA2);
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting a broad set with a more narrow set is the narrow set.
+  Intersected = PA2;
+  Intersected.intersect(PA1);
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting with empty clears.
+  Intersected.intersect(PreservedAnalyses::none());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>()
+                   .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting non-overlapping clears.
+  Intersected = PA1;
+  Intersected.intersect(PA3);
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>()
+                   .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting with moves works in when there is storage on both sides.
+  Intersected = PA1;
+  auto Tmp = PA2;
+  Intersected.intersect(std::move(Tmp));
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+
+  // Intersecting with move works for incoming all and existing all.
+  auto Tmp2 = PreservedAnalyses::all();
+  Intersected.intersect(std::move(Tmp2));
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+  Intersected = PreservedAnalyses::all();
+  auto Tmp3 = PA1;
+  Intersected.intersect(std::move(Tmp3));
+  EXPECT_TRUE(Intersected.getChecker<TestFunctionAnalysis>().preserved());
+  EXPECT_FALSE(Intersected.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(Intersected.getChecker<TestModuleAnalysis>().preserved());
+  EXPECT_TRUE(Intersected.getChecker<TestModuleAnalysis>()
+                  .preservedSet<AllAnalysesOn<Module>>());
+}
+
+TEST(PreservedAnalysisTest, Abandon) {
+  auto PA = PreservedAnalyses::none();
+
+  // We can abandon things after they are preserved.
+  PA.preserve<TestFunctionAnalysis>();
+  PA.abandon<TestFunctionAnalysis>();
+  EXPECT_FALSE(PA.getChecker<TestFunctionAnalysis>().preserved());
+
+  // Repeated is fine, and abandoning if they were never preserved is fine.
+  PA.abandon<TestFunctionAnalysis>();
+  EXPECT_FALSE(PA.getChecker<TestFunctionAnalysis>().preserved());
+  PA.abandon<TestModuleAnalysis>();
+  EXPECT_FALSE(PA.getChecker<TestModuleAnalysis>().preserved());
+
+  // Even if the sets are preserved, the abandoned analyses' checker won't
+  // return true for those sets.
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  EXPECT_FALSE(PA.getChecker<TestFunctionAnalysis>()
+                   .preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_FALSE(PA.getChecker<TestModuleAnalysis>()
+                   .preservedSet<AllAnalysesOn<Module>>());
+
+  // But an arbitrary (opaque) analysis will still observe the sets as
+  // preserved. This also checks that we can use an explicit ID rather than
+  // a type.
+  AnalysisKey FakeKey, *FakeID = &FakeKey;
+  EXPECT_TRUE(PA.getChecker(FakeID).preservedSet<AllAnalysesOn<Function>>());
+  EXPECT_TRUE(PA.getChecker(FakeID).preservedSet<AllAnalysesOn<Module>>());
 }
 
 TEST_F(PassManagerTest, Basic) {
@@ -385,12 +572,16 @@ TEST_F(PassManagerTest, CustomizedPassManagerArgs) {
 struct TestIndirectFunctionAnalysis
     : public AnalysisInfoMixin<TestIndirectFunctionAnalysis> {
   struct Result {
-    Result(TestFunctionAnalysis::Result &Dep) : Dep(Dep) {}
-    TestFunctionAnalysis::Result &Dep;
+    Result(TestFunctionAnalysis::Result &FDep, TestModuleAnalysis::Result &MDep)
+        : FDep(FDep), MDep(MDep) {}
+    TestFunctionAnalysis::Result &FDep;
+    TestModuleAnalysis::Result &MDep;
 
     bool invalidate(Function &F, const PreservedAnalyses &PA,
                     FunctionAnalysisManager::Invalidator &Inv) {
-      return !PA.preserved<TestIndirectFunctionAnalysis>() ||
+      auto PAC = PA.getChecker<TestIndirectFunctionAnalysis>();
+      return !(PAC.preserved() ||
+               PAC.preservedSet<AllAnalysesOn<Function>>()) ||
              Inv.invalidate<TestFunctionAnalysis>(F, PA);
     }
   };
@@ -400,7 +591,17 @@ struct TestIndirectFunctionAnalysis
   /// Run the analysis pass over the function and return a result.
   Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
-    return Result(AM.getResult<TestFunctionAnalysis>(F));
+    auto &FDep = AM.getResult<TestFunctionAnalysis>(F);
+    auto &Proxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    const ModuleAnalysisManager &MAM = Proxy.getManager();
+    // For the test, we insist that the module analysis starts off in the
+    // cache.
+    auto &MDep = *MAM.getCachedResult<TestModuleAnalysis>(*F.getParent());
+    // And register the dependency as module analysis dependencies have to be
+    // pre-registered on the proxy.
+    Proxy.registerOuterAnalysisInvalidation<TestModuleAnalysis,
+                                            TestIndirectFunctionAnalysis>();
+    return Result(FDep, MDep);
   }
 
 private:
@@ -411,6 +612,46 @@ private:
 };
 
 AnalysisKey TestIndirectFunctionAnalysis::Key;
+
+/// A test analysis pass which chaches in its result the result from the above
+/// indirect analysis pass.
+///
+/// This allows us to ensure that whenever an analysis pass is invalidated due
+/// to dependencies (especially dependencies across IR units that trigger
+/// asynchronous invalidation) we correctly detect that this may in turn cause
+/// other analysis to be invalidated.
+struct TestDoublyIndirectFunctionAnalysis
+    : public AnalysisInfoMixin<TestDoublyIndirectFunctionAnalysis> {
+  struct Result {
+    Result(TestIndirectFunctionAnalysis::Result &IDep) : IDep(IDep) {}
+    TestIndirectFunctionAnalysis::Result &IDep;
+
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv) {
+      auto PAC = PA.getChecker<TestDoublyIndirectFunctionAnalysis>();
+      return !(PAC.preserved() ||
+               PAC.preservedSet<AllAnalysesOn<Function>>()) ||
+             Inv.invalidate<TestIndirectFunctionAnalysis>(F, PA);
+    }
+  };
+
+  TestDoublyIndirectFunctionAnalysis(int &Runs) : Runs(Runs) {}
+
+  /// Run the analysis pass over the function and return a result.
+  Result run(Function &F, FunctionAnalysisManager &AM) {
+    ++Runs;
+    auto &IDep = AM.getResult<TestIndirectFunctionAnalysis>(F);
+    return Result(IDep);
+  }
+
+private:
+  friend AnalysisInfoMixin<TestDoublyIndirectFunctionAnalysis>;
+  static AnalysisKey Key;
+
+  int &Runs;
+};
+
+AnalysisKey TestDoublyIndirectFunctionAnalysis::Key;
 
 struct LambdaPass : public PassInfoMixin<LambdaPass> {
   using FuncT = std::function<PreservedAnalyses(Function &, FunctionAnalysisManager &)>;
@@ -426,23 +667,31 @@ struct LambdaPass : public PassInfoMixin<LambdaPass> {
 
 TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   FunctionAnalysisManager FAM(/*DebugLogging*/ true);
-  int AnalysisRuns = 0, IndirectAnalysisRuns = 0;
-  FAM.registerPass([&] { return TestFunctionAnalysis(AnalysisRuns); });
+  int FunctionAnalysisRuns = 0, ModuleAnalysisRuns = 0,
+      IndirectAnalysisRuns = 0, DoublyIndirectAnalysisRuns = 0;
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
   FAM.registerPass(
       [&] { return TestIndirectFunctionAnalysis(IndirectAnalysisRuns); });
+  FAM.registerPass([&] {
+    return TestDoublyIndirectFunctionAnalysis(DoublyIndirectAnalysisRuns);
+  });
 
   ModuleAnalysisManager MAM(/*DebugLogging*/ true);
+  MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
   FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
 
-  int InstrCount = 0;
+  int InstrCount = 0, FunctionCount = 0;
   ModulePassManager MPM(/*DebugLogging*/ true);
   FunctionPassManager FPM(/*DebugLogging*/ true);
   // First just use the analysis to get the instruction count, and preserve
   // everything.
   FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
-    InstrCount +=
-        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    auto &DoublyIndirectResult =
+        AM.getResult<TestDoublyIndirectFunctionAnalysis>(F);
+    auto &IndirectResult = DoublyIndirectResult.IDep;
+    InstrCount += IndirectResult.FDep.InstructionCount;
+    FunctionCount += IndirectResult.MDep.FunctionCount;
     return PreservedAnalyses::all();
   }));
   // Next, invalidate
@@ -450,8 +699,11 @@ TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   //   - just the underlying (indirect) analysis for "g", and
   //   - just the direct analysis for "h".
   FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
-    InstrCount +=
-        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    auto &DoublyIndirectResult =
+        AM.getResult<TestDoublyIndirectFunctionAnalysis>(F);
+    auto &IndirectResult = DoublyIndirectResult.IDep;
+    InstrCount += IndirectResult.FDep.InstructionCount;
+    FunctionCount += IndirectResult.MDep.FunctionCount;
     auto PA = PreservedAnalyses::none();
     if (F.getName() == "g")
       PA.preserve<TestFunctionAnalysis>();
@@ -462,23 +714,55 @@ TEST_F(PassManagerTest, IndirectAnalysisInvalidation) {
   // Finally, use the analysis again on each function, forcing re-computation
   // for all of them.
   FPM.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
-    InstrCount +=
-        AM.getResult<TestIndirectFunctionAnalysis>(F).Dep.InstructionCount;
+    auto &DoublyIndirectResult =
+        AM.getResult<TestDoublyIndirectFunctionAnalysis>(F);
+    auto &IndirectResult = DoublyIndirectResult.IDep;
+    InstrCount += IndirectResult.FDep.InstructionCount;
+    FunctionCount += IndirectResult.MDep.FunctionCount;
     return PreservedAnalyses::all();
   }));
+
+  // Create a second function pass manager. This will cause the module-level
+  // invalidation to occur, which will force yet another invalidation of the
+  // indirect function-level analysis as the module analysis it depends on gets
+  // invalidated.
+  FunctionPassManager FPM2(/*DebugLogging*/ true);
+  FPM2.addPass(LambdaPass([&](Function &F, FunctionAnalysisManager &AM) {
+    auto &DoublyIndirectResult =
+        AM.getResult<TestDoublyIndirectFunctionAnalysis>(F);
+    auto &IndirectResult = DoublyIndirectResult.IDep;
+    InstrCount += IndirectResult.FDep.InstructionCount;
+    FunctionCount += IndirectResult.MDep.FunctionCount;
+    return PreservedAnalyses::all();
+  }));
+
+  // Add a requires pass to populate the module analysis and then our function
+  // pass pipeline.
+  MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  // Now require the module analysis again (it will have been invalidated once)
+  // and then use it again from a function pass manager.
+  MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM2)));
   MPM.run(*M, MAM);
 
   // There are generally two possible runs for each of the three functions. But
   // for one function, we only invalidate the indirect analysis so the base one
   // only gets run five times.
-  EXPECT_EQ(5, AnalysisRuns);
+  EXPECT_EQ(5, FunctionAnalysisRuns);
+  // The module analysis pass should be run twice here.
+  EXPECT_EQ(2, ModuleAnalysisRuns);
   // The indirect analysis is invalidated for each function (either directly or
   // indirectly) and run twice for each.
-  EXPECT_EQ(6, IndirectAnalysisRuns);
+  EXPECT_EQ(9, IndirectAnalysisRuns);
+  EXPECT_EQ(9, DoublyIndirectAnalysisRuns);
 
-  // There are five instructions in the module and we add the count three
+  // There are five instructions in the module and we add the count four
   // times.
-  EXPECT_EQ(5 * 3, InstrCount);
+  EXPECT_EQ(5 * 4, InstrCount);
+
+  // There are three functions and we count them four times for each of the
+  // three functions.
+  EXPECT_EQ(3 * 4 * 3, FunctionCount);
 }
 }

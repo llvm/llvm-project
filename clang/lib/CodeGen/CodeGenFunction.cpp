@@ -42,6 +42,9 @@ using namespace CodeGen;
 /// markers.
 static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                       const LangOptions &LangOpts) {
+  if (CGOpts.DisableLifetimeMarkers)
+    return false;
+
   // Asan uses markers for use-after-scope checks.
   if (CGOpts.SanitizeAddressUseAfterScope)
     return true;
@@ -705,6 +708,11 @@ static bool endsWithReturn(const Decl* F) {
   return false;
 }
 
+static void markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
+  Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
+  Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+}
+
 void CodeGenFunction::StartFunction(GlobalDecl GD,
                                     QualType RetTy,
                                     llvm::Function *Fn,
@@ -748,16 +756,19 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     Fn->addFnAttr(llvm::Attribute::SafeStack);
 
   // Ignore TSan memory acesses from within ObjC/ObjC++ dealloc, initialize,
-  // .cxx_destruct and all of their calees at run time.
+  // .cxx_destruct, __destroy_helper_block_ and all of their calees at run time.
   if (SanOpts.has(SanitizerKind::Thread)) {
     if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
       IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
       if (OMD->getMethodFamily() == OMF_dealloc ||
           OMD->getMethodFamily() == OMF_initialize ||
           (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
-        Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
-        Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
+        markAsIgnoreThreadCheckingAtRuntime(Fn);
       }
+    } else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      IdentifierInfo *II = FD->getIdentifier();
+      if (II && II->isStr("__destroy_helper_block_"))
+        markAsIgnoreThreadCheckingAtRuntime(Fn);
     }
   }
 
@@ -775,27 +786,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
   }
 
-  // Pass inline keyword to optimizer if it appears explicitly on any
-  // declaration. Also, in the case of -fno-inline attach NoInline
-  // attribute to all functions that are not marked AlwaysInline, or
-  // to all functions that are not marked inline or implicitly inline
-  // in the case of -finline-hint-functions.
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-    const CodeGenOptions& CodeGenOpts = CGM.getCodeGenOpts();
-    if (!CodeGenOpts.NoInline) {
-      for (auto RI : FD->redecls())
-        if (RI->isInlineSpecified()) {
-          Fn->addFnAttr(llvm::Attribute::InlineHint);
-          break;
-        }
-      if (CodeGenOpts.getInlining() == CodeGenOptions::OnlyHintInlining &&
-          !FD->isInlined() && !Fn->hasFnAttribute(llvm::Attribute::InlineHint))
-        Fn->addFnAttr(llvm::Attribute::NoInline);
-    } else if (!FD->hasAttr<AlwaysInlineAttr>())
-      Fn->addFnAttr(llvm::Attribute::NoInline);
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     if (CGM.getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
       CGM.getOpenMPRuntime().emitDeclareSimdFunction(FD, Fn);
-  }
 
   // Add no-jump-tables value.
   Fn->addFnAttr("no-jump-tables",
@@ -1067,6 +1060,19 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   return ResTy;
 }
 
+static bool
+shouldUseUndefinedBehaviorReturnOptimization(const FunctionDecl *FD,
+                                             const ASTContext &Context) {
+  QualType T = FD->getReturnType();
+  // Avoid the optimization for functions that return a record type with a
+  // trivial destructor or another trivially copyable type.
+  if (const RecordType *RT = T.getCanonicalType()->getAs<RecordType>()) {
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+      return !ClassDecl->hasTrivialDestructor();
+  }
+  return !T.isTriviallyCopyableType(Context);
+}
+
 void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                                    const CGFunctionInfo &FnInfo) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
@@ -1145,17 +1151,23 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   //   function call is used by the caller, the behavior is undefined.
   if (getLangOpts().CPlusPlus && !FD->hasImplicitReturnZero() && !SawAsmBlock &&
       !FD->getReturnType()->isVoidType() && Builder.GetInsertBlock()) {
+    bool ShouldEmitUnreachable =
+        CGM.getCodeGenOpts().StrictReturn ||
+        shouldUseUndefinedBehaviorReturnOptimization(FD, getContext());
     if (SanOpts.has(SanitizerKind::Return)) {
       SanitizerScope SanScope(this);
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
                 SanitizerHandler::MissingReturn,
                 EmitCheckSourceLocation(FD->getLocation()), None);
-    } else if (CGM.getCodeGenOpts().OptimizationLevel == 0) {
-      EmitTrapCall(llvm::Intrinsic::trap);
+    } else if (ShouldEmitUnreachable) {
+      if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+        EmitTrapCall(llvm::Intrinsic::trap);
     }
-    Builder.CreateUnreachable();
-    Builder.ClearInsertionPoint();
+    if (SanOpts.has(SanitizerKind::Return) || ShouldEmitUnreachable) {
+      Builder.CreateUnreachable();
+      Builder.ClearInsertionPoint();
+    }
   }
 
   // Emit the standard function epilogue.

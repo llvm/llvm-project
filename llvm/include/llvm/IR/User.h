@@ -238,6 +238,26 @@ public:
     return make_range(value_op_begin(), value_op_end());
   }
 
+  struct const_value_op_iterator
+      : iterator_adaptor_base<const_value_op_iterator, const_op_iterator,
+                              std::random_access_iterator_tag, const Value *,
+                              ptrdiff_t, const Value *, const Value *> {
+    explicit const_value_op_iterator(const Use *U = nullptr) :
+      iterator_adaptor_base(U) {}
+    const Value *operator*() const { return *I; }
+    const Value *operator->() const { return operator*(); }
+  };
+
+  const_value_op_iterator value_op_begin() const {
+    return const_value_op_iterator(op_begin());
+  }
+  const_value_op_iterator value_op_end() const {
+    return const_value_op_iterator(op_end());
+  }
+  iterator_range<const_value_op_iterator> operand_values() const {
+    return make_range(value_op_begin(), value_op_end());
+  }
+
   /// \brief Drop all references to operands.
   ///
   /// This function is in charge of "letting go" of all objects that this User

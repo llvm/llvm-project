@@ -45,6 +45,10 @@ public:
 
   ~BlockFrequencyInfo();
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   const Function *getFunction() const;
   const BranchProbabilityInfo *getBPI() const;
   void view() const;

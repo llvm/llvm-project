@@ -469,10 +469,12 @@ static SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &
 sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
   std::sort(GVEs.begin(), GVEs.end(),
             [](DwarfCompileUnit::GlobalExpr A, DwarfCompileUnit::GlobalExpr B) {
-              if (A.Expr != B.Expr && A.Expr && B.Expr &&
-                  A.Expr->isFragment() && B.Expr->isFragment())
-                return A.Expr->getFragmentOffsetInBits() <
-                       B.Expr->getFragmentOffsetInBits();
+              if (A.Expr != B.Expr && A.Expr && B.Expr) {
+		auto FragmentA = A.Expr->getFragmentInfo();
+		auto FragmentB = B.Expr->getFragmentInfo();
+		if (FragmentA && FragmentB)
+		  return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
+	      }
               return false;
             });
   GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),

@@ -22,11 +22,8 @@ TEST(ReplacementsYamlTest, serializesReplacements) {
   TranslationUnitReplacements Doc;
 
   Doc.MainSourceFile = "/path/to/source.cpp";
-  Doc.Context = "some context";
-  Doc.Replacements
-      .push_back(Replacement("/path/to/file1.h", 232, 56, "replacement #1"));
-  Doc.Replacements
-      .push_back(Replacement("/path/to/file2.h", 301, 2, "replacement #2"));
+  Doc.Replacements.emplace_back("/path/to/file1.h", 232, 56, "replacement #1");
+  Doc.Replacements.emplace_back("/path/to/file2.h", 301, 2, "replacement #2");
 
   std::string YamlContent;
   llvm::raw_string_ostream YamlContentStream(YamlContent);
@@ -37,7 +34,6 @@ TEST(ReplacementsYamlTest, serializesReplacements) {
   // NOTE: If this test starts to fail for no obvious reason, check whitespace.
   ASSERT_STREQ("---\n"
                "MainSourceFile:  /path/to/source.cpp\n"
-               "Context:         some context\n"
                "Replacements:    \n" // Extra whitespace here!
                "  - FilePath:        /path/to/file1.h\n"
                "    Offset:          232\n"
@@ -54,7 +50,6 @@ TEST(ReplacementsYamlTest, serializesReplacements) {
 TEST(ReplacementsYamlTest, deserializesReplacements) {
   std::string YamlContent = "---\n"
                             "MainSourceFile:      /path/to/source.cpp\n"
-                            "Context:             some context\n"
                             "Replacements:\n"
                             "  - FilePath:        /path/to/file1.h\n"
                             "    Offset:          232\n"
@@ -71,7 +66,6 @@ TEST(ReplacementsYamlTest, deserializesReplacements) {
   ASSERT_FALSE(YAML.error());
   ASSERT_EQ(2u, DocActual.Replacements.size());
   ASSERT_EQ("/path/to/source.cpp", DocActual.MainSourceFile);
-  ASSERT_EQ("some context", DocActual.Context);
   ASSERT_EQ("/path/to/file1.h", DocActual.Replacements[0].getFilePath());
   ASSERT_EQ(232u, DocActual.Replacements[0].getOffset());
   ASSERT_EQ(56u, DocActual.Replacements[0].getLength());
@@ -98,7 +92,6 @@ TEST(ReplacementsYamlTest, deserializesWithoutContext) {
   ASSERT_FALSE(YAML.error());
   ASSERT_EQ("/path/to/source.cpp", DocActual.MainSourceFile);
   ASSERT_EQ(1u, DocActual.Replacements.size());
-  ASSERT_EQ(std::string(), DocActual.Context);
   ASSERT_EQ("target_file.h", DocActual.Replacements[0].getFilePath());
   ASSERT_EQ(1u, DocActual.Replacements[0].getOffset());
   ASSERT_EQ(10u, DocActual.Replacements[0].getLength());

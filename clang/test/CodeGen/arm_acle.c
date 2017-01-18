@@ -244,23 +244,23 @@ int16_t test_revsh(int16_t t) {
 }
 
 // ARM-LABEL: test_rbit
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i32 @llvm.aarch64.rbit.i32
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i32 @llvm.bitreverse.i32
 uint32_t test_rbit(uint32_t t) {
   return __rbit(t);
 }
 
 // ARM-LABEL: test_rbitl
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i64 @llvm.aarch64.rbit.i64
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i64 @llvm.bitreverse.i64
 long test_rbitl(long t) {
   return __rbitl(t);
 }
 
 // ARM-LABEL: test_rbitll
-// AArch32: call i32 @llvm.arm.rbit
-// AArch32: call i32 @llvm.arm.rbit
-// AArch64: call i64 @llvm.aarch64.rbit.i64
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch32: call i32 @llvm.bitreverse.i32
+// AArch64: call i64 @llvm.bitreverse.i64
 uint64_t test_rbitll(uint64_t t) {
   return __rbitll(t);
 }

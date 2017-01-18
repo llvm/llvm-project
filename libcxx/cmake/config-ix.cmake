@@ -1,9 +1,20 @@
 include(CheckLibraryExists)
 include(CheckCXXCompilerFlag)
 
-check_library_exists(c fopen "" LIBCXX_HAS_C_LIB)
+if(WIN32 AND NOT MINGW)
+  # NOTE(compnerd) this is technically a lie, there is msvcrt, but for now, lets
+  # let the default linking take care of that.
+  set(LIBCXX_HAS_C_LIB NO)
+else()
+  check_library_exists(c fopen "" LIBCXX_HAS_C_LIB)
+endif()
+
 if (NOT LIBCXX_USE_COMPILER_RT)
-  check_library_exists(gcc_s __gcc_personality_v0 "" LIBCXX_HAS_GCC_S_LIB)
+  if(WIN32 AND NOT MINGW)
+    set(LIBCXX_HAS_GCC_S_LIB NO)
+  else()
+    check_library_exists(gcc_s __gcc_personality_v0 "" LIBCXX_HAS_GCC_S_LIB)
+  endif()
 endif()
 
 # libc++ is built with -nodefaultlibs, so we want all our checks to also
@@ -32,7 +43,9 @@ if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
   endif ()
 endif ()
 
-include(CheckLibcxxAtomic)
+if(NOT WIN32 OR MINGW)
+  include(CheckLibcxxAtomic)
+endif()
 
 # Check compiler flags
 
@@ -45,6 +58,14 @@ check_cxx_compiler_flag(/GR-                    LIBCXX_HAS_NO_GR_FLAG)
 
 
 # Check libraries
-check_library_exists(pthread pthread_create "" LIBCXX_HAS_PTHREAD_LIB)
-check_library_exists(m ccos "" LIBCXX_HAS_M_LIB)
-check_library_exists(rt clock_gettime "" LIBCXX_HAS_RT_LIB)
+if(WIN32 AND NOT MINGW)
+  # TODO(compnerd) do we want to support an emulation layer that allows for the
+  # use of pthread-win32 or similar libraries to emulate pthreads on Windows?
+  set(LIBCXX_HAS_PTHREAD_LIB NO)
+  set(LIBCXX_HAS_M_LIB NO)
+  set(LIBCXX_HAS_RT_LIB NO)
+else()
+  check_library_exists(pthread pthread_create "" LIBCXX_HAS_PTHREAD_LIB)
+  check_library_exists(m ccos "" LIBCXX_HAS_M_LIB)
+  check_library_exists(rt clock_gettime "" LIBCXX_HAS_RT_LIB)
+endif()

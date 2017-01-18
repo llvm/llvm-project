@@ -12,22 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -44,10 +44,10 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -2120,35 +2120,9 @@ INITIALIZE_PASS_END(LoopAccessLegacyAnalysis, LAA_NAME, laa_name, false, true)
 
 AnalysisKey LoopAccessAnalysis::Key;
 
-LoopAccessInfo LoopAccessAnalysis::run(Loop &L, LoopAnalysisManager &AM) {
-  const FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
-  Function &F = *L.getHeader()->getParent();
-  auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(F);
-  auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(F);
-  auto *AA = FAM.getCachedResult<AAManager>(F);
-  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
-  auto *LI = FAM.getCachedResult<LoopAnalysis>(F);
-  if (!SE)
-    report_fatal_error(
-        "ScalarEvolution must have been cached at a higher level");
-  if (!AA)
-    report_fatal_error("AliasAnalysis must have been cached at a higher level");
-  if (!DT)
-    report_fatal_error("DominatorTree must have been cached at a higher level");
-  if (!LI)
-    report_fatal_error("LoopInfo must have been cached at a higher level");
-  return LoopAccessInfo(&L, SE, TLI, AA, DT, LI);
-}
-
-PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
-                                                 LoopAnalysisManager &AM) {
-  Function &F = *L.getHeader()->getParent();
-  auto &LAI = AM.getResult<LoopAccessAnalysis>(L);
-  OS << "Loop access info in function '" << F.getName() << "':\n";
-  OS.indent(2) << L.getHeader()->getName() << ":\n";
-  LAI.print(OS, 4);
-  return PreservedAnalyses::all();
+LoopAccessInfo LoopAccessAnalysis::run(Loop &L, LoopAnalysisManager &AM,
+                                       LoopStandardAnalysisResults &AR) {
+  return LoopAccessInfo(&L, &AR.SE, &AR.TLI, &AR.AA, &AR.DT, &AR.LI);
 }
 
 namespace llvm {

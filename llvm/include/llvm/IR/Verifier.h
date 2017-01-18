@@ -48,15 +48,22 @@ class TBAAVerifier {
   ///
   /// \c BitWidth has no meaning if \c IsInvalid is true.
   typedef std::pair<bool, unsigned> TBAABaseNodeSummary;
-  DenseMap<MDNode *, TBAABaseNodeSummary> TBAABaseNodes;
+  DenseMap<const MDNode *, TBAABaseNodeSummary> TBAABaseNodes;
+
+  /// Maps an alleged scalar TBAA node to a boolean that is true if the said
+  /// TBAA node is a valid scalar TBAA node or false otherwise.
+  DenseMap<const MDNode *, bool> TBAAScalarNodes;
 
   /// \name Helper functions used by \c visitTBAAMetadata.
   /// @{
-  MDNode *getFieldNodeFromTBAABaseNode(Instruction &I, MDNode *BaseNode,
+  MDNode *getFieldNodeFromTBAABaseNode(Instruction &I, const MDNode *BaseNode,
                                        APInt &Offset);
   TBAAVerifier::TBAABaseNodeSummary verifyTBAABaseNode(Instruction &I,
-                                                       MDNode *BaseNode);
-  TBAABaseNodeSummary verifyTBAABaseNodeImpl(Instruction &I, MDNode *BaseNode);
+                                                       const MDNode *BaseNode);
+  TBAABaseNodeSummary verifyTBAABaseNodeImpl(Instruction &I,
+                                             const MDNode *BaseNode);
+
+  bool isValidScalarTBAANode(const MDNode *MD);
   /// @}
 
 public:
@@ -64,7 +71,7 @@ public:
       : Diagnostic(Diagnostic) {}
   /// Visit an instruction and return true if it is valid, return false if an
   /// invalid TBAA is attached.
-  bool visitTBAAMetadata(Instruction &I, MDNode *MD);
+  bool visitTBAAMetadata(Instruction &I, const MDNode *MD);
 };
 
 /// \brief Check a function for errors, useful for use when debugging a

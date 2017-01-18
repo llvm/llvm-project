@@ -149,7 +149,7 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
   if (!ForceOffset) {
     // On COFF targets, we have to emit the special .secrel32 directive.
     if (MAI->needsDwarfSectionOffsetDirective()) {
-      OutStreamer->EmitCOFFSecRel32(Label);
+      OutStreamer->EmitCOFFSecRel32(Label, /*Offset=*/0);
       return;
     }
 

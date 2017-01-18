@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
 
 ; This tests that a hot callsite gets the (higher) inlinehint-threshold even without
 ; without inline hints and gets inlined because the cost is less than

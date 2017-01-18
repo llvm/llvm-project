@@ -76,6 +76,7 @@ class MachineBlockFrequencyInfo;
 class MachineRegisterInfo;
 class TargetPassConfig;
 class TargetRegisterInfo;
+class raw_ostream;
 
 /// This pass implements the reg bank selector pass used in the GlobalISel
 /// pipeline. At the end of this pass, all register operands have been assigned
@@ -450,6 +451,18 @@ private:
     bool operator>(const MappingCost &Cost) const {
       return *this != Cost && Cost < *this;
     }
+
+    /// Print this on dbgs() stream.
+    void dump() const;
+
+    /// Print this on \p OS;
+    void print(raw_ostream &OS) const;
+
+    /// Overload the stream operator for easy debug printing.
+    friend raw_ostream &operator<<(raw_ostream &OS, const MappingCost &Cost) {
+      Cost.print(OS);
+      return OS;
+    }
   };
 
   /// Interface to the target lowering info related
@@ -626,6 +639,7 @@ public:
   /// \endcode
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
 } // End namespace llvm.
 
 #endif

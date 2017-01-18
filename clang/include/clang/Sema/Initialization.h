@@ -215,14 +215,14 @@ public:
 
   /// \brief Create the initialization entity for a parameter.
   static InitializedEntity InitializeParameter(ASTContext &Context,
-                                               ParmVarDecl *Parm) {
+                                               const ParmVarDecl *Parm) {
     return InitializeParameter(Context, Parm, Parm->getType());
   }
 
   /// \brief Create the initialization entity for a parameter, but use
   /// another type.
   static InitializedEntity InitializeParameter(ASTContext &Context,
-                                               ParmVarDecl *Parm,
+                                               const ParmVarDecl *Parm,
                                                QualType Type) {
     bool Consumed = (Context.getLangOpts().ObjCAutoRefCount &&
                      Parm->hasAttr<NSConsumedAttr>());
@@ -751,6 +751,8 @@ public:
     SK_StdInitializerListConstructorCall,
     /// \brief Initialize an OpenCL sampler from an integer.
     SK_OCLSamplerInit,
+    /// \brief Initialize queue_t from 0.
+    SK_OCLZeroQueue,
     /// \brief Passing zero to a function where OpenCL event_t is expected.
     SK_OCLZeroEvent
   };
@@ -1147,6 +1149,9 @@ public:
   /// \brief Add a step to initialize an OpenCL event_t from a NULL
   /// constant.
   void AddOCLZeroEventStep(QualType T);
+
+  /// \brief Add a step to initialize an OpenCL queue_t from 0.
+  void AddOCLZeroQueueStep(QualType T);
 
   /// \brief Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

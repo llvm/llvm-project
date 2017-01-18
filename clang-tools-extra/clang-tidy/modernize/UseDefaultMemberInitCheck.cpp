@@ -146,10 +146,6 @@ void UseDefaultMemberInitCheck::storeOptions(
   Options.store(Opts, "UseAssignment", UseAssignment);
 }
 
-AST_MATCHER(FieldDecl, hasInClassInitializer) {
-  return Node.hasInClassInitializer();
-}
-
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
@@ -162,23 +158,24 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
             unaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")),
                           hasUnaryOperand(floatLiteral())),
             cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr());
+            declRefExpr(to(enumConstantDecl())));
 
   Finder->addMatcher(
       cxxConstructorDecl(
           isDefaultConstructor(), unless(isInstantiated()),
-          forEachConstructorInitializer(allOf(
-              forField(unless(anyOf(isBitField(), hasInClassInitializer()))),
-              cxxCtorInitializer(isWritten(),
-                                 withInitializer(ignoringImplicit(Init)))
-                  .bind("default")))),
+          forEachConstructorInitializer(
+              allOf(forField(unless(anyOf(isBitField(),
+                                          hasInClassInitializer(anything())))),
+                    cxxCtorInitializer(isWritten(),
+                                       withInitializer(ignoringImplicit(Init)))
+                        .bind("default")))),
       this);
 
   Finder->addMatcher(
       cxxConstructorDecl(
           unless(ast_matchers::isTemplateInstantiation()),
           forEachConstructorInitializer(
-              allOf(forField(hasInClassInitializer()),
+              allOf(forField(hasInClassInitializer(anything())),
                     cxxCtorInitializer(isWritten(),
                                        withInitializer(ignoringImplicit(Init)))
                         .bind("existing")))),

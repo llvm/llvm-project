@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-threshold=40 -unroll-dynamic-cost-savings-discount=0 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-runtime -unroll-threshold=40 -unroll-max-percent-threshold-boost=100 | FileCheck %s
 
 @known_constant = internal unnamed_addr constant [9 x i32] [i32 0, i32 -1, i32 0, i32 -1, i32 5, i32 -1, i32 0, i32 -1, i32 0], align 16
 

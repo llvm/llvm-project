@@ -28,14 +28,14 @@ bar:
         .zero   4
 
 
-// CHECK:      Name: .got
+// CHECK:      Name: .got (
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC (0x2)
 // CHECK-NEXT:   SHF_WRITE (0x1)
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x20D0
-// CHECK-NEXT: Offset: 0x20D0
+// CHECK-NEXT: Address: 0x30D0
+// CHECK-NEXT: Offset: 0x30D0
 // CHECK-NEXT: Size: 32
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -47,6 +47,6 @@ bar:
 // CHECK-NEXT: )
 
 // CHECK:      Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:   0x20D0 R_X86_64_DTPMOD64 - 0x0
-// CHECK-NEXT:   0x20E0 R_X86_64_DTPMOD64 - 0x0
+// CHECK-NEXT:   0x30D0 R_X86_64_DTPMOD64 - 0x0
+// CHECK-NEXT:   0x30E0 R_X86_64_DTPMOD64 - 0x0
 // CHECK-NEXT: }

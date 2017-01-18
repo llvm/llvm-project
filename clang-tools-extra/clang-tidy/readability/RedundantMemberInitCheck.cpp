@@ -22,6 +22,9 @@ namespace tidy {
 namespace readability {
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
+
   auto Construct =
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(hasParent(

@@ -112,6 +112,7 @@ int main()
         assert(f.egptr() - f.gptr() == 1);
     }
     {
+        typedef std::char_traits<wchar_t> Traits;
         test_buf<wchar_t> f;
         f.pubimbue(std::locale(LOCALE_en_US_UTF_8));
         assert(f.open("underflow_utf8.dat", std::ios_base::in) != 0);
@@ -119,6 +120,6 @@ int main()
         assert(f.sbumpc() == 0x4E51);
         assert(f.sbumpc() == 0x4E52);
         assert(f.sbumpc() == 0x4E53);
-        assert(f.sbumpc() == static_cast<unsigned>(-1));
+        assert(f.sbumpc() == static_cast<Traits::int_type>(-1));
     }
 }

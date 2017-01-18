@@ -85,8 +85,9 @@ static std::string runIncludeFixer(
                  1, {}),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
-  SymbolIndexMgr->addSymbolIndex(
-      llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols));
+  SymbolIndexMgr->addSymbolIndex([=]() {
+    return llvm::make_unique<include_fixer::InMemorySymbolIndex>(Symbols);
+  });
 
   std::vector<IncludeFixerContext> FixerContexts;
   IncludeFixerActionFactory Factory(*SymbolIndexMgr, FixerContexts, "llvm");

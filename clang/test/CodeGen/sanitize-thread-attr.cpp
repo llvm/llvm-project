@@ -54,9 +54,9 @@ int global2 = *(int*)((char*)&global1+1);
 // BL: @__cxx_global_var_init{{.*}}[[NOATTR:#[0-9]+]]
 // TSAN: @__cxx_global_var_init{{.*}}[[WITH:#[0-9]+]]
 
-// WITHOUT: attributes [[NOATTR]] = { nounwind{{.*}} }
+// WITHOUT: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// BL: attributes [[NOATTR]] = { nounwind{{.*}} }
+// BL: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// TSAN: attributes [[NOATTR]] = { nounwind{{.*}} }
-// TSAN: attributes [[WITH]] = { nounwind sanitize_thread{{.*}} }
+// TSAN: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
+// TSAN: attributes [[WITH]] = { noinline nounwind sanitize_thread{{.*}} }

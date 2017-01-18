@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-pc-linux-gnu -std=c++1y -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO-OPT
-// RUN: %clang_cc1 -emit-llvm -triple i686-pc-linux-gnu -std=c++1y -O3 -disable-llvm-optzns -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-linux-gnu -std=c++1y -O3 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
 // RUN: %clang_cc1 -emit-llvm -triple i686-pc-win32 -std=c++1y -o - %s | FileCheck %s --check-prefix=CHECK-MS
 
 // This check logically is attached to 'template int S<int>::i;' below.

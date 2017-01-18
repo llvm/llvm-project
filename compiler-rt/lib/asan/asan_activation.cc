@@ -77,12 +77,13 @@ static struct AsanDeactivatedFlags {
 
   void Print() {
     Report(
-        "quarantine_size_mb %d, max_redzone %d, poison_heap %d, "
-        "malloc_context_size %d, alloc_dealloc_mismatch %d, "
-        "allocator_may_return_null %d, coverage %d, coverage_dir %s, "
-        "allocator_release_to_os_interval_ms %d\n",
-        allocator_options.quarantine_size_mb, allocator_options.max_redzone,
-        poison_heap, malloc_context_size,
+        "quarantine_size_mb %d, thread_local_quarantine_size_kb %d, "
+        "max_redzone %d, poison_heap %d, malloc_context_size %d, "
+        "alloc_dealloc_mismatch %d, allocator_may_return_null %d, coverage %d, "
+        "coverage_dir %s, allocator_release_to_os_interval_ms %d\n",
+        allocator_options.quarantine_size_mb,
+        allocator_options.thread_local_quarantine_size_kb,
+        allocator_options.max_redzone, poison_heap, malloc_context_size,
         allocator_options.alloc_dealloc_mismatch,
         allocator_options.may_return_null, coverage, coverage_dir,
         allocator_options.release_to_os_interval_ms);
@@ -109,6 +110,7 @@ void AsanDeactivate() {
 
   AllocatorOptions disabled = asan_deactivated_flags.allocator_options;
   disabled.quarantine_size_mb = 0;
+  disabled.thread_local_quarantine_size_kb = 0;
   disabled.min_redzone = 16;  // Redzone must be at least 16 bytes long.
   disabled.max_redzone = 16;
   disabled.alloc_dealloc_mismatch = false;

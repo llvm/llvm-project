@@ -1,16 +1,12 @@
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnueabi | \
-; RUN:     grep "tbss"
-; RUN: llc < %s -march=arm -mtriple=arm-linux-gnueabi | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=NOEMU
-; RUN: llc < %s -emulated-tls -march=arm -mtriple=arm-linux-gnueabi | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=EMU
+; RUN: llc -mtriple arm-linux-gnueabi -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix NOEMU
+; RUN: llc -mtriple arm-linux-gnueabi -emulated-tls -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix EMU
 
 %struct.anon = type { i32, i32 }
-@teste = internal thread_local global %struct.anon zeroinitializer ; <%struct.anon*> [#uses=1]
+@teste = internal thread_local global %struct.anon zeroinitializer
 
 define i32 @main() {
 entry:
-  %tmp2 = load i32, i32* getelementptr (%struct.anon, %struct.anon* @teste, i32 0, i32 0), align 8 ; <i32> [#uses=1]
+  %tmp2 = load i32, i32* getelementptr (%struct.anon, %struct.anon* @teste, i32 0, i32 0), align 8
   ret i32 %tmp2
 }
 
@@ -32,3 +28,4 @@ entry:
 
 ; CHECK-NOT: teste:
 ; CHECK-NOT: __emutls_t.teste
+

@@ -12,8 +12,7 @@ define <8 x i16> @test1(<8 x i16> %A, <8 x i16> %B) {
 ;
 ; AVX-LABEL: test1:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX-NEXT:    vpsllw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -32,8 +31,7 @@ define <4 x i32> @test2(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX-LABEL: test2:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpslld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -68,8 +66,7 @@ define <8 x i16> @test4(<8 x i16> %A, <8 x i16> %B) {
 ;
 ; AVX-LABEL: test4:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX-NEXT:    vpsrlw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -88,8 +85,7 @@ define <4 x i32> @test5(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX-LABEL: test5:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpsrld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -124,8 +120,7 @@ define <8 x i16> @test7(<8 x i16> %A, <8 x i16> %B) {
 ;
 ; AVX-LABEL: test7:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX-NEXT:    vpsraw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -144,8 +139,7 @@ define <4 x i32> @test8(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX-LABEL: test8:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3,4,5,6,7]
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX-NEXT:    vpsrad %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:

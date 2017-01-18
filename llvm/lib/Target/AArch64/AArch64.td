@@ -264,9 +264,13 @@ def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    "Qualcomm Falkor processors", [
                                    FeatureCRC,
                                    FeatureCrypto,
+                                   FeatureCustomCheapAsMoveHandling,
                                    FeatureFPARMv8,
                                    FeatureNEON,
-                                   FeaturePerfMon
+                                   FeaturePerfMon,
+                                   FeaturePostRAScheduler,
+                                   FeaturePredictableSelectIsExpensive,
+                                   FeatureZCZeroing
                                    ]>;
 
 def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",

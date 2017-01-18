@@ -343,3 +343,7 @@ A a;
 
 int call_it = (A::default_args(), 1);
 }
+
+enum { enumerator };
+void f(decltype(enumerator)) {}
+// CHECK-DAG: define void @"\01?f@@YAXW4<unnamed-enum-enumerator>@@@Z"(

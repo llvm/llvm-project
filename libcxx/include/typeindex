@@ -55,7 +55,7 @@ struct hash<type_index>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TYPE_VIS_ONLY type_index
+class _LIBCPP_TEMPLATE_VIS type_index
 {
     const type_info* __t_;
 public:
@@ -87,10 +87,10 @@ public:
     const char* name() const _NOEXCEPT {return __t_->name();}
 };
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash;
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <>
-struct _LIBCPP_TYPE_VIS_ONLY hash<type_index>
+struct _LIBCPP_TEMPLATE_VIS hash<type_index>
     : public unary_function<type_index, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY

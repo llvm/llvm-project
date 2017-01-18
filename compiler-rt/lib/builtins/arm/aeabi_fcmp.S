@@ -26,10 +26,10 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmp ## cond)           \
         bl        SYMBOL_NAME(__ ## cond ## sf2) SEPARATOR \
         cmp       r0, #0                         SEPARATOR \
         b ## cond 1f                             SEPARATOR \
-        mov       r0, #0                         SEPARATOR \
+        movs      r0, #0                         SEPARATOR \
         pop       { r4, pc }                     SEPARATOR \
 1:                                               SEPARATOR \
-        mov       r0, #1                         SEPARATOR \
+        movs      r0, #1                         SEPARATOR \
         pop       { r4, pc }                     SEPARATOR \
 END_COMPILERRT_FUNCTION(__aeabi_fcmp ## cond)
 

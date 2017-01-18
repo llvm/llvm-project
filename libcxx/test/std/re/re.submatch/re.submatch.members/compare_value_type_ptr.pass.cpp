@@ -23,7 +23,6 @@ int main()
         typedef char CharT;
         typedef std::sub_match<const CharT*> SM;
         SM sm = SM();
-        SM sm2 = SM();
         assert(sm.compare("") == 0);
         const CharT s[] = {'1', '2', '3', 0};
         sm.first = s;
@@ -36,7 +35,6 @@ int main()
         typedef wchar_t CharT;
         typedef std::sub_match<const CharT*> SM;
         SM sm = SM();
-        SM sm2 = SM();
         assert(sm.compare(L"") == 0);
         const CharT s[] = {'1', '2', '3', 0};
         sm.first = s;

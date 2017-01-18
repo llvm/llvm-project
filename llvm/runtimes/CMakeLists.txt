@@ -61,6 +61,10 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # This variable makes sure that e.g. llvm-lit is found.
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
 
+  # Handle common options used by all runtimes.
+  include(AddLLVM)
+  include(HandleLLVMOptions)
+
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
 
@@ -73,7 +77,13 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # Setting a variable to let sub-projects detect which other projects
     # will be included under here.
     set(HAVE_${canon_name} On)
+  endforeach()
 
+  # We do this in two loops so that HAVE_* is set for each runtime before the
+  # other runtimes are added.
+  foreach(entry ${runtimes})
+    get_filename_component(projName ${entry} NAME)
+    
     # Between each sub-project we want to cache and clear the LIT properties
     set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
     set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)

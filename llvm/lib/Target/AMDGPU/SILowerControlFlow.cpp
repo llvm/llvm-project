@@ -175,9 +175,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   // Insert a pseudo terminator to help keep the verifier happy. This will also
   // be used later when inserting skips.
-  MachineInstr *NewBr =
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addOperand(MI.getOperand(2));
+  MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+                            .add(MI.getOperand(2));
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -221,7 +220,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // the src like it does.
   unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
   BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
-    .addOperand(MI.getOperand(1)); // Saved EXEC
+      .add(MI.getOperand(1)); // Saved EXEC
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
@@ -283,10 +282,9 @@ void SILowerControlFlow::emitBreak(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
   unsigned Dst = MI.getOperand(0).getReg();
 
-  MachineInstr *Or =
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-    .addReg(AMDGPU::EXEC)
-    .addOperand(MI.getOperand(1));
+  MachineInstr *Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+                         .addReg(AMDGPU::EXEC)
+                         .add(MI.getOperand(1));
 
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(MI, *Or);
@@ -306,13 +304,13 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
 
   MachineInstr *AndN2 =
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64_term), AMDGPU::EXEC)
-    .addReg(AMDGPU::EXEC)
-    .addOperand(MI.getOperand(0));
+      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_ANDN2_B64_term), AMDGPU::EXEC)
+          .addReg(AMDGPU::EXEC)
+          .add(MI.getOperand(0));
 
   MachineInstr *Branch =
-    BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
-    .addOperand(MI.getOperand(1));
+      BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ))
+          .add(MI.getOperand(1));
 
   if (LIS) {
     LIS->ReplaceMachineInstrInMaps(MI, *AndN2);
@@ -328,9 +326,9 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   MachineBasicBlock::iterator InsPt = MBB.begin();
   MachineInstr *NewMI =
-    BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::S_OR_B64), AMDGPU::EXEC)
-    .addReg(AMDGPU::EXEC)
-    .addOperand(MI.getOperand(0));
+      BuildMI(MBB, InsPt, DL, TII->get(AMDGPU::S_OR_B64), AMDGPU::EXEC)
+          .addReg(AMDGPU::EXEC)
+          .add(MI.getOperand(0));
 
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);

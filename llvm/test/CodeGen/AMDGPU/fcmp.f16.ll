@@ -24,6 +24,34 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}fcmp_f16_lt_abs:
+; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
+; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
+
+; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
+; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
+
+; SI:  v_cmp_lt_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, |v[[A_F32]]|, |v[[B_F32]]|
+; VI:  v_cmp_lt_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, |v[[A_F16]]|, |v[[B_F16]]|
+
+; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
+; GCN: buffer_store_dword v[[R_I32]]
+; GCN: s_endpgm
+define void @fcmp_f16_lt_abs(
+    i32 addrspace(1)* %r,
+    half addrspace(1)* %a,
+    half addrspace(1)* %b) {
+entry:
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
+  %a.abs = call half @llvm.fabs.f16(half %a.val)
+  %b.abs = call half @llvm.fabs.f16(half %b.val)
+  %r.val = fcmp olt half %a.abs, %b.abs
+  %r.val.sext = sext i1 %r.val to i32
+  store i32 %r.val.sext, i32 addrspace(1)* %r
+  ret void
+}
+
 ; GCN-LABEL: {{^}}fcmp_f16_eq
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
@@ -742,3 +770,8 @@ entry:
   store <2 x i32> %r.val.sext, <2 x i32> addrspace(1)* %r
   ret void
 }
+
+declare half @llvm.fabs.f16(half) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

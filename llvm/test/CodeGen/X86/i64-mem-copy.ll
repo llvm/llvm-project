@@ -68,9 +68,10 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
 
 define void @PR23476(<5 x i64> %in, i64* %out, i32 %index) {
 ; X32-LABEL: PR23476:
+; X32: andl $7, %eax
 ; X32:         movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32:         movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    movsd %xmm0, (%eax)
+; X32-NEXT:    movsd %xmm0, (%ecx)
   %ext = extractelement <5 x i64> %in, i32 %index
   store i64 %ext, i64* %out, align 8
   ret void

@@ -14,6 +14,18 @@
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
 
+#ifdef _MSC_VER
+// Disable warnings from ppltasks.h transitively included by <future>.
+#pragma warning(push)
+#pragma warning(disable:4530)
+#endif
+
+#include <future>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 namespace clang {
 namespace include_fixer {
 
@@ -21,8 +33,13 @@ namespace include_fixer {
 /// to an indentifier in the source code from multiple symbol databases.
 class SymbolIndexManager {
 public:
-  void addSymbolIndex(std::unique_ptr<SymbolIndex> DB) {
-    SymbolIndices.push_back(std::move(DB));
+  void addSymbolIndex(std::function<std::unique_ptr<SymbolIndex>()> F) {
+#if LLVM_ENABLE_THREADS
+    auto Strategy = std::launch::async;
+#else
+    auto Strategy = std::launch::deferred;
+#endif
+    SymbolIndices.push_back(std::async(Strategy, F));
   }
 
   /// Search for header files to be included for an identifier.
@@ -36,10 +53,11 @@ public:
   ///
   /// \returns A list of symbol candidates.
   std::vector<find_all_symbols::SymbolInfo>
-  search(llvm::StringRef Identifier, bool IsNestedSearch = true) const;
+  search(llvm::StringRef Identifier, bool IsNestedSearch = true,
+         llvm::StringRef FileName = "") const;
 
 private:
-  std::vector<std::unique_ptr<SymbolIndex>> SymbolIndices;
+  std::vector<std::shared_future<std::unique_ptr<SymbolIndex>>> SymbolIndices;
 };
 
 } // namespace include_fixer

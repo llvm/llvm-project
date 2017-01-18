@@ -109,13 +109,13 @@ static const DeclContext *getEffectiveParentContext(const DeclContext *DC) {
 
 static const FunctionDecl *getStructor(const NamedDecl *ND) {
   if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
-    return FTD->getTemplatedDecl();
+    return FTD->getTemplatedDecl()->getCanonicalDecl();
 
   const auto *FD = cast<FunctionDecl>(ND);
   if (const auto *FTD = FD->getPrimaryTemplate())
-    return FTD->getTemplatedDecl();
+    return FTD->getTemplatedDecl()->getCanonicalDecl();
 
-  return FD;
+  return FD->getCanonicalDecl();
 }
 
 /// MicrosoftMangleContextImpl - Overrides the default MangleContext for the
@@ -312,6 +312,10 @@ public:
   void mangleNestedName(const NamedDecl *ND);
 
 private:
+  bool isStructorDecl(const NamedDecl *ND) const {
+    return ND == Structor || getStructor(ND) == Structor;
+  }
+
   void mangleUnqualifiedName(const NamedDecl *ND) {
     mangleUnqualifiedName(ND, ND->getDeclName());
   }
@@ -863,21 +867,28 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
         }
       }
 
-      llvm::SmallString<64> Name("<unnamed-type-");
+      llvm::SmallString<64> Name;
       if (DeclaratorDecl *DD =
               Context.getASTContext().getDeclaratorForUnnamedTagDecl(TD)) {
         // Anonymous types without a name for linkage purposes have their
         // declarator mangled in if they have one.
+        Name += "<unnamed-type-";
         Name += DD->getName();
       } else if (TypedefNameDecl *TND =
                      Context.getASTContext().getTypedefNameForUnnamedTagDecl(
                          TD)) {
         // Anonymous types without a name for linkage purposes have their
         // associate typedef mangled in if they have one.
+        Name += "<unnamed-type-";
         Name += TND->getName();
+      } else if (auto *ED = dyn_cast<EnumDecl>(TD)) {
+        auto EnumeratorI = ED->enumerator_begin();
+        assert(EnumeratorI != ED->enumerator_end());
+        Name += "<unnamed-enum-";
+        Name += EnumeratorI->getName();
       } else {
         // Otherwise, number the types using a $S prefix.
-        Name += "$S";
+        Name += "<unnamed-type-$S";
         Name += llvm::utostr(Context.getAnonymousStructId(TD) + 1);
       }
       Name += ">";
@@ -891,7 +902,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       llvm_unreachable("Can't mangle Objective-C selector names here!");
 
     case DeclarationName::CXXConstructorName:
-      if (Structor == getStructor(ND)) {
+      if (isStructorDecl(ND)) {
         if (StructorType == Ctor_CopyingClosure) {
           Out << "?_O";
           return;
@@ -905,7 +916,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
       return;
 
     case DeclarationName::CXXDestructorName:
-      if (ND == Structor)
+      if (isStructorDecl(ND))
         // If the named decl is the C++ destructor we're mangling,
         // use the type we were given.
         mangleCXXDtorType(static_cast<CXXDtorType>(StructorType));
@@ -1855,7 +1866,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       IsStructor = true;
       IsCtorClosure = (StructorType == Ctor_CopyingClosure ||
                        StructorType == Ctor_DefaultClosure) &&
-                      getStructor(MD) == Structor;
+                      isStructorDecl(MD);
       if (IsCtorClosure)
         CC = getASTContext().getDefaultCallingConvention(
             /*IsVariadic=*/false, /*IsCXXMethod=*/true);
@@ -1876,7 +1887,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
-    if (isa<CXXDestructorDecl>(D) && D == Structor &&
+    if (isa<CXXDestructorDecl>(D) && isStructorDecl(D) &&
         StructorType == Dtor_Deleting) {
       // The scalar deleting destructor takes an extra int argument.
       // However, the FunctionType generated has 0 arguments.
@@ -2986,14 +2997,14 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // N.B. The length is in terms of bytes, not characters.
   Mangler.mangleNumber(SL->getByteLength() + SL->getCharByteWidth());
 
-  auto GetLittleEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetLittleEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = Index % CharByteWidth;
     return static_cast<char>((CodeUnit >> (8 * OffsetInCodeUnit)) & 0xff);
   };
 
-  auto GetBigEndianByte = [&Mangler, &SL](unsigned Index) {
+  auto GetBigEndianByte = [&SL](unsigned Index) {
     unsigned CharByteWidth = SL->getCharByteWidth();
     uint32_t CodeUnit = SL->getCodeUnit(Index / CharByteWidth);
     unsigned OffsetInCodeUnit = (CharByteWidth - 1) - (Index % CharByteWidth);

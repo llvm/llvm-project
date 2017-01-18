@@ -8,8 +8,8 @@ declare i32 @llvm.eh.typeid.for(i8*)
 
 ; CHECK: name: bar
 ; CHECK: body:
-; CHECK-NEXT:   bb.1:
-; CHECK:     successors: %[[GOOD:bb.[0-9]+]]{{.*}}%[[BAD:bb.[0-9]+]]
+; CHECK-NEXT:   bb.1 (%ir-block.0):
+; CHECK:     successors: %[[GOOD:bb.[0-9]+.continue]]{{.*}}%[[BAD:bb.[0-9]+.broken]]
 ; CHECK:     EH_LABEL
 ; CHECK:     %w0 = COPY
 ; CHECK:     BL @foo, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0, implicit-def %w0

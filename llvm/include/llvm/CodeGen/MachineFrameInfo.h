@@ -148,8 +148,7 @@ class MachineFrameInfo {
   /// grouping overaligned allocas into a "secondary stack frame" and
   /// then only use a single alloca to allocate this frame and only a
   /// single virtual register to access it. Currently, without such an
-  /// optimization, each such alloca gets it's own dynamic
-  /// realignment.
+  /// optimization, each such alloca gets its own dynamic realignment.
   bool StackRealignable;
 
   /// Whether the function has the \c alignstack attribute.

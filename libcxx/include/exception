@@ -163,6 +163,7 @@ make_exception_ptr(_Ep __e) _NOEXCEPT
         return current_exception();
     }
 #else
+    ((void)__e);
     _VSTD::abort();
 #endif
 }
@@ -208,6 +209,9 @@ throw_with_nested (_Tp& __t, typename enable_if<
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw __nested<typename remove_reference<_Tp>::type>(_VSTD::forward<_Tp>(__t));
+#else
+    ((void)__t);
+    // FIXME: Make this abort.
 #endif
 }
 
@@ -228,6 +232,9 @@ throw_with_nested (_Tp& __t, typename enable_if<
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw _VSTD::forward<_Tp>(__t);
+#else
+    ((void)__t);
+    // FIXME: Make this abort
 #endif
 }
 

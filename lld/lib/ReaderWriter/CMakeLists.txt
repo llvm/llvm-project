@@ -11,9 +11,11 @@ add_lld_library(lldReaderWriter
   ADDITIONAL_HEADER_DIRS
   ${LLD_INCLUDE_DIR}/lld/ReaderWriter
 
+  LINK_COMPONENTS
+    Object
+    Support
+
   LINK_LIBS
     lldCore
     lldYAML
-    LLVMObject
-    LLVMSupport
   )

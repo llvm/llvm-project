@@ -433,13 +433,7 @@ void SearchFilterByModule::Search(Searcher &searcher) {
 
 void SearchFilterByModule::GetDescription(Stream *s) {
   s->PutCString(", module = ");
-  if (s->GetVerbose()) {
-    char buffer[2048];
-    m_module_spec.GetPath(buffer, 2047);
-    s->PutCString(buffer);
-  } else {
-    s->PutCString(m_module_spec.GetFilename().AsCString("<Unknown>"));
-  }
+  s->PutCString(m_module_spec.GetFilename().AsCString("<Unknown>"));
 }
 
 uint32_t SearchFilterByModule::GetFilterRequiredItems() {
@@ -591,27 +585,15 @@ void SearchFilterByModuleList::GetDescription(Stream *s) {
   size_t num_modules = m_module_spec_list.GetSize();
   if (num_modules == 1) {
     s->Printf(", module = ");
-    if (s->GetVerbose()) {
-      char buffer[2048];
-      m_module_spec_list.GetFileSpecAtIndex(0).GetPath(buffer, 2047);
-      s->PutCString(buffer);
-    } else {
-      s->PutCString(
-          m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
-              "<Unknown>"));
-    }
+    s->PutCString(
+        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
+            "<Unknown>"));
   } else {
     s->Printf(", modules(%" PRIu64 ") = ", (uint64_t)num_modules);
     for (size_t i = 0; i < num_modules; i++) {
-      if (s->GetVerbose()) {
-        char buffer[2048];
-        m_module_spec_list.GetFileSpecAtIndex(i).GetPath(buffer, 2047);
-        s->PutCString(buffer);
-      } else {
-        s->PutCString(
-            m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
-                "<Unknown>"));
-      }
+      s->PutCString(
+          m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
+              "<Unknown>"));
       if (i != num_modules - 1)
         s->PutCString(", ");
     }
@@ -827,27 +809,15 @@ void SearchFilterByModuleListAndCU::GetDescription(Stream *s) {
   size_t num_modules = m_module_spec_list.GetSize();
   if (num_modules == 1) {
     s->Printf(", module = ");
-    if (s->GetVerbose()) {
-      char buffer[2048];
-      m_module_spec_list.GetFileSpecAtIndex(0).GetPath(buffer, 2047);
-      s->PutCString(buffer);
-    } else {
-      s->PutCString(
-          m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
-              "<Unknown>"));
-    }
+    s->PutCString(
+        m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().AsCString(
+            "<Unknown>"));
   } else if (num_modules > 0) {
     s->Printf(", modules(%" PRIu64 ") = ", static_cast<uint64_t>(num_modules));
     for (size_t i = 0; i < num_modules; i++) {
-      if (s->GetVerbose()) {
-        char buffer[2048];
-        m_module_spec_list.GetFileSpecAtIndex(i).GetPath(buffer, 2047);
-        s->PutCString(buffer);
-      } else {
-        s->PutCString(
-            m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
-                "<Unknown>"));
-      }
+      s->PutCString(
+          m_module_spec_list.GetFileSpecAtIndex(i).GetFilename().AsCString(
+              "<Unknown>"));
       if (i != num_modules - 1)
         s->PutCString(", ");
     }

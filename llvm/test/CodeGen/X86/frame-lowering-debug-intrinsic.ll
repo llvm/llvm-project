@@ -2,31 +2,56 @@
 ;
 ; RUN: llc -O1 -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 
-
-define i64 @noDebug(i64 %a) {
+define i64 @fn1NoDebug(i64 %a) {
   %call = call i64 @fn(i64 %a, i64 0)
   ret i64 %call
 }
 
-; CHECK-LABEL: noDebug
+; CHECK-LABEL: fn1NoDebug
 ; CHECK: popq %rcx
-; CHECK: ret
+; CHECK-NEXT: ret
 
-
-define i64 @withDebug(i64 %a) !dbg !4 {
+define i64 @fn1WithDebug(i64 %a) !dbg !4 {
   %call = call i64 @fn(i64 %a, i64 0)
   tail call void @llvm.dbg.value(metadata i64 %call, i64 0, metadata !5, metadata !6), !dbg !7
   ret i64 %call
 }
 
-; CHECK-LABEL: withDebug
+; CHECK-LABEL: fn1WithDebug
 ; CHECK: popq %rcx
-; CHECK: ret
+; CHECK-NEXT: ret
 
+%struct.Buffer = type { i8, [63 x i8] }
+
+define void @fn2NoDebug(%struct.Buffer* byval align 64 %p1) {
+  ret void
+}
+
+; CHECK-LABEL: fn2NoDebug
+; CHECK: and
+; CHECK-NOT: add
+; CHECK-NOT: sub
+; CHECK: mov
+; CHECK-NEXT: pop
+; CHECK-NEXT: ret
+
+define void @fn2WithDebug(%struct.Buffer* byval align 64 %p1) !dbg !4 {
+  call void @llvm.dbg.declare(metadata %struct.Buffer* %p1, metadata !5, metadata !6), !dbg !7
+  ret void
+}
+
+; CHECK-LABEL: fn2WithDebug
+; CHECK: and
+; CHECK-NOT: add
+; CHECK-NOT: sub
+; CHECK: mov
+; CHECK-NEXT: pop
+; CHECK-NEXT: ret
 
 declare i64 @fn(i64, i64)
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2,!3}

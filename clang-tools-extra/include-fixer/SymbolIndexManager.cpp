@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "include-fixer"
 
@@ -20,30 +21,57 @@ namespace include_fixer {
 
 using clang::find_all_symbols::SymbolInfo;
 
-/// Sorts SymbolInfos based on the popularity info in SymbolInfo.
-static void rankByPopularity(std::vector<SymbolInfo> &Symbols) {
-  // First collect occurrences per header file.
-  llvm::DenseMap<llvm::StringRef, unsigned> HeaderPopularity;
-  for (const SymbolInfo &Symbol : Symbols) {
-    unsigned &Popularity = HeaderPopularity[Symbol.getFilePath()];
-    Popularity = std::max(Popularity, Symbol.getNumOccurrences());
+// Calculate a score based on whether we think the given header is closely
+// related to the given source file.
+static double similarityScore(llvm::StringRef FileName,
+                              llvm::StringRef Header) {
+  // Compute the maximum number of common path segements between Header and
+  // a suffix of FileName.
+  // We do not do a full longest common substring computation, as Header
+  // specifies the path we would directly #include, so we assume it is rooted
+  // relatively to a subproject of the repository.
+  int MaxSegments = 1;
+  for (auto FileI = llvm::sys::path::begin(FileName),
+            FileE = llvm::sys::path::end(FileName);
+       FileI != FileE; ++FileI) {
+    int Segments = 0;
+    for (auto HeaderI = llvm::sys::path::begin(Header),
+              HeaderE = llvm::sys::path::end(Header), I = FileI;
+         HeaderI != HeaderE && *I == *HeaderI && I != FileE; ++I, ++HeaderI) {
+      ++Segments;
+    }
+    MaxSegments = std::max(Segments, MaxSegments);
   }
+  return MaxSegments;
+}
 
-  // Sort by the gathered popularities. Use file name as a tie breaker so we can
+static void rank(std::vector<SymbolInfo> &Symbols,
+                 llvm::StringRef FileName) {
+  llvm::DenseMap<llvm::StringRef, double> Score;
+  for (const SymbolInfo &Symbol : Symbols) {
+    // Calculate a score from the similarity of the header the symbol is in
+    // with the current file and the popularity of the symbol.
+    double NewScore = similarityScore(FileName, Symbol.getFilePath()) *
+                      (1.0 + std::log2(1 + Symbol.getNumOccurrences()));
+    double &S = Score[Symbol.getFilePath()];
+    S = std::max(S, NewScore);
+  }
+  // Sort by the gathered scores. Use file name as a tie breaker so we can
   // deduplicate.
   std::sort(Symbols.begin(), Symbols.end(),
             [&](const SymbolInfo &A, const SymbolInfo &B) {
-              auto APop = HeaderPopularity[A.getFilePath()];
-              auto BPop = HeaderPopularity[B.getFilePath()];
-              if (APop != BPop)
-                return APop > BPop;
+              auto AS = Score[A.getFilePath()];
+              auto BS = Score[B.getFilePath()];
+              if (AS != BS)
+                return AS > BS;
               return A.getFilePath() < B.getFilePath();
             });
 }
 
 std::vector<find_all_symbols::SymbolInfo>
 SymbolIndexManager::search(llvm::StringRef Identifier,
-                           bool IsNestedSearch) const {
+                           bool IsNestedSearch,
+                           llvm::StringRef FileName) const {
   // The identifier may be fully qualified, so split it and get all the context
   // names.
   llvm::SmallVector<llvm::StringRef, 8> Names;
@@ -64,7 +92,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
   do {
     std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
     for (const auto &DB : SymbolIndices) {
-      auto Res = DB->search(Names.back().str());
+      auto Res = DB.get()->search(Names.back());
       Symbols.insert(Symbols.end(), Res.begin(), Res.end());
     }
 
@@ -119,7 +147,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
     TookPrefix = true;
   } while (MatchedSymbols.empty() && !Names.empty() && IsNestedSearch);
 
-  rankByPopularity(MatchedSymbols);
+  rank(MatchedSymbols, FileName);
   return MatchedSymbols;
 }
 

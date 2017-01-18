@@ -207,7 +207,7 @@ enum DiscriminantList {
 };
 
 /// Line Number Standard Opcode Encodings.
-enum LineNumberOps {
+enum LineNumberOps : uint8_t {
 #define HANDLE_DW_LNS(ID, NAME) DW_LNS_##NAME = ID,
 #include "llvm/Support/Dwarf.def"
 };

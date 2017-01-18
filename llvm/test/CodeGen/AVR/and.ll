@@ -67,7 +67,8 @@ define i64 @and64_reg_reg(i64 %a, i64 %b) {
 define i64 @and64_reg_imm(i64 %a) {
 ; CHECK-LABEL: and64_reg_imm:
 ; CHECK: andi r18, 253
-; CHECK: andi r19, 255
+; Per PR 31345, we optimize away ANDI Rd, 0xff
+; CHECK-NOT: andi r19, 255
 ; CHECK: andi r20, 155
 ; CHECK: andi r21, 88
 ; CHECK: andi r22, 76

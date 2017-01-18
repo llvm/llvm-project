@@ -12,6 +12,7 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movaps %xmm0, (%esp)
 ; X32-NEXT:    movl $76, (%esp,%eax,4)
 ; X32-NEXT:    movl (%esp), %eax
@@ -21,9 +22,10 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t0:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movl $76, -24(%rsp,%rax,4)
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    movl $76, -24(%rsp,%rdi,4)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
   %t13 = insertelement <4 x i32> %t8, i32 76, i32 %t7
@@ -38,6 +40,7 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movl $76, %ecx
 ; X32-NEXT:    pinsrd $0, %ecx, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%esp)
@@ -48,11 +51,12 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t1:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movl $76, %eax
 ; X64-NEXT:    pinsrd $0, %eax, %xmm0
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movl -24(%rsp,%rax,4), %eax
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    movl -24(%rsp,%rdi,4), %eax
 ; X64-NEXT:    retq
   %t13 = insertelement <4 x i32> %t8, i32 76, i32 0
   %t9 = extractelement <4 x i32> %t13, i32 %t7
@@ -66,6 +70,7 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movdqa %xmm0, (%esp)
 ; X32-NEXT:    pinsrd $0, (%esp,%eax,4), %xmm0
 ; X32-NEXT:    movl %ebp, %esp
@@ -74,9 +79,10 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t2:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    pinsrd $0, -24(%rsp,%rax,4), %xmm0
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    pinsrd $0, -24(%rsp,%rdi,4), %xmm0
 ; X64-NEXT:    retq
   %t9 = extractelement <4 x i32> %t8, i32 %t7
   %t13 = insertelement <4 x i32> %t8, i32 %t9, i32 0
@@ -90,6 +96,7 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
 ; X32-NEXT:    subl $32, %esp
+; X32-NEXT:    andl $3, %eax
 ; X32-NEXT:    movaps %xmm0, (%esp)
 ; X32-NEXT:    movss %xmm0, (%esp,%eax,4)
 ; X32-NEXT:    movaps (%esp), %xmm0
@@ -99,9 +106,10 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t3:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movslq %edi, %rax
-; X64-NEXT:    movss %xmm0, -24(%rsp,%rax,4)
+; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    movss %xmm0, -24(%rsp,%rdi,4)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    retq
   %t9 = extractelement <4 x i32> %t8, i32 0

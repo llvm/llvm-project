@@ -571,6 +571,16 @@ void native(SmallVectorImpl<char> &Path) {
 #endif
 }
 
+std::string convert_to_slash(StringRef path) {
+#ifdef LLVM_ON_WIN32
+  std::string s = path.str();
+  std::replace(s.begin(), s.end(), '\\', '/');
+  return s;
+#else
+  return path;
+#endif
+}
+
 StringRef filename(StringRef path) {
   return *rbegin(path);
 }

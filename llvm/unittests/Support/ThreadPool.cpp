@@ -90,7 +90,7 @@ TEST_F(ThreadPoolTest, AsyncBarrier) {
 
   ThreadPool Pool;
   for (size_t i = 0; i < 5; ++i) {
-    Pool.async([this, &checked_in, i] {
+    Pool.async([this, &checked_in] {
       waitForMainThread();
       ++checked_in;
     });
@@ -154,7 +154,7 @@ TEST_F(ThreadPoolTest, PoolDestruction) {
   {
     ThreadPool Pool;
     for (size_t i = 0; i < 5; ++i) {
-      Pool.async([this, &checked_in, i] {
+      Pool.async([this, &checked_in] {
         waitForMainThread();
         ++checked_in;
       });

@@ -803,49 +803,13 @@ def : Pat<(int_nvvm_ull2d_rp Int64Regs:$a),
           (CVT_f64_u64 Int64Regs:$a, CvtRP)>;
 
 
-// FIXME: Ideally, we could use these patterns instead of the scope-creating
-// patterns, but ptxas does not like these since .s16 is not compatible with
-// .f16.  The solution is to use .bXX for all integer register types, but we
-// are not there yet.
-//def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
-//          (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>;
-//def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
-//          (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
-//
-//def : Pat<(int_nvvm_h2f Int16Regs:$a),
-//          (CVT_f32_f16 Int16Regs:$a, CvtNONE)>;
+def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
+          (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ))>;
+def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
+          (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN))>;
 
-def INT_NVVM_F2H_RN_FTZ : F_MATH_1<!strconcat("{{\n\t",
-                                   !strconcat(".reg .b16 %temp;\n\t",
-           !strconcat("cvt.rn.ftz.f16.f32 \t%temp, $src0;\n\t",
-           !strconcat("mov.b16 \t$dst, %temp;\n",
-             "}}")))),
-                                   Int16Regs, Float32Regs, int_nvvm_f2h_rn_ftz>;
-def INT_NVVM_F2H_RN : F_MATH_1<!strconcat("{{\n\t",
-                                   !strconcat(".reg .b16 %temp;\n\t",
-           !strconcat("cvt.rn.f16.f32 \t%temp, $src0;\n\t",
-           !strconcat("mov.b16 \t$dst, %temp;\n",
-             "}}")))),
-           Int16Regs, Float32Regs, int_nvvm_f2h_rn>;
-
-def INT_NVVM_H2F : F_MATH_1<!strconcat("{{\n\t",
-                            !strconcat(".reg .b16 %temp;\n\t",
-          !strconcat("mov.b16 \t%temp, $src0;\n\t",
-          !strconcat("cvt.f32.f16 \t$dst, %temp;\n\t",
-            "}}")))),
-          Float32Regs, Int16Regs, int_nvvm_h2f>;
-
-def : Pat<(f32 (f16_to_fp Int16Regs:$a)),
-          (CVT_f32_f16 Int16Regs:$a, CvtNONE)>;
-def : Pat<(i16 (fp_to_f16 Float32Regs:$a)),
-          (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i16 (fp_to_f16 Float32Regs:$a)),
-          (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
-
-def : Pat<(f64 (f16_to_fp Int16Regs:$a)),
-          (CVT_f64_f16 Int16Regs:$a, CvtNONE)>;
-def : Pat<(i16 (fp_to_f16 Float64Regs:$a)),
-          (CVT_f16_f64 Float64Regs:$a, CvtRN)>;
+def : Pat<(int_nvvm_h2f Int16Regs:$a),
+          (CVT_f32_f16 (BITCONVERT_16_I2F Int16Regs:$a), CvtNONE)>;
 
 //
 // Bitcast

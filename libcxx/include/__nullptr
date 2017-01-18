@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS_ONLY nullptr_t
+struct _LIBCPP_TEMPLATE_VIS nullptr_t
 {
     void* __lx;
 

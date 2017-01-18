@@ -72,7 +72,7 @@ endforeach()
 
 # Configure plist creation for OS X.
 set (TOOL_INFO_PLIST "Info.plist" CACHE STRING "Plist name")
-if (APPLE)  
+if (APPLE)
   if (CLANG_VENDOR)
     set(TOOL_INFO_NAME "${CLANG_VENDOR} clang")
   else()
@@ -82,20 +82,19 @@ if (APPLE)
   set(TOOL_INFO_UTI "${CLANG_VENDOR_UTI}")
   set(TOOL_INFO_VERSION "${CLANG_VERSION}")
   set(TOOL_INFO_BUILD_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-  
+
   set(TOOL_INFO_PLIST_OUT "${CMAKE_CURRENT_BINARY_DIR}/${TOOL_INFO_PLIST}")
   target_link_libraries(clang
     "-Wl,-sectcreate,__TEXT,__info_plist,${TOOL_INFO_PLIST_OUT}")
   configure_file("${TOOL_INFO_PLIST}.in" "${TOOL_INFO_PLIST_OUT}" @ONLY)
-  
+
   set(TOOL_INFO_UTI)
   set(TOOL_INFO_NAME)
   set(TOOL_INFO_VERSION)
   set(TOOL_INFO_BUILD_VERSION)
 endif()
 
-# the linker -order_file flag is only supported by ld64
-if(LD64_EXECUTABLE AND CLANG_ORDER_FILE)
+if(CLANG_ORDER_FILE AND (LD64_EXECUTABLE OR GOLD_EXECUTABLE))
   include(CMakePushCheckState)
 
   function(check_linker_flag flag out_var)
@@ -105,9 +104,14 @@ if(LD64_EXECUTABLE AND CLANG_ORDER_FILE)
     cmake_pop_check_state()
   endfunction()
 
+  if (LD64_EXECUTABLE)
+    set(LINKER_ORDER_FILE_OPTION "-Wl,-order_file,${CLANG_ORDER_FILE}")
+  elseif (GOLD_EXECUTABLE)
+    set(LINKER_ORDER_FILE_OPTION "-Wl,--section-ordering-file,${CLANG_ORDER_FILE}")
+  endif()
+
   # This is a test to ensure the actual order file works with the linker.
-  check_linker_flag("-Wl,-order_file,${CLANG_ORDER_FILE}"
-    LINKER_ORDER_FILE_WORKS)
+  check_linker_flag(${LINKER_ORDER_FILE_OPTION} LINKER_ORDER_FILE_WORKS)
 
   # Passing an empty order file disables some linker layout optimizations.
   # To work around this and enable workflows for re-linking when the order file
@@ -117,7 +121,7 @@ if(LD64_EXECUTABLE AND CLANG_ORDER_FILE)
   if("${ORDER_FILE}" STREQUAL "\n")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CLANG_ORDER_FILE})
   elseif(LINKER_ORDER_FILE_WORKS)
-    target_link_libraries(clang "-Wl,-order_file,${CLANG_ORDER_FILE}")
+    target_link_libraries(clang ${LINKER_ORDER_FILE_OPTION})
     set_target_properties(clang PROPERTIES LINK_DEPENDS ${CLANG_ORDER_FILE})
   endif()
 endif()

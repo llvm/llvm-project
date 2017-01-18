@@ -12,14 +12,45 @@
 #include "system_error"  // __throw_system_error
 #include <time.h>        // clock_gettime, CLOCK_MONOTONIC and CLOCK_REALTIME
 
-#if !defined(CLOCK_REALTIME)
-#include <sys/time.h>        // for gettimeofday and timeval
+#if (__APPLE__)
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101200
+#define _LIBCXX_USE_CLOCK_GETTIME
 #endif
+#elif defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 100000
+#define _LIBCXX_USE_CLOCK_GETTIME
+#endif
+#elif defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 100000
+#define _LIBCXX_USE_CLOCK_GETTIME
+#endif
+#elif defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)
+#if __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 30000
+#define _LIBCXX_USE_CLOCK_GETTIME
+#endif
+#endif // __ENVIRONMENT_.*_VERSION_MIN_REQUIRED__
+#else
+#define _LIBCXX_USE_CLOCK_GETTIME
+#endif // __APPLE__
 
-#if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK) && !defined(CLOCK_MONOTONIC)
+#if defined(_LIBCPP_WIN32API)
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRA_LEAN
+#include <Windows.h>
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#include <winapifamily.h>
+#endif
+#else
+#if !defined(CLOCK_REALTIME) || !defined(_LIBCXX_USE_CLOCK_GETTIME)
+#include <sys/time.h>        // for gettimeofday and timeval
+#endif // !defined(CLOCK_REALTIME)
+#endif // defined(_LIBCPP_WIN32API)
+
+#if !defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 #if __APPLE__
 #include <mach/mach_time.h>  // mach_absolute_time, mach_timebase_info_data_t
-#else
+#elif !defined(_LIBCPP_WIN32API) && !defined(CLOCK_MONOTONIC)
 #error "Monotonic clock not implemented"
 #endif
 #endif
@@ -36,16 +67,42 @@ const bool system_clock::is_steady;
 system_clock::time_point
 system_clock::now() _NOEXCEPT
 {
-#ifdef CLOCK_REALTIME
+#if defined(_LIBCPP_WIN32API)
+  // FILETIME is in 100ns units
+  using filetime_duration =
+      _VSTD::chrono::duration<__int64,
+                              _VSTD::ratio_multiply<_VSTD::ratio<100, 1>,
+                                                    nanoseconds::period>>;
+
+  // The Windows epoch is Jan 1 1601, the Unix epoch Jan 1 1970.
+  static _LIBCPP_CONSTEXPR const seconds nt_to_unix_epoch{11644473600};
+
+  FILETIME ft;
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  GetSystemTimePreciseAsFileTime(&ft);
+#else
+  GetSystemTimeAsFileTime(&ft);
+#endif
+#else
+  GetSystemTimeAsFileTime(&ft);
+#endif
+
+  filetime_duration d{(static_cast<__int64>(ft.dwHighDateTime) << 32) |
+                       static_cast<__int64>(ft.dwLowDateTime)};
+  return time_point(duration_cast<duration>(d - nt_to_unix_epoch));
+#else
+#if defined(_LIBCXX_USE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
     struct timespec tp;
     if (0 != clock_gettime(CLOCK_REALTIME, &tp))
         __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
     return time_point(seconds(tp.tv_sec) + microseconds(tp.tv_nsec / 1000));
-#else  // !CLOCK_REALTIME
+#else
     timeval tv;
     gettimeofday(&tv, 0);
     return time_point(seconds(tv.tv_sec) + microseconds(tv.tv_usec));
-#endif  // CLOCK_REALTIME
+#endif // _LIBCXX_USE_CLOCK_GETTIME && CLOCK_REALTIME
+#endif
 }
 
 time_t
@@ -69,19 +126,20 @@ system_clock::from_time_t(time_t t) _NOEXCEPT
 
 const bool steady_clock::is_steady;
 
-#ifdef CLOCK_MONOTONIC
+#if defined(__APPLE__)
 
+// Darwin libc versions >= 1133 provide ns precision via CLOCK_UPTIME_RAW
+#if defined(_LIBCXX_USE_CLOCK_GETTIME) && defined(CLOCK_UPTIME_RAW)
 steady_clock::time_point
 steady_clock::now() _NOEXCEPT
 {
     struct timespec tp;
-    if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
-        __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
+    if (0 != clock_gettime(CLOCK_UPTIME_RAW, &tp))
+        __throw_system_error(errno, "clock_gettime(CLOCK_UPTIME_RAW) failed");
     return time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
-#elif defined(__APPLE__)
-
+#else
 //   mach_absolute_time() * MachInfo.numer / MachInfo.denom is the number of
 //   nanoseconds since the computer booted up.  MachInfo.numer and MachInfo.denom
 //   are run time constants supplied by the OS.  This clock has no relationship
@@ -132,6 +190,40 @@ steady_clock::now() _NOEXCEPT
 {
     static FP fp = init_steady_clock();
     return time_point(duration(fp()));
+}
+#endif // defined(_LIBCXX_USE_CLOCK_GETTIME) && defined(CLOCK_UPTIME_RAW)
+
+#elif defined(_LIBCPP_WIN32API)
+
+steady_clock::time_point
+steady_clock::now() _NOEXCEPT
+{
+  static LARGE_INTEGER freq;
+  static BOOL initialized = FALSE;
+  if (!initialized)
+    initialized = QueryPerformanceFrequency(&freq); // always succceeds
+
+  LARGE_INTEGER counter;
+  QueryPerformanceCounter(&counter);
+  return time_point(duration(counter.QuadPart * nano::den / freq.QuadPart));
+}
+
+#elif defined(CLOCK_MONOTONIC)
+
+// On Apple platforms only CLOCK_UPTIME_RAW or mach_absolute_time are able to
+// time functions in the nanosecond range. Thus, they are the only acceptable
+// implementations of steady_clock.
+#ifdef __APPLE__
+#error "Never use CLOCK_MONOTONIC for steady_clock::now on Apple platforms"
+#endif
+
+steady_clock::time_point
+steady_clock::now() _NOEXCEPT
+{
+    struct timespec tp;
+    if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
+        __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
+    return time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
 #else

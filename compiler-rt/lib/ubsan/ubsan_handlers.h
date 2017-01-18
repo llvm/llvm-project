@@ -20,7 +20,7 @@ namespace __ubsan {
 struct TypeMismatchData {
   SourceLocation Loc;
   const TypeDescriptor &Type;
-  uptr Alignment;
+  unsigned char LogAlignment;
   unsigned char TypeCheckKind;
 };
 
@@ -37,7 +37,7 @@ struct TypeMismatchData {
 /// \brief Handle a runtime type check failure, caused by either a misaligned
 /// pointer, a null pointer, or a pointer to insufficient storage for the
 /// type.
-RECOVERABLE(type_mismatch, TypeMismatchData *Data, ValueHandle Pointer)
+RECOVERABLE(type_mismatch_v1, TypeMismatchData *Data, ValueHandle Pointer)
 
 struct OverflowData {
   SourceLocation Loc;

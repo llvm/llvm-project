@@ -28,23 +28,34 @@ namespace decl_ref_expr {
 bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
                        ASTContext &Context);
 
-// Returns set of all DeclRefExprs to VarDecl in Stmt.
+/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt``.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
 allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context);
 
-// Returns set of all DeclRefExprs where VarDecl is guaranteed to be accessed in
-// a const fashion.
+/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Decl``.
+llvm::SmallPtrSet<const DeclRefExpr *, 16>
+allDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl, ASTContext &Context);
+
+/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Stmt`` where
+/// ``VarDecl`` is guaranteed to be accessed in a const fashion.
 llvm::SmallPtrSet<const DeclRefExpr *, 16>
 constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
                            ASTContext &Context);
 
-// Returns true if DeclRefExpr is the argument of a copy-constructor call expr.
-bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Stmt &Stmt,
+/// Returns set of all ``DeclRefExprs`` to ``VarDecl`` within ``Decl`` where
+/// ``VarDecl`` is guaranteed to be accessed in a const fashion.
+llvm::SmallPtrSet<const DeclRefExpr *, 16>
+constReferenceDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl,
+                           ASTContext &Context);
+
+/// Returns ``true`` if ``DeclRefExpr`` is the argument of a copy-constructor
+/// call expression within ``Decl``.
+bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
                                ASTContext &Context);
 
-// Returns true if DeclRefExpr is the argument of a copy-assignment operator
-// call expr.
-bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Stmt &Stmt,
+/// Returns ``true`` if ``DeclRefExpr`` is the argument of a copy-assignment
+/// operator CallExpr within ``Decl``.
+bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
                               ASTContext &Context);
 
 } // namespace decl_ref_expr

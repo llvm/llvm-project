@@ -142,17 +142,108 @@ define <16 x i16> @test_vpmullw(<16 x i16> %i, <16 x i16> %j) nounwind readnone 
   ret <16 x i16> %x
 }
 
-define <16 x i8> @mul-v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
+define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
+; X32-LABEL: mul_v16i8:
+; X32:       ## BB#0:
+; X32-NEXT:    vpmovsxbw %xmm1, %ymm1
+; X32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X32-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; X32-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; X32-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: mul_v16i8:
+; X64:       ## BB#0:
+; X64-NEXT:    vpmovsxbw %xmm1, %ymm1
+; X64-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X64-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X64-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; X64-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
   %x = mul <16 x i8> %i, %j
   ret <16 x i8> %x
 }
 
-define <32 x i8> @mul-v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
+define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
+; X32-LABEL: mul_v32i8:
+; X32:       ## BB#0:
+; X32-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; X32-NEXT:    vpmovsxbw %xmm2, %ymm2
+; X32-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; X32-NEXT:    vpmovsxbw %xmm3, %ymm3
+; X32-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
+; X32-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; X32-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; X32-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
+; X32-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X32-NEXT:    vpmovsxbw %xmm1, %ymm1
+; X32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X32-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X32-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; X32-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: mul_v32i8:
+; X64:       ## BB#0:
+; X64-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; X64-NEXT:    vpmovsxbw %xmm2, %ymm2
+; X64-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; X64-NEXT:    vpmovsxbw %xmm3, %ymm3
+; X64-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
+; X64-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; X64-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; X64-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
+; X64-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; X64-NEXT:    vpmovsxbw %xmm1, %ymm1
+; X64-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X64-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X64-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; X64-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X64-NEXT:    retq
   %x = mul <32 x i8> %i, %j
   ret <32 x i8> %x
 }
 
-define <4 x i64> @mul-v4i64(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
+define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind readnone {
+; X32-LABEL: mul_v4i64:
+; X32:       ## BB#0:
+; X32-NEXT:    vpsrlq $32, %ymm0, %ymm2
+; X32-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
+; X32-NEXT:    vpsrlq $32, %ymm1, %ymm3
+; X32-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; X32-NEXT:    vpsllq $32, %ymm2, %ymm2
+; X32-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: mul_v4i64:
+; X64:       ## BB#0:
+; X64-NEXT:    vpsrlq $32, %ymm0, %ymm2
+; X64-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
+; X64-NEXT:    vpsrlq $32, %ymm1, %ymm3
+; X64-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; X64-NEXT:    vpsllq $32, %ymm2, %ymm2
+; X64-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X64-NEXT:    retq
   %x = mul <4 x i64> %i, %j
   ret <4 x i64> %x
 }
@@ -291,8 +382,8 @@ define <8 x i32> @mul_const9(<8 x i32> %x) {
   ret <8 x i32> %y
 }
 
+; %x * 0x01010101
 define <4 x i32> @mul_const10(<4 x i32> %x) {
-  ; %x * 0x01010101
 ; X32-LABEL: mul_const10:
 ; X32:       ## BB#0:
 ; X32-NEXT:    vpbroadcastd LCPI22_0, %xmm1
@@ -308,8 +399,8 @@ define <4 x i32> @mul_const10(<4 x i32> %x) {
   ret <4 x i32> %m
 }
 
+; %x * 0x80808080
 define <4 x i32> @mul_const11(<4 x i32> %x) {
-  ; %x * 0x80808080
 ; X32-LABEL: mul_const11:
 ; X32:       ## BB#0:
 ; X32-NEXT:    vpbroadcastd LCPI23_0, %xmm1

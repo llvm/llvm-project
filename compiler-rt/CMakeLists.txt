@@ -225,6 +225,17 @@ append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 # Warnings to turn off for all libraries, not just sanitizers.
 append_string_if(COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG -Wno-unused-parameter CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+if (CMAKE_LINKER MATCHES "link.exe$")
+  # Silence MSVC linker warnings caused by empty object files. The
+  # sanitizer libraries intentionally use ifdefs that result in empty
+  # files, rather than skipping these files in the build system.
+  # Ideally, we would pass this flag only for the libraries that need
+  # it, but CMake doesn't seem to have a way to set linker flags for
+  # individual static libraries, so we enable the suppression flag for
+  # the whole compiler-rt project.
+  append("/IGNORE:4221" CMAKE_STATIC_LINKER_FLAGS)
+endif()
+
 add_subdirectory(include)
 
 set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/projects/libcxx)

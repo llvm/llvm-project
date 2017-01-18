@@ -376,7 +376,7 @@ private:
     // Initializers may refer to functions declared (but not defined) in this
     // module. Build a materializer to clone decls on demand.
     auto Materializer = createLambdaMaterializer(
-      [this, &LD, &GVsM](Value *V) -> Value* {
+      [&LD, &GVsM](Value *V) -> Value* {
         if (auto *F = dyn_cast<Function>(V)) {
           // Decls in the original module just get cloned.
           if (F->isDeclaration())
@@ -419,7 +419,7 @@ private:
 
     // Build a resolver for the globals module and add it to the base layer.
     auto GVsResolver = createLambdaResolver(
-        [this, &LD, LMId](const std::string &Name) {
+        [this, &LD](const std::string &Name) {
           if (auto Sym = LD.StubsMgr->findStub(Name, false))
             return Sym;
           if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
@@ -499,8 +499,8 @@ private:
     M->setDataLayout(SrcM.getDataLayout());
     ValueToValueMapTy VMap;
 
-    auto Materializer = createLambdaMaterializer([this, &LD, &LMId, &M,
-                                                  &VMap](Value *V) -> Value * {
+    auto Materializer = createLambdaMaterializer([&LD, &LMId,
+                                                  &M](Value *V) -> Value * {
       if (auto *GV = dyn_cast<GlobalVariable>(V))
         return cloneGlobalVariableDecl(*M, *GV);
 
@@ -546,12 +546,12 @@ private:
 
     // Create memory manager and symbol resolver.
     auto Resolver = createLambdaResolver(
-        [this, &LD, LMId](const std::string &Name) {
+        [this, &LD](const std::string &Name) {
           if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
             return Sym;
           return LD.ExternalSymbolResolver->findSymbolInLogicalDylib(Name);
         },
-        [this, &LD](const std::string &Name) {
+        [&LD](const std::string &Name) {
           return LD.ExternalSymbolResolver->findSymbol(Name);
         });
 

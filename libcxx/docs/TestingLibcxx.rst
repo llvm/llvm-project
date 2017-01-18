@@ -130,7 +130,7 @@ configuration. Passing the option on the command line will override the default.
 
   Specify the directory of the libc++ library to be tested. By default the
   library folder of the build directory is used. This option cannot be used
-  when use_system_lib is provided.
+  when use_system_cxx_lib is provided.
 
 
 .. option:: cxx_runtime_root=<path/to/lib/>
@@ -139,9 +139,9 @@ configuration. Passing the option on the command line will override the default.
   is not added to the linkers search path. This can be used to compile tests
   against one version of libc++ and run them using another. The default value
   for this option is `cxx_library_root`. This option cannot be used
-  when use_system_lib is provided.
+  when use_system_cxx_lib is provided.
 
-.. option:: use_system_lib=<bool>
+.. option:: use_system_cxx_lib=<bool>
 
   **Default**: False
 

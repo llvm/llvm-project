@@ -415,8 +415,10 @@ set(aarch64_SOURCES
   fixunstfti.c
   floatditf.c
   floatsitf.c
+  floattitf.c
   floatunditf.c
   floatunsitf.c
+  floatuntitf.c
   multc3.c
   trunctfdf2.c
   trunctfsf2.c

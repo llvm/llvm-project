@@ -62,6 +62,9 @@ public:
 
   void Clear() { m_value_objects.clear(); }
 
+  const std::vector<lldb::ValueObjectSP> &GetObjects() const {
+    return m_value_objects;
+  }
 protected:
   typedef std::vector<lldb::ValueObjectSP> collection;
   //------------------------------------------------------------------

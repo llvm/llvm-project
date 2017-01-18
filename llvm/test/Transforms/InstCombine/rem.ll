@@ -204,11 +204,11 @@ define i32 @test17(i32 %X) {
 
 define i32 @test18(i16 %x, i32 %y) {
 ; CHECK: @test18
-; CHECK-NEXT: [[AND:%.*]] = and i16 %x, 4
-; CHECK-NEXT: [[EXT:%.*]] = zext i16 [[AND]] to i32
-; CHECK-NEXT: [[SHL:%.*]] = shl nuw nsw i32 [[EXT]], 3
-; CHECK-NEXT: [[XOR:%.*]] = xor i32 [[SHL]], 63
-; CHECK-NEXT: [[REM:%.*]] = and i32 [[XOR]], %y
+; CHECK-NEXT: [[SHL:%.*]] = shl i16 %x, 3
+; CHECK-NEXT: [[AND:%.*]] = and i16 [[SHL]], 32
+; CHECK-NEXT: [[XOR:%.*]] = xor i16 [[AND]], 63
+; CHECK-NEXT: [[EXT:%.*]] = zext i16 [[XOR]] to i32
+; CHECK-NEXT: [[REM:%.*]] = and i32 [[EXT]], %y
 ; CHECK-NEXT: ret i32 [[REM]]
 	%1 = and i16 %x, 4
 	%2 = icmp ne i16 %1, 0

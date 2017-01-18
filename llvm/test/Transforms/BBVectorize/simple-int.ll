@@ -177,7 +177,7 @@ define double @testcopysign(double %A1, double %A2, double %B1, double %B2) {
 ; CHECK: %X1.v.i0.1 = insertelement <2 x double> undef, double %A1, i32 0
 ; CHECK: %X1.v.i0.2 = insertelement <2 x double> %X1.v.i0.1, double %A2, i32 1
 ; CHECK: %X1 = fsub <2 x double> %X1.v.i0.2, %X1.v.i1.2
-; CHECK: %Y1.v.i1.2 = insertelement <2 x double> %X1.v.i0.1, double %A1, i32 1
+; CHECK: %Y1.v.i1.2 = shufflevector <2 x double> %X1.v.i0.1, <2 x double> undef, <2 x i32> zeroinitializer
 ; CHECK: %Y1 = call <2 x double> @llvm.copysign.v2f64(<2 x double> %X1, <2 x double> %Y1.v.i1.2)
 ; CHECK: %Z1 = fadd <2 x double> %Y1, %X1.v.i1.2
 ; CHECK: %Z1.v.r1 = extractelement <2 x double> %Z1, i32 0

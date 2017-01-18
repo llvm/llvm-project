@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -98,9 +99,9 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> MB) {
   MemoryBufferRef MBRef = *MB;
   OwningMBs.push_back(std::move(MB));
 
-  if (Driver->Cpio)
-    Driver->Cpio->append(relativeToRoot(MBRef.getBufferIdentifier()),
-                         MBRef.getBuffer());
+  if (Driver->Tar)
+    Driver->Tar->append(relativeToRoot(MBRef.getBufferIdentifier()),
+                        MBRef.getBuffer());
 
   return MBRef;
 }
@@ -368,7 +369,7 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     case OPT_libpath:
       break;
     default:
-      OS << stringize(Arg) << "\n";
+      OS << toString(Arg) << "\n";
     }
   }
 
@@ -458,13 +459,17 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (auto *Arg = Args.getLastArg(OPT_linkrepro)) {
     SmallString<64> Path = StringRef(Arg->getValue());
-    sys::path::append(Path, "repro");
-    ErrorOr<CpioFile *> F = CpioFile::create(Path);
-    if (F)
-      Cpio.reset(*F);
-    else
-      errs() << "/linkrepro: failed to open " << Path
-             << ".cpio: " << F.getError().message() << '\n';
+    sys::path::append(Path, "repro.tar");
+
+    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
+        TarWriter::create(Path, "repro");
+
+    if (ErrOrWriter) {
+      Tar = std::move(*ErrOrWriter);
+    } else {
+      errs() << "/linkrepro: failed to open " << Path << ": "
+             << toString(ErrOrWriter.takeError()) << '\n';
+    }
   }
 
   if (Args.filtered_begin(OPT_INPUT) == Args.filtered_end())
@@ -653,6 +658,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->DumpPdb = Args.hasArg(OPT_dumppdb);
   Config->DebugPdb = Args.hasArg(OPT_debugpdb);
 
+  Config->MapFile = getMapFile(Args);
+
   // Create a list of input files. Files can be given as arguments
   // for /defaultlib option.
   std::vector<MemoryBufferRef> MBs;
@@ -683,10 +690,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Resources.empty())
     addBuffer(convertResToCOFF(Resources));
 
-  if (Cpio)
-    Cpio->append("response.txt",
-                 createResponseFile(Args, FilePaths,
-                                    ArrayRef<StringRef>(SearchPaths).slice(1)));
+  if (Tar)
+    Tar->append("response.txt",
+                createResponseFile(Args, FilePaths,
+                                   ArrayRef<StringRef>(SearchPaths).slice(1)));
 
   // Handle /largeaddressaware
   if (Config->is64() || Args.hasArg(OPT_largeaddressaware))
@@ -840,17 +847,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result.
   writeResult(&Symtab);
-
-  // Create a symbol map file containing symbol VAs and their names
-  // to help debugging.
-  std::string MapFile = getMapFile(Args);
-  if (!MapFile.empty()) {
-    std::error_code EC;
-    raw_fd_ostream Out(MapFile, EC, OpenFlags::F_Text);
-    if (EC)
-      fatal(EC, "could not create the symbol map " + MapFile);
-    Symtab.printMap(Out);
-  }
 
   // Call exit to avoid calling destructors.
   exit(0);

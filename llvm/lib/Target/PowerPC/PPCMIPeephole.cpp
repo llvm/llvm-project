@@ -147,9 +147,9 @@ bool PPCMIPeephole::simplifyCode(void) {
                       << "Optimizing load-and-splat/splat "
                       "to load-and-splat/copy: ");
                 DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(),
-                        TII->get(PPC::COPY), MI.getOperand(0).getReg())
-                  .addOperand(MI.getOperand(1));
+                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                        MI.getOperand(0).getReg())
+                    .add(MI.getOperand(1));
                 ToErase = &MI;
                 Simplified = true;
               }
@@ -169,9 +169,9 @@ bool PPCMIPeephole::simplifyCode(void) {
                       << "Optimizing splat/swap or splat/splat "
                       "to splat/copy: ");
                 DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(),
-                        TII->get(PPC::COPY), MI.getOperand(0).getReg())
-                  .addOperand(MI.getOperand(1));
+                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                        MI.getOperand(0).getReg())
+                    .add(MI.getOperand(1));
                 ToErase = &MI;
                 Simplified = true;
               }
@@ -194,9 +194,9 @@ bool PPCMIPeephole::simplifyCode(void) {
               else if (Immed == 2 && FeedImmed == 2 && FeedReg1 == FeedReg2) {
                 DEBUG(dbgs() << "Optimizing swap/swap => copy: ");
                 DEBUG(MI.dump());
-                BuildMI(MBB, &MI, MI.getDebugLoc(),
-                        TII->get(PPC::COPY), MI.getOperand(0).getReg())
-                  .addOperand(DefMI->getOperand(1));
+                BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                        MI.getOperand(0).getReg())
+                    .add(DefMI->getOperand(1));
                 ToErase = &MI;
                 Simplified = true;
               }
@@ -251,7 +251,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           DEBUG(MI.dump());
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
                   MI.getOperand(0).getReg())
-              .addOperand(MI.getOperand(OpNo));
+              .add(MI.getOperand(OpNo));
           ToErase = &MI;
           Simplified = true;
         }

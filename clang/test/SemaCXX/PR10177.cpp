@@ -24,6 +24,13 @@ void f() {
   (void)class_ref<int, int&, U<2>::a>(); // expected-note {{here}}
 };
 
+template<typename T>
+void not_instantiated() {
+  // These cases (arguably) do not require instantiation of U<i>::a.
+  (void)alias_ref<int, int&, U<3>::a>();
+  (void)func_ref<int, int&, U<4>::a>();
+  (void)class_ref<int, int&, U<5>::a>();
+};
 
 template<int N>
 void fi() {
@@ -33,7 +40,7 @@ void fi() {
 };
 
 int main() {
-  f<int>();   // NOTE: Non-dependent name uses are type-checked at template definition time.
+  f<int>();   // expected-note 3{{here}}
   fi<10>();   // expected-note 3{{here}}
 }
 

@@ -1,7 +1,9 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
+
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
 
 //===----------------------------------------------------------------------===//
 // Check dpp_ctrl values
@@ -503,3 +505,55 @@ v_min_i16 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 // NOSICI: error:
 // VI: v_ldexp_f16_dpp v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x66,0x02,0x01,0x09,0xa1]
 v_ldexp_f16 v1, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_add_i32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x32,0x02,0x01,0x09,0xa1]
+v_add_i32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_sub_i32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x34,0x02,0x01,0x09,0xa1]
+v_sub_i32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_subrev_i32_dpp v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x36,0x02,0x01,0x09,0xa1]
+v_subrev_i32 v1, vcc, v2, v3 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_addc_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x38,0x02,0x01,0x09,0xa1]
+v_addc_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_subb_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x3a,0x02,0x01,0x09,0xa1]
+v_subb_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// VI: v_subbrev_u32_dpp v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x06,0x02,0x3c,0x02,0x01,0x09,0xa1]
+v_subbrev_u32 v1, vcc, v2, v3, vcc row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+//===----------------------------------------------------------------------===//
+// Check that immideates and scalar regs are not supported
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error:
+// NOVI: error:
+v_mov_b32 v0, 1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// NOVI: error:
+v_and_b32 v0, 42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// NOVI: error:
+v_add_f32 v0, v1, 345 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// NOVI: error:
+v_mov_b32 v0, s1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// NOVI: error:
+v_and_b32 v0, s42, v1 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
+
+// NOSICI: error:
+// NOVI: error:
+v_add_f32 v0, v1, s45 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0

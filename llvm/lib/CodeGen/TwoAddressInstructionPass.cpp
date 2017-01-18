@@ -1785,7 +1785,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     MachineInstr *CopyMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                    TII->get(TargetOpcode::COPY))
                                .addReg(DstReg, RegState::Define, SubIdx)
-                               .addOperand(UseMO);
+                               .add(UseMO);
 
     // The first def needs an <undef> flag because there is no live register
     // before it.

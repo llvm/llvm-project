@@ -53,7 +53,7 @@ last:
 // CHECK: Disassembly of section .plt:
 // CHECK: .plt:
 // CHECK: 10010020:       f8 41 00 28     std 2, 40(1)
-// CHECK: 10010024:       3d 62 10 03     addis 11, 2, 4099
+// CHECK: 10010024:       3d 62 10 02     addis 11, 2, 4098
 // CHECK: 10010028:       e9 8b 80 18     ld 12, -32744(11)
 // CHECK: 1001002c:       e9 6c 00 00     ld 11, 0(12)
 // CHECK: 10010030:       7d 69 03 a6     mtctr 11

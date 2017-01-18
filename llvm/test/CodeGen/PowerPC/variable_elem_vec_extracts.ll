@@ -23,7 +23,7 @@ entry:
 ; CHECK: mfvsrd [[TOGPR:[0-9]+]],
 ; CHECK: srd [[RSHREG:[0-9]+]], [[TOGPR]], [[SHAMREG]]
 ; CHECK: extsw 3, [[RSHREG]]
-; CHECK-P7-DAG: sldi [[ELEMOFFREG:[0-9]+]], 5, 2
+; CHECK-P7-DAG: rlwinm [[ELEMOFFREG:[0-9]+]], 5, 2, 28, 29
 ; CHECK-P7-DAG: stxvw4x 34,
 ; CHECK-P7: lwax 3, [[ELEMOFFREG]],
 ; CHECK-BE-DAG: andi. [[ANDREG:[0-9]+]], 5, 2
@@ -52,7 +52,7 @@ entry:
 ; CHECK-DAG: lvsl [[SHMSKREG:[0-9]+]], 0, [[SHIFTREG]]
 ; CHECK-DAG: vperm [[PERMVEC:[0-9]+]], 2, 2, [[SHMSKREG]]
 ; CHECK: mfvsrd 3,
-; CHECK-P7-DAG: sldi [[ELEMOFFREG:[0-9]+]], 5, 3
+; CHECK-P7-DAG: rlwinm [[ELEMOFFREG:[0-9]+]], 5, 3, 28, 28
 ; CHECK-P7-DAG: stxvd2x 34,
 ; CHECK-P7: ldx 3, [[ELEMOFFREG]],
 ; CHECK-BE-DAG: andi. [[ANDREG:[0-9]+]], 5, 1
@@ -75,7 +75,7 @@ entry:
 ; CHECK: lvsl [[SHMSKREG:[0-9]+]], 0, [[TRUNCREG]]
 ; CHECK: vperm {{[0-9]+}}, 2, 2, [[SHMSKREG]]
 ; CHECK: xscvspdpn 1,
-; CHECK-P7-DAG: sldi [[ELEMOFFREG:[0-9]+]], 5, 2
+; CHECK-P7-DAG: rlwinm [[ELEMOFFREG:[0-9]+]], 5, 2, 28, 29
 ; CHECK-P7-DAG: stxvw4x 34,
 ; CHECK-P7: lfsx 1, [[ELEMOFFREG]],
 ; CHECK-BE: sldi [[ELNOREG:[0-9]+]], 5, 2

@@ -24,6 +24,7 @@
 ASAN_ACTIVATION_FLAG(int, redzone)
 ASAN_ACTIVATION_FLAG(int, max_redzone)
 ASAN_ACTIVATION_FLAG(int, quarantine_size_mb)
+ASAN_ACTIVATION_FLAG(int, thread_local_quarantine_size_kb)
 ASAN_ACTIVATION_FLAG(bool, alloc_dealloc_mismatch)
 ASAN_ACTIVATION_FLAG(bool, poison_heap)
 

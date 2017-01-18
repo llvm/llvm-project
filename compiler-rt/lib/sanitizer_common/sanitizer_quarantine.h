@@ -49,17 +49,31 @@ class Quarantine {
   }
 
   void Init(uptr size, uptr cache_size) {
-    atomic_store(&max_size_, size, memory_order_release);
+    // Thread local quarantine size can be zero only when global quarantine size
+    // is zero (it allows us to perform just one atomic read per Put() call).
+    CHECK((size == 0 && cache_size == 0) || cache_size != 0);
+
+    atomic_store(&max_size_, size, memory_order_relaxed);
     atomic_store(&min_size_, size / 10 * 9,
-                 memory_order_release); // 90% of max size.
-    max_cache_size_ = cache_size;
+                 memory_order_relaxed);  // 90% of max size.
+    atomic_store(&max_cache_size_, cache_size, memory_order_relaxed);
   }
 
-  uptr GetSize() const { return atomic_load(&max_size_, memory_order_acquire); }
+  uptr GetSize() const { return atomic_load(&max_size_, memory_order_relaxed); }
+  uptr GetCacheSize() const {
+    return atomic_load(&max_cache_size_, memory_order_relaxed);
+  }
 
   void Put(Cache *c, Callback cb, Node *ptr, uptr size) {
-    c->Enqueue(cb, ptr, size);
-    if (c->Size() > max_cache_size_)
+    uptr cache_size = GetCacheSize();
+    if (cache_size) {
+      c->Enqueue(cb, ptr, size);
+    } else {
+      // cache_size == 0 only when size == 0 (see Init).
+      cb.Recycle(ptr);
+    }
+    // Check cache size anyway to accommodate for runtime cache_size change.
+    if (c->Size() > cache_size)
       Drain(c, cb);
   }
 
@@ -72,12 +86,17 @@ class Quarantine {
       Recycle(cb);
   }
 
+  void PrintStats() const {
+    // It assumes that the world is stopped, just as the allocator's PrintStats.
+    cache_.PrintStats();
+  }
+
  private:
   // Read-only data.
   char pad0_[kCacheLineSize];
   atomic_uintptr_t max_size_;
   atomic_uintptr_t min_size_;
-  uptr max_cache_size_;
+  atomic_uintptr_t max_cache_size_;
   char pad1_[kCacheLineSize];
   SpinMutex cache_mutex_;
   SpinMutex recycle_mutex_;
@@ -86,7 +105,7 @@ class Quarantine {
 
   void NOINLINE Recycle(Callback cb) {
     Cache tmp;
-    uptr min_size = atomic_load(&min_size_, memory_order_acquire);
+    uptr min_size = atomic_load(&min_size_, memory_order_relaxed);
     {
       SpinMutexLock l(&cache_mutex_);
       while (cache_.Size() > min_size) {
@@ -162,8 +181,25 @@ class QuarantineCache {
     return b;
   }
 
+  void PrintStats() const {
+    uptr batch_count = 0;
+    uptr total_quarantine_bytes = 0;
+    uptr total_quarantine_chunks = 0;
+    for (List::ConstIterator it = list_.begin(); it != list_.end(); ++it) {
+      batch_count++;
+      total_quarantine_bytes += (*it).size;
+      total_quarantine_chunks += (*it).count;
+    }
+    Printf("Global quarantine stats: batches: %zd; bytes: %zd; chunks: %zd "
+           "(capacity: %zd chunks)\n",
+           batch_count, total_quarantine_bytes, total_quarantine_chunks,
+           batch_count * QuarantineBatch::kSize);
+  }
+
  private:
-  IntrusiveList<QuarantineBatch> list_;
+  typedef IntrusiveList<QuarantineBatch> List;
+
+  List list_;
   atomic_uintptr_t size_;
 
   void SizeAdd(uptr add) {
@@ -182,6 +218,7 @@ class QuarantineCache {
     return b;
   }
 };
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_QUARANTINE_H

@@ -75,7 +75,7 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
                  .addImm(FirstActualI->getOpcode());
 
   for (auto &MO : FirstActualI->operands())
-    MIB.addOperand(MO);
+    MIB.add(MO);
 
   FirstActualI->eraseFromParent();
   MF.ensureAlignment(4);

@@ -103,3 +103,95 @@ define float @PR22688(float %x) {
   ret float %7
 }
 
+declare float @llvm.fabs.f32(float)
+
+; CHECK-LABEL: @fabs_select_positive_constants(
+; CHECK: %select = select i1 %cmp, float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT: ret float %select
+define float @fabs_select_positive_constants(i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 1.0, float 2.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_constant_variable(
+; CHECK: %select = select i1 %cmp, float 1.000000e+00, float %x
+; CHECK-NEXT: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_constant_variable(i32 %c, float %x) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 1.0, float %x
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_neg0_pos0(
+; CHECK: %select = select i1 %cmp, float -0.000000e+00, float 0.000000e+00
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+; CHECK-NEXT: ret float %fabs
+define float @fabs_select_neg0_pos0(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float -0.0, float 0.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_neg0_neg1(
+; CHECK: %select = select i1 %cmp, float -0.000000e+00, float -1.000000e+00
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_neg0_neg1(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float -0.0, float -1.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_nan_nan(
+; CHECK: %select = select i1 %cmp, float 0x7FF8000000000000, float 0x7FF8000100000000
+; CHECK-NEXT: ret float %select
+define float @fabs_select_nan_nan(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 0x7FF8000000000000, float 0x7FF8000100000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_negnan_nan(
+; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000000000000
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_negnan_nan(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_negnan_negnan(
+; CHECK:  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000100000000
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_negnan_negnan(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000100000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_negnan_negzero(
+; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float -0.000000e+00
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_negnan_negzero(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 0xFFF8000000000000, float -0.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+; CHECK-LABEL: @fabs_select_negnan_zero(
+; CHECK: %select = select i1 %cmp, float 0xFFF8000000000000, float 0.000000e+00
+; CHECK: %fabs = call float @llvm.fabs.f32(float %select)
+define float @fabs_select_negnan_zero(float addrspace(1)* %out, i32 %c) {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, float 0xFFF8000000000000, float 0.0
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}

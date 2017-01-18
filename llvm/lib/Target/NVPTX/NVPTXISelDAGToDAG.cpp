@@ -42,7 +42,6 @@ FtzEnabled("nvptx-f32ftz", cl::ZeroOrMore, cl::Hidden,
            cl::desc("NVPTX Specific: Flush f32 subnormals to sign-preserving zero."),
            cl::init(false));
 
-
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -101,6 +100,11 @@ bool NVPTXDAGToDAGISel::useF32FTZ() const {
 bool NVPTXDAGToDAGISel::allowFMA() const {
   const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
   return TL->allowFMA(*MF, OptLevel);
+}
+
+bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
+  const NVPTXTargetLowering *TL = Subtarget->getTargetLowering();
+  return TL->allowUnsafeFPMath(*MF);
 }
 
 /// Select - Select instructions not customized! Used for
@@ -515,6 +519,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case ISD::ADDRSPACECAST:
     SelectAddrSpaceCast(N);
     return;
+  case ISD::ConstantFP:
+    if (tryConstantFP16(N))
+      return;
+    break;
   default:
     break;
   }
@@ -534,6 +542,19 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
   }
+}
+
+// There's no way to specify FP16 immediates in .f16 ops, so we have to
+// load them into an .f16 register first.
+bool NVPTXDAGToDAGISel::tryConstantFP16(SDNode *N) {
+  if (N->getValueType(0) != MVT::f16)
+    return false;
+  SDValue Val = CurDAG->getTargetConstantFP(
+      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), MVT::f16);
+  SDNode *LoadConstF16 =
+      CurDAG->getMachineNode(NVPTX::LOAD_CONST_F16, SDLoc(N), MVT::f16, Val);
+  ReplaceNode(N, LoadConstF16);
+  return true;
 }
 
 static unsigned int getCodeAddrSpace(MemSDNode *N) {
@@ -735,7 +756,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if ((LD->getExtensionType() == ISD::SEXTLOAD))
     fromType = NVPTX::PTXLdStInstCode::Signed;
   else if (ScalarVT.isFloatingPoint())
-    fromType = NVPTX::PTXLdStInstCode::Float;
+    // f16 uses .b16 as its storage type.
+    fromType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
+                                             : NVPTX::PTXLdStInstCode::Float;
   else
     fromType = NVPTX::PTXLdStInstCode::Unsigned;
 
@@ -760,6 +783,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
       break;
     case MVT::i64:
       Opcode = NVPTX::LD_i64_avar;
+      break;
+    case MVT::f16:
+      Opcode = NVPTX::LD_f16_avar;
       break;
     case MVT::f32:
       Opcode = NVPTX::LD_f32_avar;
@@ -788,6 +814,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
       break;
     case MVT::i64:
       Opcode = NVPTX::LD_i64_asi;
+      break;
+    case MVT::f16:
+      Opcode = NVPTX::LD_f16_asi;
       break;
     case MVT::f32:
       Opcode = NVPTX::LD_f32_asi;
@@ -818,6 +847,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
       case MVT::i64:
         Opcode = NVPTX::LD_i64_ari_64;
         break;
+      case MVT::f16:
+        Opcode = NVPTX::LD_f16_ari_64;
+        break;
       case MVT::f32:
         Opcode = NVPTX::LD_f32_ari_64;
         break;
@@ -840,6 +872,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
         break;
       case MVT::i64:
         Opcode = NVPTX::LD_i64_ari;
+        break;
+      case MVT::f16:
+        Opcode = NVPTX::LD_f16_ari;
         break;
       case MVT::f32:
         Opcode = NVPTX::LD_f32_ari;
@@ -870,6 +905,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
       case MVT::i64:
         Opcode = NVPTX::LD_i64_areg_64;
         break;
+      case MVT::f16:
+        Opcode = NVPTX::LD_f16_areg_64;
+        break;
       case MVT::f32:
         Opcode = NVPTX::LD_f32_areg_64;
         break;
@@ -892,6 +930,9 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
         break;
       case MVT::i64:
         Opcode = NVPTX::LD_i64_areg;
+        break;
+      case MVT::f16:
+        Opcode = NVPTX::LD_f16_areg;
         break;
       case MVT::f32:
         Opcode = NVPTX::LD_f32_areg;
@@ -2168,7 +2209,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   unsigned toTypeWidth = ScalarVT.getSizeInBits();
   unsigned int toType;
   if (ScalarVT.isFloatingPoint())
-    toType = NVPTX::PTXLdStInstCode::Float;
+    // f16 uses .b16 as its storage type.
+    toType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
+                                           : NVPTX::PTXLdStInstCode::Float;
   else
     toType = NVPTX::PTXLdStInstCode::Unsigned;
 
@@ -2194,6 +2237,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       break;
     case MVT::i64:
       Opcode = NVPTX::ST_i64_avar;
+      break;
+    case MVT::f16:
+      Opcode = NVPTX::ST_f16_avar;
       break;
     case MVT::f32:
       Opcode = NVPTX::ST_f32_avar;
@@ -2223,6 +2269,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       break;
     case MVT::i64:
       Opcode = NVPTX::ST_i64_asi;
+      break;
+    case MVT::f16:
+      Opcode = NVPTX::ST_f16_asi;
       break;
     case MVT::f32:
       Opcode = NVPTX::ST_f32_asi;
@@ -2254,6 +2303,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       case MVT::i64:
         Opcode = NVPTX::ST_i64_ari_64;
         break;
+      case MVT::f16:
+        Opcode = NVPTX::ST_f16_ari_64;
+        break;
       case MVT::f32:
         Opcode = NVPTX::ST_f32_ari_64;
         break;
@@ -2276,6 +2328,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
         break;
       case MVT::i64:
         Opcode = NVPTX::ST_i64_ari;
+        break;
+      case MVT::f16:
+        Opcode = NVPTX::ST_f16_ari;
         break;
       case MVT::f32:
         Opcode = NVPTX::ST_f32_ari;
@@ -2307,6 +2362,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       case MVT::i64:
         Opcode = NVPTX::ST_i64_areg_64;
         break;
+      case MVT::f16:
+        Opcode = NVPTX::ST_f16_areg_64;
+        break;
       case MVT::f32:
         Opcode = NVPTX::ST_f32_areg_64;
         break;
@@ -2329,6 +2387,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
         break;
       case MVT::i64:
         Opcode = NVPTX::ST_i64_areg;
+        break;
+      case MVT::f16:
+        Opcode = NVPTX::ST_f16_areg;
         break;
       case MVT::f32:
         Opcode = NVPTX::ST_f32_areg;
@@ -2781,6 +2842,9 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
     case MVT::i64:
       Opc = NVPTX::LoadParamMemI64;
       break;
+    case MVT::f16:
+      Opc = NVPTX::LoadParamMemF16;
+      break;
     case MVT::f32:
       Opc = NVPTX::LoadParamMemF32;
       break;
@@ -2916,6 +2980,9 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
     case MVT::i64:
       Opcode = NVPTX::StoreRetvalI64;
       break;
+    case MVT::f16:
+      Opcode = NVPTX::StoreRetvalF16;
+      break;
     case MVT::f32:
       Opcode = NVPTX::StoreRetvalF32;
       break;
@@ -3048,6 +3115,9 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
         break;
       case MVT::i64:
         Opcode = NVPTX::StoreParamI64;
+        break;
+      case MVT::f16:
+        Opcode = NVPTX::StoreParamF16;
         break;
       case MVT::f32:
         Opcode = NVPTX::StoreParamF32;

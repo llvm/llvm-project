@@ -94,6 +94,13 @@ bool CMICmdCmdEnvironmentCd::Execute() {
                                    m_cmdData.strMiCmd.c_str(),
                                    "SetCurrentPlatformSDKRoot()"));
 
+  lldb::SBTarget sbTarget = m_rLLDBDebugSessionInfo.GetTarget();
+  if (sbTarget.IsValid()) {
+    lldb::SBLaunchInfo sbLaunchInfo = sbTarget.GetLaunchInfo();
+    sbLaunchInfo.SetWorkingDirectory(strWkDir.c_str());
+    sbTarget.SetLaunchInfo(sbLaunchInfo);
+  }
+
   return bOk;
 }
 

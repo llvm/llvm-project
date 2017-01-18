@@ -496,14 +496,22 @@ bool CMICmdCmdInterpreterExec::Execute() {
 //--
 bool CMICmdCmdInterpreterExec::Acknowledge() {
   if (m_lldbResult.GetOutputSize() > 0) {
-    CMIUtilString strMsg(m_lldbResult.GetOutput());
-    strMsg = strMsg.StripCREndOfLine();
-    CMICmnStreamStdout::TextToStdout(strMsg);
+    const CMIUtilString line(m_lldbResult.GetOutput());
+    const bool bEscapeQuotes(true);
+    CMICmnMIValueConst miValueConst(line.Escape(bEscapeQuotes));
+    CMICmnMIOutOfBandRecord miOutOfBandRecord(CMICmnMIOutOfBandRecord::eOutOfBand_ConsoleStreamOutput, miValueConst);
+    const bool bOk = CMICmnStreamStdout::TextToStdout(miOutOfBandRecord.GetString());
+    if (!bOk)
+      return MIstatus::failure;
   }
   if (m_lldbResult.GetErrorSize() > 0) {
-    CMIUtilString strMsg(m_lldbResult.GetError());
-    strMsg = strMsg.StripCREndOfLine();
-    CMICmnStreamStderr::LLDBMsgToConsole(strMsg);
+    const CMIUtilString line(m_lldbResult.GetError());
+    const bool bEscapeQuotes(true);
+    CMICmnMIValueConst miValueConst(line.Escape(bEscapeQuotes));
+    CMICmnMIOutOfBandRecord miOutOfBandRecord(CMICmnMIOutOfBandRecord::eOutOfBand_LogStreamOutput, miValueConst);
+    const bool bOk = CMICmnStreamStdout::TextToStdout(miOutOfBandRecord.GetString());
+    if (!bOk)
+      return MIstatus::failure;
   }
 
   const CMICmnMIResultRecord miRecordResult(

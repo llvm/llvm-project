@@ -33,15 +33,17 @@
 ; CHECK: DW_TAG_enumerator
 ; CHECK-NEXT: DW_AT_name{{.*}} = "X"
 
-@a = global i64 0, align 8, !dbg !18
+source_filename = "test/DebugInfo/Generic/enum.ll"
+
+@a = global i64 0, align 8, !dbg !0
 
 ; Function Attrs: nounwind uwtable
-define void @_Z4funcv() #0 !dbg !13 {
+define void @_Z4funcv() #0 !dbg !17 {
 entry:
   %b = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !20, metadata !DIExpression()), !dbg !22
-  store i32 0, i32* %b, align 4, !dbg !22
-  ret void, !dbg !23
+  call void @llvm.dbg.declare(metadata i32* %b, metadata !20, metadata !22), !dbg !23
+  store i32 0, i32* %b, align 4, !dbg !23
+  ret void, !dbg !24
 }
 
 ; Function Attrs: nounwind readnone
@@ -50,30 +52,32 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!19, !24}
+!llvm.dbg.cu = !{!8}
+!llvm.module.flags = !{!15, !16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !11, globals: !17, imports: !11)
-!1 = !DIFile(filename: "enum.cpp", directory: "/tmp")
-!2 = !{!3, !8}
-!3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e1", line: 1, size: 64, align: 64, file: !1, elements: !4)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "a", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "enum.cpp", directory: "/tmp")
+!3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e1", file: !2, line: 1, size: 64, align: 64, elements: !4)
 !4 = !{!5, !6, !7}
-!5 = !DIEnumerator(name: "I", value: 0) ; [ DW_TAG_enumerator ] [I :: 0]
-!6 = !DIEnumerator(name: "J", value: 4294967295) ; [ DW_TAG_enumerator ] [J :: 4294967295]
-!7 = !DIEnumerator(name: "K", value: -1152921504606846976) ; [ DW_TAG_enumerator ] [K :: 17293822569102704640]
-!8 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e2", line: 2, size: 32, align: 32, file: !1, elements: !9)
-!9 = !{!10}
-!10 = !DIEnumerator(name: "X", value: 0) ; [ DW_TAG_enumerator ] [X :: 0]
-!11 = !{}
-!13 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !14, type: !15, variables: !11)
-!14 = !DIFile(filename: "enum.cpp", directory: "/tmp")
-!15 = !DISubroutineType(types: !16)
-!16 = !{null}
-!17 = !{!18}
-!18 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !14, type: !3))
-!19 = !{i32 2, !"Dwarf Version", i32 3}
-!20 = !DILocalVariable(name: "b", line: 4, scope: !13, file: !14, type: !21)
-!21 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!22 = !DILocation(line: 4, scope: !13)
-!23 = !DILocation(line: 5, scope: !13)
-!24 = !{i32 1, !"Debug Info Version", i32 3}
+!5 = !DIEnumerator(name: "I", value: 0)
+!6 = !DIEnumerator(name: "J", value: 4294967295) ; [ DW_TAG_enumerator ] [I :: 0]
+!7 = !DIEnumerator(name: "K", value: -1152921504606846976) ; [ DW_TAG_enumerator ] [J :: 4294967295]
+!8 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, retainedTypes: !13, globals: !14, imports: !13) ; [ DW_TAG_enumerator ] [K :: 17293822569102704640]
+!9 = !{!3, !10}
+!10 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e2", file: !2, line: 2, size: 32, align: 32, elements: !11)
+!11 = !{!12}
+!12 = !DIEnumerator(name: "X", value: 0) ; [ DW_TAG_enumerator ] [X :: 0]
+!13 = !{}
+!14 = !{!0}
+!15 = !{i32 2, !"Dwarf Version", i32 3}
+!16 = !{i32 1, !"Debug Info Version", i32 3}
+!17 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcv", scope: !2, file: !2, line: 3, type: !18, isLocal: false, isDefinition: true, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, variables: !13)
+!18 = !DISubroutineType(types: !19)
+!19 = !{null}
+!20 = !DILocalVariable(name: "b", scope: !17, file: !2, line: 4, type: !21)
+!21 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!22 = !DIExpression()
+!23 = !DILocation(line: 4, scope: !17)
+!24 = !DILocation(line: 5, scope: !17)
+

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; Check that functions with "returns_twice" calls are only inlined,
 ; if they are themselves marked as such.

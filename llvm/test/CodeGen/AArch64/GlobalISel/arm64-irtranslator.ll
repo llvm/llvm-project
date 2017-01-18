@@ -52,10 +52,10 @@ define void @allocai64() {
 ; CHECK: body:
 ;
 ; ABI/constant lowering and IR-level entry basic block.
-; CHECK: {{bb.[0-9]+}}:
+; CHECK: {{bb.[0-9]+}} (%ir-block.{{[0-9]+}}):
 ;
 ; Make sure we have one successor and only one.
-; CHECK-NEXT: successors: %[[END:bb.[0-9]+]](0x80000000)
+; CHECK-NEXT: successors: %[[END:bb.[0-9]+.end]](0x80000000)
 ;
 ; Check that we emit the correct branch.
 ; CHECK: G_BR %[[END]]
@@ -74,10 +74,10 @@ end:
 ; CHECK: body:
 ;
 ; ABI/constant lowering and IR-level entry basic block.
-; CHECK: {{bb.[0-9]+}}:
+; CHECK: {{bb.[0-9]+}} (%ir-block.{{[0-9]+}}):
 ; Make sure we have two successors
-; CHECK-NEXT: successors: %[[TRUE:bb.[0-9]+]](0x40000000),
-; CHECK:                  %[[FALSE:bb.[0-9]+]](0x40000000)
+; CHECK-NEXT: successors: %[[TRUE:bb.[0-9]+.true]](0x40000000),
+; CHECK:                  %[[FALSE:bb.[0-9]+.false]](0x40000000)
 ;
 ; CHECK: [[ADDR:%.*]](p0) = COPY %x0
 ;
@@ -98,6 +98,74 @@ true:
   ret void
 false:
   ret void
+}
+
+; Tests for switch.
+; This gets lowered to a very straightforward sequence of comparisons for now.
+; CHECK-LABEL: name: switch
+; CHECK: body:
+;
+; CHECK: {{bb.[0-9]+.entry}}:
+; CHECK-NEXT: successors: %[[BB_CASE100:bb.[0-9]+.case100]](0x40000000), %[[BB_NOTCASE100_CHECKNEXT:bb.[0-9]+.entry]](0x40000000)
+; CHECK: %0(s32) = COPY %w0
+; CHECK: %[[reg100:[0-9]+]](s32) = G_CONSTANT i32 100
+; CHECK: %[[reg200:[0-9]+]](s32) = G_CONSTANT i32 200
+; CHECK: %[[reg0:[0-9]+]](s32) = G_CONSTANT i32 0
+; CHECK: %[[reg1:[0-9]+]](s32) = G_CONSTANT i32 1
+; CHECK: %[[reg2:[0-9]+]](s32) = G_CONSTANT i32 2
+; CHECK: %[[regicmp100:[0-9]+]](s1) = G_ICMP intpred(eq), %[[reg100]](s32), %0
+; CHECK: G_BRCOND %[[regicmp100]](s1), %[[BB_CASE100]]
+; CHECK: G_BR %[[BB_NOTCASE100_CHECKNEXT]]
+;
+; CHECK: [[BB_CASE100]]:
+; CHECK-NEXT: successors: %[[BB_RET:bb.[0-9]+.return]](0x80000000)
+; CHECK: %[[regretc100:[0-9]+]](s32) = G_ADD %0, %[[reg1]]
+; CHECK: G_BR %[[BB_RET]]
+; CHECK: [[BB_NOTCASE100_CHECKNEXT]]:
+; CHECK-NEXT: successors: %[[BB_CASE200:bb.[0-9]+.case200]](0x40000000), %[[BB_NOTCASE200_CHECKNEXT:bb.[0-9]+.entry]](0x40000000)
+; CHECK: %[[regicmp200:[0-9]+]](s1) = G_ICMP intpred(eq), %[[reg200]](s32), %0
+; CHECK: G_BRCOND %[[regicmp200]](s1), %[[BB_CASE200]]
+; CHECK: G_BR %[[BB_NOTCASE200_CHECKNEXT]]
+;
+; CHECK: [[BB_CASE200]]:
+; CHECK-NEXT: successors: %[[BB_RET:bb.[0-9]+.return]](0x80000000)
+; CHECK: %[[regretc200:[0-9]+]](s32) = G_ADD %0, %[[reg2]]
+; CHECK: G_BR %[[BB_RET]]
+; CHECK: [[BB_NOTCASE200_CHECKNEXT]]:
+; CHECK-NEXT: successors: %[[BB_DEFAULT:bb.[0-9]+.default]](0x80000000)
+; CHECK: G_BR %[[BB_DEFAULT]]
+;
+; CHECK: [[BB_DEFAULT]]:
+; CHECK-NEXT: successors: %[[BB_RET]](0x80000000)
+; CHECK: %[[regretdefault:[0-9]+]](s32) = G_ADD %0, %[[reg0]]
+; CHECK: G_BR %[[BB_RET]]
+;
+; CHECK: [[BB_RET]]:
+; CHECK-NEXT: %[[regret:[0-9]+]](s32) = PHI %[[regretdefault]](s32), %[[BB_DEFAULT]], %[[regretc100]](s32), %[[BB_CASE100]]
+; CHECK:  %w0 = COPY %[[regret]](s32)
+; CHECK:  RET_ReallyLR implicit %w0
+define i32 @switch(i32 %argc) {
+entry:
+  switch i32 %argc, label %default [
+    i32 100, label %case100
+    i32 200, label %case200
+  ]
+
+default:
+  %tmp0 = add i32 %argc, 0
+  br label %return
+
+case100:
+  %tmp1 = add i32 %argc, 1
+  br label %return
+
+case200:
+  %tmp2 = add i32 %argc, 2
+  br label %return
+
+return:
+  %res = phi i32 [ %tmp0, %default ], [ %tmp1, %case100 ], [ %tmp2, %case200 ]
+  ret i32 %res
 }
 
 ; Tests for or.
@@ -223,11 +291,11 @@ define i64* @trivial_bitcast(i8* %a) {
 
 ; CHECK-LABEL: name: trivial_bitcast_with_copy
 ; CHECK:     [[A:%[0-9]+]](p0) = COPY %x0
-; CHECK:     G_BR %[[CAST:bb\.[0-9]+]]
+; CHECK:     G_BR %[[CAST:bb\.[0-9]+.cast]]
 
 ; CHECK: [[CAST]]:
 ; CHECK:     {{%[0-9]+}}(p0) = COPY [[A]]
-; CHECK:     G_BR %[[END:bb\.[0-9]+]]
+; CHECK:     G_BR %[[END:bb\.[0-9]+.end]]
 
 ; CHECK: [[END]]:
 define i64* @trivial_bitcast_with_copy(i8* %a) {
@@ -324,8 +392,8 @@ define void @intrinsics(i32 %cur, i32 %bits) {
 }
 
 ; CHECK-LABEL: name: test_phi
-; CHECK:     G_BRCOND {{%.*}}, %[[TRUE:bb\.[0-9]+]]
-; CHECK:     G_BR %[[FALSE:bb\.[0-9]+]]
+; CHECK:     G_BRCOND {{%.*}}, %[[TRUE:bb\.[0-9]+.true]]
+; CHECK:     G_BR %[[FALSE:bb\.[0-9]+.false]]
 
 ; CHECK: [[TRUE]]:
 ; CHECK:     [[RES1:%[0-9]+]](s32) = G_LOAD
@@ -933,7 +1001,7 @@ define void @test_large_const(i128* %addr) {
 ; correct.
 define i8* @test_const_placement() {
 ; CHECK-LABEL: name: test_const_placement
-; CHECK: bb.{{[0-9]+}}:
+; CHECK: bb.{{[0-9]+}} (%ir-block.{{[0-9]+}}):
 ; CHECK:   [[VAL_INT:%[0-9]+]](s32) = G_CONSTANT i32 42
 ; CHECK:   [[VAL:%[0-9]+]](p0) = G_INTTOPTR [[VAL_INT]](s32)
 ; CHECK:   G_BR

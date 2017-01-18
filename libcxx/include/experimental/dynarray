@@ -11,9 +11,6 @@
 #ifndef _LIBCPP_DYNARRAY
 #define _LIBCPP_DYNARRAY
 
-#include <__config>
-#if _LIBCPP_STD_VER > 11
-
 /*
     dynarray synopsis
 
@@ -96,6 +93,8 @@ public:
 }}  // std::experimental
 
 */
+#include <__config>
+#if _LIBCPP_STD_VER > 11
 
 #include <__functional_base>
 #include <iterator>
@@ -104,8 +103,6 @@ public:
 #include <new>
 #include <algorithm>
 
-#include <__undef___deallocate>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -113,7 +110,7 @@ public:
 namespace std { namespace experimental { inline namespace __array_extensions_v1 {
 
 template <class _Tp>
-struct _LIBCPP_TYPE_VIS_ONLY dynarray
+struct _LIBCPP_TEMPLATE_VIS dynarray
 {
 public:
     // types:
@@ -143,9 +140,9 @@ private:
         return static_cast<value_type *> (_VSTD::__allocate (sizeof(value_type) * count));
     }
 
-    static inline _LIBCPP_INLINE_VISIBILITY void __deallocate ( value_type* __ptr ) noexcept
+    static inline _LIBCPP_INLINE_VISIBILITY void __deallocate_value( value_type* __ptr ) noexcept
     {
-        _VSTD::__deallocate (static_cast<void *> (__ptr));
+        _VSTD::__libcpp_deallocate (static_cast<void *> (__ptr));
     }
 
 public:
@@ -265,7 +262,7 @@ dynarray<_Tp>::~dynarray()
     value_type *__data = data () + __size_;
     for ( size_t i = 0; i < __size_; ++i )
         (--__data)->value_type::~value_type();
-    __deallocate ( __base_ );
+    __deallocate_value( __base_ );
 }
 
 template <class _Tp>
@@ -295,7 +292,7 @@ dynarray<_Tp>::at(size_type __n) const
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Alloc>
-struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<std::experimental::dynarray<_Tp>, _Alloc> : true_type {};
+struct _LIBCPP_TEMPLATE_VIS uses_allocator<std::experimental::dynarray<_Tp>, _Alloc> : true_type {};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // if _LIBCPP_STD_VER > 11 

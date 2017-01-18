@@ -65,7 +65,9 @@ public:
     eOutOfBand_ThreadSelected,
     eOutOfBand_TargetModuleLoaded,
     eOutOfBand_TargetModuleUnloaded,
-    eOutOfBand_TargetStreamOutput
+    eOutOfBand_TargetStreamOutput,
+    eOutOfBand_ConsoleStreamOutput,
+    eOutOfBand_LogStreamOutput
   };
 
   // Methods:

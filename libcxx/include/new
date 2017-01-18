@@ -92,8 +92,6 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <cstdlib>
 #endif
 
-#include <__undef___deallocate>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -162,7 +160,7 @@ _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 
 }  // std
 
-#if !__has_feature(cxx_noexcept)
+#if defined(_LIBCPP_CXX03_LANG)
 #define _THROW_BAD_ALLOC throw(std::bad_alloc)
 #else
 #define _THROW_BAD_ALLOC
@@ -217,7 +215,7 @@ inline _LIBCPP_INLINE_VISIBILITY void *__allocate(size_t __size) {
 #endif
 }
 
-inline _LIBCPP_INLINE_VISIBILITY void __deallocate(void *__ptr) {
+inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate(void *__ptr) {
 #ifdef _LIBCPP_HAS_NO_BUILTIN_OPERATOR_NEW_DELETE
   ::operator delete(__ptr);
 #else

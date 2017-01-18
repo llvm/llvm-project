@@ -13,6 +13,8 @@
 #include <memory>
 #include <type_traits>
 
+#include <crtversion.h>
+
 typedef _VSTD::remove_pointer<locale_t>::type __locale_struct;
 typedef _VSTD::unique_ptr<__locale_struct, decltype(&uselocale)> __locale_raii;
 
@@ -29,7 +31,9 @@ locale_t uselocale( locale_t newloc )
     // uselocale sets the thread's locale by definition, so unconditionally use thread-local locale
     _configthreadlocale( _ENABLE_PER_THREAD_LOCALE );
     // uselocale sets all categories
+#if _VC_CRT_MAJOR_VERSION < 14
     setlocale( LC_ALL, newloc->locinfo->lc_category[LC_ALL].locale );
+#endif
     // uselocale returns the old locale_t
     return old_locale;
 }

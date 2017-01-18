@@ -13,7 +13,7 @@
 #include "OutputStyle.h"
 #include "PdbYaml.h"
 
-#include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/YAMLTraits.h"
 

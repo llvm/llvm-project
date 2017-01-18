@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 
 namespace llvm {
+
 class AArch64InstrInfo;
 class AArch64RegisterBankInfo;
 class AArch64RegisterInfo;
@@ -29,9 +30,13 @@ public:
                              const AArch64Subtarget &STI,
                              const AArch64RegisterBankInfo &RBI);
 
-  virtual bool select(MachineInstr &I) const override;
+  bool select(MachineInstr &I) const override;
 
 private:
+  /// tblgen-erated 'select' implementation, used as the initial selector for
+  /// the patterns that don't require complex C++.
+  bool selectImpl(MachineInstr &I) const;
+
   const AArch64TargetMachine &TM;
   const AArch64Subtarget &STI;
   const AArch64InstrInfo &TII;
@@ -39,5 +44,6 @@ private:
   const AArch64RegisterBankInfo &RBI;
 };
 
-} // End llvm namespace.
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_AARCH64_AARCH64INSTRUCTIONSELECTOR_H

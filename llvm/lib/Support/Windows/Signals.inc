@@ -28,6 +28,7 @@
 #ifdef __MINGW32__
  #include <imagehlp.h>
 #else
+ #include <crtdbg.h>
  #include <dbghelp.h>
 #endif
 #include <psapi.h>

@@ -1,4 +1,5 @@
 ; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' %s -S | FileCheck %s
 ; Ensure SSP attributes are propagated correctly when inlining.
 
 @.str = private unnamed_addr constant [11 x i8] c"fun_nossp\0A\00", align 1

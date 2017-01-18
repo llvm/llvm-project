@@ -95,37 +95,40 @@
 ;
 ; template int func<&glbl>(); // create a second reference to 'glbl'
 
+source_filename = "test/DebugInfo/X86/tls.ll"
 
-@tls = thread_local global i32 0, align 4, !dbg !13
-@glbl = global i32 0, align 4, !dbg !14
+@tls = thread_local global i32 0, align 4, !dbg !0
+@glbl = global i32 0, align 4, !dbg !4
 
 ; Function Attrs: nounwind uwtable
-define weak_odr i32 @_Z4funcIXadL_Z4glblEEEiv() #0 !dbg !4 {
+define weak_odr i32 @_Z4funcIXadL_Z4glblEEEiv() #0 !dbg !12 {
 entry:
   ret i32 0, !dbg !18
 }
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!15, !16}
-!llvm.ident = !{!17}
+!llvm.dbg.cu = !{!6}
+!llvm.module.flags = !{!9, !10}
+!llvm.ident = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, splitDebugFilename: "-.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !12, imports: !2)
-!1 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
-!2 = !{}
-!4 = distinct !DISubprogram(name: "func<&glbl>", linkageName: "_Z4funcIXadL_Z4glblEEEiv", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, templateParams: !9, variables: !2)
-!5 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
-!6 = !DISubroutineType(types: !7)
-!7 = !{!8}
-!8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = !{!10}
-!10 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, name: "I", type: !11, value: i32* @glbl)
-!11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !8)
-!12 = !{!13, !14}
-!13 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "tls", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8))
-!14 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "glbl", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !8))
-!15 = !{i32 2, !"Dwarf Version", i32 4}
-!16 = !{i32 1, !"Debug Info Version", i32 3}
-!17 = !{!"clang version 3.5 "}
-!18 = !DILocation(line: 6, scope: !4)
+!0 = !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "tls", scope: null, file: !2, line: 1, type: !3, isLocal: false, isDefinition: true)
+!2 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
+!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!4 = !DIGlobalVariableExpression(var: !5)
+!5 = !DIGlobalVariable(name: "glbl", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
+!6 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5 ", isOptimized: false, runtimeVersion: 0, splitDebugFilename: "-.dwo", emissionKind: FullDebug, enums: !7, retainedTypes: !7, globals: !8, imports: !7)
+!7 = !{}
+!8 = !{!0, !4}
+!9 = !{i32 2, !"Dwarf Version", i32 4}
+!10 = !{i32 1, !"Debug Info Version", i32 3}
+!11 = !{!"clang version 3.5 "}
+!12 = distinct !DISubprogram(name: "func<&glbl>", linkageName: "_Z4funcIXadL_Z4glblEEEiv", scope: !2, file: !2, line: 5, type: !13, isLocal: false, isDefinition: true, scopeLine: 5, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !6, templateParams: !15, variables: !7)
+!13 = !DISubroutineType(types: !14)
+!14 = !{!3}
+!15 = !{!16}
+!16 = !DITemplateValueParameter(name: "I", type: !17, value: i32* @glbl)
+!17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 64, align: 64)
+!18 = !DILocation(line: 6, scope: !12)
+

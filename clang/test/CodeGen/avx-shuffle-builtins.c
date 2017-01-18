@@ -67,9 +67,7 @@ __m128
 test_mm_broadcast_ss(float const *__a) {
   // CHECK-LABEL: @test_mm_broadcast_ss
   // CHECK: insertelement <4 x float> {{.*}}, i32 0
-  // CHECK: insertelement <4 x float> {{.*}}, i32 1
-  // CHECK: insertelement <4 x float> {{.*}}, i32 2
-  // CHECK: insertelement <4 x float> {{.*}}, i32 3
+  // CHECK: shufflevector <4 x float> {{.*}}, <4 x float> undef, <4 x i32> zeroinitializer
   return _mm_broadcast_ss(__a);
 }
 
@@ -77,9 +75,7 @@ __m256d
 test_mm256_broadcast_sd(double const *__a) {
   // CHECK-LABEL: @test_mm256_broadcast_sd
   // CHECK: insertelement <4 x double> {{.*}}, i32 0
-  // CHECK: insertelement <4 x double> {{.*}}, i32 1
-  // CHECK: insertelement <4 x double> {{.*}}, i32 2
-  // CHECK: insertelement <4 x double> {{.*}}, i32 3
+  // CHECK: shufflevector <4 x double> {{.*}}, <4 x double> undef, <4 x i32> zeroinitializer
   return _mm256_broadcast_sd(__a);
 }
 
@@ -87,13 +83,7 @@ __m256
 test_mm256_broadcast_ss(float const *__a) {
   // CHECK-LABEL: @test_mm256_broadcast_ss
   // CHECK: insertelement <8 x float> {{.*}}, i32 0
-  // CHECK: insertelement <8 x float> {{.*}}, i32 1
-  // CHECK: insertelement <8 x float> {{.*}}, i32 2
-  // CHECK: insertelement <8 x float> {{.*}}, i32 3
-  // CHECK: insertelement <8 x float> {{.*}}, i32 4
-  // CHECK: insertelement <8 x float> {{.*}}, i32 5
-  // CHECK: insertelement <8 x float> {{.*}}, i32 6
-  // CHECK: insertelement <8 x float> {{.*}}, i32 7
+  // CHECK: shufflevector <8 x float> {{.*}}, <8 x float> undef, <8 x i32> zeroinitializer
   return _mm256_broadcast_ss(__a);
 }
 

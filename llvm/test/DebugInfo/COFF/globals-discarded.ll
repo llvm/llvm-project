@@ -15,21 +15,23 @@ source_filename = "t.ii"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.0"
 
-@x = global i32 42, !dbg !6
+@x = global i32 42, !dbg !0
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!35, !36, !37}
-!llvm.ident = !{!38}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!9, !10, !11}
+!llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 272215) (llvm/trunk 272226)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3)
-!1 = !DIFile(filename: "t.c", directory: "foo")
-!2 = !{}
-!3 = !{!4, !6}
-!4 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "_OptionsStorage", scope: !0, file: !1, line: 3, type: !5, isLocal: true, isDefinition: true))
-!5 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
-!6 = distinct !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 4, type: !5, isLocal: true, isDefinition: true))
+!0 = distinct !DIGlobalVariableExpression(var: !1)
+!1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 4, type: !8, isLocal: true, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.9.0 (trunk 272215) (llvm/trunk 272226)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5)
+!3 = !DIFile(filename: "t.c", directory: "foo")
+!4 = !{}
+!5 = !{!6, !0}
+!6 = distinct !DIGlobalVariableExpression(var: !7)
+!7 = !DIGlobalVariable(name: "_OptionsStorage", scope: !2, file: !3, line: 3, type: !8, isLocal: true, isDefinition: true)
+!8 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+!9 = !{i32 2, !"CodeView", i32 1}
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !{i32 1, !"PIC Level", i32 2}
+!12 = !{!"clang version 3.9.0 (trunk 272215) (llvm/trunk 272226)"}
 
-!35 = !{i32 2, !"CodeView", i32 1}
-!36 = !{i32 2, !"Debug Info Version", i32 3}
-!37 = !{i32 1, !"PIC Level", i32 2}
-!38 = !{!"clang version 3.9.0 (trunk 272215) (llvm/trunk 272226)"}

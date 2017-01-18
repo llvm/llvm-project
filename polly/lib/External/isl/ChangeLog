@@ -1,3 +1,13 @@
+version: 0.18
+date: Sun Dec 18 11:01:58 CET 2016
+changes:
+	- improve elimination of redundant existentially quantified variables
+	- improve coalescing
+	- improve parametric integer programming
+	- preserve isolate option in isl_schedule_node_band_split
+	- print AST nodes in YAML format
+	- minor improvements to Python bindings
+---
 version: 0.17.1
 date: Fri May  6 12:02:48 CEST 2016
 changes:

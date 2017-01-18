@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -fms-compatibility -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -fms-compatibility -O2 -disable-llvm-passes -o - | FileCheck %s
 
 __declspec(selectany) int x1 = 1;
 const __declspec(selectany) int x2 = 2;

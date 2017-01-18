@@ -886,6 +886,10 @@ public:
     return *this;
   }
 
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   // updateStatistics - Update statistic about created regions.
   void updateStatistics(Region *R) final;
 
