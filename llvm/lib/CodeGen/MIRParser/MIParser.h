@@ -45,11 +45,16 @@ struct VRegInfo {
   unsigned PreferredReg = 0;
 };
 
+typedef StringMap<const TargetRegisterClass*> Name2RegClassMap;
+typedef StringMap<const RegisterBank*> Name2RegBankMap;
+
 struct PerFunctionMIParsingState {
   BumpPtrAllocator Allocator;
   MachineFunction &MF;
   SourceMgr *SM;
   const SlotMapping &IRSlots;
+  const Name2RegClassMap &Names2RegClasses;
+  const Name2RegBankMap &Names2RegBanks;
 
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
   DenseMap<unsigned, VRegInfo*> VRegInfos;
@@ -59,7 +64,9 @@ struct PerFunctionMIParsingState {
   DenseMap<unsigned, unsigned> JumpTableSlots;
 
   PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
-                            const SlotMapping &IRSlots);
+                            const SlotMapping &IRSlots,
+                            const Name2RegClassMap &Names2RegClasses,
+                            const Name2RegBankMap &Names2RegBanks);
 
   VRegInfo &getVRegInfo(unsigned VReg);
 };
