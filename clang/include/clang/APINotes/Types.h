@@ -38,16 +38,6 @@ using llvm::StringRef;
 using llvm::Optional;
 using llvm::None;
 
-/// Describes whether to classify a factory method as an initializer.
-enum class FactoryAsInitKind {
-  /// Infer based on name and type (the default).
-  Infer,
-  /// Treat as a class method.
-  AsClassMethod,
-  /// Treat as an initializer.
-  AsInitializer
-};
-
 /// Opaque context ID used to refer to an Objective-C class or protocol.
 class ContextID {
 public:
@@ -556,30 +546,17 @@ public:
   /// Whether this is a designated initializer of its class.
   unsigned DesignatedInit : 1;
 
-  /// Whether to treat this method as a factory or initializer.
-  unsigned FactoryAsInit : 2;
-
   /// Whether this is a required initializer.
   unsigned Required : 1;
 
   ObjCMethodInfo()
     : FunctionInfo(),
       DesignatedInit(false),
-      FactoryAsInit(static_cast<unsigned>(FactoryAsInitKind::Infer)),
       Required(false) { }
-
-  FactoryAsInitKind getFactoryAsInitKind() const {
-    return static_cast<FactoryAsInitKind>(FactoryAsInit);
-  }
-
-  void setFactoryAsInitKind(FactoryAsInitKind kind) {
-    FactoryAsInit = static_cast<unsigned>(kind);
-  }
 
   friend bool operator==(const ObjCMethodInfo &lhs, const ObjCMethodInfo &rhs) {
     return static_cast<const FunctionInfo &>(lhs) == rhs &&
            lhs.DesignatedInit == rhs.DesignatedInit &&
-           lhs.FactoryAsInit == rhs.FactoryAsInit &&
            lhs.Required == rhs.Required;
   }
 

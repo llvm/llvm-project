@@ -353,8 +353,6 @@ namespace {
       payload >>= 1;
       info.DesignatedInit = payload & 0x01;
       payload >>= 1;
-      info.FactoryAsInit = payload & 0x03;
-      payload >>= 2;
 
       readFunctionInfo(data, info);
       return info;

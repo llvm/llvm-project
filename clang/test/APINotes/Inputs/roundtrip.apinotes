@@ -16,7 +16,6 @@ Classes:
         AvailabilityMsg: ''
         SwiftPrivate:    false
         SwiftName:       ''
-        FactoryAsInit:   C
         ResultType:      id
       - Selector:        init
         MethodKind:      Instance

@@ -568,14 +568,6 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
     });
   }
 
-  // FIXME: This doesn't work well with versioned API notes.
-  if (metadata.Role == VersionedInfoRole::AugmentSource &&
-      info.getFactoryAsInitKind()
-        == api_notes::FactoryAsInitKind::AsClassMethod &&
-      !D->getAttr<SwiftNameAttr>()) {
-    D->addAttr(SwiftSuppressFactoryAsInitAttr::CreateImplicit(S.Context));
-  }
-
   // Handle common function information.
   ProcessAPINotes(S, FunctionOrMethod(D),
                   static_cast<const api_notes::FunctionInfo &>(info), metadata);
