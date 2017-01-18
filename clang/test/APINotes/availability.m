@@ -31,6 +31,18 @@ int main() {
   [a transform:a]; // expected-error{{'transform:' is unavailable: anything but this}}
   // expected-note@SomeKit/SomeKit.h:6{{'transform:' has been explicitly marked unavailable here}}
 
+  [a implicitGetOnlyInstance]; // expected-error{{'implicitGetOnlyInstance' is unavailable: getter gone}}
+  // expected-note@SomeKit/SomeKit.h:53{{'implicitGetOnlyInstance' has been explicitly marked unavailable here}}
+  [A implicitGetOnlyClass]; // expected-error{{'implicitGetOnlyClass' is unavailable: getter gone}}
+  // expected-note@SomeKit/SomeKit.h:54{{'implicitGetOnlyClass' has been explicitly marked unavailable here}}
+  [a implicitGetSetInstance]; // expected-error{{'implicitGetSetInstance' is unavailable: getter gone}}
+  // expected-note@SomeKit/SomeKit.h:56{{'implicitGetSetInstance' has been explicitly marked unavailable here}}
+  [a setImplicitGetSetInstance: a];  // expected-error{{'setImplicitGetSetInstance:' is unavailable: setter gone}}
+  // expected-note@SomeKit/SomeKit.h:56{{'setImplicitGetSetInstance:' has been explicitly marked unavailable here}}
+  [A implicitGetSetClass]; // expected-error{{'implicitGetSetClass' is unavailable: getter gone}}
+  // expected-note@SomeKit/SomeKit.h:57{{'implicitGetSetClass' has been explicitly marked unavailable here}}
+  [A setImplicitGetSetClass: a];  // expected-error{{'setImplicitGetSetClass:' is unavailable: setter gone}}
+  // expected-note@SomeKit/SomeKit.h:57{{'setImplicitGetSetClass:' has been explicitly marked unavailable here}}
   return 0;
 }
 
