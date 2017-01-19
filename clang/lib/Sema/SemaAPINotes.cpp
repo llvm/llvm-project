@@ -15,20 +15,20 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/APINotes/APINotesReader.h"
 using namespace clang;
-using clang::api_notes::VersionedInfoRole;
 
 namespace {
+  enum IsActive_t : bool {
+    IsNotActive,
+    IsActive
+  };
+
   struct VersionedInfoMetadata {
+    /// An empty version refers to unversioned metadata.
     VersionTuple Version;
-    VersionedInfoRole Role;
+    bool IsActive;
 
-    /*implicit*/ VersionedInfoMetadata(VersionedInfoRole role) : Role(role) {
-      assert(role != VersionedInfoRole::Versioned &&
-             "explicit version required");
-    }
-
-    /*implicit*/ VersionedInfoMetadata(VersionTuple version)
-        : Version(version), Role(VersionedInfoRole::Versioned) {}
+    VersionedInfoMetadata(VersionTuple version, IsActive_t active)
+        : Version(version), IsActive(active == IsActive_t::IsActive) {}
   };
 } // end anonymous namespace
 
@@ -45,20 +45,8 @@ static bool isMultiLevelPointerType(QualType type) {
 // Apply nullability to the given declaration.
 static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
                              VersionedInfoMetadata metadata) {
-  bool overrideExisting;
-  switch (metadata.Role) {
-  case VersionedInfoRole::AugmentSource:
-    overrideExisting = false;
-    break;
-
-  case VersionedInfoRole::ReplaceSource:
-    overrideExisting = true;
-    break;
-
-  case VersionedInfoRole::Versioned:
-    // FIXME: Record versioned info?
+  if (!metadata.IsActive)
     return;
-  }
 
   QualType type;
 
@@ -80,7 +68,7 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
   S.checkNullabilityTypeSpecifier(type, nullability, decl->getLocation(),
                                   /*isContextSensitive=*/false,
                                   isa<ParmVarDecl>(decl), /*implicit=*/true,
-                                  overrideExisting);
+                                  /*overrideExisting=*/true);
   if (type.getTypePtr() == origType.getTypePtr())
     return;
 
@@ -154,20 +142,7 @@ namespace {
          VersionedInfoMetadata metadata,
          llvm::function_ref<A *()> createAttr,
          llvm::function_ref<specific_attr_iterator<A>(Decl*)> getExistingAttr) {
-    switch (metadata.Role) {
-    case VersionedInfoRole::AugmentSource:
-      // If we're not adding an attribute, there's nothing to do.
-      if (!shouldAddAttribute) return;
-
-      // If the attribute is already present, we're done.
-      if (getExistingAttr(D) != D->specific_attr_end<A>()) return;
-
-      // Add the attribute.
-      if (auto attr = createAttr())
-        D->addAttr(attr);
-      break;
-
-    case VersionedInfoRole::ReplaceSource: {
+    if (metadata.IsActive) {
       auto end = D->specific_attr_end<A>();
       auto existing = getExistingAttr(D);
       if (existing != end) {
@@ -187,11 +162,8 @@ namespace {
           D->addAttr(attr);
         }
       }
-      break;
-    }
 
-    case VersionedInfoRole::Versioned:
-      // FIXME: Include the actual version instead of making one up.
+    } else {
       if (shouldAddAttribute) {
         if (auto attr = createAttr()) {
           auto *versioned =
@@ -209,7 +181,6 @@ namespace {
                                                       AttrKindFor<A>::value);
         D->addAttr(versioned);
       }
-      break;
     }
   }
   
@@ -341,8 +312,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::VariableInfo &info,
                             VersionedInfoMetadata metadata) {
   // Type override.
-  if (metadata.Role != VersionedInfoRole::Versioned &&
-      !info.getType().empty() && S.ParseTypeFromStringCallback) {
+  if (metadata.IsActive && !info.getType().empty() &&
+      S.ParseTypeFromStringCallback) {
     auto parsedType = S.ParseTypeFromStringCallback(info.getType(),
                                                     "<API Notes>",
                                                     D->getLocation());
@@ -480,8 +451,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 
   // Result type override.
   QualType overriddenResultType;
-  if (metadata.Role != VersionedInfoRole::Versioned &&
-      !info.ResultType.empty() && S.ParseTypeFromStringCallback) {
+  if (metadata.IsActive && !info.ResultType.empty() &&
+      S.ParseTypeFromStringCallback) {
     auto parsedType = S.ParseTypeFromStringCallback(info.ResultType,
                                                     "<API Notes>",
                                                     D->getLocation());
@@ -650,11 +621,8 @@ static void ProcessVersionedAPINotes(
   SpecificInfo InfoSlice;
   for (unsigned i = 0, e = Info.size(); i != e; ++i) {
     std::tie(Version, InfoSlice) = Info[i];
-    if (i != Selected) {
-      ProcessAPINotes(S, D, InfoSlice, Version);
-    } else {
-      ProcessAPINotes(S, D, InfoSlice, Info.getSelectedRole());
-    }
+    auto Active = (i == Selected) ? IsActive : IsNotActive;
+    ProcessAPINotes(S, D, InfoSlice, VersionedInfoMetadata(Version, Active));
   }
 }
 

@@ -25,20 +25,6 @@
 namespace clang {
 namespace api_notes {
 
-/// Describes the role of a specific bit of versioned information.
-enum class VersionedInfoRole : unsigned {
-  /// Augment the AST, but do not override information explicitly specified
-  /// in the source code.
-  AugmentSource,
-
-  /// Replace information that may have been explicitly specified in the source
-  /// code.
-  ReplaceSource,
-
-  /// Describes an alternate version of this information.
-  Versioned,
-};
-
 /// A class that reads API notes data from a binary file that was written by
 /// the \c APINotesWriter.
 class APINotesReader {
@@ -94,9 +80,6 @@ public:
     /// Swift version, or \c Results.size() if nothing matched.
     unsigned Selected;
 
-    /// The role of the selected index.
-    VersionedInfoRole SelectedRole;
-
   public:
     /// Form an empty set of versioned information.
     VersionedInfo(llvm::NoneType) : Selected(0) { }
@@ -120,11 +103,6 @@ public:
     Optional<unsigned> getSelected() const {
       if (Selected == Results.size()) return None;
       return Selected;
-    }
-
-    /// Describes the role of the selected entity.
-    VersionedInfoRole getSelectedRole() const {
-      return SelectedRole;
     }
 
     /// Return the number of versioned results we know about.
