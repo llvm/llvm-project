@@ -1707,6 +1707,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     RegisteredFlag = new GlobalVariable(
         M, IntptrTy, false, GlobalVariable::CommonLinkage,
         ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
+    RegisteredFlag->setVisibility(GlobalVariable::HiddenVisibility);
 
     // Update llvm.compiler.used, adding the new liveness globals. This is
     // needed so that during LTO these variables stay alive. The alternative
