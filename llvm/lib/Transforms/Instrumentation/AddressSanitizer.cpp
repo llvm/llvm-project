@@ -1471,6 +1471,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   size_t n = GlobalsToChange.size();
   if (n == 0) return false;
 
+  auto &DL = M.getDataLayout();
   bool UseComdatMetadata = TargetTriple.isOSBinFormatCOFF();
   bool UseMachOGlobalsSection = ShouldUseMachOGlobalsSection();
   bool UseMetadataArray = !(UseComdatMetadata || UseMachOGlobalsSection);
@@ -1488,6 +1489,10 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   StructType *GlobalStructTy =
       StructType::get(IntptrTy, IntptrTy, IntptrTy, IntptrTy, IntptrTy,
                       IntptrTy, IntptrTy, IntptrTy, nullptr);
+  unsigned SizeOfGlobalStruct = DL.getTypeAllocSize(GlobalStructTy);
+  assert((isPowerOf2_32(SizeOfGlobalStruct) ||
+          !TargetTriple.isOSBinFormatCOFF()) &&
+         "global metadata will not be padded appropriately");
   SmallVector<Constant *, 16> Initializers(UseMetadataArray ? n : 0);
 
   // On recent Mach-O platforms, use a structure which binds the liveness of
@@ -1506,7 +1511,6 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
   GlobalVariable *ModuleName = createPrivateGlobalForString(
       M, M.getModuleIdentifier(), /*AllowMerging*/ false);
 
-  auto &DL = M.getDataLayout();
   for (size_t i = 0; i < n; i++) {
     static const uint64_t kMaxGlobalRedzone = 1 << 18;
     GlobalVariable *G = GlobalsToChange[i];
@@ -1653,7 +1657,14 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
         Initializer, Twine("__asan_global_") +
                              GlobalValue::getRealLinkageName(G->getName()));
     Metadata->setSection(getGlobalMetadataSection());
-    Metadata->setAlignment(1); // Don't leave padding in between.
+
+    // The MSVC linker always inserts padding when linking incrementally. We
+    // cope with that by aligning each struct to its size, which must be a power
+    // of two.
+    if (TargetTriple.isOSBinFormatCOFF())
+      Metadata->setAlignment(SizeOfGlobalStruct);
+    else
+      Metadata->setAlignment(1); // Don't leave padding in between.
 
     // On platforms that support comdats, put the metadata and the
     // instrumented global in the same group. This ensures that the metadata
