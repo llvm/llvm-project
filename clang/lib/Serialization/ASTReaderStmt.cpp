@@ -1928,7 +1928,8 @@ OMPClause *OMPClauseReader::readClause() {
 }
 
 void OMPClauseReader::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
-  C->setPreInitStmt(Reader->Record.readSubStmt());
+  C->setPreInitStmt(Reader->Record.readSubStmt(),
+                    static_cast<OpenMPDirectiveKind>(Reader->Record.readInt()));
 }
 
 void OMPClauseReader::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
@@ -1937,6 +1938,7 @@ void OMPClauseReader::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
 }
 
 void OMPClauseReader::VisitOMPIfClause(OMPIfClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setNameModifier(static_cast<OpenMPDirectiveKind>(Reader->Record.readInt()));
   C->setNameModifierLoc(Reader->ReadSourceLocation());
   C->setColonLoc(Reader->ReadSourceLocation());

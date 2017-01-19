@@ -544,6 +544,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
   Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile = Args.getLastArgValue(OPT_fprofile_sample_use_EQ);
+  Opts.DebugInfoForProfiling = Args.hasFlag(
+      OPT_fdebug_info_for_profiling, OPT_fno_debug_info_for_profiling, false);
 
   setPGOInstrumentor(Opts, Args, Diags);
   Opts.InstrProfileOutput =
@@ -631,6 +633,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   const Arg *A = Args.getLastArg(OPT_flto, OPT_flto_EQ);
   Opts.EmitSummaryIndex = A && A->containsValue("thin");
+  Opts.LTOUnit = Args.hasFlag(OPT_flto_unit, OPT_fno_lto_unit, false);
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK != IK_LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)

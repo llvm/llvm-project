@@ -527,6 +527,7 @@ public:
   /// Get combiner/initializer for the specified user-defined reduction, if any.
   virtual std::pair<llvm::Function *, llvm::Function *>
   getUserDefinedReduction(const OMPDeclareReductionDecl *D);
+
   /// \brief Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).
@@ -535,7 +536,19 @@ public:
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  virtual llvm::Value *emitParallelOrTeamsOutlinedFunction(
+  virtual llvm::Value *emitParallelOutlinedFunction(
+      const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+      OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
+
+  /// \brief Emits outlined function for the specified OpenMP teams directive
+  /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
+  /// kmp_int32 BoundID, struct context_vars*).
+  /// \param D OpenMP directive.
+  /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
+  /// \param InnermostKind Kind of innermost directive (for simple directives it
+  /// is a directive itself, for combined - its innermost directive).
+  /// \param CodeGen Code generation sequence for the \a D directive.
+  virtual llvm::Value *emitTeamsOutlinedFunction(
       const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
       OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
 

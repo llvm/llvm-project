@@ -283,6 +283,7 @@ void OMPClauseProfiler::VistOMPClauseWithPostUpdate(
 }
 
 void OMPClauseProfiler::VisitOMPIfClause(const OMPIfClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getCondition())
     Profiler->VisitStmt(C->getCondition());
 }

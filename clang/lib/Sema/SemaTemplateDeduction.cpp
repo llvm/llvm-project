@@ -2640,11 +2640,9 @@ Sema::SubstituteExplicitTemplateArguments(
   if (Inst.isInvalid())
     return TDK_InstantiationDepth;
 
-  if (CheckTemplateArgumentList(FunctionTemplate,
-                                SourceLocation(),
-                                ExplicitTemplateArgs,
-                                true,
-                                Builder) || Trap.hasErrorOccurred()) {
+  if (CheckTemplateArgumentList(FunctionTemplate, SourceLocation(),
+                                ExplicitTemplateArgs, true, Builder, false) ||
+      Trap.hasErrorOccurred()) {
     unsigned Index = Builder.size();
     if (Index >= TemplateParams->size())
       Index = TemplateParams->size() - 1;

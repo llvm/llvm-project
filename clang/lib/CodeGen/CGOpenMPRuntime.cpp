@@ -842,12 +842,12 @@ static Address createIdentFieldGEP(CodeGenFunction &CGF, Address Addr,
   return CGF.Builder.CreateStructGEP(Addr, Field, Offset, Name);
 }
 
-llvm::Value *CGOpenMPRuntime::emitParallelOrTeamsOutlinedFunction(
-    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
-    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+static llvm::Value *emitParallelOrTeamsOutlinedFunction(
+    CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
+    const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+    const StringRef OutlinedHelperName, const RegionCodeGenTy &CodeGen) {
   assert(ThreadIDVar->getType()->isPointerType() &&
          "thread id variable must be of type kmp_int32 *");
-  const CapturedStmt *CS = cast<CapturedStmt>(D.getAssociatedStmt());
   CodeGenFunction CGF(CGM, true);
   bool HasCancel = false;
   if (auto *OPD = dyn_cast<OMPParallelDirective>(&D))
@@ -857,9 +857,25 @@ llvm::Value *CGOpenMPRuntime::emitParallelOrTeamsOutlinedFunction(
   else if (auto *OPFD = dyn_cast<OMPParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
-                                    HasCancel, getOutlinedHelperName());
+                                    HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
   return CGF.GenerateOpenMPCapturedStmtFunction(*CS);
+}
+
+llvm::Value *CGOpenMPRuntime::emitParallelOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  const CapturedStmt *CS = D.getCapturedStmt(OMPD_parallel);
+  return emitParallelOrTeamsOutlinedFunction(
+      CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(), CodeGen);
+}
+
+llvm::Value *CGOpenMPRuntime::emitTeamsOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  const CapturedStmt *CS = D.getCapturedStmt(OMPD_teams);
+  return emitParallelOrTeamsOutlinedFunction(
+      CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(), CodeGen);
 }
 
 llvm::Value *CGOpenMPRuntime::emitTaskOutlinedFunction(
@@ -6123,6 +6139,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case Stmt::OMPTargetDirectiveClass:
       CodeGenFunction::EmitOMPTargetDeviceFunction(
           CGM, ParentName, cast<OMPTargetDirective>(*S));
+      break;
+    case Stmt::OMPTargetParallelDirectiveClass:
+      CodeGenFunction::EmitOMPTargetParallelDeviceFunction(
+          CGM, ParentName, cast<OMPTargetParallelDirective>(*S));
       break;
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");

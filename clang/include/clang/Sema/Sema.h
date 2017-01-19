@@ -6155,12 +6155,17 @@ public:
   /// \param Converted Will receive the converted, canonicalized template
   /// arguments.
   ///
+  /// \param UpdateArgsWithConversions If \c true, update \p TemplateArgs to
+  /// contain the converted forms of the template arguments as written.
+  /// Otherwise, \p TemplateArgs will not be modified.
+  ///
   /// \returns true if an error occurred, false otherwise.
   bool CheckTemplateArgumentList(TemplateDecl *Template,
                                  SourceLocation TemplateLoc,
                                  TemplateArgumentListInfo &TemplateArgs,
                                  bool PartialTemplateArgs,
-                           SmallVectorImpl<TemplateArgument> &Converted);
+                                 SmallVectorImpl<TemplateArgument> &Converted,
+                                 bool UpdateArgsWithConversions = true);
 
   bool CheckTemplateTypeArgument(TemplateTypeParmDecl *Param,
                                  TemplateArgumentLoc &Arg,
@@ -8386,6 +8391,9 @@ public:
   bool isInOpenMPDeclareTargetContext() const {
     return IsInOpenMPDeclareTargetContext;
   }
+
+  /// Return the number of captured regions created for an OpenMP directive.
+  static int getOpenMPCaptureLevels(OpenMPDirectiveKind Kind);
 
   /// \brief Initialization of captured region for OpenMP region.
   void ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope);
