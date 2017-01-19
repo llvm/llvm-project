@@ -1,12 +1,12 @@
 ; Make sure we still form mad even when unsafe math or fp-contract is allowed instead of fma.
 
-; RUN: llc -march=amdgcn -mcpu=tahiti -amdgpu-enable-fneg-combines -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -amdgpu-enable-fneg-combines -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -amdgpu-enable-fneg-combines -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI -check-prefix=SI-STD -check-prefix=FUNC %s
 
 ; Make sure we don't form mad with denormals
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+fp32-denormals -fp-contract=fast -amdgpu-enable-fneg-combines -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=verde -mattr=+fp32-denormals -fp-contract=fast -amdgpu-enable-fneg-combines -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-DENORM-SLOWFMAF -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -mattr=+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-DENORM-SLOWFMAF -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fabs.f32(float) #0
