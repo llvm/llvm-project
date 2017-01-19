@@ -3,15 +3,15 @@
 // Note: [class.inhctor] was removed by P0136R1. This tests the new behavior
 // for the wording that used to be there.
 
-struct B1 { // expected-note 2{{candidate}}
+struct B1 {
   B1(int); // expected-note {{candidate}}
 };
-struct B2 { // expected-note 2{{candidate}}
+struct B2 {
   B2(int); // expected-note {{candidate}}
 };
 struct D1 : B1, B2 { // expected-note 2{{candidate}}
-  using B1::B1; // expected-note 3{{inherited here}}
-  using B2::B2; // expected-note 3{{inherited here}}
+  using B1::B1; // expected-note {{inherited here}}
+  using B2::B2; // expected-note {{inherited here}}
 };
 struct D2 : B1, B2 {
   using B1::B1;

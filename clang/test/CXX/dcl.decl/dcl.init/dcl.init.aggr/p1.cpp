@@ -134,13 +134,13 @@ ExplicitDefaultedAggr eda2{};
 
 struct DefaultedBase {
   int n;
-  DefaultedBase() = default; // expected-note 0+ {{candidate}}
-  DefaultedBase(DefaultedBase const&) = default; // expected-note 0+ {{candidate}}
-  DefaultedBase(DefaultedBase &&) = default; // expected-note 0+ {{candidate}}
+  DefaultedBase() = default;
+  DefaultedBase(DefaultedBase const&) = default;
+  DefaultedBase(DefaultedBase &&) = default;
 };
 
 struct InheritingConstructors : DefaultedBase { // expected-note 3 {{candidate}}
-  using DefaultedBase::DefaultedBase; // expected-note 2 {{inherited here}}
+  using DefaultedBase::DefaultedBase;
 };
 InheritingConstructors ic = { 42 }; // expected-error {{no matching constructor}}
 
