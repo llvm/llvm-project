@@ -1986,3 +1986,117 @@ define i32 @test_bitcast_v16i1_zext(<16 x i32> %a) {
    %val1 = add i32 %val, %val
    ret i32 %val1
 }
+
+define i16 @test_v16i1_add(i16 %x, i16 %y) {
+; CHECK-LABEL: test_v16i1_add:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kxorw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i16 %x to <16 x i1>
+  %m1 = bitcast i16 %y to <16 x i1>
+  %m2 = add <16 x i1> %m0,  %m1
+  %ret = bitcast <16 x i1> %m2 to i16
+  ret i16 %ret
+}
+
+define i16 @test_v16i1_sub(i16 %x, i16 %y) {
+; CHECK-LABEL: test_v16i1_sub:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kxorw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i16 %x to <16 x i1>
+  %m1 = bitcast i16 %y to <16 x i1>
+  %m2 = sub <16 x i1> %m0,  %m1
+  %ret = bitcast <16 x i1> %m2 to i16
+  ret i16 %ret
+}
+
+define i16 @test_v16i1_mul(i16 %x, i16 %y) {
+; CHECK-LABEL: test_v16i1_mul:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %m0 = bitcast i16 %x to <16 x i1>
+  %m1 = bitcast i16 %y to <16 x i1>
+  %m2 = mul <16 x i1> %m0,  %m1
+  %ret = bitcast <16 x i1> %m2 to i16
+  ret i16 %ret
+}
+
+define i8 @test_v8i1_add(i8 %x, i8 %y) {
+; KNL-LABEL: test_v8i1_add:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v8i1_add:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb %edi, %k0
+; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kxorb %k1, %k0, %k0
+; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    retq
+  %m0 = bitcast i8 %x to <8 x i1>
+  %m1 = bitcast i8 %y to <8 x i1>
+  %m2 = add <8 x i1> %m0,  %m1
+  %ret = bitcast <8 x i1> %m2 to i8
+  ret i8 %ret
+}
+
+define i8 @test_v8i1_sub(i8 %x, i8 %y) {
+; KNL-LABEL: test_v8i1_sub:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v8i1_sub:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb %edi, %k0
+; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kxorb %k1, %k0, %k0
+; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    retq
+  %m0 = bitcast i8 %x to <8 x i1>
+  %m1 = bitcast i8 %y to <8 x i1>
+  %m2 = sub <8 x i1> %m0,  %m1
+  %ret = bitcast <8 x i1> %m2 to i8
+  ret i8 %ret
+}
+
+define i8 @test_v8i1_mul(i8 %x, i8 %y) {
+; KNL-LABEL: test_v8i1_mul:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_v8i1_mul:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb %edi, %k0
+; SKX-NEXT:    kmovb %esi, %k1
+; SKX-NEXT:    kandb %k1, %k0, %k0
+; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    retq
+  %m0 = bitcast i8 %x to <8 x i1>
+  %m1 = bitcast i8 %y to <8 x i1>
+  %m2 = mul <8 x i1> %m0,  %m1
+  %ret = bitcast <8 x i1> %m2 to i8
+  ret i8 %ret
+}

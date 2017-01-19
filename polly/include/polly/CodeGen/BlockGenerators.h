@@ -824,7 +824,7 @@ private:
   DenseMap<BasicBlock *, ValueMapT> RegionMaps;
 
   /// Mapping to remember PHI nodes that still need incoming values.
-  using PHINodePairTy = std::pair<const PHINode *, PHINode *>;
+  using PHINodePairTy = std::pair<PHINode *, PHINode *>;
   DenseMap<BasicBlock *, SmallVector<PHINodePairTy, 4>> IncompletePHINodeMap;
 
   /// Repair the dominance tree after we created a copy block for @p BB.
@@ -840,7 +840,7 @@ private:
   /// @param IncomingBB An incoming block of @p PHI.
   /// @param LTS        A map from old loops to new induction variables as
   /// SCEVs.
-  void addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI, PHINode *PHICopy,
+  void addOperandToPHI(ScopStmt &Stmt, PHINode *PHI, PHINode *PHICopy,
                        BasicBlock *IncomingBB, LoopToScevMapT &LTS);
 
   /// Create a PHI that combines the incoming values from all incoming blocks

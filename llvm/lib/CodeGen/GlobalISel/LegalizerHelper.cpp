@@ -222,7 +222,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
-  case TargetOpcode::G_SUB: {
+  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SHL: {
     // Perform operation at larger width (any extension is fine here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
@@ -242,10 +243,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV: {
-    unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV
-                          ? TargetOpcode::G_SEXT
-                          : TargetOpcode::G_ZEXT;
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
+    unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV ||
+                             MI.getOpcode() == TargetOpcode::G_ASHR
+                         ? TargetOpcode::G_SEXT
+                         : TargetOpcode::G_ZEXT;
 
     unsigned LHSExt = MRI.createGenericVirtualRegister(WideTy);
     MIRBuilder.buildInstr(ExtOp).addDef(LHSExt).addUse(

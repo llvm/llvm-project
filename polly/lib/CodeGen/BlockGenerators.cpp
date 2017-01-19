@@ -1400,7 +1400,7 @@ void RegionGenerator::generateScalarStores(
   }
 }
 
-void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI,
+void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
                                       PHINode *PHICopy, BasicBlock *IncomingBB,
                                       LoopToScevMapT &LTS) {
   Region *StmtR = Stmt.getRegion();
@@ -1436,7 +1436,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI,
     if (PHICopy->getBasicBlockIndex(BBCopy) >= 0)
       return;
 
-    Value *PHIOpAddr = getOrCreatePHIAlloca(const_cast<PHINode *>(PHI));
+    Value *PHIOpAddr = getOrCreatePHIAlloca(PHI);
     OpCopy = new LoadInst(PHIOpAddr, PHIOpAddr->getName() + ".reload",
                           BlockMap[IncomingBB]->getTerminator());
   }

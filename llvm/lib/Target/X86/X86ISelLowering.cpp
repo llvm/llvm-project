@@ -1357,12 +1357,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v16i32, Legal);
     setOperationAction(ISD::UMIN,               MVT::v8i64, Legal);
 
-    setOperationAction(ISD::ADD,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::ADD,                MVT::v16i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::SUB,                MVT::v16i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::MUL,                MVT::v16i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::ADD,                MVT::v16i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::SUB,                MVT::v16i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::MUL,                MVT::v16i1, Custom);
 
     setOperationAction(ISD::MUL,                MVT::v16i32, Legal);
 
@@ -1460,12 +1460,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
-    setOperationAction(ISD::ADD,                MVT::v32i1, Expand);
-    setOperationAction(ISD::ADD,                MVT::v64i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v32i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v64i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v32i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v64i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v32i1, Custom);
+    setOperationAction(ISD::ADD,                MVT::v64i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v32i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v64i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v32i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v64i1, Custom);
 
     setOperationAction(ISD::SETCC,              MVT::v32i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v64i1, Custom);
@@ -1574,9 +1574,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
 
     for (auto VT : { MVT::v2i1, MVT::v4i1 }) {
-      setOperationAction(ISD::ADD,                VT, Expand);
-      setOperationAction(ISD::SUB,                VT, Expand);
-      setOperationAction(ISD::MUL,                VT, Expand);
+      setOperationAction(ISD::ADD,                VT, Custom);
+      setOperationAction(ISD::SUB,                VT, Custom);
+      setOperationAction(ISD::MUL,                VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Expand);
 
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
@@ -20847,8 +20847,9 @@ static SDValue Lower512IntArith(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue LowerADD_SUB(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getValueType() == MVT::i1)
-    return DAG.getNode(ISD::XOR, SDLoc(Op), Op.getValueType(),
+  MVT VT = Op.getSimpleValueType();
+  if (VT.getScalarType() == MVT::i1)
+    return DAG.getNode(ISD::XOR, SDLoc(Op), VT,
                        Op.getOperand(0), Op.getOperand(1));
   assert(Op.getSimpleValueType().is256BitVector() &&
          Op.getSimpleValueType().isInteger() &&
@@ -20868,7 +20869,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
 
-  if (VT == MVT::i1)
+  if (VT.getScalarType() == MVT::i1)
     return DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0), Op.getOperand(1));
 
   // Decompose 256-bit ops into smaller 128-bit ops.
@@ -31325,6 +31326,96 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::PCMPGT, SDLoc(N), VT, Shift.getOperand(0), Ones);
 }
 
+/// Check if truncation with saturation form type \p SrcVT to \p DstVT
+/// is valid for the given \p Subtarget.
+static bool isSATValidOnAVX512Subtarget(EVT SrcVT, EVT DstVT,
+                                        const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512())
+    return false;
+
+  // FIXME: Scalar type may be supported if we move it to vector register.
+  if (!SrcVT.isVector() || !SrcVT.isSimple() || SrcVT.getSizeInBits() > 512)
+    return false;
+
+  EVT SrcElVT = SrcVT.getScalarType();
+  EVT DstElVT = DstVT.getScalarType();
+  if (SrcElVT.getSizeInBits() < 16 || SrcElVT.getSizeInBits() > 64)
+    return false;
+  if (DstElVT.getSizeInBits() < 8 || DstElVT.getSizeInBits() > 32)
+    return false;
+  if (SrcVT.is512BitVector() || Subtarget.hasVLX())
+    return SrcElVT.getSizeInBits() >= 32 || Subtarget.hasBWI();
+  return false;
+}
+
+/// Return true if VPACK* instruction can be used for the given types
+/// and it is avalable on \p Subtarget.
+static bool
+isSATValidOnSSESubtarget(EVT SrcVT, EVT DstVT, const X86Subtarget &Subtarget) {
+  if (Subtarget.hasSSE2())
+    // v16i16 -> v16i8
+    if (SrcVT == MVT::v16i16 && DstVT == MVT::v16i8)
+      return true;
+  if (Subtarget.hasSSE41())
+    // v8i32 -> v8i16
+    if (SrcVT == MVT::v8i32 && DstVT == MVT::v8i16)
+      return true;
+  return false;
+}
+
+/// Detect a pattern of truncation with saturation:
+/// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
+/// Return the source value to be truncated or SDValue() if the pattern was not
+/// matched.
+static SDValue detectUSatPattern(SDValue In, EVT VT) {
+  if (In.getOpcode() != ISD::UMIN)
+    return SDValue();
+
+  //Saturation with truncation. We truncate from InVT to VT.
+  assert(In.getScalarValueSizeInBits() > VT.getScalarSizeInBits() &&
+    "Unexpected types for truncate operation");
+
+  APInt C;
+  if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C)) {
+    // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
+    // the element size of the destination type.
+    return APIntOps::isMask(VT.getScalarSizeInBits(), C) ? In.getOperand(0) :
+      SDValue();
+  }
+  return SDValue();
+}
+
+/// Detect a pattern of truncation with saturation:
+/// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
+/// The types should allow to use VPMOVUS* instruction on AVX512.
+/// Return the source value to be truncated or SDValue() if the pattern was not
+/// matched.
+static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
+                                       const X86Subtarget &Subtarget) {
+  if (!isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
+    return SDValue();
+  return detectUSatPattern(In, VT);
+}
+
+static SDValue
+combineTruncateWithUSat(SDValue In, EVT VT, SDLoc &DL, SelectionDAG &DAG,
+                        const X86Subtarget &Subtarget) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(In.getValueType()) || !TLI.isTypeLegal(VT))
+    return SDValue();
+  SDValue USatVal = detectUSatPattern(In, VT);
+  if (USatVal) {
+    if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
+      return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
+    if (isSATValidOnSSESubtarget(In.getValueType(), VT, Subtarget)) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(USatVal, DL);
+      return DAG.getNode(X86ISD::PACKUS, DL, VT, Lo, Hi);
+    }
+  }
+  return SDValue();
+}
+
 /// This function detects the AVG pattern between vectors of unsigned i8/i16,
 /// which is c = (a + b + 1) / 2, and replace this operation with the efficient
 /// X86ISD::AVG instruction.
@@ -31890,6 +31981,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
                           St->getPointerInfo(), St->getAlignment(),
                           St->getMemOperand()->getFlags());
+
+    if (SDValue Val =
+        detectAVX512USatPattern(St->getValue(), St->getMemoryVT(), Subtarget))
+      return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
+                             dl, Val, St->getBasePtr(),
+                             St->getMemoryVT(), St->getMemOperand(), DAG);
 
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     unsigned NumElems = VT.getVectorNumElements();
@@ -32510,6 +32607,10 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   // Try to detect AVG pattern first.
   if (SDValue Avg = detectAVGPattern(Src, VT, DAG, Subtarget, DL))
     return Avg;
+
+  // Try to combine truncation with unsigned saturation.
+  if (SDValue Val = combineTruncateWithUSat(Src, VT, DL, DAG, Subtarget))
+    return Val;
 
   // The bitcast source is a direct mmx result.
   // Detect bitcasts between i32 to x86mmx
