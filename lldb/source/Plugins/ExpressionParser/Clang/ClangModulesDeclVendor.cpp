@@ -66,7 +66,7 @@ class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
       llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> &diagnostics_engine,
-      llvm::IntrusiveRefCntPtr<clang::CompilerInvocation> &compiler_invocation,
+      std::shared_ptr<clang::CompilerInvocation> &compiler_invocation,
       std::unique_ptr<clang::CompilerInstance> &&compiler_instance,
       std::unique_ptr<clang::Parser> &&parser);
 
@@ -97,7 +97,7 @@ private:
   bool m_enabled = false;
 
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> m_diagnostics_engine;
-  llvm::IntrusiveRefCntPtr<clang::CompilerInvocation> m_compiler_invocation;
+  std::shared_ptr<clang::CompilerInvocation> m_compiler_invocation;
   std::unique_ptr<clang::CompilerInstance> m_compiler_instance;
   std::unique_ptr<clang::Parser> m_parser;
   size_t m_source_location_index =
@@ -159,7 +159,7 @@ ClangModulesDeclVendor::~ClangModulesDeclVendor() {}
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> &diagnostics_engine,
-    llvm::IntrusiveRefCntPtr<clang::CompilerInvocation> &compiler_invocation,
+    std::shared_ptr<clang::CompilerInvocation> &compiler_invocation,
     std::unique_ptr<clang::CompilerInstance> &&compiler_instance,
     std::unique_ptr<clang::Parser> &&parser)
     : ClangModulesDeclVendor(), m_diagnostics_engine(diagnostics_engine),
@@ -622,9 +622,9 @@ ClangModulesDeclVendor::Create(Target &target) {
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
   }
 
-  llvm::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(
-      clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,
-                                             diagnostics_engine));
+  std::shared_ptr<clang::CompilerInvocation> invocation(
+      std::move(clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,
+                                             diagnostics_engine)));
 
   if (!invocation)
     return nullptr;
@@ -648,7 +648,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       llvm::make_unique<clang::ObjectFilePCHContainerReader>());
 
   instance->setDiagnostics(diagnostics_engine.get());
-  instance->setInvocation(invocation.get());
+  instance->setInvocation(std::move(invocation));
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 

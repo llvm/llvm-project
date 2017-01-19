@@ -4070,12 +4070,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
     error.Clear();
 
     // If we were to crash doing this, remember what type caused it
-    Host::SetCrashDescriptionWithFormat("error finding type for %s",
+    llvm::PrettyStackTraceFormat PST("error finding type for %s",
                                         mangled_typename);
-    // Make a scoped cleanup object that will clear the crash description string
-    // on exit of this function.
-    lldb_utility::CleanUp<const char *> crash_description_cleanup(
-        NULL, Host::SetCrashDescription);
     ConstString mangled_name(mangled_typename);
     swift::TypeBase *found_type =
         m_mangled_name_to_type_map.lookup(mangled_name.GetCString());

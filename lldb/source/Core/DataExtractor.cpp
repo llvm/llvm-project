@@ -1726,7 +1726,7 @@ lldb::offset_t DataExtractor::Dump(
               auto byte_size = item_byte_size;
               const auto &semantics =
                   ast->getFloatTypeSemantics(ast->LongDoubleTy);
-              if (&semantics == &llvm::APFloat::x87DoubleExtended)
+              if (&semantics == &llvm::APFloat::x87DoubleExtended())
                 byte_size = 10;
 
               llvm::APInt apint;

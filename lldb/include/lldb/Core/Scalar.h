@@ -75,11 +75,11 @@ public:
   Scalar(long double v, bool ieee_quad)
       : m_type(e_long_double), m_float((float)0), m_ieee_quad(ieee_quad) {
     if (ieee_quad)
-      m_float = llvm::APFloat(llvm::APFloat::IEEEquad,
+      m_float = llvm::APFloat(llvm::APFloat::IEEEquad(),
                               llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
                                           ((type128 *)&v)->x));
     else
-      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended,
+      m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
                               llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128,
                                           ((type128 *)&v)->x));
   }
