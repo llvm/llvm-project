@@ -512,7 +512,7 @@ protected:
     Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
-      Builder.defineMacro("_POSIX_THREADS");
+      Builder.defineMacro("_REENTRANT");
 
     switch (Triple.getArch()) {
     default:

@@ -554,8 +554,8 @@ class BaseEnumeration(object):
         if value >= len(self.__class__._kinds):
             self.__class__._kinds += [None] * (value - len(self.__class__._kinds) + 1)
         if self.__class__._kinds[value] is not None:
-            raise ValueError,'{0} value {1} already loaded'.format(
-                str(self.__class__), value)
+            raise ValueError('{0} value {1} already loaded'.format(
+                str(self.__class__), value))
         self.value = value
         self.__class__._kinds[value] = self
         self.__class__._name_map = None
@@ -577,7 +577,7 @@ class BaseEnumeration(object):
     @classmethod
     def from_id(cls, id):
         if id >= len(cls._kinds) or cls._kinds[id] is None:
-            raise ValueError,'Unknown template argument kind %d' % id
+            raise ValueError('Unknown template argument kind %d' % id)
         return cls._kinds[id]
 
     def __repr__(self):
@@ -1777,7 +1777,7 @@ class StorageClass(object):
         if value >= len(StorageClass._kinds):
             StorageClass._kinds += [None] * (value - len(StorageClass._kinds) + 1)
         if StorageClass._kinds[value] is not None:
-            raise ValueError,'StorageClass already loaded'
+            raise ValueError('StorageClass already loaded')
         self.value = value
         StorageClass._kinds[value] = self
         StorageClass._name_map = None
@@ -1798,7 +1798,7 @@ class StorageClass(object):
     @staticmethod
     def from_id(id):
         if id >= len(StorageClass._kinds) or not StorageClass._kinds[id]:
-            raise ValueError,'Unknown storage class %d' % id
+            raise ValueError('Unknown storage class %d' % id)
         return StorageClass._kinds[id]
 
     def __repr__(self):
@@ -2729,9 +2729,9 @@ class TranslationUnit(ClangObject):
                     # FIXME: It would be great to support an efficient version
                     # of this, one day.
                     value = value.read()
-                    print value
+                    print(value)
                 if not isinstance(value, str):
-                    raise TypeError,'Unexpected unsaved file contents.'
+                    raise TypeError('Unexpected unsaved file contents.')
                 unsaved_files_array[i].name = name
                 unsaved_files_array[i].contents = value
                 unsaved_files_array[i].length = len(value)
@@ -2793,9 +2793,9 @@ class TranslationUnit(ClangObject):
                     # FIXME: It would be great to support an efficient version
                     # of this, one day.
                     value = value.read()
-                    print value
+                    print(value)
                 if not isinstance(value, str):
-                    raise TypeError,'Unexpected unsaved file contents.'
+                    raise TypeError('Unexpected unsaved file contents.')
                 unsaved_files_array[i].name = name
                 unsaved_files_array[i].contents = value
                 unsaved_files_array[i].length = len(value)

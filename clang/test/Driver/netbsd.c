@@ -126,6 +126,8 @@
 // RUN: %clang -no-canonical-prefixes -target powerpc64--netbsd -static \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-POWERPC64 %s
+// RUN: %clang -target x86_64--netbsd -pthread -dM -E %s \
+// RUN: | FileCheck -check-prefix=PTHREAD %s
 
 // STATIC: ld{{.*}}" "--eh-frame-hdr"
 // STATIC-NOT: "-pie"
@@ -427,3 +429,7 @@
 // S-POWERPC64: "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // S-POWERPC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // S-POWERPC64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// PTHREAD-NOT: _POSIX_THREADS
+// PTHREAD:     _REENTRANT
+// PTHREAD-NOT: _POSIX_THREADS
