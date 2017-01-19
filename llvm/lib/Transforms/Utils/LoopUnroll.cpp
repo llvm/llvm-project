@@ -51,6 +51,16 @@ UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
                     cl::desc("Allow runtime unrolled loops to be unrolled "
                              "with epilog instead of prolog."));
 
+static cl::opt<bool>
+UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
+                    cl::desc("Verify domtree after unrolling"),
+#ifdef NDEBUG
+    cl::init(false)
+#else
+    cl::init(true)
+#endif
+                    );
+
 /// Convert the instruction operands from referencing the current values into
 /// those specified by VMap.
 static inline void remapInstruction(Instruction *I,
@@ -327,7 +337,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
          "and peeling for the same loop");
 
   if (PeelCount)
-    peelLoop(L, PeelCount, LI, SE, DT, PreserveLCSSA);
+    peelLoop(L, PeelCount, LI, SE, DT, AC, PreserveLCSSA);
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
@@ -612,14 +622,11 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       Term->eraseFromParent();
     }
   }
+
   // Update dominators of blocks we might reach through exits.
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
-  // iterations too. Thus, the new idom of the block will be the nearest
-  // common dominator of the previous idom and common dominator of all copies of
-  // the previous idom. This is equivalent to the nearest common dominator of
-  // the previous idom and the first latch, which dominates all copies of the
-  // previous idom.
+  // iterations too.
   if (DT && Count > 1) {
     for (auto *BB : OriginalLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
@@ -629,11 +636,37 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
         if (!L->contains(ChildBB))
           ChildrenToUpdate.push_back(ChildBB);
       }
-      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latches[0]);
+      BasicBlock *NewIDom;
+      if (BB == LatchBlock) {
+        // The latch is special because we emit unconditional branches in
+        // some cases where the original loop contained a conditional branch.
+        // Since the latch is always at the bottom of the loop, if the latch
+        // dominated an exit before unrolling, the new dominator of that exit
+        // must also be a latch.  Specifically, the dominator is the first
+        // latch which ends in a conditional branch, or the last latch if
+        // there is no such latch.
+        NewIDom = Latches.back();
+        for (BasicBlock *IterLatch : Latches) {
+          TerminatorInst *Term = IterLatch->getTerminator();
+          if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
+            NewIDom = IterLatch;
+            break;
+          }
+        }
+      } else {
+        // The new idom of the block will be the nearest common dominator
+        // of all copies of the previous idom. This is equivalent to the
+        // nearest common dominator of the previous idom and the first latch,
+        // which dominates all copies of the previous idom.
+        NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
+      }
       for (auto *ChildBB : ChildrenToUpdate)
         DT->changeImmediateDominator(ChildBB, NewIDom);
     }
   }
+
+  if (DT && UnrollVerifyDomtree)
+    DT->verifyDomTree();
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<Loop *, 4> ForgottenLoops;
@@ -651,13 +684,6 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       }
     }
   }
-
-  // FIXME: We only preserve DT info for complete unrolling now. Incrementally
-  // updating domtree after partial loop unrolling should also be easy.
-  if (DT && !CompletelyUnroll)
-    DT->recalculate(*L->getHeader()->getParent());
-  else if (DT)
-    DEBUG(DT->verifyDomTree());
 
   // Simplify any new induction variables in the partially unrolled loop.
   if (SE && !CompletelyUnroll && Count > 1) {
@@ -718,8 +744,6 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // at least one layer outside of the loop that was unrolled so that any
   // changes to the parent loop exposed by the unrolling are considered.
   if (DT) {
-    if (!OuterL && !CompletelyUnroll)
-      OuterL = L;
     if (OuterL) {
       // OuterL includes all loops for which we can break loop-simplify, so
       // it's sufficient to simplify only it (it'll recursively simplify inner

@@ -942,7 +942,7 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
 
 void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  if (!getCodeGenOpts().PrepareForLTO)
+  if (!getCodeGenOpts().LTOUnit)
     return;
 
   CharUnits PointerWidth =

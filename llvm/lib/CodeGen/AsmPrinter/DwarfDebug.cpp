@@ -1211,8 +1211,10 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   TheCU.addRange(RangeSpan(Asm->getFunctionBegin(), Asm->getFunctionEnd()));
 
   // Under -gmlt, skip building the subprogram if there are no inlined
-  // subroutines inside it.
-  if (TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
+  // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
+  // is still needed as we need its source location.
+  if (!Asm->TM.Options.DebugInfoForProfiling &&
+      TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
     assert(DbgValues.empty());

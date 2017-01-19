@@ -28,6 +28,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
@@ -257,7 +258,7 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree *DT,
-                    bool PreserveLCSSA) {
+                    AssumptionCache *AC, bool PreserveLCSSA) {
   if (!canPeel(L))
     return false;
 
@@ -404,9 +405,19 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
 
+  // FIXME: Incrementally update domtree.
+  DT->recalculate(*L->getHeader()->getParent());
+
   // If the loop is nested, we changed the parent loop, update SE.
-  if (Loop *ParentLoop = L->getParentLoop())
+  if (Loop *ParentLoop = L->getParentLoop()) {
     SE->forgetLoop(ParentLoop);
+
+    // FIXME: Incrementally update loop-simplify
+    simplifyLoop(ParentLoop, DT, LI, SE, AC, PreserveLCSSA);
+  } else {
+    // FIXME: Incrementally update loop-simplify
+    simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
+  }
 
   NumPeeled++;
 

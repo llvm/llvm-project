@@ -1554,7 +1554,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
 void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
                                              const CXXRecordDecl *RD,
                                              llvm::GlobalVariable *VTable) {
-  if (!CGM.getCodeGenOpts().PrepareForLTO)
+  if (!CGM.getCodeGenOpts().LTOUnit)
     return;
 
   // The location of the first virtual function pointer in the virtual table,

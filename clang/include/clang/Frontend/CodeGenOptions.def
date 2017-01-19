@@ -89,6 +89,8 @@ CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(EmitSummaryIndex, 1, 0)   ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
+CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
+                          ///< program vtable opt).
 CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< be used with an incremental
                                               ///< linker.
@@ -255,6 +257,9 @@ CODEGENOPT(PIECopyRelocations, 1, 0)
 /// Whether we should use the undefined behaviour optimization for control flow
 /// paths that reach the end of a function without executing a required return.
 CODEGENOPT(StrictReturn, 1, 1)
+
+/// Whether emit extra debug info for sample pgo profile collection.
+CODEGENOPT(DebugInfoForProfiling, 1, 0)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
