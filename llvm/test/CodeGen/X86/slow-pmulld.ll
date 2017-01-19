@@ -4,6 +4,9 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE4-32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE4-64
 
+; Make sure that the slow-pmulld feature can be used without SSE4.1.
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=silvermont -mattr=-sse4.1
+
 define <4 x i32> @foo(<4 x i8> %A) {
 ; CHECK32-LABEL: foo:
 ; CHECK32:       # BB#0:
