@@ -2300,8 +2300,6 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   }
 
   // global <-> flat are no-ops and never emitted.
-  DEBUG(dbgs() << "Invalid addrspacecast:\n";
-        ASC->dump());
 
   DiagnosticInfoUnsupported InvalidAddrSpaceCast(
     *MF.getFunction(), "invalid addrspacecast", SL.getDebugLoc());
