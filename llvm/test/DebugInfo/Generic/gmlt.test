@@ -1,5 +1,6 @@
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -O0 -filetype=obj < %S/../Inputs/gmlt.ll | llvm-dwarfdump - | FileCheck %S/../Inputs/gmlt.ll
+; RUN: %llc_dwarf -O0 -filetype=obj -debug-info-for-profiling < %S/../Inputs/gmlt.ll | llvm-dwarfdump - | FileCheck %S/../Inputs/gmlt.ll --check-prefixes=PROFILING
 
 ; There's a darwin specific test in X86/gmlt, so it's okay to XFAIL this here.
 ; XFAIL: darwin
