@@ -16,6 +16,10 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <string>
 #include <vector>
 
 #if defined(__GNUC__) && defined(__linux__) && !defined(ANDROID)
@@ -34,7 +38,8 @@ inline void *getDFSanRetValTLSPtrForJIT() {
 
 namespace llvm {
 
-class TargetMachine;
+class FunctionPass;
+class ModulePass;
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
@@ -43,9 +48,6 @@ class TargetMachine;
 /// block.
 BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
                                               BasicBlock::iterator IP);
-
-class ModulePass;
-class FunctionPass;
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
@@ -76,6 +78,7 @@ struct GCOVOptions {
   // all of the function body's blocks.
   bool ExitBlockBeforeBody;
 };
+
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
@@ -87,13 +90,13 @@ ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
-  InstrProfOptions() : NoRedZone(false) {}
-
   // Add the 'noredzone' attribute to added runtime library calls.
-  bool NoRedZone;
+  bool NoRedZone = false;
 
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
+
+  InstrProfOptions() = default;
 };
 
 /// Insert frontend instrumentation based profiling.
@@ -121,12 +124,13 @@ ModulePass *createDataFlowSanitizerPass(
 
 // Options for EfficiencySanitizer sub-tools.
 struct EfficiencySanitizerOptions {
-  EfficiencySanitizerOptions() : ToolType(ESAN_None) {}
   enum Type {
     ESAN_None = 0,
     ESAN_CacheFrag,
     ESAN_WorkingSet,
-  } ToolType;
+  } ToolType = ESAN_None;
+
+  EfficiencySanitizerOptions() = default;
 };
 
 // Insert EfficiencySanitizer instrumentation.
@@ -135,25 +139,22 @@ ModulePass *createEfficiencySanitizerPass(
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
-  SanitizerCoverageOptions()
-      : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
-        TraceCmp(false), TraceDiv(false), TraceGep(false),
-        Use8bitCounters(false), TracePC(false), TracePCGuard(false) {}
-
   enum Type {
     SCK_None = 0,
     SCK_Function,
     SCK_BB,
     SCK_Edge
-  } CoverageType;
-  bool IndirectCalls;
-  bool TraceBB;
-  bool TraceCmp;
-  bool TraceDiv;
-  bool TraceGep;
-  bool Use8bitCounters;
-  bool TracePC;
-  bool TracePCGuard;
+  } CoverageType = SCK_None;
+  bool IndirectCalls = false;
+  bool TraceBB = false;
+  bool TraceCmp = false;
+  bool TraceDiv = false;
+  bool TraceGep = false;
+  bool Use8bitCounters = false;
+  bool TracePC = false;
+  bool TracePCGuard = false;
+
+  SanitizerCoverageOptions() = default;
 };
 
 // Insert SanitizerCoverage instrumentation.
@@ -175,9 +176,11 @@ FunctionPass *createBoundsCheckingPass();
 /// \brief Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the
-/// weights to strictly less than UINT32_MAX.
+/// weights to strictly less than std::numeric_limits<uint32_t>::max().
 static inline uint64_t calculateCountScale(uint64_t MaxCount) {
-  return MaxCount < UINT32_MAX ? 1 : MaxCount / UINT32_MAX + 1;
+  return MaxCount < std::numeric_limits<uint32_t>::max()
+             ? 1
+             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
 }
 
 /// \brief Scale an individual branch count.
@@ -186,10 +189,10 @@ static inline uint64_t calculateCountScale(uint64_t MaxCount) {
 ///
 static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
   uint64_t Scaled = Count / Scale;
-  assert(Scaled <= UINT32_MAX && "overflow 32-bits");
+  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
   return Scaled;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_H

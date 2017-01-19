@@ -15,7 +15,8 @@
 
 #include "typeinfo"
 
-#if defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY)
+#if defined(_LIBCPP_BUILDING_HAS_NO_ABI_LIBRARY) || \
+    defined(_LIBCPP_ABI_MICROSOFT) // FIXME: This is a temporary workaround
 std::type_info::~type_info()
 {
 }

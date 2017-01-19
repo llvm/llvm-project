@@ -158,12 +158,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->Relocatable)
     addReservedSymbols();
 
-  // Some architectures use small displacements for jump instructions.
-  // It is linker's responsibility to create thunks containing long
-  // jump instructions if jump targets are too far. Create thunks.
-  if (Target->NeedsThunks)
-    forEachRelSec(createThunks<ELFT>);
-
   // Create output sections.
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasSections) {
@@ -217,6 +211,9 @@ template <class ELFT> void Writer<ELFT>::run() {
     fixAbsoluteSymbols();
   }
 
+  // It does not make sense try to open the file if we have error already.
+  if (ErrorCount)
+    return;
   // Write the result down to a file.
   openFile();
   if (ErrorCount)
@@ -234,7 +231,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
+  // Handle -Map option.
   writeMapFile<ELFT>(OutputSections);
+  if (ErrorCount)
+    return;
+
   if (auto EC = Buffer->commit())
     error("failed to write to the output file: " + EC.message());
 
@@ -490,6 +491,16 @@ static int getPPC64SectionRank(StringRef SectionName) {
       .Default(1);
 }
 
+// All sections with SHF_MIPS_GPREL flag should be grouped together
+// because data in these sections is addressable with a gp relative address.
+static int getMipsSectionRank(const OutputSectionBase *S) {
+  if ((S->Flags & SHF_MIPS_GPREL) == 0)
+    return 0;
+  if (S->getName() == ".got")
+    return 1;
+  return 2;
+}
+
 template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
   if (!Config->ZRelro)
     return false;
@@ -507,8 +518,6 @@ template <class ELFT> bool elf::isRelroSection(const OutputSectionBase *Sec) {
   if (Sec == In<ELFT>::Dynamic->OutSec)
     return true;
   if (In<ELFT>::Got && Sec == In<ELFT>::Got->OutSec)
-    return true;
-  if (In<ELFT>::MipsGot && Sec == In<ELFT>::MipsGot->OutSec)
     return true;
   if (Sec == Out<ELFT>::BssRelRo)
     return true;
@@ -609,6 +618,8 @@ static bool compareSectionsNonScript(const OutputSectionBase *A,
   if (Config->EMachine == EM_PPC64)
     return getPPC64SectionRank(A->getName()) <
            getPPC64SectionRank(B->getName());
+  if (Config->EMachine == EM_MIPS)
+    return getMipsSectionRank(A) < getMipsSectionRank(B);
 
   return false;
 }
@@ -651,7 +662,7 @@ static void addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
                                  typename ELFT::uint Val,
                                  uint8_t StOther = STV_HIDDEN) {
   if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
-    if (S->isUndefined() || S->isShared())
+    if (!S->isInCurrentDSO())
       Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
@@ -671,7 +682,7 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase<ELFT> *IS,
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
-  if (!S->isUndefined() && !S->isShared())
+  if (S->isInCurrentDSO())
     return S->symbol();
   return addRegular(Name, IS, Value);
 }
@@ -1070,6 +1081,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     addPtArmExid(Phdrs);
     fixHeaders();
   }
+
+  // Some architectures use small displacements for jump instructions.
+  // It is linker's responsibility to create thunks containing long
+  // jump instructions if jump targets are too far. Create thunks.
+  if (Target->NeedsThunks)
+    createThunks<ELFT>(OutputSections);
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result

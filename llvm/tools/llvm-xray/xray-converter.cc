@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/Trace.h"
@@ -95,7 +96,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
   for (const auto &R : Records) {
     Trace.Records.push_back({R.RecordType, R.CPU, R.Type, R.FuncId,
                              Symbolize ? FuncIdHelper.SymbolOrNumber(R.FuncId)
-                                       : std::to_string(R.FuncId),
+                                       : llvm::to_string(R.FuncId),
                              R.TSC, R.TId});
   }
   Output Out(OS);

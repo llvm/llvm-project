@@ -166,6 +166,10 @@ int main(int argc, char **argv) {
     std::vector<GenericValue> args;
     Function *brainf_func = M.getFunction("brainf");
     GenericValue gv = ee->runFunction(brainf_func, args);
+    // Genereated code calls putchar, and output is not guaranteed without fflush.
+    // The better place for fflush(stdout) call would be the generated code, but it
+    // is unmanageable because stdout linkage name depends on stdlib implementation.
+    fflush(stdout);
   } else {
     WriteBitcodeToFile(Mod.get(), *out);
   }

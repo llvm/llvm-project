@@ -38,8 +38,7 @@ struct StringContainerChecks : BasicContainerChecks<Container, CT> {
 public:
   static void run() {
     Base::run_iterator_tests();
-    // FIXME: get these passing
-    // Base::run_allocator_aware_tests();
+    Base::run_allocator_aware_tests();
     try {
       for (int N : {3, 128}) {
         FrontOnEmptyContainer(N);

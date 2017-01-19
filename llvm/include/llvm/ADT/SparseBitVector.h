@@ -132,6 +132,17 @@ public:
     llvm_unreachable("Illegal empty element");
   }
 
+  /// find_last - Returns the index of the last set bit.
+  int find_last() const {
+    for (unsigned I = 0; I < BITWORDS_PER_ELEMENT; ++I) {
+      unsigned Idx = BITWORDS_PER_ELEMENT - I - 1;
+      if (Bits[Idx] != 0)
+        return Idx * BITWORD_SIZE + BITWORD_SIZE -
+               countLeadingZeros(Bits[Idx]) - 1;
+    }
+    llvm_unreachable("Illegal empty element");
+  }
+
   /// find_next - Returns the index of the next set bit starting from the
   /// "Curr" bit. Returns -1 if the next set bit is not found.
   int find_next(unsigned Curr) const {
@@ -766,6 +777,14 @@ public:
       return -1;
     const SparseBitVectorElement<ElementSize> &First = *(Elements.begin());
     return (First.index() * ElementSize) + First.find_first();
+  }
+
+  // Return the last set bit in the bitmap.  Return -1 if no bits are set.
+  int find_last() const {
+    if (Elements.empty())
+      return -1;
+    const SparseBitVectorElement<ElementSize> &Last = *(Elements.rbegin());
+    return (Last.index() * ElementSize) + Last.find_last();
   }
 
   // Return true if the SparseBitVector is empty

@@ -60,8 +60,8 @@ llvm::Statistic RejectStatistics[] = {
     SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
     SCOP_STAT(LoopHasNoExit, "Loop without exit"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
-    SCOP_STAT(NonSimpleMemoryAccess, "Compilated access semantics (volatile or "
-                                     "atomic)"),
+    SCOP_STAT(NonSimpleMemoryAccess,
+              "Compilated access semantics (volatile or atomic)"),
     SCOP_STAT(Alias, "Base address aliasing"),
     SCOP_STAT(Other, ""),
     SCOP_STAT(IntToPtr, "Integer to pointer conversions"),
@@ -309,8 +309,9 @@ bool ReportDifferentArrayElementSize::classof(const RejectReason *RR) {
 std::string ReportDifferentArrayElementSize::getEndUserMessage() const {
   llvm::StringRef BaseName = BaseValue->getName();
   std::string Name = (BaseName.size() > 0) ? BaseName : "UNKNOWN";
-  return "The array \"" + Name + "\" is accessed through elements that differ "
-                                 "in size";
+  return "The array \"" + Name +
+         "\" is accessed through elements that differ "
+         "in size";
 }
 
 //===----------------------------------------------------------------------===//

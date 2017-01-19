@@ -79,13 +79,13 @@ namespace Auto {
 
   TInt<Auto> ia;
   TInt<AutoPtr> iap; // expected-error {{different template parameters}}
-  TInt<DecltypeAuto> ida; // FIXME expected-error {{different template parameters}}
+  TInt<DecltypeAuto> ida;
   TInt<Int> ii;
   TInt<IntPtr> iip; // expected-error {{different template parameters}}
 
   TIntPtr<Auto> ipa;
   TIntPtr<AutoPtr> ipap;
-  TIntPtr<DecltypeAuto> ipda; // FIXME expected-error {{different template parameters}}
+  TIntPtr<DecltypeAuto> ipda;
   TIntPtr<Int> ipi; // expected-error {{different template parameters}}
   TIntPtr<IntPtr> ipip;
 
@@ -114,6 +114,6 @@ namespace Auto {
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;
-  TInt<SubstFailure> isf; // expected-error {{different template parameters}}
-  TIntPtr<SubstFailure> ipsf; // expected-error {{different template parameters}}
+  TInt<SubstFailure> isf; // FIXME: this should be ill-formed
+  TIntPtr<SubstFailure> ipsf;
 }

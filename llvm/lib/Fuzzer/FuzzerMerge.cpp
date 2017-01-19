@@ -239,14 +239,20 @@ void Fuzzer::CrashResistantMerge(const std::vector<std::string> &Args,
   // Execute the inner process untill it passes.
   // Every inner process should execute at least one input.
   std::string BaseCmd = CloneArgsWithoutX(Args, "keep-all-flags");
+  bool Success = false;
   for (size_t i = 1; i <= AllFiles.size(); i++) {
     Printf("MERGE-OUTER: attempt %zd\n", i);
     auto ExitCode =
         ExecuteCommand(BaseCmd + " -merge_control_file=" + CFPath);
     if (!ExitCode) {
       Printf("MERGE-OUTER: succesfull in %zd attempt(s)\n", i);
+      Success = true;
       break;
     }
+  }
+  if (!Success) {
+    Printf("MERGE-OUTER: zero succesfull attempts, exiting\n");
+    exit(1);
   }
   // Read the control file and do the merge.
   Merger M;

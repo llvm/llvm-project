@@ -303,8 +303,9 @@ TEST(Isl, Foreach) {
     EXPECT_EQ(isl_stat_error,
               foreachEltWithBreak(
                   TestMap, [&](IslPtr<isl_basic_map> BMap) -> isl_stat {
-                    EXPECT_EQ(isl_bool_true, isl_basic_map_is_equal(
-                                                 BMap.keep(), TestBMap.keep()));
+                    EXPECT_EQ(
+                        isl_bool_true,
+                        isl_basic_map_is_equal(BMap.keep(), TestBMap.keep()));
                     NumBMaps++;
                     return isl_stat_error;
                   }));
@@ -328,13 +329,15 @@ TEST(Isl, Foreach) {
     auto TestPwAff =
         give(isl_pw_aff_val_on_domain(TestSet.copy(), isl_val_zero(Ctx.get())));
     auto NumPieces = 0;
-    foreachPieceWithBreak(TestPwAff, [&](IslPtr<isl_set> Domain,
-                                         IslPtr<isl_aff> Aff) -> isl_stat {
-      EXPECT_EQ(isl_bool_true, isl_set_is_equal(Domain.keep(), TestSet.keep()));
-      EXPECT_EQ(isl_bool_true, isl_aff_is_cst(Aff.keep()));
-      NumPieces++;
-      return isl_stat_error;
-    });
+    foreachPieceWithBreak(
+        TestPwAff,
+        [&](IslPtr<isl_set> Domain, IslPtr<isl_aff> Aff) -> isl_stat {
+          EXPECT_EQ(isl_bool_true,
+                    isl_set_is_equal(Domain.keep(), TestSet.keep()));
+          EXPECT_EQ(isl_bool_true, isl_aff_is_cst(Aff.keep()));
+          NumPieces++;
+          return isl_stat_error;
+        });
     EXPECT_EQ(1, NumPieces);
   }
 }

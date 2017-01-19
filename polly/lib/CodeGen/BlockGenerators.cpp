@@ -476,9 +476,9 @@ void BlockGenerator::generateScalarStores(
     __isl_keep isl_id_to_ast_expr *NewAccesses) {
   Loop *L = LI.getLoopFor(Stmt.getBasicBlock());
 
-  assert(Stmt.isBlockStmt() && "Region statements need to use the "
-                               "generateScalarStores() function in the "
-                               "RegionGenerator");
+  assert(Stmt.isBlockStmt() &&
+         "Region statements need to use the generateScalarStores() function in "
+         "the RegionGenerator");
 
   for (MemoryAccess *MA : Stmt) {
     if (MA->isOriginalArrayKind() || MA->isRead())
@@ -1060,8 +1060,9 @@ void VectorBlockGenerator::verifyNoScalarStores(ScopStmt &Stmt) {
 
 void VectorBlockGenerator::copyStmt(
     ScopStmt &Stmt, __isl_keep isl_id_to_ast_expr *NewAccesses) {
-  assert(Stmt.isBlockStmt() && "TODO: Only block statements can be copied by "
-                               "the vector block generator");
+  assert(Stmt.isBlockStmt() &&
+         "TODO: Only block statements can be copied by the vector block "
+         "generator");
 
   BasicBlock *BB = Stmt.getBasicBlock();
   BasicBlock *CopyBB = SplitBlock(Builder.GetInsertBlock(),
@@ -1237,8 +1238,9 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   BlockMap[R->getExit()] = ExitBBCopy;
 
   BasicBlock *ExitDomBBCopy = BlockMap.lookup(findExitDominator(DT, R));
-  assert(ExitDomBBCopy && "Common exit dominator must be within region; at "
-                          "least the entry node must match");
+  assert(ExitDomBBCopy &&
+         "Common exit dominator must be within region; at least the entry node "
+         "must match");
   DT.changeImmediateDominator(ExitBBCopy, ExitDomBBCopy);
 
   // As the block generator doesn't handle control flow we need to add the

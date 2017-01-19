@@ -67,6 +67,7 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
   bool isShared() const { return SymbolKind == SharedKind; }
+  bool isInCurrentDSO() const { return !isUndefined() && !isShared(); }
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
   StringRef getName() const { return Name; }

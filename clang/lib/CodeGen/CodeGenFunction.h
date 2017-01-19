@@ -2704,13 +2704,10 @@ public:
   void EmitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &S);
 
-  /// Emit outlined function for the target directive.
-  static std::pair<llvm::Function * /*OutlinedFn*/,
-                   llvm::Constant * /*OutlinedFnID*/>
-  EmitOMPTargetDirectiveOutlinedFunction(CodeGenModule &CGM,
-                                         const OMPTargetDirective &S,
-                                         StringRef ParentName,
-                                         bool IsOffloadEntry);
+  /// Emit device code for the target directive.
+  static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
+                                          StringRef ParentName,
+                                          const OMPTargetDirective &S);
   /// \brief Emit inner loop of the worksharing/simd construct.
   ///
   /// \param S Directive, for which the inner loop must be emitted.

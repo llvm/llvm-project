@@ -3832,13 +3832,13 @@ private:
 
   friend class ASTContext; // creates these
 
-  AttributedType(QualType canon, Kind attrKind,
-                 QualType modified, QualType equivalent)
-    : Type(Attributed, canon, canon->isDependentType(),
-           canon->isInstantiationDependentType(),
-           canon->isVariablyModifiedType(),
-           canon->containsUnexpandedParameterPack()),
-      ModifiedType(modified), EquivalentType(equivalent) {
+  AttributedType(QualType canon, Kind attrKind, QualType modified,
+                 QualType equivalent)
+      : Type(Attributed, canon, equivalent->isDependentType(),
+             equivalent->isInstantiationDependentType(),
+             equivalent->isVariablyModifiedType(),
+             equivalent->containsUnexpandedParameterPack()),
+        ModifiedType(modified), EquivalentType(equivalent) {
     AttributedTypeBits.AttrKind = attrKind;
   }
 

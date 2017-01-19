@@ -1,4 +1,4 @@
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   add_subdirectory(Linux)
   add_subdirectory(POSIX)
 elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")

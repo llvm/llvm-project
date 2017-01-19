@@ -553,6 +553,13 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
       KnownOne.setAllBits();
       return;
     }
+    if (match(Arg, m_Not(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      assert(BitWidth == 1 && "assume operand is not i1?");
+      KnownZero.setAllBits();
+      KnownOne.clearAllBits();
+      return;
+    }
 
     // The remaining tests are all recursive, so bail out if we hit the limit.
     if (Depth == MaxDepth)
@@ -1400,6 +1407,11 @@ static void computeKnownBitsFromOperator(const Operator *I, APInt &KnownZero,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default: break;
+      case Intrinsic::bitreverse:
+        computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
+        KnownZero = KnownZero2.reverseBits();
+        KnownOne = KnownOne2.reverseBits();
+        break;
       case Intrinsic::bswap:
         computeKnownBits(I->getOperand(0), KnownZero2, KnownOne2, Depth + 1, Q);
         KnownZero |= KnownZero2.byteSwap();

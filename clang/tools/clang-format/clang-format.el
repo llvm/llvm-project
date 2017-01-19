@@ -134,7 +134,11 @@ is no active region.  If no style is given uses `clang-format-style'."
         (file-end (clang-format--bufferpos-to-filepos end 'approximate))
         (cursor (clang-format--bufferpos-to-filepos (point) 'exact))
         (temp-buffer (generate-new-buffer " *clang-format-temp*"))
-        (temp-file (make-temp-file "clang-format")))
+        (temp-file (make-temp-file "clang-format"))
+        (default-process-coding-system
+          ;; Output is XML, which is always UTF-8.  Input encoding should match
+          ;; the file encoding, otherwise the offsets calculated above are off.
+          (cons 'utf-8-unix buffer-file-coding-system)))
     (unwind-protect
         (let ((status (call-process-region
                        nil nil clang-format-executable

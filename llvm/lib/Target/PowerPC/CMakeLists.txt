@@ -40,6 +40,7 @@ add_llvm_target(PowerPCCodeGen
   PPCVSXCopy.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp
+  PPCExpandISEL.cpp
   )
 
 add_subdirectory(AsmParser)

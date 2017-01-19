@@ -5217,7 +5217,11 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
 
 SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
 
+  // fold (bitreverse c1) -> c2
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
+    return DAG.getNode(ISD::BITREVERSE, SDLoc(N), VT, N0);
   // fold (bitreverse (bitreverse x)) -> x
   if (N0.getOpcode() == ISD::BITREVERSE)
     return N0.getOperand(0);

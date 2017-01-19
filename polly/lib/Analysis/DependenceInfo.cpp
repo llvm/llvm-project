@@ -151,8 +151,9 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         // to match the new access domains, thus we need
         //   [Stmt[i0, i1] -> MemAcc_A[i0 + i1]] -> [0, i0, 2, i1, 0]
         isl_map *Schedule = Stmt.getSchedule();
-        assert(Schedule && "Schedules that contain extension nodes require "
-                           "special handling.");
+        assert(Schedule &&
+               "Schedules that contain extension nodes require special "
+               "handling.");
         Schedule = isl_map_apply_domain(
             Schedule,
             isl_map_reverse(isl_map_domain_map(isl_map_copy(accdom))));
@@ -163,8 +164,9 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         accdom = tag(accdom, MA, Level);
         if (Level > Dependences::AL_Statement) {
           auto *StmtScheduleMap = Stmt.getSchedule();
-          assert(StmtScheduleMap && "Schedules that contain extension nodes "
-                                    "require special handling.");
+          assert(StmtScheduleMap &&
+                 "Schedules that contain extension nodes require special "
+                 "handling.");
           isl_map *Schedule = tag(StmtScheduleMap, MA, Level);
           *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Schedule);
         }
@@ -274,8 +276,9 @@ void Dependences::addPrivatizationDependences() {
     *PrivMap = isl_union_map_apply_range(isl_union_map_copy(*Map),
                                          isl_union_map_copy(TC_RED));
     *PrivMap = isl_union_map_union(
-        *PrivMap, isl_union_map_apply_range(isl_union_map_copy(TC_RED),
-                                            isl_union_map_copy(*Map)));
+        *PrivMap,
+        isl_union_map_apply_range(isl_union_map_copy(TC_RED),
+                                  isl_union_map_copy(*Map)));
 
     *Map = isl_union_map_union(*Map, *PrivMap);
   }

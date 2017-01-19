@@ -29,13 +29,12 @@ if( IS_IN_TRY_COMPILE )
  return()
 endif()
 
-set( CMAKE_SYSTEM_NAME Linux )
+set( CMAKE_SYSTEM_NAME Android )
 include( CMakeForceCompiler )
 
 # flags and definitions
 add_definitions( -DANDROID -DLLDB_DISABLE_LIBEDIT )
 set( ANDROID True )
-set( __ANDROID_NDK__ True )
 set( LLDB_DEFAULT_DISABLE_LIBEDIT True )
 
 # linking lldb-server statically for Android avoids the need to ship two

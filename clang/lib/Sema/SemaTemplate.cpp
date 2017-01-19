@@ -5123,18 +5123,22 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   if (CTAK == CTAK_Deduced &&
       !Context.hasSameType(ParamType.getNonLValueExprType(Context),
                            Arg->getType())) {
-    // C++ [temp.deduct.type]p17: (DR1770)
-    //   If P has a form that contains <i>, and if the type of i differs from
-    //   the type of the corresponding template parameter of the template named
-    //   by the enclosing simple-template-id, deduction fails.
-    //
-    // Note that CTAK will be CTAK_DeducedFromArrayBound if the form was [i]
-    // rather than <i>.
-    //
-    // FIXME: We interpret the 'i' here as referring to the expression
-    // denoting the non-type template parameter rather than the parameter
-    // itself, and so strip off references before comparing types. It's
-    // not clear how this is supposed to work for references.
+    // FIXME: If either type is dependent, we skip the check. This isn't
+    // correct, since during deduction we're supposed to have replaced each
+    // template parameter with some unique (non-dependent) placeholder.
+    // FIXME: If the argument type contains 'auto', we carry on and fail the
+    // type check in order to force specific types to be more specialized than
+    // 'auto'. It's not clear how partial ordering with 'auto' is supposed to
+    // work.
+    if ((ParamType->isDependentType() || Arg->isTypeDependent()) &&
+        !Arg->getType()->getContainedAutoType()) {
+      Converted = TemplateArgument(Arg);
+      return Arg;
+    }
+    // FIXME: This attempts to implement C++ [temp.deduct.type]p17. Per DR1770,
+    // we should actually be checking the type of the template argument in P,
+    // not the type of the template argument deduced from A, against the
+    // template parameter type.
     Diag(StartLoc, diag::err_deduced_non_type_template_arg_type_mismatch)
       << Arg->getType()
       << ParamType.getUnqualifiedType();

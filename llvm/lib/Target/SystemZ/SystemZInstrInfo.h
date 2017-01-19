@@ -151,7 +151,8 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
   void expandLoadStackGuard(MachineInstr *MI) const;
   void emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
-                     unsigned LowLowOpcode, unsigned Size, bool KillSrc) const;
+                     unsigned LowLowOpcode, unsigned Size, bool KillSrc,
+                     bool UndefSrc) const;
   virtual void anchor();
 
 protected:

@@ -1277,7 +1277,7 @@ void FileSpec::PrependPathComponent(llvm::StringRef component) {
   std::string result =
       join_path_components(m_syntax, {component, m_directory.GetStringRef(),
                                       m_filename.GetStringRef()});
-  SetFile(result, resolve);
+  SetFile(result, resolve, m_syntax);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {

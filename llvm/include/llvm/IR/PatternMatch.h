@@ -826,6 +826,18 @@ inline CastClass_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::SIToFP>(Op);
 }
 
+/// \brief Matches FPTrunc
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPTrunc> m_FPTrunc(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPTrunc>(Op);
+}
+
+/// \brief Matches FPExt
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::FPExt>(Op);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for unary operators
 //

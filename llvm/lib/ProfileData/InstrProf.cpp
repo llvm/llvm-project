@@ -271,12 +271,12 @@ Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
   }
 
   SmallString<128> CompressedNameStrings;
-  zlib::Status Success =
-      zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
-                     zlib::BestSizeCompression);
-
-  if (Success != zlib::StatusOK)
+  Error E = zlib::compress(StringRef(UncompressedNameStrings),
+                           CompressedNameStrings, zlib::BestSizeCompression);
+  if (E) {
+    consumeError(std::move(E));
     return make_error<InstrProfError>(instrprof_error::compress_failed);
+  }
 
   return WriteStringToResult(CompressedNameStrings.size(),
                              CompressedNameStrings);
@@ -315,9 +315,12 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     if (isCompressed) {
       StringRef CompressedNameStrings(reinterpret_cast<const char *>(P),
                                       CompressedSize);
-      if (zlib::uncompress(CompressedNameStrings, UncompressedNameStrings,
-                           UncompressedSize) != zlib::StatusOK)
+      if (Error E =
+              zlib::uncompress(CompressedNameStrings, UncompressedNameStrings,
+                               UncompressedSize)) {
+        consumeError(std::move(E));
         return make_error<InstrProfError>(instrprof_error::uncompress_failed);
+      }
       P += CompressedSize;
       NameStrings = StringRef(UncompressedNameStrings.data(),
                               UncompressedNameStrings.size());
@@ -791,7 +794,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
     return true;
 
   Triple TT(M.getTargetTriple());
-  if (!TT.isOSBinFormatELF())
+  if (!TT.isOSBinFormatELF() && !TT.isOSBinFormatWasm())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile

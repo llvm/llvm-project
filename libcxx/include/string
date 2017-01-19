@@ -818,6 +818,7 @@ public:
     operator __self_view() const _NOEXCEPT { return __self_view(data(), size()); }
 
     basic_string& operator=(const basic_string& __str);
+    template <class = void>
     _LIBCPP_INLINE_VISIBILITY
     basic_string& operator=(__self_view __sv)  {return assign(__sv);}
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES

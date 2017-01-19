@@ -6099,17 +6099,18 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   if (!S)
     return;
 
-  // If we find a OMP target directive, codegen the outline function and
-  // register the result.
-  // FIXME: Add other directives with target when they become supported.
-  bool isTargetDirective = isa<OMPTargetDirective>(S);
+  // Codegen OMP target directives that offload compute to the device.
+  bool requiresDeviceCodegen =
+      isa<OMPExecutableDirective>(S) &&
+      isOpenMPTargetExecutionDirective(
+          cast<OMPExecutableDirective>(S)->getDirectiveKind());
 
-  if (isTargetDirective) {
-    auto *E = cast<OMPExecutableDirective>(S);
+  if (requiresDeviceCodegen) {
+    auto &E = *cast<OMPExecutableDirective>(S);
     unsigned DeviceID;
     unsigned FileID;
     unsigned Line;
-    getTargetEntryUniqueInfo(CGM.getContext(), E->getLocStart(), DeviceID,
+    getTargetEntryUniqueInfo(CGM.getContext(), E.getLocStart(), DeviceID,
                              FileID, Line);
 
     // Is this a target region that should not be emitted as an entry point? If
@@ -6118,13 +6119,14 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
                                                             ParentName, Line))
       return;
 
-    llvm::Function *Fn;
-    llvm::Constant *Addr;
-    std::tie(Fn, Addr) =
-        CodeGenFunction::EmitOMPTargetDirectiveOutlinedFunction(
-            CGM, cast<OMPTargetDirective>(*E), ParentName,
-            /*isOffloadEntry=*/true);
-    assert(Fn && Addr && "Target region emission failed.");
+    switch (S->getStmtClass()) {
+    case Stmt::OMPTargetDirectiveClass:
+      CodeGenFunction::EmitOMPTargetDeviceFunction(
+          CGM, ParentName, cast<OMPTargetDirective>(*S));
+      break;
+    default:
+      llvm_unreachable("Unknown target directive for OpenMP device codegen.");
+    }
     return;
   }
 

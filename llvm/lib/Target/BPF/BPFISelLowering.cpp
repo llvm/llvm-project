@@ -33,7 +33,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-lower"
 
-static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg) {
+static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
       DiagnosticInfoUnsupported(*MF.getFunction(), Msg, DL.getDebugLoc()));
@@ -306,11 +306,23 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress node (quite common, every direct call is)
   // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
   // Likewise ExternalSymbol -> TargetExternalSymbol.
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    auto GV = G->getGlobal();
+    fail(CLI.DL, DAG,
+         "A call to global function '" + StringRef(GV->getName())
+         + "' is not supported. "
+         + (GV->isDeclaration() ?
+           "Only calls to predefined BPF helpers are allowed." :
+           "Please use __attribute__((always_inline) to make sure"
+           " this function is inlined."));
     Callee = DAG.getTargetGlobalAddress(G->getGlobal(), CLI.DL, PtrVT,
                                         G->getOffset(), 0);
-  else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
+  } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
+    fail(CLI.DL, DAG, Twine("A call to built-in function '"
+                            + StringRef(E->getSymbol())
+                            + "' is not supported."));
+  }
 
   // Returns a chain & a flag for retval copy to use.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);

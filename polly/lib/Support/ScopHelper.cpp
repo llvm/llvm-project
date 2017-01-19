@@ -296,8 +296,9 @@ private:
     else
       IP = RTCBB->getParent()->getEntryBlock().getTerminator();
 
-    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
-                  Inst->getOpcode() != Instruction::SDiv))
+    if (!Inst ||
+        (Inst->getOpcode() != Instruction::SRem &&
+         Inst->getOpcode() != Instruction::SDiv))
       return visitGenericInst(E, Inst, IP);
 
     const SCEV *LHSScev = SE.getSCEV(Inst->getOperand(0));
@@ -569,4 +570,18 @@ polly::getIndexExpressionsFromGEP(GetElementPtrInst *GEP, ScalarEvolution &SE) {
   }
 
   return std::make_tuple(Subscripts, Sizes);
+}
+
+llvm::Loop *polly::getFirstNonBoxedLoopFor(llvm::Loop *L, llvm::LoopInfo &LI,
+                                           const BoxedLoopsSetTy &BoxedLoops) {
+  while (BoxedLoops.count(L))
+    L = L->getParentLoop();
+  return L;
+}
+
+llvm::Loop *polly::getFirstNonBoxedLoopFor(llvm::BasicBlock *BB,
+                                           llvm::LoopInfo &LI,
+                                           const BoxedLoopsSetTy &BoxedLoops) {
+  Loop *L = LI.getLoopFor(BB);
+  return getFirstNonBoxedLoopFor(L, LI, BoxedLoops);
 }

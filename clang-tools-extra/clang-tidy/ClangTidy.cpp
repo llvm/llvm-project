@@ -197,10 +197,14 @@ public:
           continue;
         }
         StringRef Code = Buffer.get()->getBuffer();
-        format::FormatStyle Style = format::getStyle("file", File, FormatStyle);
+        auto Style = format::getStyle("file", File, FormatStyle);
+        if (!Style) {
+          llvm::errs() << llvm::toString(Style.takeError()) << "\n";
+          continue;
+        }
         llvm::Expected<Replacements> CleanReplacements =
             format::cleanupAroundReplacements(Code, FileAndReplacements.second,
-                                              Style);
+                                              *Style);
         if (!CleanReplacements) {
           llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
           continue;

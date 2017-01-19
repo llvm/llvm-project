@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -145,10 +146,15 @@ wait_on_buffer.exit1319:                          ; preds = %while.body392
   br i1 %inp8, label %while.end418, label %while.body392
 
 ; CHECK-LABEL: @jbd2_journal_commit_transaction
+; CHECK-NO-ISEL-LABEL: @jbd2_journal_commit_transaction
 ; CHECK: andi.
 ; CHECK: crmove
 ; CHECK: stdcx.
 ; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}},
+; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 30, 3, 0
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
+
 
 while.end418:                                     ; preds = %wait_on_buffer.exit1319, %do.body378
   %err.4.lcssa = phi i32 [ %inp2, %do.body378 ], [ %.err.4, %wait_on_buffer.exit1319 ]

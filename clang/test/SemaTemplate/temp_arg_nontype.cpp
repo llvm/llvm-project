@@ -370,13 +370,13 @@ namespace PR17696 {
 }
 
 namespace partial_order_different_types {
-  // These are unordered because the type of the final argument doesn't match.
-  template<int, int, typename T, typename, T> struct A; // expected-note {{here}}
-  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {}; // expected-note {{matches}}
-  template<typename T, typename U, U V> struct A<0, 0, T, U, V> {}; // expected-note {{matches}}
-  // expected-error@-1 {{not more specialized than the primary}}
-  // expected-note@-2 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('U' vs 'type-parameter-0-0')}}
-  A<0, 0, int, int, 0> a; // expected-error {{ambiguous partial specializations}}
+  template<int, int, typename T, typename, T> struct A;
+  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V>; // expected-note {{matches}}
+  // FIXME: It appears that this partial specialization should be ill-formed as
+  // it is not more specialized than the primary template. V is not deducible
+  // because it does not have the same type as the corresponding parameter.
+  template<int N, typename T, typename U, U V> struct A<0, N, T, U, V> {}; // expected-note {{matches}}
+  A<0, 0, int, int, 0> a; // expected-error {{ambiguous}}
 }
 
 namespace partial_order_references {
@@ -434,7 +434,7 @@ namespace dependent_nested_partial_specialization {
 
   template<typename T> struct E {
     template<typename U, U V> struct F; // expected-note {{template}}
-    template<typename W, T V> struct F<W, V> {}; // expected-error {{not more specialized than the primary}} expected-note {{does not have the same type}}
+    template<typename W, T V> struct F<W, V> {}; // expected-error {{not more specialized than the primary}}
   };
   E<int>::F<int, 0> e1; // expected-note {{instantiation of}}
 }

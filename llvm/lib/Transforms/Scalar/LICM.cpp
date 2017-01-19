@@ -461,7 +461,10 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
 
   SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
   // Iterate over loop instructions and compute safety info.
-  for (Loop::block_iterator BB = CurLoop->block_begin(),
+  // Skip header as it has been computed and stored in HeaderMayThrow.
+  // The first block in loopinfo.Blocks is guaranteed to be the header.
+  assert(Header == *CurLoop->getBlocks().begin() && "First block must be header");
+  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
        (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
     for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end();

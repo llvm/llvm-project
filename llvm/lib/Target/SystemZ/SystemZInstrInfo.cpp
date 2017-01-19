@@ -131,7 +131,8 @@ void SystemZInstrInfo::expandRIEPseudo(MachineInstr &MI, unsigned LowOpcode,
     MI.setDesc(get(LowOpcodeK));
   else {
     emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(), DestReg, SrcReg,
-                  SystemZ::LR, 32, MI.getOperand(1).isKill());
+                  SystemZ::LR, 32, MI.getOperand(1).isKill(),
+                  MI.getOperand(1).isUndef());
     MI.setDesc(get(DestIsHigh ? HighOpcode : LowOpcode));
     MI.getOperand(1).setReg(DestReg);
     MI.tieOperands(0, 1);
@@ -187,7 +188,7 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                                         unsigned Size) const {
   emitGRX32Move(*MI.getParent(), MI, MI.getDebugLoc(),
                 MI.getOperand(0).getReg(), MI.getOperand(1).getReg(), LowOpcode,
-                Size, MI.getOperand(1).isKill());
+                Size, MI.getOperand(1).isKill(), MI.getOperand(1).isUndef());
   MI.eraseFromParent();
 }
 
@@ -231,7 +232,8 @@ void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, unsigned DestReg,
                                      unsigned SrcReg, unsigned LowLowOpcode,
-                                     unsigned Size, bool KillSrc) const {
+                                     unsigned Size, bool KillSrc,
+                                     bool UndefSrc) const {
   unsigned Opcode;
   bool DestIsHigh = isHighReg(DestReg);
   bool SrcIsHigh = isHighReg(SrcReg);
@@ -243,13 +245,13 @@ void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
     Opcode = SystemZ::RISBLH;
   else {
     BuildMI(MBB, MBBI, DL, get(LowLowOpcode), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc) | getUndefRegState(UndefSrc));
     return;
   }
   unsigned Rotate = (DestIsHigh != SrcIsHigh ? 32 : 0);
   BuildMI(MBB, MBBI, DL, get(Opcode), DestReg)
     .addReg(DestReg, RegState::Undef)
-    .addReg(SrcReg, getKillRegState(KillSrc))
+    .addReg(SrcReg, getKillRegState(KillSrc) | getUndefRegState(UndefSrc))
     .addImm(32 - Size).addImm(128 + 31).addImm(Rotate);
 }
 
@@ -814,7 +816,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (SystemZ::GRX32BitRegClass.contains(DestReg, SrcReg)) {
-    emitGRX32Move(MBB, MBBI, DL, DestReg, SrcReg, SystemZ::LR, 32, KillSrc);
+    emitGRX32Move(MBB, MBBI, DL, DestReg, SrcReg, SystemZ::LR, 32, KillSrc,
+                  false);
     return;
   }
 

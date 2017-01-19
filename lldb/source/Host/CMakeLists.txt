@@ -88,7 +88,7 @@ else()
     posix/PipePosix.cpp
     )
 
-  if (NOT __ANDROID_NDK__)
+  if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
     add_host_subdirectory(posix
       posix/ProcessLauncherPosix.cpp
       )
@@ -110,13 +110,7 @@ else()
       macosx/cfcpp/CFCString.cpp
       )
 
-  elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-    if (__ANDROID_NDK__)
-      add_host_subdirectory(android
-        android/HostInfoAndroid.cpp
-        android/LibcGlue.cpp
-        )
-    endif()
+  elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
     add_host_subdirectory(linux
       linux/AbstractSocket.cpp
       linux/Host.cpp
@@ -126,7 +120,12 @@ else()
       linux/ProcessLauncherLinux.cpp
       linux/ThisThread.cpp
       )
-
+    if (CMAKE_SYSTEM_NAME MATCHES "Android")
+      add_host_subdirectory(android
+        android/HostInfoAndroid.cpp
+        android/LibcGlue.cpp
+        )
+    endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     add_host_subdirectory(freebsd
       freebsd/Host.cpp

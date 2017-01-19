@@ -458,8 +458,9 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   CmpInst::Predicate Predicate;
   bool Parallel;
 
-  Parallel = KnownParallel || (IslAstInfo::isParallel(For) &&
-                               !IslAstInfo::isReductionParallel(For));
+  Parallel =
+      KnownParallel ||
+      (IslAstInfo::isParallel(For) && !IslAstInfo::isReductionParallel(For));
 
   Body = isl_ast_node_for_get_body(For);
 
@@ -758,8 +759,6 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
     assert(MA->isAffine() &&
            "Only affine memory accesses can be code generated");
-    assert(!MA->getLatestScopArrayInfo()->getBasePtrOriginSAI() &&
-           "Generating new index expressions to indirect arrays not working");
 
     auto Schedule = isl_ast_build_get_schedule(Build);
 
