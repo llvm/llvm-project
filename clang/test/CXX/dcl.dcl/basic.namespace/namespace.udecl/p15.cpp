@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
 
-struct B1 { // expected-note 2{{candidate}}
+struct B1 {
   B1(int); // expected-note {{candidate}}
 };
 
-struct B2 { // expected-note 2{{candidate}}
+struct B2 {
   B2(int); // expected-note {{candidate}}
 };
 
 struct D1 : B1, B2 { // expected-note 2{{candidate}}
-  using B1::B1; // expected-note 3{{inherited here}}
-  using B2::B2; // expected-note 3{{inherited here}}
+  using B1::B1; // expected-note {{inherited here}}
+  using B2::B2; // expected-note {{inherited here}}
 };
 D1 d1(0); // expected-error {{ambiguous}}
 
@@ -35,7 +35,7 @@ namespace default_ctor {
     operator D&&();
   };
 
-  struct A { // expected-note 4{{candidate}}
+  struct A { // expected-note 2{{candidate}}
     A(); // expected-note {{candidate}}
 
     A(C &&); // expected-note {{candidate}}
@@ -47,7 +47,7 @@ namespace default_ctor {
     A(convert_to_D2); // expected-note {{candidate}}
   };
 
-  struct B { // expected-note 4{{candidate}}
+  struct B { // expected-note 2{{candidate}}
     B(); // expected-note {{candidate}}
 
     B(C &&); // expected-note {{candidate}}
@@ -66,9 +66,9 @@ namespace default_ctor {
     using B::operator=;
   };
   struct D : A, B {
-    using A::A; // expected-note 5{{inherited here}}
+    using A::A; // expected-note 3{{inherited here}}
     using A::operator=;
-    using B::B; // expected-note 5{{inherited here}}
+    using B::B; // expected-note 3{{inherited here}}
     using B::operator=;
 
     D(int);
@@ -93,13 +93,13 @@ namespace default_ctor {
   }
 
   struct Y;
-  struct X { // expected-note 2{{candidate}}
+  struct X {
     X();
-    X(volatile Y &); // expected-note {{constructor inherited from base class cannot be used to initialize from an argument of the derived class type}}
+    X(volatile Y &); // expected-note 3{{inherited constructor cannot be used to copy object}}
   } x;
-  struct Y : X { using X::X; } volatile y; // expected-note 2{{candidate}}
-  struct Z : Y { using Y::Y; } volatile z; // expected-note 3{{candidate}} expected-note 5{{inherited here}}
-  Z z1(x); // ok
-  Z z2(y); // ok, Z is not reference-related to type of y
+  struct Y : X { using X::X; } volatile y;
+  struct Z : Y { using Y::Y; } volatile z; // expected-note 4{{no known conversion}} expected-note 2{{would lose volatile}} expected-note 3{{requires 0}} expected-note 3{{inherited here}}
+  Z z1(x); // expected-error {{no match}}
+  Z z2(y); // expected-error {{no match}}
   Z z3(z); // expected-error {{no match}}
 }

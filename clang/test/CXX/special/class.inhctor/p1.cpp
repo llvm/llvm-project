@@ -3,7 +3,7 @@
 // Note: [class.inhctor] was removed by P0136R1. This tests the new behavior
 // for the wording that used to be there.
 
-struct A { // expected-note 8{{candidate is the implicit}}
+struct A { // expected-note 4{{candidate is the implicit}}
   A(...); // expected-note 4{{candidate constructor}} expected-note 4{{candidate inherited constructor}}
   A(int = 0, int = 0, int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 3{{candidate inherited constructor}}
   A(int = 0, int = 0, ...); // expected-note 3{{candidate constructor}} expected-note 3{{candidate inherited constructor}}
@@ -15,7 +15,7 @@ struct A { // expected-note 8{{candidate is the implicit}}
 };
 
 struct B : A { // expected-note 4{{candidate is the implicit}}
-  using A::A; // expected-note 19{{inherited here}}
+  using A::A; // expected-note 15{{inherited here}}
   B(void*);
 };
 
