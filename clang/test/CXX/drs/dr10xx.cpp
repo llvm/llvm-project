@@ -12,6 +12,29 @@ namespace std {
   };
 }
 
+namespace dr1004 { // dr1004: 5
+  template<typename> struct A {};
+  template<typename> struct B1 {};
+  template<template<typename> class> struct B2 {};
+  template<typename X> void f(); // expected-note {{[with X = dr1004::A<int>]}}
+  template<template<typename> class X> void f(); // expected-note {{[with X = A]}}
+  template<template<typename> class X> void g(); // expected-note {{[with X = A]}}
+  template<typename X> void g(); // expected-note {{[with X = dr1004::A<int>]}}
+  struct C : A<int> {
+    B1<A> b1a;
+    B2<A> b2a;
+    void h() {
+      f<A>(); // expected-error {{ambiguous}}
+      g<A>(); // expected-error {{ambiguous}}
+    }
+  };
+
+  // FIXME: Is this example (from the standard) really OK, or does name lookup
+  // of "T::template A" name the constructor?
+  template<class T, template<class> class U = T::template A> struct Third { };
+  Third<A<int> > t;
+}
+
 namespace dr1048 { // dr1048: 3.6
   struct A {};
   const A f();

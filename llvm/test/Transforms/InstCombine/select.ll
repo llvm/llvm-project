@@ -1344,14 +1344,13 @@ define i8 @assume_cond_true(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
-; FIXME: computeKnownBitsFromAssume() should understand the 'not' of an assumed condition.
+; computeKnownBitsFromAssume() understands the 'not' of an assumed condition.
 
 define i8 @assume_cond_false(i1 %cond, i8 %x, i8 %y) {
 ; CHECK-LABEL: @assume_cond_false(
 ; CHECK-NEXT:    [[NOTCOND:%.*]] = xor i1 %cond, true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOTCOND]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 %cond, i8 %x, i8 %y
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 %y
 ;
   %notcond = xor i1 %cond, true
   call void @llvm.assume(i1 %notcond)

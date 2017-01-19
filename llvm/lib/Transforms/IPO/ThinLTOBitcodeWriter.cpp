@@ -200,6 +200,7 @@ void filterModule(
       continue;
 
     F.deleteBody();
+    F.setComdat(nullptr);
     F.clearMetadata();
   }
 
@@ -209,6 +210,7 @@ void filterModule(
 
     GV.setInitializer(nullptr);
     GV.setLinkage(GlobalValue::ExternalLinkage);
+    GV.setComdat(nullptr);
     GV.clearMetadata();
   }
 

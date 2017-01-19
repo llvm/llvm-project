@@ -43,8 +43,8 @@ static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
 namespace {
 struct FuncReturnHandler : public CallLowering::ValueHandler {
   FuncReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                    MachineInstrBuilder &MIB)
-      : ValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+                    MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
+    : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -99,8 +99,8 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   ArgInfo RetInfo(VReg, Val->getType());
   setArgFlags(RetInfo, AttributeSet::ReturnIndex, DL, F);
 
-  FuncReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
-  return handleAssignments(MIRBuilder, AssignFn, RetInfo, RetHandler);
+  FuncReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret, AssignFn);
+  return handleAssignments(MIRBuilder, RetInfo, RetHandler);
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -118,8 +118,9 @@ bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
 namespace {
 struct FormalArgHandler : public CallLowering::ValueHandler {
-  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-      : ValueHandler(MIRBuilder, MRI) {}
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                   CCAssignFn AssignFn)
+      : ValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -198,6 +199,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     Idx++;
   }
 
-  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo());
-  return handleAssignments(MIRBuilder, AssignFn, ArgInfos, ArgHandler);
+  FormalArgHandler ArgHandler(MIRBuilder, MIRBuilder.getMF().getRegInfo(),
+                              AssignFn);
+  return handleAssignments(MIRBuilder, ArgInfos, ArgHandler);
 }

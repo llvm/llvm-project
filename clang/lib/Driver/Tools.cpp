@@ -1363,9 +1363,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                                options::OPT_mno_global_merge)) {
     CmdArgs.push_back("-backend-option");
     if (A->getOption().matches(options::OPT_mno_global_merge))
-      CmdArgs.push_back("-aarch64-global-merge=false");
+      CmdArgs.push_back("-aarch64-enable-global-merge=false");
     else
-      CmdArgs.push_back("-aarch64-global-merge=true");
+      CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 }
 

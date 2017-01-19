@@ -434,7 +434,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 MipsGotSection<ELFT>::MipsGotSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL,
-                             SHT_PROGBITS, Target->GotEntrySize, ".got") {}
+                             SHT_PROGBITS, 16, ".got") {}
 
 template <class ELFT>
 void MipsGotSection<ELFT>::addEntry(SymbolBody &Sym, uintX_t Addend,
@@ -883,9 +883,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     add({DT_FINI_ARRAYSZ, Out<ELFT>::FiniArray, Entry::SecSize});
   }
 
-  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Init))
+  if (SymbolBody *B = Symtab<ELFT>::X->findInCurrentDSO(Config->Init))
     add({DT_INIT, B});
-  if (SymbolBody *B = Symtab<ELFT>::X->findDefined(Config->Fini))
+  if (SymbolBody *B = Symtab<ELFT>::X->findInCurrentDSO(Config->Fini))
     add({DT_FINI, B});
 
   bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;

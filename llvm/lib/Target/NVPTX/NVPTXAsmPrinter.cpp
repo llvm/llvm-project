@@ -1230,7 +1230,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   else
     O << " .align " << GVar->getAlignment();
 
-  if (ETy->isFloatingPointTy() || ETy->isIntegerTy() || ETy->isPointerTy()) {
+  if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
+      (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
     O << " .";
     // Special case: ABI requires that we use .u8 for predicates
     if (ETy->isIntegerTy(1))
@@ -1271,6 +1272,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // targets that support these high level field accesses. Structs, arrays
     // and vectors are lowered into arrays of bytes.
     switch (ETy->getTypeID()) {
+    case Type::IntegerTyID: // Integers larger than 64 bits
     case Type::StructTyID:
     case Type::ArrayTyID:
     case Type::VectorTyID:
@@ -1993,6 +1995,17 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
                                               AggBuffer *aggBuffer) {
   const DataLayout &DL = getDataLayout();
   int Bytes;
+
+  // Integers of arbitrary width
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+    APInt Val = CI->getValue();
+    for (unsigned I = 0, E = DL.getTypeAllocSize(CPV->getType()); I < E; ++I) {
+      uint8_t Byte = Val.getLoBits(8).getZExtValue();
+      aggBuffer->addBytes(&Byte, 1, 1);
+      Val = Val.lshr(8);
+    }
+    return;
+  }
 
   // Old constants
   if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {

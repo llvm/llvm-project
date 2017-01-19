@@ -4,7 +4,7 @@ include(cmake/modules/LLDBStandalone.cmake)
 include(cmake/modules/LLDBConfig.cmake)
 include(cmake/modules/AddLLDB.cmake)
 
-if (__ANDROID_NDK__ OR (CMAKE_SYSTEM_NAME MATCHES "Windows"))
+if (CMAKE_SYSTEM_NAME MATCHES "Windows|Android")
   set(LLDB_DEFAULT_DISABLE_LIBEDIT 1)
 else()
   set(LLDB_DEFAULT_DISABLE_LIBEDIT 0)

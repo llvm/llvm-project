@@ -43,7 +43,8 @@ test()
     for (int i = 0; i <= 5; ++i)
     {
         T t(static_cast<T> (i));
-        if (sizeof(T) <= sizeof(std::size_t))
+        const bool small = std::integral_constant<bool, sizeof(T) <= sizeof(std::size_t)>::value; // avoid compiler warnings
+        if (small)
             assert(h1(t) == h2(static_cast<under_type>(i)));
     }
 }

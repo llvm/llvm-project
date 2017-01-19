@@ -9305,10 +9305,9 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   MachineFunction *F = BB->getParent();
 
-  if (Subtarget.hasISEL() &&
-      (MI.getOpcode() == PPC::SELECT_CC_I4 ||
+  if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
        MI.getOpcode() == PPC::SELECT_CC_I8 ||
-       MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8)) {
+       MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8) {
     SmallVector<MachineOperand, 2> Cond;
     if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
         MI.getOpcode() == PPC::SELECT_CC_I8)

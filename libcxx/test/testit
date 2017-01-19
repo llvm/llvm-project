@@ -177,4 +177,7 @@ echo "                       +   ----"
 echo "total number of tests    : $(($FAIL+$PASS))"
 echo "****************************************************"
 
+echo "---------- WARNING ----------"
+echo "testit is no longer supported and will be removed in the future"
+
 exit $FAIL

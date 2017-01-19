@@ -127,4 +127,43 @@ TEST(SparseBitVectorTest, SelfAssignment) {
   EXPECT_TRUE(Vec.empty());
 }
 
+TEST(SparseBitVectorTest, Find) {
+  SparseBitVector<> Vec;
+  Vec.set(1);
+  EXPECT_EQ(1, Vec.find_first());
+  EXPECT_EQ(1, Vec.find_last());
+
+  Vec.set(2);
+  EXPECT_EQ(1, Vec.find_first());
+  EXPECT_EQ(2, Vec.find_last());
+
+  Vec.set(0);
+  Vec.set(3);
+  EXPECT_EQ(0, Vec.find_first());
+  EXPECT_EQ(3, Vec.find_last());
+
+  Vec.reset(1);
+  Vec.reset(0);
+  Vec.reset(3);
+  EXPECT_EQ(2, Vec.find_first());
+  EXPECT_EQ(2, Vec.find_last());
+
+  // Set some large bits to ensure we are pulling bits from more than just a
+  // single bitword.
+  Vec.set(500);
+  Vec.set(2000);
+  Vec.set(3000);
+  Vec.set(4000);
+  Vec.reset(2);
+  EXPECT_EQ(500, Vec.find_first());
+  EXPECT_EQ(4000, Vec.find_last());
+
+  Vec.reset(500);
+  Vec.reset(3000);
+  Vec.reset(4000);
+  EXPECT_EQ(2000, Vec.find_first());
+  EXPECT_EQ(2000, Vec.find_last());
+
+  Vec.clear();
+}
 }

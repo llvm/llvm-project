@@ -9,15 +9,16 @@ add_llvm_unittest(AnalysisTests
   AliasAnalysisTest.cpp
   BlockFrequencyInfoTest.cpp
   BranchProbabilityInfoTest.cpp
-  CallGraphTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
+  CallGraphTest.cpp
   LazyCallGraphTest.cpp
   LoopInfoTest.cpp
   MemoryBuiltinsTest.cpp
   ProfileSummaryInfoTest.cpp
   ScalarEvolutionTest.cpp
   TBAATest.cpp
-  ValueTrackingTest.cpp
+  TargetLibraryInfoTest.cpp
   UnrollAnalyzer.cpp
+  ValueTrackingTest.cpp
   )

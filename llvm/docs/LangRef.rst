@@ -4010,7 +4010,7 @@ DIFile
 
 ``DIFile`` nodes represent files. The ``filename:`` can include slashes.
 
-.. code-block:: llvm
+.. code-block:: none
 
     !0 = !DIFile(filename: "path/to/file", directory: "/path/to/dir",
                  checksumkind: CSK_MD5,

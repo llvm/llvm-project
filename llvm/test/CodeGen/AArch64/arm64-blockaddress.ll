@@ -15,10 +15,10 @@ entry:
 ; CHECK-LINUX: add {{x[0-9]+}}, [[REG]], :lo12:.Ltmp1
 
 ; CHECK-LARGE-LABEL: t:
-; CHECK-LARGE: movz [[ADDR_REG:x[0-9]+]], #:abs_g3:[[DEST_LBL:.Ltmp[0-9]+]]
-; CHECK-LARGE: movk [[ADDR_REG]], #:abs_g2_nc:[[DEST_LBL]]
+; CHECK-LARGE: movz [[ADDR_REG:x[0-9]+]], #:abs_g0_nc:[[DEST_LBL:.Ltmp[0-9]+]]
 ; CHECK-LARGE: movk [[ADDR_REG]], #:abs_g1_nc:[[DEST_LBL]]
-; CHECK-LARGE: movk [[ADDR_REG]], #:abs_g0_nc:[[DEST_LBL]]
+; CHECK-LARGE: movk [[ADDR_REG]], #:abs_g2_nc:[[DEST_LBL]]
+; CHECK-LARGE: movk [[ADDR_REG]], #:abs_g3:[[DEST_LBL]]
 
   %recover = alloca i64, align 8
   store volatile i64 ptrtoint (i8* blockaddress(@t, %mylabel) to i64), i64* %recover, align 8

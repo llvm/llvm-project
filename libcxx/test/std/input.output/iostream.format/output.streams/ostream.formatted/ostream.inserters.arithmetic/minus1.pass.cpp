@@ -23,6 +23,7 @@
 
 #include <sstream>
 #include <ios>
+#include <type_traits>
 #include <cctype>
 #include <cstdint>
 #include <cassert>
@@ -66,11 +67,15 @@ int main()
     test_octal<uint64_t>("1777777777777777777777");
     test_octal< int64_t>("1777777777777777777777");
     test_octal<uint64_t>("1777777777777777777777");
-    if (sizeof(long) == sizeof(int64_t)) {
+
+    const bool long_is_64 = std::integral_constant<bool, sizeof(long) == sizeof(int64_t)>::value; // avoid compiler warnings
+    const bool long_long_is_64 = std::integral_constant<bool, sizeof(long long) == sizeof(int64_t)>::value; // avoid compiler warnings
+
+    if (long_is_64) {
         test_octal< unsigned long>("1777777777777777777777");
         test_octal<          long>("1777777777777777777777");
     }
-    if (sizeof(long long) == sizeof(int64_t)) {
+    if (long_long_is_64) {
         test_octal< unsigned long long>("1777777777777777777777");
         test_octal<          long long>("1777777777777777777777");
     }
@@ -81,11 +86,11 @@ int main()
     test_dec< int32_t>(                  "-1");
     test_dec<uint64_t>("18446744073709551615");
     test_dec< int64_t>(                  "-1");
-    if (sizeof(long) == sizeof(int64_t)) {
+    if (long_is_64) {
         test_dec<unsigned long>("18446744073709551615");
         test_dec<         long>(                  "-1");
     }
-    if (sizeof(long long) == sizeof(int64_t)) {
+    if (long_long_is_64) {
         test_dec<unsigned long long>("18446744073709551615");
         test_dec<         long long>(                  "-1");
     }
@@ -96,11 +101,11 @@ int main()
     test_hex< int32_t>(        "FFFFFFFF");
     test_hex<uint64_t>("FFFFFFFFFFFFFFFF");
     test_hex< int64_t>("FFFFFFFFFFFFFFFF");
-    if (sizeof(long) == sizeof(int64_t)) {
+    if (long_is_64) {
         test_hex<unsigned long>("FFFFFFFFFFFFFFFF");
         test_hex<         long>("FFFFFFFFFFFFFFFF");
     }
-    if (sizeof(long long) == sizeof(int64_t)) {
+    if (long_long_is_64) {
         test_hex<unsigned long long>("FFFFFFFFFFFFFFFF");
         test_hex<         long long>("FFFFFFFFFFFFFFFF");
     }

@@ -11,6 +11,7 @@ import locale
 import os
 import platform
 import pkgutil
+import pipes
 import re
 import shlex
 import shutil
@@ -84,20 +85,31 @@ class Configuration(object):
                 val = default
         return val
 
-    def get_lit_bool(self, name, default=None):
-        conf = self.get_lit_conf(name)
-        if conf is None:
-            return default
-        if isinstance(conf, bool):
-            return conf
-        if not isinstance(conf, str):
-            raise TypeError('expected bool or string')
-        if conf.lower() in ('1', 'true'):
-            return True
-        if conf.lower() in ('', '0', 'false'):
-            return False
-        self.lit_config.fatal(
-            "parameter '{}' should be true or false".format(name))
+    def get_lit_bool(self, name, default=None, env_var=None):
+        def check_value(value, var_name):
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return value
+            if not isinstance(value, str):
+                raise TypeError('expected bool or string')
+            if value.lower() in ('1', 'true'):
+                return True
+            if value.lower() in ('', '0', 'false'):
+                return False
+            self.lit_config.fatal(
+                "parameter '{}' should be true or false".format(var_name))
+
+        conf_val = self.get_lit_conf(name)
+        if env_var is not None and env_var in os.environ and \
+                os.environ[env_var] is not None:
+            val = os.environ[env_var]
+            if conf_val is not None:
+                self.lit_config.warning(
+                    'Environment variable %s=%s is overriding explicit '
+                    '--param=%s=%s' % (env_var, val, name, conf_val))
+            return check_value(val, env_var)
+        return check_value(conf_val, name)
 
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
@@ -218,8 +230,7 @@ class Configuration(object):
 
     def _configure_clang_cl(self, clang_path):
         assert self.cxx_is_clang_cl
-        # FIXME: don't hardcode the target
-        flags = ['--target=i686-pc-windows']
+        flags = []
         compile_flags = []
         link_flags = []
         if 'INCLUDE' in os.environ:
@@ -227,8 +238,12 @@ class Configuration(object):
                               for p in os.environ['INCLUDE'].split(';')
                               if p.strip()]
         if 'LIB' in os.environ:
-            link_flags += ['-L%s' % p.strip()
-                           for p in os.environ['LIB'].split(';') if p.strip()]
+            for p in os.environ['LIB'].split(';'):
+                p = p.strip()
+                if not p:
+                    continue
+                link_flags += ['-L%s' % p]
+                self.add_path(self.exec_env, p)
         return CXXCompiler(clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)
@@ -270,7 +285,7 @@ class Configuration(object):
         self.cxx_stdlib_under_test = self.get_lit_conf(
             'cxx_stdlib_under_test', 'libc++')
         if self.cxx_stdlib_under_test not in \
-                ['libc++', 'libstdc++', 'cxx_default']:
+                ['libc++', 'libstdc++', 'msvc', 'cxx_default']:
             self.lit_config.fatal(
                 'unsupported value for "cxx_stdlib_under_test": %s'
                 % self.cxx_stdlib_under_test)
@@ -452,7 +467,14 @@ class Configuration(object):
            not self.is_windows:
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path, 'nasty_macros.hpp')]
-        if self.is_windows and self.debug_build:
+        if self.cxx_stdlib_under_test == 'msvc':
+            # FIXME: Uncomment this once STL commits the support header.
+            # self.cxx.compile_flags += [
+            #    '-include', os.path.join(support_path,
+            #                             'msvc_stdlib_force_include.h')]
+            pass
+        if self.is_windows and self.debug_build and \
+                self.cxx_stdlib_under_test != 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
                                          'set_windows_crt_report_mode.h')
@@ -472,7 +494,7 @@ class Configuration(object):
         self.cxx.compile_flags += ['-I' + cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
-                                          'c++-build')
+                                          'c++build')
             if os.path.isdir(cxxabi_headers):
                 self.cxx.compile_flags += ['-I' + cxxabi_headers]
 
@@ -605,6 +627,9 @@ class Configuration(object):
                     self.config.available_features.add('c++experimental')
                     self.cxx.link_flags += ['-lstdc++fs']
                 self.cxx.link_flags += ['-lm', '-pthread']
+            elif self.cxx_stdlib_under_test == 'msvc':
+                # FIXME: Correctly setup debug/release flags here.
+                pass
             elif self.cxx_stdlib_under_test == 'cxx_default':
                 self.cxx.link_flags += ['-pthread']
             else:
@@ -677,6 +702,10 @@ class Configuration(object):
                         self.cxx.link_flags += ['-lc++abi']
         elif cxx_abi == 'libcxxrt':
             self.cxx.link_flags += ['-lcxxrt']
+        elif cxx_abi == 'vcruntime':
+            debug_suffix = 'd' if self.debug_build else ''
+            self.cxx.link_flags += ['-l%s%s' % (lib, debug_suffix) for lib in
+                                    ['vcruntime', 'ucrt', 'msvcrt']]
         elif cxx_abi == 'none' or cxx_abi == 'default':
             if self.is_windows:
                 debug_suffix = 'd' if self.debug_build else ''
@@ -827,10 +856,9 @@ class Configuration(object):
         if platform.system() != 'Darwin':
             modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        enable_modules_default = supports_modules and \
-            os.environ.get('LIBCXX_USE_MODULES') is not None
         enable_modules = self.get_lit_bool('enable_modules',
-                                           enable_modules_default)
+                                           default=False,
+                                           env_var='LIBCXX_ENABLE_MODULES')
         if enable_modules and not supports_modules:
             self.lit_config.fatal(
                 '-fmodules is enabled but not supported by the compiler')
@@ -854,9 +882,9 @@ class Configuration(object):
         # Configure compiler substitutions
         sub.append(('%cxx', self.cxx.path))
         # Configure flags substitutions
-        flags_str = ' '.join(self.cxx.flags)
-        compile_flags_str = ' '.join(self.cxx.compile_flags)
-        link_flags_str = ' '.join(self.cxx.link_flags)
+        flags_str = ' '.join([pipes.quote(f) for f in self.cxx.flags])
+        compile_flags_str = ' '.join([pipes.quote(f) for f in self.cxx.compile_flags])
+        link_flags_str = ' '.join([pipes.quote(f) for f in self.cxx.link_flags])
         all_flags = '%s %s %s' % (flags_str, compile_flags_str, link_flags_str)
         sub.append(('%flags', flags_str))
         sub.append(('%compile_flags', compile_flags_str))
@@ -883,9 +911,11 @@ class Configuration(object):
         sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
-        exec_env_str = 'env ' if len(self.exec_env) != 0 else ''
-        for k, v in self.exec_env.items():
-            exec_env_str += ' %s=%s' % (k, v)
+        exec_env_str = ''
+        if not self.is_windows and len(self.exec_env) != 0:
+            exec_env_str = 'env '
+            for k, v in self.exec_env.items():
+                exec_env_str += ' %s=%s' % (k, v)
         # Configure run env substitution.
         exec_str = exec_env_str
         if self.lit_config.useValgrind:

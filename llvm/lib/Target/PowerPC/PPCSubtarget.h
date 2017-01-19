@@ -298,7 +298,9 @@ public:
   bool isSVR4ABI() const { return !isDarwinABI(); }
   bool isELFv2ABI() const;
 
-  bool enableEarlyIfConversion() const override { return hasISEL(); }
+  /// Originally, this function return hasISEL(). Now we always enable it,
+  /// but may expand the ISEL instruction later.
+  bool enableEarlyIfConversion() const override { return true; }
 
   // Scheduling customization.
   bool enableMachineScheduler() const override;

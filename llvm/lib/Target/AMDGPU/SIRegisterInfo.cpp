@@ -1474,3 +1474,23 @@ bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
                             unsigned Reg) const {
   return hasVGPRs(getRegClassForReg(MRI, Reg));
 }
+
+bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
+                                    const TargetRegisterClass *SrcRC,
+                                    unsigned SubReg,
+                                    const TargetRegisterClass *DstRC,
+                                    unsigned DstSubReg,
+                                    const TargetRegisterClass *NewRC) const {
+  unsigned SrcSize = SrcRC->getSize();
+  unsigned DstSize = DstRC->getSize();
+  unsigned NewSize = NewRC->getSize();
+
+  // Do not increase size of registers beyond dword, we would need to allocate
+  // adjacent registers and constraint regalloc more than needed.
+
+  // Always allow dword coalescing.
+  if (SrcSize <= 4 || DstSize <= 4)
+    return true;
+
+  return NewSize <= DstSize || NewSize <= SrcSize;
+}

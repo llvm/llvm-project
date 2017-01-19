@@ -4091,13 +4091,10 @@ void InnerLoopVectorizer::vectorizeLoop() {
       // we already fixed them.
       assert(LCSSAPhi->getNumIncomingValues() < 3 && "Invalid LCSSA PHI");
 
-      // We found our reduction value exit-PHI. Update it with the
+      // We found a reduction value exit-PHI. Update it with the
       // incoming bypass edge.
-      if (LCSSAPhi->getIncomingValue(0) == LoopExitInst) {
-        // Add an edge coming from the bypass.
+      if (LCSSAPhi->getIncomingValue(0) == LoopExitInst)
         LCSSAPhi->addIncoming(ReducedPartRdx, LoopMiddleBlock);
-        break;
-      }
     } // end of the LCSSA phi scan.
 
     // Fix the scalar loop reduction variable with the incoming reduction sum
@@ -5602,6 +5599,13 @@ void LoopVectorizationLegality::collectLoopUniforms() {
       // is consecutive-like, the pointer operand should remain uniform.
       else if (hasConsecutiveLikePtrOperand(&I))
         ConsecutiveLikePtrs.insert(Ptr);
+
+      // Otherwise, if the memory instruction will be vectorized and its
+      // pointer operand is non-consecutive-like, the memory instruction should
+      // be a gather or scatter operation. Its pointer operand will be
+      // non-uniform.
+      else
+        PossibleNonUniformPtrs.insert(Ptr);
     }
 
   // Add to the Worklist all consecutive and consecutive-like pointers that

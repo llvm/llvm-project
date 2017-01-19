@@ -83,6 +83,7 @@ math/erf.cl
 math/erfc.cl
 math/exp.cl
 math/exp_helper.cl
+math/expm1.cl
 math/exp2.cl
 math/exp10.cl
 math/fdim.cl
@@ -103,6 +104,7 @@ math/log.cl
 math/log10.cl
 math/log1p.cl
 math/log2.cl
+math/logb.cl
 math/mad.cl
 math/modf.cl
 math/native_log.cl

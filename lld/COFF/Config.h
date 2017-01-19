@@ -80,8 +80,10 @@ struct Configuration {
   SymbolBody *Entry = nullptr;
   bool NoEntry = false;
   std::string OutputFile;
+  bool ColorDiagnostics;
   bool DoGC = true;
   bool DoICF = true;
+  uint64_t ErrorLimit = 20;
   bool Relocatable = true;
   bool Force = false;
   bool Debug = false;

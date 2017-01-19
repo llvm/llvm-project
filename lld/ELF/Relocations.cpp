@@ -467,7 +467,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     if (Expr == R_GOT_PC && !isAbsoluteValue<ELFT>(Body))
       Expr = Target->adjustRelaxExpr(Type, Data, Expr);
   }
-  Expr = Target->getThunkExpr(Expr, Type, File, Body);
+  Expr = Target->getThunkExpr(Expr, Type, &File, Body);
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
@@ -805,31 +805,38 @@ template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &S) {
     scanRelocs(S, S.rels());
 }
 
-template <class ELFT, class RelTy>
-static void createThunks(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
-  const elf::ObjectFile<ELFT> *File = C.getFile();
-  for (const RelTy &Rel : Rels) {
-    SymbolBody &Body = File->getRelocTargetSym(Rel);
-    uint32_t Type = Rel.getType(Config->Mips64EL);
-    RelExpr Expr = Target->getRelExpr(Type, Body);
-    if (!isPreemptible(Body, Type) && needsPlt(Expr))
-      Expr = fromPlt(Expr);
-    Expr = Target->getThunkExpr(Expr, Type, *File, Body);
-    // Some targets might require creation of thunks for relocations.
-    // Now we support only MIPS which requires LA25 thunk to call PIC
-    // code from non-PIC one, and ARM which requires interworking.
-    if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC || Expr == R_THUNK_PLT_PC) {
-      auto *Sec = cast<InputSection<ELFT>>(&C);
-      addThunk<ELFT>(Type, Body, *Sec);
+template <class ELFT>
+void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
+  for (OutputSectionBase *Base : OutputSections) {
+    if (auto *OS = dyn_cast<OutputSection<ELFT>>(Base)) {
+      for (InputSection<ELFT> *IS : OS->Sections) {
+        for (const Relocation &Rel : IS->Relocations) {
+          if (Rel.Sym == nullptr) {
+            continue;
+          }
+          SymbolBody &Body = *Rel.Sym;
+          uint32_t Type = Rel.Type;
+          RelExpr Expr = Rel.Expr;
+          if (!isPreemptible(Body, Type) && needsPlt(Expr))
+            Expr = fromPlt(Expr);
+          Expr = Target->getThunkExpr(Expr, Type, IS->getFile(), Body);
+          // Some targets might require creation of thunks for relocations.
+          // Now we support only MIPS which requires LA25 thunk to call PIC
+          // code from non-PIC one, and ARM which requires interworking.
+          if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
+              Expr == R_THUNK_PLT_PC)
+            addThunk<ELFT>(Type, Body, *IS);
+        }
+      }
     }
   }
-}
-
-template <class ELFT> void createThunks(InputSectionBase<ELFT> &S) {
-  if (S.AreRelocsRela)
-    createThunks(S, S.relas());
-  else
-    createThunks(S, S.rels());
+  // Added thunks may affect the output section offset
+  for (OutputSectionBase *Base : OutputSections)
+    if (auto *OS = dyn_cast<OutputSection<ELFT>>(Base))
+      if (OS->Type == SHT_PROGBITS) {
+        OS->Size = 0;
+        OS->assignOffsets();
+      }
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase<ELF32LE> &);
@@ -837,9 +844,9 @@ template void scanRelocations<ELF32BE>(InputSectionBase<ELF32BE> &);
 template void scanRelocations<ELF64LE>(InputSectionBase<ELF64LE> &);
 template void scanRelocations<ELF64BE>(InputSectionBase<ELF64BE> &);
 
-template void createThunks<ELF32LE>(InputSectionBase<ELF32LE> &);
-template void createThunks<ELF32BE>(InputSectionBase<ELF32BE> &);
-template void createThunks<ELF64LE>(InputSectionBase<ELF64LE> &);
-template void createThunks<ELF64BE>(InputSectionBase<ELF64BE> &);
+template void createThunks<ELF32LE>(ArrayRef<OutputSectionBase *>);
+template void createThunks<ELF32BE>(ArrayRef<OutputSectionBase *>);
+template void createThunks<ELF64LE>(ArrayRef<OutputSectionBase *>);
+template void createThunks<ELF64BE>(ArrayRef<OutputSectionBase *>);
 }
 }

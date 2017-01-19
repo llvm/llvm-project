@@ -53,6 +53,7 @@
 #include <clc/math/erf.h>
 #include <clc/math/erfc.h>
 #include <clc/math/exp.h>
+#include <clc/math/expm1.h>
 #include <clc/math/exp10.h>
 #include <clc/math/exp2.h>
 #include <clc/math/fabs.h>
@@ -75,6 +76,7 @@
 #include <clc/math/log10.h>
 #include <clc/math/log1p.h>
 #include <clc/math/log2.h>
+#include <clc/math/logb.h>
 #include <clc/math/mad.h>
 #include <clc/math/modf.h>
 #include <clc/math/nextafter.h>

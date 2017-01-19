@@ -84,12 +84,12 @@ int main()
         T* ptr = new T;
         std::shared_ptr<T> s(ptr);
         {
-            // Don't re-initialize the "enabled_shared_from_this" base
+            // Don't re-initialize the "enable_shared_from_this" base
             // because it already references a non-expired shared_ptr.
             std::shared_ptr<T> s2(ptr, &nullDeleter);
         }
 #if TEST_STD_VER > 14
-        // The enabled_shared_from_this base should still be referencing
+        // The enable_shared_from_this base should still be referencing
         // the original shared_ptr.
         assert(!ptr->weak_from_this().expired());
 #endif

@@ -15,10 +15,10 @@ define i32()* @foo() {
 
   ; In the large model, the usual relocations are absolute and can
   ; materialise 0.
-; CHECK-LARGE: movz x0, #:abs_g3:var
-; CHECK-LARGE: movk x0, #:abs_g2_nc:var
+; CHECK-LARGE: movz x0, #:abs_g0_nc:var
 ; CHECK-LARGE: movk x0, #:abs_g1_nc:var
-; CHECK-LARGE: movk x0, #:abs_g0_nc:var
+; CHECK-LARGE: movk x0, #:abs_g2_nc:var
+; CHECK-LARGE: movk x0, #:abs_g3:var
 }
 
 
@@ -33,10 +33,10 @@ define i32* @bar() {
 
   ; In the large model, the usual relocations are absolute and can
   ; materialise 0.
-; CHECK-LARGE: movz [[ARR_VAR:x[0-9]+]], #:abs_g3:arr_var
-; CHECK-LARGE: movk [[ARR_VAR]], #:abs_g2_nc:arr_var
+; CHECK-LARGE: movz [[ARR_VAR:x[0-9]+]], #:abs_g0_nc:arr_var
 ; CHECK-LARGE: movk [[ARR_VAR]], #:abs_g1_nc:arr_var
-; CHECK-LARGE: movk [[ARR_VAR]], #:abs_g0_nc:arr_var
+; CHECK-LARGE: movk [[ARR_VAR]], #:abs_g2_nc:arr_var
+; CHECK-LARGE: movk [[ARR_VAR]], #:abs_g3:arr_var
 }
 
 @defined_weak_var = internal unnamed_addr global i32 0
@@ -46,8 +46,8 @@ define i32* @wibble() {
 ; CHECK: adrp [[BASE:x[0-9]+]], defined_weak_var
 ; CHECK: add x0, [[BASE]], :lo12:defined_weak_var
 
-; CHECK-LARGE: movz x0, #:abs_g3:defined_weak_var
-; CHECK-LARGE: movk x0, #:abs_g2_nc:defined_weak_var
+; CHECK-LARGE: movz x0, #:abs_g0_nc:defined_weak_var
 ; CHECK-LARGE: movk x0, #:abs_g1_nc:defined_weak_var
-; CHECK-LARGE: movk x0, #:abs_g0_nc:defined_weak_var
+; CHECK-LARGE: movk x0, #:abs_g2_nc:defined_weak_var
+; CHECK-LARGE: movk x0, #:abs_g3:defined_weak_var
 }

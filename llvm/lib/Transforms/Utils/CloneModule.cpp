@@ -20,6 +20,15 @@
 #include "llvm-c/Core.h"
 using namespace llvm;
 
+static void copyComdat(GlobalObject *Dst, const GlobalObject *Src) {
+  const Comdat *SC = Src->getComdat();
+  if (!SC)
+    return;
+  Comdat *DC = Dst->getParent()->getOrInsertComdat(SC->getName());
+  DC->setSelectionKind(SC->getSelectionKind());
+  Dst->setComdat(DC);
+}
+
 /// This is not as easy as it might seem because we have to worry about making
 /// copies of global variables and functions, and making their (initializers and
 /// references, respectively) refer to the right globals.
@@ -124,6 +133,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     I->getAllMetadata(MDs);
     for (auto MD : MDs)
       GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+
+    copyComdat(GV, &*I);
   }
 
   // Similarly, copy over function bodies now...
@@ -153,6 +164,8 @@ std::unique_ptr<Module> llvm::CloneModule(
 
     if (I.hasPersonalityFn())
       F->setPersonalityFn(MapValue(I.getPersonalityFn(), VMap));
+
+    copyComdat(F, &I);
   }
 
   // And aliases

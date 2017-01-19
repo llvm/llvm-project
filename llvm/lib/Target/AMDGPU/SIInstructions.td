@@ -449,11 +449,6 @@ def : Pat <
 >;
 
 def : Pat <
-  (f16 (fpround f64:$src)),
-  (V_CVT_F16_F32_e32 (V_CVT_F32_F64_e32 $src))
->;
-
-def : Pat <
   (i32 (fp_to_sint f16:$src)),
   (V_CVT_I32_F32_e32 (V_CVT_F32_F16_e32 $src))
 >;
@@ -1081,6 +1076,15 @@ def : Pat<
   (fcanonicalize f64:$src),
   (V_MUL_F64 0, CONST.FP64_ONE, 0, $src, 0, 0)
 >;
+
+// Allow integer inputs
+class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : Pat<
+  (node (i8 timm:$tgt), (i8 timm:$en), vt:$src0, vt:$src1, vt:$src2, vt:$src3, (i1 timm:$compr), (i1 timm:$vm)),
+  (Inst i8:$tgt, vt:$src0, vt:$src1, vt:$src2, vt:$src3, i1:$vm, i1:$compr, i8:$en)
+>;
+
+def : ExpPattern<AMDGPUexport, i32, EXP>;
+def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns

@@ -48,6 +48,7 @@ static OptionDefinition g_log_options[] = {
   { LLDB_OPT_SET_1, false, "thread-name",'n', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Prepend all log lines with the thread name for the thread that generates the log line." },
   { LLDB_OPT_SET_1, false, "stack",      'S', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append a stack backtrace to each log line." },
   { LLDB_OPT_SET_1, false, "append",     'a', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,     "Append to the log file instead of overwriting." },
+  { LLDB_OPT_SET_1, false, "file-function",'F',OptionParser::eNoArgument,      nullptr, nullptr, 0, eArgTypeNone,     "Prepend the names of files and function that generate the logs." },
     // clang-format on
 };
 
@@ -130,6 +131,8 @@ public:
       case 'a':
         log_options |= LLDB_LOG_OPTION_APPEND;
         break;
+      case 'F':
+        log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
       default:
         error.SetErrorStringWithFormat("unrecognized option '%c'",
                                        short_option);

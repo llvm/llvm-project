@@ -18,6 +18,7 @@ class SymbolBody;
 class InputSectionData;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
+class OutputSectionBase;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
@@ -113,7 +114,8 @@ struct Relocation {
 
 template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &);
 
-template <class ELFT> void createThunks(InputSectionBase<ELFT> &);
+template <class ELFT>
+void createThunks(ArrayRef<OutputSectionBase *> OutputSections);
 
 template <class ELFT>
 static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {

@@ -221,6 +221,11 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SUBE, VT, Expand);
   }
 
+  // LLVM will expand these to atomic_cmp_swap(0)
+  // and atomic_swap, respectively.
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Expand);
+  setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Expand);
+
   setSchedulingPreference(Sched::Source);
 
   setTargetDAGCombine(ISD::FP_ROUND);

@@ -30,6 +30,10 @@ def main():
     parser.add_argument('--only-stdlib-symbols', dest='only_stdlib',
                         help="Filter all symbols not related to the stdlib",
                         action='store_true', default=False)
+    parser.add_argument('--strict', dest='strict',
+                        help="Exit with a non-zero status if any symbols "
+                             "differ",
+                        action='store_true', default=False)
     parser.add_argument(
         '-o', '--output', dest='output',
         help='The output file. stdout is used if not given',
@@ -54,16 +58,16 @@ def main():
     added, removed, changed = diff.diff(old_syms_list, new_syms_list)
     if args.removed_only:
         added = {}
-    report, is_break = diff.report_diff(added, removed, changed,
-                                        names_only=args.names_only,
-                                        demangle=args.demangle)
+    report, is_break, is_different = diff.report_diff(
+        added, removed, changed, names_only=args.names_only,
+        demangle=args.demangle)
     if args.output is None:
         print(report)
     else:
         with open(args.output, 'w') as f:
             f.write(report + '\n')
-    sys.exit(is_break)
-
+    exit_code = 1 if is_break or (args.strict and is_different) else 0
+    sys.exit(exit_code)
 
 if __name__ == '__main__':
     main()

@@ -30,7 +30,7 @@
 
 # CHECK:      Local entries [
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x40008
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32744
 # CHECK-NEXT:     Initial: 0x20008
 #                          ^-- bar
@@ -38,7 +38,7 @@
 # CHECK-NEXT: ]
 # CHECK-NEXT: Global entries [
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x4000C
+# CHECK-NEXT:     Address:
 # CHECK-NEXT:     Access: -32740
 # CHECK-NEXT:     Initial: 0x0
 # CHECK-NEXT:     Value: 0x0

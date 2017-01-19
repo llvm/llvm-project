@@ -35,8 +35,9 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
 }
 
 struct IncomingArgHandler : public CallLowering::ValueHandler {
-  IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-    : ValueHandler(MIRBuilder, MRI) {}
+  IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                     CCAssignFn *AssignFn)
+      : ValueHandler(MIRBuilder, MRI, AssignFn) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -70,8 +71,9 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
 };
 
 struct FormalArgHandler : public IncomingArgHandler {
-  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-      : IncomingArgHandler(MIRBuilder, MRI) {}
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                   CCAssignFn *AssignFn)
+    : IncomingArgHandler(MIRBuilder, MRI, AssignFn) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
@@ -80,8 +82,8 @@ struct FormalArgHandler : public IncomingArgHandler {
 
 struct CallReturnHandler : public IncomingArgHandler {
   CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstrBuilder MIB)
-    : IncomingArgHandler(MIRBuilder, MRI), MIB(MIB) {}
+                    MachineInstrBuilder MIB, CCAssignFn *AssignFn)
+    : IncomingArgHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
@@ -92,8 +94,10 @@ struct CallReturnHandler : public IncomingArgHandler {
 
 struct OutgoingArgHandler : public CallLowering::ValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                     MachineInstrBuilder MIB)
-      : ValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+                     MachineInstrBuilder MIB, CCAssignFn *AssignFn,
+                     CCAssignFn *AssignFnVarArg)
+      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+        AssignFnVarArg(AssignFnVarArg), StackSize(0) {}
 
   unsigned getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -109,6 +113,7 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
+    StackSize = std::max(StackSize, Size + Offset);
     return AddrReg;
   }
 
@@ -126,7 +131,18 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
+  virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                         CCValAssign::LocInfo LocInfo,
+                         const CallLowering::ArgInfo &Info,
+                         CCState &State) override {
+    if (Info.IsFixed)
+      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+    return  AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+  }
+
   MachineInstrBuilder MIB;
+  CCAssignFn *AssignFnVarArg;
+  uint64_t StackSize;
 };
 
 void AArch64CallLowering::splitToValueTypes(
@@ -144,7 +160,7 @@ void AArch64CallLowering::splitToValueTypes(
     // No splitting to do, but we want to replace the original type (e.g. [1 x
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Reg, SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags);
+                           OrigArg.Flags, OrigArg.IsFixed);
     return;
   }
 
@@ -154,7 +170,7 @@ void AArch64CallLowering::splitToValueTypes(
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
     SplitArgs.push_back(
         ArgInfo{MRI.createGenericVirtualRegister(LLT{*SplitTy, DL}), SplitTy,
-                OrigArg.Flags});
+                OrigArg.Flags, OrigArg.IsFixed});
   }
 
   SmallVector<uint64_t, 4> BitOffsets;
@@ -191,8 +207,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                         MIRBuilder.buildExtract(Regs, Offsets, VReg);
                       });
 
-    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB);
-    Success = handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler);
+    OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
+    Success = handleAssignments(MIRBuilder, SplitArgs, Handler);
   }
 
   MIRBuilder.insertInstr(MIB);
@@ -227,8 +243,8 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
 
-  FormalArgHandler Handler(MIRBuilder, MRI);
-  if (!handleAssignments(MIRBuilder, AssignFn, SplitArgs, Handler))
+  FormalArgHandler Handler(MIRBuilder, MRI, AssignFn);
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
 
   // Move back to the end of the basic block.
@@ -256,8 +272,12 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Find out which ABI gets to decide where things go.
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
-  CCAssignFn *CallAssignFn =
+  CCAssignFn *AssignFnFixed =
       TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/false);
+  CCAssignFn *AssignFnVarArg =
+      TLI.CCAssignFnForCall(F.getCallingConv(), /*IsVarArg=*/true);
+
+  auto CallSeqStart = MIRBuilder.buildInstr(AArch64::ADJCALLSTACKDOWN);
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
@@ -271,8 +291,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Do the actual argument marshalling.
   SmallVector<unsigned, 8> PhysRegs;
-  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB);
-  if (!handleAssignments(MIRBuilder, CallAssignFn, SplitArgs, Handler))
+  OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFnFixed,
+                             AssignFnVarArg);
+  if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
     return false;
 
   // Now we can add the actual call instruction to the correct basic block.
@@ -304,13 +325,18 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                   std::back_inserter(SplitRegs));
                       });
 
-    CallReturnHandler Handler(MIRBuilder, MRI, MIB);
-    if (!handleAssignments(MIRBuilder, RetAssignFn, SplitArgs, Handler))
+    CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);
+    if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
       return false;
 
     if (!RegOffsets.empty())
       MIRBuilder.buildSequence(OrigRet.Reg, SplitRegs, RegOffsets);
   }
+
+  CallSeqStart.addImm(Handler.StackSize);
+  MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
+      .addImm(Handler.StackSize)
+      .addImm(0);
 
   return true;
 }

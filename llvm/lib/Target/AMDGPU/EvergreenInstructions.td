@@ -35,27 +35,58 @@ class CF_MEM_RAT_CACHELESS <bits<6> rat_inst, bits<4> rat_id, bits<4> mask, dag 
     : EG_CF_RAT <0x57, rat_inst, rat_id, mask, (outs), ins,
                  "MEM_RAT_CACHELESS "#name, pattern>;
 
-class CF_MEM_RAT <bits<6> rat_inst, bits<4> rat_id, dag ins, string name,
-                  list<dag> pattern>
-    : EG_CF_RAT <0x56, rat_inst, rat_id, 0xf /* mask */, (outs), ins,
+class CF_MEM_RAT <bits<6> rat_inst, bits<4> rat_id, bits<4> mask, dag ins,
+                  dag outs, string name, list<dag> pattern>
+    : EG_CF_RAT <0x56, rat_inst, rat_id, mask, outs, ins,
                  "MEM_RAT "#name, pattern>;
 
 class CF_MEM_RAT_STORE_TYPED<bits<1> has_eop>
-    : CF_MEM_RAT <0x1, ?, (ins R600_Reg128:$rw_gpr, R600_Reg128:$index_gpr,
-                           i32imm:$rat_id, InstFlag:$eop),
+    : CF_MEM_RAT <0x1, ?, 0xf, (ins R600_Reg128:$rw_gpr, R600_Reg128:$index_gpr,
+                           i32imm:$rat_id, InstFlag:$eop), (outs),
                   "STORE_TYPED RAT($rat_id) $rw_gpr, $index_gpr"
                                #!if(has_eop, ", $eop", ""),
                   [(int_r600_rat_store_typed R600_Reg128:$rw_gpr,
                                              R600_Reg128:$index_gpr,
                                              (i32 imm:$rat_id))]>;
 
-def RAT_MSKOR : CF_MEM_RAT <0x11, 0,
-  (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+def RAT_MSKOR : CF_MEM_RAT <0x11, 0, 0xf,
+  (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr), (outs),
   "MSKOR $rw_gpr.XW, $index_gpr",
   [(mskor_global v4i32:$rw_gpr, i32:$index_gpr)]
 > {
   let eop = 0;
 }
+
+
+multiclass RAT_ATOMIC<bits<6> op_ret, bits<6> op_noret, string name> {
+  let Constraints = "$rw_gpr = $out_gpr", eop = 0, mayStore = 1 in {
+  def  _RTN: CF_MEM_RAT <op_ret, 0, 0xf,
+             (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+             (outs R600_Reg128:$out_gpr),
+             name ## "_RTN" ## " $rw_gpr, $index_gpr", [] >;
+  def _NORET: CF_MEM_RAT <op_noret, 0, 0xf,
+              (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
+              (outs R600_Reg128:$out_gpr),
+              name ## " $rw_gpr, $index_gpr", [] >;
+  }
+}
+
+// Swap no-ret is just store. Raw store to cached target
+// can only store on dword, which exactly matches swap_no_ret.
+defm RAT_ATOMIC_XCHG_INT : RAT_ATOMIC<1, 34, "ATOMIC_XCHG_INT">;
+defm RAT_ATOMIC_CMPXCHG_INT : RAT_ATOMIC<4, 36, "ATOMIC_CMPXCHG_INT">;
+defm RAT_ATOMIC_ADD : RAT_ATOMIC<7, 39, "ATOMIC_ADD">;
+defm RAT_ATOMIC_SUB : RAT_ATOMIC<8, 40, "ATOMIC_SUB">;
+defm RAT_ATOMIC_RSUB : RAT_ATOMIC<9, 41, "ATOMIC_RSUB">;
+defm RAT_ATOMIC_MIN_INT : RAT_ATOMIC<10, 42, "ATOMIC_MIN_INT">;
+defm RAT_ATOMIC_MIN_UINT : RAT_ATOMIC<11, 43, "ATOMIC_MIN_UINT">;
+defm RAT_ATOMIC_MAX_INT : RAT_ATOMIC<12, 44, "ATOMIC_MAX_INT">;
+defm RAT_ATOMIC_MAX_UINT : RAT_ATOMIC<13, 45, "ATOMIC_MAX_UINT">;
+defm RAT_ATOMIC_AND : RAT_ATOMIC<14, 46, "ATOMIC_AND">;
+defm RAT_ATOMIC_OR : RAT_ATOMIC<15, 47, "ATOMIC_OR">;
+defm RAT_ATOMIC_XOR : RAT_ATOMIC<16, 48, "ATOMIC_XOR">;
+defm RAT_ATOMIC_INC_UINT : RAT_ATOMIC<18, 50, "ATOMIC_INC_UINT">;
+defm RAT_ATOMIC_DEC_UINT : RAT_ATOMIC<19, 51, "ATOMIC_DEC_UINT">;
 
 } // End let Predicates = [isEGorCayman]
 
@@ -256,6 +287,76 @@ def : Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [isEGorCayman] in {
+
+multiclass AtomicPat<Instruction inst_ret, Instruction inst_noret,
+                     SDPatternOperator node_ret, SDPatternOperator node_noret> {
+  // FIXME: Add _RTN version. We need per WI scratch location to store the old value
+  // EXTRACT_SUBREG here is dummy, we know the node has no uses
+  def : Pat<(i32 (node_noret i32:$ptr, i32:$data)),
+            (EXTRACT_SUBREG (inst_noret
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $data, sub0), $ptr), sub1)>;
+}
+multiclass AtomicIncDecPat<Instruction inst_ret, Instruction inst_noret,
+                     SDPatternOperator node_ret, SDPatternOperator node_noret, int C> {
+  // FIXME: Add _RTN version. We need per WI scratch location to store the old value
+  // EXTRACT_SUBREG here is dummy, we know the node has no uses
+  def : Pat<(i32 (node_noret i32:$ptr, C)),
+            (EXTRACT_SUBREG (inst_noret
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (MOV_IMM_I32 -1), sub0), $ptr), sub1)>;
+}
+
+// CMPSWAP is pattern is special
+// EXTRACT_SUBREG here is dummy, we know the node has no uses
+// FIXME: Add _RTN version. We need per WI scratch location to store the old value
+def : Pat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$data)),
+          (EXTRACT_SUBREG (RAT_ATOMIC_CMPXCHG_INT_NORET
+            (INSERT_SUBREG
+              (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), $cmp, sub3),
+            $data, sub0),
+          $ptr), sub1)>;
+
+defm AtomicSwapPat : AtomicPat <RAT_ATOMIC_XCHG_INT_RTN,
+                                RAT_ATOMIC_XCHG_INT_NORET,
+                                atomic_swap_global_ret,
+                                atomic_swap_global_noret>;
+defm AtomicAddPat : AtomicPat <RAT_ATOMIC_ADD_RTN, RAT_ATOMIC_ADD_NORET,
+                               atomic_add_global_ret, atomic_add_global_noret>;
+defm AtomicSubPat : AtomicPat <RAT_ATOMIC_SUB_RTN, RAT_ATOMIC_SUB_NORET,
+                               atomic_sub_global_ret, atomic_sub_global_noret>;
+defm AtomicMinPat : AtomicPat <RAT_ATOMIC_MIN_INT_RTN,
+                               RAT_ATOMIC_MIN_INT_NORET,
+                               atomic_min_global_ret, atomic_min_global_noret>;
+defm AtomicUMinPat : AtomicPat <RAT_ATOMIC_MIN_UINT_RTN,
+                                RAT_ATOMIC_MIN_UINT_NORET,
+                                atomic_umin_global_ret, atomic_umin_global_noret>;
+defm AtomicMaxPat : AtomicPat <RAT_ATOMIC_MAX_INT_RTN,
+                               RAT_ATOMIC_MAX_INT_NORET,
+                               atomic_max_global_ret, atomic_max_global_noret>;
+defm AtomicUMaxPat : AtomicPat <RAT_ATOMIC_MAX_UINT_RTN,
+                                RAT_ATOMIC_MAX_UINT_NORET,
+                                atomic_umax_global_ret, atomic_umax_global_noret>;
+defm AtomicAndPat : AtomicPat <RAT_ATOMIC_AND_RTN, RAT_ATOMIC_AND_NORET,
+                               atomic_and_global_ret, atomic_and_global_noret>;
+defm AtomicOrPat : AtomicPat <RAT_ATOMIC_OR_RTN, RAT_ATOMIC_OR_NORET,
+                              atomic_or_global_ret, atomic_or_global_noret>;
+defm AtomicXorPat : AtomicPat <RAT_ATOMIC_XOR_RTN, RAT_ATOMIC_XOR_NORET,
+                               atomic_xor_global_ret, atomic_xor_global_noret>;
+defm AtomicIncAddPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
+                                        RAT_ATOMIC_INC_UINT_NORET,
+                                        atomic_add_global_ret,
+                                        atomic_add_global_noret, 1>;
+defm AtomicIncSubPat : AtomicIncDecPat <RAT_ATOMIC_INC_UINT_RTN,
+                                        RAT_ATOMIC_INC_UINT_NORET,
+                                        atomic_sub_global_ret,
+                                        atomic_sub_global_noret, -1>;
+defm AtomicDecAddPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
+                                        RAT_ATOMIC_DEC_UINT_NORET,
+                                        atomic_add_global_ret,
+                                        atomic_add_global_noret, -1>;
+defm AtomicDecSubPat : AtomicIncDecPat <RAT_ATOMIC_DEC_UINT_RTN,
+                                        RAT_ATOMIC_DEC_UINT_NORET,
+                                        atomic_sub_global_ret,
+                                        atomic_sub_global_noret, 1>;
 
 // Should be predicated on FeatureFP64
 // def FMA_64 : R600_3OP <

@@ -95,8 +95,5 @@ Error Decompressor::decompress(SmallString<32> &Out) {
 
 Error Decompressor::decompress(MutableArrayRef<char> Buffer) {
   size_t Size = Buffer.size();
-  zlib::Status Status = zlib::uncompress(SectionData, Buffer.data(), Size);
-  if (Status != zlib::StatusOK)
-    return createError("decompression failed");
-  return Error::success();
+  return zlib::uncompress(SectionData, Buffer.data(), Size);
 }

@@ -6,6 +6,11 @@
 
 set -e
 
+echo "---------- WARNING ----------"
+echo "buildit is no longer supported and will be removed in the next week!"
+echo "please contact the libc++ maintainers if you have any concerns"
+echo ""
+
 if [ `basename $(pwd)` != "lib" ]
 then
     echo "current directory must be lib"
@@ -177,3 +182,8 @@ if [ -z "$RC_XBS" ]
 then
     rm *.o
 fi
+
+echo "---------- WARNING ----------"
+echo "buildit is no longer supported and will be removed in the next week!"
+echo "please contact the libc++ maintainers if you have any concerns"
+echo ""

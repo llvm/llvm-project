@@ -37,9 +37,9 @@ entry:
 define signext i8 @foo3() nounwind ssp {
 entry:
 ; CHECK-LABEL: @foo3
-; CHECK: mov x[[REG:[0-9]+]], #12343736008704
+; CHECK: mov x[[REG:[0-9]+]], #12274
 ; CHECK: movk x[[REG]], #29646, lsl #16
-; CHECK: movk x[[REG]], #12274
+; CHECK: movk x[[REG]], #2874, lsl #32
   %0 = load i8*, i8** @pd2, align 8
   %arrayidx = getelementptr inbounds i8, i8* %0, i64 12345678901234
   %1 = load i8, i8* %arrayidx, align 1

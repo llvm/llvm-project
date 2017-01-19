@@ -97,7 +97,7 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
 endif ()
 
 # Linux-only libraries
-if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
+if ( CMAKE_SYSTEM_NAME MATCHES "Linux|Android" )
   list(APPEND LLDB_USED_LIBS
     lldbPluginProcessLinux
     lldbPluginProcessPOSIX

@@ -1392,21 +1392,24 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI.getOperand(0));
   if (II) {
     switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::fabs: {
-        // (fptrunc (fabs x)) -> (fabs (fptrunc x))
-        Value *InnerTrunc = Builder->CreateFPTrunc(II->getArgOperand(0),
-                                                   CI.getType());
-        Type *IntrinsicType[] = { CI.getType() };
-        Function *Overload = Intrinsic::getDeclaration(
-            CI.getModule(), II->getIntrinsicID(), IntrinsicType);
+    default: break;
+    case Intrinsic::fabs: {
+      // (fptrunc (fabs x)) -> (fabs (fptrunc x))
+      Value *InnerTrunc = Builder->CreateFPTrunc(II->getArgOperand(0),
+                                                 CI.getType());
+      Type *IntrinsicType[] = { CI.getType() };
+      Function *Overload = Intrinsic::getDeclaration(
+        CI.getModule(), II->getIntrinsicID(), IntrinsicType);
 
-        SmallVector<OperandBundleDef, 1> OpBundles;
-        II->getOperandBundlesAsDefs(OpBundles);
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      II->getOperandBundlesAsDefs(OpBundles);
 
-        Value *Args[] = { InnerTrunc };
-        return CallInst::Create(Overload, Args, OpBundles, II->getName());
-      }
+      Value *Args[] = { InnerTrunc };
+      CallInst *NewCI =  CallInst::Create(Overload, Args,
+                                          OpBundles, II->getName());
+      NewCI->copyFastMathFlags(II);
+      return NewCI;
+    }
     }
   }
 

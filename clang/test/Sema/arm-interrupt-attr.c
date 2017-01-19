@@ -17,3 +17,14 @@ __attribute__((interrupt("UNDEF"))) void foo7() {}
 __attribute__((interrupt)) void foo8() {}
 __attribute__((interrupt())) void foo9() {}
 __attribute__((interrupt(""))) void foo10() {}
+
+void callee1();
+__attribute__((interrupt("IRQ"))) void callee2();
+void caller1() {
+  callee1();
+  callee2();
+}
+__attribute__((interrupt("IRQ"))) void caller2() {
+  callee1(); // expected-warning {{call to function without interrupt attribute could clobber interruptee's VFP registers}}
+  callee2();
+}

@@ -577,7 +577,7 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  while ((ResultFD = open(P.begin(), O_RDONLY)) < 0) {
+  while ((ResultFD = open(P.begin(), O_RDONLY | O_CLOEXEC)) < 0) {
     if (errno != EINTR)
       return std::error_code(errno, std::generic_category());
   }
@@ -614,7 +614,7 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
          "Cannot specify both 'excl' and 'append' file creation flags!");
 
-  int OpenFlags = O_CREAT;
+  int OpenFlags = O_CREAT | O_CLOEXEC;
 
   if (Flags & F_RW)
     OpenFlags |= O_RDWR;

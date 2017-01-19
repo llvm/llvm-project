@@ -1079,3 +1079,13 @@ retw
 // CHECK: lretw
 // CHECK: encoding: [0x66,0xcb]
 lretw
+
+// CHECK: data16
+// CHECK: encoding: [0x66]
+data16
+
+// CHECK: data16
+// CHECK: encoding: [0x66]
+// CHECK: lgdtl 4(%eax)
+// CHECK:  encoding: [0x0f,0x01,0x50,0x04]
+data16 lgdt 4(%eax)

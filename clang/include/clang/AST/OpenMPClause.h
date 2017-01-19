@@ -76,10 +76,17 @@ class OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// Pre-initialization statement for the clause.
   Stmt *PreInit;
+  /// Region that captures the associated stmt.
+  OpenMPDirectiveKind CaptureRegion;
+
 protected:
   /// Set pre-initialization statement for the clause.
-  void setPreInitStmt(Stmt *S) { PreInit = S; }
-  OMPClauseWithPreInit(const OMPClause *This) : PreInit(nullptr) {
+  void setPreInitStmt(Stmt *S, OpenMPDirectiveKind ThisRegion = OMPD_unknown) {
+    PreInit = S;
+    CaptureRegion = ThisRegion;
+  }
+  OMPClauseWithPreInit(const OMPClause *This)
+      : PreInit(nullptr), CaptureRegion(OMPD_unknown) {
     assert(get(This) && "get is not tuned for pre-init.");
   }
 
@@ -88,6 +95,8 @@ public:
   const Stmt *getPreInitStmt() const { return PreInit; }
   /// Get pre-initialization statement for the clause.
   Stmt *getPreInitStmt() { return PreInit; }
+  /// Get capture region for the stmt in the clause.
+  OpenMPDirectiveKind getCaptureRegion() { return CaptureRegion; }
   static OMPClauseWithPreInit *get(OMPClause *C);
   static const OMPClauseWithPreInit *get(const OMPClause *C);
 };
@@ -194,7 +203,7 @@ public:
 /// In this example directive '#pragma omp parallel' has simple 'if' clause with
 /// condition 'a > 5' and directive name modifier 'parallel'.
 ///
-class OMPIfClause : public OMPClause {
+class OMPIfClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// \brief Location of '('.
   SourceLocation LParenLoc;
@@ -225,26 +234,31 @@ public:
   ///
   /// \param NameModifier [OpenMP 4.1] Directive name modifier of clause.
   /// \param Cond Condition of the clause.
+  /// \param HelperCond Helper condition for the clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param NameModifierLoc Location of directive name modifier.
   /// \param ColonLoc [OpenMP 4.1] Location of ':'.
   /// \param EndLoc Ending location of the clause.
   ///
-  OMPIfClause(OpenMPDirectiveKind NameModifier, Expr *Cond,
-              SourceLocation StartLoc, SourceLocation LParenLoc,
-              SourceLocation NameModifierLoc, SourceLocation ColonLoc,
-              SourceLocation EndLoc)
-      : OMPClause(OMPC_if, StartLoc, EndLoc), LParenLoc(LParenLoc),
-        Condition(Cond), ColonLoc(ColonLoc), NameModifier(NameModifier),
-        NameModifierLoc(NameModifierLoc) {}
+  OMPIfClause(OpenMPDirectiveKind NameModifier, Expr *Cond, Stmt *HelperCond,
+              OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+              SourceLocation LParenLoc, SourceLocation NameModifierLoc,
+              SourceLocation ColonLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_if, StartLoc, EndLoc), OMPClauseWithPreInit(this),
+        LParenLoc(LParenLoc), Condition(Cond), ColonLoc(ColonLoc),
+        NameModifier(NameModifier), NameModifierLoc(NameModifierLoc) {
+    setPreInitStmt(HelperCond, CaptureRegion);
+  }
 
   /// \brief Build an empty clause.
   ///
   OMPIfClause()
-      : OMPClause(OMPC_if, SourceLocation(), SourceLocation()), LParenLoc(),
-        Condition(nullptr), ColonLoc(), NameModifier(OMPD_unknown),
-        NameModifierLoc() {}
+      : OMPClause(OMPC_if, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this), LParenLoc(), Condition(nullptr), ColonLoc(),
+        NameModifier(OMPD_unknown), NameModifierLoc() {}
 
   /// \brief Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }

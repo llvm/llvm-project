@@ -230,8 +230,9 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
   //      - PHI:
   //        - All uses of the PHI must be the reduction (safe).
   //        - Otherwise, not safe.
-  //  - By one instruction outside of the loop (safe).
-  //  - By further instructions outside of the loop (not safe).
+  //  - By instructions outside of the loop (safe).
+  //      * One value may have several outside users, but all outside
+  //        uses must be of the same value.
   //  - By an instruction that is not part of the reduction (not safe).
   //    This is either:
   //      * An instruction type other than PHI or the reduction operation.
@@ -297,10 +298,15 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
       // Check if we found the exit user.
       BasicBlock *Parent = UI->getParent();
       if (!TheLoop->contains(Parent)) {
-        // Exit if you find multiple outside users or if the header phi node is
-        // being used. In this case the user uses the value of the previous
-        // iteration, in which case we would loose "VF-1" iterations of the
-        // reduction operation if we vectorize.
+        // If we already know this instruction is used externally, move on to
+        // the next user.
+        if (ExitInstruction == Cur)
+          continue;
+
+        // Exit if you find multiple values used outside or if the header phi
+        // node is being used. In this case the user uses the value of the
+        // previous iteration, in which case we would loose "VF-1" iterations of
+        // the reduction operation if we vectorize.
         if (ExitInstruction != nullptr || Cur == Phi)
           return false;
 

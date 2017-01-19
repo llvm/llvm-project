@@ -9,8 +9,8 @@ __SIZE_TYPE__ f1(void) {
 // WEBASSEMBLY64: call {{i.*}} @llvm.wasm.current.memory.i64()
 }
 
-void f2(long delta) {
-  __builtin_wasm_grow_memory(delta);
-// WEBASSEMBLY32: call void @llvm.wasm.grow.memory.i32(i32 %{{.*}})
-// WEBASSEMBLY64: call void @llvm.wasm.grow.memory.i64(i64 %{{.*}})
+__SIZE_TYPE__ f2(__SIZE_TYPE__ delta) {
+  return __builtin_wasm_grow_memory(delta);
+// WEBASSEMBLY32: call i32 @llvm.wasm.grow.memory.i32(i32 %{{.*}})
+// WEBASSEMBLY64: call i64 @llvm.wasm.grow.memory.i64(i64 %{{.*}})
 }

@@ -24,7 +24,7 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-SmallVector<WeakVH, 1> &AssumptionCache::getAffectedValues(Value *V) {
+SmallVector<WeakVH, 1> &AssumptionCache::getOrInsertAffectedValues(Value *V) {
   // Try using find_as first to avoid creating extra value handles just for the
   // purpose of doing the lookup.
   auto AVI = AffectedValues.find_as(V);
@@ -47,9 +47,11 @@ void AssumptionCache::updateAffectedValues(CallInst *CI) {
     } else if (auto *I = dyn_cast<Instruction>(V)) {
       Affected.push_back(I);
 
-      if (I->getOpcode() == Instruction::BitCast ||
-          I->getOpcode() == Instruction::PtrToInt) {
-        auto *Op = I->getOperand(0);
+      // Peek through unary operators to find the source of the condition.
+      Value *Op;
+      if (match(I, m_BitCast(m_Value(Op))) ||
+          match(I, m_PtrToInt(m_Value(Op))) ||
+          match(I, m_Not(m_Value(Op)))) {
         if (isa<Instruction>(Op) || isa<Argument>(Op))
           Affected.push_back(Op);
       }
@@ -98,7 +100,7 @@ void AssumptionCache::updateAffectedValues(CallInst *CI) {
   }
 
   for (auto &AV : Affected) {
-    auto &AVV = getAffectedValues(AV);
+    auto &AVV = getOrInsertAffectedValues(AV);
     if (std::find(AVV.begin(), AVV.end(), CI) == AVV.end())
       AVV.push_back(CI);
   }
@@ -111,20 +113,27 @@ void AssumptionCache::AffectedValueCallbackVH::deleted() {
   // 'this' now dangles!
 }
 
+void AssumptionCache::copyAffectedValuesInCache(Value *OV, Value *NV) {
+  auto &NAVV = getOrInsertAffectedValues(NV);
+  auto AVI = AffectedValues.find(OV);
+  if (AVI == AffectedValues.end())
+    return;
+
+  for (auto &A : AVI->second)
+    if (std::find(NAVV.begin(), NAVV.end(), A) == NAVV.end())
+      NAVV.push_back(A);
+}
+
 void AssumptionCache::AffectedValueCallbackVH::allUsesReplacedWith(Value *NV) {
   if (!isa<Instruction>(NV) && !isa<Argument>(NV))
     return;
 
   // Any assumptions that affected this value now affect the new value.
 
-  auto &NAVV = AC->getAffectedValues(NV);
-  auto AVI = AC->AffectedValues.find(getValPtr());
-  if (AVI == AC->AffectedValues.end())
-    return;
-
-  for (auto &A : AVI->second)
-    if (std::find(NAVV.begin(), NAVV.end(), A) == NAVV.end())
-      NAVV.push_back(A);
+  AC->copyAffectedValuesInCache(getValPtr(), NV);
+  // 'this' now might dangle! If the AffectedValues map was resized to add an
+  // entry for NV then this object might have been destroyed in favor of some
+  // copy in the grown map.
 }
 
 void AssumptionCache::scanFunction() {

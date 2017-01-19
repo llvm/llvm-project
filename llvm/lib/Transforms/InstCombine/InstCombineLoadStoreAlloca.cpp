@@ -1325,8 +1325,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
       break;
     }
 
-    // Don't skip over loads or things that can modify memory.
-    if (BBI->mayWriteToMemory() || BBI->mayReadFromMemory())
+    // Don't skip over loads, throws or things that can modify memory.
+    if (BBI->mayWriteToMemory() || BBI->mayReadFromMemory() || BBI->mayThrow())
       break;
   }
 
@@ -1449,8 +1449,8 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
       }
       // If we find something that may be using or overwriting the stored
       // value, or if we run out of instructions, we can't do the xform.
-      if (BBI->mayReadFromMemory() || BBI->mayWriteToMemory() ||
-          BBI == OtherBB->begin())
+      if (BBI->mayReadFromMemory() || BBI->mayThrow() ||
+          BBI->mayWriteToMemory() || BBI == OtherBB->begin())
         return false;
     }
 
@@ -1459,7 +1459,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
     // StoreBB.
     for (BasicBlock::iterator I = StoreBB->begin(); &*I != &SI; ++I) {
       // FIXME: This should really be AA driven.
-      if (I->mayReadFromMemory() || I->mayWriteToMemory())
+      if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
         return false;
     }
   }

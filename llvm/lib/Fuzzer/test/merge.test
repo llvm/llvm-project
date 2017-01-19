@@ -52,3 +52,7 @@ TMPDIR: MERGE-OUTER: failed to write to the control file: DIR_DOES_NOT_EXIST/lib
 # Check that we can report an error if file size exceeded
 RUN: (ulimit -f 1; not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
 SIGXFSZ: ERROR: libFuzzer: file size exceeded
+
+RUN: rm -rf  %tmp/T1/* %tmp/T2/*
+RUN: not LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=EMPTY
+EMPTY: MERGE-OUTER: zero succesfull attempts, exiting

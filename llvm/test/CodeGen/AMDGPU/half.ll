@@ -399,15 +399,15 @@ define void @global_extload_v2f16_to_v2f64(<2 x double> addrspace(1)* %out, <2 x
 ; XVI-NOT: v_cvt_f32_f16
 
 ; GCN: buffer_load_dwordx2 v{{\[}}[[IN_LO:[0-9]+]]:[[IN_HI:[0-9]+]]
-; VI:  v_lshrrev_b32_e32 [[Y16:v[0-9]+]], 16, v[[IN_LO]]
-; GCN: v_cvt_f32_f16_e32 [[Z32:v[0-9]+]], v[[IN_HI]]
-; GCN: v_cvt_f32_f16_e32 [[X32:v[0-9]+]], v[[IN_LO]]
-; SI:  v_lshrrev_b32_e32 [[Y16:v[0-9]+]], 16, v[[IN_LO]]
-; GCN: v_cvt_f32_f16_e32 [[Y32:v[0-9]+]], [[Y16]]
+; VI-DAG:  v_lshrrev_b32_e32 [[Y16:v[0-9]+]], 16, v[[IN_LO]]
+; GCN-DAG: v_cvt_f32_f16_e32 [[Z32:v[0-9]+]], v[[IN_HI]]
+; GCN-DAG: v_cvt_f32_f16_e32 [[X32:v[0-9]+]], v[[IN_LO]]
+; SI:      v_lshrrev_b32_e32 [[Y16:v[0-9]+]], 16, v[[IN_LO]]
+; GCN-DAG: v_cvt_f32_f16_e32 [[Y32:v[0-9]+]], [[Y16]]
 
-; GCN: v_cvt_f64_f32_e32 [[Z:v\[[0-9]+:[0-9]+\]]], [[Z32]]
-; GCN: v_cvt_f64_f32_e32 v{{\[}}[[XLO:[0-9]+]]:{{[0-9]+}}], [[X32]]
-; GCN: v_cvt_f64_f32_e32 v[{{[0-9]+}}:[[YHI:[0-9]+]]{{\]}}, [[Y32]]
+; GCN-DAG: v_cvt_f64_f32_e32 [[Z:v\[[0-9]+:[0-9]+\]]], [[Z32]]
+; GCN-DAG: v_cvt_f64_f32_e32 v{{\[}}[[XLO:[0-9]+]]:{{[0-9]+}}], [[X32]]
+; GCN-DAG: v_cvt_f64_f32_e32 v[{{[0-9]+}}:[[YHI:[0-9]+]]{{\]}}, [[Y32]]
 ; GCN-NOT: v_cvt_f64_f32_e32
 
 ; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[XLO]]:[[YHI]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}

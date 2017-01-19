@@ -2308,6 +2308,16 @@ public:
   ///  @param AliasGroups The alias groups to split
   void splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups);
 
+  /// Build a given alias group and its access data.
+  ///
+  /// @param AliasGroup     The alias group to build.
+  /// @param HasWriteAccess A set of base pointer values for through which
+  ///                       memory is not only read, but also written.
+  ///
+  /// @returns True if __no__ error occurred, false otherwise.
+  bool buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
+                       DenseSet<Value *> HasWriteAccess);
+
   /// Return all alias groups for this SCoP.
   const MinMaxVectorPairVectorTy &getAliasGroups() const {
     return MinMaxAliasGroups;

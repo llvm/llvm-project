@@ -74,7 +74,7 @@ typedef void(*__libcpp_debug_function_type)(__libcpp_debug_info const&);
 
 /// __libcpp_debug_function - The handler function called when a _LIBCPP_ASSERT
 ///    fails.
-extern __libcpp_debug_function_type __libcpp_debug_function;
+extern _LIBCPP_EXTERN_VIS __libcpp_debug_function_type __libcpp_debug_function;
 
 /// __libcpp_abort_debug_function - A debug handler that aborts when called.
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS

@@ -14,6 +14,25 @@ import subprocess
 import sys
 import re
 
+def to_bytes(str):
+    # Encode to UTF-8 to get binary data.
+    if isinstance(str, bytes):
+        return str
+    return str.encode('utf-8')
+
+def to_string(bytes):
+    if isinstance(bytes, str):
+        return bytes
+    return to_bytes(bytes)
+
+def convert_string(bytes):
+    try:
+        return to_string(bytes.decode('utf-8'))
+    except AttributeError: # 'str' object has no attribute 'decode'.
+        return str(bytes)
+    except UnicodeError:
+        return str(bytes)
+
 def execute_command(cmd, input_str=None):
     """
     Execute a command, capture and return its output.
@@ -28,6 +47,8 @@ def execute_command(cmd, input_str=None):
     exitCode = p.wait()
     if exitCode == -signal.SIGINT:
         raise KeyboardInterrupt
+    out = convert_string(out)
+    err = convert_string(err)
     return out, err, exitCode
 
 
@@ -105,13 +126,13 @@ def demangle_symbol(symbol):
 
 
 def is_elf(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'rb') as f:
         magic_bytes = f.read(4)
-    return magic_bytes == '\x7fELF'
+    return magic_bytes == b'\x7fELF'
 
 
 def is_mach_o(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'rb') as f:
         magic_bytes = f.read(4)
     return magic_bytes in [
         '\xfe\xed\xfa\xce',  # MH_MAGIC

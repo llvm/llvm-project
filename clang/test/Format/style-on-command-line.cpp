@@ -1,11 +1,11 @@
 // RUN: clang-format -style="{BasedOnStyle: Google, IndentWidth: 8}" %s | FileCheck -strict-whitespace -check-prefix=CHECK1 %s
 // RUN: clang-format -style="{BasedOnStyle: LLVM, IndentWidth: 7}" %s | FileCheck -strict-whitespace -check-prefix=CHECK2 %s
-// RUN: clang-format -style="{BasedOnStyle: invalid, IndentWidth: 7}" -fallback-style=LLVM %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK3 %s
-// RUN: clang-format -style="{lsjd}" %s -fallback-style=LLVM 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK4 %s
+// RUN: not clang-format -style="{BasedOnStyle: invalid, IndentWidth: 7}" -fallback-style=LLVM %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK3 %s
+// RUN: not clang-format -style="{lsjd}" %s -fallback-style=LLVM 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK4 %s
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 5\n" > %T/.clang-format
 // RUN: clang-format -style=file -assume-filename=%T/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK5 %s
 // RUN: printf "\n" > %T/.clang-format
-// RUN: clang-format -style=file -fallback-style=webkit -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK6 %s
+// RUN: not clang-format -style=file -fallback-style=webkit -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK6 %s
 // RUN: rm %T/.clang-format
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 6\n" > %T/_clang-format
 // RUN: clang-format -style=file -assume-filename=%T/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK7 %s
@@ -15,13 +15,10 @@ void f() {
 // CHECK1: {{^        int\* i;$}}
 // CHECK2: {{^       int \*i;$}}
 // CHECK3: Unknown value for BasedOnStyle: invalid
-// CHECK3: Error parsing -style: {{I|i}}nvalid argument, using LLVM style
-// CHECK3: {{^  int \*i;$}}
-// CHECK4: Error parsing -style: {{I|i}}nvalid argument, using LLVM style
-// CHECK4: {{^  int \*i;$}}
+// CHECK3: Error parsing -style: {{I|i}}nvalid argument
+// CHECK4: Error parsing -style: {{I|i}}nvalid argument
 // CHECK5: {{^     int\* i;$}}
 // CHECK6: {{^Error reading .*\.clang-format: (I|i)nvalid argument}}
-// CHECK6: {{^    int\* i;$}}
 // CHECK7: {{^      int\* i;$}}
 // CHECK8: {{^  int\* i;$}}
 // CHECK9: {{^    int \*i;$}}

@@ -11,20 +11,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/SSAUpdaterImpl.h"
+#include <cassert>
+#include <utility>
 
 using namespace llvm;
 
@@ -36,7 +45,7 @@ static AvailableValsTy &getAvailableVals(void *AV) {
 }
 
 SSAUpdater::SSAUpdater(SmallVectorImpl<PHINode*> *NewPHI)
-  : AV(nullptr), ProtoType(nullptr), ProtoName(), InsertedPHIs(NewPHI) {}
+  : InsertedPHIs(NewPHI) {}
 
 SSAUpdater::~SSAUpdater() {
   delete static_cast<AvailableValsTy*>(AV);
@@ -205,6 +214,7 @@ void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
 }
 
 namespace llvm {
+
 template<>
 class SSAUpdaterTraits<SSAUpdater> {
 public:
@@ -230,6 +240,7 @@ public:
     PHI_iterator &operator++() { ++idx; return *this; } 
     bool operator==(const PHI_iterator& x) const { return idx == x.idx; }
     bool operator!=(const PHI_iterator& x) const { return !operator==(x); }
+
     Value *getIncomingValue() { return PHI->getIncomingValue(idx); }
     BasicBlock *getIncomingBlock() { return PHI->getIncomingBlock(idx); }
   };
@@ -303,7 +314,7 @@ public:
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
 /// Check to see if AvailableVals has an entry for the specified BB and if so,
 /// return it.  If not, construct SSA form by first calculating the required
@@ -337,14 +348,12 @@ LoadAndStorePromoter(ArrayRef<const Instruction*> Insts,
   SSA.Initialize(SomeVal->getType(), BaseName);
 }
 
-
 void LoadAndStorePromoter::
 run(const SmallVectorImpl<Instruction*> &Insts) const {
-  
   // First step: bucket up uses of the alloca by the block they occur in.
   // This is important because we have to handle multiple defs/uses in a block
   // ourselves: SSAUpdater is purely for cross-block references.
-  DenseMap<BasicBlock*, TinyPtrVector<Instruction*> > UsesByBlock;
+  DenseMap<BasicBlock*, TinyPtrVector<Instruction*>> UsesByBlock;
 
   for (Instruction *User : Insts)
     UsesByBlock[User->getParent()].push_back(User);

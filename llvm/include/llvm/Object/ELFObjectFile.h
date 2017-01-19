@@ -26,6 +26,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -72,6 +73,12 @@ public:
   static inline bool classof(const Binary *v) { return v->isELF(); }
 
   SubtargetFeatures getFeatures() const override;
+
+  SubtargetFeatures getMIPSFeatures() const override;
+
+  SubtargetFeatures getARMFeatures() const override;
+
+  void setARMSubArch(Triple &TheTriple) const override;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -353,6 +360,28 @@ public:
 
   std::error_code getPlatformFlags(unsigned &Result) const override {
     Result = EF.getHeader()->e_flags;
+    return std::error_code();
+  }
+
+  std::error_code getBuildAttributes(ARMAttributeParser &Attributes) const override {
+    auto SectionsOrErr = EF.sections();
+    if (!SectionsOrErr)
+      return errorToErrorCode(SectionsOrErr.takeError());
+
+    for (const Elf_Shdr &Sec : *SectionsOrErr) {
+      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES) {
+        auto ErrorOrContents = EF.getSectionContents(&Sec);
+        if (!ErrorOrContents)
+          return errorToErrorCode(ErrorOrContents.takeError());
+
+        auto Contents = ErrorOrContents.get();
+        if (Contents[0] != ARMBuildAttrs::Format_Version || Contents.size() == 1)
+          return std::error_code();
+
+        Attributes.Parse(Contents, ELFT::TargetEndianness == support::little);
+        break;
+      }
+    }
     return std::error_code();
   }
 

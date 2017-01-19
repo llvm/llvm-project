@@ -126,7 +126,6 @@ foreach(Test ${Tests})
   add_libfuzzer_test(${Test} SOURCES ${Test}.cpp)
 endforeach()
 
-
 ###############################################################################
 # Unit tests
 ###############################################################################
@@ -213,5 +212,5 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${TestBinaries} FileCheck not
+    DEPENDS ${TestBinaries} FileCheck sancov not
     )

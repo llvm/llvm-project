@@ -22,8 +22,20 @@ define i32 @test2(float %x, float %y) nounwind uwtable {
   %5 = zext i1 %4 to i32
   ret i32 %5
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT: %fabsf = call float @fabsf(float %x)
-; CHECK-NEXT: fcmp oeq float %fabsf, %y
+; CHECK-NEXT: [[FABS:%[0-9]+]] = call float @llvm.fabs.f32(float %x)
+; CHECK-NEXT: fcmp oeq float [[FABS]], %y
+}
+
+define i32 @fmf_test2(float %x, float %y) nounwind uwtable {
+  %1 = fpext float %x to double
+  %2 = call nnan double @fabs(double %1) nounwind readnone
+  %3 = fpext float %y to double
+  %4 = fcmp oeq double %2, %3
+  %5 = zext i1 %4 to i32
+  ret i32 %5
+; CHECK-LABEL: @fmf_test2(
+; CHECK-NEXT: [[FABS:%[0-9]+]] = call nnan float @llvm.fabs.f32(float %x)
+; CHECK-NEXT: fcmp oeq float [[FABS]], %y
 }
 
 define i32 @test3(float %x, float %y) nounwind uwtable {
@@ -99,15 +111,15 @@ define i32 @test8(float %x, float %y) nounwind uwtable {
 }
 
 define i32 @test9(float %x, float %y) nounwind uwtable {
-  %1 = fpext float %y to double
-  %2 = fpext float %x to double
-  %3 = call double @fabs(double %2) nounwind readnone
-  %4 = fcmp oeq double %1, %3
-  %5 = zext i1 %4 to i32
-  ret i32 %5
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  %fabs = call double @fabs(double %x.ext) nounwind readnone
+  %cmp = fcmp oeq double %y.ext, %fabs
+  %cmp.ext = zext i1 %cmp to i32
+  ret i32 %cmp.ext
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT: %fabsf = call float @fabsf(float %x)
-; CHECK-NEXT: fcmp oeq float %fabsf, %y
+; CHECK-NEXT: %fabs = call float @llvm.fabs.f32(float %x)
+; CHECK-NEXT: fcmp oeq float %fabs, %y
 }
 
 define i32 @test10(float %x, float %y) nounwind uwtable {

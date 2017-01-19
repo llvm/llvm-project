@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "scudo_allocator.h"
-#include "scudo_crc32.h"
 #include "scudo_utils.h"
 
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -73,15 +72,21 @@ static uptr Cookie;
 // at compilation or at runtime.
 static atomic_uint8_t HashAlgorithm = { CRC32Software };
 
-// Helper function that will compute the chunk checksum, being passed all the
-// the needed information as uptrs. It will opt for the hardware version of
-// the checksumming function if available.
-INLINE u32 hashUptrs(uptr Pointer, uptr *Array, uptr ArraySize, u8 HashType) {
-  u32 Crc;
-  Crc = computeCRC32(Cookie, Pointer, HashType);
-  for (uptr i = 0; i < ArraySize; i++)
-    Crc = computeCRC32(Crc, Array[i], HashType);
-  return Crc;
+SANITIZER_WEAK_ATTRIBUTE u32 computeHardwareCRC32(u32 Crc, uptr Data);
+
+INLINE u32 computeCRC32(u32 Crc, uptr Data, u8 HashType) {
+  // If SSE4.2 is defined here, it was enabled everywhere, as opposed to only
+  // for scudo_crc32.cpp. This means that other SSE instructions were likely
+  // emitted at other places, and as a result there is no reason to not use
+  // the hardware version of the CRC32.
+#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+  return computeHardwareCRC32(Crc, Data);
+#else
+  if (computeHardwareCRC32 && HashType == CRC32Hardware)
+    return computeHardwareCRC32(Crc, Data);
+  else
+    return computeSoftwareCRC32(Crc, Data);
+#endif  // defined(__SSE4_2__)
 }
 
 struct ScudoChunk : UnpackedHeader {
@@ -108,11 +113,11 @@ struct ScudoChunk : UnpackedHeader {
     ZeroChecksumHeader.Checksum = 0;
     uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
     memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
-    u32 Hash = hashUptrs(reinterpret_cast<uptr>(this),
-                         HeaderHolder,
-                         ARRAY_SIZE(HeaderHolder),
-                         atomic_load_relaxed(&HashAlgorithm));
-    return static_cast<u16>(Hash);
+    u8 HashType = atomic_load_relaxed(&HashAlgorithm);
+    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HashType);
+    for (uptr i = 0; i < ARRAY_SIZE(HeaderHolder); i++)
+      Crc = computeCRC32(Crc, HeaderHolder[i], HashType);
+    return static_cast<u16>(Crc);
   }
 
   // Checks the validity of a chunk by verifying its checksum.

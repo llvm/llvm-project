@@ -33,8 +33,10 @@ bool CallLowering::lowerCall(
   // we'll pass to the assigner function.
   SmallVector<ArgInfo, 8> OrigArgs;
   unsigned i = 0;
+  unsigned NumFixedArgs = CI.getFunctionType()->getNumParams();
   for (auto &Arg : CI.arg_operands()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{}};
+    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
+                    i < NumFixedArgs};
     setArgFlags(OrigArg, i + 1, DL, CI);
     OrigArgs.push_back(OrigArg);
     ++i;
@@ -103,7 +105,6 @@ CallLowering::setArgFlags<CallInst>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const CallInst &FuncInfo) const;
 
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
-                                     CCAssignFn *AssignFn,
                                      ArrayRef<ArgInfo> Args,
                                      ValueHandler &Handler) const {
   MachineFunction &MF = MIRBuilder.getMF();
@@ -116,7 +117,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   unsigned NumArgs = Args.size();
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT CurVT = MVT::getVT(Args[i].Ty);
-    if (AssignFn(i, CurVT, CurVT, CCValAssign::Full, Args[i].Flags, CCInfo))
+    if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i], CCInfo))
       return false;
   }
 

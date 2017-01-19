@@ -98,4 +98,6 @@ def report_diff(added_syms, removed_syms, changed_syms, names_only=False,
             report += 'ABI BREAKAGE: SYMBOLS ADDED OR REMOVED!'
     else:
         report += 'Symbols match.'
-    return report, int(abi_break)
+    is_different = abi_break or bool(len(added_syms)) \
+                   or bool(len(changed_syms))
+    return report, abi_break, is_different
