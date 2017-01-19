@@ -207,19 +207,19 @@ namespace NTTPTypeVsPartialOrder {
   struct X { typedef int value_type; };
   template<typename T> struct Y { typedef T value_type; };
 
-  template<typename T, typename T::value_type N> struct A; // expected-note {{template}}
+  template<typename T, typename T::value_type N> struct A;
   template<int N> struct A<X, N> {};
-  template<typename T, T N> struct A<Y<T>, N> {}; // expected-error {{not more specialized}} expected-note {{'T' vs 'typename Y<type-parameter-0-0>::value_type'}}
+  template<typename T, T N> struct A<Y<T>, N> {};
   A<X, 0> ax;
   A<Y<int>, 0> ay;
 
 
-  template<int, typename T, typename T::value_type> struct B; // expected-note {{template}}
-  template<typename T, typename T::value_type N> struct B<0, T, N>; // expected-note {{matches}}
+  template<int, typename T, typename T::value_type> struct B;
+  template<typename T, typename T::value_type N> struct B<0, T, N>;
   template<int N> struct B<0, X, N> {};
-  template<typename T, T N> struct B<0, Y<T>, N> {}; // expected-error {{not more specialized}} expected-note {{'T' vs 'typename Y<type-parameter-0-0>::value_type'}} expected-note {{matches}}
+  template<typename T, T N> struct B<0, Y<T>, N> {};
   B<0, X, 0> bx;
-  B<0, Y<int>, 0> by; // expected-error {{ambiguous}}
+  B<0, Y<int>, 0> by;
 }
 
 namespace DefaultArgVsPartialSpec {
