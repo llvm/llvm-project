@@ -253,8 +253,14 @@ class LowerTypeTestsModule {
   // Indirect function call index assignment counter for WebAssembly
   uint64_t IndirectIndex = 1;
 
-  // Mapping from type identifiers to the call sites that test them.
-  DenseMap<Metadata *, std::vector<CallInst *>> TypeTestCallSites;
+  // Mapping from type identifiers to the call sites that test them, as well as
+  // whether the type identifier needs to be exported to ThinLTO backends as
+  // part of the regular LTO phase of the ThinLTO pipeline (see exportTypeId).
+  struct TypeIdUserInfo {
+    std::vector<CallInst *> CallSites;
+    bool IsExported = false;
+  };
+  DenseMap<Metadata *, TypeIdUserInfo> TypeIdUsers;
 
   /// This structure describes how to lower type tests for a particular type
   /// identifier. It is either built directly from the global analysis (during
@@ -290,6 +296,8 @@ class LowerTypeTestsModule {
   std::vector<ByteArrayInfo> ByteArrayInfos;
 
   Function *WeakInitializerFn = nullptr;
+
+  void exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
 
   BitSetInfo
   buildBitSet(Metadata *TypeId,
@@ -687,6 +695,44 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
   }
 }
 
+/// Export the given type identifier so that ThinLTO backends may import it.
+/// Type identifiers are exported by adding coarse-grained information about how
+/// to test the type identifier to the summary, and creating symbols in the
+/// object file (aliases and absolute symbols) containing fine-grained
+/// information about the type identifier.
+void LowerTypeTestsModule::exportTypeId(StringRef TypeId,
+                                        const TypeIdLowering &TIL) {
+  TypeTestResolution &TTRes = Summary->getTypeIdSummary(TypeId).TTRes;
+  TTRes.TheKind = TIL.TheKind;
+
+  auto ExportGlobal = [&](StringRef Name, Constant *C) {
+    GlobalAlias *GA =
+        GlobalAlias::create(Int8Ty, 0, GlobalValue::ExternalLinkage,
+                            "__typeid_" + TypeId + "_" + Name, C, &M);
+    GA->setVisibility(GlobalValue::HiddenVisibility);
+  };
+
+  if (TIL.TheKind != TypeTestResolution::Unsat)
+    ExportGlobal("global_addr", TIL.OffsetedGlobal);
+
+  if (TIL.TheKind == TypeTestResolution::ByteArray ||
+      TIL.TheKind == TypeTestResolution::Inline ||
+      TIL.TheKind == TypeTestResolution::AllOnes) {
+    ExportGlobal("align", ConstantExpr::getIntToPtr(TIL.AlignLog2, Int8PtrTy));
+    ExportGlobal("size_m1", ConstantExpr::getIntToPtr(TIL.SizeM1, Int8PtrTy));
+    TTRes.SizeM1BitWidth = TIL.SizeM1BitWidth;
+  }
+
+  if (TIL.TheKind == TypeTestResolution::ByteArray) {
+    ExportGlobal("byte_array", TIL.TheByteArray);
+    ExportGlobal("bit_mask", TIL.BitMask);
+  }
+
+  if (TIL.TheKind == TypeTestResolution::Inline)
+    ExportGlobal("inline_bits",
+                 ConstantExpr::getIntToPtr(TIL.InlineBits, Int8PtrTy));
+}
+
 void LowerTypeTestsModule::lowerTypeTestCalls(
     ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
     const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
@@ -737,8 +783,13 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
       TIL.BitMask = BAI->MaskGlobal;
     }
 
+    TypeIdUserInfo &TIUI = TypeIdUsers[TypeId];
+
+    if (TIUI.IsExported)
+      exportTypeId(cast<MDString>(TypeId)->getString(), TIL);
+
     // Lower each call to llvm.type.test for this type identifier.
-    for (CallInst *CI : TypeTestCallSites[TypeId]) {
+    for (CallInst *CI : TIUI.CallSites) {
       ++NumTypeTestCallsLowered;
       Value *Lowered = lowerTypeTestCall(TypeId, CI, TIL);
       CI->replaceAllUsesWith(Lowered);
@@ -1176,10 +1227,6 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 LowerTypeTestsModule::LowerTypeTestsModule(Module &M, SummaryAction Action,
                                            ModuleSummaryIndex *Summary)
     : M(M), Action(Action), Summary(Summary) {
-  // FIXME: Use these fields.
-  (void)this->Action;
-  (void)this->Summary;
-
   Triple TargetTriple(M.getTargetTriple());
   LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
   Arch = TargetTriple.getArch();
@@ -1222,7 +1269,8 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
-  if (!TypeTestFunc || TypeTestFunc->use_empty())
+  if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
+      Action != SummaryAction::Export)
     return false;
 
   // Equivalence class set containing type identifiers and the globals that
@@ -1262,33 +1310,57 @@ bool LowerTypeTestsModule::lower() {
     }
   }
 
-  for (const Use &U : TypeTestFunc->uses()) {
-    auto CI = cast<CallInst>(U.getUser());
-
-    auto BitSetMDVal = dyn_cast<MetadataAsValue>(CI->getArgOperand(1));
-    if (!BitSetMDVal)
-      report_fatal_error("Second argument of llvm.type.test must be metadata");
-    auto BitSet = BitSetMDVal->getMetadata();
-
+  auto AddTypeIdUse = [&](Metadata *TypeId) -> TypeIdUserInfo & {
     // Add the call site to the list of call sites for this type identifier. We
-    // also use TypeTestCallSites to keep track of whether we have seen this
-    // type identifier before. If we have, we don't need to re-add the
-    // referenced globals to the equivalence class.
-    std::pair<DenseMap<Metadata *, std::vector<CallInst *>>::iterator, bool>
-        Ins = TypeTestCallSites.insert(
-            std::make_pair(BitSet, std::vector<CallInst *>()));
-    Ins.first->second.push_back(CI);
-    if (!Ins.second)
-      continue;
+    // also use TypeIdUsers to keep track of whether we have seen this type
+    // identifier before. If we have, we don't need to re-add the referenced
+    // globals to the equivalence class.
+    auto Ins = TypeIdUsers.insert({TypeId, {}});
+    if (Ins.second) {
+      // Add the type identifier to the equivalence class.
+      GlobalClassesTy::iterator GCI = GlobalClasses.insert(TypeId);
+      GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
 
-    // Add the type identifier to the equivalence class.
-    GlobalClassesTy::iterator GCI = GlobalClasses.insert(BitSet);
-    GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
+      // Add the referenced globals to the type identifier's equivalence class.
+      for (GlobalTypeMember *GTM : TypeIdInfo[TypeId].RefGlobals)
+        CurSet = GlobalClasses.unionSets(
+            CurSet, GlobalClasses.findLeader(GlobalClasses.insert(GTM)));
+    }
 
-    // Add the referenced globals to the type identifier's equivalence class.
-    for (GlobalTypeMember *GTM : TypeIdInfo[BitSet].RefGlobals)
-      CurSet = GlobalClasses.unionSets(
-          CurSet, GlobalClasses.findLeader(GlobalClasses.insert(GTM)));
+    return Ins.first->second;
+  };
+
+  if (TypeTestFunc) {
+    for (const Use &U : TypeTestFunc->uses()) {
+      auto CI = cast<CallInst>(U.getUser());
+
+      auto TypeIdMDVal = dyn_cast<MetadataAsValue>(CI->getArgOperand(1));
+      if (!TypeIdMDVal)
+        report_fatal_error("Second argument of llvm.type.test must be metadata");
+      auto TypeId = TypeIdMDVal->getMetadata();
+      AddTypeIdUse(TypeId).CallSites.push_back(CI);
+    }
+  }
+
+  if (Action == SummaryAction::Export) {
+    DenseMap<GlobalValue::GUID, TinyPtrVector<Metadata *>> MetadataByGUID;
+    for (auto &P : TypeIdInfo) {
+      if (auto *TypeId = dyn_cast<MDString>(P.first))
+        MetadataByGUID[GlobalValue::getGUID(TypeId->getString())].push_back(
+            TypeId);
+    }
+
+    for (auto &P : *Summary) {
+      for (auto &S : P.second) {
+        auto *FS = dyn_cast<FunctionSummary>(S.get());
+        if (!FS)
+          continue;
+        // FIXME: Only add live functions.
+        for (GlobalValue::GUID G : FS->type_tests())
+          for (Metadata *MD : MetadataByGUID[G])
+            AddTypeIdUse(MD).IsExported = true;
+      }
+    }
   }
 
   if (GlobalClasses.empty())

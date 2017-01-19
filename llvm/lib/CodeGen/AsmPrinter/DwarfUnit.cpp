@@ -1180,8 +1180,12 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 }
 
 void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
-                                          bool Minimal) {
-  if (!Minimal)
+                                          bool SkipSPAttributes) {
+  // If -fdebug-info-for-profiling is enabled, need to emit the subprogram
+  // and its source location.
+  bool SkipSPSourceLocation = SkipSPAttributes &&
+                              !Asm->TM.Options.DebugInfoForProfiling;
+  if (!SkipSPSourceLocation)
     if (applySubprogramDefinitionAttributes(SP, SPDie))
       return;
 
@@ -1189,11 +1193,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->getName().empty())
     addString(SPDie, dwarf::DW_AT_name, SP->getName());
 
-  // Skip the rest of the attributes under -gmlt to save space.
-  if (Minimal)
-    return;
+  if (!SkipSPSourceLocation)
+    addSourceLine(SPDie, SP);
 
-  addSourceLine(SPDie, SP);
+  // Skip the rest of the attributes under -gmlt to save space.
+  if (SkipSPAttributes)
+    return;
 
   // Add the prototype if we have a prototype and we have a C like
   // language.

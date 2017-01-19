@@ -1455,6 +1455,6 @@ void RegionGenerator::copyPHIInstruction(ScopStmt &Stmt, PHINode *PHI,
   PHICopy->moveBefore(PHICopy->getParent()->getFirstNonPHI());
   BBMap[PHI] = PHICopy;
 
-  for (unsigned u = 0; u < NumIncoming; u++)
-    addOperandToPHI(Stmt, PHI, PHICopy, PHI->getIncomingBlock(u), LTS);
+  for (BasicBlock *IncomingBB : PHI->blocks())
+    addOperandToPHI(Stmt, PHI, PHICopy, IncomingBB, LTS);
 }

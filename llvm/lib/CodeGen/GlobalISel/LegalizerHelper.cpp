@@ -161,6 +161,32 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_LOAD: {
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts =
+        MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
+    LLT NarrowPtrTy = LLT::pointer(
+        MRI.getType(MI.getOperand(1).getReg()).getAddressSpace(), NarrowSize);
+
+    SmallVector<unsigned, 2> DstRegs;
+    SmallVector<uint64_t, 2> Indexes;
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+      unsigned SrcReg = MRI.createGenericVirtualRegister(NarrowPtrTy);
+      unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
+
+      MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
+      MIRBuilder.buildGEP(SrcReg, MI.getOperand(1).getReg(), Offset);
+      MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
+
+      DstRegs.push_back(DstReg);
+      Indexes.push_back(i * NarrowSize);
+    }
+    unsigned DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildSequence(DstReg, DstRegs, Indexes);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_STORE: {
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     int NumParts =
