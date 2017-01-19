@@ -3163,6 +3163,9 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Don't bother if the instruction is in a BB which ends in an EHPad.
         if (UseBB->getTerminator()->isEHPad())
           continue;
+        // Don't bother rewriting PHIs in catchswitch blocks.
+        if (isa<CatchSwitchInst>(UserInst->getParent()->getTerminator()))
+          continue;
         // Ignore uses which are part of other SCEV expressions, to avoid
         // analyzing them multiple times.
         if (SE.isSCEVable(UserInst->getType())) {
@@ -4672,7 +4675,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN,
       // is the canonical backedge for this loop, which complicates post-inc
       // users.
       if (e != 1 && BB->getTerminator()->getNumSuccessors() > 1 &&
-          !isa<IndirectBrInst>(BB->getTerminator())) {
+          !isa<IndirectBrInst>(BB->getTerminator()) &&
+          !isa<CatchSwitchInst>(BB->getTerminator())) {
         BasicBlock *Parent = PN->getParent();
         Loop *PNLoop = LI.getLoopFor(Parent);
         if (!PNLoop || Parent != PNLoop->getHeader()) {
