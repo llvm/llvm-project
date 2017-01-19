@@ -768,13 +768,12 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
     unsigned ID, PlaceholderQueue &Placeholders) {
   assert(ID < (MDStringRef.size()) + GlobalMetadataBitPosIndex.size());
   assert(ID >= MDStringRef.size() && "Unexpected lazy-loading of MDString");
-#ifndef NDEBUG
   // Lookup first if the metadata hasn't already been loaded.
   if (auto *MD = MetadataList.lookup(ID)) {
     auto *N = dyn_cast_or_null<MDNode>(MD);
-    assert(N && N->isTemporary() && "Lazy loading an already loaded metadata");
+    if (!N->isTemporary())
+      return;
   }
-#endif
   SmallVector<uint64_t, 64> Record;
   StringRef Blob;
   IndexCursor.JumpToBit(GlobalMetadataBitPosIndex[ID - MDStringRef.size()]);
@@ -827,8 +826,22 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   auto getMD = [&](unsigned ID) -> Metadata * {
     if (ID < MDStringRef.size())
       return lazyLoadOneMDString(ID);
-    if (!IsDistinct)
+    if (!IsDistinct) {
+      if (auto *MD = MetadataList.lookup(ID))
+        return MD;
+      // If lazy-loading is enabled, we try recursively to load the operand
+      // instead of creating a temporary.
+      if (ID < (MDStringRef.size() + GlobalMetadataBitPosIndex.size())) {
+        // Create a temporary for the node that is referencing the operand we
+        // will lazy-load. It is needed before recursing in case there are
+        // uniquing cycles.
+        MetadataList.getMetadataFwdRef(NextMetadataNo);
+        lazyLoadOneMetadata(ID, Placeholders);
+        return MetadataList.lookup(ID);
+      }
+      // Return a temporary.
       return MetadataList.getMetadataFwdRef(ID);
+    }
     if (auto *MD = MetadataList.getMetadataIfResolved(ID))
       return MD;
     return &Placeholders.getPlaceholderOp(ID);

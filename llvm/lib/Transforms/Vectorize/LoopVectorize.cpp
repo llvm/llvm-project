@@ -5602,6 +5602,13 @@ void LoopVectorizationLegality::collectLoopUniforms() {
       // is consecutive-like, the pointer operand should remain uniform.
       else if (hasConsecutiveLikePtrOperand(&I))
         ConsecutiveLikePtrs.insert(Ptr);
+
+      // Otherwise, if the memory instruction will be vectorized and its
+      // pointer operand is non-consecutive-like, the memory instruction should
+      // be a gather or scatter operation. Its pointer operand will be
+      // non-uniform.
+      else
+        PossibleNonUniformPtrs.insert(Ptr);
     }
 
   // Add to the Worklist all consecutive and consecutive-like pointers that
