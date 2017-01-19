@@ -51,24 +51,24 @@ define i32 @movz() nounwind {
 
 define i64 @movz_3movk() nounwind {
 ; CHECK-LABEL: movz_3movk:
-; CHECK:      mov x0, #1407374883553280
-; CHECK-NEXT: movk x0, #4660, lsl #32
+; CHECK:      mov x0, #22136
 ; CHECK-NEXT: movk x0, #43981, lsl #16
-; CHECK-NEXT: movk x0, #22136
+; CHECK-NEXT: movk x0, #4660, lsl #32
+; CHECK-NEXT: movk x0, #5, lsl #48
   ret i64 1427392313513592
 }
 
 define i64 @movz_movk_skip1() nounwind {
 ; CHECK-LABEL: movz_movk_skip1:
-; CHECK:      mov x0, #21474836480
-; CHECK-NEXT: movk x0, #17185, lsl #16
+; CHECK:      mov x0, #1126236160
+; CHECK-NEXT: movk x0, #5, lsl #32
   ret i64 22601072640
 }
 
 define i64 @movz_skip1_movk() nounwind {
 ; CHECK-LABEL: movz_skip1_movk:
-; CHECK:      mov x0, #147695335374848
-; CHECK-NEXT: movk x0, #4660
+; CHECK:      mov x0, #4660
+; CHECK-NEXT: movk x0, #34388, lsl #32
   ret i64 147695335379508
 }
 
@@ -84,8 +84,8 @@ define i64 @movn() nounwind {
 
 define i64 @movn_skip1_movk() nounwind {
 ; CHECK-LABEL: movn_skip1_movk:
-; CHECK:      mov x0, #-176093659137
-; CHECK-NEXT: movk x0, #4660
+; CHECK:      mov x0, #-60876
+; CHECK-NEXT: movk x0, #65494, lsl #32
   ret i64 -176093720012
 }
 
@@ -195,8 +195,8 @@ define i64 @orr_movk13() nounwind {
 ; rdar://13944082
 define i64 @g() nounwind {
 ; CHECK-LABEL: g:
-; CHECK: mov x0, #-281474976710656
-; CHECK: movk x0, #2
+; CHECK: mov x0, #2
+; CHECK: movk x0, #65535, lsl #48
 entry:
   ret i64 -281474976710654
 }

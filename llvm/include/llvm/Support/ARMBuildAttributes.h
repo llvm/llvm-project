@@ -176,14 +176,25 @@ enum {
   WCharWidth2Bytes = 2, // sizeof(wchar_t) == 2
   WCharWidth4Bytes = 4, // sizeof(wchar_t) == 4
 
+  // Tag_ABI_align_needed, (=24), uleb128
+  Align8Byte = 1,
+  Align4Byte = 2,
+  AlignReserved = 3,
+
+  // Tag_ABI_align_needed, (=25), uleb128
+  AlignNotPreserved = 0,
+  AlignPreserve8Byte = 1,
+  AlignPreserveAll = 2,
+
   // Tag_ABI_FP_denormal, (=20), uleb128
   PositiveZero = 0,
   IEEEDenormals = 1,
   PreserveFPSign = 2, // sign when flushed-to-zero is preserved
 
   // Tag_ABI_FP_number_model, (=23), uleb128
+  AllowIEEENormal = 1,
   AllowRTABI = 2,  // numbers, infinities, and one quiet NaN (see [RTABI])
-  AllowIEE754 = 3, // this code to use all the IEEE 754-defined FP encodings
+  AllowIEEE754 = 3, // this code to use all the IEEE 754-defined FP encodings
 
   // Tag_ABI_enum_size, (=26), uleb128
   EnumProhibited = 0, // The user prohibited the use of enums when building
@@ -208,6 +219,7 @@ enum {
 
   // Tag_FP_16bit_format, (=38), uleb128
   FP16FormatIEEE = 1,
+  FP16VFP3 = 2,
 
   // Tag_MPextension_use, (=42), uleb128
   AllowMP = 1, // Allow use of MP extensions

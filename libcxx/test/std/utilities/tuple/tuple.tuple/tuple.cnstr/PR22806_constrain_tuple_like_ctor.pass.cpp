@@ -144,8 +144,8 @@ int main()
         assert(&std::get<0>(t2) == &t1);
     }
     // Test constructing a 1-tuple of the form tuple<UDT> from another 1-tuple
-    // 'tuple<T>' where UDT *can* be constructed from 'tuple<T>' In this case
-    // the 'tuple(UTypes...)' ctor should be choosen and 'UDT' constructed frow
+    // 'tuple<T>' where UDT *can* be constructed from 'tuple<T>'. In this case
+    // the 'tuple(UTypes...)' ctor should be chosen and 'UDT' constructed from
     // 'tuple<T>'.
     {
         using VT = ConstructibleFromTupleAndInt;

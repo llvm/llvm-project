@@ -363,7 +363,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   unsigned Kind = Fixup.getKind();
   switch (Kind) {
   default:
-    llvm_unreachable("Unknown fixup kind!");
+    if (Ctx) Ctx->reportError(Fixup.getLoc(), "bad relocation fixup type");
+    return 0;
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:

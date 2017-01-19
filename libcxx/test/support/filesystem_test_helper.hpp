@@ -381,7 +381,7 @@ bool checkCollectionsEqualBackwards(
 }
 
 // We often need to test that the error_code was cleared if no error occurs
-// this function returns a error_code which is set to an error that will
+// this function returns an error_code which is set to an error that will
 // never be returned by the filesystem functions.
 inline std::error_code GetTestEC() {
     return std::make_error_code(std::errc::address_family_not_supported);

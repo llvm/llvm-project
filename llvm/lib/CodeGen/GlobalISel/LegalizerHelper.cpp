@@ -125,6 +125,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   // FIXME: Don't know how to handle secondary types yet.
   if (TypeIdx != 0)
     return UnableToLegalize;
+
+  MIRBuilder.setInstr(MI);
+
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
@@ -133,8 +136,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     int NumParts = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() /
                    NarrowTy.getSizeInBits();
-
-    MIRBuilder.setInstr(MI);
 
     SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs;
     SmallVector<uint64_t, 2> Indexes;
@@ -160,6 +161,52 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_LOAD: {
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts =
+        MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
+    LLT NarrowPtrTy = LLT::pointer(
+        MRI.getType(MI.getOperand(1).getReg()).getAddressSpace(), NarrowSize);
+
+    SmallVector<unsigned, 2> DstRegs;
+    SmallVector<uint64_t, 2> Indexes;
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+      unsigned SrcReg = MRI.createGenericVirtualRegister(NarrowPtrTy);
+      unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
+
+      MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
+      MIRBuilder.buildGEP(SrcReg, MI.getOperand(1).getReg(), Offset);
+      MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
+
+      DstRegs.push_back(DstReg);
+      Indexes.push_back(i * NarrowSize);
+    }
+    unsigned DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildSequence(DstReg, DstRegs, Indexes);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_STORE: {
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts =
+        MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
+    LLT NarrowPtrTy = LLT::pointer(
+        MRI.getType(MI.getOperand(1).getReg()).getAddressSpace(), NarrowSize);
+
+    SmallVector<unsigned, 2> SrcRegs;
+    extractParts(MI.getOperand(0).getReg(), NarrowTy, NumParts, SrcRegs);
+
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowPtrTy);
+      unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
+      MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
+      MIRBuilder.buildGEP(DstReg, MI.getOperand(1).getReg(), Offset);
+      MIRBuilder.buildStore(SrcRegs[i], DstReg, **MI.memoperands_begin());
+    }
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
@@ -175,7 +222,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
-  case TargetOpcode::G_SUB: {
+  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SHL: {
     // Perform operation at larger width (any extension is fine here, high bits
     // don't affect the result) and then truncate the result back to the
     // original type.
@@ -195,10 +243,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV: {
-    unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV
-                          ? TargetOpcode::G_SEXT
-                          : TargetOpcode::G_ZEXT;
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
+    unsigned ExtOp = MI.getOpcode() == TargetOpcode::G_SDIV ||
+                             MI.getOpcode() == TargetOpcode::G_ASHR
+                         ? TargetOpcode::G_SEXT
+                         : TargetOpcode::G_ZEXT;
 
     unsigned LHSExt = MRI.createGenericVirtualRegister(WideTy);
     MIRBuilder.buildInstr(ExtOp).addDef(LHSExt).addUse(

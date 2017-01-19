@@ -539,15 +539,15 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   if (Imm != 0) {
     unsigned LZ = countLeadingZeros(Imm);
     unsigned TZ = countTrailingZeros(Imm);
-    Shift = ((63 - LZ) / 16) * 16;
-    LastShift = (TZ / 16) * 16;
+    Shift = (TZ / 16) * 16;
+    LastShift = ((63 - LZ) / 16) * 16;
   }
   unsigned Imm16 = (Imm >> Shift) & Mask;
   bool DstIsDead = MI.getOperand(0).isDead();
   MachineInstrBuilder MIB1 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(FirstOpc))
           .addReg(DstReg, RegState::Define |
-                              getDeadRegState(DstIsDead && Shift == LastShift))
+                  getDeadRegState(DstIsDead && Shift == LastShift))
           .addImm(Imm16)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, Shift));
 
@@ -564,15 +564,15 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
 
   MachineInstrBuilder MIB2;
   unsigned Opc = (BitSize == 32 ? AArch64::MOVKWi : AArch64::MOVKXi);
-  while (Shift != LastShift) {
-    Shift -= 16;
+  while (Shift < LastShift) {
+    Shift += 16;
     Imm16 = (Imm >> Shift) & Mask;
     if (Imm16 == (isNeg ? Mask : 0))
       continue; // This 16-bit portion is already set correctly.
     MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
                .addReg(DstReg,
                        RegState::Define |
-                           getDeadRegState(DstIsDead && Shift == LastShift))
+                       getDeadRegState(DstIsDead && Shift == LastShift))
                .addReg(DstReg)
                .addImm(Imm16)
                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, Shift));

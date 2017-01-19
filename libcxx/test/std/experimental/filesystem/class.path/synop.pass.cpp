@@ -32,7 +32,7 @@ int main() {
   {
     ASSERT_SAME_TYPE(const path::value_type, decltype(path::preferred_separator));
     static_assert(path::preferred_separator == '/', "");
-    // Make preferred_separator ODR used by taking it's address.
+    // Make preferred_separator ODR used by taking its address.
     const char* dummy = &path::preferred_separator;
     ((void)dummy);
   }

@@ -4255,7 +4255,7 @@ static bool hasSameExtUse(Instruction *Inst, const TargetLowering &TLI) {
 /// %ld = load i32* %addr
 /// %zext = zext i32 %ld to i64
 /// %add = add nuw i64 %zext, 4
-/// \encode
+/// \endcode
 /// Thanks to the promotion, we can match zext(load i32*) to i64.
 bool CodeGenPrepare::extLdPromotion(TypePromotionTransaction &TPT,
                                     LoadInst *&LI, Instruction *&Inst,

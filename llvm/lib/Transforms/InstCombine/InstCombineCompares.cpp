@@ -1921,8 +1921,16 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   // A 'shl nuw' is just shifting out zeros, so adjust the compare constant
   // and eliminate the shift.
   if (Shl->hasNoUnsignedWrap()) {
-    if (Cmp.isEquality() || Pred == ICmpInst::ICMP_UGT) {
+    if (Pred == ICmpInst::ICMP_UGT) {
       // icmp Pred (shl nuw X, ShiftAmt), C --> icmp Pred X, (C >>u ShiftAmt)
+      APInt ShiftedC = C->lshr(*ShiftAmt);
+      return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
+    }
+    if (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) {
+      // This is the same code as the UGT case, but assert the pre-condition
+      // that is needed for this to work with equality predicates.
+      assert(C->lshr(*ShiftAmt).shl(*ShiftAmt) == *C &&
+             "Compare known true or false was not folded");
       APInt ShiftedC = C->lshr(*ShiftAmt);
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }
@@ -1939,8 +1947,6 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
 
   if (Cmp.isEquality()) {
     Constant *LShrC = ConstantInt::get(ShType, C->lshr(*ShiftAmt));
-    if (Shl->hasNoUnsignedWrap())
-      return new ICmpInst(Pred, X, LShrC);
 
     // If the shift is NSW and we compare to 0, then it is just shifting out
     // sign bits, no need for an AND either.

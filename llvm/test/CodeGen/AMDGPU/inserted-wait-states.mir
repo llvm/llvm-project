@@ -63,7 +63,7 @@ body: |
     S_BRANCH %bb.3
 
   bb.3:
-    %vgpr4, %vcc = V_DIV_SCALE_F32 0, %vgpr1, 0, %vgpr1, 0, %vgpr3, 0, 0, implicit %exec
+    %vgpr4, %vcc = V_DIV_SCALE_F32 %vgpr1, %vgpr1, %vgpr3, implicit %exec
     %vgpr0 = V_DIV_FMAS_F32 0, %vgpr1, 0, %vgpr2, 0, %vgpr3, 0, 0, implicit %vcc, implicit %exec
     S_ENDPGM
 

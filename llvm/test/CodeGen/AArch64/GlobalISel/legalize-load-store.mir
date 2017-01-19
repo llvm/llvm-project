@@ -24,6 +24,7 @@ registers:
   - { id: 5, class: _ }
   - { id: 6, class: _ }
   - { id: 7, class: _ }
+  - { id: 8, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -51,6 +52,15 @@ body: |
 
     ; CHECK: %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %7(<2 x s32>) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+
+    ; CHECK: [[OFFSET0:%[0-9]+]](s64) = G_CONSTANT i64 0
+    ; CHECK: [[GEP0:%[0-9]+]](p0) = G_GEP %0, [[OFFSET0]](s64)
+    ; CHECK: [[LOAD0:%[0-9]+]](s64) = G_LOAD [[GEP0]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]](s64) = G_LOAD [[GEP1]](p0) :: (load 16 from %ir.addr)
+    ; CHECK: %8(s128) = G_SEQUENCE [[LOAD0]](s64), 0, [[LOAD1]](s64), 64
+    %8(s128) = G_LOAD %0(p0) :: (load 16 from %ir.addr)
 ...
 
 ---
@@ -62,6 +72,8 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -92,4 +104,14 @@ body: |
 
     ; CHECK: G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
     G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
+
+    ; CHECK: [[OFFSET0:%[0-9]+]](s64) = G_CONSTANT i64 0
+    ; CHECK: [[GEP0:%[0-9]+]](p0) = G_GEP %0, [[OFFSET0]](s64)
+    ; CHECK: G_STORE %5(s64), [[GEP0]](p0) :: (store 16 into %ir.addr)
+    ; CHECK: [[OFFSET1:%[0-9]+]](s64) = G_CONSTANT i64 8
+    ; CHECK: [[GEP1:%[0-9]+]](p0) = G_GEP %0, [[OFFSET1]](s64)
+    ; CHECK: G_STORE %6(s64), [[GEP1]](p0) :: (store 16 into %ir.addr)
+    %6(s64) = G_PTRTOINT %0(p0)
+    %7(s128) = G_SEQUENCE %5, 0, %6, 64
+    G_STORE %7, %0 :: (store 16 into %ir.addr)
 ...

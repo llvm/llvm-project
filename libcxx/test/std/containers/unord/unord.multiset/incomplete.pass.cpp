@@ -11,7 +11,7 @@
 
 // <unordered_set>
 
-// Check that std::unordered_multiset and it's iterators can be instantiated with an incomplete
+// Check that std::unordered_multiset and its iterators can be instantiated with an incomplete
 // type.
 
 #include <unordered_set>

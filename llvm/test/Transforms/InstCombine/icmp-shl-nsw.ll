@@ -354,3 +354,28 @@ define i1 @icmp_sle11(i8 %x) {
   ret i1 %cmp
 }
 
+; Some of the earlier sgt/sle tests are transformed to eq/ne, but try a couple
+; of those explicitly, so we know no intermediate transforms are necessary.
+
+define i1 @icmp_eq1(i8 %x) {
+; CHECK-LABEL: @icmp_eq1(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 %x, 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL_MASK]], 6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 1
+  %cmp = icmp eq i8 %shl, 12
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne1(i8 %x) {
+; CHECK-LABEL: @icmp_ne1(
+; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 %x, 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SHL_MASK]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %x, 6
+  %cmp = icmp ne i8 %shl, -128
+  ret i1 %cmp
+}
+

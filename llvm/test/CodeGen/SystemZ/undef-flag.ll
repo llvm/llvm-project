@@ -2,9 +2,7 @@
 ; register. This typically happens while expanding a pseudo or otherwise
 ; replacing an instruction for another.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs \
-; RUN:   |& FileCheck %s
-
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs | FileCheck %s
 
 ; LLCRMux
 define void @f1(i8*) {

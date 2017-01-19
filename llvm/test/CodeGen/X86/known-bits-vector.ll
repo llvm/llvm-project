@@ -520,7 +520,7 @@ define <4 x i32> @knownbits_umax_shuffle_ashr(<4 x i32> %a0) {
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
 ; X64-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -15, i32 262143>)
+  %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
   %3 = ashr <4 x i32> %2, <i32 31, i32 31, i32 31, i32 31>
   ret <4 x i32> %3

@@ -59,7 +59,7 @@ def find_compilation_database(path):
 
 
 def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
-                        header_filter):
+                        header_filter, extra_arg, extra_arg_before):
   """Gets a command line for clang-tidy."""
   start = [clang_tidy_binary]
   if header_filter is not None:
@@ -76,6 +76,10 @@ def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
     (handle, name) = tempfile.mkstemp(suffix='.yaml', dir=tmpdir)
     os.close(handle)
     start.append(name)
+  for arg in extra_arg:
+      start.append('-extra-arg=%s' % arg)
+  for arg in extra_arg_before:
+      start.append('-extra-arg-before=%s' % arg)
   start.append('-p=' + build_path)
   start.append(f)
   return start
@@ -96,7 +100,8 @@ def run_tidy(args, tmpdir, build_path, queue):
   while True:
     name = queue.get()
     invocation = get_tidy_invocation(name, args.clang_tidy_binary, args.checks,
-                                     tmpdir, build_path, args.header_filter)
+                                     tmpdir, build_path, args.header_filter,
+                                     args.extra_arg, args.extra_arg_before)
     sys.stdout.write(' '.join(invocation) + '\n')
     subprocess.call(invocation)
     queue.task_done()
@@ -130,6 +135,14 @@ def main():
                       'after applying fixes')
   parser.add_argument('-p', dest='build_path',
                       help='Path used to read a compile command database.')
+  parser.add_argument('-extra-arg', dest='extra_arg',
+                      action='append', default=[],
+                      help='Additional argument to append to the compiler '
+                      'command line.')
+  parser.add_argument('-extra-arg-before', dest='extra_arg_before',
+                      action='append', default=[],
+                      help='Additional argument to prepend to the compiler '
+                      'command line.')
   args = parser.parse_args()
 
   db_path = 'compile_commands.json'

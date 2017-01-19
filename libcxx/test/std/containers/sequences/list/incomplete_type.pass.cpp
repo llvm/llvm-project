@@ -9,7 +9,7 @@
 
 // <list>
 
-// Check that std::list and it's iterators can be instantiated with an incomplete
+// Check that std::list and its iterators can be instantiated with an incomplete
 // type.
 
 #include <list>
