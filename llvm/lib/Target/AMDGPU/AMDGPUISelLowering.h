@@ -119,6 +119,16 @@ protected:
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 
+  bool mayIgnoreSignedZero(SDValue Op) const {
+    if (getTargetMachine().Options.UnsafeFPMath) // FIXME: nsz only
+      return true;
+
+    if (const auto *BO = dyn_cast<BinaryWithFlagsSDNode>(Op))
+      return BO->Flags.hasNoSignedZeros();
+
+    return false;
+  }
+
   bool isFAbsFree(EVT VT) const override;
   bool isFNegFree(EVT VT) const override;
   bool isTruncateFree(EVT Src, EVT Dest) const override;

@@ -507,6 +507,10 @@ public:
     return ModulePathStringTable.count(M.getModuleIdentifier());
   }
 
+  TypeIdSummary &getTypeIdSummary(StringRef TypeId) {
+    return TypeIdMap[TypeId];
+  }
+
   /// Remove entries in the GlobalValueMap that have empty summaries due to the
   /// eager nature of map entry creation during VST parsing. These would
   /// also be suppressed during combined index generation in mergeFrom(),

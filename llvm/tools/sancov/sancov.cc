@@ -946,7 +946,15 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   Hasher.update((*BufOrErr)->getBuffer());
   Coverage->BinaryHash = toHex(Hasher.final());
 
+  Blacklists B;
+  auto Symbolizer(createSymbolizer());
+
   for (uint64_t Addr : *Data.Addrs) {
+    auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, Addr);
+    failIfError(LineInfo);
+    if (B.isBlacklisted(*LineInfo))
+      continue;
+
     Coverage->CoveredIds.insert(utohexstr(Addr, true));
   }
 
