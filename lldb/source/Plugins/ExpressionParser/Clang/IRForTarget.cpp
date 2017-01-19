@@ -512,11 +512,9 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
    break;
  default:
    encoding_flags = 0x0600; /* fall back to 0x0600, kCFStringEncodingASCII */
-   if (log) {
-     log->Format("Encountered an Objective-C constant string with unusual "
+   LLDB_LOG(log, "Encountered an Objective-C constant string with unusual "
                  "element size {0}",
-                 string_array->getElementByteSize());
-   }
+            string_array->getElementByteSize());
  }
  Constant *encoding_arg = ConstantInt::get(i32_ty, encoding_flags, false);
  Constant *isExternal_arg =

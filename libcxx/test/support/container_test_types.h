@@ -33,7 +33,7 @@
 //   the construction of types using an allocator. This type is used to communicate
 //   between the test author, the containers allocator, and the types
 //   being constructed by the container.
-//   The controllers primary functions are:
+//   The controller's primary functions are:
 //     1. Allow calls to 'a.construct(p, args...)' to be checked by a test.
 //        The test uses 'cc->expect<Args...>()' to specify that the allocator
 //        should expect one call to 'a.construct' with the specified argument
@@ -366,7 +366,7 @@ struct CopyInsertable {
 
   CopyInsertable(CopyInsertable&& other) : CopyInsertable(other) {}
 
-  // Forgive pair for not downcasting this to an lvalue it its constructors.
+  // Forgive pair for not downcasting this to an lvalue in its constructors.
   CopyInsertable(CopyInsertable const && other) : CopyInsertable(other) {}
 
 

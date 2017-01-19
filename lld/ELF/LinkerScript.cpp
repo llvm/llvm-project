@@ -1471,6 +1471,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   else if (peek().startswith("="))
     Cmd->Filler = readOutputSectionFiller(next().drop_front());
 
+  // Consume optional comma following output section command.
+  consume(",");
+
   return Cmd;
 }
 

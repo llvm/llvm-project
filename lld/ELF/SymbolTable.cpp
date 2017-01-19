@@ -283,7 +283,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
   if (WasInserted)
     return 1;
   SymbolBody *Body = S->body();
-  if (Body->isLazy() || Body->isUndefined() || Body->isShared())
+  if (Body->isLazy() || !Body->isInCurrentDSO())
     return 1;
   if (Binding == STB_WEAK)
     return -1;
@@ -464,9 +464,9 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
 }
 
 template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::findDefined(StringRef Name) {
+SymbolBody *SymbolTable<ELFT>::findInCurrentDSO(StringRef Name) {
   if (SymbolBody *S = find(Name))
-    if (S->isDefined() && !S->isShared())
+    if (S->isInCurrentDSO())
       return S;
   return nullptr;
 }

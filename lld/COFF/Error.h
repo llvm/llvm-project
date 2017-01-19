@@ -16,6 +16,12 @@
 namespace lld {
 namespace coff {
 
+extern uint64_t ErrorCount;
+extern llvm::raw_ostream *ErrorOS;
+extern llvm::StringRef Argv0;
+
+void warn(const Twine &Msg);
+void error(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(std::error_code EC, const Twine &Prefix);
 LLVM_ATTRIBUTE_NORETURN void fatal(llvm::Error &Err, const Twine &Prefix);

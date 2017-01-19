@@ -85,20 +85,31 @@ class Configuration(object):
                 val = default
         return val
 
-    def get_lit_bool(self, name, default=None):
-        conf = self.get_lit_conf(name)
-        if conf is None:
-            return default
-        if isinstance(conf, bool):
-            return conf
-        if not isinstance(conf, str):
-            raise TypeError('expected bool or string')
-        if conf.lower() in ('1', 'true'):
-            return True
-        if conf.lower() in ('', '0', 'false'):
-            return False
-        self.lit_config.fatal(
-            "parameter '{}' should be true or false".format(name))
+    def get_lit_bool(self, name, default=None, env_var=None):
+        def check_value(value, var_name):
+            if value is None:
+                return default
+            if isinstance(value, bool):
+                return value
+            if not isinstance(value, str):
+                raise TypeError('expected bool or string')
+            if value.lower() in ('1', 'true'):
+                return True
+            if value.lower() in ('', '0', 'false'):
+                return False
+            self.lit_config.fatal(
+                "parameter '{}' should be true or false".format(var_name))
+
+        conf_val = self.get_lit_conf(name)
+        if env_var is not None and env_var in os.environ and \
+                os.environ[env_var] is not None:
+            val = os.environ[env_var]
+            if conf_val is not None:
+                self.lit_config.warning(
+                    'Environment variable %s=%s is overriding explicit '
+                    '--param=%s=%s' % (env_var, val, name, conf_val))
+            return check_value(val, env_var)
+        return check_value(conf_val, name)
 
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
@@ -274,7 +285,7 @@ class Configuration(object):
         self.cxx_stdlib_under_test = self.get_lit_conf(
             'cxx_stdlib_under_test', 'libc++')
         if self.cxx_stdlib_under_test not in \
-                ['libc++', 'libstdc++', 'cxx_default']:
+                ['libc++', 'libstdc++', 'msvc', 'cxx_default']:
             self.lit_config.fatal(
                 'unsupported value for "cxx_stdlib_under_test": %s'
                 % self.cxx_stdlib_under_test)
@@ -456,7 +467,14 @@ class Configuration(object):
            not self.is_windows:
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path, 'nasty_macros.hpp')]
-        if self.is_windows and self.debug_build:
+        if self.cxx_stdlib_under_test == 'msvc':
+            # FIXME: Uncomment this once STL commits the support header.
+            # self.cxx.compile_flags += [
+            #    '-include', os.path.join(support_path,
+            #                             'msvc_stdlib_force_include.h')]
+            pass
+        if self.is_windows and self.debug_build and \
+                self.cxx_stdlib_under_test != 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
                                          'set_windows_crt_report_mode.h')
@@ -609,6 +627,9 @@ class Configuration(object):
                     self.config.available_features.add('c++experimental')
                     self.cxx.link_flags += ['-lstdc++fs']
                 self.cxx.link_flags += ['-lm', '-pthread']
+            elif self.cxx_stdlib_under_test == 'msvc':
+                # FIXME: Correctly setup debug/release flags here.
+                pass
             elif self.cxx_stdlib_under_test == 'cxx_default':
                 self.cxx.link_flags += ['-pthread']
             else:
@@ -835,10 +856,9 @@ class Configuration(object):
         if platform.system() != 'Darwin':
             modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        enable_modules_default = supports_modules and \
-            os.environ.get('LIBCXX_USE_MODULES') is not None
         enable_modules = self.get_lit_bool('enable_modules',
-                                           enable_modules_default)
+                                           default=False,
+                                           env_var='LIBCXX_ENABLE_MODULES')
         if enable_modules and not supports_modules:
             self.lit_config.fatal(
                 '-fmodules is enabled but not supported by the compiler')

@@ -223,7 +223,7 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType, const InputFile &File,
+  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType, const InputFile *File,
                        const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
@@ -241,7 +241,7 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType, const InputFile &File,
+  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType, const InputFile *File,
                        const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool usesOnlyLowPageBits(uint32_t Type) const override;
@@ -294,7 +294,7 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 bool TargetInfo::usesOnlyLowPageBits(uint32_t Type) const { return false; }
 
 RelExpr TargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
-                                 const InputFile &File,
+                                 const InputFile *File,
                                  const SymbolBody &S) const {
   return Expr;
 }
@@ -631,6 +631,7 @@ template <class ELFT>
 RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                            const SymbolBody &S) const {
   switch (Type) {
+  case R_X86_64_8:
   case R_X86_64_32:
   case R_X86_64_32S:
   case R_X86_64_64:
@@ -857,6 +858,10 @@ template <class ELFT>
 void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
                                          uint64_t Val) const {
   switch (Type) {
+  case R_X86_64_8:
+    checkUInt<8>(Loc, Val, Type);
+    *Loc = Val;
+    break;
   case R_X86_64_32:
     checkUInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
@@ -1744,13 +1749,13 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
-                                    const InputFile &File,
+                                    const InputFile *File,
                                     const SymbolBody &S) const {
   // If S is an undefined weak symbol in an executable we don't need a Thunk.
   // In a DSO calls to undefined symbols, including weak ones get PLT entries
   // which may need a thunk.
-  if (S.isUndefined() && !S.isLocal() && S.symbol()->isWeak()
-      && !Config->Shared)
+  if (S.isUndefined() && !S.isLocal() && S.symbol()->isWeak() &&
+      !Config->Shared)
     return Expr;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
@@ -2188,7 +2193,7 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
 template <class ELFT>
 RelExpr MipsTargetInfo<ELFT>::getThunkExpr(RelExpr Expr, uint32_t Type,
-                                           const InputFile &File,
+                                           const InputFile *File,
                                            const SymbolBody &S) const {
   // Any MIPS PIC code function is invoked with its address in register $t9.
   // So if we have a branch instruction from non-PIC code to the PIC one
@@ -2197,7 +2202,7 @@ RelExpr MipsTargetInfo<ELFT>::getThunkExpr(RelExpr Expr, uint32_t Type,
   // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
   if (Type != R_MIPS_26)
     return Expr;
-  auto *F = dyn_cast<ELFFileBase<ELFT>>(&File);
+  auto *F = dyn_cast_or_null<ELFFileBase<ELFT>>(File);
   if (!F)
     return Expr;
   // If current file has PIC code, LA25 stub is not required.

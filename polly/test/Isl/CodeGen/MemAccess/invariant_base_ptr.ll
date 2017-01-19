@@ -1,13 +1,11 @@
 ; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-dir=%S \
-; RUN:   -polly-codegen -analyze 2 >&1 < %s | FileCheck %s
-
-; XFAIL: *
+; RUN:   -polly-codegen -polly-invariant-load-hoisting -S \
+; RUN:   2>&1 < %s | FileCheck %s
 
 ; Setting new access functions where the base pointer of the array that is newly
 ; accessed is only loaded within the scop itself caused incorrect code to be
-; generated when invariant load hoisting is disabled. Since r282893 we assert
-; in such situations. This test case was added to demonstrate what needs to be
-; resolved to support such access functions.
+; generated when invariant load hoisting is disabled. This test case checks
+; that in case invariant load hoisting is enabled, we generate correct code.
 
 ; CHECK: %polly.access.polly.access.X.load = getelementptr float, float* %polly.access.X.load, i64 %polly.indvar
 

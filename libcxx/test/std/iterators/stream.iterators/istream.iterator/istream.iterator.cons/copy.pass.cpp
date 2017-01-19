@@ -13,7 +13,7 @@
 
 // istream_iterator(const istream_iterator& x);
 //  C++17 says:  If is_trivially_copy_constructible_v<T> is true, then
-//     this constructor shall beis a trivial copy constructor.
+//     this constructor is a trivial copy constructor.
 
 #include <iterator>
 #include <sstream>

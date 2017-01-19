@@ -29,11 +29,11 @@
 //   If T is a literal type, then this destructor shall be a trivial destructor.
 // C++17 says:
 //   If is_trivially_default_constructible_v<T> is true, then
-//       this constructor (the default ctor) shall beis a constexpr constructor.
+//       this constructor (the default ctor) is a constexpr constructor.
 //   If is_trivially_copy_constructible_v<T> is true, then
-//       this constructor (the copy ctor) shall beis a trivial copy constructor.
+//       this constructor (the copy ctor) is a trivial copy constructor.
 //   If is_trivially_destructible_v<T> is true, then this
-//       destructor shall beis a trivial destructor.
+//       destructor is a trivial destructor.
 //  Testing the C++17 ctors for this are in the ctor tests.
 
 #include <iterator>

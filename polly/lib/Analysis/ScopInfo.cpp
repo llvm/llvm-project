@@ -1078,16 +1078,24 @@ void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
   isl_set_free(NewDomain);
   isl_set_free(StmtDomain);
 
-  // Check whether access dimensions correspond to number of dimensions of the
-  // accesses array.
   auto *NewAccessSpace = isl_space_range(NewSpace);
   assert(isl_space_has_tuple_id(NewAccessSpace, isl_dim_set) &&
          "Must specify the array that is accessed");
   auto *NewArrayId = isl_space_get_tuple_id(NewAccessSpace, isl_dim_set);
   auto *SAI = static_cast<ScopArrayInfo *>(isl_id_get_user(NewArrayId));
   assert(SAI && "Must set a ScopArrayInfo");
-  assert(!SAI->getBasePtrOriginSAI() &&
-         "Indirect array not supported by codegen");
+
+  if (SAI->isArrayKind() && SAI->getBasePtrOriginSAI()) {
+    InvariantEquivClassTy *EqClass =
+        getStatement()->getParent()->lookupInvariantEquivClass(
+            SAI->getBasePtr());
+    assert(EqClass &&
+           "Access functions to indirect arrays must have an invariant and "
+           "hoisted base pointer");
+  }
+
+  // Check whether access dimensions correspond to number of dimensions of the
+  // accesses array.
   auto Dims = SAI->getNumberOfDimensions();
   assert(isl_space_dim(NewAccessSpace, isl_dim_set) == Dims &&
          "Access dims must match array dims");

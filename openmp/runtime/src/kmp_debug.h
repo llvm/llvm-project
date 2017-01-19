@@ -26,27 +26,8 @@
 // Build-time assertion.
 // -------------------------------------------------------------------------------------------------
 
-/*
-    Build-time assertion can do compile-time checking of data structure sizes, etc. This works by
-    declaring a negative-length array if the conditional expression evaluates to false.  In that
-    case, the compiler issues a syntax error and stops the compilation. If the expression is
-    true, we get an extraneous static single character array in the scope of the macro.
-
-    Usage:
-
-        KMP_BUILD_ASSERT( sizeof( some_t ) <= 32 );
-        KMP_BUILD_ASSERT( offsetof( some_t, field ) % 8 == 0 );
-
-    Do not use _KMP_BUILD_ASSERT and __KMP_BUILD_ASSERT directly, it is working guts.
-*/
-
-#define __KMP_BUILD_ASSERT( expr, suffix )  typedef char __kmp_build_check_##suffix[ (expr) ? 1 : -1 ]
-#define _KMP_BUILD_ASSERT( expr, suffix )   __KMP_BUILD_ASSERT( (expr), suffix )
-#ifdef KMP_USE_ASSERT
-    #define KMP_BUILD_ASSERT( expr )            _KMP_BUILD_ASSERT( (expr), __LINE__ )
-#else
-    #define KMP_BUILD_ASSERT( expr )            /* nothing to do */
-#endif
+// New C++11 style build assert
+#define KMP_BUILD_ASSERT( expr )            static_assert(expr, "Build condition error")
 
 // -------------------------------------------------------------------------------------------------
 // Run-time assertions.

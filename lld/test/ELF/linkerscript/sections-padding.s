@@ -36,6 +36,11 @@
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
 
+## Check case with optional comma following output section command:
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122, .a : { *(.a*) } }" > %t.script
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
+
 .section        .mysec.1,"a"
 .align  16
 .byte   0x66
