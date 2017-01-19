@@ -17,7 +17,7 @@ void test_Unexpanded() {
 
 // Test using non-type members from pack of base classes.
 template<typename ...T> struct A : T... { // expected-note 2{{candidate}}
-  using T::T ...; // expected-note 6{{inherited here}}
+  using T::T ...; // expected-note 2{{inherited here}}
   using T::operator() ...;
   using T::operator T* ...;
   using T::h ...;
@@ -29,7 +29,7 @@ template<typename ...T> struct A : T... { // expected-note 2{{candidate}}
 };
 
 namespace test_A {
-  struct X { // expected-note 2{{candidate}}
+  struct X {
     X();
     X(int); // expected-note {{candidate}}
     void operator()(int); // expected-note 2{{candidate}}
@@ -43,7 +43,7 @@ namespace test_A {
     operator Y *();
     void h(int, int); // expected-note {{not viable}}
   };
-  struct Z { // expected-note 2{{candidate}}
+  struct Z {
     Z();
     Z(int); // expected-note {{candidate}}
     void operator()(int); // expected-note 2{{candidate}}
