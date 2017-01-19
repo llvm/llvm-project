@@ -27,6 +27,7 @@ add_tablegen(llvm-tblgen LLVM
   IntrinsicEmitter.cpp
   OptParserEmitter.cpp
   PseudoLoweringEmitter.cpp
+  RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
   SearchableTableEmitter.cpp
   SubtargetEmitter.cpp

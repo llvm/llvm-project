@@ -16,204 +16,81 @@
 #endif
 
 namespace llvm {
-namespace AArch64 {
-
-const uint32_t GPRCoverageData[] = {
-    // Classes 0-31
-    (1u << AArch64::GPR32allRegClassID) | (1u << AArch64::GPR32RegClassID) |
-        (1u << AArch64::GPR32spRegClassID) |
-        (1u << AArch64::GPR32commonRegClassID) |
-        (1u << AArch64::GPR32sponlyRegClassID) |
-        (1u << AArch64::GPR64allRegClassID) | (1u << AArch64::GPR64RegClassID) |
-        (1u << AArch64::GPR64spRegClassID) |
-        (1u << AArch64::GPR64commonRegClassID) |
-        (1u << AArch64::tcGPR64RegClassID) |
-        (1u << AArch64::GPR64sponlyRegClassID),
-    // Classes 32-63
-    0,
-    // FIXME: The entries below this point can be safely removed once this is
-    // tablegenerated. It's only needed because of the hardcoded register class
-    // limit.
-    // Classes 64-96
-    0,
-    // Classes 97-128
-    0,
-    // Classes 129-160
-    0,
-    // Classes 161-192
-    0,
-    // Classes 193-224
-    0,
-};
-
-const uint32_t FPRCoverageData[] = {
-    // Classes 0-31
-    (1u << AArch64::FPR8RegClassID) | (1u << AArch64::FPR16RegClassID) |
-        (1u << AArch64::FPR32RegClassID) | (1u << AArch64::FPR64RegClassID) |
-        (1u << AArch64::DDRegClassID) | (1u << AArch64::FPR128RegClassID) |
-        (1u << AArch64::FPR128_loRegClassID) | (1u << AArch64::DDDRegClassID) |
-        (1u << AArch64::DDDDRegClassID),
-    // Classes 32-63
-    (1u << (AArch64::QQRegClassID - 32)) |
-        (1u << (AArch64::QQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
-        (1u
-         << (AArch64::
-                 QQQ_with_qsub1_in_FPR128_lo_and_QQQ_with_qsub2_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQ_with_qsub0_in_FPR128_lo_and_QQQ_with_qsub2_in_FPR128_loRegClassID -
-             32)) |
-        (1u << (AArch64::QQQQRegClassID - 32)) |
-        (1u << (AArch64::QQQQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQQQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQQQ_with_qsub2_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQQQ_with_qsub3_in_FPR128_loRegClassID - 32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub1_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub1_in_FPR128_lo_and_QQQQ_with_qsub2_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub2_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub2_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub1_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQQQ_with_qsub0_in_FPR128_lo_and_QQQQ_with_qsub3_in_FPR128_loRegClassID -
-             32)) |
-        (1u
-         << (AArch64::
-                 QQ_with_qsub0_in_FPR128_lo_and_QQ_with_qsub1_in_FPR128_loRegClassID -
-             32)) |
-        (1u << (AArch64::QQQRegClassID - 32)) |
-        (1u << (AArch64::QQQ_with_qsub0_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQQ_with_qsub1_in_FPR128_loRegClassID - 32)) |
-        (1u << (AArch64::QQQ_with_qsub2_in_FPR128_loRegClassID - 32)) |
-        (1u
-         << (AArch64::
-                 QQQ_with_qsub0_in_FPR128_lo_and_QQQ_with_qsub1_in_FPR128_loRegClassID -
-             32)),
-    // FIXME: The entries below this point can be safely removed once this
-    // is tablegenerated. It's only needed because of the hardcoded register
-    // class limit.
-    // Classes 64-96
-    0,
-    // Classes 97-128
-    0,
-    // Classes 129-160
-    0,
-    // Classes 161-192
-    0,
-    // Classes 193-224
-    0,
-};
-
-const uint32_t CCRCoverageData[] = {
-    // Classes 0-31
-    1u << AArch64::CCRRegClassID,
-    // Classes 32-63
-    0,
-    // FIXME: The entries below this point can be safely removed once this
-    // is tablegenerated. It's only needed because of the hardcoded register
-    // class limit.
-    // Classes 64-96
-    0,
-    // Classes 97-128
-    0,
-    // Classes 129-160
-    0,
-    // Classes 161-192
-    0,
-    // Classes 193-224
-    0,
-};
-
-RegisterBank GPRRegBank(AArch64::GPRRegBankID, "GPR", 64, GPRCoverageData);
-RegisterBank FPRRegBank(AArch64::FPRRegBankID, "FPR", 512, FPRCoverageData);
-RegisterBank CCRRegBank(AArch64::CCRRegBankID, "CCR", 32, CCRCoverageData);
-} // end namespace AArch64
-
-RegisterBank *AArch64GenRegisterBankInfo::RegBanks[] = {
-    &AArch64::GPRRegBank, &AArch64::FPRRegBank, &AArch64::CCRRegBank};
-
 RegisterBankInfo::PartialMapping AArch64GenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
-    // 0: GPR 32-bit value.
-    {0, 32, AArch64::GPRRegBank},
-    // 1: GPR 64-bit value.
-    {0, 64, AArch64::GPRRegBank},
-    // 2: FPR 32-bit value.
+    // 0: FPR 32-bit value.
     {0, 32, AArch64::FPRRegBank},
-    // 3: FPR 64-bit value.
+    // 1: FPR 64-bit value.
     {0, 64, AArch64::FPRRegBank},
-    // 4: FPR 128-bit value.
+    // 2: FPR 128-bit value.
     {0, 128, AArch64::FPRRegBank},
-    // 5: FPR 256-bit value.
+    // 3: FPR 256-bit value.
     {0, 256, AArch64::FPRRegBank},
-    // 6: FPR 512-bit value.
-    {0, 512, AArch64::FPRRegBank}};
+    // 4: FPR 512-bit value.
+    {0, 512, AArch64::FPRRegBank},
+    // 5: GPR 32-bit value.
+    {0, 32, AArch64::GPRRegBank},
+    // 6: GPR 64-bit value.
+    {0, 64, AArch64::GPRRegBank},
+};
 
 // ValueMappings.
 RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     /* BreakDown, NumBreakDowns */
     // 3-operands instructions (all binary operations should end up with one of
     // those mapping).
-    // 0: GPR 32-bit value. <-- This must match First3OpsIdx.
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 3: GPR 64-bit value.
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    // 6: FPR 32-bit value.
+    // 0: FPR 32-bit value. <-- This must match First3OpsIdx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 9: FPR 64-bit value.
+    // 3: FPR 64-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    // 12: FPR 128-bit value.
+    // 6: FPR 128-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
-    // 15: FPR 256-bit value.
+    // 9: FPR 256-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR256 - PMI_Min], 1},
-    // 18: FPR 512-bit value. <-- This must match Last3OpsIdx.
+    // 12: FPR 512-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR512 - PMI_Min], 1},
+    // 15: GPR 32-bit value.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    // 18: GPR 64-bit value. <-- This must match Last3OpsIdx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     // Cross register bank copies.
-    // 21: GPR 32-bit value to FPR 32-bit value. <-- This must match
+    // 21: FPR 32-bit value to GPR 32-bit value. <-- This must match
     //                                               FirstCrossRegCpyIdx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    // 23: FPR 64-bit value to GPR 64-bit value.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    // 25: FPR 128-bit value to GPR 128-bit value (invalid)
+    {nullptr, 1},
+    {nullptr, 1},
+    // 27: FPR 256-bit value to GPR 256-bit value (invalid)
+    {nullptr, 1},
+    {nullptr, 1},
+    // 29: FPR 512-bit value to GPR 512-bit value (invalid)
+    {nullptr, 1},
+    {nullptr, 1},
+    // 31: GPR 32-bit value to FPR 32-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 23: GPR 64-bit value to FPR 64-bit value.
+    // 33: GPR 64-bit value to FPR 64-bit value. <-- This must match
+    //                                               LastCrossRegCpyIdx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    // 25: FPR 32-bit value to GPR 32-bit value.
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 27: FPR 64-bit value to GPR 64-bit value. <-- This must match
-    //                                               LastCrossRegCpyIdx.
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1}
 };
 
 bool AArch64GenRegisterBankInfo::checkPartialMap(unsigned Idx,
@@ -301,9 +178,9 @@ AArch64GenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx,
 
 AArch64GenRegisterBankInfo::PartialMappingIdx
     AArch64GenRegisterBankInfo::BankIDToCopyMapIdx[]{
-        PMI_FirstGPR, // GPR
-        PMI_FirstFPR, // FPR
         PMI_None,     // CCR
+        PMI_FirstFPR, // FPR
+        PMI_FirstGPR, // GPR
     };
 
 const RegisterBankInfo::ValueMapping *
