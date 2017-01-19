@@ -10,7 +10,7 @@
 
 // <unordered_map>
 
-// Check that std::unordered_map and it's iterators can be instantiated with an incomplete
+// Check that std::unordered_map and its iterators can be instantiated with an incomplete
 // type.
 
 #include <unordered_map>

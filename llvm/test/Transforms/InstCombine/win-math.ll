@@ -274,21 +274,26 @@ define float @float_round(float %x) nounwind readnone {
 }
 
 declare float @powf(float, float)
-; win32 lacks sqrtf&fabsf, win64 lacks fabsf
+
+; win32 lacks sqrtf&fabsf, win64 lacks fabsf, but
+; calls to the intrinsics can be emitted instead.
 define float @float_powsqrt(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_powsqrt(
 ; WIN32-NOT: float @sqrtf
 ; WIN32: float @powf
+
 ; WIN64-LABEL: @float_powsqrt(
-; WIN64-NOT: float @sqrtf
-; WIN64: float @powf
+; WIN64: float @sqrtf
+; WIN64: float @llvm.fabs.f32(
+; WIN64-NOT: float @powf
+
 ; MINGW32-LABEL: @float_powsqrt(
 ; MINGW32: float @sqrtf
-; MINGW32: float @fabsf
+; MINGW32: float @llvm.fabs.f32
 ; MINGW32-NOT: float @powf
 ; MINGW64-LABEL: @float_powsqrt(
 ; MINGW64: float @sqrtf
-; MINGW64: float @fabsf
+; MINGW64: float @llvm.fabs.f32(
 ; MINGW64-NOT: float @powf
     %1 = call float @powf(float %x, float 0.5)
     ret float %1

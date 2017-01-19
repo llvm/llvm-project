@@ -44,7 +44,11 @@ using namespace llvm;
 
 static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
-                    cl::desc("The baseline cost threshold for loop unrolling"));
+                    cl::desc("The cost threshold for loop unrolling"));
+
+static cl::opt<unsigned> UnrollPartialThreshold(
+    "unroll-partial-threshold", cl::Hidden,
+    cl::desc("The cost threshold for partial loop unrolling"));
 
 static cl::opt<unsigned> UnrollMaxPercentThresholdBoost(
     "unroll-max-percent-threshold-boost", cl::init(400), cl::Hidden,
@@ -127,7 +131,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.Threshold = 150;
   UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = 0;
-  UP.PartialThreshold = UP.Threshold;
+  UP.PartialThreshold = 150;
   UP.PartialOptSizeThreshold = 0;
   UP.Count = 0;
   UP.PeelCount = 0;
@@ -153,10 +157,10 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   }
 
   // Apply any user values specified by cl::opt
-  if (UnrollThreshold.getNumOccurrences() > 0) {
+  if (UnrollThreshold.getNumOccurrences() > 0)
     UP.Threshold = UnrollThreshold;
-    UP.PartialThreshold = UnrollThreshold;
-  }
+  if (UnrollPartialThreshold.getNumOccurrences() > 0)
+    UP.PartialThreshold = UnrollPartialThreshold;
   if (UnrollMaxPercentThresholdBoost.getNumOccurrences() > 0)
     UP.MaxPercentThresholdBoost = UnrollMaxPercentThresholdBoost;
   if (UnrollMaxCount.getNumOccurrences() > 0)

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf | FileCheck %s
+; RUN: not llc < %s -march=bpf | FileCheck %s
 
 %struct.bpf_map_def = type { i32, i32, i32, i32 }
 %struct.__sk_buff = type opaque

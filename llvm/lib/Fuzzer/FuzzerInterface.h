@@ -55,7 +55,7 @@ size_t LLVMFuzzerCustomCrossOver(const uint8_t *Data1, size_t Size1,
                                  unsigned int Seed);
 
 // Experimental, may go away in future.
-// libFuzzer-provided function to be used inside LLVMFuzzerTestOneInput.
+// libFuzzer-provided function to be used inside LLVMFuzzerCustomMutator.
 // Mutates raw data in [Data, Data+Size) inplace.
 // Returns the new size, which is not greater than MaxSize.
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);

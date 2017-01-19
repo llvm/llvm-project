@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -mattr=-crbits -disable-ppc-cmp-opt=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -mattr=-crbits -disable-ppc-cmp-opt=0 -ppc-gen-isel=false | FileCheck --check-prefix=CHECK-NO-ISEL %s
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -34,9 +35,14 @@ entry:
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 
-; CHECK: @fool
+; CHECK-LABEL: @fool
+; CHECK-NO-ISEL-LABEL: @fool
 ; CHECK: subf. [[REG:[0-9]+]], 4, 3
 ; CHECK: isel 3, 3, 4, 1
+; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 3, 4, 0
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
+
 ; CHECK: std [[REG]], 0(5)
 }
 
@@ -48,9 +54,13 @@ entry:
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 
-; CHECK: @foolb
+; CHECK-LABEL: @foolb
+; CHECK-NO-ISEL-LABEL: @foolb
 ; CHECK: subf. [[REG:[0-9]+]], 4, 3
 ; CHECK: isel 3, 4, 3, 1
+; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL-NEXT: b .LBB
+; CHECK-NO-ISEL addi: 3, 4, 0
 ; CHECK: std [[REG]], 0(5)
 }
 
@@ -62,9 +72,13 @@ entry:
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 
-; CHECK: @foolc
+; CHECK-LABEL: @foolc
+; CHECK-NO-ISEL-LABEL: @foolc
 ; CHECK: subf. [[REG:[0-9]+]], 3, 4
 ; CHECK: isel 3, 3, 4, 0
+; CHECK-NO-ISEL: bc 12, 0, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 3, 4, 0
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK: std [[REG]], 0(5)
 }
 
@@ -76,9 +90,13 @@ entry:
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 
-; CHECK: @foold
+; CHECK-LABEL: @foold
+; CHECK-NO-ISEL-LABEL: @foold
 ; CHECK: subf. [[REG:[0-9]+]], 3, 4
 ; CHECK: isel 3, 3, 4, 1
+; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 3, 4, 0
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK: std [[REG]], 0(5)
 }
 
@@ -90,9 +108,13 @@ entry:
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
 
-; CHECK: @foold2
+; CHECK-LABEL: @foold2
+; CHECK-NO-ISEL-LABEL: @foold2
 ; CHECK: subf. [[REG:[0-9]+]], 4, 3
 ; CHECK: isel 3, 3, 4, 0
+; CHECK-NO-ISEL: bc 12, 0, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 3, 4, 0
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK: std [[REG]], 0(5)
 }
 

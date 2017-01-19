@@ -720,6 +720,7 @@ public:
         return *this;
     }
 
+    template <class = void>
     _LIBCPP_INLINE_VISIBILITY
     path& operator=(string_type&& __s) _NOEXCEPT {
         __pn_ = _VSTD::move(__s);

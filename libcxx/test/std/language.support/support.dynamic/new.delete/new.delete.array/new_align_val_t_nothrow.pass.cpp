@@ -29,7 +29,7 @@ constexpr auto OverAligned = alignof(std::max_align_t) * 2;
 
 int new_handler_called = 0;
 
-void new_handler()
+void my_new_handler()
 {
     ++new_handler_called;
     std::set_new_handler(0);
@@ -44,7 +44,7 @@ struct alignas(OverAligned) A
 };
 
 void test_max_alloc() {
-    std::set_new_handler(new_handler);
+    std::set_new_handler(my_new_handler);
     auto do_test = []() {
         void* vp = operator new [](std::numeric_limits<std::size_t>::max(),
                                  std::align_val_t(OverAligned),

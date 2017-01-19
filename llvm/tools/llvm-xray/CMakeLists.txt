@@ -12,6 +12,7 @@ set(LLVM_XRAY_TOOLS
   xray-converter.cc
   xray-extract.cc
   xray-extract.cc
+  xray-graph.cc
   xray-registry.cc)
 
 add_llvm_tool(llvm-xray llvm-xray.cc ${LLVM_XRAY_TOOLS})

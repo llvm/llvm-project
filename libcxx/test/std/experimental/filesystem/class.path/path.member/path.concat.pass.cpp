@@ -132,7 +132,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
     assert(LHS == E);
   }
   // input iterator - For non-native char types, appends needs to copy the
-  // iterator range into a contigious block of memory before it can perform the
+  // iterator range into a contiguous block of memory before it can perform the
   // code_cvt conversions.
   // For "char" no allocations will be performed because no conversion is
   // required.

@@ -1124,7 +1124,7 @@ public:
     if (auto RemoteIdOrErr = callB<OrcRPCNegotiate>(Func::getPrototype())) {
       this->RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
       if (*RemoteIdOrErr == this->getInvalidFunctionId())
-        return orcError(OrcErrorCode::UnknownRPCFunction);
+        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
       return Error::success();
     } else
       return RemoteIdOrErr.takeError();
@@ -1262,7 +1262,7 @@ public:
     if (auto RemoteIdOrErr = callB<OrcRPCNegotiate>(Func::getPrototype())) {
       this->RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
       if (*RemoteIdOrErr == this->getInvalidFunctionId())
-        return orcError(OrcErrorCode::UnknownRPCFunction);
+        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
       return Error::success();
     } else
       return RemoteIdOrErr.takeError();

@@ -853,17 +853,19 @@ extern const char *StyleOptionHelpDescription;
 /// \param[in] FileName Path to start search for .clang-format if ``StyleName``
 /// == "file".
 /// \param[in] FallbackStyle The name of a predefined style used to fallback to
-/// in case the style can't be determined from \p StyleName.
+/// in case \p StyleName is "file" and no file can be found.
 /// \param[in] Code The actual code to be formatted. Used to determine the
 /// language if the filename isn't sufficient.
 /// \param[in] FS The underlying file system, in which the file resides. By
 /// default, the file system is the real file system.
 ///
-/// \returns FormatStyle as specified by ``StyleName``. If no style could be
-/// determined, the default is LLVM Style (see ``getLLVMStyle()``).
-FormatStyle getStyle(StringRef StyleName, StringRef FileName,
-                     StringRef FallbackStyle, StringRef Code = "",
-                     vfs::FileSystem *FS = nullptr);
+/// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
+/// "file" and no file is found, returns ``FallbackStyle``. If no style could be
+/// determined, returns an Error.
+llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
+                                     StringRef FallbackStyle,
+                                     StringRef Code = "",
+                                     vfs::FileSystem *FS = nullptr);
 
 // \brief Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {

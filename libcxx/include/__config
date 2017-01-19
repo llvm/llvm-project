@@ -59,8 +59,9 @@
 #define _LIBCPP_ABI_POINTER_SAFETY_ENUM_TYPE
 #elif _LIBCPP_ABI_VERSION == 1
 #if !defined(_WIN32)
-// Enable compiling a definition of error_category() into the libc++ dylib.
-#define _LIBCPP_DEPRECATED_ABI_EXTERNAL_ERROR_CATEGORY_CONSTRUCTOR
+// Enable compiling copies of now inline methods into the dylib to support
+// applications compiled against older libraries.
+#define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
 #endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
@@ -99,6 +100,9 @@
 // the compiler and '1' otherwise.
 #ifndef __is_identifier
 #define __is_identifier(__x) 1
+#endif
+#ifndef __has_declspec_attribute
+#define __has_declspec_attribute(__x) 0
 #endif
 
 #define __has_keyword(__x) !(__is_identifier(__x))
@@ -583,6 +587,7 @@ namespace std {
 
 #define _LIBCPP_TYPE_VIS            _LIBCPP_DLL_VIS
 #define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
+#define _LIBCPP_EXTERN_VIS          _LIBCPP_DLL_VIS
 #define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
 #define _LIBCPP_HIDDEN
 #define _LIBCPP_TEMPLATE_VIS
@@ -634,6 +639,10 @@ namespace std {
 
 #ifndef _LIBCPP_FUNC_VIS_ONLY
 # define _LIBCPP_FUNC_VIS_ONLY _LIBCPP_FUNC_VIS
+#endif
+
+#ifndef _LIBCPP_EXTERN_VIS
+# define _LIBCPP_EXTERN_VIS
 #endif
 
 #ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
@@ -1016,6 +1025,13 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #else
 # define _LIBCPP_DIAGNOSE_WARNING(...)
 # define _LIBCPP_DIAGNOSE_ERROR(...)
+#endif
+
+#if defined(_LIBCPP_ABI_MICROSOFT) && \
+   (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
+# define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
+#else
+# define _LIBCPP_DECLSPEC_EMPTY_BASES
 #endif
 
 #endif // __cplusplus

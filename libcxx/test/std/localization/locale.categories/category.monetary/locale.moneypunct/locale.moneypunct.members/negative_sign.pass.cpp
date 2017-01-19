@@ -14,7 +14,7 @@
 // string_type negative_sign() const;
 
 // The C++ and C standards are silent.
-//   On this one, commen sense is the guideline.
+//   On this one, common sense is the guideline.
 //   If customers complain, I'll endeavor to minimize customer complaints
 
 #include <locale>

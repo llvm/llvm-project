@@ -440,7 +440,8 @@ bool isInlinableLiteral32(int32_t Literal, bool HasInv2Pi) {
 }
 
 bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
-  assert(HasInv2Pi);
+  if (!HasInv2Pi)
+    return false;
 
   if (Literal >= -16 && Literal <= 64)
     return true;

@@ -20,6 +20,7 @@
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -69,58 +70,18 @@ void Log::Printf(const char *format, ...) {
 // a valid file handle, we also log to the file.
 //----------------------------------------------------------------------
 void Log::VAPrintf(const char *format, va_list args) {
-  // Make a copy of our stream shared pointer in case someone disables our
-  // log while we are logging and releases the stream
-  StreamSP stream_sp(m_stream_sp);
-  if (stream_sp) {
-    static uint32_t g_sequence_id = 0;
-    StreamString header;
+  std::string message_string;
+  llvm::raw_string_ostream message(message_string);
+  WriteHeader(message, "", "");
 
-    // Add a sequence ID if requested
-    if (m_options.Test(LLDB_LOG_OPTION_PREPEND_SEQUENCE))
-      header.Printf("%u ", ++g_sequence_id);
+  char *text;
+  vasprintf(&text, format, args);
+  message << text;
+  free(text);
 
-    // Timestamp if requested
-    if (m_options.Test(LLDB_LOG_OPTION_PREPEND_TIMESTAMP)) {
-      auto now = std::chrono::duration<double>(
-          std::chrono::system_clock::now().time_since_epoch());
-      header.Printf("%.9f ", now.count());
-    }
+  message << "\n";
 
-    // Add the process and thread if requested
-    if (m_options.Test(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
-      header.Printf("[%4.4x/%4.4" PRIx64 "]: ", getpid(),
-                    Host::GetCurrentThreadID());
-
-    // Add the thread name if requested
-    if (m_options.Test(LLDB_LOG_OPTION_PREPEND_THREAD_NAME)) {
-      llvm::SmallString<32> thread_name;
-      ThisThread::GetName(thread_name);
-      if (!thread_name.empty())
-        header.Printf("%s ", thread_name.c_str());
-    }
-
-    header.PrintfVarArg(format, args);
-    header.PutCString("\n");
-
-    if (m_options.Test(LLDB_LOG_OPTION_BACKTRACE)) {
-      std::string back_trace;
-      llvm::raw_string_ostream stream(back_trace);
-      llvm::sys::PrintStackTrace(stream);
-      stream.flush();
-      header.PutCString(back_trace);
-    }
-
-    if (m_options.Test(LLDB_LOG_OPTION_THREADSAFE)) {
-      static std::recursive_mutex g_LogThreadedMutex;
-      std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
-      stream_sp->PutCString(header.GetString());
-      stream_sp->Flush();
-    } else {
-      stream_sp->PutCString(header.GetString());
-      stream_sp->Flush();
-    }
-  }
+  WriteMessage(message.str());
 }
 
 //----------------------------------------------------------------------
@@ -351,6 +312,71 @@ bool Log::GetVerbose() const { return m_options.Test(LLDB_LOG_OPTION_VERBOSE); }
 bool Log::GetDebug() const {
   // TODO: remove and clean up callers
   return false;
+}
+
+void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
+                      llvm::StringRef function) {
+  static uint32_t g_sequence_id = 0;
+  // Add a sequence ID if requested
+  if (m_options.Test(LLDB_LOG_OPTION_PREPEND_SEQUENCE))
+    OS << ++g_sequence_id << " ";
+
+  // Timestamp if requested
+  if (m_options.Test(LLDB_LOG_OPTION_PREPEND_TIMESTAMP)) {
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    OS << llvm::formatv("{0:f9} ", now.count());
+  }
+
+  // Add the process and thread if requested
+  if (m_options.Test(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
+    OS << llvm::formatv("[{0,0+4}/{1,0+4}] ", getpid(),
+                        Host::GetCurrentThreadID());
+
+  // Add the thread name if requested
+  if (m_options.Test(LLDB_LOG_OPTION_PREPEND_THREAD_NAME)) {
+    llvm::SmallString<32> thread_name;
+    ThisThread::GetName(thread_name);
+    if (!thread_name.empty())
+      OS << thread_name;
+  }
+
+  if (m_options.Test(LLDB_LOG_OPTION_BACKTRACE))
+    llvm::sys::PrintStackTrace(OS);
+
+  if (m_options.Test(LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION) &&
+      (!file.empty() || !function.empty())) {
+    file = llvm::sys::path::filename(file).take_front(40);
+    function = function.take_front(40);
+    OS << llvm::formatv("{0,-60:60} ", (file + ":" + function).str());
+  }
+}
+
+void Log::WriteMessage(const std::string &message) {
+  // Make a copy of our stream shared pointer in case someone disables our
+  // log while we are logging and releases the stream
+  StreamSP stream_sp(m_stream_sp);
+  if (!stream_sp)
+    return;
+
+  if (m_options.Test(LLDB_LOG_OPTION_THREADSAFE)) {
+    static std::recursive_mutex g_LogThreadedMutex;
+    std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
+    stream_sp->PutCString(message.c_str());
+    stream_sp->Flush();
+  } else {
+    stream_sp->PutCString(message.c_str());
+    stream_sp->Flush();
+  }
+}
+
+void Log::Format(llvm::StringRef file, llvm::StringRef function,
+                 const llvm::formatv_object_base &payload) {
+  std::string message_string;
+  llvm::raw_string_ostream message(message_string);
+  WriteHeader(message, file, function);
+  message << payload << "\n";
+  WriteMessage(message.str());
 }
 
 LogChannelSP LogChannel::FindPlugin(const char *plugin_name) {

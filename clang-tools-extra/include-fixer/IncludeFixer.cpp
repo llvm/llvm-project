@@ -118,14 +118,14 @@ bool IncludeFixerActionFactory::runInvocation(
   return !Compiler.getDiagnostics().hasFatalErrorOccurred();
 }
 
-static void addDiagnosticsForContext(TypoCorrection &Correction,
+static bool addDiagnosticsForContext(TypoCorrection &Correction,
                                      const IncludeFixerContext &Context,
                                      StringRef Code, SourceLocation StartOfFile,
                                      ASTContext &Ctx) {
   auto Reps = createIncludeFixerReplacements(
       Code, Context, format::getLLVMStyle(), /*AddQualifiers=*/false);
-  if (!Reps)
-    return;
+  if (!Reps || Reps->size() != 1)
+    return false;
 
   unsigned DiagID = Ctx.getDiagnostics().getCustomDiagID(
       DiagnosticsEngine::Note, "Add '#include %0' to provide the missing "
@@ -133,7 +133,6 @@ static void addDiagnosticsForContext(TypoCorrection &Correction,
 
   // FIXME: Currently we only generate a diagnostic for the first header. Give
   // the user choices.
-  assert(Reps->size() == 1 && "Expected exactly one replacement");
   const tooling::Replacement &Placed = *Reps->begin();
 
   auto Begin = StartOfFile.getLocWithOffset(Placed.getOffset());
@@ -143,6 +142,7 @@ static void addDiagnosticsForContext(TypoCorrection &Correction,
      << FixItHint::CreateReplacement(CharSourceRange::getCharRange(Begin, End),
                                      Placed.getReplacementText());
   Correction.addExtraDiagnostic(std::move(PD));
+  return true;
 }
 
 /// Callback for incomplete types. If we encounter a forward declaration we
@@ -286,12 +286,12 @@ clang::TypoCorrection IncludeFixerSemaSource::CorrectTypo(
     FileID FID = SM.getFileID(Typo.getLoc());
     StringRef Code = SM.getBufferData(FID);
     SourceLocation StartOfFile = SM.getLocForStartOfFile(FID);
-    addDiagnosticsForContext(
-        Correction,
-        getIncludeFixerContext(SM, CI->getPreprocessor().getHeaderSearchInfo(),
-                               MatchedSymbols),
-        Code, StartOfFile, CI->getASTContext());
-    return Correction;
+    if (addDiagnosticsForContext(
+            Correction, getIncludeFixerContext(
+                            SM, CI->getPreprocessor().getHeaderSearchInfo(),
+                            MatchedSymbols),
+            Code, StartOfFile, CI->getASTContext()))
+      return Correction;
   }
   return TypoCorrection();
 }

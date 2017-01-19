@@ -9,7 +9,7 @@
 
 // <map>
 
-// Check that std::multimap and it's iterators can be instantiated with an incomplete
+// Check that std::multimap and its iterators can be instantiated with an incomplete
 // type.
 
 #include <map>

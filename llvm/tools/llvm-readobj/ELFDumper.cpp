@@ -1892,7 +1892,7 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
     if (Contents.size() == 1)
       continue;
 
-    ARMAttributeParser(W).Parse(Contents);
+    ARMAttributeParser(&W).Parse(Contents, true);
   }
 }
 }

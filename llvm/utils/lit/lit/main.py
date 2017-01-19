@@ -259,6 +259,14 @@ def main_with_tmp(builtinParameters):
                      help=("Only run tests with paths matching the given "
                            "regular expression"),
                      action="store", default=None)
+    selection_group.add_argument("--num-shards", dest="numShards", metavar="M",
+                     help="Split testsuite into M pieces and only run one",
+                     action="store", type=int,
+                     default=os.environ.get("LIT_NUM_SHARDS"))
+    selection_group.add_argument("--run-shard", dest="runShard", metavar="N",
+                     help="Run shard #N of the testsuite",
+                     action="store", type=int,
+                     default=os.environ.get("LIT_RUN_SHARD"))
 
     debug_group = parser.add_argument_group("Debug and Experimental Options")
     debug_group.add_argument("--debug",
@@ -398,6 +406,29 @@ def main_with_tmp(builtinParameters):
         sort_by_incremental_cache(run)
     else:
         run.tests.sort(key = lambda t: (not t.isEarlyTest(), t.getFullName()))
+
+    # Then optionally restrict our attention to a shard of the tests.
+    if (opts.numShards is not None) or (opts.runShard is not None):
+        if (opts.numShards is None) or (opts.runShard is None):
+            parser.error("--num-shards and --run-shard must be used together")
+        if opts.numShards <= 0:
+            parser.error("--num-shards must be positive")
+        if (opts.runShard < 1) or (opts.runShard > opts.numShards):
+            parser.error("--run-shard must be between 1 and --num-shards (inclusive)")
+        num_tests = len(run.tests)
+        # Note: user views tests and shard numbers counting from 1.
+        test_ixs = range(opts.runShard - 1, num_tests, opts.numShards)
+        run.tests = [run.tests[i] for i in test_ixs]
+        # Generate a preview of the first few test indices in the shard
+        # to accompany the arithmetic expression, for clarity.
+        preview_len = 3
+        ix_preview = ", ".join([str(i+1) for i in test_ixs[:preview_len]])
+        if len(test_ixs) > preview_len:
+            ix_preview += ", ..."
+        litConfig.note('Selecting shard %d/%d = size %d/%d = tests #(%d*k)+%d = [%s]' %
+                       (opts.runShard, opts.numShards,
+                        len(run.tests), num_tests,
+                        opts.numShards, opts.runShard, ix_preview))
 
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:

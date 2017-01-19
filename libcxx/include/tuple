@@ -366,7 +366,7 @@ struct __all_default_constructible<__tuple_types<_Tp...>>
 template<class _Indx, class ..._Tp> struct __tuple_impl;
 
 template<size_t ..._Indx, class ..._Tp>
-struct __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
+struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
     : public __tuple_leaf<_Indx, _Tp>...
 {
     _LIBCPP_INLINE_VISIBILITY

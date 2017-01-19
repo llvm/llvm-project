@@ -13,7 +13,9 @@
 #define LLVM_FUZZER_TRACE_PC
 
 #include "FuzzerDefs.h"
+#include "FuzzerDictionary.h"
 #include "FuzzerValueBitMap.h"
+
 #include <set>
 
 namespace fuzzer {
@@ -50,7 +52,7 @@ class TracePC {
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   void HandleValueProfile(size_t Value) { ValueProfileMap.AddValue(Value); }
-  template <class T> void HandleCmp(void *PC, T Arg1, T Arg2);
+  template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
@@ -74,15 +76,13 @@ class TracePC {
   void DumpCoverage();
 
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
-                         size_t n);
-  void AddValueForStrcmp(void *caller_pc, const char *s1, const char *s2,
-                         size_t n);
+                         size_t n, bool StopAtZero);
 
   bool UsingTracePcGuard() const {return NumModules; }
 
-  static const size_t kTORCSize = 1 << 5;
-  TableOfRecentCompares<uint32_t, kTORCSize> TORC4;
-  TableOfRecentCompares<uint64_t, kTORCSize> TORC8;
+  TableOfRecentCompares<uint32_t, 32> TORC4;
+  TableOfRecentCompares<uint64_t, 32> TORC8;
+  TableOfRecentCompares<Word, 32> TORCW;
 
   void PrintNewPCs();
   void InitializePrintNewPCs();

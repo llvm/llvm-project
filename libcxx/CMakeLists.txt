@@ -104,7 +104,7 @@ endif()
 # ABI Library options ---------------------------------------------------------
 set(LIBCXX_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
-set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++)
+set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 # FIXME: This is a temporary hack to force LLVM buildbots to store
@@ -131,9 +131,9 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
     set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
     set(LIBCXX_CXX_ABI_INTREE 1)
   else()
-    if (WIN32 AND NOT MINGW)
+    if (LIBCXX_TARGETING_MSVC)
       # FIXME: Figure out how to configure the ABI library on Windows.
-      set(LIBCXX_CXX_ABI_LIBNAME "none")
+      set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
     else()
       set(LIBCXX_CXX_ABI_LIBNAME "default")
     endif()
@@ -331,7 +331,9 @@ endif()
 set(LIBCXX_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
 set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+file(MAKE_DIRECTORY "${LIBCXX_BINARY_INCLUDE_DIR}")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
@@ -393,7 +395,7 @@ include(HandleLibCXXABI) # Setup the ABI library flags
 if (NOT LIBCXX_STANDALONE_BUILD)
   # Remove flags that may have snuck in.
   remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
-               -lc++abi -m32)
+               -lc++abi)
 endif()
 remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 
@@ -402,7 +404,7 @@ remove_flags(-stdlib=libc++ -stdlib=libstdc++)
 # non-debug DLLs
 remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 
-# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
+# FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEqDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
 # so they don't get transformed into -Wno and -errors respectivly.
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)

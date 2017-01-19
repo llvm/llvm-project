@@ -20,8 +20,9 @@
 
 namespace fuzzer {
 // A simple POD sized array of bytes.
-template <size_t kMaxSize> class FixedWord {
+template <size_t kMaxSizeT> class FixedWord {
 public:
+  static const size_t kMaxSize = kMaxSizeT;
   FixedWord() {}
   FixedWord(const uint8_t *B, uint8_t S) { Set(B, S); }
 

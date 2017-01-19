@@ -405,10 +405,14 @@ protected:
   void SetupModule() { OldM = new Module("", C); }
 
   void CreateOldModule() {
+    auto *CD = OldM->getOrInsertComdat("comdat");
+    CD->setSelectionKind(Comdat::ExactMatch);
+
     auto GV = new GlobalVariable(
         *OldM, Type::getInt32Ty(C), false, GlobalValue::ExternalLinkage,
         ConstantInt::get(Type::getInt32Ty(C), 1), "gv");
     GV->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
+    GV->setComdat(CD);
 
     DIBuilder DBuilder(*OldM);
     IRBuilder<> IBuilder(C);
@@ -419,6 +423,7 @@ protected:
     auto *F =
         Function::Create(FuncType, GlobalValue::PrivateLinkage, "f", OldM);
     F->setPersonalityFn(PersFn);
+    F->setComdat(CD);
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
@@ -471,5 +476,16 @@ TEST_F(CloneModule, Subprogram) {
 TEST_F(CloneModule, GlobalMetadata) {
   GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
   EXPECT_NE(nullptr, NewGV->getMetadata(LLVMContext::MD_type));
+}
+
+TEST_F(CloneModule, Comdat) {
+  GlobalVariable *NewGV = NewM->getGlobalVariable("gv");
+  auto *CD = NewGV->getComdat();
+  ASSERT_NE(nullptr, CD);
+  EXPECT_EQ("comdat", CD->getName());
+  EXPECT_EQ(Comdat::ExactMatch, CD->getSelectionKind());
+
+  Function *NewF = NewM->getFunction("f");
+  EXPECT_EQ(CD, NewF->getComdat());
 }
 }

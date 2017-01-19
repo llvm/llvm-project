@@ -1237,4 +1237,6 @@ doScavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger *RS) {
         ++I;
     }
   }
+
+  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
 }

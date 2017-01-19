@@ -15,10 +15,10 @@
 ; PIC-LINUX: ldr {{x[0-9]+}}, {{\[}}[[R1]]{{\]}}
 
 ; STATIC-LARGE: foo2
-; STATIC-LARGE: movz [[R0:x[0-9]+]], #:abs_g3:__stack_chk_guard
-; STATIC-LARGE: movk [[R0]], #:abs_g2_nc:__stack_chk_guard
+; STATIC-LARGE: movz [[R0:x[0-9]+]], #:abs_g0_nc:__stack_chk_guard
 ; STATIC-LARGE: movk [[R0]], #:abs_g1_nc:__stack_chk_guard
-; STATIC-LARGE: movk [[R0]], #:abs_g0_nc:__stack_chk_guard
+; STATIC-LARGE: movk [[R0]], #:abs_g2_nc:__stack_chk_guard
+; STATIC-LARGE: movk [[R0]], #:abs_g3:__stack_chk_guard
 ; STATIC-LARGE: ldr {{x[0-9]+}}, {{\[}}[[R0]]{{\]}}
 
 ; STATIC-SMALL: foo2

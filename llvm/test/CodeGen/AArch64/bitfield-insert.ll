@@ -428,8 +428,8 @@ define i32 @test5(i32 %a) {
 ; BFXIL will use the same constant as the ORR, so we don't care how the constant
 ; is materialized (it's an equal cost either way).
 ; CHECK-LABEL: @test6
-; CHECK: mov [[REG:w[0-9]+]], #720896
-; CHECK: movk [[REG]], #23250
+; CHECK: mov [[REG:w[0-9]+]], #23250
+; CHECK: movk [[REG]], #11, lsl #16
 ; CHECK: bfxil w0, [[REG]], #0, #20
 define i32 @test6(i32 %a) {
   %1 = and i32 %a, 4293918720 ; 0xfff00000
@@ -440,8 +440,8 @@ define i32 @test6(i32 %a) {
 ; BFIs that require the same number of instruction to materialize the constant
 ; as the original ORR are okay.
 ; CHECK-LABEL: @test7
-; CHECK: mov [[REG:w[0-9]+]], #327680
-; CHECK: movk [[REG]], #44393
+; CHECK: mov [[REG:w[0-9]+]], #44393
+; CHECK: movk [[REG]], #5, lsl #16
 ; CHECK: bfi w0, [[REG]], #1, #19
 define i32 @test7(i32 %a) {
   %1 = and i32 %a, 4293918721 ; 0xfff00001
@@ -454,9 +454,9 @@ define i32 @test7(i32 %a) {
 ; 'and' with a 'movk', which would decrease ILP while using the same number of
 ; instructions.
 ; CHECK-LABEL: @test8
-; CHECK: mov [[REG2:x[0-9]+]], #157599529959424
+; CHECK: mov [[REG2:x[0-9]+]], #2035482624
 ; CHECK: and [[REG1:x[0-9]+]], x0, #0xff000000000000ff
-; CHECK: movk [[REG2]], #31059, lsl #16
+; CHECK: movk [[REG2]], #36694, lsl #32
 ; CHECK: orr x0, [[REG1]], [[REG2]]
 define i64 @test8(i64 %a) {
   %1 = and i64 %a, -72057594037927681 ; 0xff000000000000ff

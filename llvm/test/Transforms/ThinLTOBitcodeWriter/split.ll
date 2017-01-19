@@ -12,9 +12,11 @@
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
+$g = comdat any
+
 ; M0: @g = external global i8{{$}}
-; M1: @g = global i8 42, !type !0
-@g = global i8 42, !type !0
+; M1: @g = global i8 42, comdat, !type !0
+@g = global i8 42, comdat, !type !0
 
 ; M0: define i8* @f()
 ; M1-NOT: @f()

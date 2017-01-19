@@ -5,7 +5,7 @@
 ; passes *always* work on LCSSA. This should stop using a different set of
 ; checks at that point.
 
-; RUN: opt < %s -analyze -iv-users | FileCheck %s
+; RUN: opt < %s -analyze -iv-users | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
 ; RUN: opt < %s -disable-output -passes='print<ivusers>' 2>&1 | FileCheck %s
 
 ; Provide legal integer types.
@@ -14,7 +14,7 @@ target datalayout = "n8:16:32:64"
 ; The value of %r is dependent on a polynomial iteration expression.
 ;
 ; CHECK-LABEL: IV Users for loop %foo.loop
-; CHECK: {1,+,3,+,2}<%foo.loop>
+; CHECK-NO-LCSSA: {1,+,3,+,2}<%foo.loop>
 define i64 @foo(i64 %n) {
 entry:
   br label %foo.loop
@@ -36,7 +36,7 @@ exit:
 ; sure they aren't marked as post-inc users.
 ;
 ; CHECK-LABEL: IV Users for loop %test2.loop
-; CHECK: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us))<nuw><nsw>,+,33554432}<%test2.loop> in %f = ashr i32 %sext.us, 24
+; CHECK-NO-LCSSA: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us))<nuw><nsw>,+,33554432}<%test2.loop> in %f = ashr i32 %sext.us, 24
 define i32 @test2() {
 entry:
   br label %test2.loop

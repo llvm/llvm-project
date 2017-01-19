@@ -470,6 +470,7 @@ def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
 
 // Calls
 def : Pat<(BPFcall tglobaladdr:$dst), (JAL tglobaladdr:$dst)>;
+def : Pat<(BPFcall texternalsym:$dst), (JAL texternalsym:$dst)>;
 def : Pat<(BPFcall imm:$dst), (JAL imm:$dst)>;
 
 // Loads

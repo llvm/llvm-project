@@ -8,10 +8,14 @@
 #include <cstdlib>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  char *S = (char*)Data;
-  if (Size >= 7 && !strcmp(S, "qwerty")) {
-    fprintf(stderr, "BINGO\n");
-    exit(1);
+  if (Size >= 7) {
+    char Copy[7];
+    memcpy(Copy, Data, 6);
+    Copy[6] = 0;
+    if (!strcmp(Copy, "qwerty")) {
+      fprintf(stderr, "BINGO\n");
+      exit(1);
+    }
   }
   return 0;
 }

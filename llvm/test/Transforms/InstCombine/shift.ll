@@ -453,9 +453,8 @@ define i32 @test25(i32 %tmp.2, i32 %AA) {
 
 define <2 x i32> @test25_vector(<2 x i32> %tmp.2, <2 x i32> %AA) {
 ; CHECK-LABEL: @test25_vector(
-; CHECK-NEXT:    [[TMP_3:%.*]] = lshr <2 x i32> %tmp.2, <i32 17, i32 17>
-; CHECK-NEXT:    [[TMP_51:%.*]] = shl nuw <2 x i32> [[TMP_3]], <i32 17, i32 17>
-; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[TMP_51]], %AA
+; CHECK-NEXT:    [[TMP_3:%.*]] = and <2 x i32> %tmp.2, <i32 -131072, i32 -131072>
+; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[TMP_3]], %AA
 ; CHECK-NEXT:    [[TMP_6:%.*]] = and <2 x i32> [[X2]], <i32 -131072, i32 -131072>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP_6]]
 ;

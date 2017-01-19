@@ -234,6 +234,11 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// directives that need loop bound sharing across loops outlined in nested
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
+
+/// Return the captured regions of an OpenMP directive.
+void getOpenMPCaptureRegions(
+    llvm::SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
+    OpenMPDirectiveKind DKind);
 }
 
 #endif

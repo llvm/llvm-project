@@ -347,6 +347,10 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   // checks for hasVarSizedObjects.
   if (MFI.hasVarSizedObjects())
     AFI->setShouldRestoreSPFromFP(true);
+
+  // In some cases, virtual registers have been introduced, e.g. by uses of
+  // emitThumbRegPlusImmInReg.
+  MF.getProperties().reset(MachineFunctionProperties::Property::NoVRegs);
 }
 
 static bool isCSRestore(MachineInstr &MI, const MCPhysReg *CSRegs) {

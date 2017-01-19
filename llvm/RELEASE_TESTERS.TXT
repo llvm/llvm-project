@@ -51,7 +51,7 @@ E: diana.picus@linaro.org
 T: AArch64
 O: Linux
 
-N: Vasileios Kalintiris
-E: Vasileios.Kalintiris@imgtec.com
+N: Simon Dardis
+E: simon.dardis@imgtec.com
 T: MIPS
 O: Linux

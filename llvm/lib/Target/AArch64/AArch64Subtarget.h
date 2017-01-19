@@ -61,6 +61,7 @@ protected:
   bool HasCRC = false;
   bool HasLSE = false;
   bool HasRAS = false;
+  bool HasRDM = false;
   bool HasPerfMon = false;
   bool HasFullFP16 = false;
   bool HasSPE = false;
@@ -183,6 +184,7 @@ public:
   bool hasCRC() const { return HasCRC; }
   bool hasLSE() const { return HasLSE; }
   bool hasRAS() const { return HasRAS; }
+  bool hasRDM() const { return HasRDM; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {
     return PredictableSelectIsExpensive;

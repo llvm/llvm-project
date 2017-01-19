@@ -1134,7 +1134,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
              .addDef(Def1Reg)
              .addUse(AArch64::WZR)
              .addUse(AArch64::WZR)
-             .addImm(CC1);
+             .addImm(getInvertedCondCode(CC1));
 
     if (CC2 != AArch64CC::AL) {
       unsigned Def2Reg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
@@ -1143,7 +1143,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
                .addDef(Def2Reg)
                .addUse(AArch64::WZR)
                .addUse(AArch64::WZR)
-               .addImm(CC2);
+               .addImm(getInvertedCondCode(CC2));
       MachineInstr &OrMI =
           *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ORRWrr))
                .addDef(DefReg)

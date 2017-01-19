@@ -648,8 +648,9 @@ class EXP_Helper<bit done, SDPatternOperator node = null_frag> : EXPCommon<
        ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
        exp_vm:$vm, exp_compr:$compr, i8imm:$en),
   "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm",
-  [(node (i8 timm:$en), (i1 timm:$vm), (i8 timm:$tgt), (i1 timm:$compr),
-         f32:$src0, f32:$src1, f32:$src2, f32:$src3)]> {
+  [(node (i8 timm:$tgt), (i8 timm:$en),
+         f32:$src0, f32:$src1, f32:$src2, f32:$src3,
+         (i1 timm:$compr), (i1 timm:$vm))]> {
   let AsmMatchConverter = "cvtExp";
 }
 
@@ -1035,7 +1036,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field Operand Src1ModDPP = getSrcModExt<Src1VT>.ret;
   field Operand Src0ModSDWA = getSrcModExt<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModExt<Src1VT>.ret;
-  
+
 
   field bit HasDst = !if(!eq(DstVT.Value, untyped.Value), 0, 1);
   field bit HasDst32 = HasDst;

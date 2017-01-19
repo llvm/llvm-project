@@ -20,8 +20,9 @@
 #if defined(__x86_64__) || defined(__i386__)
 # include <cpuid.h>
 #endif
-
-#include <cstring>
+#if defined(__arm__) || defined(__aarch64__)
+# include <sys/auxv.h>
+#endif
 
 // TODO(kostyak): remove __sanitizer *Printf uses in favor for our own less
 //                complicated string formatting code. The following is a
@@ -82,16 +83,35 @@ CPUIDRegs getCPUFeatures() {
 }
 
 #ifndef bit_SSE4_2
-#define bit_SSE4_2 bit_SSE42  // clang and gcc have different defines.
+# define bit_SSE4_2 bit_SSE42  // clang and gcc have different defines.
 #endif
 
 bool testCPUFeature(CPUFeature Feature)
 {
-  static CPUIDRegs FeaturesRegs = getCPUFeatures();
+  CPUIDRegs FeaturesRegs = getCPUFeatures();
 
   switch (Feature) {
     case CRC32CPUFeature:  // CRC32 is provided by SSE 4.2.
       return !!(FeaturesRegs.Ecx & bit_SSE4_2);
+    default:
+      break;
+  }
+  return false;
+}
+#elif defined(__arm__) || defined(__aarch64__)
+// For ARM and AArch64, hardware CRC32 support is indicated in the
+// AT_HWVAL auxiliary vector.
+
+#ifndef HWCAP_CRC32
+# define HWCAP_CRC32 (1<<7)  // HWCAP_CRC32 is missing on older platforms.
+#endif
+
+bool testCPUFeature(CPUFeature Feature) {
+  uptr HWCap = getauxval(AT_HWCAP);
+
+  switch (Feature) {
+    case CRC32CPUFeature:
+      return !!(HWCap & HWCAP_CRC32);
     default:
       break;
   }

@@ -303,10 +303,13 @@ int includeFixerMain(int argc, const char **argv) {
            const IncludeFixerContext::HeaderInfo &RHS) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
-    format::FormatStyle InsertStyle =
-        format::getStyle("file", Context.getFilePath(), Style);
+    auto InsertStyle = format::getStyle("file", Context.getFilePath(), Style);
+    if (!InsertStyle) {
+      llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
+      return 1;
+    }
     auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
-        Code->getBuffer(), Context, InsertStyle,
+        Code->getBuffer(), Context, *InsertStyle,
         /*AddQualifiers=*/IsUniqueQualifiedName);
     if (!Replacements) {
       errs() << "Failed to create replacements: "
@@ -378,7 +381,11 @@ int includeFixerMain(int argc, const char **argv) {
   std::vector<tooling::Replacements> FixerReplacements;
   for (const auto &Context : Contexts) {
     StringRef FilePath = Context.getFilePath();
-    format::FormatStyle InsertStyle = format::getStyle("file", FilePath, Style);
+    auto InsertStyle = format::getStyle("file", FilePath, Style);
+    if (!InsertStyle) {
+      llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
+      return 1;
+    }
     auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
     if (!Buffer) {
       errs() << "Couldn't open file: " + FilePath.str() + ": "
@@ -387,7 +394,7 @@ int includeFixerMain(int argc, const char **argv) {
     }
 
     auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
-        Buffer.get()->getBuffer(), Context, InsertStyle);
+        Buffer.get()->getBuffer(), Context, *InsertStyle);
     if (!Replacements) {
       errs() << "Failed to create replacement: "
              << llvm::toString(Replacements.takeError()) << "\n";

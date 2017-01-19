@@ -20,7 +20,7 @@
 //
 // Plan
 //  1 Default construct unique_ptr's with various deleter types (C-1)
-//  2 Default construct a unique_ptr with a incomplete element_type and
+//  2 Default construct a unique_ptr with an incomplete element_type and
 //    various deleter types (C-1,2)
 
 #include <memory>

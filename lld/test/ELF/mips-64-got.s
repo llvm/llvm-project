@@ -19,23 +19,22 @@
 # CHECK-NEXT:    20010:   24 42 80 38   addiu   $2,  $2, -32712
 
 # CHECK: 0000000000020018   .text   00000000 foo
-# CHECK: 0000000000047ff0   *ABS*   00000000 .hidden _gp
 # CHECK: 0000000000020000   .text   00000000 __start
 # CHECK: 0000000000020014   .text   00000000 bar
 
 # GOT:      Relocations [
 # GOT-NEXT: ]
 # GOT-NEXT: Primary GOT {
-# GOT-NEXT:   Canonical gp value: 0x47FF0
+# GOT-NEXT:   Canonical gp value:
 # GOT-NEXT:   Reserved entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40000
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32752
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Purpose: Lazy resolver
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40008
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32744
 # GOT-NEXT:       Initial: 0x8000000000000000
 # GOT-NEXT:       Purpose: Module pointer (GNU extension)
@@ -43,29 +42,29 @@
 # GOT-NEXT:   ]
 # GOT-NEXT:   Local entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40010
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32736
 # GOT-NEXT:       Initial: 0x20000
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40018
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32728
 # GOT-NEXT:       Initial: 0x30000
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40020
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32720
 # GOT-NEXT:       Initial: 0x20014
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40028
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32712
 # GOT-NEXT:       Initial: 0x20018
 # GOT-NEXT:     }
 # GOT-NEXT:   ]
 # GOT-NEXT:   Global entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x40030
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32704
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Value: 0x0

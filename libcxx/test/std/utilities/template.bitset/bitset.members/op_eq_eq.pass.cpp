@@ -13,6 +13,7 @@
 // bool operator!=(const bitset<N>& rhs) const;
 
 #include <bitset>
+#include <type_traits>
 #include <cstdlib>
 #include <cassert>
 
@@ -36,7 +37,8 @@ void test_equality()
     const std::bitset<N> v1 = make_bitset<N>();
     std::bitset<N> v2 = v1;
     assert(v1 == v2);
-    if (N > 0)
+    const bool greater_than_0 = std::integral_constant<bool, (N > 0)>::value; // avoid compiler warnings
+    if (greater_than_0)
     {
         v2[N/2].flip();
         assert(v1 != v2);

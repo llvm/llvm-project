@@ -841,7 +841,7 @@ void ARMAsmPrinter::emitAttributes() {
                       ARMBuildAttrs::Allowed);
   else
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
-                      ARMBuildAttrs::AllowIEE754);
+                      ARMBuildAttrs::AllowIEEE754);
 
   if (STI.allowsUnalignedMem())
     ATS.emitAttribute(ARMBuildAttrs::CPU_unaligned_access,

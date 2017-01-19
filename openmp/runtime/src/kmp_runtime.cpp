@@ -7293,6 +7293,10 @@ __kmp_cleanup( void )
     __kmp_nested_nth.nth = NULL;
     __kmp_nested_nth.size = 0;
     __kmp_nested_nth.used = 0;
+    KMP_INTERNAL_FREE( __kmp_nested_proc_bind.bind_types );
+    __kmp_nested_proc_bind.bind_types = NULL;
+    __kmp_nested_proc_bind.size = 0;
+    __kmp_nested_proc_bind.used = 0;
 
     __kmp_i18n_catclose();
 
