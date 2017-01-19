@@ -353,8 +353,6 @@ namespace {
       payload >>= 1;
       info.DesignatedInit = payload & 0x01;
       payload >>= 1;
-      info.FactoryAsInit = payload & 0x03;
-      payload >>= 2;
 
       readFunctionInfo(data, info);
       return info;
@@ -1473,14 +1471,10 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // Look for an exact version match.
   Optional<unsigned> unversioned;
   Selected = Results.size();
-  SelectedRole = VersionedInfoRole::Versioned;
 
   for (unsigned i = 0, n = Results.size(); i != n; ++i) {
     if (Results[i].first == version) {
       Selected = i;
-
-      if (version) SelectedRole = VersionedInfoRole::ReplaceSource;
-      else SelectedRole = VersionedInfoRole::AugmentSource;
       break;
     }
 
@@ -1494,9 +1488,8 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
   // unversioned result.
   if (Selected == Results.size() && unversioned) {
     Selected = *unversioned;
-    SelectedRole = VersionedInfoRole::AugmentSource;
   }
-  }
+}
 
 auto APINotesReader::lookupObjCClassID(StringRef name) -> Optional<ContextID> {
   if (!Impl.ObjCContextIDTable)
