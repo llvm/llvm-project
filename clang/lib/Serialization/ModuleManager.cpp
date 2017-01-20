@@ -143,15 +143,15 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     PCHContainerRdr.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
   }
 
-  if (ExpectedSignature) {
+  if (ExpectedSignature != ASTFileSignature({{0}})) {
     if (NewModule)
       ModuleEntry->Signature = ReadSignature(ModuleEntry->StreamFile);
     else
       assert(ModuleEntry->Signature == ReadSignature(ModuleEntry->StreamFile));
 
     if (ModuleEntry->Signature != ExpectedSignature) {
-      ErrorStr = ModuleEntry->Signature ? "signature mismatch"
-                                        : "could not read module signature";
+      ErrorStr = ModuleEntry->Signature != ASTFileSignature({{0}}) ?
+                 "signature mismatch" : "could not read module signature";
 
       if (NewModule) {
         // Remove the module file immediately, since removeModules might try to

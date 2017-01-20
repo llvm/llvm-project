@@ -106,6 +106,9 @@ private:
   /// \brief The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
 
+  /// \brief The buffer associated with the bitstream.
+  const SmallVectorImpl<char> &Buffer;
+
   /// \brief The ASTContext we're writing.
   ASTContext *Context;
 
@@ -415,6 +418,9 @@ private:
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
     ModuleFileExtensionWriters;
 
+  /// \brief Bit position for start of UNHASHED_CONTROL_BLOCK.
+  size_t StartOfUnhashedControl;
+
   /// \brief Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
 
@@ -422,8 +428,12 @@ private:
   void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
-  uint64_t WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                             StringRef isysroot, const std::string &OutputFile);
+  void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
+                         StringRef isysroot, const std::string &OutputFile);
+  ASTFileSignature WriteUnhashedControlBlock(Preprocessor &PP,
+                                             ASTContext &Context);
+  /// \brief Calculate hash of the pcm content and write it to SIGNATURE record.
+  ASTFileSignature WriteHash(size_t BlockStartPos);
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
                        bool Modules);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -487,14 +497,14 @@ private:
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
-  uint64_t WriteASTCore(Sema &SemaRef,
-                        StringRef isysroot, const std::string &OutputFile,
-                        Module *WritingModule);
+  ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
+                                const std::string &OutputFile,
+                                Module *WritingModule);
 
 public:
   /// \brief Create a new precompiled header writer that outputs to
   /// the given bitstream.
-  ASTWriter(llvm::BitstreamWriter &Stream,
+  ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
@@ -520,9 +530,9 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  uint64_t WriteAST(Sema &SemaRef, const std::string &OutputFile,
-                    Module *WritingModule, StringRef isysroot,
-                    bool hasErrors = false);
+  ASTFileSignature WriteAST(Sema &SemaRef, const std::string &OutputFile,
+                            Module *WritingModule, StringRef isysroot,
+                            bool hasErrors = false);
 
   /// \brief Emit a token.
   void AddToken(const Token &Tok, RecordDataImpl &Record);

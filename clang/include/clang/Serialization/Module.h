@@ -16,6 +16,7 @@
 #define LLVM_CLANG_SERIALIZATION_MODULE_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
@@ -88,8 +89,6 @@ public:
   bool isOutOfDate() const { return Val.getInt() == OutOfDate; }
   bool isNotFound() const { return Val.getInt() == NotFound; }
 };
-
-typedef unsigned ASTFileSignature;
 
 /// \brief Information about a module that has been loaded by the ASTReader.
 ///
