@@ -335,7 +335,8 @@ def main_with_tmp(builtinParameters):
         params = userParams,
         config_prefix = opts.configPrefix,
         maxIndividualTestTime = maxIndividualTestTime,
-        maxFailures = opts.maxFailures)
+        maxFailures = opts.maxFailures,
+        parallelism_groups = {})
 
     # Perform test discovery.
     run = lit.run.Run(litConfig,

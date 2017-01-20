@@ -1510,6 +1510,13 @@ public:
     return false;
   }
 
+  /// True if the instruction is bound to the top of its basic block and no
+  /// other instructions shall be inserted before it. This can be implemented
+  /// to prevent register allocator to insert spills before such instructions.
+  virtual bool isBasicBlockPrologue(const MachineInstr &MI) const {
+    return false;
+  }
+
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
   unsigned CatchRetOpcode;

@@ -310,11 +310,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
       // Commit to parsing the template-id.
       TPA.Commit();
       TemplateTy Template;
-      if (TemplateNameKind TNK
-          = Actions.ActOnDependentTemplateName(getCurScope(),
-                                               SS, TemplateKWLoc, TemplateName,
-                                               ObjectType, EnteringContext,
-                                               Template)) {
+      if (TemplateNameKind TNK = Actions.ActOnDependentTemplateName(
+              getCurScope(), SS, TemplateKWLoc, TemplateName, ObjectType,
+              EnteringContext, Template, /*AllowInjectedClassName*/ true)) {
         if (AnnotateTemplateIdToken(Template, TNK, SS, TemplateKWLoc,
                                     TemplateName, false))
           return true;
@@ -509,12 +507,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
         Diag(Tok.getLocation(), DiagID)
           << II.getName()
           << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
-        
-        if (TemplateNameKind TNK 
-              = Actions.ActOnDependentTemplateName(getCurScope(), 
-                                                   SS, SourceLocation(),
-                                                   TemplateName, ObjectType,
-                                                   EnteringContext, Template)) {
+
+        if (TemplateNameKind TNK = Actions.ActOnDependentTemplateName(
+                getCurScope(), SS, SourceLocation(), TemplateName, ObjectType,
+                EnteringContext, Template, /*AllowInjectedClassName*/ true)) {
           // Consume the identifier.
           ConsumeToken();
           if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
@@ -2020,9 +2016,11 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   case UnqualifiedId::IK_OperatorFunctionId:
   case UnqualifiedId::IK_LiteralOperatorId:
     if (AssumeTemplateId) {
-      TNK = Actions.ActOnDependentTemplateName(getCurScope(), SS, TemplateKWLoc,
-                                               Id, ObjectType, EnteringContext,
-                                               Template);
+      // We defer the injected-class-name checks until we've found whether
+      // this template-id is used to form a nested-name-specifier or not.
+      TNK = Actions.ActOnDependentTemplateName(
+          getCurScope(), SS, TemplateKWLoc, Id, ObjectType, EnteringContext,
+          Template, /*AllowInjectedClassName*/ true);
       if (TNK == TNK_Non_template)
         return true;
     } else {
@@ -2051,10 +2049,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
         Diag(Id.StartLocation, diag::err_missing_dependent_template_keyword)
           << Name
           << FixItHint::CreateInsertion(Id.StartLocation, "template ");
-        TNK = Actions.ActOnDependentTemplateName(getCurScope(),
-                                                 SS, TemplateKWLoc, Id,
-                                                 ObjectType, EnteringContext,
-                                                 Template);
+        TNK = Actions.ActOnDependentTemplateName(
+            getCurScope(), SS, TemplateKWLoc, Id, ObjectType, EnteringContext,
+            Template, /*AllowInjectedClassName*/ true);
         if (TNK == TNK_Non_template)
           return true;              
       }
@@ -2077,10 +2074,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
     bool MemberOfUnknownSpecialization;
     TemplateName.setIdentifier(Name, NameLoc);
     if (ObjectType) {
-      TNK = Actions.ActOnDependentTemplateName(getCurScope(),
-                                               SS, TemplateKWLoc, TemplateName,
-                                               ObjectType, EnteringContext,
-                                               Template);
+      TNK = Actions.ActOnDependentTemplateName(
+          getCurScope(), SS, TemplateKWLoc, TemplateName, ObjectType,
+          EnteringContext, Template, /*AllowInjectedClassName*/ true);
       if (TNK == TNK_Non_template)
         return true;
     } else {

@@ -1,6 +1,7 @@
 ; XFAIL: *
 ; RUN: opt -S -basicaa -newgvn < %s | FileCheck %s
 
+@a = external constant i32
 ; We can value forward across the fence since we can (semantically) 
 ; reorder the following load before the fence.
 define i32 @test(i32* %addr.i) {
@@ -51,6 +52,25 @@ define i32 @test3(i32* noalias %addr.i, i32* noalias %otheraddr) {
   %a2 = load i32, i32* %addr.i, align 4
   %res = sub i32 %a, %a2
   ret i32 %res
+}
+
+; We can forward the value forward the load
+; across both the fences, because the load is from
+; a constant memory location.
+define i32 @test4(i32* %addr) {
+; CHECK-LABEL: @test4
+; CHECK-NOT: load
+; CHECK: fence release
+; CHECK: store
+; CHECK: fence seq_cst
+; CHECK: ret i32 0
+  %var = load i32, i32* @a
+  fence release
+  store i32 42, i32* %addr, align 8
+  fence seq_cst
+  %var2 = load i32, i32* @a
+  %var3 = sub i32 %var, %var2
+  ret i32 %var3
 }
 
 ; Another example of why forwarding across an acquire fence is problematic

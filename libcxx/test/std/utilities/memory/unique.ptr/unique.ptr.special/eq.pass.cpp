@@ -22,7 +22,7 @@
 #include <memory>
 #include <cassert>
 
-#include "../deleter.h"
+#include "deleter_types.h"
 
 struct A
 {

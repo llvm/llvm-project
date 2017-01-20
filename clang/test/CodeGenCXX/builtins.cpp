@@ -26,3 +26,7 @@ int x = __builtin_abs(-2);
 long y = __builtin_abs(-2l);
 // CHECK:  [[Y:%.+]] = call i64 @_Z13__builtin_absl(i64 -2)
 // CHECK:  store i64 [[Y]], i64* @y, align 8
+
+extern const char char_memchr_arg[32];
+char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
+// CHECK: call i8* @memchr(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @char_memchr_arg, i32 0, i32 0), i32 123, i64 32)

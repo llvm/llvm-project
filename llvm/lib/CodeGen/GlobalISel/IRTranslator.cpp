@@ -523,8 +523,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
     // FIXME: these obviously need to be supported properly.
-    MF->getProperties().set(
-          MachineFunctionProperties::Property::FailedISel);
+    if (!TPC->isGlobalISelAbortEnabled())
+      MF->getProperties().set(MachineFunctionProperties::Property::FailedISel);
     return true;
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDE, MIRBuilder);
@@ -580,6 +580,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   const CallInst &CI = cast<CallInst>(U);
   auto TII = MF->getTarget().getIntrinsicInfo();
   const Function *F = CI.getCalledFunction();
+
+  if (CI.isInlineAsm())
+    return false;
 
   if (!F || !F->isIntrinsic()) {
     unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);

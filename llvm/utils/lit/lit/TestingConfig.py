@@ -106,7 +106,7 @@ class TestingConfig:
                  environment, substitutions, unsupported,
                  test_exec_root, test_source_root, excludes,
                  available_features, pipefail, limit_to_features = [],
-                 is_early = False):
+                 is_early = False, parallelism_group = ""):
         self.parent = parent
         self.name = str(name)
         self.suffixes = set(suffixes)
@@ -125,6 +125,7 @@ class TestingConfig:
         self.limit_to_features = set(limit_to_features)
         # Whether the suite should be tested early in a given run.
         self.is_early = bool(is_early)
+        self.parallelism_group = parallelism_group
 
     def finish(self, litConfig):
         """finish() - Finish this config object, after loading is complete."""
