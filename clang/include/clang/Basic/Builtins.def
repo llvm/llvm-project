@@ -1339,6 +1339,7 @@ BUILTIN(__builtin_smulll_overflow, "bSLLiCSLLiCSLLi*", "n")
 BUILTIN(__builtin_addressof, "v*v&", "nct")
 BUILTIN(__builtin_operator_new, "v*z", "c")
 BUILTIN(__builtin_operator_delete, "vv*", "n")
+BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
 
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")

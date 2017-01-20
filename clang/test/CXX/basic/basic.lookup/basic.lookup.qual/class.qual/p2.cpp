@@ -81,9 +81,7 @@ template void in_instantiation_x0<X0>(); // expected-note {{instantiation of}}
 
 template<typename T> void in_instantiation_x1() {
   typename T::X1 x1; // expected-warning{{qualified reference to 'X1' is a constructor name rather than a type in this context}}
-  // FIXME: Matching the behavior of other compilers, we do not treat this case
-  // as naming the constructor.
-  typename T::template X1<int> x1i;
+  typename T::template X1<int> x1i; // expected-warning{{qualified reference to 'X1' is a constructor name rather than a template name in this context}}
   typename T::X0 x0;
 }
 template void in_instantiation_x1<X1<int> >(); // expected-note {{instantiation of}}

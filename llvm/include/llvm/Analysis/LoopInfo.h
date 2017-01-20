@@ -570,6 +570,23 @@ public:
   reverse_iterator rend() const { return TopLevelLoops.rend(); }
   bool empty() const { return TopLevelLoops.empty(); }
 
+  /// Return all of the loops in the function in preorder across the loop
+  /// nests, with siblings in forward program order.
+  ///
+  /// Note that because loops form a forest of trees, preorder is equivalent to
+  /// reverse postorder.
+  SmallVector<LoopT *, 4> getLoopsInPreorder();
+
+  /// Return all of the loops in the function in preorder across the loop
+  /// nests, with siblings in *reverse* program order.
+  ///
+  /// Note that because loops form a forest of trees, preorder is equivalent to
+  /// reverse postorder.
+  ///
+  /// Also note that this is *not* a reverse preorder. Only the siblings are in
+  /// reverse program order.
+  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder();
+
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const { return BBMap.lookup(BB); }

@@ -1,8 +1,15 @@
 
+if (DEFINED TARGET_TRIPLE)
+    # Ignore the minor and patchlevel versions of the darwin
+    # target.
+    string(REGEX REPLACE "darwin16\\.[0-9]\\.[0-9]" "darwin16"
+      GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
+endif()
+
 # Detect if we are building in the same configuration used to generate
 # the abilist files.
-if (DEFINED TARGET_TRIPLE
-    AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/${TARGET_TRIPLE}.abilist"
+if (DEFINED GENERIC_TARGET_TRIPLE
+    AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/${GENERIC_TARGET_TRIPLE}.abilist"
     AND TARGET cxx_shared
     AND ("${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "libcxxabi" OR
          (APPLE AND "${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default"))
@@ -19,7 +26,7 @@ endif()
 
 
 if (LIBCXX_HAS_ABILIST_CONFIGURATION)
-    set(ABILIST_FILE "${CMAKE_CURRENT_LIST_DIR}/${TARGET_TRIPLE}.abilist")
+    set(ABILIST_FILE "${CMAKE_CURRENT_LIST_DIR}/${GENERIC_TARGET_TRIPLE}.abilist")
     set(SYMDIFF_EXE "${LIBCXX_SOURCE_DIR}/utils/sym_check/sym_diff.py")
     add_custom_target(check-cxx-abilist
             ${SYMDIFF_EXE} --only-stdlib-symbols --strict ${ABILIST_FILE}

@@ -177,6 +177,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
       MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
       MIRBuilder.buildGEP(SrcReg, MI.getOperand(1).getReg(), Offset);
+      // TODO: This is conservatively correct, but we probably want to split the
+      // memory operands in the future.
       MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
 
       DstRegs.push_back(DstReg);
@@ -202,6 +204,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
       MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
       MIRBuilder.buildGEP(DstReg, MI.getOperand(1).getReg(), Offset);
+      // TODO: This is conservatively correct, but we probably want to split the
+      // memory operands in the future.
       MIRBuilder.buildStore(SrcRegs[i], DstReg, **MI.memoperands_begin());
     }
     MI.eraseFromParent();
@@ -266,6 +270,28 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
         .addUse(RHSExt);
 
     MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), ResExt);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    unsigned Src = MI.getOperand(1).getReg();
+    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
+
+    if (MI.getOpcode() == TargetOpcode::G_SITOFP) {
+      MIRBuilder.buildSExt(SrcExt, Src);
+    } else {
+      assert(MI.getOpcode() == TargetOpcode::G_UITOFP && "Unexpected conv op");
+      MIRBuilder.buildZExt(SrcExt, Src);
+    }
+
+    MIRBuilder.buildInstr(MI.getOpcode())
+        .addDef(MI.getOperand(0).getReg())
+        .addUse(SrcExt);
+
     MI.eraseFromParent();
     return Legalized;
   }

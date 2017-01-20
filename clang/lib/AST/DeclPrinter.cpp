@@ -464,6 +464,7 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
 
 void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   Out << *D;
+  prettyPrintAttributes(D);
   if (Expr *Init = D->getInitExpr()) {
     Out << " = ";
     Init->printPretty(Out, nullptr, Policy, Indentation);

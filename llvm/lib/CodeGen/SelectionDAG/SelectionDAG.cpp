@@ -2687,10 +2687,40 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownOne = KnownOne2.byteSwap();
     break;
   }
-  case ISD::SMIN:
-  case ISD::SMAX:
-  case ISD::UMIN:
+  case ISD::UMIN: {
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
+
+    // UMIN - we know that the result will have the maximum of the
+    // known zero leading bits of the inputs.
+    unsigned LeadZero = KnownZero.countLeadingOnes();
+    LeadZero = std::max(LeadZero, KnownZero2.countLeadingOnes());
+
+    KnownZero &= KnownZero2;
+    KnownOne &= KnownOne2;
+    KnownZero |= APInt::getHighBitsSet(BitWidth, LeadZero);
+    break;
+  }
   case ISD::UMAX: {
+    computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
+                     Depth + 1);
+    computeKnownBits(Op.getOperand(1), KnownZero2, KnownOne2, DemandedElts,
+                     Depth + 1);
+
+    // UMAX - we know that the result will have the maximum of the
+    // known one leading bits of the inputs.
+    unsigned LeadOne = KnownOne.countLeadingOnes();
+    LeadOne = std::max(LeadOne, KnownOne2.countLeadingOnes());
+
+    KnownZero &= KnownZero2;
+    KnownOne &= KnownOne2;
+    KnownOne |= APInt::getHighBitsSet(BitWidth, LeadOne);
+    break;
+  }
+  case ISD::SMIN:
+  case ISD::SMAX: {
     computeKnownBits(Op.getOperand(0), KnownZero, KnownOne, DemandedElts,
                      Depth + 1);
     // If we don't know any bits, early out.

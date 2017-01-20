@@ -367,6 +367,14 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
   return MRI_Mod;
 }
 
+ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
+  // If we know that the location is a constant memory location, the fence
+  // cannot modify this location.
+  if (Loc.Ptr && pointsToConstantMemory(Loc))
+    return MRI_Ref;
+  return MRI_ModRef;
+}
+
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc) {
 

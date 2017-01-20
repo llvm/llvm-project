@@ -731,6 +731,8 @@ public:
 
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
+
+  bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 };
 
 namespace AMDGPU {

@@ -34,6 +34,7 @@ add_pdb_impl_folder(Raw
   Raw/GlobalsStream.cpp
   Raw/GSI.cpp
   Raw/Hash.cpp
+  Raw/HashTable.cpp
   Raw/InfoStream.cpp
   Raw/InfoStreamBuilder.cpp
   Raw/ModInfo.cpp

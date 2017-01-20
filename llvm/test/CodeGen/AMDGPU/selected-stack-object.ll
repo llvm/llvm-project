@@ -1,4 +1,4 @@
-; "Assertion failure" should be caught with both XFAIL:* and +Asserts.
+; "Assertion failure" should be caught with both XFAIL * and +Asserts.
 ; XFAIL: *
 ; REQUIRES: asserts
 

@@ -10,11 +10,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBNAMEMAPBUILDER_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBNAMEMAPBUILDER_H
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/DebugInfo/PDB/Raw/HashTable.h"
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace llvm {
 namespace msf {
@@ -29,14 +30,14 @@ public:
 
   void addMapping(StringRef Name, uint32_t Mapping);
 
-  Expected<std::unique_ptr<NameMap>> build();
   Error commit(msf::StreamWriter &Writer) const;
 
   uint32_t calculateSerializedLength() const;
 
 private:
-  StringMap<uint32_t> Map;
-  uint32_t StringDataBytes = 0;
+  std::vector<StringRef> Strings;
+  HashTable Map;
+  uint32_t Offset = 0;
 };
 
 } // end namespace pdb

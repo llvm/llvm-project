@@ -507,6 +507,55 @@ analyze(const DominatorTreeBase<BlockT> &DomTree) {
   DFS.traverse(DomRoot->getBlock());
 }
 
+template <class BlockT, class LoopT>
+SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
+  SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
+  // The outer-most loop actually goes into the result in the same relative
+  // order as we walk it. But LoopInfo stores the top level loops in reverse
+  // program order so for here we reverse it to get forward program order.
+  // FIXME: If we change the order of LoopInfo we will want to remove the
+  // reverse here.
+  for (LoopT *RootL : reverse(*this)) {
+    assert(PreOrderWorklist.empty() &&
+           "Must start with an empty preorder walk worklist.");
+    PreOrderWorklist.push_back(RootL);
+    do {
+      LoopT *L = PreOrderWorklist.pop_back_val();
+      // Sub-loops are stored in forward program order, but will process the
+      // worklist backwards so append them in reverse order.
+      PreOrderWorklist.append(L->rbegin(), L->rend());
+      PreOrderLoops.push_back(L);
+    } while (!PreOrderWorklist.empty());
+  }
+
+  return PreOrderLoops;
+}
+
+template <class BlockT, class LoopT>
+SmallVector<LoopT *, 4>
+LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() {
+  SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
+  // The outer-most loop actually goes into the result in the same relative
+  // order as we walk it. LoopInfo stores the top level loops in reverse
+  // program order so we walk in order here.
+  // FIXME: If we change the order of LoopInfo we will want to add a reverse
+  // here.
+  for (LoopT *RootL : *this) {
+    assert(PreOrderWorklist.empty() &&
+           "Must start with an empty preorder walk worklist.");
+    PreOrderWorklist.push_back(RootL);
+    do {
+      LoopT *L = PreOrderWorklist.pop_back_val();
+      // Sub-loops are stored in forward program order, but will process the
+      // worklist backwards so we can just append them in order.
+      PreOrderWorklist.append(L->begin(), L->end());
+      PreOrderLoops.push_back(L);
+    } while (!PreOrderWorklist.empty());
+  }
+
+  return PreOrderLoops;
+}
+
 // Debugging
 template<class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::print(raw_ostream &OS) const {
