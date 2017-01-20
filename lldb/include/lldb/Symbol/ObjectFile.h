@@ -774,6 +774,20 @@ public:
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
 
+  //------------------------------------------------------------------
+  /// Loads this objfile to memory.
+  ///
+  /// Loads the bits needed to create an executable image to the memory.
+  /// It is useful with bare-metal targets where target does not have the
+  /// ability to start a process itself.
+  ///
+  /// @param[in] target
+  ///     Target where to load.
+  ///
+  /// @return
+  //------------------------------------------------------------------
+  virtual Error LoadInMemory(Target &target);
+
 protected:
   //------------------------------------------------------------------
   // Member variables.

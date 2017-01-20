@@ -10,15 +10,18 @@
 #ifndef SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
 #define SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
 
-
-// This header is force-included when running MSVC's compiler and standard library with libc++'s tests.
-
+// This header is force-included when running the libc++ tests against the
+// MSVC standard library.
 
 // Avoid assertion dialogs.
 #define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()
 
 #include <crtdbg.h>
 #include <stdlib.h>
+
+#if defined(_LIBCPP_VERSION)
+#error This header may not be used when targeting libc++
+#endif
 
 struct AssertionDialogAvoider {
     AssertionDialogAvoider() {
@@ -33,6 +36,11 @@ struct AssertionDialogAvoider {
 const AssertionDialogAvoider assertion_dialog_avoider{};
 
 
+// MSVC frontend only configurations
+#if !defined(__clang__)
+
+#define TEST_STD_VER 17
+
 // Simulate feature-test macros.
 #define __has_feature(X) _MSVC_HAS_FEATURE_ ## X
 #define _MSVC_HAS_FEATURE_cxx_exceptions    1
@@ -41,33 +49,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #define _MSVC_HAS_FEATURE_memory_sanitizer  0
 #define _MSVC_HAS_FEATURE_thread_sanitizer  0
 
-
-// atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
-#define _ENABLE_ATOMIC_ALIGNMENT_FIX
-
-
-// Enable features that /std:c++latest removes by default.
-#define _HAS_AUTO_PTR_ETC          1
-#define _HAS_FUNCTION_ASSIGN       1
-#define _HAS_OLD_IOSTREAMS_MEMBERS 1
-
-
-// MSVC doesn't have __int128_t.
-#define _LIBCPP_HAS_NO_INT128
-
-
-// MSVC has quick_exit() and at_quick_exit().
-#define _LIBCPP_HAS_QUICK_EXIT
-
-
-// MSVC's STL partially supports C++17.
-#define TEST_STD_VER 17
-
-
-// Silence warnings about raw pointers and other unchecked iterators.
-#define _SCL_SECURE_NO_WARNINGS
-
-
 // Silence compiler warnings.
 #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
 #pragma warning(disable: 4521) // multiple copy constructors specified
@@ -75,5 +56,23 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
 #pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.
 
+#endif // !defined(__clang__)
+
+// MSVC doesn't have __int128_t.
+#define _LIBCPP_HAS_NO_INT128
+
+// MSVC has quick_exit() and at_quick_exit().
+#define _LIBCPP_HAS_QUICK_EXIT
+
+// atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
+#define _ENABLE_ATOMIC_ALIGNMENT_FIX
+
+// Enable features that /std:c++latest removes by default.
+#define _HAS_AUTO_PTR_ETC          1
+#define _HAS_FUNCTION_ASSIGN       1
+#define _HAS_OLD_IOSTREAMS_MEMBERS 1
+
+// Silence warnings about raw pointers and other unchecked iterators.
+#define _SCL_SECURE_NO_WARNINGS
 
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_HPP
