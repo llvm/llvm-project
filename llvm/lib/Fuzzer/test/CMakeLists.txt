@@ -72,6 +72,8 @@ set(Tests
   CustomMutatorTest
   DivTest
   EmptyTest
+  EquivalenceATest
+  EquivalenceBTest
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest
@@ -92,6 +94,7 @@ set(Tests
   SimpleHashTest
   SimpleTest
   SimpleThreadedTest
+  SingleByteInputTest
   SingleMemcmpTest
   SingleStrcmpTest
   SingleStrncmpTest

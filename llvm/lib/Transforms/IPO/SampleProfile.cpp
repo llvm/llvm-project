@@ -451,8 +451,7 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
 /// \param Inst Instruction to query.
 ///
 /// \returns the weight of \p Inst.
-ErrorOr<uint64_t>
-SampleProfileLoader::getInstWeight(const Instruction &Inst) {
+ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   const DebugLoc &DLoc = Inst.getDebugLoc();
   if (!DLoc)
     return std::error_code();
@@ -491,8 +490,8 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) {
       LLVMContext &Ctx = F->getContext();
       emitOptimizationRemark(
           Ctx, DEBUG_TYPE, *F, DLoc,
-          Twine("Applied ") + Twine(*R) + " samples from profile (offset: " +
-              Twine(LineOffset) +
+          Twine("Applied ") + Twine(*R) +
+              " samples from profile (offset: " + Twine(LineOffset) +
               ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
     }
     DEBUG(dbgs() << "    " << Lineno << "." << DIL->getDiscriminator() << ":"
@@ -511,8 +510,7 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) {
 /// \param BB The basic block to query.
 ///
 /// \returns the weight for \p BB.
-ErrorOr<uint64_t>
-SampleProfileLoader::getBlockWeight(const BasicBlock *BB) {
+ErrorOr<uint64_t> SampleProfileLoader::getBlockWeight(const BasicBlock *BB) {
   uint64_t Max = 0;
   bool HasWeight = false;
   for (auto &I : BB->getInstList()) {

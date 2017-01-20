@@ -247,6 +247,17 @@ void PositiveMoveOnCopyAssignment(ExpensiveMovableType E) {
   // CHECK-FIXES: F = std::move(E);
 }
 
+struct NotCopyAssigned {
+  NotCopyAssigned &operator=(const ExpensiveMovableType &);
+};
+
+void PositiveNoMoveForNonCopyAssigmentOperator(ExpensiveMovableType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:69: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void PositiveNoMoveForNonCopyAssigmentOperator(const ExpensiveMovableType& E) {
+  NotCopyAssigned N;
+  N = E;
+}
+
 // The argument could be moved but is not since copy statement is inside a loop.
 void PositiveNoMoveInsideLoop(ExpensiveMovableType E) {
   // CHECK-MESSAGES: [[@LINE-1]]:52: warning: the parameter 'E' is copied

@@ -883,6 +883,33 @@ define %struct.C* @test46(%struct.C* %c1, %struct.C* %c2, i64 %N) {
 ; CHECK-NEXT:  ret %struct.C* [[GEP]]
 }
 
+define i32* @test47(i32* %I, i64 %C, i64 %D) {
+  %sub = sub i64 %D, %C
+  %A = getelementptr i32, i32* %I, i64 %C
+  %B = getelementptr i32, i32* %A, i64 %sub
+  ret i32* %B
+; CHECK-LABEL: @test47(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 %D
+}
+
+define i32* @test48(i32* %I, i64 %C, i64 %D) {
+  %sub = sub i64 %D, %C
+  %A = getelementptr i32, i32* %I, i64 %sub
+  %B = getelementptr i32, i32* %A, i64 %C
+  ret i32* %B
+; CHECK-LABEL: @test48(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 %D
+}
+
+define i32* @test49(i32* %I, i64 %C) {
+  %notC = xor i64 -1, %C
+  %A = getelementptr i32, i32* %I, i64 %C
+  %B = getelementptr i32, i32* %A, i64 %notC
+  ret i32* %B
+; CHECK-LABEL: @test49(
+; CHECK-NEXT: %B = getelementptr i32, i32* %I, i64 -1
+}
+
 define i32 addrspace(1)* @ascast_0_gep(i32* %p) nounwind {
 ; CHECK-LABEL: @ascast_0_gep(
 ; CHECK-NOT: getelementptr

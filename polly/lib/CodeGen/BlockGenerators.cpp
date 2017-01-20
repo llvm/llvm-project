@@ -1415,12 +1415,12 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
     return;
   }
 
-  Value *OpCopy = nullptr;
-  if (StmtR->contains(IncomingBB)) {
-    assert(RegionMaps.count(BBCopy) &&
-           "Incoming PHI block did not have a BBMap");
-    ValueMapT &BBCopyMap = RegionMaps[BBCopy];
+  assert(RegionMaps.count(BBCopy) && "Incoming PHI block did not have a BBMap");
+  ValueMapT &BBCopyMap = RegionMaps[BBCopy];
 
+  Value *OpCopy = nullptr;
+
+  if (StmtR->contains(IncomingBB)) {
     Value *Op = PHI->getIncomingValueForBlock(IncomingBB);
 
     // If the current insert block is different from the PHIs incoming block
@@ -1432,13 +1432,15 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
     if (IP->getParent() != BBCopy)
       Builder.SetInsertPoint(&*IP);
   } else {
-
+    // All edges from outside the non-affine region become a single edge
+    // in the new copy of the non-affine region. Make sure to only add the
+    // corresponding edge the first time we encounter a basic block from
+    // outside the non-affine region.
     if (PHICopy->getBasicBlockIndex(BBCopy) >= 0)
       return;
 
-    Value *PHIOpAddr = getOrCreatePHIAlloca(PHI);
-    OpCopy = new LoadInst(PHIOpAddr, PHIOpAddr->getName() + ".reload",
-                          BlockMap[IncomingBB]->getTerminator());
+    // Get the reloaded value.
+    OpCopy = getNewValue(Stmt, PHI, BBCopyMap, LTS, getLoopForStmt(Stmt));
   }
 
   assert(OpCopy && "Incoming PHI value was not copied properly");

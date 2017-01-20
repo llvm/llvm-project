@@ -481,22 +481,14 @@ define <4 x float> @knownbits_umin_shuffle_uitofp(<4 x i32> %a0) {
 ; X32:       # BB#0:
 ; X32-NEXT:    vpminud {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
-; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X32-NEXT:    vpsrld $16, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X32-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_umin_shuffle_uitofp:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
-; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X64-NEXT:    vpsrld $16, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3],xmm0[4],mem[5],xmm0[6],mem[7]
-; X64-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
@@ -511,14 +503,12 @@ define <4 x i32> @knownbits_umax_shuffle_ashr(<4 x i32> %a0) {
 ; X32:       # BB#0:
 ; X32-NEXT:    vpmaxud {{\.LCPI.*}}, %xmm0, %xmm0
 ; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
-; X32-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_umax_shuffle_ashr:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
-; X64-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>

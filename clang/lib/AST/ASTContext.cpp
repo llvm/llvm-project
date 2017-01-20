@@ -3785,12 +3785,8 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
                                           QualType Canon) const {
   if (Canon.isNull()) {
     NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
-    ElaboratedTypeKeyword CanonKeyword = Keyword;
-    if (Keyword == ETK_None)
-      CanonKeyword = ETK_Typename;
-    
-    if (CanonNNS != NNS || CanonKeyword != Keyword)
-      Canon = getDependentNameType(CanonKeyword, CanonNNS, Name);
+    if (CanonNNS != NNS)
+      Canon = getDependentNameType(Keyword, CanonNNS, Name);
   }
 
   llvm::FoldingSetNodeID ID;

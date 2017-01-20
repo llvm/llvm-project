@@ -73,6 +73,7 @@ HANDLE_LOAD_COMMAND(LC_LINKER_OPTION, 0x0000002Du, linker_option_command)
 HANDLE_LOAD_COMMAND(LC_LINKER_OPTIMIZATION_HINT, 0x0000002Eu, linkedit_data_command)
 HANDLE_LOAD_COMMAND(LC_VERSION_MIN_TVOS, 0x0000002Fu, version_min_command)
 HANDLE_LOAD_COMMAND(LC_VERSION_MIN_WATCHOS, 0x00000030u, version_min_command)
+HANDLE_LOAD_COMMAND(LC_NOTE, 0x00000031u, note_command)
 
 #endif
 
@@ -109,6 +110,7 @@ LOAD_COMMAND_STRUCT(thread_command)
 LOAD_COMMAND_STRUCT(twolevel_hints_command)
 LOAD_COMMAND_STRUCT(uuid_command)
 LOAD_COMMAND_STRUCT(version_min_command)
+LOAD_COMMAND_STRUCT(note_command)
 
 #endif
 

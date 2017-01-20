@@ -180,6 +180,28 @@ void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
   BFI->setBlockFreq(BB, Freq);
 }
 
+void BlockFrequencyInfo::setBlockFreqAndScale(
+    const BasicBlock *ReferenceBB, uint64_t Freq,
+    SmallPtrSetImpl<BasicBlock *> &BlocksToScale) {
+  assert(BFI && "Expected analysis to be available");
+  // Use 128 bits APInt to avoid overflow.
+  APInt NewFreq(128, Freq);
+  APInt OldFreq(128, BFI->getBlockFreq(ReferenceBB).getFrequency());
+  APInt BBFreq(128, 0);
+  for (auto *BB : BlocksToScale) {
+    BBFreq = BFI->getBlockFreq(BB).getFrequency();
+    // Multiply first by NewFreq and then divide by OldFreq
+    // to minimize loss of precision.
+    BBFreq *= NewFreq;
+    // udiv is an expensive operation in the general case. If this ends up being
+    // a hot spot, one of the options proposed in
+    // https://reviews.llvm.org/D28535#650071 could be used to avoid this.
+    BBFreq = BBFreq.udiv(OldFreq);
+    BFI->setBlockFreq(BB, BBFreq.getLimitedValue());
+  }
+  BFI->setBlockFreq(ReferenceBB, Freq);
+}
+
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
 void BlockFrequencyInfo::view() const {

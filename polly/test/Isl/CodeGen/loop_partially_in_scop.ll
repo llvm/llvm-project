@@ -12,11 +12,10 @@
 
 ; CHECK: polly.stmt.bb2.entry:                             ; preds = %polly.start
 ; CHECK-NEXT:   %tmp.phiops.reload = load i32, i32* %tmp.phiops
-; CHECK-NEXT:   %tmp.phiops.reload2 = load i32, i32* %tmp.phiops
 ; CHECK-NEXT:   br label %polly.stmt.bb2
 
 ; CHECK: polly.stmt.bb2:                                   ; preds = %polly.stmt.bb2, %polly.stmt.bb2.entry
-; CHECK-NEXT:   %polly.tmp = phi i32 [ %tmp.phiops.reload2, %polly.stmt.bb2.entry ], [ %p_tmp4, %polly.stmt.bb2 ]
+; CHECK-NEXT:   %polly.tmp = phi i32 [ %tmp.phiops.reload, %polly.stmt.bb2.entry ], [ %p_tmp4, %polly.stmt.bb2 ]
 ; CHECK-NEXT:   %p_tmp3 = or i32 undef, undef
 ; CHECK-NEXT:   %p_tmp4 = udiv i32 %p_tmp3, 10
 ; CHECK-NEXT:   %p_tmp6 = icmp eq i8 undef, 0

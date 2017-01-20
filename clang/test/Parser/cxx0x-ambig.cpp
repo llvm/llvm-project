@@ -109,7 +109,7 @@ namespace trailing_return {
 namespace ellipsis {
   template<typename...T>
   struct S {
-    void e(S::S());
+    void e(S::S()); // expected-error {{is a constructor name}}
     void f(S(...args[sizeof(T)])); // expected-note {{here}} expected-note {{here}}
     void f(S(...args)[sizeof(T)]); // expected-error {{redeclared}}
     void f(S ...args[sizeof(T)]); // expected-error {{redeclared}}

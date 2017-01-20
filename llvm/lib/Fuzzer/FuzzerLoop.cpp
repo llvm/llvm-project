@@ -792,7 +792,7 @@ void Fuzzer::Loop() {
 }
 
 void Fuzzer::MinimizeCrashLoop(const Unit &U) {
-  if (U.size() <= 2) return;
+  if (U.size() <= 1) return;
   while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
     MD.StartMutationSequence();
     memcpy(CurrentUnitData, U.data(), U.size());
@@ -814,4 +814,7 @@ size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   assert(fuzzer::F);
   return fuzzer::F->GetMD().DefaultMutate(Data, Size, MaxSize);
 }
+
+// Experimental
+void LLVMFuzzerAnnounceOutput(const uint8_t *Data, size_t Size) {}
 }  // extern "C"
