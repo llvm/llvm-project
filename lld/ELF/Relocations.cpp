@@ -808,25 +808,20 @@ template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &S) {
 template <class ELFT>
 void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
   for (OutputSectionBase *Base : OutputSections) {
-    if (auto *OS = dyn_cast<OutputSection<ELFT>>(Base)) {
-      for (InputSection<ELFT> *IS : OS->Sections) {
-        for (const Relocation &Rel : IS->Relocations) {
-          if (Rel.Sym == nullptr) {
-            continue;
-          }
-          SymbolBody &Body = *Rel.Sym;
-          uint32_t Type = Rel.Type;
-          RelExpr Expr = Rel.Expr;
-          if (!isPreemptible(Body, Type) && needsPlt(Expr))
-            Expr = fromPlt(Expr);
-          Expr = Target->getThunkExpr(Expr, Type, IS->getFile(), Body);
-          // Some targets might require creation of thunks for relocations.
-          // Now we support only MIPS which requires LA25 thunk to call PIC
-          // code from non-PIC one, and ARM which requires interworking.
-          if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
-              Expr == R_THUNK_PLT_PC)
-            addThunk<ELFT>(Type, Body, *IS);
-        }
+    auto *OS = dyn_cast<OutputSection<ELFT>>(Base);
+    if (OS == nullptr)
+      continue;
+    for (InputSection<ELFT> *IS : OS->Sections) {
+      for (const Relocation &Rel : IS->Relocations) {
+        if (Rel.Sym == nullptr)
+          continue;
+        RelExpr Expr = Rel.Expr;
+        // Some targets might require creation of thunks for relocations.
+        // Now we support only MIPS which requires LA25 thunk to call PIC
+        // code from non-PIC one, and ARM which requires interworking.
+        if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
+            Expr == R_THUNK_PLT_PC)
+          addThunk<ELFT>(Rel.Type, *Rel.Sym, *IS);
       }
     }
   }

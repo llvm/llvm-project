@@ -19,7 +19,6 @@
 
 #include <stdlib.h>
 
-#include "asan_globals_win.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_report.h"
@@ -28,6 +27,7 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_win_defs.h"
 
 using namespace __asan;  // NOLINT
 
@@ -44,31 +44,17 @@ uptr __asan_get_shadow_memory_dynamic_address() {
   return __asan_shadow_memory_dynamic_address;
 }
 
-// -------------------- A workaround for the absence of weak symbols ----- {{{
-// We don't have a direct equivalent of weak symbols when using MSVC, but we can
-// use the /alternatename directive to tell the linker to default a specific
-// symbol to a specific value, which works nicely for allocator hooks and
-// __asan_default_options().
 void __sanitizer_default_malloc_hook(void *ptr, uptr size) { }
 void __sanitizer_default_free_hook(void *ptr) { }
 const char* __asan_default_default_options() { return ""; }
 const char* __asan_default_default_suppressions() { return ""; }
 void __asan_default_on_error() {}
-// 64-bit msvc will not prepend an underscore for symbols.
-#ifdef _WIN64
-#pragma comment(linker, "/alternatename:__sanitizer_malloc_hook=__sanitizer_default_malloc_hook")  // NOLINT
-#pragma comment(linker, "/alternatename:__sanitizer_free_hook=__sanitizer_default_free_hook")      // NOLINT
-#pragma comment(linker, "/alternatename:__asan_default_options=__asan_default_default_options")    // NOLINT
-#pragma comment(linker, "/alternatename:__asan_default_suppressions=__asan_default_default_suppressions")    // NOLINT
-#pragma comment(linker, "/alternatename:__asan_on_error=__asan_default_on_error")                  // NOLINT
-#else
-#pragma comment(linker, "/alternatename:___sanitizer_malloc_hook=___sanitizer_default_malloc_hook")  // NOLINT
-#pragma comment(linker, "/alternatename:___sanitizer_free_hook=___sanitizer_default_free_hook")      // NOLINT
-#pragma comment(linker, "/alternatename:___asan_default_options=___asan_default_default_options")    // NOLINT
-#pragma comment(linker, "/alternatename:___asan_default_suppressions=___asan_default_default_suppressions")    // NOLINT
-#pragma comment(linker, "/alternatename:___asan_on_error=___asan_default_on_error")                  // NOLINT
-#endif
-// }}}
+
+WIN_WEAK_ALIAS(__sanitizer_malloc_hook, __sanitizer_default_malloc_hook)
+WIN_WEAK_ALIAS(__sanitizer_free_hook, __sanitizer_default_free_hook)
+WIN_WEAK_ALIAS(__asan_default_options, __asan_default_default_options)
+WIN_WEAK_ALIAS(__asan_default_suppressions, __asan_default_default_suppressions)
+WIN_WEAK_ALIAS(__asan_on_error, __asan_default_on_error)
 }  // extern "C"
 
 // ---------------------- Windows-specific interceptors ---------------- {{{
@@ -368,7 +354,7 @@ __declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
     unsigned long, void *) = asan_thread_init;
 #endif
 
-ASAN_LINK_GLOBALS_WIN()
+WIN_FORCE_LINK(__asan_dso_reg_hook)
 
 // }}}
 }  // namespace __asan

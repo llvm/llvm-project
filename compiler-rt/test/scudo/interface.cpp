@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clang_scudo %s -lstdc++ -o %t
 // RUN: %run %t 2>&1
 
 // Tests that the sanitizer interface functions behave appropriately.

@@ -733,17 +733,7 @@ void LinkerScript<ELFT>::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
       Sec->Addr = 0;
   }
 
-  uintX_t HeaderSize = getHeaderSize();
-  // If the linker script doesn't have PHDRS, add ElfHeader and ProgramHeaders
-  // now that we know we have space.
-  if (HeaderSize <= MinVA && !hasPhdrsCommands())
-    allocateHeaders<ELFT>(Phdrs, *OutputSections);
-
-  // ELF and Program headers need to be right before the first section in
-  // memory. Set their addresses accordingly.
-  MinVA = alignDown(MinVA - HeaderSize, Config->MaxPageSize);
-  Out<ELFT>::ElfHeader->Addr = MinVA;
-  Out<ELFT>::ProgramHeaders->Addr = Out<ELFT>::ElfHeader->Size + MinVA;
+  allocateHeaders<ELFT>(Phdrs, *OutputSections, MinVA);
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

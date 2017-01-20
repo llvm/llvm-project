@@ -24,7 +24,7 @@
 // Using #ifdef rather than relying on Makefiles etc.
 // simplifies the build procedure.
 #ifdef ASAN_DYNAMIC_RUNTIME_THUNK
-#include "asan_globals_win.h"
+#include "sanitizer_common/sanitizer_win_defs.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -122,6 +122,6 @@ __declspec(allocate(".CRT$XCAB")) int (*__asan_seh_interceptor)() =
     SetSEHFilter;
 }
 
-ASAN_LINK_GLOBALS_WIN()
+WIN_FORCE_LINK(__asan_dso_reg_hook)
 
 #endif // ASAN_DYNAMIC_RUNTIME_THUNK

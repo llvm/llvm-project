@@ -30,6 +30,7 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
+#include "sanitizer_win_defs.h"
 
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
@@ -946,11 +947,8 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
 // of null.
 extern "C" void __sanitizer_print_memory_profile(int top_percent) {}
 
-#ifdef _WIN64
-#pragma comment(linker, "/alternatename:__sanitizer_print_memory_profile=__sanitizer_default_print_memory_profile") // NOLINT
-#else
-#pragma comment(linker, "/alternatename:___sanitizer_print_memory_profile=___sanitizer_default_print_memory_profile") // NOLINT
-#endif
+WIN_WEAK_ALIAS(__sanitizer_print_memory_profile,
+               __sanitizer_default_print_memory_profile)
 #endif
 
 #endif  // _WIN32

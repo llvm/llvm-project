@@ -22,8 +22,6 @@
 # error "The Scudo hardened allocator is currently only supported on Linux."
 #endif
 
-#include <atomic>
-
 namespace __scudo {
 
 enum AllocType : u8 {
@@ -58,7 +56,7 @@ struct UnpackedHeader {
   u64 Salt        : 8;
 };
 
-typedef std::atomic<PackedHeader> AtomicPackedHeader;
+typedef atomic_uint64_t AtomicPackedHeader;
 COMPILER_CHECK(sizeof(UnpackedHeader) == sizeof(PackedHeader));
 
 // Minimum alignment of 8 bytes for 32-bit, 16 for 64-bit

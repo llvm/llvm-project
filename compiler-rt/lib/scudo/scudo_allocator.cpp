@@ -125,8 +125,7 @@ struct ScudoChunk : UnpackedHeader {
     UnpackedHeader NewUnpackedHeader;
     const AtomicPackedHeader *AtomicHeader =
         reinterpret_cast<const AtomicPackedHeader *>(this);
-    PackedHeader NewPackedHeader =
-        AtomicHeader->load(std::memory_order_relaxed);
+    PackedHeader NewPackedHeader = atomic_load_relaxed(AtomicHeader);
     NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
     return (NewUnpackedHeader.Checksum == computeChecksum(&NewUnpackedHeader));
   }
@@ -135,8 +134,7 @@ struct ScudoChunk : UnpackedHeader {
   void loadHeader(UnpackedHeader *NewUnpackedHeader) const {
     const AtomicPackedHeader *AtomicHeader =
         reinterpret_cast<const AtomicPackedHeader *>(this);
-    PackedHeader NewPackedHeader =
-        AtomicHeader->load(std::memory_order_relaxed);
+    PackedHeader NewPackedHeader = atomic_load_relaxed(AtomicHeader);
     *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
     if (NewUnpackedHeader->Checksum != computeChecksum(NewUnpackedHeader)) {
       dieWithMessage("ERROR: corrupted chunk header at address %p\n", this);
@@ -149,7 +147,7 @@ struct ScudoChunk : UnpackedHeader {
     PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
     AtomicPackedHeader *AtomicHeader =
         reinterpret_cast<AtomicPackedHeader *>(this);
-    AtomicHeader->store(NewPackedHeader, std::memory_order_relaxed);
+    atomic_store_relaxed(AtomicHeader, NewPackedHeader);
   }
 
   // Packs and stores the header, computing the checksum in the process. We
@@ -162,10 +160,10 @@ struct ScudoChunk : UnpackedHeader {
     PackedHeader OldPackedHeader = bit_cast<PackedHeader>(*OldUnpackedHeader);
     AtomicPackedHeader *AtomicHeader =
         reinterpret_cast<AtomicPackedHeader *>(this);
-    if (!AtomicHeader->compare_exchange_strong(OldPackedHeader,
-                                               NewPackedHeader,
-                                               std::memory_order_relaxed,
-                                               std::memory_order_relaxed)) {
+    if (!atomic_compare_exchange_strong(AtomicHeader,
+                                        &OldPackedHeader,
+                                        NewPackedHeader,
+                                        memory_order_relaxed)) {
       dieWithMessage("ERROR: race on chunk header at address %p\n", this);
     }
   }
