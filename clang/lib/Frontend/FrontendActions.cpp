@@ -92,7 +92,8 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
                         CI.getPreprocessor(), OutputFile, nullptr, Sysroot,
-                        Buffer, CI.getFrontendOpts().ModuleFileExtensions,
+                        Buffer, CI.getFileManager().getPCMCache(),
+                        CI.getFrontendOpts().ModuleFileExtensions,
                         /*AllowASTWithErrors*/false,
                         /*IncludeTimestamps*/
                           +CI.getFrontendOpts().IncludeTimestamps));
@@ -148,7 +149,8 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
 
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
                         CI.getPreprocessor(), OutputFile, Module, Sysroot,
-                        Buffer, CI.getFrontendOpts().ModuleFileExtensions,
+                        Buffer, CI.getFileManager().getPCMCache(),
+                        CI.getFrontendOpts().ModuleFileExtensions,
                         /*AllowASTWithErrors=*/false,
                         /*IncludeTimestamps=*/
                           +CI.getFrontendOpts().BuildingImplicitModule));
