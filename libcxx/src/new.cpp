@@ -151,6 +151,8 @@ operator delete[] (void* ptr, size_t) _NOEXCEPT
     ::operator delete[](ptr);
 }
 
+#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+
 _LIBCPP_WEAK
 void *
 operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC
@@ -274,6 +276,8 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
 {
     ::operator delete[](ptr, alignment);
 }
+
+#endif // !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
 
 #endif // !__GLIBCXX__
 
