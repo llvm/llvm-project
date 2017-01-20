@@ -140,7 +140,7 @@ template <class ELFT>
 DefinedRegular<ELFT> *SymbolTable<ELFT>::addIgnored(StringRef Name,
                                                     uint8_t Visibility) {
   SymbolBody *S = find(Name);
-  if (!S || !S->isUndefined())
+  if (!S || S->isInCurrentDSO())
     return nullptr;
   return addAbsolute(Name, Visibility);
 }

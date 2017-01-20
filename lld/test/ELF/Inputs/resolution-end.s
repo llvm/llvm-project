@@ -1,0 +1,2 @@
+.data
+        .quad _end
