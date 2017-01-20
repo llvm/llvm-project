@@ -10,6 +10,7 @@
 # CHECK:   - { id: 1, class: gr64 }
 # CHECK:   - { id: 2, class: gr32 }
 # CHECK:   - { id: 3, class: gr16 }
+# CHECK:   - { id: 4, class: _ }
 name: func
 body: |
   bb.0:
@@ -21,4 +22,6 @@ body: |
 
     %3 : gr16 = COPY %bx
     %bx = COPY %3 : gr16
+
+    %4 : _(s32) = COPY %edx
 ...
