@@ -273,6 +273,28 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    unsigned Src = MI.getOperand(1).getReg();
+    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
+
+    if (MI.getOpcode() == TargetOpcode::G_SITOFP) {
+      MIRBuilder.buildSExt(SrcExt, Src);
+    } else {
+      assert(MI.getOpcode() == TargetOpcode::G_UITOFP && "Unexpected conv op");
+      MIRBuilder.buildZExt(SrcExt, Src);
+    }
+
+    MIRBuilder.buildInstr(MI.getOpcode())
+        .addDef(MI.getOperand(0).getReg())
+        .addUse(SrcExt);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_LOAD: {
     assert(alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) ==
                WideTy.getSizeInBits() &&
