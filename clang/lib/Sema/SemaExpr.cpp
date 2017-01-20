@@ -13431,8 +13431,7 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
       if (BuildAndDiagnose) {
         SourceLocation VarLoc = Var->getLocation();
         S.Diag(Loc, diag::warn_block_capture_autoreleasing);
-        S.Diag(VarLoc, diag::note_declare_parameter_autoreleasing) <<
-            FixItHint::CreateInsertion(VarLoc, "__autoreleasing");
+        S.Diag(VarLoc, diag::note_declare_parameter_autoreleasing);
         S.Diag(VarLoc, diag::note_declare_parameter_strong);
       }
     }
