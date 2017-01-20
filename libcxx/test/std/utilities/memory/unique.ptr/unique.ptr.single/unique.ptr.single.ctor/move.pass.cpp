@@ -17,7 +17,7 @@
 #include <utility>
 #include <cassert>
 
-#include "../../deleter.h"
+#include "deleter_types.h"
 
 //=============================================================================
 // TESTING unique_ptr(unique_ptr&&)

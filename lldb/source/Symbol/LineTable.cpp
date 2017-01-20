@@ -501,6 +501,7 @@ LineTable *LineTable::LinkLineTable(const FileRangeMap &file_range_map) {
 
     if (terminate_previous_entry && !sequence.m_entries.empty()) {
       assert(prev_file_addr != LLDB_INVALID_ADDRESS);
+      UNUSED_IF_ASSERT_DISABLED(prev_file_addr);
       sequence.m_entries.push_back(sequence.m_entries.back());
       if (prev_end_entry_linked_file_addr == LLDB_INVALID_ADDRESS)
         prev_end_entry_linked_file_addr =

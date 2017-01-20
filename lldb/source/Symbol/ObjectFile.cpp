@@ -20,6 +20,9 @@
 #include "lldb/Core/Timer.h"
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/lldb-private.h"
 
@@ -647,4 +650,32 @@ ConstString ObjectFile::GetNextSyntheticSymbolName() {
   ss.Printf("___lldb_unnamed_symbol%u$$%s", ++m_synthetic_symbol_idx,
             file_name.GetCString());
   return ConstString(ss.GetString());
+}
+
+Error ObjectFile::LoadInMemory(Target &target) {
+  Error error;
+  ProcessSP process = target.CalculateProcess();
+  if (!process)
+    return Error("No Process");
+
+  SectionList *section_list = GetSectionList();
+  if (!section_list)
+      return Error("No section in object file");
+  size_t section_count = section_list->GetNumSections(0);
+  for (size_t i = 0; i < section_count; ++i) {
+    SectionSP section_sp = section_list->GetSectionAtIndex(i);
+    addr_t addr = target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    if (addr != LLDB_INVALID_ADDRESS) {
+      DataExtractor section_data;
+      // We can skip sections like bss
+      if (section_sp->GetFileSize() == 0)
+        continue;
+      section_sp->GetSectionData(section_data);
+      lldb::offset_t written = process->WriteMemory(
+          addr, section_data.GetDataStart(), section_data.GetByteSize(), error);
+      if (written != section_data.GetByteSize())
+        return error;
+    }
+  }
+  return error;
 }

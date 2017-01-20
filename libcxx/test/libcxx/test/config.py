@@ -468,10 +468,9 @@ class Configuration(object):
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path, 'nasty_macros.hpp')]
         if self.cxx_stdlib_under_test == 'msvc':
-            # FIXME: Uncomment this once STL commits the support header.
-            # self.cxx.compile_flags += [
-            #    '-include', os.path.join(support_path,
-            #                             'msvc_stdlib_force_include.h')]
+            self.cxx.compile_flags += [
+                '-include', os.path.join(support_path,
+                                         'msvc_stdlib_force_include.hpp')]
             pass
         if self.is_windows and self.debug_build and \
                 self.cxx_stdlib_under_test != 'msvc':

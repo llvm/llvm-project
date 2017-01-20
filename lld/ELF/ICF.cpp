@@ -245,7 +245,6 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
     if (&SA == &SB)
       return true;
 
-    // Or, the two sections must be in the same equivalence class.
     auto *DA = dyn_cast<DefinedRegular<ELFT>>(&SA);
     auto *DB = dyn_cast<DefinedRegular<ELFT>>(&SB);
     if (!DA || !DB)
@@ -253,6 +252,11 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A, ArrayRef<RelTy> RelsA,
     if (DA->Value != DB->Value)
       return false;
 
+    // Either both symbols must be absolute...
+    if (!DA->Section || !DB->Section)
+      return !DA->Section && !DB->Section;
+
+    // Or the two sections must be in the same equivalence class.
     auto *X = dyn_cast<InputSection<ELFT>>(DA->Section);
     auto *Y = dyn_cast<InputSection<ELFT>>(DB->Section);
     if (!X || !Y)

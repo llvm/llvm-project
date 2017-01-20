@@ -159,7 +159,8 @@ bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
       parmVarDecl(hasType(matchers::isReferenceToConst())));
   auto Matches = match(
       decl(hasDescendant(
-          cxxOperatorCallExpr(UsedAsConstRefArg, hasOverloadedOperatorName("="))
+          cxxOperatorCallExpr(UsedAsConstRefArg, hasOverloadedOperatorName("="),
+                              callee(cxxMethodDecl(isCopyAssignmentOperator())))
               .bind("operatorCallExpr"))),
       Decl, Context);
   return !Matches.empty();

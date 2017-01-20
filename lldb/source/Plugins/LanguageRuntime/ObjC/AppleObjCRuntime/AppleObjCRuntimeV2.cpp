@@ -895,6 +895,7 @@ UtilityFunction *AppleObjCRuntimeV2::CreateObjectChecker(const char *name) {
   }
 
   assert(len < (int)sizeof(check_function_code));
+  UNUSED_IF_ASSERT_DISABLED(len);
 
   Error error;
   return GetTargetRef().GetUtilityFunctionForLanguage(
