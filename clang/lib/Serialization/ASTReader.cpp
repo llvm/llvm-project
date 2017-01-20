@@ -3251,8 +3251,11 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         for (unsigned I = 0, N = Record.size(); I != N; /**/) {
           unsigned GlobalID = getGlobalSubmoduleID(F, Record[I++]);
           SourceLocation Loc = ReadSourceLocation(F, Record, I);
-          if (GlobalID)
+          if (GlobalID) {
             ImportedModules.push_back(ImportedSubmodule(GlobalID, Loc));
+            if (DeserializationListener)
+              DeserializationListener->ModuleImportRead(GlobalID, Loc);
+          }
         }
       }
       break;

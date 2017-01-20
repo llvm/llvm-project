@@ -5395,6 +5395,15 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     return ExprError();
   }
 
+  // Interrupt handlers don't save off the VFP regs automatically on ARM,
+  // so there's some risk when calling out to non-interrupt handler functions
+  // that the callee might not preserve them. This is easy to diagnose here,
+  // but can be very challenging to debug.
+  if (auto *Caller = getCurFunctionDecl())
+    if (Caller->hasAttr<ARMInterruptAttr>())
+      if (!FDecl->hasAttr<ARMInterruptAttr>())
+        Diag(Fn->getExprLoc(), diag::warn_arm_interrupt_calling_convention);
+
   // Promote the function operand.
   // We special-case function promotion here because we only allow promoting
   // builtin functions to function pointers in the callee of a call.
@@ -11496,7 +11505,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       return checkPseudoObjectAssignment(S, OpLoc, Opc, LHSExpr, RHSExpr);
 
     // Don't resolve overloads if the other type is overloadable.
-    if (pty->getKind() == BuiltinType::Overload) {
+    if (getLangOpts().CPlusPlus && pty->getKind() == BuiltinType::Overload) {
       // We can't actually test that if we still have a placeholder,
       // though.  Fortunately, none of the exceptions we see in that
       // code below are valid when the LHS is an overload set.  Note
@@ -11521,17 +11530,16 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     // An overload in the RHS can potentially be resolved by the type
     // being assigned to.
     if (Opc == BO_Assign && pty->getKind() == BuiltinType::Overload) {
-      if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
-        return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
-
-      if (LHSExpr->getType()->isOverloadableType())
+      if (getLangOpts().CPlusPlus &&
+          (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
+           LHSExpr->getType()->isOverloadableType()))
         return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 
       return CreateBuiltinBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
     }
 
     // Don't resolve overloads if the other type is overloadable.
-    if (pty->getKind() == BuiltinType::Overload &&
+    if (getLangOpts().CPlusPlus && pty->getKind() == BuiltinType::Overload &&
         LHSExpr->getType()->isOverloadableType())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
 

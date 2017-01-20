@@ -2708,6 +2708,9 @@ public:
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
                                           StringRef ParentName,
                                           const OMPTargetDirective &S);
+  static void
+  EmitOMPTargetParallelDeviceFunction(CodeGenModule &CGM, StringRef ParentName,
+                                      const OMPTargetParallelDirective &S);
   /// \brief Emit inner loop of the worksharing/simd construct.
   ///
   /// \param S Directive, for which the inner loop must be emitted.

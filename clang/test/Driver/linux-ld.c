@@ -705,6 +705,14 @@
 // CHECK-PPC64LE-ELFv2: "-m" "elf64lppc"
 // CHECK-PPC64LE-ELFv2: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
 //
+// Check that we do not pass --hash-style=gnu or --hash-style=both to
+// hexagon linux linker
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=hexagon-linux-gnu \
+// RUN:   | FileCheck --check-prefix=CHECK-HEXAGON %s
+// CHECK-HEXAGON: "{{.*}}hexagon-link{{(.exe)?}}"
+// CHECK-HEXAGON-NOT: "--hash-style={{gnu|both}}"
+//
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
 // and provide correct path to the dynamic linker and emulation mode when build
 // for MIPS platforms.

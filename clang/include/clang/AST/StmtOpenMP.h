@@ -198,6 +198,26 @@ public:
     return const_cast<Stmt *>(*child_begin());
   }
 
+  /// \brief Returns the captured statement associated with the
+  /// component region within the (combined) directive.
+  //
+  // \param RegionKind Component region kind.
+  CapturedStmt *getCapturedStmt(OpenMPDirectiveKind RegionKind) const {
+    SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+    getOpenMPCaptureRegions(CaptureRegions, getDirectiveKind());
+    assert(std::any_of(
+               CaptureRegions.begin(), CaptureRegions.end(),
+               [=](const OpenMPDirectiveKind K) { return K == RegionKind; }) &&
+           "RegionKind not found in OpenMP CaptureRegions.");
+    auto *CS = cast<CapturedStmt>(getAssociatedStmt());
+    for (auto ThisCaptureRegion : CaptureRegions) {
+      if (ThisCaptureRegion == RegionKind)
+        return CS;
+      CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    }
+    llvm_unreachable("Incorrect RegionKind specified for directive.");
+  }
+
   OpenMPDirectiveKind getDirectiveKind() const { return Kind; }
 
   static bool classof(const Stmt *S) {

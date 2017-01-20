@@ -259,6 +259,9 @@ def err_anyx86_interrupt_attribute : Error<
   "a pointer as the first parameter|a %2 type as the second parameter}1">;
 def err_anyx86_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
+def warn_arm_interrupt_calling_convention : Warning<
+   "call to function without interrupt attribute could clobber interruptee's VFP registers">,
+   InGroup<Extra>;
 def warn_mips_interrupt_attribute : Warning<
    "MIPS 'interrupt' attribute only applies to functions that have "
    "%select{no parameters|a 'void' return type}0">,
@@ -317,7 +320,7 @@ def warn_unneeded_member_function : Warning<
 def warn_unused_private_field: Warning<"private field %0 is not used">,
   InGroup<UnusedPrivateField>, DefaultIgnore;
 def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
-  "%select{used|required to be captured for use in an unevaluated context}1">,
+  "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
 def warn_parameter_size: Warning<

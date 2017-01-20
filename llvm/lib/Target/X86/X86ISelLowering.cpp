@@ -1357,12 +1357,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v16i32, Legal);
     setOperationAction(ISD::UMIN,               MVT::v8i64, Legal);
 
-    setOperationAction(ISD::ADD,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::ADD,                MVT::v16i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::SUB,                MVT::v16i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v8i1,  Expand);
-    setOperationAction(ISD::MUL,                MVT::v16i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::ADD,                MVT::v16i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::SUB,                MVT::v16i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v8i1,  Custom);
+    setOperationAction(ISD::MUL,                MVT::v16i1, Custom);
 
     setOperationAction(ISD::MUL,                MVT::v16i32, Legal);
 
@@ -1460,12 +1460,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
-    setOperationAction(ISD::ADD,                MVT::v32i1, Expand);
-    setOperationAction(ISD::ADD,                MVT::v64i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v32i1, Expand);
-    setOperationAction(ISD::SUB,                MVT::v64i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v32i1, Expand);
-    setOperationAction(ISD::MUL,                MVT::v64i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v32i1, Custom);
+    setOperationAction(ISD::ADD,                MVT::v64i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v32i1, Custom);
+    setOperationAction(ISD::SUB,                MVT::v64i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v32i1, Custom);
+    setOperationAction(ISD::MUL,                MVT::v64i1, Custom);
 
     setOperationAction(ISD::SETCC,              MVT::v32i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v64i1, Custom);
@@ -1574,9 +1574,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
 
     for (auto VT : { MVT::v2i1, MVT::v4i1 }) {
-      setOperationAction(ISD::ADD,                VT, Expand);
-      setOperationAction(ISD::SUB,                VT, Expand);
-      setOperationAction(ISD::MUL,                VT, Expand);
+      setOperationAction(ISD::ADD,                VT, Custom);
+      setOperationAction(ISD::SUB,                VT, Custom);
+      setOperationAction(ISD::MUL,                VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Expand);
 
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
@@ -20846,19 +20846,10 @@ static SDValue Lower512IntArith(SDValue Op, SelectionDAG &DAG) {
                      DAG.getNode(Op.getOpcode(), dl, NewVT, LHS2, RHS2));
 }
 
-static SDValue LowerADD(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getValueType() == MVT::i1)
-    return DAG.getNode(ISD::XOR, SDLoc(Op), Op.getValueType(),
-                       Op.getOperand(0), Op.getOperand(1));
-  assert(Op.getSimpleValueType().is256BitVector() &&
-         Op.getSimpleValueType().isInteger() &&
-         "Only handle AVX 256-bit vector integer operation");
-  return Lower256IntArith(Op, DAG);
-}
-
-static SDValue LowerSUB(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getValueType() == MVT::i1)
-    return DAG.getNode(ISD::XOR, SDLoc(Op), Op.getValueType(),
+static SDValue LowerADD_SUB(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  if (VT.getScalarType() == MVT::i1)
+    return DAG.getNode(ISD::XOR, SDLoc(Op), VT,
                        Op.getOperand(0), Op.getOperand(1));
   assert(Op.getSimpleValueType().is256BitVector() &&
          Op.getSimpleValueType().isInteger() &&
@@ -20878,7 +20869,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
 
-  if (VT == MVT::i1)
+  if (VT.getScalarType() == MVT::i1)
     return DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0), Op.getOperand(1));
 
   // Decompose 256-bit ops into smaller 128-bit ops.
@@ -23404,8 +23395,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDE:
   case ISD::SUBC:
   case ISD::SUBE:               return LowerADDC_ADDE_SUBC_SUBE(Op, DAG);
-  case ISD::ADD:                return LowerADD(Op, DAG);
-  case ISD::SUB:                return LowerSUB(Op, DAG);
+  case ISD::ADD:
+  case ISD::SUB:                return LowerADD_SUB(Op, DAG);
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
@@ -31409,6 +31400,9 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
 static SDValue
 combineTruncateWithUSat(SDValue In, EVT VT, SDLoc &DL, SelectionDAG &DAG,
                         const X86Subtarget &Subtarget) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(In.getValueType()) || !TLI.isTypeLegal(VT))
+    return SDValue();
   SDValue USatVal = detectUSatPattern(In, VT);
   if (USatVal) {
     if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
@@ -32354,13 +32348,30 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
 
-  auto IsRepeatedOpOrOneUseConstant = [](SDValue Op0, SDValue Op1) {
-    // TODO: Add extra cases where we can truncate both inputs for the
-    // cost of one (or none).
-    // e.g. TRUNC( BINOP( EXT( X ), EXT( Y ) ) ) --> BINOP( X, Y )
+  auto IsRepeatedOpOrFreeTruncation = [VT](SDValue Op0, SDValue Op1) {
+    unsigned TruncSizeInBits = VT.getScalarSizeInBits();
+
+    // Repeated operand, so we are only trading one output truncation for
+    // one input truncation.
     if (Op0 == Op1)
       return true;
 
+    // See if either operand has been extended from a smaller/equal size to
+    // the truncation size, allowing a truncation to combine with the extend.
+    unsigned Opcode0 = Op0.getOpcode();
+    if ((Opcode0 == ISD::ANY_EXTEND || Opcode0 == ISD::SIGN_EXTEND ||
+         Opcode0 == ISD::ZERO_EXTEND) &&
+        Op0.getOperand(0).getScalarValueSizeInBits() <= TruncSizeInBits)
+      return true;
+
+    unsigned Opcode1 = Op1.getOpcode();
+    if ((Opcode1 == ISD::ANY_EXTEND || Opcode1 == ISD::SIGN_EXTEND ||
+         Opcode1 == ISD::ZERO_EXTEND) &&
+        Op1.getOperand(0).getScalarValueSizeInBits() <= TruncSizeInBits)
+      return true;
+
+    // See if either operand is a single use constant which can be constant
+    // folded.
     SDValue BC0 = peekThroughOneUseBitcasts(Op0);
     SDValue BC1 = peekThroughOneUseBitcasts(Op1);
     return ISD::isBuildVectorOfConstantSDNodes(BC0.getNode()) ||
@@ -32392,7 +32403,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
     if (TLI.isOperationLegalOrPromote(Opcode, VT) &&
-        IsRepeatedOpOrOneUseConstant(Op0, Op1))
+        IsRepeatedOpOrFreeTruncation(Op0, Op1))
       return TruncateArithmetic(Op0, Op1);
     break;
   }
@@ -32408,7 +32419,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
     if (TLI.isOperationLegal(Opcode, VT) &&
-        IsRepeatedOpOrOneUseConstant(Op0, Op1))
+        IsRepeatedOpOrFreeTruncation(Op0, Op1))
       return TruncateArithmetic(Op0, Op1);
     break;
   }

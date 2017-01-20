@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -flto -emit-llvm -o - -triple=x86_64-pc-win32 %s -fsanitize=cfi-vcall | FileCheck --check-prefix=RTTI %s
-// RUN: %clang_cc1 -flto -emit-llvm -o - -triple=x86_64-pc-win32 %s -fsanitize=cfi-vcall -fno-rtti-data | FileCheck --check-prefix=NO-RTTI %s
+// RUN: %clang_cc1 -flto -flto-unit -emit-llvm -o - -triple=x86_64-pc-win32 %s -fsanitize=cfi-vcall | FileCheck --check-prefix=RTTI %s
+// RUN: %clang_cc1 -flto -flto-unit -emit-llvm -o - -triple=x86_64-pc-win32 %s -fsanitize=cfi-vcall -fno-rtti-data | FileCheck --check-prefix=NO-RTTI %s
 
 struct A {
   A();

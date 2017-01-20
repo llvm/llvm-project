@@ -1482,7 +1482,10 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::x86_avx512_vpermilvar_ps_512:
     case Intrinsic::x86_avx_vpermilvar_pd:
     case Intrinsic::x86_avx_vpermilvar_pd_256:
-    case Intrinsic::x86_avx512_vpermilvar_pd_512: {
+    case Intrinsic::x86_avx512_vpermilvar_pd_512:
+    // PERMV
+    case Intrinsic::x86_avx2_permd:
+    case Intrinsic::x86_avx2_permps: {
       Value *Op1 = II->getArgOperand(1);
       TmpV = SimplifyDemandedVectorElts(Op1, DemandedElts, UndefElts,
                                         Depth + 1);

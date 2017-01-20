@@ -118,8 +118,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       if (!ISel->select(MI)) {
         if (TPC.isGlobalISelAbortEnabled())
           // FIXME: It would be nice to dump all inserted instructions.  It's
-          // not
-          // obvious how, esp. considering select() can insert after MI.
+          // not obvious how, esp. considering select() can insert after MI.
           reportSelectionError(&MI, "Cannot select");
         Failed = true;
         break;

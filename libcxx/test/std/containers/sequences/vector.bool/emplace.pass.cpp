@@ -34,7 +34,7 @@ int main()
         assert(c.front() == false);
         assert(c.back() == true);
 
-        i = c.emplace(c.cbegin()+1, 1 == 1);
+        i = c.emplace(c.cbegin()+1, true);
         assert(i == c.begin()+1);
         assert(c.size() == 3);
         assert(c.front() == false);
@@ -56,7 +56,7 @@ int main()
         assert(c.front() == false);
         assert(c.back() == true);
 
-        i = c.emplace(c.cbegin()+1, 1 == 1);
+        i = c.emplace(c.cbegin()+1, true);
         assert(i == c.begin()+1);
         assert(c.size() == 3);
         assert(c.size() == 3);

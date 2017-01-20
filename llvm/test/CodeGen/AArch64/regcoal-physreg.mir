@@ -63,9 +63,9 @@ body: |
     ; Only coalesce when the source register is reserved as a whole (this is
     ; a limitation of the current code which cannot update liveness information
     ; of the non-reserved part).
-    ; CHECK: %6 = COPY %xzr_x0
+    ; CHECK: %6 = COPY %x28_fp
     ; CHECK: HINT 0, implicit %6
-    %6 = COPY %xzr_x0
+    %6 = COPY %x28_fp
     HINT 0, implicit %6
 
     ; It is not fine to coalesce copies from reserved physregs when they are

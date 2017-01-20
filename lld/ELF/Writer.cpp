@@ -771,7 +771,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     assert(S.startswith("_"));
     S = S.substr(1);
     if (SymbolBody *B = Symtab<ELFT>::X->find(S))
-      if (B->isUndefined())
+      if (!B->isInCurrentDSO())
         Sym2 = Symtab<ELFT>::X->addAbsolute(S, STV_DEFAULT);
   };
 

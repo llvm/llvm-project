@@ -609,13 +609,23 @@ namespace {
     }
 
     bool runOnSCC(CallGraphSCC &SCC) override {
-      Out << Banner;
+      auto PrintBannerOnce = [&] () {
+        static bool BannerPrinted = false;
+        if (BannerPrinted)
+          return;
+        Out << Banner;
+        BannerPrinted = true;
+        };
       for (CallGraphNode *CGN : SCC) {
         if (CGN->getFunction()) {
-          if (isFunctionInPrintList(CGN->getFunction()->getName()))
+          if (isFunctionInPrintList(CGN->getFunction()->getName())) {
+            PrintBannerOnce();
             CGN->getFunction()->print(Out);
-        } else
+          }
+        } else if (llvm::isFunctionInPrintList("*")) {
+          PrintBannerOnce();
           Out << "\nPrinting <null> Function\n";
+        }
       }
       return false;
     }

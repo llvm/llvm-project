@@ -80,6 +80,21 @@ define half @test_fsub(half %a, half %b) #0 {
   ret half %r
 }
 
+; CHECK-LABEL: test_fneg(
+; CHECK-DAG:  ld.param.b16    [[A:%h[0-9]+]], [test_fneg_param_0];
+; CHECK-F16-NEXT:   mov.b16        [[Z:%h[0-9]+]], 0x0000
+; CHECK-F16-NEXT:   sub.rn.f16     [[R:%h[0-9]+]], [[Z]], [[A]];
+; CHECK-NOF16-DAG:  cvt.f32.f16    [[A32:%f[0-9]+]], [[A]]
+; CHECK-NOF16-DAG:  mov.f32        [[Z:%f[0-9]+]], 0f00000000;
+; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%f[0-9]+]], [[Z]], [[A32]];
+; CHECK-NOF16-NEXT: cvt.rn.f16.f32 [[R:%h[0-9]+]], [[R32]]
+; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
+; CHECK-NEXT: ret;
+define half @test_fneg(half %a) #0 {
+  %r = fsub half 0.0, %a
+  ret half %r
+}
+
 ; CHECK-LABEL: test_fmul(
 ; CHECK-DAG:  ld.param.b16    [[A:%h[0-9]+]], [test_fmul_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%h[0-9]+]], [test_fmul_param_1];

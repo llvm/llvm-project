@@ -243,7 +243,10 @@ def err_expected_property_name : Error<"expected property name">;
 
 def err_unexpected_at : Error<"unexpected '@' in program">;
 def err_atimport : Error<
-"use of '@import' when modules are disabled">;
+  "use of '@import' when modules are disabled">;
+def err_atimport_cxx : Error<
+  "use of '@import' when C++ modules are disabled, consider using fmodules "
+  "and fcxx-modules">;
 
 def err_invalid_reference_qualifier_application : Error<
   "'%0' qualifier may not be applied to a reference">;

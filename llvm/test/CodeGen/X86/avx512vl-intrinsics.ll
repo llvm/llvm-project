@@ -4206,6 +4206,19 @@ define <8 x float>@test_int_x86_avx512_mask_broadcastf32x4_256(<4 x float> %x0, 
   ret <8 x float> %res5
 }
 
+define <8 x float>@test_int_x86_avx512_mask_broadcastf32x4_256_load(<4 x float>* %x0ptr, <8 x float> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x4_256_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vmovaps (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x0f]
+; CHECK-NEXT:    vshuff32x4 $0, %ymm1, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf3,0x75,0x29,0x23,0xc1,0x00]
+; CHECK-NEXT:    ## ymm0 {%k1} = ymm1[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %x0 = load <4 x float>, <4 x float>* %x0ptr
+  %res = call <8 x float> @llvm.x86.avx512.mask.broadcastf32x4.256(<4 x float> %x0, <8 x float> %x2, i8 %mask)
+  ret <8 x float> %res
+}
+
 declare <8 x i32> @llvm.x86.avx512.mask.broadcasti32x4.256(<4 x i32>, <8 x i32>, i8)
 
 define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x4_256(<4 x i32> %x0, <8 x i32> %x2, i8 %mask) {
@@ -4228,6 +4241,19 @@ define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x4_256(<4 x i32> %x0, <8 x
   %res4 = add <8 x i32> %res1, %res2
   %res5 = add <8 x i32> %res3, %res4
   ret <8 x i32> %res5
+}
+
+define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x4_256_load(<4 x i32>* %x0ptr, <8 x i32> %x2, i8 %mask) {
+; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x4_256_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x0f]
+; CHECK-NEXT:    vshufi32x4 $0, %ymm1, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf3,0x75,0x29,0x43,0xc1,0x00]
+; CHECK-NEXT:    ## ymm0 {%k1} = ymm1[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %x0 = load <4 x i32>, <4 x i32>* %x0ptr
+  %res = call <8 x i32> @llvm.x86.avx512.mask.broadcasti32x4.256(<4 x i32> %x0, <8 x i32> %x2, i8 %mask)
+  ret <8 x i32> %res
 }
 
 declare <4 x i32> @llvm.x86.avx512.mask.prorv.d.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)

@@ -3657,6 +3657,39 @@ Sema::SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
                 TempTempParm->getDefaultArgument().getTemplateNameLoc());
 }
 
+/// Convert a template-argument that we parsed as a type into a template, if
+/// possible. C++ permits injected-class-names to perform dual service as
+/// template template arguments and as template type arguments.
+static TemplateArgumentLoc convertTypeTemplateArgumentToTemplate(TypeLoc TLoc) {
+  // Extract and step over any surrounding nested-name-specifier.
+  NestedNameSpecifierLoc QualLoc;
+  if (auto ETLoc = TLoc.getAs<ElaboratedTypeLoc>()) {
+    if (ETLoc.getTypePtr()->getKeyword() != ETK_None)
+      return TemplateArgumentLoc();
+
+    QualLoc = ETLoc.getQualifierLoc();
+    TLoc = ETLoc.getNamedTypeLoc();
+  }
+
+  // If this type was written as an injected-class-name, it can be used as a
+  // template template argument.
+  if (auto InjLoc = TLoc.getAs<InjectedClassNameTypeLoc>())
+    return TemplateArgumentLoc(InjLoc.getTypePtr()->getTemplateName(),
+                               QualLoc, InjLoc.getNameLoc());
+
+  // If this type was written as an injected-class-name, it may have been
+  // converted to a RecordType during instantiation. If the RecordType is
+  // *not* wrapped in a TemplateSpecializationType and denotes a class
+  // template specialization, it must have come from an injected-class-name.
+  if (auto RecLoc = TLoc.getAs<RecordTypeLoc>())
+    if (auto *CTSD =
+            dyn_cast<ClassTemplateSpecializationDecl>(RecLoc.getDecl()))
+      return TemplateArgumentLoc(TemplateName(CTSD->getSpecializedTemplate()),
+                                 QualLoc, RecLoc.getNameLoc());
+
+  return TemplateArgumentLoc();
+}
+
 /// \brief Check that the given template argument corresponds to the given
 /// template parameter.
 ///
@@ -3863,6 +3896,17 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
       return true;
   }
 
+  // C++1z [temp.local]p1: (DR1004)
+  //   When [the injected-class-name] is used [...] as a template-argument for
+  //   a template template-parameter [...] it refers to the class template
+  //   itself.
+  if (Arg.getArgument().getKind() == TemplateArgument::Type) {
+    TemplateArgumentLoc ConvertedArg = convertTypeTemplateArgumentToTemplate(
+        Arg.getTypeSourceInfo()->getTypeLoc());
+    if (!ConvertedArg.getArgument().isNull())
+      Arg = ConvertedArg;
+  }
+
   switch (Arg.getArgument().getKind()) {
   case TemplateArgument::Null:
     llvm_unreachable("Should never see a NULL template argument here");
@@ -3976,11 +4020,11 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
 
 /// \brief Check that the given template argument list is well-formed
 /// for specializing the given template.
-bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
-                                     SourceLocation TemplateLoc,
-                                     TemplateArgumentListInfo &TemplateArgs,
-                                     bool PartialTemplateArgs,
-                          SmallVectorImpl<TemplateArgument> &Converted) {
+bool Sema::CheckTemplateArgumentList(
+    TemplateDecl *Template, SourceLocation TemplateLoc,
+    TemplateArgumentListInfo &TemplateArgs, bool PartialTemplateArgs,
+    SmallVectorImpl<TemplateArgument> &Converted,
+    bool UpdateArgsWithConversions) {
   // Make a copy of the template arguments for processing.  Only make the
   // changes at the end when successful in matching the arguments to the
   // template.
@@ -4218,7 +4262,8 @@ bool Sema::CheckTemplateArgumentList(TemplateDecl *Template,
 
   // No problems found with the new argument list, propagate changes back
   // to caller.
-  TemplateArgs = std::move(NewArgs);
+  if (UpdateArgsWithConversions)
+    TemplateArgs = std::move(NewArgs);
 
   return false;
 }

@@ -106,7 +106,7 @@ public:
 //  A Each allocation performed during thread construction should be performed
 //    in the parent thread so that std::terminate is not called if
 //    std::bad_alloc is thrown by new.
-//  B std::threads constructor should properly handle exceptions and not leak
+//  B std::thread's constructor should properly handle exceptions and not leak
 //    memory.
 // Plan:
 //  1 Create a thread and count the number of allocations, 'N', it performs.

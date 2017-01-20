@@ -2104,6 +2104,7 @@ void OMPClauseEnqueue::VisitOMPClauseWithPostUpdate(
 }
 
 void OMPClauseEnqueue::VisitOMPIfClause(const OMPIfClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Visitor->AddStmt(C->getCondition());
 }
 

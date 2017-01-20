@@ -4350,6 +4350,9 @@ public:
   const TemplateSpecializationType *getInjectedTST() const {
     return cast<TemplateSpecializationType>(InjectedType.getTypePtr());
   }
+  TemplateName getTemplateName() const {
+    return getInjectedTST()->getTemplateName();
+  }
 
   CXXRecordDecl *getDecl() const;
 

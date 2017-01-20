@@ -42,7 +42,7 @@ private:
 
 public:
   RegisterBank(unsigned ID, const char *Name, unsigned Size,
-               const uint32_t *ContainedRegClasses);
+               const uint32_t *ContainedRegClasses, unsigned NumRegClasses);
 
   /// Get the identifier of this register bank.
   unsigned getID() const { return ID; }

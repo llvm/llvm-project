@@ -819,6 +819,14 @@ namespace llvm {
       uint32_t sdk;       // X.Y.Z is encoded in nibbles xxxx.yy.zz
     };
 
+    struct note_command {
+      uint32_t cmd;        // LC_NOTE
+      uint32_t cmdsize;    // sizeof(struct note_command)
+      char data_owner[16]; // owner name for this LC_NOTE
+      uint64_t offset;     // file offset of this data
+      uint64_t size;       // length of data region
+    };
+
     struct dyld_info_command {
       uint32_t cmd;
       uint32_t cmdsize;
@@ -1264,6 +1272,13 @@ namespace llvm {
       sys::swapByteOrder(C.cmdsize);
       sys::swapByteOrder(C.version);
       sys::swapByteOrder(C.sdk);
+    }
+
+    inline void swapStruct(note_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.offset);
+      sys::swapByteOrder(C.size);
     }
 
     inline void swapStruct(data_in_code_entry &C) {

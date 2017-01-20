@@ -2711,6 +2711,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPostUpdate(
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPIfClause(OMPIfClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }

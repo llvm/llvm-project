@@ -1026,7 +1026,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     if (Ty == LLT::scalar(32)) {
       CSelOpc = AArch64::CSELWr;
-    } else if (Ty == LLT::scalar(64)) {
+    } else if (Ty == LLT::scalar(64) || Ty == LLT::pointer(0, 64)) {
       CSelOpc = AArch64::CSELXr;
     } else {
       return false;

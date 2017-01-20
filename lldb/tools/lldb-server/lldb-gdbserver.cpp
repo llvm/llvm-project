@@ -424,8 +424,10 @@ int main_gdbserver(int argc, char *argv[]) {
     exit(option_error);
   }
 
-  if (!LLDBServerUtilities::SetupLogging(log_file, log_channels,
-                                         LLDB_LOG_OPTION_PREPEND_TIMESTAMP))
+  if (!LLDBServerUtilities::SetupLogging(
+          log_file, log_channels,
+          LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
+              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
     return -1;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_VERBOSE));

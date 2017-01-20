@@ -17,7 +17,7 @@
 ; RUN:          -o /dev/null -disable-ondemand-mds-loading -stats \
 ; RUN:  2>&1 | FileCheck %s -check-prefix=NOTLAZY
 ; NOTLAZY: 58 bitcode-reader  - Number of Metadata records loaded
-; NOTLAZY: 8 bitcode-reader  - Number of MDStrings loaded
+; NOTLAZY: 6 bitcode-reader  - Number of MDStrings loaded
 
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -48,7 +48,7 @@ define void @globalfunc3(i32 %arg) {
 !3 = !{!"3"}
 !4 = !{!"4"}
 !5 = !{!"5"}
-!6 = !{!"6"}
+!6 = !{!9}
 !7 = !{!"7"}
 !8 = !{!"8"}
-!9 = !{!"9"}
+!9 = !{!6}

@@ -705,3 +705,25 @@ define <16 x i16> @usat_trunc_qw_1024(<16 x i64> %i) {
   ret <16 x i16> %x6
 }
 
+define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
+; KNL-LABEL: usat_trunc_db_256:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; KNL-NEXT:    vpminud %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: usat_trunc_db_256:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpminud {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; SKX-NEXT:    vpmovdw %ymm0, %xmm0
+; SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SKX-NEXT:    retq
+  %tmp1 = icmp ult <8 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %tmp2 = select <8 x i1> %tmp1, <8 x i32> %x, <8 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %tmp3 = trunc <8 x i32> %tmp2 to <8 x i8>
+  %tmp4 = shufflevector <8 x i8> %tmp3, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %tmp4
+}
+

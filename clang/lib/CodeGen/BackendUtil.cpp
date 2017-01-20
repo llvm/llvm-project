@@ -573,6 +573,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
   Options.CompressDebugSections = CodeGenOpts.CompressDebugSections;
   Options.RelaxELFRelocations = CodeGenOpts.RelaxELFRelocations;
+  Options.DebugInfoForProfiling = CodeGenOpts.DebugInfoForProfiling;
 
   // Set EABI version.
   Options.EABIVersion = llvm::StringSwitch<llvm::EABI>(TargetOpts.EABIVersion)

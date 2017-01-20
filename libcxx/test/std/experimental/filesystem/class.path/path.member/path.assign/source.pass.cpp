@@ -50,7 +50,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      // string provides a contigious iterator. No allocation needed.
+      // string provides a contiguous iterator. No allocation needed.
       DisableAllocationGuard g;
       path& pref = (p = S);
       assert(&pref == &p);
@@ -76,7 +76,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string_view<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      // string provides a contigious iterator. No allocation needed.
+      // string provides a contiguous iterator. No allocation needed.
       DisableAllocationGuard g;
       path& pref = (p = S);
       assert(&pref == &p);
@@ -102,7 +102,7 @@ void RunTestCase(MultiStringType const& MS) {
   {
     path p; PathReserve(p, Size + 1);
     {
-      // char* pointers are contigious and can be used with code_cvt directly.
+      // char* pointers are contiguous and can be used with code_cvt directly.
       // no allocations needed.
       DisableAllocationGuard g;
       path& pref = (p = TestPath);

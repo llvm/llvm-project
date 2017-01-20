@@ -151,6 +151,11 @@ void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
 void DynamicLoaderMacOS::DoInitialImageFetch() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
+  // Remove any binaries we pre-loaded in the Target before launching/attaching.
+  // If the same binaries are present in the process, we'll get them from the
+  // shared module cache, we won't need to re-load them from disk.
+  UnloadAllImages();
+
   StructuredData::ObjectSP all_image_info_json_sp(
       m_process->GetLoadedDynamicLibrariesInfos());
   ImageInfo::collection image_infos;

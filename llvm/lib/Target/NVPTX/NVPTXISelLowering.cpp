@@ -332,6 +332,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::f16, Promote);
     setOperationAction(ISD::FMA, MVT::f16, Promote);
   }
+  // There's no neg.f16 instruction.
+  setOperationAction(ISD::FNEG, MVT::f16, Expand);
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.

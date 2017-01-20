@@ -1,3 +1,3 @@
 # this path looks like sancov/Inputs/../Inputs/ in the binary. 
 # Make sure it is filtered out correctly.
-src:*/sancov/Inputs/foo.cpp
+src:*/sancov/Inputs/test.cpp

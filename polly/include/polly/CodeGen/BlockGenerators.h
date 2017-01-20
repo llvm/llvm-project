@@ -824,7 +824,7 @@ private:
   DenseMap<BasicBlock *, ValueMapT> RegionMaps;
 
   /// Mapping to remember PHI nodes that still need incoming values.
-  using PHINodePairTy = std::pair<const PHINode *, PHINode *>;
+  using PHINodePairTy = std::pair<PHINode *, PHINode *>;
   DenseMap<BasicBlock *, SmallVector<PHINodePairTy, 4>> IncompletePHINodeMap;
 
   /// Repair the dominance tree after we created a copy block for @p BB.
@@ -834,13 +834,84 @@ private:
 
   /// Add the new operand from the copy of @p IncomingBB to @p PHICopy.
   ///
+  /// PHI nodes, which may have (multiple) edges that enter from outside the
+  /// non-affine subregion and even from outside the scop, are code generated as
+  /// follows:
+  ///
+  /// # Original
+  ///
+  ///   Region: %A-> %exit
+  ///   NonAffine Stmt: %nonaffB -> %D (includes %nonaffB, %nonaffC)
+  ///
+  ///     pre:
+  ///       %val = add i64 1, 1
+  ///
+  ///     A:
+  ///      br label %nonaff
+  ///
+  ///     nonaffB:
+  ///       %phi = phi i64 [%val, %A], [%valC, %nonAffC], [%valD, %D]
+  ///       %cmp = <nonaff>
+  ///       br i1 %cmp, label %C, label %nonaffC
+  ///
+  ///     nonaffC:
+  ///       %valC = add i64 1, 1
+  ///       br i1 undef, label %D, label %nonaffB
+  ///
+  ///     D:
+  ///       %valD = ...
+  ///       %exit_cond = <loopexit>
+  ///       br i1 %exit_cond, label %nonaffB, label %exit
+  ///
+  ///     exit:
+  ///       ...
+  ///
+  ///  - %start and %C enter from outside the non-affine region.
+  ///  - %nonaffC enters from within the non-affine region.
+  ///
+  ///  # New
+  ///
+  ///    polly.A:
+  ///       store i64 %val, i64* %phi.phiops
+  ///       br label %polly.nonaffA.entry
+  ///
+  ///    polly.nonaffB.entry:
+  ///       %phi.phiops.reload = load i64, i64* %phi.phiops
+  ///       br label %nonaffB
+  ///
+  ///    polly.nonaffB:
+  ///       %polly.phi = [%phi.phiops.reload, %nonaffB.entry],
+  ///                    [%p.valC, %polly.nonaffC]
+  ///
+  ///    polly.nonaffC:
+  ///       %p.valC = add i64 1, 1
+  ///       br i1 undef, label %polly.D, label %polly.nonaffB
+  ///
+  ///    polly.D:
+  ///        %p.valD = ...
+  ///        store i64 %p.valD, i64* %phi.phiops
+  ///        %p.exit_cond = <loopexit>
+  ///        br i1 %p.exit_cond, label %polly.nonaffB, label %exit
+  ///
+  /// Values that enter the PHI from outside the non-affine region are stored
+  /// into the stack slot %phi.phiops by statements %polly.A and %polly.D and
+  /// reloaded in %polly.nonaffB.entry, a basic block generated before the
+  /// actual non-affine region.
+  ///
+  /// When generating the PHI node of the non-affine region in %polly.nonaffB,
+  /// incoming edges from outside the region are combined into a single branch
+  /// from %polly.nonaffB.entry which has as incoming value the value reloaded
+  /// from the %phi.phiops stack slot. Incoming edges from within the region
+  /// refer to the copied instructions (%p.valC) and basic blocks
+  /// (%polly.nonaffC) of the non-affine region.
+  ///
   /// @param Stmt       The statement to code generate.
   /// @param PHI        The original PHI we copy.
   /// @param PHICopy    The copy of @p PHI.
   /// @param IncomingBB An incoming block of @p PHI.
   /// @param LTS        A map from old loops to new induction variables as
   /// SCEVs.
-  void addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI, PHINode *PHICopy,
+  void addOperandToPHI(ScopStmt &Stmt, PHINode *PHI, PHINode *PHICopy,
                        BasicBlock *IncomingBB, LoopToScevMapT &LTS);
 
   /// Create a PHI that combines the incoming values from all incoming blocks

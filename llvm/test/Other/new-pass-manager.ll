@@ -456,6 +456,7 @@
 ; CHECK-O: Starting llvm::Function pass manager run.
 ; CHECK-O: Running pass: Float2IntPass
 ; CHECK-O: Running pass: LoopDistributePass
+; CHECK-O: Running pass: LoopVectorizePass
 ; CHECK-O: Running pass: InstCombinePass
 ; CHECK-O: Running pass: SLPVectorizerPass
 ; CHECK-O: Running pass: SimplifyCFGPass

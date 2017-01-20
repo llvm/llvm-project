@@ -15,7 +15,7 @@
 
 // This test doesn't pass due to a constexpr bug in GCC 4.9 that fails
 // to initialize any type without a user provided constructor in a constant
-// expression (ie float).
+// expression (e.g. float).
 // XFAIL: gcc-4.9
 
 // NOTE: The SFINAE on the default constructor is tested in

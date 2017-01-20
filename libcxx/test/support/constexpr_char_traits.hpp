@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------_------------ constexpr_char_traits ---------------------------===//
+//===-------------------- constexpr_char_traits ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

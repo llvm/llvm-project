@@ -576,31 +576,31 @@ def : Pat<(f64 fpimm:$in),
 // sequences.
 def : Pat<(AArch64WrapperLarge tglobaladdr:$g3, tglobaladdr:$g2,
                              tglobaladdr:$g1, tglobaladdr:$g0),
-          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tglobaladdr:$g3, 48),
-                                  tglobaladdr:$g2, 32),
-                          tglobaladdr:$g1, 16),
-                  tglobaladdr:$g0, 0)>;
+          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tglobaladdr:$g0, 0),
+                                  tglobaladdr:$g1, 16),
+                          tglobaladdr:$g2, 32),
+                  tglobaladdr:$g3, 48)>;
 
 def : Pat<(AArch64WrapperLarge tblockaddress:$g3, tblockaddress:$g2,
                              tblockaddress:$g1, tblockaddress:$g0),
-          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tblockaddress:$g3, 48),
-                                  tblockaddress:$g2, 32),
-                          tblockaddress:$g1, 16),
-                  tblockaddress:$g0, 0)>;
+          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tblockaddress:$g0, 0),
+                                  tblockaddress:$g1, 16),
+                          tblockaddress:$g2, 32),
+                  tblockaddress:$g3, 48)>;
 
 def : Pat<(AArch64WrapperLarge tconstpool:$g3, tconstpool:$g2,
                              tconstpool:$g1, tconstpool:$g0),
-          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tconstpool:$g3, 48),
-                                  tconstpool:$g2, 32),
-                          tconstpool:$g1, 16),
-                  tconstpool:$g0, 0)>;
+          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tconstpool:$g0, 0),
+                                  tconstpool:$g1, 16),
+                          tconstpool:$g2, 32),
+                  tconstpool:$g3, 48)>;
 
 def : Pat<(AArch64WrapperLarge tjumptable:$g3, tjumptable:$g2,
                              tjumptable:$g1, tjumptable:$g0),
-          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tjumptable:$g3, 48),
-                                  tjumptable:$g2, 32),
-                          tjumptable:$g1, 16),
-                  tjumptable:$g0, 0)>;
+          (MOVKXi (MOVKXi (MOVKXi (MOVZXi tjumptable:$g0, 0),
+                                  tjumptable:$g1, 16),
+                          tjumptable:$g2, 32),
+                  tjumptable:$g3, 48)>;
 
 
 //===----------------------------------------------------------------------===//

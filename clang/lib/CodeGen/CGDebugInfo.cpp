@@ -2774,9 +2774,10 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
   }
   // No need to replicate the linkage name if it isn't different from the
   // subprogram name, no need to have it at all unless coverage is enabled or
-  // debug is set to more than just line tables.
+  // debug is set to more than just line tables or extra debug info is needed.
   if (LinkageName == Name || (!CGM.getCodeGenOpts().EmitGcovArcs &&
                               !CGM.getCodeGenOpts().EmitGcovNotes &&
+                              !CGM.getCodeGenOpts().DebugInfoForProfiling &&
                               DebugKind <= codegenoptions::DebugLineTablesOnly))
     LinkageName = StringRef();
 

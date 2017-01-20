@@ -2888,7 +2888,7 @@ const SCEV *ScalarEvolution::getUDivExactExpr(const SCEV *LHS,
   // end of this file for inspiration.
 
   const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (!Mul)
+  if (!Mul || !Mul->hasNoUnsignedWrap())
     return getUDivExpr(LHS, RHS);
 
   if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHS)) {
@@ -5147,12 +5147,27 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
         if ((LZ != 0 || TZ != 0) && !((~A & ~KnownZero) & EffectiveMask)) {
-          const SCEV *MulCount = getConstant(ConstantInt::get(
-              getContext(), APInt::getOneBitSet(BitWidth, TZ)));
+          const SCEV *MulCount = getConstant(APInt::getOneBitSet(BitWidth, TZ));
+          const SCEV *LHS = getSCEV(BO->LHS);
+          const SCEV *ShiftedLHS = nullptr;
+          if (auto *LHSMul = dyn_cast<SCEVMulExpr>(LHS)) {
+            if (auto *OpC = dyn_cast<SCEVConstant>(LHSMul->getOperand(0))) {
+              // For an expression like (x * 8) & 8, simplify the multiply.
+              unsigned MulZeros = OpC->getAPInt().countTrailingZeros();
+              unsigned GCD = std::min(MulZeros, TZ);
+              APInt DivAmt = APInt::getOneBitSet(BitWidth, TZ - GCD);
+              SmallVector<const SCEV*, 4> MulOps;
+              MulOps.push_back(getConstant(OpC->getAPInt().lshr(GCD)));
+              MulOps.append(LHSMul->op_begin() + 1, LHSMul->op_end());
+              auto *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
+              ShiftedLHS = getUDivExpr(NewMul, getConstant(DivAmt));
+            }
+          }
+          if (!ShiftedLHS)
+            ShiftedLHS = getUDivExpr(LHS, MulCount);
           return getMulExpr(
               getZeroExtendExpr(
-                  getTruncateExpr(
-                      getUDivExactExpr(getSCEV(BO->LHS), MulCount),
+                  getTruncateExpr(ShiftedLHS,
                       IntegerType::get(getContext(), BitWidth - LZ - TZ)),
                   BO->LHS->getType()),
               MulCount);
@@ -7276,17 +7291,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
       // E.g. if Val is i8 -127 then the smallest value of X that satisfies (3)
       // is i8 1, not i8 -127
 
-      const auto *ModuloResult = getUDivExactExpr(Distance, Step);
-
-      // Since SCEV does not have a URem node, we construct one using a truncate
-      // and a zero extend.
-
-      unsigned NarrowWidth = StepV.getBitWidth() - StepV.countTrailingZeros();
-      auto *NarrowTy = IntegerType::get(getContext(), NarrowWidth);
-      auto *WideTy = Distance->getType();
-
-      const SCEV *Limit =
-          getZeroExtendExpr(getTruncateExpr(ModuloResult, NarrowTy), WideTy);
+      const auto *Limit = getUDivExactExpr(Distance, Step);
       return ExitLimit(Limit, Limit, false, Predicates);
     }
   }

@@ -48,9 +48,10 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPReductionClause *>(C);
   case OMPC_linear:
     return static_cast<const OMPLinearClause *>(C);
+  case OMPC_if:
+    return static_cast<const OMPIfClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
-  case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
   case OMPC_safelen:

@@ -256,7 +256,7 @@ public:
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal = false);
 
   void applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
-                                 bool Minimal = false);
+                                 bool SkipSPAttributes = false);
 
   /// Find existing DIE or create new DIE for the given type.
   DIE *getOrCreateTypeDIE(const MDNode *N);
