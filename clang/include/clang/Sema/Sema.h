@@ -5978,7 +5978,8 @@ public:
 
   TypeResult
   ActOnTemplateIdType(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                      TemplateTy Template, SourceLocation TemplateLoc,
+                      TemplateTy Template, IdentifierInfo *TemplateII,
+                      SourceLocation TemplateIILoc,
                       SourceLocation LAngleLoc,
                       ASTTemplateArgsPtr TemplateArgs,
                       SourceLocation RAngleLoc,
@@ -6024,13 +6025,10 @@ public:
                                const DeclarationNameInfo &NameInfo,
                                const TemplateArgumentListInfo *TemplateArgs);
 
-  TemplateNameKind ActOnDependentTemplateName(Scope *S,
-                                              CXXScopeSpec &SS,
-                                              SourceLocation TemplateKWLoc,
-                                              UnqualifiedId &Name,
-                                              ParsedType ObjectType,
-                                              bool EnteringContext,
-                                              TemplateTy &Template);
+  TemplateNameKind ActOnDependentTemplateName(
+      Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+      UnqualifiedId &Name, ParsedType ObjectType, bool EnteringContext,
+      TemplateTy &Template, bool AllowInjectedClassName = false);
 
   DeclResult
   ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec, TagUseKind TUK,
@@ -6254,7 +6252,8 @@ public:
   /// \param SS the nested-name-specifier following the typename (e.g., 'T::').
   /// \param TemplateLoc the location of the 'template' keyword, if any.
   /// \param TemplateName The template name.
-  /// \param TemplateNameLoc The location of the template name.
+  /// \param TemplateII The identifier used to name the template.
+  /// \param TemplateIILoc The location of the template name.
   /// \param LAngleLoc The location of the opening angle bracket  ('<').
   /// \param TemplateArgs The template arguments.
   /// \param RAngleLoc The location of the closing angle bracket  ('>').
@@ -6263,7 +6262,8 @@ public:
                     const CXXScopeSpec &SS,
                     SourceLocation TemplateLoc,
                     TemplateTy TemplateName,
-                    SourceLocation TemplateNameLoc,
+                    IdentifierInfo *TemplateII,
+                    SourceLocation TemplateIILoc,
                     SourceLocation LAngleLoc,
                     ASTTemplateArgsPtr TemplateArgs,
                     SourceLocation RAngleLoc);

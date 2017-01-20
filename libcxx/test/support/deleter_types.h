@@ -13,8 +13,8 @@
 
 // Example move-only deleter
 
-#ifndef DELETER_H
-#define DELETER_H
+#ifndef SUPPORT_DELETER_TYPES_H
+#define SUPPORT_DELETER_TYPES_H
 
 #include <type_traits>
 #include <utility>
@@ -335,4 +335,48 @@ public:
 };
 
 
-#endif  // DELETER_H
+struct test_deleter_base
+{
+    static int count;
+    static int dealloc_count;
+};
+
+int test_deleter_base::count = 0;
+int test_deleter_base::dealloc_count = 0;
+
+template <class T>
+class test_deleter
+    : public test_deleter_base
+{
+    int state_;
+
+public:
+
+    test_deleter() : state_(0) {++count;}
+    explicit test_deleter(int s) : state_(s) {++count;}
+    test_deleter(const test_deleter& d)
+        : state_(d.state_) {++count;}
+    ~test_deleter() {assert(state_ >= 0); --count; state_ = -1;}
+
+    int state() const {return state_;}
+    void set_state(int i) {state_ = i;}
+
+    void operator()(T* p) {assert(state_ >= 0); ++dealloc_count; delete p;}
+#if TEST_STD_VER >= 11
+    test_deleter* operator&() const = delete;
+#else
+private:
+  test_deleter* operator&() const;
+#endif
+};
+
+template <class T>
+void
+swap(test_deleter<T>& x, test_deleter<T>& y)
+{
+    test_deleter<T> t(std::move(x));
+    x = std::move(y);
+    y = std::move(t);
+}
+
+#endif  // SUPPORT_DELETER_TYPES_H

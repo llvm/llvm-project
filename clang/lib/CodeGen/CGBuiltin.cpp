@@ -1189,6 +1189,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(Dest.getPointer());
   }
 
+  case Builtin::BI__builtin_char_memchr:
+    BuiltinID = Builtin::BI__builtin_memchr;
+    break;
+
   case Builtin::BI__builtin___memcpy_chk: {
     // fold __builtin_memcpy_chk(x, y, cst1, cst2) to memcpy iff cst1<=cst2.
     llvm::APSInt Size, DstSize;

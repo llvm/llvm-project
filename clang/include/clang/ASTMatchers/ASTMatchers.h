@@ -5507,7 +5507,7 @@ AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
       integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
 }
 
-/// \brief Matches declaration of the function the statemenet belongs to
+/// \brief Matches declaration of the function the statement belongs to
 ///
 /// Given:
 /// \code

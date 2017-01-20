@@ -22,6 +22,7 @@ int side_effect() {
 
 void test() {
   int i = 0;
+  const int k = 0;
 
   auto captures_nothing = [] {};
 
@@ -34,8 +35,9 @@ void test() {
   auto explicit_by_value_used = [i] { return i + 1; };
   auto explicit_by_value_used_void = [i] { (void)i; };
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
-  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for use in an unevaluated context}}
-  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not required to be captured for use in an unevaluated context}}
+  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
+  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
+  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}
@@ -70,6 +72,7 @@ class Foo
 template <typename T>
 void test_templated() {
   int i = 0;
+  const int k = 0;
 
   auto captures_nothing = [] {};
 
@@ -82,8 +85,9 @@ void test_templated() {
   auto explicit_by_value_used = [i] { return i + 1; };
   auto explicit_by_value_used_void = [i] { (void)i; };
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
-  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for use in an unevaluated context}}
+  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
   auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not used}}
+  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}

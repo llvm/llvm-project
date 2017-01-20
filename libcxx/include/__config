@@ -848,6 +848,18 @@ template <unsigned> struct __static_assert_check {};
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
+#if defined(__APPLE__)
+# if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
+     defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#   define __MAC_OS_X_VERSION_MIN_REQUIRED __ENVIROMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
+# endif
+# if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
+#   if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
+#     define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#   endif
+# endif
+#endif // defined(__APPLE__)
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #define _LIBCPP_HAS_DEFAULTRUNELOCALE
 #endif

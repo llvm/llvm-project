@@ -4122,6 +4122,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   const bool IsAndroid = Triple.isAndroid();
   const bool IsMips = isMipsArch(Arch);
+  const bool IsHexagon = Arch == llvm::Triple::hexagon;
 
   if (IsMips && !SysRoot.empty())
     ExtraOpts.push_back("--sysroot=" + SysRoot);
@@ -4131,7 +4132,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
   // Android loader does not support .gnu.hash.
-  if (!IsMips && !IsAndroid) {
+  // Hexagon linker/loader does not support .gnu.hash
+  if (!IsMips && !IsAndroid && !IsHexagon) {
     if (Distro.IsRedhat() || Distro.IsOpenSUSE() ||
         (Distro.IsUbuntu() && Distro >= Distro::UbuntuMaverick))
       ExtraOpts.push_back("--hash-style=gnu");

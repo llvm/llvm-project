@@ -11,7 +11,10 @@ struct X<int***> {
   typedef X<int***> *ptr;
 };
 
-X<float>::X<int> xi = x; // expected-error{{qualified reference to 'X' is a constructor name rather than a template name wherever a constructor can be declared}}
+X<float>::X<int> xi = x; // expected-error{{qualified reference to 'X' is a constructor name rather than a template name}}
+void f() {
+  X<float>::X<int> xi = x; // expected-error{{qualified reference to 'X' is a constructor name rather than a template name}}
+}
 
 // [temp.local]p1:
 

@@ -243,7 +243,10 @@ def err_expected_property_name : Error<"expected property name">;
 
 def err_unexpected_at : Error<"unexpected '@' in program">;
 def err_atimport : Error<
-"use of '@import' when modules are disabled">;
+  "use of '@import' when modules are disabled">;
+def err_atimport_cxx : Error<
+  "use of '@import' when C++ modules are disabled, consider using fmodules "
+  "and fcxx-modules">;
 
 def err_invalid_reference_qualifier_application : Error<
   "'%0' qualifier may not be applied to a reference">;
@@ -669,9 +672,6 @@ def warn_static_inline_explicit_inst_ignored : Warning<
 // Constructor template diagnostics.
 def err_out_of_line_constructor_template_id : Error<
   "out-of-line constructor for %0 cannot have template arguments">;
-def err_out_of_line_template_id_type_names_constructor : Error<
-  "qualified reference to %0 is a constructor name rather than a "
-  "%select{template name|type}1 wherever a constructor can be declared">;
 
 def err_expected_qualified_after_typename : Error<
   "expected a qualified name after 'typename'">;

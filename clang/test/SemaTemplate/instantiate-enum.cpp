@@ -29,13 +29,14 @@ namespace PR6375 {
 namespace EnumScoping {
 
 template <typename T>
-class C {
+struct C {
+  struct X {};
   enum {
     value = 42
   };
 };
 
-void f(int i, C<int>::C c) {
+void f(int i, C<int>::X c) {
   int value;
 }
 

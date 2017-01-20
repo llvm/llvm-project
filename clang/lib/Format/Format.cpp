@@ -1888,8 +1888,8 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
 }
 
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                                     StringRef FallbackStyle, StringRef Code,
-                                     vfs::FileSystem *FS) {
+                                     StringRef FallbackStyleName,
+                                     StringRef Code, vfs::FileSystem *FS) {
   if (!FS) {
     FS = vfs::getRealFileSystem().get();
   }
@@ -1903,9 +1903,9 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       (Code.contains("\n- (") || Code.contains("\n+ (")))
     Style.Language = FormatStyle::LK_ObjC;
 
-  // FIXME: If FallbackStyle is explicitly "none", format is disabled.
-  if (!getPredefinedStyle(FallbackStyle, Style.Language, &Style))
-    return make_string_error("Invalid fallback style \"" + FallbackStyle.str());
+  FormatStyle FallbackStyle = getNoStyle();
+  if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
+    return make_string_error("Invalid fallback style \"" + FallbackStyleName);
 
   if (StyleName.startswith("{")) {
     // Parse YAML/JSON style from the command line.
@@ -1977,7 +1977,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     return make_string_error("Configuration file(s) do(es) not support " +
                              getLanguageName(Style.Language) + ": " +
                              UnsuitableConfigFiles);
-  return Style;
+  return FallbackStyle;
 }
 
 } // namespace format

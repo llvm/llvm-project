@@ -53,7 +53,7 @@ namespace ambiguous_missing_parens {
 // expected-error@+1 {{'Q::U' instantiated to a class template, not a function template}}
 template <typename T> void f() { int a = sizeof T::template U<0> + 4; }
 struct Q {
-  // expected-error@+1 {{class template declared here}}
+  // expected-note@+1 {{class template declared here}}
   template <int> struct U {};
 };
 // expected-note-re@+1 {{in instantiation {{.*}} requested here}}

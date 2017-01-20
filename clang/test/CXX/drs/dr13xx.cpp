@@ -13,6 +13,86 @@ namespace std {
   };
 }
 
+namespace dr1310 { // dr1310: 5
+  struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
+  void f() {
+    S::S(a); // expected-error {{qualified reference to 'S' is a constructor name}}
+  }
+  struct T { int n; typedef int U; typedef T V; };
+  int k = T().T::T::n;
+  T::V v;
+
+  struct U { int U; };
+  int u = U().U::U;
+  struct U::U w;
+
+  struct V : T::T {
+    // FIXME: This is technically ill-formed, but we consider that to be a defect.
+    V() : T::T() {}
+  };
+  template<typename T> struct VT : T::T {
+    VT() : T::T() {}
+  };
+  template struct VT<T>;
+
+  template<template<typename> class> class TT {};
+  template<typename> class TTy {};
+
+  template<typename T> struct WBase {};
+  template<typename T> struct W : WBase<T> { typedef int X; int n; };
+
+  void w_test() {
+    W<int>::W w1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W::X w1ax;
+    W<int>::W<int> w1b; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W<int>::X w1bx;
+    typename W<int>::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    typename W<int>::W::X w2ax; // expected-error 0-1{{outside of a template}}
+    typename W<int>::W<int> w2b; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    typename W<int>::W<int>::X w2bx; // expected-error 0-1{{outside of a template}}
+    W<int>::template W<int> w3; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    W<int>::template W<int>::X w3x; // expected-error 0-1{{outside of a template}}
+    typename W<int>::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-2{{outside of a template}}
+    typename W<int>::template W<int>::X w4x; // expected-error 0-2{{outside of a template}}
+
+    TT<W<int>::W> tt1; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TTy<W<int>::W> tt1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TT<W<int>::template W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    TT<W<int>::WBase> tt3;
+    TTy<W<int>::WBase> tt3a;
+    TT<W<int>::template WBase> tt4; // expected-error 0-1{{outside of a template}}
+
+    W<int> w;
+    (void)w.W::W::n;
+    (void)w.W<int>::W::n;
+    (void)w.W<int>::W<int>::n;
+    (void)w.W<int>::template W<int>::n; // expected-error 0-1{{outside of a template}}
+  }
+
+  template<typename W>
+  void wt_test() {
+    typename W::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    typename W::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TTy<typename W::W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}}
+    TT<W::template W> tt3; // expected-error {{qualified reference to 'W' is a constructor name}}
+  }
+  template<typename W>
+  void wt_test_good() {
+    typename W::W::X w2ax;
+    typename W::template W<int>::X w4x;
+    TTy<typename W::WBase> tt4;
+    TT<W::template WBase> tt5;
+
+    W w;
+    (void)w.W::W::n;
+    (void)w.W::template W<int>::n;
+    (void)w.template W<int>::W::n;
+    (void)w.template W<int>::template W<int>::n;
+  }
+  template void wt_test<W<int> >(); // expected-note {{instantiation of}}
+  template void wt_test_good<W<int> >();
+}
+
 namespace dr1315 { // dr1315: partial
   template <int I, int J> struct A {};
   template <int I> // expected-note {{non-deducible template parameter 'I'}}

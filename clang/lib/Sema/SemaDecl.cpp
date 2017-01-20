@@ -425,6 +425,17 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
 
   QualType T;
   if (TypeDecl *TD = dyn_cast<TypeDecl>(IIDecl)) {
+    // C++ [class.qual]p2: A lookup that would find the injected-class-name
+    // instead names the constructors of the class, except when naming a class.
+    // This is ill-formed when we're not actually forming a ctor or dtor name.
+    auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
+    auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
+    if (!isClassName && !IsCtorOrDtorName && LookupRD && FoundRD &&
+        FoundRD->isInjectedClassName() &&
+        declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
+      Diag(NameLoc, diag::err_out_of_line_qualified_id_type_names_constructor)
+          << &II << /*Type*/1;
+
     DiagnoseUseOfDecl(IIDecl, NameLoc);
 
     T = Context.getTypeDeclType(TD);
@@ -783,6 +794,13 @@ Sema::ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
   if (NextToken.is(tok::coloncolon)) {
     NestedNameSpecInfo IdInfo(Name, NameLoc, NextToken.getLocation());
     BuildCXXNestedNameSpecifier(S, IdInfo, false, SS, nullptr, false);
+  } else if (getLangOpts().CPlusPlus && SS.isSet() &&
+             isCurrentClassName(*Name, S, &SS)) {
+    // Per [class.qual]p2, this names the constructors of SS, not the
+    // injected-class-name. We don't have a classification for that.
+    // There's not much point caching this result, since the parser
+    // will reject it later.
+    return NameClassification::Unknown();
   }
 
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
