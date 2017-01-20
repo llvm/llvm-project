@@ -165,13 +165,11 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _sdwa : VOPC_SDWA_Pseudo <opName, P>,
-              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)> {
+  def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
     let isCompare = 1;
-    let isCommutable = 1;
   }
 }
 

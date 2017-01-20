@@ -425,10 +425,11 @@ void ARMBaseRegisterInfo::emitLoadConstPool(
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::LDRcp))
-    .addReg(DestReg, getDefRegState(true), SubIdx)
-    .addConstantPoolIndex(Idx)
-    .addImm(0).addImm(Pred).addReg(PredReg)
-    .setMIFlags(MIFlags);
+      .addReg(DestReg, getDefRegState(true), SubIdx)
+      .addConstantPoolIndex(Idx)
+      .addImm(0)
+      .add(predOps(Pred, PredReg))
+      .setMIFlags(MIFlags);
 }
 
 bool ARMBaseRegisterInfo::

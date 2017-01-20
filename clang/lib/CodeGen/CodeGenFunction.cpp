@@ -112,9 +112,8 @@ CodeGenFunction::~CodeGenFunction() {
   if (FirstBlockInfo)
     destroyBlockInfos(FirstBlockInfo);
 
-  if (getLangOpts().OpenMP) {
+  if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
-  }
 }
 
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,

@@ -707,8 +707,8 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
             .addReg(Base, getKillRegState(KillOldBase));
         } else
           BuildMI(MBB, InsertBefore, DL, TII->get(ARM::tMOVr), NewBase)
-            .addReg(Base, getKillRegState(KillOldBase))
-            .addImm(Pred).addReg(PredReg);
+              .addReg(Base, getKillRegState(KillOldBase))
+              .add(predOps(Pred, PredReg));
 
         // The following ADDS/SUBS becomes an update.
         Base = NewBase;
@@ -717,19 +717,21 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
       if (BaseOpc == ARM::tADDrSPi) {
         assert(Offset % 4 == 0 && "tADDrSPi offset is scaled by 4");
         BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase)
-          .addReg(Base, getKillRegState(KillOldBase)).addImm(Offset/4)
-          .addImm(Pred).addReg(PredReg);
+            .addReg(Base, getKillRegState(KillOldBase))
+            .addImm(Offset / 4)
+            .add(predOps(Pred, PredReg));
       } else
         BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase)
             .add(t1CondCodeOp(true))
             .addReg(Base, getKillRegState(KillOldBase))
             .addImm(Offset)
-            .addImm(Pred)
-            .addReg(PredReg);
+            .add(predOps(Pred, PredReg));
     } else {
       BuildMI(MBB, InsertBefore, DL, TII->get(BaseOpc), NewBase)
-        .addReg(Base, getKillRegState(KillOldBase)).addImm(Offset)
-        .addImm(Pred).addReg(PredReg).addReg(0);
+          .addReg(Base, getKillRegState(KillOldBase))
+          .addImm(Offset)
+          .add(predOps(Pred, PredReg))
+          .add(condCodeOp());
     }
     Base = NewBase;
     BaseKill = true; // New base is always killed straight away.
@@ -1401,14 +1403,19 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
       } else {
         int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
         BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
-          .addReg(Base, RegState::Define)
-          .addReg(Base).addReg(0).addImm(Imm).addImm(Pred).addReg(PredReg);
+            .addReg(Base, RegState::Define)
+            .addReg(Base)
+            .addReg(0)
+            .addImm(Imm)
+            .add(predOps(Pred, PredReg));
       }
     } else {
       // t2LDR_PRE, t2LDR_POST
       BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
-        .addReg(Base, RegState::Define)
-        .addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg);
+          .addReg(Base, RegState::Define)
+          .addReg(Base)
+          .addImm(Offset)
+          .add(predOps(Pred, PredReg));
     }
   } else {
     MachineOperand &MO = MI->getOperand(0);
@@ -1419,13 +1426,18 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
       int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
       // STR_PRE, STR_POST
       BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
-        .addReg(MO.getReg(), getKillRegState(MO.isKill()))
-        .addReg(Base).addReg(0).addImm(Imm).addImm(Pred).addReg(PredReg);
+          .addReg(MO.getReg(), getKillRegState(MO.isKill()))
+          .addReg(Base)
+          .addReg(0)
+          .addImm(Imm)
+          .add(predOps(Pred, PredReg));
     } else {
       // t2STR_PRE, t2STR_POST
       BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
-        .addReg(MO.getReg(), getKillRegState(MO.isKill()))
-        .addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg);
+          .addReg(MO.getReg(), getKillRegState(MO.isKill()))
+          .addReg(Base)
+          .addImm(Offset)
+          .add(predOps(Pred, PredReg));
     }
   }
   MBB.erase(MBBI);

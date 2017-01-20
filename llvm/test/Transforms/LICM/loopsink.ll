@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-sink < %s | FileCheck %s
+; RUN: opt -S -passes=loop-sink < %s | FileCheck %s
 
 @g = global i32 0, align 4
 

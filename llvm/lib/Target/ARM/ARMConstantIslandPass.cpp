@@ -897,8 +897,9 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   if (!isThumb)
     BuildMI(OrigBB, DebugLoc(), TII->get(Opc)).addMBB(NewBB);
   else
-    BuildMI(OrigBB, DebugLoc(), TII->get(Opc)).addMBB(NewBB)
-            .addImm(ARMCC::AL).addReg(0);
+    BuildMI(OrigBB, DebugLoc(), TII->get(Opc))
+        .addMBB(NewBB)
+        .add(predOps(ARMCC::AL));
   ++NumSplit;
 
   // Update the CFG.  All succs of OrigBB are now succs of NewBB.
@@ -1296,8 +1297,9 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
       if (!isThumb)
         BuildMI(UserMBB, DebugLoc(), TII->get(UncondBr)).addMBB(NewMBB);
       else
-        BuildMI(UserMBB, DebugLoc(), TII->get(UncondBr)).addMBB(NewMBB)
-          .addImm(ARMCC::AL).addReg(0);
+        BuildMI(UserMBB, DebugLoc(), TII->get(UncondBr))
+            .addMBB(NewMBB)
+            .add(predOps(ARMCC::AL));
       unsigned MaxDisp = getUnconditionalBrDisp(UncondBr);
       ImmBranches.push_back(ImmBranch(&UserMBB->back(),
                                       MaxDisp, false, UncondBr));
@@ -1683,8 +1685,9 @@ ARMConstantIslands::fixupConditionalBr(ImmBranch &Br) {
   Br.MI = &MBB->back();
   BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
   if (isThumb)
-    BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr)).addMBB(DestBB)
-            .addImm(ARMCC::AL).addReg(0);
+    BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr))
+        .addMBB(DestBB)
+        .add(predOps(ARMCC::AL));
   else
     BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr)).addMBB(DestBB);
   BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
@@ -2240,13 +2243,11 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   if (isThumb2)
     BuildMI(NewBB, DebugLoc(), TII->get(ARM::t2B))
         .addMBB(BB)
-        .addImm(ARMCC::AL)
-        .addReg(0);
+        .add(predOps(ARMCC::AL));
   else
     BuildMI(NewBB, DebugLoc(), TII->get(ARM::tB))
         .addMBB(BB)
-        .addImm(ARMCC::AL)
-        .addReg(0);
+        .add(predOps(ARMCC::AL));
 
   // Update internal data structures to account for the newly inserted MBB.
   MF->RenumberBlocks(NewBB);

@@ -308,6 +308,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VOP3;
   }
 
+  static bool isSDWA(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::SDWA;
+  }
+
+  bool isSDWA(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::SDWA;
+  }
+
   static bool isVOPC(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VOPC;
   }

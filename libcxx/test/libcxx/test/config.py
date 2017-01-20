@@ -423,6 +423,15 @@ class Configuration(object):
         if not std:
             # Choose the newest possible language dialect if none is given.
             possible_stds = ['c++1z', 'c++14', 'c++11', 'c++03']
+            if self.cxx.type == 'gcc':
+                maj_v, _, _ = self.cxx.version
+                maj_v = int(maj_v)
+                if maj_v < 7:
+                    possible_stds.remove('c++1z')
+                # FIXME: How many C++14 tests actually fail under GCC 5 and 6?
+                # Should we XFAIL them individually instead?
+                if maj_v <= 6:
+                    possible_stds.remove('c++14')
             for s in possible_stds:
                 if self.cxx.hasCompileFlag('-std=%s' % s):
                     std = s
