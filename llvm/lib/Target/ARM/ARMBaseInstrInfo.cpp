@@ -168,9 +168,8 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
                          get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
                      .addReg(BaseReg)
                      .addImm(Amt)
-                     .addImm(Pred)
-                     .addReg(0)
-                     .addReg(0);
+                     .add(predOps(Pred))
+                     .add(condCodeOp());
     } else if (Amt != 0) {
       ARM_AM::ShiftOpc ShOpc = ARM_AM::getAM2ShiftOpc(OffImm);
       unsigned SOOpc = ARM_AM::getSORegOpc(ShOpc, Amt);
@@ -180,17 +179,15 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
                      .addReg(OffReg)
                      .addReg(0)
                      .addImm(SOOpc)
-                     .addImm(Pred)
-                     .addReg(0)
-                     .addReg(0);
+                     .add(predOps(Pred))
+                     .add(condCodeOp());
     } else
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
                      .addReg(BaseReg)
                      .addReg(OffReg)
-                     .addImm(Pred)
-                     .addReg(0)
-                     .addReg(0);
+                     .add(predOps(Pred))
+                     .add(condCodeOp());
     break;
   }
   case ARMII::AddrMode3 : {
@@ -202,17 +199,15 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
                          get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
                      .addReg(BaseReg)
                      .addImm(Amt)
-                     .addImm(Pred)
-                     .addReg(0)
-                     .addReg(0);
+                     .add(predOps(Pred))
+                     .add(condCodeOp());
     else
       UpdateMI = BuildMI(MF, MI.getDebugLoc(),
                          get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
                      .addReg(BaseReg)
                      .addReg(OffReg)
-                     .addImm(Pred)
-                     .addReg(0)
-                     .addReg(0);
+                     .add(predOps(Pred))
+                     .add(condCodeOp());
     break;
   }
   }
@@ -433,7 +428,7 @@ unsigned ARMBaseInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (!FBB) {
     if (Cond.empty()) { // Unconditional branch?
       if (isThumb)
-        BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB).addImm(ARMCC::AL).addReg(0);
+        BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB).add(predOps(ARMCC::AL));
       else
         BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
     } else
@@ -450,7 +445,7 @@ unsigned ARMBaseInstrInfo::insertBranch(MachineBasicBlock &MBB,
       .addImm(Cond[0].getImm())
       .add(Cond[1]);
   if (isThumb)
-    BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB).addImm(ARMCC::AL).addReg(0);
+    BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB).add(predOps(ARMCC::AL));
   else
     BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
   return 2;
@@ -2047,9 +2042,10 @@ void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
                                    unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
     BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), DestReg)
-      .addReg(BaseReg, RegState::Kill)
-      .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-      .setMIFlags(MIFlags);
+        .addReg(BaseReg, RegState::Kill)
+        .add(predOps(Pred, PredReg))
+        .add(condCodeOp())
+        .setMIFlags(MIFlags);
     return;
   }
 
@@ -2069,9 +2065,11 @@ void llvm::emitARMRegPlusImmediate(MachineBasicBlock &MBB,
     // Build the new ADD / SUB.
     unsigned Opc = isSub ? ARM::SUBri : ARM::ADDri;
     BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg)
-      .addReg(BaseReg, RegState::Kill).addImm(ThisVal)
-      .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-      .setMIFlags(MIFlags);
+        .addReg(BaseReg, RegState::Kill)
+        .addImm(ThisVal)
+        .add(predOps(Pred, PredReg))
+        .add(condCodeOp())
+        .setMIFlags(MIFlags);
     BaseReg = DestReg;
   }
 }

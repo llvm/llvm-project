@@ -16,7 +16,7 @@
 #include <memory>
 
 #include "test_macros.h"
-#include "../../deleter.h"
+#include "deleter_types.h"
 
 struct A
 {

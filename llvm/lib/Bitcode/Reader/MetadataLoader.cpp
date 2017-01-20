@@ -358,6 +358,9 @@ class PlaceholderQueue {
   std::deque<DistinctMDOperandPlaceholder> PHs;
 
 public:
+  ~PlaceholderQueue() {
+    assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
+  }
   bool empty() { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
   void flush(BitcodeReaderMetadataList &MetadataList);

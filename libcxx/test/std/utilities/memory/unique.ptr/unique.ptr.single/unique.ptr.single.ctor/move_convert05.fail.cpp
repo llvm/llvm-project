@@ -17,7 +17,7 @@
 #include <utility>
 #include <cassert>
 
-#include "../../deleter.h"
+#include "deleter_types.h"
 
 // test converting move ctor.  Should only require a MoveConstructible deleter, or if
 //    deleter is a reference, not even that.

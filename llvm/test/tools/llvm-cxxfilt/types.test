@@ -1,0 +1,5 @@
+RUN: llvm-cxxfilt -t f i | FileCheck %s
+
+CHECK: float
+CHECK-NEXT: int
+

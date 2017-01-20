@@ -264,10 +264,11 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
     if (Fits) {
       if (isSub) {
         BuildMI(MBB, MBBI, dl, TII.get(ARM::t2SUBrr), DestReg)
-          .addReg(BaseReg)
-          .addReg(DestReg, RegState::Kill)
-          .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-          .setMIFlags(MIFlags);
+            .addReg(BaseReg)
+            .addReg(DestReg, RegState::Kill)
+            .add(predOps(Pred, PredReg))
+            .add(condCodeOp())
+            .setMIFlags(MIFlags);
       } else {
         // Here we know that DestReg is not SP but we do not
         // know anything about BaseReg. t2ADDrr is an invalid
@@ -275,10 +276,11 @@ void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
         // is fine if SP is the first argument. To be sure we
         // do not generate invalid encoding, put BaseReg first.
         BuildMI(MBB, MBBI, dl, TII.get(ARM::t2ADDrr), DestReg)
-          .addReg(BaseReg)
-          .addReg(DestReg, RegState::Kill)
-          .addImm((unsigned)Pred).addReg(PredReg).addReg(0)
-          .setMIFlags(MIFlags);
+            .addReg(BaseReg)
+            .addReg(DestReg, RegState::Kill)
+            .add(predOps(Pred, PredReg))
+            .add(condCodeOp())
+            .setMIFlags(MIFlags);
       }
       return;
     }

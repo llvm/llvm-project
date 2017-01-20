@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "count_new.hpp"
 
-#include "../test_deleter.h"
+#include "deleter_types.h"
 
 struct A
 {

@@ -696,8 +696,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     HI16 = HI16.addImm(SOImmValV2);
     LO16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
     HI16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-    LO16.addImm(Pred).addReg(PredReg).addReg(0);
-    HI16.addImm(Pred).addReg(PredReg).addReg(0);
+    LO16.addImm(Pred).addReg(PredReg).add(condCodeOp());
+    HI16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     TransferImpOps(MI, LO16, HI16);
     MI.eraseFromParent();
     return;
@@ -1028,7 +1028,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
         // Add the default predicate in Thumb mode.
         if (STI->isThumb())
-          MIB.addImm(ARMCC::AL).addReg(0);
+          MIB.add(predOps(ARMCC::AL));
       } else if (RetOpcode == ARM::TCRETURNri) {
         BuildMI(MBB, MBBI, dl,
                 TII.get(STI->isThumb() ? ARM::tTAILJMPr : ARM::TAILJMPr))
@@ -1064,7 +1064,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .add(MI.getOperand(2))
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
 
       MI.eraseFromParent();
       return true;
@@ -1076,7 +1076,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(3).getImm())
           .addImm(MI.getOperand(4).getImm()) // 'pred'
           .add(MI.getOperand(5))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
 
       MI.eraseFromParent();
       return true;
@@ -1089,7 +1089,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(4).getImm())
           .addImm(MI.getOperand(5).getImm()) // 'pred'
           .add(MI.getOperand(6))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
 
       MI.eraseFromParent();
       return true;
@@ -1113,7 +1113,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(2).getImm())
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
 
       MI.eraseFromParent();
       return true;
@@ -1126,7 +1126,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(2).getImm())
           .addImm(MI.getOperand(3).getImm()) // 'pred'
           .add(MI.getOperand(4))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
 
       MI.eraseFromParent();
       return true;
@@ -1149,7 +1149,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addImm(MI.getOperand(3).getImm())
           .addImm(MI.getOperand(4).getImm()) // 'pred'
           .add(MI.getOperand(5))
-          .addReg(0); // 's' bit
+          .add(condCodeOp()); // 's' bit
       MI.eraseFromParent();
       return true;
     }
@@ -1222,7 +1222,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
               .add(MI.getOperand(1))
               .addImm(ARM_AM::getSORegOpc(ARM_AM::rrx, 0))
               .add(predOps(ARMCC::AL))
-              .addReg(0);
+              .add(condCodeOp());
       TransferImpOps(MI, MIB, MIB);
       MI.eraseFromParent();
       return true;
@@ -1231,10 +1231,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::TPsoft: {
       MachineInstrBuilder MIB;
       if (Opcode == ARM::tTPsoft)
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get( ARM::tBL))
-              .addImm((unsigned)ARMCC::AL).addReg(0)
-              .addExternalSymbol("__aeabi_read_tp", 0);
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tBL))
+                  .add(predOps(ARMCC::AL))
+                  .addExternalSymbol("__aeabi_read_tp", 0);
       else
         MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
                       TII->get( ARM::BL))
