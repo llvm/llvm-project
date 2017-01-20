@@ -44,8 +44,8 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static void reportSelectionError(const MachineInstr *MI, const Twine &Message) {
-  const MachineFunction &MF = *MI->getParent()->getParent();
+static void reportSelectionError(const MachineFunction &MF,
+                                 const MachineInstr *MI, const Twine &Message) {
   std::string ErrStorage;
   raw_string_ostream Err(ErrStorage);
   Err << Message << ":\nIn function: " << MF.getName() << '\n';
@@ -83,7 +83,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
-          reportSelectionError(&MI, "Instruction is not legal");
+          reportSelectionError(MF, &MI, "Instruction is not legal");
 
 #endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
@@ -119,7 +119,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         if (TPC.isGlobalISelAbortEnabled())
           // FIXME: It would be nice to dump all inserted instructions.  It's
           // not obvious how, esp. considering select() can insert after MI.
-          reportSelectionError(&MI, "Cannot select");
+          reportSelectionError(MF, &MI, "Cannot select");
         Failed = true;
         break;
       }
@@ -146,7 +146,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                    : &*MRI.def_instr_begin(VReg);
     if (!RC) {
       if (TPC.isGlobalISelAbortEnabled())
-        reportSelectionError(MI, "VReg as no regclass after selection");
+        reportSelectionError(MF, MI, "VReg as no regclass after selection");
       Failed = true;
       break;
     }
@@ -155,7 +155,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         VRegToType.second.getSizeInBits() > (RC->getSize() * 8)) {
       if (TPC.isGlobalISelAbortEnabled())
         reportSelectionError(
-            MI, "VReg has explicit size different from class size");
+            MF, MI, "VReg has explicit size different from class size");
       Failed = true;
       break;
     }
