@@ -31,8 +31,8 @@
                    (with-current-buffer stdout
                      (insert "<?xml version='1.0'?>
 <replacements xml:space='preserve' incomplete_format='false'>
-<replacement offset='7' length='0'> </replacement>
-<replacement offset='14' length='0'> </replacement>
+<replacement offset='4' length='0'> </replacement>
+<replacement offset='10' length='0'> </replacement>
 </replacements>
 "))
                    0)))))
@@ -58,15 +58,14 @@
        (should (equal args
                       '("-output-replacements-xml" "-assume-filename" "foo.cpp"
                         "-style" "file"
-                        ;; Length of the UTF-8 byte-order mark.
-                        "-offset" "3"
+                        ;; Beginning of buffer, no byte-order mark.
+                        "-offset" "0"
                         ;; We have two lines with 2×2 bytes for the umlauts,
-                        ;; 2 bytes for the line ending, and 3 bytes for the
+                        ;; 1 byte for the line ending, and 3 bytes for the
                         ;; other ASCII characters each.
-                        "-length" "18"
-                        ;; Length of a single line (without line ending) plus
-                        ;; BOM.
-                        "-cursor" "10")))))))
+                        "-length" "16"
+                        ;; Length of a single line (without line ending).
+                        "-cursor" "7")))))))
 
 (ert-deftest clang-format-buffer--process-encoding ()
   "Tests that text is sent to the clang-format process in the
@@ -105,6 +104,23 @@ right encoding."
         (clang-format-buffer))
       (should (equal (buffer-string) "ä\n"))
       (should (eobp)))
-    (should (equal call-process-inputs '("ef bb bf c3 a4 0d 0a ")))))
+    (should (equal call-process-inputs '("c3 a4 0a ")))))
+
+(ert-deftest clang-format-buffer--end-to-end ()
+  "End-to-end test for ‘clang-format-buffer’.
+Actually calls the clang-format binary."
+  (skip-unless (file-executable-p clang-format-executable))
+  (with-temp-buffer
+    (let ((buffer-file-name "foo.cpp")
+          (buffer-file-coding-system 'utf-8-with-signature-dos)
+          (default-process-coding-system 'latin-1-unix))
+      (insert "ä =ö;\nü= ß;\n")
+      (goto-char (point-min))
+      (end-of-line)
+      (clang-format-buffer))
+    (should (equal (buffer-string) "ä = ö;\nü = ß;\n"))
+    (should (eolp))
+    (should (equal (buffer-substring (point) (point-max))
+                   "\nü = ß;\n"))))
 
 ;;; clang-format-test.el ends here

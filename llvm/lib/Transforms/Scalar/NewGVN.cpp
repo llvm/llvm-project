@@ -85,6 +85,8 @@ STATISTIC(NumGVNLeaderChanges, "Number of leader changes");
 STATISTIC(NumGVNSortedLeaderChanges, "Number of sorted leader changes");
 STATISTIC(NumGVNAvoidedSortedLeaderChanges,
           "Number of avoided sorted leader changes");
+STATISTIC(NumGVNNotMostDominatingLeader,
+          "Number of times a member dominated it's new classes' leader");
 
 //===----------------------------------------------------------------------===//
 //                                GVN Pass
@@ -1071,16 +1073,20 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I,
   if (I == OldClass->NextLeader.first)
     OldClass->NextLeader = {nullptr, ~0U};
 
-  // The new instruction and new class leader may either be siblings in the
-  // dominator tree, or the new class leader should dominate the new member
-  // instruction.  We simply check that the member instruction does not properly
-  // dominate the new class leader.
-  assert((!isa<Instruction>(NewClass->RepLeader) || !NewClass->RepLeader ||
-          I == NewClass->RepLeader ||
-          !DT->properlyDominates(
-              I->getParent(),
-              cast<Instruction>(NewClass->RepLeader)->getParent())) &&
-         "New class for instruction should not be dominated by instruction");
+  // It's possible, though unlikely, for us to discover equivalences such
+  // that the current leader does not dominate the old one.
+  // This statistic tracks how often this happens.
+  // We assert on phi nodes when this happens, currently, for debugging, because
+  // we want to make sure we name phi node cycles properly.
+  if (isa<Instruction>(NewClass->RepLeader) && NewClass->RepLeader &&
+      I != NewClass->RepLeader &&
+      DT->properlyDominates(
+          I->getParent(),
+          cast<Instruction>(NewClass->RepLeader)->getParent())) {
+    ++NumGVNNotMostDominatingLeader;
+    assert(!isa<PHINode>(I) &&
+           "New class for instruction should not be dominated by instruction");
+  }
 
   if (NewClass->RepLeader != I) {
     auto DFSNum = InstrDFS.lookup(I);

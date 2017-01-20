@@ -918,12 +918,7 @@ const OutputSectionBase *LinkerScript<ELFT>::getSymbolSection(StringRef S) {
     return CurOutSec ? CurOutSec : (*OutputSections)[0];
   }
 
-  if (auto *DR = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
-    return DR->Section ? DR->Section->OutSec : nullptr;
-  if (auto *DS = dyn_cast_or_null<DefinedSynthetic>(Sym))
-    return DS->Section;
-
-  return nullptr;
+  return SymbolTableSection<ELFT>::getOutputSection(Sym);
 }
 
 // Returns indices of ELF headers containing specific section, identified

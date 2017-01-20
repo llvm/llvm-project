@@ -9,6 +9,8 @@
 
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <iostream>
@@ -36,7 +38,10 @@ static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
 }
 
 int main(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv, "llvm symbol table dumper\n");
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  cl::ParseCommandLineOptions(argc, argv, "llvm symbol undecoration tool\n");
 
   if (Decorated.empty())
     for (std::string Mangled; std::getline(std::cin, Mangled);)
