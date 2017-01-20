@@ -933,8 +933,8 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
 
   // We were able to resolve the template name to an actual template. 
   // Build an appropriate nested-name-specifier.
-  QualType T = CheckTemplateIdType(Template.get(), TemplateNameLoc, 
-                                   TemplateArgs);
+  QualType T =
+      CheckTemplateIdType(Template.get(), TemplateNameLoc, TemplateArgs);
   if (T.isNull())
     return true;
 

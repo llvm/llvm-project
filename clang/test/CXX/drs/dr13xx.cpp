@@ -13,6 +13,59 @@ namespace std {
   };
 }
 
+namespace dr1310 { // dr1310: partial
+  struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
+  void f() {
+    S::S(a); // expected-error {{qualified reference to 'S' is a constructor name}}
+  }
+  struct T { int n; typedef int U; typedef T V; };
+  int k = T().T::T::n;
+  T::V v;
+
+  struct U { int U; };
+  int u = U().U::U;
+  struct U::U w;
+
+  struct V : T::T {
+    // FIXME: This is technically ill-formed, but we consider that to be a defect.
+    V() : T::T() {}
+  };
+  template<typename T> struct VT : T::T {
+    VT() : T::T() {}
+  };
+  template struct VT<T>;
+
+  template<template<typename> class> class TT {};
+
+  template<typename T> struct W {};
+
+  void w_test() {
+    W<int>::W w1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W<int> w1b; // expected-error {{qualified reference to 'W' is a constructor name}}
+    typename W<int>::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{typename}}
+    typename W<int>::W<int> w2b; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{typename}}
+    W<int>::template W<int> w3; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{template}}
+    typename W<int>::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{typename}} expected-error 0-1{{template}}
+    TT<W<int>::W> tt1; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{template}}
+    // FIXME: It's inconsistent for us to reject the above 'template' cases but
+    // not this one; per the standard, they are all ill-formed.
+    TT<W<int>::template W> tt2; // expected-error 0-1{{template}}
+  }
+
+  template<typename W>
+  void wt_test() {
+    typename W::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{typename}}
+    // FIXME: We reject the non-dependent form of this, and this case appears
+    // to be ill-formed too. However, our behavior here matches that of other
+    // implementations.
+    typename W::template W<int> w4; // expected-error 0-1{{typename}} expected-error 0-1{{template}}
+    // FIXME: We reject the non-dependent form of this one, too.
+    TT<W::W> tt1; // expected-error 0-1{{template}}
+    TT<W::template W> tt2; // expected-error 0-1{{template}}
+  }
+  template void wt_test<W<int> >(); // expected-note {{instantiation of}}
+}
+
 namespace dr1315 { // dr1315: partial
   template <int I, int J> struct A {};
   template <int I> // expected-note {{non-deducible template parameter 'I'}}

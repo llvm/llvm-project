@@ -1,5 +1,7 @@
 // REQUIRES: long_tests
 
+// RUN: false
+
 // Check that clang is able to process short response files
 // Since this is a short response file, clang must not use a response file
 // to pass its parameters to other tools. This is only necessary for a large

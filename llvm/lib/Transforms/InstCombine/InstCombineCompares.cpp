@@ -1912,14 +1912,42 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
   Value *X = Shl->getOperand(0);
   Type *ShType = Shl->getType();
 
-  // If this is a signed comparison to 0 and the shift is sign preserving,
-  // use the shift LHS operand instead; isSignTest may change 'Pred', so only
-  // do that if we're sure to not continue on in this function.
-  if (Shl->hasNoSignedWrap() && isSignTest(Pred, *C))
-    return new ICmpInst(Pred, X, Constant::getNullValue(ShType));
+  // NSW guarantees that we are only shifting out sign bits from the high bits,
+  // so we can ASHR the compare constant without needing a mask and eliminate
+  // the shift.
+  if (Shl->hasNoSignedWrap()) {
+    if (Pred == ICmpInst::ICMP_SGT) {
+      // icmp Pred (shl nsw X, ShiftAmt), C --> icmp Pred X, (C >>s ShiftAmt)
+      APInt ShiftedC = C->ashr(*ShiftAmt);
+      return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
+    }
+    if (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) {
+      // This is the same code as the SGT case, but assert the pre-condition
+      // that is needed for this to work with equality predicates.
+      assert(C->ashr(*ShiftAmt).shl(*ShiftAmt) == *C &&
+             "Compare known true or false was not folded");
+      APInt ShiftedC = C->ashr(*ShiftAmt);
+      return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
+    }
+    if (Pred == ICmpInst::ICMP_SLT) {
+      // SLE is the same as above, but SLE is canonicalized to SLT, so convert:
+      // (X << S) <=s C is equiv to X <=s (C >> S) for all C
+      // (X << S) <s (C + 1) is equiv to X <s (C >> S) + 1 if C <s SMAX
+      // (X << S) <s C is equiv to X <s ((C - 1) >> S) + 1 if C >s SMIN
+      assert(!C->isMinSignedValue() && "Unexpected icmp slt");
+      APInt ShiftedC = (*C - 1).ashr(*ShiftAmt) + 1;
+      return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
+    }
+    // If this is a signed comparison to 0 and the shift is sign preserving,
+    // use the shift LHS operand instead; isSignTest may change 'Pred', so only
+    // do that if we're sure to not continue on in this function.
+    if (isSignTest(Pred, *C))
+      return new ICmpInst(Pred, X, Constant::getNullValue(ShType));
+  }
 
-  // A 'shl nuw' is just shifting out zeros, so adjust the compare constant
-  // and eliminate the shift.
+  // NUW guarantees that we are only shifting out zero bits from the high bits,
+  // so we can LSHR the compare constant without needing a mask and eliminate
+  // the shift.
   if (Shl->hasNoUnsignedWrap()) {
     if (Pred == ICmpInst::ICMP_UGT) {
       // icmp Pred (shl nuw X, ShiftAmt), C --> icmp Pred X, (C >>u ShiftAmt)
@@ -1945,23 +1973,14 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
     }
   }
 
-  if (Cmp.isEquality()) {
+  if (Cmp.isEquality() && Shl->hasOneUse()) {
+    // Strength-reduce the shift into an 'and'.
+    Constant *Mask = ConstantInt::get(
+        ShType,
+        APInt::getLowBitsSet(TypeBits, TypeBits - ShiftAmt->getZExtValue()));
+    Value *And = Builder->CreateAnd(X, Mask, Shl->getName() + ".mask");
     Constant *LShrC = ConstantInt::get(ShType, C->lshr(*ShiftAmt));
-
-    // If the shift is NSW and we compare to 0, then it is just shifting out
-    // sign bits, no need for an AND either.
-    if (Shl->hasNoSignedWrap() && *C == 0)
-      return new ICmpInst(Pred, X, LShrC);
-
-    if (Shl->hasOneUse()) {
-      // Otherwise, strength-reduce the shift into an 'and'.
-      Constant *Mask = ConstantInt::get(
-          ShType,
-          APInt::getLowBitsSet(TypeBits, TypeBits - ShiftAmt->getZExtValue()));
-
-      Value *And = Builder->CreateAnd(X, Mask, Shl->getName() + ".mask");
-      return new ICmpInst(Pred, And, LShrC);
-    }
+    return new ICmpInst(Pred, And, LShrC);
   }
 
   // Otherwise, if this is a comparison of the sign bit, simplify to and/test.

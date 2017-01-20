@@ -2567,6 +2567,9 @@ public:
         m_option_group(),
         m_file_option(LLDB_OPT_SET_1, false, "file", 'f', 0, eArgTypeName,
                       "Fullpath or basename for module to load.", ""),
+        m_load_option(LLDB_OPT_SET_1, false, "load", 'l',
+                      "Write file contents to the memory.",
+                      false, true),
         m_slide_option(LLDB_OPT_SET_1, false, "slide", 's', 0, eArgTypeOffset,
                        "Set the load address for all sections to be the "
                        "virtual address in the file plus the offset.",
@@ -2574,6 +2577,7 @@ public:
     m_option_group.Append(&m_uuid_option_group, LLDB_OPT_SET_ALL,
                           LLDB_OPT_SET_1);
     m_option_group.Append(&m_file_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Append(&m_load_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Append(&m_slide_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
   }
@@ -2585,6 +2589,7 @@ public:
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    const bool load = m_load_option.GetOptionValue().GetCurrentValue();
     if (target == nullptr) {
       result.AppendError("invalid target, create a debug target using the "
                          "'target create' command");
@@ -2594,6 +2599,21 @@ protected:
       const size_t argc = args.GetArgumentCount();
       ModuleSpec module_spec;
       bool search_using_module_spec = false;
+
+      // Allow "load" option to work without --file or --uuid
+      // option.
+      if (load) {
+        if (!m_file_option.GetOptionValue().OptionWasSet() &&
+            !m_uuid_option_group.GetOptionValue().OptionWasSet()) {
+          ModuleList &module_list = target->GetImages();
+          if (module_list.GetSize() == 1) {
+            search_using_module_spec = true;
+            module_spec.GetFileSpec() =
+                module_list.GetModuleAtIndex(0)->GetFileSpec();
+          }
+        }
+      }
+
       if (m_file_option.GetOptionValue().OptionWasSet()) {
         search_using_module_spec = true;
         const char *arg_cstr = m_file_option.GetOptionValue().GetCurrentValue();
@@ -2721,6 +2741,13 @@ protected:
                   if (process)
                     process->Flush();
                 }
+                if (load) {
+                  Error error = module->LoadInMemory(*target);
+                  if (error.Fail()) {
+                    result.AppendError(error.AsCString());
+                    return false;
+                  }
+                }
               } else {
                 module->GetFileSpec().GetPath(path, sizeof(path));
                 result.AppendErrorWithFormat(
@@ -2783,6 +2810,7 @@ protected:
   OptionGroupOptions m_option_group;
   OptionGroupUUID m_uuid_option_group;
   OptionGroupString m_file_option;
+  OptionGroupBoolean m_load_option;
   OptionGroupUInt64 m_slide_option;
 };
 

@@ -558,6 +558,14 @@ void MappingTraits<MachO::version_min_command>::mapping(
   IO.mapRequired("sdk", LoadCommand.sdk);
 }
 
+void MappingTraits<MachO::note_command>::mapping(
+    IO &IO, MachO::note_command &LoadCommand) {
+
+  IO.mapRequired("data_owner", LoadCommand.data_owner);
+  IO.mapRequired("offset", LoadCommand.offset);
+  IO.mapRequired("size", LoadCommand.size);
+}
+
 } // namespace llvm::yaml
 
 } // namespace llvm

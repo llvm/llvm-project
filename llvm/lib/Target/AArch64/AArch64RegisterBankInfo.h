@@ -16,40 +16,30 @@
 
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 
+#define GET_REGBANK_DECLARATIONS
+#include "AArch64GenRegisterBank.inc"
+
 namespace llvm {
 
 class TargetRegisterInfo;
 
-namespace AArch64 {
-enum {
-  GPRRegBankID = 0, /// General Purpose Registers: W, X.
-  FPRRegBankID = 1, /// Floating Point/Vector Registers: B, H, S, D, Q.
-  CCRRegBankID = 2, /// Conditional register: NZCV.
-  NumRegisterBanks
-};
-} // End AArch64 namespace.
-
 class AArch64GenRegisterBankInfo : public RegisterBankInfo {
-private:
-  static RegisterBank *RegBanks[];
-
 protected:
-  AArch64GenRegisterBankInfo();
 
   enum PartialMappingIdx {
     PMI_None = -1,
-    PMI_GPR32 = 1,
-    PMI_GPR64,
-    PMI_FPR32,
+    PMI_FPR32 = 1,
     PMI_FPR64,
     PMI_FPR128,
     PMI_FPR256,
     PMI_FPR512,
+    PMI_GPR32,
+    PMI_GPR64,
     PMI_FirstGPR = PMI_GPR32,
     PMI_LastGPR = PMI_GPR64,
     PMI_FirstFPR = PMI_FPR32,
     PMI_LastFPR = PMI_FPR512,
-    PMI_Min = PMI_FirstGPR,
+    PMI_Min = PMI_FirstFPR,
   };
 
   static RegisterBankInfo::PartialMapping PartMappings[];
@@ -61,7 +51,7 @@ protected:
     Last3OpsIdx = 18,
     DistanceBetweenRegBanks = 3,
     FirstCrossRegCpyIdx = 21,
-    LastCrossRegCpyIdx = 27,
+    LastCrossRegCpyIdx = 33,
     DistanceBetweenCrossRegCpy = 2
   };
 
@@ -90,6 +80,9 @@ protected:
   /// register bank with a size of \p Size.
   static const RegisterBankInfo::ValueMapping *
   getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
+
+#define GET_TARGET_REGBANK_CLASS
+#include "AArch64GenRegisterBank.inc"
 };
 
 /// This class provides the information for the target register banks.

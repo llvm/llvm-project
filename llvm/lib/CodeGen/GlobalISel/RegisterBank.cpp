@@ -19,10 +19,11 @@ using namespace llvm;
 
 const unsigned RegisterBank::InvalidID = UINT_MAX;
 
-RegisterBank::RegisterBank(unsigned ID, const char *Name, unsigned Size,
-                           const uint32_t *CoveredClasses)
+RegisterBank::RegisterBank(
+    unsigned ID, const char *Name, unsigned Size,
+    const uint32_t *CoveredClasses, unsigned NumRegClasses)
     : ID(ID), Name(Name), Size(Size) {
-  ContainedRegClasses.resize(200);
+  ContainedRegClasses.resize(NumRegClasses);
   ContainedRegClasses.setBitsInMask(CoveredClasses);
 }
 

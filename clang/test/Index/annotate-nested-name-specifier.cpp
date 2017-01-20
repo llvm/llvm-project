@@ -266,7 +266,7 @@ struct X9 : X8 {
 // CHECK: Identifier: "vector" [57:51 - 57:57] TemplateRef=vector:4:12
 // CHECK: Punctuation: "<" [57:57 - 57:58] MemberRefExpr=
 // CHECK: Identifier: "T" [57:58 - 57:59] TypeRef=T:54:19
-// CHECK: Punctuation: ">" [57:59 - 57:60] CallExpr=
+// CHECK: Punctuation: ">" [57:59 - 57:60] MemberRefExpr=
 // CHECK: Punctuation: "(" [57:60 - 57:61] CallExpr=
 // CHECK: Punctuation: ")" [57:61 - 57:62] CallExpr=
 

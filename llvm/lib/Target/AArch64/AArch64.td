@@ -127,6 +127,7 @@ def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
 //===----------------------------------------------------------------------===//
 
 include "AArch64RegisterInfo.td"
+include "AArch64RegisterBanks.td"
 include "AArch64CallingConvention.td"
 
 //===----------------------------------------------------------------------===//

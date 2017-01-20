@@ -2950,6 +2950,9 @@ tracksRegLiveness: true
 # CHECK-NEXT:  - { id: 4, class: gpr64 }
 # CHECK-NEXT:  - { id: 5, class: gpr64 }
 # CHECK-NEXT:  - { id: 6, class: gpr64 }
+# CHECK-NEXT:  - { id: 7, class: gpr64 }
+# CHECK-NEXT:  - { id: 8, class: gpr64 }
+# CHECK-NEXT:  - { id: 9, class: gpr64 }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -2958,12 +2961,17 @@ registers:
   - { id: 4, class: gpr }
   - { id: 5, class: gpr }
   - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+  - { id: 8, class: gpr }
+  - { id: 9, class: gpr }
 
 # CHECK:  body:
 # CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
 # CHECK:      %3 = CSELWr %1, %2, 1, implicit %nzcv
 # CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
 # CHECK:      %6 = CSELXr %4, %5, 1, implicit %nzcv
+# CHECK:      %wzr = ANDSWri %0, 0, implicit-def %nzcv
+# CHECK:      %9 = CSELXr %7, %8, 1, implicit %nzcv
 body:             |
   bb.0:
     liveins: %w0, %w1, %w2
@@ -2976,4 +2984,8 @@ body:             |
     %4(s64) = COPY %x0
     %5(s64) = COPY %x1
     %6(s64) = G_SELECT %0, %4, %5
+
+    %7(p0) = COPY %x0
+    %8(p0) = COPY %x1
+    %9(p0) = G_SELECT %0, %7, %8
 ...

@@ -21,6 +21,9 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
+#define GET_TARGET_REGBANK_IMPL
+#include "AArch64GenRegisterBank.inc"
+
 // This file will be TableGen'ed at some point.
 #include "AArch64GenRegisterBankInfo.def"
 
@@ -29,9 +32,6 @@ using namespace llvm;
 #ifndef LLVM_BUILD_GLOBAL_ISEL
 #error "You shouldn't build this"
 #endif
-
-AArch64GenRegisterBankInfo::AArch64GenRegisterBankInfo()
-    : RegisterBankInfo(RegBanks, AArch64::NumRegisterBanks) {}
 
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     : AArch64GenRegisterBankInfo() {

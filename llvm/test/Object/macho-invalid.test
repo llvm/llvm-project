@@ -505,3 +505,6 @@ INVALID-FAT-ARCH-OVERLAP: macho-invalid-fat-arch-overlap': truncated or malforme
 
 RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat-arch-overlapheaders 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-OVERLAPHEADERS %s
 INVALID-FAT-ARCH-OVERLAPHEADERS: macho-invalid-fat-arch-overlapheaders': truncated or malformed fat file (cputype (7) cpusubtype (3) offset 12 overlaps universal headers)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-note 2>&1 | FileCheck -check-prefix INVALID-NOTE-COMMAND %s
+INVALID-NOTE-COMMAND: macho-invalid-note': truncated or malformed object (size field plus offset field of LC_NOTE command 0 extends past the end of the file)

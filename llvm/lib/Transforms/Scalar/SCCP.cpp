@@ -910,9 +910,10 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
 
   // Otherwise, one of our operands is overdefined.  Try to produce something
   // better than overdefined with some tricks.
-
-  // If this is an AND or OR with 0 or -1, it doesn't matter that the other
-  // operand is overdefined.
+  // If this is:
+  // -> AND/MUL with 0
+  // -> OR with -1
+  // it doesn't matter that the other operand is overdefined.
   if (I.getOpcode() == Instruction::And || I.getOpcode() == Instruction::Mul ||
       I.getOpcode() == Instruction::Or) {
     LatticeVal *NonOverdefVal = nullptr;

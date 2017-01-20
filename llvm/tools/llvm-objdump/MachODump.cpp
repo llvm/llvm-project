@@ -8169,6 +8169,19 @@ static void PrintVersionMinLoadCommand(MachO::version_min_command vd) {
   outs() << "\n";
 }
 
+static void PrintNoteLoadCommand(MachO::note_command Nt) {
+  outs() << "       cmd LC_NOTE\n";
+  outs() << "   cmdsize " << Nt.cmdsize;
+  if (Nt.cmdsize != sizeof(struct MachO::note_command))
+    outs() << " Incorrect size\n";
+  else
+    outs() << "\n";
+  const char *d = Nt.data_owner;
+  outs() << "data_owner " << format("%.16s\n", d);
+  outs() << "    offset " << Nt.offset << "\n";
+  outs() << "      size " << Nt.size << "\n";
+}
+
 static void PrintSourceVersionCommand(MachO::source_version_command sd) {
   outs() << "      cmd LC_SOURCE_VERSION\n";
   outs() << "  cmdsize " << sd.cmdsize;
@@ -9014,6 +9027,9 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
                Command.C.cmd == MachO::LC_VERSION_MIN_WATCHOS) {
       MachO::version_min_command Vd = Obj->getVersionMinLoadCommand(Command);
       PrintVersionMinLoadCommand(Vd);
+    } else if (Command.C.cmd == MachO::LC_NOTE) {
+      MachO::note_command Nt = Obj->getNoteLoadCommand(Command);
+      PrintNoteLoadCommand(Nt);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);

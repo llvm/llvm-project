@@ -73,6 +73,12 @@ public:
   // Set the frequency of the given basic block.
   void setBlockFreq(const BasicBlock *BB, uint64_t Freq);
 
+  /// Set the frequency of \p ReferenceBB to \p Freq and scale the frequencies
+  /// of the blocks in \p BlocksToScale such that their frequencies relative
+  /// to \p ReferenceBB remain unchanged.
+  void setBlockFreqAndScale(const BasicBlock *ReferenceBB, uint64_t Freq,
+                            SmallPtrSetImpl<BasicBlock *> &BlocksToScale);
+
   /// calculate - compute block frequency info for the given function.
   void calculate(const Function &F, const BranchProbabilityInfo &BPI,
                  const LoopInfo &LI);

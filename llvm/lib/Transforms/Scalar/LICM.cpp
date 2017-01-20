@@ -999,14 +999,34 @@ bool llvm::promoteLoopAccessesToScalars(
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
+  // Do we know this object does not escape ?
+  bool IsKnownNonEscapingObject = false;
   if (SafetyInfo->MayThrow) {
     // If a loop can throw, we have to insert a store along each unwind edge.
     // That said, we can't actually make the unwind edge explicit. Therefore,
     // we have to prove that the store is dead along the unwind edge.
     //
-    // Currently, this code just special-cases alloca instructions.
-    if (!isa<AllocaInst>(GetUnderlyingObject(SomePtr, MDL)))
-      return false;
+    // If the underlying object is not an alloca, nor a pointer that does not
+    // escape, then we can not effectively prove that the store is dead along
+    // the unwind edge. i.e. the caller of this function could have ways to
+    // access the pointed object.
+    Value *Object = GetUnderlyingObject(SomePtr, MDL);
+    // If this is a base pointer we do not understand, simply bail.
+    // We only handle alloca and return value from alloc-like fn right now.
+    if (!isa<AllocaInst>(Object)) {
+        if (!isAllocLikeFn(Object, TLI))
+          return false;
+      // If this is an alloc like fn. There are more constraints we need to verify.
+      // More specifically, we must make sure that the pointer can not escape.
+      //
+      // NOTE: PointerMayBeCaptured is not enough as the pointer may have escaped
+      // even though its not captured by the enclosing function. Standard allocation
+      // functions like malloc, calloc, and operator new return values which can
+      // be assumed not to have previously escaped.
+      if (PointerMayBeCaptured(Object, true, true))
+        return false;
+      IsKnownNonEscapingObject = true;
+    }
   }
 
   // Check that all of the pointers in the alias set have the same type.  We
@@ -1109,10 +1129,15 @@ bool llvm::promoteLoopAccessesToScalars(
   // stores along paths which originally didn't have them without violating the
   // memory model.
   if (!SafeToInsertStore) {
-    Value *Object = GetUnderlyingObject(SomePtr, MDL);
-    SafeToInsertStore =
-        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
+    // If this is a known non-escaping object, it is safe to insert the stores.
+    if (IsKnownNonEscapingObject)
+      SafeToInsertStore = true;
+    else {
+      Value *Object = GetUnderlyingObject(SomePtr, MDL);
+      SafeToInsertStore =
+        (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) && 
         !PointerMayBeCaptured(Object, true, true);
+    }
   }
 
   // If we've still failed to prove we can sink the store, give up.
