@@ -81,3 +81,78 @@ TEST(LoopInfoTest, LoopWithSingleLatch) {
     EXPECT_TRUE(loopIDFoundAndSet);
   });
 }
+
+TEST(LoopInfoTest, PreorderTraversals) {
+  const char *ModuleStr = "define void @f() {\n"
+                          "entry:\n"
+                          "  br label %loop.0\n"
+                          "loop.0:\n"
+                          "  br i1 undef, label %loop.0.0, label %loop.1\n"
+                          "loop.0.0:\n"
+                          "  br i1 undef, label %loop.0.0, label %loop.0.1\n"
+                          "loop.0.1:\n"
+                          "  br i1 undef, label %loop.0.1, label %loop.0.2\n"
+                          "loop.0.2:\n"
+                          "  br i1 undef, label %loop.0.2, label %loop.0\n"
+                          "loop.1:\n"
+                          "  br i1 undef, label %loop.1.0, label %end\n"
+                          "loop.1.0:\n"
+                          "  br i1 undef, label %loop.1.0, label %loop.1.1\n"
+                          "loop.1.1:\n"
+                          "  br i1 undef, label %loop.1.1, label %loop.1.2\n"
+                          "loop.1.2:\n"
+                          "  br i1 undef, label %loop.1.2, label %loop.1\n"
+                          "end:\n"
+                          "  ret void\n"
+                          "}\n";
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+  Function &F = *M->begin();
+
+  DominatorTree DT(F);
+  LoopInfo LI;
+  LI.analyze(DT);
+
+  Function::iterator I = F.begin();
+  ASSERT_EQ("entry", I->getName());
+  ++I;
+  Loop &L_0 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.0", L_0.getHeader()->getName());
+  Loop &L_0_0 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.0.0", L_0_0.getHeader()->getName());
+  Loop &L_0_1 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.0.1", L_0_1.getHeader()->getName());
+  Loop &L_0_2 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.0.2", L_0_2.getHeader()->getName());
+  Loop &L_1 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.1", L_1.getHeader()->getName());
+  Loop &L_1_0 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.1.0", L_1_0.getHeader()->getName());
+  Loop &L_1_1 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.1.1", L_1_1.getHeader()->getName());
+  Loop &L_1_2 = *LI.getLoopFor(&*I++);
+  ASSERT_EQ("loop.1.2", L_1_2.getHeader()->getName());
+
+  auto Preorder = LI.getLoopsInPreorder();
+  ASSERT_EQ(8u, Preorder.size());
+  EXPECT_EQ(&L_0, Preorder[0]);
+  EXPECT_EQ(&L_0_0, Preorder[1]);
+  EXPECT_EQ(&L_0_1, Preorder[2]);
+  EXPECT_EQ(&L_0_2, Preorder[3]);
+  EXPECT_EQ(&L_1, Preorder[4]);
+  EXPECT_EQ(&L_1_0, Preorder[5]);
+  EXPECT_EQ(&L_1_1, Preorder[6]);
+  EXPECT_EQ(&L_1_2, Preorder[7]);
+
+  auto ReverseSiblingPreorder = LI.getLoopsInReverseSiblingPreorder();
+  ASSERT_EQ(8u, ReverseSiblingPreorder.size());
+  EXPECT_EQ(&L_1, ReverseSiblingPreorder[0]);
+  EXPECT_EQ(&L_1_2, ReverseSiblingPreorder[1]);
+  EXPECT_EQ(&L_1_1, ReverseSiblingPreorder[2]);
+  EXPECT_EQ(&L_1_0, ReverseSiblingPreorder[3]);
+  EXPECT_EQ(&L_0, ReverseSiblingPreorder[4]);
+  EXPECT_EQ(&L_0_2, ReverseSiblingPreorder[5]);
+  EXPECT_EQ(&L_0_1, ReverseSiblingPreorder[6]);
+  EXPECT_EQ(&L_0_0, ReverseSiblingPreorder[7]);
+}

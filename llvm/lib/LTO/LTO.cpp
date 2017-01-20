@@ -372,6 +372,7 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
       OS << 'x';
     OS << '\n';
   }
+  OS.flush();
   assert(ResI == Res.end());
 }
 

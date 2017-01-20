@@ -125,6 +125,22 @@ TEST(SanitizerCommon, IntrusiveList) {
   CHECK(l.empty());
   l.CheckConsistency();
 
+  l.push_back(x);
+  l.push_back(y);
+  l.push_back(z);
+  l.extract(x, y);
+  CHECK_EQ(l.size(), 2);
+  CHECK_EQ(l.front(), x);
+  CHECK_EQ(l.back(), z);
+  l.CheckConsistency();
+  l.extract(x, z);
+  CHECK_EQ(l.size(), 1);
+  CHECK_EQ(l.front(), x);
+  CHECK_EQ(l.back(), x);
+  l.CheckConsistency();
+  l.pop_front();
+  CHECK(l.empty());
+
   List l1, l2;
   l1.clear();
   l2.clear();

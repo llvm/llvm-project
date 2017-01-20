@@ -1453,6 +1453,15 @@ def err_nested_name_spec_is_not_class : Error<
 def ext_nested_name_spec_is_enum : ExtWarn<
   "use of enumeration in a nested name specifier is a C++11 extension">,
   InGroup<CXX11>;
+def err_out_of_line_qualified_id_type_names_constructor : Error<
+  "qualified reference to %0 is a constructor name rather than a "
+  "%select{template name|type}1 in this context">;
+def ext_out_of_line_qualified_id_type_names_constructor : ExtWarn<
+  "ISO C++ specifies that "
+  "qualified reference to %0 is a constructor name rather than a "
+  "%select{template name|type}1 in this context, despite preceding "
+  "%select{'typename'|'template'}2 keyword">, SFINAEFailure,
+  InGroup<DiagGroup<"injected-class-name">>;
 
 // C++ class members
 def err_storageclass_invalid_for_member : Error<
@@ -4316,7 +4325,7 @@ def err_template_kw_refers_to_non_template : Error<
   "%0 following the 'template' keyword does not refer to a template">;
 def err_template_kw_refers_to_class_template : Error<
   "'%0%1' instantiated to a class template, not a function template">;
-def note_referenced_class_template : Error<
+def note_referenced_class_template : Note<
   "class template declared here">;
 def err_template_kw_missing : Error<
   "missing 'template' keyword prior to dependent template name '%0%1'">;

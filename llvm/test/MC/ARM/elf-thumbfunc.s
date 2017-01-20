@@ -14,10 +14,20 @@ foo:
 	.global bar
 bar = foo
 
+	.global baz
+baz = foo + 2
+
 @@ make sure foo and bar are thumb function: bit 0 = 1 (st_value)
 @CHECK:        Symbol {
 @CHECK:          Name: bar
 @CHECK-NEXT:     Value: 0x1
+@CHECK-NEXT:     Size: 0
+@CHECK-NEXT:     Binding: Global
+@CHECK-NEXT:     Type: Function
+
+@CHECK:        Symbol {
+@CHECK:          Name: baz
+@CHECK-NEXT:     Value: 0x3
 @CHECK-NEXT:     Size: 0
 @CHECK-NEXT:     Binding: Global
 @CHECK-NEXT:     Type: Function

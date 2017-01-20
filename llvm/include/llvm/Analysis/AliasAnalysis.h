@@ -443,11 +443,7 @@ public:
 
   /// getModRefInfo (for fences) - Return information about whether
   /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
-    // Conservatively correct.  (We could possibly be a bit smarter if
-    // Loc is a alloca that doesn't escape.)
-    return MRI_ModRef;
-  }
+  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc);
 
   /// getModRefInfo (for fences) - A convenience wrapper.
   ModRefInfo getModRefInfo(const FenceInst *S, const Value *P, uint64_t Size) {

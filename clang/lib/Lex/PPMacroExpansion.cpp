@@ -1183,6 +1183,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("cxx_attributes", LangOpts.CPlusPlus11)
       .Case("cxx_auto_type", LangOpts.CPlusPlus11)
       .Case("cxx_constexpr", LangOpts.CPlusPlus11)
+      .Case("cxx_constexpr_string_builtins", LangOpts.CPlusPlus11)
       .Case("cxx_decltype", LangOpts.CPlusPlus11)
       .Case("cxx_decltype_incomplete_return_types", LangOpts.CPlusPlus11)
       .Case("cxx_default_function_template_args", LangOpts.CPlusPlus11)

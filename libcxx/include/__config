@@ -189,7 +189,6 @@
 #  define _LIBCPP_LITTLE_ENDIAN 1
 #  define _LIBCPP_BIG_ENDIAN    0
 #  define _LIBCPP_SHORT_WCHAR   1
-
 // If mingw not explicitly detected, assume using MS C runtime only.
 #  ifndef __MINGW32__
 #    define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
@@ -197,6 +196,9 @@
 #  if (defined(_M_AMD64) || defined(__x86_64__)) || (defined(_M_ARM) || defined(__arm__))
 #    define _LIBCPP_HAS_BITSCAN64
 #  endif
+# if defined(_LIBCPP_MSVCRT)
+#   define _LIBCPP_HAS_QUICK_EXIT
+# endif
 #endif // defined(_WIN32)
 
 #ifdef __sun__
@@ -845,6 +847,18 @@ template <unsigned> struct __static_assert_check {};
 #ifdef __FreeBSD__
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
+
+#if defined(__APPLE__)
+# if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
+     defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+#   define __MAC_OS_X_VERSION_MIN_REQUIRED __ENVIROMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
+# endif
+# if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
+#   if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
+#     define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#   endif
+# endif
+#endif // defined(__APPLE__)
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #define _LIBCPP_HAS_DEFAULTRUNELOCALE
