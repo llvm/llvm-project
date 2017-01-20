@@ -27,3 +27,6 @@ config.test_source_root = config.test_exec_root
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_ld_library_path(config, config.compiler_rt_libdir)
+
+if config.host_os == 'Darwin':
+  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func
