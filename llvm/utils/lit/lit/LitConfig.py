@@ -24,7 +24,8 @@ class LitConfig(object):
                  noExecute, debug, isWindows,
                  params, config_prefix = None,
                  maxIndividualTestTime = 0,
-                 maxFailures = None):
+                 maxFailures = None,
+                 parallelism_groups = []):
         # The name of the test runner.
         self.progname = progname
         # The items to add to the PATH environment variable.
@@ -62,6 +63,7 @@ class LitConfig(object):
 
         self.maxIndividualTestTime = maxIndividualTestTime
         self.maxFailures = maxFailures
+        self.parallelism_groups = parallelism_groups
 
     @property
     def maxIndividualTestTime(self):

@@ -632,6 +632,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           // SetArchitecture should have set the vendor to unknown
           vendor = spec.GetArchitecture().GetTriple().getVendor();
           assert(vendor == llvm::Triple::UnknownVendor);
+          UNUSED_IF_ASSERT_DISABLED(vendor);
 
           //
           // Validate it is ok to remove GetOsFromOSABI
@@ -1524,6 +1525,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
     spec_ostype = arch_spec.GetTriple().getOS();
     assert(spec_ostype == ostype);
+    UNUSED_IF_ASSERT_DISABLED(spec_ostype);
   }
 
   if (arch_spec.GetMachine() == llvm::Triple::mips ||

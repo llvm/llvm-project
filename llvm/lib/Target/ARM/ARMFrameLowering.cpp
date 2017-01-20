@@ -468,10 +468,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Default:
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBL))
-        .addImm((unsigned)ARMCC::AL).addReg(0)
-        .addExternalSymbol("__chkstk")
-        .addReg(ARM::R4, RegState::Implicit)
-        .setMIFlags(MachineInstr::FrameSetup);
+          .add(predOps(ARMCC::AL))
+          .addExternalSymbol("__chkstk")
+          .addReg(ARM::R4, RegState::Implicit)
+          .setMIFlags(MachineInstr::FrameSetup);
       break;
     case CodeModel::Large:
     case CodeModel::JITDefault:
@@ -480,10 +480,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlags(MachineInstr::FrameSetup);
 
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tBLXr))
-        .addImm((unsigned)ARMCC::AL).addReg(0)
-        .addReg(ARM::R12, RegState::Kill)
-        .addReg(ARM::R4, RegState::Implicit)
-        .setMIFlags(MachineInstr::FrameSetup);
+          .add(predOps(ARMCC::AL))
+          .addReg(ARM::R12, RegState::Kill)
+          .addReg(ARM::R4, RegState::Implicit)
+          .setMIFlags(MachineInstr::FrameSetup);
       break;
     }
 
@@ -684,10 +684,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // FIXME: Clarify FrameSetup flags here.
   if (RegInfo->hasBasePointer(MF)) {
     if (isARM)
-      BuildMI(MBB, MBBI, dl,
-              TII.get(ARM::MOVr), RegInfo->getBaseRegister())
-        .addReg(ARM::SP)
-        .addImm((unsigned)ARMCC::AL).addReg(0).addReg(0);
+      BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), RegInfo->getBaseRegister())
+          .addReg(ARM::SP)
+          .add(predOps(ARMCC::AL))
+          .add(condCodeOp());
     else
       BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), RegInfo->getBaseRegister())
           .addReg(ARM::SP)
@@ -774,7 +774,9 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
         // Thumb2 or ARM.
         if (isARM)
           BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), ARM::SP)
-            .addReg(FramePtr).addImm((unsigned)ARMCC::AL).addReg(0).addReg(0);
+              .addReg(FramePtr)
+              .add(predOps(ARMCC::AL))
+              .add(condCodeOp());
         else
           BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
               .addReg(FramePtr)
@@ -2150,7 +2152,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     BuildMI(McrMBB, DL, TII.get(ARM::MOVr), ScratchReg1)
         .addReg(ARM::SP)
         .add(predOps(ARMCC::AL))
-        .addReg(0);
+        .add(condCodeOp());
   }
 
   // sub SR1, sp, #StackSize
@@ -2165,7 +2167,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
         .addReg(ARM::SP)
         .addImm(AlignedStackSize)
         .add(predOps(ARMCC::AL))
-        .addReg(0);
+        .add(condCodeOp());
   }
 
   if (Thumb && ST->isThumb1Only()) {
@@ -2238,7 +2240,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     BuildMI(AllocMBB, DL, TII.get(ARM::MOVi), ScratchReg0)
         .addImm(AlignedStackSize)
         .add(predOps(ARMCC::AL))
-        .addReg(0);
+        .add(condCodeOp());
   }
   // Pass second argument for the __morestack by Scratch Register #1.
   //   The amount size of stack consumed to save function arguments.
@@ -2251,7 +2253,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
     BuildMI(AllocMBB, DL, TII.get(ARM::MOVi), ScratchReg1)
         .addImm(alignToARMConstant(ARMFI->getArgumentStackSize()))
         .add(predOps(ARMCC::AL))
-        .addReg(0);
+        .add(condCodeOp());
   }
 
   // push {lr} - Save return address of this function.

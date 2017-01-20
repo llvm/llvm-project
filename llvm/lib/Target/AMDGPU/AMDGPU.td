@@ -190,6 +190,18 @@ def FeatureScalarStores : SubtargetFeature<"scalar-stores",
   "Has store scalar memory instructions"
 >;
 
+def FeatureSDWA : SubtargetFeature<"sdwa",
+  "HasSDWA",
+  "true",
+  "Support SDWA (Sub-DWORD Addressing) extension"
+>;
+
+def FeatureDPP : SubtargetFeature<"dpp",
+  "HasDPP",
+  "true",
+  "Support DPP (Data Parallel Primitives) extension"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -337,7 +349,8 @@ def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
-   FeatureScalarStores, FeatureInv2PiInlineImm
+   FeatureScalarStores, FeatureInv2PiInlineImm, FeatureSDWA,
+   FeatureDPP
   ]
 >;
 
@@ -506,6 +519,12 @@ def isCIVI : Predicate <
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">;
+
+def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
+  AssemblerPredicate<"FeatureSDWA">;
+
+def HasDPP : Predicate<"Subtarget->hasDPP()">,
+  AssemblerPredicate<"FeatureDPP">;
 
 class PredicateControl {
   Predicate SubtargetPredicate;

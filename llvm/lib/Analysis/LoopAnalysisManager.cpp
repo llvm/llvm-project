@@ -31,24 +31,10 @@ bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
     FunctionAnalysisManager::Invalidator &Inv) {
   // First compute the sequence of IR units covered by this proxy. We will want
   // to visit this in postorder, but because this is a tree structure we can do
-  // this by building a preorder sequence and walking it in reverse.
-  SmallVector<Loop *, 4> PreOrderLoops, PreOrderWorklist;
-  // Note that we want to walk the roots in reverse order because we will end
-  // up reversing the preorder sequence. However, it happens that the loop nest
-  // roots are in reverse order within the LoopInfo object. So we just walk
-  // forward here.
-  // FIXME: If we change the order of LoopInfo we will want to add a reverse
-  // here.
-  for (Loop *RootL : *LI) {
-    assert(PreOrderWorklist.empty() &&
-           "Must start with an empty preorder walk worklist.");
-    PreOrderWorklist.push_back(RootL);
-    do {
-      Loop *L = PreOrderWorklist.pop_back_val();
-      PreOrderWorklist.append(L->begin(), L->end());
-      PreOrderLoops.push_back(L);
-    } while (!PreOrderWorklist.empty());
-  }
+  // this by building a preorder sequence and walking it backwards. We also
+  // want siblings in forward program order to match the LoopPassManager so we
+  // get the preorder with siblings reversed.
+  SmallVector<Loop *, 4> PreOrderLoops = LI->getLoopsInReverseSiblingPreorder();
 
   // If this proxy or the loop info is going to be invalidated, we also need
   // to clear all the keys coming from that analysis. We also completely blow

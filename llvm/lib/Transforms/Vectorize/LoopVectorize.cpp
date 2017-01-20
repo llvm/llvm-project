@@ -6016,7 +6016,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     if (Group->getNumMembers() != Group->getFactor())
       releaseGroup(Group);
 
-  // Remove interleaved groups with gaps (currently only loads) whose memory 
+  // Remove interleaved groups with gaps (currently only loads) whose memory
   // accesses may wrap around. We have to revisit the getPtrStride analysis, 
   // this time with ShouldCheckWrap=true, since collectConstStrideAccesses does 
   // not check wrapping (see documentation there).

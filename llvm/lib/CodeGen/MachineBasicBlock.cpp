@@ -148,8 +148,11 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
+  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition()))
+  while (I != E && (I->isPHI() || I->isPosition() ||
+                    TII->isBasicBlockPrologue(*I)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels
   // inside the bundle.
@@ -160,8 +163,11 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
+  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue()))
+  while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue() ||
+                    TII->isBasicBlockPrologue(*I)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.

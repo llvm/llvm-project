@@ -46,6 +46,7 @@ add_llvm_library(LLVMCodeGen
   LiveRangeCalc.cpp
   LiveRangeEdit.cpp
   LiveRegMatrix.cpp
+  LiveRegUnits.cpp
   LiveStackAnalysis.cpp
   LiveVariables.cpp
   LLVMTargetMachine.cpp

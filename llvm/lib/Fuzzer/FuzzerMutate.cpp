@@ -272,6 +272,7 @@ size_t MutationDispatcher::Mutate_AddWordFromTORC(
   default:
     assert(0);
   }
+  if (!DE.GetW().size()) return 0;
   Size = ApplyDictionaryEntry(Data, Size, MaxSize, DE);
   if (!Size) return 0;
   DictionaryEntry &DERef =
@@ -462,6 +463,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
   for (auto DE : CurrentDictionaryEntrySequence) {
     // PersistentAutoDictionary.AddWithSuccessCountOne(DE);
     DE->IncSuccessCount();
+    assert(DE->GetW().size());
     // Linear search is fine here as this happens seldom.
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
       PersistentAutoDictionary.push_back({DE->GetW(), 1});
@@ -476,6 +478,7 @@ void MutationDispatcher::PrintRecommendedDictionary() {
   if (V.empty()) return;
   Printf("###### Recommended dictionary. ######\n");
   for (auto &DE: V) {
+    assert(DE.GetW().size());
     Printf("\"");
     PrintASCII(DE.GetW(), "\"");
     Printf(" # Uses: %zd\n", DE.GetUseCount());

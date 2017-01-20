@@ -93,9 +93,10 @@ static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::t2LDRpci))
-    .addReg(DestReg, getDefRegState(true), SubIdx)
-    .addConstantPoolIndex(Idx).addImm((int64_t)ARMCC::AL).addReg(0)
-    .setMIFlags(MIFlags);
+      .addReg(DestReg, getDefRegState(true), SubIdx)
+      .addConstantPoolIndex(Idx)
+      .add(predOps(ARMCC::AL))
+      .setMIFlags(MIFlags);
 }
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the

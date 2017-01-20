@@ -351,6 +351,8 @@ public:
   getLinkerOptionLoadCommand(const LoadCommandInfo &L) const;
   MachO::version_min_command
   getVersionMinLoadCommand(const LoadCommandInfo &L) const;
+  MachO::note_command
+  getNoteLoadCommand(const LoadCommandInfo &L) const;
   MachO::dylib_command
   getDylibIDLoadCommand(const LoadCommandInfo &L) const;
   MachO::dyld_info_command

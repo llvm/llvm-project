@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/SMLoc.h"
 
 namespace llvm {
 class MCAsmInfo;
@@ -43,6 +44,7 @@ public:
 
 private:
   ExprKind Kind;
+  SMLoc Loc;
 
   MCExpr(const MCExpr&) = delete;
   void operator=(const MCExpr&) = delete;
@@ -56,7 +58,7 @@ private:
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
-  explicit MCExpr(ExprKind Kind) : Kind(Kind) {}
+  explicit MCExpr(ExprKind Kind, SMLoc Loc) : Kind(Kind), Loc(Loc) {}
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCAsmLayout *Layout,
@@ -68,6 +70,7 @@ public:
   /// @{
 
   ExprKind getKind() const { return Kind; }
+  SMLoc getLoc() const { return Loc; }
 
   /// @}
   /// \name Utility Methods
@@ -132,7 +135,7 @@ class MCConstantExpr : public MCExpr {
   int64_t Value;
 
   explicit MCConstantExpr(int64_t Value)
-      : MCExpr(MCExpr::Constant), Value(Value) {}
+      : MCExpr(MCExpr::Constant, SMLoc()), Value(Value) {}
 
 public:
   /// \name Construction
@@ -289,7 +292,7 @@ private:
   const MCSymbol *Symbol;
 
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
-                           const MCAsmInfo *MAI);
+                           const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
 
 public:
   /// \name Construction
@@ -300,7 +303,7 @@ public:
   }
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
-                                       MCContext &Ctx);
+                                       MCContext &Ctx, SMLoc Loc = SMLoc());
   static const MCSymbolRefExpr *create(StringRef Name, VariantKind Kind,
                                        MCContext &Ctx);
 
@@ -346,7 +349,7 @@ private:
   const MCExpr *Expr;
 
   MCUnaryExpr(Opcode Op, const MCExpr *Expr)
-      : MCExpr(MCExpr::Unary), Op(Op), Expr(Expr) {}
+      : MCExpr(MCExpr::Unary, SMLoc()), Op(Op), Expr(Expr) {}
 
 public:
   /// \name Construction
@@ -417,15 +420,17 @@ private:
   Opcode Op;
   const MCExpr *LHS, *RHS;
 
-  MCBinaryExpr(Opcode Op, const MCExpr *LHS, const MCExpr *RHS)
-      : MCExpr(MCExpr::Binary), Op(Op), LHS(LHS), RHS(RHS) {}
+  MCBinaryExpr(Opcode Op, const MCExpr *LHS, const MCExpr *RHS,
+               SMLoc Loc = SMLoc())
+      : MCExpr(MCExpr::Binary, Loc), Op(Op), LHS(LHS), RHS(RHS) {}
 
 public:
   /// \name Construction
   /// @{
 
   static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
-                                    const MCExpr *RHS, MCContext &Ctx);
+                                    const MCExpr *RHS, MCContext &Ctx,
+                                    SMLoc Loc = SMLoc());
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {
     return create(Add, LHS, RHS, Ctx);
@@ -531,7 +536,7 @@ public:
 class MCTargetExpr : public MCExpr {
   virtual void anchor();
 protected:
-  MCTargetExpr() : MCExpr(Target) {}
+  MCTargetExpr() : MCExpr(Target, SMLoc()) {}
   virtual ~MCTargetExpr() {}
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;

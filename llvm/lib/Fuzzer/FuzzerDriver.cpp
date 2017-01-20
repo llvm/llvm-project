@@ -277,7 +277,8 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
-int MinimizeCrashInput(const std::vector<std::string> &Args) {
+int MinimizeCrashInput(const std::vector<std::string> &Args,
+                       const FuzzingOptions &Options) {
   if (Inputs->size() != 1) {
     Printf("ERROR: -minimize_crash should be given one input file\n");
     exit(1);
@@ -299,10 +300,6 @@ int MinimizeCrashInput(const std::vector<std::string> &Args) {
   std::string CurrentFilePath = InputFilePath;
   while (true) {
     Unit U = FileToVector(CurrentFilePath);
-    if (U.size() < 2) {
-      Printf("CRASH_MIN: '%s' is small enough\n", CurrentFilePath.c_str());
-      return 0;
-    }
     Printf("CRASH_MIN: minimizing crash input: '%s' (%zd bytes)\n",
            CurrentFilePath.c_str(), U.size());
 
@@ -318,7 +315,8 @@ int MinimizeCrashInput(const std::vector<std::string> &Args) {
            "it further\n",
            CurrentFilePath.c_str(), U.size());
 
-    std::string ArtifactPath = "minimized-from-" + Hash(U);
+    std::string ArtifactPath =
+        Options.ArtifactPrefix + "minimized-from-" + Hash(U);
     Cmd += " -minimize_crash_internal_step=1 -exact_artifact_path=" +
         ArtifactPath;
     Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
@@ -342,8 +340,11 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   assert(Inputs->size() == 1);
   std::string InputFilePath = Inputs->at(0);
   Unit U = FileToVector(InputFilePath);
-  assert(U.size() > 2);
   Printf("INFO: Starting MinimizeCrashInputInternalStep: %zd\n", U.size());
+  if (U.size() < 2) {
+    Printf("INFO: The input is small enough, exiting\n");
+    exit(0);
+  }
   Corpus->AddToCorpus(U, 0);
   F->SetMaxInputLen(U.size());
   F->SetMaxMutationLen(U.size() - 1);
@@ -367,9 +368,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     PrintHelp();
     return 0;
   }
-
-  if (Flags.minimize_crash)
-    return MinimizeCrashInput(Args);
 
   if (Flags.close_fd_mask & 2)
     DupAndCloseStderr();
@@ -469,6 +467,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleTerm = Flags.handle_term;
   Options.HandleXfsz = Flags.handle_xfsz;
   SetSignalHandler(Options);
+
+  if (Flags.minimize_crash)
+    return MinimizeCrashInput(Args, Options);
 
   if (Flags.minimize_crash_internal_step)
     return MinimizeCrashInputInternalStep(F, Corpus);

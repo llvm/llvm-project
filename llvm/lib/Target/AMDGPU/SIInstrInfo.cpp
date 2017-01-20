@@ -3635,3 +3635,8 @@ ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
   return new GCNHazardRecognizer(MF);
 }
+
+bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
+  return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
+         MI.modifiesRegister(AMDGPU::EXEC, &RI);
+}

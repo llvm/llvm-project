@@ -219,7 +219,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // tied. In order to correctly tie the registers, split this into a copy of
   // the src like it does.
   unsigned CopyReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-  BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
+  MachineInstr *CopyExec =
+    BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
       .add(MI.getOperand(1)); // Saved EXEC
 
   // This must be inserted before phis and any spill code inserted before the
@@ -261,6 +262,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
 
+  LIS->InsertMachineInstrInMaps(*CopyExec);
   LIS->InsertMachineInstrInMaps(*OrSaveExec);
 
   LIS->InsertMachineInstrInMaps(*Xor);

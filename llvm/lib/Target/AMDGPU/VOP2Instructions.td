@@ -119,8 +119,7 @@ multiclass VOP2Inst <string opName,
   def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
              Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-  def _sdwa : VOP2_SDWA_Pseudo <opName, P>,
-              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)>;
+  def _sdwa : VOP2_SDWA_Pseudo <opName, P>;
 }
 
 // TODO: add SDWA pseudo instructions for VOP2bInst and VOP2eInst
@@ -135,9 +134,9 @@ multiclass VOP2bInst <string opName,
       def _e32 : VOP2_Pseudo <opName, P>,
                  Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
       
-      def _sdwa : VOP2_SDWA_Pseudo <opName, P>,
-              Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)>;
+      def _sdwa : VOP2_SDWA_Pseudo <opName, P>;
     }
+
     def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
   }
@@ -154,6 +153,7 @@ multiclass VOP2eInst <string opName,
       def _e32 : VOP2_Pseudo <opName, P>,
                  Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
     }
+
     def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
   }

@@ -80,6 +80,14 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BFI.getBlockProfileCount(BB3).getValue(), UINT64_C(100));
   EXPECT_EQ(BFI.getBlockProfileCount(BB1).getValue(), 100 * BB1Freq / BB0Freq);
   EXPECT_EQ(BFI.getBlockProfileCount(BB2).getValue(), 100 * BB2Freq / BB0Freq);
+
+  // Scale the frequencies of BB0, BB1 and BB2 by a factor of two.
+  SmallPtrSet<BasicBlock *, 4> BlocksToScale({BB1, BB2});
+  BFI.setBlockFreqAndScale(&BB0, BB0Freq * 2, BlocksToScale);
+  EXPECT_EQ(BFI.getBlockFreq(&BB0).getFrequency(), 2 * BB0Freq);
+  EXPECT_EQ(BFI.getBlockFreq(BB1).getFrequency(), 2 * BB1Freq);
+  EXPECT_EQ(BFI.getBlockFreq(BB2).getFrequency(), 2 * BB2Freq);
+  EXPECT_EQ(BFI.getBlockFreq(BB3).getFrequency(), BB3Freq);
 }
 
 } // end anonymous namespace

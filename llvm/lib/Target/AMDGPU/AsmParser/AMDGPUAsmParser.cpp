@@ -3442,7 +3442,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
     if (Op.isReg() && Op.Reg.RegNo == AMDGPU::VCC) {
-      // VOP2b (v_add_u32, v_sub_u32 ...) sdwa use "vcc" token.
+      // VOP2b (v_add_u32, v_sub_u32 ...) dpp use "vcc" token.
       // Skip it.
       continue;
     } if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {

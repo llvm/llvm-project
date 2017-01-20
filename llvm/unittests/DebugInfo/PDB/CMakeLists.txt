@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(DebugInfoPDBSources
+  HashTableTest.cpp
   MappedBlockStreamTest.cpp
   NameHashTableBuilderTest.cpp
   MSFBuilderTest.cpp
