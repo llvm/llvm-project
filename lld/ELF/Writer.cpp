@@ -641,7 +641,7 @@ static void addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
                                  typename ELFT::uint Val,
                                  uint8_t StOther = STV_HIDDEN) {
   if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
-    if (S->isUndefined() || S->isShared())
+    if (!S->isInCurrentDSO())
       Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
 }
 
@@ -661,7 +661,7 @@ static Symbol *addOptionalRegular(StringRef Name, InputSectionBase<ELFT> *IS,
   SymbolBody *S = Symtab<ELFT>::X->find(Name);
   if (!S)
     return nullptr;
-  if (!S->isUndefined() && !S->isShared())
+  if (S->isInCurrentDSO())
     return S->symbol();
   return addRegular(Name, IS, Value);
 }
