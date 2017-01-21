@@ -3,21 +3,13 @@
 // than linux
 REQUIRES: linux
 CHECK: BINGO
-Done1000000: Done 1000000 runs in
 
-RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=1000000   2>&1 | FileCheck %s
-ZZZ:     LLVMFuzzer-MemcmpTest -use_memcmp=0 -seed=4294967295 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
+RUN: not LLVMFuzzer-MemcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-StrncmpTest              -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-StrcmpTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-StrstrTest               -seed=1 -runs=2000000   2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-StrncmpTest               -seed=2 -runs=1000000   2>&1 | FileCheck %s
-ZZZ:     LLVMFuzzer-StrncmpTest -use_memcmp=0 -seed=3 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-StrcmpTest               -seed=4 -runs=1000000   2>&1 | FileCheck %s
-ZZZ:     LLVMFuzzer-StrcmpTest -use_memcmp=0 -seed=5 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-RUN: not LLVMFuzzer-StrstrTest               -seed=6 -runs=200000   2>&1 | FileCheck %s
-ZZZ:     LLVMFuzzer-StrstrTest -use_memmem=0 -seed=7 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
-
-DISABLED: LLVMFuzzer-RepeatedMemcmp -seed=11 -runs=100000 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
+RUN: LLVMFuzzer-RepeatedMemcmp -seed=11 -runs=100000 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
 RECOMMENDED_DICT:###### Recommended dictionary. ######
 RECOMMENDED_DICT-DAG: "foo"
 RECOMMENDED_DICT-DAG: "bar"

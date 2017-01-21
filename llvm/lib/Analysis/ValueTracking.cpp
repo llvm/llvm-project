@@ -3918,6 +3918,45 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
                                        Value *TrueVal, Value *FalseVal,
                                        Value *&LHS, Value *&RHS) {
+  // Recognize variations of:
+  // CLAMP(v,l,h) ==> ((v) < (l) ? (l) : ((v) > (h) ? (h) : (v)))
+  const APInt *C1;
+  if (CmpRHS == TrueVal && match(CmpRHS, m_APInt(C1))) {
+    const APInt *C2;
+
+    // (X <s C1) ? C1 : SMIN(X, C2) ==> SMAX(SMIN(X, C2), C1)
+    if (match(FalseVal, m_SMin(m_Specific(CmpLHS), m_APInt(C2))) &&
+        C1->slt(*C2) && Pred == CmpInst::ICMP_SLT) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {SPF_SMAX, SPNB_NA, false};
+    }
+
+    // (X >s C1) ? C1 : SMAX(X, C2) ==> SMIN(SMAX(X, C2), C1)
+    if (match(FalseVal, m_SMax(m_Specific(CmpLHS), m_APInt(C2))) &&
+        C1->sgt(*C2) && Pred == CmpInst::ICMP_SGT) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {SPF_SMIN, SPNB_NA, false};
+    }
+
+    // (X <u C1) ? C1 : UMIN(X, C2) ==> UMAX(UMIN(X, C2), C1)
+    if (match(FalseVal, m_UMin(m_Specific(CmpLHS), m_APInt(C2))) &&
+        C1->ult(*C2) && Pred == CmpInst::ICMP_ULT) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {SPF_UMAX, SPNB_NA, false};
+    }
+
+    // (X >u C1) ? C1 : UMAX(X, C2) ==> UMIN(UMAX(X, C2), C1)
+    if (match(FalseVal, m_UMax(m_Specific(CmpLHS), m_APInt(C2))) &&
+        C1->ugt(*C2) && Pred == CmpInst::ICMP_UGT) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+      return {SPF_UMIN, SPNB_NA, false};
+    }
+  }
+
   if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
     return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -3941,7 +3980,6 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
     return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
   }
 
-  const APInt *C1;
   if (!match(CmpRHS, m_APInt(C1)))
     return {SPF_UNKNOWN, SPNB_NA, false};
 

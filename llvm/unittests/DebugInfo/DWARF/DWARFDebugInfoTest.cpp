@@ -13,6 +13,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/ObjectYAML/DWARFYAML.h"
+#include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
@@ -1157,41 +1159,35 @@ TEST(DWARFDebugInfo, TestChildIteratorsOnInvalidDie) {
   EXPECT_EQ(begin, end);
 }
 
-  
 TEST(DWARFDebugInfo, TestEmptyChildren) {
-  // Test a DIE that says it has children in the abbreviation, but actually
-  // doesn't have any attributes, will not return anything during iteration.
-  // We do this by making sure the begin and end iterators are equal.
-  uint16_t Version = 4;
-  
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
-  dwarfgen::Generator *DG = ExpectedDG.get().get();
-  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
-  
-  // Scope to allow us to re-use the same DIE names
-  {
-    // Create a compile unit DIE that has an abbreviation that says it has
-    // children, but doesn't have any actual attributes. This helps us test
-    // a DIE that has only one child: a NULL DIE.
-    auto CUDie = CU.getUnitDIE();
-    CUDie.setForceChildren();
-  }
-  
-  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
-  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
-  EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
-  
+  const char *yamldata = "debug_abbrev:\n"
+                         "  - Code:            0x00000001\n"
+                         "    Tag:             DW_TAG_compile_unit\n"
+                         "    Children:        DW_CHILDREN_yes\n"
+                         "    Attributes:\n"
+                         "debug_info:\n"
+                         "  - Length:          9\n"
+                         "    Version:         4\n"
+                         "    AbbrOffset:      0\n"
+                         "    AddrSize:        8\n"
+                         "    Entries:\n"
+                         "      - AbbrCode:        0x00000001\n"
+                         "        Values:\n"
+                         "      - AbbrCode:        0x00000000\n"
+                         "        Values:\n";
+
+  auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
+  EXPECT_TRUE((bool)ErrOrSections);
+
+  auto &DebugSections = *ErrOrSections;
+
+  DWARFContextInMemory DwarfContext(DebugSections, 8);
+
   // Verify the number of compile units is correct.
   uint32_t NumCUs = DwarfContext.getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
   DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
-  
+
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
   EXPECT_TRUE(CUDie.isValid());

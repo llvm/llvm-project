@@ -15,6 +15,7 @@
 #include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
+#include "FuzzerShmem.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <atomic>
@@ -357,12 +358,17 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
+  std::string Argv0((*argv)[0]);
   EF = new ExternalFunctions();
   if (EF->LLVMFuzzerInitialize)
     EF->LLVMFuzzerInitialize(argc, argv);
   const std::vector<std::string> Args(*argv, *argv + *argc);
   assert(!Args.empty());
   ProgName = new std::string(Args[0]);
+  if (Argv0 != *ProgName) {
+    Printf("ERROR: argv[0] has been modified in LLVMFuzzerInitialize\n");
+    exit(1);
+  }
   ParseFlags(Args);
   if (Flags.help) {
     PrintHelp();
@@ -473,6 +479,31 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   if (Flags.minimize_crash_internal_step)
     return MinimizeCrashInputInternalStep(F, Corpus);
+
+  if (auto Name = Flags.run_equivalence_server) {
+    SMR.Destroy(Name);
+    if (!SMR.Create(Name, 1 << 12)) {
+      Printf("ERROR: can't create shared memory region\n");
+      return 1;
+    }
+    Printf("INFO: EQUIVALENCE SERVER UP\n");
+    while (true) {
+      SMR.WaitClient();
+      size_t Size = SMR.ReadByteArraySize();
+      SMR.WriteByteArray(nullptr, 0);
+      F->RunOne(SMR.GetByteArray(), Size);
+      SMR.PostServer();
+    }
+    return 0;
+  }
+
+  if (auto Name = Flags.use_equivalence_server) {
+    if (!SMR.Open(Name)) {
+      Printf("ERROR: can't open shared memory region\n");
+      return 1;
+    }
+    Printf("INFO: EQUIVALENCE CLIENT UP\n");
+  }
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;

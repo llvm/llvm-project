@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   MC
   Object
+  ObjectYAML
   Support
   )
 

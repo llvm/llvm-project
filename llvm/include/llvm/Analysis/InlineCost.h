@@ -21,6 +21,7 @@
 
 namespace llvm {
 class AssumptionCacheTracker;
+class BlockFrequencyInfo;
 class CallSite;
 class DataLayout;
 class Function;
@@ -137,6 +138,9 @@ struct InlineParams {
 
   /// Threshold to use when the callsite is considered hot.
   Optional<int> HotCallSiteThreshold;
+
+  /// Threshold to use when the callsite is considered cold.
+  Optional<int> ColdCallSiteThreshold;
 };
 
 /// Generate the parameters to tune the inline cost analysis based only on the
@@ -171,6 +175,7 @@ InlineCost
 getInlineCost(CallSite CS, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
               ProfileSummaryInfo *PSI);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
@@ -182,6 +187,7 @@ InlineCost
 getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
               ProfileSummaryInfo *PSI);
 
 /// \brief Minimal filter to detect invalid constructs for inlining.

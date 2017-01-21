@@ -510,6 +510,22 @@ public:
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(EVT VT) const override;
 
+  // Get the degree of precision we want from 32-bit floating point division
+  // operations.
+  //
+  //  0 - Use ptx div.approx
+  //  1 - Use ptx.div.full (approximate, but less so than div.approx)
+  //  2 - Use IEEE-compliant div instructions, if available.
+  int getDivF32Level() const;
+
+  // Get whether we should use a precise or approximate 32-bit floating point
+  // sqrt instruction.
+  bool usePrecSqrtF32() const;
+
+  // Get whether we should use instructions that flush floating-point denormals
+  // to sign-preserving zero.
+  bool useF32FTZ(const MachineFunction &MF) const;
+
   bool allowFMA(MachineFunction &MF, CodeGenOpt::Level OptLevel) const;
   bool allowUnsafeFPMath(MachineFunction &MF) const;
 

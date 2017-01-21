@@ -1,4 +1,4 @@
-//===- NameHashTableBuilder.h - PDB Name Hash Table Builder -----*- C++ -*-===//
+//===- StringTableBuilder.h - PDB String Table Builder ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLEBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLEBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H
+#define LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,13 +25,13 @@ class StreamWriter;
 }
 namespace pdb {
 
-class NameHashTableBuilder {
+class StringTableBuilder {
 public:
   // If string S does not exist in the string table, insert it.
   // Returns the ID for S.
   uint32_t insert(StringRef S);
 
-  uint32_t calculateSerializedLength() const;
+  uint32_t finalize();
   Error commit(msf::StreamWriter &Writer) const;
 
 private:
@@ -42,4 +42,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLEBUILDER_H
+#endif // LLVM_DEBUGINFO_PDB_RAW_STRINGTABLEBUILDER_H

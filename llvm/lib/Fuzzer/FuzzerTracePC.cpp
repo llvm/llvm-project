@@ -20,7 +20,6 @@
 #include "FuzzerTracePC.h"
 #include "FuzzerValueBitMap.h"
 #include <map>
-#include <sanitizer/coverage_interface.h>
 #include <set>
 #include <sstream>
 
@@ -197,7 +196,8 @@ void TracePC::PrintCoverage() {
 }
 
 void TracePC::DumpCoverage() {
-  __sanitizer_dump_coverage(PCs, GetNumPCs());
+  if (EF->__sanitizer_dump_coverage)
+    EF->__sanitizer_dump_coverage(PCs, GetNumPCs());
 }
 
 // Value profile.

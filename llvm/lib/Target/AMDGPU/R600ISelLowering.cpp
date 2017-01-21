@@ -1120,7 +1120,10 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
     llvm_unreachable("Unsupported private trunc store");
   }
 
-  SDValue Chain = Store->getChain();
+  SDValue OldChain = Store->getChain();
+  bool VectorTrunc = (OldChain.getOpcode() == AMDGPUISD::DUMMY_CHAIN);
+  // Skip dummy
+  SDValue Chain = VectorTrunc ? OldChain->getOperand(0) : OldChain;
   SDValue BasePtr = Store->getBasePtr();
   SDValue Offset = Store->getOffset();
   EVT MemVT = Store->getMemoryVT();
@@ -1176,7 +1179,15 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
 
   // Store dword
   // TODO: Can we be smarter about MachinePointerInfo?
-  return DAG.getStore(Chain, DL, Value, Ptr, MachinePointerInfo());
+  SDValue NewStore = DAG.getStore(Chain, DL, Value, Ptr, MachinePointerInfo());
+
+  // If we are part of expanded vector, make our neighbors depend on this store
+  if (VectorTrunc) {
+    // Make all other vector elements depend on this store
+    Chain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, NewStore);
+    DAG.ReplaceAllUsesOfValueWith(OldChain, Chain);
+  }
+  return NewStore;
 }
 
 SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
@@ -1196,6 +1207,17 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   // Neither LOCAL nor PRIVATE can do vectors at the moment
   if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS) &&
       VT.isVector()) {
+    if ((AS == AMDGPUAS::PRIVATE_ADDRESS) && StoreNode->isTruncatingStore()) {
+      // Add an extra level of chain to isolate this vector
+      SDValue NewChain = DAG.getNode(AMDGPUISD::DUMMY_CHAIN, DL, MVT::Other, Chain);
+      // TODO: can the chain be replaced without creating a new store?
+      SDValue NewStore = DAG.getTruncStore(
+          NewChain, DL, Value, Ptr, StoreNode->getPointerInfo(),
+          MemVT, StoreNode->getAlignment(),
+          StoreNode->getMemOperand()->getFlags(), StoreNode->getAAInfo());
+      StoreNode = cast<StoreSDNode>(NewStore);
+    }
+
     return scalarizeVectorStore(StoreNode, DAG);
   }
 
@@ -1230,7 +1252,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       // Put the mask in correct place
       SDValue Mask = DAG.getNode(ISD::SHL, DL, VT, MaskConstant, BitShift);
 
-      // Put the mask in correct place
+      // Put the value bits in correct place
       SDValue TruncValue = DAG.getNode(ISD::AND, DL, VT, Value, MaskConstant);
       SDValue ShiftedValue = DAG.getNode(ISD::SHL, DL, VT, TruncValue, BitShift);
 

@@ -21,6 +21,7 @@
 #include <vector>
 
 namespace llvm {
+class ModuleSummaryIndex;
 class Pass;
 class TargetLibraryInfoImpl;
 class TargetMachine;
@@ -122,6 +123,11 @@ public:
   /// Inliner - Specifies the inliner to use.  If this is non-null, it is
   /// added to the per-module passes.
   Pass *Inliner;
+
+  /// The module summary index to use for passing information between the
+  /// regular LTO phase and the thin LTO backends, for example the CFI and
+  /// devirtualization type tests.
+  ModuleSummaryIndex *Summary = nullptr;
 
   bool DisableTailCalls;
   bool DisableUnitAtATime;

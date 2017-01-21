@@ -107,6 +107,8 @@ struct PdbObject {
   Optional<PdbTpiStream> TpiStream;
   Optional<PdbTpiStream> IpiStream;
 
+  Optional<std::vector<StringRef>> StringTable;
+
   BumpPtrAllocator &Allocator;
 };
 }

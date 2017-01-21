@@ -1477,7 +1477,7 @@ def : T1Pat<(extloadi16 t_addrmode_rr:$addr),  (tLDRHr t_addrmode_rr:$addr)>;
 // post-inc LDR -> LDM r0!, {r1}. The way operands are layed out in LDMs is
 // different to how ISel expects them for a post-inc load, so use a pseudo
 // and expand it just after ISel.
-let usesCustomInserter = 1,
+let usesCustomInserter = 1, mayLoad =1,
     Constraints = "$Rn = $Rn_wb,@earlyclobber $Rn_wb" in
  def tLDR_postidx: tPseudoInst<(outs rGPR:$Rt, rGPR:$Rn_wb),
                                (ins rGPR:$Rn, pred:$p),

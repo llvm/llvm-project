@@ -405,6 +405,7 @@ char ModuleSummaryIndexWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                       "Module Summary Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                     "Module Summary Analysis", false, true)
 

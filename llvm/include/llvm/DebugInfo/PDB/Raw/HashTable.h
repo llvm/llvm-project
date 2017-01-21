@@ -47,6 +47,8 @@ public:
   uint32_t calculateSerializedLength() const;
   Error commit(msf::StreamWriter &Writer) const;
 
+  void clear();
+
   uint32_t capacity() const;
   uint32_t size() const;
 

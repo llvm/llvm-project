@@ -1,4 +1,4 @@
-//===- NameHashTable.h - PDB Name Hash Table --------------------*- C++ -*-===//
+//===- StringTable.h - PDB String Table -------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H
-#define LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H
+#ifndef LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H
+#define LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,9 +25,9 @@ class StreamReader;
 }
 namespace pdb {
 
-class NameHashTable {
+class StringTable {
 public:
-  NameHashTable();
+  StringTable();
 
   Error load(msf::StreamReader &Stream);
 
@@ -51,4 +51,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H
+#endif // LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H

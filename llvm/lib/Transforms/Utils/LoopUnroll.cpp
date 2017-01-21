@@ -750,7 +750,10 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       // loops too).
       // TODO: That potentially might be compile-time expensive. We should try
       // to fix the loop-simplified form incrementally.
-      simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
+      // Note that we only preserve LCSSA at this stage if we need to and if we
+      // won't end up fixing it. If we end up fixing it anyways, we don't need
+      // to preserve it here and in fact we can't because it isn't correct.
+      simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA && !NeedToFixLCSSA);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -762,7 +765,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
 
       if (NeedToFixLCSSA)
         formLCSSARecursively(*OuterL, *DT, LI, SE);
-      else
+      else if (PreserveLCSSA)
         assert(OuterL->isLCSSAForm(*DT) &&
                "Loops should be in LCSSA form after loop-unroll.");
     } else {

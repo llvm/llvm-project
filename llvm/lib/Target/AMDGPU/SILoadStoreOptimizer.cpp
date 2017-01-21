@@ -39,15 +39,27 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -57,10 +69,10 @@ namespace {
 
 class SILoadStoreOptimizer : public MachineFunctionPass {
 private:
-  const SIInstrInfo *TII;
-  const SIRegisterInfo *TRI;
-  MachineRegisterInfo *MRI;
-  AliasAnalysis *AA;
+  const SIInstrInfo *TII = nullptr;
+  const SIRegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  AliasAnalysis *AA = nullptr;
 
   static bool offsetsCanBeCombined(unsigned Offset0,
                                    unsigned Offset1,
@@ -86,9 +98,7 @@ private:
 public:
   static char ID;
 
-  SILoadStoreOptimizer()
-      : MachineFunctionPass(ID), TII(nullptr), TRI(nullptr), MRI(nullptr),
-        AA(nullptr) {}
+  SILoadStoreOptimizer() : MachineFunctionPass(ID) {}
 
   SILoadStoreOptimizer(const TargetMachine &TM_) : MachineFunctionPass(ID) {
     initializeSILoadStoreOptimizerPass(*PassRegistry::getPassRegistry());
@@ -108,7 +118,7 @@ public:
   }
 };
 
-} // End anonymous namespace.
+} // end anonymous namespace.
 
 INITIALIZE_PASS_BEGIN(SILoadStoreOptimizer, DEBUG_TYPE,
                       "SI Load / Store Optimizer", false, false)
@@ -141,11 +151,10 @@ static void addDefsToList(const MachineInstr &MI,
   }
 }
 
-static bool memAccessesCanBeReordered(
-  MachineBasicBlock::iterator A,
-  MachineBasicBlock::iterator B,
-  const SIInstrInfo *TII,
-  llvm::AliasAnalysis * AA) {
+static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
+                                      MachineBasicBlock::iterator B,
+                                      const SIInstrInfo *TII,
+                                      AliasAnalysis * AA) {
   return (TII->areMemAccessesTriviallyDisjoint(*A, *B, AA) ||
     // RAW or WAR - cannot reorder
     // WAW - cannot reorder
@@ -179,7 +188,6 @@ canMoveInstsAcrossMemOp(MachineInstr &MemOp,
                         ArrayRef<MachineInstr*> InstsToMove,
                         const SIInstrInfo *TII,
                         AliasAnalysis *AA) {
-
   assert(MemOp.mayLoadOrStore());
 
   for (MachineInstr *InstToMove : InstsToMove) {
@@ -230,7 +238,6 @@ SILoadStoreOptimizer::findMatchingDSInst(MachineBasicBlock::iterator I,
   addDefsToList(*I, DefsToMove);
 
   for ( ; MBBI != E; ++MBBI) {
-
     if (MBBI->getOpcode() != I->getOpcode()) {
 
       // This is not a matching DS instruction, but we can keep looking as
