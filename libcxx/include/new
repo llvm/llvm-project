@@ -145,7 +145,7 @@ public:
 
 #endif  // defined(_LIBCPP_BUILDING_NEW) || (_LIBCPP_STD_VER > 11)
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || _LIBCPP_STD_VER > 14
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #ifndef _LIBCPP_CXX03_LANG
 enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
 #else

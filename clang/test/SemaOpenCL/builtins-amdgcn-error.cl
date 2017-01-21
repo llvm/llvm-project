@@ -62,3 +62,8 @@ void test_ds_swizzle(global int* out, int a, int b)
 {
   *out = __builtin_amdgcn_ds_swizzle(a, b); // expected-error {{argument to '__builtin_amdgcn_ds_swizzle' must be a constant integer}}
 }
+
+void test_s_getreg(global int* out, int a)
+{
+  *out = __builtin_amdgcn_s_getreg(a); // expected-error {{argument to '__builtin_amdgcn_s_getreg' must be a constant integer}}
+}

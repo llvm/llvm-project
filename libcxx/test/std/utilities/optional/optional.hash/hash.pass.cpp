@@ -17,6 +17,15 @@
 #include <memory>
 #include <cassert>
 
+#include "poisoned_hash_helper.hpp"
+
+struct A {};
+struct B {};
+
+template <>
+struct std::hash<B> {
+  size_t operator()(B const&) { return 0; }
+};
 
 int main()
 {
@@ -44,5 +53,17 @@ int main()
         assert(std::hash<optional<T>>{}(opt) == nullopt_hash);
         opt = std::unique_ptr<int>(new int(3));
         assert(std::hash<optional<T>>{}(opt) == std::hash<T>{}(*opt));
+    }
+    {
+      test_hash_enabled_for_type<std::optional<int> >();
+      test_hash_enabled_for_type<std::optional<int*> >();
+      test_hash_enabled_for_type<std::optional<const int> >();
+      test_hash_enabled_for_type<std::optional<int* const> >();
+
+      test_hash_disabled_for_type<std::optional<A>>();
+      test_hash_disabled_for_type<std::optional<const A>>();
+
+      test_hash_enabled_for_type<std::optional<B>>();
+      test_hash_enabled_for_type<std::optional<const B>>();
     }
 }

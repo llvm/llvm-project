@@ -9,7 +9,7 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// <functional>
+// <thread>
 
 // template <class T>
 // struct hash

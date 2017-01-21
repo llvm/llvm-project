@@ -1295,7 +1295,9 @@ optional<_Tp> make_optional(initializer_list<_Up> __il,  _Args&&... __args)
 }
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS hash<optional<_Tp> >
+struct _LIBCPP_TEMPLATE_VIS hash<
+    __enable_hash_helper<optional<_Tp>, remove_const_t<_Tp>>
+>
 {
     typedef optional<_Tp> argument_type;
     typedef size_t        result_type;
@@ -1303,7 +1305,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<optional<_Tp> >
     _LIBCPP_INLINE_VISIBILITY
     result_type operator()(const argument_type& __opt) const _NOEXCEPT
     {
-        return static_cast<bool>(__opt) ? hash<_Tp>()(*__opt) : 0;
+        return static_cast<bool>(__opt) ? hash<remove_const_t<_Tp>>()(*__opt) : 0;
     }
 };
 
