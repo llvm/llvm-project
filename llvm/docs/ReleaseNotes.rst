@@ -69,19 +69,44 @@ Non-comprehensive list of changes in this release
 
    Improvements to ThinLTO (-flto=thin)
    ------------------------------------
-   * Integration with profile data (PGO). When available, profile data 
-     enables more accurate function importing decisions, as well as 
+   * Integration with profile data (PGO). When available, profile data
+     enables more accurate function importing decisions, as well as
      cross-module indirect call promotion.
-   * Significant build-time and binary-size improvements when compiling with 
+   * Significant build-time and binary-size improvements when compiling with
      debug info (-g).
 
 Changes to the LLVM IR
 ----------------------
 
-Changes to the ARM Backend
+Changes to the ARM Targets
 --------------------------
 
- During this release ...
+**During this release the AArch64 target has:**
+
+* Gained support for ILP32 relocations.
+* Gained support for XRay.
+* Made even more progress on GlobalISel. There is still some work left before
+  it is production-ready though.
+* Refined the support for Qualcomm's Falkor and Samsung's Exynos CPUs.
+* Learned a few new tricks for lowering multiplications by constants, folding
+  spilled/refilled copies etc.
+
+**During this release the ARM target has:**
+
+* Gained support for ROPI (read-only position independence) and RWPI
+  (read-write position independence), which can be used to remove the need for
+  a dynamic linker.
+* Gained support for execute-only code, which is placed in pages without read
+  permissions.
+* Gained a machine scheduler for Cortex-R52.
+* Gained support for XRay.
+* Gained Thumb1 implementations for several compiler-rt builtins. It also
+  has some support for building the builtins for HF targets.
+* Started using the generic bitreverse intrinsic instead of rbit.
+* Gained very basic support for GlobalISel.
+
+A lot of work has also been done in LLD for ARM, which now supports more
+relocations and TLS.
 
 
 Changes to the MIPS Target
