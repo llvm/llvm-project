@@ -540,6 +540,23 @@ llvm::EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
 /// Fixup WeakForLinker linkages in \p TheModule based on summary analysis.
 void llvm::thinLTOResolveWeakForLinkerModule(
     Module &TheModule, const GVSummaryMapTy &DefinedGlobals) {
+  auto ConvertToDeclaration = [](GlobalValue &GV) {
+    DEBUG(dbgs() << "Converting to a declaration: `" << GV.getName() << "\n");
+    if (Function *F = dyn_cast<Function>(&GV)) {
+      F->deleteBody();
+      F->clearMetadata();
+    } else if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
+      V->setInitializer(nullptr);
+      V->setLinkage(GlobalValue::ExternalLinkage);
+      V->clearMetadata();
+    } else
+      // For now we don't resolve or drop aliases. Once we do we'll
+      // need to add support here for creating either a function or
+      // variable declaration, and return the new GlobalValue* for
+      // the caller to use.
+      assert(false && "Expected function or variable");
+  };
+
   auto updateLinkage = [&](GlobalValue &GV) {
     if (!GlobalValue::isWeakForLinker(GV.getLinkage()))
       return;
@@ -550,18 +567,25 @@ void llvm::thinLTOResolveWeakForLinkerModule(
     auto NewLinkage = GS->second->linkage();
     if (NewLinkage == GV.getLinkage())
       return;
-    DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
-                 << GV.getLinkage() << " to " << NewLinkage << "\n");
-    GV.setLinkage(NewLinkage);
-    // Remove functions converted to available_externally from comdats,
+    // Check for a non-prevailing def that has interposable linkage
+    // (e.g. non-odr weak or linkonce). In that case we can't simply
+    // convert to available_externally, since it would lose the
+    // interposable property and possibly get inlined. Simply drop
+    // the definition in that case.
+    if (GlobalValue::isAvailableExternallyLinkage(NewLinkage) &&
+        GlobalValue::isInterposableLinkage(GV.getLinkage()))
+      ConvertToDeclaration(GV);
+    else {
+      DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
+                   << GV.getLinkage() << " to " << NewLinkage << "\n");
+      GV.setLinkage(NewLinkage);
+    }
+    // Remove declarations from comdats, including available_externally
     // as this is a declaration for the linker, and will be dropped eventually.
     // It is illegal for comdats to contain declarations.
     auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
-    if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
-      assert(GO->hasAvailableExternallyLinkage() &&
-             "Expected comdat on definition (possibly available external)");
+    if (GO && GO->isDeclarationForLinker() && GO->hasComdat())
       GO->setComdat(nullptr);
-    }
   };
 
   // Process functions and global now

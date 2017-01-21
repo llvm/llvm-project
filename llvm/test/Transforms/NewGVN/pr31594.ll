@@ -19,6 +19,7 @@ define void @patatino(i8* %blah, i32 %choice) {
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    store i8 0, i8* [[FOO]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[BLAH]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[BLAH]], align 1
 ; CHECK-NEXT:    ret void
 ;

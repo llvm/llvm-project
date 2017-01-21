@@ -5,8 +5,7 @@
 # RUN: llvm-objdump -private-headers %t1 | FileCheck %s
 
 ## We expect 2 PT_LOAD segments
-# CHECK:       PHDR
-# CHECK-NEXT:     filesz {{0x[0-9a-f]+}} memsz {{0x[0-9a-f]+}} flags r--
+# CHECK:     Program Header:
 # CHECK-NEXT:  LOAD
 # CHECK-NEXT:     filesz {{0x[0-9a-f]+}} memsz {{0x[0-9a-f]+}} flags rw-
 # CHECK-NEXT:  LOAD

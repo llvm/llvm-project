@@ -14,6 +14,7 @@
 #include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
+#include "FuzzerShmem.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <cstring>
@@ -41,6 +42,8 @@ namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
 
 thread_local bool Fuzzer::IsMyThread;
+
+SharedMemoryRegion SMR;
 
 static void MissingExternalApiFunction(const char *FnName) {
   Printf("ERROR: %s is not defined. Exiting.\n"
@@ -531,6 +534,8 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   assert(InFuzzingThread());
+  if (SMR.IsClient())
+    SMR.WriteByteArray(Data, Size);
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
   uint8_t *DataCopy = new uint8_t[Size];
@@ -806,6 +811,29 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
   }
 }
 
+void Fuzzer::AnnounceOutput(const uint8_t *Data, size_t Size) {
+  if (SMR.IsServer()) {
+    SMR.WriteByteArray(Data, Size);
+  } else if (SMR.IsClient()) {
+    SMR.PostClient();
+    SMR.WaitServer();
+    size_t OtherSize = SMR.ReadByteArraySize();
+    uint8_t *OtherData = SMR.GetByteArray();
+    if (Size != OtherSize || memcmp(Data, OtherData, Size) != 0) {
+      size_t i = 0;
+      for (i = 0; i < Min(Size, OtherSize); i++)
+        if (Data[i] != OtherData[i])
+          break;
+      Printf("==%lu== ERROR: libFuzzer: equivalence-mismatch. Sizes: %zd %zd; "
+             "offset %zd\n", GetPid(), Size, OtherSize, i);
+      DumpCurrentUnit("mismatch-");
+      Printf("SUMMARY: libFuzzer: equivalence-mismatch\n");
+      PrintFinalStats();
+      _Exit(Options.ErrorExitCode);
+    }
+  }
+}
+
 } // namespace fuzzer
 
 extern "C" {
@@ -816,5 +844,8 @@ size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
 }
 
 // Experimental
-void LLVMFuzzerAnnounceOutput(const uint8_t *Data, size_t Size) {}
+void LLVMFuzzerAnnounceOutput(const uint8_t *Data, size_t Size) {
+  assert(fuzzer::F);
+  fuzzer::F->AnnounceOutput(Data, Size);
+}
 }  // extern "C"

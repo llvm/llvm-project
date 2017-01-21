@@ -3207,7 +3207,6 @@ public:
                              bool IsProtocolMethodDecl);
 
   typedef llvm::SmallPtrSet<Selector, 8> SelectorSet;
-  typedef llvm::DenseMap<Selector, ObjCMethodDecl*> ProtocolsMethodsMap;
 
   /// CheckImplementationIvars - This routine checks if the instance variables
   /// listed in the implelementation match those listed in the interface.

@@ -164,9 +164,7 @@ static void thinLTOResolveWeakForLinkerGUID(
     }
     // Alias and aliasee can't be turned into available_externally.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) &&
-             (GlobalValue::isLinkOnceODRLinkage(OriginalLinkage) ||
-              GlobalValue::isWeakODRLinkage(OriginalLinkage)))
+             !GlobalInvolvedWithAlias.count(S.get()))
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
     if (S->linkage() != OriginalLinkage)
       recordNewLinkage(S->modulePath(), GUID, S->linkage());

@@ -55,3 +55,6 @@ RUN: ASAN_OPTIONS=strict_string_checks=1 not LLVMFuzzer-StrncmpOOBTest -seed=1 -
 STRNCMP: AddressSanitizer: heap-buffer-overflow
 STRNCMP-NOT: __sanitizer_weak_hook_strncmp
 STRNCMP: in LLVMFuzzerTestOneInput
+
+RUN: not --crash LLVMFuzzer-BogusInitializeTest 2>&1 | FileCheck %s --check-prefix=BOGUS_INITIALIZE
+BOGUS_INITIALIZE: argv[0] has been modified in LLVMFuzzerInitialize

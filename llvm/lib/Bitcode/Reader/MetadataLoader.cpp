@@ -488,8 +488,21 @@ public:
   Error parseMetadata(bool ModuleLevel);
 
   bool hasFwdRefs() const { return MetadataList.hasFwdRefs(); }
-  Metadata *getMetadataFwdRef(unsigned Idx) {
-    return MetadataList.getMetadataFwdRef(Idx);
+
+  Metadata *getMetadataFwdRefOrLoad(unsigned ID) {
+    if (ID < MDStringRef.size())
+      return lazyLoadOneMDString(ID);
+    if (auto *MD = MetadataList.lookup(ID))
+      return MD;
+    // If lazy-loading is enabled, we try recursively to load the operand
+    // instead of creating a temporary.
+    if (ID < (MDStringRef.size() + GlobalMetadataBitPosIndex.size())) {
+      PlaceholderQueue Placeholders;
+      lazyLoadOneMetadata(ID, Placeholders);
+      resolveForwardRefsAndPlaceholders(Placeholders);
+      return MetadataList.lookup(ID);
+    }
+    return MetadataList.getMetadataFwdRef(ID);
   }
 
   MDNode *getMDNodeFwdRefOrNull(unsigned Idx) {
@@ -1730,8 +1743,8 @@ bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }
 
 /// Return the given metadata, creating a replaceable forward reference if
 /// necessary.
-Metadata *MetadataLoader::getMetadataFwdRef(unsigned Idx) {
-  return Pimpl->getMetadataFwdRef(Idx);
+Metadata *MetadataLoader::getMetadataFwdRefOrLoad(unsigned Idx) {
+  return Pimpl->getMetadataFwdRefOrLoad(Idx);
 }
 
 MDNode *MetadataLoader::getMDNodeFwdRefOrNull(unsigned Idx) {

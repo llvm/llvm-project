@@ -65,6 +65,7 @@ set(Tests
   AbsNegAndConstantTest
   AbsNegAndConstant64Test
   AccumulateAllocationsTest
+  BogusInitializeTest
   BufferOverflowOnInput
   CallerCalleeTest
   CounterTest

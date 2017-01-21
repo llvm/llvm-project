@@ -4601,16 +4601,19 @@ declaration. It marks the declaration as a reference to an absolute symbol,
 which causes the backend to use absolute relocations for the symbol even
 in position independent code, and expresses the possible ranges that the
 global variable's *address* (not its value) is in, in the same format as
-``range`` metadata.
+``range`` metadata, with the extension that the pair ``all-ones,all-ones``
+may be used to represent the full set.
 
-Example:
+Example (assuming 64-bit pointers):
 
 .. code-block:: llvm
 
       @a = external global i8, !absolute_symbol !0 ; Absolute symbol in range [0,256)
+      @b = external global i8, !absolute_symbol !1 ; Absolute symbol in range [0,2^64)
 
     ...
     !0 = !{ i64 0, i64 256 }
+    !1 = !{ i64 -1, i64 -1 }
 
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

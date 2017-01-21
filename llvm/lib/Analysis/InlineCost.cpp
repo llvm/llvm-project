@@ -134,6 +134,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   void accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
                           int InstructionCost);
   bool isGEPOffsetConstant(GetElementPtrInst &GEP);
+  bool isGEPFree(GetElementPtrInst &GEP);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallSite CS);
   ConstantInt *stripAndComputeInBoundsConstantOffsets(Value *&V);
@@ -331,6 +332,21 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
   return true;
 }
 
+/// \brief Use TTI to check whether a GEP is free.
+///
+/// Respects any simplified values known during the analysis of this callsite.
+bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
+  SmallVector<Value *, 4> Indices;
+  for (User::op_iterator I = GEP.idx_begin(), E = GEP.idx_end(); I != E; ++I)
+    if (Constant *SimpleOp = SimplifiedValues.lookup(*I))
+       Indices.push_back(SimpleOp);
+     else
+       Indices.push_back(*I);
+  return TargetTransformInfo::TCC_Free ==
+         TTI.getGEPCost(GEP.getSourceElementType(), GEP.getPointerOperand(),
+                        Indices);
+}
+
 bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // Check whether inlining will turn a dynamic alloca into a static
   // alloca and handle that case.
@@ -396,7 +412,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
         // Non-constant GEPs aren't folded, and disable SROA.
         if (SROACandidate)
           disableSROA(CostIt);
-        return false;
+        return isGEPFree(I);
       }
 
       // Add the result as a new mapping to Base + Offset.
@@ -422,7 +438,7 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   // Variable GEPs will require math and will disable SROA.
   if (SROACandidate)
     disableSROA(CostIt);
-  return false;
+  return isGEPFree(I);
 }
 
 bool CallAnalyzer::visitBitCast(BitCastInst &I) {

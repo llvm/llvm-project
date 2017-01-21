@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clang_scudo %s -lstdc++ -o %t
 // RUN:     %run %t pointers 2>&1
 // RUN:     %run %t contents 2>&1
 // RUN: not %run %t memalign 2>&1 | FileCheck %s

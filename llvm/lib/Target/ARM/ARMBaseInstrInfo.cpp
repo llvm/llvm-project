@@ -2435,6 +2435,63 @@ inline static bool isRedundantFlagInstr(MachineInstr *CmpI, unsigned SrcReg,
   return false;
 }
 
+static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
+  switch (MI->getOpcode()) {
+  default: return false;
+  case ARM::tLSLri:
+  case ARM::tLSRri:
+  case ARM::tLSLrr:
+  case ARM::tLSRrr:
+  case ARM::tSUBrr:
+  case ARM::tADDrr:
+  case ARM::tADDi3:
+  case ARM::tADDi8:
+  case ARM::tSUBi3:
+  case ARM::tSUBi8:
+  case ARM::tMUL:
+    IsThumb1 = true;
+    LLVM_FALLTHROUGH;
+  case ARM::RSBrr:
+  case ARM::RSBri:
+  case ARM::RSCrr:
+  case ARM::RSCri:
+  case ARM::ADDrr:
+  case ARM::ADDri:
+  case ARM::ADCrr:
+  case ARM::ADCri:
+  case ARM::SUBrr:
+  case ARM::SUBri:
+  case ARM::SBCrr:
+  case ARM::SBCri:
+  case ARM::t2RSBri:
+  case ARM::t2ADDrr:
+  case ARM::t2ADDri:
+  case ARM::t2ADCrr:
+  case ARM::t2ADCri:
+  case ARM::t2SUBrr:
+  case ARM::t2SUBri:
+  case ARM::t2SBCrr:
+  case ARM::t2SBCri:
+  case ARM::ANDrr:
+  case ARM::ANDri:
+  case ARM::t2ANDrr:
+  case ARM::t2ANDri:
+  case ARM::ORRrr:
+  case ARM::ORRri:
+  case ARM::t2ORRrr:
+  case ARM::t2ORRri:
+  case ARM::EORrr:
+  case ARM::EORri:
+  case ARM::t2EORrr:
+  case ARM::t2EORri:
+  case ARM::t2LSRri:
+  case ARM::t2LSRrr:
+  case ARM::t2LSLri:
+  case ARM::t2LSLrr:
+    return true;
+  }
+}
+
 /// optimizeCompareInstr - Convert the instruction supplying the argument to the
 /// comparison into one that sets the zero bit in the flags register;
 /// Remove a redundant Compare instruction if an earlier instruction can set the
@@ -2496,6 +2553,41 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
       return false;
   }
 
+  bool IsThumb1 = false;
+  if (MI && !isOptimizeCompareCandidate(MI, IsThumb1))
+    return false;
+
+  // We also want to do this peephole for cases like this: if (a*b == 0),
+  // and optimise away the CMP instruction from the generated code sequence:
+  // MULS, MOVS, MOVS, CMP. Here the MOVS instructions load the boolean values
+  // resulting from the select instruction, but these MOVS instructions for
+  // Thumb1 (V6M) are flag setting and are thus preventing this optimisation.
+  // However, if we only have MOVS instructions in between the CMP and the
+  // other instruction (the MULS in this example), then the CPSR is dead so we
+  // can safely reorder the sequence into: MOVS, MOVS, MULS, CMP. We do this
+  // reordering and then continue the analysis hoping we can eliminate the
+  // CMP. This peephole works on the vregs, so is still in SSA form. As a
+  // consequence, the movs won't redefine/kill the MUL operands which would
+  // make this reordering illegal.
+  if (MI && IsThumb1) {
+    --I;
+    bool CanReorder = true;
+    const bool HasStmts = I != E;
+    for (; I != E; --I) {
+      if (I->getOpcode() != ARM::tMOVi8) {
+        CanReorder = false;
+        break;
+      }
+    }
+    if (HasStmts && CanReorder) {
+      MI = MI->removeFromParent();
+      E = CmpInstr;
+      CmpInstr.getParent()->insert(E, MI);
+    }
+    I = CmpInstr;
+    E = MI;
+  }
+
   // Check that CPSR isn't set between the comparison instruction and the one we
   // want to change. At the same time, search for Sub.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -2531,183 +2623,128 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   if (isPredicated(*MI))
     return false;
 
-  bool IsThumb1 = false;
-  switch (MI->getOpcode()) {
-  default: break;
-  case ARM::tLSLri:
-  case ARM::tLSRri:
-  case ARM::tLSLrr:
-  case ARM::tLSRrr:
-  case ARM::tSUBrr:
-  case ARM::tADDrr:
-  case ARM::tADDi3:
-  case ARM::tADDi8:
-  case ARM::tSUBi3:
-  case ARM::tSUBi8:
-    IsThumb1 = true;
-    LLVM_FALLTHROUGH;
-  case ARM::RSBrr:
-  case ARM::RSBri:
-  case ARM::RSCrr:
-  case ARM::RSCri:
-  case ARM::ADDrr:
-  case ARM::ADDri:
-  case ARM::ADCrr:
-  case ARM::ADCri:
-  case ARM::SUBrr:
-  case ARM::SUBri:
-  case ARM::SBCrr:
-  case ARM::SBCri:
-  case ARM::t2RSBri:
-  case ARM::t2ADDrr:
-  case ARM::t2ADDri:
-  case ARM::t2ADCrr:
-  case ARM::t2ADCri:
-  case ARM::t2SUBrr:
-  case ARM::t2SUBri:
-  case ARM::t2SBCrr:
-  case ARM::t2SBCri:
-  case ARM::ANDrr:
-  case ARM::ANDri:
-  case ARM::t2ANDrr:
-  case ARM::t2ANDri:
-  case ARM::ORRrr:
-  case ARM::ORRri:
-  case ARM::t2ORRrr:
-  case ARM::t2ORRri:
-  case ARM::EORrr:
-  case ARM::EORri:
-  case ARM::t2EORrr:
-  case ARM::t2EORri:
-  case ARM::t2LSRri:
-  case ARM::t2LSRrr:
-  case ARM::t2LSLri:
-  case ARM::t2LSLrr: {
-    // Scan forward for the use of CPSR
-    // When checking against MI: if it's a conditional code that requires
-    // checking of the V bit or C bit, then this is not safe to do.
-    // It is safe to remove CmpInstr if CPSR is redefined or killed.
-    // If we are done with the basic block, we need to check whether CPSR is
-    // live-out.
-    SmallVector<std::pair<MachineOperand*, ARMCC::CondCodes>, 4>
-        OperandsToUpdate;
-    bool isSafe = false;
-    I = CmpInstr;
-    E = CmpInstr.getParent()->end();
-    while (!isSafe && ++I != E) {
-      const MachineInstr &Instr = *I;
-      for (unsigned IO = 0, EO = Instr.getNumOperands();
-           !isSafe && IO != EO; ++IO) {
-        const MachineOperand &MO = Instr.getOperand(IO);
-        if (MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR)) {
-          isSafe = true;
-          break;
-        }
-        if (!MO.isReg() || MO.getReg() != ARM::CPSR)
-          continue;
-        if (MO.isDef()) {
-          isSafe = true;
-          break;
-        }
-        // Condition code is after the operand before CPSR except for VSELs.
-        ARMCC::CondCodes CC;
-        bool IsInstrVSel = true;
-        switch (Instr.getOpcode()) {
-        default:
-          IsInstrVSel = false;
-          CC = (ARMCC::CondCodes)Instr.getOperand(IO - 1).getImm();
-          break;
-        case ARM::VSELEQD:
-        case ARM::VSELEQS:
-          CC = ARMCC::EQ;
-          break;
-        case ARM::VSELGTD:
-        case ARM::VSELGTS:
-          CC = ARMCC::GT;
-          break;
-        case ARM::VSELGED:
-        case ARM::VSELGES:
-          CC = ARMCC::GE;
-          break;
-        case ARM::VSELVSS:
-        case ARM::VSELVSD:
-          CC = ARMCC::VS;
-          break;
-        }
+  // Scan forward for the use of CPSR
+  // When checking against MI: if it's a conditional code that requires
+  // checking of the V bit or C bit, then this is not safe to do.
+  // It is safe to remove CmpInstr if CPSR is redefined or killed.
+  // If we are done with the basic block, we need to check whether CPSR is
+  // live-out.
+  SmallVector<std::pair<MachineOperand*, ARMCC::CondCodes>, 4>
+      OperandsToUpdate;
+  bool isSafe = false;
+  I = CmpInstr;
+  E = CmpInstr.getParent()->end();
+  while (!isSafe && ++I != E) {
+    const MachineInstr &Instr = *I;
+    for (unsigned IO = 0, EO = Instr.getNumOperands();
+         !isSafe && IO != EO; ++IO) {
+      const MachineOperand &MO = Instr.getOperand(IO);
+      if (MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR)) {
+        isSafe = true;
+        break;
+      }
+      if (!MO.isReg() || MO.getReg() != ARM::CPSR)
+        continue;
+      if (MO.isDef()) {
+        isSafe = true;
+        break;
+      }
+      // Condition code is after the operand before CPSR except for VSELs.
+      ARMCC::CondCodes CC;
+      bool IsInstrVSel = true;
+      switch (Instr.getOpcode()) {
+      default:
+        IsInstrVSel = false;
+        CC = (ARMCC::CondCodes)Instr.getOperand(IO - 1).getImm();
+        break;
+      case ARM::VSELEQD:
+      case ARM::VSELEQS:
+        CC = ARMCC::EQ;
+        break;
+      case ARM::VSELGTD:
+      case ARM::VSELGTS:
+        CC = ARMCC::GT;
+        break;
+      case ARM::VSELGED:
+      case ARM::VSELGES:
+        CC = ARMCC::GE;
+        break;
+      case ARM::VSELVSS:
+      case ARM::VSELVSD:
+        CC = ARMCC::VS;
+        break;
+      }
 
-        if (Sub) {
-          ARMCC::CondCodes NewCC = getSwappedCondition(CC);
-          if (NewCC == ARMCC::AL)
+      if (Sub) {
+        ARMCC::CondCodes NewCC = getSwappedCondition(CC);
+        if (NewCC == ARMCC::AL)
+          return false;
+        // If we have SUB(r1, r2) and CMP(r2, r1), the condition code based
+        // on CMP needs to be updated to be based on SUB.
+        // Push the condition code operands to OperandsToUpdate.
+        // If it is safe to remove CmpInstr, the condition code of these
+        // operands will be modified.
+        if (SrcReg2 != 0 && Sub->getOperand(1).getReg() == SrcReg2 &&
+            Sub->getOperand(2).getReg() == SrcReg) {
+          // VSel doesn't support condition code update.
+          if (IsInstrVSel)
             return false;
-          // If we have SUB(r1, r2) and CMP(r2, r1), the condition code based
-          // on CMP needs to be updated to be based on SUB.
-          // Push the condition code operands to OperandsToUpdate.
-          // If it is safe to remove CmpInstr, the condition code of these
-          // operands will be modified.
-          if (SrcReg2 != 0 && Sub->getOperand(1).getReg() == SrcReg2 &&
-              Sub->getOperand(2).getReg() == SrcReg) {
-            // VSel doesn't support condition code update.
-            if (IsInstrVSel)
-              return false;
-            OperandsToUpdate.push_back(
-                std::make_pair(&((*I).getOperand(IO - 1)), NewCC));
-          }
-        } else {
-          // No Sub, so this is x = <op> y, z; cmp x, 0.
-          switch (CC) {
-          case ARMCC::EQ: // Z
-          case ARMCC::NE: // Z
-          case ARMCC::MI: // N
-          case ARMCC::PL: // N
-          case ARMCC::AL: // none
-            // CPSR can be used multiple times, we should continue.
-            break;
-          case ARMCC::HS: // C
-          case ARMCC::LO: // C
-          case ARMCC::VS: // V
-          case ARMCC::VC: // V
-          case ARMCC::HI: // C Z
-          case ARMCC::LS: // C Z
-          case ARMCC::GE: // N V
-          case ARMCC::LT: // N V
-          case ARMCC::GT: // Z N V
-          case ARMCC::LE: // Z N V
-            // The instruction uses the V bit or C bit which is not safe.
-            return false;
-          }
+          OperandsToUpdate.push_back(
+              std::make_pair(&((*I).getOperand(IO - 1)), NewCC));
+        }
+      } else {
+        // No Sub, so this is x = <op> y, z; cmp x, 0.
+        switch (CC) {
+        case ARMCC::EQ: // Z
+        case ARMCC::NE: // Z
+        case ARMCC::MI: // N
+        case ARMCC::PL: // N
+        case ARMCC::AL: // none
+          // CPSR can be used multiple times, we should continue.
+          break;
+        case ARMCC::HS: // C
+        case ARMCC::LO: // C
+        case ARMCC::VS: // V
+        case ARMCC::VC: // V
+        case ARMCC::HI: // C Z
+        case ARMCC::LS: // C Z
+        case ARMCC::GE: // N V
+        case ARMCC::LT: // N V
+        case ARMCC::GT: // Z N V
+        case ARMCC::LE: // Z N V
+          // The instruction uses the V bit or C bit which is not safe.
+          return false;
         }
       }
     }
-
-    // If CPSR is not killed nor re-defined, we should check whether it is
-    // live-out. If it is live-out, do not optimize.
-    if (!isSafe) {
-      MachineBasicBlock *MBB = CmpInstr.getParent();
-      for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
-               SE = MBB->succ_end(); SI != SE; ++SI)
-        if ((*SI)->isLiveIn(ARM::CPSR))
-          return false;
-    }
-
-    // Toggle the optional operand to CPSR (if it exists - in Thumb1 we always
-    // set CPSR so this is represented as an explicit output)
-    if (!IsThumb1) {
-      MI->getOperand(5).setReg(ARM::CPSR);
-      MI->getOperand(5).setIsDef(true);
-    }
-    assert(!isPredicated(*MI) && "Can't use flags from predicated instruction");
-    CmpInstr.eraseFromParent();
-
-    // Modify the condition code of operands in OperandsToUpdate.
-    // Since we have SUB(r1, r2) and CMP(r2, r1), the condition code needs to
-    // be changed from r2 > r1 to r1 < r2, from r2 < r1 to r1 > r2, etc.
-    for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
-      OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
-    return true;
   }
+
+  // If CPSR is not killed nor re-defined, we should check whether it is
+  // live-out. If it is live-out, do not optimize.
+  if (!isSafe) {
+    MachineBasicBlock *MBB = CmpInstr.getParent();
+    for (MachineBasicBlock::succ_iterator SI = MBB->succ_begin(),
+             SE = MBB->succ_end(); SI != SE; ++SI)
+      if ((*SI)->isLiveIn(ARM::CPSR))
+        return false;
   }
-  
-  return false;
+
+  // Toggle the optional operand to CPSR (if it exists - in Thumb1 we always
+  // set CPSR so this is represented as an explicit output)
+  if (!IsThumb1) {
+    MI->getOperand(5).setReg(ARM::CPSR);
+    MI->getOperand(5).setIsDef(true);
+  }
+  assert(!isPredicated(*MI) && "Can't use flags from predicated instruction");
+  CmpInstr.eraseFromParent();
+
+  // Modify the condition code of operands in OperandsToUpdate.
+  // Since we have SUB(r1, r2) and CMP(r2, r1), the condition code needs to
+  // be changed from r2 > r1 to r1 < r2, from r2 < r1 to r1 > r2, etc.
+  for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
+    OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
+
+  return true;
 }
 
 bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
