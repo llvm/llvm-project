@@ -19,10 +19,26 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600RegisterInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <new>
+#include <set>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -43,13 +59,12 @@ struct CFStack {
   std::vector<StackItem> BranchStack;
   std::vector<StackItem> LoopStack;
   unsigned MaxStackSize;
-  unsigned CurrentEntries;
-  unsigned CurrentSubEntries;
+  unsigned CurrentEntries = 0;
+  unsigned CurrentSubEntries = 0;
 
   CFStack(const R600Subtarget *st, CallingConv::ID cc) : ST(st),
       // We need to reserve a stack entry for CALL_FS in vertex shaders.
-      MaxStackSize(cc == CallingConv::AMDGPU_VS ? 1 : 0),
-      CurrentEntries(0), CurrentSubEntries(0) { }
+      MaxStackSize(cc == CallingConv::AMDGPU_VS ? 1 : 0) {}
 
   unsigned getLoopDepth();
   bool branchStackContains(CFStack::StackItem);
@@ -198,9 +213,8 @@ void CFStack::popLoop() {
 }
 
 class R600ControlFlowFinalizer : public MachineFunctionPass {
-
 private:
-  typedef std::pair<MachineInstr *, std::vector<MachineInstr *> > ClauseFile;
+  typedef std::pair<MachineInstr *, std::vector<MachineInstr *>> ClauseFile;
 
   enum ControlFlowInstruction {
     CF_TC,
@@ -217,10 +231,10 @@ private:
   };
 
   static char ID;
-  const R600InstrInfo *TII;
-  const R600RegisterInfo *TRI;
+  const R600InstrInfo *TII = nullptr;
+  const R600RegisterInfo *TRI = nullptr;
   unsigned MaxFetchInst;
-  const R600Subtarget *ST;
+  const R600Subtarget *ST = nullptr;
 
   bool IsTrivialInst(MachineInstr &MI) const {
     switch (MI.getOpcode()) {
@@ -355,7 +369,7 @@ private:
         continue;
       int64_t Imm = Src.second;
       std::vector<MachineOperand *>::iterator It =
-          find_if(Lits, [&](MachineOperand *val) {
+          llvm::find_if(Lits, [&](MachineOperand *val) {
             return val->isImm() && (val->getImm() == Imm);
           });
 
@@ -485,8 +499,7 @@ private:
   }
 
 public:
-  R600ControlFlowFinalizer(TargetMachine &tm)
-      : MachineFunctionPass(ID), TII(nullptr), TRI(nullptr), ST(nullptr) {}
+  R600ControlFlowFinalizer(TargetMachine &tm) : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     ST = &MF.getSubtarget<R600Subtarget>();
@@ -501,7 +514,7 @@ public:
         ++MB) {
       MachineBasicBlock &MBB = *MB;
       unsigned CfCount = 0;
-      std::vector<std::pair<unsigned, std::set<MachineInstr *> > > LoopStack;
+      std::vector<std::pair<unsigned, std::set<MachineInstr *>>> LoopStack;
       std::vector<MachineInstr * > IfThenElseStack;
       if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_VS) {
         BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
@@ -554,7 +567,7 @@ public:
           MachineInstr *MIb = BuildMI(MBB, MI, MBB.findDebugLoc(MI),
               getHWInstrDesc(CF_WHILE_LOOP))
               .addImm(1);
-          std::pair<unsigned, std::set<MachineInstr *> > Pair(CfCount,
+          std::pair<unsigned, std::set<MachineInstr *>> Pair(CfCount,
               std::set<MachineInstr *>());
           Pair.second.insert(MIb);
           LoopStack.push_back(std::move(Pair));
@@ -564,7 +577,7 @@ public:
         }
         case AMDGPU::ENDLOOP: {
           CFStack.popLoop();
-          std::pair<unsigned, std::set<MachineInstr *> > Pair =
+          std::pair<unsigned, std::set<MachineInstr *>> Pair =
               std::move(LoopStack.back());
           LoopStack.pop_back();
           CounterPropagateAddr(Pair.second, CfCount);
@@ -693,7 +706,6 @@ char R600ControlFlowFinalizer::ID = 0;
 
 } // end anonymous namespace
 
-
-llvm::FunctionPass *llvm::createR600ControlFlowFinalizer(TargetMachine &TM) {
+FunctionPass *llvm::createR600ControlFlowFinalizer(TargetMachine &TM) {
   return new R600ControlFlowFinalizer(TM);
 }

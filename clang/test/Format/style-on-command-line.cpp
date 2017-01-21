@@ -16,15 +16,13 @@
 // RUN: rm %T/_clang-format
 // Test no config file found, WebKit fallback style is applied
 // RUN: clang-format -style=file -fallback-style=WebKit -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK10 %s
-// Test no config file and no fallback style, LLVM style is applied
-// RUN: clang-format -style=file -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK11 %s
 // Test no config file and fallback style "none", no formatting is applied
-// RUN: clang-format -style=file -fallback-style=none -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK12 %s
+// RUN: clang-format -style=file -fallback-style=none -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK11 %s
 // Test config file with no based style, and fallback style "none", formatting is applied
 // RUN: printf "IndentWidth: 6\n" > %T/_clang-format
-// RUN: clang-format -style=file -fallback-style=none -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK13 %s
+// RUN: clang-format -style=file -fallback-style=none -assume-filename=%T/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK12 %s
 // Test yaml with no based style, and fallback style "none", LLVM formatting applied
-// RUN: clang-format -style="{IndentWidth: 7}" -fallback-style=none %s | FileCheck -strict-whitespace -check-prefix=CHECK14 %s
+// RUN: clang-format -style="{IndentWidth: 7}" -fallback-style=none %s | FileCheck -strict-whitespace -check-prefix=CHECK13 %s
 
 void f() {
 // CHECK1: {{^        int\* i;$}}
@@ -38,10 +36,9 @@ void f() {
 // CHECK8: {{^  int\* i;$}}
 // CHECK9: {{^    int \*i;$}}
 // CHECK10: {{^    int\* i;$}}
-// CHECK11: {{^  int \*i;$}}
-// CHECK12: {{^int\*i;$}}
-// CHECK13: {{^      int \*i;$}}
-// CHECK14: {{^       int \*i;$}}
+// CHECK11: {{^int\*i;$}}
+// CHECK12: {{^      int \*i;$}}
+// CHECK13: {{^       int \*i;$}}
 int*i;
 int j;
 }

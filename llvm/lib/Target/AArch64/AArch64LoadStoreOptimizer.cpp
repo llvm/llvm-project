@@ -687,9 +687,30 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   MachineInstrBuilder MIB;
   DebugLoc DL = I->getDebugLoc();
   MachineBasicBlock *MBB = I->getParent();
+  MachineOperand RegOp0 = getLdStRegOp(*RtMI);
+  MachineOperand RegOp1 = getLdStRegOp(*Rt2MI);
+  // Kill flags may become invalid when moving stores for pairing.
+  if (RegOp0.isUse()) {
+    if (!MergeForward) {
+      // Clear kill flags on store if moving upwards. Example:
+      //   STRWui %w0, ...
+      //   USE %w1
+      //   STRWui kill %w1  ; need to clear kill flag when moving STRWui upwards
+      RegOp0.setIsKill(false);
+      RegOp1.setIsKill(false);
+    } else {
+      // Clear kill flags of the first stores register. Example:
+      //   STRWui %w1, ...
+      //   USE kill %w1   ; need to clear kill flag when moving STRWui downwards
+      //   STRW %w0
+      unsigned Reg = getLdStRegOp(*I).getReg();
+      for (MachineInstr &MI : make_range(std::next(I), Paired))
+        MI.clearRegisterKills(Reg, TRI);
+    }
+  }
   MIB = BuildMI(*MBB, InsertionPoint, DL, TII->get(getMatchingPairOpcode(Opc)))
-            .add(getLdStRegOp(*RtMI))
-            .add(getLdStRegOp(*Rt2MI))
+            .add(RegOp0)
+            .add(RegOp1)
             .add(BaseRegOp)
             .addImm(OffsetImm)
             .setMemRefs(I->mergeMemRefsWith(*Paired));

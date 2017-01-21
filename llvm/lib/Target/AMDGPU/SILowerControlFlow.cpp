@@ -51,13 +51,23 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <iterator>
 
 using namespace llvm;
 
@@ -67,10 +77,10 @@ namespace {
 
 class SILowerControlFlow : public MachineFunctionPass {
 private:
-  const SIRegisterInfo *TRI;
-  const SIInstrInfo *TII;
-  LiveIntervals *LIS;
-  MachineRegisterInfo *MRI;
+  const SIRegisterInfo *TRI = nullptr;
+  const SIInstrInfo *TII = nullptr;
+  LiveIntervals *LIS = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
@@ -88,12 +98,7 @@ private:
 public:
   static char ID;
 
-  SILowerControlFlow() :
-    MachineFunctionPass(ID),
-    TRI(nullptr),
-    TII(nullptr),
-    LIS(nullptr),
-    MRI(nullptr) {}
+  SILowerControlFlow() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -113,7 +118,7 @@ public:
   }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 char SILowerControlFlow::ID = 0;
 

@@ -114,6 +114,8 @@ protected:
   bool HasVGPRIndexMode;
   bool HasScalarStores;
   bool HasInv2PiInlineImm;
+  bool HasSDWA;
+  bool HasDPP;
   bool FlatAddressSpace;
   bool R600ALUInst;
   bool CaymanISA;
@@ -550,6 +552,14 @@ public:
 
   bool hasInv2PiInlineImm() const {
     return HasInv2PiInlineImm;
+  }
+
+  bool hasSDWA() const {
+    return HasSDWA;
+  }
+
+  bool hasDPP() const {
+    return HasDPP;
   }
 
   bool enableSIScheduler() const {

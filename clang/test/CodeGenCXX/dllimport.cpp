@@ -26,7 +26,6 @@ struct ExplicitSpec_NotImported {};
 #define USEVARTYPE(type, var) type UNIQ(use)() { return var; }
 #define USEVAR(var) USEVARTYPE(int, var)
 #define USE(func) void UNIQ(use)() { func(); }
-#define USE1(func) void UNIQ(use)() { func(nullptr); }
 #define USEMEMFUNC(class, func) void (class::*UNIQ(use)())() { return &class::func; }
 #define USESTATICMEMFUNC(class, func) void (*UNIQ(use)())() { return &class::func; }
 #define USECLASS(class) void UNIQ(USE)() { class x; }
@@ -317,13 +316,10 @@ namespace ns { __declspec(dllimport) void externalFunc(); }
 USE(ns::externalFunc)
 
 // A dllimport function referencing non-imported vars or functions must not be available_externally.
-
 __declspec(dllimport) int ImportedVar;
 int NonImportedVar;
 __declspec(dllimport) int ImportedFunc();
 int NonImportedFunc();
-struct ClassWithNonImportedMethod { int f(); };
-
 __declspec(dllimport) inline int ReferencingImportedVar() { return ImportedVar; }
 // MO1-DAG: define available_externally dllimport i32 @"\01?ReferencingImportedVar@@YAHXZ"
 __declspec(dllimport) inline int ReferencingNonImportedVar() { return NonImportedVar; }
@@ -332,13 +328,10 @@ __declspec(dllimport) inline int ReferencingImportedFunc() { return ImportedFunc
 // MO1-DAG: define available_externally dllimport i32 @"\01?ReferencingImportedFunc@@YAHXZ"
 __declspec(dllimport) inline int ReferencingNonImportedFunc() { return NonImportedFunc(); }
 // MO1-DAG: declare dllimport i32 @"\01?ReferencingNonImportedFunc@@YAHXZ"()
-__declspec(dllimport) inline int ReferencingNonImportedMethod(ClassWithNonImportedMethod *x) { return x->f(); }
-// MO1-DAG: declare dllimport i32 @"\01?ReferencingNonImportedMethod
 USE(ReferencingImportedVar)
 USE(ReferencingNonImportedVar)
 USE(ReferencingImportedFunc)
 USE(ReferencingNonImportedFunc)
-USE1(ReferencingNonImportedMethod)
 // References to operator new and delete count too, despite not being DeclRefExprs.
 __declspec(dllimport) inline int *ReferencingNonImportedNew() { return new int[2]; }
 // MO1-DAG: declare dllimport i32* @"\01?ReferencingNonImportedNew@@YAPAHXZ"

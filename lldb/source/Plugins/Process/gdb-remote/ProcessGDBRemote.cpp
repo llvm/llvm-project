@@ -1649,27 +1649,8 @@ bool ProcessGDBRemote::UpdateThreadList(ThreadList &old_thread_list,
                       __FUNCTION__, static_cast<void *>(thread_sp.get()),
                       thread_sp->GetID());
       }
-      // The m_thread_pcs vector has pc values in big-endian order, not
-      // target-endian, unlike most
-      // of the register read/write packets in gdb-remote protocol.
-      // Early in the process startup, we may not yet have set the process
-      // ByteOrder so we ignore these;
-      // they are a performance improvement over fetching thread register values
-      // individually, the
-      // method we will fall back to if needed.
-      if (m_thread_ids.size() == m_thread_pcs.size() && thread_sp.get() &&
-          GetByteOrder() != eByteOrderInvalid) {
-        ThreadGDBRemote *gdb_thread =
-            static_cast<ThreadGDBRemote *>(thread_sp.get());
-        RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
-        if (reg_ctx_sp) {
-          uint32_t pc_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
-              eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-          if (pc_regnum != LLDB_INVALID_REGNUM) {
-            gdb_thread->PrivateSetRegisterValue(pc_regnum, m_thread_pcs[i]);
-          }
-        }
-      }
+
+      SetThreadPc(thread_sp, i);
       new_thread_list.AddThreadSortedByIndexID(thread_sp);
     }
   }
@@ -1687,6 +1668,22 @@ bool ProcessGDBRemote::UpdateThreadList(ThreadList &old_thread_list,
   }
 
   return true;
+}
+
+void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
+  if (m_thread_ids.size() == m_thread_pcs.size() && thread_sp.get() &&
+      GetByteOrder() != eByteOrderInvalid) {
+    ThreadGDBRemote *gdb_thread =
+        static_cast<ThreadGDBRemote *>(thread_sp.get());
+    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    if (reg_ctx_sp) {
+      uint32_t pc_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+          eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+      if (pc_regnum != LLDB_INVALID_REGNUM) {
+        gdb_thread->PrivateSetRegisterValue(pc_regnum, m_thread_pcs[index]);
+      }
+    }
+  }
 }
 
 bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
@@ -1773,6 +1770,11 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
       ThreadGDBRemote *gdb_thread =
           static_cast<ThreadGDBRemote *>(thread_sp.get());
       gdb_thread->GetRegisterContext()->InvalidateIfNeeded(true);
+
+      auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
+      if (iter != m_thread_ids.end()) {
+        SetThreadPc(thread_sp, iter - m_thread_ids.begin());
+      }
 
       for (const auto &pair : expedited_register_map) {
         StringExtractor reg_value_extractor;

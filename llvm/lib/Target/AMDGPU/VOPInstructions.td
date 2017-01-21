@@ -267,8 +267,8 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let SDWA = 1;
   let Uses = [EXEC];
   
-  let SubtargetPredicate = isVI;
-  let AssemblerPredicate = !if(P.HasExt, isVI, DisableInst);
+  let SubtargetPredicate = HasSDWA;
+  let AssemblerPredicate = !if(P.HasExt, HasSDWA, DisableInst);
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.SDWA,
                                      AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
@@ -337,8 +337,8 @@ class VOP_DPP <string OpName, VOPProfile P> :
   let Size = 8;
 
   let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
-  let SubtargetPredicate = isVI;
-  let AssemblerPredicate = !if(P.HasExt, isVI, DisableInst);
+  let SubtargetPredicate = HasDPP;
+  let AssemblerPredicate = !if(P.HasExt, HasDPP, DisableInst);
   let AsmVariantName = !if(P.HasExt, AMDGPUAsmVariants.DPP,
                                      AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "DPP";

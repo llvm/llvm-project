@@ -3043,6 +3043,7 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   //                   ::= Te <name> # dependent elaborated type specifier using
   //                                 # 'enum'
   switch (T->getKeyword()) {
+    case ETK_None:
     case ETK_Typename:
       break;
     case ETK_Struct:
@@ -3056,8 +3057,6 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
     case ETK_Enum:
       Out << "Te";
       break;
-    default:
-      llvm_unreachable("unexpected keyword for dependent type name");
   }
   // Typename types are always nested
   Out << 'N';

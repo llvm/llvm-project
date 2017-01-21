@@ -1532,6 +1532,7 @@ Error NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
     assert((proc_entry_info.GetRange().GetRangeBase() >= prev_base_address) &&
            "descending /proc/pid/maps entries detected, unexpected");
     prev_base_address = proc_entry_info.GetRange().GetRangeBase();
+    UNUSED_IF_ASSERT_DISABLED(prev_base_address);
 
     // If the target address comes before this entry, indicate distance to next
     // region.

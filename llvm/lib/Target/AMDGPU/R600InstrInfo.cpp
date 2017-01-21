@@ -12,16 +12,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "R600InstrInfo.h"
 #include "AMDGPU.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
 #include "R600Defines.h"
-#include "R600MachineFunctionInfo.h"
+#include "R600FrameLowering.h"
+#include "R600InstrInfo.h"
 #include "R600RegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -191,7 +209,7 @@ bool R600InstrInfo::usesTextureCache(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getParent()->getParent();
   return (AMDGPU::isCompute(MF->getFunction()->getCallingConv()) &&
           usesVertexCache(MI.getOpcode())) ||
-         usesTextureCache(MI.getOpcode());
+          usesTextureCache(MI.getOpcode());
 }
 
 bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
@@ -321,7 +339,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
                            unsigned &ConstCount) const {
   ConstCount = 0;
   const std::pair<int, unsigned> DummyPair(-1, 0);
-  std::vector<std::pair<int, unsigned> > Result;
+  std::vector<std::pair<int, unsigned>> Result;
   unsigned i = 0;
   for (const auto &Src : getSrcs(MI)) {
     ++i;
@@ -348,8 +366,8 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
   return Result;
 }
 
-static std::vector<std::pair<int, unsigned> >
-Swizzle(std::vector<std::pair<int, unsigned> > Src,
+static std::vector<std::pair<int, unsigned>>
+Swizzle(std::vector<std::pair<int, unsigned>> Src,
         R600InstrInfo::BankSwizzle Swz) {
   if (Src[0] == Src[1])
     Src[1].first = -1;
@@ -404,14 +422,14 @@ static unsigned getTransSwizzle(R600InstrInfo::BankSwizzle Swz, unsigned Op) {
 /// in the same Instruction Group while meeting read port limitations given a
 /// Swz swizzle sequence.
 unsigned  R600InstrInfo::isLegalUpTo(
-    const std::vector<std::vector<std::pair<int, unsigned> > > &IGSrcs,
+    const std::vector<std::vector<std::pair<int, unsigned>>> &IGSrcs,
     const std::vector<R600InstrInfo::BankSwizzle> &Swz,
-    const std::vector<std::pair<int, unsigned> > &TransSrcs,
+    const std::vector<std::pair<int, unsigned>> &TransSrcs,
     R600InstrInfo::BankSwizzle TransSwz) const {
   int Vector[4][3];
   memset(Vector, -1, sizeof(Vector));
   for (unsigned i = 0, e = IGSrcs.size(); i < e; i++) {
-    const std::vector<std::pair<int, unsigned> > &Srcs =
+    const std::vector<std::pair<int, unsigned>> &Srcs =
         Swizzle(IGSrcs[i], Swz[i]);
     for (unsigned j = 0; j < 3; j++) {
       const std::pair<int, unsigned> &Src = Srcs[j];
@@ -473,9 +491,9 @@ NextPossibleSolution(
 /// Enumerate all possible Swizzle sequence to find one that can meet all
 /// read port requirements.
 bool R600InstrInfo::FindSwizzleForVectorSlot(
-    const std::vector<std::vector<std::pair<int, unsigned> > > &IGSrcs,
+    const std::vector<std::vector<std::pair<int, unsigned>>> &IGSrcs,
     std::vector<R600InstrInfo::BankSwizzle> &SwzCandidate,
-    const std::vector<std::pair<int, unsigned> > &TransSrcs,
+    const std::vector<std::pair<int, unsigned>> &TransSrcs,
     R600InstrInfo::BankSwizzle TransSwz) const {
   unsigned ValidUpTo = 0;
   do {
@@ -490,7 +508,7 @@ bool R600InstrInfo::FindSwizzleForVectorSlot(
 /// a const, and can't read a gpr at cycle 1 if they read 2 const.
 static bool
 isConstCompatible(R600InstrInfo::BankSwizzle TransSwz,
-                  const std::vector<std::pair<int, unsigned> > &TransOps,
+                  const std::vector<std::pair<int, unsigned>> &TransOps,
                   unsigned ConstCount) {
   // TransALU can't read 3 constants
   if (ConstCount > 2)
@@ -516,7 +534,7 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
     const {
   //Todo : support shared src0 - src1 operand
 
-  std::vector<std::vector<std::pair<int, unsigned> > > IGSrcs;
+  std::vector<std::vector<std::pair<int, unsigned>>> IGSrcs;
   ValidSwizzle.clear();
   unsigned ConstCount;
   BankSwizzle TransBS = ALU_VEC_012_SCL_210;
@@ -527,7 +545,7 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
     ValidSwizzle.push_back( (R600InstrInfo::BankSwizzle)
         IG[i]->getOperand(Op).getImm());
   }
-  std::vector<std::pair<int, unsigned> > TransOps;
+  std::vector<std::pair<int, unsigned>> TransOps;
   if (!isLastAluTrans)
     return FindSwizzleForVectorSlot(IGSrcs, ValidSwizzle, TransOps, TransBS);
 
@@ -555,7 +573,6 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
 
   return false;
 }
-
 
 bool
 R600InstrInfo::fitsConstReadLimitations(const std::vector<unsigned> &Consts)
@@ -780,7 +797,7 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                      int *BytesRemoved) const {
-    assert(!BytesRemoved && "code size not handled");
+  assert(!BytesRemoved && "code size not handled");
 
   // Note : we leave PRED* instructions there.
   // They may be needed when predicating instructions.
@@ -874,7 +891,6 @@ bool R600InstrInfo::isPredicable(MachineInstr &MI) const {
   }
 }
 
-
 bool
 R600InstrInfo::isProfitableToIfCvt(MachineBasicBlock &MBB,
                                    unsigned NumCyles,
@@ -907,7 +923,6 @@ R600InstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
                                          MachineBasicBlock &FMBB) const {
   return false;
 }
-
 
 bool
 R600InstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
@@ -947,7 +962,6 @@ bool R600InstrInfo::DefinesPredicate(MachineInstr &MI,
                                      std::vector<MachineOperand> &Pred) const {
   return isPredicateSetter(MI.getOpcode());
 }
-
 
 bool R600InstrInfo::PredicateInstruction(MachineInstr &MI,
                                          ArrayRef<MachineOperand> Pred) const {
@@ -1067,7 +1081,7 @@ bool R600InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return true;
 }
 
-void  R600InstrInfo::reserveIndirectRegisters(BitVector &Reserved,
+void R600InstrInfo::reserveIndirectRegisters(BitVector &Reserved,
                                              const MachineFunction &MF) const {
   const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
   const R600FrameLowering *TFL = ST.getFrameLowering();

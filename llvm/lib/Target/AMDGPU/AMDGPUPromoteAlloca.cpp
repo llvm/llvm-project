@@ -14,12 +14,49 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <map>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
 
@@ -31,16 +68,16 @@ namespace {
 class AMDGPUPromoteAlloca : public FunctionPass {
 private:
   const TargetMachine *TM;
-  Module *Mod;
-  const DataLayout *DL;
-  MDNode *MaxWorkGroupSizeRange;
+  Module *Mod = nullptr;
+  const DataLayout *DL = nullptr;
+  MDNode *MaxWorkGroupSizeRange = nullptr;
 
   // FIXME: This should be per-kernel.
-  uint32_t LocalMemLimit;
-  uint32_t CurrentLocalMemUsage;
+  uint32_t LocalMemLimit = 0;
+  uint32_t CurrentLocalMemUsage = 0;
 
-  bool IsAMDGCN;
-  bool IsAMDHSA;
+  bool IsAMDGCN = false;
+  bool IsAMDHSA = false;
 
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
@@ -63,15 +100,7 @@ public:
   static char ID;
 
   AMDGPUPromoteAlloca(const TargetMachine *TM_ = nullptr) :
-    FunctionPass(ID),
-    TM(TM_),
-    Mod(nullptr),
-    DL(nullptr),
-    MaxWorkGroupSizeRange(nullptr),
-    LocalMemLimit(0),
-    CurrentLocalMemUsage(0),
-    IsAMDGCN(false),
-    IsAMDHSA(false) { }
+    FunctionPass(ID), TM(TM_) {}
 
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
@@ -86,7 +115,7 @@ public:
   }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 char AMDGPUPromoteAlloca::ID = 0;
 
@@ -94,7 +123,6 @@ INITIALIZE_TM_PASS(AMDGPUPromoteAlloca, DEBUG_TYPE,
                    "AMDGPU promote alloca to vector or LDS", false, false)
 
 char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
-
 
 bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
   if (!TM)
@@ -298,7 +326,7 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
   Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 2);
   LoadInst *LoadZU = Builder.CreateAlignedLoad(GEPZU, 4);
 
-  MDNode *MD = llvm::MDNode::get(Mod->getContext(), None);
+  MDNode *MD = MDNode::get(Mod->getContext(), None);
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);

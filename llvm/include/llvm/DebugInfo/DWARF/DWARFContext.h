@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -293,9 +294,15 @@ class DWARFContextInMemory : public DWARFContext {
 
   SmallVector<SmallString<32>, 4> UncompressedSections;
 
+  StringRef *MapSectionToMember(StringRef Name);
+
 public:
   DWARFContextInMemory(const object::ObjectFile &Obj,
     const LoadedObjectInfo *L = nullptr);
+
+  DWARFContextInMemory(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
+                       uint8_t AddrSize,
+                       bool isLittleEndian = sys::IsLittleEndianHost);
 
   bool isLittleEndian() const override { return IsLittleEndian; }
   uint8_t getAddressSize() const override { return AddressSize; }
