@@ -8045,45 +8045,51 @@ static __inline__ vector float __ATTRS_o_ai vec_vsel(vector float __a,
 
 /* vec_sl */
 
-static __inline__ vector signed char __ATTRS_o_ai
-vec_sl(vector signed char __a, vector unsigned char __b) {
-  return __a << (vector signed char)__b;
-}
-
+// vec_sl does modulo arithmetic on __b first, so __b is allowed to be more
+// than the length of __a.
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_sl(vector unsigned char __a, vector unsigned char __b) {
-  return __a << __b;
+  return __a << (__b %
+                 (vector unsigned char)(sizeof(unsigned char) * __CHAR_BIT__));
 }
 
-static __inline__ vector short __ATTRS_o_ai vec_sl(vector short __a,
-                                                   vector unsigned short __b) {
-  return __a << (vector short)__b;
+static __inline__ vector signed char __ATTRS_o_ai
+vec_sl(vector signed char __a, vector unsigned char __b) {
+  return (vector signed char)vec_sl((vector unsigned char)__a, __b);
 }
 
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_sl(vector unsigned short __a, vector unsigned short __b) {
-  return __a << __b;
+  return __a << (__b % (vector unsigned short)(sizeof(unsigned short) *
+                                               __CHAR_BIT__));
 }
 
-static __inline__ vector int __ATTRS_o_ai vec_sl(vector int __a,
-                                                 vector unsigned int __b) {
-  return __a << (vector int)__b;
+static __inline__ vector short __ATTRS_o_ai vec_sl(vector short __a,
+                                                   vector unsigned short __b) {
+  return (vector short)vec_sl((vector unsigned short)__a, __b);
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_sl(vector unsigned int __a, vector unsigned int __b) {
-  return __a << __b;
+  return __a << (__b %
+                 (vector unsigned int)(sizeof(unsigned int) * __CHAR_BIT__));
+}
+
+static __inline__ vector int __ATTRS_o_ai vec_sl(vector int __a,
+                                                 vector unsigned int __b) {
+  return (vector int)vec_sl((vector unsigned int)__a, __b);
 }
 
 #ifdef __POWER8_VECTOR__
-static __inline__ vector signed long long __ATTRS_o_ai
-vec_sl(vector signed long long __a, vector unsigned long long __b) {
-  return __a << (vector long long)__b;
-}
-
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sl(vector unsigned long long __a, vector unsigned long long __b) {
-  return __a << __b;
+  return __a << (__b % (vector unsigned long long)(sizeof(unsigned long long) *
+                                                   __CHAR_BIT__));
+}
+
+static __inline__ vector long long __ATTRS_o_ai
+vec_sl(vector long long __a, vector unsigned long long __b) {
+  return (vector long long)vec_sl((vector unsigned long long)__a, __b);
 }
 #endif
 

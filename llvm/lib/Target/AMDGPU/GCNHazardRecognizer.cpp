@@ -11,11 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "GCNHazardRecognizer.h"
 #include "AMDGPUSubtarget.h"
+#include "GCNHazardRecognizer.h"
+#include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <set>
+#include <vector>
 
 using namespace llvm;
 
@@ -59,7 +72,6 @@ static bool isRFE(unsigned Opcode) {
 }
 
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
-
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
   return RegOp->getImm() & AMDGPU::Hwreg::ID_MASK_;
@@ -142,7 +154,6 @@ void GCNHazardRecognizer::EmitNoop() {
 }
 
 void GCNHazardRecognizer::AdvanceCycle() {
-
   // When the scheduler detects a stall, it will call AdvanceCycle() without
   // emitting any instructions.
   if (!CurrCycleInstr)
@@ -180,7 +191,6 @@ void GCNHazardRecognizer::RecedeCycle() {
 
 int GCNHazardRecognizer::getWaitStatesSince(
     function_ref<bool(MachineInstr *)> IsHazard) {
-
   int WaitStates = -1;
   for (MachineInstr *MI : EmittedInstrs) {
     ++WaitStates;
@@ -204,7 +214,6 @@ int GCNHazardRecognizer::getWaitStatesSinceDef(
 
 int GCNHazardRecognizer::getWaitStatesSinceSetReg(
     function_ref<bool(MachineInstr *)> IsHazard) {
-
   auto IsHazardFn = [IsHazard] (MachineInstr *MI) {
     return isSSetReg(MI->getOpcode()) && IsHazard(MI);
   };
@@ -486,7 +495,6 @@ int GCNHazardRecognizer::checkRWLaneHazards(MachineInstr *RWLane) {
 }
 
 int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
-
   if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
     return 0;
 

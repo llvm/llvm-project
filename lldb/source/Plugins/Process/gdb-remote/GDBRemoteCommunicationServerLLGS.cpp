@@ -415,7 +415,8 @@ static void AppendHexValue(StreamString &response, const uint8_t *buf,
 
 static void WriteRegisterValueInHexFixedWidth(
     StreamString &response, NativeRegisterContextSP &reg_ctx_sp,
-    const RegisterInfo &reg_info, const RegisterValue *reg_value_p) {
+    const RegisterInfo &reg_info, const RegisterValue *reg_value_p,
+    lldb::ByteOrder byte_order) {
   RegisterValue reg_value;
   if (!reg_value_p) {
     Error error = reg_ctx_sp->ReadRegister(&reg_info, reg_value);
@@ -426,7 +427,8 @@ static void WriteRegisterValueInHexFixedWidth(
 
   if (reg_value_p) {
     AppendHexValue(response, (const uint8_t *)reg_value_p->GetBytes(),
-                   reg_value_p->GetByteSize(), false);
+                   reg_value_p->GetByteSize(),
+                   byte_order == lldb::eByteOrderLittle);
   } else {
     // Zero-out any unreadable values.
     if (reg_info.byte_size > 0) {
@@ -436,8 +438,7 @@ static void WriteRegisterValueInHexFixedWidth(
   }
 }
 
-static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread,
-                                         bool abridged) {
+static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
 
   NativeRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
@@ -462,11 +463,8 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread,
   static const uint32_t k_expedited_registers[] = {
       LLDB_REGNUM_GENERIC_PC, LLDB_REGNUM_GENERIC_SP, LLDB_REGNUM_GENERIC_FP,
       LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM};
-  static const uint32_t k_abridged_expedited_registers[] = {
-      LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM};
 
-  for (const uint32_t *generic_reg_p = abridged ? k_abridged_expedited_registers
-                                                : k_expedited_registers;
+  for (const uint32_t *generic_reg_p = k_expedited_registers;
        *generic_reg_p != LLDB_INVALID_REGNUM; ++generic_reg_p) {
     uint32_t reg_num = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
         eRegisterKindGeneric, *generic_reg_p);
@@ -501,7 +499,7 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread,
 
     StreamString stream;
     WriteRegisterValueInHexFixedWidth(stream, reg_ctx_sp, *reg_info_p,
-                                      &reg_value);
+                                      &reg_value, lldb::eByteOrderBig);
 
     register_object_sp->SetObject(
         llvm::to_string(reg_num),
@@ -567,8 +565,10 @@ static JSONArray::SP GetJSONThreadsInfo(NativeProcessProtocol &process,
     JSONObject::SP thread_obj_sp = std::make_shared<JSONObject>();
     threads_array_sp->AppendObject(thread_obj_sp);
 
-    if (JSONObject::SP registers_sp = GetRegistersAsJSON(*thread_sp, abridged))
-      thread_obj_sp->SetObject("registers", registers_sp);
+    if (!abridged) {
+      if (JSONObject::SP registers_sp = GetRegistersAsJSON(*thread_sp))
+        thread_obj_sp->SetObject("registers", registers_sp);
+    }
 
     thread_obj_sp->SetObject("tid", std::make_shared<JSONNumber>(tid));
     if (signum != 0)
@@ -721,6 +721,41 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
                     "jstopinfo field for pid %" PRIu64,
                     __FUNCTION__, m_debugged_process_sp->GetID());
     }
+
+    uint32_t i = 0;
+    response.PutCString("thread-pcs");
+    char delimiter = ':';
+    for (NativeThreadProtocolSP thread_sp;
+         (thread_sp = m_debugged_process_sp->GetThreadAtIndex(i)) != nullptr;
+         ++i) {
+      NativeRegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+      if (!reg_ctx_sp)
+        continue;
+
+      uint32_t reg_to_read = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+          eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+      const RegisterInfo *const reg_info_p =
+          reg_ctx_sp->GetRegisterInfoAtIndex(reg_to_read);
+
+      RegisterValue reg_value;
+      Error error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+      if (error.Fail()) {
+        if (log)
+          log->Printf("%s failed to read register '%s' index %" PRIu32 ": %s",
+                      __FUNCTION__,
+                      reg_info_p->name ? reg_info_p->name
+                                       : "<unnamed-register>",
+                      reg_to_read, error.AsCString());
+        continue;
+      }
+
+      response.PutChar(delimiter);
+      delimiter = ',';
+      WriteRegisterValueInHexFixedWidth(response, reg_ctx_sp, *reg_info_p,
+                                        &reg_value, endian::InlHostByteOrder());
+    }
+
+    response.PutChar(';');
   }
 
   //
@@ -761,7 +796,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
           if (error.Success()) {
             response.Printf("%.02x:", *reg_num_p);
             WriteRegisterValueInHexFixedWidth(response, reg_ctx_sp, *reg_info_p,
-                                              &reg_value);
+                                              &reg_value, lldb::eByteOrderBig);
             response.PutChar(';');
           } else {
             if (log)

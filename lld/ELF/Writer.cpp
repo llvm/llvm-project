@@ -765,14 +765,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
                        DefinedRegular<ELFT> *&Sym2) {
     Sym1 = Symtab<ELFT>::X->addIgnored(S, STV_DEFAULT);
-
-    // The name without the underscore is not a reserved name,
-    // so it is defined only when there is a reference against it.
     assert(S.startswith("_"));
     S = S.substr(1);
-    if (SymbolBody *B = Symtab<ELFT>::X->find(S))
-      if (!B->isInCurrentDSO())
-        Sym2 = Symtab<ELFT>::X->addAbsolute(S, STV_DEFAULT);
+    Sym2 = Symtab<ELFT>::X->addIgnored(S, STV_DEFAULT);
   };
 
   Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
@@ -1335,13 +1330,35 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 }
 
 template <class ELFT>
-void elf::allocateHeaders(MutableArrayRef<PhdrEntry> Phdrs,
-                          ArrayRef<OutputSectionBase *> OutputSections) {
+bool elf::allocateHeaders(std::vector<PhdrEntry> &Phdrs,
+                          ArrayRef<OutputSectionBase *> OutputSections,
+                          uint64_t Min) {
   auto FirstPTLoad =
       std::find_if(Phdrs.begin(), Phdrs.end(),
                    [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
   if (FirstPTLoad == Phdrs.end())
-    return;
+    return false;
+
+  uint64_t HeaderSize = getHeaderSize<ELFT>();
+  if (HeaderSize > Min) {
+    auto PhdrI =
+        std::find_if(Phdrs.begin(), Phdrs.end(),
+                     [](const PhdrEntry &E) { return E.p_type == PT_PHDR; });
+    if (PhdrI != Phdrs.end())
+      Phdrs.erase(PhdrI);
+    return false;
+  }
+  Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
+
+  if (!ScriptConfig->HasSections)
+    Config->ImageBase = Min = std::min(Min, Config->ImageBase);
+
+  Out<ELFT>::ElfHeader->Addr = Min;
+  Out<ELFT>::ProgramHeaders->Addr = Min + Out<ELFT>::ElfHeader->Size;
+
+  if (Script<ELFT>::X->hasPhdrsCommands())
+    return true;
+
   if (FirstPTLoad->First)
     for (OutputSectionBase *Sec : OutputSections)
       if (Sec->FirstInPtLoad == FirstPTLoad->First)
@@ -1349,6 +1366,7 @@ void elf::allocateHeaders(MutableArrayRef<PhdrEntry> Phdrs,
   FirstPTLoad->First = Out<ELFT>::ElfHeader;
   if (!FirstPTLoad->Last)
     FirstPTLoad->Last = Out<ELFT>::ProgramHeaders;
+  return true;
 }
 
 // We should set file offsets and VAs for elf header and program headers
@@ -1360,27 +1378,14 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
   if (ScriptConfig->HasSections)
     return;
 
-  uintX_t HeaderSize = getHeaderSize<ELFT>();
   // When -T<section> option is specified, lower the base to make room for those
   // sections.
-  if (!Config->SectionStartMap.empty()) {
-    uint64_t Min = -1;
+  uint64_t Min = -1;
+  if (!Config->SectionStartMap.empty())
     for (const auto &P : Config->SectionStartMap)
       Min = std::min(Min, P.second);
-    if (HeaderSize < Min)
-      Min -= HeaderSize;
-    else
-      AllocateHeader = false;
-    if (Min < Config->ImageBase)
-      Config->ImageBase = alignDown(Min, Config->MaxPageSize);
-  }
 
-  if (AllocateHeader)
-    allocateHeaders<ELFT>(Phdrs, OutputSections);
-
-  uintX_t BaseVA = Config->ImageBase;
-  Out<ELFT>::ElfHeader->Addr = BaseVA;
-  Out<ELFT>::ProgramHeaders->Addr = BaseVA + Out<ELFT>::ElfHeader->Size;
+  AllocateHeader = allocateHeaders<ELFT>(Phdrs, OutputSections, Min);
 }
 
 // Assign VAs (addresses at run-time) to output sections.
@@ -1745,14 +1750,18 @@ template void elf::writeResult<ELF32BE>();
 template void elf::writeResult<ELF64LE>();
 template void elf::writeResult<ELF64BE>();
 
-template void elf::allocateHeaders<ELF32LE>(MutableArrayRef<PhdrEntry>,
-                                            ArrayRef<OutputSectionBase *>);
-template void elf::allocateHeaders<ELF32BE>(MutableArrayRef<PhdrEntry>,
-                                            ArrayRef<OutputSectionBase *>);
-template void elf::allocateHeaders<ELF64LE>(MutableArrayRef<PhdrEntry>,
-                                            ArrayRef<OutputSectionBase *>);
-template void elf::allocateHeaders<ELF64BE>(MutableArrayRef<PhdrEntry>,
-                                            ArrayRef<OutputSectionBase *>);
+template bool elf::allocateHeaders<ELF32LE>(std::vector<PhdrEntry> &,
+                                            ArrayRef<OutputSectionBase *>,
+                                            uint64_t);
+template bool elf::allocateHeaders<ELF32BE>(std::vector<PhdrEntry> &,
+                                            ArrayRef<OutputSectionBase *>,
+                                            uint64_t);
+template bool elf::allocateHeaders<ELF64LE>(std::vector<PhdrEntry> &,
+                                            ArrayRef<OutputSectionBase *>,
+                                            uint64_t);
+template bool elf::allocateHeaders<ELF64BE>(std::vector<PhdrEntry> &,
+                                            ArrayRef<OutputSectionBase *>,
+                                            uint64_t);
 
 template bool elf::isRelroSection<ELF32LE>(const OutputSectionBase *);
 template bool elf::isRelroSection<ELF32BE>(const OutputSectionBase *);

@@ -148,6 +148,11 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     if (!Ty)
       continue;
 
+    // Wasm varargs are not ABI-compatible with non-varargs. Just ignore
+    // such casts for now.
+    if (Ty->isVarArg() || F->isVarArg())
+      continue;
+
     auto Pair = Wrappers.insert(std::make_pair(std::make_pair(F, Ty), nullptr));
     if (Pair.second)
       Pair.first->second = CreateWrapper(F, Ty);

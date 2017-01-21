@@ -37,7 +37,6 @@
 #include <string>
 
 namespace AMDGPU {
-
 namespace RuntimeMD {
 
   // Version and revision of runtime metadata
@@ -46,6 +45,7 @@ namespace RuntimeMD {
 
   // Name of keys for runtime metadata.
   namespace KeyName {
+
     const char MDVersion[]                = "amd.MDVersion";            // Runtime metadata version
     const char Language[]                 = "amd.Language";             // Language
     const char LanguageVersion[]          = "amd.LanguageVersion";      // Language version
@@ -72,9 +72,11 @@ namespace RuntimeMD {
     const char PrintfInfo[]               = "amd.PrintfInfo";           // Prinf function call information
     const char ArgActualAcc[]             = "amd.ArgActualAcc";         // The actual kernel argument access qualifier
     const char ArgPointeeAlign[]          = "amd.ArgPointeeAlign";      // Alignment of pointee type
-  }
+
+  } // end namespace KeyName
 
   namespace KernelArg {
+
     enum Kind : uint8_t {
       ByValue                 = 0,
       GlobalBuffer            = 1,
@@ -123,7 +125,8 @@ namespace RuntimeMD {
       Generic    = 4,
       Region     = 5,
     };
-  } // namespace KernelArg
+
+  } // end namespace KernelArg
 
   // Invalid values are used to indicate an optional key should not be emitted.
   const uint8_t INVALID_ADDR_QUAL     = 0xff;
@@ -131,28 +134,30 @@ namespace RuntimeMD {
   const uint32_t INVALID_KERNEL_INDEX = ~0U;
 
   namespace KernelArg {
+
     // In-memory representation of kernel argument information.
     struct Metadata {
-      uint32_t Size;
-      uint32_t Align;
-      uint32_t PointeeAlign;
-      uint8_t Kind;
-      uint16_t ValueType;
+      uint32_t Size = 0;
+      uint32_t Align = 0;
+      uint32_t PointeeAlign = 0;
+      uint8_t Kind = 0;
+      uint16_t ValueType = 0;
       std::string TypeName;
       std::string Name;
-      uint8_t AddrQual;
-      uint8_t AccQual;
-      uint8_t IsVolatile;
-      uint8_t IsConst;
-      uint8_t IsRestrict;
-      uint8_t IsPipe;
-      Metadata() : Size(0), Align(0), PointeeAlign(0), Kind(0), ValueType(0),
-          AddrQual(INVALID_ADDR_QUAL), AccQual(INVALID_ACC_QUAL), IsVolatile(0),
-          IsConst(0), IsRestrict(0), IsPipe(0) {}
+      uint8_t AddrQual = INVALID_ADDR_QUAL;
+      uint8_t AccQual = INVALID_ACC_QUAL;
+      uint8_t IsVolatile = 0;
+      uint8_t IsConst = 0;
+      uint8_t IsRestrict = 0;
+      uint8_t IsPipe = 0;
+
+      Metadata() = default;
     };
-  }
+
+  } // end namespace KernelArg
 
   namespace Kernel {
+
     // In-memory representation of kernel information.
     struct Metadata {
       std::string Name;
@@ -161,21 +166,24 @@ namespace RuntimeMD {
       std::vector<uint32_t> ReqdWorkGroupSize;
       std::vector<uint32_t> WorkGroupSizeHint;
       std::string VecTypeHint;
-      uint32_t KernelIndex;
-      uint8_t NoPartialWorkGroups;
+      uint32_t KernelIndex = INVALID_KERNEL_INDEX;
+      uint8_t NoPartialWorkGroups = 0;
       std::vector<KernelArg::Metadata> Args;
-      Metadata() : KernelIndex(INVALID_KERNEL_INDEX), NoPartialWorkGroups(0) {}
+
+      Metadata() = default;
     };
-  }
+
+  } // end namespace Kernel
 
   namespace Program {
+
     // In-memory representation of program information.
     struct Metadata {
       std::vector<uint8_t> MDVersionSeq;
       std::vector<std::string> PrintfInfo;
       std::vector<Kernel::Metadata> Kernels;
 
-      explicit Metadata(){}
+      explicit Metadata() = default;
 
       // Construct from an YAML string.
       explicit Metadata(const std::string &YAML);
@@ -186,8 +194,10 @@ namespace RuntimeMD {
       // Convert from YAML string.
       static Metadata fromYAML(const std::string &S);
     };
-  }
-} // namespace RuntimeMD
-} // namespace AMDGPU
+
+  } //end namespace Program
+
+} // end namespace RuntimeMD
+} // end namespace AMDGPU
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPURUNTIMEMETADATA_H

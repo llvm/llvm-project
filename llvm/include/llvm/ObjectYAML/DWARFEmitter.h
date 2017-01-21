@@ -13,6 +13,14 @@
 #ifndef LLVM_OBJECTYAML_DWARFEMITTER_H
 #define LLVM_OBJECTYAML_DWARFEMITTER_H
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <memory>
+#include <vector>
+
 namespace llvm {
 class raw_ostream;
 
@@ -29,6 +37,10 @@ void EmitPubSection(llvm::raw_ostream &OS,
                     bool IsLittleEndian);
 void EmitDebugInfo(llvm::raw_ostream &OS, const llvm::DWARFYAML::Data &DI);
 void EmitDebugLine(llvm::raw_ostream &OS, const llvm::DWARFYAML::Data &DI);
+
+Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
+EmitDebugSections(StringRef YAMLString,
+                  bool IsLittleEndian = sys::IsLittleEndianHost);
 
 } // namespace DWARFYAML
 } // namespace llvm

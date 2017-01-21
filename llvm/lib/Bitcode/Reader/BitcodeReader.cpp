@@ -512,7 +512,7 @@ private:
   }
 
   Metadata *getFnMetadataByID(unsigned ID) {
-    return MDLoader->getMetadataFwdRef(ID);
+    return MDLoader->getMetadataFwdRefOrLoad(ID);
   }
 
   BasicBlock *getBasicBlock(unsigned ID) const {

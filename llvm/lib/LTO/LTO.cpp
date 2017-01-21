@@ -164,9 +164,7 @@ static void thinLTOResolveWeakForLinkerGUID(
     }
     // Alias and aliasee can't be turned into available_externally.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) &&
-             (GlobalValue::isLinkOnceODRLinkage(OriginalLinkage) ||
-              GlobalValue::isWeakODRLinkage(OriginalLinkage)))
+             !GlobalInvolvedWithAlias.count(S.get()))
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
     if (S->linkage() != OriginalLinkage)
       recordNewLinkage(S->modulePath(), GUID, S->linkage());
@@ -603,7 +601,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       return Error::success();
   }
   return backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-                 std::move(RegularLTO.CombinedModule));
+                 std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex);
 }
 
 /// This class defines the interface to the ThinLTO backend.

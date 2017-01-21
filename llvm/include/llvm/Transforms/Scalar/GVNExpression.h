@@ -333,11 +333,14 @@ public:
 class StoreExpression final : public BasicExpression {
 private:
   StoreInst *Store;
+  Value *StoredValue;
   MemoryAccess *DefiningAccess;
 
 public:
-  StoreExpression(unsigned NumOperands, StoreInst *S, MemoryAccess *DA)
-      : BasicExpression(NumOperands, ET_Store), Store(S), DefiningAccess(DA) {}
+  StoreExpression(unsigned NumOperands, StoreInst *S, Value *StoredValue,
+                  MemoryAccess *DA)
+      : BasicExpression(NumOperands, ET_Store), Store(S),
+        StoredValue(StoredValue), DefiningAccess(DA) {}
   StoreExpression() = delete;
   StoreExpression(const StoreExpression &) = delete;
   StoreExpression &operator=(const StoreExpression &) = delete;
@@ -349,10 +352,13 @@ public:
 
   StoreInst *getStoreInst() const { return Store; }
   MemoryAccess *getDefiningAccess() const { return DefiningAccess; }
+  Value *getStoredValue() const { return StoredValue; }
 
   bool equals(const Expression &Other) const override;
 
   hash_code getHashValue() const override {
+    // This deliberately does not include the stored value we compare it as part
+    // of equals, and only against other stores.
     return hash_combine(getOpcode(), getType(), DefiningAccess,
                         hash_combine_range(op_begin(), op_end()));
   }

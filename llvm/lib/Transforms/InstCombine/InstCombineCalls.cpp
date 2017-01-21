@@ -510,6 +510,18 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   return Builder.CreateAShr(Vec, ShiftVec);
 }
 
+static Value *simplifyX86muldq(const IntrinsicInst &II) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  Type *ResTy = II.getType();
+
+  // muldq/muludq(undef, undef) -> undef
+  if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
+    return UndefValue::get(ResTy);
+
+  return nullptr;
+}
+
 static Value *simplifyX86movmsk(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   Value *Arg = II.getArgOperand(0);
@@ -2142,6 +2154,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pmulu_dq:
   case Intrinsic::x86_avx512_pmul_dq_512:
   case Intrinsic::x86_avx512_pmulu_dq_512: {
+    if (Value *V = simplifyX86muldq(*II))
+      return replaceInstUsesWith(*II, V);
+
     unsigned VWidth = II->getType()->getVectorNumElements();
     APInt UndefElts(VWidth, 0);
     APInt DemandedElts = APInt::getAllOnesValue(VWidth);

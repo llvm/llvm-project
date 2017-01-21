@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -188,6 +189,9 @@ namespace {
     /// can transform the copy into a noop by commuting the definition.
     /// This returns true if an interval was modified.
     bool removeCopyByCommutingDef(const CoalescerPair &CP,MachineInstr *CopyMI);
+
+    /// We found a copy which can be moved to its less frequent predecessor.
+    bool removePartialRedundancy(const CoalescerPair &CP, MachineInstr &CopyMI);
 
     /// If the source of a copy is defined by a
     /// trivial computation, replace the copy by rematerialize the definition.
@@ -861,6 +865,167 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   return true;
 }
 
+/// For copy B = A in BB2, if A is defined by A = B in BB0 which is a
+/// predecessor of BB2, and if B is not redefined on the way from A = B
+/// in BB2 to B = A in BB2, B = A in BB2 is partially redundant if the
+/// execution goes through the path from BB0 to BB2. We may move B = A
+/// to the predecessor without such reversed copy.
+/// So we will transform the program from:
+///   BB0:
+///      A = B;    BB1:
+///       ...         ...
+///     /     \      /
+///             BB2:
+///               ...
+///               B = A;
+///
+/// to:
+///
+///   BB0:         BB1:
+///      A = B;        ...
+///       ...          B = A;
+///     /     \       /
+///             BB2:
+///               ...
+///
+/// A special case is when BB0 and BB2 are the same BB which is the only
+/// BB in a loop:
+///   BB1:
+///        ...
+///   BB0/BB2:  ----
+///        B = A;   |
+///        ...      |
+///        A = B;   |
+///          |-------
+///          |
+/// We may hoist B = A from BB0/BB2 to BB1.
+///
+/// The major preconditions for correctness to remove such partial
+/// redundancy include:
+/// 1. A in B = A in BB2 is defined by a PHI in BB2, and one operand of
+///    the PHI is defined by the reversed copy A = B in BB0.
+/// 2. No B is referenced from the start of BB2 to B = A.
+/// 3. No B is defined from A = B to the end of BB0.
+/// 4. BB1 has only one successor.
+///
+/// 2 and 4 implicitly ensure B is not live at the end of BB1.
+/// 4 guarantees BB2 is hotter than BB1, so we can only move a copy to a
+/// colder place, which not only prevent endless loop, but also make sure
+/// the movement of copy is beneficial.
+bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
+                                                MachineInstr &CopyMI) {
+  assert(!CP.isPhys());
+  if (!CopyMI.isFullCopy())
+    return false;
+
+  MachineBasicBlock &MBB = *CopyMI.getParent();
+  if (MBB.isEHPad())
+    return false;
+
+  if (MBB.pred_size() != 2)
+    return false;
+
+  LiveInterval &IntA =
+      LIS->getInterval(CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg());
+  LiveInterval &IntB =
+      LIS->getInterval(CP.isFlipped() ? CP.getSrcReg() : CP.getDstReg());
+
+  // A is defined by PHI at the entry of MBB.
+  SlotIndex CopyIdx = LIS->getInstructionIndex(CopyMI).getRegSlot(true);
+  VNInfo *AValNo = IntA.getVNInfoAt(CopyIdx);
+  assert(AValNo && !AValNo->isUnused() && "COPY source not live");
+  if (!AValNo->isPHIDef())
+    return false;
+
+  // No B is referenced before CopyMI in MBB.
+  if (IntB.overlaps(LIS->getMBBStartIdx(&MBB), CopyIdx))
+    return false;
+
+  // MBB has two predecessors: one contains A = B so no copy will be inserted
+  // for it. The other one will have a copy moved from MBB.
+  bool FoundReverseCopy = false;
+  MachineBasicBlock *CopyLeftBB = nullptr;
+  for (MachineBasicBlock *Pred : MBB.predecessors()) {
+    VNInfo *PVal = IntA.getVNInfoBefore(LIS->getMBBEndIdx(Pred));
+    MachineInstr *DefMI = LIS->getInstructionFromIndex(PVal->def);
+    if (!DefMI || !DefMI->isFullCopy()) {
+      CopyLeftBB = Pred;
+      continue;
+    }
+    // Check DefMI is a reverse copy and it is in BB Pred.
+    if (DefMI->getOperand(0).getReg() != IntA.reg ||
+        DefMI->getOperand(1).getReg() != IntB.reg ||
+        DefMI->getParent() != Pred) {
+      CopyLeftBB = Pred;
+      continue;
+    }
+    // If there is any other def of B after DefMI and before the end of Pred,
+    // we need to keep the copy of B = A at the end of Pred if we remove
+    // B = A from MBB.
+    bool ValB_Changed = false;
+    for (auto VNI : IntB.valnos) {
+      if (VNI->isUnused())
+        continue;
+      if (PVal->def < VNI->def && VNI->def < LIS->getMBBEndIdx(Pred)) {
+        ValB_Changed = true;
+        break;
+      }
+    }
+    if (ValB_Changed) {
+      CopyLeftBB = Pred;
+      continue;
+    }
+    FoundReverseCopy = true;
+  }
+
+  // If no reverse copy is found in predecessors, nothing to do.
+  if (!FoundReverseCopy)
+    return false;
+
+  // If CopyLeftBB is nullptr, it means every predecessor of MBB contains
+  // reverse copy, CopyMI can be removed trivially if only IntA/IntB is updated.
+  // If CopyLeftBB is not nullptr, move CopyMI from MBB to CopyLeftBB and
+  // update IntA/IntB.
+  //
+  // If CopyLeftBB is not nullptr, ensure CopyLeftBB has a single succ so
+  // MBB is hotter than CopyLeftBB.
+  if (CopyLeftBB && CopyLeftBB->succ_size() > 1)
+    return false;
+
+  // Now ok to move copy.
+  if (CopyLeftBB) {
+    DEBUG(dbgs() << "\tremovePartialRedundancy: Move the copy to BB#"
+                 << CopyLeftBB->getNumber() << '\t' << CopyMI);
+
+    // Insert new copy to CopyLeftBB.
+    auto InsPos = CopyLeftBB->getFirstTerminator();
+    MachineInstr *NewCopyMI = BuildMI(*CopyLeftBB, InsPos, CopyMI.getDebugLoc(),
+                                      TII->get(TargetOpcode::COPY), IntB.reg)
+                                  .addReg(IntA.reg);
+    SlotIndex NewCopyIdx =
+        LIS->InsertMachineInstrInMaps(*NewCopyMI).getRegSlot();
+    VNInfo *VNI = IntB.getNextValue(NewCopyIdx, LIS->getVNInfoAllocator());
+    IntB.createDeadDef(VNI);
+  } else {
+    DEBUG(dbgs() << "\tremovePartialRedundancy: Remove the copy from BB#"
+                 << MBB.getNumber() << '\t' << CopyMI);
+  }
+
+  // Remove CopyMI.
+  SmallVector<SlotIndex, 8> EndPoints;
+  VNInfo *BValNo = IntB.Query(CopyIdx.getRegSlot()).valueOutOrDead();
+  LIS->pruneValue(IntB, CopyIdx.getRegSlot(), &EndPoints);
+  BValNo->markUnused();
+  LIS->RemoveMachineInstrFromMaps(CopyMI);
+  CopyMI.eraseFromParent();
+
+  // Extend IntB to the EndPoints of its original live interval.
+  LIS->extendToIndices(IntB, EndPoints);
+
+  shrinkToUses(&IntA);
+  return true;
+}
+
 /// Returns true if @p MI defines the full vreg @p Reg, as opposed to just
 /// defining a subregister.
 static bool definesFullReg(const MachineInstr &MI, unsigned Reg) {
@@ -1485,6 +1650,12 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
         return true;
       }
     }
+
+    // Try and see if we can partially eliminate the copy by moving the copy to
+    // its predecessor.
+    if (!CP.isPartial() && !CP.isPhys())
+      if (removePartialRedundancy(CP, *CopyMI))
+        return true;
 
     // Otherwise, we are unable to join the intervals.
     DEBUG(dbgs() << "\tInterference!\n");

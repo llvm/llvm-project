@@ -1,0 +1,31 @@
+---
+TypeIdMap:
+  allones7:
+    TTRes:
+      Kind: AllOnes
+      SizeM1BitWidth: 7
+  allones32:
+    TTRes:
+      Kind: AllOnes
+      SizeM1BitWidth: 32
+  bytearray7:
+    TTRes:
+      Kind: ByteArray
+      SizeM1BitWidth: 7
+  bytearray32:
+    TTRes:
+      Kind: ByteArray
+      SizeM1BitWidth: 32
+  inline5:
+    TTRes:
+      Kind: Inline
+      SizeM1BitWidth: 5
+  inline6:
+    TTRes:
+      Kind: Inline
+      SizeM1BitWidth: 6
+  single:
+    TTRes:
+      Kind: Single
+      SizeM1BitWidth: 0
+...

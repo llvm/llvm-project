@@ -10,15 +10,13 @@
 
 # CHECK: Program Headers:
 # CHECK-NEXT:  Type
-# CHECK-NEXT:  PHDR
 # CHECK-NEXT:  LOAD {{.*}} R E
 # CHECK-NEXT:  LOAD {{.*}} RW
 
 # CHECK:      Section to Segment mapping:
 # CHECK-NEXT:  Segment Sections...
-# CHECK-NEXT:   00
-# CHECK-NEXT:   01     .text .dynsym .hash .dynstr
-# CHECK-NEXT:   02     .dynamic
+# CHECK-NEXT:   00     .text .dynsym .hash .dynstr
+# CHECK-NEXT:   01     .dynamic
 
 nop
 .section foo

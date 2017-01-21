@@ -256,8 +256,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "    : RegisterBankInfo(RegBanks, " << TargetName
      << "::NumRegisterBanks) {\n"
      << "  // Assert that RegBank indices match their ID's\n"
-     << "  unsigned Index = 0;\n"
      << "#ifndef NDEBUG\n"
+     << "  unsigned Index = 0;\n"
      << "  for (const auto &RB : RegBanks)\n"
      << "    assert(Index++ == RB->getID() && \"Index != ID\");\n"
      << "#endif // NDEBUG\n"

@@ -330,3 +330,42 @@ void DWARFYAML::EmitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     }
   }
 }
+
+typedef void (*EmitFuncType)(raw_ostream &, const DWARFYAML::Data &);
+
+void EmitDebugSectionImpl(
+    const DWARFYAML::Data &DI, EmitFuncType EmitFunc, StringRef Sec,
+    StringMap<std::unique_ptr<MemoryBuffer>> &OutputBuffers) {
+  std::string Data;
+  raw_string_ostream DebugInfoStream(Data);
+  EmitFunc(DebugInfoStream, DI);
+  DebugInfoStream.flush();
+  if (!Data.empty())
+    OutputBuffers[Sec] = MemoryBuffer::getMemBufferCopy(Data);
+}
+
+Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
+DWARFYAML::EmitDebugSections(StringRef YAMLString,
+                             bool IsLittleEndian) {
+  StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
+
+  yaml::Input YIn(YAMLString);
+
+  DWARFYAML::Data DI;
+  DI.IsLittleEndian = IsLittleEndian;
+  YIn >> DI;
+  if (YIn.error())
+    return errorCodeToError(YIn.error());
+
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugInfo, "debug_info",
+                       DebugSections);
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugLine, "debug_line",
+                       DebugSections);
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugStr, "debug_str",
+                       DebugSections);
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAbbrev, "debug_abbrev",
+                       DebugSections);
+  EmitDebugSectionImpl(DI, &DWARFYAML::EmitDebugAranges, "debug_aranges",
+                       DebugSections);
+  return std::move(DebugSections);
+}
