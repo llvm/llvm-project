@@ -38,7 +38,7 @@ entry:
 ; PIC: jalrc $25
   %call1 = tail call i32 @i()
   %cmp = icmp eq i32 %call, %call1
-; CHECK beqc
+; CHECK: beqc
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry:
@@ -61,7 +61,7 @@ entry:
 ; PIC: jalrc $25
   %call = tail call i32 @k()
   %cmp = icmp slt i32 %call, 0
-; CHECK : bgez
+; CHECK: bgez
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry:

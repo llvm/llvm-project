@@ -29,6 +29,6 @@ end:
 ; CHECK: [[JUMP_TABLE_BLOCK]]:
 ; CHECK: btl
 ; CHECK: jae [[UNREACHABLE_BLOCK:[.][A-Za-z0-9_]+]]
-; CHECK [[UNREACHABLE_BLOCK]]:
+; CHECK: [[UNREACHABLE_BLOCK]]:
 ; CHECK: .Lfunc_end0
 }
