@@ -63,7 +63,7 @@ public:
 
   /// Return the given metadata, creating a replaceable forward reference if
   /// necessary.
-  Metadata *getMetadataFwdRef(unsigned Idx);
+  Metadata *getMetadataFwdRefOrLoad(unsigned Idx);
 
   MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
 
