@@ -27,8 +27,8 @@ entry:
   %cmp.i = icmp sgt i32 %i, 2
   %mul.i = select i1 %cmp.i, i32 1, i32 %i
 ; CHECK: %mul.i = select i1 %cmp.i, i32 1, i32 %i
-; CHECK-SAME !prof ![[BW:[0-9]+]]
-; CHECK ![[BW]] = !{!"branch_weights", i32 12, i32 6}
+; CHECK-SAME: !prof ![[BW:[0-9]+]]
+; CHECK: ![[BW]] = !{!"branch_weights", i32 12, i32 6}
   %retval.0.i = mul nsw i32 %mul.i, %i
   ret i32 %retval.0.i
 }
