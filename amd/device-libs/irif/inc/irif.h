@@ -215,6 +215,7 @@ extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_i32_f64(double) __asm(
 
 extern __attribute__((const)) double __llvm_amdgcn_trig_preop_f64(double, int) __asm("llvm.amdgcn.trig.preop.f64");
 
+extern void __llvm_amdgcn_s_sendmsg(uint, uint) __asm("llvm.amdgcn.s.sendmsg");
 extern void __llvm_amdgcn_s_barrier(void) __asm("llvm.amdgcn.s.barrier");
 extern void __llvm_amdgcn_wave_barrier(void) __asm("llvm.amdgcn.wave.barrier");
 
