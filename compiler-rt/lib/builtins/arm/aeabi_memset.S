@@ -26,7 +26,7 @@ DEFINE_AEABI_FUNCTION_ALIAS(__aeabi_memset8, __aeabi_memset)
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_memclr)
         mov     r2, r1
-        mov     r1, #0
+        movs    r1, #0
         b       memset
 END_COMPILERRT_FUNCTION(__aeabi_memclr)
 

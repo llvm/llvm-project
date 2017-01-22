@@ -45,6 +45,9 @@ Error YAMLOutputStyle::dump() {
   if (auto EC = dumpStreamDirectory())
     return EC;
 
+  if (auto EC = dumpStringTable())
+    return EC;
+
   if (auto EC = dumpPDBStream())
     return EC;
 
@@ -80,6 +83,24 @@ Error YAMLOutputStyle::dumpFileHeaders() {
   Obj.Headers->SuperBlock.Unknown1 = File.getUnknown1();
   Obj.Headers->FileSize = File.getFileSize();
 
+  return Error::success();
+}
+
+Error YAMLOutputStyle::dumpStringTable() {
+  if (!opts::pdb2yaml::StringTable)
+    return Error::success();
+
+  Obj.StringTable.emplace();
+  auto ExpectedST = File.getStringTable();
+  if (!ExpectedST)
+    return ExpectedST.takeError();
+
+  const auto &ST = ExpectedST.get();
+  for (auto ID : ST.name_ids()) {
+    StringRef S = ST.getStringForID(ID);
+    if (!S.empty())
+      Obj.StringTable->push_back(S);
+  }
   return Error::success();
 }
 
@@ -122,12 +143,6 @@ Error YAMLOutputStyle::dumpPDBStream() {
   Obj.PdbStream->Guid = InfoS.getGuid();
   Obj.PdbStream->Signature = InfoS.getSignature();
   Obj.PdbStream->Version = InfoS.getVersion();
-  for (auto &NS : InfoS.named_streams()) {
-    yaml::NamedStreamMapping Mapping;
-    Mapping.StreamName = NS.getKey();
-    Mapping.StreamNumber = NS.getValue();
-    Obj.PdbStream->NamedStreams.push_back(Mapping);
-  }
 
   return Error::success();
 }

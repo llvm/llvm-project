@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -204,7 +205,38 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
+  case 'n': {
+    if (Name.startswith("nvvm.")) {
+      Name = Name.substr(5);
 
+      // The following nvvm intrinsics correspond exactly to an LLVM intrinsic.
+      Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Name)
+                              .Cases("brev32", "brev64", Intrinsic::bitreverse)
+                              .Case("clz.i", Intrinsic::ctlz)
+                              .Case("popc.i", Intrinsic::ctpop)
+                              .Default(Intrinsic::not_intrinsic);
+      if (IID != Intrinsic::not_intrinsic && F->arg_size() == 1) {
+        NewFn = Intrinsic::getDeclaration(F->getParent(), IID,
+                                          {F->getReturnType()});
+        return true;
+      }
+
+      // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
+      // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
+      //
+      // TODO: We could add lohi.i2d.
+      bool Expand = StringSwitch<bool>(Name)
+                        .Cases("abs.i", "abs.ll", true)
+                        .Cases("clz.ll", "popc.ll", "h2f", true)
+                        .Cases("max.i", "max.ll", "max.ui", "max.ull", true)
+                        .Cases("min.i", "min.ll", "min.ui", "min.ull", true)
+                        .Default(false);
+      if (Expand) {
+        NewFn = nullptr;
+        return true;
+      }
+    }
+  }
   case 'o':
     // We only need to change the name to match the mangling including the
     // address space.
@@ -753,6 +785,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     bool IsX86 = Name.startswith("x86.");
     if (IsX86)
       Name = Name.substr(4);
+    bool IsNVVM = Name.startswith("nvvm.");
+    if (IsNVVM)
+      Name = Name.substr(5);
 
     if (IsX86 && Name.startswith("sse4a.movnt.")) {
       Module *M = F->getParent();
@@ -1727,6 +1762,50 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                { CI->getArgOperand(0), CI->getArgOperand(1) });
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
+    } else if (IsNVVM && (Name == "abs.i" || Name == "abs.ll")) {
+      Value *Arg = CI->getArgOperand(0);
+      Value *Neg = Builder.CreateNeg(Arg, "neg");
+      Value *Cmp = Builder.CreateICmpSGE(
+          Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
+      Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
+    } else if (IsNVVM && (Name == "max.i" || Name == "max.ll" ||
+                          Name == "max.ui" || Name == "max.ull")) {
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+      Value *Cmp = Name.endswith(".ui") || Name.endswith(".ull")
+                       ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
+                       : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
+      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
+    } else if (IsNVVM && (Name == "min.i" || Name == "min.ll" ||
+                          Name == "min.ui" || Name == "min.ull")) {
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+      Value *Cmp = Name.endswith(".ui") || Name.endswith(".ull")
+                       ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
+                       : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
+      Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
+    } else if (IsNVVM && Name == "clz.ll") {
+      // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 and returns an i64.
+      Value *Arg = CI->getArgOperand(0);
+      Value *Ctlz = Builder.CreateCall(
+          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
+                                    {Arg->getType()}),
+          {Arg, Builder.getFalse()}, "ctlz");
+      Rep = Builder.CreateTrunc(Ctlz, Builder.getInt32Ty(), "ctlz.trunc");
+    } else if (IsNVVM && Name == "popc.ll") {
+      // llvm.nvvm.popc.ll returns an i32, but llvm.ctpop.i64 and returns an
+      // i64.
+      Value *Arg = CI->getArgOperand(0);
+      Value *Popc = Builder.CreateCall(
+          Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
+                                    {Arg->getType()}),
+          Arg, "ctpop");
+      Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
+    } else if (IsNVVM && Name == "h2f") {
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(
+                                   F->getParent(), Intrinsic::convert_from_fp16,
+                                   {Builder.getFloatTy()}),
+                               CI->getArgOperand(0), "h2f");
     } else {
       llvm_unreachable("Unknown function for CallInst upgrade.");
     }
@@ -1786,11 +1865,15 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
 
-  case Intrinsic::ctpop: {
+  case Intrinsic::ctpop:
     CI->replaceAllUsesWith(Builder.CreateCall(NewFn, {CI->getArgOperand(0)}));
     CI->eraseFromParent();
     return;
-  }
+
+  case Intrinsic::convert_from_fp16:
+    CI->replaceAllUsesWith(Builder.CreateCall(NewFn, {CI->getArgOperand(0)}));
+    CI->eraseFromParent();
+    return;
 
   case Intrinsic::x86_xop_vfrcz_ss:
   case Intrinsic::x86_xop_vfrcz_sd:

@@ -16,6 +16,7 @@
 #include "Utils/AMDGPUAsmUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -39,15 +40,12 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -56,7 +54,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -695,9 +692,9 @@ raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods) {
 // Kernel scope begins at .amdgpu_hsa_kernel directive, ends at next
 // .amdgpu_hsa_kernel or at EOF.
 class KernelScopeInfo {
-  int SgprIndexUnusedMin;
-  int VgprIndexUnusedMin;
-  MCContext *Ctx;
+  int SgprIndexUnusedMin = -1;
+  int VgprIndexUnusedMin = -1;
+  MCContext *Ctx = nullptr;
 
   void usesSgprAt(int i) {
     if (i >= SgprIndexUnusedMin) {
@@ -708,6 +705,7 @@ class KernelScopeInfo {
       }
     }
   }
+
   void usesVgprAt(int i) {
     if (i >= VgprIndexUnusedMin) {
       VgprIndexUnusedMin = ++i;
@@ -717,14 +715,16 @@ class KernelScopeInfo {
       }
     }
   }
+
 public:
-  KernelScopeInfo() : SgprIndexUnusedMin(-1), VgprIndexUnusedMin(-1), Ctx(nullptr)
-  {}
+  KernelScopeInfo() = default;
+
   void initialize(MCContext &Context) {
     Ctx = &Context;
     usesSgprAt(SgprIndexUnusedMin = -1);
     usesVgprAt(VgprIndexUnusedMin = -1);
   }
+
   void usesRegister(RegisterKind RegKind, unsigned DwordRegIndex, unsigned RegWidth) {
     switch (RegKind) {
       case IS_SGPR: usesSgprAt(DwordRegIndex + RegWidth - 1); break;
@@ -738,9 +738,9 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   const MCInstrInfo &MII;
   MCAsmParser &Parser;
 
-  unsigned ForcedEncodingSize;
-  bool ForcedDPP;
-  bool ForcedSDWA;
+  unsigned ForcedEncodingSize = 0;
+  bool ForcedDPP = false;
+  bool ForcedSDWA = false;
   KernelScopeInfo KernelScope;
 
   /// @name Auto-generated Match Functions
@@ -779,10 +779,7 @@ public:
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
                const MCInstrInfo &MII,
                const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI), MII(MII), Parser(_Parser),
-        ForcedEncodingSize(0),
-        ForcedDPP(false),
-        ForcedSDWA(false) {
+      : MCTargetAsmParser(Options, STI), MII(MII), Parser(_Parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     if (getSTI().getFeatureBits().none()) {
@@ -1043,7 +1040,6 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
       AsmParser->hasInv2PiInlineImm());
   }
 
-
   // We got int literal token.
   if (type == MVT::f64 || type == MVT::i64) { // Expected 64-bit operand
     return AMDGPU::isInlinableLiteral64(Imm.Val,
@@ -1132,7 +1128,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
     APInt Literal(64, Val);
 
     switch (OpSize) {
-    case 8: {
+    case 8:
       if (AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
         Inst.addOperand(MCOperand::createImm(Literal.getZExtValue()));
@@ -1156,7 +1152,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
       // unclear how we should encode them. This case should be checked earlier
       // in predicate methods (isLiteralImm())
       llvm_unreachable("fp literal in 64-bit integer instruction.");
-    }
+
     case 4:
     case 2: {
       bool lost;
@@ -1180,7 +1176,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
   // Only sign extend inline immediates.
   // FIXME: No errors on truncation
   switch (OpSize) {
-  case 4: {
+  case 4:
     if (isInt<32>(Val) &&
         AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val),
                                      AsmParser->hasInv2PiInlineImm())) {
@@ -1190,8 +1186,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
 
     Inst.addOperand(MCOperand::createImm(Val & 0xffffffff));
     return;
-  }
-  case 8: {
+
+  case 8:
     if (AMDGPU::isInlinableLiteral64(Val,
                                      AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
@@ -1200,8 +1196,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
 
     Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
     return;
-  }
-  case 2: {
+
+  case 2:
     if (isInt<16>(Val) &&
         AMDGPU::isInlinableLiteral16(static_cast<int16_t>(Val),
                                      AsmParser->hasInv2PiInlineImm())) {
@@ -1211,7 +1207,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val) const {
 
     Inst.addOperand(MCOperand::createImm(Val & 0xffff));
     return;
-  }
+
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -1295,7 +1291,8 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Default(0);
 }
 
-bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
+bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                    SMLoc &EndLoc) {
   auto R = parseRegister();
   if (!R) return true;
   assert(R->isReg());
@@ -1305,20 +1302,43 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
   return false;
 }
 
-bool AMDGPUAsmParser::AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, RegisterKind RegKind, unsigned Reg1, unsigned RegNum)
-{
+bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
+                                            RegisterKind RegKind, unsigned Reg1,
+                                            unsigned RegNum) {
   switch (RegKind) {
   case IS_SPECIAL:
-    if (Reg == AMDGPU::EXEC_LO && Reg1 == AMDGPU::EXEC_HI) { Reg = AMDGPU::EXEC; RegWidth = 2; return true; }
-    if (Reg == AMDGPU::FLAT_SCR_LO && Reg1 == AMDGPU::FLAT_SCR_HI) { Reg = AMDGPU::FLAT_SCR; RegWidth = 2; return true; }
-    if (Reg == AMDGPU::VCC_LO && Reg1 == AMDGPU::VCC_HI) { Reg = AMDGPU::VCC; RegWidth = 2; return true; }
-    if (Reg == AMDGPU::TBA_LO && Reg1 == AMDGPU::TBA_HI) { Reg = AMDGPU::TBA; RegWidth = 2; return true; }
-    if (Reg == AMDGPU::TMA_LO && Reg1 == AMDGPU::TMA_HI) { Reg = AMDGPU::TMA; RegWidth = 2; return true; }
+    if (Reg == AMDGPU::EXEC_LO && Reg1 == AMDGPU::EXEC_HI) {
+      Reg = AMDGPU::EXEC;
+      RegWidth = 2;
+      return true;
+    }
+    if (Reg == AMDGPU::FLAT_SCR_LO && Reg1 == AMDGPU::FLAT_SCR_HI) {
+      Reg = AMDGPU::FLAT_SCR;
+      RegWidth = 2;
+      return true;
+    }
+    if (Reg == AMDGPU::VCC_LO && Reg1 == AMDGPU::VCC_HI) {
+      Reg = AMDGPU::VCC;
+      RegWidth = 2;
+      return true;
+    }
+    if (Reg == AMDGPU::TBA_LO && Reg1 == AMDGPU::TBA_HI) {
+      Reg = AMDGPU::TBA;
+      RegWidth = 2;
+      return true;
+    }
+    if (Reg == AMDGPU::TMA_LO && Reg1 == AMDGPU::TMA_HI) {
+      Reg = AMDGPU::TMA;
+      RegWidth = 2;
+      return true;
+    }
     return false;
   case IS_VGPR:
   case IS_SGPR:
   case IS_TTMP:
-    if (Reg1 != Reg + RegWidth) { return false; }
+    if (Reg1 != Reg + RegWidth) {
+      return false;
+    }
     RegWidth++;
     return true;
   default:
@@ -1326,8 +1346,9 @@ bool AMDGPUAsmParser::AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, R
   }
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth, unsigned *DwordRegIndex)
-{
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+                                          unsigned &RegNum, unsigned &RegWidth,
+                                          unsigned *DwordRegIndex) {
   if (DwordRegIndex) { *DwordRegIndex = 0; }
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   if (getLexer().is(AsmToken::Identifier)) {
@@ -1528,7 +1549,8 @@ AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands) {
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands, bool AllowImm) {
+AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
+                                              bool AllowImm) {
   // XXX: During parsing we can't determine if minus sign means
   // negate-modifier or negative immediate value.
   // By default we suppose it is modifier.
@@ -1539,7 +1561,8 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands, bool Allo
     Negate = true;
   }
 
-  if (getLexer().getKind() == AsmToken::Identifier && Parser.getTok().getString() == "abs") {
+  if (getLexer().getKind() == AsmToken::Identifier &&
+      Parser.getTok().getString() == "abs") {
     Parser.Lex();
     Abs2 = true;
     if (getLexer().isNot(AsmToken::LParen)) {
@@ -1597,10 +1620,12 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands, bool Allo
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands, bool AllowImm) {
+AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands,
+                                               bool AllowImm) {
   bool Sext = false;
 
-  if (getLexer().getKind() == AsmToken::Identifier && Parser.getTok().getString() == "sext") {
+  if (getLexer().getKind() == AsmToken::Identifier &&
+      Parser.getTok().getString() == "sext") {
     Parser.Lex();
     Sext = true;
     if (getLexer().isNot(AsmToken::LParen)) {
@@ -1667,7 +1692,6 @@ OperandMatchResultTy AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) 
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
-
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
 
   if ((getForcedEncodingSize() == 32 && (TSFlags & SIInstrFlags::VOP3)) ||
@@ -1799,7 +1823,6 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
   return false;
 }
 
-
 bool AMDGPUAsmParser::ParseDirectiveMajorMinor(uint32_t &Major,
                                                uint32_t &Minor) {
   if (ParseAsAbsoluteExpression(Major))
@@ -1816,7 +1839,6 @@ bool AMDGPUAsmParser::ParseDirectiveMajorMinor(uint32_t &Major,
 }
 
 bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectVersion() {
-
   uint32_t Major;
   uint32_t Minor;
 
@@ -2086,7 +2108,6 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
-
   // Try to parse with a custom parser
   OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
 

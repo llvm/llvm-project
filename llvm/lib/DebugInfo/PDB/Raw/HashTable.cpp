@@ -99,6 +99,12 @@ Error HashTable::commit(msf::StreamWriter &Writer) const {
   return Error::success();
 }
 
+void HashTable::clear() {
+  Buckets.resize(8);
+  Present.clear();
+  Deleted.clear();
+}
+
 uint32_t HashTable::capacity() const { return Buckets.size(); }
 uint32_t HashTable::size() const { return Present.count(); }
 

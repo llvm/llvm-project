@@ -10,28 +10,30 @@
 # CHECK-NEXT:   SuperBlock:
 # CHECK-NEXT:     BlockSize:       4096
 # CHECK-NEXT:     FreeBlockMap:    1
-# CHECK-NEXT:     NumBlocks:       10
-# CHECK-NEXT:     NumDirectoryBytes: 48
+# CHECK-NEXT:     NumBlocks:       11
+# CHECK-NEXT:     NumDirectoryBytes: 64
 # CHECK-NEXT:     Unknown1:        0
 # CHECK-NEXT:     BlockMapAddr:    3
 # CHECK-NEXT:   NumDirectoryBlocks: 1
-# CHECK-NEXT:   DirectoryBlocks: [ 9 ]
-# CHECK-NEXT:   NumStreams:      6
-# CHECK-NEXT:   FileSize:        40960
-# CHECK-NEXT: StreamSizes:     [ 0, 48, 736, 390, 56, 160 ]
+# CHECK-NEXT:   DirectoryBlocks: [ 10 ]
+# CHECK-NEXT:   NumStreams:      9
+# CHECK-NEXT:   FileSize:        45056
+# CHECK-NEXT: StreamSizes:     [ 0, 114, 736, 390, 56, 160, 25, 0, 0 ]
 # CHECK-NEXT: StreamMap:
 # CHECK-NEXT:   - Stream:          [  ]
-# CHECK-NEXT:   - Stream:          [ 5 ]
-# CHECK-NEXT:   - Stream:          [ 7 ]
 # CHECK-NEXT:   - Stream:          [ 6 ]
 # CHECK-NEXT:   - Stream:          [ 8 ]
+# CHECK-NEXT:   - Stream:          [ 7 ]
+# CHECK-NEXT:   - Stream:          [ 9 ]
 # CHECK-NEXT:   - Stream:          [ 4 ]
+# CHECK-NEXT:   - Stream:          [ 5 ]
+# CHECK-NEXT:   - Stream:          [ ]
+# CHECK-NEXT:   - Stream:          [ ]
 # CHECK-NEXT: PdbStream:
 # CHECK-NEXT:   Age:             1
 # CHECK-NEXT:   Guid:
 # CHECK-NEXT:   Signature:       0
 # CHECK-NEXT:   Version:         VC70
-# CHECK-NEXT:   NamedStreams:
 # CHECK-NEXT: DbiStream:
 # CHECK-NEXT:   VerHeader:       V110
 # CHECK-NEXT:   Age:             1

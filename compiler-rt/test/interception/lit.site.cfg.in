@@ -1,0 +1,15 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.target_cflags = "@INTERCEPTION_TEST_TARGET_CFLAGS@"
+config.clang = "@INTERCEPTION_TEST_TARGET_CC@"
+config.target_arch = "@INTERCEPTION_TEST_TARGET_ARCH@"
+config.target_lib = "@INTERCEPTION_TEST_TARGET_LIB@"
+config.target_lib_dir = "@INTERCEPTION_TEST_TARGET_LIB_DIR@"
+config.sources_dir = os.path.join("@COMPILER_RT_SOURCE_DIR@", "lib")
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@INTERCEPTION_LIT_SOURCE_DIR@/lit.cfg")

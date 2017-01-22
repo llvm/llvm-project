@@ -79,6 +79,60 @@ FMAContractLevelOpt("nvptx-fma-level", cl::ZeroOrMore, cl::Hidden,
                              " 1: do it  2: do it aggressively"),
                     cl::init(2));
 
+static cl::opt<int> UsePrecDivF32(
+    "nvptx-prec-divf32", cl::ZeroOrMore, cl::Hidden,
+    cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
+             " IEEE Compliant F32 div.rnd if available."),
+    cl::init(2));
+
+static cl::opt<bool> UsePrecSqrtF32(
+    "nvptx-prec-sqrtf32", cl::Hidden,
+    cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
+    cl::init(true));
+
+static cl::opt<bool> FtzEnabled(
+    "nvptx-f32ftz", cl::ZeroOrMore, cl::Hidden,
+    cl::desc("NVPTX Specific: Flush f32 subnormals to sign-preserving zero."),
+    cl::init(false));
+
+int NVPTXTargetLowering::getDivF32Level() const {
+  if (UsePrecDivF32.getNumOccurrences() > 0) {
+    // If nvptx-prec-div32=N is used on the command-line, always honor it
+    return UsePrecDivF32;
+  } else {
+    // Otherwise, use div.approx if fast math is enabled
+    if (getTargetMachine().Options.UnsafeFPMath)
+      return 0;
+    else
+      return 2;
+  }
+}
+
+bool NVPTXTargetLowering::usePrecSqrtF32() const {
+  if (UsePrecSqrtF32.getNumOccurrences() > 0) {
+    // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
+    return UsePrecSqrtF32;
+  } else {
+    // Otherwise, use sqrt.approx if fast math is enabled
+    return !getTargetMachine().Options.UnsafeFPMath;
+  }
+}
+
+bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
+  // TODO: Get rid of this flag; there can be only one way to do this.
+  if (FtzEnabled.getNumOccurrences() > 0) {
+    // If nvptx-f32ftz is used on the command-line, always honor it
+    return FtzEnabled;
+  } else {
+    const Function *F = MF.getFunction();
+    // Otherwise, check for an nvptx-f32ftz attribute on the function
+    if (F->hasFnAttribute("nvptx-f32ftz"))
+      return F->getFnAttribute("nvptx-f32ftz").getValueAsString() == "true";
+    else
+      return false;
+  }
+}
+
 static bool IsPTXVectorType(MVT VT) {
   switch (VT.SimpleTy) {
   default:

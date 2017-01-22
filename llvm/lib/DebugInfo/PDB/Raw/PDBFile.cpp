@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTable.h"
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
@@ -323,8 +323,8 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
   return *Symbols;
 }
 
-Expected<NameHashTable &> PDBFile::getStringTable() {
-  if (!StringTable || !StringTableStream) {
+Expected<StringTable &> PDBFile::getStringTable() {
+  if (!Strings || !StringTableStream) {
     auto IS = getPDBInfoStream();
     if (!IS)
       return IS.takeError();
@@ -336,13 +336,13 @@ Expected<NameHashTable &> PDBFile::getStringTable() {
     if (!NS) return NS.takeError();
 
     StreamReader Reader(**NS);
-    auto N = llvm::make_unique<NameHashTable>();
+    auto N = llvm::make_unique<StringTable>();
     if (auto EC = N->load(Reader))
       return std::move(EC);
-    StringTable = std::move(N);
+    Strings = std::move(N);
     StringTableStream = std::move(*NS);
   }
-  return *StringTable;
+  return *Strings;
 }
 
 bool PDBFile::hasPDBDbiStream() const { return StreamDBI < getNumStreams(); }

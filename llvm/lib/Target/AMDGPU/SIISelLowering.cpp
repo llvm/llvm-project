@@ -15,7 +15,6 @@
 #ifdef _MSC_VER
 // Provide M_PI.
 #define _USE_MATH_DEFINES
-#include <cmath>
 #endif
 
 #include "AMDGPU.h"
@@ -26,15 +25,59 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/DAGCombine.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetCallingConv.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <iterator>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -42,7 +85,6 @@ static cl::opt<bool> EnableVGPRIndexMode(
   "amdgpu-vgpr-index-mode",
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
-
 
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
@@ -109,7 +151,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v8i32, MVT::v8i8, Expand);
   setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v32i32, MVT::v32i8, Expand);
-
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
@@ -441,7 +482,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   switch (AS) {
-  case AMDGPUAS::GLOBAL_ADDRESS: {
+  case AMDGPUAS::GLOBAL_ADDRESS:
     if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
       // Assume the we will use FLAT for all global memory accesses
       // on VI.
@@ -456,8 +497,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     }
 
     return isLegalMUBUFAddressingMode(AM);
-  }
-  case AMDGPUAS::CONSTANT_ADDRESS: {
+
+  case AMDGPUAS::CONSTANT_ADDRESS:
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -494,13 +535,12 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
-  }
 
   case AMDGPUAS::PRIVATE_ADDRESS:
     return isLegalMUBUFAddressingMode(AM);
 
   case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS: {
+  case AMDGPUAS::REGION_ADDRESS:
     // Basic, single offset DS instructions allow a 16-bit unsigned immediate
     // field.
     // XXX - If doing a 4-byte aligned 8-byte type access, we effectively have
@@ -515,7 +555,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
-  }
+
   case AMDGPUAS::FLAT_ADDRESS:
   case AMDGPUAS::UNKNOWN_ADDRESS_SPACE:
     // For an unknown address space, this usually means that this is for some
@@ -897,7 +937,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   SmallVector<SDValue, 16> Chains;
 
   for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
-
     const ISD::InputArg &Arg = Ins[i];
     if (Skipped[i]) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
@@ -954,7 +993,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
 
     if (Arg.VT.isVector()) {
-
       // Build a vector from the registers
       Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
       unsigned NumElements = ParamType->getVectorNumElements();
@@ -1543,7 +1581,6 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
     return &MBB;
   }
 
-
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(&MI);
 
@@ -1736,13 +1773,13 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
-  case AMDGPU::SI_INIT_M0: {
+  case AMDGPU::SI_INIT_M0:
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
         .add(MI.getOperand(0));
     MI.eraseFromParent();
     return BB;
-  }
+
   case AMDGPU::GET_GROUPSTATICSIZE: {
     DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
@@ -2001,7 +2038,6 @@ bool SITargetLowering::shouldEmitPCReloc(const GlobalValue *GV) const {
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
                                       SelectionDAG &DAG) const {
-
   SDLoc DL(BRCOND);
 
   SDNode *Intr = BRCOND.getOperand(1).getNode();
@@ -2399,17 +2435,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_rsq:
   case AMDGPUIntrinsic::AMDGPU_rsq: // Legacy name
     return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
-  case Intrinsic::amdgcn_rsq_legacy: {
+  case Intrinsic::amdgcn_rsq_legacy:
     if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
 
     return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
-  }
-  case Intrinsic::amdgcn_rcp_legacy: {
+  case Intrinsic::amdgcn_rcp_legacy:
     if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
     return DAG.getNode(AMDGPUISD::RCP_LEGACY, DL, VT, Op.getOperand(1));
-  }
   case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
@@ -2516,9 +2550,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::LOAD_CONSTANT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
   }
-  case AMDGPUIntrinsic::amdgcn_fdiv_fast: {
+  case AMDGPUIntrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
-  }
   case AMDGPUIntrinsic::SI_vs_load_input:
     return DAG.getNode(AMDGPUISD::LOAD_INPUT, DL, VT,
                        Op.getOperand(1),
@@ -2912,7 +2945,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // loads.
     //
     LLVM_FALLTHROUGH;
-  case AMDGPUAS::GLOBAL_ADDRESS: {
+  case AMDGPUAS::GLOBAL_ADDRESS:
     if (Subtarget->getScalarizeGlobalBehavior() && isMemOpUniform(Load) &&
                   isMemOpHasNoClobberedMemOperand(Load))
       return SDValue();
@@ -2920,14 +2953,13 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // have the same legalization requirements as global and private
     // loads.
     //
-  }
     LLVM_FALLTHROUGH;
   case AMDGPUAS::FLAT_ADDRESS:
     if (NumElements > 4)
       return SplitVectorLoad(Op, DAG);
     // v4 loads are supported for private and global memory.
     return SDValue();
-  case AMDGPUAS::PRIVATE_ADDRESS: {
+  case AMDGPUAS::PRIVATE_ADDRESS:
     // Depending on the setting of the private_element_size field in the
     // resource descriptor, we can only make private accesses up to a certain
     // size.
@@ -2946,8 +2978,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     default:
       llvm_unreachable("unsupported private_element_size");
     }
-  }
-  case AMDGPUAS::LOCAL_ADDRESS: {
+  case AMDGPUAS::LOCAL_ADDRESS:
     if (NumElements > 2)
       return SplitVectorLoad(Op, DAG);
 
@@ -2956,7 +2987,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     // If properly aligned, if we split we might be able to use ds_read_b64.
     return SplitVectorLoad(Op, DAG);
-  }
   default:
     return SDValue();
   }
@@ -3454,27 +3484,24 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
 static bool canFoldOffset(unsigned OffsetSize, unsigned AS,
                           const SISubtarget &STI) {
   switch (AS) {
-  case AMDGPUAS::GLOBAL_ADDRESS: {
+  case AMDGPUAS::GLOBAL_ADDRESS:
     // MUBUF instructions a 12-bit offset in bytes.
     return isUInt<12>(OffsetSize);
-  }
-  case AMDGPUAS::CONSTANT_ADDRESS: {
+  case AMDGPUAS::CONSTANT_ADDRESS:
     // SMRD instructions have an 8-bit offset in dwords on SI and
     // a 20-bit offset in bytes on VI.
     if (STI.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
       return isUInt<20>(OffsetSize);
     else
       return (OffsetSize % 4 == 0) && isUInt<8>(OffsetSize / 4);
-  }
   case AMDGPUAS::LOCAL_ADDRESS:
-  case AMDGPUAS::REGION_ADDRESS: {
+  case AMDGPUAS::REGION_ADDRESS:
     // The single offset versions have a 16-bit offset in bytes.
     return isUInt<16>(OffsetSize);
-  }
   case AMDGPUAS::PRIVATE_ADDRESS:
   // Indirect register addressing does not use any offsets.
   default:
-    return 0;
+    return false;
   }
 }
 
@@ -4176,11 +4203,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case AMDGPUISD::ATOMIC_INC:
-  case AMDGPUISD::ATOMIC_DEC: { // TODO: Target mem intrinsics.
+  case AMDGPUISD::ATOMIC_DEC: // TODO: Target mem intrinsics.
     if (DCI.isBeforeLegalize())
       break;
     return performMemSDNodeCombine(cast<MemSDNode>(N), DCI);
-  }
   case ISD::AND:
     return performAndCombine(N, DCI);
   case ISD::OR:
@@ -4291,7 +4317,6 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   // Update the users of the node with the new indices
   for (unsigned i = 0, Idx = AMDGPU::sub0; i < 4; ++i) {
-
     SDNode *User = Users[i];
     if (!User)
       continue;

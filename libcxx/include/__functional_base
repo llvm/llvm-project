@@ -16,19 +16,13 @@
 #include <typeinfo>
 #include <exception>
 #include <new>
+#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Arg, class _Result>
-struct _LIBCPP_TEMPLATE_VIS unary_function
-{
-    typedef _Arg    argument_type;
-    typedef _Result result_type;
-};
 
 template <class _Arg1, class _Arg2, class _Result>
 struct _LIBCPP_TEMPLATE_VIS binary_function

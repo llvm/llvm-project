@@ -1,4 +1,4 @@
-//===-- SIInsertSkips.cpp - Use predicates for control flow ----------===//
+//===-- SIInsertSkips.cpp - Use predicates for control flow ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,33 +12,46 @@
 /// branches when it's expected that jumping over the untaken control flow will
 /// be cheaper than having every workitem no-op through it.
 //
+//===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-skips"
-
-namespace {
 
 static cl::opt<unsigned> SkipThresholdFlag(
   "amdgpu-skip-threshold",
   cl::desc("Number of instructions before jumping over divergent control flow"),
   cl::init(12), cl::Hidden);
 
+namespace {
+
 class SIInsertSkips : public MachineFunctionPass {
 private:
-  const SIRegisterInfo *TRI;
-  const SIInstrInfo *TII;
-  unsigned SkipThreshold;
+  const SIRegisterInfo *TRI = nullptr;
+  const SIInstrInfo *TII = nullptr;
+  unsigned SkipThreshold = 0;
 
   bool shouldSkip(const MachineBasicBlock &From,
                   const MachineBasicBlock &To) const;
@@ -55,8 +68,7 @@ private:
 public:
   static char ID;
 
-  SIInsertSkips() :
-    MachineFunctionPass(ID), TRI(nullptr), TII(nullptr), SkipThreshold(0) { }
+  SIInsertSkips() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -69,7 +81,7 @@ public:
   }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 char SIInsertSkips::ID = 0;
 
@@ -270,19 +282,19 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr &MI = *I;
 
       switch (MI.getOpcode()) {
-      case AMDGPU::SI_MASK_BRANCH: {
+      case AMDGPU::SI_MASK_BRANCH:
         ExecBranchStack.push_back(MI.getOperand(0).getMBB());
         MadeChange |= skipMaskBranch(MI, MBB);
         break;
-      }
-      case AMDGPU::S_BRANCH: {
+
+      case AMDGPU::S_BRANCH:
         // Optimize out branches to the next block.
         // FIXME: Shouldn't this be handled by BranchFolding?
         if (MBB.isLayoutSuccessor(MI.getOperand(0).getMBB()))
           MI.eraseFromParent();
         break;
-      }
-      case AMDGPU::SI_KILL_TERMINATOR: {
+
+      case AMDGPU::SI_KILL_TERMINATOR:
         MadeChange = true;
         kill(MI);
 
@@ -298,8 +310,8 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
 
         MI.eraseFromParent();
         break;
-      }
-      case AMDGPU::SI_RETURN: {
+
+      case AMDGPU::SI_RETURN:
         // FIXME: Should move somewhere else
         assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
 
@@ -318,7 +330,8 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
             .addMBB(EmptyMBBAtEnd);
           I->eraseFromParent();
         }
-      }
+        break;
+
       default:
         break;
       }

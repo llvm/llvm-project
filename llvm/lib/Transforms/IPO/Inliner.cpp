@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
@@ -765,15 +766,15 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-
-  // Setup the data structure used to plumb customization into the
-  // `InlineFunction` routine.
-  InlineFunctionInfo IFI(/*cg=*/nullptr, &GetAssumptionCache);
+  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
 
   auto GetInlineCost = [&](CallSite CS) {
     Function &Callee = *CS.getCalledFunction();
     auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
-    return getInlineCost(CS, Params, CalleeTTI, GetAssumptionCache, PSI);
+    return getInlineCost(CS, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
+                         PSI);
   };
 
   // We use a worklist of nodes to process so that we can handle if the SCC
@@ -842,6 +843,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // Check whether we want to inline this callsite.
       if (!shouldInline(CS, GetInlineCost, ORE))
         continue;
+
+      // Setup the data structure used to plumb customization into the
+      // `InlineFunction` routine.
+      InlineFunctionInfo IFI(
+          /*cg=*/nullptr, &GetAssumptionCache,
+          &FAM.getResult<BlockFrequencyAnalysis>(*(CS.getCaller())),
+          &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
       if (!InlineFunction(CS, IFI))
         continue;

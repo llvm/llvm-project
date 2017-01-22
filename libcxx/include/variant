@@ -1534,7 +1534,8 @@ auto swap(variant<_Types...>& __lhs,
 }
 
 template <class... _Types>
-struct _LIBCPP_TEMPLATE_VIS hash<variant<_Types...>> {
+struct _LIBCPP_TEMPLATE_VIS hash<
+    __enable_hash_helper<variant<_Types...>, remove_const_t<_Types>...>> {
   using argument_type = variant<_Types...>;
   using result_type = size_t;
 
@@ -1547,7 +1548,8 @@ struct _LIBCPP_TEMPLATE_VIS hash<variant<_Types...>> {
                : __variant::__visit_alt(
                      [](const auto& __alt) {
                        using __alt_type = decay_t<decltype(__alt)>;
-                       using __value_type = typename __alt_type::__value_type;
+                       using __value_type = remove_const_t<
+                         typename __alt_type::__value_type>;
                        return hash<__value_type>{}(__alt.__value);
                      },
                      __v);

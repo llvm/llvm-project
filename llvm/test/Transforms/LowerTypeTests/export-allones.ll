@@ -140,11 +140,11 @@
 
 ; CHECK: @__typeid_typeid1_global_addr = hidden alias i8, getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0, i32 0)
 ; CHECK: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 1 to i8*)
-; CHECK: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i8 1 to i8*)
+; CHECK: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 1 to i8*)
 
 ; CHECK: @__typeid_typeid2_global_addr = hidden alias i8, getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0, i64 4)
 ; CHECK: @__typeid_typeid2_align = hidden alias i8, inttoptr (i8 2 to i8*)
-; CHECK: @__typeid_typeid2_size_m1 = hidden alias i8, inttoptr (i32 128 to i8*)
+; CHECK: @__typeid_typeid2_size_m1 = hidden alias i8, inttoptr (i64 128 to i8*)
 
 ; CHECK: @foo = alias [2048 x i8], getelementptr inbounds ({ [2048 x i8] }, { [2048 x i8] }* [[G]], i32 0, i32 0)
 

@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 
@@ -44,7 +45,7 @@ MSFBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
 
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
-    Info = llvm::make_unique<InfoStreamBuilder>(*Msf);
+    Info = llvm::make_unique<InfoStreamBuilder>(*Msf, NamedStreams);
   return *Info;
 }
 
@@ -66,7 +67,26 @@ TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
   return *Ipi;
 }
 
-Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
+StringTableBuilder &PDBFileBuilder::getStringTableBuilder() { return Strings; }
+
+Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
+  auto ExpectedStream = Msf->addStream(Size);
+  if (!ExpectedStream)
+    return ExpectedStream.takeError();
+  NamedStreams.set(Name, *ExpectedStream);
+  return Error::success();
+}
+
+Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
+  uint32_t StringTableSize = Strings.finalize();
+
+  if (auto EC = addNamedStream("/names", StringTableSize))
+    return std::move(EC);
+  if (auto EC = addNamedStream("/LinkInfo", 0))
+    return std::move(EC);
+  if (auto EC = addNamedStream("/src/headerblock", 0))
+    return std::move(EC);
+
   if (Info) {
     if (auto EC = Info->finalizeMsfLayout())
       return std::move(EC);
@@ -123,6 +143,16 @@ Error PDBFileBuilder::commit(StringRef Filename) {
     if (auto EC = DW.writeArray(Blocks))
       return EC;
   }
+
+  uint32_t StringTableStreamNo = 0;
+  if (!NamedStreams.get("/names", StringTableStreamNo))
+    return llvm::make_error<pdb::RawError>(raw_error_code::no_stream);
+
+  auto NS = WritableMappedBlockStream::createIndexedStream(Layout, Buffer,
+                                                           StringTableStreamNo);
+  StreamWriter NSWriter(*NS);
+  if (auto EC = Strings.commit(NSWriter))
+    return EC;
 
   if (Info) {
     if (auto EC = Info->commit(Layout, Buffer))

@@ -19,29 +19,38 @@
 // Not very portable
 
 #include <string_view>
+#include <string>
 #include <cassert>
 #include <type_traits>
 
 using std::string_view;
 
-template <class T>
+template <class SV>
 void
 test()
 {
-    typedef std::hash<T> H;
-    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
+    typedef std::hash<SV> H;
+    static_assert((std::is_same<typename H::argument_type, SV>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
-    H h;
-//     std::string g1 = "1234567890";
-//     std::string g2 = "1234567891";
-    typedef typename T::value_type char_type;
+
+    typedef typename SV::value_type char_type;
+    typedef std::basic_string<char_type> String;
+    typedef std::hash<String> SH;
+
     char_type g1 [ 10 ];
     char_type g2 [ 10 ];
     for ( int i = 0; i < 10; ++i )
         g1[i] = g2[9-i] = static_cast<char_type>('0' + i);
-    T s1(g1, 10);
-    T s2(g2, 10);
+    H h;
+    SH sh;
+    SV s1(g1, 10);
+    String ss1(s1);
+    SV s2(g2, 10);
+    String ss2(s2);
+    assert(h(s1) == h(s1));
     assert(h(s1) != h(s2));
+    assert(sh(ss1) == h(s1));
+    assert(sh(ss2) == h(s2));
 }
 
 int main()

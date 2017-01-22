@@ -67,6 +67,10 @@ inline std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
   return CloneArgsWithoutX(Args, X, X);
 }
 
+std::string DisassembleCmd(const std::string &FileName);
+
+std::string SearchRegexCmd(const std::string &Regex);
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_UTIL_H

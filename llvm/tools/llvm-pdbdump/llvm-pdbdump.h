@@ -64,12 +64,14 @@ extern llvm::cl::opt<bool> DumpSectionMap;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
 extern llvm::cl::opt<bool> DumpFpo;
+extern llvm::cl::opt<bool> DumpStringTable;
 }
 
 namespace pdb2yaml {
 extern llvm::cl::opt<bool> NoFileHeaders;
 extern llvm::cl::opt<bool> StreamMetadata;
 extern llvm::cl::opt<bool> StreamDirectory;
+extern llvm::cl::opt<bool> StringTable;
 extern llvm::cl::opt<bool> PdbStream;
 extern llvm::cl::opt<bool> DbiStream;
 extern llvm::cl::opt<bool> DbiModuleInfo;

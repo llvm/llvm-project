@@ -53,6 +53,12 @@
 #  define ALWAYS_INLINE
 #endif // __clang__
 
+#if LIBFUZZER_WINDOWS
+#define ATTRIBUTE_INTERFACE __declspec(dllexport)
+#else
+#define ATTRIBUTE_INTERFACE __attribute__((visibility("default")))
+#endif
+
 namespace fuzzer {
 
 template <class T> T Min(T a, T b) { return a < b ? a : b; }

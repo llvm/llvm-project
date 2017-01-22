@@ -1630,6 +1630,8 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
           return ConstantFoldFP(sin, V, Ty);
         case Intrinsic::cos:
           return ConstantFoldFP(cos, V, Ty);
+        case Intrinsic::sqrt:
+          return ConstantFoldFP(sqrt, V, Ty);
       }
 
       if (!TLI)
@@ -1683,19 +1685,6 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         else if ((Name == "log10" && V > 0 && TLI->has(LibFunc::log10)) ||
                  (Name == "log10f" && V > 0 && TLI->has(LibFunc::log10f)))
           return ConstantFoldFP(log10, V, Ty);
-        else if (IntrinsicID == Intrinsic::sqrt &&
-                 (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())) {
-          if (V >= -0.0)
-            return ConstantFoldFP(sqrt, V, Ty);
-          else {
-            // Unlike the sqrt definitions in C/C++, POSIX, and IEEE-754 - which
-            // all guarantee or favor returning NaN - the square root of a
-            // negative number is not defined for the LLVM sqrt intrinsic.
-            // This is because the intrinsic should only be emitted in place of
-            // libm's sqrt function when using "no-nans-fp-math".
-            return UndefValue::get(Ty);
-          }
-        }
         break;
       case 'r':
         if ((Name == "round" && TLI->has(LibFunc::round)) ||

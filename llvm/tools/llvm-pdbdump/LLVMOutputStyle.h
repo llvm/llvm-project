@@ -34,6 +34,7 @@ private:
   Error dumpGlobalsStream();
   Error dumpStreamBytes();
   Error dumpStreamBlocks();
+  Error dumpStringTable();
   Error dumpInfoStream();
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpDbiStream();

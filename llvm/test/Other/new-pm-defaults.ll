@@ -94,6 +94,8 @@
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
+; CHECK-O-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
+; CHECK-O-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Starting Loop pass manager run.
 ; CHECK-O-NEXT: Finished Loop pass manager run.
 ; CHECK-Os-NEXT: Running pass: MergedLoadStoreMotionPass

@@ -16,12 +16,15 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "SIRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <array>
+#include <cassert>
 #include <map>
+#include <utility>
 
 namespace llvm {
-
-class MachineRegisterInfo;
 
 class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
 public:
@@ -174,10 +177,12 @@ private:
 
 public:
   struct SpilledReg {
-    unsigned VGPR;
-    int Lane;
+    unsigned VGPR = AMDGPU::NoRegister;
+    int Lane = -1;
+
+    SpilledReg() = default;
     SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) { }
-    SpilledReg() : VGPR(AMDGPU::NoRegister), Lane(-1) { }
+
     bool hasLane() { return Lane != -1;}
     bool hasReg() { return VGPR != AMDGPU::NoRegister;}
   };
@@ -185,6 +190,7 @@ public:
   // SIMachineFunctionInfo definition
 
   SIMachineFunctionInfo(const MachineFunction &MF);
+
   SpilledReg getSpilledReg(MachineFunction *MF, unsigned FrameIndex,
                            unsigned SubIdx);
   bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; };
@@ -495,6 +501,6 @@ public:
   }
 };
 
-} // End namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H

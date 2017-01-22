@@ -16,14 +16,15 @@ endforeach()
 ###############################################################################
 # AFL Driver test
 ###############################################################################
+if(NOT MSVC)
+  add_executable(AFLDriverTest
+    ../AFLDriverTest.cpp ../../afl/afl_driver.cpp)
 
-add_executable(AFLDriverTest
-  ../AFLDriverTest.cpp ../../afl/afl_driver.cpp)
+  set_target_properties(AFLDriverTest
+      PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+      "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
+      )
 
-set_target_properties(AFLDriverTest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
-    )
-
-# Propagate value into parent directory
-set(TestBinaries ${TestBinaries} AFLDriverTest PARENT_SCOPE)
+  # Propagate value into parent directory
+  set(TestBinaries ${TestBinaries} AFLDriverTest PARENT_SCOPE)
+endif()

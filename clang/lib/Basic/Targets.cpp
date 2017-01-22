@@ -8604,8 +8604,6 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<ARMleTargetInfo>(Triple, Opts);
-    case llvm::Triple::Fuchsia:
-      return new FuchsiaTargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<ARMleTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
@@ -8642,8 +8640,6 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<ARMbeTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<ARMbeTargetInfo>(Triple, Opts);
-    case llvm::Triple::Fuchsia:
-      return new FuchsiaTargetInfo<ARMbeTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<ARMbeTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
@@ -8879,8 +8875,6 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new BitrigI386TargetInfo(Triple, Opts);
     case llvm::Triple::FreeBSD:
       return new FreeBSDTargetInfo<X86_32TargetInfo>(Triple, Opts);
-    case llvm::Triple::Fuchsia:
-      return new FuchsiaTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::KFreeBSD:
       return new KFreeBSDTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::Minix:

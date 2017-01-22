@@ -303,13 +303,13 @@ struct InfoStreamHeader {
 };
 
 /// The header preceeding the /names stream.
-struct NameHashTableHeader {
+struct StringTableHeader {
   support::ulittle32_t Signature;
   support::ulittle32_t HashVersion;
   support::ulittle32_t ByteSize;
 };
 
-const uint32_t NameHashTableSignature = 0xEFFEEFFE;
+const uint32_t StringTableSignature = 0xEFFEEFFE;
 
 } // namespace pdb
 } // namespace llvm

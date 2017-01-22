@@ -139,6 +139,7 @@ bool DynamicLoaderMacOS::DidSetNotificationBreakpoint() {
 void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
   if (LLDB_BREAK_ID_IS_VALID(m_break_id)) {
     m_process->GetTarget().RemoveBreakpointByID(m_break_id);
+    m_break_id = LLDB_INVALID_BREAK_ID;
   }
 }
 

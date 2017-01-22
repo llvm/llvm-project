@@ -89,8 +89,10 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   HANDLE FindHandle(FindFirstFileA(Path.c_str(), &FindInfo));
   if (FindHandle == INVALID_HANDLE_VALUE)
   {
-    Printf("No file found in: %s.\n", Dir.c_str());
-    return;
+    if (GetLastError() == ERROR_FILE_NOT_FOUND)
+      return;
+    Printf("No such directory: %s; exiting\n", Dir.c_str());
+    exit(1);
   }
 
   do {
@@ -137,6 +139,14 @@ int DuplicateFile(int Fd) {
 
 void RemoveFile(const std::string &Path) {
   _unlink(Path.c_str());
+}
+
+void DiscardOutput(int Fd) {
+  FILE* Temp = fopen("nul", "w");
+  if (!Temp)
+    return;
+  _dup2(_fileno(Temp), Fd);
+  fclose(Temp);
 }
 
 static bool IsSeparator(char C) {
@@ -278,6 +288,16 @@ std::string DirName(const std::string &FileName) {
 }
 
 std::string TmpDir() { return "TODO: implement TmpDir"; }
+
+bool IsInterestingCoverageFile(const std::string &FileName) {
+  if (FileName.find("Program Files") != std::string::npos)
+    return false;
+  if (FileName.find("compiler-rt\\lib\\") != std::string::npos)
+    return false; // sanitizer internal.
+  if (FileName == "<null>")
+    return false;
+  return true;
+}
 
 }  // namespace fuzzer
 

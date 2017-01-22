@@ -13,6 +13,8 @@
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/NamedStreamMap.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 
@@ -21,8 +23,10 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-InfoStreamBuilder::InfoStreamBuilder(msf::MSFBuilder &Msf)
-    : Msf(Msf), Ver(PdbRaw_ImplVer::PdbImplVC70), Sig(-1), Age(0) {}
+InfoStreamBuilder::InfoStreamBuilder(msf::MSFBuilder &Msf,
+                                     NamedStreamMap &NamedStreams)
+    : Msf(Msf), Ver(PdbRaw_ImplVer::PdbImplVC70), Sig(-1), Age(0),
+      NamedStreams(NamedStreams) {}
 
 void InfoStreamBuilder::setVersion(PdbRaw_ImplVer V) { Ver = V; }
 
@@ -32,16 +36,8 @@ void InfoStreamBuilder::setAge(uint32_t A) { Age = A; }
 
 void InfoStreamBuilder::setGuid(PDB_UniqueId G) { Guid = G; }
 
-NameMapBuilder &InfoStreamBuilder::getNamedStreamsBuilder() {
-  return NamedStreams;
-}
-
-uint32_t InfoStreamBuilder::calculateSerializedLength() const {
-  return sizeof(InfoStreamHeader) + NamedStreams.calculateSerializedLength();
-}
-
 Error InfoStreamBuilder::finalizeMsfLayout() {
-  uint32_t Length = calculateSerializedLength();
+  uint32_t Length = sizeof(InfoStreamHeader) + NamedStreams.finalize();
   if (auto EC = Msf.setStreamSize(StreamPDB, Length))
     return EC;
   return Error::success();

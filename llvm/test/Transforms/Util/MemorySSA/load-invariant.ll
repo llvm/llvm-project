@@ -3,9 +3,6 @@
 ;
 ; Invariant loads should be considered live on entry, because, once the
 ; location is known to be dereferenceable, the value can never change.
-;
-; Currently XFAILed because this optimization was held back from the initial
-; commit.
 
 @g = external global i32
 

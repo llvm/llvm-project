@@ -22,6 +22,15 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: call        foo3@FUNCTION{{$}}
 ; CHECK-NEXT: .endfunc
 
+; CHECK-LABEL: test_varargs:
+; CHECK-NEXT: .local      i32
+; CHECK:      store
+; CHECK:      i32.const   $push[[L3:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: call        vararg@FUNCTION, $pop[[L3]]{{$}}
+; CHECK-NEXT: i32.const   $push[[L4:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: i32.store   0($[[L5:[0-9]+]]), $pop[[L4]]{{$}}
+; CHECK-NEXT: call        plain@FUNCTION, $[[L5]]{{$}}
+
 ; CHECK-LABEL: .Lbitcast:
 ; CHECK-NEXT: .local      i32
 ; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
@@ -45,6 +54,8 @@ target triple = "wasm32-unknown-unknown"
 
 declare void @has_i32_arg(i32)
 declare i32 @has_i32_ret()
+declare void @vararg(...)
+declare void @plain(i32)
 
 declare void @foo0()
 declare void @foo1()
@@ -68,5 +79,11 @@ entry:
   call void @foo1()
   call void @foo3()
 
+  ret void
+}
+
+define void @test_varargs() {
+  call void bitcast (void (...)* @vararg to void (i32)*)(i32 0)
+  call void (...) bitcast (void (i32)* @plain to void (...)*)(i32 0)
   ret void
 }

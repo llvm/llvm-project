@@ -29,6 +29,7 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 #include "llvm/Object/COFF.h"
