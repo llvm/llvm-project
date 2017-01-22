@@ -122,9 +122,17 @@ inline uint32_t Registers_x86::getRegister(int regNum) const {
     return _registers.__edx;
   case UNW_X86_EBX:
     return _registers.__ebx;
-  case UNW_X86_EBP:
-    return _registers.__ebp;
+#if !defined(__APPLE__)
   case UNW_X86_ESP:
+#else
+  case UNW_X86_EBP:
+#endif
+    return _registers.__ebp;
+#if !defined(__APPLE__)
+  case UNW_X86_EBP:
+#else
+  case UNW_X86_ESP:
+#endif
     return _registers.__esp;
   case UNW_X86_ESI:
     return _registers.__esi;
@@ -154,10 +162,18 @@ inline void Registers_x86::setRegister(int regNum, uint32_t value) {
   case UNW_X86_EBX:
     _registers.__ebx = value;
     return;
+#if !defined(__APPLE__)
+  case UNW_X86_ESP:
+#else
   case UNW_X86_EBP:
+#endif
     _registers.__ebp = value;
     return;
+#if !defined(__APPLE__)
+  case UNW_X86_EBP:
+#else
   case UNW_X86_ESP:
+#endif
     _registers.__esp = value;
     return;
   case UNW_X86_ESI:
