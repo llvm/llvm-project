@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump raw -headers -tpi-records -tpi-record-bytes -module-syms \
+; RUN: llvm-pdbdump raw -headers -string-table -tpi-records -tpi-record-bytes -module-syms \
 ; RUN:              -sym-record-bytes -globals -publics -module-files \
 ; RUN:              -stream-summary -stream-blocks -ipi-records -ipi-record-bytes \
 ; RUN:              -section-contribs -section-map -section-headers -line-info \
@@ -61,11 +61,21 @@
 ; EMPTY-NEXT:   Stream 15: [21]
 ; EMPTY-NEXT:   Stream 16: [22]
 ; EMPTY-NEXT: ]
+; EMPTY-NEXT: String Table {
+; EMPTY-NEXT:   'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
+; EMPTY-NEXT:   'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+; EMPTY-NEXT:   '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
+; EMPTY-NEXT: }
 ; EMPTY-NEXT: PDB Stream {
 ; EMPTY-NEXT:   Version: 20000404
 ; EMPTY-NEXT:   Signature: 0x54E507E2
 ; EMPTY-NEXT:   Age: 1
 ; EMPTY-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY-NEXT:   Named Streams {
+; EMPTY-NEXT:     /names: 13
+; EMPTY-NEXT:     /LinkInfo: 5
+; EMPTY-NEXT:     /src/headerblock: 9
+; EMPTY-NEXT:   }
 ; EMPTY-NEXT: }
 ; EMPTY-NEXT: Type Info Stream (TPI) {
 ; EMPTY-NEXT:   TPI Version: 20040203
@@ -1692,6 +1702,11 @@
 ; BIG-NEXT:   Signature: 0x571FFE67
 ; BIG-NEXT:   Age: 1
 ; BIG-NEXT:   Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+; BIG-NEXT:   Named Streams {
+; BIG-NEXT:     /names: 13
+; BIG-NEXT:     /LinkInfo: 5
+; BIG-NEXT:     /src/headerblock: 61
+; BIG-NEXT:   }
 ; BIG-NEXT: }
 ; BIG-NEXT: DBI Stream {
 ; BIG-NEXT:   Dbi Version: 19990903

@@ -365,8 +365,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   const std::vector<std::string> Args(*argv, *argv + *argc);
   assert(!Args.empty());
   ProgName = new std::string(Args[0]);
-  assert(Argv0 == *ProgName &&
-         "argv[0] has been modified in LLVMFuzzerInitialize");
+  if (Argv0 != *ProgName) {
+    Printf("ERROR: argv[0] has been modified in LLVMFuzzerInitialize\n");
+    exit(1);
+  }
   ParseFlags(Args);
   if (Flags.help) {
     PrintHelp();

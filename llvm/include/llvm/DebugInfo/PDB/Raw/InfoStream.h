@@ -13,7 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/DebugInfo/PDB/Raw/NameMap.h"
+#include "llvm/DebugInfo/PDB/Raw/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
 #include "llvm/Support/Endian.h"
@@ -36,6 +36,8 @@ public:
   uint32_t getSignature() const;
   uint32_t getAge() const;
   PDB_UniqueId getGuid() const;
+
+  const NamedStreamMap &getNamedStreams() const;
 
   uint32_t getNamedStreamIndex(llvm::StringRef Name) const;
   iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
@@ -61,7 +63,7 @@ private:
   // universally unique.
   PDB_UniqueId Guid;
 
-  NameMap NamedStreams;
+  NamedStreamMap NamedStreams;
 };
 }
 }

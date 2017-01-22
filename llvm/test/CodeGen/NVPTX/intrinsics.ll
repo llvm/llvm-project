@@ -22,6 +22,13 @@ define float @test_nvvm_sqrt(float %a) {
   ret float %val
 }
 
+; CHECK-LABEL: test_llvm_sqrt(
+define float @test_llvm_sqrt(float %a) {
+; CHECK sqrt.rn.f32
+  %val = call float @llvm.sqrt.f32(float %a)
+  ret float %val
+}
+
 ; CHECK-LABEL: test_bitreverse32(
 define i32 @test_bitreverse32(i32 %a) {
 ; CHECK: brev.b32
@@ -90,6 +97,7 @@ define i32 @test_popc16_to_32(i16 %a) {
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
+declare float @llvm.sqrt.f32(float)
 declare i32 @llvm.bitreverse.i32(i32)
 declare i64 @llvm.bitreverse.i64(i64)
 declare i16 @llvm.ctpop.i16(i16)

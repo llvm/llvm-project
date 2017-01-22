@@ -242,7 +242,12 @@ class NewGVN : public FunctionPass {
 #endif
 
   // DFS info.
+  // This contains a mapping from Instructions to DFS numbers.
+  // The numbering starts at 1. An instruction with DFS number zero
+  // means that the instruction is dead.
   DenseMap<const Value *, unsigned> InstrDFS;
+
+  // This contains the mapping DFS numbers to instructions.
   SmallVector<Value *, 32> DFSToInstr;
 
   // Deletion info.
@@ -1504,7 +1509,12 @@ void NewGVN::valueNumberMemoryPhi(MemoryPhi *MP) {
 // congruence finding, and updating mappings.
 void NewGVN::valueNumberInstruction(Instruction *I) {
   DEBUG(dbgs() << "Processing instruction " << *I << "\n");
-  if (isInstructionTriviallyDead(I, TLI)) {
+
+  // There's no need to call isInstructionTriviallyDead more than once on
+  // an instruction. Therefore, once we know that an instruction is dead
+  // we change its DFS number so that it doesn't get numbered again.
+  if (InstrDFS[I] != 0 && isInstructionTriviallyDead(I, TLI)) {
+    InstrDFS[I] = 0;
     DEBUG(dbgs() << "Skipping unused instruction\n");
     markInstructionForDeletion(I);
     return;
@@ -1705,8 +1715,14 @@ bool NewGVN::runGVN(Function &F, DominatorTree *_DT, AssumptionCache *_AC,
     // Walk through all the instructions in all the blocks in RPO.
     for (int InstrNum = TouchedInstructions.find_first(); InstrNum != -1;
          InstrNum = TouchedInstructions.find_next(InstrNum)) {
-      assert(InstrNum != 0 && "Bit 0 should never be set, something touched an "
-                              "instruction not in the lookup table");
+
+      // This instruction was found to be dead. We don't bother looking
+      // at it again.
+      if (InstrNum == 0) {
+        TouchedInstructions.reset(InstrNum);
+        continue;
+      }
+
       Value *V = DFSToInstr[InstrNum];
       BasicBlock *CurrBlock = nullptr;
 

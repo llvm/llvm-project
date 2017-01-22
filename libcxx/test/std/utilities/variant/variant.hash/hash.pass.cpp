@@ -21,6 +21,7 @@
 
 #include "test_macros.h"
 #include "variant_test_helpers.hpp"
+#include "poisoned_hash_helper.hpp"
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 namespace std {
@@ -103,6 +104,9 @@ void test_hash_monostate() {
     ASSERT_SAME_TYPE(decltype(h(m1)), std::size_t);
     static_assert(std::is_copy_constructible<H>::value, "");
   }
+  {
+    test_hash_enabled_for_type<std::monostate>();
+  }
 }
 
 void test_hash_variant_duplicate_elements() {
@@ -117,8 +121,34 @@ void test_hash_variant_duplicate_elements() {
     LIBCPP_ASSERT(h(v1) != h(v2));
 }
 
+struct A {};
+struct B {};
+
+template <>
+struct std::hash<B> {
+  size_t operator()(B const&) const {
+    return 0;
+  }
+};
+
+void test_hash_variant_enabled() {
+  {
+    test_hash_enabled_for_type<std::variant<int> >();
+    test_hash_enabled_for_type<std::variant<int*, long, double, const int> >();
+  }
+  {
+    test_hash_disabled_for_type<std::variant<int, A>>();
+    test_hash_disabled_for_type<std::variant<const A, void*>>();
+  }
+  {
+    test_hash_enabled_for_type<std::variant<int, B>>();
+    test_hash_enabled_for_type<std::variant<const B, int>>();
+  }
+}
+
 int main() {
   test_hash_variant();
   test_hash_variant_duplicate_elements();
   test_hash_monostate();
+  test_hash_variant_enabled();
 }

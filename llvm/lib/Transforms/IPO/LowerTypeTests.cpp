@@ -602,8 +602,7 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
                      IntPtrTy));
   Value *BitOffset = B.CreateOr(OffsetSHR, OffsetSHL);
 
-  Constant *BitSizeConst = ConstantExpr::getZExtOrBitCast(TIL.SizeM1, IntPtrTy);
-  Value *OffsetInRange = B.CreateICmpULE(BitOffset, BitSizeConst);
+  Value *OffsetInRange = B.CreateICmpULE(BitOffset, TIL.SizeM1);
 
   // If the bit set is all ones, testing against it is unnecessary.
   if (TIL.TheKind == TypeTestResolution::AllOnes)
@@ -832,14 +831,12 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
         Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, BSI.ByteOffset)),
     TIL.AlignLog2 = ConstantInt::get(Int8Ty, BSI.AlignLog2);
+    TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {
       TIL.TheKind = (BSI.BitSize == 1) ? TypeTestResolution::Single
                                        : TypeTestResolution::AllOnes;
-      TIL.SizeM1 = ConstantInt::get((BSI.BitSize <= 128) ? Int8Ty : Int32Ty,
-                                    BSI.BitSize - 1);
     } else if (BSI.BitSize <= 64) {
       TIL.TheKind = TypeTestResolution::Inline;
-      TIL.SizeM1 = ConstantInt::get(Int8Ty, BSI.BitSize - 1);
       uint64_t InlineBits = 0;
       for (auto Bit : BSI.Bits)
         InlineBits |= uint64_t(1) << Bit;
@@ -850,8 +847,6 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
             (BSI.BitSize <= 32) ? Int32Ty : Int64Ty, InlineBits);
     } else {
       TIL.TheKind = TypeTestResolution::ByteArray;
-      TIL.SizeM1 = ConstantInt::get((BSI.BitSize <= 128) ? Int8Ty : Int32Ty,
-                                    BSI.BitSize - 1);
       ++NumByteArraysCreated;
       ByteArrayInfo *BAI = createByteArray(BSI);
       TIL.TheByteArray = BAI->ByteArray;

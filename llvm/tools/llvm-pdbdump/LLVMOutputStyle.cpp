@@ -113,6 +113,9 @@ Error LLVMOutputStyle::dump() {
   if (auto EC = dumpStreamBytes())
     return EC;
 
+  if (auto EC = dumpStringTable())
+    return EC;
+
   if (auto EC = dumpInfoStream())
     return EC;
 
@@ -456,6 +459,28 @@ Error LLVMOutputStyle::dumpStreamBytes() {
   return Error::success();
 }
 
+Error LLVMOutputStyle::dumpStringTable() {
+  if (!opts::raw::DumpStringTable)
+    return Error::success();
+
+  auto IS = File.getStringTable();
+  if (!IS)
+    return IS.takeError();
+
+  DictScope D(P, "String Table");
+  for (uint32_t I : IS->name_ids()) {
+    StringRef S = IS->getStringForID(I);
+    if (!S.empty()) {
+      llvm::SmallString<32> Str;
+      Str.append("'");
+      Str.append(S);
+      Str.append("'");
+      P.printString(Str);
+    }
+  }
+  return Error::success();
+}
+
 Error LLVMOutputStyle::dumpInfoStream() {
   if (!opts::raw::DumpHeaders)
     return Error::success();
@@ -472,6 +497,11 @@ Error LLVMOutputStyle::dumpInfoStream() {
   P.printHex("Signature", IS->getSignature());
   P.printNumber("Age", IS->getAge());
   P.printObject("Guid", IS->getGuid());
+  {
+    DictScope DD(P, "Named Streams");
+    for (const auto &S : IS->getNamedStreams().entries())
+      P.printObject(S.getKey(), S.getValue());
+  }
   return Error::success();
 }
 

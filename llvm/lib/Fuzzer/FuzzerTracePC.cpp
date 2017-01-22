@@ -197,7 +197,8 @@ void TracePC::PrintCoverage() {
 }
 
 void TracePC::DumpCoverage() {
-  __sanitizer_dump_coverage(PCs, GetNumPCs());
+  if (EF->__sanitizer_dump_coverage)
+    EF->__sanitizer_dump_coverage(PCs, GetNumPCs());
 }
 
 // Value profile.

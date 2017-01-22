@@ -9,7 +9,7 @@
 // SharedMemoryRegion
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
-#ifdef LIBFUZZER_POSIX
+#if LIBFUZZER_POSIX
 
 #include "FuzzerIO.h"
 #include "FuzzerShmem.h"

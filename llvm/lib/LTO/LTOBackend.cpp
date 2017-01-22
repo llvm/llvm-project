@@ -168,13 +168,14 @@ static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
 }
 
 static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
-                           bool IsThinLTO) {
+                           bool IsThinLTO, ModuleSummaryIndex &CombinedIndex) {
   legacy::PassManager passes;
   passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 
   PassManagerBuilder PMB;
   PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
   PMB.Inliner = createFunctionInliningPass();
+  PMB.Summary = &CombinedIndex;
   // Unconditionally verify input since it is not verified before this
   // point and has unknown origin.
   PMB.VerifyInput = true;
@@ -191,10 +192,11 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
 }
 
 bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
-         bool IsThinLTO) {
+         bool IsThinLTO, ModuleSummaryIndex &CombinedIndex) {
   if (Conf.OptPipeline.empty())
-    runOldPMPasses(Conf, Mod, TM, IsThinLTO);
+    runOldPMPasses(Conf, Mod, TM, IsThinLTO, CombinedIndex);
   else
+    // FIXME: Plumb the combined index into the new pass manager.
     runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
                          Conf.DisableVerify);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
@@ -291,7 +293,8 @@ static void handleAsmUndefinedRefs(Module &Mod, TargetMachine &TM) {
 
 Error lto::backend(Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel,
-                   std::unique_ptr<Module> Mod) {
+                   std::unique_ptr<Module> Mod,
+                   ModuleSummaryIndex &CombinedIndex) {
   Expected<const Target *> TOrErr = initAndLookupTarget(C, *Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -302,7 +305,7 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
   handleAsmUndefinedRefs(*Mod, *TM);
 
   if (!C.CodeGenOnly)
-    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false))
+    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false, CombinedIndex))
       return Error::success();
 
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -367,7 +370,7 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return Error::success();
 
-  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true))
+  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true, CombinedIndex))
     return Error::success();
 
   codegen(Conf, TM.get(), AddStream, Task, Mod);

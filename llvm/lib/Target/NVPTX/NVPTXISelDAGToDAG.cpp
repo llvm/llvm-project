@@ -26,22 +26,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-isel"
 
-static cl::opt<int> UsePrecDivF32(
-    "nvptx-prec-divf32", cl::ZeroOrMore, cl::Hidden,
-    cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
-             " IEEE Compliant F32 div.rnd if available."),
-    cl::init(2));
-
-static cl::opt<bool>
-UsePrecSqrtF32("nvptx-prec-sqrtf32", cl::Hidden,
-          cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
-          cl::init(true));
-
-static cl::opt<bool>
-FtzEnabled("nvptx-f32ftz", cl::ZeroOrMore, cl::Hidden,
-           cl::desc("NVPTX Specific: Flush f32 subnormals to sign-preserving zero."),
-           cl::init(false));
-
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -56,45 +40,20 @@ NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
 }
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-    Subtarget = &static_cast<const NVPTXSubtarget &>(MF.getSubtarget());
-    return SelectionDAGISel::runOnMachineFunction(MF);
+  Subtarget = &static_cast<const NVPTXSubtarget &>(MF.getSubtarget());
+  return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
 int NVPTXDAGToDAGISel::getDivF32Level() const {
-  if (UsePrecDivF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-div32=N is used on the command-line, always honor it
-    return UsePrecDivF32;
-  } else {
-    // Otherwise, use div.approx if fast math is enabled
-    if (TM.Options.UnsafeFPMath)
-      return 0;
-    else
-      return 2;
-  }
+  return Subtarget->getTargetLowering()->getDivF32Level();
 }
 
 bool NVPTXDAGToDAGISel::usePrecSqrtF32() const {
-  if (UsePrecSqrtF32.getNumOccurrences() > 0) {
-    // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
-    return UsePrecSqrtF32;
-  } else {
-    // Otherwise, use sqrt.approx if fast math is enabled
-    return !TM.Options.UnsafeFPMath;
-  }
+  return Subtarget->getTargetLowering()->usePrecSqrtF32();
 }
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
-  if (FtzEnabled.getNumOccurrences() > 0) {
-    // If nvptx-f32ftz is used on the command-line, always honor it
-    return FtzEnabled;
-  } else {
-    const Function *F = MF->getFunction();
-    // Otherwise, check for an nvptx-f32ftz attribute on the function
-    if (F->hasFnAttribute("nvptx-f32ftz"))
-      return F->getFnAttribute("nvptx-f32ftz").getValueAsString() == "true";
-    else
-      return false;
-  }
+  return Subtarget->getTargetLowering()->useF32FTZ(*MF);
 }
 
 bool NVPTXDAGToDAGISel::allowFMA() const {

@@ -40,13 +40,12 @@ enum SIScheduleCandReason {
 
 struct SISchedulerCandidate {
   // The reason for this candidate.
-  SIScheduleCandReason Reason;
+  SIScheduleCandReason Reason = NoCand;
 
   // Set of reasons that apply to multiple candidates.
-  uint32_t RepeatReasonSet;
+  uint32_t RepeatReasonSet = 0;
 
-  SISchedulerCandidate()
-    :  Reason(NoCand), RepeatReasonSet(0) {}
+  SISchedulerCandidate() = default;
 
   bool isRepeat(SIScheduleCandReason R) { return RepeatReasonSet & (1 << R); }
   void setRepeat(SIScheduleCandReason R) { RepeatReasonSet |= (1 << R); }
@@ -84,8 +83,8 @@ class SIScheduleBlock {
   std::set<unsigned> LiveInRegs;
   std::set<unsigned> LiveOutRegs;
 
-  bool Scheduled;
-  bool HighLatencyBlock;
+  bool Scheduled = false;
+  bool HighLatencyBlock = false;
 
   std::vector<unsigned> HasLowLatencyNonWaitedParent;
 
@@ -94,13 +93,12 @@ class SIScheduleBlock {
 
   std::vector<SIScheduleBlock*> Preds;  // All blocks predecessors.
   std::vector<SIScheduleBlock*> Succs;  // All blocks successors.
-  unsigned NumHighLatencySuccessors;
+  unsigned NumHighLatencySuccessors = 0;
 
 public:
   SIScheduleBlock(SIScheduleDAGMI *DAG, SIScheduleBlockCreator *BC,
                   unsigned ID):
-    DAG(DAG), BC(BC), TopRPTracker(TopPressure), Scheduled(false),
-    HighLatencyBlock(false), ID(ID), NumHighLatencySuccessors(0) {}
+    DAG(DAG), BC(BC), TopRPTracker(TopPressure), ID(ID) {}
 
   ~SIScheduleBlock() = default;
 
@@ -213,9 +211,9 @@ struct SIScheduleBlocks {
 };
 
 enum SISchedulerBlockCreatorVariant {
-    LatenciesAlone,
-    LatenciesGrouped,
-    LatenciesAlonePlusConsecutive
+  LatenciesAlone,
+  LatenciesGrouped,
+  LatenciesAlonePlusConsecutive
 };
 
 class SIScheduleBlockCreator {

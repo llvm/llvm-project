@@ -1,4 +1,4 @@
-//===- NameHashTableBuilderTest.cpp ---------------------------------------===//
+//===- StringTableBuilderTest.cpp -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
-#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
-#include "llvm/DebugInfo/PDB/Raw/NameHashTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTable.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
 
 #include "gtest/gtest.h"
 
@@ -21,18 +21,18 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 namespace {
-class NameHashTableBuilderTest : public ::testing::Test {};
+class StringTableBuilderTest : public ::testing::Test {};
 }
 
-TEST_F(NameHashTableBuilderTest, Simple) {
+TEST_F(StringTableBuilderTest, Simple) {
   // Create /names table contents.
-  NameHashTableBuilder Builder;
+  StringTableBuilder Builder;
   EXPECT_EQ(1U, Builder.insert("foo"));
   EXPECT_EQ(5U, Builder.insert("bar"));
   EXPECT_EQ(1U, Builder.insert("foo"));
   EXPECT_EQ(9U, Builder.insert("baz"));
 
-  std::vector<uint8_t> Buffer(Builder.calculateSerializedLength());
+  std::vector<uint8_t> Buffer(Builder.finalize());
   msf::MutableByteStream OutStream(Buffer);
   msf::StreamWriter Writer(OutStream);
   EXPECT_NO_ERROR(Builder.commit(Writer));
@@ -40,7 +40,7 @@ TEST_F(NameHashTableBuilderTest, Simple) {
   // Reads the contents back.
   msf::ByteStream InStream(Buffer);
   msf::StreamReader Reader(InStream);
-  NameHashTable Table;
+  StringTable Table;
   EXPECT_NO_ERROR(Table.load(Reader));
 
   EXPECT_EQ(3U, Table.getNameCount());

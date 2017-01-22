@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -48,6 +49,11 @@ static cl::opt<int> HintThreshold(
     "inlinehint-threshold", cl::Hidden, cl::init(325),
     cl::desc("Threshold for inlining functions with inline hint"));
 
+static cl::opt<int>
+    ColdCallSiteThreshold("inline-cold-callsite-threshold", cl::Hidden,
+                          cl::init(45),
+                          cl::desc("Threshold for inlining cold callsites"));
+
 // We introduce this threshold to help performance of instrumentation based
 // PGO before we actually hook up inliner with analysis passes such as BPI and
 // BFI.
@@ -71,6 +77,9 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
   /// Getter for the cache of @llvm.assume intrinsics.
   std::function<AssumptionCache &(Function &)> &GetAssumptionCache;
+
+  /// Getter for BlockFrequencyInfo
+  Optional<function_ref<BlockFrequencyInfo &(Function &)>> &GetBFI;
 
   /// Profile summary information.
   ProfileSummaryInfo *PSI;
@@ -203,19 +212,21 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 public:
   CallAnalyzer(const TargetTransformInfo &TTI,
                std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+               Optional<function_ref<BlockFrequencyInfo &(Function &)>> &GetBFI,
                ProfileSummaryInfo *PSI, Function &Callee, CallSite CSArg,
                const InlineParams &Params)
-      : TTI(TTI), GetAssumptionCache(GetAssumptionCache), PSI(PSI), F(Callee),
-        CandidateCS(CSArg), Params(Params), Threshold(Params.DefaultThreshold),
-        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
-        ExposesReturnsTwice(false), HasDynamicAlloca(false),
-        ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
-        NumVectorInstructions(0), FiftyPercentVectorBonus(0),
-        TenPercentVectorBonus(0), VectorBonus(0), NumConstantArgs(0),
-        NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
-        NumConstantPtrDiffs(0), NumInstructionsSimplified(0),
-        SROACostSavings(0), SROACostSavingsLost(0) {}
+      : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
+        PSI(PSI), F(Callee), CandidateCS(CSArg), Params(Params),
+        Threshold(Params.DefaultThreshold), Cost(0), IsCallerRecursive(false),
+        IsRecursiveCall(false), ExposesReturnsTwice(false),
+        HasDynamicAlloca(false), ContainsNoDuplicateCall(false),
+        HasReturn(false), HasIndirectBr(false), HasFrameEscape(false),
+        AllocatedSize(0), NumInstructions(0), NumVectorInstructions(0),
+        FiftyPercentVectorBonus(0), TenPercentVectorBonus(0), VectorBonus(0),
+        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
+        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
+        NumInstructionsSimplified(0), SROACostSavings(0),
+        SROACostSavingsLost(0) {}
 
   bool analyzeCall(CallSite CS);
 
@@ -658,16 +669,21 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     if (Callee.hasFnAttribute(Attribute::InlineHint))
       Threshold = MaxIfValid(Threshold, Params.HintThreshold);
     if (PSI) {
-      uint64_t TotalWeight;
-      if (CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
-          PSI->isHotCount(TotalWeight)) {
+      BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
+      if (PSI->isHotCallSite(CS, CallerBFI)) {
+        DEBUG(dbgs() << "Hot callsite.\n");
         Threshold = MaxIfValid(Threshold, Params.HotCallSiteThreshold);
       } else if (PSI->isFunctionEntryHot(&Callee)) {
+        DEBUG(dbgs() << "Hot callee.\n");
         // If callsite hotness can not be determined, we may still know
         // that the callee is hot and treat it as a weaker hint for threshold
         // increase.
         Threshold = MaxIfValid(Threshold, Params.HintThreshold);
+      } else if (PSI->isColdCallSite(CS, CallerBFI)) {
+        DEBUG(dbgs() << "Cold callsite.\n");
+        Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
       } else if (PSI->isFunctionEntryCold(&Callee)) {
+        DEBUG(dbgs() << "Cold callee.\n");
         Threshold = MinIfValid(Threshold, Params.ColdThreshold);
       }
     }
@@ -975,7 +991,8 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // out. Pretend to inline the function, with a custom threshold.
   auto IndirectCallParams = Params;
   IndirectCallParams.DefaultThreshold = InlineConstants::IndirectCallThreshold;
-  CallAnalyzer CA(TTI, GetAssumptionCache, PSI, *F, CS, IndirectCallParams);
+  CallAnalyzer CA(TTI, GetAssumptionCache, GetBFI, PSI, *F, CS,
+                  IndirectCallParams);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // threshold to get the bonus we want to apply, but don't go below zero.
@@ -1465,15 +1482,17 @@ static bool functionsHaveCompatibleAttributes(Function *Caller,
 InlineCost llvm::getInlineCost(
     CallSite CS, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+    Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
     ProfileSummaryInfo *PSI) {
   return getInlineCost(CS, CS.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, PSI);
+                       GetAssumptionCache, GetBFI, PSI);
 }
 
 InlineCost llvm::getInlineCost(
     CallSite CS, Function *Callee, const InlineParams &Params,
     TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+    Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
     ProfileSummaryInfo *PSI) {
 
   // Cannot inline indirect calls.
@@ -1508,7 +1527,8 @@ InlineCost llvm::getInlineCost(
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                      << "...\n");
 
-  CallAnalyzer CA(CalleeTTI, GetAssumptionCache, PSI, *Callee, CS, Params);
+  CallAnalyzer CA(CalleeTTI, GetAssumptionCache, GetBFI, PSI, *Callee, CS,
+                  Params);
   bool ShouldInline = CA.analyzeCall(CS);
 
   DEBUG(CA.dump());
@@ -1580,6 +1600,9 @@ InlineParams llvm::getInlineParams(int Threshold) {
 
   // Set the HotCallSiteThreshold knob from the -hot-callsite-threshold.
   Params.HotCallSiteThreshold = HotCallSiteThreshold;
+
+  // Set the ColdCallSiteThreshold knob from the -inline-cold-callsite-threshold.
+  Params.ColdCallSiteThreshold = ColdCallSiteThreshold;
 
   // Set the OptMinSizeThreshold and OptSizeThreshold params only if the
   // Set the OptMinSizeThreshold and OptSizeThreshold params only if the

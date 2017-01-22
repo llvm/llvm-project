@@ -26,6 +26,7 @@ public:
   Error dump() override;
 
 private:
+  Error dumpStringTable();
   Error dumpFileHeaders();
   Error dumpStreamMetadata();
   Error dumpStreamDirectory();

@@ -21,6 +21,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "min_allocator.h"
 
 #if TEST_STD_VER >= 11
 
@@ -378,5 +379,64 @@ swap(test_deleter<T>& x, test_deleter<T>& y)
     x = std::move(y);
     y = std::move(t);
 }
+
+#if TEST_STD_VER >= 11
+
+template <class T, size_t ID = 0>
+class PointerDeleter
+{
+    PointerDeleter(const PointerDeleter&);
+    PointerDeleter& operator=(const PointerDeleter&);
+
+public:
+    typedef min_pointer<T, std::integral_constant<size_t, ID>> pointer;
+
+    PointerDeleter() = default;
+    PointerDeleter(PointerDeleter&&) = default;
+    PointerDeleter& operator=(PointerDeleter&&) = default;
+    explicit PointerDeleter(int) {}
+
+    template <class U>
+        PointerDeleter(PointerDeleter<U, ID>&&,
+            typename std::enable_if<!std::is_same<U, T>::value>::type* = 0)
+    {}
+
+    void operator()(pointer p) { if (p) { delete std::addressof(*p); }}
+
+private:
+    template <class U>
+        PointerDeleter(const PointerDeleter<U, ID>&,
+            typename std::enable_if<!std::is_same<U, T>::value>::type* = 0);
+};
+
+
+template <class T, size_t ID>
+class PointerDeleter<T[], ID>
+{
+    PointerDeleter(const PointerDeleter&);
+    PointerDeleter& operator=(const PointerDeleter&);
+
+public:
+    typedef min_pointer<T, std::integral_constant<size_t, ID> > pointer;
+
+    PointerDeleter() = default;
+    PointerDeleter(PointerDeleter&&) = default;
+    PointerDeleter& operator=(PointerDeleter&&) = default;
+    explicit PointerDeleter(int) {}
+
+    template <class U>
+        PointerDeleter(PointerDeleter<U, ID>&&,
+            typename std::enable_if<!std::is_same<U, T>::value>::type* = 0)
+    {}
+
+    void operator()(pointer p) { if (p) { delete [] std::addressof(*p); }}
+
+private:
+    template <class U>
+        PointerDeleter(const PointerDeleter<U, ID>&,
+            typename std::enable_if<!std::is_same<U, T>::value>::type* = 0);
+};
+
+#endif // TEST_STD_VER >= 11
 
 #endif  // SUPPORT_DELETER_TYPES_H

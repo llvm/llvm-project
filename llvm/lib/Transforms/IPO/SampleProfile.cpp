@@ -35,6 +35,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -43,6 +44,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -992,6 +994,26 @@ void SampleProfileLoader::buildEdges(Function &F) {
   }
 }
 
+/// Sorts the CallTargetMap \p M by count in descending order and stores the
+/// sorted result in \p Sorted. Returns the total counts.
+static uint64_t SortCallTargets(SmallVector<InstrProfValueData, 2> &Sorted,
+                                const SampleRecord::CallTargetMap &M) {
+  Sorted.clear();
+  uint64_t Sum = 0;
+  for (auto I = M.begin(); I != M.end(); ++I) {
+    Sum += I->getValue();
+    Sorted.push_back({Function::getGUID(I->getKey()), I->getValue()});
+  }
+  std::sort(Sorted.begin(), Sorted.end(),
+            [](const InstrProfValueData &L, const InstrProfValueData &R) {
+              if (L.Count == R.Count)
+                return L.Value > R.Value;
+              else
+                return L.Count > R.Count;
+            });
+  return Sum;
+}
+
 /// \brief Propagate weights into edges
 ///
 /// The following rules are applied to every block BB in the CFG:
@@ -1069,13 +1091,33 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 
     if (BlockWeights[BB]) {
       for (auto &I : BB->getInstList()) {
-        if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-          if (!dyn_cast<IntrinsicInst>(&I)) {
-            SmallVector<uint32_t, 1> Weights;
-            Weights.push_back(BlockWeights[BB]);
-            CI->setMetadata(LLVMContext::MD_prof,
-                            MDB.createBranchWeights(Weights));
-          }
+        if (!isa<CallInst>(I) && !isa<InvokeInst>(I))
+          continue;
+        CallSite CS(&I);
+        if (!CS.getCalledFunction()) {
+          const DebugLoc &DLoc = I.getDebugLoc();
+          if (!DLoc)
+            continue;
+          const DILocation *DIL = DLoc;
+          uint32_t LineOffset = getOffset(
+              DLoc.getLine(), DIL->getScope()->getSubprogram()->getLine());
+          uint32_t Discriminator = DIL->getDiscriminator();
+
+          const FunctionSamples *FS = findFunctionSamples(I);
+          if (!FS)
+            continue;
+          auto T = FS->findCallTargetMapAt(LineOffset, Discriminator);
+          if (!T || T.get().size() == 0)
+            continue;
+          SmallVector<InstrProfValueData, 2> SortedCallTargets;
+          uint64_t Sum = SortCallTargets(SortedCallTargets, T.get());
+          annotateValueSite(*I.getParent()->getParent()->getParent(), I,
+                            SortedCallTargets, Sum, IPVK_IndirectCallTarget,
+                            SortedCallTargets.size());
+        } else if (!dyn_cast<IntrinsicInst>(&I)) {
+          SmallVector<uint32_t, 1> Weights;
+          Weights.push_back(BlockWeights[BB]);
+          I.setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
         }
       }
     }

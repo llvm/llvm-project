@@ -25,7 +25,22 @@ foreach (VARNAME ${variables_to_filter})
 endforeach()
 
 # Enable the coverage instrumentation (it is disabled for the Fuzzer lib).
-set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp,trace-div,trace-gep -g")
+set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fsanitize-coverage=trace-pc-guard,indirect-calls,trace-cmp,trace-div,trace-gep -gline-tables-only")
+
+if(MSVC)
+  # In order to use the sanitizers in Windows, we need to link against many
+  # runtime libraries which will depend on the target being created
+  # (executable or dll) and the c runtime library used (MT/MD).
+  # By default, cmake uses link.exe for linking, which fails because we don't
+  # specify the appropiate dependencies.
+  # As we don't want to consider all of that possible situations which depends
+  # on the implementation of the compiler-rt, the simplest option is to change
+  # the rules for linking executables and shared libraries, using the compiler
+  # instead of link.exe. Clang will consider the sanitizer flags, and
+  # automatically provide the required libraries to the linker.
+  set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> ${CMAKE_CXX_FLAGS} <OBJECTS> -o <TARGET> <LINK_LIBRARIES> /link <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS>")
+  set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> ${CMAKE_CXX_FLAGS} /LD <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG> <TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES> /link <LINK_FLAGS>")
+endif()
 
 # add_libfuzzer_test(<name>
 #   SOURCES source0.cpp [source1.cpp ...]

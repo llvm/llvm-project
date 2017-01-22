@@ -1,4 +1,4 @@
-//===- NameHashTable.cpp - PDB Name Hash Table ------------------*- C++ -*-===//
+//===- StringTable.cpp - PDB String Table -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
@@ -21,14 +21,14 @@ using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
+StringTable::StringTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
-Error NameHashTable::load(StreamReader &Stream) {
-  const NameHashTableHeader *H;
+Error StringTable::load(StreamReader &Stream) {
+  const StringTableHeader *H;
   if (auto EC = Stream.readObject(H))
     return EC;
 
-  if (H->Signature != NameHashTableSignature)
+  if (H->Signature != StringTableSignature)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid hash table signature");
   if (H->HashVersion != 1 && H->HashVersion != 2)
@@ -60,7 +60,7 @@ Error NameHashTable::load(StreamReader &Stream) {
   return Error::success();
 }
 
-StringRef NameHashTable::getStringForID(uint32_t ID) const {
+StringRef StringTable::getStringForID(uint32_t ID) const {
   if (ID == IDs[0])
     return StringRef();
 
@@ -75,7 +75,7 @@ StringRef NameHashTable::getStringForID(uint32_t ID) const {
   return Result;
 }
 
-uint32_t NameHashTable::getIDForString(StringRef Str) const {
+uint32_t StringTable::getIDForString(StringRef Str) const {
   uint32_t Hash = (HashVersion == 1) ? hashStringV1(Str) : hashStringV2(Str);
   size_t Count = IDs.size();
   uint32_t Start = Hash % Count;
@@ -94,6 +94,6 @@ uint32_t NameHashTable::getIDForString(StringRef Str) const {
   return IDs[0];
 }
 
-FixedStreamArray<support::ulittle32_t> NameHashTable::name_ids() const {
+FixedStreamArray<support::ulittle32_t> StringTable::name_ids() const {
   return IDs;
 }

@@ -16,9 +16,9 @@
 #include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
-#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTable.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -89,7 +89,7 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
   std::vector<ModuleInfoEx> ModuleInfos;
-  NameHashTable ECNames;
+  StringTable ECNames;
 
   msf::ReadableStreamRef ModInfoSubstream;
   msf::ReadableStreamRef SecContrSubstream;

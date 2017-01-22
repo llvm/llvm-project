@@ -348,8 +348,8 @@ define i32 @clamp_signed1(i32 %x) {
 ; CHECK-LABEL: @clamp_signed1(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 %x, 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 %x, i32 255
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 %x, 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 15, i32 [[MIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[MIN]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp slt i32 %x, 255
@@ -365,8 +365,8 @@ define i32 @clamp_signed2(i32 %x) {
 ; CHECK-LABEL: @clamp_signed2(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 %x, 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 %x, i32 15
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 %x, 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 255, i32 [[MAX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[MAX]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp sgt i32 %x, 15
@@ -382,8 +382,8 @@ define i32 @clamp_unsigned1(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned1(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 %x, 255
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], i32 %x, i32 255
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %x, 15
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 15, i32 [[MIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[MIN]], 15
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MIN]], i32 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ult i32 %x, 255
@@ -399,8 +399,8 @@ define i32 @clamp_unsigned2(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned2(
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 %x, 15
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], i32 %x, i32 15
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %x, 255
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i32 255, i32 [[MAX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[MAX]], 255
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 [[MAX]], i32 255
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp2 = icmp ugt i32 %x, 15

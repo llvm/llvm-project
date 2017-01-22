@@ -48,3 +48,5 @@ EXT_FUNC(__sanitizer_set_death_callback, void, (void (*)(void)), true);
 EXT_FUNC(__sanitizer_set_report_fd, void, (void*), false);
 EXT_FUNC(__sanitizer_update_counter_bitset_and_clear_counters, uintptr_t,
   (uint8_t*), false);
+EXT_FUNC(__sanitizer_dump_coverage, void, (const uintptr_t *, uintptr_t),
+         false);
