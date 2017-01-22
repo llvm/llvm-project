@@ -40,6 +40,8 @@ std::string DirName(const std::string &FileName);
 // Returns path to a TmpDir.
 std::string TmpDir();
 
+bool IsInterestingCoverageFile(const std::string &FileName);
+
 void DupAndCloseStderr();
 
 void CloseStdout();
@@ -61,6 +63,8 @@ int CloseFile(int Fd);
 int DuplicateFile(int Fd);
 
 void RemoveFile(const std::string &Path);
+
+void DiscardOutput(int Fd);
 
 }  // namespace fuzzer
 

@@ -118,6 +118,14 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
   return memmem(Data, DataLen, Patt, PattLen);
 }
 
+std::string DisassembleCmd(const std::string &FileName) {
+  return "objdump -d " + FileName;
+}
+
+std::string SearchRegexCmd(const std::string &Regex) {
+  return "grep '" + Regex + "'";
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

@@ -315,13 +315,31 @@ static Instruction *
 foldShiftByConstOfShiftByConst(BinaryOperator &I, const APInt *COp1,
                                InstCombiner::BuilderTy *Builder) {
   Value *Op0 = I.getOperand(0);
-  uint32_t TypeBits = Op0->getType()->getScalarSizeInBits();
+  unsigned TypeBits = Op0->getType()->getScalarSizeInBits();
 
   // Find out if this is a shift of a shift by a constant.
   BinaryOperator *ShiftOp = dyn_cast<BinaryOperator>(Op0);
-  if (!ShiftOp || !ShiftOp->isShift() ||
-      !isa<ConstantInt>(ShiftOp->getOperand(1)))
+  if (!ShiftOp || !ShiftOp->isShift())
     return nullptr;
+
+  const APInt *ShAmt1;
+  if (!match(ShiftOp->getOperand(1), m_APInt(ShAmt1)))
+    return nullptr;
+
+  // Check for (X << c1) << c2  and  (X >> c1) >> c2
+  if (I.getOpcode() == ShiftOp->getOpcode()) {
+    unsigned AmtSum = (*ShAmt1 + *COp1).getZExtValue();
+    // If this is an oversized composite shift, then unsigned shifts become
+    // zero (handled in InstSimplify) and ashr saturates.
+    if (AmtSum >= TypeBits) {
+      if (I.getOpcode() != Instruction::AShr)
+        return nullptr;
+      AmtSum = TypeBits - 1; // Saturate to 31 for i32 ashr.
+    }
+
+    return BinaryOperator::Create(I.getOpcode(), ShiftOp->getOperand(0),
+                                  ConstantInt::get(I.getType(), AmtSum));
+  }
 
   // This is a constant shift of a constant shift. Be careful about hiding
   // shl instructions behind bit masks. They are used to represent multiplies
@@ -335,31 +353,20 @@ foldShiftByConstOfShiftByConst(BinaryOperator &I, const APInt *COp1,
   // Combinations of right and left shifts will still be optimized in
   // DAGCombine where scalar evolution no longer applies.
 
-  ConstantInt *ShiftAmt1C = cast<ConstantInt>(ShiftOp->getOperand(1));
+  // FIXME: Everything under here should be extended to work with vector types.
+
+  auto *ShiftAmt1C = dyn_cast<ConstantInt>(ShiftOp->getOperand(1));
+  if (!ShiftAmt1C)
+    return nullptr;
+
   uint32_t ShiftAmt1 = ShiftAmt1C->getLimitedValue(TypeBits);
   uint32_t ShiftAmt2 = COp1->getLimitedValue(TypeBits);
   assert(ShiftAmt2 != 0 && "Should have been simplified earlier");
   if (ShiftAmt1 == 0)
     return nullptr; // Will be simplified in the future.
+
   Value *X = ShiftOp->getOperand(0);
-
   IntegerType *Ty = cast<IntegerType>(I.getType());
-
-  // Check for (X << c1) << c2  and  (X >> c1) >> c2
-  if (I.getOpcode() == ShiftOp->getOpcode()) {
-    uint32_t AmtSum = ShiftAmt1 + ShiftAmt2; // Fold into one big shift.
-    // If this is an oversized composite shift, then unsigned shifts become
-    // zero (handled in InstSimplify) and ashr saturates.
-    if (AmtSum >= TypeBits) {
-      if (I.getOpcode() != Instruction::AShr)
-        return nullptr;
-      AmtSum = TypeBits - 1; // Saturate to 31 for i32 ashr.
-    }
-
-    return BinaryOperator::Create(I.getOpcode(), X,
-                                  ConstantInt::get(Ty, AmtSum));
-  }
-
   if (ShiftAmt1 == ShiftAmt2) {
     // If we have ((X << C) >>u C), turn this into X & (-1 >>u C).
     if (I.getOpcode() == Instruction::LShr &&

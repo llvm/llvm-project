@@ -104,13 +104,17 @@ public:
   /// or nullptr it the function does not have a module.
   ///
   /// Note: this is undefined behavior if the block does not have a parent.
-  const Module *getModule() const;
   Module *getModule();
+  const Module *getModule() const {
+    return const_cast<BasicBlock *>(this)->getModule();
+  }
 
   /// \brief Returns the terminator instruction if the block is well formed or
   /// null if the block is not well formed.
-  TerminatorInst *getTerminator();
-  const TerminatorInst *getTerminator() const;
+  TerminatorInst *getTerminator() LLVM_READONLY;
+  const TerminatorInst *getTerminator() const {
+    return const_cast<BasicBlock *>(this)->getTerminator();
+  }
 
   /// \brief Returns the call instruction calling @llvm.experimental.deoptimize
   /// prior to the terminating return instruction of this basic block, if such a
