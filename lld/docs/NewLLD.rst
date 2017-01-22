@@ -169,7 +169,7 @@ it would slow down the linker by 10%. So, don't do that.
 On the other hand, you don't have to pursue efficiency
 when handling files.
 
-Important Data Strcutures
+Important Data Structures
 -------------------------
 
 We will describe the key data structures in LLD in this section.

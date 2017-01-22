@@ -337,6 +337,7 @@ set(thumb1_EABI_SOURCES
   arm/aeabi_idivmod.S
   arm/aeabi_memcmp.S
   arm/aeabi_memcpy.S
+  arm/aeabi_memset.S
   arm/aeabi_memmove.S
   arm/aeabi_uidivmod.S)
 

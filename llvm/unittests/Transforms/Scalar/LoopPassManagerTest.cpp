@@ -244,27 +244,38 @@ protected:
 
 public:
   LoopPassManagerTest()
-      : M(parseIR(Context, "define void @f() {\n"
-                           "entry:\n"
-                           "  br label %loop.0\n"
-                           "loop.0:\n"
-                           "  br i1 undef, label %loop.0.0, label %end\n"
-                           "loop.0.0:\n"
-                           "  br i1 undef, label %loop.0.0, label %loop.0.1\n"
-                           "loop.0.1:\n"
-                           "  br i1 undef, label %loop.0.1, label %loop.0\n"
-                           "end:\n"
-                           "  ret void\n"
-                           "}\n"
-                           "\n"
-                           "define void @g() {\n"
-                           "entry:\n"
-                           "  br label %loop.g.0\n"
-                           "loop.g.0:\n"
-                           "  br i1 undef, label %loop.g.0, label %end\n"
-                           "end:\n"
-                           "  ret void\n"
-                           "}\n")),
+      : M(parseIR(Context,
+                  "define void @f(i1* %ptr) {\n"
+                  "entry:\n"
+                  "  br label %loop.0\n"
+                  "loop.0:\n"
+                  "  %cond.0 = load volatile i1, i1* %ptr\n"
+                  "  br i1 %cond.0, label %loop.0.0.ph, label %end\n"
+                  "loop.0.0.ph:\n"
+                  "  br label %loop.0.0\n"
+                  "loop.0.0:\n"
+                  "  %cond.0.0 = load volatile i1, i1* %ptr\n"
+                  "  br i1 %cond.0.0, label %loop.0.0, label %loop.0.1.ph\n"
+                  "loop.0.1.ph:\n"
+                  "  br label %loop.0.1\n"
+                  "loop.0.1:\n"
+                  "  %cond.0.1 = load volatile i1, i1* %ptr\n"
+                  "  br i1 %cond.0.1, label %loop.0.1, label %loop.0.latch\n"
+                  "loop.0.latch:\n"
+                  "  br label %loop.0\n"
+                  "end:\n"
+                  "  ret void\n"
+                  "}\n"
+                  "\n"
+                  "define void @g(i1* %ptr) {\n"
+                  "entry:\n"
+                  "  br label %loop.g.0\n"
+                  "loop.g.0:\n"
+                  "  %cond.0 = load volatile i1, i1* %ptr\n"
+                  "  br i1 %cond.0, label %loop.g.0, label %end\n"
+                  "end:\n"
+                  "  ret void\n"
+                  "}\n")),
         LAM(true), FAM(true), MAM(true) {
     // Register our mock analysis.
     LAM.registerPass([&] { return MLAHandle.getAnalysis(); });
@@ -820,17 +831,29 @@ TEST_F(LoopPassManagerTest, IndirectOuterPassInvalidation) {
 
 TEST_F(LoopPassManagerTest, LoopChildInsertion) {
   // Super boring module with three loops in a single loop nest.
-  M = parseIR(Context, "define void @f() {\n"
+  M = parseIR(Context, "define void @f(i1* %ptr) {\n"
                        "entry:\n"
                        "  br label %loop.0\n"
                        "loop.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %end\n"
+                       "  %cond.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0, label %loop.0.0.ph, label %end\n"
+                       "loop.0.0.ph:\n"
+                       "  br label %loop.0.0\n"
                        "loop.0.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %loop.0.1\n"
+                       "  %cond.0.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.0, label %loop.0.0, label %loop.0.1.ph\n"
+                       "loop.0.1.ph:\n"
+                       "  br label %loop.0.1\n"
                        "loop.0.1:\n"
-                       "  br i1 undef, label %loop.0.1, label %loop.0.2\n"
+                       "  %cond.0.1 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.1, label %loop.0.1, label %loop.0.2.ph\n"
+                       "loop.0.2.ph:\n"
+                       "  br label %loop.0.2\n"
                        "loop.0.2:\n"
-                       "  br i1 undef, label %loop.0.2, label %loop.0\n"
+                       "  %cond.0.2 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.2, label %loop.0.2, label %loop.0.latch\n"
+                       "loop.0.latch:\n"
+                       "  br label %loop.0\n"
                        "end:\n"
                        "  ret void\n"
                        "}\n");
@@ -839,20 +862,34 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
   // easily.
   Function &F = *M->begin();
   ASSERT_THAT(F, HasName("f"));
+  Argument &Ptr = *F.arg_begin();
   auto BBI = F.begin();
   BasicBlock &EntryBB = *BBI++;
   ASSERT_THAT(EntryBB, HasName("entry"));
   BasicBlock &Loop0BB = *BBI++;
   ASSERT_THAT(Loop0BB, HasName("loop.0"));
+  BasicBlock &Loop00PHBB = *BBI++;
+  ASSERT_THAT(Loop00PHBB, HasName("loop.0.0.ph"));
   BasicBlock &Loop00BB = *BBI++;
   ASSERT_THAT(Loop00BB, HasName("loop.0.0"));
+  BasicBlock &Loop01PHBB = *BBI++;
+  ASSERT_THAT(Loop01PHBB, HasName("loop.0.1.ph"));
   BasicBlock &Loop01BB = *BBI++;
   ASSERT_THAT(Loop01BB, HasName("loop.0.1"));
+  BasicBlock &Loop02PHBB = *BBI++;
+  ASSERT_THAT(Loop02PHBB, HasName("loop.0.2.ph"));
   BasicBlock &Loop02BB = *BBI++;
   ASSERT_THAT(Loop02BB, HasName("loop.0.2"));
+  BasicBlock &Loop0LatchBB = *BBI++;
+  ASSERT_THAT(Loop0LatchBB, HasName("loop.0.latch"));
   BasicBlock &EndBB = *BBI++;
   ASSERT_THAT(EndBB, HasName("end"));
   ASSERT_THAT(BBI, F.end());
+  auto CreateCondBr = [&](BasicBlock *TrueBB, BasicBlock *FalseBB,
+                          const char *Name, BasicBlock *BB) {
+    auto *Cond = new LoadInst(&Ptr, Name, /*isVolatile*/ true, BB);
+    BranchInst::Create(TrueBB, FalseBB, Cond, BB);
+  };
 
   // Build the pass managers and register our pipeline. We build a single loop
   // pass pipeline consisting of three mock pass runs over each loop. After
@@ -887,20 +924,33 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
 
   // When running over the middle loop, the second run inserts two new child
   // loops, inserting them and itself into the worklist.
-  BasicBlock *NewLoop010BB;
+  BasicBlock *NewLoop010BB, *NewLoop01LatchBB;
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.1"), _, _, _))
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
         auto *NewLoop = new Loop();
         L.addChildLoop(NewLoop);
-        NewLoop010BB = BasicBlock::Create(Context, "loop.0.1.0", &F, &Loop02BB);
-        BranchInst::Create(&Loop01BB, NewLoop010BB,
-                           UndefValue::get(Type::getInt1Ty(Context)),
-                           NewLoop010BB);
-        Loop01BB.getTerminator()->replaceUsesOfWith(&Loop01BB, NewLoop010BB);
-        AR.DT.addNewBlock(NewLoop010BB, &Loop01BB);
+        auto *NewLoop010PHBB =
+            BasicBlock::Create(Context, "loop.0.1.0.ph", &F, &Loop02PHBB);
+        NewLoop010BB =
+            BasicBlock::Create(Context, "loop.0.1.0", &F, &Loop02PHBB);
+        NewLoop01LatchBB =
+            BasicBlock::Create(Context, "loop.0.1.latch", &F, &Loop02PHBB);
+        Loop01BB.getTerminator()->replaceUsesOfWith(&Loop01BB, NewLoop010PHBB);
+        BranchInst::Create(NewLoop010BB, NewLoop010PHBB);
+        CreateCondBr(NewLoop01LatchBB, NewLoop010BB, "cond.0.1.0",
+                     NewLoop010BB);
+        BranchInst::Create(&Loop01BB, NewLoop01LatchBB);
+        AR.DT.addNewBlock(NewLoop010PHBB, &Loop01BB);
+        AR.DT.addNewBlock(NewLoop010BB, NewLoop010PHBB);
+        AR.DT.addNewBlock(NewLoop01LatchBB, NewLoop010BB);
+        AR.DT.verifyDomTree();
+        L.addBasicBlockToLoop(NewLoop010PHBB, AR.LI);
         NewLoop->addBasicBlockToLoop(NewLoop010BB, AR.LI);
+        L.addBasicBlockToLoop(NewLoop01LatchBB, AR.LI);
+        NewLoop->verifyLoop();
+        L.verifyLoop();
         Updater.addChildLoops({NewLoop});
         return PreservedAnalyses::all();
       }));
@@ -921,21 +971,27 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
   // In the second run over the middle loop after we've visited the new child,
   // we add another child to check that we can repeatedly add children, and add
   // children to a loop that already has children.
-  BasicBlock *NewLoop011BB;
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.1"), _, _, _))
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
         auto *NewLoop = new Loop();
         L.addChildLoop(NewLoop);
-        NewLoop011BB = BasicBlock::Create(Context, "loop.0.1.1", &F, &Loop02BB);
-        BranchInst::Create(&Loop01BB, NewLoop011BB,
-                           UndefValue::get(Type::getInt1Ty(Context)),
-                           NewLoop011BB);
-        NewLoop010BB->getTerminator()->replaceUsesOfWith(&Loop01BB,
-                                                         NewLoop011BB);
-        AR.DT.addNewBlock(NewLoop011BB, NewLoop010BB);
+        auto *NewLoop011PHBB = BasicBlock::Create(Context, "loop.0.1.1.ph", &F, NewLoop01LatchBB);
+        auto *NewLoop011BB = BasicBlock::Create(Context, "loop.0.1.1", &F, NewLoop01LatchBB);
+        NewLoop010BB->getTerminator()->replaceUsesOfWith(NewLoop01LatchBB,
+                                                         NewLoop011PHBB);
+        BranchInst::Create(NewLoop011BB, NewLoop011PHBB);
+        CreateCondBr(NewLoop01LatchBB, NewLoop011BB, "cond.0.1.1",
+                     NewLoop011BB);
+        AR.DT.addNewBlock(NewLoop011PHBB, NewLoop010BB);
+        auto *NewDTNode = AR.DT.addNewBlock(NewLoop011BB, NewLoop011PHBB);
+        AR.DT.changeImmediateDominator(AR.DT[NewLoop01LatchBB], NewDTNode);
+        AR.DT.verifyDomTree();
+        L.addBasicBlockToLoop(NewLoop011PHBB, AR.LI);
         NewLoop->addBasicBlockToLoop(NewLoop011BB, AR.LI);
+        NewLoop->verifyLoop();
+        L.verifyLoop();
         Updater.addChildLoops({NewLoop});
         return PreservedAnalyses::all();
       }));
@@ -977,17 +1033,29 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
 TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
   // Super boring module with two loop nests and loop nest with two child
   // loops.
-  M = parseIR(Context, "define void @f() {\n"
+  M = parseIR(Context, "define void @f(i1* %ptr) {\n"
                        "entry:\n"
                        "  br label %loop.0\n"
                        "loop.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %loop.2\n"
+                       "  %cond.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0, label %loop.0.0.ph, label %loop.2.ph\n"
+                       "loop.0.0.ph:\n"
+                       "  br label %loop.0.0\n"
                        "loop.0.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %loop.0.2\n"
+                       "  %cond.0.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.0, label %loop.0.0, label %loop.0.2.ph\n"
+                       "loop.0.2.ph:\n"
+                       "  br label %loop.0.2\n"
                        "loop.0.2:\n"
-                       "  br i1 undef, label %loop.0.2, label %loop.0\n"
+                       "  %cond.0.2 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.2, label %loop.0.2, label %loop.0.latch\n"
+                       "loop.0.latch:\n"
+                       "  br label %loop.0\n"
+                       "loop.2.ph:\n"
+                       "  br label %loop.2\n"
                        "loop.2:\n"
-                       "  br i1 undef, label %loop.2, label %end\n"
+                       "  %cond.2 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.2, label %loop.2, label %end\n"
                        "end:\n"
                        "  ret void\n"
                        "}\n");
@@ -996,21 +1064,34 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
   // easily.
   Function &F = *M->begin();
   ASSERT_THAT(F, HasName("f"));
+  Argument &Ptr = *F.arg_begin();
   auto BBI = F.begin();
   BasicBlock &EntryBB = *BBI++;
   ASSERT_THAT(EntryBB, HasName("entry"));
   BasicBlock &Loop0BB = *BBI++;
   ASSERT_THAT(Loop0BB, HasName("loop.0"));
+  BasicBlock &Loop00PHBB = *BBI++;
+  ASSERT_THAT(Loop00PHBB, HasName("loop.0.0.ph"));
   BasicBlock &Loop00BB = *BBI++;
   ASSERT_THAT(Loop00BB, HasName("loop.0.0"));
+  BasicBlock &Loop02PHBB = *BBI++;
+  ASSERT_THAT(Loop02PHBB, HasName("loop.0.2.ph"));
   BasicBlock &Loop02BB = *BBI++;
   ASSERT_THAT(Loop02BB, HasName("loop.0.2"));
+  BasicBlock &Loop0LatchBB = *BBI++;
+  ASSERT_THAT(Loop0LatchBB, HasName("loop.0.latch"));
+  BasicBlock &Loop2PHBB = *BBI++;
+  ASSERT_THAT(Loop2PHBB, HasName("loop.2.ph"));
   BasicBlock &Loop2BB = *BBI++;
   ASSERT_THAT(Loop2BB, HasName("loop.2"));
   BasicBlock &EndBB = *BBI++;
   ASSERT_THAT(EndBB, HasName("end"));
   ASSERT_THAT(BBI, F.end());
-  Constant *Undefi1 = UndefValue::get(Type::getInt1Ty(Context));
+  auto CreateCondBr = [&](BasicBlock *TrueBB, BasicBlock *FalseBB,
+                          const char *Name, BasicBlock *BB) {
+    auto *Cond = new LoadInst(&Ptr, Name, /*isVolatile*/ true, BB);
+    BranchInst::Create(TrueBB, FalseBB, Cond, BB);
+  };
 
   // Build the pass managers and register our pipeline. We build a single loop
   // pass pipeline consisting of three mock pass runs over each loop. After
@@ -1037,19 +1118,24 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
   EXPECT_CALL(MLAHandle, run(HasName("loop.0.0"), _, _));
 
   // On the second run, we insert a sibling loop.
-  BasicBlock *NewLoop01BB;
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.0"), _, _, _))
       .WillOnce(Invoke([&](Loop &L, LoopAnalysisManager &AM,
                            LoopStandardAnalysisResults &AR,
                            LPMUpdater &Updater) {
         auto *NewLoop = new Loop();
         L.getParentLoop()->addChildLoop(NewLoop);
-        NewLoop01BB = BasicBlock::Create(Context, "loop.0.1", &F, &Loop02BB);
-        BranchInst::Create(&Loop02BB, NewLoop01BB, Undefi1, NewLoop01BB);
-        Loop00BB.getTerminator()->replaceUsesOfWith(&Loop02BB, NewLoop01BB);
-        auto *NewDTNode = AR.DT.addNewBlock(NewLoop01BB, &Loop00BB);
-        AR.DT.changeImmediateDominator(AR.DT[&Loop02BB], NewDTNode);
+        auto *NewLoop01PHBB = BasicBlock::Create(Context, "loop.0.1.ph", &F, &Loop02PHBB);
+        auto *NewLoop01BB = BasicBlock::Create(Context, "loop.0.1", &F, &Loop02PHBB);
+        BranchInst::Create(NewLoop01BB, NewLoop01PHBB);
+        CreateCondBr(&Loop02PHBB, NewLoop01BB, "cond.0.1", NewLoop01BB);
+        Loop00BB.getTerminator()->replaceUsesOfWith(&Loop02PHBB, NewLoop01PHBB);
+        AR.DT.addNewBlock(NewLoop01PHBB, &Loop00BB);
+        auto *NewDTNode = AR.DT.addNewBlock(NewLoop01BB, NewLoop01PHBB);
+        AR.DT.changeImmediateDominator(AR.DT[&Loop02PHBB], NewDTNode);
+        AR.DT.verifyDomTree();
+        L.getParentLoop()->addBasicBlockToLoop(NewLoop01PHBB, AR.LI);
         NewLoop->addBasicBlockToLoop(NewLoop01BB, AR.LI);
+        L.getParentLoop()->verifyLoop();
         Updater.addSiblingLoops({NewLoop});
         return PreservedAnalyses::all();
       }));
@@ -1082,22 +1168,45 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
         L.getParentLoop()->addChildLoop(NewLoops[0]);
         L.getParentLoop()->addChildLoop(NewLoops[1]);
         NewLoops[1]->addChildLoop(NewLoops[2]);
+        auto *NewLoop03PHBB =
+            BasicBlock::Create(Context, "loop.0.3.ph", &F, &Loop0LatchBB);
         auto *NewLoop03BB =
-            BasicBlock::Create(Context, "loop.0.3", &F, &Loop2BB);
+            BasicBlock::Create(Context, "loop.0.3", &F, &Loop0LatchBB);
+        auto *NewLoop04PHBB =
+            BasicBlock::Create(Context, "loop.0.4.ph", &F, &Loop0LatchBB);
         auto *NewLoop04BB =
-            BasicBlock::Create(Context, "loop.0.4", &F, &Loop2BB);
+            BasicBlock::Create(Context, "loop.0.4", &F, &Loop0LatchBB);
+        auto *NewLoop040PHBB =
+            BasicBlock::Create(Context, "loop.0.4.0.ph", &F, &Loop0LatchBB);
         auto *NewLoop040BB =
-            BasicBlock::Create(Context, "loop.0.4.0", &F, &Loop2BB);
-        Loop02BB.getTerminator()->replaceUsesOfWith(&Loop0BB, NewLoop03BB);
-        BranchInst::Create(NewLoop04BB, NewLoop03BB, Undefi1, NewLoop03BB);
-        BranchInst::Create(&Loop0BB, NewLoop040BB, Undefi1, NewLoop04BB);
-        BranchInst::Create(NewLoop04BB, NewLoop040BB, Undefi1, NewLoop040BB);
-        AR.DT.addNewBlock(NewLoop03BB, &Loop02BB);
-        AR.DT.addNewBlock(NewLoop04BB, NewLoop03BB);
-        AR.DT.addNewBlock(NewLoop040BB, NewLoop04BB);
+            BasicBlock::Create(Context, "loop.0.4.0", &F, &Loop0LatchBB);
+        auto *NewLoop04LatchBB =
+            BasicBlock::Create(Context, "loop.0.4.latch", &F, &Loop0LatchBB);
+        Loop02BB.getTerminator()->replaceUsesOfWith(&Loop0LatchBB, NewLoop03PHBB);
+        BranchInst::Create(NewLoop03BB, NewLoop03PHBB);
+        CreateCondBr(NewLoop04PHBB, NewLoop03BB, "cond.0.3", NewLoop03BB);
+        BranchInst::Create(NewLoop04BB, NewLoop04PHBB);
+        CreateCondBr(&Loop0LatchBB, NewLoop040PHBB, "cond.0.4", NewLoop04BB);
+        BranchInst::Create(NewLoop040BB, NewLoop040PHBB);
+        CreateCondBr(NewLoop04LatchBB, NewLoop040BB, "cond.0.4.0", NewLoop040BB);
+        BranchInst::Create(NewLoop04BB, NewLoop04LatchBB);
+        AR.DT.addNewBlock(NewLoop03PHBB, &Loop02BB);
+        AR.DT.addNewBlock(NewLoop03BB, NewLoop03PHBB);
+        AR.DT.addNewBlock(NewLoop04PHBB, NewLoop03BB);
+        auto *NewDTNode = AR.DT.addNewBlock(NewLoop04BB, NewLoop04PHBB);
+        AR.DT.changeImmediateDominator(AR.DT[&Loop0LatchBB], NewDTNode);
+        AR.DT.addNewBlock(NewLoop040PHBB, NewLoop04BB);
+        AR.DT.addNewBlock(NewLoop040BB, NewLoop040PHBB);
+        AR.DT.addNewBlock(NewLoop04LatchBB, NewLoop040BB);
+        AR.DT.verifyDomTree();
+        L.getParentLoop()->addBasicBlockToLoop(NewLoop03PHBB, AR.LI);
         NewLoops[0]->addBasicBlockToLoop(NewLoop03BB, AR.LI);
+        L.getParentLoop()->addBasicBlockToLoop(NewLoop04PHBB, AR.LI);
         NewLoops[1]->addBasicBlockToLoop(NewLoop04BB, AR.LI);
+        NewLoops[1]->addBasicBlockToLoop(NewLoop040PHBB, AR.LI);
         NewLoops[2]->addBasicBlockToLoop(NewLoop040BB, AR.LI);
+        NewLoops[1]->addBasicBlockToLoop(NewLoop04LatchBB, AR.LI);
+        L.getParentLoop()->verifyLoop();
         Updater.addSiblingLoops({NewLoops[0], NewLoops[1]});
         return PreservedAnalyses::all();
       }));
@@ -1136,12 +1245,17 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
                            LPMUpdater &Updater) {
         auto *NewLoop = new Loop();
         AR.LI.addTopLevelLoop(NewLoop);
+        auto *NewLoop1PHBB = BasicBlock::Create(Context, "loop.1.ph", &F, &Loop2BB);
         auto *NewLoop1BB = BasicBlock::Create(Context, "loop.1", &F, &Loop2BB);
-        BranchInst::Create(&Loop2BB, NewLoop1BB, Undefi1, NewLoop1BB);
-        Loop0BB.getTerminator()->replaceUsesOfWith(&Loop2BB, NewLoop1BB);
-        auto *NewDTNode = AR.DT.addNewBlock(NewLoop1BB, &Loop0BB);
-        AR.DT.changeImmediateDominator(AR.DT[&Loop2BB], NewDTNode);
+        BranchInst::Create(NewLoop1BB, NewLoop1PHBB);
+        CreateCondBr(&Loop2PHBB, NewLoop1BB, "cond.1", NewLoop1BB);
+        Loop0BB.getTerminator()->replaceUsesOfWith(&Loop2PHBB, NewLoop1PHBB);
+        AR.DT.addNewBlock(NewLoop1PHBB, &Loop0BB);
+        auto *NewDTNode = AR.DT.addNewBlock(NewLoop1BB, NewLoop1PHBB);
+        AR.DT.changeImmediateDominator(AR.DT[&Loop2PHBB], NewDTNode);
+        AR.DT.verifyDomTree();
         NewLoop->addBasicBlockToLoop(NewLoop1BB, AR.LI);
+        NewLoop->verifyLoop();
         Updater.addSiblingLoops({NewLoop});
         return PreservedAnalyses::all();
       }));
@@ -1171,19 +1285,36 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
   // Build a module with a single loop nest that contains one outer loop with
   // three subloops, and one of those with its own subloop. We will
   // incrementally delete all of these to test different deletion scenarios.
-  M = parseIR(Context, "define void @f() {\n"
+  M = parseIR(Context, "define void @f(i1* %ptr) {\n"
                        "entry:\n"
                        "  br label %loop.0\n"
                        "loop.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %end\n"
+                       "  %cond.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0, label %loop.0.0.ph, label %end\n"
+                       "loop.0.0.ph:\n"
+                       "  br label %loop.0.0\n"
                        "loop.0.0:\n"
-                       "  br i1 undef, label %loop.0.0, label %loop.0.1\n"
+                       "  %cond.0.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.0, label %loop.0.0, label %loop.0.1.ph\n"
+                       "loop.0.1.ph:\n"
+                       "  br label %loop.0.1\n"
                        "loop.0.1:\n"
-                       "  br i1 undef, label %loop.0.1, label %loop.0.2\n"
+                       "  %cond.0.1 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.1, label %loop.0.1, label %loop.0.2.ph\n"
+                       "loop.0.2.ph:\n"
+                       "  br label %loop.0.2\n"
                        "loop.0.2:\n"
-                       "  br i1 undef, label %loop.0.2.0, label %loop.0\n"
+                       "  %cond.0.2 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.2, label %loop.0.2.0.ph, label %loop.0.latch\n"
+                       "loop.0.2.0.ph:\n"
+                       "  br label %loop.0.2.0\n"
                        "loop.0.2.0:\n"
-                       "  br i1 undef, label %loop.0.2.0, label %loop.0.2\n"
+                       "  %cond.0.2.0 = load volatile i1, i1* %ptr\n"
+                       "  br i1 %cond.0.2.0, label %loop.0.2.0, label %loop.0.2.latch\n"
+                       "loop.0.2.latch:\n"
+                       "  br label %loop.0.2\n"
+                       "loop.0.latch:\n"
+                       "  br label %loop.0\n"
                        "end:\n"
                        "  ret void\n"
                        "}\n");
@@ -1192,44 +1323,64 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
   // easily.
   Function &F = *M->begin();
   ASSERT_THAT(F, HasName("f"));
+  Argument &Ptr = *F.arg_begin();
   auto BBI = F.begin();
   BasicBlock &EntryBB = *BBI++;
   ASSERT_THAT(EntryBB, HasName("entry"));
   BasicBlock &Loop0BB = *BBI++;
   ASSERT_THAT(Loop0BB, HasName("loop.0"));
+  BasicBlock &Loop00PHBB = *BBI++;
+  ASSERT_THAT(Loop00PHBB, HasName("loop.0.0.ph"));
   BasicBlock &Loop00BB = *BBI++;
   ASSERT_THAT(Loop00BB, HasName("loop.0.0"));
+  BasicBlock &Loop01PHBB = *BBI++;
+  ASSERT_THAT(Loop01PHBB, HasName("loop.0.1.ph"));
   BasicBlock &Loop01BB = *BBI++;
   ASSERT_THAT(Loop01BB, HasName("loop.0.1"));
+  BasicBlock &Loop02PHBB = *BBI++;
+  ASSERT_THAT(Loop02PHBB, HasName("loop.0.2.ph"));
   BasicBlock &Loop02BB = *BBI++;
   ASSERT_THAT(Loop02BB, HasName("loop.0.2"));
+  BasicBlock &Loop020PHBB = *BBI++;
+  ASSERT_THAT(Loop020PHBB, HasName("loop.0.2.0.ph"));
   BasicBlock &Loop020BB = *BBI++;
   ASSERT_THAT(Loop020BB, HasName("loop.0.2.0"));
+  BasicBlock &Loop02LatchBB = *BBI++;
+  ASSERT_THAT(Loop02LatchBB, HasName("loop.0.2.latch"));
+  BasicBlock &Loop0LatchBB = *BBI++;
+  ASSERT_THAT(Loop0LatchBB, HasName("loop.0.latch"));
   BasicBlock &EndBB = *BBI++;
   ASSERT_THAT(EndBB, HasName("end"));
   ASSERT_THAT(BBI, F.end());
-  Constant *Undefi1 = UndefValue::get(Type::getInt1Ty(Context));
 
   // Helper to do the actual deletion of a loop. We directly encode this here
   // to isolate ourselves from the rest of LLVM and for simplicity. Here we can
   // egregiously cheat based on knowledge of the test case. For example, we
   // have no PHI nodes and there is always a single i-dom.
-  auto DeleteLoopBlocks = [](Loop &L, BasicBlock &IDomBB,
+  auto RemoveLoop = [](Loop &L, BasicBlock &IDomBB,
                              LoopStandardAnalysisResults &AR,
                              LPMUpdater &Updater) {
-    for (BasicBlock *LoopBB : L.blocks()) {
+    assert(L.empty() && "Can only delete leaf loops with this routine!");
+    SmallVector<BasicBlock *, 4> LoopBBs(L.block_begin(), L.block_end());
+    Updater.markLoopAsDeleted(L);
+    IDomBB.getTerminator()->replaceUsesOfWith(L.getHeader(),
+                                              L.getUniqueExitBlock());
+    for (BasicBlock *LoopBB : LoopBBs) {
       SmallVector<DomTreeNode *, 4> ChildNodes(AR.DT[LoopBB]->begin(),
                                                AR.DT[LoopBB]->end());
       for (DomTreeNode *ChildNode : ChildNodes)
         AR.DT.changeImmediateDominator(ChildNode, AR.DT[&IDomBB]);
       AR.DT.eraseNode(LoopBB);
+      AR.LI.removeBlock(LoopBB);
       LoopBB->dropAllReferences();
     }
-    SmallVector<BasicBlock *, 4> LoopBBs(L.block_begin(), L.block_end());
-    Updater.markLoopAsDeleted(L);
-    AR.LI.markAsRemoved(&L);
     for (BasicBlock *LoopBB : LoopBBs)
       LoopBB->eraseFromParent();
+
+    if (Loop *ParentL = L.getParentLoop())
+      return ParentL->removeChildLoop(find(*ParentL, &L));
+
+    return AR.LI.removeLoop(find(AR.LI, &L));
   };
 
   // Build up the pass managers.
@@ -1272,9 +1423,10 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
       .WillOnce(
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
+            Loop *ParentL = L.getParentLoop();
             AR.SE.forgetLoop(&L);
-            Loop00BB.getTerminator()->replaceUsesOfWith(&Loop01BB, &Loop02BB);
-            DeleteLoopBlocks(L, Loop00BB, AR, Updater);
+            delete RemoveLoop(L, Loop01PHBB, AR, Updater);
+            ParentL->verifyLoop();
             return PreservedAnalyses::all();
           }));
 
@@ -1315,38 +1467,40 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
 
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.2"), _, _, _))
       .WillOnce(Invoke(getLoopAnalysisResult));
-  BasicBlock *NewLoop03BB;
+  BasicBlock *NewLoop03PHBB;
   EXPECT_CALL(MLPHandle, run(HasName("loop.0.2"), _, _, _))
       .WillOnce(
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
-            // Delete the inner loop first. we also do this manually because we
-            // want to preserve the loop object and reuse it.
+            // Remove the inner loop first but retain it to reuse later.
             AR.SE.forgetLoop(*L.begin());
-            Loop02BB.getTerminator()->replaceUsesOfWith(&Loop020BB, &Loop02BB);
-            assert(std::next((*L.begin())->block_begin()) ==
-                       (*L.begin())->block_end() &&
-                   "There should only be one block.");
-            assert(AR.DT[&Loop020BB]->getNumChildren() == 0 &&
-                   "Cannot have children in the domtree!");
-            AR.DT.eraseNode(&Loop020BB);
-            Updater.markLoopAsDeleted(**L.begin());
-            AR.LI.removeBlock(&Loop020BB);
-            auto *OldL = L.removeChildLoop(L.begin());
-            Loop020BB.eraseFromParent();
+            auto *OldL = RemoveLoop(**L.begin(), Loop020PHBB, AR, Updater);
 
             auto *ParentL = L.getParentLoop();
             AR.SE.forgetLoop(&L);
-            Loop00BB.getTerminator()->replaceUsesOfWith(&Loop02BB, &Loop0BB);
-            DeleteLoopBlocks(L, Loop00BB, AR, Updater);
+            delete RemoveLoop(L, Loop02PHBB, AR, Updater);
 
             // Now insert a new sibling loop, reusing a loop pointer.
             ParentL->addChildLoop(OldL);
-            NewLoop03BB = BasicBlock::Create(Context, "loop.0.3", &F, &EndBB);
-            BranchInst::Create(&Loop0BB, NewLoop03BB, Undefi1, NewLoop03BB);
-            Loop00BB.getTerminator()->replaceUsesOfWith(&Loop0BB, NewLoop03BB);
-            AR.DT.addNewBlock(NewLoop03BB, &Loop00BB);
+            NewLoop03PHBB =
+                BasicBlock::Create(Context, "loop.0.3.ph", &F, &Loop0LatchBB);
+            auto *NewLoop03BB =
+                BasicBlock::Create(Context, "loop.0.3", &F, &Loop0LatchBB);
+            BranchInst::Create(NewLoop03BB, NewLoop03PHBB);
+            auto *Cond = new LoadInst(&Ptr, "cond.0.3", /*isVolatile*/ true,
+                                      NewLoop03BB);
+            BranchInst::Create(&Loop0LatchBB, NewLoop03BB, Cond, NewLoop03BB);
+            Loop02PHBB.getTerminator()->replaceUsesOfWith(&Loop0LatchBB,
+                                                          NewLoop03PHBB);
+            AR.DT.addNewBlock(NewLoop03PHBB, &Loop02PHBB);
+            AR.DT.addNewBlock(NewLoop03BB, NewLoop03PHBB);
+            AR.DT.changeImmediateDominator(AR.DT[&Loop0LatchBB],
+                                           AR.DT[NewLoop03BB]);
+            AR.DT.verifyDomTree();
+            ParentL->addBasicBlockToLoop(NewLoop03PHBB, AR.LI);
             OldL->addBasicBlockToLoop(NewLoop03BB, AR.LI);
+            OldL->verifyLoop();
+            ParentL->verifyLoop();
             Updater.addSiblingLoops({OldL});
             return PreservedAnalyses::all();
           }));
@@ -1379,8 +1533,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            Loop0BB.getTerminator()->replaceUsesOfWith(&Loop00BB, NewLoop03BB);
-            DeleteLoopBlocks(L, Loop0BB, AR, Updater);
+            delete RemoveLoop(L, Loop00PHBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 
@@ -1391,8 +1544,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            Loop0BB.getTerminator()->replaceUsesOfWith(NewLoop03BB, &Loop0BB);
-            DeleteLoopBlocks(L, Loop0BB, AR, Updater);
+            delete RemoveLoop(L, *NewLoop03PHBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 
@@ -1403,8 +1555,7 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
           Invoke([&](Loop &L, LoopAnalysisManager &AM,
                      LoopStandardAnalysisResults &AR, LPMUpdater &Updater) {
             AR.SE.forgetLoop(&L);
-            EntryBB.getTerminator()->replaceUsesOfWith(&Loop0BB, &EndBB);
-            DeleteLoopBlocks(L, EntryBB, AR, Updater);
+            delete RemoveLoop(L, EntryBB, AR, Updater);
             return PreservedAnalyses::all();
           }));
 

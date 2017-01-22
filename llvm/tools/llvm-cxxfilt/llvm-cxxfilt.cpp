@@ -17,6 +17,25 @@
 
 using namespace llvm;
 
+enum Style {
+  Auto,  ///< auto-detect mangling
+  GNU,   ///< GNU
+  Lucid, ///< Lucid compiler (lcc)
+  ARM,
+  HP,    ///< HP compiler (xCC)
+  EDG,   ///< EDG compiler
+  GNUv3, ///< GNU C++ v3 ABI
+  Java,  ///< Java (gcj)
+  GNAT   ///< ADA copiler (gnat)
+};
+static cl::opt<Style>
+    Format("format", cl::desc("decoration style"),
+           cl::values(clEnumValN(Auto, "auto", "auto-detect style"),
+                      clEnumValN(GNU, "gnu", "GNU (itanium) style")),
+           cl::init(Auto));
+static cl::alias FormatShort("s", cl::desc("alias for --format"),
+                             cl::aliasopt(Format));
+
 static cl::opt<bool>
     Types("types",
           cl::desc("attempt to demangle types as well as function names"),

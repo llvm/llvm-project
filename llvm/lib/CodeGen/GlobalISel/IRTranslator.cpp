@@ -81,7 +81,9 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
       }
     }
   }
-  return ValReg;
+
+  // Look Val up again in case the reference has been invalidated since.
+  return ValToVReg[&Val];
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {

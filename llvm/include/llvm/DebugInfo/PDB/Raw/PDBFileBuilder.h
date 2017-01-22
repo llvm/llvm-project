@@ -13,8 +13,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/PDB/Raw/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -44,11 +46,13 @@ public:
   DbiStreamBuilder &getDbiBuilder();
   TpiStreamBuilder &getTpiBuilder();
   TpiStreamBuilder &getIpiBuilder();
+  StringTableBuilder &getStringTableBuilder();
 
   Error commit(StringRef Filename);
 
 private:
-  Expected<msf::MSFLayout> finalizeMsfLayout() const;
+  Error addNamedStream(StringRef Name, uint32_t Size);
+  Expected<msf::MSFLayout> finalizeMsfLayout();
 
   BumpPtrAllocator &Allocator;
 
@@ -57,6 +61,9 @@ private:
   std::unique_ptr<DbiStreamBuilder> Dbi;
   std::unique_ptr<TpiStreamBuilder> Tpi;
   std::unique_ptr<TpiStreamBuilder> Ipi;
+
+  StringTableBuilder Strings;
+  NamedStreamMap NamedStreams;
 };
 }
 }

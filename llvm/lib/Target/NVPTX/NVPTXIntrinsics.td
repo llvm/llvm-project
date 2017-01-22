@@ -187,42 +187,12 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 // MISC
 //
 
-def INT_NVVM_CLZ_I : F_MATH_1<"clz.b32 \t$dst, $src0;", Int32Regs, Int32Regs,
-  int_nvvm_clz_i>;
-def INT_NVVM_CLZ_LL : F_MATH_1<"clz.b64 \t$dst, $src0;", Int32Regs, Int64Regs,
-  int_nvvm_clz_ll>;
-
-def INT_NVVM_POPC_I : F_MATH_1<"popc.b32 \t$dst, $src0;", Int32Regs, Int32Regs,
-  int_nvvm_popc_i>;
-def INT_NVVM_POPC_LL : F_MATH_1<"popc.b64 \t$dst, $src0;", Int32Regs, Int64Regs,
-  int_nvvm_popc_ll>;
-
 def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
   Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
 
 //
 // Min Max
 //
-
-def INT_NVVM_MIN_I : F_MATH_2<"min.s32 \t$dst, $src0, $src1;", Int32Regs,
-  Int32Regs, Int32Regs, int_nvvm_min_i>;
-def INT_NVVM_MIN_UI : F_MATH_2<"min.u32 \t$dst, $src0, $src1;", Int32Regs,
-  Int32Regs, Int32Regs, int_nvvm_min_ui>;
-
-def INT_NVVM_MIN_LL : F_MATH_2<"min.s64 \t$dst, $src0, $src1;", Int64Regs,
-  Int64Regs, Int64Regs, int_nvvm_min_ll>;
-def INT_NVVM_MIN_ULL : F_MATH_2<"min.u64 \t$dst, $src0, $src1;", Int64Regs,
-  Int64Regs, Int64Regs, int_nvvm_min_ull>;
-
-def INT_NVVM_MAX_I : F_MATH_2<"max.s32 \t$dst, $src0, $src1;", Int32Regs,
-  Int32Regs, Int32Regs, int_nvvm_max_i>;
-def INT_NVVM_MAX_UI : F_MATH_2<"max.u32 \t$dst, $src0, $src1;", Int32Regs,
-  Int32Regs, Int32Regs, int_nvvm_max_ui>;
-
-def INT_NVVM_MAX_LL : F_MATH_2<"max.s64 \t$dst, $src0, $src1;", Int64Regs,
-  Int64Regs, Int64Regs, int_nvvm_max_ll>;
-def INT_NVVM_MAX_ULL : F_MATH_2<"max.u64 \t$dst, $src0, $src1;", Int64Regs,
-  Int64Regs, Int64Regs, int_nvvm_max_ull>;
 
 def INT_NVVM_FMIN_F : F_MATH_2<"min.f32 \t$dst, $src0, $src1;", Float32Regs,
   Float32Regs, Float32Regs, int_nvvm_fmin_f>;
@@ -238,6 +208,7 @@ def INT_NVVM_FMIN_D : F_MATH_2<"min.f64 \t$dst, $src0, $src1;", Float64Regs,
   Float64Regs, Float64Regs, int_nvvm_fmin_d>;
 def INT_NVVM_FMAX_D : F_MATH_2<"max.f64 \t$dst, $src0, $src1;", Float64Regs,
   Float64Regs, Float64Regs, int_nvvm_fmax_d>;
+
 
 //
 // Multiplication
@@ -321,15 +292,6 @@ def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64 \t$dst, $src0, $src1;",
   Float64Regs, Float64Regs, Float64Regs, int_nvvm_div_rp_d>;
 
 //
-// Brev
-//
-
-def INT_NVVM_BREV32 : F_MATH_1<"brev.b32 \t$dst, $src0;", Int32Regs, Int32Regs,
-  int_nvvm_brev32>;
-def INT_NVVM_BREV64 : F_MATH_1<"brev.b64 \t$dst, $src0;", Int64Regs, Int64Regs,
-  int_nvvm_brev64>;
-
-//
 // Sad
 //
 
@@ -359,11 +321,6 @@ def : Pat<(int_nvvm_ceil_d Float64Regs:$a),
 //
 // Abs
 //
-
-def INT_NVVM_ABS_I : F_MATH_1<"abs.s32 \t$dst, $src0;", Int32Regs, Int32Regs,
-  int_nvvm_abs_i>;
-def INT_NVVM_ABS_LL : F_MATH_1<"abs.s64 \t$dst, $src0;", Int64Regs, Int64Regs,
-  int_nvvm_abs_ll>;
 
 def INT_NVVM_FABS_FTZ_F : F_MATH_1<"abs.ftz.f32 \t$dst, $src0;", Float32Regs,
   Float32Regs, int_nvvm_fabs_ftz_f>;
@@ -809,9 +766,6 @@ def : Pat<(int_nvvm_f2h_rn_ftz Float32Regs:$a),
           (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ))>;
 def : Pat<(int_nvvm_f2h_rn Float32Regs:$a),
           (BITCONVERT_16_F2I (CVT_f16_f32 Float32Regs:$a, CvtRN))>;
-
-def : Pat<(int_nvvm_h2f Int16Regs:$a),
-          (CVT_f32_f16 (BITCONVERT_16_I2F Int16Regs:$a), CvtNONE)>;
 
 //
 // Bitcast

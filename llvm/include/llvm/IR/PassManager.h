@@ -791,7 +791,7 @@ public:
 
         if (DebugLogging)
           dbgs() << "Invalidating analysis: " << this->lookUpPass(ID).name()
-                 << "\n";
+                 << " on " << IR.getName() << "\n";
 
         I = ResultsList.erase(I);
         AnalysisResults.erase({ID, &IR});
@@ -832,7 +832,8 @@ private:
     if (Inserted) {
       auto &P = this->lookUpPass(ID);
       if (DebugLogging)
-        dbgs() << "Running analysis: " << P.name() << "\n";
+        dbgs() << "Running analysis: " << P.name() << " on " << IR.getName()
+               << "\n";
       AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
       ResultList.emplace_back(ID, P.run(IR, *this, ExtraArgs...));
 
@@ -863,7 +864,7 @@ private:
 
     if (DebugLogging)
       dbgs() << "Invalidating analysis: " << this->lookUpPass(ID).name()
-             << "\n";
+             << " on " << IR.getName() << "\n";
     AnalysisResultLists[&IR].erase(RI->second);
     AnalysisResults.erase(RI);
   }

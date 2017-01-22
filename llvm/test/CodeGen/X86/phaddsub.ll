@@ -225,3 +225,61 @@ define <4 x i32> @phsubd4(<4 x i32> %x) {
   %r = sub <4 x i32> %a, %b
   ret <4 x i32> %r
 }
+
+define <8 x i16> @phsubw1_reverse(<8 x i16> %x, <8 x i16> %y) {
+; SSSE3-LABEL: phsubw1_reverse:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
+; SSSE3-NEXT:    movdqa %xmm1, %xmm4
+; SSSE3-NEXT:    pshufb %xmm3, %xmm4
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pshufb %xmm3, %xmm2
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SSSE3-NEXT:    pshufb %xmm3, %xmm1
+; SSSE3-NEXT:    pshufb %xmm3, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    psubw %xmm0, %xmm2
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    retq
+;
+; AVX-LABEL: phsubw1_reverse:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpsubw %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    retq
+  %a = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %b = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %r = sub <8 x i16> %a, %b
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @phsubd1_reverse(<4 x i32> %x, <4 x i32> %y) {
+; SSSE3-LABEL: phsubd1_reverse:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movaps %xmm0, %xmm2
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSSE3-NEXT:    psubd %xmm0, %xmm2
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    retq
+;
+; AVX-LABEL: phsubd1_reverse:
+; AVX:       # BB#0:
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[1,3],xmm1[1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    retq
+  %a = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %b = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %r = sub <4 x i32> %a, %b
+  ret <4 x i32> %r
+}
+

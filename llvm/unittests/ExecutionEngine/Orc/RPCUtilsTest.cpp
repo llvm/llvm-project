@@ -504,3 +504,29 @@ TEST(DummyRPC, TestAPICalls) {
 
   ServerThread.join();
 }
+
+TEST(DummyRPC, TestRemoveHandler) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Server(Q1, Q2);
+
+  Server.addHandler<DummyRPCAPI::VoidBool>(
+    [](bool B) {
+      EXPECT_EQ(B, true)
+        << "Server void(bool) received unexpected result";
+    });
+
+  Server.removeHandler<DummyRPCAPI::VoidBool>();
+}
+
+TEST(DummyRPC, TestClearHandlers) {
+  Queue Q1, Q2;
+  DummyRPCEndpoint Server(Q1, Q2);
+
+  Server.addHandler<DummyRPCAPI::VoidBool>(
+    [](bool B) {
+      EXPECT_EQ(B, true)
+        << "Server void(bool) received unexpected result";
+    });
+
+  Server.clearHandlers();
+}

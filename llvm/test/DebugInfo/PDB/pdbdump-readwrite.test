@@ -1,10 +1,10 @@
 RUN: llvm-pdbdump pdb2yaml -dbi-module-info -dbi-module-source-info \
-RUN:   -dbi-stream -pdb-stream -tpi-stream -stream-directory \
+RUN:   -dbi-stream -pdb-stream -string-table -tpi-stream -stream-directory \
 RUN:   -stream-metadata %p/Inputs/empty.pdb > %t.1
 RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
 
-RUN: llvm-pdbdump raw -headers -tpi-records %p/Inputs/empty.pdb | FileCheck %s
-RUN: llvm-pdbdump raw -headers -tpi-records %t.2 | FileCheck %s
+RUN: llvm-pdbdump raw -headers -string-table -tpi-records %p/Inputs/empty.pdb | FileCheck %s
+RUN: llvm-pdbdump raw -headers -string-table -tpi-records %t.2 | FileCheck %s
 
 CHECK:      FileHeaders {
 CHECK-NEXT:   BlockSize: 4096
@@ -17,11 +17,19 @@ CHECK-NEXT:   NumDirectoryBlocks: 1
 CHECK-NEXT:   DirectoryBlocks:
 CHECK-NEXT:   NumStreams:
 CHECK-NEXT: }
+CHECK:      String Table {
+CHECK-DAG:   'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
+CHECK-DAG:   'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+CHECK-DAG:   '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
+CHECK-NEXT: }
 CHECK:      PDB Stream {
 CHECK-NEXT:   Version: 20000404
 CHECK-NEXT:   Signature: 0x54E507E2
 CHECK-NEXT:   Age: 1
 CHECK-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+CHECK-NEXT:   Named Streams {
+CHECK:          /names: 
+CHECK:        }
 CHECK-NEXT: }
 CHECK:      Type Info Stream (TPI) {
 CHECK-NEXT:   TPI Version: 20040203

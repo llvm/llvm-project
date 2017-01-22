@@ -136,31 +136,31 @@ public:
 
 #include <memory>
 
-template <class T> class min_pointer;
-template <class T> class min_pointer<const T>;
-template <> class min_pointer<void>;
-template <> class min_pointer<const void>;
+template <class T, class = std::integral_constant<size_t, 0> > class min_pointer;
+template <class T, class ID> class min_pointer<const T, ID>;
+template <class ID> class min_pointer<void, ID>;
+template <class ID> class min_pointer<const void, ID>;
 template <class T> class min_allocator;
 
-template <>
-class min_pointer<const void>
+template <class ID>
+class min_pointer<const void, ID>
 {
     const void* ptr_;
 public:
     min_pointer() TEST_NOEXCEPT = default;
     min_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr) {}
     template <class T>
-    min_pointer(min_pointer<T> p) TEST_NOEXCEPT : ptr_(p.ptr_) {}
+    min_pointer(min_pointer<T, ID> p) TEST_NOEXCEPT : ptr_(p.ptr_) {}
 
     explicit operator bool() const {return ptr_ != nullptr;}
 
     friend bool operator==(min_pointer x, min_pointer y) {return x.ptr_ == y.ptr_;}
     friend bool operator!=(min_pointer x, min_pointer y) {return !(x == y);}
-    template <class U> friend class min_pointer;
+    template <class U, class XID> friend class min_pointer;
 };
 
-template <>
-class min_pointer<void>
+template <class ID>
+class min_pointer<void, ID>
 {
     void* ptr_;
 public:
@@ -172,16 +172,16 @@ public:
                             !std::is_const<T>::value
                        >::type
              >
-    min_pointer(min_pointer<T> p) TEST_NOEXCEPT : ptr_(p.ptr_) {}
+    min_pointer(min_pointer<T, ID> p) TEST_NOEXCEPT : ptr_(p.ptr_) {}
 
     explicit operator bool() const {return ptr_ != nullptr;}
 
     friend bool operator==(min_pointer x, min_pointer y) {return x.ptr_ == y.ptr_;}
     friend bool operator!=(min_pointer x, min_pointer y) {return !(x == y);}
-    template <class U> friend class min_pointer;
+    template <class U, class XID> friend class min_pointer;
 };
 
-template <class T>
+template <class T, class ID>
 class min_pointer
 {
     T* ptr_;
@@ -190,7 +190,7 @@ class min_pointer
 public:
     min_pointer() TEST_NOEXCEPT = default;
     min_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr) {}
-    explicit min_pointer(min_pointer<void> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
+    explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
 
     explicit operator bool() const {return ptr_ != nullptr;}
 
@@ -247,12 +247,12 @@ public:
 
     friend bool operator==(min_pointer x, min_pointer y) {return x.ptr_ == y.ptr_;}
     friend bool operator!=(min_pointer x, min_pointer y) {return !(x == y);}
-    template <class U> friend class min_pointer;
+    template <class U, class XID> friend class min_pointer;
     template <class U> friend class min_allocator;
 };
 
-template <class T>
-class min_pointer<const T>
+template <class T, class ID>
+class min_pointer<const T, ID>
 {
     const T* ptr_;
 
@@ -260,8 +260,8 @@ class min_pointer<const T>
 public:
     min_pointer() TEST_NOEXCEPT = default;
     min_pointer(std::nullptr_t) : ptr_(nullptr) {}
-    min_pointer(min_pointer<T> p) : ptr_(p.ptr_) {}
-    explicit min_pointer(min_pointer<const void> p) : ptr_(static_cast<const T*>(p.ptr_)) {}
+    min_pointer(min_pointer<T, ID> p) : ptr_(p.ptr_) {}
+    explicit min_pointer(min_pointer<const void, ID> p) : ptr_(static_cast<const T*>(p.ptr_)) {}
 
     explicit operator bool() const {return ptr_ != nullptr;}
 
@@ -318,37 +318,37 @@ public:
 
     friend bool operator==(min_pointer x, min_pointer y) {return x.ptr_ == y.ptr_;}
     friend bool operator!=(min_pointer x, min_pointer y) {return !(x == y);}
-    template <class U> friend class min_pointer;
+    template <class U, class XID> friend class min_pointer;
 };
 
-template <class T>
+template <class T, class ID>
 inline
 bool
-operator==(min_pointer<T> x, std::nullptr_t)
+operator==(min_pointer<T, ID> x, std::nullptr_t)
 {
     return !static_cast<bool>(x);
 }
 
-template <class T>
+template <class T, class ID>
 inline
 bool
-operator==(std::nullptr_t, min_pointer<T> x)
+operator==(std::nullptr_t, min_pointer<T, ID> x)
 {
     return !static_cast<bool>(x);
 }
 
-template <class T>
+template <class T, class ID>
 inline
 bool
-operator!=(min_pointer<T> x, std::nullptr_t)
+operator!=(min_pointer<T, ID> x, std::nullptr_t)
 {
     return static_cast<bool>(x);
 }
 
-template <class T>
+template <class T, class ID>
 inline
 bool
-operator!=(std::nullptr_t, min_pointer<T> x)
+operator!=(std::nullptr_t, min_pointer<T, ID> x)
 {
     return static_cast<bool>(x);
 }

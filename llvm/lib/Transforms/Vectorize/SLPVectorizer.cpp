@@ -4135,7 +4135,7 @@ class HorizontalReduction {
   WeakVH ReductionPHI;
 
   /// The opcode of the reduction.
-  unsigned ReductionOpcode;
+  Instruction::BinaryOps ReductionOpcode;
   /// The opcode of the values we perform a reduction on.
   unsigned ReducedValueOpcode;
   /// Should we model this reduction as a pairwise reduction tree or a tree that
@@ -4151,8 +4151,8 @@ public:
   unsigned MinVecRegSize;
 
   HorizontalReduction(unsigned MinVecRegSize)
-      : ReductionRoot(nullptr), ReductionOpcode(0), ReducedValueOpcode(0),
-        IsPairwiseReduction(false), ReduxWidth(0),
+      : ReductionRoot(nullptr), ReductionOpcode(Instruction::BinaryOpsEnd),
+        ReducedValueOpcode(0), IsPairwiseReduction(false), ReduxWidth(0),
         MinVecRegSize(MinVecRegSize) {}
 
   /// \brief Try to find a reduction tree.
@@ -4302,8 +4302,8 @@ public:
       Value *ReducedSubTree = emitReduction(VectorizedRoot, Builder);
       if (VectorizedTree) {
         Builder.SetCurrentDebugLocation(Loc);
-        VectorizedTree = createBinOp(Builder, ReductionOpcode, VectorizedTree,
-                                     ReducedSubTree, "bin.rdx");
+        VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
+                                             ReducedSubTree, "bin.rdx");
       } else
         VectorizedTree = ReducedSubTree;
     }
@@ -4313,8 +4313,8 @@ public:
       for (; i < NumReducedVals; ++i) {
         Builder.SetCurrentDebugLocation(
           cast<Instruction>(ReducedVals[i])->getDebugLoc());
-        VectorizedTree = createBinOp(Builder, ReductionOpcode, VectorizedTree,
-                                     ReducedVals[i]);
+        VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
+                                             ReducedVals[i]);
       }
       // Update users.
       if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {
@@ -4356,13 +4356,6 @@ private:
     return VecReduxCost - ScalarReduxCost;
   }
 
-  static Value *createBinOp(IRBuilder<> &Builder, unsigned Opcode, Value *L,
-                            Value *R, const Twine &Name = "") {
-    if (Opcode == Instruction::FAdd)
-      return Builder.CreateFAdd(L, R, Name);
-    return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, L, R, Name);
-  }
-
   /// \brief Emit a horizontal reduction of the vectorized value.
   Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
@@ -4382,14 +4375,14 @@ private:
         Value *RightShuf = Builder.CreateShuffleVector(
           TmpVec, UndefValue::get(TmpVec->getType()), (RightMask),
           "rdx.shuf.r");
-        TmpVec = createBinOp(Builder, ReductionOpcode, LeftShuf, RightShuf,
-                             "bin.rdx");
+        TmpVec = Builder.CreateBinOp(ReductionOpcode, LeftShuf, RightShuf,
+                                     "bin.rdx");
       } else {
         Value *UpperHalf =
           createRdxShuffleMask(ReduxWidth, i, false, false, Builder);
         Value *Shuf = Builder.CreateShuffleVector(
           TmpVec, UndefValue::get(TmpVec->getType()), UpperHalf, "rdx.shuf");
-        TmpVec = createBinOp(Builder, ReductionOpcode, TmpVec, Shuf, "bin.rdx");
+        TmpVec = Builder.CreateBinOp(ReductionOpcode, TmpVec, Shuf, "bin.rdx");
       }
     }
 

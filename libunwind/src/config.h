@@ -85,22 +85,32 @@
     fflush(stderr);                                                            \
     abort();                                                                   \
   } while (0)
-#define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
+
+#define _LIBUNWIND_LOG(msg, ...)                                               \
+  fprintf(stderr, "libunwind: " msg "\n", ##__VA_ARGS__)
 
 #if defined(_LIBUNWIND_HAS_NO_THREADS)
   // only used with pthread calls, not needed for the single-threaded builds
   #define _LIBUNWIND_LOG_NON_ZERO(x)
+#else
+  #if defined(NDEBUG)
+    #define _LIBUNWIND_LOG_NON_ZERO(x) x
+  #else
+    #define _LIBUNWIND_LOG_NON_ZERO(x)                                         \
+      do {                                                                     \
+        int _err = x;                                                          \
+        if (_err != 0)                                                         \
+          _LIBUNWIND_LOG("" #x "=%d in %s", _err, __FUNCTION__);               \
+      } while (0)
+  #endif
 #endif
 
 // Macros that define away in non-Debug builds
 #ifdef NDEBUG
   #define _LIBUNWIND_DEBUG_LOG(msg, ...)
   #define _LIBUNWIND_TRACE_API(msg, ...)
-  #define _LIBUNWIND_TRACING_UNWINDING 0
+  #define _LIBUNWIND_TRACING_UNWINDING (0)
   #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)
-  #ifndef _LIBUNWIND_LOG_NON_ZERO
-    #define _LIBUNWIND_LOG_NON_ZERO(x) x
-  #endif
 #else
   #ifdef __cplusplus
     extern "C" {
@@ -111,23 +121,17 @@
     }
   #endif
   #define _LIBUNWIND_DEBUG_LOG(msg, ...)  _LIBUNWIND_LOG(msg, __VA_ARGS__)
-  #ifndef _LIBUNWIND_LOG_NON_ZERO
-    #define _LIBUNWIND_LOG_NON_ZERO(x) \
-              do { \
-                int _err = x; \
-                if ( _err != 0 ) \
-                  _LIBUNWIND_LOG("" #x "=%d in %s", _err, __FUNCTION__); \
-               } while (0)
-  #endif
-  #define _LIBUNWIND_TRACE_API(msg, ...) \
-            do { \
-              if ( logAPIs() ) _LIBUNWIND_LOG(msg, __VA_ARGS__); \
-            } while(0)
-  #define _LIBUNWIND_TRACE_UNWINDING(msg, ...) \
-            do { \
-              if ( logUnwinding() ) _LIBUNWIND_LOG(msg, __VA_ARGS__); \
-            } while(0)
+  #define _LIBUNWIND_TRACE_API(msg, ...)                                       \
+    do {                                                                       \
+      if (logAPIs())                                                           \
+        _LIBUNWIND_LOG(msg, __VA_ARGS__);                                      \
+    } while (0)
   #define _LIBUNWIND_TRACING_UNWINDING logUnwinding()
+  #define _LIBUNWIND_TRACE_UNWINDING(msg, ...)                                 \
+    do {                                                                       \
+      if (logUnwinding())                                                      \
+        _LIBUNWIND_LOG(msg, __VA_ARGS__);                                      \
+    } while (0)
 #endif
 
 #ifdef __cplusplus

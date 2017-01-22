@@ -804,7 +804,8 @@ class APFloat : public APFloatBase {
       : U(std::move(F), S) {}
 
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
-    assert(&getSemantics() == &RHS.getSemantics());
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only compare APFloats with the same semantics");
     if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
@@ -923,6 +924,8 @@ public:
   void Profile(FoldingSetNodeID &NID) const { getIEEE().Profile(NID); }
 
   opStatus add(const APFloat &RHS, roundingMode RM) {
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only call on two APFloats with the same semantics");
     if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.add(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
@@ -930,6 +933,8 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
   opStatus subtract(const APFloat &RHS, roundingMode RM) {
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only call on two APFloats with the same semantics");
     if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.subtract(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
