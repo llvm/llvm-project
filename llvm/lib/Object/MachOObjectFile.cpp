@@ -809,6 +809,27 @@ static Error checkNoteCommand(const MachOObjectFile &Obj,
   return Error::success();
 }
 
+static Error
+parseBuildVersionCommand(const MachOObjectFile &Obj,
+                         const MachOObjectFile::LoadCommandInfo &Load,
+                         SmallVectorImpl<const char*> &BuildTools,
+                         uint32_t LoadCommandIndex) {
+  MachO::build_version_command BVC =
+      getStruct<MachO::build_version_command>(Obj, Load.Ptr);
+  if (Load.C.cmdsize !=
+      sizeof(MachO::build_version_command) +
+          BVC.ntools * sizeof(MachO::build_tool_version))
+    return malformedError("load command " + Twine(LoadCommandIndex) +
+                          " LC_BUILD_VERSION_COMMAND has incorrect cmdsize");
+
+  auto Start = Load.Ptr + sizeof(MachO::build_version_command);
+  BuildTools.resize(BVC.ntools);
+  for (unsigned i = 0; i < BVC.ntools; ++i)
+    BuildTools[i] = Start + i * sizeof(MachO::build_tool_version);
+
+  return Error::success();
+}
+
 static Error checkRpathCommand(const MachOObjectFile &Obj,
                                const MachOObjectFile::LoadCommandInfo &Load,
                                uint32_t LoadCommandIndex) {
@@ -1307,6 +1328,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
         return;
     } else if (Load.C.cmd == MachO::LC_NOTE) {
       if ((Err = checkNoteCommand(*this, Load, I, Elements)))
+        return;
+    } else if (Load.C.cmd == MachO::LC_BUILD_VERSION) {
+      if ((Err = parseBuildVersionCommand(*this, Load, BuildTools, I)))
         return;
     } else if (Load.C.cmd == MachO::LC_RPATH) {
       if ((Err = checkRpathCommand(*this, Load, I)))
@@ -3320,6 +3344,16 @@ MachOObjectFile::getVersionMinLoadCommand(const LoadCommandInfo &L) const {
 MachO::note_command
 MachOObjectFile::getNoteLoadCommand(const LoadCommandInfo &L) const {
   return getStruct<MachO::note_command>(*this, L.Ptr);
+}
+
+MachO::build_version_command
+MachOObjectFile::getBuildVersionLoadCommand(const LoadCommandInfo &L) const {
+  return getStruct<MachO::build_version_command>(*this, L.Ptr);
+}
+
+MachO::build_tool_version
+MachOObjectFile::getBuildToolVersion(unsigned index) const {
+  return getStruct<MachO::build_tool_version>(*this, BuildTools[index]);
 }
 
 MachO::dylib_command
