@@ -1439,6 +1439,10 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     } else if (Tok == "ASSERT") {
       Cmd->Commands.emplace_back(new AssertCommand(readAssert()));
       expect(";");
+    } else if (Tok == "CONSTRUCTORS") {
+      // CONSTRUCTORS is a keyword to make the linker recognize C++ ctors/dtors
+      // by name. This is for very old file formats such as ECOFF/XCOFF.
+      // For ELF, we should ignore.
     } else if (Tok == "FILL") {
       Cmd->Filler = readFill();
     } else if (Tok == "SORT") {

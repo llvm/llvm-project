@@ -56,17 +56,28 @@ def : VectorExtractSubreg<v4i32, VLGVF>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [FeatureVector] in {
-  // Generate byte mask.
-  def VZERO : InherentVRIa<"vzero", 0xE744, 0>;
-  def VONE  : InherentVRIa<"vone", 0xE744, 0xffff>;
-  def VGBM  : UnaryVRIa<"vgbm", 0xE744, z_byte_mask, v128b, imm32zx16>;
+  let hasSideEffects = 0, isAsCheapAsAMove = 1, isMoveImm = 1,
+      isReMaterializable = 1 in {
 
-  // Generate mask.
-  def VGM  : BinaryVRIbGeneric<"vgm", 0xE746>;
-  def VGMB : BinaryVRIb<"vgmb", 0xE746, z_rotate_mask, v128b, 0>;
-  def VGMH : BinaryVRIb<"vgmh", 0xE746, z_rotate_mask, v128h, 1>;
-  def VGMF : BinaryVRIb<"vgmf", 0xE746, z_rotate_mask, v128f, 2>;
-  def VGMG : BinaryVRIb<"vgmg", 0xE746, z_rotate_mask, v128g, 3>;
+    // Generate byte mask.
+    def VZERO : InherentVRIa<"vzero", 0xE744, 0>;
+    def VONE  : InherentVRIa<"vone", 0xE744, 0xffff>;
+    def VGBM  : UnaryVRIa<"vgbm", 0xE744, z_byte_mask, v128b, imm32zx16>;
+
+    // Generate mask.
+    def VGM  : BinaryVRIbGeneric<"vgm", 0xE746>;
+    def VGMB : BinaryVRIb<"vgmb", 0xE746, z_rotate_mask, v128b, 0>;
+    def VGMH : BinaryVRIb<"vgmh", 0xE746, z_rotate_mask, v128h, 1>;
+    def VGMF : BinaryVRIb<"vgmf", 0xE746, z_rotate_mask, v128f, 2>;
+    def VGMG : BinaryVRIb<"vgmg", 0xE746, z_rotate_mask, v128g, 3>;
+
+    // Replicate immediate.
+    def VREPI  : UnaryVRIaGeneric<"vrepi", 0xE745, imm32sx16>;
+    def VREPIB : UnaryVRIa<"vrepib", 0xE745, z_replicate, v128b, imm32sx16, 0>;
+    def VREPIH : UnaryVRIa<"vrepih", 0xE745, z_replicate, v128h, imm32sx16, 1>;
+    def VREPIF : UnaryVRIa<"vrepif", 0xE745, z_replicate, v128f, imm32sx16, 2>;
+    def VREPIG : UnaryVRIa<"vrepig", 0xE745, z_replicate, v128g, imm32sx16, 3>;
+  }
 
   // Load element immediate.
   //
@@ -86,13 +97,6 @@ let Predicates = [FeatureVector] in {
     def VLEIG : TernaryVRIa<"vleig", 0xE742, z_vector_insert,
                             v128g, v128g, imm64sx16, imm32zx1>;
   }
-
-  // Replicate immediate.
-  def VREPI  : UnaryVRIaGeneric<"vrepi", 0xE745, imm32sx16>;
-  def VREPIB : UnaryVRIa<"vrepib", 0xE745, z_replicate, v128b, imm32sx16, 0>;
-  def VREPIH : UnaryVRIa<"vrepih", 0xE745, z_replicate, v128h, imm32sx16, 1>;
-  def VREPIF : UnaryVRIa<"vrepif", 0xE745, z_replicate, v128f, imm32sx16, 2>;
-  def VREPIG : UnaryVRIa<"vrepig", 0xE745, z_replicate, v128g, imm32sx16, 3>;
 }
 
 //===----------------------------------------------------------------------===//

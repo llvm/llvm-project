@@ -515,9 +515,9 @@ static Value *simplifyX86muldq(const IntrinsicInst &II) {
   Value *Arg1 = II.getArgOperand(1);
   Type *ResTy = II.getType();
 
-  // muldq/muludq(undef, undef) -> undef
+  // muldq/muludq(undef, undef) -> zero (matches generic mul behavior)
   if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
-    return UndefValue::get(ResTy);
+    return ConstantAggregateZero::get(ResTy);
 
   return nullptr;
 }

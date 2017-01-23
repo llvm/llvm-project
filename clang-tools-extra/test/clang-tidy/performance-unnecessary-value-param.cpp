@@ -331,3 +331,20 @@ template <typename T>
 struct NegativeFinalImpl : public NegativeDependentTypeInterface<T> {
   void Method(ExpensiveToCopyType E) final {}
 };
+
+struct PositiveConstructor {
+  PositiveConstructor(ExpensiveToCopyType E) : E(E) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:43: warning: the parameter 'E' is copied
+  // CHECK-FIXES: PositiveConstructor(const ExpensiveToCopyType& E) : E(E) {}
+
+  ExpensiveToCopyType E;
+};
+
+struct NegativeUsingConstructor : public PositiveConstructor {
+  using PositiveConstructor::PositiveConstructor;
+};
+
+void fun() {
+  ExpensiveToCopyType E;
+  NegativeUsingConstructor S(E);
+}
