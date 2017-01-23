@@ -523,11 +523,11 @@ void Platform::AddClangModuleCompilationOptions(
 
 FileSpec Platform::GetWorkingDirectory() {
   if (IsHost()) {
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)))
-      return FileSpec{cwd, true};
-    else
+    llvm::SmallString<64> cwd;
+    if (llvm::sys::fs::current_path(cwd))
       return FileSpec{};
+    else
+      return FileSpec(cwd, true);
   } else {
     if (!m_working_dir)
       m_working_dir = GetRemoteWorkingDirectory();

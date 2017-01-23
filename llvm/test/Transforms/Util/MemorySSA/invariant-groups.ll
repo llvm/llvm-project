@@ -98,6 +98,188 @@ define i32 @handleInvariantGroups(i32* %a) {
   ret i32 %add
 }
 
+define i32 @loop(i1 %a) {
+entry:
+  %0 = alloca i32, align 4
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i32 4
+  store i32 4, i32* %0, !invariant.group !0
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber(i32* %0)
+  br i1 %a, label %Loop.Body, label %Loop.End
+
+Loop.Body:
+; FIXME: MemoryUse(1)
+; CHECK: MemoryUse(2)
+; CHECK-NEXT: %1 = load i32
+  %1 = load i32, i32* %0, !invariant.group !0
+  br i1 %a, label %Loop.End, label %Loop.Body
+
+Loop.End:
+; FIXME: MemoryUse(1)
+; CHECK: MemoryUse(2)
+; CHECK-NEXT: %2 = load
+  %2 = load i32, i32* %0, align 4, !invariant.group !0
+  br i1 %a, label %Ret, label %Loop.Body
+
+Ret:
+  ret i32 %2
+}
+
+define i8 @loop2(i8* %p) {
+entry:
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i8
+  store i8 4, i8* %p, !invariant.group !0
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+  br i1 undef, label %Loop.Body, label %Loop.End
+
+Loop.Body:
+; 4 = MemoryPhi({entry,2},{Loop.Body,3},{Loop.End,5})
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: %0 = load i8
+  %0 = load i8, i8* %after, !invariant.group !0
+
+; FIXME: MemoryUse(1)
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: %1 = load i8
+  %1 = load i8, i8* %p, !invariant.group !0
+
+; CHECK: 3 = MemoryDef(4)
+  store i8 4, i8* %after, !invariant.group !0
+
+  br i1 undef, label %Loop.End, label %Loop.Body
+
+Loop.End:
+; 5 = MemoryPhi({entry,2},{Loop.Body,3})
+; CHECK: MemoryUse(5)
+; CHECK-NEXT: %2 = load
+  %2 = load i8, i8* %after, align 4, !invariant.group !0
+
+; FIXME: MemoryUse(1)
+; CHECK: MemoryUse(5)
+; CHECK-NEXT: %3 = load
+  %3 = load i8, i8* %p, align 4, !invariant.group !0
+  br i1 undef, label %Ret, label %Loop.Body
+
+Ret:
+  ret i8 %3
+}
+
+
+define i8 @loop3(i8* %p) {
+entry:
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i8
+  store i8 4, i8* %p, !invariant.group !0
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+  br i1 undef, label %Loop.Body, label %Loop.End
+
+Loop.Body:
+; CHECK: 6 = MemoryPhi({entry,2},{Loop.Body,3},{Loop.next,4},{Loop.End,5})
+; CHECK: MemoryUse(6)
+; CHECK-NEXT: %0 = load i8
+  %0 = load i8, i8* %after, !invariant.group !0
+
+; CHECK: 3 = MemoryDef(6)
+; CHECK-NEXT: call void @clobber8
+  call void @clobber8(i8* %after)
+
+; FIXME: MemoryUse(6)
+; CHECK: MemoryUse(3)
+; CHECK-NEXT: %1 = load i8
+  %1 = load i8, i8* %after, !invariant.group !0
+
+  br i1 undef, label %Loop.next, label %Loop.Body
+Loop.next:
+; CHECK: 4 = MemoryDef(3)
+; CHECK-NEXT: call void @clobber8
+  call void @clobber8(i8* %after)
+
+; FIXME: MemoryUse(6)
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: %2 = load i8
+  %2 = load i8, i8* %after, !invariant.group !0
+
+  br i1 undef, label %Loop.End, label %Loop.Body
+
+Loop.End:
+; CHECK: 7 = MemoryPhi({entry,2},{Loop.next,4})
+; CHECK: MemoryUse(7)
+; CHECK-NEXT: %3 = load
+  %3 = load i8, i8* %after, align 4, !invariant.group !0
+
+; CHECK: 5 = MemoryDef(7)
+; CHECK-NEXT: call void @clobber8
+  call void @clobber8(i8* %after)
+
+; FIXME: MemoryUse(7)
+; CHECK: MemoryUse(5)
+; CHECK-NEXT: %4 = load
+  %4 = load i8, i8* %after, align 4, !invariant.group !0
+  br i1 undef, label %Ret, label %Loop.Body
+
+Ret:
+  ret i8 %3
+}
+
+define i8 @loop4(i8* %p) {
+entry:
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i8
+  store i8 4, i8* %p, !invariant.group !0
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber8(i8* %p)
+  %after = call i8* @llvm.invariant.group.barrier(i8* %p)
+  br i1 undef, label %Loop.Pre, label %Loop.End
+
+Loop.Pre:
+; CHECK: MemoryUse(2)
+; CHECK-NEXT: %0 = load i8
+  %0 = load i8, i8* %after, !invariant.group !0
+  br label %Loop.Body
+Loop.Body:
+; CHECK: 4 = MemoryPhi({Loop.Pre,2},{Loop.Body,3},{Loop.End,5})
+; CHECK-NEXT: MemoryUse(4)
+; CHECK-NEXT: %1 = load i8
+  %1 = load i8, i8* %after, !invariant.group !0
+
+; FIXME: MemoryUse(2)
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: %2 = load i8
+  %2 = load i8, i8* %p, !invariant.group !0
+
+; CHECK: 3 = MemoryDef(4)
+  store i8 4, i8* %after, !invariant.group !0
+  br i1 undef, label %Loop.End, label %Loop.Body
+
+Loop.End:
+; CHECK: 5 = MemoryPhi({entry,2},{Loop.Body,3})
+; CHECK-NEXT: MemoryUse(5)
+; CHECK-NEXT: %3 = load
+  %3 = load i8, i8* %after, align 4, !invariant.group !0
+
+; FIXME: MemoryUse(2)
+; CHECK: MemoryUse(5)
+; CHECK-NEXT: %4 = load
+  %4 = load i8, i8* %p, align 4, !invariant.group !0
+  br i1 undef, label %Ret, label %Loop.Body
+
+Ret:
+  ret i8 %3
+}
+
 declare i8* @llvm.invariant.group.barrier(i8*)
+declare void @clobber(i32*)
+declare void @clobber8(i8*)
+
 
 !0 = !{!"group1"}

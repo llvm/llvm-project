@@ -366,16 +366,15 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override { return getNumSymbols() * sizeof(Elf_Sym); }
-  void addSymbol(SymbolBody *Body);
+  void addGlobal(SymbolBody *Body);
+  void addLocal(SymbolBody *Body);
   StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
-  unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
+  unsigned getNumSymbols() const { return Symbols.size() + 1; }
+  size_t getSymbolIndex(SymbolBody *Body);
 
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
   static const OutputSectionBase *getOutputSection(SymbolBody *Sym);
-
-  unsigned NumLocals = 0;
-  StringTableSection<ELFT> &StrTabSec;
 
 private:
   void writeLocalSymbols(uint8_t *&Buf);
@@ -383,6 +382,10 @@ private:
 
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
+
+  StringTableSection<ELFT> &StrTabSec;
+
+  unsigned NumLocals = 0;
 };
 
 // Outputs GNU Hash section. For detailed explanation see:
