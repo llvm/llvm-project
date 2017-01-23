@@ -8419,6 +8419,25 @@ static void PrintRoutinesCommand64(MachO::routines_command_64 r) {
   outs() << "    reserved6 " << r.reserved6 << "\n";
 }
 
+static void Print_x86_thread_state32_t(MachO::x86_thread_state32_t &cpu32) {
+  outs() << "\t    eax " << format("0x%08" PRIx32, cpu32.eax);
+  outs() << " ebx    " << format("0x%08" PRIx32, cpu32.ebx);
+  outs() << " ecx " << format("0x%08" PRIx32, cpu32.ecx);
+  outs() << " edx " << format("0x%08" PRIx32, cpu32.edx) << "\n";
+  outs() << "\t    edi " << format("0x%08" PRIx32, cpu32.edi);
+  outs() << " esi    " << format("0x%08" PRIx32, cpu32.esi);
+  outs() << " ebp " << format("0x%08" PRIx32, cpu32.ebp);
+  outs() << " esp " << format("0x%08" PRIx32, cpu32.esp) << "\n";
+  outs() << "\t    ss  " << format("0x%08" PRIx32, cpu32.ss);
+  outs() << " eflags " << format("0x%08" PRIx32, cpu32.eflags);
+  outs() << " eip " << format("0x%08" PRIx32, cpu32.eip);
+  outs() << " cs  " << format("0x%08" PRIx32, cpu32.cs) << "\n";
+  outs() << "\t    ds  " << format("0x%08" PRIx32, cpu32.ds);
+  outs() << " es     " << format("0x%08" PRIx32, cpu32.es);
+  outs() << " fs  " << format("0x%08" PRIx32, cpu32.fs);
+  outs() << " gs  " << format("0x%08" PRIx32, cpu32.gs) << "\n";
+}
+
 static void Print_x86_thread_state64_t(MachO::x86_thread_state64_t &cpu64) {
   outs() << "   rax  " << format("0x%016" PRIx64, cpu64.rax);
   outs() << " rbx " << format("0x%016" PRIx64, cpu64.rbx);
@@ -8656,7 +8675,85 @@ static void PrintThreadCommand(MachO::thread_command t, const char *Ptr,
   const char *begin = Ptr + sizeof(struct MachO::thread_command);
   const char *end = Ptr + t.cmdsize;
   uint32_t flavor, count, left;
-  if (cputype == MachO::CPU_TYPE_X86_64) {
+  if (cputype == MachO::CPU_TYPE_I386) {
+    while (begin < end) {
+      if (end - begin > (ptrdiff_t)sizeof(uint32_t)) {
+        memcpy((char *)&flavor, begin, sizeof(uint32_t));
+        begin += sizeof(uint32_t);
+      } else {
+        flavor = 0;
+        begin = end;
+      }
+      if (isLittleEndian != sys::IsLittleEndianHost)
+        sys::swapByteOrder(flavor);
+      if (end - begin > (ptrdiff_t)sizeof(uint32_t)) {
+        memcpy((char *)&count, begin, sizeof(uint32_t));
+        begin += sizeof(uint32_t);
+      } else {
+        count = 0;
+        begin = end;
+      }
+      if (isLittleEndian != sys::IsLittleEndianHost)
+        sys::swapByteOrder(count);
+      if (flavor == MachO::x86_THREAD_STATE32) {
+        outs() << "     flavor i386_THREAD_STATE\n";
+        if (count == MachO::x86_THREAD_STATE32_COUNT)
+          outs() << "      count i386_THREAD_STATE_COUNT\n";
+        else
+          outs() << "      count " << count
+                 << " (not x86_THREAD_STATE32_COUNT)\n";
+        MachO::x86_thread_state32_t cpu32;
+        left = end - begin;
+        if (left >= sizeof(MachO::x86_thread_state32_t)) {
+          memcpy(&cpu32, begin, sizeof(MachO::x86_thread_state32_t));
+          begin += sizeof(MachO::x86_thread_state32_t);
+        } else {
+          memset(&cpu32, '\0', sizeof(MachO::x86_thread_state32_t));
+          memcpy(&cpu32, begin, left);
+          begin += left;
+        }
+        if (isLittleEndian != sys::IsLittleEndianHost)
+          swapStruct(cpu32);
+        Print_x86_thread_state32_t(cpu32);
+      } else if (flavor == MachO::x86_THREAD_STATE) {
+        outs() << "     flavor x86_THREAD_STATE\n";
+        if (count == MachO::x86_THREAD_STATE_COUNT)
+          outs() << "      count x86_THREAD_STATE_COUNT\n";
+        else
+          outs() << "      count " << count
+                 << " (not x86_THREAD_STATE_COUNT)\n";
+        struct MachO::x86_thread_state_t ts;
+        left = end - begin;
+        if (left >= sizeof(MachO::x86_thread_state_t)) {
+          memcpy(&ts, begin, sizeof(MachO::x86_thread_state_t));
+          begin += sizeof(MachO::x86_thread_state_t);
+        } else {
+          memset(&ts, '\0', sizeof(MachO::x86_thread_state_t));
+          memcpy(&ts, begin, left);
+          begin += left;
+        }
+        if (isLittleEndian != sys::IsLittleEndianHost)
+          swapStruct(ts);
+        if (ts.tsh.flavor == MachO::x86_THREAD_STATE32) {
+          outs() << "\t    tsh.flavor x86_THREAD_STATE32 ";
+          if (ts.tsh.count == MachO::x86_THREAD_STATE32_COUNT)
+            outs() << "tsh.count x86_THREAD_STATE32_COUNT\n";
+          else
+            outs() << "tsh.count " << ts.tsh.count
+                   << " (not x86_THREAD_STATE32_COUNT\n";
+          Print_x86_thread_state32_t(ts.uts.ts32);
+        } else {
+          outs() << "\t    tsh.flavor " << ts.tsh.flavor << "  tsh.count "
+                 << ts.tsh.count << "\n";
+        }
+      } else {
+        outs() << "     flavor " << flavor << " (unknown)\n";
+        outs() << "      count " << count << "\n";
+        outs() << "      state (unknown)\n";
+        begin += count * sizeof(uint32_t);
+      }
+    }
+  } else if (cputype == MachO::CPU_TYPE_X86_64) {
     while (begin < end) {
       if (end - begin > (ptrdiff_t)sizeof(uint32_t)) {
         memcpy((char *)&flavor, begin, sizeof(uint32_t));

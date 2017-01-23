@@ -1530,6 +1530,25 @@ namespace llvm {
       CPU_SUBTYPE_MC98601       = CPU_SUBTYPE_POWERPC_601
     };
 
+    struct x86_thread_state32_t {
+      uint32_t eax;
+      uint32_t ebx;
+      uint32_t ecx;
+      uint32_t edx;
+      uint32_t edi;
+      uint32_t esi;
+      uint32_t ebp;
+      uint32_t esp;
+      uint32_t ss;
+      uint32_t eflags;
+      uint32_t eip;
+      uint32_t cs;
+      uint32_t ds;
+      uint32_t es;
+      uint32_t fs;
+      uint32_t gs;
+    };
+
     struct x86_thread_state64_t {
       uint64_t rax;
       uint64_t rbx;
@@ -1659,6 +1678,25 @@ namespace llvm {
       uint64_t faultvaddr;
     };
 
+    inline void swapStruct(x86_thread_state32_t &x) {
+      sys::swapByteOrder(x.eax);
+      sys::swapByteOrder(x.ebx);
+      sys::swapByteOrder(x.ecx);
+      sys::swapByteOrder(x.edx);
+      sys::swapByteOrder(x.edi);
+      sys::swapByteOrder(x.esi);
+      sys::swapByteOrder(x.ebp);
+      sys::swapByteOrder(x.esp);
+      sys::swapByteOrder(x.ss);
+      sys::swapByteOrder(x.eflags);
+      sys::swapByteOrder(x.eip);
+      sys::swapByteOrder(x.cs);
+      sys::swapByteOrder(x.ds);
+      sys::swapByteOrder(x.es);
+      sys::swapByteOrder(x.fs);
+      sys::swapByteOrder(x.gs);
+    }
+
     inline void swapStruct(x86_thread_state64_t &x) {
       sys::swapByteOrder(x.rax);
       sys::swapByteOrder(x.rbx);
@@ -1716,6 +1754,7 @@ namespace llvm {
       x86_state_hdr_t tsh;
       union {
         x86_thread_state64_t ts64;
+        x86_thread_state32_t ts32;
       } uts;
     };
 
@@ -1770,6 +1809,9 @@ namespace llvm {
       if (x.esh.flavor == x86_EXCEPTION_STATE64)
         swapStruct(x.ues.es64);
     }
+
+    const uint32_t x86_THREAD_STATE32_COUNT =
+      sizeof(x86_thread_state32_t) / sizeof(uint32_t);
 
     const uint32_t x86_THREAD_STATE64_COUNT =
       sizeof(x86_thread_state64_t) / sizeof(uint32_t);
