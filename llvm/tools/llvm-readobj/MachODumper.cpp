@@ -713,12 +713,30 @@ void MachODumper::printMachOVersionMin() {
     case MachO::LC_VERSION_MIN_WATCHOS:
       Cmd = "LC_VERSION_MIN_WATCHOS";
       break;
+    case MachO::LC_BUILD_VERSION:
+      Cmd = "LC_BUILD_VERSION";
+      break;
     default:
       continue;
     }
 
-    MachO::version_min_command VMC = Obj->getVersionMinLoadCommand(Load);
     DictScope Group(W, "MinVersion");
+    // Handle LC_BUILD_VERSION.
+    if (Load.C.cmd == MachO::LC_BUILD_VERSION) {
+      MachO::build_version_command BVC = Obj->getBuildVersionLoadCommand(Load);
+      W.printString("Cmd", Cmd);
+      W.printNumber("Size", BVC.cmdsize);
+      W.printString("Platform",
+                    MachOObjectFile::getBuildPlatform(BVC.platform));
+      W.printString("Version", MachOObjectFile::getVersionString(BVC.minos));
+      if (BVC.sdk)
+        W.printString("SDK", MachOObjectFile::getVersionString(BVC.sdk));
+      else
+        W.printString("SDK", StringRef("n/a"));
+      continue;
+    }
+
+    MachO::version_min_command VMC = Obj->getVersionMinLoadCommand(Load);
     W.printString("Cmd", Cmd);
     W.printNumber("Size", VMC.cmdsize);
     SmallString<32> Version;

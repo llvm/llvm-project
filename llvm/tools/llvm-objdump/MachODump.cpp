@@ -8182,6 +8182,38 @@ static void PrintNoteLoadCommand(MachO::note_command Nt) {
   outs() << "      size " << Nt.size << "\n";
 }
 
+static void PrintBuildToolVersion(MachO::build_tool_version bv) {
+  outs() << "      tool " << MachOObjectFile::getBuildTool(bv.tool) << "\n";
+  outs() << "   version " << MachOObjectFile::getVersionString(bv.version)
+         << "\n";
+}
+
+static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
+                                         MachO::build_version_command bd) {
+  outs() << "       cmd LC_BUILD_VERSION\n";
+  outs() << "   cmdsize " << bd.cmdsize;
+  if (bd.cmdsize !=
+      sizeof(struct MachO::build_version_command) +
+          bd.ntools * sizeof(struct MachO::build_tool_version))
+    outs() << " Incorrect size\n";
+  else
+    outs() << "\n";
+  outs() << "  platform " << MachOObjectFile::getBuildPlatform(bd.platform)
+         << "\n";
+  if (bd.sdk)
+    outs() << "       sdk " << MachOObjectFile::getVersionString(bd.sdk)
+           << "\n";
+  else
+    outs() << "       sdk n/a\n";
+  outs() << "     minos " << MachOObjectFile::getVersionString(bd.minos)
+         << "\n";
+  outs() << "    ntools " << bd.ntools << "\n";
+  for (unsigned i = 0; i < bd.ntools; ++i) {
+    MachO::build_tool_version bv = obj->getBuildToolVersion(i);
+    PrintBuildToolVersion(bv);
+  }
+}
+
 static void PrintSourceVersionCommand(MachO::source_version_command sd) {
   outs() << "      cmd LC_SOURCE_VERSION\n";
   outs() << "  cmdsize " << sd.cmdsize;
@@ -9030,6 +9062,10 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
     } else if (Command.C.cmd == MachO::LC_NOTE) {
       MachO::note_command Nt = Obj->getNoteLoadCommand(Command);
       PrintNoteLoadCommand(Nt);
+    } else if (Command.C.cmd == MachO::LC_BUILD_VERSION) {
+      MachO::build_version_command Bv =
+          Obj->getBuildVersionLoadCommand(Command);
+      PrintBuildVersionLoadCommand(Obj, Bv);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);

@@ -353,6 +353,10 @@ public:
   getVersionMinLoadCommand(const LoadCommandInfo &L) const;
   MachO::note_command
   getNoteLoadCommand(const LoadCommandInfo &L) const;
+  MachO::build_version_command
+  getBuildVersionLoadCommand(const LoadCommandInfo &L) const;
+  MachO::build_tool_version
+  getBuildToolVersion(unsigned index) const;
   MachO::dylib_command
   getDylibIDLoadCommand(const LoadCommandInfo &L) const;
   MachO::dyld_info_command
@@ -446,6 +450,46 @@ public:
     return VersionOrSDK & 0xff;
   }
 
+  static std::string getBuildPlatform(uint32_t platform) {
+    switch (platform) {
+    case MachO::PLATFORM_MACOS: return "macos";
+    case MachO::PLATFORM_IOS: return "ios";
+    case MachO::PLATFORM_TVOS: return "tvos";
+    case MachO::PLATFORM_WATCHOS: return "watchos";
+    case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
+    default:
+      std::string ret;
+      llvm::raw_string_ostream ss(ret);
+      ss << format_hex(platform, 8, true);
+      return ss.str();
+    }
+  }
+
+  static std::string getBuildTool(uint32_t tools) {
+    switch (tools) {
+    case MachO::TOOL_CLANG: return "clang";
+    case MachO::TOOL_SWIFT: return "swift";
+    case MachO::TOOL_LD: return "ld";
+    default:
+      std::string ret;
+      llvm::raw_string_ostream ss(ret);
+      ss << format_hex(tools, 8, true);
+      return ss.str();
+    }
+  }
+
+  static std::string getVersionString(uint32_t version) {
+    uint32_t major = (version >> 16) & 0xffff;
+    uint32_t minor = (version >> 8) & 0xff;
+    uint32_t update = version & 0xff;
+
+    SmallString<32> Version;
+    Version = utostr(major) + "." + utostr(minor);
+    if (update != 0)
+      Version += "." + utostr(update);
+    return Version.str();
+  }
+
 private:
 
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
@@ -464,6 +508,8 @@ private:
   LibraryList Libraries;
   LoadCommandList LoadCommands;
   typedef SmallVector<StringRef, 1> LibraryShortName;
+  using BuildToolList = SmallVector<const char*, 1>;
+  BuildToolList BuildTools;
   mutable LibraryShortName LibrariesShortNames;
   const char *SymtabLoadCmd;
   const char *DysymtabLoadCmd;
