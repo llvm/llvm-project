@@ -149,10 +149,6 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
   bool Changed =
       runImpl(F, &TLI, &LVI, HasProfileData, std::move(BFI), std::move(BPI));
 
-  // FIXME: We need to invalidate LVI to avoid PR28400. Is there a better
-  // solution?
-  AM.invalidate<LazyValueAnalysis>(F);
-
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

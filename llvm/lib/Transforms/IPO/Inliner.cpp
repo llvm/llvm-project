@@ -887,10 +887,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty()) {
-          // Clear the body and queue the function itself for deletion when we
-          // finish inlining and call graph updates.
+          // Clear all analyses and the body and queue the function itself for
+          // deletion when we finish inlining and call graph updates.
           // Note that after this point, it is an error to do anything other
           // than use the callee's address or delete it.
+          FAM.clear(Callee);
           Callee.dropAllReferences();
           assert(find(DeadFunctions, &Callee) == DeadFunctions.end() &&
                  "Cannot put cause a function to become dead twice!");

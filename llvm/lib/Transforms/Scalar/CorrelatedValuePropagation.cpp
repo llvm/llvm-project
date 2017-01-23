@@ -565,10 +565,6 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   LazyValueInfo *LVI = &AM.getResult<LazyValueAnalysis>(F);
   bool Changed = runImpl(F, LVI);
 
-  // FIXME: We need to invalidate LVI to avoid PR28400. Is there a better
-  // solution?
-  AM.invalidate<LazyValueAnalysis>(F);
-
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
