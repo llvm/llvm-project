@@ -41,7 +41,8 @@ public:
   static ConstString GetPluginNameStatic();
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Module *module, Target *target);
+                                           Module *module, Target *target,
+                                           const char *extra_options);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
@@ -111,7 +112,7 @@ public:
 
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, bool check_cplusplus,
-                             bool check_objc) override;
+                             bool check_objc, bool check_swift) override;
 
   bool IsPointerType(lldb::opaque_compiler_type_t type,
                      CompilerType *pointee_type = nullptr) override;
@@ -174,12 +175,16 @@ public:
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
+  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
@@ -193,6 +198,8 @@ public:
 
   uint64_t GetBitSize(lldb::opaque_compiler_type_t type,
                       ExecutionContextScope *exe_scope) override;
+
+  uint64_t GetByteStride(lldb::opaque_compiler_type_t type) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -258,8 +265,8 @@ public:
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                     ExecutionContextScope *exe_scope) override;
-
+                     ExecutionContextScope *exe_scope,
+                     bool is_base_class) override;
   void DumpTypeDescription(lldb::opaque_compiler_type_t type) override;
 
   void DumpTypeDescription(lldb::opaque_compiler_type_t type,

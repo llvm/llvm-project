@@ -9,9 +9,15 @@
 
 #include "lldb/Expression/ExpressionSourceCode.h"
 
+#include <algorithm>
+
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
+#include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/DebugMacros.h"
@@ -22,6 +28,9 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb_private;
 
@@ -59,6 +68,13 @@ extern "C"
     int printf(const char * __restrict, ...);
 }
 )";
+
+uint32_t ExpressionSourceCode::GetNumBodyLines() {
+  if (m_num_body_lines == 0)
+    // 2 = <one for zero indexing> + <one for the body start marker>
+    m_num_body_lines = 2 + std::count(m_body.begin(), m_body.end(), '\n');
+  return m_num_body_lines;
+}
 
 static const char *c_start_marker = "    /*LLDB_BODY_START*/\n    ";
 static const char *c_end_marker = ";\n    /*LLDB_BODY_END*/\n";
@@ -179,65 +195,131 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
   }
 }
 
-bool ExpressionSourceCode::GetText(std::string &text,
-                                   lldb::LanguageType wrapping_language,
-                                   bool static_method,
-                                   ExecutionContext &exe_ctx) const {
+bool ExpressionSourceCode::SaveExpressionTextToTempFile(
+    llvm::StringRef text, const EvaluateExpressionOptions &options,
+    std::string &expr_source_path) {
+  bool success = false;
+
+  const uint32_t expr_number = options.GetExpressionNumber();
+  FileSpec tmpdir_file_spec;
+
+  const bool playground = options.GetPlaygroundTransformEnabled();
+  const bool repl = options.GetREPLEnabled();
+
+  const char *file_prefix = NULL;
+  if (playground)
+    file_prefix = "playground";
+  else if (repl)
+    file_prefix = "repl";
+  else
+    file_prefix = "expr";
+
+  StreamString strm;
+  if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir,
+                            tmpdir_file_spec)) {
+    strm.Printf("%s%u", file_prefix, expr_number);
+    tmpdir_file_spec.GetFilename().SetString(strm.GetString());
+    expr_source_path = std::move(tmpdir_file_spec.GetPath());
+  } else {
+    strm.Printf("/tmp/%s%u", file_prefix, expr_number);
+    expr_source_path = std::move(strm.GetString());
+  }
+
+  switch (options.GetLanguage()) {
+  default:
+    expr_source_path.append(".cpp");
+    break;
+
+  case lldb::eLanguageTypeSwift:
+    expr_source_path.append(".swift");
+    break;
+  }
+
+  int temp_fd = mkstemp(&expr_source_path[0]);
+  if (temp_fd != -1) {
+    lldb_private::File file(temp_fd, true);
+    size_t bytes_written = text.size();
+    if (file.Write(text.data(), bytes_written).Success()) {
+      if (bytes_written == text.size()) {
+        // Make sure we have a newline in the file at the end
+        bytes_written = 1;
+        file.Write("\n", bytes_written);
+        if (bytes_written == 1)
+          success = true;
+      }
+    }
+    if (!success)
+      FileSystem::Unlink(FileSpec(expr_source_path, true));
+  }
+  if (!success)
+    expr_source_path.clear();
+  return success;
+}
+
+bool ExpressionSourceCode::GetText(
+    std::string &text, lldb::LanguageType wrapping_language,
+    uint32_t language_flags, const EvaluateExpressionOptions &options,
+    const Expression::SwiftGenericInfo &generic_info, ExecutionContext &exe_ctx) const {
+
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
 
   Target *target = exe_ctx.GetTargetPtr();
-  if (target) {
-    if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64) {
-      target_specific_defines = "typedef bool BOOL;\n";
-    }
-    if (target->GetArchitecture().GetMachine() == llvm::Triple::x86_64) {
-      if (lldb::PlatformSP platform_sp = target->GetPlatform()) {
-        static ConstString g_platform_ios_simulator("ios-simulator");
-        if (platform_sp->GetPluginName() == g_platform_ios_simulator) {
-          target_specific_defines = "typedef bool BOOL;\n";
-        }
+  if (ClangModulesDeclVendor::LanguageSupportsClangModules(wrapping_language)) {
+    if (target) {
+      if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64) {
+        target_specific_defines = "typedef bool BOOL;\n";
       }
-    }
-
-    if (ClangModulesDeclVendor *decl_vendor =
-            target->GetClangModulesDeclVendor()) {
-      ClangPersistentVariables *persistent_vars =
-          llvm::cast<ClangPersistentVariables>(
-              target->GetPersistentExpressionStateForLanguage(
-                  lldb::eLanguageTypeC));
-      const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
-          persistent_vars->GetHandLoadedClangModules();
-      ClangModulesDeclVendor::ModuleVector modules_for_macros;
-
-      for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
-        modules_for_macros.push_back(module);
-      }
-
-      if (target->GetEnableAutoImportClangModules()) {
-        if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-          if (Block *block = frame->GetFrameBlock()) {
-            SymbolContext sc;
-
-            block->CalculateSymbolContext(&sc);
-
-            if (sc.comp_unit) {
-              StreamString error_stream;
-
-              decl_vendor->AddModulesForCompileUnit(
-                  *sc.comp_unit, modules_for_macros, error_stream);
-            }
+      if (target->GetArchitecture().GetMachine() == llvm::Triple::x86_64) {
+        if (lldb::PlatformSP platform_sp = target->GetPlatform()) {
+          static ConstString g_platform_ios_simulator("ios-simulator");
+          if (platform_sp->GetPluginName() == g_platform_ios_simulator) {
+            target_specific_defines = "typedef bool BOOL;\n";
           }
         }
       }
 
-      decl_vendor->ForEachMacro(
-          modules_for_macros,
-          [&module_macros](const std::string &expansion) -> bool {
-            module_macros.append(expansion);
-            module_macros.append("\n");
-            return false;
-          });
+      ClangPersistentVariables *persistent_vars =
+          llvm::dyn_cast_or_null<ClangPersistentVariables>(
+              target->GetPersistentExpressionStateForLanguage(
+                  lldb::eLanguageTypeC));
+      ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
+
+      if (persistent_vars && decl_vendor) {
+        const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
+            persistent_vars->GetHandLoadedClangModules();
+
+        ClangModulesDeclVendor::ModuleVector modules_for_macros;
+
+        for (ClangModulesDeclVendor::ModuleID module : hand_imported_modules) {
+          modules_for_macros.push_back(module);
+        }
+
+        if (target->GetEnableAutoImportClangModules()) {
+          if (StackFrame *frame = exe_ctx.GetFramePtr()) {
+            if (Block *block = frame->GetFrameBlock()) {
+              SymbolContext sc;
+
+              block->CalculateSymbolContext(&sc);
+
+              if (sc.comp_unit) {
+                StreamString error_stream;
+
+                decl_vendor->AddModulesForCompileUnit(
+                    *sc.comp_unit, modules_for_macros, error_stream);
+              }
+            }
+          }
+        }
+
+        decl_vendor->ForEachMacro(
+            modules_for_macros,
+            [&module_macros](const std::string &expansion) -> bool {
+              module_macros.append(expansion);
+              module_macros.append("\n");
+              return false;
+            });
+      }
     }
   }
 
@@ -266,20 +348,38 @@ bool ExpressionSourceCode::GetText(std::string &text,
   }
 
   if (m_wrap) {
+    const char *body = m_body.c_str();
+    const char *pound_file = options.GetPoundLineFilePath();
+    const uint32_t pound_line = options.GetPoundLineLine();
+    StreamString pound_body;
+    if (pound_file && pound_line) {
+      if (wrapping_language == lldb::eLanguageTypeSwift) {
+        pound_body.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s",
+                          pound_file, pound_line, body);
+      } else {
+        pound_body.Printf("#line %u \"%s\"\n%s", pound_line, pound_file, body);
+      }
+      body = pound_body.GetString().data();
+    }
+
     switch (wrapping_language) {
     default:
       return false;
     case lldb::eLanguageTypeC:
     case lldb::eLanguageTypeC_plus_plus:
     case lldb::eLanguageTypeObjC:
+    case lldb::eLanguageTypeSwift:
       break;
     }
 
     StreamString wrap_stream;
 
-    wrap_stream.Printf("%s\n%s\n%s\n%s\n%s\n", module_macros.c_str(),
-                       debug_macros_stream.GetData(), g_expression_prefix,
-                       target_specific_defines, m_prefix.c_str());
+    if (ClangModulesDeclVendor::LanguageSupportsClangModules(
+            wrapping_language)) {
+      wrap_stream.Printf("%s\n%s\n%s\n%s\n%s\n", module_macros.c_str(),
+                         debug_macros_stream.GetData(), g_expression_prefix,
+                         target_specific_defines, m_prefix.c_str());
+    }
 
     // First construct a tagged form of the user expression so we can find it
     // later:
@@ -320,7 +420,7 @@ bool ExpressionSourceCode::GetText(std::string &text,
                          tagged_body.c_str());
       break;
     case lldb::eLanguageTypeObjC:
-      if (static_method) {
+      if (language_flags & ClangUserExpression::eLanguageFlagInStaticMethod) {
         wrap_stream.Printf(
             "@interface $__lldb_objc_class ($__lldb_category)        \n"
             "+(void)%s:(void *)$__lldb_arg;                          \n"
@@ -346,6 +446,10 @@ bool ExpressionSourceCode::GetText(std::string &text,
             m_name.c_str(), m_name.c_str(), tagged_body.c_str());
       }
       break;
+    case lldb::eLanguageTypeSwift: {
+      SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
+                                          language_flags, options, generic_info);
+    }
     }
 
     text = wrap_stream.GetString();
@@ -365,6 +469,10 @@ bool ExpressionSourceCode::GetOriginalBodyBounds(
   switch (wrapping_language) {
   default:
     return false;
+  case lldb::eLanguageTypeSwift:
+    start_marker = SwiftASTManipulator::GetUserCodeStartMarker();
+    end_marker = SwiftASTManipulator::GetUserCodeEndMarker();
+    break;
   case lldb::eLanguageTypeC:
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeObjC:

@@ -28,6 +28,7 @@
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/OCamlASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
@@ -110,6 +111,11 @@
 #if defined(_WIN32)
 #include "Plugins/Process/Windows/Common/ProcessWindows.h"
 #include "lldb/Host/windows/windows.h"
+#endif
+
+#if defined(__APPLE__) || defined(__linux__)
+#include "Plugins/Language/Swift/SwiftLanguage.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #endif
 
 #include "llvm/Support/TargetSelect.h"
@@ -244,6 +250,20 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
+static void SwiftInitialize() {
+#if defined(__APPLE__) || defined(__linux__)
+  SwiftLanguage::Initialize();
+  SwiftLanguageRuntime::Initialize();
+#endif
+}
+
+static void SwiftTerminate() {
+#if defined(__APPLE__) || defined(__linux__)
+  SwiftLanguage::Terminate();
+  SwiftLanguageRuntime::Terminate();
+#endif
+}
+
 void SystemInitializerFull::Initialize() {
   SystemInitializerCommon::Initialize();
   ScriptInterpreterNone::Initialize();
@@ -286,6 +306,7 @@ void SystemInitializerFull::Initialize() {
   GoASTContext::Initialize();
   JavaASTContext::Initialize();
   OCamlASTContext::Initialize();
+  SwiftASTContext::Initialize();
 
   ABIMacOSX_i386::Initialize();
   ABIMacOSX_arm::Initialize();
@@ -331,6 +352,7 @@ void SystemInitializerFull::Initialize() {
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
   OCamlLanguage::Initialize();
+  ::SwiftInitialize();
 
 #if defined(_WIN32)
   ProcessWindows::Initialize();
@@ -409,6 +431,7 @@ void SystemInitializerFull::Terminate() {
   GoASTContext::Terminate();
   JavaASTContext::Terminate();
   OCamlASTContext::Terminate();
+  SwiftASTContext::Terminate();
 
   ABIMacOSX_i386::Terminate();
   ABIMacOSX_arm::Terminate();
@@ -445,6 +468,8 @@ void SystemInitializerFull::Terminate() {
   SystemRuntimeMacOSX::Terminate();
   RenderScriptRuntime::Terminate();
   JavaLanguageRuntime::Terminate();
+
+  ::SwiftTerminate();
 
   CPlusPlusLanguage::Terminate();
   GoLanguage::Terminate();

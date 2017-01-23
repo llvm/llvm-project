@@ -11,7 +11,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegularExpression.h"
@@ -20,6 +22,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
@@ -69,7 +72,9 @@ ThreadPlanStepInRange::ThreadPlanStepInRange(
                     step_out_avoids_code_without_debug_info);
 }
 
-ThreadPlanStepInRange::~ThreadPlanStepInRange() = default;
+ThreadPlanStepInRange::~ThreadPlanStepInRange() {
+  ClearStepInDeepBreakpoints();
+}
 
 void ThreadPlanStepInRange::SetupAvoidNoDebug(
     LazyBool step_in_avoids_code_without_debug_info,
@@ -297,6 +302,13 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
   }
 }
 
+bool ThreadPlanStepInRange::MischiefManaged() {
+  bool return_value = ThreadPlanStepRange::MischiefManaged();
+  if (return_value)
+    ClearStepInDeepBreakpoints();
+  return return_value;
+}
+
 void ThreadPlanStepInRange::SetAvoidRegexp(const char *name) {
   auto name_ref = llvm::StringRef::withNullAsEmpty(name);
   if (!m_avoid_regexp_ap)
@@ -310,25 +322,91 @@ void ThreadPlanStepInRange::SetDefaultFlagValue(uint32_t new_value) {
   ThreadPlanStepInRange::s_default_flag_values = new_value;
 }
 
+bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
+    lldb::StopInfoSP stop_info_sp) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  size_t num_step_in_deep_bps = m_step_in_deep_bps.size();
+  if (num_step_in_deep_bps == 0)
+    return false;
+
+  break_id_t bp_site_id = stop_info_sp->GetValue();
+  BreakpointSiteSP bp_site_sp =
+      m_thread.GetProcess()->GetBreakpointSiteList().FindByID(bp_site_id);
+  if (!bp_site_sp)
+    return false;
+
+  bool explains_stop = false;
+  bool hit_step_in_deep_bp = false;
+  for (size_t i = 0; i < num_step_in_deep_bps && hit_step_in_deep_bp == false;
+       i++) {
+    if (bp_site_sp->IsBreakpointAtThisSite(m_step_in_deep_bps[i])) {
+      // We've hit a step in deep breakpoint, see if it is the only breakpoint
+      // at this site:
+      explains_stop = true;
+      hit_step_in_deep_bp = true;
+      size_t num_owners = bp_site_sp->GetNumberOfOwners();
+
+      // If all the owners are internal, then we are probably just stepping over
+      // this range from multiple threads,
+      // or multiple frames, so we want to continue.  If one is not internal,
+      // then we should not explain the stop,
+      // and let the user breakpoint handle the stop.
+      // Of course, if there's only one owner, it's us so we don't need to
+      // check.
+
+      if (num_owners == 1)
+        continue;
+
+      for (size_t i = 0; i < num_owners; i++) {
+        BreakpointLocationSP owner_loc_sp(bp_site_sp->GetOwnerAtIndex(i));
+        Breakpoint &owner_bp(owner_loc_sp->GetBreakpoint());
+        if (owner_loc_sp->ValidForThisThread(&GetThread()) &&
+            !owner_bp.IsInternal()) {
+          explains_stop = false;
+          break;
+        }
+      }
+      if (log)
+        log->Printf("ThreadPlanStepRange::StepInDeepBreakpointExplainsStop - "
+                    "Hit step in deep breakpoint %d which has %zu owners - "
+                    "explains stop: %u.",
+                    m_step_in_deep_bps[i], num_owners, explains_stop);
+    }
+  }
+
+  // For now, if we trigger one of our "step in deep" breakpoints we delete them
+  // all:
+  if (hit_step_in_deep_bp) {
+    ClearStepInDeepBreakpoints();
+  }
+
+  return explains_stop;
+}
+
+void ThreadPlanStepInRange::ClearStepInDeepBreakpoints() {
+  size_t num_step_in_deep_bps = m_step_in_deep_bps.size();
+  for (size_t i = 0; i < num_step_in_deep_bps; i++) {
+    GetTarget().RemoveBreakpointByID(m_step_in_deep_bps[i]);
+  }
+  m_step_in_deep_bps.clear();
+}
+
 bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
   StackFrame *frame = GetThread().GetStackFrameAtIndex(0).get();
 
   // Check the library list first, as that's cheapest:
-  bool libraries_say_avoid = false;
-
   FileSpecList libraries_to_avoid(GetThread().GetLibrariesToAvoid());
   size_t num_libraries = libraries_to_avoid.GetSize();
-  if (num_libraries > 0) {
-    SymbolContext sc(frame->GetSymbolContext(eSymbolContextModule));
-    FileSpec frame_library(sc.module_sp->GetFileSpec());
+  bool libraries_say_avoid = false;
+  SymbolContext sc(frame->GetSymbolContext(eSymbolContextModule));
+  FileSpec frame_library(sc.module_sp->GetFileSpec());
 
-    if (frame_library) {
-      for (size_t i = 0; i < num_libraries; i++) {
-        const FileSpec &file_spec(libraries_to_avoid.GetFileSpecAtIndex(i));
-        if (FileSpec::Equal(file_spec, frame_library, false)) {
-          libraries_say_avoid = true;
-          break;
-        }
+  if (frame_library) {
+    for (size_t i = 0; i < num_libraries; i++) {
+      const FileSpec &file_spec(libraries_to_avoid.GetFileSpecAtIndex(i));
+      if (FileSpec::Equal(file_spec, frame_library, false)) {
+        libraries_say_avoid = true;
+        break;
       }
     }
   }
@@ -378,56 +456,137 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
     ThreadPlan *current_plan, Flags &flags, FrameComparison operation,
     void *baton) {
   bool should_stop_here = true;
-  StackFrame *frame = current_plan->GetThread().GetStackFrameAtIndex(0).get();
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   // First see if the ThreadPlanShouldStopHere default implementation thinks we
   // should get out of here:
   should_stop_here = ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
       current_plan, flags, operation, baton);
   if (!should_stop_here)
-    return should_stop_here;
+    return false;
 
   if (should_stop_here && current_plan->GetKind() == eKindStepInRange &&
       operation == eFrameCompareYounger) {
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);
-    if (step_in_range_plan->m_step_into_target) {
+    should_stop_here =
+        step_in_range_plan->DefaultShouldStopHereImpl(flags, !should_stop_here);
+
+    //        if (should_stop_here)
+    //        {
+    //            ThreadPlanStepInRange *step_in_range_plan =
+    //            static_cast<ThreadPlanStepInRange *> (current_plan);
+    //            // Don't log the should_step_out here, it's easier to do it in
+    //            FrameMatchesAvoidCriteria.
+    //            should_stop_here =
+    //            !step_in_range_plan->FrameMatchesAvoidCriteria ();
+    //        }
+  }
+
+  return should_stop_here;
+}
+
+bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
+                                                      bool should_step_out) {
+  StackFrame *frame = GetThread().GetStackFrameAtIndex(0).get();
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+
+  if (m_step_into_target) {
+    SymbolContext sc = frame->GetSymbolContext(
+        eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+    if (sc.symbol != NULL) {
       SymbolContext sc = frame->GetSymbolContext(
           eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
       if (sc.symbol != nullptr) {
         // First try an exact match, since that's cheap with ConstStrings.  Then
         // do a strstr compare.
-        if (step_in_range_plan->m_step_into_target == sc.GetFunctionName()) {
-          should_stop_here = true;
+        if (m_step_into_target == sc.GetFunctionName()) {
+          should_step_out = false;
         } else {
-          const char *target_name =
-              step_in_range_plan->m_step_into_target.AsCString();
+          const char *target_name = m_step_into_target.AsCString();
           const char *function_name = sc.GetFunctionName().AsCString();
 
           if (function_name == nullptr)
-            should_stop_here = false;
+            should_step_out = true;
           else if (strstr(function_name, target_name) == nullptr)
-            should_stop_here = false;
+            should_step_out = true;
         }
-        if (log && !should_stop_here)
+        if (log && should_step_out)
           log->Printf("Stepping out of frame %s which did not match step into "
                       "target %s.",
                       sc.GetFunctionName().AsCString(),
-                      step_in_range_plan->m_step_into_target.AsCString());
-      }
-    }
+                      m_step_into_target.AsCString());
+      } else {
+        const char *target_name = m_step_into_target.AsCString();
+        const char *function_name = sc.GetFunctionName().AsCString();
 
-    if (should_stop_here) {
-      ThreadPlanStepInRange *step_in_range_plan =
-          static_cast<ThreadPlanStepInRange *>(current_plan);
-      // Don't log the should_step_out here, it's easier to do it in
-      // FrameMatchesAvoidCriteria.
-      should_stop_here = !step_in_range_plan->FrameMatchesAvoidCriteria();
+        if (function_name == NULL)
+          should_step_out = true;
+        else if (strstr(function_name, target_name) == NULL)
+          should_step_out = true;
+      }
+      if (log && should_step_out)
+        log->Printf(
+            "Stepping out of frame %s which did not match step into target %s.",
+            sc.GetFunctionName().AsCString(), m_step_into_target.AsCString());
     }
   }
 
-  return should_stop_here;
+  if (!should_step_out) {
+    // Don't log the should_step_out here, it's easier to do it in
+    // FrameMatchesAvoidRegexp.
+    should_step_out = FrameMatchesAvoidCriteria();
+  }
+
+  if (should_step_out) {
+    // We are going to step out, but first let's examine the function we are
+    // stepping past to see if it tells us
+    // about any interesting places we could stop while running it.  For
+    // instance, if we can tell from the signature
+    // that we're being passed a function pointer that points to user code,
+    // we'll prospectively stop there.
+    // We only know how to do this for Swift at present.
+    // FIXME: We could probably do this for C++ mangled names as well, if we
+    // could come up with some
+    // good heuristic to identify function pointers in the mangled function
+    // arguments.
+
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextSymbol);
+    if (sc.symbol) {
+      Mangled mangled_name = sc.symbol->GetMangled();
+      if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
+        ProcessSP process_sp(GetThread().GetProcess());
+        SwiftLanguageRuntime *swift_runtime =
+            process_sp->GetSwiftLanguageRuntime();
+        if (swift_runtime) {
+          std::vector<Address> interesting_addresses;
+          swift_runtime->FindFunctionPointersInCall(*frame,
+                                                    interesting_addresses);
+          size_t num_addresses = interesting_addresses.size();
+          if (num_addresses) {
+            // Run through the addresses we found, make sure they have debug
+            // info, and if so set breakpoints
+            // on all these addresses.
+            for (size_t i = 0; i < num_addresses; i++) {
+              LineEntry line_entry;
+              if (interesting_addresses[i].CalculateSymbolContextLineEntry(
+                      line_entry)) {
+                // It has debug information, use it:
+                const bool internal = true;
+                const bool hardware = false;
+                BreakpointSP bkpt_sp = GetTarget().CreateBreakpoint(
+                    interesting_addresses[i], internal, hardware);
+                bkpt_sp->SetThreadID(GetThread().GetID());
+                m_step_in_deep_bps.push_back(bkpt_sp->GetID());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  // We're returning an answer to "Should Stop Here" which is the opposite of
+  // "should_step_out".
+  return !should_step_out;
 }
 
 bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
@@ -462,7 +621,13 @@ bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
       StopReason reason = stop_info_sp->GetStopReason();
 
       if (reason == eStopReasonBreakpoint) {
-        if (NextRangeBreakpointExplainsStop(stop_info_sp)) {
+        bool hit_next_range_bp = NextRangeBreakpointExplainsStop(stop_info_sp);
+        bool hit_step_in_deep_bp =
+            StepInDeepBreakpointExplainsStop(stop_info_sp);
+        if (hit_next_range_bp || hit_step_in_deep_bp) {
+          if (hit_step_in_deep_bp)
+            SetPlanComplete();
+
           return_value = true;
         }
       } else if (IsUsuallyUnexplainedStopReason(reason)) {

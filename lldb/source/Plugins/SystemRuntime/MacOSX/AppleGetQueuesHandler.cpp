@@ -150,7 +150,7 @@ lldb::addr_t
 AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
                                               ValueList &get_queues_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
 
   Address impl_code_address;
   DiagnosticManager diagnostics;

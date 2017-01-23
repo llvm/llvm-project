@@ -19,6 +19,8 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolVendor.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -137,15 +139,35 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
   // and treat each set separately.
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
+  const bool force_check_inlines =
+      context.module_sp->GetSymbolVendor()->ForceInlineSourceFileCheck();
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
       if (filter.CompUnitPasses(*cu_sp))
-        cu_sp->ResolveSymbolContext(m_file_spec, m_line_number, m_inlines,
-                                    m_exact_match, eSymbolContextEverything,
-                                    sc_list);
+        cu_sp->ResolveSymbolContext(
+            m_file_spec, m_line_number, m_inlines | force_check_inlines,
+            m_exact_match, eSymbolContextEverything, sc_list);
     }
   }
+
+  SymbolContext sc;
+  size_t i = 0;
+  while (i < sc_list.GetSize()) {
+    if (sc_list.GetContextAtIndex(i, sc)) {
+      if (sc.module_sp) {
+        SymbolVendor *sym_vendor = sc.module_sp->GetSymbolVendor();
+        if (sym_vendor) {
+          if (sym_vendor->SymbolContextShouldBeExcluded(sc, m_line_number)) {
+            sc_list.RemoveContextAtIndex(i);
+            continue;
+          }
+        }
+      }
+    }
+    ++i;
+  }
+
   StreamString s;
   s.Printf("for %s:%d ", m_file_spec.GetFilename().AsCString("<Unknown>"),
            m_line_number);

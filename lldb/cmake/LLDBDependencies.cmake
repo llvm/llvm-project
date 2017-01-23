@@ -27,6 +27,7 @@ set( LLDB_USED_LIBS
   lldbPluginJavaLanguage
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
+  lldbPluginSwiftLanguage
   lldbPluginOCamlLanguage
 
   lldbPluginObjectFileELF
@@ -85,6 +86,7 @@ set( LLDB_USED_LIBS
   lldbPluginJITLoaderGDB
   lldbPluginExpressionParserClang
   lldbPluginExpressionParserGo
+  lldbPluginExpressionParserSwift
   )
 
 # Windows-only libraries
@@ -130,21 +132,54 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
     )
 endif()
 
-set( CLANG_USED_LIBS
-  clangAnalysis
-  clangAST
-  clangBasic
-  clangCodeGen
-  clangDriver
-  clangEdit
-  clangFrontend
-  clangLex
-  clangParse
-  clangRewrite
-  clangRewriteFrontend
-  clangSema
-  clangSerialization
-  )
+macro(add_libs_from_path build_dir lib_prefix lib_list)
+  file(TO_CMAKE_PATH ${build_dir} build_dir_cmake)
+  
+  file(GLOB built_libs
+    RELATIVE "${build_dir_cmake}/lib${LLVM_LIBDIR_SUFFIX}"
+    ${build_dir_cmake}/lib/lib${lib_prefix}*.a)
+
+  set(${lib_list})
+  
+  foreach(built_lib ${built_libs})
+    string(REGEX REPLACE ".*lib(${lib_prefix}[^.]+)\\..*" "\\1" built_lib_no_extension ${built_lib})
+    list(APPEND ${lib_list} ${built_lib_no_extension})
+  endforeach()
+endmacro(add_libs_from_path)
+
+if (LLDB_BUILT_STANDALONE)
+  add_libs_from_path(${LLDB_PATH_TO_SWIFT_BUILD} "swift" SWIFT_ALL_LIBS)
+  add_libs_from_path(${LLDB_PATH_TO_CLANG_BUILD} "clang" CLANG_ALL_LIBS)
+  add_libs_from_path(${LLDB_PATH_TO_LLVM_BUILD} "LLVM" LLVM_ALL_LIBS)
+else()
+  set(CLANG_ALL_LIBS
+    clangAnalysis
+    clangAST
+    clangBasic
+    clangCodeGen
+    clangDriver
+    clangEdit
+    clangFrontend
+    clangLex
+    clangParse
+    clangRewrite
+    clangRewriteFrontend
+    clangSema
+    clangSerialization)
+  set(SWIFT_ALL_LIBS
+    swiftBasic
+    swiftAST
+    swiftIDE
+    swiftFrontend
+    swiftSerialization
+    swiftClangImporter
+    swiftParse
+    swiftSIL
+    swiftSILOptimizer
+    swiftASTSectionImporter
+    swiftRemoteAST
+    )
+endif()
 
 set(LLDB_SYSTEM_LIBS)
 if (NOT LLDB_DISABLE_LIBEDIT)
@@ -178,6 +213,18 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
+# we should do this with a configuration script, but there is none for UUID
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+list(APPEND LLDB_SYSTEM_LIBS uuid)
+endif()
+
+if(LLDB_BUILT_STANDALONE)
+  # this needs to be linked statially
+  list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
+else()
+  list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
+endif()
+
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   interpreter
@@ -185,7 +232,6 @@ set(LLVM_LINK_COMPONENTS
   bitreader
   bitwriter
   codegen
-  demangle
   ipo
   selectiondag
   bitreader

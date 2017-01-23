@@ -208,6 +208,16 @@ lldb::ExpressionResults UserExpression::Evaluate(
       language = frame->GetLanguage();
   }
 
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the langage for the frame.
+  if (language == lldb::eLanguageTypeUnknown) {
+    if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
+      language = target->GetLanguage();
+    else if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GetLanguage();
+  }
+
   lldb::UserExpressionSP user_expression_sp(
       target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, error));
@@ -234,9 +244,9 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   DiagnosticManager diagnostic_manager;
 
-  bool parse_success =
-      user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy,
-                                keep_expression_in_memory, generate_debug_info);
+  bool parse_success = user_expression_sp->Parse(
+      diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
+      generate_debug_info, 0);
 
   // Calculate the fixed expression always, since we need it for errors.
   std::string tmp_fixed_expression;
@@ -259,7 +269,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
       DiagnosticManager fixed_diagnostic_manager;
       parse_success = fixed_expression_sp->Parse(
           fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info);
+          keep_expression_in_memory, generate_debug_info, 0);
       if (parse_success) {
         diagnostic_manager.Clear();
         user_expression_sp = fixed_expression_sp;

@@ -19,6 +19,9 @@
 
 namespace lldb_private {
 namespace formatters {
+bool NSStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &options);
+
 bool NSIndexSetSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
 

@@ -21,6 +21,7 @@
 #include "UniqueDWARFASTType.h"
 
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"

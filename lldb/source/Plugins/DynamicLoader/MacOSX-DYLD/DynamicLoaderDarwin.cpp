@@ -542,6 +542,10 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
           dyld_idx = i;
         }
       }
+      else {
+        // catch-all for any other environment -- trust that dyld is actually dyld
+        dyld_idx = i;
+      }
     } else if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }

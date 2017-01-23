@@ -1,7 +1,7 @@
 # FIXME: if a non-standard version of python is requested, the cmake macro
 # below will need Python_ADDITIONAL_VERSIONS set in order to find it.
 include(FindPythonInterp)
-SET(PYTHON_DIRECTORY python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages)
+SET(PYTHON_DIRECTORY python2.7/site-packages)
 
 # Build the readline python module
 include_directories(${PYTHON_INCLUDE_DIR})

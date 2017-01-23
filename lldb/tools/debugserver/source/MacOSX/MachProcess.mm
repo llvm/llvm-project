@@ -677,9 +677,6 @@ bool MachProcess::GetMachOInformationFromMemory(
   return true;
 }
 
-// Given completely filled in array of binary_image_information structures,
-// create a JSONGenerator object
-// with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos) {
 

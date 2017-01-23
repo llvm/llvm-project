@@ -1,0 +1,48 @@
+#!/bin/bash
+# This script makes a copy of the source directory with certain Apple-internal
+# portions of the code removed.
+
+origsrc=$(pwd)
+SRCROOT=/tmp/$(basename $origsrc)
+echo Exporting to $SRCROOT
+rm -rf $SRCROOT
+mkdir -p $SRCROOT
+
+tar cf - --exclude=.svn --exclude=.git . | \
+  (cd $SRCROOT; tar xf - )
+cd $SRCROOT
+
+# Filter out !_OPEN_SOURCE_ source -- don't modify anything in the llvm/ subdir
+find . -path ./llvm -prune -o -type f -print | while read file
+do
+    rm -f "${file}.temp"
+    case "$file" in
+    *.h | *.c | *.cpp)
+        unifdef -D__OPEN_SOURCE__ -D_OPEN_SOURCE_ "$file" > "${file}.temp"
+        if [ $? -ne 0 ]
+        then
+            echo Re-doing strip of $file via manual method.
+            perl -ne 'if  (/!__OPEN_SOURCE__/) { $skip = 0; } elsif (/__OPEN_SOURCE__/) { $skip = 1; } elsif (! $skip) { print; }' < "$file" > "${file}.temp"
+        fi
+        ;;
+    *)
+        perl -ne 'if  (/!__OPEN_SOURCE__/) { $skip = 0; } elsif (/__OPEN_SOURCE__/) { $skip = 1; } elsif (! $skip) { print; }' < "$file" > "${file}.temp"
+        ;;
+    esac
+    if cmp "$file" "${file}.temp" >/dev/null
+    then
+        :
+    else
+        cat "${file}.temp" > "$file"
+    fi
+    rm "${file}".temp
+done
+
+echo Running llvm sanitize script
+
+cd $SRCROOT/llvm && MODIFY_LLVM_IN_PLACE=1 ./EXPORT.APPLE
+
+cd $SRCROOT
+find . -type f -name '*.APPLE' -exec rm -rf {} \;
+
+exit 0

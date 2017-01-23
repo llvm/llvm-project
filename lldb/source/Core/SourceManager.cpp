@@ -270,6 +270,57 @@ bool SourceManager::SetDefaultFileAndLine(const FileSpec &file_spec,
   }
 }
 
+// this is a vector of pairs that each represent a legitimate interesting
+// entry point to the user program. the bool argument means whether
+// we want to skip the prologue code or not when trying to resolve
+// this name to a line entry
+// FindEntryPoint() will attempt to resolve these to a valid line entry in the
+// order
+// in which they are provided. This could probably be extended with a notion
+// of "main language", i.e. the language in which the main executable module is
+// coded
+static const std::vector<std::pair<ConstString, bool>> &GetEntryPointNames() {
+  static std::vector<std::pair<ConstString, bool>> g_entry_point_names;
+  if (g_entry_point_names.size() == 0) {
+    g_entry_point_names.push_back({ConstString("main"), false});
+    g_entry_point_names.push_back({ConstString("top_level_code"), true});
+  }
+  return g_entry_point_names;
+}
+
+static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
+  if (!exe_module)
+    return LineEntry();
+  const std::vector<std::pair<ConstString, bool>> &entry_points(
+      GetEntryPointNames());
+  for (std::pair<ConstString, bool> entry_point : entry_points) {
+    const ConstString entry_point_name = entry_point.first;
+    const bool skip_prologue = entry_point.second;
+    SymbolContextList sc_list;
+    bool symbols_okay = false; // Force it to be a debug symbol.
+    bool inlines_okay = true;
+    bool append = false;
+    size_t num_matches = exe_module->FindFunctions(
+        entry_point_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
+        symbols_okay, append, sc_list);
+    for (size_t idx = 0; idx < num_matches; idx++) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(idx, sc);
+      if (sc.function) {
+        lldb_private::LineEntry line_entry;
+        Address base_address = sc.function->GetAddressRange().GetBaseAddress();
+        if (skip_prologue)
+          base_address.SetOffset(sc.function->GetPrologueByteSize() +
+                                 base_address.GetOffset());
+        if (base_address.CalculateSymbolContextLineEntry(line_entry)) {
+          return line_entry;
+        }
+      }
+    }
+  }
+  return LineEntry();
+}
+
 bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
   if (m_last_file_sp) {
     file_spec = m_last_file_sp->GetFileSpec();
@@ -286,28 +337,12 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       // somebody will have to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
-        SymbolContextList sc_list;
-        ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
-        bool append = false;
-        size_t num_matches = executable_ptr->FindFunctions(
-            main_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
-            symbols_okay, append, sc_list);
-        for (size_t idx = 0; idx < num_matches; idx++) {
-          SymbolContext sc;
-          sc_list.GetContextAtIndex(idx, sc);
-          if (sc.function) {
-            lldb_private::LineEntry line_entry;
-            if (sc.function->GetAddressRange()
-                    .GetBaseAddress()
-                    .CalculateSymbolContextLineEntry(line_entry)) {
-              SetDefaultFileAndLine(line_entry.file, line_entry.line);
-              file_spec = m_last_file_sp->GetFileSpec();
-              line = m_last_line;
-              return true;
-            }
-          }
+        lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
+        if (line_entry.IsValid()) {
+          SetDefaultFileAndLine(line_entry.file, line_entry.line);
+          file_spec = m_last_file_sp->GetFileSpec();
+          line = m_last_line;
+          return true;
         }
       }
     }
