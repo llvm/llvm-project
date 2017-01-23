@@ -159,7 +159,7 @@ public:
 
   /// \brief Returns the in-memory (virtual file) buffer with the given name
   std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
-  
+
   /// \brief Number of modules loaded
   unsigned size() const { return Chain.size(); }
 
@@ -223,7 +223,8 @@ public:
   /// \brief Remove the given set of modules.
   void removeModules(ModuleIterator first, ModuleIterator last,
                      llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
-                     ModuleMap *modMap);
+                     ModuleMap *modMap,
+                     llvm::SmallVectorImpl<std::string> &ValidationConflicts);
 
   /// \brief Add an in-memory buffer the list of known buffers
   void addInMemoryBuffer(StringRef FileName,
@@ -233,8 +234,9 @@ public:
   void setGlobalIndex(GlobalModuleIndex *Index);
 
   /// \brief Notification from the AST reader that the given module file
-  /// has been "accepted", and will not (can not) be unloaded.
-  void moduleFileAccepted(ModuleFile *MF);
+  /// has been "accepted", and will not (can not) be unloaded. The IsSystem
+  /// flag tells us whether the module file was validated as a system module.
+  void moduleFileAccepted(ModuleFile *MF, bool IsSystem);
 
   /// \brief Visit each of the modules.
   ///

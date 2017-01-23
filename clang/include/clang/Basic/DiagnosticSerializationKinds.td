@@ -125,6 +125,15 @@ def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,
   InGroup<ModuleFileExtension>;
 
+def warn_module_system_bit_conflict : Warning<
+  "module file '%0' was validated as a system module and is now being imported "
+  "as a non-system module; any difference in diagnostic options will be ignored">,
+  InGroup<ModuleConflict>;
+
+def err_module_ancestor_conflict : Error<
+  "module file '%0' was validated in an ancestor thread, now it needs to "
+  "be invalidated">;
+
 } // let CategoryName
 } // let Component
 
