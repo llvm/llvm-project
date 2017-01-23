@@ -784,6 +784,31 @@ static Error checkVersCommand(const MachOObjectFile &Obj,
   return Error::success();
 }
 
+static Error checkNoteCommand(const MachOObjectFile &Obj,
+                              const MachOObjectFile::LoadCommandInfo &Load,
+                              uint32_t LoadCommandIndex,
+                              std::list<MachOElement> &Elements) {
+  if (Load.C.cmdsize != sizeof(MachO::note_command))
+    return malformedError("load command " + Twine(LoadCommandIndex) + 
+                          " LC_NOTE has incorrect cmdsize");
+  MachO::note_command Nt = getStruct<MachO::note_command>(Obj, Load.Ptr);
+  uint64_t FileSize = Obj.getData().size();
+  if (Nt.offset > FileSize)
+    return malformedError("offset field of LC_NOTE command " +
+                          Twine(LoadCommandIndex) + " extends "
+                          "past the end of the file");
+  uint64_t BigSize = Nt.offset;
+  BigSize += Nt.size;
+  if (BigSize > FileSize)
+    return malformedError("size field plus offset field of LC_NOTE command " +
+                          Twine(LoadCommandIndex) + " extends past the end of "
+                          "the file");
+  if (Error Err = checkOverlappingElement(Elements, Nt.offset, Nt.size,
+                                          "LC_NOTE data"))
+    return Err;
+  return Error::success();
+}
+
 static Error checkRpathCommand(const MachOObjectFile &Obj,
                                const MachOObjectFile::LoadCommandInfo &Load,
                                uint32_t LoadCommandIndex) {
@@ -1279,6 +1304,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
     } else if (Load.C.cmd == MachO::LC_VERSION_MIN_WATCHOS) {
       if ((Err = checkVersCommand(*this, Load, I, &VersLoadCmd,
                                   "LC_VERSION_MIN_WATCHOS")))
+        return;
+    } else if (Load.C.cmd == MachO::LC_NOTE) {
+      if ((Err = checkNoteCommand(*this, Load, I, Elements)))
         return;
     } else if (Load.C.cmd == MachO::LC_RPATH) {
       if ((Err = checkRpathCommand(*this, Load, I)))
@@ -3287,6 +3315,11 @@ MachOObjectFile::getLinkerOptionLoadCommand(const LoadCommandInfo &L) const {
 MachO::version_min_command
 MachOObjectFile::getVersionMinLoadCommand(const LoadCommandInfo &L) const {
   return getStruct<MachO::version_min_command>(*this, L.Ptr);
+}
+
+MachO::note_command
+MachOObjectFile::getNoteLoadCommand(const LoadCommandInfo &L) const {
+  return getStruct<MachO::note_command>(*this, L.Ptr);
 }
 
 MachO::dylib_command
