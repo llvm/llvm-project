@@ -744,10 +744,9 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (keyFunction->getTemplateSpecializationKind()) {
       case TSK_Undeclared:
       case TSK_ExplicitSpecialization:
-        assert((def || CodeGenOpts.OptimizationLevel > 0 ||
-                CodeGenOpts.getDebugInfo() != codegenoptions::NoDebugInfo) &&
-               "Shouldn't query vtable linkage without key function, "
-               "optimizations, or debug info");
+        assert((def || CodeGenOpts.OptimizationLevel > 0) &&
+               "Shouldn't query vtable linkage without key function or "
+               "optimizations");
         if (!def && CodeGenOpts.OptimizationLevel > 0)
           return llvm::GlobalVariable::AvailableExternallyLinkage;
 

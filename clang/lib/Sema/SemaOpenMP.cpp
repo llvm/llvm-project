@@ -2268,7 +2268,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
     // Check default data sharing attributes for referenced variables.
     DSAAttrChecker DSAChecker(DSAStack, *this, cast<CapturedStmt>(AStmt));
-    DSAChecker.Visit(cast<CapturedStmt>(AStmt)->getCapturedStmt());
+    int ThisCaptureLevel = getOpenMPCaptureLevels(Kind);
+    Stmt *S = AStmt;
+    while (--ThisCaptureLevel >= 0)
+      S = cast<CapturedStmt>(S)->getCapturedStmt();
+    DSAChecker.Visit(S);
     if (DSAChecker.isErrorFound())
       return StmtError();
     // Generate list of implicitly defined firstprivate variables.

@@ -30,7 +30,7 @@ kernel void enqueue_kernel_tests() {
 
   enqueue_kernel(default_queue, flags, ndrange, vptr); // expected-error{{illegal call to enqueue_kernel, expected block argument}}
 
-  enqueue_kernel(default_queue, flags, ndrange, ^(int i) { // expected-error{{blocks in this form of device side enqueue call are expected to have have no parameters}}
+  enqueue_kernel(default_queue, flags, ndrange, ^(int i) { // expected-error{{blocks with parameters are not accepted in this prototype of enqueue_kernel call}}
     return 0;
   });
 
@@ -111,7 +111,7 @@ kernel void enqueue_kernel_tests() {
 
   const bl_B_t block_B = (bl_B_t) ^ (local void *a, local int *b) {};
 
-  enqueue_kernel(default_queue, flags, ndrange, block_B, 1024, 1024); // expected-error{{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  enqueue_kernel(default_queue, flags, ndrange, block_B, 1024, 1024); // expected-error{{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
 
   enqueue_kernel(default_queue, flags, ndrange, // expected-error{{mismatch in number of block parameters and local size arguments passed}}
                  ^(local void *a, local void *b) {
@@ -177,12 +177,12 @@ kernel void work_group_size_tests() {
   size = get_kernel_work_group_size(^(local void *a) {
     return;
   });
-  size = get_kernel_work_group_size(^(local int *a) { // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  size = get_kernel_work_group_size(^(local int *a) { // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
     return;
   });
-  size = get_kernel_work_group_size(block_B);   // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
-  size = get_kernel_work_group_size(block_D);   // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
-  size = get_kernel_work_group_size(^(int a) {  // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  size = get_kernel_work_group_size(block_B);   // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
+  size = get_kernel_work_group_size(block_D);   // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
+  size = get_kernel_work_group_size(^(int a) {  // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
     return;
   });
   size = get_kernel_work_group_size();          // expected-error {{too few arguments to function call, expected 1, have 0}}
@@ -194,14 +194,14 @@ kernel void work_group_size_tests() {
   size = get_kernel_preferred_work_group_size_multiple(^(local void *a) {
     return;
   });
-  size = get_kernel_preferred_work_group_size_multiple(^(local int *a) { // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  size = get_kernel_preferred_work_group_size_multiple(^(local int *a) { // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
     return;
   });
-  size = get_kernel_preferred_work_group_size_multiple(^(int a) {  // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  size = get_kernel_preferred_work_group_size_multiple(^(int a) {  // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
     return;
   });
-  size = get_kernel_preferred_work_group_size_multiple(block_B);   // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
-  size = get_kernel_preferred_work_group_size_multiple(block_D);   // expected-error {{blocks used in device side enqueue are expected to have parameters of type 'local void*'}}
+  size = get_kernel_preferred_work_group_size_multiple(block_B);   // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
+  size = get_kernel_preferred_work_group_size_multiple(block_D);   // expected-error {{blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'}}
   size = get_kernel_preferred_work_group_size_multiple();          // expected-error {{too few arguments to function call, expected 1, have 0}}
   size = get_kernel_preferred_work_group_size_multiple(1);         // expected-error{{expected block argument}}
   size = get_kernel_preferred_work_group_size_multiple(block_A, 1); // expected-error{{too many arguments to function call, expected 1, have 2}}

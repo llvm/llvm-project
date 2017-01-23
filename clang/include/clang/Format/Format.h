@@ -459,13 +459,13 @@ struct FormatStyle {
   enum LanguageKind {
     /// Do not use.
     LK_None,
-    /// Should be used for C, C++, ObjectiveC, ObjectiveC++.
+    /// Should be used for C, C++.
     LK_Cpp,
     /// Should be used for Java.
     LK_Java,
     /// Should be used for JavaScript.
     LK_JavaScript,
-    /// Should be used for ObjC code.
+    /// Should be used for ObjectiveC, ObjectiveC++.
     LK_ObjC,
     /// Should be used for Protocol Buffers
     /// (https://developers.google.com/protocol-buffers/).
