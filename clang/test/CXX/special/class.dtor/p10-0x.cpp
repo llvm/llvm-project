@@ -33,7 +33,7 @@ void a(const A *x, int i, int *pi) {
                              expected-error{{the type of object expression ('int') does not match the type being destroyed ('decltype(intp())' (aka 'int *')) in pseudo-destructor expression}}
   i.~decltype(intp())(); // expected-error{{the type of object expression ('int') does not match the type being destroyed ('decltype(intp())' (aka 'int *')) in pseudo-destructor expression}}
   pi->~decltype(int())();
-  pi.~decltype(int())(); // expected-error{{the type of object expression ('int *') does not match the type being destroyed ('decltype(int())' (aka 'int')) in pseudo-destructor expression}}
+  pi.~decltype(int())(); // expected-error{{member reference type 'int *' is a pointer; did you mean to use '->'?}}
   pi.~decltype(intp())();
   pi->~decltype(intp())(); // expected-error{{the type of object expression ('int') does not match the type being destroyed ('decltype(intp())' (aka 'int *')) in pseudo-destructor expression}}
 }
