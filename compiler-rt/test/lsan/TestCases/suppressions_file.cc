@@ -1,4 +1,4 @@
-// RUN: LSAN_BASE="use_registers=0:use_stacks=0"
+// RUN: LSAN_BASE="detect_leaks=1:use_registers=0:use_stacks=0"
 // RUN: %clangxx_lsan %s -o %t
 
 // RUN: rm -f %t.supp

@@ -751,9 +751,6 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(InitialC, CG)
-          .getManager();
   const ModuleAnalysisManager &MAM =
       AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG).getManager();
   bool Changed = false;
@@ -761,21 +758,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
   ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
-
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-      [&](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(F);
-  };
-  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
-    return FAM.getResult<BlockFrequencyAnalysis>(F);
-  };
-
-  auto GetInlineCost = [&](CallSite CS) {
-    Function &Callee = *CS.getCalledFunction();
-    auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
-    return getInlineCost(CS, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
-                         PSI);
-  };
 
   // We use a worklist of nodes to process so that we can handle if the SCC
   // structure changes and some nodes are no longer part of the current SCC. We
@@ -813,6 +795,33 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     Function &F = N.getFunction();
     if (F.hasFnAttribute(Attribute::OptimizeNone))
       continue;
+
+    DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
+
+    // Get a FunctionAnalysisManager via a proxy for this particular node. We
+    // do this each time we visit a node as the SCC may have changed and as
+    // we're going to mutate this particular function we want to make sure the
+    // proxy is in place to forward any invalidation events. We can use the
+    // manager we get here for looking up results for functions other than this
+    // node however because those functions aren't going to be mutated by this
+    // pass.
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG)
+            .getManager();
+    std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+        [&](Function &F) -> AssumptionCache & {
+      return FAM.getResult<AssumptionAnalysis>(F);
+    };
+    auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+      return FAM.getResult<BlockFrequencyAnalysis>(F);
+    };
+
+    auto GetInlineCost = [&](CallSite CS) {
+      Function &Callee = *CS.getCalledFunction();
+      auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+      return getInlineCost(CS, Params, CalleeTTI, GetAssumptionCache, {GetBFI},
+                           PSI);
+    };
 
     // Get the remarks emission analysis for the caller.
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -878,10 +887,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty()) {
-          // Clear the body and queue the function itself for deletion when we
-          // finish inlining and call graph updates.
+          // Clear all analyses and the body and queue the function itself for
+          // deletion when we finish inlining and call graph updates.
           // Note that after this point, it is an error to do anything other
           // than use the callee's address or delete it.
+          FAM.clear(Callee);
           Callee.dropAllReferences();
           assert(find(DeadFunctions, &Callee) == DeadFunctions.end() &&
                  "Cannot put cause a function to become dead twice!");
@@ -916,6 +926,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // re-use the exact same logic for updating the call graph to reflect the
     // change..
     C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
+    DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
   } while (!Nodes.empty());
 

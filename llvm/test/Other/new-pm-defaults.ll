@@ -62,8 +62,8 @@
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O-NEXT: Running pass: InlinerPass
-; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph{{.*}}>
+; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
@@ -73,10 +73,7 @@
 ; CHECK-O-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O-NEXT: Running analysis: LazyValueAnalysis
-; CHECK-O-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: CorrelatedValuePropagationPass
-; CHECK-O-NEXT: Running analysis: LazyValueAnalysis
-; CHECK-O-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -112,11 +109,7 @@
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: JumpThreadingPass
-; CHECK-O-NEXT: Running analysis: LazyValueAnalysis
-; CHECK-O-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: CorrelatedValuePropagationPass
-; CHECK-O-NEXT: Running analysis: LazyValueAnalysis
-; CHECK-O-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: DSEPass
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis

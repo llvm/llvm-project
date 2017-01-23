@@ -3,7 +3,7 @@
 ; CHECK: DIVERGENT:
 ; CHECK-NOT: %arg0
 ; CHECK-NOT: %arg1
-; CHECK-NOT; %arg2
+; CHECK-NOT: %arg2
 ; CHECK: <2 x i32> %arg3
 ; CHECK: DIVERGENT:  <3 x i32> %arg4
 ; CHECK: DIVERGENT:  float %arg5

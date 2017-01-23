@@ -46,22 +46,22 @@ define <2 x double> @insert_v2f64_z1(<2 x double> %a) {
 define <4 x double> @insert_v4f64_0zz3(<4 x double> %a) {
 ; SSE2-LABEL: insert_v4f64_0zz3:
 ; SSE2:       # BB#0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE2-NEXT:    xorpd %xmm2, %xmm2
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v4f64_0zz3:
 ; SSE3:       # BB#0:
+; SSE3-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE3-NEXT:    xorpd %xmm2, %xmm2
-; SSE3-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v4f64_0zz3:
 ; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSSE3-NEXT:    xorpd %xmm2, %xmm2
-; SSSE3-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSSE3-NEXT:    retq
 ;
@@ -440,8 +440,8 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
   ret <16 x i16> %3
 }
 
-define <16 x i8> @insert_v16i8_z123456789ABZDEz(<16 x i8> %a) {
-; SSE2-LABEL: insert_v16i8_z123456789ABZDEz:
+define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
+; SSE2-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -449,14 +449,10 @@ define <16 x i8> @insert_v16i8_z123456789ABZDEz(<16 x i8> %a) {
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    pandn %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
-; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
-; SSE3-LABEL: insert_v16i8_z123456789ABZDEz:
+; SSE3-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; SSE3-NEXT:    pand %xmm1, %xmm0
@@ -464,34 +460,22 @@ define <16 x i8> @insert_v16i8_z123456789ABZDEz(<16 x i8> %a) {
 ; SSE3-NEXT:    movd %eax, %xmm2
 ; SSE3-NEXT:    pandn %xmm2, %xmm1
 ; SSE3-NEXT:    por %xmm1, %xmm0
-; SSE3-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE3-NEXT:    pand %xmm1, %xmm0
-; SSE3-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
-; SSE3-NEXT:    pandn %xmm2, %xmm1
-; SSE3-NEXT:    por %xmm1, %xmm0
+; SSE3-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
-; SSSE3-LABEL: insert_v16i8_z123456789ABZDEz:
+; SSSE3-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-; SSSE3-NEXT:    xorl %eax, %eax
-; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSSE3-NEXT:    por %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
-; SSSE3-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
-; SSE41-LABEL: insert_v16i8_z123456789ABZDEz:
+; SSE41-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    pinsrb $0, %eax, %xmm0
 ; SSE41-NEXT:    pinsrb $15, %eax, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: insert_v16i8_z123456789ABZDEz:
+; AVX-LABEL: insert_v16i8_z123456789ABCDEz:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vpinsrb $0, %eax, %xmm0, %xmm0
@@ -511,19 +495,8 @@ define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    pandn %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; SSE2-NEXT:    pand %xmm5, %xmm1
-; SSE2-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
-; SSE2-NEXT:    pandn %xmm3, %xmm5
-; SSE2-NEXT:    por %xmm5, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
@@ -534,39 +507,14 @@ define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; SSE3-NEXT:    movd %eax, %xmm3
 ; SSE3-NEXT:    pandn %xmm3, %xmm2
 ; SSE3-NEXT:    por %xmm2, %xmm0
-; SSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; SSE3-NEXT:    pand %xmm2, %xmm0
-; SSE3-NEXT:    movdqa %xmm3, %xmm4
-; SSE3-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
-; SSE3-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; SSE3-NEXT:    pand %xmm5, %xmm1
-; SSE3-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
-; SSE3-NEXT:    pandn %xmm3, %xmm5
-; SSE3-NEXT:    por %xmm5, %xmm1
-; SSE3-NEXT:    pand %xmm2, %xmm1
-; SSE3-NEXT:    pandn %xmm4, %xmm2
-; SSE3-NEXT:    por %xmm2, %xmm0
-; SSE3-NEXT:    por %xmm2, %xmm1
+; SSE3-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-; SSSE3-NEXT:    xorl %eax, %eax
-; SSSE3-NEXT:    movd %eax, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm3
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSSE3-NEXT:    por %xmm3, %xmm0
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,128]
-; SSSE3-NEXT:    pshufb %xmm3, %xmm0
-; SSSE3-NEXT:    movdqa %xmm2, %xmm4
-; SSSE3-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
-; SSSE3-NEXT:    por %xmm4, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero,xmm1[15]
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0],zero
-; SSSE3-NEXT:    por %xmm2, %xmm1
-; SSSE3-NEXT:    pshufb %xmm3, %xmm1
-; SSSE3-NEXT:    por %xmm4, %xmm1
+; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:

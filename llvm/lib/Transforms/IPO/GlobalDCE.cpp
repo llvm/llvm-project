@@ -50,7 +50,14 @@ namespace {
       if (skipModule(M))
         return false;
 
+      // We need a minimally functional dummy module analysis manager. It needs
+      // to at least know about the possibility of proxying a function analysis
+      // manager.
+      FunctionAnalysisManager DummyFAM;
       ModuleAnalysisManager DummyMAM;
+      DummyMAM.registerPass(
+          [&] { return FunctionAnalysisManagerModuleProxy(DummyFAM); });
+
       auto PA = Impl.run(M, DummyMAM);
       return !PA.areAllPreserved();
     }
@@ -78,7 +85,7 @@ static bool isEmptyFunction(Function *F) {
   return RI.getReturnValue() == nullptr;
 }
 
-PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
   // Remove empty functions from the global ctors list.
@@ -137,13 +144,29 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &) {
       }
     }
 
+  // Because we may have cached analyses for functions we take extra care when
+  // deleting them if there is an active proxy. If there isn't, then we get to
+  // assume that everything in the function AM has been cleared already.
+  // FIXME: Note that all of this will happen automatically when this pass
+  // finishes. Unfortuantely there are analyses which hold asserting VHs to
+  // IR units. We could make those weak VHs that would assert if ever used
+  // without asserting eagerly and then all of this knowledge of the analysis
+  // manager could go away.
+  FunctionAnalysisManager *FAM = nullptr;
+  if (auto *FAMProxy =
+          MAM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M))
+    FAM = &FAMProxy->getManager();
+
   // The second pass drops the bodies of functions which are dead...
   std::vector<Function *> DeadFunctions;
   for (Function &F : M)
     if (!AliveGlobals.count(&F)) {
       DeadFunctions.push_back(&F);         // Keep track of dead globals
-      if (!F.isDeclaration())
+      if (!F.isDeclaration()) {
+        if (FAM)
+          FAM->clear(F);
         F.deleteBody();
+      }
     }
 
   // The third pass drops targets of aliases which are dead...

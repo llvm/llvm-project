@@ -5686,6 +5686,15 @@ static bool setTargetShuffleZeroElements(SDValue N,
       continue;
     }
 
+    // SCALAR_TO_VECTOR - only the first element is defined, and the rest UNDEF.
+    if (V.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+        (Size % V.getValueType().getVectorNumElements()) == 0) {
+      int Scale = Size / V.getValueType().getVectorNumElements();
+      if (((M / Scale) == 0) && X86::isZeroNode(V.getOperand(0)))
+        Mask[i] = SM_SentinelZero;
+      continue;
+    }
+
     // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
     if (V.getOpcode() != ISD::BUILD_VECTOR)
       continue;
@@ -28823,10 +28832,12 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// If a vector select has an operand that is -1 or 0, simplify the select to a
-/// bitwise logic operation.
-static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
-                                                const X86Subtarget &Subtarget) {
+/// If a vector select has an operand that is -1 or 0, try to simplify the
+/// select to a bitwise logic operation.
+static SDValue
+combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
@@ -28888,18 +28899,28 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (!TValIsAllOnes && !FValIsAllZeros)
+  // vselect Cond, 111..., 000... -> Cond
+  if (TValIsAllOnes && FValIsAllZeros)
+    return DAG.getBitcast(VT, Cond);
+
+  if (!DCI.isBeforeLegalize() && !TLI.isTypeLegal(CondVT))
     return SDValue();
 
-  SDValue Ret;
-  if (TValIsAllOnes && FValIsAllZeros)
-    Ret = Cond;
-  else if (TValIsAllOnes)
-    Ret = DAG.getNode(ISD::OR, DL, CondVT, Cond, DAG.getBitcast(CondVT, RHS));
-  else if (FValIsAllZeros)
-    Ret = DAG.getNode(ISD::AND, DL, CondVT, Cond, DAG.getBitcast(CondVT, LHS));
+  // vselect Cond, 111..., X -> or Cond, X
+  if (TValIsAllOnes) {
+    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
+    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, CastRHS);
+    return DAG.getBitcast(VT, Or);
+  }
 
-  return DAG.getBitcast(VT, Ret);
+  // vselect Cond, X, 000... -> and Cond, X
+  if (FValIsAllZeros) {
+    SDValue CastLHS = DAG.getBitcast(CondVT, LHS);
+    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, CastLHS);
+    return DAG.getBitcast(VT, And);
+  }
+
+  return SDValue();
 }
 
 static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
@@ -29404,7 +29425,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, Subtarget))
+  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DCI, Subtarget))
     return V;
 
   // If this is a *dynamic* select (non-constant condition) and we can match
@@ -32975,6 +32996,20 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(SelectOpcode, DL, VT, IsOp0Nan, Op1, MinOrMax);
 }
 
+/// Do target-specific dag combines on X86ISD::ANDNP nodes.
+static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
+                           const X86Subtarget &Subtarget) {
+  // ANDNP(0, x) -> x
+  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+    return N->getOperand(1);
+
+  // ANDNP(x, 0) -> 0
+  if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode()))
+    return getZeroVector(N->getSimpleValueType(0), Subtarget, DAG, SDLoc(N));
+
+  return SDValue();
+}
+
 static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI) {
   // BT ignores high bits in the bit index operand.
@@ -34041,6 +34076,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
+  case X86ISD::ANDNP:       return combineAndnp(N, DAG, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
   case X86ISD::FXOR:

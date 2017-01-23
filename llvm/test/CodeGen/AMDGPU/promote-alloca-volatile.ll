@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: @volatile_load(
 ; CHECK: alloca [5 x i32]
-; CHECK load volatile i32, i32*
+; CHECK: load volatile i32, i32*
 define void @volatile_load(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [5 x i32], align 4
@@ -15,7 +15,7 @@ entry:
 
 ; CHECK-LABEL: @volatile_store(
 ; CHECK: alloca [5 x i32]
-; CHECK store volatile i32 %tmp, i32*
+; CHECK: store volatile i32 %tmp, i32*
 define void @volatile_store(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [5 x i32], align 4

@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @abort()
 
 ; CHECK-LABEL: @foo(
-; CHECK-NOT return:
+; CHECK-NOT: return:
 define void @foo(i32* %p) {
 entry:
   %p.addr = alloca i32*, align 8

@@ -100,6 +100,10 @@ public:
 
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();
+
+  /// Handle invalidation events in the new pass manager.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &Inv);
 };
 
 /// \brief Analysis to compute lazy value information.
