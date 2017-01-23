@@ -977,7 +977,26 @@ static Error checkThreadCommand(const MachOObjectFile &Obj,
       sys::swapByteOrder(count);
     state += sizeof(uint32_t);
 
-    if (cputype == MachO::CPU_TYPE_X86_64) {
+    if (cputype == MachO::CPU_TYPE_I386) {
+      if (flavor == MachO::x86_THREAD_STATE32) {
+        if (count != MachO::x86_THREAD_STATE32_COUNT)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " count not x86_THREAD_STATE32_COUNT for "
+                                "flavor number " + Twine(nflavor) + " which is "
+                                "a x86_THREAD_STATE32 flavor in " + CmdName +
+                                " command");
+        if (state + sizeof(MachO::x86_thread_state32_t) > end)
+          return malformedError("load command " + Twine(LoadCommandIndex) +
+                                " x86_THREAD_STATE32 extends past end of "
+                                "command in " + CmdName + " command");
+        state += sizeof(MachO::x86_thread_state32_t);
+      } else {
+        return malformedError("load command " + Twine(LoadCommandIndex) +
+                              " unknown flavor (" + Twine(flavor) + ") for "
+                              "flavor number " + Twine(nflavor) + " in " +
+                              CmdName + " command");
+      }
+    } else if (cputype == MachO::CPU_TYPE_X86_64) {
       if (flavor == MachO::x86_THREAD_STATE64) {
         if (count != MachO::x86_THREAD_STATE64_COUNT)
           return malformedError("load command " + Twine(LoadCommandIndex) +
