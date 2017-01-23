@@ -1487,6 +1487,14 @@ def SwiftPrivate : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def SwiftImportAsNonGeneric : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}
+
 def SwiftImportPropertyAsAccessors : InheritableAttr { 
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.

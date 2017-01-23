@@ -253,6 +253,10 @@ namespace {
 
       if (payload & 0x4)
         info.setDefaultNullability(static_cast<NullabilityKind>(payload&0x03));
+      payload >>= 3;
+
+      if (payload & (1 << 1))
+        info.setSwiftImportAsNonGeneric(payload & 1);
 
       return info;
     }

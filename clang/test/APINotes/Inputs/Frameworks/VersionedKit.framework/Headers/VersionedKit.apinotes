@@ -19,6 +19,8 @@ SwiftVersions:
     Classes:
       - Name: MyReferenceType
         SwiftBridge: ''
+      - Name: TestGenericDUMP
+        SwiftImportAsNonGeneric: true
       - Name: TestProperties
         Properties:
           - Name: accessorsOnlyInVersion3
@@ -34,7 +36,7 @@ SwiftVersions:
             PropertyKind:    Class
             SwiftImportAsAccessors: false
     Functions:
-      - Name: moveToPoint
+      - Name: moveToPointDUMP
         SwiftName: 'moveTo(a:b:)'
       - Name: acceptClosure
         Parameters:      
