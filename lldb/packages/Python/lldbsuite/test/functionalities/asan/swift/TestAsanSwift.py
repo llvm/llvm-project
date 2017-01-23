@@ -27,7 +27,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
 
     @decorators.swiftTest
     @decorators.skipIfLinux
-    @decorators.skipUnlessThreadSanitizer
+    @decorators.skipUnlessSwiftAddressSanitizer
     def test_asan_swift(self):
         self.build()
         self.do_test()
@@ -72,9 +72,9 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         # ASan will break when a report occurs and we'll try the API then
         self.runCmd("continue")
 
-        # the stop reason of the thread should be a TSan report.
-        self.expect("thread list", "Heap buffer overflow detected", substrs=[
-                    'stopped', 'stop reason = Heap buffer overflow detected'])
+        # the stop reason of the thread should be a ASan report.
+        self.expect("thread list", "Heap buffer overflow", substrs=[
+                    'stopped', 'stop reason = Heap buffer overflow'])
 
         process = self.dbg.GetSelectedTarget().process
         thread = process.GetSelectedThread()
