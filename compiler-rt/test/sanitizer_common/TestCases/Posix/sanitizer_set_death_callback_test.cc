@@ -2,6 +2,13 @@
 
 // REQUIRES: stable-runtime
 
+// For standalone LSan on x86 we have a problem: compiler spills the address
+// of allocated at line 42 memory thus memory block allocated in Leak() function
+// ends up to be classified as reachable despite the fact we zero out 'sink' at
+// the last line of main function. The problem doesn't reproduce with ASan because
+// quarantine prohibits memory block reuse for different allocations.
+// XFAIL: lsan-x86
+
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 

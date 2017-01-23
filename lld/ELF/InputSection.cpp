@@ -247,7 +247,8 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Config->Rela)
       P->r_addend = getAddend<ELFT>(Rel);
     P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
-    P->setSymbolAndType(Body.DynsymIndex, Type, Config->Mips64EL);
+    P->setSymbolAndType(In<ELFT>::SymTab->getSymbolIndex(&Body), Type,
+                        Config->Mips64EL);
   }
 }
 

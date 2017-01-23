@@ -1503,6 +1503,18 @@ void LazyValueInfo::releaseMemory() {
   }
 }
 
+bool LazyValueInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                               FunctionAnalysisManager::Invalidator &Inv) {
+  // We need to invalidate if we have either failed to preserve this analyses
+  // result directly or if any of its dependencies have been invalidated.
+  auto PAC = PA.getChecker<LazyValueAnalysis>();
+  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
+      (DT && Inv.invalidate<DominatorTreeAnalysis>(F, PA)))
+    return true;
+
+  return false;
+}
+
 void LazyValueInfoWrapperPass::releaseMemory() { Info.releaseMemory(); }
 
 LazyValueInfo LazyValueAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
