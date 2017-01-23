@@ -130,7 +130,8 @@ body: |
     %0:_(s32) = COPY %w0
 
     ; CHECK-LABEL: name: test_fptosi_s1_s32
-    ; CHECK: %1(s1) = G_FPTOSI %0
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s1) = G_TRUNC %2
     %1:_(s1) = G_FPTOSI %0
 ...
 
@@ -142,7 +143,8 @@ body: |
     %0:_(s32) = COPY %w0
 
     ; CHECK-LABEL: name: test_fptoui_s1_s32
-    ; CHECK: %1(s1) = G_FPTOUI %0
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s1) = G_TRUNC %2
     %1:_(s1) = G_FPTOUI %0
 ...
 
@@ -154,7 +156,8 @@ body: |
     %0:_(s64) = COPY %x0
 
     ; CHECK-LABEL: name: test_fptosi_s8_s64
-    ; CHECK: %1(s8) = G_FPTOSI %0
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s8) = G_TRUNC %2
     %1:_(s8) = G_FPTOSI %0
 ...
 
@@ -166,7 +169,8 @@ body: |
     %0:_(s64) = COPY %x0
 
     ; CHECK-LABEL: name: test_fptoui_s8_s64
-    ; CHECK: %1(s8) = G_FPTOUI %0
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s8) = G_TRUNC %2
     %1:_(s8) = G_FPTOUI %0
 ...
 
@@ -178,7 +182,8 @@ body: |
     %0:_(s32) = COPY %w0
 
     ; CHECK-LABEL: name: test_fptosi_s16_s32
-    ; CHECK: %1(s16) = G_FPTOSI %0
+    ; CHECK: %2(s32) = G_FPTOSI %0
+    ; CHECK: %1(s16) = G_TRUNC %2
     %1:_(s16) = G_FPTOSI %0
 ...
 
@@ -190,6 +195,7 @@ body: |
     %0:_(s32) = COPY %w0
 
     ; CHECK-LABEL: name: test_fptoui_s16_s32
-    ; CHECK: %1(s16) = G_FPTOUI %0
+    ; CHECK: %2(s32) = G_FPTOUI %0
+    ; CHECK: %1(s16) = G_TRUNC %2
     %1:_(s16) = G_FPTOUI %0
 ...
