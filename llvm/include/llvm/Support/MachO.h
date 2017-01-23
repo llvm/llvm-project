@@ -487,6 +487,22 @@ namespace llvm {
       VM_PROT_EXECUTE = 0x4
     };
 
+    // Values for platform field in build_version_command.
+    enum {
+      PLATFORM_MACOS    = 1,
+      PLATFORM_IOS      = 2,
+      PLATFORM_TVOS     = 3,
+      PLATFORM_WATCHOS  = 4,
+      PLATFORM_BRIDGEOS = 5
+    };
+
+    // Values for tools enum in build_tool_version.
+    enum {
+      TOOL_CLANG  = 1,
+      TOOL_SWIFT  = 2,
+      TOOL_LD     = 3
+    };
+
     // Structs from <mach-o/loader.h>
 
     struct mach_header {
@@ -825,6 +841,21 @@ namespace llvm {
       char data_owner[16]; // owner name for this LC_NOTE
       uint64_t offset;     // file offset of this data
       uint64_t size;       // length of data region
+    };
+
+    struct build_tool_version {
+      uint32_t tool;      // enum for the tool
+      uint32_t version;   // version of the tool
+    };
+
+    struct build_version_command {
+      uint32_t cmd;       // LC_BUILD_VERSION
+      uint32_t cmdsize;   // sizeof(struct build_version_command) +
+                          // ntools * sizeof(struct build_tool_version)
+      uint32_t platform;  // platform
+      uint32_t minos;     // X.Y.Z is encoded in nibbles xxxx.yy.zz
+      uint32_t sdk;       // X.Y.Z is encoded in nibbles xxxx.yy.zz
+      uint32_t ntools;    // number of tool entries following this
     };
 
     struct dyld_info_command {
@@ -1279,6 +1310,20 @@ namespace llvm {
       sys::swapByteOrder(C.cmdsize);
       sys::swapByteOrder(C.offset);
       sys::swapByteOrder(C.size);
+    }
+
+    inline void swapStruct(build_version_command&C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.platform);
+      sys::swapByteOrder(C.minos);
+      sys::swapByteOrder(C.sdk);
+      sys::swapByteOrder(C.ntools);
+    }
+
+    inline void swapStruct(build_tool_version&C) {
+      sys::swapByteOrder(C.tool);
+      sys::swapByteOrder(C.version);
     }
 
     inline void swapStruct(data_in_code_entry &C) {
