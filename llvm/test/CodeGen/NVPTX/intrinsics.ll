@@ -24,7 +24,7 @@ define float @test_nvvm_sqrt(float %a) {
 
 ; CHECK-LABEL: test_llvm_sqrt(
 define float @test_llvm_sqrt(float %a) {
-; CHECK sqrt.rn.f32
+; CHECK: sqrt.rn.f32
   %val = call float @llvm.sqrt.f32(float %a)
   ret float %val
 }

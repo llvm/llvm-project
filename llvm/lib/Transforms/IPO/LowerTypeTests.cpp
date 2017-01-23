@@ -1344,8 +1344,11 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   if (Action == SummaryAction::Import) {
-    for (const Use &U : TypeTestFunc->uses())
-      importTypeTest(cast<CallInst>(U.getUser()));
+    for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
+         UI != UE;) {
+      auto *CI = cast<CallInst>((*UI++).getUser());
+      importTypeTest(CI);
+    }
     return true;
   }
 

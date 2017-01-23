@@ -18,7 +18,7 @@ entry:
   ret <16 x i8> %res
 ; CHECK-LABEL: @test_byte
 ; CHECK: vabsdub 2, 2, 3
-; CHECK blr
+; CHECK: blr
 }
 
 define <8 x i16> @test_half(<8 x i16> %a, <8 x i16> %b) {
@@ -27,7 +27,7 @@ entry:
   ret <8 x i16> %res
 ; CHECK-LABEL: @test_half
 ; CHECK: vabsduh 2, 2, 3
-; CHECK blr
+; CHECK: blr
 }
 
 define <4 x i32> @test_word(<4 x i32> %a, <4 x i32> %b) {

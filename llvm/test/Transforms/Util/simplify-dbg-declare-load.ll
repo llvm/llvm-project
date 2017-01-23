@@ -19,7 +19,7 @@ fail:                                             ; preds = %top
   unreachable
 
 idxend:                                           ; preds = %top
-; CHECK-NOT call void @llvm.dbg.value(metadata %foo* %cp,
+; CHECK-NOT: call void @llvm.dbg.value(metadata %foo* %cp,
   %0 = load volatile %foo, %foo* %cp, align 8
 ; CHECK: call void @llvm.dbg.value(metadata %foo %0,
   store volatile %foo %0, %foo* undef, align 8

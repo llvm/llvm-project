@@ -485,14 +485,14 @@ inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
 
 #ifdef UNW_REMOTE
 
-/// OtherAddressSpace is used as a template parameter to UnwindCursor when
+/// RemoteAddressSpace is used as a template parameter to UnwindCursor when
 /// unwinding a thread in the another process.  The other process can be a
 /// different endianness and a different pointer size which is handled by
 /// the P template parameter.
 template <typename P>
-class OtherAddressSpace {
+class RemoteAddressSpace {
 public:
-  OtherAddressSpace(task_t task) : fTask(task) {}
+  RemoteAddressSpace(task_t task) : fTask(task) {}
 
   typedef typename P::uint_t pint_t;
 
@@ -515,29 +515,29 @@ private:
   task_t fTask;
 };
 
-template <typename P> uint8_t OtherAddressSpace<P>::get8(pint_t addr) {
+template <typename P> uint8_t RemoteAddressSpace<P>::get8(pint_t addr) {
   return *((uint8_t *)localCopy(addr));
 }
 
-template <typename P> uint16_t OtherAddressSpace<P>::get16(pint_t addr) {
+template <typename P> uint16_t RemoteAddressSpace<P>::get16(pint_t addr) {
   return P::E::get16(*(uint16_t *)localCopy(addr));
 }
 
-template <typename P> uint32_t OtherAddressSpace<P>::get32(pint_t addr) {
+template <typename P> uint32_t RemoteAddressSpace<P>::get32(pint_t addr) {
   return P::E::get32(*(uint32_t *)localCopy(addr));
 }
 
-template <typename P> uint64_t OtherAddressSpace<P>::get64(pint_t addr) {
+template <typename P> uint64_t RemoteAddressSpace<P>::get64(pint_t addr) {
   return P::E::get64(*(uint64_t *)localCopy(addr));
 }
 
 template <typename P>
-typename P::uint_t OtherAddressSpace<P>::getP(pint_t addr) {
+typename P::uint_t RemoteAddressSpace<P>::getP(pint_t addr) {
   return P::getP(*(uint64_t *)localCopy(addr));
 }
 
 template <typename P>
-uint64_t OtherAddressSpace<P>::getULEB128(pint_t &addr, pint_t end) {
+uint64_t RemoteAddressSpace<P>::getULEB128(pint_t &addr, pint_t end) {
   uintptr_t size = (end - addr);
   LocalAddressSpace::pint_t laddr = (LocalAddressSpace::pint_t) localCopy(addr);
   LocalAddressSpace::pint_t sladdr = laddr;
@@ -547,7 +547,7 @@ uint64_t OtherAddressSpace<P>::getULEB128(pint_t &addr, pint_t end) {
 }
 
 template <typename P>
-int64_t OtherAddressSpace<P>::getSLEB128(pint_t &addr, pint_t end) {
+int64_t RemoteAddressSpace<P>::getSLEB128(pint_t &addr, pint_t end) {
   uintptr_t size = (end - addr);
   LocalAddressSpace::pint_t laddr = (LocalAddressSpace::pint_t) localCopy(addr);
   LocalAddressSpace::pint_t sladdr = laddr;
@@ -556,13 +556,14 @@ int64_t OtherAddressSpace<P>::getSLEB128(pint_t &addr, pint_t end) {
   return result;
 }
 
-template <typename P> void *OtherAddressSpace<P>::localCopy(pint_t addr) {
+template <typename P> void *RemoteAddressSpace<P>::localCopy(pint_t addr) {
   // FIX ME
 }
 
 template <typename P>
-bool OtherAddressSpace<P>::findFunctionName(pint_t addr, char *buf,
-                                            size_t bufLen, unw_word_t *offset) {
+bool RemoteAddressSpace<P>::findFunctionName(pint_t addr, char *buf,
+                                             size_t bufLen,
+                                             unw_word_t *offset) {
   // FIX ME
 }
 
@@ -578,7 +579,7 @@ struct unw_addr_space {
 /// a 32-bit intel process.
 struct unw_addr_space_i386 : public unw_addr_space {
   unw_addr_space_i386(task_t task) : oas(task) {}
-  OtherAddressSpace<Pointer32<LittleEndian> > oas;
+  RemoteAddressSpace<Pointer32<LittleEndian>> oas;
 };
 
 /// unw_addr_space_x86_64 is the concrete instance that a unw_addr_space_t
@@ -586,7 +587,7 @@ struct unw_addr_space_i386 : public unw_addr_space {
 /// a 64-bit intel process.
 struct unw_addr_space_x86_64 : public unw_addr_space {
   unw_addr_space_x86_64(task_t task) : oas(task) {}
-  OtherAddressSpace<Pointer64<LittleEndian> > oas;
+  RemoteAddressSpace<Pointer64<LittleEndian>> oas;
 };
 
 /// unw_addr_space_ppc is the concrete instance that a unw_addr_space_t points
@@ -594,7 +595,7 @@ struct unw_addr_space_x86_64 : public unw_addr_space {
 /// a 32-bit PowerPC process.
 struct unw_addr_space_ppc : public unw_addr_space {
   unw_addr_space_ppc(task_t task) : oas(task) {}
-  OtherAddressSpace<Pointer32<BigEndian> > oas;
+  RemoteAddressSpace<Pointer32<BigEndian>> oas;
 };
 
 #endif // UNW_REMOTE

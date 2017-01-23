@@ -12,7 +12,7 @@ CHECK: SanitizerCoverage: ./LLVMFuzzer-NullDerefTest.{{.*}}.sancov {{.*}} PCs wr
 SANCOV: LLVMFuzzerTestOneInput
 
 DSO: SanitizerCoverage: ./LLVMFuzzer-DSOTest.{{.*}}.sancov {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: ./libLLVMFuzzer-DSO1.{{.*}}.sancov {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: ./libLLVMFuzzer-DSO2.{{.*}}.sancov {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO1.{{.*}}.sancov {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}LLVMFuzzer-DSO2.{{.*}}.sancov {{.*}} PCs written
 
 NOCOV-NOT: SanitizerCoverage: {{.*}} PCs written

@@ -97,13 +97,13 @@ void DupAndCloseStderr() {
       OutputFile = NewOutputFile;
       if (EF->__sanitizer_set_report_fd)
         EF->__sanitizer_set_report_fd(reinterpret_cast<void *>(OutputFd));
-      CloseFile(2);
+      DiscardOutput(2);
     }
   }
 }
 
 void CloseStdout() {
-  CloseFile(1);
+  DiscardOutput(1);
 }
 
 void Printf(const char *Fmt, ...) {

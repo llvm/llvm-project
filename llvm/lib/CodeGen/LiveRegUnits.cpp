@@ -26,6 +26,15 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
   }
 }
 
+void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
+  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+    for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
+      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg))
+        Units.set(U);
+    }
+  }
+}
+
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
@@ -48,6 +57,21 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
     if (!TargetRegisterInfo::isPhysicalRegister(Reg))
       continue;
     addReg(Reg);
+  }
+}
+
+void LiveRegUnits::accumulateBackward(const MachineInstr &MI) {
+  // Add defs, uses and regmask clobbers to the set.
+  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
+    if (O->isReg()) {
+      unsigned Reg = O->getReg();
+      if (!TargetRegisterInfo::isPhysicalRegister(Reg))
+        continue;
+      if (!O->isDef() && !O->readsReg())
+        continue;
+      addReg(Reg);
+    } else if (O->isRegMask())
+      addRegsInMask(O->getRegMask());
   }
 }
 

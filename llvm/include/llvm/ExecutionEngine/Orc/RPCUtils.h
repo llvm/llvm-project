@@ -887,6 +887,24 @@ public:
     SequenceNumberMgr.reset();
   }
 
+  /// Remove the handler for the given function.
+  /// A handler must currently be registered for this function.
+  template <typename Func>
+  void removeHandler() {
+    auto IdItr = LocalFunctionIds.find(Func::getPrototype());
+    assert(IdItr != LocalFunctionIds.end() &&
+           "Function does not have a registered handler");
+    auto HandlerItr = Handlers.find(IdItr->second);
+    assert(HandlerItr != Handlers.end() &&
+           "Function does not have a registered handler");
+    Handlers.erase(HandlerItr);
+  }
+
+  /// Clear all handlers.
+  void clearHandlers() {
+    Handlers.clear();
+  }
+
 protected:
   // The LaunchPolicy type allows a launch policy to be specified when adding
   // a function handler. See addHandlerImpl.

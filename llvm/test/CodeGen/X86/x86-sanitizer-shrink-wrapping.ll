@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK: popq
 ; CHECK-NEXT: retq
 ; CHECK: movl $40, %edi
-; CHECK-NEXT callq ___asan_report_load4
+; CHECK-NEXT: callq ___asan_report_load4
 define  void @sanitize() #0 {
 entry:
   %tmp = load i8, i8* inttoptr (i64 17592186044421 to i8*)

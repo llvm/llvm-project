@@ -45,13 +45,4 @@ define double @constant_fold_fmuladd_f64() #0 {
   ret double %x
 }
 
-; Currently we don't constant-fold intrinsics whose corresponding libcalls
-; raise an fp exception.
-; CHECK-LABEL: @bad_sqrt
-; CHECK-NEXT: call double @llvm.sqrt.f64(double -2
-define double @bad_sqrt() {
-  %x = call double @llvm.sqrt.f64(double -2.000000e+00)
-  ret double %x
-}
-
 attributes #0 = { nounwind readnone }

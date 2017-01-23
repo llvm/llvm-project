@@ -296,7 +296,10 @@ void Fuzzer::InterruptCallback() {
 NO_SANITIZE_MEMORY
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
+  // In Windows Alarm callback is executed by a different thread.
+#if !LIBFUZZER_WINDOWS
   if (!InFuzzingThread()) return;
+#endif
   if (!RunningCB)
     return; // We have not started running units yet.
   size_t Seconds =
