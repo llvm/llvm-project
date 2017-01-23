@@ -2104,10 +2104,59 @@ static bool isDiagnosedResult(ASTReader::ASTReadResult ARR, unsigned Caps) {
   llvm_unreachable("unknown ASTReadResult");
 }
 
+ASTReader::ASTReadResult ASTReader::ReadDiagnosticOptionsBlock(
+    ModuleFile *F, BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
+    bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
+    bool ValidateDiagnosticOptions) {
+  // Read all of the records in the options block.
+  RecordData Record;
+  ASTReadResult Result = Success;
+  while (1) {
+    llvm::BitstreamEntry Entry = Stream.advance();
+
+    switch (Entry.Kind) {
+    case llvm::BitstreamEntry::Error:
+    case llvm::BitstreamEntry::SubBlock:
+      return Failure;
+
+    case llvm::BitstreamEntry::EndBlock:
+      return Result;
+
+    case llvm::BitstreamEntry::Record:
+      // The interesting case.
+      break;
+    }
+
+    // Read and process a record.
+    Record.clear();
+    switch ((UnhashedControlBlockRecordTypes)Stream.readRecord(Entry.ID, Record)) {
+    case DIAGNOSTIC_OPTIONS: {
+      bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
+      if (ValidateDiagnosticOptions &&
+          !AllowCompatibleConfigurationMismatch &&
+          ParseDiagnosticOptions(Record, Complain, Listener))
+        return OutOfDate;
+      break;
+    }
+    case SIGNATURE: {
+      if (!F)
+        break;
+      int Pos = 0;
+      F->Signature[Pos++] = Record[0];
+      F->Signature[Pos++] = Record[1];
+      F->Signature[Pos++] = Record[2];
+      F->Signature[Pos++] = Record[3];
+      F->Signature[Pos++] = Record[4];
+      break;
+    }
+    }
+  }
+}
+
 ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
     BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
     bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-    std::string &SuggestedPredefines, bool ValidateDiagnosticOptions) {
+    std::string &SuggestedPredefines) {
   if (Stream.EnterSubBlock(OPTIONS_BLOCK_ID))
     return Failure;
 
@@ -2146,15 +2195,6 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
       if (ParseTargetOptions(Record, Complain, Listener,
                              AllowCompatibleConfigurationMismatch))
         Result = ConfigurationMismatch;
-      break;
-    }
-
-    case DIAGNOSTIC_OPTIONS: {
-      bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
-      if (ValidateDiagnosticOptions &&
-          !AllowCompatibleConfigurationMismatch &&
-          ParseDiagnosticOptions(Record, Complain, Listener))
-        return OutOfDate;
       break;
     }
 
@@ -2281,13 +2321,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           // FIXME: Allow this for files explicitly specified with -include-pch.
           bool AllowCompatibleConfigurationMismatch =
               F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule;
-          const HeaderSearchOptions &HSOpts =
-              PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
           Result = ReadOptionsBlock(Stream, ClientLoadCapabilities,
                                     AllowCompatibleConfigurationMismatch,
-                                    *Listener, SuggestedPredefines,
-                                    HSOpts.ModulesValidateDiagnosticOptions);
+                                    *Listener, SuggestedPredefines);
           if (Result == Failure) {
             Error("malformed block record in AST file");
             return Result;
@@ -2361,11 +2398,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       break;
     }
 
-    case SIGNATURE:
-      assert((!F.Signature || F.Signature == Record[0]) && "signature changed");
-      F.Signature = Record[0];
-      break;
-
     case IMPORTS: {
       // Load each of the imported PCH files. 
       unsigned Idx = 0, N = Record.size();
@@ -2379,7 +2411,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             ReadUntranslatedSourceLocation(Record[Idx++]);
         off_t StoredSize = (off_t)Record[Idx++];
         time_t StoredModTime = (time_t)Record[Idx++];
-        ASTFileSignature StoredSignature = Record[Idx++];
+        ASTFileSignature StoredSignature =
+            {{(uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
+              (uint32_t)Record[Idx++], (uint32_t)Record[Idx++],
+              (uint32_t)Record[Idx++]}};
         auto ImportedFile = ReadPath(F, Record, Idx);
 
         // If our client can't cope with us being out of date, we can't cope with
@@ -3546,7 +3581,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   SmallVector<ImportedModule, 4> Loaded;
   switch(ASTReadResult ReadResult = ReadASTCore(FileName, Type, ImportLoc,
                                                 /*ImportedBy=*/nullptr, Loaded,
-                                                0, 0, 0,
+                                                0, 0, {{0}},
                                                 ClientLoadCapabilities)) {
   case Failure:
   case Missing:
@@ -3855,6 +3890,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   // This is used for compatibility with older PCH formats.
   bool HaveReadControlBlock = false;
+  BitstreamCursor ASTCursor;
   while (1) {
     llvm::BitstreamEntry Entry = Stream.advance();
     
@@ -3905,10 +3941,48 @@ ASTReader::ReadASTCore(StringRef FileName,
         return VersionMismatch;
       }
 
-      // Record that we've loaded this module.
-      Loaded.push_back(ImportedModule(M, ImportedBy, ImportLoc));
-      return Success;
+      ASTCursor = Stream;
+      if (Stream.SkipBlock()) {
+        Error("malformed block record in AST file");
+        return Failure;
+      }
+      break;
 
+    case UNHASHED_CONTROL_BLOCK_ID: {
+      if (Stream.EnterSubBlock(UNHASHED_CONTROL_BLOCK_ID)) {
+        Error("malformed block record in AST file");
+        return Failure;
+      }
+
+      ASTReadResult Result = Success;
+      if (Listener && !ImportedBy) {
+        const HeaderSearchOptions &HSOpts =
+            PP.getHeaderSearchInfo().getHeaderSearchOpts();
+        bool AllowCompatibleConfigurationMismatch =
+            F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule;
+        Result = ReadDiagnosticOptionsBlock(&F, Stream, ClientLoadCapabilities,
+                                            AllowCompatibleConfigurationMismatch,
+                                            *Listener,
+                                            HSOpts.ModulesValidateDiagnosticOptions);
+
+        if (Result == Failure) {
+          Error("malformed block record in AST file");
+          return Failure;
+        }
+
+        if (DisableValidation ||
+            (AllowConfigurationMismatch && Result == ConfigurationMismatch))
+          Result = Success;
+      }
+
+      if (Result == Success)
+        // Record that we've loaded this module.
+        Loaded.push_back(ImportedModule(M, ImportedBy, ImportLoc));
+
+      // Move Stream backward to point to ASTCursor.
+      Stream = ASTCursor;
+      return Result;
+    }
     default:
       if (Stream.SkipBlock()) {
         Error("malformed block record in AST file");
@@ -4137,24 +4211,25 @@ void ASTReader::finalizeForWriting() {
 static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile){
   BitstreamCursor Stream(StreamFile);
   if (!startsWithASTFileMagic(Stream))
-    return 0;
+    return {{0}};
 
-  // Scan for the CONTROL_BLOCK_ID block.
-  if (SkipCursorToBlock(Stream, CONTROL_BLOCK_ID))
-    return 0;
+  // Scan for the UNHASHED_CONTROL_BLOCK_ID block.
+  if (SkipCursorToBlock(Stream, UNHASHED_CONTROL_BLOCK_ID))
+    return {{0}};
 
-  // Scan for SIGNATURE inside the control block.
+  // Scan for SIGNATURE inside the diagnostic options block.
   ASTReader::RecordData Record;
   while (1) {
     llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
     if (Entry.Kind == llvm::BitstreamEntry::EndBlock ||
         Entry.Kind != llvm::BitstreamEntry::Record)
-      return 0;
+      return {{0}};
 
     Record.clear();
     StringRef Blob;
     if (SIGNATURE == Stream.readRecord(Entry.ID, Record, &Blob))
-      return Record[0];
+      return {{(uint32_t)Record[0], (uint32_t)Record[1], (uint32_t)Record[2],
+               (uint32_t)Record[3], (uint32_t)Record[4]}};
   }
 }
 
@@ -4300,8 +4375,7 @@ bool ASTReader::readASTFileControlBlock(
         std::string IgnoredSuggestedPredefines;
         if (ReadOptionsBlock(Stream, ARR_ConfigurationMismatch | ARR_OutOfDate,
                              /*AllowCompatibleConfigurationMismatch*/ false,
-                             Listener, IgnoredSuggestedPredefines,
-                             ValidateDiagnosticOptions) != Success)
+                             Listener, IgnoredSuggestedPredefines) != Success)
           return true;
         break;
       }
@@ -4422,6 +4496,7 @@ bool ASTReader::readASTFileControlBlock(
 
   // Look for module file extension blocks, if requested.
   if (FindModuleFileExtensions) {
+    BitstreamCursor SavedStream = Stream;
     while (!SkipCursorToBlock(Stream, EXTENSION_BLOCK_ID)) {
       bool DoneWithExtensionBlock = false;
       while (!DoneWithExtensionBlock) {
@@ -4460,7 +4535,17 @@ bool ASTReader::readASTFileControlBlock(
        }
       }
     }
+    Stream = SavedStream;
   }
+
+  // Scan for the UNHASHED_CONTROL_BLOCK_ID block.
+  if (SkipCursorToBlock(Stream, UNHASHED_CONTROL_BLOCK_ID))
+    return true;
+  if (ReadDiagnosticOptionsBlock(nullptr, Stream,
+          ARR_ConfigurationMismatch | ARR_OutOfDate,
+          /*AllowCompatibleConfigurationMismatch*/ false,
+          Listener, ValidateDiagnosticOptions) != Success)
+    return true;
 
   return false;
 }
