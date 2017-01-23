@@ -2,38 +2,15 @@
 
 --- !mach-o
 FileHeader:
-  magic:           0xFEEDFACE
-  cputype:         0x00000007
-  cpusubtype:      0x00000003
-  filetype:        0x00000004
-  ncmds:           2
-  sizeofcmds:      192
-  flags:           0x00000000
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      32
+  flags:           0x00218085
+  reserved:        0x00000000
 LoadCommands:
-  - cmd:             LC_SEGMENT_64
-    cmdsize:         152
-    segname:         __TEXT
-    vmaddr:          4294967296
-    vmsize:          8192
-    fileoff:         0
-    filesize:        3099
-    maxprot:         7
-    initprot:        5
-    nsects:          1
-    flags:           0
-    Sections:
-      - sectname:        __text
-        segname:         __TEXT
-        addr:            0x0000000100001160
-        size:            3099
-        offset:          0x00001160
-        align:           4
-        reloff:          0x00000000
-        nreloc:          0
-        flags:           0x80000400
-        reserved1:       0x00000000
-        reserved2:       0x00000000
-        reserved3:       0x00000000
   - cmd:             LC_BUILD_VERSION
     cmdsize:         32
     platform:        2
