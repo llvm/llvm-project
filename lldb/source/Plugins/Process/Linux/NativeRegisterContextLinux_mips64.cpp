@@ -71,6 +71,9 @@ struct pt_watch_regs {
 
 #define IRW (I | R | W)
 
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
 struct pt_watch_regs default_watch_regs;
 
 using namespace lldb_private;

@@ -520,7 +520,7 @@ static Value *simplifyX86muldq(const IntrinsicInst &II,
          ResTy->getScalarSizeInBits() == 64 && "Unexpected muldq/muludq types");
 
   // muldq/muludq(undef, undef) -> zero (matches generic mul behavior)
-  if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
+  if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
     return ConstantAggregateZero::get(ResTy);
 
   // Constant folding.

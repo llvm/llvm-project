@@ -7564,7 +7564,7 @@ let Predicates = [HasAVX512] in {
   defm : avx512_ext_lowering<"DQZ",    v8i64_info,   v8i32x_info,  extloadvi32>;
 }
 
-multiclass AVX512_pmovx_patterns<string OpcPrefix, string ExtTy,
+multiclass AVX512_pmovx_patterns<string OpcPrefix,
                                  SDNode ExtOp, PatFrag ExtLoad16> {
   // 128-bit patterns
   let Predicates = [HasVLX, HasBWI] in {
@@ -7705,8 +7705,8 @@ multiclass AVX512_pmovx_patterns<string OpcPrefix, string ExtTy,
   }
 }
 
-defm : AVX512_pmovx_patterns<"VPMOVSX", "s", X86vsext, extloadi32i16>;
-defm : AVX512_pmovx_patterns<"VPMOVZX", "z", X86vzext, loadi16_anyext>;
+defm : AVX512_pmovx_patterns<"VPMOVSX", X86vsext, extloadi32i16>;
+defm : AVX512_pmovx_patterns<"VPMOVZX", X86vzext, loadi16_anyext>;
 
 //===----------------------------------------------------------------------===//
 // GATHER - SCATTER Operations

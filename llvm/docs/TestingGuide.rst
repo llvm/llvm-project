@@ -387,49 +387,23 @@ depends on special features of sub-architectures, you must add the specific
 triple, test with the specific FileCheck and put it into the specific
 directory that will filter out all other architectures.
 
+REQUIRES and REQUIRES-ANY directive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Constraining test execution
----------------------------
-
-Some tests can be run only in specific configurations, such as
-with debug builds or on particular platforms. Use ``REQUIRES``
-and ``UNSUPPORTED`` to control when the test is enabled.
-
-Some tests are expected to fail. For example, there may be a known bug
-that the test detect. Use ``XFAIL`` to mark a test as an expected failure.
-An ``XFAIL`` test will be successful if its execution fails, and
-will be a failure if its execution succeeds.
+Some tests can be enabled only in specific situation - like having
+debug build. Use ``REQUIRES`` directive to specify those requirements.
 
 .. code-block:: llvm
 
-    ; This test will be only enabled in the build with asserts.
+    ; This test will be only enabled in the build with asserts
     ; REQUIRES: asserts
-    ; This test is disabled on Linux.
-    ; UNSUPPORTED: -linux-
-    ; This test is expected to fail on PowerPC.
-    ; XFAIL: powerpc
 
-``REQUIRES`` and ``UNSUPPORTED`` and ``XFAIL`` all accept a comma-separated
-list of boolean expressions. The values in each expression may be:
+You can separate requirements by a comma.
+``REQUIRES`` means all listed requirements must be satisfied.
+``REQUIRES-ANY`` means at least one must be satisfied.
 
-- Features added to ``config.available_features`` by 
-  configuration files such as ``lit.cfg``.
-- Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
-
-| ``REQUIRES`` enables the test if all expressions are true.
-| ``UNSUPPORTED`` disables the test if any expression is true.
-| ``XFAIL`` expects the test to fail if any expression is true.
-
-As a special case, ``XFAIL: *`` is expected to fail everywhere.
-
-.. code-block:: llvm
-
-    ; This test is disabled on Windows,
-    ; and is disabled on Linux, except for Android Linux.
-    ; UNSUPPORTED: windows, linux && !android
-    ; This test is expected to fail on both PowerPC and ARM.
-    ; XFAIL: powerpc || arm
-
+List of features that can be used in ``REQUIRES`` and ``REQUIRES-ANY`` can be
+found in lit.cfg files.
 
 Substitutions
 -------------
@@ -545,6 +519,24 @@ their name. For example:
 ``not``
    This program runs its arguments and then inverts the result code from it.
    Zero result codes become 1. Non-zero result codes become 0.
+
+Sometimes it is necessary to mark a test case as "expected fail" or
+XFAIL. You can easily mark a test as XFAIL just by including ``XFAIL:``
+on a line near the top of the file. This signals that the test case
+should succeed if the test fails. Such test cases are counted separately
+by the testing tool. To specify an expected fail, use the XFAIL keyword
+in the comments of the test program followed by a colon and one or more
+failure patterns. Each failure pattern can be either ``*`` (to specify
+fail everywhere), or a part of a target triple (indicating the test
+should fail on that platform), or the name of a configurable feature
+(for example, ``loadable_module``). If there is a match, the test is
+expected to fail. If not, the test is expected to succeed. To XFAIL
+everywhere just specify ``XFAIL: *``. Here is an example of an ``XFAIL``
+line:
+
+.. code-block:: llvm
+
+    ; XFAIL: darwin,sun
 
 To make the output more useful, :program:`lit` will scan
 the lines of the test case for ones that contain a pattern that matches

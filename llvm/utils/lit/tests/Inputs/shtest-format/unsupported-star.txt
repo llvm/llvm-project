@@ -1,3 +1,0 @@
-# '*' only works in XFAIL
-UNSUPPORTED: *
-RUN: false

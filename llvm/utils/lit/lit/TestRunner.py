@@ -9,7 +9,6 @@ import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
 from lit.util import to_bytes, to_string
-from lit.BooleanExpression import BooleanExpression
 
 class InternalShellError(Exception):
     def __init__(self, command, message):
@@ -747,35 +746,14 @@ class ParserKind(object):
     command.
 
     TAG: A keyword taking no value. Ex 'END.'
-    COMMAND: A keyword taking a list of shell commands. Ex 'RUN:'
-    LIST: A keyword taking a comma-separated list of values.
-    BOOLEAN_EXPR: A keyword taking a comma-separated list of 
-        boolean expressions. Ex 'XFAIL:'
+    COMMAND: A Keyword taking a list of shell commands. Ex 'RUN:'
+    LIST: A keyword taking a comma separated list of value. Ex 'XFAIL:'
     CUSTOM: A keyword with custom parsing semantics.
     """
     TAG = 0
     COMMAND = 1
     LIST = 2
-    BOOLEAN_EXPR = 3
-    CUSTOM = 4
-
-    @staticmethod
-    def allowedKeywordSuffixes(value):
-        return { ParserKind.TAG:          ['.'],
-                 ParserKind.COMMAND:      [':'],
-                 ParserKind.LIST:         [':'],
-                 ParserKind.BOOLEAN_EXPR: [':'],
-                 ParserKind.CUSTOM:       [':', '.']
-               } [value]
-
-    @staticmethod
-    def str(value):
-        return { ParserKind.TAG:          'TAG',
-                 ParserKind.COMMAND:      'COMMAND',
-                 ParserKind.LIST:         'LIST',
-                 ParserKind.BOOLEAN_EXPR: 'BOOLEAN_EXPR',
-                 ParserKind.CUSTOM:       'CUSTOM'
-               } [value]
+    CUSTOM = 3
 
 
 class IntegratedTestKeywordParser(object):
@@ -787,18 +765,15 @@ class IntegratedTestKeywordParser(object):
             ParserKind.CUSTOM.
     """
     def __init__(self, keyword, kind, parser=None, initial_value=None):
-        allowedSuffixes = ParserKind.allowedKeywordSuffixes(kind)
-        if len(keyword) == 0 or keyword[-1] not in allowedSuffixes:
-            if len(allowedSuffixes) == 1:
-                raise ValueError("Keyword '%s' of kind '%s' must end in '%s'"
-                                 % (keyword, ParserKind.str(kind),
-                                    allowedSuffixes[0]))
-            else:
-                raise ValueError("Keyword '%s' of kind '%s' must end in "
-                                 " one of '%s'"
-                                 % (keyword, ParserKind.str(kind),
-                                    ' '.join(allowedSuffixes)))
+        if not keyword.endswith('.') and not keyword.endswith(':'):
+            raise ValueError("keyword '%s' must end with either '.' or ':' "
+                             % keyword)
+        if keyword.endswith('.') and kind in \
+                [ParserKind.LIST, ParserKind.COMMAND]:
+            raise ValueError("Keyword '%s' should end in ':'" % keyword)
 
+        elif keyword.endswith(':') and kind in [ParserKind.TAG]:
+            raise ValueError("Keyword '%s' should end in '.'" % keyword)
         if parser is not None and kind != ParserKind.CUSTOM:
             raise ValueError("custom parsers can only be specified with "
                              "ParserKind.CUSTOM")
@@ -812,9 +787,9 @@ class IntegratedTestKeywordParser(object):
             self.parser = self._handleCommand
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
-        elif kind == ParserKind.BOOLEAN_EXPR:
-            self.parser = self._handleBooleanExpr
         elif kind == ParserKind.TAG:
+            if not keyword.endswith('.'):
+                raise ValueError("keyword '%s' should end with '.'" % keyword)
             self.parser = self._handleTag
         elif kind == ParserKind.CUSTOM:
             if parser is None:
@@ -824,12 +799,8 @@ class IntegratedTestKeywordParser(object):
             raise ValueError("Unknown kind '%s'" % kind)
 
     def parseLine(self, line_number, line):
-        try:
-            self.parsed_lines += [(line_number, line)]
-            self.value = self.parser(line_number, line, self.value)
-        except ValueError as e:
-            raise ValueError(str(e) + ("\nin %s directive on test line %d" %
-                                       (self.keyword, line_number)))
+        self.parsed_lines += [(line_number, line)]
+        self.value = self.parser(line_number, line, self.value)
 
     def getValue(self):
         return self.value
@@ -870,38 +841,12 @@ class IntegratedTestKeywordParser(object):
         output.extend([s.strip() for s in line.split(',')])
         return output
 
-    @staticmethod
-    def _handleBooleanExpr(line_number, line, output):
-        """A parser for BOOLEAN_EXPR type keywords"""
-        if output is None:
-            output = []
-        output.extend([s.strip() for s in line.split(',')])
-        # Evaluate each expression to verify syntax.
-        # We don't want any results, just the raised ValueError.
-        for s in output:
-            if s != '*':
-                BooleanExpression.evaluate(s, [])
-        return output
-
-    @staticmethod
-    def _handleRequiresAny(line_number, line, output):
-        """A custom parser to transform REQUIRES-ANY: into REQUIRES:"""
-
-        # Extract the conditions specified in REQUIRES-ANY: as written.
-        conditions = []
-        IntegratedTestKeywordParser._handleList(line_number, line, conditions)
-
-        # Output a `REQUIRES: a || b || c` expression in its place.
-        expression = ' || '.join(conditions)
-        IntegratedTestKeywordParser._handleBooleanExpr(line_number,
-                                                       expression, output)
-        return output
 
 def parseIntegratedTestScript(test, additional_parsers=[],
                               require_script=True):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test
     script and extract the lines to 'RUN' as well as 'XFAIL' and 'REQUIRES'
-    and 'UNSUPPORTED' information.
+    'REQUIRES-ANY' and 'UNSUPPORTED' information.
 
     If additional parsers are specified then the test is also scanned for the
     keywords they specify and all matches are passed to the custom parser.
@@ -910,26 +855,26 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     may be returned. This can be used for test formats where the actual script
     is optional or ignored.
     """
-
-    # Install the built-in keyword parsers.
+    # Collect the test lines from the script.
+    sourcepath = test.getSourcePath()
     script = []
+    requires = []
+    requires_any = []
+    unsupported = []
     builtin_parsers = [
         IntegratedTestKeywordParser('RUN:', ParserKind.COMMAND,
                                     initial_value=script),
-        IntegratedTestKeywordParser('XFAIL:', ParserKind.BOOLEAN_EXPR,
+        IntegratedTestKeywordParser('XFAIL:', ParserKind.LIST,
                                     initial_value=test.xfails),
-        IntegratedTestKeywordParser('REQUIRES:', ParserKind.BOOLEAN_EXPR,
-                                    initial_value=test.requires),
-        IntegratedTestKeywordParser('REQUIRES-ANY:', ParserKind.CUSTOM,
-                                    IntegratedTestKeywordParser._handleRequiresAny, 
-                                    initial_value=test.requires), 
-        IntegratedTestKeywordParser('UNSUPPORTED:', ParserKind.BOOLEAN_EXPR,
-                                    initial_value=test.unsupported),
+        IntegratedTestKeywordParser('REQUIRES:', ParserKind.LIST,
+                                    initial_value=requires),
+        IntegratedTestKeywordParser('REQUIRES-ANY:', ParserKind.LIST,
+                                    initial_value=requires_any),
+        IntegratedTestKeywordParser('UNSUPPORTED:', ParserKind.LIST,
+                                    initial_value=unsupported),
         IntegratedTestKeywordParser('END.', ParserKind.TAG)
     ]
     keyword_parsers = {p.keyword: p for p in builtin_parsers}
-    
-    # Install user-defined additional parsers.
     for parser in additional_parsers:
         if not isinstance(parser, IntegratedTestKeywordParser):
             raise ValueError('additional parser must be an instance of '
@@ -938,9 +883,7 @@ def parseIntegratedTestScript(test, additional_parsers=[],
             raise ValueError("Parser for keyword '%s' already exists"
                              % parser.keyword)
         keyword_parsers[parser.keyword] = parser
-        
-    # Collect the test lines from the script.
-    sourcepath = test.getSourcePath()
+
     for line_number, command_type, ln in \
             parseIntegratedTestScriptCommands(sourcepath,
                                               keyword_parsers.keys()):
@@ -958,30 +901,46 @@ def parseIntegratedTestScript(test, additional_parsers=[],
         return lit.Test.Result(Test.UNRESOLVED,
                                "Test has unterminated run lines (with '\\')")
 
-    # Enforce REQUIRES:
-    missing_required_features = test.getMissingRequiredFeatures()
+    # Check that we have the required features:
+    missing_required_features = [f for f in requires
+                                 if f not in test.config.available_features]
     if missing_required_features:
         msg = ', '.join(missing_required_features)
         return lit.Test.Result(Test.UNSUPPORTED,
-                               "Test requires the following unavailable "
-                               "features: %s" % msg)
-
-    # Enforce UNSUPPORTED:
-    unsupported_features = test.getUnsupportedFeatures()
+                               "Test requires the following features: %s"
+                               % msg)
+    requires_any_features = [f for f in requires_any
+                             if f in test.config.available_features]
+    if requires_any and not requires_any_features:
+        msg = ' ,'.join(requires_any)
+        return lit.Test.Result(Test.UNSUPPORTED,
+                               "Test requires any of the following features: "
+                               "%s" % msg)
+    unsupported_features = [f for f in unsupported
+                            if f in test.config.available_features]
     if unsupported_features:
         msg = ', '.join(unsupported_features)
         return lit.Test.Result(
             Test.UNSUPPORTED,
-            "Test does not support the following features "
-            "and/or targets: %s" % msg)
+            "Test is unsupported with the following features: %s" % msg)
 
-    # Enforce limit_to_features.
-    if not test.isWithinFeatureLimits():
-        msg = ', '.join(test.config.limit_to_features)
-        return lit.Test.Result(Test.UNSUPPORTED,
-                               "Test does not require any of the features "
-                               "specified in limit_to_features: %s" % msg)
+    unsupported_targets = [f for f in unsupported
+                           if f in test.suite.config.target_triple]
+    if unsupported_targets:
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test is unsupported with the following triple: %s" % (
+             test.suite.config.target_triple,))
 
+    if test.config.limit_to_features:
+        # Check that we have one of the limit_to_features features in requires.
+        limit_to_features_tests = [f for f in test.config.limit_to_features
+                                   if f in requires]
+        if not limit_to_features_tests:
+            msg = ', '.join(test.config.limit_to_features)
+            return lit.Test.Result(
+                Test.UNSUPPORTED,
+                "Test requires one of the limit_to_features features %s" % msg)
     return script
 
 

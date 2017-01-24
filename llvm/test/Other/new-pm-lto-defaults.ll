@@ -37,7 +37,6 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
-; CHECK-O-NEXT: Invalidating analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O2-NEXT: Running pass: GlobalOptPass

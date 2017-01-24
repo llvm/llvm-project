@@ -272,7 +272,7 @@ public:
 private:
   friend class CallGraph;
 
-  AssertingVH<Function> F;
+  Function *F;
 
   std::vector<CallRecord> CalledFunctions;
 

@@ -1,3 +1,0 @@
-# REQUIRES line that uses target triple, which doesn't work. Test should not run
-REQUIRES: x86_64
-RUN: false
