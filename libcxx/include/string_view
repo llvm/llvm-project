@@ -206,7 +206,7 @@ public:
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
 	basic_string_view(const basic_string_view&) _NOEXCEPT = default;
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 	basic_string_view& operator=(const basic_string_view&) _NOEXCEPT = default;
 
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -235,16 +235,16 @@ public:
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
 	const_iterator cend()   const _NOEXCEPT { return __data + __size; }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator rbegin()   const _NOEXCEPT { return const_reverse_iterator(cend()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator rend()     const _NOEXCEPT { return const_reverse_iterator(cbegin()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator crbegin()  const _NOEXCEPT { return const_reverse_iterator(cend()); }
 
-	_LIBCPP_INLINE_VISIBILITY
+	_LIBCPP_CONSTEXPR_AFTER_CXX14 _LIBCPP_INLINE_VISIBILITY
 	const_reverse_iterator crend()    const _NOEXCEPT { return const_reverse_iterator(cbegin()); }
 
 	// [string.view.capacity], capacity
