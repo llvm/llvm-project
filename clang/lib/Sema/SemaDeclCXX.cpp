@@ -12383,9 +12383,9 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   Diag(Loc, diag::err_in_class_initializer_not_yet_parsed)
       << OutermostClass << Field;
   Diag(Field->getLocEnd(), diag::note_in_class_initializer_not_yet_parsed);
-
-  // Don't diagnose this again.
-  Field->setInvalidDecl();
+  // Recover by marking the field invalid, unless we're in a SFINAE context.
+  if (!isSFINAEContext())
+    Field->setInvalidDecl();
   return ExprError();
 }
 
