@@ -5683,6 +5683,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_strchr:
   case Builtin::BI__builtin_wcschr:
   case Builtin::BI__builtin_memchr:
+  case Builtin::BI__builtin_char_memchr:
   case Builtin::BI__builtin_wmemchr: {
     if (!Visit(E->getArg(0)))
       return false;
@@ -5720,6 +5721,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // Fall through.
     case Builtin::BImemchr:
     case Builtin::BI__builtin_memchr:
+    case Builtin::BI__builtin_char_memchr:
       // memchr compares by converting both sides to unsigned char. That's also
       // correct for strchr if we get this far (to cope with plain char being
       // unsigned in the strchr case).

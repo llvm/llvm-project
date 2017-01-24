@@ -166,6 +166,27 @@ namespace StrchrEtc {
   static_assert(__builtin_memchr(nullptr, 'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
   static_assert(__builtin_memchr(nullptr, 'x', 0) == nullptr); // FIXME: Should we reject this?
 
+  static_assert(__builtin_char_memchr(kStr, 'a', 0) == nullptr);
+  static_assert(__builtin_char_memchr(kStr, 'a', 1) == kStr);
+  static_assert(__builtin_char_memchr(kStr, '\0', 5) == nullptr);
+  static_assert(__builtin_char_memchr(kStr, '\0', 6) == kStr + 5);
+  static_assert(__builtin_char_memchr(kStr, '\xff', 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kStr, '\xff' + 256, 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kStr, '\xff' - 256, 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kFoo, 'x', 3) == nullptr);
+  static_assert(__builtin_char_memchr(kFoo, 'x', 4) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_char_memchr(nullptr, 'x', 3) == nullptr); // expected-error {{not an integral constant}} expected-note {{dereferenced null}}
+  static_assert(__builtin_char_memchr(nullptr, 'x', 0) == nullptr); // FIXME: Should we reject this?
+
+  static_assert(*__builtin_char_memchr(kStr, '\xff', 8) == '\xff');
+  constexpr bool char_memchr_mutable() {
+    char buffer[] = "mutable";
+    *__builtin_char_memchr(buffer, 't', 8) = 'r';
+    *__builtin_char_memchr(buffer, 'm', 8) = 'd';
+    return __builtin_strcmp(buffer, "durable") == 0;
+  }
+  static_assert(char_memchr_mutable());
+
   constexpr bool a = !strchr("hello", 'h'); // expected-error {{constant expression}} expected-note {{non-constexpr function 'strchr' cannot be used in a constant expression}}
   constexpr bool b = !memchr("hello", 'h', 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'memchr' cannot be used in a constant expression}}
 }
