@@ -44,10 +44,7 @@ const char *lldb_private::StateAsCString(StateType state) {
   case eStateSuspended:
     return "suspended";
   }
-  static char unknown_state_string[64];
-  snprintf(unknown_state_string, sizeof(unknown_state_string), "StateType = %i",
-           state);
-  return unknown_state_string;
+  return "unknown";
 }
 
 const char *lldb_private::GetPermissionsAsCString(uint32_t permissions) {

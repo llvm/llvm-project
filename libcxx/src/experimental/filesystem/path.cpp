@@ -6,9 +6,11 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#undef NDEBUG
 #include "experimental/filesystem"
 #include "string_view"
 #include "utility"
+#include "cassert"
 
 namespace { namespace parser
 {
@@ -111,6 +113,7 @@ public:
   void decrement() noexcept {
     const PosPtr REnd = &Path.front() - 1;
     const PosPtr RStart = getCurrentTokenStartPos() - 1;
+    assert(RStart != REnd);
 
     switch (State) {
     case PS_AtEnd: {
@@ -319,6 +322,7 @@ string_view_t path::__root_path_raw() const
       auto NextCh = PP.peek();
       if (NextCh && *NextCh == '/') {
         ++PP;
+        assert(PP.State == PathParser::PS_InRootDir);
         return createView(__pn_.data(), &PP.RawEntry.back());
       }
       return PP.RawEntry;

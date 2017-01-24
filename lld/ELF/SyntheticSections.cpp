@@ -1073,11 +1073,13 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
 
   if (!StrTabSec.isDynamic()) {
     auto GlobBegin = Symbols.begin() + NumLocals;
-    std::stable_sort(GlobBegin, Symbols.end(), [](const SymbolTableEntry &L,
-                                                  const SymbolTableEntry &R) {
-      return L.Symbol->symbol()->computeBinding() == STB_LOCAL &&
-             R.Symbol->symbol()->computeBinding() != STB_LOCAL;
-    });
+    auto It = std::stable_partition(
+        GlobBegin, Symbols.end(), [](const SymbolTableEntry &S) {
+          return S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+        });
+    // update sh_info with number of Global symbols output with computed
+    // binding of STB_LOCAL
+    this->OutSec->Info = this->Info = 1 + It - Symbols.begin();
     return;
   }
 

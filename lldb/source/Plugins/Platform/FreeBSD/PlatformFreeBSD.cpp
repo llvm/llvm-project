@@ -549,6 +549,12 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
       // FreeBSD kernel as of 10.x, does not support thumb breakpoints
       return 0;
     }
+
+    static const uint8_t g_arm_breakpoint_opcode[] = {0xFE, 0xDE, 0xFF, 0xE7};
+    size_t trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
+    assert(bp_site);
+    if (bp_site->SetTrapOpcode(g_arm_breakpoint_opcode, trap_opcode_size))
+      return trap_opcode_size;
   }
     LLVM_FALLTHROUGH;
   default:

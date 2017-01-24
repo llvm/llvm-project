@@ -60,7 +60,7 @@ endif()
 include(CMakeDependentOption)
 
 # Basic options ---------------------------------------------------------------
-option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." OFF)
+option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
@@ -501,7 +501,6 @@ endif()
 # Assertion flags =============================================================
 define_if(LIBCXX_ENABLE_ASSERTIONS -UNDEBUG)
 define_if_not(LIBCXX_ENABLE_ASSERTIONS -DNDEBUG)
-define_if(LIBCXX_ENABLE_ASSERTIONS -D_LIBCPP_DEBUG=0)
 define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
 if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
