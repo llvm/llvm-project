@@ -1168,7 +1168,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    AttrVec vec;\n"
-            "    ReadAttributes(F, vec, Record, Idx);\n"
+            "    ReadAttributes(Record, vec);\n"
             "    assert(vec.size() == 1);\n"
             "    Attr *" << getLowerName() << " = vec.front();";
     }
