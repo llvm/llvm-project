@@ -884,6 +884,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -893,6 +895,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1096,6 +1100,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1105,6 +1111,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1198,6 +1206,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1207,6 +1217,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1299,6 +1311,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1308,6 +1322,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1741,6 +1757,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1750,6 +1768,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1883,6 +1903,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1892,6 +1914,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -2099,6 +2123,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -2108,6 +2134,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -2233,6 +2261,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -2242,6 +2272,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
