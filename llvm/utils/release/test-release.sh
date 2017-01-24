@@ -37,6 +37,7 @@ do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="yes"
 do_lldb="no"
+do_polly="no"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -65,6 +66,8 @@ function usage() {
     echo " -no-openmp           Disable check-out & build libomp"
     echo " -lldb                Enable check-out & build lldb"
     echo " -no-lldb             Disable check-out & build lldb (default)"
+    echo " -polly               Enable check-out & build Polly"
+    echo " -no-polly            Disable check-out & build Polly (default)"
 }
 
 while [ $# -gt 0 ]; do
@@ -146,6 +149,12 @@ while [ $# -gt 0 ]; do
         -no-lldb )
             do_lldb="no"
             ;;
+        -polly )
+            do_polly="yes"
+            ;;
+        -no-polly )
+            do_polly="no"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -219,6 +228,9 @@ fi
 if [ $do_lldb = "yes" ]; then
   projects="$projects lldb"
 fi
+if [ $do_polly = "yes" ]; then
+  projects="$projects polly"
+fi
 
 # Go to the build directory (may be different from CWD)
 BuildDir=$BuildDir/$RC
@@ -285,7 +297,7 @@ function export_sources() {
         cfe)
             projsrc=llvm.src/tools/clang
             ;;
-        lldb)
+        lldb|polly)
             projsrc=llvm.src/tools/$proj
             ;;
         clang-tools-extra)
