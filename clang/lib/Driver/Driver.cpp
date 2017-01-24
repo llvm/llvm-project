@@ -3186,7 +3186,8 @@ InputInfo Driver::BuildJobsForActionNoCache(
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
 
-  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(), embedBitcodeInObject());
+  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
+                  embedBitcodeInObject() && !isUsingLTO());
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)
