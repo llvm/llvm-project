@@ -824,9 +824,7 @@ template <unsigned> struct __static_assert_check {};
 #   else
 #       error Supported values for _LIBCPP_DEBUG are 0 and 1
 #   endif
-# if !defined(_LIBCPP_BUILDING_LIBRARY)
 #   define _LIBCPP_EXTERN_TEMPLATE(...)
-# endif
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE

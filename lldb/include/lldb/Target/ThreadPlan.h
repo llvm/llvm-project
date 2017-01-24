@@ -40,9 +40,10 @@ namespace lldb_private {
 //  The thread maintaining a thread plan stack, and you program the actions of a
 //  particular thread
 //  by pushing plans onto the plan stack.
-//  There is always a "Current" plan, which is the head of the plan stack,
+//  There is always a "Current" plan, which is the top of the plan stack,
 //  though in some cases
-//  a plan may defer to plans higher in the stack for some piece of information.
+//  a plan may defer to plans higher in the stack for some piece of information
+//  (let us define that the plan stack grows downwards).
 //
 //  The plan stack is never empty, there is always a Base Plan which persists
 //  through the life
@@ -109,6 +110,15 @@ namespace lldb_private {
 //  plans in the time between when
 //  your plan gets unshipped and the next resume.
 //
+//  Thread State Checkpoint:
+//
+//  Note that calling functions on target process (ThreadPlanCallFunction) changes
+//  current thread state. The function can be called either by direct user demand or
+//  internally, for example lldb allocates memory on device to calculate breakpoint
+//  condition expression - on Linux it is performed by calling mmap on device.
+//  ThreadStateCheckpoint saves Thread state (stop info and completed
+//  plan stack) to restore it after completing function call.
+//
 //  Over the lifetime of the plan, various methods of the ThreadPlan are then
 //  called in response to changes of state in
 //  the process we are debugging as follows:
@@ -149,7 +159,7 @@ namespace lldb_private {
 //  If the Current plan answers "true" then it is asked if the stop should
 //  percolate all the way to the
 //  user by calling the ShouldStop method.  If the current plan doesn't explain
-//  the stop, then we query down
+//  the stop, then we query up
 //  the plan stack for a plan that does explain the stop.  The plan that does
 //  explain the stop then needs to
 //  figure out what to do about the plans below it in the stack.  If the stop is
@@ -170,7 +180,7 @@ namespace lldb_private {
 //  event it didn't directly handle
 //  it can designate itself a "Master" plan by responding true to IsMasterPlan,
 //  and then if it wants not to be
-//  discarded, it can return true to OkayToDiscard, and it and all its dependent
+//  discarded, it can return false to OkayToDiscard, and it and all its dependent
 //  plans will be preserved when
 //  we resume execution.
 //
@@ -207,7 +217,7 @@ namespace lldb_private {
 //
 //  If a plan says responds "true" to ShouldStop, then it is asked if it's job
 //  is complete by calling
-//  MischiefManaged.  If that returns true, the thread is popped from the plan
+//  MischiefManaged.  If that returns true, the plan is popped from the plan
 //  stack and added to the
 //  Completed Plan Stack.  Then the next plan in the stack is asked if it
 //  ShouldStop, and  it returns "true",
@@ -241,9 +251,9 @@ namespace lldb_private {
 //
 //  When the process stops, the thread is given a StopReason, in the form of a
 //  StopInfo object.  If there is a completed
-//  plan corresponding to the stop, then the "actual" stop reason will be
+//  plan corresponding to the stop, then the "actual" stop reason can be
 //  suppressed, and instead a StopInfoThreadPlan
-//  object will be cons'ed up from the highest completed plan in the stack.
+//  object will be cons'ed up from the top completed plan in the stack.
 //  However, if the plan doesn't want to be
 //  the stop reason, then it can call SetPlanComplete and pass in "false" for
 //  the "success" parameter.  In that case,

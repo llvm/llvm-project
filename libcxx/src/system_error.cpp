@@ -17,9 +17,9 @@
 #include "cstring"
 #include "cstdio"
 #include "cstdlib"
+#include "cassert"
 #include "string"
 #include "string.h"
-#include "__debug"
 
 #if defined(__ANDROID__)
 #include <android/api-level.h>
@@ -96,7 +96,7 @@ string do_strerror_r(int ev) {
             std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
             return string(buffer);
         } else {
-            _LIBCPP_ASSERT(new_errno == ERANGE, "unexpected error from ::strerr_r");
+            assert(new_errno == ERANGE);
             // FIXME maybe? 'strerror_buff_size' is likely to exceed the
             // maximum error size so ERANGE shouldn't be returned.
             std::abort();

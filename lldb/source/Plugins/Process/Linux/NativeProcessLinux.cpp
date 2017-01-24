@@ -567,7 +567,7 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
             pid,
             thread_found ? "stopped tracking thread metadata"
                          : "thread metadata not found",
-            StateAsCString(GetState()));
+            GetState());
         // The main thread exited.  We're done monitoring.  Report to delegate.
         SetExitStatus(convert_pid_status_to_exit_type(status),
                       convert_pid_status_to_return_code(status), nullptr, true);
@@ -1033,7 +1033,7 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
       LLDB_LOG(log,
                "pid {0} tid {1}, thread was already marked as a stopped "
                "state (state={2}), leaving stop signal as is",
-               GetID(), thread.GetID(), StateAsCString(thread_state));
+               GetID(), thread.GetID(), thread_state);
       SignalIfAllThreadsStopped();
     }
 
@@ -1263,7 +1263,7 @@ Error NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     }
 
     LLDB_LOG(log, "processing resume action state {0} for pid {1} tid {2}",
-             StateAsCString(action->state), GetID(), thread_sp->GetID());
+             action->state, GetID(), thread_sp->GetID());
 
     switch (action->state) {
     case eStateRunning:
@@ -1393,7 +1393,7 @@ Error NativeProcessLinux::Kill() {
   case StateType::eStateUnloaded:
     // Nothing to do - the process is already dead.
     LLDB_LOG(log, "ignored for PID {0} due to current state: {1}", GetID(),
-             StateAsCString(m_state));
+             m_state);
     return error;
 
   case StateType::eStateConnected:
@@ -2273,7 +2273,7 @@ Error NativeProcessLinux::ResumeThread(NativeThreadLinux &thread,
     return step_result;
   }
   default:
-    LLDB_LOG(log, "Unhandled state {0}.", StateAsCString(state));
+    LLDB_LOG(log, "Unhandled state {0}.", state);
     llvm_unreachable("Unhandled state for resume");
   }
 }

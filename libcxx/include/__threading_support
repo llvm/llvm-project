@@ -25,6 +25,7 @@
 # include <pthread.h>
 # include <sched.h>
 #elif defined(_LIBCPP_HAS_THREAD_API_WIN32)
+#include <assert.h>
 #include <Windows.h>
 #include <process.h>
 #include <fibersapi.h>
