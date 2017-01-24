@@ -127,7 +127,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
           if (Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
               Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
               Name == TLI.getLibcallName(RTLIB::MEMSET)) {
-            LibFunc::Func Func;
+            LibFunc Func;
             if (LibInfo.getLibFunc(Name, Func)) {
               const auto &Op2 = MI.getOperand(2);
               if (!Op2.isReg())

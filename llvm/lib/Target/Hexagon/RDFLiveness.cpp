@@ -377,9 +377,9 @@ void Liveness::computePhiInfo() {
         NodeAddr<UseNode*> A = DFG.addr<UseNode*>(UN);
         uint16_t F = A.Addr->getFlags();
         if ((F & (NodeAttrs::Undef | NodeAttrs::PhiRef)) == 0) {
-	  RegisterRef R = DFG.normalizeRef(getRestrictedRegRef(A));
+          RegisterRef R = DFG.normalizeRef(getRestrictedRegRef(A));
           RealUses[R.Reg].insert({A.Id,R.Mask});
-	}
+        }
         UN = A.Addr->getSibling();
       }
       // Visit all reached defs, and add them to the queue. These defs may
@@ -424,7 +424,7 @@ void Liveness::computePhiInfo() {
         auto UA = DFG.addr<UseNode*>(I->first);
         // Undef flag is checked above.
         assert((UA.Addr->getFlags() & NodeAttrs::Undef) == 0);
-	RegisterRef R(UI->first, I->second);
+        RegisterRef R(UI->first, I->second);
         NodeList RDs = getAllReachingDefs(R, UA);
         if (any_of(RDs, InPhiDefs))
           ++I;
@@ -803,9 +803,8 @@ void Liveness::resetKills(MachineBasicBlock *B) {
         IsLive = true;
         break;
       }
-      if (IsLive)
-        continue;
-      Op.setIsKill(true);
+      if (!IsLive)
+        Op.setIsKill(true);
       for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR)
         Live.set(*SR);
     }

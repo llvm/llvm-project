@@ -20,7 +20,7 @@
 // One of TLI_DEFINE_ENUM/STRING are defined.
 
 #if defined(TLI_DEFINE_ENUM)
-#define TLI_DEFINE_ENUM_INTERNAL(enum_variant) enum_variant,
+#define TLI_DEFINE_ENUM_INTERNAL(enum_variant) LibFunc_##enum_variant,
 #define TLI_DEFINE_STRING_INTERNAL(string_repr)
 #else
 #define TLI_DEFINE_ENUM_INTERNAL(enum_variant)

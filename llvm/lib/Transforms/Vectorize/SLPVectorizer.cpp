@@ -4124,7 +4124,7 @@ class HorizontalReduction {
   SmallVector<Value *, 16> ReductionOps;
   SmallVector<Value *, 32> ReducedVals;
 
-  BinaryOperator *ReductionRoot;
+  BinaryOperator *ReductionRoot = nullptr;
   // After successfull horizontal reduction vectorization attempt for PHI node
   // vectorizer tries to update root binary op by combining vectorized tree and
   // the ReductionPHI node. But during vectorization this ReductionPHI can be
@@ -4135,25 +4135,15 @@ class HorizontalReduction {
   WeakVH ReductionPHI;
 
   /// The opcode of the reduction.
-  Instruction::BinaryOps ReductionOpcode;
+  Instruction::BinaryOps ReductionOpcode = Instruction::BinaryOpsEnd;
   /// The opcode of the values we perform a reduction on.
-  unsigned ReducedValueOpcode;
+  unsigned ReducedValueOpcode = 0;
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
-  bool IsPairwiseReduction;
+  bool IsPairwiseReduction = false;
 
 public:
-  /// The width of one full horizontal reduction operation.
-  unsigned ReduxWidth;
-
-  /// Minimal width of available vector registers. It's used to determine
-  /// ReduxWidth.
-  unsigned MinVecRegSize;
-
-  HorizontalReduction(unsigned MinVecRegSize)
-      : ReductionRoot(nullptr), ReductionOpcode(Instruction::BinaryOpsEnd),
-        ReducedValueOpcode(0), IsPairwiseReduction(false), ReduxWidth(0),
-        MinVecRegSize(MinVecRegSize) {}
+  HorizontalReduction() = default;
 
   /// \brief Try to find a reduction tree.
   bool matchAssociativeReduction(PHINode *Phi, BinaryOperator *B) {
@@ -4180,17 +4170,10 @@ public:
     if (!isValidElementType(Ty))
       return false;
 
-    const DataLayout &DL = B->getModule()->getDataLayout();
     ReductionOpcode = B->getOpcode();
     ReducedValueOpcode = 0;
-    // FIXME: Register size should be a parameter to this function, so we can
-    // try different vectorization factors.
-    ReduxWidth = MinVecRegSize / DL.getTypeSizeInBits(Ty);
     ReductionRoot = B;
     ReductionPHI = Phi;
-
-    if (ReduxWidth < 4)
-      return false;
 
     // We currently only support adds.
     if (ReductionOpcode != Instruction::Add &&
@@ -4263,9 +4246,14 @@ public:
     if (ReducedVals.empty())
       return false;
 
+    // If there is a sufficient number of reduction values, reduce
+    // to a nearby power-of-2. Can safely generate oversized
+    // vectors and rely on the backend to split them to legal sizes.
     unsigned NumReducedVals = ReducedVals.size();
-    if (NumReducedVals < ReduxWidth)
+    if (NumReducedVals < 4)
       return false;
+
+    unsigned ReduxWidth = PowerOf2Floor(NumReducedVals);
 
     Value *VectorizedTree = nullptr;
     IRBuilder<> Builder(ReductionRoot);
@@ -4287,7 +4275,8 @@ public:
       V.computeMinimumValueSizes();
 
       // Estimate cost.
-      int Cost = V.getTreeCost() + getReductionCost(TTI, ReducedVals[i]);
+      int Cost =
+          V.getTreeCost() + getReductionCost(TTI, ReducedVals[i], ReduxWidth);
       if (Cost >= -SLPCostThreshold)
         break;
 
@@ -4299,7 +4288,8 @@ public:
       Value *VectorizedRoot = V.vectorizeTree();
 
       // Emit a reduction.
-      Value *ReducedSubTree = emitReduction(VectorizedRoot, Builder);
+      Value *ReducedSubTree =
+          emitReduction(VectorizedRoot, Builder, ReduxWidth);
       if (VectorizedTree) {
         Builder.SetCurrentDebugLocation(Loc);
         VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
@@ -4333,7 +4323,8 @@ public:
 
 private:
   /// \brief Calculate the cost of a reduction.
-  int getReductionCost(TargetTransformInfo *TTI, Value *FirstReducedVal) {
+  int getReductionCost(TargetTransformInfo *TTI, Value *FirstReducedVal,
+                       unsigned ReduxWidth) {
     Type *ScalarTy = FirstReducedVal->getType();
     Type *VecTy = VectorType::get(ScalarTy, ReduxWidth);
 
@@ -4357,7 +4348,8 @@ private:
   }
 
   /// \brief Emit a horizontal reduction of the vectorized value.
-  Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder) {
+  Value *emitReduction(Value *VectorizedValue, IRBuilder<> &Builder,
+                       unsigned ReduxWidth) {
     assert(VectorizedValue && "Need to have a vectorized tree node");
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
@@ -4582,14 +4574,8 @@ static bool canBeVectorized(
     if (Stack.back().isInitial()) {
       Stack.back().clearInitial();
       if (auto *BI = dyn_cast<BinaryOperator>(Inst)) {
-        HorizontalReduction HorRdx(R.getMinVecRegSize());
+        HorizontalReduction HorRdx;
         if (HorRdx.matchAssociativeReduction(P, BI)) {
-          // If there is a sufficient number of reduction values, reduce
-          // to a nearby power-of-2. Can safely generate oversized
-          // vectors and rely on the backend to split them to legal sizes.
-          HorRdx.ReduxWidth =
-              std::max((uint64_t)4, PowerOf2Floor(HorRdx.numReductionValues()));
-
           if (HorRdx.tryToReduce(R, TTI)) {
             Res = true;
             P = nullptr;

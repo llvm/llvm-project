@@ -644,9 +644,9 @@ static bool isWriteOnlyParam(ImmutableCallSite CS, unsigned ArgIdx,
   // whenever possible.
   // FIXME Consider handling this in InferFunctionAttr.cpp together with other
   // attributes.
-  LibFunc::Func F;
+  LibFunc F;
   if (CS.getCalledFunction() && TLI.getLibFunc(*CS.getCalledFunction(), F) &&
-      F == LibFunc::memset_pattern16 && TLI.has(F))
+      F == LibFunc_memset_pattern16 && TLI.has(F))
     if (ArgIdx == 0)
       return true;
 

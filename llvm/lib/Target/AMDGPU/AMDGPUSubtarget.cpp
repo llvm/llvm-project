@@ -41,9 +41,10 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // for SI has the unhelpful behavior that it unsets everything else if you
   // disable it.
 
-  SmallString<256> FullFS("+promote-alloca,+fp64-denormals,+load-store-opt,");
+  SmallString<256> FullFS("+promote-alloca,+fp64-fp16-denormals,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,";
+
   FullFS += FS;
 
   ParseSubtargetFeatures(GPU, FullFS);
@@ -52,9 +53,8 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // denormals, but should be checked. Should we issue a warning somewhere
   // if someone tries to enable these?
   if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
-    FP16Denormals = false;
+    FP64FP16Denormals = false;
     FP32Denormals = false;
-    FP64Denormals = false;
   }
 
   // Set defaults if needed.
@@ -78,9 +78,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FastFMAF32(false),
     HalfRate64Ops(false),
 
-    FP16Denormals(false),
     FP32Denormals(false),
-    FP64Denormals(false),
+    FP64FP16Denormals(false),
     FPExceptions(false),
     FlatForGlobal(false),
     UnalignedScratchAccess(false),

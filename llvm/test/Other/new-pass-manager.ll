@@ -384,13 +384,6 @@
 ; CHECK-O0-NEXT: Finished llvm::Module pass manager run
 
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager \
-; RUN:     -passes='lto<O2>' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-LTO-O2
-; CHECK-LTO-O2: Starting llvm::Module pass manager run
-; CHECK-LTO-O2: Running pass: InstCombinePass
-; CHECK-LTO-O2: Running pass: SimplifyCFGPass
-
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
 ; RUN:     -passes='repeat<3>(no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-MODULE-PASS
 ; CHECK-REPEAT-MODULE-PASS: Starting llvm::Module pass manager run

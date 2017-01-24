@@ -12560,6 +12560,11 @@ SDValue DAGCombiner::ReplaceExtractVectorEltOfLoadWithNarrowedLoad(
   if (NewAlign > Align || !TLI.isOperationLegalOrCustom(ISD::LOAD, VecEltVT))
     return SDValue();
 
+  ISD::LoadExtType ExtTy = ResultVT.bitsGT(VecEltVT) ?
+    ISD::NON_EXTLOAD : ISD::EXTLOAD;
+  if (!TLI.shouldReduceLoadWidth(OriginalLoad, ExtTy, VecEltVT))
+    return SDValue();
+
   Align = NewAlign;
 
   SDValue NewPtr = OriginalLoad->getBasePtr();

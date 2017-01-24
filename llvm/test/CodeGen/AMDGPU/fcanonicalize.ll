@@ -347,5 +347,5 @@ define void @test_fold_canonicalize_snan3_value_f64(double addrspace(1)* %out) #
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
-attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals,+fp64-denormals" }
+attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
+attributes #3 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }

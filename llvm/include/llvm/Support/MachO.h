@@ -487,6 +487,22 @@ namespace llvm {
       VM_PROT_EXECUTE = 0x4
     };
 
+    // Values for platform field in build_version_command.
+    enum {
+      PLATFORM_MACOS    = 1,
+      PLATFORM_IOS      = 2,
+      PLATFORM_TVOS     = 3,
+      PLATFORM_WATCHOS  = 4,
+      PLATFORM_BRIDGEOS = 5
+    };
+
+    // Values for tools enum in build_tool_version.
+    enum {
+      TOOL_CLANG  = 1,
+      TOOL_SWIFT  = 2,
+      TOOL_LD     = 3
+    };
+
     // Structs from <mach-o/loader.h>
 
     struct mach_header {
@@ -825,6 +841,21 @@ namespace llvm {
       char data_owner[16]; // owner name for this LC_NOTE
       uint64_t offset;     // file offset of this data
       uint64_t size;       // length of data region
+    };
+
+    struct build_tool_version {
+      uint32_t tool;      // enum for the tool
+      uint32_t version;   // version of the tool
+    };
+
+    struct build_version_command {
+      uint32_t cmd;       // LC_BUILD_VERSION
+      uint32_t cmdsize;   // sizeof(struct build_version_command) +
+                          // ntools * sizeof(struct build_tool_version)
+      uint32_t platform;  // platform
+      uint32_t minos;     // X.Y.Z is encoded in nibbles xxxx.yy.zz
+      uint32_t sdk;       // X.Y.Z is encoded in nibbles xxxx.yy.zz
+      uint32_t ntools;    // number of tool entries following this
     };
 
     struct dyld_info_command {
@@ -1281,6 +1312,20 @@ namespace llvm {
       sys::swapByteOrder(C.size);
     }
 
+    inline void swapStruct(build_version_command&C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.platform);
+      sys::swapByteOrder(C.minos);
+      sys::swapByteOrder(C.sdk);
+      sys::swapByteOrder(C.ntools);
+    }
+
+    inline void swapStruct(build_tool_version&C) {
+      sys::swapByteOrder(C.tool);
+      sys::swapByteOrder(C.version);
+    }
+
     inline void swapStruct(data_in_code_entry &C) {
       sys::swapByteOrder(C.offset);
       sys::swapByteOrder(C.length);
@@ -1485,6 +1530,25 @@ namespace llvm {
       CPU_SUBTYPE_MC98601       = CPU_SUBTYPE_POWERPC_601
     };
 
+    struct x86_thread_state32_t {
+      uint32_t eax;
+      uint32_t ebx;
+      uint32_t ecx;
+      uint32_t edx;
+      uint32_t edi;
+      uint32_t esi;
+      uint32_t ebp;
+      uint32_t esp;
+      uint32_t ss;
+      uint32_t eflags;
+      uint32_t eip;
+      uint32_t cs;
+      uint32_t ds;
+      uint32_t es;
+      uint32_t fs;
+      uint32_t gs;
+    };
+
     struct x86_thread_state64_t {
       uint64_t rax;
       uint64_t rbx;
@@ -1614,6 +1678,25 @@ namespace llvm {
       uint64_t faultvaddr;
     };
 
+    inline void swapStruct(x86_thread_state32_t &x) {
+      sys::swapByteOrder(x.eax);
+      sys::swapByteOrder(x.ebx);
+      sys::swapByteOrder(x.ecx);
+      sys::swapByteOrder(x.edx);
+      sys::swapByteOrder(x.edi);
+      sys::swapByteOrder(x.esi);
+      sys::swapByteOrder(x.ebp);
+      sys::swapByteOrder(x.esp);
+      sys::swapByteOrder(x.ss);
+      sys::swapByteOrder(x.eflags);
+      sys::swapByteOrder(x.eip);
+      sys::swapByteOrder(x.cs);
+      sys::swapByteOrder(x.ds);
+      sys::swapByteOrder(x.es);
+      sys::swapByteOrder(x.fs);
+      sys::swapByteOrder(x.gs);
+    }
+
     inline void swapStruct(x86_thread_state64_t &x) {
       sys::swapByteOrder(x.rax);
       sys::swapByteOrder(x.rbx);
@@ -1671,6 +1754,7 @@ namespace llvm {
       x86_state_hdr_t tsh;
       union {
         x86_thread_state64_t ts64;
+        x86_thread_state32_t ts32;
       } uts;
     };
 
@@ -1725,6 +1809,9 @@ namespace llvm {
       if (x.esh.flavor == x86_EXCEPTION_STATE64)
         swapStruct(x.ues.es64);
     }
+
+    const uint32_t x86_THREAD_STATE32_COUNT =
+      sizeof(x86_thread_state32_t) / sizeof(uint32_t);
 
     const uint32_t x86_THREAD_STATE64_COUNT =
       sizeof(x86_thread_state64_t) / sizeof(uint32_t);

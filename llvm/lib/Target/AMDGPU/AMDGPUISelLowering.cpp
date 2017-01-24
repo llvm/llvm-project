@@ -2872,7 +2872,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     else
       RHS = RHS.getOperand(0);
 
-    SDValue Res = DAG.getNode(ISD::FADD, SL, VT, LHS, RHS);
+    SDValue Res = DAG.getNode(ISD::FADD, SL, VT, LHS, RHS, N0->getFlags());
     if (!N0.hasOneUse())
       DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
     return Res;
@@ -2891,7 +2891,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     else
       RHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
 
-    SDValue Res = DAG.getNode(Opc, SL, VT, LHS, RHS);
+    SDValue Res = DAG.getNode(Opc, SL, VT, LHS, RHS, N0->getFlags());
     if (!N0.hasOneUse())
       DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
     return Res;
@@ -2941,7 +2941,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     // (fneg (fp_extend x)) -> (fp_extend (fneg x))
     // (fneg (rcp x)) -> (rcp (fneg x))
     SDValue Neg = DAG.getNode(ISD::FNEG, SL, CvtSrc.getValueType(), CvtSrc);
-    return DAG.getNode(Opc, SL, VT, Neg);
+    return DAG.getNode(Opc, SL, VT, Neg, N0->getFlags());
   }
   case ISD::FP_ROUND: {
     SDValue CvtSrc = N0.getOperand(0);

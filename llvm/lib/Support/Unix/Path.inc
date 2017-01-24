@@ -257,6 +257,16 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   return std::error_code();
 }
 
+std::error_code set_current_path(const Twine &path) {
+  SmallString<128> path_storage;
+  StringRef p = path.toNullTerminatedStringRef(path_storage);
+
+  if (::chdir(p.begin()) == -1)
+    return std::error_code(errno, std::generic_category());
+
+  return std::error_code();
+}
+
 std::error_code create_directory(const Twine &path, bool IgnoreExisting,
                                  perms Perms) {
   SmallString<128> path_storage;

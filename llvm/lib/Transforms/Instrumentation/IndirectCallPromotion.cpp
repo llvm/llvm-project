@@ -172,19 +172,6 @@ private:
       Instruction *Inst, const ArrayRef<InstrProfValueData> &ValueDataRef,
       uint64_t TotalCount, uint32_t NumCandidates);
 
-  // Main function that transforms Inst (either a indirect-call instruction, or
-  // an invoke instruction , to a conditional call to F. This is like:
-  //     if (Inst.CalledValue == F)
-  //        F(...);
-  //     else
-  //        Inst(...);
-  //     end
-  // TotalCount is the profile count value that the instruction executes.
-  // Count is the profile count value that F is the target function.
-  // These two values are being used to update the branch weight.
-  void promote(Instruction *Inst, Function *F, uint64_t Count,
-               uint64_t TotalCount);
-
   // Promote a list of targets for one indirect-call callsite. Return
   // the number of promotions.
   uint32_t tryToPromote(Instruction *Inst,
@@ -532,8 +519,10 @@ static void insertCallRetPHI(Instruction *Inst, Instruction *CallResult,
 //     Ret = phi(Ret1, Ret2);
 // It adds type casts for the args do not match the parameters and the return
 // value. Branch weights metadata also updated.
-void ICallPromotionFunc::promote(Instruction *Inst, Function *DirectCallee,
-                                 uint64_t Count, uint64_t TotalCount) {
+// Returns the promoted direct call instruction.
+Instruction *llvm::promoteIndirectCall(Instruction *Inst,
+                                       Function *DirectCallee, uint64_t Count,
+                                       uint64_t TotalCount) {
   assert(DirectCallee != nullptr);
   BasicBlock *BB = Inst->getParent();
   // Just to suppress the non-debug build warning.
@@ -576,9 +565,10 @@ void ICallPromotionFunc::promote(Instruction *Inst, Function *DirectCallee,
   DEBUG(dbgs() << *BB << *DirectCallBB << *IndirectCallBB << *MergeBB << "\n");
 
   emitOptimizationRemark(
-      F.getContext(), "pgo-icall-prom", F, Inst->getDebugLoc(),
+      BB->getContext(), "pgo-icall-prom", *BB->getParent(), Inst->getDebugLoc(),
       Twine("Promote indirect call to ") + DirectCallee->getName() +
           " with count " + Twine(Count) + " out of " + Twine(TotalCount));
+  return NewInst;
 }
 
 // Promote indirect-call to conditional direct-call for one callsite.
@@ -589,7 +579,7 @@ uint32_t ICallPromotionFunc::tryToPromote(
 
   for (auto &C : Candidates) {
     uint64_t Count = C.Count;
-    promote(Inst, C.TargetFunction, Count, TotalCount);
+    promoteIndirectCall(Inst, C.TargetFunction, Count, TotalCount);
     assert(TotalCount >= Count);
     TotalCount -= Count;
     NumOfPGOICallPromotion++;

@@ -119,7 +119,7 @@ static bool unsupportedBinOp(const MachineInstr &I,
 }
 
 /// Select the AArch64 opcode for the basic binary operation \p GenericOpc
-/// (such as G_OR or G_ADD), appropriate for the register bank \p RegBankID
+/// (such as G_OR or G_SDIV), appropriate for the register bank \p RegBankID
 /// and of size \p OpSize.
 /// \returns \p GenericOpc if the combination is unsupported.
 static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
@@ -140,9 +140,6 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return AArch64::EORWrr;
       case TargetOpcode::G_AND:
         return AArch64::ANDWrr;
-      case TargetOpcode::G_ADD:
-        assert(OpSize != 32 && "s32 G_ADD should have been selected");
-        return AArch64::ADDWrr;
       case TargetOpcode::G_SUB:
         return AArch64::SUBWrr;
       case TargetOpcode::G_SHL:
@@ -759,7 +756,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
-  case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_GEP: {
     // Reject the various things we don't support yet.

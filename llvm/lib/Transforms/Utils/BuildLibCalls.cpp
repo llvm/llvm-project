@@ -107,255 +107,255 @@ static bool setNonNull(Function &F, unsigned n) {
 }
 
 bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
-  LibFunc::Func TheLibFunc;
+  LibFunc TheLibFunc;
   if (!(TLI.getLibFunc(F, TheLibFunc) && TLI.has(TheLibFunc)))
     return false;
 
   bool Changed = false;
   switch (TheLibFunc) {
-  case LibFunc::strlen:
+  case LibFunc_strlen:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::strchr:
-  case LibFunc::strrchr:
+  case LibFunc_strchr:
+  case LibFunc_strrchr:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     return Changed;
-  case LibFunc::strtol:
-  case LibFunc::strtod:
-  case LibFunc::strtof:
-  case LibFunc::strtoul:
-  case LibFunc::strtoll:
-  case LibFunc::strtold:
-  case LibFunc::strtoull:
+  case LibFunc_strtol:
+  case LibFunc_strtod:
+  case LibFunc_strtof:
+  case LibFunc_strtoul:
+  case LibFunc_strtoll:
+  case LibFunc_strtold:
+  case LibFunc_strtoull:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::strcpy:
-  case LibFunc::stpcpy:
-  case LibFunc::strcat:
-  case LibFunc::strncat:
-  case LibFunc::strncpy:
-  case LibFunc::stpncpy:
+  case LibFunc_strcpy:
+  case LibFunc_stpcpy:
+  case LibFunc_strcat:
+  case LibFunc_strncat:
+  case LibFunc_strncpy:
+  case LibFunc_stpncpy:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::strxfrm:
+  case LibFunc_strxfrm:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::strcmp:      // 0,1
-  case LibFunc::strspn:      // 0,1
-  case LibFunc::strncmp:     // 0,1
-  case LibFunc::strcspn:     // 0,1
-  case LibFunc::strcoll:     // 0,1
-  case LibFunc::strcasecmp:  // 0,1
-  case LibFunc::strncasecmp: //
+  case LibFunc_strcmp:      // 0,1
+  case LibFunc_strspn:      // 0,1
+  case LibFunc_strncmp:     // 0,1
+  case LibFunc_strcspn:     // 0,1
+  case LibFunc_strcoll:     // 0,1
+  case LibFunc_strcasecmp:  // 0,1
+  case LibFunc_strncasecmp: //
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::strstr:
-  case LibFunc::strpbrk:
+  case LibFunc_strstr:
+  case LibFunc_strpbrk:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::strtok:
-  case LibFunc::strtok_r:
+  case LibFunc_strtok:
+  case LibFunc_strtok_r:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::scanf:
+  case LibFunc_scanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::setbuf:
-  case LibFunc::setvbuf:
+  case LibFunc_setbuf:
+  case LibFunc_setvbuf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::strdup:
-  case LibFunc::strndup:
+  case LibFunc_strdup:
+  case LibFunc_strndup:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::stat:
-  case LibFunc::statvfs:
+  case LibFunc_stat:
+  case LibFunc_statvfs:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::sscanf:
+  case LibFunc_sscanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::sprintf:
+  case LibFunc_sprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::snprintf:
+  case LibFunc_snprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 3);
     Changed |= setOnlyReadsMemory(F, 3);
     return Changed;
-  case LibFunc::setitimer:
+  case LibFunc_setitimer:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setDoesNotCapture(F, 3);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::system:
+  case LibFunc_system:
     // May throw; "system" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::malloc:
+  case LibFunc_malloc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     return Changed;
-  case LibFunc::memcmp:
+  case LibFunc_memcmp:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::memchr:
-  case LibFunc::memrchr:
+  case LibFunc_memchr:
+  case LibFunc_memrchr:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     return Changed;
-  case LibFunc::modf:
-  case LibFunc::modff:
-  case LibFunc::modfl:
+  case LibFunc_modf:
+  case LibFunc_modff:
+  case LibFunc_modfl:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::memcpy:
-  case LibFunc::mempcpy:
-  case LibFunc::memccpy:
-  case LibFunc::memmove:
+  case LibFunc_memcpy:
+  case LibFunc_mempcpy:
+  case LibFunc_memccpy:
+  case LibFunc_memmove:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::memcpy_chk:
+  case LibFunc_memcpy_chk:
     Changed |= setDoesNotThrow(F);
     return Changed;
-  case LibFunc::memalign:
+  case LibFunc_memalign:
     Changed |= setDoesNotAlias(F, 0);
     return Changed;
-  case LibFunc::mkdir:
+  case LibFunc_mkdir:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::mktime:
+  case LibFunc_mktime:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::realloc:
+  case LibFunc_realloc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::read:
+  case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::rewind:
+  case LibFunc_rewind:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::rmdir:
-  case LibFunc::remove:
-  case LibFunc::realpath:
+  case LibFunc_rmdir:
+  case LibFunc_remove:
+  case LibFunc_realpath:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::rename:
+  case LibFunc_rename:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::readlink:
+  case LibFunc_readlink:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::write:
+  case LibFunc_write:
     // May throw; "write" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::bcopy:
+  case LibFunc_bcopy:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::bcmp:
+  case LibFunc_bcmp:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::bzero:
+  case LibFunc_bzero:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::calloc:
+  case LibFunc_calloc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     return Changed;
-  case LibFunc::chmod:
-  case LibFunc::chown:
+  case LibFunc_chmod:
+  case LibFunc_chown:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::ctermid:
-  case LibFunc::clearerr:
-  case LibFunc::closedir:
+  case LibFunc_ctermid:
+  case LibFunc_clearerr:
+  case LibFunc_closedir:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::atoi:
-  case LibFunc::atol:
-  case LibFunc::atof:
-  case LibFunc::atoll:
+  case LibFunc_atoi:
+  case LibFunc_atol:
+  case LibFunc_atof:
+  case LibFunc_atoll:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::access:
+  case LibFunc_access:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::fopen:
+  case LibFunc_fopen:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -363,283 +363,283 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::fdopen:
+  case LibFunc_fdopen:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::feof:
-  case LibFunc::free:
-  case LibFunc::fseek:
-  case LibFunc::ftell:
-  case LibFunc::fgetc:
-  case LibFunc::fseeko:
-  case LibFunc::ftello:
-  case LibFunc::fileno:
-  case LibFunc::fflush:
-  case LibFunc::fclose:
-  case LibFunc::fsetpos:
-  case LibFunc::flockfile:
-  case LibFunc::funlockfile:
-  case LibFunc::ftrylockfile:
+  case LibFunc_feof:
+  case LibFunc_free:
+  case LibFunc_fseek:
+  case LibFunc_ftell:
+  case LibFunc_fgetc:
+  case LibFunc_fseeko:
+  case LibFunc_ftello:
+  case LibFunc_fileno:
+  case LibFunc_fflush:
+  case LibFunc_fclose:
+  case LibFunc_fsetpos:
+  case LibFunc_flockfile:
+  case LibFunc_funlockfile:
+  case LibFunc_ftrylockfile:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::ferror:
+  case LibFunc_ferror:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F);
     return Changed;
-  case LibFunc::fputc:
-  case LibFunc::fstat:
-  case LibFunc::frexp:
-  case LibFunc::frexpf:
-  case LibFunc::frexpl:
-  case LibFunc::fstatvfs:
+  case LibFunc_fputc:
+  case LibFunc_fstat:
+  case LibFunc_frexp:
+  case LibFunc_frexpf:
+  case LibFunc_frexpl:
+  case LibFunc_fstatvfs:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::fgets:
+  case LibFunc_fgets:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 3);
     return Changed;
-  case LibFunc::fread:
+  case LibFunc_fread:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 4);
     return Changed;
-  case LibFunc::fwrite:
+  case LibFunc_fwrite:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 4);
     // FIXME: readonly #1?
     return Changed;
-  case LibFunc::fputs:
+  case LibFunc_fputs:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::fscanf:
-  case LibFunc::fprintf:
+  case LibFunc_fscanf:
+  case LibFunc_fprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::fgetpos:
+  case LibFunc_fgetpos:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::getc:
-  case LibFunc::getlogin_r:
-  case LibFunc::getc_unlocked:
+  case LibFunc_getc:
+  case LibFunc_getlogin_r:
+  case LibFunc_getc_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::getenv:
+  case LibFunc_getenv:
     Changed |= setDoesNotThrow(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::gets:
-  case LibFunc::getchar:
+  case LibFunc_gets:
+  case LibFunc_getchar:
     Changed |= setDoesNotThrow(F);
     return Changed;
-  case LibFunc::getitimer:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 2);
-    return Changed;
-  case LibFunc::getpwnam:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
-  case LibFunc::ungetc:
+  case LibFunc_getitimer:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::uname:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    return Changed;
-  case LibFunc::unlink:
+  case LibFunc_getpwnam:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::unsetenv:
+  case LibFunc_ungetc:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 2);
+    return Changed;
+  case LibFunc_uname:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    return Changed;
+  case LibFunc_unlink:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::utime:
-  case LibFunc::utimes:
+  case LibFunc_unsetenv:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setOnlyReadsMemory(F, 1);
+    return Changed;
+  case LibFunc_utime:
+  case LibFunc_utimes:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::putc:
+  case LibFunc_putc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::puts:
-  case LibFunc::printf:
-  case LibFunc::perror:
+  case LibFunc_puts:
+  case LibFunc_printf:
+  case LibFunc_perror:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::pread:
+  case LibFunc_pread:
     // May throw; "pread" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::pwrite:
+  case LibFunc_pwrite:
     // May throw; "pwrite" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::putchar:
+  case LibFunc_putchar:
     Changed |= setDoesNotThrow(F);
     return Changed;
-  case LibFunc::popen:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotAlias(F, 0);
-    Changed |= setDoesNotCapture(F, 1);
-    Changed |= setDoesNotCapture(F, 2);
-    Changed |= setOnlyReadsMemory(F, 1);
-    Changed |= setOnlyReadsMemory(F, 2);
-    return Changed;
-  case LibFunc::pclose:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    return Changed;
-  case LibFunc::vscanf:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
-  case LibFunc::vsscanf:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    Changed |= setDoesNotCapture(F, 2);
-    Changed |= setOnlyReadsMemory(F, 1);
-    Changed |= setOnlyReadsMemory(F, 2);
-    return Changed;
-  case LibFunc::vfscanf:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCapture(F, 1);
-    Changed |= setDoesNotCapture(F, 2);
-    Changed |= setOnlyReadsMemory(F, 2);
-    return Changed;
-  case LibFunc::valloc:
+  case LibFunc_popen:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
+    Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::vprintf:
+  case LibFunc_pclose:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    return Changed;
+  case LibFunc_vscanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::vfprintf:
-  case LibFunc::vsprintf:
+  case LibFunc_vsscanf:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
+    Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setOnlyReadsMemory(F, 2);
+    return Changed;
+  case LibFunc_vfscanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::vsnprintf:
+  case LibFunc_valloc:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotAlias(F, 0);
+    return Changed;
+  case LibFunc_vprintf:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setOnlyReadsMemory(F, 1);
+    return Changed;
+  case LibFunc_vfprintf:
+  case LibFunc_vsprintf:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
+    Changed |= setOnlyReadsMemory(F, 2);
+    return Changed;
+  case LibFunc_vsnprintf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 3);
     Changed |= setOnlyReadsMemory(F, 3);
     return Changed;
-  case LibFunc::open:
+  case LibFunc_open:
     // May throw; "open" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::opendir:
+  case LibFunc_opendir:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::tmpfile:
+  case LibFunc_tmpfile:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     return Changed;
-  case LibFunc::times:
+  case LibFunc_times:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::htonl:
-  case LibFunc::htons:
-  case LibFunc::ntohl:
-  case LibFunc::ntohs:
+  case LibFunc_htonl:
+  case LibFunc_htons:
+  case LibFunc_ntohl:
+  case LibFunc_ntohs:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAccessMemory(F);
     return Changed;
-  case LibFunc::lstat:
+  case LibFunc_lstat:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::lchown:
+  case LibFunc_lchown:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::qsort:
+  case LibFunc_qsort:
     // May throw; places call through function pointer.
     Changed |= setDoesNotCapture(F, 4);
     return Changed;
-  case LibFunc::dunder_strdup:
-  case LibFunc::dunder_strndup:
+  case LibFunc_dunder_strdup:
+  case LibFunc_dunder_strndup:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::dunder_strtok_r:
+  case LibFunc_dunder_strtok_r:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::under_IO_getc:
+  case LibFunc_under_IO_getc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::under_IO_putc:
+  case LibFunc_under_IO_putc:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::dunder_isoc99_scanf:
+  case LibFunc_dunder_isoc99_scanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::stat64:
-  case LibFunc::lstat64:
-  case LibFunc::statvfs64:
+  case LibFunc_stat64:
+  case LibFunc_lstat64:
+  case LibFunc_statvfs64:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::dunder_isoc99_sscanf:
+  case LibFunc_dunder_isoc99_sscanf:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::fopen64:
+  case LibFunc_fopen64:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -647,26 +647,26 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
-  case LibFunc::fseeko64:
-  case LibFunc::ftello64:
+  case LibFunc_fseeko64:
+  case LibFunc_ftello64:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
-  case LibFunc::tmpfile64:
+  case LibFunc_tmpfile64:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotAlias(F, 0);
     return Changed;
-  case LibFunc::fstat64:
-  case LibFunc::fstatvfs64:
+  case LibFunc_fstat64:
+  case LibFunc_fstatvfs64:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::open64:
+  case LibFunc_open64:
     // May throw; "open" is a valid pthread cancellation point.
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
-  case LibFunc::gettimeofday:
+  case LibFunc_gettimeofday:
     // Currently some platforms have the restrict keyword on the arguments to
     // gettimeofday. To be conservative, do not add noalias to gettimeofday's
     // arguments.
@@ -674,29 +674,29 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
-  case LibFunc::Znwj: // new(unsigned int)
-  case LibFunc::Znwm: // new(unsigned long)
-  case LibFunc::Znaj: // new[](unsigned int)
-  case LibFunc::Znam: // new[](unsigned long)
-  case LibFunc::msvc_new_int: // new(unsigned int)
-  case LibFunc::msvc_new_longlong: // new(unsigned long long)
-  case LibFunc::msvc_new_array_int: // new[](unsigned int)
-  case LibFunc::msvc_new_array_longlong: // new[](unsigned long long)
+  case LibFunc_Znwj: // new(unsigned int)
+  case LibFunc_Znwm: // new(unsigned long)
+  case LibFunc_Znaj: // new[](unsigned int)
+  case LibFunc_Znam: // new[](unsigned long)
+  case LibFunc_msvc_new_int: // new(unsigned int)
+  case LibFunc_msvc_new_longlong: // new(unsigned long long)
+  case LibFunc_msvc_new_array_int: // new[](unsigned int)
+  case LibFunc_msvc_new_array_longlong: // new[](unsigned long long)
     // Operator new always returns a nonnull noalias pointer
     Changed |= setNonNull(F, AttributeSet::ReturnIndex);
     Changed |= setDoesNotAlias(F, AttributeSet::ReturnIndex);
     return Changed;
   //TODO: add LibFunc entries for:
-  //case LibFunc::memset_pattern4:
-  //case LibFunc::memset_pattern8:
-  case LibFunc::memset_pattern16:
+  //case LibFunc_memset_pattern4:
+  //case LibFunc_memset_pattern8:
+  case LibFunc_memset_pattern16:
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
   // int __nvvm_reflect(const char *)
-  case LibFunc::nvvm_reflect:
+  case LibFunc_nvvm_reflect:
     Changed |= setDoesNotAccessMemory(F);
     Changed |= setDoesNotThrow(F);
     return Changed;
@@ -717,7 +717,7 @@ Value *llvm::castToCStr(Value *V, IRBuilder<> &B) {
 
 Value *llvm::emitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
                         const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::strlen))
+  if (!TLI->has(LibFunc_strlen))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -734,7 +734,7 @@ Value *llvm::emitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
 
 Value *llvm::emitStrChr(Value *Ptr, char C, IRBuilder<> &B,
                         const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::strchr))
+  if (!TLI->has(LibFunc_strchr))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -752,7 +752,7 @@ Value *llvm::emitStrChr(Value *Ptr, char C, IRBuilder<> &B,
 
 Value *llvm::emitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::strncmp))
+  if (!TLI->has(LibFunc_strncmp))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -772,7 +772,7 @@ Value *llvm::emitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
 
 Value *llvm::emitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
                         const TargetLibraryInfo *TLI, StringRef Name) {
-  if (!TLI->has(LibFunc::strcpy))
+  if (!TLI->has(LibFunc_strcpy))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -788,7 +788,7 @@ Value *llvm::emitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
 
 Value *llvm::emitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
                          const TargetLibraryInfo *TLI, StringRef Name) {
-  if (!TLI->has(LibFunc::strncpy))
+  if (!TLI->has(LibFunc_strncpy))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -806,7 +806,7 @@ Value *llvm::emitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
 Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                            IRBuilder<> &B, const DataLayout &DL,
                            const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::memcpy_chk))
+  if (!TLI->has(LibFunc_memcpy_chk))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -828,7 +828,7 @@ Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
 
 Value *llvm::emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::memchr))
+  if (!TLI->has(LibFunc_memchr))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -847,7 +847,7 @@ Value *llvm::emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilder<> &B,
 
 Value *llvm::emitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::memcmp))
+  if (!TLI->has(LibFunc_memcmp))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -914,7 +914,7 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
 
 Value *llvm::emitPutChar(Value *Char, IRBuilder<> &B,
                          const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::putchar))
+  if (!TLI->has(LibFunc_putchar))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -934,7 +934,7 @@ Value *llvm::emitPutChar(Value *Char, IRBuilder<> &B,
 
 Value *llvm::emitPutS(Value *Str, IRBuilder<> &B,
                       const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::puts))
+  if (!TLI->has(LibFunc_puts))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -949,7 +949,7 @@ Value *llvm::emitPutS(Value *Str, IRBuilder<> &B,
 
 Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilder<> &B,
                        const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::fputc))
+  if (!TLI->has(LibFunc_fputc))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -968,11 +968,11 @@ Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilder<> &B,
 
 Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
                        const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::fputs))
+  if (!TLI->has(LibFunc_fputs))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
-  StringRef FPutsName = TLI->getName(LibFunc::fputs);
+  StringRef FPutsName = TLI->getName(LibFunc_fputs);
   Constant *F = M->getOrInsertFunction(
       FPutsName, B.getInt32Ty(), B.getInt8PtrTy(), File->getType(), nullptr);
   if (File->getType()->isPointerTy())
@@ -986,12 +986,12 @@ Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
 
 Value *llvm::emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::fwrite))
+  if (!TLI->has(LibFunc_fwrite))
     return nullptr;
 
   Module *M = B.GetInsertBlock()->getModule();
   LLVMContext &Context = B.GetInsertBlock()->getContext();
-  StringRef FWriteName = TLI->getName(LibFunc::fwrite);
+  StringRef FWriteName = TLI->getName(LibFunc_fwrite);
   Constant *F = M->getOrInsertFunction(
       FWriteName, DL.getIntPtrType(Context), B.getInt8PtrTy(),
       DL.getIntPtrType(Context), DL.getIntPtrType(Context), File->getType(),

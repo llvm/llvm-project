@@ -4073,8 +4073,7 @@ let Predicates = [HasDQI, NoVLX] in {
 //===----------------------------------------------------------------------===//
 
 multiclass avx512_logic_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                           X86VectorVTInfo _, OpndItins itins,
-                           bit IsCommutable = 0> {
+                           X86VectorVTInfo _, bit IsCommutable = 0> {
   defm rr : AVX512_maskable_logic<opc, MRMSrcReg, _, (outs _.RC:$dst),
                     (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
                     "$src2, $src1", "$src1, $src2",
@@ -4082,7 +4081,7 @@ multiclass avx512_logic_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                      (bitconvert (_.VT _.RC:$src2)))),
                     (_.VT (bitconvert (_.i64VT (OpNode _.RC:$src1,
                                                        _.RC:$src2)))),
-                    itins.rr, IsCommutable>,
+                    IIC_SSE_BIT_P_RR, IsCommutable>,
             AVX512BIBase, EVEX_4V;
 
   defm rm : AVX512_maskable_logic<opc, MRMSrcMem, _, (outs _.RC:$dst),
@@ -4092,14 +4091,13 @@ multiclass avx512_logic_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                    (bitconvert (_.LdFrag addr:$src2)))),
                   (_.VT (bitconvert (_.i64VT (OpNode _.RC:$src1,
                                      (bitconvert (_.LdFrag addr:$src2)))))),
-                  itins.rm>,
+                  IIC_SSE_BIT_P_RM>,
             AVX512BIBase, EVEX_4V;
 }
 
 multiclass avx512_logic_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                            X86VectorVTInfo _, OpndItins itins,
-                            bit IsCommutable = 0> :
-           avx512_logic_rm<opc, OpcodeStr, OpNode, _, itins, IsCommutable> {
+                            X86VectorVTInfo _, bit IsCommutable = 0> :
+           avx512_logic_rm<opc, OpcodeStr, OpNode, _, IsCommutable> {
   defm rmb : AVX512_maskable_logic<opc, MRMSrcMem, _, (outs _.RC:$dst),
                   (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr,
                   "${src2}"##_.BroadcastStr##", $src1",
@@ -4112,58 +4110,48 @@ multiclass avx512_logic_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                      (bitconvert
                                       (_.VT (X86VBroadcast
                                              (_.ScalarLdFrag addr:$src2)))))))),
-                  itins.rm>,
+                  IIC_SSE_BIT_P_RM>,
              AVX512BIBase, EVEX_4V, EVEX_B;
 }
 
 multiclass avx512_logic_rmb_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                               AVX512VLVectorVTInfo VTInfo, OpndItins itins,
-                               Predicate prd, bit IsCommutable = 0> {
-  let Predicates = [prd] in
-    defm Z : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info512, itins,
+                               AVX512VLVectorVTInfo VTInfo,
+                               bit IsCommutable = 0> {
+  let Predicates = [HasAVX512] in
+    defm Z : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info512,
                              IsCommutable>, EVEX_V512;
 
-  let Predicates = [prd, HasVLX] in {
-    defm Z256 : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info256, itins,
+  let Predicates = [HasAVX512, HasVLX] in {
+    defm Z256 : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info256,
                              IsCommutable>, EVEX_V256;
-    defm Z128 : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info128, itins,
+    defm Z128 : avx512_logic_rmb<opc, OpcodeStr, OpNode, VTInfo.info128,
                              IsCommutable>, EVEX_V128;
   }
 }
 
 multiclass avx512_logic_rm_vl_d<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                OpndItins itins, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_logic_rmb_vl<opc, OpcodeStr, OpNode, avx512vl_i32_info,
-                               itins, prd, IsCommutable>, EVEX_CD8<32, CD8VF>;
+                                  IsCommutable>, EVEX_CD8<32, CD8VF>;
 }
 
 multiclass avx512_logic_rm_vl_q<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                OpndItins itins, Predicate prd,
                                 bit IsCommutable = 0> {
   defm NAME : avx512_logic_rmb_vl<opc, OpcodeStr, OpNode, avx512vl_i64_info,
-                               itins, prd, IsCommutable>,
-                               VEX_W, EVEX_CD8<64, CD8VF>;
+                                  IsCommutable>,
+                                  VEX_W, EVEX_CD8<64, CD8VF>;
 }
 
 multiclass avx512_logic_rm_vl_dq<bits<8> opc_d, bits<8> opc_q, string OpcodeStr,
-                                 SDNode OpNode, OpndItins itins, Predicate prd,
-                                 bit IsCommutable = 0> {
-  defm Q : avx512_logic_rm_vl_q<opc_q, OpcodeStr#"q", OpNode, itins, prd,
-                                IsCommutable>;
-
-  defm D : avx512_logic_rm_vl_d<opc_d, OpcodeStr#"d", OpNode, itins, prd,
-                                IsCommutable>;
+                                 SDNode OpNode, bit IsCommutable = 0> {
+  defm Q : avx512_logic_rm_vl_q<opc_q, OpcodeStr#"q", OpNode, IsCommutable>;
+  defm D : avx512_logic_rm_vl_d<opc_d, OpcodeStr#"d", OpNode, IsCommutable>;
 }
 
-defm VPAND : avx512_logic_rm_vl_dq<0xDB, 0xDB, "vpand", and,
-                                  SSE_INTALU_ITINS_P, HasAVX512, 1>;
-defm VPOR : avx512_logic_rm_vl_dq<0xEB, 0xEB, "vpor", or,
-                                  SSE_INTALU_ITINS_P, HasAVX512, 1>;
-defm VPXOR : avx512_logic_rm_vl_dq<0xEF, 0xEF, "vpxor", xor,
-                                  SSE_INTALU_ITINS_P, HasAVX512, 1>;
-defm VPANDN : avx512_logic_rm_vl_dq<0xDF, 0xDF, "vpandn", X86andnp,
-                                  SSE_INTALU_ITINS_P, HasAVX512, 0>;
+defm VPAND : avx512_logic_rm_vl_dq<0xDB, 0xDB, "vpand", and, 1>;
+defm VPOR : avx512_logic_rm_vl_dq<0xEB, 0xEB, "vpor", or, 1>;
+defm VPXOR : avx512_logic_rm_vl_dq<0xEF, 0xEF, "vpxor", xor, 1>;
+defm VPANDN : avx512_logic_rm_vl_dq<0xDF, 0xDF, "vpandn", X86andnp>;
 
 //===----------------------------------------------------------------------===//
 // AVX-512  FP arithmetic

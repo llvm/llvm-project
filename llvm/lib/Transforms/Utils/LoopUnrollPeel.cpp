@@ -165,7 +165,8 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
                             BasicBlock *InsertBot, BasicBlock *Exit,
                             SmallVectorImpl<BasicBlock *> &NewBlocks,
                             LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
-                            ValueToValueMapTy &LVMap, LoopInfo *LI) {
+                            ValueToValueMapTy &LVMap, DominatorTree *DT,
+                            LoopInfo *LI) {
 
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -186,6 +187,17 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
       ParentLoop->addBasicBlockToLoop(NewBB, *LI);
 
     VMap[*BB] = NewBB;
+
+    // If dominator tree is available, insert nodes to represent cloned blocks.
+    if (DT) {
+      if (Header == *BB)
+        DT->addNewBlock(NewBB, InsertTop);
+      else {
+        DomTreeNode *IDom = DT->getNode(*BB)->getIDom();
+        // VMap must contain entry for IDom, as the iteration order is RPO.
+        DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
+      }
+    }
   }
 
   // Hook-up the control flow for the newly inserted blocks.
@@ -199,11 +211,13 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
   // The backedge now goes to the "bottom", which is either the loop's real
   // header (for the last peeled iteration) or the copied header of the next
   // iteration (for every other iteration)
-  BranchInst *LatchBR =
-      cast<BranchInst>(cast<BasicBlock>(VMap[Latch])->getTerminator());
+  BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
+  BranchInst *LatchBR = cast<BranchInst>(NewLatch->getTerminator());
   unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
   LatchBR->setSuccessor(HeaderIdx, InsertBot);
   LatchBR->setSuccessor(1 - HeaderIdx, Exit);
+  if (DT)
+    DT->changeImmediateDominator(InsertBot, NewLatch);
 
   // The new copy of the loop body starts with a bunch of PHI nodes
   // that pick an incoming value from either the preheader, or the previous
@@ -359,7 +373,19 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       CurHeaderWeight = 1;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
-                    NewBlocks, LoopBlocks, VMap, LVMap, LI);
+                    NewBlocks, LoopBlocks, VMap, LVMap, DT, LI);
+    if (DT) {
+      // Latches of the cloned loops dominate over the loop exit, so idom of the
+      // latter is the first cloned loop body, as original PreHeader dominates
+      // the original loop body.
+      if (Iter == 0)
+        DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
+#ifndef NDEBUG
+      if (VerifyDomInfo)
+        DT->verifyDomTree();
+#endif
+    }
+
     updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
                         PeelCount, ExitWeight);
 
@@ -404,9 +430,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                   : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
     LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
-
-  // FIXME: Incrementally update domtree.
-  DT->recalculate(*L->getHeader()->getParent());
 
   // If the loop is nested, we changed the parent loop, update SE.
   if (Loop *ParentLoop = L->getParentLoop()) {

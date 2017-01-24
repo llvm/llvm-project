@@ -55,7 +55,17 @@ cl::opt<unsigned>
                                 "is no less than the max frequency of the "
                                 "function multiplied by this percent."));
 
+// Command line option to turn on CFG dot dump after profile annotation.
+cl::opt<bool> PGOViewCounts("pgo-view-counts", cl::init(false), cl::Hidden);
+
 namespace llvm {
+
+static GVDAGType getGVDT() {
+
+  if (PGOViewCounts)
+    return GVDT_Count;
+  return ViewBlockFreqPropagationDAG;
+}
 
 template <>
 struct GraphTraits<BlockFrequencyInfo *> {
@@ -89,8 +99,7 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
   std::string getNodeLabel(const BasicBlock *Node,
                            const BlockFrequencyInfo *Graph) {
 
-    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph,
-                                           ViewBlockFreqPropagationDAG);
+    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph, getGVDT());
   }
 
   std::string getNodeAttributes(const BasicBlock *Node,

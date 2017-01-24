@@ -69,13 +69,14 @@ private:
     uint16_t ReservedVGPRCount = 0;
 
     // Fixed SGPR number used to hold wave scratch offset for entire kernel
-    // execution, or uint16_t(-1) if the register is not used or not known.
+    // execution, or std::numeric_limits<uint16_t>::max() if the register is not
+    // used or not known.
     uint16_t DebuggerWavefrontPrivateSegmentOffsetSGPR =
         std::numeric_limits<uint16_t>::max();
 
     // Fixed SGPR number of the first 4 SGPRs used to hold scratch V# for entire
-    // kernel execution, or uint16_t(-1) if the register is not used or not
-    // known.
+    // kernel execution, or std::numeric_limits<uint16_t>::max() if the register
+    // is not used or not known.
     uint16_t DebuggerPrivateSegmentBufferSGPR =
         std::numeric_limits<uint16_t>::max();
 

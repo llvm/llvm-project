@@ -62,7 +62,7 @@ define void @test_no_denormals(float addrspace(1)* %out0, double addrspace(1)* %
 
 attributes #0 = { nounwind "target-cpu"="kaveri" }
 attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "target-features"="-fp32-denormals,+fp64-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals,-fp64-denormals" }
-attributes #4 = { nounwind "target-features"="+fp32-denormals,+fp64-denormals" }
-attributes #5 = { nounwind "target-features"="-fp32-denormals,-fp64-denormals" }
+attributes #2 = { nounwind "target-features"="-fp32-denormals,+fp64-fp16-denormals" }
+attributes #3 = { nounwind "target-features"="+fp32-denormals,-fp64-fp16-denormals" }
+attributes #4 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
+attributes #5 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }

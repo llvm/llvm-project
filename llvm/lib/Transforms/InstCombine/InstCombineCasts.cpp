@@ -1393,7 +1393,14 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
   if (II) {
     switch (II->getIntrinsicID()) {
     default: break;
-    case Intrinsic::fabs: {
+    case Intrinsic::fabs:
+    case Intrinsic::ceil:
+    case Intrinsic::floor:
+    case Intrinsic::rint:
+    case Intrinsic::round:
+    case Intrinsic::nearbyint:
+    case Intrinsic::trunc: {
+      // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
       Value *InnerTrunc = Builder->CreateFPTrunc(II->getArgOperand(0),
                                                  CI.getType());

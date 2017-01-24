@@ -651,9 +651,9 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       Function *CalledFunction = CS.getCalledFunction();
       if (!CalledFunction || !CalledFunction->getSubprogram())
         continue;
+      DebugLoc DLoc = I->getDebugLoc();
+      uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
       if (InlineFunction(CS, IFI)) {
-        DebugLoc DLoc = I->getDebugLoc();
-        uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
         LocalChanged = true;
         emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
                                Twine("inlined hot callee '") +
