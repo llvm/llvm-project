@@ -35,8 +35,8 @@
 // CHECK-LTO-NOT: -cc1
 // CHECK-LTO-NOT: -fembed-bitcode=all
 // RUN: touch %t.o
-// RUN: %clang  %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=277  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-277
-// RUN: %clang  %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=278  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-278
+// RUN: %clang  -target armv7-apple-darwin -miphoneos-version-min=6.0 %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=277  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-277
+// RUN: %clang  -target armv7-apple-darwin -miphoneos-version-min=6.0 %t.o -fembed-bitcode  -fembed-bitcode-marker -mlinker-version=278  2>&1 -### | FileCheck %s -check-prefix=CHECK-LTO-MARKER-278
 // CHECK-LTO-MARKER-277-NOT: bitcode_process_mode
 // CHECK-LTO-MARKER-278: bitcode_process_mode
 
