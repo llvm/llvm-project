@@ -713,6 +713,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
+				"OTHER_LDFLAGS[sdk=macosx*]" = "";
 				STRIP_INSTALLED_PRODUCT = NO;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_BUILDER = "$(USER)";
@@ -883,6 +884,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -892,6 +895,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -985,6 +990,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -994,6 +1001,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1086,6 +1095,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1095,6 +1106,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1175,6 +1188,8 @@
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
 					Foundation,
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1182,6 +1197,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
 					"$(LLDB_ENERGY_LFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = "debugserver-nonui";
@@ -1246,6 +1263,8 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1255,6 +1274,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = "debugserver-nonui";
@@ -1319,6 +1340,8 @@
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1328,6 +1351,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = "debugserver-nonui";
@@ -1390,6 +1415,8 @@
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
 					Foundation,
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1397,6 +1424,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
 					"$(LLDB_ENERGY_LFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = "debugserver-nonui";
@@ -1528,6 +1557,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1537,6 +1568,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1670,6 +1703,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1679,6 +1714,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1740,6 +1777,8 @@
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
 					Foundation,
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1747,6 +1786,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
 					"$(LLDB_ENERGY_LFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = "debugserver-nonui";
@@ -1886,6 +1927,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -1895,6 +1938,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -2019,6 +2064,8 @@
 					MobileCoreServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"-sectcreate",
@@ -2028,6 +2075,8 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"-weak_framework",
+					LoggingSupport,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;

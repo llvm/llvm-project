@@ -607,10 +607,10 @@ bool GDBRemoteCommunication::DecompressPacket() {
        m_compression_type == CompressionType::LZFSE ||
        m_compression_type == CompressionType::LZ4)) {
     compression_algorithm compression_type;
-    if (m_compression_type == CompressionType::ZlibDeflate)
-      compression_type = COMPRESSION_ZLIB;
-    else if (m_compression_type == CompressionType::LZFSE)
+    if (m_compression_type == CompressionType::LZFSE)
       compression_type = COMPRESSION_LZFSE;
+    else if (m_compression_type == CompressionType::ZlibDeflate)
+      compression_type = COMPRESSION_ZLIB;
     else if (m_compression_type == CompressionType::LZ4)
       compression_type = COMPRESSION_LZ4_RAW;
     else if (m_compression_type == CompressionType::LZMA)

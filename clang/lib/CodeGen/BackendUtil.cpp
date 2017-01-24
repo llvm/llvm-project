@@ -262,7 +262,7 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
     TLII->disableAllFunctions();
   else {
     // Disable individual libc/libm calls in TargetLibraryInfo.
-    LibFunc::Func F;
+    LibFunc F;
     for (auto &FuncName : CodeGenOpts.getNoBuiltinFuncs())
       if (TLII->getLibFunc(FuncName, F))
         TLII->setUnavailable(F);

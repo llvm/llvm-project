@@ -1751,6 +1751,16 @@ namespace {
       SafeToInline = E->getConstructor()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
+      CXXMethodDecl *M = E->getMethodDecl();
+      if (!M) {
+        // Call through a pointer to member function. This is safe to inline.
+        SafeToInline = true;
+      } else {
+        SafeToInline = M->hasAttr<DLLImportAttr>();
+      }
+      return SafeToInline;
+    }
     bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
       SafeToInline = E->getOperatorDelete()->hasAttr<DLLImportAttr>();
       return SafeToInline;
