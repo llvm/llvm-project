@@ -8459,9 +8459,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   // for embed-bitcode, use -bitcode_bundle in linker command
   if (C.getDriver().embedBitcodeEnabled()) {
     // Check if the toolchain supports bitcode build flow.
-    if (MachOTC.SupportsEmbeddedBitcode())
+    if (MachOTC.SupportsEmbeddedBitcode()) {
       CmdArgs.push_back("-bitcode_bundle");
-    else
+      if (C.getDriver().embedBitcodeMarkerOnly() && Version[0] >= 278) {
+        CmdArgs.push_back("-bitcode_process_mode");
+        CmdArgs.push_back("marker");
+      }
+    } else
       D.Diag(diag::err_drv_bitcode_unsupported_on_toolchain);
   }
 
