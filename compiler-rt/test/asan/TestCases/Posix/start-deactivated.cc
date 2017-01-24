@@ -20,6 +20,8 @@
 
 // XFAIL: arm-linux-gnueabi
 
+// END.
+
 #if !defined(SHARED_LIB)
 
 #include <assert.h>
