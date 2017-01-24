@@ -11,3 +11,13 @@ config.name = 'ThreadSanitizer-Unit'
 # FIXME: De-hardcode this path.
 config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/tsan/tests"
 config.test_source_root = config.test_exec_root
+
+if config.host_os == 'Darwin':
+  config.parallelism_group = config.darwin_sanitizer_parallelism_group_func
+
+  # On Darwin, we default to ignore_noninstrumented_modules=1, which also
+  # suppresses some races the tests are supposed to find.  See tsan/lit.cfg.
+  if 'TSAN_OPTIONS' in config.environment:
+    config.environment['TSAN_OPTIONS'] += ':ignore_noninstrumented_modules=0'
+  else:
+    config.environment['TSAN_OPTIONS'] = 'ignore_noninstrumented_modules=0'
