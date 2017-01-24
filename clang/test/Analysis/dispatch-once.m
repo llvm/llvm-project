@@ -107,3 +107,10 @@ void test_block_var_from_outside_block() {
   };
   dispatch_once(&once, ^{}); // expected-warning{{Call to 'dispatch_once' uses the block variable 'once' for the predicate value.}}
 }
+
+void test_static_var_from_outside_block() {
+  static dispatch_once_t once;
+  ^{
+    dispatch_once(&once, ^{}); // no-warning
+  };
+}
