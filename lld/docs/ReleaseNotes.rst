@@ -32,12 +32,12 @@ ELF Improvements
 ----------------
 
 LLD provides much better compatibility with the GNU linker than before.
-Now it is able to link the entire FreeBSD base system including kernel
+Now it is able to link the entire FreeBSD base system including the kernel
 out of the box. We are working closely with the FreeBSD project to
 make it usable as the system linker in a future release of the operating
 system.
 
-Multi-threading performance has been imporved, and multi-threading
+Multi-threading performance has been improved, and multi-threading
 is now enabled by default. Combined with other optimizations, LLD 4.0
 is about 1.5 times faster than LLD 3.9 when linking large programs
 in our test environment.
@@ -51,13 +51,13 @@ Other notable changes are listed below:
 * Error messages are printed in red just like Clang by default. You
   can disable it by passing -no-color-diagnostics.
 
-* LLD's version string is now embedded to a .comment section in a
-  result output file. You can dump it by this command: ``objdump -j -s
+* LLD's version string is now embedded in a .comment section in the
+  result output file. You can dump it with this command: ``objdump -j -s
   .comment <file>``.
 
 * The -Map option is supported. With that, you can print out section
   and symbol information to a specified file. This feature is useful
-  to analyze link results.
+  for analyzing link results.
 
 * The file format for the -reproduce option has changed from cpio to
   tar.
@@ -86,4 +86,8 @@ Other notable changes are listed below:
 COFF Improvements
 -----------------
 
-* 
+* Performance on Windows has been improved by parallelizing parts of the
+  linker and optimizing file system operations. As a result of these
+  improvements, LLD 4.0 has been measured to be about 2.5 times faster
+  than LLD 3.9 when linking a large Chromium DLL.
+
