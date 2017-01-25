@@ -127,18 +127,20 @@ template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(DiagnosticInfoOptimizationBase::Argument)
 
 void OptimizationRemarkEmitter::computeHotness(
-    DiagnosticInfoOptimizationBase &OptDiag) {
+    DiagnosticInfoIROptimization &OptDiag) {
   Value *V = OptDiag.getCodeRegion();
   if (V)
     OptDiag.setHotness(computeHotness(V));
 }
 
-void OptimizationRemarkEmitter::emit(DiagnosticInfoOptimizationBase &OptDiag) {
+void OptimizationRemarkEmitter::emit(
+    DiagnosticInfoOptimizationBase &OptDiagBase) {
+  auto &OptDiag = cast<DiagnosticInfoIROptimization>(OptDiagBase);
   computeHotness(OptDiag);
 
   yaml::Output *Out = F->getContext().getDiagnosticsOutputFile();
   if (Out) {
-    auto *P = &const_cast<DiagnosticInfoOptimizationBase &>(OptDiag);
+    auto *P = const_cast<DiagnosticInfoOptimizationBase *>(&OptDiagBase);
     *Out << P;
   }
   // FIXME: now that IsVerbose is part of DI, filtering for this will be moved
