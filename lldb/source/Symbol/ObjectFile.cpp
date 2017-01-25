@@ -652,11 +652,13 @@ ConstString ObjectFile::GetNextSyntheticSymbolName() {
   return ConstString(ss.GetString());
 }
 
-Error ObjectFile::LoadInMemory(Target &target) {
+Error ObjectFile::LoadInMemory(Target &target, bool set_pc) {
   Error error;
   ProcessSP process = target.CalculateProcess();
   if (!process)
     return Error("No Process");
+  if (set_pc && !GetEntryPointAddress().IsValid())
+    return Error("No entry address in object file");
 
   SectionList *section_list = GetSectionList();
   if (!section_list)
@@ -676,6 +678,13 @@ Error ObjectFile::LoadInMemory(Target &target) {
       if (written != section_data.GetByteSize())
         return error;
     }
+  }
+  if (set_pc) {
+    ThreadList &thread_list = process->GetThreadList();
+    ThreadSP curr_thread(thread_list.GetSelectedThread());
+    RegisterContextSP reg_context(curr_thread->GetRegisterContext());
+    Address file_entry = GetEntryPointAddress();
+    reg_context->SetPC(file_entry.GetLoadAddress(&target));
   }
   return error;
 }

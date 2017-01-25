@@ -415,8 +415,7 @@ void CoverageData::Add(uptr pc, u32 *guard) {
   uptr idx = -guard_value - 1;
   if (idx >= atomic_load(&pc_array_index, memory_order_acquire))
     return;  // May happen after fork when pc_array_index becomes 0.
-  CHECK_LT(idx * sizeof(uptr),
-           atomic_load(&pc_array_size, memory_order_acquire));
+  CHECK_LT(idx, atomic_load(&pc_array_size, memory_order_acquire));
   uptr counter = atomic_fetch_add(&coverage_counter, 1, memory_order_relaxed);
   pc_array[idx] = BundlePcAndCounter(pc, counter);
 }
@@ -940,7 +939,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_with_check(u32 *guard) {
   atomic_uint32_t *atomic_guard = reinterpret_cast<atomic_uint32_t*>(guard);
   if (static_cast<s32>(
           __sanitizer::atomic_load(atomic_guard, memory_order_relaxed)) < 0)
-    __sanitizer_cov(guard);
+  coverage_data.Add(StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()),
+                    guard);
 }
 SANITIZER_INTERFACE_ATTRIBUTE void
 __sanitizer_cov_indir_call16(uptr callee, uptr callee_cache16[]) {

@@ -2731,16 +2731,19 @@ void ProcessGDBRemote::WillPublicStop() {
 size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
                                       Error &error) {
   GetMaxMemorySize();
-  if (size > m_max_memory_size) {
+  bool binary_memory_read = m_gdb_comm.GetxPacketSupported();
+  // M and m packets take 2 bytes for 1 byte of memory
+  size_t max_memory_size =
+      binary_memory_read ? m_max_memory_size : m_max_memory_size / 2;
+  if (size > max_memory_size) {
     // Keep memory read sizes down to a sane limit. This function will be
     // called multiple times in order to complete the task by
     // lldb_private::Process so it is ok to do this.
-    size = m_max_memory_size;
+    size = max_memory_size;
   }
 
   char packet[64];
   int packet_len;
-  bool binary_memory_read = m_gdb_comm.GetxPacketSupported();
   packet_len = ::snprintf(packet, sizeof(packet), "%c%" PRIx64 ",%" PRIx64,
                           binary_memory_read ? 'x' : 'm', (uint64_t)addr,
                           (uint64_t)size);
@@ -2787,11 +2790,13 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
 size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                        size_t size, Error &error) {
   GetMaxMemorySize();
-  if (size > m_max_memory_size) {
+  // M and m packets take 2 bytes for 1 byte of memory
+  size_t max_memory_size = m_max_memory_size / 2;
+  if (size > max_memory_size) {
     // Keep memory read sizes down to a sane limit. This function will be
     // called multiple times in order to complete the task by
     // lldb_private::Process so it is ok to do this.
-    size = m_max_memory_size;
+    size = max_memory_size;
   }
 
   StreamString packet;
@@ -3988,6 +3993,21 @@ void ProcessGDBRemote::GetMaxMemorySize() {
       // don't exceed our reasonable largeish default packet size.
       if (stub_max_size > reasonable_largeish_default) {
         stub_max_size = reasonable_largeish_default;
+      }
+
+      // Memory packet have other overheads too like Maddr,size:#NN
+      // Instead of calculating the bytes taken by size and addr every
+      // time, we take a maximum guess here.
+      if (stub_max_size > 70)
+        stub_max_size -= 32 + 32 + 6;
+      else {
+        // In unlikely scenario that max packet size is less then 70, we will
+        // hope that data being written is small enough to fit.
+        Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(
+            GDBR_LOG_COMM | GDBR_LOG_MEMORY));
+        if (log)
+          log->Warning("Packet size is too small. "
+                       "LLDB may face problems while writing memory");
       }
 
       m_max_memory_size = stub_max_size;

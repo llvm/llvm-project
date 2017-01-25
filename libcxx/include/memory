@@ -208,10 +208,10 @@ template <class ForwardIterator>
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_default_construct_n(ForwardIterator first, Size n);
 
-template <class Y> struct auto_ptr_ref {};
+template <class Y> struct auto_ptr_ref {};      // removed in C++17
 
 template<class X>
-class auto_ptr
+class auto_ptr                                  // removed in C++17
 {
 public:
     typedef X element_type;
@@ -270,7 +270,7 @@ public:
     template <class U, class E>
         unique_ptr(unique_ptr<U, E>&& u) noexcept;
     template <class U>
-        unique_ptr(auto_ptr<U>&& u) noexcept;
+        unique_ptr(auto_ptr<U>&& u) noexcept;       // removed in C++17
 
     // destructor
     ~unique_ptr();
@@ -404,7 +404,7 @@ public:
     shared_ptr(shared_ptr&& r) noexcept;
     template<class Y> shared_ptr(shared_ptr<Y>&& r) noexcept;
     template<class Y> explicit shared_ptr(const weak_ptr<Y>& r);
-    template<class Y> shared_ptr(auto_ptr<Y>&& r);
+    template<class Y> shared_ptr(auto_ptr<Y>&& r);          // removed in C++17
     template <class Y, class D> shared_ptr(unique_ptr<Y, D>&& r);
     shared_ptr(nullptr_t) : shared_ptr() { }
 
@@ -416,7 +416,7 @@ public:
     template<class Y> shared_ptr& operator=(const shared_ptr<Y>& r) noexcept;
     shared_ptr& operator=(shared_ptr&& r) noexcept;
     template<class Y> shared_ptr& operator=(shared_ptr<Y>&& r);
-    template<class Y> shared_ptr& operator=(auto_ptr<Y>&& r);
+    template<class Y> shared_ptr& operator=(auto_ptr<Y>&& r); // removed in C++17
     template <class Y, class D> shared_ptr& operator=(unique_ptr<Y, D>&& r);
 
     // modifiers:
@@ -1996,6 +1996,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {::operator delete(__p);}
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 template <class _Tp>
 struct auto_ptr_ref
 {
@@ -2052,6 +2053,7 @@ class _LIBCPP_TEMPLATE_VIS auto_ptr<void>
 public:
     typedef void element_type;
 };
+#endif
 
 template <class _T1, class _T2, bool = is_same<typename remove_cv<_T1>::type,
                                                      typename remove_cv<_T2>::type>::value,
@@ -2496,6 +2498,7 @@ public:
                       >::type = __nat()) _NOEXCEPT
             : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {}
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
     template <class _Up>
         _LIBCPP_INLINE_VISIBILITY unique_ptr(auto_ptr<_Up>&& __p,
                 typename enable_if<
@@ -2506,6 +2509,7 @@ public:
             : __ptr_(__p.release())
             {
             }
+#endif
 
         _LIBCPP_INLINE_VISIBILITY unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT
             {
@@ -2557,6 +2561,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY unique_ptr(pointer __p, deleter_type __d)
         : __ptr_(_VSTD::move(__p), _VSTD::move(__d)) {}
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
     template <class _Up>
         _LIBCPP_INLINE_VISIBILITY
                 typename enable_if<
@@ -2566,7 +2571,7 @@ public:
                                   >::type
         operator=(auto_ptr<_Up> __p)
             {reset(__p.release()); return *this;}
-
+#endif
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY ~unique_ptr() {reset();}
 
@@ -3645,6 +3650,7 @@ public:
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template<class _Yp> explicit shared_ptr(const weak_ptr<_Yp>& __r,
                    typename enable_if<is_convertible<_Yp*, element_type*>::value, __nat>::type= __nat());
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template<class _Yp>
         shared_ptr(auto_ptr<_Yp>&& __r,
@@ -3653,6 +3659,7 @@ public:
     template<class _Yp>
         shared_ptr(auto_ptr<_Yp> __r,
                    typename enable_if<is_convertible<_Yp*, element_type*>::value, __nat>::type = __nat());
+#endif
 #endif
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template <class _Yp, class _Dp>
@@ -3717,6 +3724,7 @@ public:
         >::type
         _LIBCPP_INLINE_VISIBILITY
         operator=(shared_ptr<_Yp>&& __r);
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
     template<class _Yp>
         _LIBCPP_INLINE_VISIBILITY
         typename enable_if
@@ -3726,7 +3734,9 @@ public:
             shared_ptr
         >::type&
         operator=(auto_ptr<_Yp>&& __r);
+#endif
 #else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
     template<class _Yp>
         _LIBCPP_INLINE_VISIBILITY
         typename enable_if
@@ -3736,6 +3746,7 @@ public:
             shared_ptr&
         >::type
         operator=(auto_ptr<_Yp> __r);
+#endif
 #endif
     template <class _Yp, class _Dp>
         typename enable_if
@@ -4072,6 +4083,7 @@ shared_ptr<_Tp>::shared_ptr(shared_ptr<_Yp>&& __r,
 
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 template<class _Tp>
 template<class _Yp>
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -4087,6 +4099,7 @@ shared_ptr<_Tp>::shared_ptr(auto_ptr<_Yp> __r,
     __enable_weak_this(__r.get(), __r.get());
     __r.release();
 }
+#endif
 
 template<class _Tp>
 template <class _Yp, class _Dp>
@@ -4393,6 +4406,7 @@ shared_ptr<_Tp>::operator=(shared_ptr<_Yp>&& __r)
     return *this;
 }
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 template<class _Tp>
 template<class _Yp>
 inline
@@ -4407,6 +4421,7 @@ shared_ptr<_Tp>::operator=(auto_ptr<_Yp>&& __r)
     shared_ptr(_VSTD::move(__r)).swap(*this);
     return *this;
 }
+#endif
 
 template<class _Tp>
 template <class _Yp, class _Dp>
@@ -4426,6 +4441,7 @@ shared_ptr<_Tp>::operator=(unique_ptr<_Yp, _Dp>&& __r)
 
 #else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 template<class _Tp>
 template<class _Yp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -4440,6 +4456,7 @@ shared_ptr<_Tp>::operator=(auto_ptr<_Yp> __r)
     shared_ptr(__r).swap(*this);
     return *this;
 }
+#endif
 
 template<class _Tp>
 template <class _Yp, class _Dp>

@@ -87,7 +87,7 @@ public:
     reference       front();
     const_reference front() const;
 
-    template <class... Args> reference emplace_front(Args&&... args);
+    template <class... Args> reference emplace_front(Args&&... args);  // reference in C++17
     void push_front(const value_type& v);
     void push_front(value_type&& v);
 
@@ -747,7 +747,11 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #ifndef _LIBCPP_HAS_NO_VARIADICS
+#if _LIBCPP_STD_VER > 14
     template <class... _Args> reference emplace_front(_Args&&... __args);
+#else
+    template <class... _Args> void      emplace_front(_Args&&... __args);
+#endif
 #endif
     void push_front(value_type&& __v);
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -1103,7 +1107,11 @@ forward_list<_Tp, _Alloc>::assign(initializer_list<value_type> __il)
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
+#if _LIBCPP_STD_VER > 14
 typename forward_list<_Tp, _Alloc>::reference
+#else
+void
+#endif
 forward_list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
 {
     __node_allocator& __a = base::__alloc();
@@ -1113,7 +1121,9 @@ forward_list<_Tp, _Alloc>::emplace_front(_Args&&... __args)
                                   _VSTD::forward<_Args>(__args)...);
     __h->__next_ = base::__before_begin()->__next_;
     base::__before_begin()->__next_ = __h.release();
+#if _LIBCPP_STD_VER > 14
     return base::__before_begin()->__next_->__value_;
+#endif
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS

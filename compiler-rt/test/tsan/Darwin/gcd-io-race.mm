@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %deflake %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: disabled
 

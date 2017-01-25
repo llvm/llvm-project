@@ -156,7 +156,7 @@ public:
     ~future();
     future& operator=(const future& rhs) = delete;
     future& operator=(future&&) noexcept;
-    shared_future<R> share();
+    shared_future<R> share() noecept;
 
     // retrieving the value
     R get();
@@ -183,7 +183,7 @@ public:
     ~future();
     future& operator=(const future& rhs) = delete;
     future& operator=(future&&) noexcept;
-    shared_future<R&> share();
+    shared_future<R&> share() noexcept;
 
     // retrieving the value
     R& get();
@@ -210,7 +210,7 @@ public:
     ~future();
     future& operator=(const future& rhs) = delete;
     future& operator=(future&&) noexcept;
-    shared_future<void> share();
+    shared_future<void> share() noexcept;
 
     // retrieving the value
     void get();
@@ -1119,7 +1119,7 @@ public:
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     ~future();
     _LIBCPP_INLINE_VISIBILITY
-    shared_future<_Rp> share();
+    shared_future<_Rp> share() _NOEXCEPT;
 
     // retrieving the value
     _Rp get();
@@ -1222,7 +1222,7 @@ public:
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     ~future();
     _LIBCPP_INLINE_VISIBILITY
-    shared_future<_Rp&> share();
+    shared_future<_Rp&> share() _NOEXCEPT;
 
     // retrieving the value
     _Rp& get();
@@ -1320,7 +1320,7 @@ public:
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     ~future();
     _LIBCPP_INLINE_VISIBILITY
-    shared_future<void> share();
+    shared_future<void> share() _NOEXCEPT;
 
     // retrieving the value
     void get();
@@ -2580,7 +2580,7 @@ swap(shared_future<_Rp>& __x, shared_future<_Rp>& __y) _NOEXCEPT
 template <class _Rp>
 inline
 shared_future<_Rp>
-future<_Rp>::share()
+future<_Rp>::share() _NOEXCEPT
 {
     return shared_future<_Rp>(_VSTD::move(*this));
 }
@@ -2588,7 +2588,7 @@ future<_Rp>::share()
 template <class _Rp>
 inline
 shared_future<_Rp&>
-future<_Rp&>::share()
+future<_Rp&>::share() _NOEXCEPT
 {
     return shared_future<_Rp&>(_VSTD::move(*this));
 }
@@ -2597,7 +2597,7 @@ future<_Rp&>::share()
 
 inline
 shared_future<void>
-future<void>::share()
+future<void>::share() _NOEXCEPT
 {
     return shared_future<void>(_VSTD::move(*this));
 }
