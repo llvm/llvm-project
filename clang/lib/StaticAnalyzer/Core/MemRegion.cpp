@@ -776,22 +776,6 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
-static CanQualType getBlockPointerType(const BlockDecl *BD, ASTContext &C) {
-  // FIXME: The fallback type here is totally bogus -- though it should
-  // never be queried, it will prevent uniquing with the real
-  // BlockCodeRegion. Ideally we'd fix the AST so that we always had a
-  // signature.
-  QualType T;
-  if (const TypeSourceInfo *TSI = BD->getSignatureAsWritten())
-    T = TSI->getType();
-  if (T.isNull())
-    T = C.VoidTy;
-  if (!T->getAs<FunctionType>())
-    T = C.getFunctionNoProtoType(T);
-  T = C.getBlockPointerType(T);
-  return C.getCanonicalType(T);
-}
-
 const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const MemRegion *sReg = nullptr;
@@ -819,7 +803,7 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
         sReg = getGlobalsRegion();
     }
 
-  // Finally handle locals.
+  // Finally handle static locals.
   } else {
     // FIXME: Once we implement scope handling, we will need to properly lookup
     // 'D' to the proper LocationContext.
@@ -832,22 +816,9 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
 
     const StackFrameContext *STC = V.get<const StackFrameContext*>();
 
-    if (!STC) {
-      if (D->isStaticLocal()) {
-        const CodeTextRegion *fReg = nullptr;
-        if (const auto *ND = dyn_cast<NamedDecl>(DC))
-          fReg = getFunctionCodeRegion(ND);
-        else if (const auto *BD = dyn_cast<BlockDecl>(DC))
-          fReg = getBlockCodeRegion(BD, getBlockPointerType(BD, getContext()),
-                                    LC->getAnalysisDeclContext());
-        assert(fReg && "Unable to determine code region for a static local!");
-        sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind, fReg);
-      } else {
-        // We're looking at a block-captured local variable, which may be either
-        // still local, or already moved to the heap. So we're not sure.
-        sReg = getUnknownRegion();
-      }
-    } else {
+    if (!STC)
+      sReg = getUnknownRegion();
+    else {
       if (D->hasLocalStorage()) {
         sReg = isa<ParmVarDecl>(D) || isa<ImplicitParamDecl>(D)
                ? static_cast<const MemRegion*>(getStackArgumentsRegion(STC))
@@ -860,9 +831,22 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   getFunctionCodeRegion(cast<NamedDecl>(STCD)));
         else if (const BlockDecl *BD = dyn_cast<BlockDecl>(STCD)) {
+          // FIXME: The fallback type here is totally bogus -- though it should
+          // never be queried, it will prevent uniquing with the real
+          // BlockCodeRegion. Ideally we'd fix the AST so that we always had a
+          // signature.
+          QualType T;
+          if (const TypeSourceInfo *TSI = BD->getSignatureAsWritten())
+            T = TSI->getType();
+          if (T.isNull())
+            T = getContext().VoidTy;
+          if (!T->getAs<FunctionType>())
+            T = getContext().getFunctionNoProtoType(T);
+          T = getContext().getBlockPointerType(T);
+
           const BlockCodeRegion *BTR =
-              getBlockCodeRegion(BD, getBlockPointerType(BD, getContext()),
-                                 STC->getAnalysisDeclContext());
+            getBlockCodeRegion(BD, C.getCanonicalType(T),
+                               STC->getAnalysisDeclContext());
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   BTR);
         }
