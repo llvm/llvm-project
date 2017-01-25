@@ -235,32 +235,36 @@ bool OptionGroupFormat::ParserGDBFormatLetter(
     m_prev_gdb_format = format_letter;
     return true;
 
-  // Size isn't used for printing instructions, so if a size is specified, and
-  // the previous format was
-  // 'i', then we should reset it to the default ('x').  Otherwise we'll
-  // continue to print as instructions,
-  // which isn't expected.
   case 'b':
-    byte_size = 1;
-    LLVM_FALLTHROUGH;
   case 'h':
-    byte_size = 2;
-    LLVM_FALLTHROUGH;
   case 'w':
-    byte_size = 4;
-    LLVM_FALLTHROUGH;
   case 'g':
-    byte_size = 8;
+    {
+      // Size isn't used for printing instructions, so if a size is specified, and
+      // the previous format was
+      // 'i', then we should reset it to the default ('x').  Otherwise we'll
+      // continue to print as instructions,
+      // which isn't expected.
+      if (format_letter == 'b')
+          byte_size = 1;
+      else if (format_letter == 'h')
+          byte_size = 2;
+      else if (format_letter == 'w')
+          byte_size = 4;
+      else if (format_letter == 'g')
+          byte_size = 8;
 
-    m_prev_gdb_size = format_letter;
-    if (m_prev_gdb_format == 'i')
-      m_prev_gdb_format = 'x';
-    return true;
-
+        m_prev_gdb_size = format_letter;
+        if (m_prev_gdb_format == 'i')
+          m_prev_gdb_format = 'x';
+        return true;
+    }
     break;
   default:
     break;
   }
+
+
   return false;
 }
 
