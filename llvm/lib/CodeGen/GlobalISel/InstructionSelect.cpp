@@ -146,7 +146,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                    : &*MRI.def_instr_begin(VReg);
     if (!RC) {
       if (TPC.isGlobalISelAbortEnabled())
-        reportSelectionError(MF, MI, "VReg as no regclass after selection");
+        reportSelectionError(MF, MI, "VReg has no regclass after selection");
       Failed = true;
       break;
     }
