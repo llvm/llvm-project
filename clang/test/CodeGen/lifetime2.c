@@ -90,7 +90,7 @@ L:
   bar(&x, 1);
 }
 
-// O2-LABEL: define i32 @jump_backward_over_declaration(
+// O2-LABEL: @jump_backward_over_declaration(
 // O2-NOT: call void @llvm.lifetime.{{.*}}(i64 4,
 
 extern void foo2(int p);
