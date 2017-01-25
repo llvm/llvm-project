@@ -1,7 +1,7 @@
-// RUN: %clang -S -emit-llvm -o - -O2 %s | FileCheck %s -check-prefixes=CHECK,O2
-// RUN: %clang -S -emit-llvm -o - -O2 -Xclang -disable-lifetime-markers %s \
+// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-llvm-passes %s | FileCheck %s -check-prefixes=CHECK,O2
+// RUN: %clang_cc1 -S -emit-llvm -o - -O2 -disable-lifetime-markers %s \
 // RUN:       | FileCheck %s -check-prefixes=CHECK,O0
-// RUN: %clang -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=CHECK,O0
+// RUN: %clang_cc1 -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=CHECK,O0
 
 extern int bar(char *A, int n);
 
@@ -25,13 +25,11 @@ void no_goto_bypass() {
   char x;
 l1:
   bar(&x, 1);
-  // O2: @llvm.lifetime.start(i64 5
-  // O2: @llvm.lifetime.end(i64 5
   char y[5];
   bar(y, 5);
   goto l1;
   // Infinite loop
-  // O2-NOT: @llvm.lifetime.end(i64 1
+  // O2-NOT: @llvm.lifetime.end(
 }
 
 // CHECK-LABEL: @goto_bypass
@@ -90,4 +88,25 @@ void indirect_jump(int n) {
   goto *T[n];
 L:
   bar(&x, 1);
+}
+
+// O2-LABEL: define i32 @jump_backward_over_declaration(
+// O2-NOT: call void @llvm.lifetime.{{.*}}(i64 4,
+
+extern void foo2(int p);
+
+int jump_backward_over_declaration(int a) {
+  int *p = 0;
+label1:
+  if (p) {
+    foo2(*p);
+    return 0;
+  }
+
+  int i = 999;
+  if (a != 2) {
+    p = &i;
+    goto label1;
+  }
+  return -1;
 }
