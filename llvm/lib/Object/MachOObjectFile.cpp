@@ -2454,6 +2454,8 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
         *ArchFlag = "armv7em";
       return Triple("thumbv7em-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7K:
+      if (McpuDefault)
+        *McpuDefault = "cortex-a7";
       if (ArchFlag)
         *ArchFlag = "armv7k";
       return Triple("armv7k-apple-darwin");
@@ -2464,6 +2466,8 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
         *ArchFlag = "armv7m";
       return Triple("thumbv7m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V7S:
+      if (McpuDefault)
+        *McpuDefault = "cortex-a7";
       if (ArchFlag)
         *ArchFlag = "armv7s";
       return Triple("armv7s-apple-darwin");
