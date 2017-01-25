@@ -1780,7 +1780,7 @@ String builtins
 ---------------
 
 Clang provides constant expression evaluation support for builtins forms of
-the following functions from the C standard library ``<strings.h>`` header:
+the following functions from the C standard library ``<string.h>`` header:
 
 * ``memchr``
 * ``memcmp``

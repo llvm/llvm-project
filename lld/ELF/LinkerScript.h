@@ -15,6 +15,7 @@
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -127,6 +128,7 @@ struct OutputSectionCommand : BaseCommand {
   uint32_t Filler = 0;
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
   std::string Location;
+  std::string MemoryRegionName;
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
@@ -187,6 +189,18 @@ struct PhdrsCommand {
   Expr LMAExpr;
 };
 
+// This struct is used to represent the location and size of regions of
+// target memory. Instances of the struct are created by parsing the
+// MEMORY command.
+struct MemoryRegion {
+  std::string Name;
+  uint64_t Origin;
+  uint64_t Length;
+  uint64_t Offset;
+  uint32_t Flags;
+  uint32_t NotFlags;
+};
+
 class LinkerScriptBase {
 protected:
   ~LinkerScriptBase() = default;
@@ -215,6 +229,9 @@ struct ScriptConfiguration {
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
   std::vector<InputSectionDescription *> KeptSections;
+
+  // A map from memory region name to a memory region descriptor.
+  llvm::DenseMap<llvm::StringRef, MemoryRegion> MemoryRegions;
 };
 
 extern ScriptConfiguration *ScriptConfig;
@@ -273,9 +290,13 @@ private:
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
+  MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd,
+                                 OutputSectionBase *Sec);
+
   uintX_t Dot;
   uintX_t LMAOffset = 0;
   OutputSectionBase *CurOutSec = nullptr;
+  MemoryRegion *CurMemRegion = nullptr;
   uintX_t ThreadBssOffset = 0;
   void switchTo(OutputSectionBase *Sec);
   void flush();

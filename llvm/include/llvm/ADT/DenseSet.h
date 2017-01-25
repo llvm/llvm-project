@@ -90,9 +90,12 @@ public:
 
   // Iterators.
 
+  class ConstIterator;
+
   class Iterator {
     typename MapTy::iterator I;
     friend class DenseSetImpl;
+    friend class ConstIterator;
 
   public:
     typedef typename MapTy::iterator::difference_type difference_type;
@@ -101,6 +104,7 @@ public:
     typedef value_type &reference;
     typedef std::forward_iterator_tag iterator_category;
 
+    Iterator() = default;
     Iterator(const typename MapTy::iterator &i) : I(i) {}
 
     ValueT &operator*() { return I->getFirst(); }
@@ -110,13 +114,14 @@ public:
 
     Iterator& operator++() { ++I; return *this; }
     Iterator operator++(int) { auto T = *this; ++I; return T; }
-    bool operator==(const Iterator& X) const { return I == X.I; }
-    bool operator!=(const Iterator& X) const { return I != X.I; }
+    bool operator==(const ConstIterator& X) const { return I == X.I; }
+    bool operator!=(const ConstIterator& X) const { return I != X.I; }
   };
 
   class ConstIterator {
     typename MapTy::const_iterator I;
     friend class DenseSet;
+    friend class Iterator;
 
   public:
     typedef typename MapTy::const_iterator::difference_type difference_type;
@@ -124,6 +129,10 @@ public:
     typedef value_type *pointer;
     typedef value_type &reference;
     typedef std::forward_iterator_tag iterator_category;
+
+    ConstIterator(const Iterator &B) : I(B.I) {}
+
+    ConstIterator() = default;
 
     ConstIterator(const typename MapTy::const_iterator &i) : I(i) {}
 

@@ -2471,6 +2471,33 @@ def : SchedAlias<WriteALUsr, A9WriteALUsr>;
 def : SchedAlias<WriteALUSsr, A9WriteALUsr>;
 def : SchedAlias<ReadALU, A9ReadALU>;
 def : SchedAlias<ReadALUsr, A9ReadALU>;
+
+// ===---------------------------------------------------------------------===//
+// Floating-point. Map target defined SchedReadWrite to processor specific ones
+//
+def : WriteRes<WriteFPCVT, [A9UnitFP, A9UnitAGU]> { let Latency = 4; }
+def : SchedAlias<WriteFPMOV, A9WriteFMov>;
+
+def : SchedAlias<WriteFPALU32, A9WriteF>;
+def : SchedAlias<WriteFPALU64, A9WriteF>;
+
+def : SchedAlias<WriteFPMUL32, A9WriteFMulS>;
+def : SchedAlias<WriteFPMUL64, A9WriteFMulD>;
+
+def : SchedAlias<WriteFPMAC32, A9WriteFMAS>;
+def : SchedAlias<WriteFPMAC64, A9WriteFMAD>;
+
+def : SchedAlias<WriteFPDIV32, A9WriteFDivS>;
+def : SchedAlias<WriteFPDIV64, A9WriteFDivD>;
+def : SchedAlias<WriteFPSQRT32, A9WriteFSqrtS>;
+def : SchedAlias<WriteFPSQRT64, A9WriteFSqrtD>;
+
+def : ReadAdvance<ReadFPMUL, 0>;
+def : ReadAdvance<ReadFPMAC, 0>;
+
+// ===---------------------------------------------------------------------===//
+// Subtarget-specific overrides. Map opcodes to list of SchedReadWrite types.
+//
 def : InstRW< [WriteALU],
       (instregex "ANDri", "ORRri", "EORri", "BICri", "ANDrr", "ORRrr", "EORrr",
                  "BICrr")>;
@@ -2524,6 +2551,5 @@ def : WriteRes<WriteBr, [A9UnitB]>;
 def : WriteRes<WriteBrL, [A9UnitB]>;
 def : WriteRes<WriteBrTbl, [A9UnitB]>;
 def : WriteRes<WritePreLd, []>;
-def : SchedAlias<WriteCvtFP, A9WriteF>;
 def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
 } // SchedModel = CortexA9Model

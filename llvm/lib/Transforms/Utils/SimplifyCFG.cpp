@@ -1691,7 +1691,7 @@ static bool SinkThenElseCodeToEnd(BranchInst *BI1) {
   //      /    \
   //    [f(1)] [if]
   //      |     | \
-  //      |     |  \
+  //      |     |  |
   //      |  [f(2)]|
   //       \    | /
   //        [ end ]

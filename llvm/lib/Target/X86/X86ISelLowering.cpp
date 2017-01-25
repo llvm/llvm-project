@@ -4844,10 +4844,6 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
   EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
                                   VT.getVectorNumElements()/Factor);
 
-  // Extract from UNDEF is UNDEF.
-  if (Vec.isUndef())
-    return DAG.getUNDEF(ResultVT);
-
   // Extract the relevant vectorWidth bits.  Generate an EXTRACT_SUBVECTOR
   unsigned ElemsPerChunk = vectorWidth / ElVT.getSizeInBits();
   assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
@@ -5094,8 +5090,7 @@ static SDValue concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
 }
 
 /// Returns a vector of specified type with all bits set.
-/// Always build ones vectors as <4 x i32> or <8 x i32>. For 256-bit types with
-/// no AVX2 support, use two <4 x i32> inserted in a <8 x i32> appropriately.
+/// Always build ones vectors as <4 x i32>, <8 x i32> or <16 x i32>.
 /// Then bitcast to their original type, ensuring they get CSE'd.
 static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG, const SDLoc &dl) {
@@ -5104,13 +5099,7 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
 
   APInt Ones = APInt::getAllOnesValue(32);
   unsigned NumElts = VT.getSizeInBits() / 32;
-  SDValue Vec;
-  if (!Subtarget.hasInt256() && NumElts == 8) {
-    Vec = DAG.getConstant(Ones, dl, MVT::v4i32);
-    Vec = concat128BitVectors(Vec, Vec, MVT::v8i32, 8, DAG, dl);
-  } else {
-    Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
-  }
+  SDValue Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
   return DAG.getBitcast(VT, Vec);
 }
 
@@ -30474,8 +30463,11 @@ static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
 static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
-  assert((X86ISD::VSHLI == N->getOpcode() || X86ISD::VSRLI == N->getOpcode()) &&
-         "Unexpected opcode");
+  unsigned Opcode = N->getOpcode();
+  assert((X86ISD::VSHLI == Opcode || X86ISD::VSRAI == Opcode ||
+          X86ISD::VSRLI == Opcode) &&
+         "Unexpected shift opcode");
+  bool LogicalShift = X86ISD::VSHLI == Opcode || X86ISD::VSRLI == Opcode;
   EVT VT = N->getValueType(0);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
@@ -30484,20 +30476,27 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Out of range logical bit shifts are guaranteed to be zero.
+  // Out of range arithmetic bit shifts splat the sign bit.
   APInt ShiftVal = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
-  if (ShiftVal.zextOrTrunc(8).uge(NumBitsPerElt))
-    return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
+  if (ShiftVal.zextOrTrunc(8).uge(NumBitsPerElt)) {
+    if (LogicalShift)
+      return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
+    else
+      ShiftVal = NumBitsPerElt - 1;
+  }
+
+  SDValue N0 = N->getOperand(0);
 
   // Shift N0 by zero -> N0.
   if (!ShiftVal)
-    return N->getOperand(0);
+    return N0;
 
   // Shift zero -> zero.
-  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+  if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
 
   // We can decode 'whole byte' logical bit shifts as shuffles.
-  if ((ShiftVal.getZExtValue() % 8) == 0) {
+  if (LogicalShift && (ShiftVal.getZExtValue() % 8) == 0) {
     SDValue Op(N, 0);
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
@@ -30505,6 +30504,25 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
+  }
+
+  // Constant Folding.
+  SmallBitVector UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (N->isOnlyUserOf(N0.getNode()) &&
+      getTargetConstantBitsFromNode(N0, NumBitsPerElt, UndefElts, EltBits)) {
+    assert(EltBits.size() == VT.getVectorNumElements() &&
+           "Unexpected shift value type");
+    unsigned ShiftImm = ShiftVal.getZExtValue();
+    for (APInt &Elt : EltBits) {
+      if (X86ISD::VSHLI == Opcode)
+        Elt = Elt.shl(ShiftImm);
+      else if (X86ISD::VSRAI == Opcode)
+        Elt = Elt.ashr(ShiftImm);
+      else
+        Elt = Elt.lshr(ShiftImm);
+    }
+    return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 
   return SDValue();
@@ -30635,22 +30653,9 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   SDValue N00 = N0->getOperand(0);
   SDValue N01 = N0->getOperand(1);
 
-  N01 = peekThroughBitcasts(N01);
+  if (!ISD::isBuildVectorAllOnes(N01.getNode()))
+    return SDValue();
 
-  // Either match a direct AllOnes for 128, 256, and 512-bit vectors, or an
-  // insert_subvector building a 256-bit AllOnes vector.
-  if (!ISD::isBuildVectorAllOnes(N01.getNode())) {
-    if (!VT.is256BitVector() || N01->getOpcode() != ISD::INSERT_SUBVECTOR)
-      return SDValue();
-
-    SDValue V1 = N01->getOperand(0);
-    SDValue V2 = N01->getOperand(1);
-    if (V1.getOpcode() != ISD::INSERT_SUBVECTOR ||
-        !V1.getOperand(0).isUndef() ||
-        !ISD::isBuildVectorAllOnes(V1.getOperand(1).getNode()) ||
-        !ISD::isBuildVectorAllOnes(V2.getNode()))
-      return SDValue();
-  }
   return DAG.getNode(X86ISD::ANDNP, DL, VT, N00, N1);
 }
 
@@ -34094,6 +34099,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SETCC:       return combineX86SetCC(N, DAG, DCI, Subtarget);
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, DCI, Subtarget);
   case X86ISD::VSHLI:
+  case X86ISD::VSRAI:
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);
   case X86ISD::VSEXT:
   case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);

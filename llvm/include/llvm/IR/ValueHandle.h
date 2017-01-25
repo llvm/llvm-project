@@ -98,6 +98,15 @@ protected:
            V != DenseMapInfo<Value *>::getTombstoneKey();
   }
 
+  /// \brief Remove this ValueHandle from its current use list.
+  void RemoveFromUseList();
+
+  /// \brief Clear the underlying pointer without clearing the use list.
+  ///
+  /// This should only be used if a derived class has manually removed the
+  /// handle from the use list.
+  void clearValPtr() { V = nullptr; }
+
 public:
   // Callbacks made from Value.
   static void ValueIsDeleted(Value *V);
@@ -120,8 +129,6 @@ private:
 
   /// \brief Add this ValueHandle to the use list for V.
   void AddToUseList();
-  /// \brief Remove this ValueHandle from its current use list.
-  void RemoveFromUseList();
 };
 
 /// \brief Value handle that is nullable, but tries to track the Value.
@@ -259,7 +266,6 @@ struct isPodLike<AssertingVH<T> > {
 #endif
 };
 
-
 /// \brief Value handle that tracks a Value across RAUW.
 ///
 /// TrackingVH is designed for situations where a client needs to hold a handle
@@ -368,6 +374,130 @@ public:
   /// implemented as a CallbackVH, it would use this method to call
   /// setValPtr(new_value).  AssertingVH would do nothing in this method.
   virtual void allUsesReplacedWith(Value *) {}
+};
+
+/// Value handle that poisons itself if the Value is deleted.
+///
+/// This is a Value Handle that points to a value and poisons itself if the
+/// value is destroyed while the handle is still live.  This is very useful for
+/// catching dangling pointer bugs where an \c AssertingVH cannot be used
+/// because the dangling handle needs to outlive the value without ever being
+/// used.
+///
+/// One particularly useful place to use this is as the Key of a map. Dangling
+/// pointer bugs often lead to really subtle bugs that only occur if another
+/// object happens to get allocated to the same address as the old one. Using
+/// a PoisoningVH ensures that an assert is triggered if looking up a new value
+/// in the map finds a handle from the old value.
+///
+/// Note that a PoisoningVH handle does *not* follow values across RAUW
+/// operations. This means that RAUW's need to explicitly update the
+/// PoisoningVH's as it moves. This is required because in non-assert mode this
+/// class turns into a trivial wrapper around a pointer.
+template <typename ValueTy>
+class PoisoningVH
+#ifndef NDEBUG
+    final : public CallbackVH
+#endif
+{
+  friend struct DenseMapInfo<PoisoningVH<ValueTy>>;
+
+  // Convert a ValueTy*, which may be const, to the raw Value*.
+  static Value *GetAsValue(Value *V) { return V; }
+  static Value *GetAsValue(const Value *V) { return const_cast<Value *>(V); }
+
+#ifndef NDEBUG
+  /// A flag tracking whether this value has been poisoned.
+  ///
+  /// On delete and RAUW, we leave the value pointer alone so that as a raw
+  /// pointer it produces the same value (and we fit into the same key of
+  /// a hash table, etc), but we poison the handle so that any top-level usage
+  /// will fail.
+  bool Poisoned = false;
+
+  Value *getRawValPtr() const { return ValueHandleBase::getValPtr(); }
+  void setRawValPtr(Value *P) { ValueHandleBase::operator=(P); }
+
+  /// Handle deletion by poisoning the handle.
+  void deleted() override {
+    assert(!Poisoned && "Tried to delete an already poisoned handle!");
+    Poisoned = true;
+    RemoveFromUseList();
+  }
+
+  /// Handle RAUW by poisoning the handle.
+  void allUsesReplacedWith(Value *) override {
+    assert(!Poisoned && "Tried to RAUW an already poisoned handle!");
+    Poisoned = true;
+    RemoveFromUseList();
+  }
+#else // NDEBUG
+  Value *ThePtr = nullptr;
+
+  Value *getRawValPtr() const { return ThePtr; }
+  void setRawValPtr(Value *P) { ThePtr = P; }
+#endif
+
+  ValueTy *getValPtr() const {
+    assert(!Poisoned && "Accessed a poisoned value handle!");
+    return static_cast<ValueTy *>(getRawValPtr());
+  }
+  void setValPtr(ValueTy *P) { setRawValPtr(GetAsValue(P)); }
+
+public:
+  PoisoningVH() = default;
+#ifndef NDEBUG
+  PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
+  PoisoningVH(const PoisoningVH &RHS)
+      : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+  ~PoisoningVH() {
+    if (Poisoned)
+      clearValPtr();
+  }
+  PoisoningVH &operator=(const PoisoningVH &RHS) {
+    if (Poisoned)
+      clearValPtr();
+    CallbackVH::operator=(RHS);
+    Poisoned = RHS.Poisoned;
+    return *this;
+  }
+#else
+  PoisoningVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
+#endif
+
+  operator ValueTy *() const { return getValPtr(); }
+
+  ValueTy *operator->() const { return getValPtr(); }
+  ValueTy &operator*() const { return *getValPtr(); }
+};
+
+// Specialize DenseMapInfo to allow PoisoningVH to participate in DenseMap.
+template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
+  static inline PoisoningVH<T> getEmptyKey() {
+    PoisoningVH<T> Res;
+    Res.setRawValPtr(DenseMapInfo<Value *>::getEmptyKey());
+    return Res;
+  }
+  static inline PoisoningVH<T> getTombstoneKey() {
+    PoisoningVH<T> Res;
+    Res.setRawValPtr(DenseMapInfo<Value *>::getTombstoneKey());
+    return Res;
+  }
+  static unsigned getHashValue(const PoisoningVH<T> &Val) {
+    return DenseMapInfo<Value *>::getHashValue(Val.getRawValPtr());
+  }
+  static bool isEqual(const PoisoningVH<T> &LHS, const PoisoningVH<T> &RHS) {
+    return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
+                                          RHS.getRawValPtr());
+  }
+};
+
+template <typename T> struct isPodLike<PoisoningVH<T>> {
+#ifdef NDEBUG
+  static const bool value = true;
+#else
+  static const bool value = false;
+#endif
 };
 
 } // End llvm namespace

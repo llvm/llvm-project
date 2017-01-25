@@ -762,6 +762,12 @@ public:
         LaunchPolicy());
   }
 
+
+  /// Negotiate a function id for Func with the other end of the channel.
+  template <typename Func> Error negotiateFunction(bool Retry = false) {
+    return getRemoteFunctionId<Func>(true, Retry).takeError();
+  }
+
   /// Append a call Func, does not call send on the channel.
   /// The first argument specifies a user-defined handler to be run when the
   /// function returns. The handler should take an Expected<Func::ReturnType>,
@@ -777,7 +783,7 @@ public:
 
     // Look up the function ID.
     FunctionIdT FnId;
-    if (auto FnIdOrErr = getRemoteFunctionId<Func>())
+    if (auto FnIdOrErr = getRemoteFunctionId<Func>(LazyAutoNegotiation, false))
       FnId = *FnIdOrErr;
     else {
       // This isn't a channel error so we don't want to abandon other pending
@@ -969,41 +975,39 @@ protected:
     return I->second;
   }
 
-  // Find the remote FunctionId for the given function, which must be in the
-  // RemoteFunctionIds map.
-  template <typename Func> Expected<FunctionIdT> getRemoteFunctionId() {
-    // Try to find the id for the given function.
+  // Find the remote FunctionId for the given function.
+  template <typename Func>
+  Expected<FunctionIdT> getRemoteFunctionId(bool NegotiateIfNotInMap,
+                                            bool NegotiateIfInvalid) {
+    bool DoNegotiate;
+
+    // Check if we already have a function id...
     auto I = RemoteFunctionIds.find(Func::getPrototype());
+    if (I != RemoteFunctionIds.end()) {
+      // If it's valid there's nothing left to do.
+      if (I->second != getInvalidFunctionId())
+        return I->second;
+      DoNegotiate = NegotiateIfInvalid;
+    } else
+      DoNegotiate = NegotiateIfNotInMap;
 
-    // If we have it in the map, return it.
-    if (I != RemoteFunctionIds.end())
-      return I->second;
-
-    // Otherwise, if we have auto-negotiation enabled, try to negotiate it.
-    if (LazyAutoNegotiation) {
+    // We don't have a function id for Func yet, but we're allowed to try to
+    // negotiate one.
+    if (DoNegotiate) {
       auto &Impl = static_cast<ImplT &>(*this);
       if (auto RemoteIdOrErr =
-              Impl.template callB<OrcRPCNegotiate>(Func::getPrototype())) {
-        auto &RemoteId = *RemoteIdOrErr;
-
-        // If autonegotiation indicates that the remote end doesn't support this
-        // function, return an unknown function error.
-        if (RemoteId == getInvalidFunctionId())
-          return orcError(OrcErrorCode::UnknownRPCFunction);
-
-        // Autonegotiation succeeded and returned a valid id. Update the map and
-        // return the id.
-        RemoteFunctionIds[Func::getPrototype()] = RemoteId;
-        return RemoteId;
-      } else {
-        // Autonegotiation failed. Return the error.
+          Impl.template callB<OrcRPCNegotiate>(Func::getPrototype())) {
+        RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
+        if (*RemoteIdOrErr == getInvalidFunctionId())
+          return make_error<RPCFunctionNotSupported>(Func::getPrototype());
+        return *RemoteIdOrErr;
+      } else
         return RemoteIdOrErr.takeError();
-      }
     }
 
-    // No key was available in the map and autonegotiation wasn't enabled.
-    // Return an unknown function error.
-    return orcError(OrcErrorCode::UnknownRPCFunction);
+    // No key was available in the map and we weren't allowed to try to
+    // negotiate one, so return an unknown function error.
+    return make_error<RPCFunctionNotSupported>(Func::getPrototype());
   }
 
   using WrappedHandlerFn = std::function<Error(ChannelT &, SequenceNumberT)>;
@@ -1122,32 +1126,6 @@ public:
       Launch);
   }
 
-  /// Negotiate a function id for Func with the other end of the channel.
-  template <typename Func> Error negotiateFunction(bool Retry = false) {
-    using OrcRPCNegotiate = typename BaseClass::OrcRPCNegotiate;
-
-    // Check if we already have a function id...
-    auto I = this->RemoteFunctionIds.find(Func::getPrototype());
-    if (I != this->RemoteFunctionIds.end()) {
-      // If it's valid there's nothing left to do.
-      if (I->second != this->getInvalidFunctionId())
-        return Error::success();
-      // If it's invalid and we can't re-attempt negotiation, throw an error.
-      if (!Retry)
-        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
-    }
-
-    // We don't have a function id for Func yet, call the remote to try to
-    // negotiate one.
-    if (auto RemoteIdOrErr = callB<OrcRPCNegotiate>(Func::getPrototype())) {
-      this->RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
-      if (*RemoteIdOrErr == this->getInvalidFunctionId())
-        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
-      return Error::success();
-    } else
-      return RemoteIdOrErr.takeError();
-  }
-
   /// Return type for non-blocking call primitives.
   template <typename Func>
   using NonBlockingCallResult = typename detail::ResultTraits<
@@ -1260,32 +1238,6 @@ public:
         detail::MemberFnWrapper<ClassT, RetT, ArgTs...>(Object, Method));
   }
 
-  /// Negotiate a function id for Func with the other end of the channel.
-  template <typename Func> Error negotiateFunction(bool Retry = false) {
-    using OrcRPCNegotiate = typename BaseClass::OrcRPCNegotiate;
-
-    // Check if we already have a function id...
-    auto I = this->RemoteFunctionIds.find(Func::getPrototype());
-    if (I != this->RemoteFunctionIds.end()) {
-      // If it's valid there's nothing left to do.
-      if (I->second != this->getInvalidFunctionId())
-        return Error::success();
-      // If it's invalid and we can't re-attempt negotiation, throw an error.
-      if (!Retry)
-        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
-    }
-
-    // We don't have a function id for Func yet, call the remote to try to
-    // negotiate one.
-    if (auto RemoteIdOrErr = callB<OrcRPCNegotiate>(Func::getPrototype())) {
-      this->RemoteFunctionIds[Func::getPrototype()] = *RemoteIdOrErr;
-      if (*RemoteIdOrErr == this->getInvalidFunctionId())
-        return make_error<RPCFunctionNotSupported>(Func::getPrototype());
-      return Error::success();
-    } else
-      return RemoteIdOrErr.takeError();
-  }
-
   template <typename Func, typename... ArgTs,
             typename AltRetT = typename Func::ReturnType>
   typename detail::ResultTraits<AltRetT>::ErrorReturnType
@@ -1324,24 +1276,40 @@ public:
   }
 };
 
+/// Asynchronous dispatch for a function on an RPC endpoint.
+template <typename RPCClass, typename Func>
+class RPCAsyncDispatch {
+public:
+  RPCAsyncDispatch(RPCClass &Endpoint) : Endpoint(Endpoint) {}
+
+  template <typename HandlerT, typename... ArgTs>
+  Error operator()(HandlerT Handler, const ArgTs &... Args) const {
+    return Endpoint.template appendCallAsync<Func>(std::move(Handler), Args...);
+  }
+
+private:
+  RPCClass &Endpoint;
+};
+
+/// Construct an asynchronous dispatcher from an RPC endpoint and a Func.
+template <typename Func, typename RPCEndpointT>
+RPCAsyncDispatch<RPCEndpointT, Func> rpcAsyncDispatch(RPCEndpointT &Endpoint) {
+  return RPCAsyncDispatch<RPCEndpointT, Func>(Endpoint);
+}
+
 /// \brief Allows a set of asynchrounous calls to be dispatched, and then
 ///        waited on as a group.
-template <typename RPCClass> class ParallelCallGroup {
+class ParallelCallGroup {
 public:
 
-  /// \brief Construct a parallel call group for the given RPC.
-  ParallelCallGroup(RPCClass &RPC) : RPC(RPC), NumOutstandingCalls(0) {}
-
+  ParallelCallGroup() = default;
   ParallelCallGroup(const ParallelCallGroup &) = delete;
   ParallelCallGroup &operator=(const ParallelCallGroup &) = delete;
 
   /// \brief Make as asynchronous call.
-  ///
-  /// Does not issue a send call to the RPC's channel. The channel may use this
-  /// to batch up subsequent calls. A send will automatically be sent when wait
-  /// is called.
-  template <typename Func, typename HandlerT, typename... ArgTs>
-  Error appendCall(HandlerT Handler, const ArgTs &... Args) {
+  template <typename AsyncDispatcher, typename HandlerT, typename... ArgTs>
+  Error call(const AsyncDispatcher &AsyncDispatch, HandlerT Handler,
+             const ArgTs &... Args) {
     // Increment the count of outstanding calls. This has to happen before
     // we invoke the call, as the handler may (depending on scheduling)
     // be run immediately on another thread, and we don't want the decrement
@@ -1364,38 +1332,21 @@ public:
       return Err;
     };
 
-    return RPC.template appendCallAsync<Func>(std::move(WrappedHandler),
-                                              Args...);
-  }
-
-  /// \brief Make an asynchronous call.
-  ///
-  /// The same as appendCall, but also calls send on the channel immediately.
-  /// Prefer appendCall if you are about to issue a "wait" call shortly, as
-  /// this may allow the channel to better batch the calls.
-  template <typename Func, typename HandlerT, typename... ArgTs>
-  Error call(HandlerT Handler, const ArgTs &... Args) {
-    if (auto Err = appendCall(std::move(Handler), Args...))
-      return Err;
-    return RPC.sendAppendedCalls();
+    return AsyncDispatch(std::move(WrappedHandler), Args...);
   }
 
   /// \brief Blocks until all calls have been completed and their return value
   ///        handlers run.
-  Error wait() {
-    if (auto Err = RPC.sendAppendedCalls())
-      return Err;
+  void wait() {
     std::unique_lock<std::mutex> Lock(M);
     while (NumOutstandingCalls > 0)
       CV.wait(Lock);
-    return Error::success();
   }
 
 private:
-  RPCClass &RPC;
   std::mutex M;
   std::condition_variable CV;
-  uint32_t NumOutstandingCalls;
+  uint32_t NumOutstandingCalls = 0;
 };
 
 /// @brief Convenience class for grouping RPC Functions into APIs that can be

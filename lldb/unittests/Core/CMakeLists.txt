@@ -6,6 +6,7 @@ add_lldb_unittest(LLDBCoreTests
   ListenerTest.cpp
   LogTest.cpp
   ScalarTest.cpp
+  StateTest.cpp
   StructuredDataTest.cpp
   TimerTest.cpp
   )

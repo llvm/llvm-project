@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 
 #if !defined(_WIN32)
 #include <limits.h>
@@ -368,10 +369,8 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
           if (working_dir) {
             new_path += working_dir.GetPath();
           } else {
-            char current_working_dir[PATH_MAX];
-            const char *cwd =
-                getcwd(current_working_dir, sizeof(current_working_dir));
-            if (cwd && cwd[0])
+            llvm::SmallString<64> cwd;
+            if (! llvm::sys::fs::current_path(cwd))
               new_path += cwd;
           }
           std::string curr_path;

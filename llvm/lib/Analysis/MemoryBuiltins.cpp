@@ -50,30 +50,30 @@ struct AllocFnsTy {
 
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
-static const std::pair<LibFunc::Func, AllocFnsTy> AllocationFnData[] = {
-  {LibFunc::malloc,              {MallocLike,  1, 0,  -1}},
-  {LibFunc::valloc,              {MallocLike,  1, 0,  -1}},
-  {LibFunc::Znwj,                {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
-  {LibFunc::ZnwjRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
-  {LibFunc::Znwm,                {OpNewLike,   1, 0,  -1}}, // new(unsigned long)
-  {LibFunc::ZnwmRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned long, nothrow)
-  {LibFunc::Znaj,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned int)
-  {LibFunc::ZnajRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
-  {LibFunc::Znam,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned long)
-  {LibFunc::ZnamRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned long, nothrow)
-  {LibFunc::msvc_new_int,         {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
-  {LibFunc::msvc_new_int_nothrow, {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
-  {LibFunc::msvc_new_longlong,         {OpNewLike,   1, 0,  -1}}, // new(unsigned long long)
-  {LibFunc::msvc_new_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new(unsigned long long, nothrow)
-  {LibFunc::msvc_new_array_int,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned int)
-  {LibFunc::msvc_new_array_int_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
-  {LibFunc::msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
-  {LibFunc::msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
-  {LibFunc::calloc,              {CallocLike,  2, 0,   1}},
-  {LibFunc::realloc,             {ReallocLike, 2, 1,  -1}},
-  {LibFunc::reallocf,            {ReallocLike, 2, 1,  -1}},
-  {LibFunc::strdup,              {StrDupLike,  1, -1, -1}},
-  {LibFunc::strndup,             {StrDupLike,  2, 1,  -1}}
+static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
+  {LibFunc_malloc,              {MallocLike,  1, 0,  -1}},
+  {LibFunc_valloc,              {MallocLike,  1, 0,  -1}},
+  {LibFunc_Znwj,                {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
+  {LibFunc_ZnwjRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
+  {LibFunc_Znwm,                {OpNewLike,   1, 0,  -1}}, // new(unsigned long)
+  {LibFunc_ZnwmRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new(unsigned long, nothrow)
+  {LibFunc_Znaj,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned int)
+  {LibFunc_ZnajRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
+  {LibFunc_Znam,                {OpNewLike,   1, 0,  -1}}, // new[](unsigned long)
+  {LibFunc_ZnamRKSt9nothrow_t,  {MallocLike,  2, 0,  -1}}, // new[](unsigned long, nothrow)
+  {LibFunc_msvc_new_int,         {OpNewLike,   1, 0,  -1}}, // new(unsigned int)
+  {LibFunc_msvc_new_int_nothrow, {MallocLike,  2, 0,  -1}}, // new(unsigned int, nothrow)
+  {LibFunc_msvc_new_longlong,         {OpNewLike,   1, 0,  -1}}, // new(unsigned long long)
+  {LibFunc_msvc_new_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new(unsigned long long, nothrow)
+  {LibFunc_msvc_new_array_int,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned int)
+  {LibFunc_msvc_new_array_int_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned int, nothrow)
+  {LibFunc_msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
+  {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
+  {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
+  {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
+  {LibFunc_reallocf,            {ReallocLike, 2, 1,  -1}},
+  {LibFunc_strdup,              {StrDupLike,  1, -1, -1}},
+  {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}}
   // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 
@@ -106,12 +106,12 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
                              const TargetLibraryInfo *TLI) {
   // Make sure that the function is available.
   StringRef FnName = Callee->getName();
-  LibFunc::Func TLIFn;
+  LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
     return None;
 
   const auto *Iter = find_if(
-      AllocationFnData, [TLIFn](const std::pair<LibFunc::Func, AllocFnsTy> &P) {
+      AllocationFnData, [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
         return P.first == TLIFn;
       });
 
@@ -333,33 +333,33 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
     return nullptr;
 
   StringRef FnName = Callee->getName();
-  LibFunc::Func TLIFn;
+  LibFunc TLIFn;
   if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
     return nullptr;
 
   unsigned ExpectedNumParams;
-  if (TLIFn == LibFunc::free ||
-      TLIFn == LibFunc::ZdlPv || // operator delete(void*)
-      TLIFn == LibFunc::ZdaPv || // operator delete[](void*)
-      TLIFn == LibFunc::msvc_delete_ptr32 || // operator delete(void*)
-      TLIFn == LibFunc::msvc_delete_ptr64 || // operator delete(void*)
-      TLIFn == LibFunc::msvc_delete_array_ptr32 || // operator delete[](void*)
-      TLIFn == LibFunc::msvc_delete_array_ptr64)   // operator delete[](void*)
+  if (TLIFn == LibFunc_free ||
+      TLIFn == LibFunc_ZdlPv || // operator delete(void*)
+      TLIFn == LibFunc_ZdaPv || // operator delete[](void*)
+      TLIFn == LibFunc_msvc_delete_ptr32 || // operator delete(void*)
+      TLIFn == LibFunc_msvc_delete_ptr64 || // operator delete(void*)
+      TLIFn == LibFunc_msvc_delete_array_ptr32 || // operator delete[](void*)
+      TLIFn == LibFunc_msvc_delete_array_ptr64)   // operator delete[](void*)
     ExpectedNumParams = 1;
-  else if (TLIFn == LibFunc::ZdlPvj ||              // delete(void*, uint)
-           TLIFn == LibFunc::ZdlPvm ||              // delete(void*, ulong)
-           TLIFn == LibFunc::ZdlPvRKSt9nothrow_t || // delete(void*, nothrow)
-           TLIFn == LibFunc::ZdaPvj ||              // delete[](void*, uint)
-           TLIFn == LibFunc::ZdaPvm ||              // delete[](void*, ulong)
-           TLIFn == LibFunc::ZdaPvRKSt9nothrow_t || // delete[](void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_ptr32_int ||      // delete(void*, uint)
-           TLIFn == LibFunc::msvc_delete_ptr64_longlong || // delete(void*, ulonglong)
-           TLIFn == LibFunc::msvc_delete_ptr32_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_ptr64_nothrow || // delete(void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_array_ptr32_int ||      // delete[](void*, uint)
-           TLIFn == LibFunc::msvc_delete_array_ptr64_longlong || // delete[](void*, ulonglong)
-           TLIFn == LibFunc::msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
-           TLIFn == LibFunc::msvc_delete_array_ptr64_nothrow)   // delete[](void*, nothrow)
+  else if (TLIFn == LibFunc_ZdlPvj ||              // delete(void*, uint)
+           TLIFn == LibFunc_ZdlPvm ||              // delete(void*, ulong)
+           TLIFn == LibFunc_ZdlPvRKSt9nothrow_t || // delete(void*, nothrow)
+           TLIFn == LibFunc_ZdaPvj ||              // delete[](void*, uint)
+           TLIFn == LibFunc_ZdaPvm ||              // delete[](void*, ulong)
+           TLIFn == LibFunc_ZdaPvRKSt9nothrow_t || // delete[](void*, nothrow)
+           TLIFn == LibFunc_msvc_delete_ptr32_int ||      // delete(void*, uint)
+           TLIFn == LibFunc_msvc_delete_ptr64_longlong || // delete(void*, ulonglong)
+           TLIFn == LibFunc_msvc_delete_ptr32_nothrow || // delete(void*, nothrow)
+           TLIFn == LibFunc_msvc_delete_ptr64_nothrow || // delete(void*, nothrow)
+           TLIFn == LibFunc_msvc_delete_array_ptr32_int ||      // delete[](void*, uint)
+           TLIFn == LibFunc_msvc_delete_array_ptr64_longlong || // delete[](void*, ulonglong)
+           TLIFn == LibFunc_msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
+           TLIFn == LibFunc_msvc_delete_array_ptr64_nothrow)   // delete[](void*, nothrow)
     ExpectedNumParams = 2;
   else
     return nullptr;

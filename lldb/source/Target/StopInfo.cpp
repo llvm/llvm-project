@@ -269,6 +269,7 @@ protected:
     if (!m_should_perform_action)
       return;
     m_should_perform_action = false;
+    bool internal_breakpoint = true;
 
     ThreadSP thread_sp(m_thread_wp.lock());
 
@@ -495,6 +496,9 @@ protected:
             if (callback_says_stop)
               m_should_stop = true;
 
+            if (m_should_stop && !bp_loc_sp->GetBreakpoint().IsInternal())
+              internal_breakpoint = false;
+                  
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
             if (callback_says_stop && bp_loc_sp &&
@@ -526,6 +530,20 @@ protected:
               "Process::%s could not find breakpoint site id: %" PRId64 "...",
               __FUNCTION__, m_value);
       }
+
+      if ((m_should_stop == false || internal_breakpoint)
+          && thread_sp->CompletedPlanOverridesBreakpoint()) {
+        
+        // Override should_stop decision when we have
+        // completed step plan additionally to the breakpoint
+        m_should_stop = true;
+        
+        // Here we clean the preset stop info so the next
+        // GetStopInfo call will find the appropriate stop info,
+        // which should be the stop info related to the completed plan
+        thread_sp->ResetStopInfo();
+      }
+
       if (log)
         log->Printf("Process::%s returning from action with m_should_stop: %d.",
                     __FUNCTION__, m_should_stop);

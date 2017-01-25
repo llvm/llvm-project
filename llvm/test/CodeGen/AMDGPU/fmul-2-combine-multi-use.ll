@@ -1,5 +1,7 @@
 ; XUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
+
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
 ; make add an instruction if the fadd has more than one use.
@@ -115,7 +117,8 @@ define void @fmul_x2_xn3_f32(float addrspace(1)* %out, float %x, float %y) #0 {
 ; VI: v_cndmask_b32_e32
 ; VI: v_add_f16_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |v{{[0-9]+}}|
 ; VI: v_mul_f16_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; VI: v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
+; VI-DENORM: v_fma_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 define void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
@@ -136,7 +139,10 @@ define void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i16 zeroext %x.
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_fmac_f16:
 ; GCN-DAG: v_add_f16_e64 [[MUL2:v[0-9]+]], [[X:s[0-9]+]], s{{[0-9]+}}
-; GCN-DAG: v_mac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
+
+; VI-FLUSH-DAG: v_mac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
+; VI-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, v{{[0-9]+}}
+
 ; GCN-DAG: buffer_store_short [[MUL2]]
 ; GCN-DAG: buffer_store_short [[MAD]]
 ; GCN: s_endpgm
@@ -153,7 +159,10 @@ define void @multiple_use_fadd_fmac_f16(half addrspace(1)* %out, i16 zeroext %x.
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_fmad_f16:
 ; GCN-DAG: v_add_f16_e64 [[MUL2:v[0-9]+]], |[[X:s[0-9]+]]|, |s{{[0-9]+}}|
-; GCN-DAG: v_mad_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+
+; VI-FLUSH-DAG: v_mad_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+; VI-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
+
 ; GCN-DAG: buffer_store_short [[MUL2]]
 ; GCN-DAG: buffer_store_short [[MAD]]
 ; GCN: s_endpgm
@@ -170,8 +179,12 @@ define void @multiple_use_fadd_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.
 }
 
 ; GCN-LABEL: {{^}}multiple_use_fadd_multi_fmad_f16:
-; GCN: v_mad_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
-; GCN: v_mad_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
+; VI-FLUSH: v_mad_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
+; VI-FLUSH: v_mad_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
+
+; VI-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X:s[0-9]+]]|, 2.0, v{{[0-9]+}}
+; VI-DENORM: v_fma_f16 {{v[0-9]+}}, |[[X]]|, 2.0, v{{[0-9]+}}
+
 define void @multiple_use_fadd_multi_fmad_f16(half addrspace(1)* %out, i16 zeroext %x.arg, i16 zeroext %y.arg, i16 zeroext %z.arg) #0 {
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half

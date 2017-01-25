@@ -65,7 +65,7 @@ private:
     // target.
     for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs);
          I != E; ++I) {
-      LibFunc::Func F = static_cast<LibFunc::Func>(I);
+      LibFunc F = static_cast<LibFunc>(I);
       if (TLI.has(F))
         Libcalls.insert(TLI.getName(F));
     }

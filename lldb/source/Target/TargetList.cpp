@@ -7,11 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/SmallString.h"
-
 // Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
@@ -28,6 +23,10 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
+
+// Other libraries and framework includes
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -369,12 +368,11 @@ Error TargetList::CreateTargetInternal(Debugger &debugger,
     if (file.IsRelative() && !user_exe_path.empty()) {
       // Ignore paths that start with "./" and "../"
       if (!user_exe_path.startswith("./") && !user_exe_path.startswith("../")) {
-        char cwd[PATH_MAX];
-        if (getcwd(cwd, sizeof(cwd))) {
-          std::string cwd_user_exe_path(cwd);
-          cwd_user_exe_path += '/';
-          cwd_user_exe_path += user_exe_path;
-          FileSpec cwd_file(cwd_user_exe_path, false);
+        llvm::SmallString<64> cwd;
+        if (! llvm::sys::fs::current_path(cwd)) {
+          cwd += '/';
+          cwd += user_exe_path;
+          FileSpec cwd_file(cwd, false);
           if (cwd_file.Exists())
             file = cwd_file;
         }

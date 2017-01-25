@@ -412,4 +412,97 @@ TEST_F(ValueHandle, AssertingVHCheckedLast) {
   BitcastV.reset();
 }
 
+TEST_F(ValueHandle, PoisoningVH_BasicOperation) {
+  PoisoningVH<CastInst> VH(BitcastV.get());
+  CastInst *implicit_to_exact_type = VH;
+  (void)implicit_to_exact_type; // Avoid warning.
+
+  PoisoningVH<Value> GenericVH(BitcastV.get());
+  EXPECT_EQ(BitcastV.get(), GenericVH);
+  GenericVH = ConstantV;
+  EXPECT_EQ(ConstantV, GenericVH);
+
+  // Make sure I can call a method on the underlying CastInst.  It
+  // doesn't matter which method.
+  EXPECT_FALSE(VH->mayWriteToMemory());
+  EXPECT_FALSE((*VH).mayWriteToMemory());
+}
+
+TEST_F(ValueHandle, PoisoningVH_Const) {
+  const CastInst *ConstBitcast = BitcastV.get();
+  PoisoningVH<const CastInst> VH(ConstBitcast);
+  const CastInst *implicit_to_exact_type = VH;
+  (void)implicit_to_exact_type; // Avoid warning.
+}
+
+TEST_F(ValueHandle, PoisoningVH_Comparisons) {
+  PoisoningVH<Value> BitcastVH(BitcastV.get());
+  PoisoningVH<Value> ConstantVH(ConstantV);
+
+  EXPECT_TRUE(BitcastVH == BitcastVH);
+  EXPECT_TRUE(BitcastV.get() == BitcastVH);
+  EXPECT_TRUE(BitcastVH == BitcastV.get());
+  EXPECT_FALSE(BitcastVH == ConstantVH);
+
+  EXPECT_TRUE(BitcastVH != ConstantVH);
+  EXPECT_TRUE(BitcastV.get() != ConstantVH);
+  EXPECT_TRUE(BitcastVH != ConstantV);
+  EXPECT_FALSE(BitcastVH != BitcastVH);
+
+  // Cast to Value* so comparisons work.
+  Value *BV = BitcastV.get();
+  Value *CV = ConstantV;
+  EXPECT_EQ(BV < CV, BitcastVH < ConstantVH);
+  EXPECT_EQ(BV <= CV, BitcastVH <= ConstantVH);
+  EXPECT_EQ(BV > CV, BitcastVH > ConstantVH);
+  EXPECT_EQ(BV >= CV, BitcastVH >= ConstantVH);
+
+  EXPECT_EQ(BV < CV, BitcastV.get() < ConstantVH);
+  EXPECT_EQ(BV <= CV, BitcastV.get() <= ConstantVH);
+  EXPECT_EQ(BV > CV, BitcastV.get() > ConstantVH);
+  EXPECT_EQ(BV >= CV, BitcastV.get() >= ConstantVH);
+
+  EXPECT_EQ(BV < CV, BitcastVH < ConstantV);
+  EXPECT_EQ(BV <= CV, BitcastVH <= ConstantV);
+  EXPECT_EQ(BV > CV, BitcastVH > ConstantV);
+  EXPECT_EQ(BV >= CV, BitcastVH >= ConstantV);
+}
+
+TEST_F(ValueHandle, PoisoningVH_DoesNotFollowRAUW) {
+  PoisoningVH<Value> VH(BitcastV.get());
+  BitcastV->replaceAllUsesWith(ConstantV);
+  EXPECT_TRUE(DenseMapInfo<PoisoningVH<Value>>::isEqual(VH, BitcastV.get()));
+}
+
+#ifdef NDEBUG
+
+TEST_F(ValueHandle, PoisoningVH_ReducesToPointer) {
+  EXPECT_EQ(sizeof(CastInst *), sizeof(PoisoningVH<CastInst>));
+}
+
+#else // !NDEBUG
+
+#ifdef GTEST_HAS_DEATH_TEST
+
+TEST_F(ValueHandle, PoisoningVH_Asserts) {
+  PoisoningVH<Value> VH(BitcastV.get());
+
+  // The poisoned handle shouldn't assert when the value is deleted.
+  BitcastV.reset(new BitCastInst(ConstantV, Type::getInt32Ty(Context)));
+  // But should when we access the handle.
+  EXPECT_DEATH((void)*VH, "Accessed a poisoned value handle!");
+
+  // Now check that poison catches RAUW.
+  VH = BitcastV.get();
+  // The replace doesn't trigger anything immediately.
+  BitcastV->replaceAllUsesWith(ConstantV);
+  // But a use does.
+  EXPECT_DEATH((void)*VH, "Accessed a poisoned value handle!");
+
+  // Don't clear anything out here as destroying the handles should be fine.
+}
+
+#endif // GTEST_HAS_DEATH_TEST
+
+#endif // NDEBUG
 }

@@ -887,11 +887,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty()) {
-          // Clear all analyses and the body and queue the function itself for
-          // deletion when we finish inlining and call graph updates.
+          // Clear the body and queue the function itself for deletion when we
+          // finish inlining and call graph updates.
           // Note that after this point, it is an error to do anything other
           // than use the callee's address or delete it.
-          FAM.clear(Callee);
           Callee.dropAllReferences();
           assert(find(DeadFunctions, &Callee) == DeadFunctions.end() &&
                  "Cannot put cause a function to become dead twice!");
@@ -939,8 +938,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // sets.
   for (Function *DeadF : DeadFunctions) {
     // Get the necessary information out of the call graph and nuke the
-    // function there.
+    // function there. Also, cclear out any cached analyses.
     auto &DeadC = *CG.lookupSCC(*CG.lookup(*DeadF));
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(DeadC, CG)
+            .getManager();
+    FAM.clear(*DeadF);
+    AM.clear(DeadC);
     auto &DeadRC = DeadC.getOuterRefSCC();
     CG.removeDeadFunction(*DeadF);
 

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
-// Instruction scheduling annotations for out-of-order CPUs.
+// Instruction scheduling annotations for in-order and out-of-order CPUs.
 // These annotations are independent of the itinerary class defined below.
 // Here we define the subtarget independent read/write per-operand resources.
 // The subtarget schedule definitions will then map these to the subtarget's
@@ -54,6 +54,9 @@
 //  }
 //  def : ReadAdvance<ReadAdvanceALUsr, 3>;
 
+//===----------------------------------------------------------------------===//
+// Sched definitions for integer pipeline instructions
+//
 // Basic ALU operation.
 def WriteALU : SchedWrite;
 def ReadALU : SchedRead;
@@ -81,11 +84,37 @@ def WriteBr : SchedWrite;
 def WriteBrL : SchedWrite;
 def WriteBrTbl : SchedWrite;
 
-// Fixpoint conversions.
-def WriteCvtFP : SchedWrite;
-
 // Noop.
 def WriteNoop : SchedWrite;
+
+//===----------------------------------------------------------------------===//
+// Sched definitions for floating-point and neon instructions
+//
+// Floating point conversions
+def WriteFPCVT : SchedWrite;
+def WriteFPMOV : SchedWrite; // FP -> GPR and vice-versa
+
+// ALU operations (32/64-bit)
+def WriteFPALU32 : SchedWrite;
+def WriteFPALU64 : SchedWrite;
+
+// Multiplication
+def WriteFPMUL32 : SchedWrite;
+def WriteFPMUL64 : SchedWrite;
+def ReadFPMUL    : SchedRead; // multiplier read
+def ReadFPMAC    : SchedRead; // accumulator read
+
+// Multiply-accumulate
+def WriteFPMAC32 : SchedWrite;
+def WriteFPMAC64 : SchedWrite;
+
+// Division
+def WriteFPDIV32 : SchedWrite;
+def WriteFPDIV64 : SchedWrite;
+
+// Square-root
+def WriteFPSQRT32 : SchedWrite;
+def WriteFPSQRT64 : SchedWrite;
 
 // Define TII for use in SchedVariant Predicates.
 def : PredicateProlog<[{

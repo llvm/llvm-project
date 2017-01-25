@@ -111,6 +111,13 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
+def S_TRAP_PSEUDO : VPseudoInstSI <(outs), (ins),
+  [(trap)]> {
+  let hasSideEffects = 1;
+  let SALU = 1;
+  let usesCustomInserter = 1;
+}
+
 let usesCustomInserter = 1, SALU = 1 in {
 def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;

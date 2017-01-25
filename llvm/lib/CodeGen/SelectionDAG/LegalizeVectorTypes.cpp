@@ -97,6 +97,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::TRUNCATE:
   case ISD::UINT_TO_FP:
   case ISD::ZERO_EXTEND:
+  case ISD::FCANONICALIZE:
     R = ScalarizeVecRes_UnaryOp(N);
     break;
 
@@ -637,6 +638,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SINT_TO_FP:
   case ISD::TRUNCATE:
   case ISD::UINT_TO_FP:
+  case ISD::FCANONICALIZE:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
 
@@ -1466,6 +1468,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::FTRUNC:
+    case ISD::FCANONICALIZE:
       Res = SplitVecOp_UnaryOp(N);
       break;
     }

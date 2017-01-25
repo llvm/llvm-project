@@ -53,6 +53,7 @@ struct LoadCommand {
   virtual ~LoadCommand();
   llvm::MachO::macho_load_command Data;
   std::vector<Section> Sections;
+  std::vector<MachO::build_tool_version> Tools;
   std::vector<llvm::yaml::Hex8> PayloadBytes;
   std::string PayloadString;
   uint64_t ZeroPadBytes;
@@ -146,6 +147,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::ExportEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::NListEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Object)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::FatArch)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachO::build_tool_version)
 
 namespace llvm {
 namespace yaml {
@@ -196,6 +198,10 @@ template <> struct MappingTraits<MachOYAML::Section> {
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {
   static void mapping(IO &IO, MachOYAML::NListEntry &NListEntry);
+};
+
+template <> struct MappingTraits<MachO::build_tool_version> {
+  static void mapping(IO &IO, MachO::build_tool_version &tool);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \

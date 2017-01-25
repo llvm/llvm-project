@@ -180,6 +180,21 @@ size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
   return writePayloadString(LC, OS);
 }
 
+template <>
+size_t writeLoadCommandData<MachO::build_version_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  size_t BytesWritten = 0;
+  for (const auto &T : LC.Tools) {
+    struct MachO::build_tool_version tool = T;
+    if (IsLittleEndian != sys::IsLittleEndianHost)
+      MachO::swapStruct(tool);
+    OS.write(reinterpret_cast<const char *>(&tool),
+             sizeof(MachO::build_tool_version));
+    BytesWritten += sizeof(MachO::build_tool_version);
+  }
+  return BytesWritten;
+}
+
 void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   std::vector<uint8_t> FillData;
   FillData.insert(FillData.begin(), Size, 0);

@@ -146,6 +146,8 @@ let Namespace = "Hexagon" in {
   def LC1  : Rc<3,  "lc1",       ["c3"]>,   DwarfRegNum<[70]>;
   def P3_0 : Rc<4,  "p3:0",      ["c4"], [P0, P1, P2, P3]>,
                                             DwarfRegNum<[71]>;
+  // When defining more Cn registers, make sure to explicitly mark them
+  // as reserved in HexagonRegisterInfo.cpp.
   def C5   : Rc<5,  "c5",        ["c5"]>,   DwarfRegNum<[72]>; // future use
   def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[73]>;
   def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[74]>;

@@ -273,6 +273,20 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
+    MIRBuilder.buildInstr(MI.getOpcode())
+        .addDef(DstExt)
+        .addUse(MI.getOperand(1).getReg());
+
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
     if (TypeIdx != 1)
