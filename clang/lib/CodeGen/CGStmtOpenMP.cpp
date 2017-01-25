@@ -98,6 +98,22 @@ public:
                         /*EmitPreInitStmt=*/EmitPreInitStmt(S)) {}
 };
 
+/// Lexical scope for OpenMP teams construct, that handles correct codegen
+/// for captured expressions.
+class OMPTeamsScope final : public OMPLexicalScope {
+  bool EmitPreInitStmt(const OMPExecutableDirective &S) {
+    OpenMPDirectiveKind Kind = S.getDirectiveKind();
+    return !isOpenMPTargetExecutionDirective(Kind) &&
+           isOpenMPTeamsDirective(Kind);
+  }
+
+public:
+  OMPTeamsScope(CodeGenFunction &CGF, const OMPExecutableDirective &S)
+      : OMPLexicalScope(CGF, S,
+                        /*AsInlined=*/false,
+                        /*EmitPreInitStmt=*/EmitPreInitStmt(S)) {}
+};
+
 /// Private scope for OpenMP loop-based directives, that supports capturing
 /// of used expression from loop statement.
 class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
@@ -2018,15 +2034,6 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
       });
 }
 
-void CodeGenFunction::EmitOMPTargetTeamsDirective(
-    const OMPTargetTeamsDirective &S) {
-  CGM.getOpenMPRuntime().emitInlinedDirective(
-      *this, OMPD_target_teams, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-        CGF.EmitStmt(
-            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
-      });
-}
-
 void CodeGenFunction::EmitOMPTargetTeamsDistributeDirective(
     const OMPTargetTeamsDistributeDirective &S) {
   CGM.getOpenMPRuntime().emitInlinedDirective(
@@ -3519,9 +3526,8 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
   auto OutlinedFn = CGF.CGM.getOpenMPRuntime().emitTeamsOutlinedFunction(
       S, *CS->getCapturedDecl()->param_begin(), InnermostKind, CodeGen);
 
-  const OMPTeamsDirective &TD = *dyn_cast<OMPTeamsDirective>(&S);
-  const OMPNumTeamsClause *NT = TD.getSingleClause<OMPNumTeamsClause>();
-  const OMPThreadLimitClause *TL = TD.getSingleClause<OMPThreadLimitClause>();
+  const OMPNumTeamsClause *NT = S.getSingleClause<OMPNumTeamsClause>();
+  const OMPThreadLimitClause *TL = S.getSingleClause<OMPThreadLimitClause>();
   if (NT || TL) {
     Expr *NumTeams = (NT) ? NT->getNumTeams() : nullptr;
     Expr *ThreadLimit = (TL) ? TL->getThreadLimit() : nullptr;
@@ -3530,7 +3536,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
                                                   S.getLocStart());
   }
 
-  OMPLexicalScope Scope(CGF, S);
+  OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getLocStart(), OutlinedFn,
@@ -3547,6 +3553,39 @@ void CodeGenFunction::EmitOMPTeamsDirective(const OMPTeamsDirective &S) {
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
   };
   emitCommonOMPTeamsDirective(*this, S, OMPD_teams, CodeGen);
+}
+
+static void emitTargetTeamsRegion(CodeGenFunction &CGF, PrePostActionTy &Action,
+                                  const OMPTargetTeamsDirective &S) {
+  auto *CS = S.getCapturedStmt(OMPD_teams);
+  Action.Enter(CGF);
+  auto &&CodeGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
+    // TODO: Add support for clauses.
+    CGF.EmitStmt(CS->getCapturedStmt());
+  };
+  emitCommonOMPTeamsDirective(CGF, S, OMPD_teams, CodeGen);
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDeviceFunction(
+    CodeGenModule &CGM, StringRef ParentName,
+    const OMPTargetTeamsDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetTeamsRegion(CGF, Action, S);
+  };
+  llvm::Function *Fn;
+  llvm::Constant *Addr;
+  // Emit target region as a standalone region.
+  CGM.getOpenMPRuntime().emitTargetOutlinedFunction(
+      S, ParentName, Fn, Addr, /*IsOffloadEntry=*/true, CodeGen);
+  assert(Fn && Addr && "Target device function emission failed.");
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsDirective(
+    const OMPTargetTeamsDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetTeamsRegion(CGF, Action, S);
+  };
+  emitCommonOMPTargetDirective(*this, S, CodeGen);
 }
 
 void CodeGenFunction::EmitOMPCancellationPointDirective(

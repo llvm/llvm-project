@@ -31,6 +31,8 @@ private:
   llvm::LLVMContext *VMContext;
   bool OwnsVMContext;
 
+  std::unique_ptr<llvm::Module> loadModule(llvm::MemoryBufferRef MBRef);
+
 protected:
   /// Create a new code generation action.  If the optional \p _VMContext
   /// parameter is supplied, the action uses it without taking ownership,

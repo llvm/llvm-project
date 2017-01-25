@@ -642,6 +642,17 @@ CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
     llvm_unreachable("OpenMP NVPTX can only handle device code.");
 }
 
+void CGOpenMPRuntimeNVPTX::emitNumThreadsClause(CodeGenFunction &CGF,
+                                                llvm::Value *NumThreads,
+                                                SourceLocation Loc) {
+  // Do nothing in case of Spmd mode and L0 parallel.
+  // TODO: If in Spmd mode and L1 parallel emit the clause.
+  if (isInSpmdExecutionMode())
+    return;
+
+  CGOpenMPRuntime::emitNumThreadsClause(CGF, NumThreads, Loc);
+}
+
 void CGOpenMPRuntimeNVPTX::emitNumTeamsClause(CodeGenFunction &CGF,
                                               const Expr *NumTeams,
                                               const Expr *ThreadLimit,

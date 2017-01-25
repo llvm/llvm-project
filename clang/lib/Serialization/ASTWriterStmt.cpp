@@ -1818,6 +1818,7 @@ void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getNumThreads());
   Record.AddSourceLocation(C->getLParenLoc());
 }

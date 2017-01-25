@@ -1594,8 +1594,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
-  case OMPD_teams:
-  case OMPD_target_teams: {
+  case OMPD_teams: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
@@ -1608,6 +1607,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              Params);
     break;
   }
+  case OMPD_target_teams:
   case OMPD_target_parallel: {
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
@@ -1618,14 +1618,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
-    Sema::CapturedParamNameType ParamsParallel[] = {
+    Sema::CapturedParamNameType ParamsTeamsOrParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
-    // Start a captured region for 'parallel'.
+    // Start a captured region for 'teams' or 'parallel'.  Both regions have
+    // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel);
+                             ParamsTeamsOrParallel);
     break;
   }
   case OMPD_simd:
@@ -6635,10 +6636,9 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
 // the region in which to capture expressions associated with a clause.
 // A return value of OMPD_unknown signifies that the expression should not
 // be captured.
-static OpenMPDirectiveKind
-getOpenMPCaptureRegionForClause(OpenMPDirectiveKind DKind,
-                                OpenMPClauseKind CKind,
-                                OpenMPDirectiveKind NameModifier) {
+static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
+    OpenMPDirectiveKind DKind, OpenMPClauseKind CKind,
+    OpenMPDirectiveKind NameModifier = OMPD_unknown) {
   OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   switch (CKind) {
@@ -6708,6 +6708,69 @@ getOpenMPCaptureRegionForClause(OpenMPDirectiveKind DKind,
       llvm_unreachable("Unknown OpenMP directive");
     }
     break;
+  case OMPC_num_threads:
+    switch (DKind) {
+    case OMPD_target_parallel:
+      CaptureRegion = OMPD_target;
+      break;
+    case OMPD_cancel:
+    case OMPD_parallel:
+    case OMPD_parallel_sections:
+    case OMPD_parallel_for:
+    case OMPD_parallel_for_simd:
+    case OMPD_target:
+    case OMPD_target_simd:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_task:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_target_data:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+      // Do not capture num_threads-clause expressions.
+      break;
+    case OMPD_threadprivate:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_cancellation_point:
+    case OMPD_flush:
+    case OMPD_declare_reduction:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_teams:
+    case OMPD_simd:
+    case OMPD_for:
+    case OMPD_for_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskgroup:
+    case OMPD_distribute:
+    case OMPD_ordered:
+    case OMPD_atomic:
+    case OMPD_distribute_simd:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+      llvm_unreachable("Unexpected OpenMP directive with num_threads-clause");
+    case OMPD_unknown:
+      llvm_unreachable("Unknown OpenMP directive");
+    }
+    break;
   case OMPC_schedule:
   case OMPC_dist_schedule:
   case OMPC_firstprivate:
@@ -6717,7 +6780,6 @@ getOpenMPCaptureRegionForClause(OpenMPDirectiveKind DKind,
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_final:
-  case OMPC_num_threads:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_collapse:
@@ -6887,6 +6949,8 @@ OMPClause *Sema::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
                                              SourceLocation LParenLoc,
                                              SourceLocation EndLoc) {
   Expr *ValExpr = NumThreads;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   // OpenMP [2.5, Restrictions]
   //  The num_threads expression must evaluate to a positive integer value.
@@ -6894,8 +6958,16 @@ OMPClause *Sema::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
                                  /*StrictlyPositive=*/true))
     return nullptr;
 
-  return new (Context)
-      OMPNumThreadsClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  CaptureRegion = getOpenMPCaptureRegionForClause(DKind, OMPC_num_threads);
+  if (CaptureRegion != OMPD_unknown) {
+    llvm::MapVector<Expr *, DeclRefExpr *> Captures;
+    ValExpr = tryBuildCapture(*this, ValExpr, Captures).get();
+    HelperValStmt = buildPreInits(Context, Captures);
+  }
+
+  return new (Context) OMPNumThreadsClause(
+      ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
 }
 
 ExprResult Sema::VerifyPositiveIntegerConstantInClause(Expr *E,

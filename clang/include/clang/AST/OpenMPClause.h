@@ -345,7 +345,7 @@ public:
 /// In this example directive '#pragma omp parallel' has simple 'num_threads'
 /// clause with number of threads '6'.
 ///
-class OMPNumThreadsClause : public OMPClause {
+class OMPNumThreadsClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// \brief Location of '('.
   SourceLocation LParenLoc;
@@ -360,20 +360,29 @@ public:
   /// \brief Build 'num_threads' clause with condition \a NumThreads.
   ///
   /// \param NumThreads Number of threads for the construct.
+  /// \param HelperNumThreads Helper Number of threads for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   ///
-  OMPNumThreadsClause(Expr *NumThreads, SourceLocation StartLoc,
-                      SourceLocation LParenLoc, SourceLocation EndLoc)
-      : OMPClause(OMPC_num_threads, StartLoc, EndLoc), LParenLoc(LParenLoc),
-        NumThreads(NumThreads) {}
+  OMPNumThreadsClause(Expr *NumThreads, Stmt *HelperNumThreads,
+                      OpenMPDirectiveKind CaptureRegion,
+                      SourceLocation StartLoc, SourceLocation LParenLoc,
+                      SourceLocation EndLoc)
+      : OMPClause(OMPC_num_threads, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc),
+        NumThreads(NumThreads) {
+    setPreInitStmt(HelperNumThreads, CaptureRegion);
+  }
 
   /// \brief Build an empty clause.
   ///
   OMPNumThreadsClause()
       : OMPClause(OMPC_num_threads, SourceLocation(), SourceLocation()),
-        LParenLoc(SourceLocation()), NumThreads(nullptr) {}
+        OMPClauseWithPreInit(this), LParenLoc(SourceLocation()),
+        NumThreads(nullptr) {}
 
   /// \brief Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
