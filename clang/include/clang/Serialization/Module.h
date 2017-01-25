@@ -164,8 +164,7 @@ public:
   
   /// \brief The memory buffer that stores the data associated with
   /// this AST file.
-  /// The memory buffer is owned by PCMCache.
-  llvm::MemoryBuffer *Buffer;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
   /// \brief The size of this file, in bits.
   uint64_t SizeInBits;

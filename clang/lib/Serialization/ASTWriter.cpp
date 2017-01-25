@@ -4127,11 +4127,9 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
 
 ASTWriter::ASTWriter(
   llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-  PCMCache *BufferMgr,
   ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
   bool IncludeTimestamps)
-    : Stream(Stream), Buffer(Buffer), BufferMgr(BufferMgr),
-      Context(nullptr), PP(nullptr), Chain(nullptr),
+    : Stream(Stream), Buffer(Buffer), Context(nullptr), PP(nullptr), Chain(nullptr),
       WritingModule(nullptr), IncludeTimestamps(IncludeTimestamps),
       WritingAST(false), DoneWritingDeclsAndTypes(false),
       ASTHasCompilerErrors(false), FirstDeclID(NUM_PREDEF_DECL_IDS),
@@ -4195,16 +4193,6 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, const std::string &OutputFil
   this->BaseDirectory.clear();
 
   WritingAST = false;
-  if (BufferMgr && SemaRef.Context.getLangOpts().ImplicitModules &&
-      WritingModule) {
-    // Construct MemoryBuffer and update buffer manager.
-    std::unique_ptr<llvm::MemoryBuffer> write_buffer =
-        llvm::MemoryBuffer::getMemBufferCopy(
-            StringRef(Buffer.begin(), Buffer.size()));
-    BufferMgr->addConsistentBuffer(OutputFile, std::move(write_buffer));
-    BufferMgr->setIsSystem(OutputFile,
-                           WritingModule ? WritingModule->IsSystem : false);
-  }
   return Signature;
 }
 
