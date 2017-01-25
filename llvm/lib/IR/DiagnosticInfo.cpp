@@ -222,9 +222,9 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                    RemarkName, *Inst->getParent()->getParent(),
                                    Inst->getDebugLoc(), Inst->getParent()) {}
 
-bool OptimizationRemark::isEnabled() const {
+bool OptimizationRemark::isEnabled(StringRef PassName) {
   return PassRemarksOptLoc.Pattern &&
-         PassRemarksOptLoc.Pattern->match(getPassName());
+         PassRemarksOptLoc.Pattern->match(PassName);
 }
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
@@ -243,9 +243,9 @@ OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                    *Inst->getParent()->getParent(),
                                    Inst->getDebugLoc(), Inst->getParent()) {}
 
-bool OptimizationRemarkMissed::isEnabled() const {
+bool OptimizationRemarkMissed::isEnabled(StringRef PassName) {
   return PassRemarksMissedOptLoc.Pattern &&
-         PassRemarksMissedOptLoc.Pattern->match(getPassName());
+         PassRemarksMissedOptLoc.Pattern->match(PassName);
 }
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
@@ -273,10 +273,9 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(enum DiagnosticKind Kind,
                                    *cast<BasicBlock>(CodeRegion)->getParent(),
                                    DLoc, CodeRegion) {}
 
-bool OptimizationRemarkAnalysis::isEnabled() const {
-  return shouldAlwaysPrint() ||
-         (PassRemarksAnalysisOptLoc.Pattern &&
-          PassRemarksAnalysisOptLoc.Pattern->match(getPassName()));
+bool OptimizationRemarkAnalysis::isEnabled(StringRef PassName) {
+  return PassRemarksAnalysisOptLoc.Pattern &&
+         PassRemarksAnalysisOptLoc.Pattern->match(PassName);
 }
 
 void DiagnosticInfoMIRParser::print(DiagnosticPrinter &DP) const {

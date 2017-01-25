@@ -69,6 +69,11 @@ enum DiagnosticKind {
   DK_OptimizationFailure,
   DK_FirstRemark = DK_OptimizationRemark,
   DK_LastRemark = DK_OptimizationFailure,
+  DK_MachineOptimizationRemark,
+  DK_MachineOptimizationRemarkMissed,
+  DK_MachineOptimizationRemarkAnalysis,
+  DK_FirstMachineRemark = DK_MachineOptimizationRemark,
+  DK_LastMachineRemark = DK_MachineOptimizationRemarkAnalysis,
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
@@ -440,8 +445,10 @@ public:
   bool isVerbose() const { return IsVerbose; }
 
   static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() >= DK_FirstRemark &&
-           DI->getKind() <= DK_LastRemark;
+    return (DI->getKind() >= DK_FirstRemark &&
+            DI->getKind() <= DK_LastRemark) ||
+           (DI->getKind() >= DK_FirstMachineRemark &&
+            DI->getKind() <= DK_LastMachineRemark);
   }
 
 protected:
@@ -529,6 +536,10 @@ public:
 
   Value *getCodeRegion() const { return CodeRegion; }
 
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() >= DK_FirstRemark && DI->getKind() <= DK_LastRemark;
+  }
+
 private:
   /// The IR value (currently basic block) that the optimization operates on.
   /// This is currently used to provide run-time hotness information with PGO.
@@ -569,8 +580,10 @@ public:
     return DI->getKind() == DK_OptimizationRemark;
   }
 
+  static bool isEnabled(StringRef PassName);
+
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
-  bool isEnabled() const override;
+  bool isEnabled() const override { return isEnabled(getPassName()); }
 };
 
 /// Diagnostic information for missed-optimization remarks.
@@ -607,8 +620,10 @@ public:
     return DI->getKind() == DK_OptimizationRemarkMissed;
   }
 
+  static bool isEnabled(StringRef PassName);
+
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
-  bool isEnabled() const override;
+  bool isEnabled() const override { return isEnabled(getPassName()); }
 };
 
 /// Diagnostic information for optimization analysis remarks.
@@ -656,8 +671,12 @@ public:
     return DI->getKind() == DK_OptimizationRemarkAnalysis;
   }
 
+  static bool isEnabled(StringRef PassName);
+
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
-  bool isEnabled() const override;
+  bool isEnabled() const override {
+    return shouldAlwaysPrint() || isEnabled(getPassName());
+  }
 
   static const char *AlwaysPrint;
 

@@ -55,44 +55,43 @@ Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
 namespace llvm {
 namespace yaml {
 
-template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
-  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
-    assert(io.outputting() && "input not yet implemented");
+void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
+    IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
+  assert(io.outputting() && "input not yet implemented");
 
-    if (io.mapTag("!Passed", OptDiag->getKind() == DK_OptimizationRemark))
-      ;
-    else if (io.mapTag("!Missed",
-                       OptDiag->getKind() == DK_OptimizationRemarkMissed))
-      ;
-    else if (io.mapTag("!Analysis",
-                       OptDiag->getKind() == DK_OptimizationRemarkAnalysis))
-      ;
-    else if (io.mapTag("!AnalysisFPCommute",
-                       OptDiag->getKind() ==
-                           DK_OptimizationRemarkAnalysisFPCommute))
-      ;
-    else if (io.mapTag("!AnalysisAliasing",
-                       OptDiag->getKind() ==
-                           DK_OptimizationRemarkAnalysisAliasing))
-      ;
-    else
-      llvm_unreachable("todo");
+  if (io.mapTag("!Passed", OptDiag->getKind() == DK_OptimizationRemark))
+    ;
+  else if (io.mapTag("!Missed",
+                     OptDiag->getKind() == DK_OptimizationRemarkMissed))
+    ;
+  else if (io.mapTag("!Analysis",
+                     OptDiag->getKind() == DK_OptimizationRemarkAnalysis))
+    ;
+  else if (io.mapTag("!AnalysisFPCommute",
+                     OptDiag->getKind() ==
+                         DK_OptimizationRemarkAnalysisFPCommute))
+    ;
+  else if (io.mapTag("!AnalysisAliasing",
+                     OptDiag->getKind() ==
+                         DK_OptimizationRemarkAnalysisAliasing))
+    ;
+  else
+    llvm_unreachable("todo");
 
-    // These are read-only for now.
-    DebugLoc DL = OptDiag->getDebugLoc();
-    StringRef FN = GlobalValue::getRealLinkageName(
-        OptDiag->getFunction().getName());
+  // These are read-only for now.
+  DebugLoc DL = OptDiag->getDebugLoc();
+  StringRef FN =
+      GlobalValue::getRealLinkageName(OptDiag->getFunction().getName());
 
-    StringRef PassName(OptDiag->PassName);
-    io.mapRequired("Pass", PassName);
-    io.mapRequired("Name", OptDiag->RemarkName);
-    if (!io.outputting() || DL)
-      io.mapOptional("DebugLoc", DL);
-    io.mapRequired("Function", FN);
-    io.mapOptional("Hotness", OptDiag->Hotness);
-    io.mapOptional("Args", OptDiag->Args);
-  }
-};
+  StringRef PassName(OptDiag->PassName);
+  io.mapRequired("Pass", PassName);
+  io.mapRequired("Name", OptDiag->RemarkName);
+  if (!io.outputting() || DL)
+    io.mapOptional("DebugLoc", DL);
+  io.mapRequired("Function", FN);
+  io.mapOptional("Hotness", OptDiag->Hotness);
+  io.mapOptional("Args", OptDiag->Args);
+}
 
 template <> struct MappingTraits<DebugLoc> {
   static void mapping(IO &io, DebugLoc &DL) {
