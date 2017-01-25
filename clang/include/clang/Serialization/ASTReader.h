@@ -405,9 +405,6 @@ private:
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
 
-  /// \brief The PCM manager which manages memory buffers for pcm files.
-  PCMCache *BufferMgr;
-
   /// \brief A dummy identifier resolver used to merge TU-scope declarations in
   /// C, for the cases where we don't have a Sema object to provide a real
   /// identifier resolver.

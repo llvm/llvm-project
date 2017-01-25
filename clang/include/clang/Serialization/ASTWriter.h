@@ -109,9 +109,6 @@ private:
   /// \brief The buffer associated with the bitstream.
   const SmallVectorImpl<char> &Buffer;
 
-  /// \brief The PCM manager which manages memory buffers for pcm files.
-  PCMCache *BufferMgr;
-
   /// \brief The ASTContext we're writing.
   ASTContext *Context;
 
@@ -508,7 +505,6 @@ public:
   /// \brief Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            PCMCache *BufferMgr,
             ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
@@ -949,7 +945,7 @@ public:
   PCHGenerator(
     const Preprocessor &PP, StringRef OutputFile,
     clang::Module *Module, StringRef isysroot,
-    std::shared_ptr<PCHBuffer> Buffer, PCMCache *BufferMgr,
+    std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors = false,
     bool IncludeTimestamps = true);
