@@ -1189,14 +1189,10 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
     llvm::LockFileManager Locked(ModuleFileName);
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:
-      // PCMCache takes care of correctness and locks are only necessary for
-      // performance. If there are errors creating the lock, do not use it
-      // and fallback to building the module ourselves.
-      Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
+      Diags.Report(ModuleNameLoc, diag::err_module_lock_failure)
           << Module->Name << Locked.getErrorMessage();
-      // Clear the lock file in case there's some leftover around.
-      Locked.unsafeRemoveLockFile();
-      // FALLTHROUGH
+      return false;
+
     case llvm::LockFileManager::LFS_Owned:
       // We're responsible for building the module ourselves.
       if (!compileModuleImpl(ImportingInstance, ModuleNameLoc, Module,
@@ -1216,14 +1212,11 @@ static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
       case llvm::LockFileManager::Res_OwnerDied:
         continue; // try again to get the lock.
       case llvm::LockFileManager::Res_Timeout:
-        // Since PCMCache takes care of correctness, we try waiting for another
-        // process to complete the build so that this isn't done twice. If we
-        // reach a timeout, it's not a problem, try to build it ourselves then.
-        Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
+        Diags.Report(ModuleNameLoc, diag::err_module_lock_timeout)
             << Module->Name;
         // Clear the lock file so that future invokations can make progress.
         Locked.unsafeRemoveLockFile();
-        continue;
+        return false;
       }
       break;
     }
