@@ -1079,7 +1079,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
         });
     // update sh_info with number of Global symbols output with computed
     // binding of STB_LOCAL
-    this->OutSec->Info = this->Info = 1 + It - Symbols.begin();
+    this->OutSec->Info = this->Info = 1 + (It - Symbols.begin());
     return;
   }
 

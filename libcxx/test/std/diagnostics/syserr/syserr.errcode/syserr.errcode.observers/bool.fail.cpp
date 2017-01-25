@@ -7,33 +7,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <memory>
+// XFAIL: c++03
 
-// template <class X> class auto_ptr;
+// <system_error>
 
-// X& operator*() const throw();
+// class error_code
 
-// REQUIRES-ANY: c++98, c++03, c++11, c++14
+// explicit operator bool() const;
 
-#include <memory>
-#include <cassert>
+#include <system_error>
 
-#include "../A.h"
-
-void
-test()
+bool test_func(void)
 {
-    {
-    A* p = new A(1);
-    std::auto_ptr<A> ap(p);
-    assert(ap->id() == 1);
-    *ap = A(3);
-    assert(ap->id() == 3);
-    }
-    assert(A::count == 0);
+    const std::error_code ec(0, std::generic_category());
+    return ec;   // conversion to bool is explicit; should fail.
 }
 
 int main()
 {
-    test();
+    return 0;
 }
+

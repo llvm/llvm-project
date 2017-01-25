@@ -19,25 +19,9 @@
 //   Constant nullopt shall be initialized with an argument of literal type.
 
 #include <optional>
-#include <type_traits>
-
-using std::optional;
-using std::nullopt_t;
-using std::nullopt;
-
-constexpr
-int
-test(const nullopt_t&)
-{
-    return 3;
-}
+#include "test_macros.h"
 
 int main()
 {
-    static_assert(( std::is_class<nullopt_t>::value), "");
-    static_assert(( std::is_empty<nullopt_t>::value), "");
-    static_assert(( std::is_literal_type<nullopt_t>::value), "");
-    static_assert((!std::is_default_constructible<nullopt_t>::value), "");
-
-    static_assert(test(nullopt) == 3, "");
+	std::nullopt_t n = {};
 }

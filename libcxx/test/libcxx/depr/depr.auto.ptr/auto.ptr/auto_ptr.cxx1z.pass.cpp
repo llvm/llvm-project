@@ -9,31 +9,19 @@
 
 // <memory>
 
-// template <class X> class auto_ptr;
+// template <class X>
+// class auto_ptr;
+//
+//  In C++17, auto_ptr has been removed.
+//  However, for backwards compatibility, if _LIBCPP_NO_REMOVE_AUTOPTR
+//  is defined before including <memory>, then auto_ptr will be restored.
 
-// X& operator*() const throw();
-
-// REQUIRES-ANY: c++98, c++03, c++11, c++14
+#define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
 
 #include <memory>
-#include <cassert>
-
-#include "../A.h"
-
-void
-test()
-{
-    {
-    A* p = new A(1);
-    std::auto_ptr<A> ap(p);
-    assert(ap->id() == 1);
-    *ap = A(3);
-    assert(ap->id() == 3);
-    }
-    assert(A::count == 0);
-}
+#include <type_traits>
 
 int main()
 {
-    test();
+    std::auto_ptr<int> p;
 }
