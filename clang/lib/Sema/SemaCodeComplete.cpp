@@ -5230,24 +5230,22 @@ namespace {
 /// when it has the same number of parameters as we have selector identifiers.
 ///
 /// \param Results the structure into which we'll add results.
-static void AddObjCMethods(ObjCContainerDecl *Container, 
-                           bool WantInstanceMethods,
-                           ObjCMethodKind WantKind,
+static void AddObjCMethods(ObjCContainerDecl *Container,
+                           bool WantInstanceMethods, ObjCMethodKind WantKind,
                            ArrayRef<IdentifierInfo *> SelIdents,
                            DeclContext *CurContext,
-                           VisitedSelectorSet &Selectors,
-                           bool AllowSameLength,
-                           ResultBuilder &Results,
-                           bool InOriginalClass = true) {
+                           VisitedSelectorSet &Selectors, bool AllowSameLength,
+                           ResultBuilder &Results, bool InOriginalClass = true,
+                           bool IsRootClass = false) {
   typedef CodeCompletionResult Result;
   Container = getContainerDef(Container);
   ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container);
-  bool isRootClass = IFace && !IFace->getSuperClass();
+  IsRootClass = IsRootClass || (IFace && !IFace->getSuperClass());
   for (auto *M : Container->methods()) {
     // The instance methods on the root class can be messaged via the
     // metaclass.
     if (M->isInstanceMethod() == WantInstanceMethods ||
-        (isRootClass && !WantInstanceMethods)) {
+        (IsRootClass && !WantInstanceMethods)) {
       // Check whether the selector identifiers we've been given are a 
       // subset of the identifiers for this particular method.
       if (!isAcceptableObjCMethod(M, WantKind, SelIdents, AllowSameLength))
@@ -5273,8 +5271,8 @@ static void AddObjCMethods(ObjCContainerDecl *Container,
       for (ObjCList<ObjCProtocolDecl>::iterator I = Protocols.begin(),
                                                 E = Protocols.end(); 
            I != E; ++I)
-        AddObjCMethods(*I, WantInstanceMethods, WantKind, SelIdents, 
-                       CurContext, Selectors, AllowSameLength, Results, false);
+        AddObjCMethods(*I, WantInstanceMethods, WantKind, SelIdents, CurContext,
+                       Selectors, AllowSameLength, Results, false, IsRootClass);
     }
   }
   
@@ -5283,43 +5281,43 @@ static void AddObjCMethods(ObjCContainerDecl *Container,
   
   // Add methods in protocols.
   for (auto *I : IFace->protocols())
-    AddObjCMethods(I, WantInstanceMethods, WantKind, SelIdents,
-                   CurContext, Selectors, AllowSameLength, Results, false);
-  
+    AddObjCMethods(I, WantInstanceMethods, WantKind, SelIdents, CurContext,
+                   Selectors, AllowSameLength, Results, false, IsRootClass);
+
   // Add methods in categories.
   for (auto *CatDecl : IFace->known_categories()) {
     AddObjCMethods(CatDecl, WantInstanceMethods, WantKind, SelIdents,
-                   CurContext, Selectors, AllowSameLength,
-                   Results, InOriginalClass);
-    
+                   CurContext, Selectors, AllowSameLength, Results,
+                   InOriginalClass, IsRootClass);
+
     // Add a categories protocol methods.
     const ObjCList<ObjCProtocolDecl> &Protocols 
       = CatDecl->getReferencedProtocols();
     for (ObjCList<ObjCProtocolDecl>::iterator I = Protocols.begin(),
                                               E = Protocols.end();
          I != E; ++I)
-      AddObjCMethods(*I, WantInstanceMethods, WantKind, SelIdents, 
-                     CurContext, Selectors, AllowSameLength,
-                     Results, false);
-    
+      AddObjCMethods(*I, WantInstanceMethods, WantKind, SelIdents, CurContext,
+                     Selectors, AllowSameLength, Results, false, IsRootClass);
+
     // Add methods in category implementations.
     if (ObjCCategoryImplDecl *Impl = CatDecl->getImplementation())
-      AddObjCMethods(Impl, WantInstanceMethods, WantKind, SelIdents, 
-                     CurContext, Selectors, AllowSameLength,
-                     Results, InOriginalClass);
+      AddObjCMethods(Impl, WantInstanceMethods, WantKind, SelIdents, CurContext,
+                     Selectors, AllowSameLength, Results, InOriginalClass,
+                     IsRootClass);
   }
   
   // Add methods in superclass.
+  // Avoid passing in IsRootClass since root classes won't have super classes.
   if (IFace->getSuperClass())
-    AddObjCMethods(IFace->getSuperClass(), WantInstanceMethods, WantKind, 
-                   SelIdents, CurContext, Selectors,
-                   AllowSameLength, Results, false);
+    AddObjCMethods(IFace->getSuperClass(), WantInstanceMethods, WantKind,
+                   SelIdents, CurContext, Selectors, AllowSameLength, Results,
+                   /*IsRootClass=*/false);
 
   // Add methods in our implementation, if any.
   if (ObjCImplementationDecl *Impl = IFace->getImplementation())
-    AddObjCMethods(Impl, WantInstanceMethods, WantKind, SelIdents,
-                   CurContext, Selectors, AllowSameLength,
-                   Results, InOriginalClass);
+    AddObjCMethods(Impl, WantInstanceMethods, WantKind, SelIdents, CurContext,
+                   Selectors, AllowSameLength, Results, InOriginalClass,
+                   IsRootClass);
 }
 
 
