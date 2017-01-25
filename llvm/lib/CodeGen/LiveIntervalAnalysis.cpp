@@ -253,23 +253,30 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   // may share super-registers. That's OK because createDeadDefs() is
   // idempotent. It is very rare for a register unit to have multiple roots, so
   // uniquing super-registers is probably not worthwhile.
+  bool IsReserved = true;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
          Super.isValid(); ++Super) {
       unsigned Reg = *Super;
       if (!MRI->reg_empty(Reg))
         LRCalc->createDeadDefs(LR, Reg);
+      // A register unit is considered reserved if all its roots and all their
+      // super registers are reserved.
+      if (!MRI->isReserved(Reg))
+        IsReserved = false;
     }
   }
 
   // Now extend LR to reach all uses.
   // Ignore uses of reserved registers. We only track defs of those.
-  for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      unsigned Reg = *Super;
-      if (!MRI->isReserved(Reg) && !MRI->reg_empty(Reg))
-        LRCalc->extendToUses(LR, Reg);
+  if (!IsReserved) {
+    for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
+      for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
+           Super.isValid(); ++Super) {
+        unsigned Reg = *Super;
+        if (!MRI->reg_empty(Reg))
+          LRCalc->extendToUses(LR, Reg);
+      }
     }
   }
 

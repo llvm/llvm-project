@@ -94,8 +94,7 @@ size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
 
 size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
                                                size_t MaxSize) {
-  if (Size > MaxSize) return 0;
-  assert(Size);
+  if (Size > MaxSize || Size == 0) return 0;
   size_t ShuffleAmount =
       Rand(std::min(Size, (size_t)8)) + 1; // [1,8] and <= Size.
   size_t ShuffleStart = Rand(Size - ShuffleAmount);
@@ -107,8 +106,7 @@ size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
 
 size_t MutationDispatcher::Mutate_EraseBytes(uint8_t *Data, size_t Size,
                                              size_t MaxSize) {
-  assert(Size);
-  if (Size == 1) return 0;
+  if (Size <= 1) return 0;
   size_t N = Rand(Size / 2) + 1;
   assert(N < Size);
   size_t Idx = Rand(Size - N + 1);
@@ -343,7 +341,7 @@ size_t MutationDispatcher::InsertPartOf(const uint8_t *From, size_t FromSize,
 
 size_t MutationDispatcher::Mutate_CopyPart(uint8_t *Data, size_t Size,
                                            size_t MaxSize) {
-  if (Size > MaxSize) return 0;
+  if (Size > MaxSize || Size == 0) return 0;
   if (Rand.RandBool())
     return CopyPartOf(Data, Size, Data, Size);
   else
@@ -513,14 +511,6 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
                                       size_t MaxSize,
                                       const std::vector<Mutator> &Mutators) {
   assert(MaxSize > 0);
-  if (Size == 0) {
-    for (size_t i = 0; i < Min(size_t(4), MaxSize); i++)
-      Data[i] = RandCh(Rand);
-    if (Options.OnlyASCII)
-      ToASCII(Data, MaxSize);
-    return MaxSize;
-  }
-  assert(Size > 0);
   // Some mutations may fail (e.g. can't insert more bytes if Size == MaxSize),
   // in which case they will return 0.
   // Try several times before returning un-mutated data.
@@ -534,7 +524,8 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
       return NewSize;
     }
   }
-  return std::min(Size, MaxSize);
+  *Data = ' ';
+  return 1;   // Fallback, should not happen frequently.
 }
 
 void MutationDispatcher::AddWordToManualDictionary(const Word &W) {

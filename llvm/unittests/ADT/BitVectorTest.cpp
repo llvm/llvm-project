@@ -425,5 +425,42 @@ TYPED_TEST(BitVectorTest, MoveAssignment) {
   EXPECT_EQ(C, B);
 }
 
+template<class TypeParam>
+static void testEmpty(const TypeParam &A) {
+  EXPECT_TRUE(A.empty());
+  EXPECT_EQ((size_t)0, A.size());
+  EXPECT_EQ((size_t)0, A.count());
+  EXPECT_FALSE(A.any());
+  EXPECT_TRUE(A.all());
+  EXPECT_TRUE(A.none());
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(A, TypeParam());
+}
+
+/// Tests whether BitVector behaves well with Bits==nullptr, Capacity==0
+TYPED_TEST(BitVectorTest, EmptyVector) {
+  TypeParam A;
+  testEmpty(A);
+
+  TypeParam B;
+  B.reset();
+  testEmpty(B);
+
+  TypeParam C;
+  C.clear();
+  testEmpty(C);
+
+  TypeParam D(A);
+  testEmpty(D);
+
+  TypeParam E;
+  E = A;
+  testEmpty(E);
+
+  TypeParam F;
+  E.reset(A);
+  testEmpty(E);
+}
+
 }
 #endif

@@ -42,13 +42,13 @@ protected:
   }
 
   ::testing::AssertionResult isLibFunc(const Function *FDecl,
-                                       LibFunc::Func ExpectedLF) {
+                                       LibFunc ExpectedLF) {
     StringRef ExpectedLFName = TLI.getName(ExpectedLF);
 
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc::Func F;
+    LibFunc F;
     if (!TLI.getLibFunc(*FDecl, F))
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
@@ -66,7 +66,7 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
-    LibFunc::Func LF = (LibFunc::Func)FI;
+    LibFunc LF = (LibFunc)FI;
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy));
     EXPECT_FALSE(isLibFunc(F, LF));
@@ -472,7 +472,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     );
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
-    LibFunc::Func LF = (LibFunc::Func)FI;
+    LibFunc LF = (LibFunc)FI;
     // Make sure everything is available; we're not testing target defaults.
     TLII.setAvailable(LF);
     Function *F = M->getFunction(TLI.getName(LF));

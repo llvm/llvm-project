@@ -100,12 +100,12 @@ private:
   bool perform(CallInst *CI);
   void checkCandidate(CallInst &CI);
   void shrinkWrapCI(CallInst *CI, Value *Cond);
-  bool performCallDomainErrorOnly(CallInst *CI, const LibFunc::Func &Func);
-  bool performCallErrors(CallInst *CI, const LibFunc::Func &Func);
-  bool performCallRangeErrorOnly(CallInst *CI, const LibFunc::Func &Func);
-  Value *generateOneRangeCond(CallInst *CI, const LibFunc::Func &Func);
-  Value *generateTwoRangeCond(CallInst *CI, const LibFunc::Func &Func);
-  Value *generateCondForPow(CallInst *CI, const LibFunc::Func &Func);
+  bool performCallDomainErrorOnly(CallInst *CI, const LibFunc &Func);
+  bool performCallErrors(CallInst *CI, const LibFunc &Func);
+  bool performCallRangeErrorOnly(CallInst *CI, const LibFunc &Func);
+  Value *generateOneRangeCond(CallInst *CI, const LibFunc &Func);
+  Value *generateTwoRangeCond(CallInst *CI, const LibFunc &Func);
+  Value *generateCondForPow(CallInst *CI, const LibFunc &Func);
 
   // Create an OR of two conditions.
   Value *createOrCond(CallInst *CI, CmpInst::Predicate Cmp, float Val,
@@ -141,44 +141,44 @@ private:
 
 // Perform the transformation to calls with errno set by domain error.
 bool LibCallsShrinkWrap::performCallDomainErrorOnly(CallInst *CI,
-                                                    const LibFunc::Func &Func) {
+                                                    const LibFunc &Func) {
   Value *Cond = nullptr;
 
   switch (Func) {
-  case LibFunc::acos:  // DomainError: (x < -1 || x > 1)
-  case LibFunc::acosf: // Same as acos
-  case LibFunc::acosl: // Same as acos
-  case LibFunc::asin:  // DomainError: (x < -1 || x > 1)
-  case LibFunc::asinf: // Same as asin
-  case LibFunc::asinl: // Same as asin
+  case LibFunc_acos:  // DomainError: (x < -1 || x > 1)
+  case LibFunc_acosf: // Same as acos
+  case LibFunc_acosl: // Same as acos
+  case LibFunc_asin:  // DomainError: (x < -1 || x > 1)
+  case LibFunc_asinf: // Same as asin
+  case LibFunc_asinl: // Same as asin
   {
     ++NumWrappedTwoCond;
     Cond = createOrCond(CI, CmpInst::FCMP_OLT, -1.0f, CmpInst::FCMP_OGT, 1.0f);
     break;
   }
-  case LibFunc::cos:  // DomainError: (x == +inf || x == -inf)
-  case LibFunc::cosf: // Same as cos
-  case LibFunc::cosl: // Same as cos
-  case LibFunc::sin:  // DomainError: (x == +inf || x == -inf)
-  case LibFunc::sinf: // Same as sin
-  case LibFunc::sinl: // Same as sin
+  case LibFunc_cos:  // DomainError: (x == +inf || x == -inf)
+  case LibFunc_cosf: // Same as cos
+  case LibFunc_cosl: // Same as cos
+  case LibFunc_sin:  // DomainError: (x == +inf || x == -inf)
+  case LibFunc_sinf: // Same as sin
+  case LibFunc_sinl: // Same as sin
   {
     ++NumWrappedTwoCond;
     Cond = createOrCond(CI, CmpInst::FCMP_OEQ, INFINITY, CmpInst::FCMP_OEQ,
                         -INFINITY);
     break;
   }
-  case LibFunc::acosh:  // DomainError: (x < 1)
-  case LibFunc::acoshf: // Same as acosh
-  case LibFunc::acoshl: // Same as acosh
+  case LibFunc_acosh:  // DomainError: (x < 1)
+  case LibFunc_acoshf: // Same as acosh
+  case LibFunc_acoshl: // Same as acosh
   {
     ++NumWrappedOneCond;
     Cond = createCond(CI, CmpInst::FCMP_OLT, 1.0f);
     break;
   }
-  case LibFunc::sqrt:  // DomainError: (x < 0)
-  case LibFunc::sqrtf: // Same as sqrt
-  case LibFunc::sqrtl: // Same as sqrt
+  case LibFunc_sqrt:  // DomainError: (x < 0)
+  case LibFunc_sqrtf: // Same as sqrt
+  case LibFunc_sqrtl: // Same as sqrt
   {
     ++NumWrappedOneCond;
     Cond = createCond(CI, CmpInst::FCMP_OLT, 0.0f);
@@ -193,31 +193,31 @@ bool LibCallsShrinkWrap::performCallDomainErrorOnly(CallInst *CI,
 
 // Perform the transformation to calls with errno set by range error.
 bool LibCallsShrinkWrap::performCallRangeErrorOnly(CallInst *CI,
-                                                   const LibFunc::Func &Func) {
+                                                   const LibFunc &Func) {
   Value *Cond = nullptr;
 
   switch (Func) {
-  case LibFunc::cosh:
-  case LibFunc::coshf:
-  case LibFunc::coshl:
-  case LibFunc::exp:
-  case LibFunc::expf:
-  case LibFunc::expl:
-  case LibFunc::exp10:
-  case LibFunc::exp10f:
-  case LibFunc::exp10l:
-  case LibFunc::exp2:
-  case LibFunc::exp2f:
-  case LibFunc::exp2l:
-  case LibFunc::sinh:
-  case LibFunc::sinhf:
-  case LibFunc::sinhl: {
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_expl:
+  case LibFunc_exp10:
+  case LibFunc_exp10f:
+  case LibFunc_exp10l:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2l:
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl: {
     Cond = generateTwoRangeCond(CI, Func);
     break;
   }
-  case LibFunc::expm1:  // RangeError: (709, inf)
-  case LibFunc::expm1f: // RangeError: (88, inf)
-  case LibFunc::expm1l: // RangeError: (11356, inf)
+  case LibFunc_expm1:  // RangeError: (709, inf)
+  case LibFunc_expm1f: // RangeError: (88, inf)
+  case LibFunc_expm1l: // RangeError: (11356, inf)
   {
     Cond = generateOneRangeCond(CI, Func);
     break;
@@ -231,15 +231,15 @@ bool LibCallsShrinkWrap::performCallRangeErrorOnly(CallInst *CI,
 
 // Perform the transformation to calls with errno set by combination of errors.
 bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
-                                           const LibFunc::Func &Func) {
+                                           const LibFunc &Func) {
   Value *Cond = nullptr;
 
   switch (Func) {
-  case LibFunc::atanh:  // DomainError: (x < -1 || x > 1)
+  case LibFunc_atanh:  // DomainError: (x < -1 || x > 1)
                         // PoleError:   (x == -1 || x == 1)
                         // Overall Cond: (x <= -1 || x >= 1)
-  case LibFunc::atanhf: // Same as atanh
-  case LibFunc::atanhl: // Same as atanh
+  case LibFunc_atanhf: // Same as atanh
+  case LibFunc_atanhl: // Same as atanh
   {
     if (!LibCallsShrinkWrapDoDomainError || !LibCallsShrinkWrapDoPoleError)
       return false;
@@ -247,20 +247,20 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     Cond = createOrCond(CI, CmpInst::FCMP_OLE, -1.0f, CmpInst::FCMP_OGE, 1.0f);
     break;
   }
-  case LibFunc::log:    // DomainError: (x < 0)
+  case LibFunc_log:    // DomainError: (x < 0)
                         // PoleError:   (x == 0)
                         // Overall Cond: (x <= 0)
-  case LibFunc::logf:   // Same as log
-  case LibFunc::logl:   // Same as log
-  case LibFunc::log10:  // Same as log
-  case LibFunc::log10f: // Same as log
-  case LibFunc::log10l: // Same as log
-  case LibFunc::log2:   // Same as log
-  case LibFunc::log2f:  // Same as log
-  case LibFunc::log2l:  // Same as log
-  case LibFunc::logb:   // Same as log
-  case LibFunc::logbf:  // Same as log
-  case LibFunc::logbl:  // Same as log
+  case LibFunc_logf:   // Same as log
+  case LibFunc_logl:   // Same as log
+  case LibFunc_log10:  // Same as log
+  case LibFunc_log10f: // Same as log
+  case LibFunc_log10l: // Same as log
+  case LibFunc_log2:   // Same as log
+  case LibFunc_log2f:  // Same as log
+  case LibFunc_log2l:  // Same as log
+  case LibFunc_logb:   // Same as log
+  case LibFunc_logbf:  // Same as log
+  case LibFunc_logbl:  // Same as log
   {
     if (!LibCallsShrinkWrapDoDomainError || !LibCallsShrinkWrapDoPoleError)
       return false;
@@ -268,11 +268,11 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     Cond = createCond(CI, CmpInst::FCMP_OLE, 0.0f);
     break;
   }
-  case LibFunc::log1p:  // DomainError: (x < -1)
+  case LibFunc_log1p:  // DomainError: (x < -1)
                         // PoleError:   (x == -1)
                         // Overall Cond: (x <= -1)
-  case LibFunc::log1pf: // Same as log1p
-  case LibFunc::log1pl: // Same as log1p
+  case LibFunc_log1pf: // Same as log1p
+  case LibFunc_log1pl: // Same as log1p
   {
     if (!LibCallsShrinkWrapDoDomainError || !LibCallsShrinkWrapDoPoleError)
       return false;
@@ -280,11 +280,11 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
     Cond = createCond(CI, CmpInst::FCMP_OLE, -1.0f);
     break;
   }
-  case LibFunc::pow: // DomainError: x < 0 and y is noninteger
+  case LibFunc_pow: // DomainError: x < 0 and y is noninteger
                      // PoleError:   x == 0 and y < 0
                      // RangeError:  overflow or underflow
-  case LibFunc::powf:
-  case LibFunc::powl: {
+  case LibFunc_powf:
+  case LibFunc_powl: {
     if (!LibCallsShrinkWrapDoDomainError || !LibCallsShrinkWrapDoPoleError ||
         !LibCallsShrinkWrapDoRangeError)
       return false;
@@ -313,7 +313,7 @@ void LibCallsShrinkWrap::checkCandidate(CallInst &CI) {
   if (!CI.use_empty())
     return;
 
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *Callee = CI.getCalledFunction();
   if (!Callee)
     return;
@@ -333,16 +333,16 @@ void LibCallsShrinkWrap::checkCandidate(CallInst &CI) {
 
 // Generate the upper bound condition for RangeError.
 Value *LibCallsShrinkWrap::generateOneRangeCond(CallInst *CI,
-                                                const LibFunc::Func &Func) {
+                                                const LibFunc &Func) {
   float UpperBound;
   switch (Func) {
-  case LibFunc::expm1: // RangeError: (709, inf)
+  case LibFunc_expm1: // RangeError: (709, inf)
     UpperBound = 709.0f;
     break;
-  case LibFunc::expm1f: // RangeError: (88, inf)
+  case LibFunc_expm1f: // RangeError: (88, inf)
     UpperBound = 88.0f;
     break;
-  case LibFunc::expm1l: // RangeError: (11356, inf)
+  case LibFunc_expm1l: // RangeError: (11356, inf)
     UpperBound = 11356.0f;
     break;
   default:
@@ -355,57 +355,57 @@ Value *LibCallsShrinkWrap::generateOneRangeCond(CallInst *CI,
 
 // Generate the lower and upper bound condition for RangeError.
 Value *LibCallsShrinkWrap::generateTwoRangeCond(CallInst *CI,
-                                                const LibFunc::Func &Func) {
+                                                const LibFunc &Func) {
   float UpperBound, LowerBound;
   switch (Func) {
-  case LibFunc::cosh: // RangeError: (x < -710 || x > 710)
-  case LibFunc::sinh: // Same as cosh
+  case LibFunc_cosh: // RangeError: (x < -710 || x > 710)
+  case LibFunc_sinh: // Same as cosh
     LowerBound = -710.0f;
     UpperBound = 710.0f;
     break;
-  case LibFunc::coshf: // RangeError: (x < -89 || x > 89)
-  case LibFunc::sinhf: // Same as coshf
+  case LibFunc_coshf: // RangeError: (x < -89 || x > 89)
+  case LibFunc_sinhf: // Same as coshf
     LowerBound = -89.0f;
     UpperBound = 89.0f;
     break;
-  case LibFunc::coshl: // RangeError: (x < -11357 || x > 11357)
-  case LibFunc::sinhl: // Same as coshl
+  case LibFunc_coshl: // RangeError: (x < -11357 || x > 11357)
+  case LibFunc_sinhl: // Same as coshl
     LowerBound = -11357.0f;
     UpperBound = 11357.0f;
     break;
-  case LibFunc::exp: // RangeError: (x < -745 || x > 709)
+  case LibFunc_exp: // RangeError: (x < -745 || x > 709)
     LowerBound = -745.0f;
     UpperBound = 709.0f;
     break;
-  case LibFunc::expf: // RangeError: (x < -103 || x > 88)
+  case LibFunc_expf: // RangeError: (x < -103 || x > 88)
     LowerBound = -103.0f;
     UpperBound = 88.0f;
     break;
-  case LibFunc::expl: // RangeError: (x < -11399 || x > 11356)
+  case LibFunc_expl: // RangeError: (x < -11399 || x > 11356)
     LowerBound = -11399.0f;
     UpperBound = 11356.0f;
     break;
-  case LibFunc::exp10: // RangeError: (x < -323 || x > 308)
+  case LibFunc_exp10: // RangeError: (x < -323 || x > 308)
     LowerBound = -323.0f;
     UpperBound = 308.0f;
     break;
-  case LibFunc::exp10f: // RangeError: (x < -45 || x > 38)
+  case LibFunc_exp10f: // RangeError: (x < -45 || x > 38)
     LowerBound = -45.0f;
     UpperBound = 38.0f;
     break;
-  case LibFunc::exp10l: // RangeError: (x < -4950 || x > 4932)
+  case LibFunc_exp10l: // RangeError: (x < -4950 || x > 4932)
     LowerBound = -4950.0f;
     UpperBound = 4932.0f;
     break;
-  case LibFunc::exp2: // RangeError: (x < -1074 || x > 1023)
+  case LibFunc_exp2: // RangeError: (x < -1074 || x > 1023)
     LowerBound = -1074.0f;
     UpperBound = 1023.0f;
     break;
-  case LibFunc::exp2f: // RangeError: (x < -149 || x > 127)
+  case LibFunc_exp2f: // RangeError: (x < -149 || x > 127)
     LowerBound = -149.0f;
     UpperBound = 127.0f;
     break;
-  case LibFunc::exp2l: // RangeError: (x < -16445 || x > 11383)
+  case LibFunc_exp2l: // RangeError: (x < -16445 || x > 11383)
     LowerBound = -16445.0f;
     UpperBound = 11383.0f;
     break;
@@ -434,9 +434,9 @@ Value *LibCallsShrinkWrap::generateTwoRangeCond(CallInst *CI,
 // (i.e. we might invoke the calls that will not set the errno.).
 //
 Value *LibCallsShrinkWrap::generateCondForPow(CallInst *CI,
-                                              const LibFunc::Func &Func) {
-  // FIXME: LibFunc::powf and powl TBD.
-  if (Func != LibFunc::pow) {
+                                              const LibFunc &Func) {
+  // FIXME: LibFunc_powf and powl TBD.
+  if (Func != LibFunc_pow) {
     DEBUG(dbgs() << "Not handled powf() and powl()\n");
     return nullptr;
   }
@@ -516,7 +516,7 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
 
 // Perform the transformation to a single candidate.
 bool LibCallsShrinkWrap::perform(CallInst *CI) {
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   assert(Callee && "perform() should apply to a non-empty callee");
   TLI.getLibFunc(*Callee, Func);

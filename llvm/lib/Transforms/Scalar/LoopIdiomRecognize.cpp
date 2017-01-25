@@ -236,9 +236,9 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   ApplyCodeSizeHeuristics =
       L->getHeader()->getParent()->optForSize() && UseLIRCodeSizeHeurs;
 
-  HasMemset = TLI->has(LibFunc::memset);
-  HasMemsetPattern = TLI->has(LibFunc::memset_pattern16);
-  HasMemcpy = TLI->has(LibFunc::memcpy);
+  HasMemset = TLI->has(LibFunc_memset);
+  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
+  HasMemcpy = TLI->has(LibFunc_memcpy);
 
   if (HasMemset || HasMemsetPattern || HasMemcpy)
     if (SE->hasLoopInvariantBackedgeTakenCount(L))

@@ -281,7 +281,8 @@ namespace ISD {
     /// EXTRACT_VECTOR_ELT(VECTOR, IDX) - Returns a single element from VECTOR
     /// identified by the (potentially variable) element number IDX.  If the
     /// return type is an integer type larger than the element type of the
-    /// vector, the result is extended to the width of the return type.
+    /// vector, the result is extended to the width of the return type. In
+    /// that case, the high bits are undefined.
     EXTRACT_VECTOR_ELT,
 
     /// CONCAT_VECTORS(VECTOR0, VECTOR1, ...) - Given a number of values of

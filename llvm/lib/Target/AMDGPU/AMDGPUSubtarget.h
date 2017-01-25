@@ -81,9 +81,8 @@ protected:
   bool HalfRate64Ops;
 
   // Dynamially set bits that enable features.
-  bool FP16Denormals;
   bool FP32Denormals;
-  bool FP64Denormals;
+  bool FP64FP16Denormals;
   bool FPExceptions;
   bool FlatForGlobal;
   bool UnalignedScratchAccess;
@@ -282,7 +281,7 @@ public:
   unsigned getOccupancyWithLocalMemSize(uint32_t Bytes) const;
 
   bool hasFP16Denormals() const {
-    return FP16Denormals;
+    return FP64FP16Denormals;
   }
 
   bool hasFP32Denormals() const {
@@ -290,7 +289,7 @@ public:
   }
 
   bool hasFP64Denormals() const {
-    return FP64Denormals;
+    return FP64FP16Denormals;
   }
 
   bool hasFPExceptions() const {

@@ -30,14 +30,12 @@ struct VecDesc {
   unsigned VectorizationFactor;
 };
 
-  namespace LibFunc {
-    enum Func {
+  enum LibFunc {
 #define TLI_DEFINE_ENUM
 #include "llvm/Analysis/TargetLibraryInfo.def"
 
-      NumLibFuncs
-    };
-  }
+    NumLibFuncs
+  };
 
 /// Implementation of the target library information.
 ///
@@ -48,9 +46,9 @@ struct VecDesc {
 class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
-  unsigned char AvailableArray[(LibFunc::NumLibFuncs+3)/4];
+  unsigned char AvailableArray[(NumLibFuncs+3)/4];
   llvm::DenseMap<unsigned, std::string> CustomNames;
-  static StringRef const StandardNames[LibFunc::NumLibFuncs];
+  static StringRef const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
 
   enum AvailabilityState {
@@ -58,11 +56,11 @@ class TargetLibraryInfoImpl {
     CustomName = 1,
     Unavailable = 0  // (memset to all zeros)
   };
-  void setState(LibFunc::Func F, AvailabilityState State) {
+  void setState(LibFunc F, AvailabilityState State) {
     AvailableArray[F/4] &= ~(3 << 2*(F&3));
     AvailableArray[F/4] |= State << 2*(F&3);
   }
-  AvailabilityState getState(LibFunc::Func F) const {
+  AvailabilityState getState(LibFunc F) const {
     return static_cast<AvailabilityState>((AvailableArray[F/4] >> 2*(F&3)) & 3);
   }
 
@@ -74,7 +72,7 @@ class TargetLibraryInfoImpl {
 
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
-  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc::Func F,
+  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                               const DataLayout *DL) const;
 
 public:
@@ -104,28 +102,28 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc::Func &F) const;
+  bool getLibFunc(StringRef funcName, LibFunc &F) const;
 
   /// Searches for a particular function name, also checking that its type is
   /// valid for the library function matching that name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(const Function &FDecl, LibFunc::Func &F) const;
+  bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
-  void setUnavailable(LibFunc::Func F) {
+  void setUnavailable(LibFunc F) {
     setState(F, Unavailable);
   }
 
   /// Forces a function to be marked as available.
-  void setAvailable(LibFunc::Func F) {
+  void setAvailable(LibFunc F) {
     setState(F, StandardName);
   }
 
   /// Forces a function to be marked as available and provide an alternate name
   /// that must be used.
-  void setAvailableWithName(LibFunc::Func F, StringRef Name) {
+  void setAvailableWithName(LibFunc F, StringRef Name) {
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
       CustomNames[F] = Name;
@@ -225,16 +223,16 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc::Func &F) const {
+  bool getLibFunc(StringRef funcName, LibFunc &F) const {
     return Impl->getLibFunc(funcName, F);
   }
 
-  bool getLibFunc(const Function &FDecl, LibFunc::Func &F) const {
+  bool getLibFunc(const Function &FDecl, LibFunc &F) const {
     return Impl->getLibFunc(FDecl, F);
   }
 
   /// Tests whether a library function is available.
-  bool has(LibFunc::Func F) const {
+  bool has(LibFunc F) const {
     return Impl->getState(F) != TargetLibraryInfoImpl::Unavailable;
   }
   bool isFunctionVectorizable(StringRef F, unsigned VF) const {
@@ -249,37 +247,37 @@ public:
 
   /// Tests if the function is both available and a candidate for optimized code
   /// generation.
-  bool hasOptimizedCodeGen(LibFunc::Func F) const {
+  bool hasOptimizedCodeGen(LibFunc F) const {
     if (Impl->getState(F) == TargetLibraryInfoImpl::Unavailable)
       return false;
     switch (F) {
     default: break;
-    case LibFunc::copysign:  case LibFunc::copysignf:  case LibFunc::copysignl:
-    case LibFunc::fabs:      case LibFunc::fabsf:      case LibFunc::fabsl:
-    case LibFunc::sin:       case LibFunc::sinf:       case LibFunc::sinl:
-    case LibFunc::cos:       case LibFunc::cosf:       case LibFunc::cosl:
-    case LibFunc::sqrt:      case LibFunc::sqrtf:      case LibFunc::sqrtl:
-    case LibFunc::sqrt_finite: case LibFunc::sqrtf_finite:
-                                                  case LibFunc::sqrtl_finite:
-    case LibFunc::fmax:      case LibFunc::fmaxf:      case LibFunc::fmaxl:
-    case LibFunc::fmin:      case LibFunc::fminf:      case LibFunc::fminl:
-    case LibFunc::floor:     case LibFunc::floorf:     case LibFunc::floorl:
-    case LibFunc::nearbyint: case LibFunc::nearbyintf: case LibFunc::nearbyintl:
-    case LibFunc::ceil:      case LibFunc::ceilf:      case LibFunc::ceill:
-    case LibFunc::rint:      case LibFunc::rintf:      case LibFunc::rintl:
-    case LibFunc::round:     case LibFunc::roundf:     case LibFunc::roundl:
-    case LibFunc::trunc:     case LibFunc::truncf:     case LibFunc::truncl:
-    case LibFunc::log2:      case LibFunc::log2f:      case LibFunc::log2l:
-    case LibFunc::exp2:      case LibFunc::exp2f:      case LibFunc::exp2l:
-    case LibFunc::memcmp:    case LibFunc::strcmp:     case LibFunc::strcpy:
-    case LibFunc::stpcpy:    case LibFunc::strlen:     case LibFunc::strnlen:
-    case LibFunc::memchr:    case LibFunc::mempcpy:
+    case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
+    case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
+    case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
+    case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
+    case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
+    case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
+                                                   case LibFunc_sqrtl_finite:
+    case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
+    case LibFunc_fmin:         case LibFunc_fminf:      case LibFunc_fminl:
+    case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
+    case LibFunc_nearbyint:    case LibFunc_nearbyintf: case LibFunc_nearbyintl:
+    case LibFunc_ceil:         case LibFunc_ceilf:      case LibFunc_ceill:
+    case LibFunc_rint:         case LibFunc_rintf:      case LibFunc_rintl:
+    case LibFunc_round:        case LibFunc_roundf:     case LibFunc_roundl:
+    case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
+    case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
+    case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
+    case LibFunc_memcmp:       case LibFunc_strcmp:     case LibFunc_strcpy:
+    case LibFunc_stpcpy:       case LibFunc_strlen:     case LibFunc_strnlen:
+    case LibFunc_memchr:       case LibFunc_mempcpy:
       return true;
     }
     return false;
   }
 
-  StringRef getName(LibFunc::Func F) const {
+  StringRef getName(LibFunc F) const {
     auto State = Impl->getState(F);
     if (State == TargetLibraryInfoImpl::Unavailable)
       return StringRef();

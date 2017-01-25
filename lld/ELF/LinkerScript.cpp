@@ -409,6 +409,19 @@ template <class ELFT> void LinkerScript<ELFT>::output(InputSection<ELFT> *S) {
   // .foo { *(.aaa) a = SIZEOF(.foo); *(.bbb) }
   CurOutSec->Size = Pos - CurOutSec->Addr;
 
+  // If there is a memory region associated with this input section, then
+  // place the section in that region and update the region index.
+  if (CurMemRegion) {
+    CurMemRegion->Offset += CurOutSec->Size;
+    uint64_t CurSize = CurMemRegion->Offset - CurMemRegion->Origin;
+    if (CurSize > CurMemRegion->Length) {
+      uint64_t OverflowAmt = CurSize - CurMemRegion->Length;
+      error("section '" + CurOutSec->Name + "' will not fit in region '" +
+            CurMemRegion->Name + "': overflowed by " + Twine(OverflowAmt) +
+            " bytes");
+    }
+  }
+
   if (IsTbss)
     ThreadBssOffset = Pos - Dot;
   else
@@ -508,6 +521,42 @@ findSections(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
   return Ret;
 }
 
+// This function searches for a memory region to place the given output
+// section in. If found, a pointer to the appropriate memory region is
+// returned. Otherwise, a nullptr is returned.
+template <class ELFT>
+MemoryRegion *LinkerScript<ELFT>::findMemoryRegion(OutputSectionCommand *Cmd,
+                                                   OutputSectionBase *Sec) {
+  // If a memory region name was specified in the output section command,
+  // then try to find that region first.
+  if (!Cmd->MemoryRegionName.empty()) {
+    auto It = Opt.MemoryRegions.find(Cmd->MemoryRegionName);
+    if (It != Opt.MemoryRegions.end())
+      return &It->second;
+    error("memory region '" + Cmd->MemoryRegionName + "' not declared");
+    return nullptr;
+  }
+
+  // The memory region name is empty, thus a suitable region must be
+  // searched for in the region map. If the region map is empty, just
+  // return. Note that this check doesn't happen at the very beginning
+  // so that uses of undeclared regions can be caught.
+  if (!Opt.MemoryRegions.size())
+    return nullptr;
+
+  // See if a region can be found by matching section flags.
+  for (auto &MRI : Opt.MemoryRegions) {
+    MemoryRegion &MR = MRI.second;
+    if ((MR.Flags & Sec->Flags) != 0 && (MR.NotFlags & Sec->Flags) == 0)
+      return &MR;
+  }
+
+  // Otherwise, no suitable region was found.
+  if (Sec->Flags & SHF_ALLOC)
+    error("no memory region specified for section '" + Sec->Name + "'");
+  return nullptr;
+}
+
 // This function assigns offsets to input sections and an output section
 // for a single sections command (e.g. ".text { *(.text); }").
 template <class ELFT>
@@ -518,7 +567,13 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
       findSections<ELFT>(Cmd->Name, *OutputSections);
   if (Sections.empty())
     return;
-  switchTo(Sections[0]);
+
+  OutputSectionBase *Sec = Sections[0];
+  // Try and find an appropriate memory region to assign offsets in.
+  CurMemRegion = findMemoryRegion(Cmd, Sec);
+  if (CurMemRegion)
+    Dot = CurMemRegion->Offset;
+  switchTo(Sec);
 
   // Find the last section output location. We will output orphan sections
   // there so that end symbols point to the correct location.
@@ -961,6 +1016,8 @@ private:
   void readExtern();
   void readGroup();
   void readInclude();
+  void readMemory();
+  std::pair<uint32_t, uint32_t> readMemoryAttributes();
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
@@ -1058,6 +1115,8 @@ void ScriptParser::readLinkerScript() {
       readGroup();
     } else if (Tok == "INCLUDE") {
       readInclude();
+    } else if (Tok == "MEMORY") {
+      readMemory();
     } else if (Tok == "OUTPUT") {
       readOutput();
     } else if (Tok == "OUTPUT_ARCH") {
@@ -1453,6 +1512,10 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
     }
   }
+
+  if (consume(">"))
+    Cmd->MemoryRegionName = next();
+
   Cmd->Phdrs = readOutputSectionPhdrs();
 
   if (consume("="))
@@ -1935,6 +1998,82 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   expect("}");
   expect(";");
   return Ret;
+}
+
+// Parse the MEMORY command As specified in:
+// https://sourceware.org/binutils/docs/ld/MEMORY.html#MEMORY
+void ScriptParser::readMemory() {
+  expect("{");
+  while (!Error && !consume("}")) {
+    StringRef Name = next();
+    uint32_t Flags = 0;
+    uint32_t NotFlags = 0;
+    if (consume("(")) {
+      std::tie(Flags, NotFlags) = readMemoryAttributes();
+      expect(")");
+    }
+    expect(":");
+
+    // Parse the ORIGIN.
+    if (!(consume("ORIGIN") || consume("org") || consume("o"))) {
+      setError("expected one of: ORIGIN, org, or o");
+      return;
+    }
+    expect("=");
+    uint64_t Origin;
+    // TODO: Fully support constant expressions.
+    if (!readInteger(next(), Origin)) {
+      setError("nonconstant expression for origin");
+      return;
+    }
+    expect(",");
+
+    // Parse the LENGTH.
+    if (!(consume("LENGTH") || consume("len") || consume("l"))) {
+      setError("expected one of: LENGTH, len, or l");
+      return;
+    }
+    expect("=");
+    uint64_t Length;
+    // TODO: Fully support constant expressions.
+    if (!readInteger(next(), Length)) {
+      setError("nonconstant expression for length");
+      return;
+    }
+    // Add the memory region to the region map (if it doesn't already exist).
+    auto It = Opt.MemoryRegions.find(Name);
+    if (It != Opt.MemoryRegions.end())
+      setError("region '" + Name + "' already defined");
+    else
+      Opt.MemoryRegions[Name] = {Name, Origin, Length, Origin, Flags, NotFlags};
+  }
+}
+
+// This function parses the attributes used to match against section
+// flags when placing output sections in a memory region. These flags
+// are only used when an explicit memory region name is not used.
+std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
+  uint32_t Flags = 0;
+  uint32_t NotFlags = 0;
+  bool Invert = false;
+  for (char C : next()) {
+    uint32_t Flag = 0;
+    if (C == '!')
+      Invert = !Invert;
+    else if (tolower(C) == 'w')
+      Flag = SHF_WRITE;
+    else if (tolower(C) == 'x')
+      Flag = SHF_EXECINSTR;
+    else if (tolower(C) == 'a')
+      Flag = SHF_ALLOC;
+    else if (tolower(C) != 'r')
+      setError("invalid memory region attribute");
+    if (Invert)
+      NotFlags |= Flag;
+    else
+      Flags |= Flag;
+  }
+  return {Flags, NotFlags};
 }
 
 void elf::readLinkerScript(MemoryBufferRef MB) {

@@ -58,7 +58,9 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -143,6 +145,17 @@ static cl::opt<bool> NoPGOWarnMismatchComdat("no-pgo-warn-mismatch-comdat",
 // Command line option to enable/disable select instruction instrumentation.
 static cl::opt<bool> PGOInstrSelect("pgo-instr-select", cl::init(true),
                                     cl::Hidden);
+
+// Command line option to specify the name of the function for CFG dump
+static cl::opt<std::string>
+    PGOViewFunction("pgo-view-function", cl::Hidden,
+                    cl::desc("The option to specify "
+                             "the name of the function "
+                             "whose CFG will be displayed."));
+
+// Command line option to turn on CFG dot dump after profile annotation.
+extern cl::opt<bool> PGOViewCounts;
+
 namespace {
 
 /// The select instruction visitor plays three roles specified
@@ -1202,6 +1215,18 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
+#ifndef NDEBUG
+    if (PGOViewCounts &&
+        (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
+      LoopInfo LI{DominatorTree(F)};
+      std::unique_ptr<BranchProbabilityInfo> NewBPI =
+          llvm::make_unique<BranchProbabilityInfo>(F, LI);
+      std::unique_ptr<BlockFrequencyInfo> NewBFI =
+          llvm::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
+
+      NewBFI->view();
+    }
+#endif
   }
   M.setProfileSummary(PGOReader->getSummary().getMD(M.getContext()));
   // Set function hotness attribute from the profile.

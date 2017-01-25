@@ -1177,7 +1177,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "        Values:\n";
 
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
-  EXPECT_TRUE((bool)ErrOrSections);
+  ASSERT_TRUE((bool)ErrOrSections);
 
   auto &DebugSections = *ErrOrSections;
 

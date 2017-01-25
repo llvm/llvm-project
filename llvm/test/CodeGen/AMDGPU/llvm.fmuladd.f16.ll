@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mattr=-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SI-FLUSH %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
-; RUN: llc -march=amdgcn -mattr=+fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SI-DENORM %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
+; RUN: llc -march=amdgcn -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SI-FLUSH %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
+; RUN: llc -march=amdgcn -mattr=+fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SI-DENORM %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
 
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c)
 declare <2 x half> @llvm.fmuladd.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)

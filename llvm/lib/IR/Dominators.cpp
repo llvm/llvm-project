@@ -29,9 +29,9 @@ using namespace llvm;
 
 // Always verify dominfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
-static bool VerifyDomInfo = true;
+bool llvm::VerifyDomInfo = true;
 #else
-static bool VerifyDomInfo = false;
+bool llvm::VerifyDomInfo = false;
 #endif
 static cl::opt<bool,true>
 VerifyDomInfoX("verify-dom-info", cl::location(VerifyDomInfo),

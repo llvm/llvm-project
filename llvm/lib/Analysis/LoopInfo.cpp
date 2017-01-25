@@ -40,9 +40,9 @@ template class llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
-static bool VerifyLoopInfo = true;
+bool llvm::VerifyLoopInfo = true;
 #else
-static bool VerifyLoopInfo = false;
+bool llvm::VerifyLoopInfo = false;
 #endif
 static cl::opt<bool,true>
 VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),

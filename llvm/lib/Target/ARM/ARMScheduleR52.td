@@ -86,10 +86,43 @@ def : WriteRes<WriteBrTbl, [R52UnitALU]> { let Latency = 0; }
 
 // Misc
 def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
-def : WriteRes<WriteCvtFP, [R52UnitALU]> { let Latency = 3; }
 
+// Integer pipeline by-passes
 def : ReadAdvance<ReadALU, 1>;   // Operand needed in EX1 stage
 def : ReadAdvance<ReadALUsr, 0>; // Shift operands needed in ISS
+
+
+// Floating-point. Map target-defined SchedReadWrites to subtarget
+def : WriteRes<WriteFPMUL32, [R52UnitFPMUL]> { let Latency = 6; }
+
+def : WriteRes<WriteFPMUL64, [R52UnitFPMUL, R52UnitFPMUL]> {
+  let Latency = 6;
+}
+
+def : WriteRes<WriteFPMAC32, [R52UnitFPMUL, R52UnitFPALU]> {
+  let Latency = 11;     // as it is internally two insns (MUL then ADD)
+}
+
+def : WriteRes<WriteFPMAC64, [R52UnitFPMUL, R52UnitFPMUL,
+                              R52UnitFPALU, R52UnitFPALU]> {
+  let Latency = 11;
+}
+
+def : WriteRes<WriteFPDIV32, [R52UnitDiv]> {
+  let Latency = 7;          // FP div takes fixed #cycles
+  let ResourceCycles = [7]; // is not pipelined
+}
+
+def : WriteRes<WriteFPDIV64, [R52UnitDiv]> {
+  let Latency = 17;
+  let ResourceCycles = [17];
+}
+
+def : WriteRes<WriteFPSQRT32, [R52UnitDiv]> { let Latency = 7; }
+def : WriteRes<WriteFPSQRT64, [R52UnitDiv]> { let Latency = 17; }
+
+def : ReadAdvance<ReadFPMUL, 1>; // mul operand read in F1
+def : ReadAdvance<ReadFPMAC, 1>; // fp-mac operand read in F1
 
 
 //===----------------------------------------------------------------------===//
@@ -147,19 +180,17 @@ def R52Write2FPMAC_F5  : SchedWriteRes<[R52UnitFPMUL, R52UnitFPMUL,
 def R52WriteFPLd_F4    : SchedWriteRes<[R52UnitLd]> { let Latency = 5; }
 def R52WriteFPST_F4    : SchedWriteRes<[R52UnitLd]> { let Latency = 5; }
 
-def R52WriteFPDIV_SP   : SchedWriteRes<[R52UnitFPDIV]> {
-  let Latency = 7;          // FP div takes fixed #cycles
-  let ResourceCycles = [7]; // is not pipelined
- }
-def R52WriteFPDIV_DP   : SchedWriteRes<[R52UnitFPDIV]> {
-  let Latency = 17;
-  let ResourceCycles = [17];
-}
-
+//===----------------------------------------------------------------------===//
+// Floating-point. Map target defined SchedReadWrites to processor specific ones
+//
+def : SchedAlias<WriteFPCVT,   R52WriteFPALU_F5>;
+def : SchedAlias<WriteFPMOV, R52WriteFPALU_F3>;
+def : SchedAlias<WriteFPALU32, R52WriteFPALU_F5>;
+def : SchedAlias<WriteFPALU64, R52WriteFPALU_F5>;
 
 //===----------------------------------------------------------------------===//
-// Subtarget-specific - map operands to SchedReadWrites
-
+// Subtarget-specific overrides. Map opcodes to list of SchedReadWrites types.
+//
 def : InstRW<[WriteALU], (instrs COPY)>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS],
@@ -492,12 +523,6 @@ def : InstRW<[R52Write2FPALU_F3, R52Read_F1, R52Read_F1], (instregex "(VACGE|VAC
 def : InstRW<[R52WriteFPALU_F5, R52Read_F1, R52Read_F1], (instregex "(VADD|VSUB)(D|S|H|fd|hd)")>;
 def : InstRW<[R52Write2FPALU_F5, R52Read_F1, R52Read_F1], (instregex "(VADD|VSUB)(fq|hq)")>;
 
-def : InstRW<[R52WriteFPDIV_SP, R52Read_F0, R52Read_F0], (instregex "VDIV(S|H)")>;
-def : InstRW<[R52WriteFPDIV_DP, R52Read_F0, R52Read_F0], (instregex "VDIVD")>;
-
-def : InstRW<[R52WriteFPMAC_F5, R52Read_F1, R52Read_F1, R52Read_F1],
-                                          (instregex "(VFMA|VFMS|VFNMA|VFNMS)(D|H|S)")>;
-
 def : InstRW<[R52WriteFPLd_F4, R52Read_ISS, R52Read_F1], (instregex "VLDR")>;
 def : InstRW<[R52WriteFPST_F4, R52Read_ISS, R52Read_F1], (instregex "VSTR")>;
 
@@ -777,9 +802,8 @@ def : InstRW<[R52Write2FPALU_F4, R52Read_F2, R52Read_F2], (instregex "(VHADD|VHS
 
 def : InstRW<[R52WriteVLDM], (instregex "VLDM[SD](IA|DB)$")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VMAX", "VMIN", "VPMAX", "VPMIN")>;
-def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VMOV", "VORR", "VORN", "VREV")>;
+def : InstRW<[R52WriteFPALU_F3, R52Read_F1, R52Read_F1], (instregex "VORR", "VORN", "VREV")>;
 def : InstRW<[R52WriteNoRSRC_WRI], (instregex "VMRS")>;
-def : InstRW<[R52WriteFPMUL_F5, R52Read_F1, R52Read_F1, R52Read_F1], (instregex "VMUL", "VNMUL", "VMLA")>;
 def : InstRW<[R52WriteFPALU_F5, R52Read_F1], (instregex "VNEG")>;
 def : InstRW<[R52WriteFPALU_F4, R52Read_F1, R52Read_F1], (instregex "VPADDi")>;
 def : InstRW<[R52Write2FPALU_F4, R52Read_F1, R52Read_F1], (instregex "VPADAL", "VPADDL")>;

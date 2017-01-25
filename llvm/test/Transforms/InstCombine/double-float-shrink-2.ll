@@ -5,21 +5,21 @@
 ; RUN: opt < %s -instcombine -S -mtriple "x86_64-pc-mingw32" | FileCheck -check-prefix=DO-SIMPLIFY %s
 ; RUN: opt < %s -instcombine -S -mtriple "sparc-sun-solaris" | FileCheck -check-prefix=DO-SIMPLIFY %s
 
-; DO-SIMPLIFY: call float @floorf(
-; DO-SIMPLIFY: call float @ceilf(
-; DO-SIMPLIFY: call float @roundf(
-; DO-SIMPLIFY: call float @nearbyintf(
-; DO-SIMPLIFY: call float @truncf(
+; DO-SIMPLIFY: call float @llvm.floor.f32(
+; DO-SIMPLIFY: call float @llvm.ceil.f32(
+; DO-SIMPLIFY: call float @llvm.round.f32(
+; DO-SIMPLIFY: call float @llvm.nearbyint.f32(
+; DO-SIMPLIFY: call float @llvm.trunc.f32(
 ; DO-SIMPLIFY: call float @llvm.fabs.f32(
 ; DO-SIMPLIFY: call fast float @llvm.fabs.f32(
 
-; C89-SIMPLIFY: call float @floorf(
-; C89-SIMPLIFY: call float @ceilf(
+; C89-SIMPLIFY: call float @llvm.floor.f32(
+; C89-SIMPLIFY: call float @llvm.ceil.f32(
 ; C89-SIMPLIFY: call double @round(
 ; C89-SIMPLIFY: call double @nearbyint(
 
-; DONT-SIMPLIFY: call double @floor(
-; DONT-SIMPLIFY: call double @ceil(
+; DONT-SIMPLIFY: call float @llvm.floor.f32(
+; DONT-SIMPLIFY: call float @llvm.ceil.f32(
 ; DONT-SIMPLIFY: call double @round(
 ; DONT-SIMPLIFY: call double @nearbyint(
 ; DONT-SIMPLIFY: call double @trunc(

@@ -2387,7 +2387,7 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
-  LibFunc::Func F = LibFunc::cxa_atexit;
+  LibFunc F = LibFunc_cxa_atexit;
   if (!TLI->has(F))
     return nullptr;
 
@@ -2396,7 +2396,7 @@ static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
     return nullptr;
 
   // Make sure that the function has the correct prototype.
-  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc::cxa_atexit)
+  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
     return nullptr;
 
   return Fn;

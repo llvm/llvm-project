@@ -80,7 +80,6 @@ if( NOT CLANG_BUILT_STANDALONE )
     llc
     llvm-bcanalyzer
     llvm-dis
-    llvm-modextract
     llvm-nm
     llvm-objdump
     llvm-profdata

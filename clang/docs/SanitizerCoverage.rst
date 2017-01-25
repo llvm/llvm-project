@@ -227,7 +227,8 @@ easily used for bitset-based corpus distillation.
 Caller-callee coverage
 ======================
 
-(Experimental!)
+**Deprecated, don't use**
+
 Every indirect function call is instrumented with a run-time function call that
 captures caller and callee.  At the shutdown time the process dumps a separate
 file called ``caller-callee.PID.sancov`` which contains caller/callee pairs as
@@ -252,6 +253,8 @@ Current limitations:
 
 Coverage counters
 =================
+
+**Deprecated, don't use**
 
 This experimental feature is inspired by
 `AFL <http://lcamtuf.coredump.cx/afl/technical_details.txt>`__'s coverage
@@ -296,6 +299,9 @@ These counters may also be used for in-process coverage-guided fuzzers. See
 
 Tracing basic blocks
 ====================
+
+**Deprecated, don't use**
+
 Experimental support for basic block (or edge) tracing.
 With ``-fsanitize-coverage=trace-bb`` the compiler will insert
 ``__sanitizer_cov_trace_basic_block(s32 *id)`` before every function, basic block, or edge
@@ -319,6 +325,9 @@ Basic block tracing is currently supported only for single-threaded applications
 
 Tracing PCs
 ===========
+
+**Deprecated, don't use**
+
 *Experimental* feature similar to tracing basic blocks, but with a different API.
 With ``-fsanitize-coverage=trace-pc`` the compiler will insert
 ``__sanitizer_cov_trace_pc()`` on every edge.
@@ -331,16 +340,13 @@ and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
 
 Tracing PCs with guards
 =======================
-Another *experimental* feature that tries to combine the functionality of `trace-pc`,
-`8bit-counters` and boolean coverage.
 
 With ``-fsanitize-coverage=trace-pc-guard`` the compiler will insert the following code
 on every edge:
 
 .. code-block:: none
 
-   if (guard_variable)
-     __sanitizer_cov_trace_pc_guard(&guard_variable)
+   __sanitizer_cov_trace_pc_guard(&guard_variable)
 
 Every edge will have its own `guard_variable` (uint32_t).
 
@@ -352,7 +358,7 @@ The compler will also insert a module constructor that will call
    // This function may be called multiple times with the same values of start/stop.
    __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop);
 
-Similarly to `trace-pc,indirect-calls`, with `trace-pc-guards,indirect-calls`
+With `trace-pc-guards,indirect-calls`
 ``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
 
 The functions `__sanitizer_cov_trace_pc_*` should be defined by the user.

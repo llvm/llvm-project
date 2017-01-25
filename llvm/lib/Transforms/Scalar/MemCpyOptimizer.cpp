@@ -1274,7 +1274,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
 bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
   AliasAnalysis &AA = LookupAliasAnalysis();
 
-  if (!TLI->has(LibFunc::memmove))
+  if (!TLI->has(LibFunc_memmove))
     return false;
 
   // See if the pointers alias.
@@ -1449,7 +1449,7 @@ bool MemCpyOptPass::runImpl(
   // If we don't have at least memset and memcpy, there is little point of doing
   // anything here.  These are required by a freestanding implementation, so if
   // even they are disabled, there is no point in trying hard.
-  if (!TLI->has(LibFunc::memset) || !TLI->has(LibFunc::memcpy))
+  if (!TLI->has(LibFunc_memset) || !TLI->has(LibFunc_memcpy))
     return false;
 
   while (true) {

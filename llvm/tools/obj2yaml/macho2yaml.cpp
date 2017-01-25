@@ -163,6 +163,23 @@ const char *MachODumper::processLoadCommandData<MachO::rpath_command>(
   return readString<MachO::rpath_command>(LC, LoadCmd);
 }
 
+template <>
+const char *MachODumper::processLoadCommandData<MachO::build_version_command>(
+    MachOYAML::LoadCommand &LC,
+    const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
+  auto Start = LoadCmd.Ptr + sizeof(MachO::build_version_command);
+  auto NTools = LC.Data.build_version_command_data.ntools;
+  for (unsigned i = 0; i < NTools; ++i) {
+    auto Curr = Start + i * sizeof(MachO::build_tool_version);
+    MachO::build_tool_version BV;
+    memcpy((void *)&BV, Curr, sizeof(MachO::build_tool_version));
+    if (Obj.isLittleEndian() != sys::IsLittleEndianHost)
+      MachO::swapStruct(BV);
+    LC.Tools.push_back(BV);
+  }
+  return Start + NTools * sizeof(MachO::build_tool_version);
+}
+
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = make_unique<MachOYAML::Object>();
   Y->IsLittleEndian = Obj.isLittleEndian();

@@ -214,9 +214,12 @@ void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
   uint8_t B2[Word::kMaxSize];
   // Copy the data into locals in this non-msan-instrumented function
   // to avoid msan complaining further.
+  size_t Hash = 0;  // Compute some simple hash of both strings.
   for (size_t i = 0; i < Len; i++) {
     B1[i] = A1[i];
     B2[i] = A2[i];
+    size_t T = B1[i];
+    Hash ^= (T << 8) | B2[i];
   }
   size_t I = 0;
   for (; I < Len; I++)
@@ -225,7 +228,7 @@ void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
   size_t PC = reinterpret_cast<size_t>(caller_pc);
   size_t Idx = (PC & 4095) | (I << 12);
   TPC.HandleValueProfile(Idx);
-  TORCW.Insert(Idx, Word(B1, Len), Word(B2, Len));
+  TORCW.Insert(Idx ^ Hash, Word(B1, Len), Word(B2, Len));
 }
 
 template <class T>

@@ -83,6 +83,7 @@ set(Tests
   CounterTest
   CustomCrossOverTest
   CustomMutatorTest
+  CxxStringEqTest
   DivTest
   EmptyTest
   EquivalenceATest

@@ -257,6 +257,16 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   return std::error_code();
 }
 
+std::error_code set_current_path(const Twine &path) {
+  SmallString<128> path_storage;
+  StringRef p = path.toNullTerminatedStringRef(path_storage);
+
+  if (::chdir(p.begin()) == -1)
+    return std::error_code(errno, std::generic_category());
+
+  return std::error_code();
+}
+
 std::error_code create_directory(const Twine &path, bool IgnoreExisting,
                                  perms Perms) {
   SmallString<128> path_storage;
@@ -577,10 +587,19 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  while ((ResultFD = open(P.begin(), O_RDONLY | O_CLOEXEC)) < 0) {
+  int OpenFlags = O_RDONLY;
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
+  while ((ResultFD = open(P.begin(), OpenFlags)) < 0) {
     if (errno != EINTR)
       return std::error_code(errno, std::generic_category());
   }
+#ifndef O_CLOEXEC
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+#endif
   // Attempt to get the real name of the file, if the user asked
   if(!RealPath)
     return std::error_code();
@@ -614,7 +633,11 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
          "Cannot specify both 'excl' and 'append' file creation flags!");
 
-  int OpenFlags = O_CREAT | O_CLOEXEC;
+  int OpenFlags = O_CREAT;
+
+#ifdef O_CLOEXEC
+  OpenFlags |= O_CLOEXEC;
+#endif
 
   if (Flags & F_RW)
     OpenFlags |= O_RDWR;
@@ -635,6 +658,11 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
     if (errno != EINTR)
       return std::error_code(errno, std::generic_category());
   }
+#ifndef O_CLOEXEC
+  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+  (void)r;
+  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+#endif
   return std::error_code();
 }
 

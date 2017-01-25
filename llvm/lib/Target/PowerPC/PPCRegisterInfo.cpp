@@ -209,50 +209,38 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // The ZERO register is not really a register, but the representation of r0
   // when used in instructions that treat r0 as the constant 0.
-  Reserved.set(PPC::ZERO);
-  Reserved.set(PPC::ZERO8);
+  markSuperRegs(Reserved, PPC::ZERO);
 
   // The FP register is also not really a register, but is the representation
   // of the frame pointer register used by ISD::FRAMEADDR.
-  Reserved.set(PPC::FP);
-  Reserved.set(PPC::FP8);
+  markSuperRegs(Reserved, PPC::FP);
 
   // The BP register is also not really a register, but is the representation
   // of the base pointer register used by setjmp.
-  Reserved.set(PPC::BP);
-  Reserved.set(PPC::BP8);
+  markSuperRegs(Reserved, PPC::BP);
 
   // The counter registers must be reserved so that counter-based loops can
   // be correctly formed (and the mtctr instructions are not DCE'd).
-  Reserved.set(PPC::CTR);
-  Reserved.set(PPC::CTR8);
+  markSuperRegs(Reserved, PPC::CTR);
+  markSuperRegs(Reserved, PPC::CTR8);
 
-  Reserved.set(PPC::R1);
-  Reserved.set(PPC::LR);
-  Reserved.set(PPC::LR8);
-  Reserved.set(PPC::RM);
+  markSuperRegs(Reserved, PPC::R1);
+  markSuperRegs(Reserved, PPC::LR);
+  markSuperRegs(Reserved, PPC::LR8);
+  markSuperRegs(Reserved, PPC::RM);
 
   if (!Subtarget.isDarwinABI() || !Subtarget.hasAltivec())
-    Reserved.set(PPC::VRSAVE);
+    markSuperRegs(Reserved, PPC::VRSAVE);
 
   // The SVR4 ABI reserves r2 and r13
   if (Subtarget.isSVR4ABI()) {
-    Reserved.set(PPC::R2);  // System-reserved register
-    Reserved.set(PPC::R13); // Small Data Area pointer register
+    markSuperRegs(Reserved, PPC::R2);  // System-reserved register
+    markSuperRegs(Reserved, PPC::R13); // Small Data Area pointer register
   }
 
-  // On PPC64, r13 is the thread pointer. Never allocate this register.
   if (TM.isPPC64()) {
-    Reserved.set(PPC::R13);
-
-    Reserved.set(PPC::X1);
-    Reserved.set(PPC::X13);
-
-    if (TFI->needsFP(MF))
-      Reserved.set(PPC::X31);
-
-    if (hasBasePointer(MF))
-      Reserved.set(PPC::X30);
+    // On PPC64, r13 is the thread pointer. Never allocate this register.
+    markSuperRegs(Reserved, PPC::R13);
 
     // The 64-bit SVR4 ABI reserves r2 for the TOC pointer.
     if (Subtarget.isSVR4ABI()) {
@@ -262,33 +250,35 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       // inline asm block, then we can treat r2 has an ordinary callee-saved
       // register.
       const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-      if (FuncInfo->usesTOCBasePtr() || MF.hasInlineAsm())
-        Reserved.set(PPC::X2);
-      else
-        Reserved.reset(PPC::R2);
+      if (!FuncInfo->usesTOCBasePtr() && !MF.hasInlineAsm()) {
+        for (MCSuperRegIterator Super(PPC::R2, this, true); Super.isValid();
+             ++Super)
+          Reserved.reset(*Super);
+      }
     }
   }
 
   if (TFI->needsFP(MF))
-    Reserved.set(PPC::R31);
+    markSuperRegs(Reserved, PPC::R31);
 
   bool IsPositionIndependent = TM.isPositionIndependent();
   if (hasBasePointer(MF)) {
     if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
-      Reserved.set(PPC::R29);
+      markSuperRegs(Reserved, PPC::R29);
     else
-      Reserved.set(PPC::R30);
+      markSuperRegs(Reserved, PPC::R30);
   }
 
   if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
-    Reserved.set(PPC::R30);
+    markSuperRegs(Reserved, PPC::R30);
 
   // Reserve Altivec registers when Altivec is unavailable.
   if (!Subtarget.hasAltivec())
     for (TargetRegisterClass::iterator I = PPC::VRRCRegClass.begin(),
          IE = PPC::VRRCRegClass.end(); I != IE; ++I)
-      Reserved.set(*I);
+      markSuperRegs(Reserved, *I);
 
+  assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
 

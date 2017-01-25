@@ -366,7 +366,7 @@ namespace {
     struct ValueCacheEntryTy {
       ValueCacheEntryTy(Value *V, LazyValueInfoCache *P) : Handle(V, P) {}
       LVIValueHandle Handle;
-      SmallDenseMap<AssertingVH<BasicBlock>, LVILatticeVal, 4> BlockVals;
+      SmallDenseMap<PoisoningVH<BasicBlock>, LVILatticeVal, 4> BlockVals;
     };
 
     /// This is all of the cached information for all values,
@@ -375,13 +375,13 @@ namespace {
 
     /// This tracks, on a per-block basis, the set of values that are
     /// over-defined at the end of that block.
-    typedef DenseMap<AssertingVH<BasicBlock>, SmallPtrSet<Value *, 4>>
+    typedef DenseMap<PoisoningVH<BasicBlock>, SmallPtrSet<Value *, 4>>
         OverDefinedCacheTy;
     OverDefinedCacheTy OverDefinedCache;
 
     /// Keep track of all blocks that we have ever seen, so we
     /// don't spend time removing unused blocks from our caches.
-    DenseSet<AssertingVH<BasicBlock> > SeenBlocks;
+    DenseSet<PoisoningVH<BasicBlock> > SeenBlocks;
 
   public:
     void insertResult(Value *Val, BasicBlock *BB, const LVILatticeVal &Result) {
@@ -464,10 +464,10 @@ void LazyValueInfoCache::eraseValue(Value *V) {
     SmallPtrSetImpl<Value *> &ValueSet = I.second;
     ValueSet.erase(V);
     if (ValueSet.empty())
-      ToErase.push_back(I.first);
+      ToErase.push_back(&*I.first);
   }
   for (auto &BB : ToErase)
-    OverDefinedCache.erase(BB);
+    OverDefinedCache.erase(&*BB);
 
   ValueCache.erase(V);
 }
@@ -480,7 +480,7 @@ void LVIValueHandle::deleted() {
 
 void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
   // Shortcut if we have never seen this block.
-  DenseSet<AssertingVH<BasicBlock> >::iterator I = SeenBlocks.find(BB);
+  DenseSet<PoisoningVH<BasicBlock> >::iterator I = SeenBlocks.find(BB);
   if (I == SeenBlocks.end())
     return;
   SeenBlocks.erase(I);

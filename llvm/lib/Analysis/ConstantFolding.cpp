@@ -1639,74 +1639,74 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
 
       switch (Name[0]) {
       case 'a':
-        if ((Name == "acos" && TLI->has(LibFunc::acos)) ||
-            (Name == "acosf" && TLI->has(LibFunc::acosf)))
+        if ((Name == "acos" && TLI->has(LibFunc_acos)) ||
+            (Name == "acosf" && TLI->has(LibFunc_acosf)))
           return ConstantFoldFP(acos, V, Ty);
-        else if ((Name == "asin" && TLI->has(LibFunc::asin)) ||
-                 (Name == "asinf" && TLI->has(LibFunc::asinf)))
+        else if ((Name == "asin" && TLI->has(LibFunc_asin)) ||
+                 (Name == "asinf" && TLI->has(LibFunc_asinf)))
           return ConstantFoldFP(asin, V, Ty);
-        else if ((Name == "atan" && TLI->has(LibFunc::atan)) ||
-                 (Name == "atanf" && TLI->has(LibFunc::atanf)))
+        else if ((Name == "atan" && TLI->has(LibFunc_atan)) ||
+                 (Name == "atanf" && TLI->has(LibFunc_atanf)))
           return ConstantFoldFP(atan, V, Ty);
         break;
       case 'c':
-        if ((Name == "ceil" && TLI->has(LibFunc::ceil)) ||
-            (Name == "ceilf" && TLI->has(LibFunc::ceilf)))
+        if ((Name == "ceil" && TLI->has(LibFunc_ceil)) ||
+            (Name == "ceilf" && TLI->has(LibFunc_ceilf)))
           return ConstantFoldFP(ceil, V, Ty);
-        else if ((Name == "cos" && TLI->has(LibFunc::cos)) ||
-                 (Name == "cosf" && TLI->has(LibFunc::cosf)))
+        else if ((Name == "cos" && TLI->has(LibFunc_cos)) ||
+                 (Name == "cosf" && TLI->has(LibFunc_cosf)))
           return ConstantFoldFP(cos, V, Ty);
-        else if ((Name == "cosh" && TLI->has(LibFunc::cosh)) ||
-                 (Name == "coshf" && TLI->has(LibFunc::coshf)))
+        else if ((Name == "cosh" && TLI->has(LibFunc_cosh)) ||
+                 (Name == "coshf" && TLI->has(LibFunc_coshf)))
           return ConstantFoldFP(cosh, V, Ty);
         break;
       case 'e':
-        if ((Name == "exp" && TLI->has(LibFunc::exp)) ||
-            (Name == "expf" && TLI->has(LibFunc::expf)))
+        if ((Name == "exp" && TLI->has(LibFunc_exp)) ||
+            (Name == "expf" && TLI->has(LibFunc_expf)))
           return ConstantFoldFP(exp, V, Ty);
-        if ((Name == "exp2" && TLI->has(LibFunc::exp2)) ||
-            (Name == "exp2f" && TLI->has(LibFunc::exp2f)))
+        if ((Name == "exp2" && TLI->has(LibFunc_exp2)) ||
+            (Name == "exp2f" && TLI->has(LibFunc_exp2f)))
           // Constant fold exp2(x) as pow(2,x) in case the host doesn't have a
           // C99 library.
           return ConstantFoldBinaryFP(pow, 2.0, V, Ty);
         break;
       case 'f':
-        if ((Name == "fabs" && TLI->has(LibFunc::fabs)) ||
-            (Name == "fabsf" && TLI->has(LibFunc::fabsf)))
+        if ((Name == "fabs" && TLI->has(LibFunc_fabs)) ||
+            (Name == "fabsf" && TLI->has(LibFunc_fabsf)))
           return ConstantFoldFP(fabs, V, Ty);
-        else if ((Name == "floor" && TLI->has(LibFunc::floor)) ||
-                 (Name == "floorf" && TLI->has(LibFunc::floorf)))
+        else if ((Name == "floor" && TLI->has(LibFunc_floor)) ||
+                 (Name == "floorf" && TLI->has(LibFunc_floorf)))
           return ConstantFoldFP(floor, V, Ty);
         break;
       case 'l':
-        if ((Name == "log" && V > 0 && TLI->has(LibFunc::log)) ||
-            (Name == "logf" && V > 0 && TLI->has(LibFunc::logf)))
+        if ((Name == "log" && V > 0 && TLI->has(LibFunc_log)) ||
+            (Name == "logf" && V > 0 && TLI->has(LibFunc_logf)))
           return ConstantFoldFP(log, V, Ty);
-        else if ((Name == "log10" && V > 0 && TLI->has(LibFunc::log10)) ||
-                 (Name == "log10f" && V > 0 && TLI->has(LibFunc::log10f)))
+        else if ((Name == "log10" && V > 0 && TLI->has(LibFunc_log10)) ||
+                 (Name == "log10f" && V > 0 && TLI->has(LibFunc_log10f)))
           return ConstantFoldFP(log10, V, Ty);
         break;
       case 'r':
-        if ((Name == "round" && TLI->has(LibFunc::round)) ||
-            (Name == "roundf" && TLI->has(LibFunc::roundf)))
+        if ((Name == "round" && TLI->has(LibFunc_round)) ||
+            (Name == "roundf" && TLI->has(LibFunc_roundf)))
           return ConstantFoldFP(round, V, Ty);
       case 's':
-        if ((Name == "sin" && TLI->has(LibFunc::sin)) ||
-            (Name == "sinf" && TLI->has(LibFunc::sinf)))
+        if ((Name == "sin" && TLI->has(LibFunc_sin)) ||
+            (Name == "sinf" && TLI->has(LibFunc_sinf)))
           return ConstantFoldFP(sin, V, Ty);
-        else if ((Name == "sinh" && TLI->has(LibFunc::sinh)) ||
-                 (Name == "sinhf" && TLI->has(LibFunc::sinhf)))
+        else if ((Name == "sinh" && TLI->has(LibFunc_sinh)) ||
+                 (Name == "sinhf" && TLI->has(LibFunc_sinhf)))
           return ConstantFoldFP(sinh, V, Ty);
-        else if ((Name == "sqrt" && V >= 0 && TLI->has(LibFunc::sqrt)) ||
-                 (Name == "sqrtf" && V >= 0 && TLI->has(LibFunc::sqrtf)))
+        else if ((Name == "sqrt" && V >= 0 && TLI->has(LibFunc_sqrt)) ||
+                 (Name == "sqrtf" && V >= 0 && TLI->has(LibFunc_sqrtf)))
           return ConstantFoldFP(sqrt, V, Ty);
         break;
       case 't':
-        if ((Name == "tan" && TLI->has(LibFunc::tan)) ||
-            (Name == "tanf" && TLI->has(LibFunc::tanf)))
+        if ((Name == "tan" && TLI->has(LibFunc_tan)) ||
+            (Name == "tanf" && TLI->has(LibFunc_tanf)))
           return ConstantFoldFP(tan, V, Ty);
-        else if ((Name == "tanh" && TLI->has(LibFunc::tanh)) ||
-                 (Name == "tanhf" && TLI->has(LibFunc::tanhf)))
+        else if ((Name == "tanh" && TLI->has(LibFunc_tanh)) ||
+                 (Name == "tanhf" && TLI->has(LibFunc_tanhf)))
           return ConstantFoldFP(tanh, V, Ty);
         break;
       default:
@@ -1811,14 +1811,14 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
 
         if (!TLI)
           return nullptr;
-        if ((Name == "pow" && TLI->has(LibFunc::pow)) ||
-            (Name == "powf" && TLI->has(LibFunc::powf)))
+        if ((Name == "pow" && TLI->has(LibFunc_pow)) ||
+            (Name == "powf" && TLI->has(LibFunc_powf)))
           return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
-        if ((Name == "fmod" && TLI->has(LibFunc::fmod)) ||
-            (Name == "fmodf" && TLI->has(LibFunc::fmodf)))
+        if ((Name == "fmod" && TLI->has(LibFunc_fmod)) ||
+            (Name == "fmodf" && TLI->has(LibFunc_fmodf)))
           return ConstantFoldBinaryFP(fmod, Op1V, Op2V, Ty);
-        if ((Name == "atan2" && TLI->has(LibFunc::atan2)) ||
-            (Name == "atan2f" && TLI->has(LibFunc::atan2f)))
+        if ((Name == "atan2" && TLI->has(LibFunc_atan2)) ||
+            (Name == "atan2f" && TLI->has(LibFunc_atan2f)))
           return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
       } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
         if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())
@@ -2011,7 +2011,7 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
   if (!F)
     return false;
 
-  LibFunc::Func Func;
+  LibFunc Func;
   if (!TLI || !TLI->getLibFunc(*F, Func))
     return false;
 
@@ -2019,20 +2019,20 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
     if (ConstantFP *OpC = dyn_cast<ConstantFP>(CS.getArgOperand(0))) {
       const APFloat &Op = OpC->getValueAPF();
       switch (Func) {
-      case LibFunc::logl:
-      case LibFunc::log:
-      case LibFunc::logf:
-      case LibFunc::log2l:
-      case LibFunc::log2:
-      case LibFunc::log2f:
-      case LibFunc::log10l:
-      case LibFunc::log10:
-      case LibFunc::log10f:
+      case LibFunc_logl:
+      case LibFunc_log:
+      case LibFunc_logf:
+      case LibFunc_log2l:
+      case LibFunc_log2:
+      case LibFunc_log2f:
+      case LibFunc_log10l:
+      case LibFunc_log10:
+      case LibFunc_log10f:
         return Op.isNaN() || (!Op.isZero() && !Op.isNegative());
 
-      case LibFunc::expl:
-      case LibFunc::exp:
-      case LibFunc::expf:
+      case LibFunc_expl:
+      case LibFunc_exp:
+      case LibFunc_expf:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
           return Op.compare(APFloat(-745.0)) != APFloat::cmpLessThan &&
@@ -2042,9 +2042,9 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
                  Op.compare(APFloat(88.0f)) != APFloat::cmpGreaterThan;
         break;
 
-      case LibFunc::exp2l:
-      case LibFunc::exp2:
-      case LibFunc::exp2f:
+      case LibFunc_exp2l:
+      case LibFunc_exp2:
+      case LibFunc_exp2f:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
           return Op.compare(APFloat(-1074.0)) != APFloat::cmpLessThan &&
@@ -2054,17 +2054,17 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
                  Op.compare(APFloat(127.0f)) != APFloat::cmpGreaterThan;
         break;
 
-      case LibFunc::sinl:
-      case LibFunc::sin:
-      case LibFunc::sinf:
-      case LibFunc::cosl:
-      case LibFunc::cos:
-      case LibFunc::cosf:
+      case LibFunc_sinl:
+      case LibFunc_sin:
+      case LibFunc_sinf:
+      case LibFunc_cosl:
+      case LibFunc_cos:
+      case LibFunc_cosf:
         return !Op.isInfinity();
 
-      case LibFunc::tanl:
-      case LibFunc::tan:
-      case LibFunc::tanf: {
+      case LibFunc_tanl:
+      case LibFunc_tan:
+      case LibFunc_tanf: {
         // FIXME: Stop using the host math library.
         // FIXME: The computation isn't done in the right precision.
         Type *Ty = OpC->getType();
@@ -2075,23 +2075,23 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
         break;
       }
 
-      case LibFunc::asinl:
-      case LibFunc::asin:
-      case LibFunc::asinf:
-      case LibFunc::acosl:
-      case LibFunc::acos:
-      case LibFunc::acosf:
+      case LibFunc_asinl:
+      case LibFunc_asin:
+      case LibFunc_asinf:
+      case LibFunc_acosl:
+      case LibFunc_acos:
+      case LibFunc_acosf:
         return Op.compare(APFloat(Op.getSemantics(), "-1")) !=
                    APFloat::cmpLessThan &&
                Op.compare(APFloat(Op.getSemantics(), "1")) !=
                    APFloat::cmpGreaterThan;
 
-      case LibFunc::sinh:
-      case LibFunc::cosh:
-      case LibFunc::sinhf:
-      case LibFunc::coshf:
-      case LibFunc::sinhl:
-      case LibFunc::coshl:
+      case LibFunc_sinh:
+      case LibFunc_cosh:
+      case LibFunc_sinhf:
+      case LibFunc_coshf:
+      case LibFunc_sinhl:
+      case LibFunc_coshl:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
           return Op.compare(APFloat(-710.0)) != APFloat::cmpLessThan &&
@@ -2101,9 +2101,9 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
                  Op.compare(APFloat(89.0f)) != APFloat::cmpGreaterThan;
         break;
 
-      case LibFunc::sqrtl:
-      case LibFunc::sqrt:
-      case LibFunc::sqrtf:
+      case LibFunc_sqrtl:
+      case LibFunc_sqrt:
+      case LibFunc_sqrtf:
         return Op.isNaN() || Op.isZero() || !Op.isNegative();
 
       // FIXME: Add more functions: sqrt_finite, atanh, expm1, log1p,
@@ -2122,9 +2122,9 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
       const APFloat &Op1 = Op1C->getValueAPF();
 
       switch (Func) {
-      case LibFunc::powl:
-      case LibFunc::pow:
-      case LibFunc::powf: {
+      case LibFunc_powl:
+      case LibFunc_pow:
+      case LibFunc_powf: {
         // FIXME: Stop using the host math library.
         // FIXME: The computation isn't done in the right precision.
         Type *Ty = Op0C->getType();
@@ -2138,9 +2138,9 @@ bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
         break;
       }
 
-      case LibFunc::fmodl:
-      case LibFunc::fmod:
-      case LibFunc::fmodf:
+      case LibFunc_fmodl:
+      case LibFunc_fmod:
+      case LibFunc_fmodf:
         return Op0.isNaN() || Op1.isNaN() ||
                (!Op0.isInfinity() && !Op1.isZero());
 

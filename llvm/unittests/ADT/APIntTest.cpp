@@ -158,6 +158,36 @@ TEST(APIntTest, i1) {
   EXPECT_EQ(two, one - neg_one);
   EXPECT_EQ(zero, one - one);
 
+  // And
+  EXPECT_EQ(zero, zero & zero);
+  EXPECT_EQ(zero, one & zero);
+  EXPECT_EQ(zero, zero & one);
+  EXPECT_EQ(one, one & one);
+  EXPECT_EQ(zero, zero & zero);
+  EXPECT_EQ(zero, neg_one & zero);
+  EXPECT_EQ(zero, zero & neg_one);
+  EXPECT_EQ(neg_one, neg_one & neg_one);
+
+  // Or
+  EXPECT_EQ(zero, zero | zero);
+  EXPECT_EQ(one, one | zero);
+  EXPECT_EQ(one, zero | one);
+  EXPECT_EQ(one, one | one);
+  EXPECT_EQ(zero, zero | zero);
+  EXPECT_EQ(neg_one, neg_one | zero);
+  EXPECT_EQ(neg_one, zero | neg_one);
+  EXPECT_EQ(neg_one, neg_one | neg_one);
+
+  // Xor
+  EXPECT_EQ(zero, zero ^ zero);
+  EXPECT_EQ(one, one ^ zero);
+  EXPECT_EQ(one, zero ^ one);
+  EXPECT_EQ(zero, one ^ one);
+  EXPECT_EQ(zero, zero ^ zero);
+  EXPECT_EQ(neg_one, neg_one ^ zero);
+  EXPECT_EQ(neg_one, zero ^ neg_one);
+  EXPECT_EQ(zero, neg_one ^ neg_one);
+
   // Shifts.
   EXPECT_EQ(zero, one << one);
   EXPECT_EQ(one, one << zero);

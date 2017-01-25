@@ -73,6 +73,22 @@ TYPED_TEST(DenseSetTest, InitializerList) {
   EXPECT_EQ(0u, set.count(3));
 }
 
+TYPED_TEST(DenseSetTest, ConstIteratorComparison) {
+  TypeParam set({1});
+  const TypeParam &cset = set;
+  EXPECT_EQ(set.begin(), cset.begin());
+  EXPECT_EQ(set.end(), cset.end());
+  EXPECT_NE(set.end(), cset.begin());
+  EXPECT_NE(set.begin(), cset.end());
+}
+
+TYPED_TEST(DenseSetTest, DefaultConstruction) {
+  typename TypeParam::iterator I, J;
+  typename TypeParam::const_iterator CI, CJ;
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(CI, CJ);
+}
+
 TYPED_TEST(DenseSetTest, EmptyInitializerList) {
   TypeParam set({});
   EXPECT_EQ(0u, set.size());

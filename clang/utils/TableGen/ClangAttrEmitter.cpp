@@ -90,13 +90,13 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-    .EndsWith("Decl *", "GetLocalDeclAs<" 
-              + std::string(type, 0, type.size()-1) + ">(F, Record[Idx++])")
-    .Case("TypeSourceInfo *", "GetTypeSourceInfo(F, Record, Idx)")
-    .Case("Expr *", "ReadExpr(F)")
-    .Case("IdentifierInfo *", "GetIdentifierInfo(F, Record, Idx)")
-    .Case("StringRef", "ReadString(Record, Idx)")
-    .Default("Record[Idx++]");
+    .EndsWith("Decl *", "Record.GetLocalDeclAs<" 
+              + std::string(type, 0, type.size()-1) + ">(Record.readInt())")
+    .Case("TypeSourceInfo *", "Record.getTypeSourceInfo()")
+    .Case("Expr *", "Record.readExpr()")
+    .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
+    .Case("StringRef", "Record.readString()")
+    .Default("Record.readInt()");
 }
 
 // Get a type that is suitable for storing an object of the specified type.
@@ -413,7 +413,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    std::string " << getLowerName()
-         << "= ReadString(Record, Idx);\n";
+         << "= Record.readString();\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -539,13 +539,13 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    bool is" << getLowerName() << "Expr = Record[Idx++];\n";
+      OS << "    bool is" << getLowerName() << "Expr = Record.readInt();\n";
       OS << "    void *" << getLowerName() << "Ptr;\n";
       OS << "    if (is" << getLowerName() << "Expr)\n";
-      OS << "      " << getLowerName() << "Ptr = ReadExpr(F);\n";
+      OS << "      " << getLowerName() << "Ptr = Record.readExpr();\n";
       OS << "    else\n";
       OS << "      " << getLowerName()
-         << "Ptr = GetTypeSourceInfo(F, Record, Idx);\n";
+         << "Ptr = Record.getTypeSourceInfo();\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -658,7 +658,7 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
       OS << "    SmallVector<" << getType() << ", 4> "
          << getLowerName() << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
@@ -783,7 +783,7 @@ namespace {
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    " << getAttrName() << "Attr::" << type << " " << getLowerName()
          << "(static_cast<" << getAttrName() << "Attr::" << type
-         << ">(Record[Idx++]));\n";
+         << ">(Record.readInt()));\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -906,14 +906,14 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
       OS << "    SmallVector<" << QualifiedTypeName << ", 4> " << getLowerName()
          << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
       OS << "    for (unsigned i = " << getLowerName() << "Size; i; --i)\n";
       OS << "      " << getLowerName() << ".push_back(" << "static_cast<"
-         << QualifiedTypeName << ">(Record[Idx++]));\n";
+         << QualifiedTypeName << ">(Record.readInt()));\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -996,7 +996,7 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    VersionTuple " << getLowerName()
-         << "= ReadVersionTuple(Record, Idx);\n";
+         << "= Record.readVersionTuple();\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -2126,9 +2126,9 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
     
     OS << "  case attr::" << R.getName() << ": {\n";
     if (R.isSubClassOf(InhClass))
-      OS << "    bool isInherited = Record[Idx++];\n";
-    OS << "    bool isImplicit = Record[Idx++];\n";
-    OS << "    unsigned Spelling = Record[Idx++];\n";
+      OS << "    bool isInherited = Record.readInt();\n";
+    OS << "    bool isImplicit = Record.readInt();\n";
+    OS << "    unsigned Spelling = Record.readInt();\n";
     ArgRecords = R.getValueAsListOfDefs("Args");
     Args.clear();
     for (const auto *Arg : ArgRecords) {

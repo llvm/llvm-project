@@ -6,6 +6,10 @@
 ; RUN:  -aa-pipeline basic-aa
 ; RUN: llvm-dis < %t.o.0.4.opt.bc | FileCheck %s --check-prefix=CUSTOM
 
+; Try the new pass manager LTO default pipeline (make sure the option
+; is accepted).
+; RUN: llvm-lto2 %t1.bc -o %t.o -lto-use-new-pm -r %t1.bc,patatino,px
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

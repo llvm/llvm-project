@@ -8248,9 +8248,9 @@ def err_opencl_enqueue_kernel_local_size_args : Error<
 def err_opencl_enqueue_kernel_invalid_local_size_type : Error<
   "illegal call to enqueue_kernel, parameter needs to be specified as integer type">;
 def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
-  "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
+  "blocks used in enqueue_kernel call are expected to have parameters of type 'local void*'">;
 def err_opencl_enqueue_kernel_blocks_no_args : Error<
-  "blocks in this form of device side enqueue call are expected to have have no parameters">;
+  "blocks with parameters are not accepted in this prototype of enqueue_kernel call">;
 
 // OpenCL v2.2 s2.1.2.3 - Vector Component Access
 def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
