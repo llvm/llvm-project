@@ -31,16 +31,23 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -59,12 +66,12 @@ EnableMerge("aarch64-type-promotion-merge", cl::Hidden,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AArch64AddressTypePromotion : public FunctionPass {
 
+class AArch64AddressTypePromotion : public FunctionPass {
 public:
   static char ID;
-  AArch64AddressTypePromotion()
-      : FunctionPass(ID), Func(nullptr), ConsideredSExtType(nullptr) {
+
+  AArch64AddressTypePromotion() : FunctionPass(ID) {
     initializeAArch64AddressTypePromotionPass(*PassRegistry::getPassRegistry());
   }
 
@@ -76,10 +83,11 @@ public:
 
 private:
   /// The current function.
-  Function *Func;
+  Function *Func = nullptr;
+
   /// Filter out all sexts that does not have this type.
   /// Currently initialized with Int64Ty.
-  Type *ConsideredSExtType;
+  Type *ConsideredSExtType = nullptr;
 
   // This transformation requires dominator info.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -129,7 +137,8 @@ private:
   void mergeSExts(ValueToInsts &ValToSExtendedUses,
                   SetOfInstructions &ToRemove);
 };
-} // end anonymous namespace.
+
+} // end anonymous namespace
 
 char AArch64AddressTypePromotion::ID = 0;
 

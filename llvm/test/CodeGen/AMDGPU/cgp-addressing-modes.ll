@@ -1,9 +1,9 @@
 ; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI %s
 ; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI %s
+; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca -amdgpu-sroa=0 < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in

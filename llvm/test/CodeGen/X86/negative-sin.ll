@@ -101,5 +101,5 @@ define double @fn_attr(double %e) nounwind #0 {
   ret double %h
 }
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 

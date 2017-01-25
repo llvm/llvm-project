@@ -203,6 +203,18 @@ public:
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
+
+  bool canInsertSelect(const MachineBasicBlock &MBB,
+                       ArrayRef<MachineOperand> Cond,
+                       unsigned TrueReg, unsigned FalseReg,
+                       int &CondCycles,
+                       int &TrueCycles, int &FalseCycles) const override;
+
+  void insertSelect(MachineBasicBlock &MBB,
+                    MachineBasicBlock::iterator I, const DebugLoc &DL,
+                    unsigned DstReg, ArrayRef<MachineOperand> Cond,
+                    unsigned TrueReg, unsigned FalseReg) const override;
+
   bool
   areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;

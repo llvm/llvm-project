@@ -1,10 +1,57 @@
 # RUN: llc -mtriple arm-- -global-isel -run-pass=legalizer %s -o - | FileCheck %s
 --- |
+  define void @test_sext_s8() { ret void }
+  define void @test_zext_s16() { ret void }
+
   define void @test_add_s8() { ret void }
   define void @test_add_s16() { ret void }
   define void @test_add_s32() { ret void }
 
   define void @test_load_from_stack() { ret void }
+...
+---
+name:            test_sext_s8
+# CHECK-LABEL: name: test_sext_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s8) = COPY %r0
+    %1(s32) = G_SEXT %0
+    ; G_SEXT with s8 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_SEXT {{%[0-9]+}}
+    %r0 = COPY %1(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_zext_s16
+# CHECK-LABEL: name: test_zext_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s16) = COPY %r0
+    %1(s32) = G_ZEXT %0
+    ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_ZEXT {{%[0-9]+}}
+    %r0 = COPY %1(s32)
+    BX_RET 14, _, implicit %r0
 ...
 ---
 name:            test_add_s8

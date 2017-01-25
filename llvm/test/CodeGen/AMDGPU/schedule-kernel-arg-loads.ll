@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=VI -check-prefix=GCN %s
 
 ; FUNC-LABEL: {{^}}cluster_arg_loads:
 ; FIXME: Due to changes in the load clustering heuristics.  We no longer

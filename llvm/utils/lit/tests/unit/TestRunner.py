@@ -108,6 +108,63 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         value = custom_parser.getValue()
         self.assertItemsEqual(value, ['a', 'b', 'c'])
 
+    def test_bad_keywords(self):
+        def custom_parse(line_number, line, output):
+            return output
+        
+        try:
+            IntegratedTestKeywordParser("TAG_NO_SUFFIX", ParserKind.TAG),
+            self.fail("TAG_NO_SUFFIX failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("TAG_NO_SUFFIX raised the wrong exception: %r" % e)
+
+        try:
+            IntegratedTestKeywordParser("TAG_WITH_COLON:", ParserKind.TAG),
+            self.fail("TAG_WITH_COLON: failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("TAG_WITH_COLON: raised the wrong exception: %r" % e)
+
+        try:
+            IntegratedTestKeywordParser("LIST_WITH_DOT.", ParserKind.LIST),
+            self.fail("LIST_WITH_DOT. failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("LIST_WITH_DOT. raised the wrong exception: %r" % e)
+
+        try:
+            IntegratedTestKeywordParser("CUSTOM_NO_SUFFIX",
+                                        ParserKind.CUSTOM, custom_parse),
+            self.fail("CUSTOM_NO_SUFFIX failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("CUSTOM_NO_SUFFIX raised the wrong exception: %r" % e)
+
+        # Both '.' and ':' are allowed for CUSTOM keywords.
+        try:
+            IntegratedTestKeywordParser("CUSTOM_WITH_DOT.",
+                                        ParserKind.CUSTOM, custom_parse),
+        except BaseException as e:
+            self.fail("CUSTOM_WITH_DOT. raised an exception: %r" % e)
+        try:
+            IntegratedTestKeywordParser("CUSTOM_WITH_COLON:",
+                                        ParserKind.CUSTOM, custom_parse),
+        except BaseException as e:
+            self.fail("CUSTOM_WITH_COLON: raised an exception: %r" % e)
+
+        try:
+            IntegratedTestKeywordParser("CUSTOM_NO_PARSER:",
+                                        ParserKind.CUSTOM),
+            self.fail("CUSTOM_NO_PARSER: failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("CUSTOM_NO_PARSER: raised the wrong exception: %r" % e)
 
 if __name__ == '__main__':
     TestIntegratedTestKeywordParser.load_keyword_parser_lit_tests()

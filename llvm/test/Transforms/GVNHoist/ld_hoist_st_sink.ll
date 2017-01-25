@@ -1,6 +1,6 @@
 ; Tests to make sure that loads and stores in a diamond get merged
 ; Loads are hoisted into the header. Stores sunks into the footer.
-; RUN: opt -basicaa -memdep -mldst-motion -S < %s | FileCheck %s
+; RUN: opt -gvn-hoist -S < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 %struct.node = type { i64, %struct.node*, %struct.node*, %struct.node*, i64, %struct.arc*, i64, i64, i64 }
@@ -41,7 +41,7 @@ if.then:                                          ; preds = %while.body
   %4 = load i64, i64* %p, align 8
   %add = add nsw i64 %4, %2
   %p1 = getelementptr inbounds %struct.node, %struct.node* %node.020, i64 0, i32 6
-; CHECK-NOT: store i64
+; FIXME: store i64
   store i64 %add, i64* %p1, align 8
   br label %if.end
 
@@ -61,13 +61,13 @@ if.else:                                          ; preds = %while.body
   %8 = load i64, i64* %cost5, align 8
   %sub = sub nsw i64 %6, %8
   %p6 = getelementptr inbounds %struct.node, %struct.node* %node.020, i64 0, i32 6
-; CHECK-NOT: store i64
+; FIXME: store i64
   store i64 %sub, i64* %p6, align 8
   br label %if.end
 
 ; CHECK: if.end
 if.end:                                           ; preds = %if.else, %if.then
-; CHECK: store
+; FIXME: store
   %inc = add nsw i64 %sum.019, 1
   %node.0.in = getelementptr inbounds %struct.node, %struct.node* %node.020, i64 0, i32 2
   %node.0 = load %struct.node*, %struct.node** %node.0.in, align 8

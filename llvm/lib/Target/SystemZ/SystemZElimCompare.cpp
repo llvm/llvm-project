@@ -13,15 +13,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZ.h"
+#include "SystemZInstrInfo.h"
 #include "SystemZTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -33,11 +41,11 @@ STATISTIC(EliminatedComparisons, "Number of eliminated comparisons");
 STATISTIC(FusedComparisons, "Number of fused compare-and-branch instructions");
 
 namespace {
+
 // Represents the references to a particular register in one or more
 // instructions.
 struct Reference {
-  Reference()
-    : Def(false), Use(false) {}
+  Reference() = default;
 
   Reference &operator|=(const Reference &Other) {
     Def |= Other.Def;
@@ -49,15 +57,16 @@ struct Reference {
 
   // True if the register is defined or used in some form, either directly or
   // via a sub- or super-register.
-  bool Def;
-  bool Use;
+  bool Def = false;
+  bool Use = false;
 };
 
 class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
+
   SystemZElimCompare(const SystemZTargetMachine &tm)
-    : MachineFunctionPass(ID), TII(nullptr), TRI(nullptr) {}
+    : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "SystemZ Comparison Elimination";
@@ -65,6 +74,7 @@ public:
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
+
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
@@ -84,16 +94,13 @@ private:
   bool fuseCompareOperations(MachineInstr &Compare,
                              SmallVectorImpl<MachineInstr *> &CCUsers);
 
-  const SystemZInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const SystemZInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 };
 
 char SystemZElimCompare::ID = 0;
-} // end anonymous namespace
 
-FunctionPass *llvm::createSystemZElimComparePass(SystemZTargetMachine &TM) {
-  return new SystemZElimCompare(TM);
-}
+} // end anonymous namespace
 
 // Return true if CC is live out of MBB.
 static bool isCCLiveOut(MachineBasicBlock &MBB) {
@@ -167,7 +174,7 @@ static unsigned getCompareSourceReg(MachineInstr &Compare) {
     reg = Compare.getOperand(0).getReg();
   else if (isLoadAndTestAsCmp(Compare))
     reg = Compare.getOperand(1).getReg();
-  assert (reg);
+  assert(reg);
 
   return reg;
 }
@@ -366,10 +373,8 @@ static bool isCompareZero(MachineInstr &Compare) {
     return true;
 
   default:
-
     if (isLoadAndTestAsCmp(Compare))
       return true;
-
     return Compare.getNumExplicitOperands() == 2 &&
            Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
   }
@@ -570,4 +575,8 @@ bool SystemZElimCompare::runOnMachineFunction(MachineFunction &F) {
     Changed |= processBlock(MBB);
 
   return Changed;
+}
+
+FunctionPass *llvm::createSystemZElimComparePass(SystemZTargetMachine &TM) {
+  return new SystemZElimCompare(TM);
 }

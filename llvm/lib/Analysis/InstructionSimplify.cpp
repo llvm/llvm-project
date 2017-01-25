@@ -2385,9 +2385,23 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
   const APInt *C;
   switch (BO.getOpcode()) {
   case Instruction::Add:
-    if (BO.hasNoUnsignedWrap() && match(BO.getOperand(1), m_APInt(C)))
-      // 'add nuw x, C' produces [C, UINT_MAX].
-      Lower = *C;
+    if (match(BO.getOperand(1), m_APInt(C)) && *C != 0) {
+      // FIXME: If we have both nuw and nsw, we should reduce the range further.
+      if (BO.hasNoUnsignedWrap()) {
+        // 'add nuw x, C' produces [C, UINT_MAX].
+        Lower = *C;
+      } else if (BO.hasNoSignedWrap()) {
+        if (C->isNegative()) {
+          // 'add nsw x, -C' produces [SINT_MIN, SINT_MAX - C].
+          Lower = APInt::getSignedMinValue(Width);
+          Upper = APInt::getSignedMaxValue(Width) + *C + 1;
+        } else {
+          // 'add nsw x, +C' produces [SINT_MIN + C, SINT_MAX].
+          Lower = APInt::getSignedMinValue(Width) + *C;
+          Upper = APInt::getSignedMaxValue(Width) + 1;
+        }
+      }
+    }
     break;
 
   case Instruction::And:

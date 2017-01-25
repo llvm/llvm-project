@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine < %s | FileCheck %s --check-prefix=NORMAL
+; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=slm < %s | FileCheck %s --check-prefix=NORMAL
 ; RUN: opt -S -mtriple=x86_64-pc_linux -loop-vectorize -instcombine -mcpu=atom < %s | FileCheck %s --check-prefix=ATOM
 
 ; NORMAL-LABEL: foo

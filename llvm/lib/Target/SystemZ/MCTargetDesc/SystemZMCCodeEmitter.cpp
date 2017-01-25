@@ -11,20 +11,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "MCTargetDesc/SystemZMCFixups.h"
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mccodeemitter"
 
 namespace {
+
 class SystemZMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
   MCContext &Ctx;
@@ -34,7 +42,7 @@ public:
     : MCII(mcii), Ctx(ctx) {
   }
 
-  ~SystemZMCCodeEmitter() override {}
+  ~SystemZMCCodeEmitter() override = default;
 
   // OVerride MCCodeEmitter.
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -137,13 +145,8 @@ private:
   void verifyInstructionPredicates(const MCInst &MI,
                                    uint64_t AvailableFeatures) const;
 };
-} // end anonymous namespace
 
-MCCodeEmitter *llvm::createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
-                                                const MCRegisterInfo &MRI,
-                                                MCContext &Ctx) {
-  return new SystemZMCCodeEmitter(MCII, Ctx);
-}
+} // end anonymous namespace
 
 void SystemZMCCodeEmitter::
 encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -282,3 +285,9 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
 
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SystemZGenMCCodeEmitter.inc"
+
+MCCodeEmitter *llvm::createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
+                                                const MCRegisterInfo &MRI,
+                                                MCContext &Ctx) {
+  return new SystemZMCCodeEmitter(MCII, Ctx);
+}

@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck %s
 
 ; This used to fail due to a v_add_i32 instruction with an illegal immediate
 ; operand that was created during Local Stack Slot Allocation. Test case derived

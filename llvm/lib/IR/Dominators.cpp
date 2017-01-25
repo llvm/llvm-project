@@ -291,6 +291,10 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
 }
 
 void DominatorTree::verifyDomTree() const {
+  if (getRoots().empty())
+    // If dominator tree is unavailable, skip verification.
+    return;
+
   Function &F = *getRoot()->getParent();
 
   DominatorTree OtherDT;

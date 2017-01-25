@@ -1,4 +1,4 @@
-//==-- SystemZMachineScheduler.h - SystemZ Scheduler Interface -*- C++ -*---==//
+//==- SystemZMachineScheduler.h - SystemZ Scheduler Interface ----*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,10 +14,10 @@
 // usage of processor resources.
 //===----------------------------------------------------------------------===//
 
-#include "SystemZInstrInfo.h"
 #include "SystemZHazardRecognizer.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
+#include <set>
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
@@ -28,29 +28,29 @@ namespace llvm {
   
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {
-    ScheduleDAGMI *DAG;
+  ScheduleDAGMI *DAG;
   
   /// A candidate during instruction evaluation.
   struct Candidate {
-    SUnit *SU;
+    SUnit *SU = nullptr;
 
     /// The decoding cost.
-    int GroupingCost;
+    int GroupingCost = 0;
 
     /// The processor resources cost.
-    int ResourcesCost;
+    int ResourcesCost = 0;
 
-    Candidate() : SU(nullptr), GroupingCost(0), ResourcesCost(0) {}
+    Candidate() = default;
     Candidate(SUnit *SU_, SystemZHazardRecognizer &HazardRec);
 
     // Compare two candidates.
     bool operator<(const Candidate &other);
 
     // Check if this node is free of cost ("as good as any").
-    bool inline noCost() {
+    bool noCost() const {
       return (GroupingCost <= 0 && !ResourcesCost);
     }
-   };
+  };
 
   // A sorter for the Available set that makes sure that SUs are considered
   // in the best order.
@@ -83,7 +83,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
   // region.
   SystemZHazardRecognizer HazardRec;
   
- public:
+public:
   SystemZPostRASchedStrategy(const MachineSchedContext *C);
 
   /// PostRA scheduling does not track pressure.
@@ -107,6 +107,6 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
   void releaseBottomNode(SUnit *SU) override {};
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif /* LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H */
+#endif // LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H

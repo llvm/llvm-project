@@ -688,12 +688,13 @@ public:
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
                             Instruction::BinaryOps Opc, BranchProbability TW,
-                            BranchProbability FW);
+                            BranchProbability FW, bool InvertCond);
   void EmitBranchForMergedCondition(const Value *Cond, MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     MachineBasicBlock *CurBB,
                                     MachineBasicBlock *SwitchBB,
-                                    BranchProbability TW, BranchProbability FW);
+                                    BranchProbability TW, BranchProbability FW,
+                                    bool InvertCond);
   bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
   void CopyToExportRegsIfNeeded(const Value *V);

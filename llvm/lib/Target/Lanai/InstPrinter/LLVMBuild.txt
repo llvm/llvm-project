@@ -17,7 +17,7 @@
 
 [component_0]
 type = Library
-name = LanaiInstPrinter
+name = LanaiAsmPrinter
 parent = Lanai
 required_libraries = MC Support
 add_to_library_groups = Lanai

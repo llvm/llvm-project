@@ -701,22 +701,26 @@ bool IRTranslator::translateLandingPad(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
     .addSym(MF->addLandingPad(&MBB));
 
+  SmallVector<LLT, 2> Tys;
+  for (Type *Ty : cast<StructType>(LP.getType())->elements())
+    Tys.push_back(LLT{*Ty, *DL});
+  assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
+
   // Mark exception register as live in.
   SmallVector<unsigned, 2> Regs;
   SmallVector<uint64_t, 2> Offsets;
-  LLT p0 = LLT::pointer(0, DL->getPointerSizeInBits());
   if (unsigned Reg = TLI.getExceptionPointerRegister(PersonalityFn)) {
-    unsigned VReg = MRI->createGenericVirtualRegister(p0);
+    unsigned VReg = MRI->createGenericVirtualRegister(Tys[0]);
     MIRBuilder.buildCopy(VReg, Reg);
     Regs.push_back(VReg);
     Offsets.push_back(0);
   }
 
   if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn)) {
-    unsigned VReg = MRI->createGenericVirtualRegister(p0);
+    unsigned VReg = MRI->createGenericVirtualRegister(Tys[1]);
     MIRBuilder.buildCopy(VReg, Reg);
     Regs.push_back(VReg);
-    Offsets.push_back(p0.getSizeInBits());
+    Offsets.push_back(Tys[0].getSizeInBits());
   }
 
   MIRBuilder.buildSequence(getOrCreateVReg(LP), Regs, Offsets);

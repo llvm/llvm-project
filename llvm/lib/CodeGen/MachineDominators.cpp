@@ -143,6 +143,10 @@ void MachineDominatorTree::applySplitCriticalEdges() const {
 }
 
 void MachineDominatorTree::verifyDomTree() const {
+  if (getRoots().empty())
+    // If dominator tree is unavailable, skip verification.
+    return;
+
   MachineFunction &F = *getRoot()->getParent();
 
   MachineDominatorTree OtherDT;

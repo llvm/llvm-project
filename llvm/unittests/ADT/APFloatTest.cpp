@@ -2830,6 +2830,28 @@ TEST(APFloatTest, abs) {
   EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
 }
 
+TEST(APFloatTest, neg) {
+  APFloat One = APFloat(APFloat::IEEEsingle(), "1.0");
+  APFloat NegOne = APFloat(APFloat::IEEEsingle(), "-1.0");
+  APFloat Zero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat NegZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat Inf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat NegInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat QNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat NegQNaN = APFloat::getNaN(APFloat::IEEEsingle(), true);
+
+  EXPECT_TRUE(NegOne.bitwiseIsEqual(neg(One)));
+  EXPECT_TRUE(One.bitwiseIsEqual(neg(NegOne)));
+  EXPECT_TRUE(NegZero.bitwiseIsEqual(neg(Zero)));
+  EXPECT_TRUE(Zero.bitwiseIsEqual(neg(NegZero)));
+  EXPECT_TRUE(NegInf.bitwiseIsEqual(neg(Inf)));
+  EXPECT_TRUE(Inf.bitwiseIsEqual(neg(NegInf)));
+  EXPECT_TRUE(NegInf.bitwiseIsEqual(neg(Inf)));
+  EXPECT_TRUE(Inf.bitwiseIsEqual(neg(NegInf)));
+  EXPECT_TRUE(NegQNaN.bitwiseIsEqual(neg(QNaN)));
+  EXPECT_TRUE(QNaN.bitwiseIsEqual(neg(NegQNaN)));
+}
+
 TEST(APFloatTest, ilogb) {
   EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble(), false)));
   EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble(), true)));

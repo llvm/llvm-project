@@ -1652,7 +1652,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
-  if (Subtarget.avoidQuadLdStPairs()) {
+  if (Subtarget.isPaired128Slow()) {
     switch (MI.getOpcode()) {
     default:
       break;

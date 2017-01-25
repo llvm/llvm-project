@@ -1,5 +1,5 @@
 #RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml \
-#RUN:    | FileCheck %s -check-prefix=COUNT
+#RUN:    | FileCheck %s -check-prefix=EMPTY
 #RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -e count \
 #RUN:    | FileCheck %s -check-prefix=COUNT
 #

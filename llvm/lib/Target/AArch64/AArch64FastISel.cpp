@@ -15,28 +15,62 @@
 
 #include "AArch64.h"
 #include "AArch64CallingConvention.h"
+#include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 namespace {
@@ -50,48 +84,55 @@ class AArch64FastISel final : public FastISel {
     } BaseKind;
 
   private:
-    BaseKind Kind;
-    AArch64_AM::ShiftExtendType ExtType;
+    BaseKind Kind = RegBase;
+    AArch64_AM::ShiftExtendType ExtType = AArch64_AM::InvalidShiftExtend;
     union {
       unsigned Reg;
       int FI;
     } Base;
-    unsigned OffsetReg;
-    unsigned Shift;
-    int64_t Offset;
-    const GlobalValue *GV;
+    unsigned OffsetReg = 0;
+    unsigned Shift = 0;
+    int64_t Offset = 0;
+    const GlobalValue *GV = nullptr;
 
   public:
-    Address() : Kind(RegBase), ExtType(AArch64_AM::InvalidShiftExtend),
-      OffsetReg(0), Shift(0), Offset(0), GV(nullptr) { Base.Reg = 0; }
+    Address() { Base.Reg = 0; }
+
     void setKind(BaseKind K) { Kind = K; }
     BaseKind getKind() const { return Kind; }
     void setExtendType(AArch64_AM::ShiftExtendType E) { ExtType = E; }
     AArch64_AM::ShiftExtendType getExtendType() const { return ExtType; }
     bool isRegBase() const { return Kind == RegBase; }
     bool isFIBase() const { return Kind == FrameIndexBase; }
+
     void setReg(unsigned Reg) {
       assert(isRegBase() && "Invalid base register access!");
       Base.Reg = Reg;
     }
+
     unsigned getReg() const {
       assert(isRegBase() && "Invalid base register access!");
       return Base.Reg;
     }
+
     void setOffsetReg(unsigned Reg) {
       OffsetReg = Reg;
     }
+
     unsigned getOffsetReg() const {
       return OffsetReg;
     }
+
     void setFI(unsigned FI) {
       assert(isFIBase() && "Invalid base frame index  access!");
       Base.FI = FI;
     }
+
     unsigned getFI() const {
       assert(isFIBase() && "Invalid base frame index access!");
       return Base.FI;
     }
+
     void setOffset(int64_t O) { Offset = O; }
     int64_t getOffset() { return Offset; }
     void setShift(unsigned S) { Shift = S; }
@@ -531,23 +572,23 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
   switch (Opcode) {
   default:
     break;
-  case Instruction::BitCast: {
+  case Instruction::BitCast:
     // Look through bitcasts.
     return computeAddress(U->getOperand(0), Addr, Ty);
-  }
-  case Instruction::IntToPtr: {
+
+  case Instruction::IntToPtr:
     // Look past no-op inttoptrs.
     if (TLI.getValueType(DL, U->getOperand(0)->getType()) ==
         TLI.getPointerTy(DL))
       return computeAddress(U->getOperand(0), Addr, Ty);
     break;
-  }
-  case Instruction::PtrToInt: {
+
+  case Instruction::PtrToInt:
     // Look past no-op ptrtoints.
     if (TLI.getValueType(DL, U->getType()) == TLI.getPointerTy(DL))
       return computeAddress(U->getOperand(0), Addr, Ty);
     break;
-  }
+
   case Instruction::GetElementPtr: {
     Address SavedAddr = Addr;
     uint64_t TmpOffset = Addr.getOffset();
@@ -563,7 +604,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
         TmpOffset += SL->getElementOffset(Idx);
       } else {
         uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
-        for (;;) {
+        while (true) {
           if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
             // Constant-offset addressing.
             TmpOffset += CI->getSExtValue() * S;
@@ -2813,8 +2854,8 @@ bool AArch64FastISel::selectIntToFP(const Instruction *I, bool Signed) {
   MVT DestVT;
   if (!isTypeLegal(I->getType(), DestVT) || DestVT.isVector())
     return false;
-  assert ((DestVT == MVT::f32 || DestVT == MVT::f64) &&
-          "Unexpected value type.");
+  assert((DestVT == MVT::f32 || DestVT == MVT::f64) &&
+         "Unexpected value type.");
 
   unsigned SrcReg = getRegForValue(I->getOperand(0));
   if (!SrcReg)
@@ -3521,11 +3562,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
-  case Intrinsic::trap: {
+  case Intrinsic::trap:
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::BRK))
         .addImm(1);
     return true;
-  }
+
   case Intrinsic::sqrt: {
     Type *RetTy = II->getCalledFunction()->getReturnType();
 
@@ -5092,8 +5133,10 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 }
 
 namespace llvm {
-llvm::FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
+
+FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
                                         const TargetLibraryInfo *LibInfo) {
   return new AArch64FastISel(FuncInfo, LibInfo);
 }
-}
+
+} // end namespace llvm

@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -o /dev/null < %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -o /dev/null < %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -o /dev/null < %s
 
 ; The register coalescer introduces a verifier error which later
 ; results in a crash during scheduling.

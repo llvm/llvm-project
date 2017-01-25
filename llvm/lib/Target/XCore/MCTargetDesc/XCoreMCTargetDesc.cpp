@@ -11,15 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "XCoreMCTargetDesc.h"
 #include "InstPrinter/XCoreInstPrinter.h"
-#include "XCoreMCAsmInfo.h"
+#include "MCTargetDesc/XCoreMCAsmInfo.h"
+#include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "XCoreTargetStreamer.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
@@ -79,19 +83,24 @@ static MCInstPrinter *createXCoreMCInstPrinter(const Triple &T,
 }
 
 XCoreTargetStreamer::XCoreTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
-XCoreTargetStreamer::~XCoreTargetStreamer() {}
+
+XCoreTargetStreamer::~XCoreTargetStreamer() = default;
 
 namespace {
 
 class XCoreTargetAsmStreamer : public XCoreTargetStreamer {
   formatted_raw_ostream &OS;
+
 public:
   XCoreTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+
   void emitCCTopData(StringRef Name) override;
   void emitCCTopFunction(StringRef Name) override;
   void emitCCBottomData(StringRef Name) override;
   void emitCCBottomFunction(StringRef Name) override;
 };
+
+} // end anonymous namespace
 
 XCoreTargetAsmStreamer::XCoreTargetAsmStreamer(MCStreamer &S,
                                                formatted_raw_ostream &OS)
@@ -111,7 +120,6 @@ void XCoreTargetAsmStreamer::emitCCBottomData(StringRef Name) {
 
 void XCoreTargetAsmStreamer::emitCCBottomFunction(StringRef Name) {
   OS << "\t.cc_bottom " << Name << ".function\n";
-}
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
