@@ -1,19 +1,27 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-missed=regalloc 2>&1 | FileCheck -check-prefix=REMARK %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-missed=regalloc -pass-remarks-with-hotness 2>&1 | FileCheck -check-prefix=HOTNESS %s
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple 2>&1 | FileCheck -check-prefix=NO_REMARK %s
 
 ; This has two nested loops, each with one value that has to be spilled and
 ; then reloaded.
 
 ; (loop3:)
-; REMARK: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop
+; REMARK: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop{{$}}
 ; (loop2:)
-; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop
+; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop{{$}}
 ; (loop:)
-; REMARK: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop
+; REMARK: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop{{$}}
+
+; (loop3:)
+; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop (hotness: 300)
+; (loop2:)
+; HOTNESS: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop (hotness: 30000)
+; (loop:)
+; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop (hotness: 300)
 
 ; NO_REMARK-NOT: remark
 
-define void @fpr128(<4 x float>* %p) nounwind ssp {
+define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 {
 entry:
   br label %loop, !dbg !8
 
@@ -26,13 +34,13 @@ loop2:
   call void asm sideeffect "; inlineasm", "~{q0},~{q1},~{q2},~{q3},~{q4},~{q5},~{q6},~{q7},~{q8},~{q9},~{q10},~{q11},~{q12},~{q13},~{q14},~{q15},~{q16},~{q17},~{q18},~{q19},~{q20},~{q21},~{q22},~{q23},~{q24},~{q25},~{q26},~{q27},~{q28},~{q29},~{q30},~{q31},~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{fp},~{lr},~{sp},~{memory}"() nounwind
   %j.2 = add i32 %j, 1
   %c2 = icmp slt i32 %j.2, 100
-  br i1 %c2, label %loop2, label %end2
+  br i1 %c2, label %loop2, label %end2, !prof !12
 
 end2:
   call void asm sideeffect "; inlineasm", "~{q0},~{q1},~{q2},~{q3},~{q4},~{q5},~{q6},~{q7},~{q8},~{q9},~{q10},~{q11},~{q12},~{q13},~{q14},~{q15},~{q16},~{q17},~{q18},~{q19},~{q20},~{q21},~{q22},~{q23},~{q24},~{q25},~{q26},~{q27},~{q28},~{q29},~{q30},~{q31},~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{fp},~{lr},~{sp},~{memory}"() nounwind
   %i.2 = add i32 %i, 1
   %c = icmp slt i32 %i.2, 100
-  br i1 %c, label %loop, label %end
+  br i1 %c, label %loop, label %end, !prof !12
 
 end:
   br label %loop3
@@ -42,7 +50,7 @@ loop3:
   call void asm sideeffect "; inlineasm", "~{q0},~{q1},~{q2},~{q3},~{q4},~{q5},~{q6},~{q7},~{q8},~{q9},~{q10},~{q11},~{q12},~{q13},~{q14},~{q15},~{q16},~{q17},~{q18},~{q19},~{q20},~{q21},~{q22},~{q23},~{q24},~{q25},~{q26},~{q27},~{q28},~{q29},~{q30},~{q31},~{x0},~{x1},~{x2},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{fp},~{lr},~{sp},~{memory}"() nounwind
   %k.2 = add i32 %k, 1
   %c3 = icmp slt i32 %k.2, 100
-  br i1 %c3, label %loop3, label %end3, !dbg !10
+  br i1 %c3, label %loop3, label %end3, !dbg !10, !prof !12
 
 end3:
   ret void
@@ -63,3 +71,5 @@ end3:
 !8 = !DILocation(line: 1, column: 20, scope: !6)
 !9 = !DILocation(line: 2, column: 20, scope: !6)
 !10 = !DILocation(line: 3, column: 20, scope: !6)
+!11 = !{!"function_entry_count", i64 3}
+!12 = !{!"branch_weights", i32 99, i32 1}

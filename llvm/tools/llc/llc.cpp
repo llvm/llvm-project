@@ -136,6 +136,11 @@ static cl::opt<std::string> StartAfter("start-after",
 
 static cl::list<std::string> IncludeDirs("I", cl::desc("include search path"));
 
+static cl::opt<bool> PassRemarksWithHotness(
+    "pass-remarks-with-hotness",
+    cl::desc("With PGO, include profile count in optimization remarks"),
+    cl::Hidden);
+
 namespace {
 static ManagedStatic<std::vector<std::string>> RunPassNames;
 
@@ -282,6 +287,8 @@ int main(int argc, char **argv) {
   // Set a diagnostic handler that doesn't exit on the first error
   bool HasError = false;
   Context.setDiagnosticHandler(DiagnosticHandler, &HasError);
+  if (PassRemarksWithHotness)
+    Context.setDiagnosticHotnessRequested(true);
 
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
