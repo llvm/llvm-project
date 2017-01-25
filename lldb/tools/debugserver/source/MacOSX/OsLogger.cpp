@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "OsLogger.h"
+#include <Availability.h>
 
-#if LLDB_USE_OS_LOG
+#if (LLDB_USE_OS_LOG) && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101200)
 
 #include <os/log.h>
 
@@ -64,3 +65,4 @@ DNBCallbackLog OsLogger::GetLogFunction() {
 DNBCallbackLog OsLogger::GetLogFunction() { return nullptr; }
 
 #endif
+
