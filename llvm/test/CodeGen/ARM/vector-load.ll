@@ -251,3 +251,13 @@ define <4 x i32> @zextload_v8i8tov8i32_fake_update(<4 x i8>** %ptr) {
         %zlA = zext <4 x i8> %lA to <4 x i32>
 	ret <4 x i32> %zlA
 }
+
+; CHECK-LABEL: test_silly_load:
+; CHECK: ldr {{r[0-9]+}}, [r0, #24]
+; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0:128]!
+; CHECK: vldr d{{[0-9]+}}, [r0]
+
+define void @test_silly_load(<28 x i8>* %addr) {
+  load volatile <28 x i8>, <28 x i8>* %addr
+  ret void
+}
