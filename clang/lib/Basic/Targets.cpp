@@ -2113,15 +2113,15 @@ public:
     for (auto &I : TargetOpts.FeaturesAsWritten) {
       if (I == "+fp32-denormals" || I == "-fp32-denormals")
         hasFP32Denormals = true;
-      if (I == "+fp64-denormals" || I == "-fp64-denormals")
+      if (I == "+fp64-fp16-denormals" || I == "-fp64-fp16-denormals")
         hasFP64Denormals = true;
     }
     if (!hasFP32Denormals)
       TargetOpts.Features.push_back((Twine(hasFullSpeedFP32Denorms &&
           !CGOpts.FlushDenorm ? '+' : '-') + Twine("fp32-denormals")).str());
-    // Always do not flush fp64 denorms.
+    // Always do not flush fp64 or fp16 denorms.
     if (!hasFP64Denormals && hasFP64)
-      TargetOpts.Features.push_back("+fp64-denormals");
+      TargetOpts.Features.push_back("+fp64-fp16-denormals");
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {

@@ -315,7 +315,7 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
         // (i.e. soft float or atomics). If adapting for targets that do,
         // additional care is required here.
 
-        LibFunc::Func Func;
+        LibFunc Func;
         if (!F->hasLocalLinkage() && F->hasName() && LibInfo &&
             LibInfo->getLibFunc(F->getName(), Func) &&
             LibInfo->hasOptimizedCodeGen(Func)) {
@@ -329,50 +329,50 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
 
           switch (Func) {
           default: return true;
-          case LibFunc::copysign:
-          case LibFunc::copysignf:
+          case LibFunc_copysign:
+          case LibFunc_copysignf:
             continue; // ISD::FCOPYSIGN is never a library call.
-          case LibFunc::copysignl:
+          case LibFunc_copysignl:
             return true;
-          case LibFunc::fabs:
-          case LibFunc::fabsf:
-          case LibFunc::fabsl:
+          case LibFunc_fabs:
+          case LibFunc_fabsf:
+          case LibFunc_fabsl:
             continue; // ISD::FABS is never a library call.
-          case LibFunc::sqrt:
-          case LibFunc::sqrtf:
-          case LibFunc::sqrtl:
+          case LibFunc_sqrt:
+          case LibFunc_sqrtf:
+          case LibFunc_sqrtl:
             Opcode = ISD::FSQRT; break;
-          case LibFunc::floor:
-          case LibFunc::floorf:
-          case LibFunc::floorl:
+          case LibFunc_floor:
+          case LibFunc_floorf:
+          case LibFunc_floorl:
             Opcode = ISD::FFLOOR; break;
-          case LibFunc::nearbyint:
-          case LibFunc::nearbyintf:
-          case LibFunc::nearbyintl:
+          case LibFunc_nearbyint:
+          case LibFunc_nearbyintf:
+          case LibFunc_nearbyintl:
             Opcode = ISD::FNEARBYINT; break;
-          case LibFunc::ceil:
-          case LibFunc::ceilf:
-          case LibFunc::ceill:
+          case LibFunc_ceil:
+          case LibFunc_ceilf:
+          case LibFunc_ceill:
             Opcode = ISD::FCEIL; break;
-          case LibFunc::rint:
-          case LibFunc::rintf:
-          case LibFunc::rintl:
+          case LibFunc_rint:
+          case LibFunc_rintf:
+          case LibFunc_rintl:
             Opcode = ISD::FRINT; break;
-          case LibFunc::round:
-          case LibFunc::roundf:
-          case LibFunc::roundl:
+          case LibFunc_round:
+          case LibFunc_roundf:
+          case LibFunc_roundl:
             Opcode = ISD::FROUND; break;
-          case LibFunc::trunc:
-          case LibFunc::truncf:
-          case LibFunc::truncl:
+          case LibFunc_trunc:
+          case LibFunc_truncf:
+          case LibFunc_truncl:
             Opcode = ISD::FTRUNC; break;
-          case LibFunc::fmin:
-          case LibFunc::fminf:
-          case LibFunc::fminl:
+          case LibFunc_fmin:
+          case LibFunc_fminf:
+          case LibFunc_fminl:
             Opcode = ISD::FMINNUM; break;
-          case LibFunc::fmax:
-          case LibFunc::fmaxf:
-          case LibFunc::fmaxl:
+          case LibFunc_fmax:
+          case LibFunc_fmaxf:
+          case LibFunc_fmaxl:
             Opcode = ISD::FMAXNUM; break;
           }
         }

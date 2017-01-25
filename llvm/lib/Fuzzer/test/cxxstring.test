@@ -1,0 +1,2 @@
+RUN: not LLVMFuzzer-CxxStringEqTest -seed=1 -runs=1000000 2>&1 | FileCheck %s
+CHECK: BINGO

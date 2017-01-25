@@ -2448,7 +2448,7 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   if (!TLI)
     return Intrinsic::not_intrinsic;
 
-  LibFunc::Func Func;
+  LibFunc Func;
   // We're going to make assumptions on the semantics of the functions, check
   // that the target knows that it's available in this environment and it does
   // not have local linkage.
@@ -2463,81 +2463,81 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   switch (Func) {
   default:
     break;
-  case LibFunc::sin:
-  case LibFunc::sinf:
-  case LibFunc::sinl:
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinl:
     return Intrinsic::sin;
-  case LibFunc::cos:
-  case LibFunc::cosf:
-  case LibFunc::cosl:
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_cosl:
     return Intrinsic::cos;
-  case LibFunc::exp:
-  case LibFunc::expf:
-  case LibFunc::expl:
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_expl:
     return Intrinsic::exp;
-  case LibFunc::exp2:
-  case LibFunc::exp2f:
-  case LibFunc::exp2l:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2l:
     return Intrinsic::exp2;
-  case LibFunc::log:
-  case LibFunc::logf:
-  case LibFunc::logl:
+  case LibFunc_log:
+  case LibFunc_logf:
+  case LibFunc_logl:
     return Intrinsic::log;
-  case LibFunc::log10:
-  case LibFunc::log10f:
-  case LibFunc::log10l:
+  case LibFunc_log10:
+  case LibFunc_log10f:
+  case LibFunc_log10l:
     return Intrinsic::log10;
-  case LibFunc::log2:
-  case LibFunc::log2f:
-  case LibFunc::log2l:
+  case LibFunc_log2:
+  case LibFunc_log2f:
+  case LibFunc_log2l:
     return Intrinsic::log2;
-  case LibFunc::fabs:
-  case LibFunc::fabsf:
-  case LibFunc::fabsl:
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_fabsl:
     return Intrinsic::fabs;
-  case LibFunc::fmin:
-  case LibFunc::fminf:
-  case LibFunc::fminl:
+  case LibFunc_fmin:
+  case LibFunc_fminf:
+  case LibFunc_fminl:
     return Intrinsic::minnum;
-  case LibFunc::fmax:
-  case LibFunc::fmaxf:
-  case LibFunc::fmaxl:
+  case LibFunc_fmax:
+  case LibFunc_fmaxf:
+  case LibFunc_fmaxl:
     return Intrinsic::maxnum;
-  case LibFunc::copysign:
-  case LibFunc::copysignf:
-  case LibFunc::copysignl:
+  case LibFunc_copysign:
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
     return Intrinsic::copysign;
-  case LibFunc::floor:
-  case LibFunc::floorf:
-  case LibFunc::floorl:
+  case LibFunc_floor:
+  case LibFunc_floorf:
+  case LibFunc_floorl:
     return Intrinsic::floor;
-  case LibFunc::ceil:
-  case LibFunc::ceilf:
-  case LibFunc::ceill:
+  case LibFunc_ceil:
+  case LibFunc_ceilf:
+  case LibFunc_ceill:
     return Intrinsic::ceil;
-  case LibFunc::trunc:
-  case LibFunc::truncf:
-  case LibFunc::truncl:
+  case LibFunc_trunc:
+  case LibFunc_truncf:
+  case LibFunc_truncl:
     return Intrinsic::trunc;
-  case LibFunc::rint:
-  case LibFunc::rintf:
-  case LibFunc::rintl:
+  case LibFunc_rint:
+  case LibFunc_rintf:
+  case LibFunc_rintl:
     return Intrinsic::rint;
-  case LibFunc::nearbyint:
-  case LibFunc::nearbyintf:
-  case LibFunc::nearbyintl:
+  case LibFunc_nearbyint:
+  case LibFunc_nearbyintf:
+  case LibFunc_nearbyintl:
     return Intrinsic::nearbyint;
-  case LibFunc::round:
-  case LibFunc::roundf:
-  case LibFunc::roundl:
+  case LibFunc_round:
+  case LibFunc_roundf:
+  case LibFunc_roundl:
     return Intrinsic::round;
-  case LibFunc::pow:
-  case LibFunc::powf:
-  case LibFunc::powl:
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_powl:
     return Intrinsic::pow;
-  case LibFunc::sqrt:
-  case LibFunc::sqrtf:
-  case LibFunc::sqrtl:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
     if (ICS->hasNoNaNs())
       return Intrinsic::sqrt;
     return Intrinsic::not_intrinsic;

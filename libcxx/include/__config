@@ -109,12 +109,19 @@
 
 #if defined(__clang__)
 #define _LIBCPP_COMPILER_CLANG
+# ifndef __apple_build_version__
+#   define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
+# endif
 #elif defined(__GNUC__)
 #define _LIBCPP_COMPILER_GCC
 #elif defined(_MSC_VER)
 #define _LIBCPP_COMPILER_MSVC
 #elif defined(__IBMCPP__)
 #define _LIBCPP_COMPILER_IBM
+#endif
+
+#ifndef _LIBCPP_CLANG_VER
+#define _LIBCPP_CLANG_VER 0
 #endif
 
 // FIXME: ABI detection should be done via compiler builtin macros. This
@@ -754,7 +761,7 @@ template <unsigned> struct __static_assert_check {};
 
 #ifdef _LIBCPP_HAS_NO_DECLTYPE
 // GCC 4.6 provides __decltype in all standard modes.
-#if __has_keyword(__decltype) || _GNUC_VER >= 406
+#if __has_keyword(__decltype) || _LIBCPP_CLANG_VER >= 304 || _GNUC_VER >= 406
 #  define decltype(__x) __decltype(__x)
 #else
 #  define decltype(__x) __typeof__(__x)
@@ -817,7 +824,9 @@ template <unsigned> struct __static_assert_check {};
 #   else
 #       error Supported values for _LIBCPP_DEBUG are 0 and 1
 #   endif
+# if !defined(_LIBCPP_BUILDING_LIBRARY)
 #   define _LIBCPP_EXTERN_TEMPLATE(...)
+# endif
 #endif
 
 #ifndef _LIBCPP_EXTERN_TEMPLATE
@@ -851,7 +860,7 @@ template <unsigned> struct __static_assert_check {};
 #if defined(__APPLE__)
 # if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
      defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-#   define __MAC_OS_X_VERSION_MIN_REQUIRED __ENVIROMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
+#   define __MAC_OS_X_VERSION_MIN_REQUIRED __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
 # endif
 # if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
 #   if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060

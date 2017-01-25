@@ -1,12 +1,12 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-FLUSH,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-FLUSH,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-FLUSH,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-FLUSH,VI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-DENORM-STRICT,VI-DENORM,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-DENORM-STRICT,VI-DENORM,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-DENORM-STRICT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp64-fp16-denormals -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI-DENORM-STRICT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+fp64-fp16-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare half @llvm.fmuladd.f16(half, half, half) #1

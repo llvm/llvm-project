@@ -357,6 +357,13 @@ std::error_code create_hard_link(const Twine &to, const Twine &from);
 ///          otherwise a platform-specific error_code.
 std::error_code current_path(SmallVectorImpl<char> &result);
 
+/// @brief Set the current path.
+///
+/// @param path The path to set.
+/// @returns errc::success if the current path was successfully set,
+///          otherwise a platform-specific error_code.
+std::error_code set_current_path(const Twine &path);
+
 /// @brief Remove path. Equivalent to POSIX remove().
 ///
 /// @param path Input path.

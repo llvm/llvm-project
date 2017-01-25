@@ -14,7 +14,6 @@
 #include "condition_variable"
 #include "thread"
 #include "system_error"
-#include "cassert"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

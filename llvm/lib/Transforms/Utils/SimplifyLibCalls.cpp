@@ -51,9 +51,9 @@ static cl::opt<bool>
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-static bool ignoreCallingConv(LibFunc::Func Func) {
-  return Func == LibFunc::abs || Func == LibFunc::labs ||
-         Func == LibFunc::llabs || Func == LibFunc::strlen;
+static bool ignoreCallingConv(LibFunc Func) {
+  return Func == LibFunc_abs || Func == LibFunc_labs ||
+         Func == LibFunc_llabs || Func == LibFunc_strlen;
 }
 
 static bool isCallingConvCCompatible(CallInst *CI) {
@@ -123,8 +123,8 @@ static bool callHasFloatingPointArgument(const CallInst *CI) {
 /// \brief Check whether the overloaded unary floating point function
 /// corresponding to \a Ty is available.
 static bool hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
-                            LibFunc::Func DoubleFn, LibFunc::Func FloatFn,
-                            LibFunc::Func LongDoubleFn) {
+                            LibFunc DoubleFn, LibFunc FloatFn,
+                            LibFunc LongDoubleFn) {
   switch (Ty->getTypeID()) {
   case Type::FloatTyID:
     return TLI->has(FloatFn);
@@ -811,7 +811,7 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B) {
 // functions be moved here?
 static Value *emitCalloc(Value *Num, Value *Size, const AttributeSet &Attrs,
                          IRBuilder<> &B, const TargetLibraryInfo &TLI) {
-  LibFunc::Func Func;
+  LibFunc Func;
   if (!TLI.getLibFunc("calloc", Func) || !TLI.has(Func))
     return nullptr;
 
@@ -846,9 +846,9 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
 
   // Is the inner call really malloc()?
   Function *InnerCallee = Malloc->getCalledFunction();
-  LibFunc::Func Func;
+  LibFunc Func;
   if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-      Func != LibFunc::malloc)
+      Func != LibFunc_malloc)
     return nullptr;
 
   // The memset must cover the same number of bytes that are malloc'd.
@@ -948,6 +948,20 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   return B.CreateFPExt(V, B.getDoubleTy());
 }
 
+// Replace a libcall \p CI with a call to intrinsic \p IID
+static Value *replaceUnaryCall(CallInst *CI, IRBuilder<> &B, Intrinsic::ID IID) {
+  // Propagate fast-math flags from the existing call to the new call.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+
+  Module *M = CI->getModule();
+  Value *V = CI->getArgOperand(0);
+  Function *F = Intrinsic::getDeclaration(M, IID, CI->getType());
+  CallInst *NewCall = B.CreateCall(F, V);
+  NewCall->takeName(CI);
+  return NewCall;
+}
+
 /// Shrink double -> float for binary functions like 'fmin/fmax'.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
@@ -1041,9 +1055,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   if (ConstantFP *Op1C = dyn_cast<ConstantFP>(Op1)) {
     // pow(10.0, x) -> exp10(x)
     if (Op1C->isExactlyValue(10.0) &&
-        hasUnaryFloatFn(TLI, Op1->getType(), LibFunc::exp10, LibFunc::exp10f,
-                        LibFunc::exp10l))
-      return emitUnaryFloatFnCall(Op2, TLI->getName(LibFunc::exp10), B,
+        hasUnaryFloatFn(TLI, Op1->getType(), LibFunc_exp10, LibFunc_exp10f,
+                        LibFunc_exp10l))
+      return emitUnaryFloatFnCall(Op2, TLI->getName(LibFunc_exp10), B,
                                   Callee->getAttributes());
   }
 
@@ -1055,10 +1069,10 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   // pow(exp(x), y) = pow(inf, 0.001) = inf, whereas exp(x*y) = exp(1).
   auto *OpC = dyn_cast<CallInst>(Op1);
   if (OpC && OpC->hasUnsafeAlgebra() && CI->hasUnsafeAlgebra()) {
-    LibFunc::Func Func;
+    LibFunc Func;
     Function *OpCCallee = OpC->getCalledFunction();
     if (OpCCallee && TLI->getLibFunc(OpCCallee->getName(), Func) &&
-        TLI->has(Func) && (Func == LibFunc::exp || Func == LibFunc::exp2)) {
+        TLI->has(Func) && (Func == LibFunc_exp || Func == LibFunc_exp2)) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
       Value *FMul = B.CreateFMul(OpC->getArgOperand(0), Op2, "mul");
@@ -1075,8 +1089,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     return ConstantFP::get(CI->getType(), 1.0);
 
   if (Op2C->isExactlyValue(-0.5) &&
-      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc::sqrt, LibFunc::sqrtf,
-                      LibFunc::sqrtl)) {
+      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
+                      LibFunc_sqrtl)) {
     // If -ffast-math:
     // pow(x, -0.5) -> 1.0 / sqrt(x)
     if (CI->hasUnsafeAlgebra()) {
@@ -1085,7 +1099,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
       // Here we cannot lower to an intrinsic because C99 sqrt() and llvm.sqrt
       // are not guaranteed to have the same semantics.
-      Value *Sqrt = emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc::sqrt), B,
+      Value *Sqrt = emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
                                          Callee->getAttributes());
 
       return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Sqrt, "sqrtrecip");
@@ -1093,8 +1107,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   }
 
   if (Op2C->isExactlyValue(0.5) &&
-      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc::sqrt, LibFunc::sqrtf,
-                      LibFunc::sqrtl)) {
+      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
+                      LibFunc_sqrtl)) {
 
     // In -ffast-math, pow(x, 0.5) -> sqrt(x).
     if (CI->hasUnsafeAlgebra()) {
@@ -1103,7 +1117,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
       // Unlike other math intrinsics, sqrt has differerent semantics
       // from the libc function. See LangRef for details.
-      return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc::sqrt), B,
+      return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
                                   Callee->getAttributes());
     }
 
@@ -1175,11 +1189,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
   Value *Op = CI->getArgOperand(0);
   // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= 32
   // Turn exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < 32
-  LibFunc::Func LdExp = LibFunc::ldexpl;
+  LibFunc LdExp = LibFunc_ldexpl;
   if (Op->getType()->isFloatTy())
-    LdExp = LibFunc::ldexpf;
+    LdExp = LibFunc_ldexpf;
   else if (Op->getType()->isDoubleTy())
-    LdExp = LibFunc::ldexp;
+    LdExp = LibFunc_ldexp;
 
   if (TLI->has(LdExp)) {
     Value *LdExpArg = nullptr;
@@ -1208,19 +1222,6 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
     }
   }
   return Ret;
-}
-
-Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  IRBuilder<>::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(CI->getFastMathFlags());
-
-  // fabs/fabsf -> llvm.fabs.*
-  Value *F = Intrinsic::getDeclaration(Callee->getParent(), Intrinsic::fabs,
-                                       CI->getType());
-  Value *NewCall = B.CreateCall(F, { CI->getArgOperand(0) });
-  NewCall->takeName(CI);
-  return NewCall;
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
@@ -1286,17 +1287,17 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
   FMF.setUnsafeAlgebra();
   B.setFastMathFlags(FMF);
 
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *F = OpC->getCalledFunction();
   if (F && ((TLI->getLibFunc(F->getName(), Func) && TLI->has(Func) &&
-      Func == LibFunc::pow) || F->getIntrinsicID() == Intrinsic::pow))
+      Func == LibFunc_pow) || F->getIntrinsicID() == Intrinsic::pow))
     return B.CreateFMul(OpC->getArgOperand(1),
       emitUnaryFloatFnCall(OpC->getOperand(0), Callee->getName(), B,
                            Callee->getAttributes()), "mul");
 
   // log(exp2(y)) -> y*log(2)
   if (F && Name == "log" && TLI->getLibFunc(F->getName(), Func) &&
-      TLI->has(Func) && Func == LibFunc::exp2)
+      TLI->has(Func) && Func == LibFunc_exp2)
     return B.CreateFMul(
         OpC->getArgOperand(0),
         emitUnaryFloatFnCall(ConstantFP::get(CI->getType(), 2.0),
@@ -1308,8 +1309,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
-  if (TLI->has(LibFunc::sqrtf) && (Callee->getName() == "sqrt" ||
-                                   Callee->getIntrinsicID() == Intrinsic::sqrt))
+  if (TLI->has(LibFunc_sqrtf) && (Callee->getName() == "sqrt" ||
+                             Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
   if (!CI->hasUnsafeAlgebra())
@@ -1391,12 +1392,12 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   // tan(atan(x)) -> x
   // tanf(atanf(x)) -> x
   // tanl(atanl(x)) -> x
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *F = OpC->getCalledFunction();
   if (F && TLI->getLibFunc(F->getName(), Func) && TLI->has(Func) &&
-      ((Func == LibFunc::atan && Callee->getName() == "tan") ||
-       (Func == LibFunc::atanf && Callee->getName() == "tanf") ||
-       (Func == LibFunc::atanl && Callee->getName() == "tanl")))
+      ((Func == LibFunc_atan && Callee->getName() == "tan") ||
+       (Func == LibFunc_atanf && Callee->getName() == "tanf") ||
+       (Func == LibFunc_atanl && Callee->getName() == "tanl")))
     Ret = OpC->getArgOperand(0);
   return Ret;
 }
@@ -1514,24 +1515,24 @@ void LibCallSimplifier::classifyArgUse(
     return;
 
   Function *Callee = CI->getCalledFunction();
-  LibFunc::Func Func;
+  LibFunc Func;
   if (!Callee || !TLI->getLibFunc(*Callee, Func) || !TLI->has(Func) ||
       !isTrigLibCall(CI))
     return;
 
   if (IsFloat) {
-    if (Func == LibFunc::sinpif)
+    if (Func == LibFunc_sinpif)
       SinCalls.push_back(CI);
-    else if (Func == LibFunc::cospif)
+    else if (Func == LibFunc_cospif)
       CosCalls.push_back(CI);
-    else if (Func == LibFunc::sincospif_stret)
+    else if (Func == LibFunc_sincospif_stret)
       SinCosCalls.push_back(CI);
   } else {
-    if (Func == LibFunc::sinpi)
+    if (Func == LibFunc_sinpi)
       SinCalls.push_back(CI);
-    else if (Func == LibFunc::cospi)
+    else if (Func == LibFunc_cospi)
       CosCalls.push_back(CI);
-    else if (Func == LibFunc::sincospi_stret)
+    else if (Func == LibFunc_sincospi_stret)
       SinCosCalls.push_back(CI);
   }
 }
@@ -1705,7 +1706,7 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilder<> &B) {
 
   // printf(format, ...) -> iprintf(format, ...) if no floating point
   // arguments.
-  if (TLI->has(LibFunc::iprintf) && !callHasFloatingPointArgument(CI)) {
+  if (TLI->has(LibFunc_iprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
     Constant *IPrintFFn =
         M->getOrInsertFunction("iprintf", FT, Callee->getAttributes());
@@ -1786,7 +1787,7 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilder<> &B) {
 
   // sprintf(str, format, ...) -> siprintf(str, format, ...) if no floating
   // point arguments.
-  if (TLI->has(LibFunc::siprintf) && !callHasFloatingPointArgument(CI)) {
+  if (TLI->has(LibFunc_siprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
     Constant *SIPrintFFn =
         M->getOrInsertFunction("siprintf", FT, Callee->getAttributes());
@@ -1856,7 +1857,7 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilder<> &B) {
 
   // fprintf(stream, format, ...) -> fiprintf(stream, format, ...) if no
   // floating point arguments.
-  if (TLI->has(LibFunc::fiprintf) && !callHasFloatingPointArgument(CI)) {
+  if (TLI->has(LibFunc_fiprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
     Constant *FIPrintFFn =
         M->getOrInsertFunction("fiprintf", FT, Callee->getAttributes());
@@ -1935,7 +1936,7 @@ Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilder<> &B) {
 }
 
 bool LibCallSimplifier::hasFloatVersion(StringRef FuncName) {
-  LibFunc::Func Func;
+  LibFunc Func;
   SmallString<20> FloatFuncName = FuncName;
   FloatFuncName += 'f';
   if (TLI->getLibFunc(FloatFuncName, Func))
@@ -1945,7 +1946,7 @@ bool LibCallSimplifier::hasFloatVersion(StringRef FuncName) {
 
 Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
                                                       IRBuilder<> &Builder) {
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   // Check for string/memory library functions.
   if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
@@ -1954,51 +1955,51 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
             isCallingConvCCompatible(CI)) &&
       "Optimizing string/memory libcall would change the calling convention");
     switch (Func) {
-    case LibFunc::strcat:
+    case LibFunc_strcat:
       return optimizeStrCat(CI, Builder);
-    case LibFunc::strncat:
+    case LibFunc_strncat:
       return optimizeStrNCat(CI, Builder);
-    case LibFunc::strchr:
+    case LibFunc_strchr:
       return optimizeStrChr(CI, Builder);
-    case LibFunc::strrchr:
+    case LibFunc_strrchr:
       return optimizeStrRChr(CI, Builder);
-    case LibFunc::strcmp:
+    case LibFunc_strcmp:
       return optimizeStrCmp(CI, Builder);
-    case LibFunc::strncmp:
+    case LibFunc_strncmp:
       return optimizeStrNCmp(CI, Builder);
-    case LibFunc::strcpy:
+    case LibFunc_strcpy:
       return optimizeStrCpy(CI, Builder);
-    case LibFunc::stpcpy:
+    case LibFunc_stpcpy:
       return optimizeStpCpy(CI, Builder);
-    case LibFunc::strncpy:
+    case LibFunc_strncpy:
       return optimizeStrNCpy(CI, Builder);
-    case LibFunc::strlen:
+    case LibFunc_strlen:
       return optimizeStrLen(CI, Builder);
-    case LibFunc::strpbrk:
+    case LibFunc_strpbrk:
       return optimizeStrPBrk(CI, Builder);
-    case LibFunc::strtol:
-    case LibFunc::strtod:
-    case LibFunc::strtof:
-    case LibFunc::strtoul:
-    case LibFunc::strtoll:
-    case LibFunc::strtold:
-    case LibFunc::strtoull:
+    case LibFunc_strtol:
+    case LibFunc_strtod:
+    case LibFunc_strtof:
+    case LibFunc_strtoul:
+    case LibFunc_strtoll:
+    case LibFunc_strtold:
+    case LibFunc_strtoull:
       return optimizeStrTo(CI, Builder);
-    case LibFunc::strspn:
+    case LibFunc_strspn:
       return optimizeStrSpn(CI, Builder);
-    case LibFunc::strcspn:
+    case LibFunc_strcspn:
       return optimizeStrCSpn(CI, Builder);
-    case LibFunc::strstr:
+    case LibFunc_strstr:
       return optimizeStrStr(CI, Builder);
-    case LibFunc::memchr:
+    case LibFunc_memchr:
       return optimizeMemChr(CI, Builder);
-    case LibFunc::memcmp:
+    case LibFunc_memcmp:
       return optimizeMemCmp(CI, Builder);
-    case LibFunc::memcpy:
+    case LibFunc_memcpy:
       return optimizeMemCpy(CI, Builder);
-    case LibFunc::memmove:
+    case LibFunc_memmove:
       return optimizeMemMove(CI, Builder);
-    case LibFunc::memset:
+    case LibFunc_memset:
       return optimizeMemSet(CI, Builder);
     default:
       break;
@@ -2011,7 +2012,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   if (CI->isNoBuiltin())
     return nullptr;
 
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   StringRef FuncName = Callee->getName();
 
@@ -2071,114 +2072,116 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
     if (Value *V = optimizeStringMemoryLibCall(CI, Builder))
       return V;
     switch (Func) {
-    case LibFunc::cosf:
-    case LibFunc::cos:
-    case LibFunc::cosl:
+    case LibFunc_cosf:
+    case LibFunc_cos:
+    case LibFunc_cosl:
       return optimizeCos(CI, Builder);
-    case LibFunc::sinpif:
-    case LibFunc::sinpi:
-    case LibFunc::cospif:
-    case LibFunc::cospi:
+    case LibFunc_sinpif:
+    case LibFunc_sinpi:
+    case LibFunc_cospif:
+    case LibFunc_cospi:
       return optimizeSinCosPi(CI, Builder);
-    case LibFunc::powf:
-    case LibFunc::pow:
-    case LibFunc::powl:
+    case LibFunc_powf:
+    case LibFunc_pow:
+    case LibFunc_powl:
       return optimizePow(CI, Builder);
-    case LibFunc::exp2l:
-    case LibFunc::exp2:
-    case LibFunc::exp2f:
+    case LibFunc_exp2l:
+    case LibFunc_exp2:
+    case LibFunc_exp2f:
       return optimizeExp2(CI, Builder);
-    case LibFunc::fabsf:
-    case LibFunc::fabs:
-    case LibFunc::fabsl:
-      return optimizeFabs(CI, Builder);
-    case LibFunc::sqrtf:
-    case LibFunc::sqrt:
-    case LibFunc::sqrtl:
+    case LibFunc_fabsf:
+    case LibFunc_fabs:
+    case LibFunc_fabsl:
+      return replaceUnaryCall(CI, Builder, Intrinsic::fabs);
+    case LibFunc_sqrtf:
+    case LibFunc_sqrt:
+    case LibFunc_sqrtl:
       return optimizeSqrt(CI, Builder);
-    case LibFunc::ffs:
-    case LibFunc::ffsl:
-    case LibFunc::ffsll:
+    case LibFunc_ffs:
+    case LibFunc_ffsl:
+    case LibFunc_ffsll:
       return optimizeFFS(CI, Builder);
-    case LibFunc::fls:
-    case LibFunc::flsl:
-    case LibFunc::flsll:
+    case LibFunc_fls:
+    case LibFunc_flsl:
+    case LibFunc_flsll:
       return optimizeFls(CI, Builder);
-    case LibFunc::abs:
-    case LibFunc::labs:
-    case LibFunc::llabs:
+    case LibFunc_abs:
+    case LibFunc_labs:
+    case LibFunc_llabs:
       return optimizeAbs(CI, Builder);
-    case LibFunc::isdigit:
+    case LibFunc_isdigit:
       return optimizeIsDigit(CI, Builder);
-    case LibFunc::isascii:
+    case LibFunc_isascii:
       return optimizeIsAscii(CI, Builder);
-    case LibFunc::toascii:
+    case LibFunc_toascii:
       return optimizeToAscii(CI, Builder);
-    case LibFunc::printf:
+    case LibFunc_printf:
       return optimizePrintF(CI, Builder);
-    case LibFunc::sprintf:
+    case LibFunc_sprintf:
       return optimizeSPrintF(CI, Builder);
-    case LibFunc::fprintf:
+    case LibFunc_fprintf:
       return optimizeFPrintF(CI, Builder);
-    case LibFunc::fwrite:
+    case LibFunc_fwrite:
       return optimizeFWrite(CI, Builder);
-    case LibFunc::fputs:
+    case LibFunc_fputs:
       return optimizeFPuts(CI, Builder);
-    case LibFunc::log:
-    case LibFunc::log10:
-    case LibFunc::log1p:
-    case LibFunc::log2:
-    case LibFunc::logb:
+    case LibFunc_log:
+    case LibFunc_log10:
+    case LibFunc_log1p:
+    case LibFunc_log2:
+    case LibFunc_logb:
       return optimizeLog(CI, Builder);
-    case LibFunc::puts:
+    case LibFunc_puts:
       return optimizePuts(CI, Builder);
-    case LibFunc::tan:
-    case LibFunc::tanf:
-    case LibFunc::tanl:
+    case LibFunc_tan:
+    case LibFunc_tanf:
+    case LibFunc_tanl:
       return optimizeTan(CI, Builder);
-    case LibFunc::perror:
+    case LibFunc_perror:
       return optimizeErrorReporting(CI, Builder);
-    case LibFunc::vfprintf:
-    case LibFunc::fiprintf:
+    case LibFunc_vfprintf:
+    case LibFunc_fiprintf:
       return optimizeErrorReporting(CI, Builder, 0);
-    case LibFunc::fputc:
+    case LibFunc_fputc:
       return optimizeErrorReporting(CI, Builder, 1);
-    case LibFunc::ceil:
-    case LibFunc::floor:
-    case LibFunc::rint:
-    case LibFunc::round:
-    case LibFunc::nearbyint:
-    case LibFunc::trunc:
-      if (hasFloatVersion(FuncName))
-        return optimizeUnaryDoubleFP(CI, Builder, false);
-      return nullptr;
-    case LibFunc::acos:
-    case LibFunc::acosh:
-    case LibFunc::asin:
-    case LibFunc::asinh:
-    case LibFunc::atan:
-    case LibFunc::atanh:
-    case LibFunc::cbrt:
-    case LibFunc::cosh:
-    case LibFunc::exp:
-    case LibFunc::exp10:
-    case LibFunc::expm1:
-    case LibFunc::sin:
-    case LibFunc::sinh:
-    case LibFunc::tanh:
+    case LibFunc_ceil:
+      return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
+    case LibFunc_floor:
+      return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+    case LibFunc_round:
+      return replaceUnaryCall(CI, Builder, Intrinsic::round);
+    case LibFunc_nearbyint:
+    case LibFunc_rint:
+      return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+    case LibFunc_trunc:
+      return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+    case LibFunc_acos:
+    case LibFunc_acosh:
+    case LibFunc_asin:
+    case LibFunc_asinh:
+    case LibFunc_atan:
+    case LibFunc_atanh:
+    case LibFunc_cbrt:
+    case LibFunc_cosh:
+    case LibFunc_exp:
+    case LibFunc_exp10:
+    case LibFunc_expm1:
+    case LibFunc_sin:
+    case LibFunc_sinh:
+    case LibFunc_tanh:
       if (UnsafeFPShrink && hasFloatVersion(FuncName))
         return optimizeUnaryDoubleFP(CI, Builder, true);
       return nullptr;
-    case LibFunc::copysign:
+    case LibFunc_copysign:
       if (hasFloatVersion(FuncName))
         return optimizeBinaryDoubleFP(CI, Builder);
       return nullptr;
-    case LibFunc::fminf:
-    case LibFunc::fmin:
-    case LibFunc::fminl:
-    case LibFunc::fmaxf:
-    case LibFunc::fmax:
-    case LibFunc::fmaxl:
+    case LibFunc_fminf:
+    case LibFunc_fmin:
+    case LibFunc_fminl:
+    case LibFunc_fmaxf:
+    case LibFunc_fmax:
+    case LibFunc_fmaxl:
       return optimizeFMinFMax(CI, Builder);
     default:
       return nullptr;
@@ -2215,15 +2218,9 @@ void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
 //   * log(exp10(y)) -> y*log(10)
 //   * log(sqrt(x))  -> 0.5*log(x)
 //
-// lround, lroundf, lroundl:
-//   * lround(cnst) -> cnst'
-//
 // pow, powf, powl:
 //   * pow(sqrt(x),y) -> pow(x,y*0.5)
 //   * pow(pow(x,y),z)-> pow(x,y*z)
-//
-// round, roundf, roundl:
-//   * round(cnst) -> cnst'
 //
 // signbit:
 //   * signbit(cnst) -> cnst'
@@ -2233,10 +2230,6 @@ void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
 //   * sqrt(expN(x))  -> expN(x*0.5)
 //   * sqrt(Nroot(x)) -> pow(x,1/(2*N))
 //   * sqrt(pow(x,y)) -> pow(|x|,y*0.5)
-//
-// trunc, truncf, truncl:
-//   * trunc(cnst) -> cnst'
-//
 //
 
 //===----------------------------------------------------------------------===//
@@ -2304,7 +2297,7 @@ Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
                                                       IRBuilder<> &B,
-                                                      LibFunc::Func Func) {
+                                                      LibFunc Func) {
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   const DataLayout &DL = CI->getModule()->getDataLayout();
@@ -2312,7 +2305,7 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
         *ObjSize = CI->getArgOperand(2);
 
   // __stpcpy_chk(x,x,...)  -> x+strlen(x)
-  if (Func == LibFunc::stpcpy_chk && !OnlyLowerUnknownSize && Dst == Src) {
+  if (Func == LibFunc_stpcpy_chk && !OnlyLowerUnknownSize && Dst == Src) {
     Value *StrLen = emitStrLen(Src, B, DL, TLI);
     return StrLen ? B.CreateInBoundsGEP(B.getInt8Ty(), Dst, StrLen) : nullptr;
   }
@@ -2338,14 +2331,14 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
   Value *Ret = emitMemCpyChk(Dst, Src, LenV, ObjSize, B, DL, TLI);
   // If the function was an __stpcpy_chk, and we were able to fold it into
   // a __memcpy_chk, we still need to return the correct end pointer.
-  if (Ret && Func == LibFunc::stpcpy_chk)
+  if (Ret && Func == LibFunc_stpcpy_chk)
     return B.CreateGEP(B.getInt8Ty(), Dst, ConstantInt::get(SizeTTy, Len - 1));
   return Ret;
 }
 
 Value *FortifiedLibCallSimplifier::optimizeStrpNCpyChk(CallInst *CI,
                                                        IRBuilder<> &B,
-                                                       LibFunc::Func Func) {
+                                                       LibFunc Func) {
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
@@ -2370,7 +2363,7 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
   //
   // PR23093.
 
-  LibFunc::Func Func;
+  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
 
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -2388,17 +2381,17 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
     return nullptr;
 
   switch (Func) {
-  case LibFunc::memcpy_chk:
+  case LibFunc_memcpy_chk:
     return optimizeMemCpyChk(CI, Builder);
-  case LibFunc::memmove_chk:
+  case LibFunc_memmove_chk:
     return optimizeMemMoveChk(CI, Builder);
-  case LibFunc::memset_chk:
+  case LibFunc_memset_chk:
     return optimizeMemSetChk(CI, Builder);
-  case LibFunc::stpcpy_chk:
-  case LibFunc::strcpy_chk:
+  case LibFunc_stpcpy_chk:
+  case LibFunc_strcpy_chk:
     return optimizeStrpCpyChk(CI, Builder, Func);
-  case LibFunc::stpncpy_chk:
-  case LibFunc::strncpy_chk:
+  case LibFunc_stpncpy_chk:
+  case LibFunc_strncpy_chk:
     return optimizeStrpNCpyChk(CI, Builder, Func);
   default:
     break;

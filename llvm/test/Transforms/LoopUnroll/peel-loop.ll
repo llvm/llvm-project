@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-force-peel-count=3 -simplifycfg -instcombine | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-force-peel-count=3 -verify-dom-info -simplifycfg -instcombine | FileCheck %s
 
 ; Basic loop peeling - check that we can peel-off the first 3 loop iterations
 ; when explicitly requested.

@@ -2098,8 +2098,7 @@ public:
                                  unsigned &Idx);
 
   /// \brief Reads attributes from the current stream position.
-  void ReadAttributes(ModuleFile &F, AttrVec &Attrs,
-                      const RecordData &Record, unsigned &Idx);
+  void ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs);
 
   /// \brief Reads a statement.
   Stmt *ReadStmt(ModuleFile &F);
@@ -2284,6 +2283,14 @@ public:
   /// \brief Reads a sub-expression operand during statement reading.
   Expr *readSubExpr() { return Reader->ReadSubExpr(); }
 
+  /// \brief Reads a declaration with the given local ID in the given module.
+  ///
+  /// \returns The requested declaration, casted to the given return type.
+  template<typename T>
+  T *GetLocalDeclAs(uint32_t LocalID) {
+    return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
+  }
+
   /// \brief Reads a TemplateArgumentLocInfo appropriate for the
   /// given TemplateArgument kind, advancing Idx.
   TemplateArgumentLocInfo
@@ -2455,7 +2462,7 @@ public:
 
   /// \brief Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs) {
-    return Reader->ReadAttributes(*F, Attrs, Record, Idx);
+    return Reader->ReadAttributes(*this, Attrs);
   }
 
   /// \brief Reads a token out of a record, advancing Idx.

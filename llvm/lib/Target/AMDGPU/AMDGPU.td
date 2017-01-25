@@ -206,12 +206,6 @@ def FeatureDPP : SubtargetFeature<"dpp",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
-def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
-  "FP16Denormals",
-  "true",
-  "Enable half precision denormal handling"
->;
-
 // Some instructions do not support denormals despite this flag. Using
 // fp32 denormals also causes instructions to run at the double
 // precision rate for the device.
@@ -221,11 +215,28 @@ def FeatureFP32Denormals : SubtargetFeature<"fp32-denormals",
   "Enable single precision denormal handling"
 >;
 
-def FeatureFP64Denormals : SubtargetFeature<"fp64-denormals",
-  "FP64Denormals",
+// Denormal handling for fp64 and fp16 is controlled by the same
+// config register when fp16 supported.
+// TODO: Do we need a separate f16 setting when not legal?
+def FeatureFP64FP16Denormals : SubtargetFeature<"fp64-fp16-denormals",
+  "FP64FP16Denormals",
   "true",
-  "Enable double precision denormal handling",
+  "Enable double and half precision denormal handling",
   [FeatureFP64]
+>;
+
+def FeatureFP64Denormals : SubtargetFeature<"fp64-denormals",
+  "FP64FP16Denormals",
+  "true",
+  "Enable double and half precision denormal handling",
+  [FeatureFP64, FeatureFP64FP16Denormals]
+>;
+
+def FeatureFP16Denormals : SubtargetFeature<"fp16-denormals",
+  "FP64FP16Denormals",
+  "true",
+  "Enable half precision denormal handling",
+  [FeatureFP64FP16Denormals]
 >;
 
 def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",

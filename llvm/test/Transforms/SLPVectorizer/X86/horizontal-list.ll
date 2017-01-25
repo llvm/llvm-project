@@ -969,3 +969,66 @@ define float @loadadd31(float* nocapture readonly %x) {
   ret float %add.29
 }
 
+define float @extra_args(float* nocapture readonly %x, i32 %a, i32 %b) {
+; CHECK-LABEL: @extra_args(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[MUL]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[X:%.*]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[CONV]], 3.000000e+00
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[TMP0]], [[ADD]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[TMP1]], [[ADD1]]
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD4]], [[CONV]]
+; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, float* [[X]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX3_1]], align 4
+; CHECK-NEXT:    [[ADD4_1:%.*]] = fadd fast float [[TMP2]], [[ADD5]]
+; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, float* [[X]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX3_2]], align 4
+; CHECK-NEXT:    [[ADD4_2:%.*]] = fadd fast float [[TMP3]], [[ADD4_1]]
+; CHECK-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds float, float* [[X]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[ARRAYIDX3_3]], align 4
+; CHECK-NEXT:    [[ADD4_3:%.*]] = fadd fast float [[TMP4]], [[ADD4_2]]
+; CHECK-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds float, float* [[X]], i64 5
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX3_4]], align 4
+; CHECK-NEXT:    [[ADD4_4:%.*]] = fadd fast float [[TMP5]], [[ADD4_3]]
+; CHECK-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds float, float* [[X]], i64 6
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[ARRAYIDX3_5]], align 4
+; CHECK-NEXT:    [[ADD4_5:%.*]] = fadd fast float [[TMP6]], [[ADD4_4]]
+; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds float, float* [[X]], i64 7
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX3_6]], align 4
+; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float [[TMP7]], [[ADD4_5]]
+; CHECK-NEXT:    ret float [[ADD4_6]]
+;
+  entry:
+  %mul = mul nsw i32 %b, %a
+  %conv = sitofp i32 %mul to float
+  %0 = load float, float* %x, align 4
+  %add = fadd fast float %conv, 3.000000e+00
+  %add1 = fadd fast float %0, %add
+  %arrayidx3 = getelementptr inbounds float, float* %x, i64 1
+  %1 = load float, float* %arrayidx3, align 4
+  %add4 = fadd fast float %1, %add1
+  %add5 = fadd fast float %add4, %conv
+  %arrayidx3.1 = getelementptr inbounds float, float* %x, i64 2
+  %2 = load float, float* %arrayidx3.1, align 4
+  %add4.1 = fadd fast float %2, %add5
+  %arrayidx3.2 = getelementptr inbounds float, float* %x, i64 3
+  %3 = load float, float* %arrayidx3.2, align 4
+  %add4.2 = fadd fast float %3, %add4.1
+  %arrayidx3.3 = getelementptr inbounds float, float* %x, i64 4
+  %4 = load float, float* %arrayidx3.3, align 4
+  %add4.3 = fadd fast float %4, %add4.2
+  %arrayidx3.4 = getelementptr inbounds float, float* %x, i64 5
+  %5 = load float, float* %arrayidx3.4, align 4
+  %add4.4 = fadd fast float %5, %add4.3
+  %arrayidx3.5 = getelementptr inbounds float, float* %x, i64 6
+  %6 = load float, float* %arrayidx3.5, align 4
+  %add4.5 = fadd fast float %6, %add4.4
+  %arrayidx3.6 = getelementptr inbounds float, float* %x, i64 7
+  %7 = load float, float* %arrayidx3.6, align 4
+  %add4.6 = fadd fast float %7, %add4.5
+  ret float %add4.6
+}
+

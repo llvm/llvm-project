@@ -491,7 +491,6 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
                           [(set VR256:$dst, (v8i32 immAllOnesV))]>;
 }
 
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move FP Scalar Instructions
 //
@@ -7861,6 +7860,15 @@ def VINSERTF128rm : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
           "vinsertf128\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
           []>, Sched<[WriteFShuffleLd, ReadAfterLd]>, VEX_4V, VEX_L;
 }
+
+
+// Without AVX2 we need to concat two v4i32 V_SETALLONES to create a 256-bit
+// all ones value.
+let Predicates = [HasAVX1Only] in
+def : Pat<(v8i32 immAllOnesV),
+          (VINSERTF128rr
+           (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)), (V_SETALLONES), sub_xmm),
+           (V_SETALLONES), 1)>;
 
 multiclass vinsert_lowering<string InstrStr, ValueType From, ValueType To,
                             PatFrag memop_frag> {

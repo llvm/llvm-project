@@ -56,15 +56,15 @@ declare double @ceil(double %x)
 define float @float_ceil(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_ceil(
 ; WIN32-NOT: float @ceilf
-; WIN32: double @ceil
+; WIN32: float @llvm.ceil.f32
 ; WIN64-LABEL: @float_ceil(
-; WIN64: float @ceilf
+; WIN64: float @llvm.ceil.f32
 ; WIN64-NOT: double @ceil
 ; MINGW32-LABEL: @float_ceil(
-; MINGW32: float @ceilf
+; MINGW32: float @llvm.ceil.f32
 ; MINGW32-NOT: double @ceil
 ; MINGW64-LABEL: @float_ceil(
-; MINGW64: float @ceilf
+; MINGW64: float @llvm.ceil.f32
 ; MINGW64-NOT: double @ceil
     %1 = fpext float %x to double
     %2 = call double @ceil(double %1)
@@ -137,15 +137,15 @@ declare double @floor(double %x)
 define float @float_floor(float %x) nounwind readnone {
 ; WIN32-LABEL: @float_floor(
 ; WIN32-NOT: float @floorf
-; WIN32: double @floor
+; WIN32: float @llvm.floor.f32
 ; WIN64-LABEL: @float_floor(
-; WIN64: float @floorf
+; WIN64: float @llvm.floor.f32
 ; WIN64-NOT: double @floor
 ; MINGW32-LABEL: @float_floor(
-; MINGW32: float @floorf
+; MINGW32: float @llvm.floor.f32
 ; MINGW32-NOT: double @floor
 ; MINGW64-LABEL: @float_floor(
-; MINGW64: float @floorf
+; MINGW64: float @llvm.floor.f32
 ; MINGW64-NOT: double @floor
     %1 = fpext float %x to double
     %2 = call double @floor(double %1)
@@ -262,10 +262,10 @@ define float @float_round(float %x) nounwind readnone {
 ; WIN64-NOT: float @roundf
 ; WIN64: double @round
 ; MINGW32-LABEL: @float_round(
-; MINGW32: float @roundf
+; MINGW32: float @llvm.round.f32
 ; MINGW32-NOT: double @round
 ; MINGW64-LABEL: @float_round(
-; MINGW64: float @roundf
+; MINGW64: float @llvm.round.f32
 ; MINGW64-NOT: double @round
     %1 = fpext float %x to double
     %2 = call double @round(double %1)

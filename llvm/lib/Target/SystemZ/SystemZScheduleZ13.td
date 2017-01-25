@@ -855,8 +855,8 @@ def : InstRW<[VecXsPm], (instregex "VZERO$")>;
 def : InstRW<[VecXsPm], (instregex "VONE$")>;
 def : InstRW<[VecXsPm], (instregex "VGBM$")>;
 def : InstRW<[VecXsPm], (instregex "VGM(B|F|G|H)?$")>;
-def : InstRW<[VecXsPm], (instregex "VLEI(B|F|G|H)$")>;
 def : InstRW<[VecXsPm], (instregex "VREPI(B|F|G|H)?$")>;
+def : InstRW<[VecXsPm], (instregex "VLEI(B|F|G|H)$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Loads

@@ -26,8 +26,6 @@
 #include "lsan_common.h"
 #include "lsan_thread.h"
 
-#include <stddef.h>
-
 using namespace __lsan;
 
 extern "C" {
@@ -163,13 +161,13 @@ INTERCEPTOR(void, cfree, void *p) ALIAS(WRAPPER_NAME(free));
   return Allocate(stack, size, 1, kAlwaysClearMemory);
 
 INTERCEPTOR_ATTRIBUTE
-void *operator new(size_t size) { OPERATOR_NEW_BODY; }
+void *operator new(uptr size) { OPERATOR_NEW_BODY; }
 INTERCEPTOR_ATTRIBUTE
-void *operator new[](size_t size) { OPERATOR_NEW_BODY; }
+void *operator new[](uptr size) { OPERATOR_NEW_BODY; }
 INTERCEPTOR_ATTRIBUTE
-void *operator new(size_t size, std::nothrow_t const&) { OPERATOR_NEW_BODY; }
+void *operator new(uptr size, std::nothrow_t const&) { OPERATOR_NEW_BODY; }
 INTERCEPTOR_ATTRIBUTE
-void *operator new[](size_t size, std::nothrow_t const&) { OPERATOR_NEW_BODY; }
+void *operator new[](uptr size, std::nothrow_t const&) { OPERATOR_NEW_BODY; }
 
 #define OPERATOR_DELETE_BODY \
   ENSURE_LSAN_INITED;        \

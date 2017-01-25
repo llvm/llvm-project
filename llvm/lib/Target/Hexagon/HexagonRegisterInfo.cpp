@@ -139,19 +139,26 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
-  Reserved.set(Hexagon::PC);
-  Reserved.set(Hexagon::D14);
-  Reserved.set(Hexagon::D15);
-  Reserved.set(Hexagon::LC0);
-  Reserved.set(Hexagon::LC1);
-  Reserved.set(Hexagon::SA0);
-  Reserved.set(Hexagon::SA1);
-  Reserved.set(Hexagon::UGP);
-  Reserved.set(Hexagon::GP);
-  Reserved.set(Hexagon::CS0);
-  Reserved.set(Hexagon::CS1);
-  Reserved.set(Hexagon::CS);
-  Reserved.set(Hexagon::USR);
+  Reserved.set(Hexagon::SA0); // C0
+  Reserved.set(Hexagon::LC0); // C1
+  Reserved.set(Hexagon::SA1); // C2
+  Reserved.set(Hexagon::LC1); // C3
+  Reserved.set(Hexagon::USR); // C8
+  Reserved.set(Hexagon::PC);  // C9
+  Reserved.set(Hexagon::UGP); // C10
+  Reserved.set(Hexagon::GP);  // C11
+  Reserved.set(Hexagon::CS0); // C12
+  Reserved.set(Hexagon::CS1); // C13
+
+  // Out of the control registers, only C8 is explicitly defined in
+  // HexagonRegisterInfo.td. If others are defined, make sure to add
+  // them here as well.
+  Reserved.set(Hexagon::C8);
+  Reserved.set(Hexagon::USR_OVF);
+
+  for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
+    markSuperRegs(Reserved, x);
+
   return Reserved;
 }
 

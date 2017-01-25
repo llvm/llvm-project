@@ -88,6 +88,20 @@ ModulePass *
 createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
 ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
 
+// Helper function that transforms Inst (either an indirect-call instruction, or
+// an invoke instruction , to a conditional call to F. This is like:
+//     if (Inst.CalledValue == F)
+//        F(...);
+//     else
+//        Inst(...);
+//     end
+// TotalCount is the profile count value that the instruction executes.
+// Count is the profile count value that F is the target function.
+// These two values are used to update the branch weight.
+// Returns the promoted direct call instruction.
+Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
+                                 uint64_t TotalCount);
+
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
   // Add the 'noredzone' attribute to added runtime library calls.
