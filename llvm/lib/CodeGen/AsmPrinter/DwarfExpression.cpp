@@ -32,7 +32,7 @@ void DwarfExpression::AddReg(int DwarfReg, const char *Comment) {
   }
 }
 
-void DwarfExpression::AddRegIndirect(int DwarfReg, int Offset, bool Deref) {
+void DwarfExpression::AddRegIndirect(int DwarfReg, int Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   if (DwarfReg < 32) {
     EmitOp(dwarf::DW_OP_breg0 + DwarfReg);
@@ -41,8 +41,6 @@ void DwarfExpression::AddRegIndirect(int DwarfReg, int Offset, bool Deref) {
     EmitUnsigned(DwarfReg);
   }
   EmitSigned(Offset);
-  if (Deref)
-    EmitOp(dwarf::DW_OP_deref);
 }
 
 void DwarfExpression::AddOpPiece(unsigned SizeInBits, unsigned OffsetInBits) {
