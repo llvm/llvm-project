@@ -22,7 +22,6 @@ else()
   set(LLVM_OPTIONAL_SOURCES LLVMGlobalISel ${GLOBAL_ISEL_FILES})
 endif()
 
-
 # In LLVMBuild.txt files, it is not possible to mark a dependency to a
 # library as optional. So instead, generate an empty library if we did
 # not ask for it. 
