@@ -139,24 +139,6 @@ public:
     return make_range(predicates_begin(), predicates_end());
   }
 
-#if 0
-  /// Emit a C++ expression that tests whether all the predicates are met.
-  template <class... Args>
-  void emitCxxPredicatesExpr(raw_ostream &OS, Args&&... args) const {
-    if (Predicates.empty()) {
-      OS << "true";
-      return;
-    }
-
-    StringRef Separator = "";
-    for (const auto &Predicate : predicates()) {
-      OS << Separator << "(";
-      Predicate->emitCxxPredicateExpr(OS, std::forward<Args...>(args)...);
-      OS << ")";
-      Separator = " && ";
-    }
-  }
-#else
   /// Emit a C++ expression that tests whether all the predicates are met.
   template <class Arg1>
   void emitCxxPredicatesExpr(raw_ostream &OS, Arg1&& arg1) const {
@@ -190,7 +172,6 @@ public:
       Separator = " && ";
     }
   }
-#endif
 };
 
 /// Generates code to check a predicate of an operand.
