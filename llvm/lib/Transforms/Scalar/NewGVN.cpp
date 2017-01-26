@@ -430,12 +430,10 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I) {
   E->setType(I->getType());
   E->setOpcode(I->getOpcode());
 
-  auto ReachablePhiArg = [&](const Use &U) {
+  // Filter out unreachable phi operands.
+  auto Filtered = make_filter_range(PN->operands(), [&](const Use &U) {
     return ReachableBlocks.count(PN->getIncomingBlock(U));
-  };
-
-  // Filter out unreachable operands
-  auto Filtered = make_filter_range(PN->operands(), ReachablePhiArg);
+  });
 
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const Use &U) -> Value * {
@@ -1938,6 +1936,12 @@ void NewGVN::convertDenseToDFSOrdered(
           IBlock = I->getParent();
           VD.LocalNum = InstrDFS.lookup(I);
         }
+
+        // Skip uses in unreachable blocks, as we're going
+        // to delete them.
+        if (ReachableBlocks.count(IBlock) == 0)
+          continue;
+
         DomTreeNode *DomNode = DT->getNode(IBlock);
         VD.DFSIn = DomNode->getDFSNumIn();
         VD.DFSOut = DomNode->getDFSNumOut();

@@ -109,6 +109,11 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
   return true;
 }
 
+
+void RawPrint(const char *Str) {
+  write(2, Str, strlen(Str));
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_POSIX

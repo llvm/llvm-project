@@ -354,8 +354,6 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);
   if (MaxCoverage.BlockCoverage)
     Printf(" cov: %zd", MaxCoverage.BlockCoverage);
-  if (size_t N = MaxCoverage.VPMap.GetNumBitsSinceLastMerge())
-    Printf(" vp: %zd", N);
   if (size_t N = TPC.GetTotalPCCoverage())
     Printf(" cov: %zd", N);
   if (auto TB = MaxCoverage.CounterBitmapBits)
@@ -509,8 +507,6 @@ size_t Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
     Res = NumFeatures;
 
   if (!TPC.UsingTracePcGuard()) {
-    if (TPC.UpdateValueProfileMap(&MaxCoverage.VPMap))
-      Res = 1;
     if (!Res && RecordMaxCoverage(&MaxCoverage))
       Res = 1;
   }

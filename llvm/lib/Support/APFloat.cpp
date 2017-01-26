@@ -66,17 +66,11 @@ namespace llvm {
   static const fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
   static const fltSemantics semBogus = {0, 0, 0, 0};
 
-  /* The PowerPC format consists of two doubles.  It does not map cleanly
-     onto the usual format above.  It is approximated using twice the
-     mantissa bits.  Note that for exponents near the double minimum,
-     we no longer can represent the full 106 mantissa bits, so those
-     will be treated as denormal numbers.
-
-     FIXME: While this approximation is equivalent to what GCC uses for
-     compile-time arithmetic on PPC double-double numbers, it is not able
-     to represent all possible values held by a PPC double-double number,
-     for example: (long double) 1.0 + (long double) 0x1p-106
-     Should this be replaced by a full emulation of PPC double-double?
+  /* The IBM double-double semantics. Such a number consists of a pair of IEEE
+     64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
+     (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
+     Therefore it has two 53-bit mantissa parts that aren't necessarily adjacent
+     to each other, and two 11-bit exponents.
 
      Note: we need to make the value different from semBogus as otherwise
      an unsafe optimization may collapse both values to a single address,
@@ -85,15 +79,21 @@ namespace llvm {
 
   /* These are legacy semantics for the fallback, inaccrurate implementation of
      IBM double-double, if the accurate semPPCDoubleDouble doesn't handle the
-     case. It's equivalent to have an IEEE number with consecutive 106 bits of
-     mantissa, and 11 bits of exponent. It's not accurate, becuase the two
-     53-bit mantissa parts don't actually have to be consecutive,
-     e.g. 1 + epsilon.
+     operation. It's equivalent to having an IEEE number with consecutive 106
+     bits of mantissa and 11 bits of exponent.
+
+     It's not equivalent to IBM double-double. For example, a legit IBM
+     double-double, 1 + epsilon:
+
+       1 + epsilon = 1 + (1 >> 1076)
+
+     is not representable by a consecutive 106 bits of mantissa.
 
      Currently, these semantics are used in the following way:
 
-       (IEEEdouble, IEEEdouble) -> (64-bit APInt, 64-bit APInt) ->
-       (128-bit APInt) -> semPPCDoubleDoubleLegacy -> IEEE operations
+       semPPCDoubleDouble -> (IEEEdouble, IEEEdouble) ->
+       (64-bit APInt, 64-bit APInt) -> (128-bit APInt) ->
+       semPPCDoubleDoubleLegacy -> IEEE operations
 
      We use bitcastToAPInt() to get the bit representation (in APInt) of the
      underlying IEEEdouble, then use the APInt constructor to construct the
@@ -3907,7 +3907,7 @@ APFloat::opStatus DoubleAPFloat::addImpl(const APFloat &a, const APFloat &aa,
   if (!z.isFinite()) {
     if (!z.isInfinity()) {
       Floats[0] = std::move(z);
-      Floats[1].makeZero(false);
+      Floats[1].makeZero(/* Neg = */ false);
       return (opStatus)Status;
     }
     Status = opOK;
@@ -3925,7 +3925,7 @@ APFloat::opStatus DoubleAPFloat::addImpl(const APFloat &a, const APFloat &aa,
     }
     if (!z.isFinite()) {
       Floats[0] = std::move(z);
-      Floats[1].makeZero(false);
+      Floats[1].makeZero(/* Neg = */ false);
       return (opStatus)Status;
     }
     Floats[0] = z;
@@ -3961,13 +3961,13 @@ APFloat::opStatus DoubleAPFloat::addImpl(const APFloat &a, const APFloat &aa,
     Status |= zz.add(cc, RM);
     if (zz.isZero() && !zz.isNegative()) {
       Floats[0] = std::move(z);
-      Floats[1].makeZero(false);
+      Floats[1].makeZero(/* Neg = */ false);
       return opOK;
     }
     Floats[0] = z;
     Status |= Floats[0].add(zz, RM);
     if (!Floats[0].isFinite()) {
-      Floats[1].makeZero(false);
+      Floats[1].makeZero(/* Neg = */ false);
       return (opStatus)Status;
     }
     Floats[1] = std::move(z);
@@ -4086,7 +4086,7 @@ APFloat::opStatus DoubleAPFloat::multiply(const DoubleAPFloat &RHS,
   Status |= T.multiply(C, RM);
   if (!T.isFiniteNonZero()) {
     Floats[0] = T;
-    Floats[1].makeZero(false);
+    Floats[1].makeZero(/* Neg = */ false);
     return (opStatus)Status;
   }
 
@@ -4112,7 +4112,7 @@ APFloat::opStatus DoubleAPFloat::multiply(const DoubleAPFloat &RHS,
 
   Floats[0] = U;
   if (!U.isFinite()) {
-    Floats[1].makeZero(false);
+    Floats[1].makeZero(/* Neg = */ false);
   } else {
     // Floats[1] = (t - u) + tau
     Status |= T.subtract(U, RM);
@@ -4204,12 +4204,12 @@ bool DoubleAPFloat::isNegative() const { return Floats[0].isNegative(); }
 
 void DoubleAPFloat::makeInf(bool Neg) {
   Floats[0].makeInf(Neg);
-  Floats[1].makeZero(false);
+  Floats[1].makeZero(/* Neg = */ false);
 }
 
 void DoubleAPFloat::makeZero(bool Neg) {
   Floats[0].makeZero(Neg);
-  Floats[1].makeZero(false);
+  Floats[1].makeZero(/* Neg = */ false);
 }
 
 void DoubleAPFloat::makeLargest(bool Neg) {
@@ -4223,7 +4223,7 @@ void DoubleAPFloat::makeLargest(bool Neg) {
 void DoubleAPFloat::makeSmallest(bool Neg) {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
   Floats[0].makeSmallest(Neg);
-  Floats[1].makeZero(false);
+  Floats[1].makeZero(/* Neg = */ false);
 }
 
 void DoubleAPFloat::makeSmallestNormalized(bool Neg) {
@@ -4231,16 +4231,17 @@ void DoubleAPFloat::makeSmallestNormalized(bool Neg) {
   Floats[0] = APFloat(semIEEEdouble, APInt(64, 0x0360000000000000ull));
   if (Neg)
     Floats[0].changeSign();
-  Floats[1].makeZero(false);
+  Floats[1].makeZero(/* Neg = */ false);
 }
 
 void DoubleAPFloat::makeNaN(bool SNaN, bool Neg, const APInt *fill) {
   Floats[0].makeNaN(SNaN, Neg, fill);
-  Floats[1].makeZero(false);
+  Floats[1].makeZero(/* Neg = */ false);
 }
 
 APFloat::cmpResult DoubleAPFloat::compare(const DoubleAPFloat &RHS) const {
   auto Result = Floats[0].compare(RHS.Floats[0]);
+  // |Float[0]| > |Float[1]|
   if (Result == APFloat::cmpEqual)
     return Floats[1].compare(RHS.Floats[1]);
   return Result;
@@ -4337,6 +4338,7 @@ unsigned int DoubleAPFloat::convertToHexString(char *DST,
 bool DoubleAPFloat::isDenormal() const {
   return getCategory() == fcNormal &&
          (Floats[0].isDenormal() || Floats[1].isDenormal() ||
+          // (double)(Hi + Lo) == Hi defines a normal number.
           Floats[0].compare(Floats[0] + Floats[1]) != cmpEqual);
 }
 

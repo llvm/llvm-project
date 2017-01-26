@@ -61,13 +61,14 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 ; Test --plugin-opt=obj-path to ensure unique object files generated.
+; RUN: rm -f %t5.o %t5.o1
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=jobs=2 \
 ; RUN:    --plugin-opt=obj-path=%t5.o \
 ; RUN:    -shared %t.o %t2.o -o %t4
-; RUN: llvm-nm %t5.o0 | FileCheck %s --check-prefix=NM2
+; RUN: llvm-nm %t5.o | FileCheck %s --check-prefix=NM2
 ; RUN: llvm-nm %t5.o1 | FileCheck %s --check-prefix=NM2
 
 ; NM: T f

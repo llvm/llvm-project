@@ -311,17 +311,22 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter,
   }
 
   NewLoopsMap NewLoops;
-  NewLoops[L] = NewLoop;
+  if (NewLoop)
+    NewLoops[L] = NewLoop;
+  else if (ParentLoop)
+    NewLoops[L] = ParentLoop;
+
   // For each block in the original loop, create a new copy,
   // and update the value map with the newly created values.
   for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
     BasicBlock *NewBB = CloneBasicBlock(*BB, VMap, "." + suffix, F);
     NewBlocks.push_back(NewBB);
-
-    if (NewLoop) {
+   
+    // If we're unrolling the outermost loop, there's no remainder loop,
+    // and this block isn't in a nested loop, then the new block is not
+    // in any loop. Otherwise, add it to loopinfo.
+    if (CreateRemainderLoop || LI->getLoopFor(*BB) != L || ParentLoop)
       addClonedBlockToLoopInfo(*BB, NewBB, LI, NewLoops);
-    } else if (ParentLoop)
-      ParentLoop->addBasicBlockToLoop(NewBB, *LI);
 
     VMap[*BB] = NewBB;
     if (Header == *BB) {

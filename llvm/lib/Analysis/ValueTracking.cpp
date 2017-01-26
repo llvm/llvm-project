@@ -2645,7 +2645,8 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
                                            Depth + 1);
   case Instruction::Call:
-    Intrinsic::ID IID = getIntrinsicForCallSite(cast<CallInst>(I), TLI);
+    const auto *CI = cast<CallInst>(I);
+    Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
     switch (IID) {
     default:
       break;
@@ -2662,12 +2663,19 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     case Intrinsic::exp:
     case Intrinsic::exp2:
     case Intrinsic::fabs:
-    case Intrinsic::sqrt:
       return true;
+
+    case Intrinsic::sqrt:
+      // sqrt(x) is always >= -0 or NaN.  Moreover, sqrt(x) == -0 iff x == -0.
+      if (!SignBitOnly)
+        return true;
+      return CI->hasNoNaNs() && (CI->hasNoSignedZeros() ||
+                                 CannotBeNegativeZero(CI->getOperand(0), TLI));
+
     case Intrinsic::powi:
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
+      if (ConstantInt *Exponent = dyn_cast<ConstantInt>(I->getOperand(1))) {
         // powi(x,n) is non-negative if n is even.
-        if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
+        if (Exponent->getBitWidth() <= 64 && Exponent->getSExtValue() % 2u == 0)
           return true;
       }
       return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,

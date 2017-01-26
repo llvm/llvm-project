@@ -878,9 +878,9 @@ void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
     report_fatal_error(
         "A member of a type identifier may not have an explicit section");
 
-  if (isa<GlobalVariable>(GO) && GO->isDeclarationForLinker())
-    report_fatal_error(
-        "A global var member of a type identifier must be a definition");
+  // FIXME: We previously checked that global var member of a type identifier
+  // must be a definition, but the IR linker may leave type metadata on
+  // declarations. We should restore this check after fixing PR31759.
 
   auto OffsetConstMD = dyn_cast<ConstantAsMetadata>(Type->getOperand(0));
   if (!OffsetConstMD)
@@ -1375,6 +1375,9 @@ bool LowerTypeTestsModule::lower() {
   unsigned I = 0;
   SmallVector<MDNode *, 2> Types;
   for (GlobalObject &GO : M.global_objects()) {
+    if (isa<GlobalVariable>(GO) && GO.isDeclarationForLinker())
+      continue;
+
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
     if (Types.empty())
