@@ -27,6 +27,6 @@ ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
   CPU = LongCPU;
   return TSC;
 }
-}
+} // namespace __xray
 
 #endif // XRAY_X86_64_H

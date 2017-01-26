@@ -826,7 +826,8 @@ static ld_plugin_status allSymbolsReadHook() {
     std::error_code EC =
         sys::fs::openFileForWrite(Filenames[Task], FD, sys::fs::F_None);
     if (EC)
-      message(LDPL_FATAL, "Could not open file: %s", EC.message().c_str());
+      message(LDPL_FATAL, "Could not open file %s: %s", Filenames[Task].c_str(),
+              EC.message().c_str());
     return llvm::make_unique<lto::NativeObjectStream>(
         llvm::make_unique<llvm::raw_fd_ostream>(FD, true));
   };

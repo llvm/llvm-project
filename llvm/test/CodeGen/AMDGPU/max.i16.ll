@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=fiji -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

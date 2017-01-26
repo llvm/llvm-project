@@ -11,12 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZInstrInfo.h"
+#include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZ.h"
 #include "SystemZInstrBuilder.h"
-#include "SystemZTargetMachine.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "SystemZInstrInfo.h"
+#include "SystemZSubtarget.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -255,7 +277,6 @@ void SystemZInstrInfo::emitGRX32Move(MachineBasicBlock &MBB,
     .addImm(32 - Size).addImm(128 + 31).addImm(Rotate);
 }
 
-
 MachineInstr *SystemZInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                        bool NewMI,
                                                        unsigned OpIdx1,
@@ -283,7 +304,6 @@ MachineInstr *SystemZInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   }
 }
-
 
 // If MI is a simple load or store for a frame object, return the register
 // it loads or stores and set FrameIndex to the index of the frame object.
@@ -588,7 +608,6 @@ bool SystemZInstrInfo::optimizeCompareInstr(
          removeIPMBasedCompare(Compare, SrcReg, MRI, &RI);
 }
 
-
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Pred,
                                        unsigned TrueReg, unsigned FalseReg,
@@ -892,15 +911,19 @@ static bool isSimpleBD12Move(const MachineInstr *MI, unsigned Flag) {
 }
 
 namespace {
+
 struct LogicOp {
-  LogicOp() : RegSize(0), ImmLSB(0), ImmSize(0) {}
+  LogicOp() = default;
   LogicOp(unsigned regSize, unsigned immLSB, unsigned immSize)
     : RegSize(regSize), ImmLSB(immLSB), ImmSize(immSize) {}
 
   explicit operator bool() const { return RegSize; }
 
-  unsigned RegSize, ImmLSB, ImmSize;
+  unsigned RegSize = 0;
+  unsigned ImmLSB = 0;
+  unsigned ImmSize = 0;
 };
+
 } // end anonymous namespace
 
 static LogicOp interpretAndImmediate(unsigned Opcode) {
@@ -1044,7 +1067,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       MCRegUnitIterator CCUnit(SystemZ::CC, TRI);
       LiveRange &CCLiveRange = LIS->getRegUnit(*CCUnit);
       ++CCUnit;
-      assert (!CCUnit.isValid() && "CC only has one reg unit.");
+      assert(!CCUnit.isValid() && "CC only has one reg unit.");
       SlotIndex MISlot =
           LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
       if (!CCLiveRange.liveAt(MISlot)) {

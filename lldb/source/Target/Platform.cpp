@@ -748,14 +748,12 @@ Error Platform::Install(const FileSpec &src, const FileSpec &dst) {
 bool Platform::SetWorkingDirectory(const FileSpec &file_spec) {
   if (IsHost()) {
     Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
-    if (log)
-      log->Printf("Platform::SetWorkingDirectory('%s')",
-                  file_spec.GetCString());
-    if (file_spec) {
-      if (::chdir(file_spec.GetCString()) == 0)
-        return true;
+    LLDB_LOG(log, "{0}", file_spec);
+    if (std::error_code ec = llvm::sys::fs::set_current_path(file_spec.GetPath())) {
+      LLDB_LOG(log, "error: {0}", ec.message());
+      return false;
     }
-    return false;
+    return true;
   } else {
     m_working_dir.Clear();
     return SetRemoteWorkingDirectory(file_spec);

@@ -88,9 +88,8 @@ def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
 def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
     "Misaligned128StoreIsSlow", "true", "Misaligned 128 bit stores are slow">;
 
-def FeatureAvoidQuadLdStPairs : SubtargetFeature<"no-quad-ldst-pairs",
-    "AvoidQuadLdStPairs", "true",
-    "Do not form quad load/store pair operations">;
+def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
+    "Paired128IsSlow", "true", "Paired 128 bit loads and stores are slow">;
 
 def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
     "alternate-sextload-cvt-f32-pattern", "UseAlternateSExtLoadCVTF32Pattern",
@@ -226,7 +225,7 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
 
 def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M1 processors",
-                                    [FeatureAvoidQuadLdStPairs,
+                                    [FeatureSlowPaired128,
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureCustomCheapAsMoveHandling,
@@ -240,7 +239,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
 
 def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M2/M3 processors",
-                                    [FeatureAvoidQuadLdStPairs,
+                                    [FeatureSlowPaired128,
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureCustomCheapAsMoveHandling,
@@ -297,11 +296,11 @@ def : ProcessorModel<"generic", NoSchedModel, [
                      FeaturePostRAScheduler
                      ]>;
 
-// FIXME: Cortex-A35 is currently modelled as a Cortex-A53
+// FIXME: Cortex-A35 is currently modeled as a Cortex-A53.
 def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
-// FIXME: Cortex-A72 and Cortex-A73 are currently modelled as an Cortex-A57.
+// FIXME: Cortex-A72 and Cortex-A73 are currently modeled as a Cortex-A57.
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA72]>;
 def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;

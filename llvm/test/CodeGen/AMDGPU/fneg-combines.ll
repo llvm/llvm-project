@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -enable-unsafe-fp-math -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -1300,8 +1300,7 @@ define void @v_fneg_mul_legacy_multi_use_fneg_x_f32(float addrspace(1)* %out, fl
 
 ; GCN-LABEL: {{^}}v_fneg_sin_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
-; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], [[K]], -[[A]]
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], 0xbe22f983, [[A]]
 ; GCN: v_fract_f32_e32 [[FRACT:v[0-9]+]], [[MUL]]
 ; GCN: v_sin_f32_e32 [[RESULT:v[0-9]+]], [[FRACT]]
 ; GCN: buffer_store_dword [[RESULT]]

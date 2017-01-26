@@ -129,6 +129,7 @@ cl::opt<bool> PrintSize("print-size",
                         cl::desc("Show symbol size instead of address"));
 cl::alias PrintSizeS("S", cl::desc("Alias for --print-size"),
                      cl::aliasopt(PrintSize), cl::Grouping);
+bool MachOPrintSizeWarning = false;
 
 cl::opt<bool> SizeSort("size-sort", cl::desc("Sort symbols by size"));
 
@@ -1057,15 +1058,19 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
   MachO::mach_header H;
   MachO::mach_header_64 H_64;
   Triple T;
+  const char *McpuDefault, *ArchFlag;
   if (MachO->is64Bit()) {
     H_64 = MachO->MachOObjectFile::getHeader64();
-    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
+    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype,
+                                       &McpuDefault, &ArchFlag);
   } else {
     H = MachO->MachOObjectFile::getHeader();
-    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype,
+                                       &McpuDefault, &ArchFlag);
   }
+  const std::string ArchFlagName(ArchFlag);
   if (none_of(ArchFlags, [&](const std::string &Name) {
-        return Name == T.getArchName();
+        return Name == ArchFlagName;
       })) {
     error("No architecture specified", Filename);
     return false;
@@ -1120,6 +1125,11 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           continue;
         }
         if (SymbolicFile *O = dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
+          if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
+            errs() << ToolName << ": warning sizes with -print-size for Mach-O "
+                      "files are always zero.\n";
+            MachOPrintSizeWarning = true;
+          }
           if (!checkMachOAndArchFlags(O, Filename))
             return;
           if (!PrintFileName) {
@@ -1357,6 +1367,11 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     return;
   }
   if (SymbolicFile *O = dyn_cast<SymbolicFile>(&Bin)) {
+    if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
+      errs() << ToolName << ": warning sizes with -print-size for Mach-O files "
+                "are always zero.\n";
+      MachOPrintSizeWarning = true;
+    }
     if (!checkMachOAndArchFlags(O, Filename))
       return;
     dumpSymbolNamesFromObject(*O, true);

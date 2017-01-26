@@ -107,6 +107,7 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
 
   switch (RC.getID()) {
   case GPRRegClassID:
+  case GPRnopcRegClassID:
   case tGPR_and_tcGPRRegClassID:
     return getRegBank(ARM::GPRRegBankID);
   default:
@@ -136,6 +137,8 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case G_ADD:
   case G_LOAD:
+  case G_SEXT:
+  case G_ZEXT:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[0];

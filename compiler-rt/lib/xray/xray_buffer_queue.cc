@@ -18,15 +18,21 @@
 
 using namespace __xray;
 
-BufferQueue::BufferQueue(std::size_t B, std::size_t N)
+BufferQueue::BufferQueue(std::size_t B, std::size_t N, bool &Success)
     : BufferSize(B), Buffers(N), Mutex(), OwnedBuffers(), Finalizing(false) {
-  for (auto &Buf : Buffers) {
+  for (auto &T : Buffers) {
     void *Tmp = malloc(BufferSize);
+    if (Tmp == nullptr) {
+      Success = false;
+      return;
+    }
+
+    auto &Buf = std::get<0>(T);
     Buf.Buffer = Tmp;
     Buf.Size = B;
-    if (Tmp != 0)
-      OwnedBuffers.insert(Tmp);
+    OwnedBuffers.emplace(Tmp);
   }
+  Success = true;
 }
 
 std::error_code BufferQueue::getBuffer(Buffer &Buf) {
@@ -35,7 +41,11 @@ std::error_code BufferQueue::getBuffer(Buffer &Buf) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Buffers.empty())
     return std::make_error_code(std::errc::not_enough_memory);
-  Buf = Buffers.front();
+  auto &T = Buffers.front();
+  auto &B = std::get<0>(T);
+  Buf = B;
+  B.Buffer = nullptr;
+  B.Size = 0;
   Buffers.pop_front();
   return {};
 }
@@ -44,9 +54,11 @@ std::error_code BufferQueue::releaseBuffer(Buffer &Buf) {
   if (OwnedBuffers.count(Buf.Buffer) == 0)
     return std::make_error_code(std::errc::argument_out_of_domain);
   std::lock_guard<std::mutex> Guard(Mutex);
-  Buffers.push_back(Buf);
+
+  // Now that the buffer has been released, we mark it as "used".
+  Buffers.emplace(Buffers.end(), Buf, true /* used */);
   Buf.Buffer = nullptr;
-  Buf.Size = BufferSize;
+  Buf.Size = 0;
   return {};
 }
 
@@ -57,9 +69,8 @@ std::error_code BufferQueue::finalize() {
 }
 
 BufferQueue::~BufferQueue() {
-  for (auto &Buf : Buffers) {
+  for (auto &T : Buffers) {
+    auto &Buf = std::get<0>(T);
     free(Buf.Buffer);
-    Buf.Buffer = nullptr;
-    Buf.Size = 0;
   }
 }

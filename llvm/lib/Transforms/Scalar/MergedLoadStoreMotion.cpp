@@ -19,6 +19,8 @@
 // thinks it safe to do so.  This optimization helps with eg. hiding load
 // latencies, triggering if-conversion, and reducing static code size.
 //
+// NOTE: This code no longer performs load hoisting, it is subsumed by GVNHoist.
+//
 //===----------------------------------------------------------------------===//
 //
 //
@@ -118,16 +120,6 @@ private:
   void removeInstruction(Instruction *Inst);
   BasicBlock *getDiamondTail(BasicBlock *BB);
   bool isDiamondHead(BasicBlock *BB);
-  // Routines for hoisting loads
-  bool isLoadHoistBarrierInRange(const Instruction &Start,
-                                 const Instruction &End, LoadInst *LI,
-                                 bool SafeToLoadUnconditionally);
-  LoadInst *canHoistFromBlock(BasicBlock *BB, LoadInst *LI);
-  void hoistInstruction(BasicBlock *BB, Instruction *HoistCand,
-                        Instruction *ElseInst);
-  bool isSafeToHoist(Instruction *I) const;
-  bool hoistLoad(BasicBlock *BB, LoadInst *HoistCand, LoadInst *ElseInst);
-  bool mergeLoads(BasicBlock *BB);
   // Routines for sinking stores
   StoreInst *canSinkFromBlock(BasicBlock *BB, StoreInst *SI);
   PHINode *getPHIOperand(BasicBlock *BB, StoreInst *S0, StoreInst *S1);
@@ -188,169 +180,6 @@ bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
   return true;
 }
 
-///
-/// \brief True when instruction is a hoist barrier for a load
-///
-/// Whenever an instruction could possibly modify the value
-/// being loaded or protect against the load from happening
-/// it is considered a hoist barrier.
-///
-bool MergedLoadStoreMotion::isLoadHoistBarrierInRange(
-    const Instruction &Start, const Instruction &End, LoadInst *LI,
-    bool SafeToLoadUnconditionally) {
-  if (!SafeToLoadUnconditionally)
-    for (const Instruction &Inst :
-         make_range(Start.getIterator(), End.getIterator()))
-      if (!isGuaranteedToTransferExecutionToSuccessor(&Inst))
-        return true;
-  MemoryLocation Loc = MemoryLocation::get(LI);
-  return AA->canInstructionRangeModRef(Start, End, Loc, MRI_Mod);
-}
-
-///
-/// \brief Decide if a load can be hoisted
-///
-/// When there is a load in \p BB to the same address as \p LI
-/// and it can be hoisted from \p BB, return that load.
-/// Otherwise return Null.
-///
-LoadInst *MergedLoadStoreMotion::canHoistFromBlock(BasicBlock *BB1,
-                                                   LoadInst *Load0) {
-  BasicBlock *BB0 = Load0->getParent();
-  BasicBlock *Head = BB0->getSinglePredecessor();
-  bool SafeToLoadUnconditionally = isSafeToLoadUnconditionally(
-      Load0->getPointerOperand(), Load0->getAlignment(),
-      Load0->getModule()->getDataLayout(),
-      /*ScanFrom=*/Head->getTerminator());
-  for (BasicBlock::iterator BBI = BB1->begin(), BBE = BB1->end(); BBI != BBE;
-       ++BBI) {
-    Instruction *Inst = &*BBI;
-
-    // Only merge and hoist loads when their result in used only in BB
-    auto *Load1 = dyn_cast<LoadInst>(Inst);
-    if (!Load1 || Inst->isUsedOutsideOfBlock(BB1))
-      continue;
-
-    MemoryLocation Loc0 = MemoryLocation::get(Load0);
-    MemoryLocation Loc1 = MemoryLocation::get(Load1);
-    if (Load0->isSameOperationAs(Load1) && AA->isMustAlias(Loc0, Loc1) &&
-        !isLoadHoistBarrierInRange(BB1->front(), *Load1, Load1,
-                                   SafeToLoadUnconditionally) &&
-        !isLoadHoistBarrierInRange(BB0->front(), *Load0, Load0,
-                                   SafeToLoadUnconditionally)) {
-      return Load1;
-    }
-  }
-  return nullptr;
-}
-
-///
-/// \brief Merge two equivalent instructions \p HoistCand and \p ElseInst into
-/// \p BB
-///
-/// BB is the head of a diamond
-///
-void MergedLoadStoreMotion::hoistInstruction(BasicBlock *BB,
-                                             Instruction *HoistCand,
-                                             Instruction *ElseInst) {
-  DEBUG(dbgs() << " Hoist Instruction into BB \n"; BB->dump();
-        dbgs() << "Instruction Left\n"; HoistCand->dump(); dbgs() << "\n";
-        dbgs() << "Instruction Right\n"; ElseInst->dump(); dbgs() << "\n");
-  // Hoist the instruction.
-  assert(HoistCand->getParent() != BB);
-
-  // Intersect optional metadata.
-  HoistCand->andIRFlags(ElseInst);
-  HoistCand->dropUnknownNonDebugMetadata();
-
-  // Prepend point for instruction insert
-  Instruction *HoistPt = BB->getTerminator();
-
-  // Merged instruction
-  Instruction *HoistedInst = HoistCand->clone();
-
-  // Hoist instruction.
-  HoistedInst->insertBefore(HoistPt);
-
-  HoistCand->replaceAllUsesWith(HoistedInst);
-  removeInstruction(HoistCand);
-  // Replace the else block instruction.
-  ElseInst->replaceAllUsesWith(HoistedInst);
-  removeInstruction(ElseInst);
-}
-
-///
-/// \brief Return true if no operand of \p I is defined in I's parent block
-///
-bool MergedLoadStoreMotion::isSafeToHoist(Instruction *I) const {
-  BasicBlock *Parent = I->getParent();
-  for (Use &U : I->operands())
-    if (auto *Instr = dyn_cast<Instruction>(&U))
-      if (Instr->getParent() == Parent)
-        return false;
-  return true;
-}
-
-///
-/// \brief Merge two equivalent loads and GEPs and hoist into diamond head
-///
-bool MergedLoadStoreMotion::hoistLoad(BasicBlock *BB, LoadInst *L0,
-                                      LoadInst *L1) {
-  // Only one definition?
-  auto *A0 = dyn_cast<Instruction>(L0->getPointerOperand());
-  auto *A1 = dyn_cast<Instruction>(L1->getPointerOperand());
-  if (A0 && A1 && A0->isIdenticalTo(A1) && isSafeToHoist(A0) &&
-      A0->hasOneUse() && (A0->getParent() == L0->getParent()) &&
-      A1->hasOneUse() && (A1->getParent() == L1->getParent()) &&
-      isa<GetElementPtrInst>(A0)) {
-    DEBUG(dbgs() << "Hoist Instruction into BB \n"; BB->dump();
-          dbgs() << "Instruction Left\n"; L0->dump(); dbgs() << "\n";
-          dbgs() << "Instruction Right\n"; L1->dump(); dbgs() << "\n");
-    hoistInstruction(BB, A0, A1);
-    hoistInstruction(BB, L0, L1);
-    return true;
-  }
-  return false;
-}
-
-///
-/// \brief Try to hoist two loads to same address into diamond header
-///
-/// Starting from a diamond head block, iterate over the instructions in one
-/// successor block and try to match a load in the second successor.
-///
-bool MergedLoadStoreMotion::mergeLoads(BasicBlock *BB) {
-  bool MergedLoads = false;
-  assert(isDiamondHead(BB));
-  BranchInst *BI = cast<BranchInst>(BB->getTerminator());
-  BasicBlock *Succ0 = BI->getSuccessor(0);
-  BasicBlock *Succ1 = BI->getSuccessor(1);
-  // #Instructions in Succ1 for Compile Time Control
-  int Size1 = Succ1->size();
-  int NLoads = 0;
-  for (BasicBlock::iterator BBI = Succ0->begin(), BBE = Succ0->end();
-       BBI != BBE;) {
-    Instruction *I = &*BBI;
-    ++BBI;
-
-    // Don't move non-simple (atomic, volatile) loads.
-    auto *L0 = dyn_cast<LoadInst>(I);
-    if (!L0 || !L0->isSimple() || L0->isUsedOutsideOfBlock(Succ0))
-      continue;
-
-    ++NLoads;
-    if (NLoads * Size1 >= MagicCompileTimeControl)
-      break;
-    if (LoadInst *L1 = canHoistFromBlock(Succ1, L0)) {
-      bool Res = hoistLoad(BB, L0, L1);
-      MergedLoads |= Res;
-      // Don't attempt to hoist above loads that had not been hoisted.
-      if (!Res)
-        break;
-    }
-  }
-  return MergedLoads;
-}
 
 ///
 /// \brief True when instruction is a sink barrier for a store
@@ -534,7 +363,6 @@ bool MergedLoadStoreMotion::run(Function &F, MemoryDependenceResults *MD,
     // Hoist equivalent loads and sink stores
     // outside diamonds when possible
     if (isDiamondHead(BB)) {
-      Changed |= mergeLoads(BB);
       Changed |= mergeStores(getDiamondTail(BB));
     }
   }

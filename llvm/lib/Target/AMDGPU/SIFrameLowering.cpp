@@ -237,7 +237,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
-  if (ST.isAmdCodeObjectV2()) {
+  if (ST.isAmdCodeObjectV2(MF) || ST.isMesaGfxShader(MF)) {
     PreloadedPrivateBufferReg = TRI->getPreloadedValue(
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
@@ -255,7 +255,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (ResourceRegUsed && PreloadedPrivateBufferReg != AMDGPU::NoRegister) {
-    assert(ST.isAmdCodeObjectV2());
+    assert(ST.isAmdCodeObjectV2(MF) || ST.isMesaGfxShader(MF));
     MRI.addLiveIn(PreloadedPrivateBufferReg);
     MBB.addLiveIn(PreloadedPrivateBufferReg);
   }
@@ -280,6 +280,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool CopyBuffer = ResourceRegUsed &&
     PreloadedPrivateBufferReg != AMDGPU::NoRegister &&
+    ST.isAmdCodeObjectV2(MF) &&
     ScratchRsrcReg != PreloadedPrivateBufferReg;
 
   // This needs to be careful of the copying order to avoid overwriting one of
@@ -303,24 +304,57 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(PreloadedPrivateBufferReg, RegState::Kill);
   }
 
-  if (ResourceRegUsed && PreloadedPrivateBufferReg == AMDGPU::NoRegister) {
-    assert(!ST.isAmdCodeObjectV2());
+  if (ResourceRegUsed && (ST.isMesaGfxShader(MF) || (PreloadedPrivateBufferReg == AMDGPU::NoRegister))) {
+    assert(!ST.isAmdCodeObjectV2(MF));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
-    unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
-    unsigned Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
     unsigned Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);
     unsigned Rsrc3 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub3);
 
     // Use relocations to get the pointer, and setup the other bits manually.
     uint64_t Rsrc23 = TII->getScratchRsrcWords23();
-    BuildMI(MBB, I, DL, SMovB32, Rsrc0)
-      .addExternalSymbol("SCRATCH_RSRC_DWORD0")
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
-    BuildMI(MBB, I, DL, SMovB32, Rsrc1)
-      .addExternalSymbol("SCRATCH_RSRC_DWORD1")
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+    if (MFI->hasPrivateMemoryInputPtr()) {
+      unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
+
+      if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+        const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
+
+        BuildMI(MBB, I, DL, Mov64, Rsrc01)
+          .addReg(PreloadedPrivateBufferReg)
+          .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+      } else {
+        const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
+
+        PointerType *PtrTy =
+          PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
+                           AMDGPUAS::CONSTANT_ADDRESS);
+        MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
+        auto MMO = MF.getMachineMemOperand(PtrInfo,
+                                           MachineMemOperand::MOLoad |
+                                           MachineMemOperand::MOInvariant |
+                                           MachineMemOperand::MODereferenceable,
+                                           0, 0);
+        BuildMI(MBB, I, DL, LoadDwordX2, Rsrc01)
+          .addReg(PreloadedPrivateBufferReg)
+          .addImm(0) // offset
+          .addImm(0) // glc
+          .addMemOperand(MMO)
+          .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+      }
+    } else {
+      unsigned Rsrc0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+      unsigned Rsrc1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+
+      BuildMI(MBB, I, DL, SMovB32, Rsrc0)
+        .addExternalSymbol("SCRATCH_RSRC_DWORD0")
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+      BuildMI(MBB, I, DL, SMovB32, Rsrc1)
+        .addExternalSymbol("SCRATCH_RSRC_DWORD1")
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+
+    }
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc2)
       .addImm(Rsrc23 & 0xffffffff)

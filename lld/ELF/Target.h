@@ -41,7 +41,8 @@ public:
   virtual void writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
                         uint64_t PltEntryAddr, int32_t Index,
                         unsigned RelOff) const {}
-
+  virtual void addPltHeaderSymbols(InputSectionData* IS) const {}
+  virtual void addPltSymbols(InputSectionData* IS, uint64_t Off) const {}
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the

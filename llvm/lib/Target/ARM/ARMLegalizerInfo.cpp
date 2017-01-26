@@ -28,6 +28,7 @@ ARMLegalizerInfo::ARMLegalizerInfo() {
 
   const LLT p0 = LLT::pointer(0, 32);
 
+  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
@@ -37,8 +38,14 @@ ARMLegalizerInfo::ARMLegalizerInfo() {
   setAction({G_LOAD, s32}, Legal);
   setAction({G_LOAD, 1, p0}, Legal);
 
-  for (auto Ty : {s8, s16, s32})
+  for (auto Ty : {s1, s8, s16, s32})
     setAction({G_ADD, Ty}, Legal);
+
+  for (auto Op : {G_SEXT, G_ZEXT}) {
+    setAction({Op, s32}, Legal);
+    for (auto Ty : {s1, s8, s16})
+      setAction({Op, 1, Ty}, Legal);
+  }
 
   computeTables();
 }

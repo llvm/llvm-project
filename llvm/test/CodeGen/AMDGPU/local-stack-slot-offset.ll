@@ -1,5 +1,5 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -mattr=+vgpr-spilling -mattr=-promote-alloca -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=+vgpr-spilling -mattr=-promote-alloca -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+vgpr-spilling -mattr=-promote-alloca -verify-machineinstrs | FileCheck %s -check-prefix=CHECK
 
 ; Allocate two stack slots of 2052 bytes each requiring a total of 4104 bytes.
 ; Extracting the last element of each does not fit into the offset field of

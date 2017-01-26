@@ -82,7 +82,6 @@ char *strcasestr(const char *s, const char *find);
 char *realpath(const char *name, char *resolved);
 
 int usleep(uint32_t useconds);
-int chdir(const char *path);
 char *basename(char *path);
 char *dirname(char *path);
 

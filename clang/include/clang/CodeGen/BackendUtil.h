@@ -15,6 +15,8 @@
 #include <memory>
 
 namespace llvm {
+  class BitcodeModule;
+  template <typename T> class Expected;
   class Module;
   class MemoryBufferRef;
 }
@@ -49,8 +51,13 @@ namespace clang {
   void PerformPrelinkPasses(DiagnosticsEngine &Diags,
                             const HeaderSearchOptions &HeaderSearchOpts,
                             const CodeGenOptions &CGOpts,
-                            const TargetOptions &TOpts, const LangOptions &LOpts,
+                            const TargetOptions &TOpts,
+                            const LangOptions &LOpts,
                             const llvm::DataLayout &TDesc, llvm::Module *M,
                             BackendAction Action);
+
+  llvm::Expected<llvm::BitcodeModule>
+  FindThinLTOModule(llvm::MemoryBufferRef MBRef);
 }
+
 #endif

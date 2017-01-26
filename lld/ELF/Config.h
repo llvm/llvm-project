@@ -34,8 +34,8 @@ enum ELFKind {
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
-// For --discard-{all,locals,none} and --retain-symbols-file.
-enum class DiscardPolicy { Default, All, Locals, RetainFile, None };
+// For --discard-{all,locals,none}.
+enum class DiscardPolicy { Default, All, Locals, None };
 
 // For --strip-{all,debug}.
 enum class StripPolicy { None, All, Debug };
@@ -84,7 +84,6 @@ struct Configuration {
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
-  llvm::StringSet<> RetainSymbolsFile;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> AuxiliaryList;

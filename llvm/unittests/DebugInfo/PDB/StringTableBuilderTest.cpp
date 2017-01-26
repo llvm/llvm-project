@@ -12,8 +12,8 @@
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
-#include "llvm/DebugInfo/PDB/Raw/StringTable.h"
-#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/StringTable.h"
+#include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
 
 #include "gtest/gtest.h"
 

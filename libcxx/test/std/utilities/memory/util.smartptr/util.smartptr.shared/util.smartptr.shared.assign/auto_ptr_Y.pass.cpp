@@ -10,6 +10,7 @@
 // <memory>
 
 // shared_ptr
+// REQUIRES-ANY: c++98, c++03, c++11, c++14
 
 // template<class Y> shared_ptr& operator=(auto_ptr<Y>&& r);
 

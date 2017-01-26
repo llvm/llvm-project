@@ -10,6 +10,7 @@
 // <memory>
 
 // template<class Y> explicit shared_ptr(auto_ptr<Y>&& r);
+// REQUIRES-ANY: c++98, c++03, c++11, c++14
 
 
 #include <memory>

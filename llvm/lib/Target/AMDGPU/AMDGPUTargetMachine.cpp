@@ -58,6 +58,11 @@ static cl::opt<bool> EnableSROA(
   cl::ReallyHidden,
   cl::init(true));
 
+static cl::opt<bool>
+EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
+                        cl::desc("Run early if-conversion"),
+                        cl::init(false));
+
 static cl::opt<bool> EnableR600IfConvert(
   "r600-if-convert",
   cl::desc("Use if conversion pass"),
@@ -86,6 +91,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
+  initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
@@ -359,6 +365,7 @@ public:
   void addIRPasses() override;
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
+  bool addILPOpts() override;
   bool addInstSelector() override;
 #ifdef LLVM_BUILD_GLOBAL_ISEL
   bool addIRTranslator() override;
@@ -551,6 +558,14 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SILoadStoreOptimizerID);
 }
 
+bool GCNPassConfig::addILPOpts() {
+  if (EnableEarlyIfConversion)
+    addPass(&EarlyIfConverterID);
+
+  TargetPassConfig::addILPOpts();
+  return false;
+}
+
 void GCNPassConfig::addIRPasses() {
   // TODO: May want to move later or split into an early and late one.
   addPass(createAMDGPUCodeGenPreparePass(&getGCNTargetMachine()));
@@ -615,6 +630,7 @@ void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
+  addPass(&SIFixVGPRCopiesID);
   addPass(&SIOptimizeExecMaskingID);
   TargetPassConfig::addPostRegAlloc();
 }

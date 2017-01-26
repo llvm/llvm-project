@@ -10,3 +10,7 @@ config.name = 'XRay-Unit'
 
 config.test_exec_root = "@COMPILER_RT_BINARY_DIR@/lib/xray/tests"
 config.test_source_root = config.test_exec_root
+
+# Do not patch the XRay unit tests pre-main, and also make the error logging
+# verbose to get a more accurate error logging mechanism.
+config.environment['XRAY_OPTIONS'] = 'patch_premain=false verbose=1'

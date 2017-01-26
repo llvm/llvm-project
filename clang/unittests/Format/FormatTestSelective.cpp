@@ -111,13 +111,19 @@ TEST_F(FormatTestSelective, FormatsCommentsLocally) {
             format("int   a; // comment\n"
                    "int    b; // comment",
                    0, 0));
-  EXPECT_EQ("int   a; // comment\n"
-            "         // line 2\n"
+  EXPECT_EQ("int a; // comment\n"
+            "       // line 2\n"
             "int b;",
             format("int   a; // comment\n"
                    "            // line 2\n"
                    "int b;",
                    28, 0));
+  EXPECT_EQ("int   a; // comment\n"
+            "// comment 2\n"
+            "int b;",
+            format("int   a; // comment\n"
+                   "// comment 2\n"
+                   "int b;", 28, 0));
   EXPECT_EQ("int aaaaaa; // comment\n"
             "int b;\n"
             "int c; // unrelated comment",

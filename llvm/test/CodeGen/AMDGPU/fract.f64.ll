@@ -1,9 +1,9 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=FUNC %s
 
 ; RUN: llc -march=amdgcn -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-UNSAFE -check-prefix=SI-UNSAFE -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-UNSAFE -check-prefix=VI-UNSAFE -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-UNSAFE -check-prefix=VI-UNSAFE -check-prefix=FUNC %s
 
 declare double @llvm.fabs.f64(double) #0
 declare double @llvm.floor.f64(double) #0

@@ -147,6 +147,12 @@ Pass *createLoopSinkPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopPredication - This pass does loop predication on guards.
+//
+Pass *createLoopPredicationPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopInterchange - This pass interchanges loops to provide a more
 // cache-friendly memory access patterns.
 //

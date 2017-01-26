@@ -2,8 +2,8 @@
 ; RUN: llc -march=amdgcn -mcpu=verde  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,SI %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
 ; RUN: llc -march=amdgcn -mcpu=verde  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI %s
-; RUN: llc -march=amdgcn -mcpu=tonga  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,VI %s
 
 ; GCN-LABEL: {{^}}fmuladd_f64:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}

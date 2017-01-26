@@ -13,7 +13,7 @@
 #include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
-#include "llvm/DebugInfo/PDB/Raw/HashTable.h"
+#include "llvm/DebugInfo/PDB/Native/HashTable.h"
 
 #include <vector>
 

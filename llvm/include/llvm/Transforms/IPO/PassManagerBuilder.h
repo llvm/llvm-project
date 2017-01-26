@@ -101,6 +101,14 @@ public:
     /// will be inserted after each instance of the instruction combiner pass.
     EP_Peephole,
 
+    /// EP_LateLoopOptimizations - This extension point allows adding late loop
+    /// canonicalization and simplification passes. This is the last point in
+    /// the loop optimization pipeline before loop deletion. Each pass added
+    /// here must be an instance of LoopPass.
+    /// This is the place to add passes that can remove loops, such as target-
+    /// specific loop idiom recognition.
+    EP_LateLoopOptimizations,
+
     /// EP_CGSCCOptimizerLate - This extension point allows adding CallGraphSCC
     /// passes at the end of the main CallGraphSCC passes and before any
     /// function simplification passes run by CGPassManager.

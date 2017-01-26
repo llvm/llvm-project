@@ -181,8 +181,8 @@ define void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32
 }
 
 ; FUNC-LABEL: {{^}}v_min_max_i32:
-; GCN: buffer_load_dword [[VAL0:v[0-9]+]]
-; GCN: buffer_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[VAL0:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[VAL1:v[0-9]+]]
 
 ; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
 ; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]

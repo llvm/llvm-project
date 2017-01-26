@@ -87,6 +87,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned ScratchRSrcReg;
   unsigned ScratchWaveOffsetReg;
 
+  // Input registers for non-HSA ABI
+  unsigned PrivateMemoryPtrUserSGPR;
+
   // Input registers setup for the HSA ABI.
   // User SGPRs in allocation order.
   unsigned PrivateSegmentBufferUserSGPR;
@@ -166,6 +169,11 @@ private:
   bool WorkItemIDY : 1;
   bool WorkItemIDZ : 1;
 
+  // Private memory buffer
+  // Compute directly in sgpr[0:1]
+  // Other shaders indirect 64-bits at sgpr[0:1]
+  bool PrivateMemoryInputPtr : 1;
+
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
     return AMDGPU::SGPR0 + NumUserSGPRs;
@@ -204,6 +212,7 @@ public:
   unsigned addKernargSegmentPtr(const SIRegisterInfo &TRI);
   unsigned addDispatchID(const SIRegisterInfo &TRI);
   unsigned addFlatScratchInit(const SIRegisterInfo &TRI);
+  unsigned addPrivateMemoryPtr(const SIRegisterInfo &TRI);
 
   // Add system SGPRs.
   unsigned addWorkGroupIDX() {
@@ -308,6 +317,10 @@ public:
     return WorkItemIDZ;
   }
 
+  bool hasPrivateMemoryInputPtr() const {
+    return PrivateMemoryInputPtr;
+  }
+
   unsigned getNumUserSGPRs() const {
     return NumUserSGPRs;
   }
@@ -342,6 +355,10 @@ public:
 
   unsigned getQueuePtrUserSGPR() const {
     return QueuePtrUserSGPR;
+  }
+
+  unsigned getPrivateMemoryPtrUserSGPR() const {
+    return PrivateMemoryPtrUserSGPR;
   }
 
   bool hasSpilledSGPRs() const {

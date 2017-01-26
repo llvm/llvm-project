@@ -1130,9 +1130,10 @@ namespace test58 {
   struct State {
    bool m_fn1();
   } a;
-  template <class T> struct identity_ { typedef T type; };
+  template <class T> struct identity { typedef T type; };
   struct A {
-   template <typename T> A(T, bool (identity_<T>::type::*)());
+   template <typename T> A(T, bool (identity<T>::type::*)());
   };
+  // CHECK-LABEL: @_ZN6test581AC1INS_5StateEEET_MNS_8identityIS3_E4typeEFbvE
   void fn1() { A(a, &State::m_fn1); }
 }

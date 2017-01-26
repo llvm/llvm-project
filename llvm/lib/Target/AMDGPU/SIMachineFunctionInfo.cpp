@@ -77,7 +77,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PrivateSegmentWaveByteOffset(false),
     WorkItemIDX(false),
     WorkItemIDY(false),
-    WorkItemIDZ(false) {
+    WorkItemIDZ(false),
+    PrivateMemoryInputPtr(false) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const Function *F = MF.getFunction();
 
@@ -114,7 +115,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (HasStackObjects || MaySpill)
     PrivateSegmentWaveByteOffset = true;
 
-  if (ST.isAmdCodeObjectV2()) {
+  if (ST.isAmdCodeObjectV2(MF)) {
     if (HasStackObjects || MaySpill)
       PrivateSegmentBuffer = true;
 
@@ -126,6 +127,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (F->hasFnAttribute("amdgpu-dispatch-id"))
       DispatchID = true;
+  } else if (ST.isMesaGfxShader(MF)) {
+    if (HasStackObjects || MaySpill)
+      PrivateMemoryInputPtr = true;
   }
 
   // We don't need to worry about accessing spills with flat instructions.
@@ -180,6 +184,13 @@ unsigned SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
   NumUserSGPRs += 2;
   return FlatScratchInitUserSGPR;
+}
+
+unsigned SIMachineFunctionInfo::addPrivateMemoryPtr(const SIRegisterInfo &TRI) {
+  PrivateMemoryPtrUserSGPR = TRI.getMatchingSuperReg(
+    getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
+  NumUserSGPRs += 2;
+  return PrivateMemoryPtrUserSGPR;
 }
 
 SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg (

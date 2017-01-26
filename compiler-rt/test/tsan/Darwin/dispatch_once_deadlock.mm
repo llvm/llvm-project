@@ -1,7 +1,7 @@
 // Check that calling dispatch_once from a report callback works.
 
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 not %run %t 2>&1 | FileCheck %s
+// RUN: not %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 #import <pthread.h>

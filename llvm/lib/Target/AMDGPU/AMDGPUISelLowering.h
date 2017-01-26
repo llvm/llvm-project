@@ -120,7 +120,7 @@ public:
   AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 
   bool mayIgnoreSignedZero(SDValue Op) const {
-    if (getTargetMachine().Options.UnsafeFPMath) // FIXME: nsz only
+    if (getTargetMachine().Options.NoSignedZerosFPMath)
       return true;
 
     if (const auto *BO = dyn_cast<BinaryWithFlagsSDNode>(Op))

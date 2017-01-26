@@ -127,7 +127,38 @@ void WhitespaceManager::calculateLineBreakInformation() {
     Changes[i - 1].IsTrailingComment =
         (Changes[i].NewlinesBefore > 0 || Changes[i].Kind == tok::eof ||
          (Changes[i].IsInsideToken && Changes[i].Kind == tok::comment)) &&
-        Changes[i - 1].Kind == tok::comment;
+        Changes[i - 1].Kind == tok::comment &&
+        // FIXME: This is a dirty hack. The problem is that
+        // BreakableLineCommentSection does comment reflow changes and here is
+        // the aligning of trailing comments. Consider the case where we reflow
+        // the second line up in this example:
+        // 
+        // // line 1
+        // // line 2
+        // 
+        // That amounts to 2 changes by BreakableLineCommentSection:
+        //  - the first, delimited by (), for the whitespace between the tokens,
+        //  - and second, delimited by [], for the whitespace at the beginning
+        //  of the second token:
+        // 
+        // // line 1(
+        // )[// ]line 2
+        //
+        // So in the end we have two changes like this:
+        //
+        // // line1()[ ]line 2
+        //
+        // Note that the OriginalWhitespaceStart of the second change is the
+        // same as the PreviousOriginalWhitespaceEnd of the first change.
+        // In this case, the below check ensures that the second change doesn't
+        // get treated as a trailing comment change here, since this might
+        // trigger additional whitespace to be wrongly inserted before "line 2"
+        // by the comment aligner here.
+        //
+        // For a proper solution we need a mechanism to say to WhitespaceManager
+        // that a particular change breaks the current sequence of trailing
+        // comments.
+        OriginalWhitespaceStart != PreviousOriginalWhitespaceEnd;
   }
   // FIXME: The last token is currently not always an eof token; in those
   // cases, setting TokenLength of the last token to 0 is wrong.

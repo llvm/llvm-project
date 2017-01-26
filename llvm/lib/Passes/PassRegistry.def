@@ -227,4 +227,5 @@ LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("unroll", LoopUnrollPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
+LOOP_PASS("loop-predication", LoopPredicationPass())
 #undef LOOP_PASS

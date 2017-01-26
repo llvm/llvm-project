@@ -21,6 +21,7 @@
 #include <mutex>
 #include <system_error>
 #include <unordered_set>
+#include <utility>
 
 namespace __xray {
 
@@ -38,14 +39,18 @@ public:
 
 private:
   std::size_t BufferSize;
-  std::deque<Buffer> Buffers;
+
+  // We use a bool to indicate whether the Buffer has been used in this
+  // freelist implementation.
+  std::deque<std::tuple<Buffer, bool>> Buffers;
   std::mutex Mutex;
   std::unordered_set<void *> OwnedBuffers;
   std::atomic<bool> Finalizing;
 
 public:
-  /// Initialise a queue of size |N| with buffers of size |B|.
-  BufferQueue(std::size_t B, std::size_t N);
+  /// Initialise a queue of size |N| with buffers of size |B|. We report success
+  /// through |Success|.
+  BufferQueue(std::size_t B, std::size_t N, bool &Success);
 
   /// Updates |Buf| to contain the pointer to an appropriate buffer. Returns an
   /// error in case there are no available buffers to return when we will run
@@ -68,14 +73,25 @@ public:
 
   bool finalizing() const { return Finalizing.load(std::memory_order_acquire); }
 
-  // Sets the state of the BufferQueue to finalizing, which ensures that:
-  //
-  //   - All subsequent attempts to retrieve a Buffer will fail.
-  //   - All releaseBuffer operations will not fail.
-  //
-  // After a call to finalize succeeds, all subsequent calls to finalize will
-  // fail with std::errc::state_not_recoverable.
+  /// Sets the state of the BufferQueue to finalizing, which ensures that:
+  ///
+  ///   - All subsequent attempts to retrieve a Buffer will fail.
+  ///   - All releaseBuffer operations will not fail.
+  ///
+  /// After a call to finalize succeeds, all subsequent calls to finalize will
+  /// fail with std::errc::state_not_recoverable.
   std::error_code finalize();
+
+  /// Applies the provided function F to each Buffer in the queue, only if the
+  /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
+  /// releaseBuffer(...) operation.
+  template <class F> void apply(F Fn) {
+    std::lock_guard<std::mutex> G(Mutex);
+    for (const auto &T : Buffers) {
+      if (std::get<1>(T))
+        Fn(std::get<0>(T));
+    }
+  }
 
   // Cleans up allocated buffers.
   ~BufferQueue();
