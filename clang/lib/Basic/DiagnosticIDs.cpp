@@ -411,11 +411,8 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // to error.  Errors can only be mapped to fatal.
   diag::Severity Result = diag::Severity::Fatal;
 
-  DiagnosticsEngine::DiagStatePointsTy::iterator
-    Pos = Diag.GetDiagStatePointForLoc(Loc);
-  DiagnosticsEngine::DiagState *State = Pos->State;
-
   // Get the mapping information, or compute it lazily.
+  DiagnosticsEngine::DiagState *State = Diag.GetDiagStateForLoc(Loc);
   DiagnosticMapping &Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
   // TODO: Can a null severity really get here?
