@@ -1849,6 +1849,8 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
     // Function-scoped static variables are default-initialized to 0; if they
     // have an initializer, it would have been processed by now.
+    // FIXME: This is only true when we're starting analysis from main().
+    // We're losing a lot of coverage here.
     if (isa<StaticGlobalSpaceRegion>(MS))
       return svalBuilder.makeZeroVal(T);
 
