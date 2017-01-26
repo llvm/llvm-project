@@ -722,11 +722,16 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DebugCompilationDir = Args.getLastArgValue(OPT_fdebug_compilation_dir);
   for (auto A : Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_cuda_bitcode)) {
-    unsigned LinkFlags = llvm::Linker::Flags::None;
-    if (A->getOption().matches(OPT_mlink_cuda_bitcode))
-      LinkFlags = llvm::Linker::Flags::LinkOnlyNeeded |
-                  llvm::Linker::Flags::InternalizeLinkedSymbols;
-    Opts.LinkBitcodeFiles.push_back(std::make_pair(LinkFlags, A->getValue()));
+    CodeGenOptions::BitcodeFileToLink F;
+    F.Filename = A->getValue();
+    if (A->getOption().matches(OPT_mlink_cuda_bitcode)) {
+      F.LinkFlags = llvm::Linker::Flags::LinkOnlyNeeded |
+                    llvm::Linker::Flags::InternalizeLinkedSymbols;
+      // When linking CUDA bitcode, propagate function attributes so that
+      // e.g. libdevice gets fast-math attrs if we're building with fast-math.
+      F.PropagateAttrs = true;
+    }
+    Opts.LinkBitcodeFiles.push_back(F);
   }
   Opts.SanitizeCoverageType =
       getLastArgIntValue(Args, OPT_fsanitize_coverage_type, 0, Diags);

@@ -2169,10 +2169,12 @@ void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Visitor->AddStmt(C->getNumTeams());
 }
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(const OMPThreadLimitClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Visitor->AddStmt(C->getThreadLimit());
 }
 

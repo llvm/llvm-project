@@ -6771,6 +6771,132 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       llvm_unreachable("Unknown OpenMP directive");
     }
     break;
+  case OMPC_num_teams:
+    switch (DKind) {
+    case OMPD_target_teams:
+      CaptureRegion = OMPD_target;
+      break;
+    case OMPD_cancel:
+    case OMPD_parallel:
+    case OMPD_parallel_sections:
+    case OMPD_parallel_for:
+    case OMPD_parallel_for_simd:
+    case OMPD_target:
+    case OMPD_target_simd:
+    case OMPD_target_parallel:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_task:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_target_data:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+    case OMPD_teams:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+      // Do not capture num_teams-clause expressions.
+      break;
+    case OMPD_threadprivate:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_cancellation_point:
+    case OMPD_flush:
+    case OMPD_declare_reduction:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_simd:
+    case OMPD_for:
+    case OMPD_for_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskgroup:
+    case OMPD_distribute:
+    case OMPD_ordered:
+    case OMPD_atomic:
+    case OMPD_distribute_simd:
+      llvm_unreachable("Unexpected OpenMP directive with num_teams-clause");
+    case OMPD_unknown:
+      llvm_unreachable("Unknown OpenMP directive");
+    }
+    break;
+  case OMPC_thread_limit:
+    switch (DKind) {
+    case OMPD_target_teams:
+      CaptureRegion = OMPD_target;
+      break;
+    case OMPD_cancel:
+    case OMPD_parallel:
+    case OMPD_parallel_sections:
+    case OMPD_parallel_for:
+    case OMPD_parallel_for_simd:
+    case OMPD_target:
+    case OMPD_target_simd:
+    case OMPD_target_parallel:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_task:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_target_data:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+    case OMPD_teams:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+      // Do not capture thread_limit-clause expressions.
+      break;
+    case OMPD_threadprivate:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_cancellation_point:
+    case OMPD_flush:
+    case OMPD_declare_reduction:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_simd:
+    case OMPD_for:
+    case OMPD_for_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskgroup:
+    case OMPD_distribute:
+    case OMPD_ordered:
+    case OMPD_atomic:
+    case OMPD_distribute_simd:
+      llvm_unreachable("Unexpected OpenMP directive with thread_limit-clause");
+    case OMPD_unknown:
+      llvm_unreachable("Unknown OpenMP directive");
+    }
+    break;
   case OMPC_schedule:
   case OMPC_dist_schedule:
   case OMPC_firstprivate:
@@ -6804,8 +6930,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
-  case OMPC_num_teams:
-  case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_nogroup:
@@ -10860,6 +10984,8 @@ OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
   Expr *ValExpr = NumTeams;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   // OpenMP [teams Constrcut, Restrictions]
   // The num_teams expression must evaluate to a positive integer value.
@@ -10867,7 +10993,16 @@ OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams,
                                  /*StrictlyPositive=*/true))
     return nullptr;
 
-  return new (Context) OMPNumTeamsClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  CaptureRegion = getOpenMPCaptureRegionForClause(DKind, OMPC_num_teams);
+  if (CaptureRegion != OMPD_unknown) {
+    llvm::MapVector<Expr *, DeclRefExpr *> Captures;
+    ValExpr = tryBuildCapture(*this, ValExpr, Captures).get();
+    HelperValStmt = buildPreInits(Context, Captures);
+  }
+
+  return new (Context) OMPNumTeamsClause(ValExpr, HelperValStmt, CaptureRegion,
+                                         StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
@@ -10875,6 +11010,8 @@ OMPClause *Sema::ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
                                               SourceLocation LParenLoc,
                                               SourceLocation EndLoc) {
   Expr *ValExpr = ThreadLimit;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   // OpenMP [teams Constrcut, Restrictions]
   // The thread_limit expression must evaluate to a positive integer value.
@@ -10882,8 +11019,16 @@ OMPClause *Sema::ActOnOpenMPThreadLimitClause(Expr *ThreadLimit,
                                  /*StrictlyPositive=*/true))
     return nullptr;
 
-  return new (Context)
-      OMPThreadLimitClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  CaptureRegion = getOpenMPCaptureRegionForClause(DKind, OMPC_thread_limit);
+  if (CaptureRegion != OMPD_unknown) {
+    llvm::MapVector<Expr *, DeclRefExpr *> Captures;
+    ValExpr = tryBuildCapture(*this, ValExpr, Captures).get();
+    HelperValStmt = buildPreInits(Context, Captures);
+  }
+
+  return new (Context) OMPThreadLimitClause(
+      ValExpr, HelperValStmt, CaptureRegion, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPPriorityClause(Expr *Priority,

@@ -418,7 +418,7 @@ public:
   bool handleObjCCategory(const ObjCCategoryDecl *D);
   bool handleObjCCategoryImpl(const ObjCCategoryImplDecl *D);
 
-  bool handleObjCMethod(const ObjCMethodDecl *D);
+  bool handleObjCMethod(const ObjCMethodDecl *D, SourceLocation Loc);
 
   bool handleSynthesizedObjCProperty(const ObjCPropertyImplDecl *D);
   bool handleSynthesizedObjCMethod(const ObjCMethodDecl *D, SourceLocation Loc,

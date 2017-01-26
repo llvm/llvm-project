@@ -3479,7 +3479,7 @@ public:
 /// In this example directive '#pragma omp teams' has clause 'num_teams'
 /// with single expression 'n'.
 ///
-class OMPNumTeamsClause : public OMPClause {
+class OMPNumTeamsClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// \brief Location of '('.
   SourceLocation LParenLoc;
@@ -3495,20 +3495,27 @@ public:
   /// \brief Build 'num_teams' clause.
   ///
   /// \param E Expression associated with this clause.
+  /// \param HelperE Helper Expression associated with this clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   ///
-  OMPNumTeamsClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+  OMPNumTeamsClause(Expr *E, Stmt *HelperE, OpenMPDirectiveKind CaptureRegion,
+                    SourceLocation StartLoc, SourceLocation LParenLoc,
                     SourceLocation EndLoc)
-      : OMPClause(OMPC_num_teams, StartLoc, EndLoc), LParenLoc(LParenLoc), 
-        NumTeams(E) {}
+      : OMPClause(OMPC_num_teams, StartLoc, EndLoc), OMPClauseWithPreInit(this),
+        LParenLoc(LParenLoc), NumTeams(E) {
+    setPreInitStmt(HelperE, CaptureRegion);
+  }
 
   /// \brief Build an empty clause.
   ///
   OMPNumTeamsClause()
-      : OMPClause(OMPC_num_teams, SourceLocation(), SourceLocation()), 
-        LParenLoc(SourceLocation()), NumTeams(nullptr) {}
+      : OMPClause(OMPC_num_teams, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this), LParenLoc(SourceLocation()),
+        NumTeams(nullptr) {}
   /// \brief Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
   /// \brief Returns the location of '('.
@@ -3534,7 +3541,7 @@ public:
 /// In this example directive '#pragma omp teams' has clause 'thread_limit'
 /// with single expression 'n'.
 ///
-class OMPThreadLimitClause : public OMPClause {
+class OMPThreadLimitClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// \brief Location of '('.
   SourceLocation LParenLoc;
@@ -3550,20 +3557,28 @@ public:
   /// \brief Build 'thread_limit' clause.
   ///
   /// \param E Expression associated with this clause.
+  /// \param HelperE Helper Expression associated with this clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   ///
-  OMPThreadLimitClause(Expr *E, SourceLocation StartLoc,
-                       SourceLocation LParenLoc, SourceLocation EndLoc)
-      : OMPClause(OMPC_thread_limit, StartLoc, EndLoc), LParenLoc(LParenLoc),
-        ThreadLimit(E) {}
+  OMPThreadLimitClause(Expr *E, Stmt *HelperE,
+                       OpenMPDirectiveKind CaptureRegion,
+                       SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc)
+      : OMPClause(OMPC_thread_limit, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), ThreadLimit(E) {
+    setPreInitStmt(HelperE, CaptureRegion);
+  }
 
   /// \brief Build an empty clause.
   ///
   OMPThreadLimitClause()
       : OMPClause(OMPC_thread_limit, SourceLocation(), SourceLocation()),
-        LParenLoc(SourceLocation()), ThreadLimit(nullptr) {}
+        OMPClauseWithPreInit(this), LParenLoc(SourceLocation()),
+        ThreadLimit(nullptr) {}
   /// \brief Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
   /// \brief Returns the location of '('.

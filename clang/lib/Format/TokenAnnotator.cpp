@@ -1594,8 +1594,14 @@ void TokenAnnotator::setCommentLineLevels(
   for (SmallVectorImpl<AnnotatedLine *>::reverse_iterator I = Lines.rbegin(),
                                                           E = Lines.rend();
        I != E; ++I) {
-    if (NextNonCommentLine && (*I)->First->is(tok::comment) &&
-        (*I)->First->Next == nullptr)
+    bool CommentLine = (*I)->First;
+    for (const FormatToken *Tok = (*I)->First; Tok; Tok = Tok->Next) {
+      if (!Tok->is(tok::comment)) {
+        CommentLine = false;
+        break;
+      }
+    }
+    if (NextNonCommentLine && CommentLine)
       (*I)->Level = NextNonCommentLine->Level;
     else
       NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;

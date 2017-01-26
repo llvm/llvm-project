@@ -14,13 +14,13 @@ config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
-config.have_zlib = "@HAVE_LIBZ@"
-config.clang_arcmt = @ENABLE_CLANG_ARCMT@
+config.have_zlib = @HAVE_LIBZ@
+config.clang_arcmt = @CLANG_ENABLE_ARCMT@
 config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
-config.clang_staticanalyzer = @ENABLE_CLANG_STATIC_ANALYZER@
-config.clang_examples = @ENABLE_CLANG_EXAMPLES@
+config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@
+config.clang_examples = @CLANG_BUILD_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@
-config.enable_backtrace = "@ENABLE_BACKTRACES@"
+config.enable_backtrace = @ENABLE_BACKTRACES@
 config.host_arch = "@HOST_ARCH@"
 
 # Support substitution of the tools and libs dirs with user parameters. This is

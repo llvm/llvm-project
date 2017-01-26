@@ -2067,11 +2067,13 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getNumTeams());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getThreadLimit());
   Record.AddSourceLocation(C->getLParenLoc());
 }
