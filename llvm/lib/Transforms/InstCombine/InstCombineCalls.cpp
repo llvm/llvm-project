@@ -2306,6 +2306,44 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
 
+  case Intrinsic::x86_pclmulqdq: {
+    if (auto *C = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
+      unsigned Imm = C->getZExtValue();
+
+      bool MadeChange = false;
+      Value *Arg0 = II->getArgOperand(0);
+      Value *Arg1 = II->getArgOperand(1);
+      unsigned VWidth = Arg0->getType()->getVectorNumElements();
+      APInt DemandedElts(VWidth, 0);
+
+      APInt UndefElts1(VWidth, 0);
+      DemandedElts = (Imm & 0x01) ? 2 : 1;
+      if (Value *V = SimplifyDemandedVectorElts(Arg0, DemandedElts,
+                                                UndefElts1)) {
+        II->setArgOperand(0, V);
+        MadeChange = true;
+      }
+
+      APInt UndefElts2(VWidth, 0);
+      DemandedElts = (Imm & 0x10) ? 2 : 1;
+      if (Value *V = SimplifyDemandedVectorElts(Arg1, DemandedElts,
+                                                UndefElts2)) {
+        II->setArgOperand(1, V);
+        MadeChange = true;
+      }
+
+      // If both input elements are undef, the result is undef.
+      if (UndefElts1[(Imm & 0x01) ? 1 : 0] ||
+          UndefElts2[(Imm & 0x10) ? 1 : 0])
+        return replaceInstUsesWith(*II,
+                                   ConstantAggregateZero::get(II->getType()));
+
+      if (MadeChange)
+        return II;
+    }
+    break;
+  }
+
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))
       return replaceInstUsesWith(*II, V);

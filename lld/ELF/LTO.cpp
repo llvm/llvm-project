@@ -147,7 +147,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (Buff[I].empty())
       continue;
     if (Config->SaveTemps) {
-      if (MaxTasks == 1)
+      if (I == 0)
         saveBuffer(Buff[I], Config->OutputFile + ".lto.o");
       else
         saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");

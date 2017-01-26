@@ -586,6 +586,40 @@ addInnerLoopsToHeadersMap(DenseMap<BlockT *, const LoopT *> &LoopHeaders,
     addInnerLoopsToHeadersMap(LoopHeaders, LI, *SL);
 }
 
+#ifndef NDEBUG
+template <class BlockT, class LoopT>
+static void compareLoops(const LoopT *L, const LoopT *OtherL,
+                         DenseMap<BlockT *, const LoopT *> &OtherLoopHeaders) {
+  BlockT *H = L->getHeader();
+  BlockT *OtherH = OtherL->getHeader();
+  assert(H == OtherH &&
+         "Mismatched headers even though found in the same map entry!");
+
+  assert(L->getLoopDepth() == OtherL->getLoopDepth() &&
+         "Mismatched loop depth!");
+  const LoopT *ParentL = L, *OtherParentL = OtherL;
+  do {
+    assert(ParentL->getHeader() == OtherParentL->getHeader() &&
+           "Mismatched parent loop headers!");
+    ParentL = ParentL->getParentLoop();
+    OtherParentL = OtherParentL->getParentLoop();
+  } while (ParentL);
+
+  for (const LoopT *SubL : *L) {
+    BlockT *SubH = SubL->getHeader();
+    const LoopT *OtherSubL = OtherLoopHeaders.lookup(SubH);
+    assert(OtherSubL && "Inner loop is missing in computed loop info!");
+    OtherLoopHeaders.erase(SubH);
+    compareLoops(SubL, OtherSubL, OtherLoopHeaders);
+  }
+
+  std::vector<BlockT *> BBs = L->getBlocks();
+  std::vector<BlockT *> OtherBBs = OtherL->getBlocks();
+  assert(compareVectors(BBs, OtherBBs) &&
+         "Mismatched basic blocks in the loops!");
+}
+#endif
+
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::verify(
     const DominatorTreeBase<BlockT> &DomTree) const {
@@ -608,42 +642,32 @@ void LoopInfoBase<BlockT, LoopT>::verify(
   LoopInfoBase<BlockT, LoopT> OtherLI;
   OtherLI.analyze(DomTree);
 
-  DenseMap<BlockT *, const LoopT *> LoopHeaders1;
-  DenseMap<BlockT *, const LoopT *> LoopHeaders2;
-
-  for (LoopT *L : *this)
-    addInnerLoopsToHeadersMap(LoopHeaders1, *this, *L);
+  // Build a map we can use to move from our LI to the computed one. This
+  // allows us to ignore the particular order in any layer of the loop forest
+  // while still comparing the structure.
+  DenseMap<BlockT *, const LoopT *> OtherLoopHeaders;
   for (LoopT *L : OtherLI)
-    addInnerLoopsToHeadersMap(LoopHeaders2, OtherLI, *L);
-  assert(LoopHeaders1.size() == LoopHeaders2.size() &&
-         "LoopInfo is incorrect.");
+    addInnerLoopsToHeadersMap(OtherLoopHeaders, OtherLI, *L);
 
-  auto compareLoops = [&](const LoopT *L1, const LoopT *L2) {
-    BlockT *H1 = L1->getHeader();
-    BlockT *H2 = L2->getHeader();
-    if (H1 != H2)
-      return false;
-    std::vector<BlockT *> BB1 = L1->getBlocks();
-    std::vector<BlockT *> BB2 = L2->getBlocks();
-    if (!compareVectors(BB1, BB2))
-      return false;
+  // Walk the top level loops and ensure there is a corresponding top-level
+  // loop in the computed version and then recursively compare those loop
+  // nests.
+  for (LoopT *L : *this) {
+    BlockT *Header = L->getHeader();
+    const LoopT *OtherL = OtherLoopHeaders.lookup(Header);
+    assert(OtherL && "Top level loop is missing in computed loop info!");
+    // Now that we've matched this loop, erase its header from the map.
+    OtherLoopHeaders.erase(Header);
+    // And recursively compare these loops.
+    compareLoops(L, OtherL, OtherLoopHeaders);
+  }
 
-    std::vector<BlockT *> SubLoopHeaders1;
-    std::vector<BlockT *> SubLoopHeaders2;
-    for (LoopT *L : *L1)
-      SubLoopHeaders1.push_back(L->getHeader());
-    for (LoopT *L : *L2)
-      SubLoopHeaders2.push_back(L->getHeader());
-
-    if (!compareVectors(SubLoopHeaders1, SubLoopHeaders2))
-      return false;
-    return true;
-  };
-
-  for (auto &I : LoopHeaders1) {
-    BlockT *H = I.first;
-    bool LoopsMatch = compareLoops(LoopHeaders1[H], LoopHeaders2[H]);
-    assert(LoopsMatch && "LoopInfo is incorrect.");
+  // Any remaining entries in the map are loops which were found when computing
+  // a fresh LoopInfo but not present in the current one.
+  if (!OtherLoopHeaders.empty()) {
+    for (const auto &HeaderAndLoop : OtherLoopHeaders)
+      dbgs() << "Found new loop: " << *HeaderAndLoop.second << "\n";
+    llvm_unreachable("Found new loops when recomputing LoopInfo!");
   }
 #endif
 }

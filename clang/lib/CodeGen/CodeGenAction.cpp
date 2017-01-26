@@ -23,6 +23,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -306,9 +307,8 @@ namespace clang {
     /// them.
     void EmitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &D,
                                  unsigned DiagID);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemark &D);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemarkMissed &D);
-    void OptimizationRemarkHandler(const llvm::OptimizationRemarkAnalysis &D);
+    void
+    OptimizationRemarkHandler(const llvm::DiagnosticInfoOptimizationBase &D);
     void OptimizationRemarkHandler(
         const llvm::OptimizationRemarkAnalysisFPCommute &D);
     void OptimizationRemarkHandler(
@@ -576,36 +576,34 @@ void BackendConsumer::EmitOptimizationMessage(
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemark &D) {
-  // Optimization remarks are active only if the -Rpass flag has a regular
-  // expression that matches the name of the pass name in \p D.
-  if (CodeGenOpts.OptimizationRemarkPattern &&
-      CodeGenOpts.OptimizationRemarkPattern->match(D.getPassName()))
-    EmitOptimizationMessage(D, diag::remark_fe_backend_optimization_remark);
-}
+    const llvm::DiagnosticInfoOptimizationBase &D) {
+  if (D.isPassed()) {
+    // Optimization remarks are active only if the -Rpass flag has a regular
+    // expression that matches the name of the pass name in \p D.
+    if (CodeGenOpts.OptimizationRemarkPattern &&
+        CodeGenOpts.OptimizationRemarkPattern->match(D.getPassName()))
+      EmitOptimizationMessage(D, diag::remark_fe_backend_optimization_remark);
+  } else if (D.isMissed()) {
+    // Missed optimization remarks are active only if the -Rpass-missed
+    // flag has a regular expression that matches the name of the pass
+    // name in \p D.
+    if (CodeGenOpts.OptimizationRemarkMissedPattern &&
+        CodeGenOpts.OptimizationRemarkMissedPattern->match(D.getPassName()))
+      EmitOptimizationMessage(
+          D, diag::remark_fe_backend_optimization_remark_missed);
+  } else {
+    assert(D.isAnalysis() && "Unknown remark type");
 
-void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkMissed &D) {
-  // Missed optimization remarks are active only if the -Rpass-missed
-  // flag has a regular expression that matches the name of the pass
-  // name in \p D.
-  if (CodeGenOpts.OptimizationRemarkMissedPattern &&
-      CodeGenOpts.OptimizationRemarkMissedPattern->match(D.getPassName()))
-    EmitOptimizationMessage(D,
-                            diag::remark_fe_backend_optimization_remark_missed);
-}
+    bool ShouldAlwaysPrint = false;
+    if (auto *ORA = dyn_cast<llvm::OptimizationRemarkAnalysis>(&D))
+      ShouldAlwaysPrint = ORA->shouldAlwaysPrint();
 
-void BackendConsumer::OptimizationRemarkHandler(
-    const llvm::OptimizationRemarkAnalysis &D) {
-  // Optimization analysis remarks are active if the pass name is set to
-  // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
-  // regular expression that matches the name of the pass name in \p D.
-
-  if (D.shouldAlwaysPrint() ||
-      (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-       CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
-    EmitOptimizationMessage(
-        D, diag::remark_fe_backend_optimization_remark_analysis);
+    if (ShouldAlwaysPrint ||
+        (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
+         CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+      EmitOptimizationMessage(
+          D, diag::remark_fe_backend_optimization_remark_analysis);
+  }
 }
 
 void BackendConsumer::OptimizationRemarkHandler(
@@ -687,6 +685,21 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
     // Optimization remarks are always handled completely by this
     // handler. There is no generic way of emitting them.
     OptimizationRemarkHandler(cast<OptimizationRemarkAnalysisAliasing>(DI));
+    return;
+  case llvm::DK_MachineOptimizationRemark:
+    // Optimization remarks are always handled completely by this
+    // handler. There is no generic way of emitting them.
+    OptimizationRemarkHandler(cast<MachineOptimizationRemark>(DI));
+    return;
+  case llvm::DK_MachineOptimizationRemarkMissed:
+    // Optimization remarks are always handled completely by this
+    // handler. There is no generic way of emitting them.
+    OptimizationRemarkHandler(cast<MachineOptimizationRemarkMissed>(DI));
+    return;
+  case llvm::DK_MachineOptimizationRemarkAnalysis:
+    // Optimization remarks are always handled completely by this
+    // handler. There is no generic way of emitting them.
+    OptimizationRemarkHandler(cast<MachineOptimizationRemarkAnalysis>(DI));
     return;
   case llvm::DK_OptimizationFailure:
     // Optimization failures are always handled completely by this

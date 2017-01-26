@@ -71,13 +71,19 @@ void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
     IO &io, DiagnosticInfoOptimizationBase *&OptDiag) {
   assert(io.outputting() && "input not yet implemented");
 
-  if (io.mapTag("!Passed", OptDiag->getKind() == DK_OptimizationRemark))
+  if (io.mapTag("!Passed",
+                (OptDiag->getKind() == DK_OptimizationRemark ||
+                 OptDiag->getKind() == DK_MachineOptimizationRemark)))
     ;
-  else if (io.mapTag("!Missed",
-                     OptDiag->getKind() == DK_OptimizationRemarkMissed))
+  else if (io.mapTag(
+               "!Missed",
+               (OptDiag->getKind() == DK_OptimizationRemarkMissed ||
+                OptDiag->getKind() == DK_MachineOptimizationRemarkMissed)))
     ;
-  else if (io.mapTag("!Analysis",
-                     OptDiag->getKind() == DK_OptimizationRemarkAnalysis))
+  else if (io.mapTag(
+               "!Analysis",
+               (OptDiag->getKind() == DK_OptimizationRemarkAnalysis ||
+                OptDiag->getKind() == DK_MachineOptimizationRemarkAnalysis)))
     ;
   else if (io.mapTag("!AnalysisFPCommute",
                      OptDiag->getKind() ==

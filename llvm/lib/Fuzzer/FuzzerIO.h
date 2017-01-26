@@ -48,6 +48,9 @@ void CloseStdout();
 
 void Printf(const char *Fmt, ...);
 
+// Print using raw syscalls, useful when printing at early init stages.
+void RawPrint(const char *Str);
+
 // Platform specific functions:
 bool IsFile(const std::string &Path);
 

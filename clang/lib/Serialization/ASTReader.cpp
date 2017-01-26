@@ -5297,48 +5297,84 @@ HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
 }
 
 void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
-  // FIXME: Make it work properly with modules.
-  SmallVector<DiagnosticsEngine::DiagState *, 32> DiagStates;
+  using DiagState = DiagnosticsEngine::DiagState;
+  SmallVector<DiagState *, 32> DiagStates;
+
   for (ModuleIterator I = ModuleMgr.begin(), E = ModuleMgr.end(); I != E; ++I) {
     ModuleFile &F = *(*I);
     unsigned Idx = 0;
-    DiagStates.clear();
-    assert(!Diag.DiagStates.empty());
-    DiagStates.push_back(&Diag.DiagStates.front()); // the command-line one.
-    while (Idx < F.PragmaDiagMappings.size()) {
-      SourceLocation Loc = ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
-      unsigned DiagStateID = F.PragmaDiagMappings[Idx++];
-      if (DiagStateID != 0) {
-        Diag.DiagStatePoints.push_back(
-                    DiagnosticsEngine::DiagStatePoint(DiagStates[DiagStateID-1],
-                    FullSourceLoc(Loc, SourceMgr)));
-        continue;
-      }
+    auto &Record = F.PragmaDiagMappings;
+    if (Record.empty())
+      continue;
 
-      assert(DiagStateID == 0);
+    DiagStates.clear();
+
+    auto ReadDiagState =
+        [&](const DiagState &BasedOn, SourceLocation Loc,
+            bool IncludeNonPragmaStates) -> DiagnosticsEngine::DiagState * {
+      unsigned BackrefID = Record[Idx++];
+      if (BackrefID != 0)
+        return DiagStates[BackrefID - 1];
+
       // A new DiagState was created here.
-      Diag.DiagStates.push_back(*Diag.GetCurDiagState());
-      DiagnosticsEngine::DiagState *NewState = &Diag.DiagStates.back();
+      Diag.DiagStates.push_back(BasedOn);
+      DiagState *NewState = &Diag.DiagStates.back();
       DiagStates.push_back(NewState);
-      Diag.DiagStatePoints.push_back(
-          DiagnosticsEngine::DiagStatePoint(NewState,
-                                            FullSourceLoc(Loc, SourceMgr)));
-      while (true) {
-        assert(Idx < F.PragmaDiagMappings.size() &&
-               "Invalid data, didn't find '-1' marking end of diag/map pairs");
-        if (Idx >= F.PragmaDiagMappings.size()) {
-          break; // Something is messed up but at least avoid infinite loop in
-                 // release build.
-        }
-        unsigned DiagID = F.PragmaDiagMappings[Idx++];
-        if (DiagID == (unsigned)-1) {
-          break; // no more diag/map pairs for this location.
-        }
-        diag::Severity Map = (diag::Severity)F.PragmaDiagMappings[Idx++];
+      while (Idx + 1 < Record.size() && Record[Idx] != unsigned(-1)) {
+        unsigned DiagID = Record[Idx++];
+        diag::Severity Map = (diag::Severity)Record[Idx++];
         DiagnosticMapping Mapping = Diag.makeUserMapping(Map, Loc);
-        Diag.GetCurDiagState()->setMapping(DiagID, Mapping);
+        if (Mapping.isPragma() || IncludeNonPragmaStates)
+          NewState->setMapping(DiagID, Mapping);
+      }
+      assert(Idx != Record.size() && Record[Idx] == unsigned(-1) &&
+             "Invalid data, didn't find '-1' marking end of diag/map pairs");
+      ++Idx;
+      return NewState;
+    };
+
+    auto *FirstState = ReadDiagState(
+        F.isModule() ? DiagState() : *Diag.DiagStatesByLoc.CurDiagState,
+        SourceLocation(), F.isModule());
+    SourceLocation CurStateLoc =
+        ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
+    auto *CurState = ReadDiagState(*FirstState, CurStateLoc, false);
+
+    if (!F.isModule()) {
+      Diag.DiagStatesByLoc.CurDiagState = CurState;
+      Diag.DiagStatesByLoc.CurDiagStateLoc = CurStateLoc;
+
+      // Preserve the property that the imaginary root file describes the
+      // current state.
+      auto &T = Diag.DiagStatesByLoc.Files[FileID()].StateTransitions;
+      if (T.empty())
+        T.push_back({CurState, 0});
+      else
+        T[0].State = CurState;
+    }
+
+    while (Idx < Record.size()) {
+      SourceLocation Loc = ReadSourceLocation(F, Record[Idx++]);
+      auto IDAndOffset = SourceMgr.getDecomposedLoc(Loc);
+      assert(IDAndOffset.second == 0 && "not a start location for a FileID");
+      unsigned Transitions = Record[Idx++];
+
+      // Note that we don't need to set up Parent/ParentOffset here, because
+      // we won't be changing the diagnostic state within imported FileIDs
+      // (other than perhaps appending to the main source file, which has no
+      // parent).
+      auto &F = Diag.DiagStatesByLoc.Files[IDAndOffset.first];
+      F.StateTransitions.reserve(F.StateTransitions.size() + Transitions);
+      for (unsigned I = 0; I != Transitions; ++I) {
+        unsigned Offset = Record[Idx++];
+        auto *State =
+            ReadDiagState(*FirstState, Loc.getLocWithOffset(Offset), false);
+        F.StateTransitions.push_back({State, Offset});
       }
     }
+
+    // Don't try to read these mappings again.
+    Record.clear();
   }
 }
 

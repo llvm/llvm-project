@@ -91,7 +91,10 @@ L:
 }
 
 // O2-LABEL: @jump_backward_over_declaration(
-// O2-NOT: call void @llvm.lifetime.{{.*}}(i64 4,
+// O2: %[[p:.*]] = alloca i32*
+// O2: %[[v0:.*]] = bitcast i32** %[[p]] to i8*
+// O2: call void @llvm.lifetime.start(i64 {{.*}}, i8* %[[v0]])
+// O2-NOT: call void @llvm.lifetime.start(
 
 extern void foo2(int p);
 
