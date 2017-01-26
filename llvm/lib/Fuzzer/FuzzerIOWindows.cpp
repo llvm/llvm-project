@@ -299,6 +299,11 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
   return true;
 }
 
+void RawPrint(const char *Str) {
+  // Not tested, may or may not work. Fix if needed.
+  Printf("%s", Str);
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_WINDOWS

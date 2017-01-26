@@ -106,7 +106,6 @@ static DenseMap<int, void *> FDToLeaderHandle;
 static StringMap<ResolutionInfo> ResInfo;
 static std::vector<std::string> Cleanup;
 static llvm::TargetOptions TargetOpts;
-static size_t MaxTasks;
 
 namespace options {
   enum OutputType {
@@ -637,7 +636,7 @@ static void recordFile(std::string Filename, bool TempOutFile) {
 /// indicating whether a temp file should be generated, and an optional task id.
 /// The new filename generated is returned in \p NewFilename.
 static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
-                              SmallString<128> &NewFilename, int TaskID = -1) {
+                              SmallString<128> &NewFilename, int TaskID) {
   if (TempOutFile) {
     std::error_code EC =
         sys::fs::createTemporaryFile("lto-llvm", "o", NewFilename);
@@ -646,7 +645,7 @@ static void getOutputFileName(SmallString<128> InFilename, bool TempOutFile,
               EC.message().c_str());
   } else {
     NewFilename = InFilename;
-    if (TaskID >= 0)
+    if (TaskID > 0)
       NewFilename += utostr(TaskID);
   }
 }
@@ -813,7 +812,7 @@ static ld_plugin_status allSymbolsReadHook() {
     Filename = output_name + ".o";
   bool SaveTemps = !Filename.empty();
 
-  MaxTasks = Lto->getMaxTasks();
+  size_t MaxTasks = Lto->getMaxTasks();
   std::vector<uintptr_t> IsTemporary(MaxTasks);
   std::vector<SmallString<128>> Filenames(MaxTasks);
 
@@ -821,7 +820,7 @@ static ld_plugin_status allSymbolsReadHook() {
       [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
     IsTemporary[Task] = !SaveTemps;
     getOutputFileName(Filename, /*TempOutFile=*/!SaveTemps, Filenames[Task],
-                      MaxTasks > 1 ? Task : -1);
+                      Task);
     int FD;
     std::error_code EC =
         sys::fs::openFileForWrite(Filenames[Task], FD, sys::fs::F_None);

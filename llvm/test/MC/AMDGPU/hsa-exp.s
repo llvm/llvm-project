@@ -124,6 +124,6 @@ amd_kernel_code_t_minimal:
 // ASM:	group_segment_alignment = 4
 // ASM:	private_segment_alignment = 4
 // ASM:	wavefront_size = 6
-// ASM:	call_convention = 0
+// ASM:	call_convention = -1
 // ASM:	runtime_loader_kernel_symbol = 0
 // ASM: .end_amd_kernel_code_t

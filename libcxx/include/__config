@@ -411,15 +411,6 @@ namespace std {
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
-// A constexpr version of __builtin_memcmp was added in clang 4.0
-#if __has_builtin(__builtin_memcmp)
-# ifdef __apple_build_version__
-// No shipping version of Apple's clang has constexpr __builtin_memcmp
-# elif __clang_major__ > 3
-#  define _LIBCPP_BUILTIN_MEMCMP_ISCONSTEXPR
-# endif
-#endif
-
 #elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))

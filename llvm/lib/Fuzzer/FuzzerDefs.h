@@ -53,6 +53,11 @@
 #  define ALWAYS_INLINE
 #endif // __clang__
 
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+
+#define ATTRIBUTE_NO_SANITIZE_ALL ATTRIBUTE_NO_SANITIZE_ADDRESS ATTRIBUTE_NO_SANITIZE_MEMORY
+
+
 #if LIBFUZZER_WINDOWS
 #define ATTRIBUTE_INTERFACE __declspec(dllexport)
 #else

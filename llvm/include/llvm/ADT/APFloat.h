@@ -42,7 +42,7 @@ enum lostFraction { // Example of truncated bits:
   lfMoreThanHalf    // 1xxxxx  x's not all zero
 };
 
-/// \brief A self-contained host- and target-independent arbitrary-precision
+/// A self-contained host- and target-independent arbitrary-precision
 /// floating-point software implementation.
 ///
 /// APFloat uses bignum integer arithmetic as provided by static functions in
@@ -191,7 +191,7 @@ struct APFloatBase {
     uninitialized
   };
 
-  /// \brief Enumeration of \c ilogb error results.
+  /// Enumeration of \c ilogb error results.
   enum IlogbErrorKinds {
     IEK_Zero = INT_MIN + 1,
     IEK_NaN = INT_MIN,
@@ -227,7 +227,7 @@ public:
 
   /// @}
 
-  /// \brief Returns whether this instance allocated memory.
+  /// Returns whether this instance allocated memory.
   bool needsCleanup() const { return partCount() > 1; }
 
   /// \name Convenience "constructors"
@@ -361,7 +361,7 @@ public:
   IEEEFloat &operator=(const IEEEFloat &);
   IEEEFloat &operator=(IEEEFloat &&);
 
-  /// \brief Overload to compute a hash code for an APFloat value.
+  /// Overload to compute a hash code for an APFloat value.
   ///
   /// Note that the use of hash codes for floating point values is in general
   /// frought with peril. Equality is hard to define for these values. For
@@ -399,7 +399,7 @@ public:
   /// return true.
   bool getExactInverse(APFloat *inv) const;
 
-  /// \brief Returns the exponent of the internal representation of the APFloat.
+  /// Returns the exponent of the internal representation of the APFloat.
   ///
   /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
   /// For special APFloat values, this returns special error codes:
@@ -410,7 +410,7 @@ public:
   ///
   friend int ilogb(const IEEEFloat &Arg);
 
-  /// \brief Returns: X * 2^Exp for integral exponents.
+  /// Returns: X * 2^Exp for integral exponents.
   friend IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 
   friend IEEEFloat frexp(const IEEEFloat &X, int &Exp, roundingMode);
@@ -1051,6 +1051,8 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
+  // TODO: bool parameters are not readable and a source of bugs.
+  // Do something.
   opStatus next(bool nextDown) {
     if (usesLayout<IEEEFloat>(getSemantics()))
       return U.IEEE.next(nextDown);
@@ -1059,32 +1061,32 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
-  /// \brief Operator+ overload which provides the default
-  /// \c rmNearestTiesToEven rounding mode and *no* error checking.
+  /// Add two APFloats, rounding ties to the nearest even.
+  /// No error checking.
   APFloat operator+(const APFloat &RHS) const {
     APFloat Result(*this);
     (void)Result.add(RHS, rmNearestTiesToEven);
     return Result;
   }
 
-  /// \brief Operator- overload which provides the default
-  /// \c rmNearestTiesToEven rounding mode and *no* error checking.
+  /// Subtract two APFloats, rounding ties to the nearest even.
+  /// No error checking.
   APFloat operator-(const APFloat &RHS) const {
     APFloat Result(*this);
     (void)Result.subtract(RHS, rmNearestTiesToEven);
     return Result;
   }
 
-  /// \brief Operator* overload which provides the default
-  /// \c rmNearestTiesToEven rounding mode and *no* error checking.
+  /// Multiply two APFloats, rounding ties to the nearest even.
+  /// No error checking.
   APFloat operator*(const APFloat &RHS) const {
     APFloat Result(*this);
     (void)Result.multiply(RHS, rmNearestTiesToEven);
     return Result;
   }
 
-  /// \brief Operator/ overload which provides the default
-  /// \c rmNearestTiesToEven rounding mode and *no* error checking.
+  /// Divide the first APFloat by the second, rounding ties to the nearest even.
+  /// No error checking.
   APFloat operator/(const APFloat &RHS) const {
     APFloat Result(*this);
     (void)Result.divide(RHS, rmNearestTiesToEven);
@@ -1111,7 +1113,7 @@ public:
       changeSign();
   }
 
-  /// \brief A static helper to produce a copy of an APFloat value with its sign
+  /// A static helper to produce a copy of an APFloat value with its sign
   /// copied from some other APFloat.
   static APFloat copySign(APFloat Value, const APFloat &Sign) {
     Value.copySign(Sign);
@@ -1296,7 +1298,7 @@ inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
   llvm_unreachable("Unexpected semantics");
 }
 
-/// \brief Equivalent of C standard library function.
+/// Equivalent of C standard library function.
 ///
 /// While the C standard says Exp is an unspecified value for infinity and nan,
 /// this returns INT_MAX for infinities, and INT_MIN for NaNs.
@@ -1307,7 +1309,7 @@ inline APFloat frexp(const APFloat &X, int &Exp, APFloat::roundingMode RM) {
     return APFloat(frexp(X.U.Double, Exp, RM), X.getSemantics());
   llvm_unreachable("Unexpected semantics");
 }
-/// \brief Returns the absolute value of the argument.
+/// Returns the absolute value of the argument.
 inline APFloat abs(APFloat X) {
   X.clearSign();
   return X;

@@ -149,11 +149,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
                           void (*init_routine)(void));
 
 // Thread id
-#if defined(__APPLE__) && !defined(__arm__)
-_LIBCPP_THREAD_ABI_VISIBILITY
-mach_port_t __libcpp_thread_get_port();
-#endif
-
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2);
 
@@ -297,12 +292,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
 }
 
 // Thread id
-#if defined(__APPLE__) && !defined(__arm__)
-mach_port_t __libcpp_thread_get_port() {
-    return pthread_mach_thread_np(pthread_self());
-}
-#endif
-
 // Returns non-zero if the thread ids are equal, otherwise 0
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2)
 {

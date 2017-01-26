@@ -234,29 +234,20 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // The SVR4 ABI reserves r2 and r13
   if (Subtarget.isSVR4ABI()) {
-    markSuperRegs(Reserved, PPC::R2);  // System-reserved register
+    // We only reserve r2 if we need to use the TOC pointer. If we have no
+    // explicit uses of the TOC pointer (meaning we're a leaf function with
+    // no constant-pool loads, etc.) and we have no potential uses inside an
+    // inline asm block, then we can treat r2 has an ordinary callee-saved
+    // register.
+    const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
+    if (!TM.isPPC64() || FuncInfo->usesTOCBasePtr() || MF.hasInlineAsm())
+      markSuperRegs(Reserved, PPC::R2);  // System-reserved register
     markSuperRegs(Reserved, PPC::R13); // Small Data Area pointer register
   }
 
-  if (TM.isPPC64()) {
-    // On PPC64, r13 is the thread pointer. Never allocate this register.
+  // On PPC64, r13 is the thread pointer. Never allocate this register.
+  if (TM.isPPC64())
     markSuperRegs(Reserved, PPC::R13);
-
-    // The 64-bit SVR4 ABI reserves r2 for the TOC pointer.
-    if (Subtarget.isSVR4ABI()) {
-      // We only reserve r2 if we need to use the TOC pointer. If we have no
-      // explicit uses of the TOC pointer (meaning we're a leaf function with
-      // no constant-pool loads, etc.) and we have no potential uses inside an
-      // inline asm block, then we can treat r2 has an ordinary callee-saved
-      // register.
-      const PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-      if (!FuncInfo->usesTOCBasePtr() && !MF.hasInlineAsm()) {
-        for (MCSuperRegIterator Super(PPC::R2, this, true); Super.isValid();
-             ++Super)
-          Reserved.reset(*Super);
-      }
-    }
-  }
 
   if (TFI->needsFP(MF))
     markSuperRegs(Reserved, PPC::R31);

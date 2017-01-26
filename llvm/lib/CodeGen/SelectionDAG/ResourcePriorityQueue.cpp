@@ -57,10 +57,8 @@ ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
   RegPressure.resize(NumRC);
   std::fill(RegLimit.begin(), RegLimit.end(), 0);
   std::fill(RegPressure.begin(), RegPressure.end(), 0);
-  for (TargetRegisterInfo::regclass_iterator I = TRI->regclass_begin(),
-                                             E = TRI->regclass_end();
-       I != E; ++I)
-    RegLimit[(*I)->getID()] = TRI->getRegPressureLimit(*I, *IS->MF);
+  for (const TargetRegisterClass *RC : TRI->regclasses())
+    RegLimit[RC->getID()] = TRI->getRegPressureLimit(RC, *IS->MF);
 
   ParallelLiveRanges = 0;
   HorizontalVerticalBalance = 0;
@@ -364,16 +362,11 @@ int ResourcePriorityQueue::regPressureDelta(SUnit *SU, bool RawPressure) {
     return RegBalance;
 
   if (RawPressure) {
-    for (TargetRegisterInfo::regclass_iterator I = TRI->regclass_begin(),
-             E = TRI->regclass_end(); I != E; ++I) {
-      const TargetRegisterClass *RC = *I;
+    for (const TargetRegisterClass *RC : TRI->regclasses())
       RegBalance += rawRegPressureDelta(SU, RC->getID());
-    }
   }
   else {
-    for (TargetRegisterInfo::regclass_iterator I = TRI->regclass_begin(),
-         E = TRI->regclass_end(); I != E; ++I) {
-      const TargetRegisterClass *RC = *I;
+    for (const TargetRegisterClass *RC : TRI->regclasses()) {
       if ((RegPressure[RC->getID()] +
            rawRegPressureDelta(SU, RC->getID()) > 0) &&
           (RegPressure[RC->getID()] +

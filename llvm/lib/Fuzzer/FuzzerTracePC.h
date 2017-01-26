@@ -64,7 +64,7 @@ class TracePC {
 
   void ResetMaps() {
     ValueProfileMap.Reset();
-    memset(Counters, 0, sizeof(Counters));
+    memset(Counters, 0, GetNumPCs());
   }
 
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
@@ -105,10 +105,8 @@ private:
   size_t NumModules;  // linker-initialized.
   size_t NumGuards;  // linker-initialized.
 
-  static const size_t kNumCounters = 1 << 14;
-  alignas(8) uint8_t Counters[kNumCounters];
-
-  static const size_t kNumPCs = 1 << 24;
+  static const size_t kNumPCs = 1 << 21;
+  alignas(8) uint8_t Counters[kNumPCs];
   uintptr_t PCs[kNumPCs];
 
   std::set<uintptr_t> *PrintedPCs;
@@ -122,7 +120,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
   size_t Res = 0;
   const size_t Step = 8;
   assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
-  size_t N = Min(kNumCounters, NumGuards + 1);
+  size_t N = GetNumPCs();
   N = (N + Step - 1) & ~(Step - 1);  // Round up.
   for (size_t Idx = 0; Idx < N; Idx += Step) {
     uint64_t Bundle = *reinterpret_cast<uint64_t*>(&Counters[Idx]);
@@ -146,7 +144,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
   }
   if (UseValueProfile)
     ValueProfileMap.ForEach([&](size_t Idx) {
-      if (CB(NumGuards * 8 + Idx))
+      if (CB(N * 8 + Idx))
         Res++;
     });
   return Res;

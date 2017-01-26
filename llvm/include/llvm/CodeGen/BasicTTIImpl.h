@@ -42,24 +42,6 @@ private:
   typedef TargetTransformInfoImplCRTPBase<T> BaseT;
   typedef TargetTransformInfo TTI;
 
-  /// Estimate the overhead of scalarizing an instruction. Insert and Extract
-  /// are set if the result needs to be inserted and/or extracted from vectors.
-  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
-    assert(Ty->isVectorTy() && "Can only scalarize vectors");
-    unsigned Cost = 0;
-
-    for (int i = 0, e = Ty->getVectorNumElements(); i < e; ++i) {
-      if (Insert)
-        Cost += static_cast<T *>(this)
-                    ->getVectorInstrCost(Instruction::InsertElement, Ty, i);
-      if (Extract)
-        Cost += static_cast<T *>(this)
-                    ->getVectorInstrCost(Instruction::ExtractElement, Ty, i);
-    }
-
-    return Cost;
-  }
-
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
   unsigned getPermuteShuffleOverhead(Type *Ty) {
@@ -301,6 +283,37 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
+  /// Estimate the overhead of scalarizing an instruction. Insert and Extract
+  /// are set if the result needs to be inserted and/or extracted from vectors.
+  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
+    assert(Ty->isVectorTy() && "Can only scalarize vectors");
+    unsigned Cost = 0;
+
+    for (int i = 0, e = Ty->getVectorNumElements(); i < e; ++i) {
+      if (Insert)
+        Cost += static_cast<T *>(this)
+                    ->getVectorInstrCost(Instruction::InsertElement, Ty, i);
+      if (Extract)
+        Cost += static_cast<T *>(this)
+                    ->getVectorInstrCost(Instruction::ExtractElement, Ty, i);
+    }
+
+    return Cost;
+  }
+
+  /// Estimate the overhead of scalarizing an instructions unique operands.
+  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                            unsigned VF) {
+    unsigned Cost = 0;
+    SmallPtrSet<const Value*, 4> UniqueOperands;
+    for (const Value *A : Args) {
+      if (UniqueOperands.insert(A).second)
+        Cost += getScalarizationOverhead(VectorType::get(A->getType(), VF),
+                                         false, true);
+    }
+    return Cost;
+  }
+
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
   unsigned getArithmeticInstrCost(
@@ -341,10 +354,17 @@ public:
       unsigned Num = Ty->getVectorNumElements();
       unsigned Cost = static_cast<T *>(this)
                           ->getArithmeticInstrCost(Opcode, Ty->getScalarType());
-      // return the cost of multiple scalar invocation plus the cost of
-      // inserting
-      // and extracting the values.
-      return getScalarizationOverhead(Ty, true, true) + Num * Cost;
+      // Return the cost of multiple scalar invocation plus the cost of
+      // inserting and extracting the values.
+      unsigned TotCost = getScalarizationOverhead(Ty, true, false) + Num * Cost;
+      if (!Args.empty())
+        TotCost += getOperandsScalarizationOverhead(Args, Num);
+      else
+        // When no information on arguments is provided, we add the cost
+        // associated with one argument as a heuristic.
+        TotCost += getScalarizationOverhead(Ty, false, true);
+
+      return TotCost;
     }
 
     // We don't know anything about this scalar instruction.

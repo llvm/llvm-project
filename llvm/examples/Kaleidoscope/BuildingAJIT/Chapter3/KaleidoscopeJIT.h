@@ -70,7 +70,7 @@ public:
         CompileCallbackManager(
             orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
         CODLayer(OptimizeLayer,
-                 [this](Function &F) { return std::set<Function*>({&F}); },
+                 [](Function &F) { return std::set<Function*>({&F}); },
                  *CompileCallbackManager,
                  orc::createLocalIndirectStubsManagerBuilder(
                    TM->getTargetTriple())) {

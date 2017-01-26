@@ -46,8 +46,8 @@ entry:
 ; GCN-LABEL: {{^}}class_f16_fneg
 ; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
-; VI:  v_trunc_f16_e32 v[[VA_F16:[0-9]+]], s[[SA_F16]]
-; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -v[[VA_F16]], s[[SB_I32]]
+; VI:  v_trunc_f16_e64 v[[VA_F16:[0-9]+]], -s[[SA_F16]]
+; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], v[[VA_F16]], s[[SB_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm

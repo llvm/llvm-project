@@ -73,13 +73,14 @@
 #define LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
@@ -108,6 +109,11 @@ class Instruction;
 class MemoryAccess;
 class LLVMContext;
 class raw_ostream;
+namespace MSSAHelpers {
+
+struct AllAccessTag {};
+struct DefsOnlyTag {};
+}
 
 enum {
   // Used to signify what the default invalid ID is for MemoryAccess's
@@ -122,8 +128,16 @@ using const_memoryaccess_def_iterator =
 
 // \brief The base for all memory accesses. All memory accesses in a block are
 // linked together using an intrusive list.
-class MemoryAccess : public User, public ilist_node<MemoryAccess> {
+class MemoryAccess
+    : public User,
+      public ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::AllAccessTag>>,
+      public ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>> {
 public:
+  using AllAccessType =
+      ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::AllAccessTag>>;
+  using DefsOnlyType =
+      ilist_node<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
+
   // Methods for support type inquiry through isa, cast, and
   // dyn_cast
   static inline bool classof(const MemoryAccess *) { return true; }
@@ -155,6 +169,33 @@ public:
   const_memoryaccess_def_iterator defs_begin() const;
   memoryaccess_def_iterator defs_end();
   const_memoryaccess_def_iterator defs_end() const;
+
+  /// \brief Get the iterators for the all access list and the defs only list
+  /// We default to the all access list.
+  AllAccessType::self_iterator getIterator() {
+    return this->AllAccessType::getIterator();
+  }
+  AllAccessType::const_self_iterator getIterator() const {
+    return this->AllAccessType::getIterator();
+  }
+  AllAccessType::reverse_self_iterator getReverseIterator() {
+    return this->AllAccessType::getReverseIterator();
+  }
+  AllAccessType::const_reverse_self_iterator getReverseIterator() const {
+    return this->AllAccessType::getReverseIterator();
+  }
+  DefsOnlyType::self_iterator getDefsIterator() {
+    return this->DefsOnlyType::getIterator();
+  }
+  DefsOnlyType::const_self_iterator getDefsIterator() const {
+    return this->DefsOnlyType::getIterator();
+  }
+  DefsOnlyType::reverse_self_iterator getReverseDefsIterator() {
+    return this->DefsOnlyType::getReverseIterator();
+  }
+  DefsOnlyType::const_reverse_self_iterator getReverseDefsIterator() const {
+    return this->DefsOnlyType::getReverseIterator();
+  }
 
 protected:
   friend class MemorySSA;
@@ -531,13 +572,28 @@ public:
     return LiveOnEntryDef.get();
   }
 
-  using AccessList = iplist<MemoryAccess>;
+  // Sadly, iplists, by default, owns and deletes pointers added to the
+  // list. It's not currently possible to have two iplists for the same type,
+  // where one owns the pointers, and one does not. This is because the traits
+  // are per-type, not per-tag.  If this ever changes, we should make the
+  // DefList an iplist.
+  using AccessList = iplist<MemoryAccess, ilist_tag<MSSAHelpers::AllAccessTag>>;
+  using DefsList =
+      simple_ilist<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
 
   /// \brief Return the list of MemoryAccess's for a given basic block.
   ///
   /// This list is not modifiable by the user.
   const AccessList *getBlockAccesses(const BasicBlock *BB) const {
     return getWritableBlockAccesses(BB);
+  }
+
+  /// \brief Return the list of MemoryDef's and MemoryPhi's for a given basic
+  /// block.
+  ///
+  /// This list is not modifiable by the user.
+  const DefsList *getBlockDefs(const BasicBlock *BB) const {
+    return getWritableBlockDefs(BB);
   }
 
   /// \brief Create an empty MemoryPhi in MemorySSA for a given basic block.
@@ -623,10 +679,16 @@ protected:
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;
 
-  // This is used by the use optimizer class
+  // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
     auto It = PerBlockAccesses.find(BB);
     return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+  }
+
+  // This is used by the use optimizer and updater.
+  DefsList *getWritableBlockDefs(const BasicBlock *BB) const {
+    auto It = PerBlockDefs.find(BB);
+    return It == PerBlockDefs.end() ? nullptr : It->second.get();
   }
 
 private:
@@ -639,6 +701,7 @@ private:
 
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
+  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
 
   void
   determineInsertionPoint(const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks);
@@ -656,15 +719,26 @@ private:
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
                   SmallPtrSet<BasicBlock *, 16> &Visited);
   AccessList *getOrCreateAccessList(const BasicBlock *);
+  DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
-
+  void insertIntoListsForBlock(MemoryAccess *, const BasicBlock *,
+                               InsertionPlace);
+  void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
+                             AccessList::iterator);
   AliasAnalysis *AA;
   DominatorTree *DT;
   Function &F;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
+  // These two mappings contain the main block to access/def mappings for
+  // MemorySSA. The list contained in PerBlockAccesses really owns all the
+  // MemoryAccesses.
+  // Both maps maintain the invariant that if a block is found in them, the
+  // corresponding list is not empty, and if a block is not found in them, the
+  // corresponding list is empty.
   AccessMap PerBlockAccesses;
+  DefsMap PerBlockDefs;
   std::unique_ptr<MemoryAccess> LiveOnEntryDef;
 
   // Domination mappings
@@ -957,9 +1031,7 @@ public:
     fillInCurrentPair();
   }
 
-  upward_defs_iterator() {
-    CurrentPair.first = nullptr;
-  }
+  upward_defs_iterator() { CurrentPair.first = nullptr; }
 
   bool operator==(const upward_defs_iterator &Other) const {
     return DefIterator == Other.DefIterator;

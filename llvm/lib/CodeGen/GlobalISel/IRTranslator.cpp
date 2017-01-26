@@ -60,30 +60,30 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
 
 unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
   unsigned &ValReg = ValToVReg[&Val];
-  // Check if this is the first time we see Val.
-  if (!ValReg) {
-    // Fill ValRegsSequence with the sequence of registers
-    // we need to concat together to produce the value.
-    assert(Val.getType()->isSized() &&
-           "Don't know how to create an empty vreg");
-    unsigned VReg = MRI->createGenericVirtualRegister(LLT{*Val.getType(), *DL});
-    ValReg = VReg;
 
-    if (auto CV = dyn_cast<Constant>(&Val)) {
-      bool Success = translate(*CV, VReg);
-      if (!Success) {
-        if (!TPC->isGlobalISelAbortEnabled()) {
-          MF->getProperties().set(
-              MachineFunctionProperties::Property::FailedISel);
-          return VReg;
-        }
-        reportTranslationError(Val, "unable to translate constant");
+  if (ValReg)
+    return ValReg;
+
+  // Fill ValRegsSequence with the sequence of registers
+  // we need to concat together to produce the value.
+  assert(Val.getType()->isSized() &&
+         "Don't know how to create an empty vreg");
+  unsigned VReg = MRI->createGenericVirtualRegister(LLT{*Val.getType(), *DL});
+  ValReg = VReg;
+
+  if (auto CV = dyn_cast<Constant>(&Val)) {
+    bool Success = translate(*CV, VReg);
+    if (!Success) {
+      if (!TPC->isGlobalISelAbortEnabled()) {
+        MF->getProperties().set(
+            MachineFunctionProperties::Property::FailedISel);
+        return VReg;
       }
+      reportTranslationError(Val, "unable to translate constant");
     }
   }
 
-  // Look Val up again in case the reference has been invalidated since.
-  return ValToVReg[&Val];
+  return VReg;
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
