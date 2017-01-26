@@ -485,6 +485,7 @@ TEST_F(MemorySSATest, WalkerReopt) {
   EXPECT_EQ(NewLoadAccess->getDefiningAccess(), LoadClobber);
 }
 
+#if 0
 // Test out MemorySSA::spliceMemoryAccessAbove.
 TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
@@ -532,3 +533,4 @@ TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
   EXPECT_TRUE(MSSA.locallyDominates(MSSA.getMemoryAccess(StoreA1),
                                     MSSA.getMemoryAccess(StoreA2)));
 }
+#endif

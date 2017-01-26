@@ -1627,6 +1627,17 @@ bool AArch64InstrInfo::isUnscaledLdSt(MachineInstr &MI) const {
   return isUnscaledLdSt(MI.getOpcode());
 }
 
+bool AArch64InstrInfo::isTailCall(const MachineInstr &Inst) const
+{
+  switch (Inst.getOpcode()) {
+  case AArch64::TCRETURNdi:
+  case AArch64::TCRETURNri:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Is this a candidate for ld/st merging or pairing?  For example, we don't
 // touch volatiles or load/stores that have a hint to avoid pair formation.
 bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
@@ -1652,7 +1663,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
-  if (Subtarget.avoidQuadLdStPairs()) {
+  if (Subtarget.isPaired128Slow()) {
     switch (MI.getOpcode()) {
     default:
       break;

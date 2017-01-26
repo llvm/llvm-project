@@ -1141,11 +1141,19 @@ ProcessMessage ProcessMonitor::MonitorSIGTRAP(ProcessMonitor *monitor,
 
   case SI_KERNEL:
   case TRAP_BRKPT:
-    if (log)
-      log->Printf(
-          "ProcessMonitor::%s() received breakpoint event, tid = %" PRIu64,
-          __FUNCTION__, tid);
-    message = ProcessMessage::Break(tid);
+    if (monitor->m_process->IsSoftwareStepBreakpoint(tid)) {
+      if (log)
+        log->Printf("ProcessMonitor::%s() received sw single step breakpoint "
+                    "event, tid = %" PRIu64,
+                    __FUNCTION__, tid);
+      message = ProcessMessage::Trace(tid);
+    } else {
+      if (log)
+        log->Printf(
+            "ProcessMonitor::%s() received breakpoint event, tid = %" PRIu64,
+            __FUNCTION__, tid);
+      message = ProcessMessage::Break(tid);
+    }
     break;
   }
 

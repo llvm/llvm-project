@@ -1,8 +1,7 @@
-; Test that the inliner clears analyses which may hold references to function
-; bodies when it decides to delete them after inlining the last caller.
-; We check this by using correlated-propagation to populate LVI with basic
-; block references that would dangle if we failed to clear the inlined function
-; body.
+; Test that when a pass like correlated-propagation populates an analysis such
+; as LVI with references back into the IR of a function that the inliner will
+; delete, this doesn't crash or go awry despite the inliner clearing the analyses
+; separately from when it deletes the function.
 ;
 ; RUN: opt -debug-pass-manager -S < %s 2>&1 \
 ; RUN:     -passes='cgscc(inline,function(correlated-propagation))' \

@@ -294,6 +294,7 @@ void OMPClauseProfiler::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getNumThreads())
     Profiler->VisitStmt(C->getNumThreads());
 }
@@ -496,11 +497,13 @@ void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getNumTeams())
     Profiler->VisitStmt(C->getNumTeams());
 }
 void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getThreadLimit())
     Profiler->VisitStmt(C->getThreadLimit());
 }

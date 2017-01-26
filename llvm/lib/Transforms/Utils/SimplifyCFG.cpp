@@ -1436,6 +1436,14 @@ static bool canSinkInstructions(
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
         I->getType()->isTokenTy())
       return false;
+
+    // Conservatively return false if I is an inline-asm instruction. Sinking
+    // and merging inline-asm instructions can potentially create arguments
+    // that cannot satisfy the inline-asm constraints.
+    if (const auto *C = dyn_cast<CallInst>(I))
+      if (C->isInlineAsm())
+        return false;
+
     // Everything must have only one use too, apart from stores which
     // have no uses.
     if (!isa<StoreInst>(I) && !I->hasOneUse())

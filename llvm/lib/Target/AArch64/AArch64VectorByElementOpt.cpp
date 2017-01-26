@@ -19,13 +19,27 @@
 //    is rewritten into
 //    dup v3.4s, v2.s[1]
 //    fmla v0.4s, v1.4s, v3.4s
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCSchedule.h"
+#include "llvm/Pass.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <map>
 
 using namespace llvm;
 
@@ -41,13 +55,14 @@ namespace {
 
 struct AArch64VectorByElementOpt : public MachineFunctionPass {
   static char ID;
-  AArch64VectorByElementOpt() : MachineFunctionPass(ID) {
-    initializeAArch64VectorByElementOptPass(*PassRegistry::getPassRegistry());
-  }
 
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
+
+  AArch64VectorByElementOpt() : MachineFunctionPass(ID) {
+    initializeAArch64VectorByElementOptPass(*PassRegistry::getPassRegistry());
+  }
 
   /// Based only on latency of instructions, determine if it is cost efficient
   /// to replace the instruction InstDesc by the two instructions InstDescRep1
@@ -90,8 +105,10 @@ struct AArch64VectorByElementOpt : public MachineFunctionPass {
     return AARCH64_VECTOR_BY_ELEMENT_OPT_NAME;
   }
 };
+
 char AArch64VectorByElementOpt::ID = 0;
-} // namespace
+
+} // end anonymous namespace
 
 INITIALIZE_PASS(AArch64VectorByElementOpt, "aarch64-vectorbyelement-opt",
                 AARCH64_VECTOR_BY_ELEMENT_OPT_NAME, false, false)

@@ -2449,6 +2449,8 @@ bool MachProcess::GetOSVersionNumbers(uint64_t *major, uint64_t *minor,
 #if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
     (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101000)
   return false;
+#elif defined(OS_OBJECT_USE_OBJC) && (OS_OBJECT_USE_OBJC == 0)
+  return false;
 #else
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 

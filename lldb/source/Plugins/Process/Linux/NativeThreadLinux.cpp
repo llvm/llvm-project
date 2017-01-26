@@ -220,63 +220,12 @@ Error NativeThreadLinux::Resume(uint32_t signo) {
                                            reinterpret_cast<void *>(data));
 }
 
-void NativeThreadLinux::MaybePrepareSingleStepWorkaround() {
-  if (!SingleStepWorkaroundNeeded())
-    return;
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-
-  if (sched_getaffinity(static_cast<::pid_t>(m_tid), sizeof m_original_cpu_set,
-                        &m_original_cpu_set) != 0) {
-    // This should really not fail. But, just in case...
-    if (log) {
-      Error error(errno, eErrorTypePOSIX);
-      log->Printf(
-          "NativeThreadLinux::%s Unable to get cpu affinity for thread %" PRIx64
-          ": %s",
-          __FUNCTION__, m_tid, error.AsCString());
-    }
-    return;
-  }
-
-  cpu_set_t set;
-  CPU_ZERO(&set);
-  CPU_SET(0, &set);
-  if (sched_setaffinity(static_cast<::pid_t>(m_tid), sizeof set, &set) != 0 &&
-      log) {
-    // This may fail in very locked down systems, if the thread is not allowed
-    // to run on
-    // cpu 0. If that happens, only thing we can do is it log it and continue...
-    Error error(errno, eErrorTypePOSIX);
-    log->Printf(
-        "NativeThreadLinux::%s Unable to set cpu affinity for thread %" PRIx64
-        ": %s",
-        __FUNCTION__, m_tid, error.AsCString());
-  }
-}
-
-void NativeThreadLinux::MaybeCleanupSingleStepWorkaround() {
-  if (!SingleStepWorkaroundNeeded())
-    return;
-
-  if (sched_setaffinity(static_cast<::pid_t>(m_tid), sizeof m_original_cpu_set,
-                        &m_original_cpu_set) != 0) {
-    Error error(errno, eErrorTypePOSIX);
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-    log->Printf(
-        "NativeThreadLinux::%s Unable to reset cpu affinity for thread %" PRIx64
-        ": %s",
-        __FUNCTION__, m_tid, error.AsCString());
-  }
-}
-
 Error NativeThreadLinux::SingleStep(uint32_t signo) {
   const StateType new_state = StateType::eStateStepping;
   MaybeLogStateChange(new_state);
   m_state = new_state;
   m_stop_info.reason = StopReason::eStopReasonNone;
-
-  MaybePrepareSingleStepWorkaround();
+  m_step_workaround = SingleStepWorkaround::Get(m_tid);
 
   intptr_t data = 0;
   if (signo != LLDB_INVALID_SIGNAL_NUMBER)
@@ -338,7 +287,7 @@ bool NativeThreadLinux::IsStopped(int *signo) {
 
 void NativeThreadLinux::SetStopped() {
   if (m_state == StateType::eStateStepping)
-    MaybeCleanupSingleStepWorkaround();
+    m_step_workaround.reset();
 
   const StateType new_state = StateType::eStateStopped;
   MaybeLogStateChange(new_state);

@@ -9169,14 +9169,17 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
                 HasTypenameKeyword, IsInstantiation, SS.getScopeRep(),
                 dyn_cast<CXXRecordDecl>(CurContext)),
             CTK_ErrorRecovery)) {
-      // We reject any correction for which ND would be NULL.
-      NamedDecl *ND = Corrected.getCorrectionDecl();
-
       // We reject candidates where DroppedSpecifier == true, hence the
       // literal '0' below.
       diagnoseTypo(Corrected, PDiag(diag::err_no_member_suggest)
                                 << NameInfo.getName() << LookupContext << 0
                                 << SS.getRange());
+
+      // If we picked a correction with no attached Decl we can't do anything
+      // useful with it, bail out.
+      NamedDecl *ND = Corrected.getCorrectionDecl();
+      if (!ND)
+        return BuildInvalid();
 
       // If we corrected to an inheriting constructor, handle it as one.
       auto *RD = dyn_cast<CXXRecordDecl>(ND);

@@ -1022,6 +1022,25 @@ public:
                               CGCalleeInfo CalleeInfo, AttributeListType &PAL,
                               unsigned &CallingConv, bool AttrOnCallSite);
 
+  /// Adds attributes to F according to our CodeGenOptions and LangOptions, as
+  /// though we had emitted it ourselves.  We remove any attributes on F that
+  /// conflict with the attributes we add here.
+  ///
+  /// This is useful for adding attrs to bitcode modules that you want to link
+  /// with but don't control, such as CUDA's libdevice.  When linking with such
+  /// a bitcode library, you might want to set e.g. its functions'
+  /// "unsafe-fp-math" attribute to match the attr of the functions you're
+  /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
+  /// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
+  /// will propagate unsafe-fp-math=false up to every transitive caller of a
+  /// function in the bitcode library!
+  ///
+  /// With the exception of fast-math attrs, this will only make the attributes
+  /// on the function more conservative.  But it's unsafe to call this on a
+  /// function which relies on particular fast-math attributes for correctness.
+  /// It's up to you to ensure that this is safe.
+  void AddDefaultFnAttrs(llvm::Function &F);
+
   // Fills in the supplied string map with the set of target features for the
   // passed in function.
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
@@ -1303,6 +1322,12 @@ private:
   /// Check whether we can use a "simpler", more core exceptions personality
   /// function.
   void SimplifyPersonality();
+
+  /// Helper function for ConstructAttributeList and AddDefaultFnAttrs.
+  /// Constructs an AttrList for a function with the given properties.
+  void ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
+                                  bool AttrOnCallSite,
+                                  llvm::AttrBuilder &FuncAttrs);
 };
 }  // end namespace CodeGen
 }  // end namespace clang

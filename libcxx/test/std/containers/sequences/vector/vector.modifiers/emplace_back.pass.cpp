@@ -12,9 +12,11 @@
 // <vector>
 
 // template <class... Args> reference emplace_back(Args&&... args);
+// return type is 'reference' in C++17; 'void' before
 
 #include <vector>
 #include <cassert>
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -56,6 +58,7 @@ int main()
 {
     {
         std::vector<A> c;
+#if TEST_STD_VER > 14
         A& r1 = c.emplace_back(2, 3.5);
         assert(c.size() == 1);
         assert(&r1 == &c.back());
@@ -65,6 +68,15 @@ int main()
         A& r2 = c.emplace_back(3, 4.5);
         assert(c.size() == 2);
         assert(&r2 == &c.back());
+#else
+        c.emplace_back(2, 3.5);
+        assert(c.size() == 1);
+        assert(c.front().geti() == 2);
+        assert(c.front().getd() == 3.5);
+        assert(is_contiguous_container_asan_correct(c));
+        c.emplace_back(3, 4.5);
+        assert(c.size() == 2);
+#endif
         assert(c.front().geti() == 2);
         assert(c.front().getd() == 3.5);
         assert(c.back().geti() == 3);
@@ -73,6 +85,7 @@ int main()
     }
     {
         std::vector<A, limited_allocator<A, 4> > c;
+#if TEST_STD_VER > 14
         A& r1 = c.emplace_back(2, 3.5);
         assert(c.size() == 1);
         assert(&r1 == &c.back());
@@ -82,6 +95,15 @@ int main()
         A& r2 = c.emplace_back(3, 4.5);
         assert(c.size() == 2);
         assert(&r2 == &c.back());
+#else
+        c.emplace_back(2, 3.5);
+        assert(c.size() == 1);
+        assert(c.front().geti() == 2);
+        assert(c.front().getd() == 3.5);
+        assert(is_contiguous_container_asan_correct(c));
+        c.emplace_back(3, 4.5);
+        assert(c.size() == 2);
+#endif
         assert(c.front().geti() == 2);
         assert(c.front().getd() == 3.5);
         assert(c.back().geti() == 3);
@@ -90,6 +112,7 @@ int main()
     }
     {
         std::vector<A, min_allocator<A>> c;
+#if TEST_STD_VER > 14
         A& r1 = c.emplace_back(2, 3.5);
         assert(c.size() == 1);
         assert(&r1 == &c.back());
@@ -99,6 +122,15 @@ int main()
         A& r2 = c.emplace_back(3, 4.5);
         assert(c.size() == 2);
         assert(&r2 == &c.back());
+#else
+        c.emplace_back(2, 3.5);
+        assert(c.size() == 1);
+        assert(c.front().geti() == 2);
+        assert(c.front().getd() == 3.5);
+        assert(is_contiguous_container_asan_correct(c));
+        c.emplace_back(3, 4.5);
+        assert(c.size() == 2);
+#endif
         assert(c.front().geti() == 2);
         assert(c.front().getd() == 3.5);
         assert(c.back().geti() == 3);

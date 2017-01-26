@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan %s -o %t -framework Foundation -std=c++11
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 

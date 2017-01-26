@@ -191,8 +191,8 @@ CGSCCAnalysisManagerModuleProxy::run(Module &M, ModuleAnalysisManager &AM);
 // template.
 extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 
-extern template class OuterAnalysisManagerProxy<
-    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+                                                LazyCallGraph::SCC>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC,
                                   LazyCallGraph &>

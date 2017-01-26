@@ -16,19 +16,29 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-ldst-opt"
@@ -58,15 +68,15 @@ typedef struct LdStPairFlags {
   // If a matching instruction is found, MergeForward is set to true if the
   // merge is to remove the first instruction and replace the second with
   // a pair-wise insn, and false if the reverse is true.
-  bool MergeForward;
+  bool MergeForward = false;
 
   // SExtIdx gives the index of the result of the load pair that must be
   // extended. The value of SExtIdx assumes that the paired load produces the
   // value in this order: (I, returned iterator), i.e., -1 means no value has
   // to be extended, 0 means I, and 1 means the returned iterator.
-  int SExtIdx;
+  int SExtIdx = -1;
 
-  LdStPairFlags() : MergeForward(false), SExtIdx(-1) {}
+  LdStPairFlags() = default;
 
   void setMergeForward(bool V = true) { MergeForward = V; }
   bool getMergeForward() const { return MergeForward; }
@@ -78,6 +88,7 @@ typedef struct LdStPairFlags {
 
 struct AArch64LoadStoreOpt : public MachineFunctionPass {
   static char ID;
+
   AArch64LoadStoreOpt() : MachineFunctionPass(ID) {
     initializeAArch64LoadStoreOptPass(*PassRegistry::getPassRegistry());
   }
@@ -162,8 +173,10 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   StringRef getPassName() const override { return AARCH64_LOAD_STORE_OPT_NAME; }
 };
+
 char AArch64LoadStoreOpt::ID = 0;
-} // namespace
+
+} // end anonymous namespace
 
 INITIALIZE_PASS(AArch64LoadStoreOpt, "aarch64-ldst-opt",
                 AARCH64_LOAD_STORE_OPT_NAME, false, false)
@@ -246,7 +259,7 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   default:
     if (IsValidLdStrOpc)
       *IsValidLdStrOpc = false;
-    return UINT_MAX;
+    return std::numeric_limits<unsigned>::max();
   case AArch64::STRDui:
   case AArch64::STURDi:
   case AArch64::STRQui:
@@ -1543,14 +1556,13 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     case AArch64::LDURBBi:
     case AArch64::LDURHHi:
     case AArch64::LDURWi:
-    case AArch64::LDURXi: {
+    case AArch64::LDURXi:
       if (tryToPromoteLoadFromStore(MBBI)) {
         Modified = true;
         break;
       }
       ++MBBI;
       break;
-    }
     }
   }
   // 2) Merge adjacent zero stores into a wider store.

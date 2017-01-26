@@ -1,15 +1,15 @@
 # Build for the XRay runtime support library.
 
-# Core XRay runtime library implementation files.
+# XRay runtime library implementation files.
 set(XRAY_SOURCES
+  xray_inmemory_log.cc
   xray_init.cc
-  xray_interface.cc
   xray_flags.cc
-  xray_inmemory_log.cc)
-
-# XRay flight data recorder (FDR) implementation files.
-set(XRAY_FDR_SOURCES
-  xray_buffer_queue.cc)
+  xray_interface.cc
+  xray_buffer_queue.cc
+  xray_log_interface.cc
+  xray_fdr_logging.cc
+  xray_utils.cc)
 
 set(x86_64_SOURCES
     xray_x86_64.cc
@@ -21,12 +21,13 @@ set(arm_SOURCES
     xray_trampoline_arm.S
     ${XRAY_SOURCES})
 
-set(armhf_SOURCES ${arm_SOURCES})
+set(armhf_SOURCES
+  ${arm_SOURCES})
 
 set(aarch64_SOURCES
-        xray_AArch64.cc
-        xray_trampoline_AArch64.S
-        ${XRAY_SOURCES})
+  xray_AArch64.cc
+  xray_trampoline_AArch64.S
+  ${XRAY_SOURCES})
 
 include_directories(..)
 include_directories(../../include)
@@ -41,13 +42,7 @@ add_compiler_rt_object_libraries(RTXray
   SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
   DEFS ${XRAY_COMMON_DEFINITIONS})
 
-add_compiler_rt_object_libraries(RTXrayFDR
-  ARCHS ${XRAY_SUPPORTED_ARCH}
-  SOURCES ${XRAY_FDR_SOURCES} CFLAGS ${XRAY_CFLAGS}
-  DEFS ${XRAY_COMMON_DEFINITIONS})
-
 add_compiler_rt_component(xray)
-add_compiler_rt_component(xray-fdr)
 
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
@@ -63,14 +58,6 @@ foreach(arch ${XRAY_SUPPORTED_ARCH})
      DEFS ${XRAY_COMMON_DEFINITIONS}
      OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS}
      PARENT_TARGET xray)
-   add_compiler_rt_runtime(clang_rt.xray-fdr
-     STATIC
-     ARCHS ${arch}
-     SOURCES ${XRAY_FDR_SOURCES}
-     CFLAGS ${XRAY_CFLAGS}
-     DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS}
-     PARENT_TARGET xray-fdr)
   endif()
 endforeach()
 

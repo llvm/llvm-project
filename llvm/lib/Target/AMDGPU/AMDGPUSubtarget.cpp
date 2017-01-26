@@ -82,6 +82,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64FP16Denormals(false),
     FPExceptions(false),
     FlatForGlobal(false),
+    NoAddr64(false),
     UnalignedScratchAccess(false),
     UnalignedBufferAccess(false),
 
@@ -298,8 +299,9 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(unsigned ExplicitArgBytes) const {
-  unsigned ImplicitBytes = getImplicitArgNumBytes();
+unsigned SISubtarget::getKernArgSegmentSize(const MachineFunction &MF,
+					    unsigned ExplicitArgBytes) const {
+  unsigned ImplicitBytes = getImplicitArgNumBytes(MF);
   if (ImplicitBytes == 0)
     return ExplicitArgBytes;
 

@@ -141,8 +141,7 @@ LoopAnalysisManagerFunctionProxy::run(Function &F, FunctionAnalysisManager &AM);
 // template.
 extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 
-extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
-                                                LoopStandardAnalysisResults &>;
+extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
                                   LoopStandardAnalysisResults &>

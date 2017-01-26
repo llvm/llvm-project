@@ -853,12 +853,9 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
     Changed |= simplifyLoop(*I, DT, LI, SE, AC, /*PreserveLCSSA*/ false);
 
-  // FIXME: We need to invalidate this to avoid PR28400. Is there a better
-  // solution?
-  AM.invalidate<ScalarEvolutionAnalysis>(F);
-
   if (!Changed)
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();

@@ -70,14 +70,10 @@ static bool guaranteesZeroRegInBlock(MachineInstr &MI, MachineBasicBlock *MBB) {
   unsigned Opc = MI.getOpcode();
   // Check if the current basic block is the target block to which the
   // CBZ/CBNZ instruction jumps when its Wt/Xt is zero.
-  if ((Opc == AArch64::CBZW || Opc == AArch64::CBZX) &&
-      MBB == MI.getOperand(1).getMBB())
-    return true;
-  else if ((Opc == AArch64::CBNZW || Opc == AArch64::CBNZX) &&
-           MBB != MI.getOperand(1).getMBB())
-    return true;
-
-  return false;
+  return ((Opc == AArch64::CBZW || Opc == AArch64::CBZX) &&
+          MBB == MI.getOperand(1).getMBB()) ||
+         ((Opc == AArch64::CBNZW || Opc == AArch64::CBNZX) &&
+          MBB != MI.getOperand(1).getMBB());
 }
 
 bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
@@ -85,9 +81,14 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
   if (MBB->pred_size() != 1)
     return false;
 
+  // Check if the predecessor has two successors, implying the block ends in a
+  // conditional branch.
   MachineBasicBlock *PredMBB = *MBB->pred_begin();
+  if (PredMBB->succ_size() != 2)
+    return false;
+
   MachineBasicBlock::iterator CompBr = PredMBB->getLastNonDebugInstr();
-  if (CompBr == PredMBB->end() || PredMBB->succ_size() != 2)
+  if (CompBr == PredMBB->end())
     return false;
 
   ++CompBr;

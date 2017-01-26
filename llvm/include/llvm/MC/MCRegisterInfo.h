@@ -418,6 +418,9 @@ public:
 
   regclass_iterator regclass_begin() const { return Classes; }
   regclass_iterator regclass_end() const { return Classes+NumClasses; }
+  iterator_range<regclass_iterator> regclasses() const {
+    return make_range(regclass_begin(), regclass_end());
+  }
 
   unsigned getNumRegClasses() const {
     return (unsigned)(regclass_end()-regclass_begin());

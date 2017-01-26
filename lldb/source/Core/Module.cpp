@@ -1665,6 +1665,6 @@ bool Module::GetIsDynamicLinkEditor() {
   return false;
 }
 
-Error Module::LoadInMemory(Target &target) {
-  return m_objfile_sp->LoadInMemory(target);
+Error Module::LoadInMemory(Target &target, bool set_pc) {
+  return m_objfile_sp->LoadInMemory(target, set_pc);
 }

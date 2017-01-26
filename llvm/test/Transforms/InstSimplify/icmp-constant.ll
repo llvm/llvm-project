@@ -420,9 +420,7 @@ define <2 x i1> @tautological9_vec(<2 x i32> %x) {
 
 define i1 @add_nsw_neg_const1(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const1(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add = add nsw i32 %x, -2147483647
   %cmp = icmp sgt i32 %add, 0
@@ -446,9 +444,7 @@ define i1 @add_nsw_neg_const2(i32 %x) {
 
 define i1 @add_nsw_neg_const3(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const3(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -2147483646
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add = add nsw i32 %x, -2147483646
   %cmp = icmp sgt i32 %add, 1
@@ -472,9 +468,7 @@ define i1 @add_nsw_neg_const4(i32 %x) {
 
 define i1 @add_nsw_neg_const5(i32 %x) {
 ; CHECK-LABEL: @add_nsw_neg_const5(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, -42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD]], 2147483606
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add = add nsw i32 %x, -42
   %cmp = icmp ne i32 %add, 2147483606
@@ -498,9 +492,7 @@ define i1 @add_nsw_neg_const6(i32 %x) {
 
 define i1 @add_nsw_pos_const1(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const1(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add = add nsw i32 %x, 2147483647
   %cmp = icmp slt i32 %add, -1
@@ -524,9 +516,7 @@ define i1 @add_nsw_pos_const2(i32 %x) {
 
 define i1 @add_nsw_pos_const3(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const3(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 2147483646
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], -2
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add = add nsw i32 %x, 2147483646
   %cmp = icmp slt i32 %add, -2
@@ -550,9 +540,7 @@ define i1 @add_nsw_pos_const4(i32 %x) {
 
 define i1 @add_nsw_pos_const5(i32 %x) {
 ; CHECK-LABEL: @add_nsw_pos_const5(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 %x, 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], -2147483607
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add = add nsw i32 %x, 42
   %cmp = icmp eq i32 %add, -2147483607
@@ -576,9 +564,7 @@ define i1 @add_nsw_pos_const6(i32 %x) {
 
 define <2 x i1> @add_nsw_pos_const5_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @add_nsw_pos_const5_splat_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i32> %x, <i32 42, i32 42>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[ADD]], <i32 -2147483607, i32 -2147483607>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %add = add nsw <2 x i32> %x, <i32 42, i32 42>
   %cmp = icmp ne <2 x i32> %add, <i32 -2147483607, i32 -2147483607>

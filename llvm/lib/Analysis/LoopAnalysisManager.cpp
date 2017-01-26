@@ -23,8 +23,7 @@ namespace llvm {
 template class AllAnalysesOn<Loop>;
 template class AnalysisManager<Loop, LoopStandardAnalysisResults &>;
 template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
-template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop,
-                                         LoopStandardAnalysisResults &>;
+template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 
 bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
     Function &F, const PreservedAnalyses &PA,

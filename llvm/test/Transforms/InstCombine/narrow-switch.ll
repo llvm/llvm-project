@@ -164,3 +164,45 @@ case124:
   ret i8 5
 }
 
+; Make sure the arithmetic evaluation of the switch
+; condition is evaluated on the original type
+define i32 @trunc32to16(i32 %a0) #0 {
+; ALL-LABEL: @trunc32to16(
+; ALL:         switch i16
+; ALL-NEXT:    i16 63, label %sw.bb
+; ALL-NEXT:    i16 1, label %sw.bb1
+; ALL-NEXT:    i16 100, label %sw.bb2
+; ALL-NEXT:    ]
+;
+entry:
+  %retval = alloca i32, align 4
+  %xor = xor i32 %a0, 1034460917
+  %shr = lshr i32 %xor, 16
+  %add = add i32 %shr, -917677090
+  switch i32 %add, label %sw.epilog [
+    i32 -917677027, label %sw.bb
+    i32 -917677089, label %sw.bb1
+    i32 -917676990, label %sw.bb2
+  ]
+
+sw.bb:                                            ; preds = %entry
+  store i32 90, i32* %retval, align 4
+  br label %return
+
+sw.bb1:                                           ; preds = %entry
+  store i32 91, i32* %retval, align 4
+  br label %return
+
+sw.bb2:                                           ; preds = %entry
+  store i32 92, i32* %retval, align 4
+  br label %return
+
+sw.epilog:                                        ; preds = %entry
+  store i32 113, i32* %retval, align 4
+  br label %return
+
+return:                                           ; preds = %sw.epilog, %sw.bb2,
+  %rval = load i32, i32* %retval, align 4
+  ret i32 %rval
+}
+

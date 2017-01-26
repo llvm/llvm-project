@@ -170,6 +170,20 @@ protected:
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
 
+  /// \brief Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
+  /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
+  virtual void emitProcBindClause(CodeGenFunction &CGF,
+                                  OpenMPProcBindClauseKind ProcBind,
+                                  SourceLocation Loc) override;
+
+  /// \brief Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
+  /// clause.
+  /// \param NumThreads An integer value of threads.
+  virtual void emitNumThreadsClause(CodeGenFunction &CGF,
+                                    llvm::Value *NumThreads,
+                                    SourceLocation Loc) override;
+
   /// \brief This function ought to emit, in the general case, a call to
   // the openmp runtime kmpc_push_num_teams. In NVPTX backend it is not needed
   // as these numbers are obtained through the PTX grid and block configuration.

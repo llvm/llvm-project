@@ -926,8 +926,7 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v16i8:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0]
-; SSE2-NEXT:    psllw $5, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [8192,24640,41088,57536,49376,32928,16480,32]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pcmpgtb %xmm2, %xmm3
@@ -958,11 +957,10 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ; SSE41-LABEL: constant_shift_v16i8:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0]
-; SSE41-NEXT:    psllw $5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    psllw $4, %xmm2
 ; SSE41-NEXT:    pand {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [8192,24640,41088,57536,49376,32928,16480,32]
 ; SSE41-NEXT:    pblendvb %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    psllw $2, %xmm2
@@ -978,18 +976,17 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ;
 ; AVX-LABEL: constant_shift_v16i8:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0]
-; AVX-NEXT:    vpsllw $5, %xmm1, %xmm1
-; AVX-NEXT:    vpsllw $4, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm2, %xmm2
-; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsllw $2, %xmm0, %xmm2
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm2, %xmm2
-; AVX-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
-; AVX-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $4, %xmm0, %xmm1
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [8192,24640,41088,57536,49376,32928,16480,32]
+; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $2, %xmm0, %xmm1
+; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: constant_shift_v16i8:
@@ -1013,8 +1010,7 @@ define <16 x i8> @constant_shift_v16i8(<16 x i8> %a) nounwind {
 ;
 ; X32-SSE-LABEL: constant_shift_v16i8:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,7,6,5,4,3,2,1,0]
-; X32-SSE-NEXT:    psllw $5, %xmm2
+; X32-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [8192,24640,41088,57536,49376,32928,16480,32]
 ; X32-SSE-NEXT:    pxor %xmm1, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE-NEXT:    pcmpgtb %xmm2, %xmm3

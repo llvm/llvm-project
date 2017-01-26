@@ -287,6 +287,18 @@ template <class ELFT> InputSection<ELFT> *elf::createInterpSection() {
   return Ret;
 }
 
+template <class ELFT>
+SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type,
+                                   typename ELFT::uint Value,
+                                   typename ELFT::uint Size,
+                                   InputSectionBase<ELFT> *Section) {
+  auto *S = make<DefinedRegular<ELFT>>(Name, /*IsLocal*/ true, STV_DEFAULT,
+                                       Type, Value, Size, Section, nullptr);
+  if (In<ELFT>::SymTab)
+    In<ELFT>::SymTab->addLocal(S);
+  return S;
+}
+
 static size_t getHashSize() {
   switch (Config->BuildId) {
   case BuildIdKind::Fast:
@@ -1079,7 +1091,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
         });
     // update sh_info with number of Global symbols output with computed
     // binding of STB_LOCAL
-    this->OutSec->Info = this->Info = 1 + It - Symbols.begin();
+    this->OutSec->Info = this->Info = 1 + (It - Symbols.begin());
     return;
   }
 
@@ -1443,6 +1455,17 @@ template <class ELFT> size_t PltSection<ELFT>::getSize() const {
   return Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
+// Some architectures such as additional symbols in the PLT section. For
+// example ARM uses mapping symbols to aid disassembly
+template <class ELFT> void PltSection<ELFT>::addSymbols() {
+  Target->addPltHeaderSymbols(this);
+  size_t Off = Target->PltHeaderSize;
+  for (size_t I = 0; I < Entries.size(); ++I) {
+    Target->addPltSymbols(this, Off);
+    Off += Target->PltEntrySize;
+  }
+}
+
 template <class ELFT>
 IpltSection<ELFT>::IpltSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
@@ -1471,6 +1494,14 @@ template <class ELFT> void IpltSection<ELFT>::addEntry(SymbolBody &Sym) {
 
 template <class ELFT> size_t IpltSection<ELFT>::getSize() const {
   return Entries.size() * Target->PltEntrySize;
+}
+
+template <class ELFT> void IpltSection<ELFT>::addSymbols() {
+  size_t Off = 0;
+  for (size_t I = 0; I < Entries.size(); ++I) {
+    Target->addPltSymbols(this, Off);
+    Off += Target->PltEntrySize;
+  }
 }
 
 template <class ELFT>
@@ -1885,6 +1916,19 @@ template MergeInputSection<ELF32LE> *elf::createCommentSection();
 template MergeInputSection<ELF32BE> *elf::createCommentSection();
 template MergeInputSection<ELF64LE> *elf::createCommentSection();
 template MergeInputSection<ELF64BE> *elf::createCommentSection();
+
+template SymbolBody *
+elf::addSyntheticLocal<ELF32LE>(StringRef, uint8_t, ELF32LE::uint,
+                                ELF32LE::uint, InputSectionBase<ELF32LE> *);
+template SymbolBody *
+elf::addSyntheticLocal<ELF32BE>(StringRef, uint8_t, ELF32BE::uint,
+                                ELF32BE::uint, InputSectionBase<ELF32BE> *);
+template SymbolBody *
+elf::addSyntheticLocal<ELF64LE>(StringRef, uint8_t, ELF64LE::uint,
+                                ELF64LE::uint, InputSectionBase<ELF64LE> *);
+template SymbolBody *
+elf::addSyntheticLocal<ELF64BE>(StringRef, uint8_t, ELF64BE::uint,
+                                ELF64BE::uint, InputSectionBase<ELF64BE> *);
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

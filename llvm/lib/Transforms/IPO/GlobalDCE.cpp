@@ -144,29 +144,13 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
       }
     }
 
-  // Because we may have cached analyses for functions we take extra care when
-  // deleting them if there is an active proxy. If there isn't, then we get to
-  // assume that everything in the function AM has been cleared already.
-  // FIXME: Note that all of this will happen automatically when this pass
-  // finishes. Unfortuantely there are analyses which hold asserting VHs to
-  // IR units. We could make those weak VHs that would assert if ever used
-  // without asserting eagerly and then all of this knowledge of the analysis
-  // manager could go away.
-  FunctionAnalysisManager *FAM = nullptr;
-  if (auto *FAMProxy =
-          MAM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M))
-    FAM = &FAMProxy->getManager();
-
   // The second pass drops the bodies of functions which are dead...
   std::vector<Function *> DeadFunctions;
   for (Function &F : M)
     if (!AliveGlobals.count(&F)) {
       DeadFunctions.push_back(&F);         // Keep track of dead globals
-      if (!F.isDeclaration()) {
-        if (FAM)
-          FAM->clear(F);
+      if (!F.isDeclaration())
         F.deleteBody();
-      }
     }
 
   // The third pass drops targets of aliases which are dead...

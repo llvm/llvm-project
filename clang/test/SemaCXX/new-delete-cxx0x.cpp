@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -triple=i686-pc-linux-gnu
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -triple=i686-pc-linux-gnu -pedantic
 
 void ugly_news(int *ip) {
   (void)new int[-1]; // expected-error {{array size is negative}}
@@ -29,6 +29,7 @@ void fn(int n) {
   (void) new int[2] {1, 2};
   (void) new S[2] {1, 2};
   (void) new S[3] {1, 2};
+  (void) new S[n] {};
   // C++11 [expr.new]p19:
   //   If the new-expression creates an object or an array of objects of class
   //   type, access and ambiguity control are done for the allocation function,
@@ -44,6 +45,7 @@ void fn(int n) {
   (void) new T[2] {1, 2}; // ok
   (void) new T[3] {1, 2}; // expected-error {{no matching constructor}} expected-note {{in implicit initialization of array element 2}}
   (void) new T[n] {1, 2}; // expected-error {{no matching constructor}} expected-note {{in implicit initialization of trailing array elements in runtime-sized array new}}
+  (void) new T[n] {}; // expected-error {{no matching constructor}} expected-note {{in implicit initialization of trailing array elements in runtime-sized array new}}
 }
 
 struct U {

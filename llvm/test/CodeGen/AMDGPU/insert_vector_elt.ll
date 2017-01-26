@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 
 ; FIXME: Broken on evergreen
 ; FIXME: For some reason the 8 and 16 vectors are being stored as

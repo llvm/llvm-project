@@ -1659,9 +1659,8 @@ public:
       RegPressure.resize(NumRC);
       std::fill(RegLimit.begin(), RegLimit.end(), 0);
       std::fill(RegPressure.begin(), RegPressure.end(), 0);
-      for (TargetRegisterInfo::regclass_iterator I = TRI->regclass_begin(),
-             E = TRI->regclass_end(); I != E; ++I)
-        RegLimit[(*I)->getID()] = tri->getRegPressureLimit(*I, MF);
+      for (const TargetRegisterClass *RC : TRI->regclasses())
+        RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
     }
   }
 
@@ -1926,9 +1925,7 @@ unsigned RegReductionPQBase::getNodePriority(const SUnit *SU) const {
 
 void RegReductionPQBase::dumpRegPressure() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  for (TargetRegisterInfo::regclass_iterator I = TRI->regclass_begin(),
-         E = TRI->regclass_end(); I != E; ++I) {
-    const TargetRegisterClass *RC = *I;
+  for (const TargetRegisterClass *RC : TRI->regclasses()) {
     unsigned Id = RC->getID();
     unsigned RP = RegPressure[Id];
     if (!RP) continue;

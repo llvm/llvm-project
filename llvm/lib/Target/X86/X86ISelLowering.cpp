@@ -30463,8 +30463,11 @@ static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
 static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
-  assert((X86ISD::VSHLI == N->getOpcode() || X86ISD::VSRLI == N->getOpcode()) &&
-         "Unexpected opcode");
+  unsigned Opcode = N->getOpcode();
+  assert((X86ISD::VSHLI == Opcode || X86ISD::VSRAI == Opcode ||
+          X86ISD::VSRLI == Opcode) &&
+         "Unexpected shift opcode");
+  bool LogicalShift = X86ISD::VSHLI == Opcode || X86ISD::VSRLI == Opcode;
   EVT VT = N->getValueType(0);
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
@@ -30473,20 +30476,27 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Out of range logical bit shifts are guaranteed to be zero.
+  // Out of range arithmetic bit shifts splat the sign bit.
   APInt ShiftVal = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
-  if (ShiftVal.zextOrTrunc(8).uge(NumBitsPerElt))
-    return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
+  if (ShiftVal.zextOrTrunc(8).uge(NumBitsPerElt)) {
+    if (LogicalShift)
+      return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
+    else
+      ShiftVal = NumBitsPerElt - 1;
+  }
+
+  SDValue N0 = N->getOperand(0);
 
   // Shift N0 by zero -> N0.
   if (!ShiftVal)
-    return N->getOperand(0);
+    return N0;
 
   // Shift zero -> zero.
-  if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
+  if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N));
 
   // We can decode 'whole byte' logical bit shifts as shuffles.
-  if ((ShiftVal.getZExtValue() % 8) == 0) {
+  if (LogicalShift && (ShiftVal.getZExtValue() % 8) == 0) {
     SDValue Op(N, 0);
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
@@ -30494,6 +30504,25 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
+  }
+
+  // Constant Folding.
+  SmallBitVector UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (N->isOnlyUserOf(N0.getNode()) &&
+      getTargetConstantBitsFromNode(N0, NumBitsPerElt, UndefElts, EltBits)) {
+    assert(EltBits.size() == VT.getVectorNumElements() &&
+           "Unexpected shift value type");
+    unsigned ShiftImm = ShiftVal.getZExtValue();
+    for (APInt &Elt : EltBits) {
+      if (X86ISD::VSHLI == Opcode)
+        Elt = Elt.shl(ShiftImm);
+      else if (X86ISD::VSRAI == Opcode)
+        Elt = Elt.ashr(ShiftImm);
+      else
+        Elt = Elt.lshr(ShiftImm);
+    }
+    return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 
   return SDValue();
@@ -34070,6 +34099,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SETCC:       return combineX86SetCC(N, DAG, DCI, Subtarget);
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, DCI, Subtarget);
   case X86ISD::VSHLI:
+  case X86ISD::VSRAI:
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);
   case X86ISD::VSEXT:
   case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);

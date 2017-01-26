@@ -1151,7 +1151,11 @@ TEST_F(FileSystemTest, set_current_path) {
   ASSERT_NO_ERROR(fs::set_current_path(TestDirectory));
 
   ASSERT_NO_ERROR(fs::current_path(path));
-  ASSERT_EQ(TestDirectory, path);
+
+  fs::UniqueID D1, D2;
+  ASSERT_NO_ERROR(fs::getUniqueID(TestDirectory, D1));
+  ASSERT_NO_ERROR(fs::getUniqueID(path, D2));
+  ASSERT_EQ(D1, D2) << "D1: " << TestDirectory << "\nD2: " << path;
 }
 
 } // anonymous namespace

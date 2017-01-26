@@ -45,6 +45,8 @@
 ; HSA: .amd_kernel_code_t
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_kernarg_segment_ptr = 1
+; HSA: wavefront_size = 6
+; HSA: call_convention = -1
 ; HSA: .end_amd_kernel_code_t
 ; HSA: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x0
 

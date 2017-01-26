@@ -17,7 +17,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
-#include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

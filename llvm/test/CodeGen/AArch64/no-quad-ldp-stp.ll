@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+no-quad-ldst-pairs -verify-machineinstrs -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+slow-paired-128 -verify-machineinstrs -asm-verbose=false | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=exynos-m1 -verify-machineinstrs -asm-verbose=false | FileCheck %s
 
 ; CHECK-LABEL: test_nopair_st

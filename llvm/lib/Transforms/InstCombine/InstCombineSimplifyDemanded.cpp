@@ -1469,12 +1469,6 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                         Depth + 1);
       if (TmpV) { II->setArgOperand(1, TmpV); MadeChange = true; }
 
-      // Output elements are undefined if both are undefined.  Consider things
-      // like undef*0.  The result is known zero, not undef.
-      for (unsigned i = 0; i != VWidth; ++i)
-        if (UndefElts2[i * 2] && UndefElts3[i * 2])
-          UndefElts.setBit(i);
-
       break;
     }
 

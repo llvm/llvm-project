@@ -14,6 +14,7 @@ main_body:
 
 if:
   %u = fadd float %v, %v
+  call void asm sideeffect "", ""() #0 ; Prevent ifconversion
   br label %else
 
 else:

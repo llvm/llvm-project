@@ -17,6 +17,7 @@
 
 #include "ARMBaseInstrInfo.h"
 #include "ARMISelLowering.h"
+#include "ARMSubtarget.h"
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -37,7 +38,7 @@ static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
     return false;
 
   unsigned VTSize = VT.getSimpleVT().getSizeInBits();
-  return VTSize == 8 || VTSize == 16 || VTSize == 32;
+  return VTSize == 1 || VTSize == 8 || VTSize == 16 || VTSize == 32;
 }
 
 namespace {
@@ -59,11 +60,8 @@ struct FuncReturnHandler : public CallLowering::ValueHandler {
     assert(VA.getValVT().getSizeInBits() <= 32 && "Unsupported value size");
     assert(VA.getLocVT().getSizeInBits() == 32 && "Unsupported location size");
 
-    assert(VA.getLocInfo() != CCValAssign::SExt &&
-           VA.getLocInfo() != CCValAssign::ZExt &&
-           "ABI extensions not supported yet");
-
-    MIRBuilder.buildCopy(PhysReg, ValVReg);
+    unsigned ExtReg = extendRegister(ValVReg, VA);
+    MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
   }
 
@@ -155,6 +153,7 @@ struct FormalArgHandler : public CallLowering::ValueHandler {
     assert(VA.getValVT().getSizeInBits() <= 32 && "Unsupported value size");
     assert(VA.getLocVT().getSizeInBits() == 32 && "Unsupported location size");
 
+    // The caller should handle all necesary extensions.
     MIRBuilder.getMBB().addLiveIn(PhysReg);
     MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
@@ -173,6 +172,9 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   auto DL = MIRBuilder.getMF().getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
+
+  if (TLI.getSubtarget()->isThumb())
+    return false;
 
   auto &Args = F.getArgumentList();
   unsigned ArgIdx = 0;

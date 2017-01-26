@@ -60,7 +60,7 @@ _start:
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 // CHECK:        Symbol {
-// CHECK:          Name: __rel_iplt_end (6)
+// CHECK:          Name: __rel_iplt_end
 // CHECK-NEXT:     Value: 0x10104
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
@@ -124,14 +124,17 @@ _start:
 // DISASM-NEXT:    11018:	04 01 00 e3 	movw	r0, #260
 // DISASM-NEXT:    1101c:	01 00 40 e3 	movt	r0, #1
 // DISASM-NEXT: Disassembly of section .plt:
-// DISASM-NEXT: .plt:
-// DISASM-NEXT:    11020:	04 c0 9f e5 	ldr	r12, [pc, #4]
-// DISASM-NEXT:    11024:	0f c0 8c e0 	add	r12, r12, pc
+// DISASM: $a:
+// DISASM-NEXT:    11020:       04 c0 9f e5     ldr     r12, [pc, #4]
+// DISASM-NEXT:    11024:       0f c0 8c e0     add     r12, r12, pc
 // 11024 + 8 + fd4 = 0x12000
-// DISASM-NEXT:    11028:	00 f0 9c e5 	ldr	pc, [r12]
-// DISASM-NEXT:    1102c:	d4 0f 00 00
-// DISASM-NEXT:    11030:	04 c0 9f e5 	ldr	r12, [pc, #4]
-// DISASM-NEXT:    11034:	0f c0 8c e0 	add	r12, r12, pc
-// 11034 + 8 + fc8 = 0x12004
-// DISASM-NEXT:    11038:	00 f0 9c e5 	ldr	pc, [r12]
-// DISASM-NEXT:    1103c:	c8 0f 00 00
+// DISASM-NEXT:    11028:       00 f0 9c e5     ldr     pc, [r12]
+// DISASM: $d:
+// DISASM-NEXT:    1102c:       d4 0f 00 00     .word   0x00000fd4
+// DISASM: $a:
+// DISASM-NEXT:    11030:       04 c0 9f e5     ldr     r12, [pc, #4]
+// DISASM-NEXT:    11034:       0f c0 8c e0     add     r12, r12, pc
+// 11034 + 8 + fc8 = 0x12004        
+// DISASM-NEXT:    11038:       00 f0 9c e5     ldr     pc, [r12]
+// DISASM: $d:
+// DISASM-NEXT:    1103c:       c8 0f 00 00     .word   0x00000fc8

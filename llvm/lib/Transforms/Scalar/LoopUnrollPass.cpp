@@ -114,6 +114,15 @@ static cl::opt<bool>
                        cl::desc("Allows loops to be peeled when the dynamic "
                                 "trip count is known to be low."));
 
+// This option isn't ever intended to be enabled, it serves to allow
+// experiments to check the assumptions about when this kind of revisit is
+// necessary.
+static cl::opt<bool> UnrollRevisitChildLoops(
+    "unroll-revisit-child-loops", cl::Hidden,
+    cl::desc("Enqueue and re-visit child loops in the loop PM after unrolling. "
+             "This shouldn't typically be needed as child loops (or their "
+             "clones) were already visited."));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -1117,7 +1126,7 @@ Pass *llvm::createSimpleLoopUnrollPass() {
 
 PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
-                                      LPMUpdater &) {
+                                      LPMUpdater &Updater) {
   const auto &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
@@ -1128,12 +1137,76 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
     report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
                        "cached at a higher level");
 
+  // Keep track of the previous loop structure so we can identify new loops
+  // created by unrolling.
+  Loop *ParentL = L.getParentLoop();
+  SmallPtrSet<Loop *, 4> OldLoops;
+  if (ParentL)
+    OldLoops.insert(ParentL->begin(), ParentL->end());
+  else
+    OldLoops.insert(AR.LI.begin(), AR.LI.end());
+
   bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, &AR.SE, AR.TTI, AR.AC, *ORE,
                                  /*PreserveLCSSA*/ true, ProvidedCount,
                                  ProvidedThreshold, ProvidedAllowPartial,
                                  ProvidedRuntime, ProvidedUpperBound);
   if (!Changed)
     return PreservedAnalyses::all();
+
+  // The parent must not be damaged by unrolling!
+#ifndef NDEBUG
+  if (ParentL)
+    ParentL->verifyLoop();
+#endif
+
+  // Unrolling can do several things to introduce new loops into a loop nest:
+  // - Partial unrolling clones child loops within the current loop.
+  // - Full unrolling clones child loops within the current loop but then
+  //   removes the current loop making all of the children appear to be new
+  //   sibling loops.
+  // - Loop peeling can directly introduce new sibling loops by peeling one
+  //   iteration.
+  //
+  // When a new loop appears as a sibling loop, either from peeling an
+  // iteration or fully unrolling, its nesting structure has fundamentally
+  // changed and we want to revisit it to reflect that.
+  //
+  // When unrolling has removed the current loop, we need to tell the
+  // infrastructure that it is gone.
+  //
+  // Finally, we support a debugging/testing mode where we revisit child loops
+  // as well. These are not expected to require further optimizations as either
+  // they or the loop they were cloned from have been directly visited already.
+  // But the debugging mode allows us to check this assumption.
+  bool IsCurrentLoopValid = false;
+  SmallVector<Loop *, 4> SibLoops;
+  if (ParentL)
+    SibLoops.append(ParentL->begin(), ParentL->end());
+  else
+    SibLoops.append(AR.LI.begin(), AR.LI.end());
+  erase_if(SibLoops, [&](Loop *SibLoop) {
+    if (SibLoop == &L) {
+      IsCurrentLoopValid = true;
+      return true;
+    }
+
+    // Otherwise erase the loop from the list if it was in the old loops.
+    return OldLoops.count(SibLoop) != 0;
+  });
+  Updater.addSiblingLoops(SibLoops);
+
+  if (!IsCurrentLoopValid) {
+    Updater.markLoopAsDeleted(L);
+  } else {
+    // We can only walk child loops if the current loop remained valid.
+    if (UnrollRevisitChildLoops) {
+      // Walk *all* of the child loops. This is a highly speculative mode
+      // anyways so look for any simplifications that arose from partial
+      // unrolling or peeling off of iterations.
+      SmallVector<Loop *, 4> ChildLoops(L.begin(), L.end());
+      Updater.addChildLoops(ChildLoops);
+    }
+  }
 
   return getLoopPassPreservedAnalyses();
 }

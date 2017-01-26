@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -show-mc-encoding -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=SIVI %s
+; RUN: llc < %s -march=amdgcn -show-mc-encoding -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=SIVI %s
 ; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs | FileCheck --check-prefix=CI --check-prefix=GCN  %s
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=SIVI %s
 

@@ -1313,6 +1313,12 @@ inline APFloat abs(APFloat X) {
   return X;
 }
 
+/// \brief Returns the negated value of the argument.
+inline APFloat neg(APFloat X) {
+  X.changeSign();
+  return X;
+}
+
 /// Implements IEEE minNum semantics. Returns the smaller of the 2 arguments if
 /// both are not NaN. If either argument is a NaN, returns the other argument.
 LLVM_READONLY

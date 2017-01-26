@@ -22,14 +22,7 @@
 #include "dwarf2.h"
 
 #include "AddressSpace.hpp"
-
-extern "C" bool logDWARF();
-
-#define _LIBUNWIND_TRACE_DWARF(...)                                            \
-  do {                                                                         \
-    if (logDWARF())                                                            \
-      fprintf(stderr, __VA_ARGS__);                                            \
-  } while (0)
+#include "config.h"
 
 namespace libunwind {
 
