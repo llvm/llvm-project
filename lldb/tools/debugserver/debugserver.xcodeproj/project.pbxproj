@@ -101,6 +101,7 @@
 		49D404621E39260F00570CDC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
+		AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */; };
 /* End PBXBuildFile section */
 
@@ -244,6 +245,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */,
+				AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
