@@ -10,15 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XCoreMCTargetDesc.h"
+#include "XCore.h"
 #include "XCoreTargetMachine.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"
-#include "XCore.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/TargetRegistry.h"
+
 using namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -38,14 +42,15 @@ XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(
           T, "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32",
           TT, CPU, FS, Options, getEffectiveRelocModel(RM), CM, OL),
-      TLOF(make_unique<XCoreTargetObjectFile>()),
+      TLOF(llvm::make_unique<XCoreTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
 
-XCoreTargetMachine::~XCoreTargetMachine() {}
+XCoreTargetMachine::~XCoreTargetMachine() = default;
 
 namespace {
+
 /// XCore Code Generator Pass Configuration Options.
 class XCorePassConfig : public TargetPassConfig {
 public:
@@ -61,7 +66,8 @@ public:
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
-} // namespace
+
+} // end anonymous namespace
 
 TargetPassConfig *XCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new XCorePassConfig(this, PM);

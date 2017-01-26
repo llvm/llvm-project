@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def cl_Group : OptionGroup<"<clang-cl options>">,
+def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLOption]>,
   HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,

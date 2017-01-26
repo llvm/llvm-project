@@ -156,9 +156,8 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   const TargetRegisterClass *RC = nullptr;
   unsigned NumRCUnits = 0;
-  for (TargetRegisterInfo::regclass_iterator
-         RI = TRI->regclass_begin(), RE = TRI->regclass_end(); RI != RE; ++RI) {
-    const int *PSetID = TRI->getRegClassPressureSets(*RI);
+  for (const TargetRegisterClass *C : TRI->regclasses()) {
+    const int *PSetID = TRI->getRegClassPressureSets(C);
     for (; *PSetID != -1; ++PSetID) {
       if ((unsigned)*PSetID == Idx)
         break;
@@ -168,9 +167,9 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
 
     // Found a register class that counts against this pressure set.
     // For efficiency, only compute the set order for the largest set.
-    unsigned NUnits = TRI->getRegClassWeight(*RI).WeightLimit;
+    unsigned NUnits = TRI->getRegClassWeight(C).WeightLimit;
     if (!RC || NUnits > NumRCUnits) {
-      RC = *RI;
+      RC = C;
       NumRCUnits = NUnits;
     }
   }

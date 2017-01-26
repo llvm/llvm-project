@@ -12,7 +12,7 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include <cstdint>
 #include <cstring>
 #include <functional>

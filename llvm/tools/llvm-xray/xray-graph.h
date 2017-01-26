@@ -15,13 +15,15 @@
 #ifndef XRAY_GRAPH_H
 #define XRAY_GRAPH_H
 
+#include <string>
 #include <vector>
 
 #include "func-id-helper.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/Trace.h"
 #include "llvm/XRay/XRayRecord.h"
 
@@ -32,15 +34,20 @@ namespace xray {
 /// Graphs from them and then exporting those graphs for review.
 class GraphRenderer {
 public:
+  /// An enum for enumerating the various statistics gathered on latencies
+  enum class StatType { NONE, COUNT, MIN, MED, PCT90, PCT99, MAX, SUM };
+
   /// An inner struct for common timing statistics information
   struct TimeStat {
-    uint64_t Count;
-    double Min;
-    double Median;
-    double Pct90;
-    double Pct99;
-    double Max;
-    double Sum;
+    uint64_t Count = 0;
+    double Min = 0;
+    double Median = 0;
+    double Pct90 = 0;
+    double Pct99 = 0;
+    double Max = 0;
+    double Sum = 0;
+    std::string getAsString(StatType T) const;
+    double compare(StatType T, const TimeStat &Other) const;
   };
 
   /// An inner struct for storing edge attributes for our graph. Here the
@@ -61,6 +68,16 @@ public:
     TimeStat S;
   };
 
+  struct FunctionAttr {
+    int32_t FuncId;
+    uint64_t TSC;
+  };
+
+  typedef SmallVector<FunctionAttr, 4> FunctionStack;
+
+  typedef DenseMap<llvm::sys::ProcessInfo::ProcessId, FunctionStack>
+      PerThreadFunctionStackMap;
+
 private:
   /// The Graph stored in an edge-list like format, with the edges also having
   /// An attached set of attributes.
@@ -70,17 +87,14 @@ private:
   /// main graph.
   DenseMap<int32_t, VertexAttribute> VertexAttrs;
 
-  struct FunctionAttr {
-    int32_t FuncId;
-    uint64_t TSC;
-  };
+  TimeStat GraphEdgeMax;
+  TimeStat GraphVertexMax;
 
   /// Use a Map to store the Function stack for each thread whilst building the
   /// graph.
   ///
   /// FIXME: Perhaps we can Build this into LatencyAccountant? or vise versa?
-  DenseMap<llvm::sys::ProcessInfo::ProcessId, SmallVector<FunctionAttr, 4>>
-      PerThreadFunctionStack;
+  PerThreadFunctionStackMap PerThreadFunctionStack;
 
   /// Usefull object for getting human readable Symbol Names.
   FuncIdConversionHelper &FuncIdHelper;
@@ -90,6 +104,7 @@ private:
   /// A private function to help implement the statistic generation functions;
   template <typename U>
   void getStats(U begin, U end, GraphRenderer::TimeStat &S);
+  void updateMaxStats(const TimeStat &S, TimeStat &M);
 
   /// Calculates latency statistics for each edge and stores the data in the
   /// Graph
@@ -100,7 +115,7 @@ private:
   void calculateVertexStatistics();
 
   /// Normalises latency statistics for each edge and vertex by CycleFrequency;
-  void normaliseStatistics(double CycleFrequency);
+  void normalizeStatistics(double CycleFrequency);
 
 public:
   /// Takes in a reference to a FuncIdHelper in order to have ready access to
@@ -115,15 +130,19 @@ public:
   /// Records should be in order runtime on an ideal system.)
   ///
   /// FIXME: Make this more robust against small irregularities.
-  bool accountRecord(const XRayRecord &Record);
+  Error accountRecord(const XRayRecord &Record);
 
-  /// An enum for enumerating the various statistics gathered on latencies
-  enum class StatType { COUNT, MIN, MED, PCT90, PCT99, MAX, SUM };
+  const PerThreadFunctionStackMap getPerThreadFunctionStack() const {
+    return PerThreadFunctionStack;
+  }
 
   /// Output the Embedded graph in DOT format on \p OS, labeling the edges by
   /// \p T
   void exportGraphAsDOT(raw_ostream &OS, const XRayFileHeader &H,
-                        StatType T = StatType::COUNT);
+                        StatType EdgeLabel = StatType::NONE,
+                        StatType EdgeColor = StatType::NONE,
+                        StatType VertexLabel = StatType::NONE,
+                        StatType VertexColor = StatType::NONE);
 };
 }
 }

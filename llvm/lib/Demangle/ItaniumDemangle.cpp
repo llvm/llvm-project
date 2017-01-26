@@ -36,6 +36,12 @@ enum {
   success
 };
 
+enum {
+  CV_const = (1 << 0),
+  CV_volatile = (1 << 1),
+  CV_restrict = (1 << 2),
+};
+
 template <class C>
 static const char *parse_type(const char *first, const char *last, C &db);
 template <class C>
@@ -436,15 +442,15 @@ static const char *parse_cv_qualifiers(const char *first, const char *last,
   cv = 0;
   if (first != last) {
     if (*first == 'r') {
-      cv |= 4;
+      cv |= CV_restrict;
       ++first;
     }
     if (*first == 'V') {
-      cv |= 2;
+      cv |= CV_volatile;
       ++first;
     }
     if (*first == 'K') {
-      cv |= 1;
+      cv |= CV_const;
       ++first;
     }
   }
@@ -1663,27 +1669,30 @@ static const char *parse_type(const char *first, const char *last, C &db) {
           db.subs.emplace_back();
           for (size_t k = k0; k < k1; ++k) {
             if (is_function) {
-              size_t p = db.names[k].second.size();
-              if (db.names[k].second[p - 2] == '&')
-                p -= 3;
-              else if (db.names[k].second.back() == '&')
+              auto &name = db.names[k].second;
+              size_t p = name.size();
+
+              if (name[p - 2] == '&' && name[p - 1] == '&')
                 p -= 2;
-              if (cv & 1) {
-                db.names[k].second.insert(p, " const");
+              else if (name.back() == '&')
+                p -= 1;
+
+              if (cv & CV_const) {
+                name.insert(p, " const");
                 p += 6;
               }
-              if (cv & 2) {
-                db.names[k].second.insert(p, " volatile");
+              if (cv & CV_volatile) {
+                name.insert(p, " volatile");
                 p += 9;
               }
-              if (cv & 4)
-                db.names[k].second.insert(p, " restrict");
+              if (cv & CV_restrict)
+                name.insert(p, " restrict");
             } else {
-              if (cv & 1)
+              if (cv & CV_const)
                 db.names[k].first.append(" const");
-              if (cv & 2)
+              if (cv & CV_volatile)
                 db.names[k].first.append(" volatile");
-              if (cv & 4)
+              if (cv & CV_restrict)
                 db.names[k].first.append(" restrict");
             }
             db.subs.back().push_back(db.names[k]);
@@ -4074,11 +4083,11 @@ static const char *parse_encoding(const char *first, const char *last, C &db) {
           if (db.names.empty())
             return first;
           db.names.back().first += ')';
-          if (cv & 1)
+          if (cv & CV_const)
             db.names.back().first.append(" const");
-          if (cv & 2)
+          if (cv & CV_volatile)
             db.names.back().first.append(" volatile");
-          if (cv & 4)
+          if (cv & CV_restrict)
             db.names.back().first.append(" restrict");
           if (ref == 1)
             db.names.back().first.append(" &");

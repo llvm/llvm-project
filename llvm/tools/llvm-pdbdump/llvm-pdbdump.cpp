@@ -35,24 +35,24 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/StringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
-#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
-#include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/RawSession.h"
-#include "llvm/DebugInfo/PDB/Raw/StringTableBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
-#include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -404,7 +404,7 @@ static void pdb2Yaml(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
 
-  RawSession *RS = static_cast<RawSession *>(Session.get());
+  NativeSession *RS = static_cast<NativeSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();
   auto O = llvm::make_unique<YAMLOutputStyle>(File);
   O = llvm::make_unique<YAMLOutputStyle>(File);
@@ -416,7 +416,7 @@ static void dumpRaw(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
 
-  RawSession *RS = static_cast<RawSession *>(Session.get());
+  NativeSession *RS = static_cast<NativeSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();
   auto O = llvm::make_unique<LLVMOutputStyle>(File);
 

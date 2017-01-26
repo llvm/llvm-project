@@ -13,6 +13,7 @@
 
 // C++ Includes
 #include <mutex>
+#include <unordered_map>
 
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
@@ -122,6 +123,7 @@ Error ProcessFreeBSD::DoResume() {
 
   std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
   bool do_step = false;
+  bool software_single_step = !SupportHardwareSingleStepping();
 
   for (tid_collection::const_iterator t_pos = m_run_tids.begin(),
                                       t_end = m_run_tids.end();
@@ -133,6 +135,11 @@ Error ProcessFreeBSD::DoResume() {
        t_pos != t_end; ++t_pos) {
     m_monitor->ThreadSuspend(*t_pos, false);
     do_step = true;
+    if (software_single_step) {
+      Error error = SetupSoftwareSingleStepping(*t_pos);
+      if (error.Fail())
+        return error;
+    }
   }
   for (tid_collection::const_iterator t_pos = m_suspend_tids.begin(),
                                       t_end = m_suspend_tids.end();
@@ -145,7 +152,7 @@ Error ProcessFreeBSD::DoResume() {
   if (log)
     log->Printf("process %" PRIu64 " resuming (%s)", GetID(),
                 do_step ? "step" : "continue");
-  if (do_step)
+  if (do_step && !software_single_step)
     m_monitor->SingleStep(GetID(), m_resume_signo);
   else
     m_monitor->Resume(GetID(), m_resume_signo);
@@ -912,4 +919,195 @@ const DataBufferSP ProcessFreeBSD::GetAuxvData() {
       false &&
       "no platform or not the host - how did we get here with ProcessFreeBSD?");
   return DataBufferSP();
+}
+
+struct EmulatorBaton {
+  ProcessFreeBSD *m_process;
+  RegisterContext *m_reg_context;
+
+  // eRegisterKindDWARF -> RegisterValue
+  std::unordered_map<uint32_t, RegisterValue> m_register_values;
+
+  EmulatorBaton(ProcessFreeBSD *process, RegisterContext *reg_context)
+      : m_process(process), m_reg_context(reg_context) {}
+};
+
+static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
+                                 const EmulateInstruction::Context &context,
+                                 lldb::addr_t addr, void *dst, size_t length) {
+  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
+
+  Error error;
+  size_t bytes_read =
+      emulator_baton->m_process->DoReadMemory(addr, dst, length, error);
+  if (!error.Success())
+    bytes_read = 0;
+  return bytes_read;
+}
+
+static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
+                                 const RegisterInfo *reg_info,
+                                 RegisterValue &reg_value) {
+  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
+
+  auto it = emulator_baton->m_register_values.find(
+      reg_info->kinds[eRegisterKindDWARF]);
+  if (it != emulator_baton->m_register_values.end()) {
+    reg_value = it->second;
+    return true;
+  }
+
+  // The emulator only fills in the dwarf register numbers (and in some cases
+  // the generic register numbers). Get the full register info from the
+  // register context based on the dwarf register numbers.
+  const RegisterInfo *full_reg_info =
+      emulator_baton->m_reg_context->GetRegisterInfo(
+          eRegisterKindDWARF, reg_info->kinds[eRegisterKindDWARF]);
+
+  bool error =
+      emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
+  return error;
+}
+
+static bool WriteRegisterCallback(EmulateInstruction *instruction, void *baton,
+                                  const EmulateInstruction::Context &context,
+                                  const RegisterInfo *reg_info,
+                                  const RegisterValue &reg_value) {
+  EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
+  emulator_baton->m_register_values[reg_info->kinds[eRegisterKindDWARF]] =
+      reg_value;
+  return true;
+}
+
+static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
+                                  const EmulateInstruction::Context &context,
+                                  lldb::addr_t addr, const void *dst,
+                                  size_t length) {
+  return length;
+}
+
+bool ProcessFreeBSD::SingleStepBreakpointHit(
+    void *baton, lldb_private::StoppointCallbackContext *context,
+    lldb::user_id_t break_id, lldb::user_id_t break_loc_id) {
+  return false;
+}
+
+Error ProcessFreeBSD::SetSoftwareSingleStepBreakpoint(lldb::tid_t tid,
+                                                      lldb::addr_t addr) {
+  Error error;
+
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  if (log) {
+    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
+    log->Printf("SoftwareBreakpoint::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
+  }
+
+  // Validate the address.
+  if (addr == LLDB_INVALID_ADDRESS)
+    return Error("ProcessFreeBSD::%s invalid load address specified.",
+                 __FUNCTION__);
+
+  Breakpoint *const sw_step_break =
+      m_process->GetTarget().CreateBreakpoint(addr, true, false).get();
+  sw_step_break->SetCallback(SingleStepBreakpointHit, this, true);
+  sw_step_break->SetBreakpointKind("software-signle-step");
+
+  if (log)
+    log->Printf("ProcessFreeBSD::%s addr = 0x%" PRIx64 " -- SUCCESS",
+                __FUNCTION__, addr);
+
+  m_threads_stepping_with_breakpoint.insert({tid, sw_step_break->GetID()});
+  return Error();
+}
+
+bool ProcessFreeBSD::IsSoftwareStepBreakpoint(lldb::tid_t tid) {
+  ThreadSP thread = GetThreadList().FindThreadByID(tid);
+  if (!thread)
+    return false;
+
+  assert(thread->GetRegisterContext());
+  lldb::addr_t stop_pc = thread->GetRegisterContext()->GetPC();
+
+  const auto &iter = m_threads_stepping_with_breakpoint.find(tid);
+  if (iter == m_threads_stepping_with_breakpoint.end())
+    return false;
+
+  lldb::break_id_t bp_id = iter->second;
+  BreakpointSP bp = GetTarget().GetBreakpointByID(bp_id);
+  if (!bp)
+    return false;
+
+  BreakpointLocationSP bp_loc = bp->FindLocationByAddress(stop_pc);
+  if (!bp_loc)
+    return false;
+
+  GetTarget().RemoveBreakpointByID(bp_id);
+  m_threads_stepping_with_breakpoint.erase(tid);
+  return true;
+}
+
+bool ProcessFreeBSD::SupportHardwareSingleStepping() const {
+  lldb_private::ArchSpec arch = GetTarget().GetArchitecture();
+  if (arch.GetMachine() == llvm::Triple::arm ||
+      arch.GetMachine() == llvm::Triple::mips64 ||
+      arch.GetMachine() == llvm::Triple::mips64el ||
+      arch.GetMachine() == llvm::Triple::mips ||
+      arch.GetMachine() == llvm::Triple::mipsel)
+    return false;
+  return true;
+}
+
+Error ProcessFreeBSD::SetupSoftwareSingleStepping(lldb::tid_t tid) {
+  std::unique_ptr<EmulateInstruction> emulator_ap(
+      EmulateInstruction::FindPlugin(GetTarget().GetArchitecture(),
+                                     eInstructionTypePCModifying, nullptr));
+
+  if (emulator_ap == nullptr)
+    return Error("Instruction emulator not found!");
+
+  FreeBSDThread *thread = static_cast<FreeBSDThread *>(
+      m_thread_list.FindThreadByID(tid, false).get());
+  if (thread == NULL)
+    return Error("Thread not found not found!");
+
+  lldb::RegisterContextSP register_context_sp = thread->GetRegisterContext();
+
+  EmulatorBaton baton(this, register_context_sp.get());
+  emulator_ap->SetBaton(&baton);
+  emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
+  emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
+  emulator_ap->SetWriteMemCallback(&WriteMemoryCallback);
+  emulator_ap->SetWriteRegCallback(&WriteRegisterCallback);
+
+  if (!emulator_ap->ReadInstruction())
+    return Error("Read instruction failed!");
+
+  bool emulation_result =
+      emulator_ap->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
+  const RegisterInfo *reg_info_pc = register_context_sp->GetRegisterInfo(
+      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  auto pc_it =
+      baton.m_register_values.find(reg_info_pc->kinds[eRegisterKindDWARF]);
+
+  lldb::addr_t next_pc;
+  if (emulation_result) {
+    assert(pc_it != baton.m_register_values.end() &&
+           "Emulation was successful but PC wasn't updated");
+    next_pc = pc_it->second.GetAsUInt64();
+  } else if (pc_it == baton.m_register_values.end()) {
+    // Emulate instruction failed and it haven't changed PC. Advance PC
+    // with the size of the current opcode because the emulation of all
+    // PC modifying instruction should be successful. The failure most
+    // likely caused by a not supported instruction which don't modify PC.
+    next_pc =
+        register_context_sp->GetPC() + emulator_ap->GetOpcode().GetByteSize();
+  } else {
+    // The instruction emulation failed after it modified the PC. It is an
+    // unknown error where we can't continue because the next instruction is
+    // modifying the PC but we don't  know how.
+    return Error("Instruction emulation failed unexpectedly");
+  }
+
+  SetSoftwareSingleStepBreakpoint(tid, next_pc);
+  return Error();
 }

@@ -126,57 +126,27 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
                                unsigned OpSize) {
   switch (RegBankID) {
   case AArch64::GPRRegBankID:
-    if (OpSize <= 32) {
-      assert((OpSize == 32 || (GenericOpc != TargetOpcode::G_SDIV &&
-                               GenericOpc != TargetOpcode::G_UDIV &&
-                               GenericOpc != TargetOpcode::G_LSHR &&
-                               GenericOpc != TargetOpcode::G_ASHR)) &&
-             "operation should have been legalized before now");
-
+    if (OpSize == 32) {
       switch (GenericOpc) {
-      case TargetOpcode::G_OR:
-        return AArch64::ORRWrr;
-      case TargetOpcode::G_XOR:
-        return AArch64::EORWrr;
-      case TargetOpcode::G_AND:
-        return AArch64::ANDWrr;
-      case TargetOpcode::G_SUB:
-        return AArch64::SUBWrr;
       case TargetOpcode::G_SHL:
         return AArch64::LSLVWr;
       case TargetOpcode::G_LSHR:
         return AArch64::LSRVWr;
       case TargetOpcode::G_ASHR:
         return AArch64::ASRVWr;
-      case TargetOpcode::G_SDIV:
-        return AArch64::SDIVWr;
-      case TargetOpcode::G_UDIV:
-        return AArch64::UDIVWr;
       default:
         return GenericOpc;
       }
     } else if (OpSize == 64) {
       switch (GenericOpc) {
-      case TargetOpcode::G_OR:
-        return AArch64::ORRXrr;
-      case TargetOpcode::G_XOR:
-        return AArch64::EORXrr;
-      case TargetOpcode::G_AND:
-        return AArch64::ANDXrr;
       case TargetOpcode::G_GEP:
         return AArch64::ADDXrr;
-      case TargetOpcode::G_SUB:
-        return AArch64::SUBXrr;
       case TargetOpcode::G_SHL:
         return AArch64::LSLVXr;
       case TargetOpcode::G_LSHR:
         return AArch64::LSRVXr;
       case TargetOpcode::G_ASHR:
         return AArch64::ASRVXr;
-      case TargetOpcode::G_SDIV:
-        return AArch64::SDIVXr;
-      case TargetOpcode::G_UDIV:
-        return AArch64::UDIVXr;
       default:
         return GenericOpc;
       }
@@ -749,14 +719,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   case TargetOpcode::G_FDIV:
 
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_XOR:
-  case TargetOpcode::G_AND:
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV:
-  case TargetOpcode::G_SUB:
   case TargetOpcode::G_GEP: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))

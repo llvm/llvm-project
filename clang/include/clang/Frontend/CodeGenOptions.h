@@ -130,8 +130,19 @@ public:
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;
 
-  /// The name of the bitcode file to link before optzns.
-  std::vector<std::pair<unsigned, std::string>> LinkBitcodeFiles;
+  struct BitcodeFileToLink {
+    /// The filename of the bitcode file to link in.
+    std::string Filename;
+    /// If true, we set attributes functions in the bitcode library according to
+    /// our CodeGenOptions, much as we set attrs on functions that we generate
+    /// ourselves.
+    bool PropagateAttrs = false;
+    /// Bitwise combination of llvm::Linker::Flags, passed to the LLVM linker.
+    unsigned LinkFlags = 0;
+  };
+
+  /// The files specified here are linked in to the module before optimizations.
+  std::vector<BitcodeFileToLink> LinkBitcodeFiles;
 
   /// The user provided name for the "main file", if non-empty. This is useful
   /// in situations where the input file name does not match the original input

@@ -256,6 +256,8 @@ without using static initializers, do this manually:
   otherwise. Calling this function multiple times appends profile data to an
   existing on-disk raw profile.
 
+In C++ files, declare these as ``extern "C"``.
+
 Collecting coverage reports for the llvm project
 ================================================
 

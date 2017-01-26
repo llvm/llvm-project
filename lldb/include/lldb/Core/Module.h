@@ -974,7 +974,7 @@ public:
   ///
   /// @return
   //------------------------------------------------------------------
-  Error LoadInMemory(Target &target);
+  Error LoadInMemory(Target &target, bool set_pc);
 
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"

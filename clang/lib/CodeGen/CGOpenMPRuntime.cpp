@@ -4894,25 +4894,45 @@ static const Stmt *ignoreCompoundStmts(const Stmt *Body) {
   return Body;
 }
 
-/// \brief Emit the num_teams clause of an enclosed teams directive at the
-/// target region scope. If there is no teams directive associated with the
-/// target directive, or if there is no num_teams clause associated with the
-/// enclosed teams directive, return nullptr.
+/// Emit the number of teams for a target directive.  Inspect the num_teams
+/// clause associated with a teams construct combined or closely nested
+/// with the target directive.
+///
+/// Emit a team of size one for directives such as 'target parallel' that
+/// have no associated teams construct.
+///
+/// Otherwise, return nullptr.
 static llvm::Value *
-emitNumTeamsClauseForTargetDirective(CGOpenMPRuntime &OMPRuntime,
-                                     CodeGenFunction &CGF,
-                                     const OMPExecutableDirective &D) {
+emitNumTeamsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
+                               CodeGenFunction &CGF,
+                               const OMPExecutableDirective &D) {
 
   assert(!CGF.getLangOpts().OpenMPIsDevice && "Clauses associated with the "
                                               "teams directive expected to be "
                                               "emitted only for the host!");
 
-  // FIXME: For the moment we do not support combined directives with target and
-  // teams, so we do not expect to get any num_teams clause in the provided
-  // directive. Once we support that, this assertion can be replaced by the
-  // actual emission of the clause expression.
-  assert(D.getSingleClause<OMPNumTeamsClause>() == nullptr &&
-         "Not expecting clause in directive.");
+  auto &Bld = CGF.Builder;
+
+  // If the target directive is combined with a teams directive:
+  //   Return the value in the num_teams clause, if any.
+  //   Otherwise, return 0 to denote the runtime default.
+  if (isOpenMPTeamsDirective(D.getDirectiveKind())) {
+    if (const auto *NumTeamsClause = D.getSingleClause<OMPNumTeamsClause>()) {
+      CodeGenFunction::RunCleanupsScope NumTeamsScope(CGF);
+      auto NumTeams = CGF.EmitScalarExpr(NumTeamsClause->getNumTeams(),
+                                         /*IgnoreResultAssign*/ true);
+      return Bld.CreateIntCast(NumTeams, CGF.Int32Ty,
+                               /*IsSigned=*/true);
+    }
+
+    // The default value is 0.
+    return Bld.getInt32(0);
+  }
+
+  // If the target directive is combined with a parallel directive but not a
+  // teams directive, start one team.
+  if (isOpenMPParallelDirective(D.getDirectiveKind()))
+    return Bld.getInt32(1);
 
   // If the current target region has a teams region enclosed, we need to get
   // the number of teams to pass to the runtime function call. This is done
@@ -4930,38 +4950,92 @@ emitNumTeamsClauseForTargetDirective(CGOpenMPRuntime &OMPRuntime,
       CGOpenMPInnerExprInfo CGInfo(CGF, CS);
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
       llvm::Value *NumTeams = CGF.EmitScalarExpr(NTE->getNumTeams());
-      return CGF.Builder.CreateIntCast(NumTeams, CGF.Int32Ty,
-                                       /*IsSigned=*/true);
+      return Bld.CreateIntCast(NumTeams, CGF.Int32Ty,
+                               /*IsSigned=*/true);
     }
 
     // If we have an enclosed teams directive but no num_teams clause we use
     // the default value 0.
-    return CGF.Builder.getInt32(0);
+    return Bld.getInt32(0);
   }
 
   // No teams associated with the directive.
   return nullptr;
 }
 
-/// \brief Emit the thread_limit clause of an enclosed teams directive at the
-/// target region scope. If there is no teams directive associated with the
-/// target directive, or if there is no thread_limit clause associated with the
-/// enclosed teams directive, return nullptr.
+/// Emit the number of threads for a target directive.  Inspect the
+/// thread_limit clause associated with a teams construct combined or closely
+/// nested with the target directive.
+///
+/// Emit the num_threads clause for directives such as 'target parallel' that
+/// have no associated teams construct.
+///
+/// Otherwise, return nullptr.
 static llvm::Value *
-emitThreadLimitClauseForTargetDirective(CGOpenMPRuntime &OMPRuntime,
-                                        CodeGenFunction &CGF,
-                                        const OMPExecutableDirective &D) {
+emitNumThreadsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
+                                 CodeGenFunction &CGF,
+                                 const OMPExecutableDirective &D) {
 
   assert(!CGF.getLangOpts().OpenMPIsDevice && "Clauses associated with the "
                                               "teams directive expected to be "
                                               "emitted only for the host!");
 
-  // FIXME: For the moment we do not support combined directives with target and
-  // teams, so we do not expect to get any thread_limit clause in the provided
-  // directive. Once we support that, this assertion can be replaced by the
-  // actual emission of the clause expression.
-  assert(D.getSingleClause<OMPThreadLimitClause>() == nullptr &&
-         "Not expecting clause in directive.");
+  auto &Bld = CGF.Builder;
+
+  //
+  // If the target directive is combined with a teams directive:
+  //   Return the value in the thread_limit clause, if any.
+  //
+  // If the target directive is combined with a parallel directive:
+  //   Return the value in the num_threads clause, if any.
+  //
+  // If both clauses are set, select the minimum of the two.
+  //
+  // If neither teams or parallel combined directives set the number of threads
+  // in a team, return 0 to denote the runtime default.
+  //
+  // If this is not a teams directive return nullptr.
+
+  if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
+      isOpenMPParallelDirective(D.getDirectiveKind())) {
+    llvm::Value *DefaultThreadLimitVal = Bld.getInt32(0);
+    llvm::Value *NumThreadsVal = nullptr;
+    llvm::Value *ThreadLimitVal = nullptr;
+
+    if (const auto *ThreadLimitClause =
+            D.getSingleClause<OMPThreadLimitClause>()) {
+      CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
+      auto ThreadLimit = CGF.EmitScalarExpr(ThreadLimitClause->getThreadLimit(),
+                                            /*IgnoreResultAssign*/ true);
+      ThreadLimitVal = Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty,
+                                         /*IsSigned=*/true);
+    }
+
+    if (const auto *NumThreadsClause =
+            D.getSingleClause<OMPNumThreadsClause>()) {
+      CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
+      llvm::Value *NumThreads =
+          CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
+                             /*IgnoreResultAssign*/ true);
+      NumThreadsVal =
+          Bld.CreateIntCast(NumThreads, CGF.Int32Ty, /*IsSigned=*/true);
+    }
+
+    // Select the lesser of thread_limit and num_threads.
+    if (NumThreadsVal)
+      ThreadLimitVal = ThreadLimitVal
+                           ? Bld.CreateSelect(Bld.CreateICmpSLT(NumThreadsVal,
+                                                                ThreadLimitVal),
+                                              NumThreadsVal, ThreadLimitVal)
+                           : NumThreadsVal;
+
+    // Set default value passed to the runtime if either teams or a target
+    // parallel type directive is found but no clause is specified.
+    if (!ThreadLimitVal)
+      ThreadLimitVal = DefaultThreadLimitVal;
+
+    return ThreadLimitVal;
+  }
 
   // If the current target region has a teams region enclosed, we need to get
   // the thread limit to pass to the runtime function call. This is done
@@ -6041,24 +6115,50 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
     // Return value of the runtime offloading call.
     llvm::Value *Return;
 
-    auto *NumTeams = emitNumTeamsClauseForTargetDirective(RT, CGF, D);
-    auto *ThreadLimit = emitThreadLimitClauseForTargetDirective(RT, CGF, D);
+    auto *NumTeams = emitNumTeamsForTargetDirective(RT, CGF, D);
+    auto *NumThreads = emitNumThreadsForTargetDirective(RT, CGF, D);
 
-    // If we have NumTeams defined this means that we have an enclosed teams
-    // region. Therefore we also expect to have ThreadLimit defined. These two
-    // values should be defined in the presence of a teams directive, regardless
-    // of having any clauses associated. If the user is using teams but no
-    // clauses, these two values will be the default that should be passed to
-    // the runtime library - a 32-bit integer with the value zero.
+    // The target region is an outlined function launched by the runtime
+    // via calls __tgt_target() or __tgt_target_teams().
+    //
+    // __tgt_target() launches a target region with one team and one thread,
+    // executing a serial region.  This master thread may in turn launch
+    // more threads within its team upon encountering a parallel region,
+    // however, no additional teams can be launched on the device.
+    //
+    // __tgt_target_teams() launches a target region with one or more teams,
+    // each with one or more threads.  This call is required for target
+    // constructs such as:
+    //  'target teams'
+    //  'target' / 'teams'
+    //  'target teams distribute parallel for'
+    //  'target parallel'
+    // and so on.
+    //
+    // Note that on the host and CPU targets, the runtime implementation of
+    // these calls simply call the outlined function without forking threads.
+    // The outlined functions themselves have runtime calls to
+    // __kmpc_fork_teams() and __kmpc_fork() for this purpose, codegen'd by
+    // the compiler in emitTeamsCall() and emitParallelCall().
+    //
+    // In contrast, on the NVPTX target, the implementation of
+    // __tgt_target_teams() launches a GPU kernel with the requested number
+    // of teams and threads so no additional calls to the runtime are required.
     if (NumTeams) {
-      assert(ThreadLimit && "Thread limit expression should be available along "
-                            "with number of teams.");
+      // If we have NumTeams defined this means that we have an enclosed teams
+      // region. Therefore we also expect to have NumThreads defined. These two
+      // values should be defined in the presence of a teams directive,
+      // regardless of having any clauses associated. If the user is using teams
+      // but no clauses, these two values will be the default that should be
+      // passed to the runtime library - a 32-bit integer with the value zero.
+      assert(NumThreads && "Thread limit expression should be available along "
+                           "with number of teams.");
       llvm::Value *OffloadingArgs[] = {
           DeviceID,           OutlinedFnID,
           PointerNum,         Info.BasePointersArray,
           Info.PointersArray, Info.SizesArray,
           Info.MapTypesArray, NumTeams,
-          ThreadLimit};
+          NumThreads};
       Return = CGF.EmitRuntimeCall(
           RT.createRuntimeFunction(OMPRTL__tgt_target_teams), OffloadingArgs);
     } else {
@@ -6143,6 +6243,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case Stmt::OMPTargetParallelDirectiveClass:
       CodeGenFunction::EmitOMPTargetParallelDeviceFunction(
           CGM, ParentName, cast<OMPTargetParallelDirective>(*S));
+      break;
+    case Stmt::OMPTargetTeamsDirectiveClass:
+      CodeGenFunction::EmitOMPTargetTeamsDeviceFunction(
+          CGM, ParentName, cast<OMPTargetTeamsDirective>(*S));
       break;
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");

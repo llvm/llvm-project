@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s
 
 // Check that we do not report races between:
 // - Object retain and initialize

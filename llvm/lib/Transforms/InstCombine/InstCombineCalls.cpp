@@ -559,6 +559,82 @@ static Value *simplifyX86muldq(const IntrinsicInst &II,
   return Builder.CreateMul(LHS, RHS);
 }
 
+static Value *simplifyX86pack(IntrinsicInst &II, InstCombiner &IC,
+                              InstCombiner::BuilderTy &Builder, bool IsSigned) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  Type *ResTy = II.getType();
+
+  // Fast all undef handling.
+  if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
+    return UndefValue::get(ResTy);
+
+  Type *ArgTy = Arg0->getType();
+  unsigned NumLanes = ResTy->getPrimitiveSizeInBits() / 128;
+  unsigned NumDstElts = ResTy->getVectorNumElements();
+  unsigned NumSrcElts = ArgTy->getVectorNumElements();
+  assert(NumDstElts == (2 * NumSrcElts) && "Unexpected packing types");
+
+  unsigned NumDstEltsPerLane = NumDstElts / NumLanes;
+  unsigned NumSrcEltsPerLane = NumSrcElts / NumLanes;
+  unsigned DstScalarSizeInBits = ResTy->getScalarSizeInBits();
+  assert(ArgTy->getScalarSizeInBits() == (2 * DstScalarSizeInBits) &&
+         "Unexpected packing types");
+
+  // Constant folding.
+  auto *Cst0 = dyn_cast<Constant>(Arg0);
+  auto *Cst1 = dyn_cast<Constant>(Arg1);
+  if (!Cst0 || !Cst1)
+    return nullptr;
+
+  SmallVector<Constant *, 32> Vals;
+  for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+    for (unsigned Elt = 0; Elt != NumDstEltsPerLane; ++Elt) {
+      unsigned SrcIdx = Lane * NumSrcEltsPerLane + Elt % NumSrcEltsPerLane;
+      auto *Cst = (Elt >= NumSrcEltsPerLane) ? Cst1 : Cst0;
+      auto *COp = Cst->getAggregateElement(SrcIdx);
+      if (COp && isa<UndefValue>(COp)) {
+        Vals.push_back(UndefValue::get(ResTy->getScalarType()));
+        continue;
+      }
+
+      auto *CInt = dyn_cast_or_null<ConstantInt>(COp);
+      if (!CInt)
+        return nullptr;
+
+      APInt Val = CInt->getValue();
+      assert(Val.getBitWidth() == ArgTy->getScalarSizeInBits() &&
+             "Unexpected constant bitwidth");
+
+      if (IsSigned) {
+        // PACKSS: Truncate signed value with signed saturation.
+        // Source values less than dst minint are saturated to minint.
+        // Source values greater than dst maxint are saturated to maxint.
+        if (Val.isSignedIntN(DstScalarSizeInBits))
+          Val = Val.trunc(DstScalarSizeInBits);
+        else if (Val.isNegative())
+          Val = APInt::getSignedMinValue(DstScalarSizeInBits);
+        else
+          Val = APInt::getSignedMaxValue(DstScalarSizeInBits);
+      } else {
+        // PACKUS: Truncate signed value with unsigned saturation.
+        // Source values less than zero are saturated to zero.
+        // Source values greater than dst maxuint are saturated to maxuint.
+        if (Val.isIntN(DstScalarSizeInBits))
+          Val = Val.trunc(DstScalarSizeInBits);
+        else if (Val.isNegative())
+          Val = APInt::getNullValue(DstScalarSizeInBits);
+        else
+          Val = APInt::getAllOnesValue(DstScalarSizeInBits);
+      }
+
+      Vals.push_back(ConstantInt::get(ResTy->getScalarType(), Val));
+    }
+  }
+
+  return ConstantVector::get(Vals);
+}
+
 static Value *simplifyX86movmsk(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   Value *Arg = II.getArgOperand(0);
@@ -2212,6 +2288,24 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::x86_sse2_packssdw_128:
+  case Intrinsic::x86_sse2_packsswb_128:
+  case Intrinsic::x86_avx2_packssdw:
+  case Intrinsic::x86_avx2_packsswb:
+  // TODO Add support for Intrinsic::x86_avx512_mask_packss*
+    if (Value *V = simplifyX86pack(*II, *this, *Builder, true))
+      return replaceInstUsesWith(*II, V);
+    break;
+
+  case Intrinsic::x86_sse2_packuswb_128:
+  case Intrinsic::x86_sse41_packusdw:
+  case Intrinsic::x86_avx2_packusdw:
+  case Intrinsic::x86_avx2_packuswb:
+  // TODO Add support for Intrinsic::x86_avx512_mask_packus*
+    if (Value *V = simplifyX86pack(*II, *this, *Builder, false))
+      return replaceInstUsesWith(*II, V);
+    break;
+
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))
       return replaceInstUsesWith(*II, V);
@@ -2868,6 +2962,45 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Canonicalize on the type from the uses to the defs
 
     // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
+    break;
+  }
+
+  case Intrinsic::experimental_guard: {
+    Value *IIOperand = II->getArgOperand(0);
+
+    // Remove a guard if it is immediately followed by an identical guard.
+    if (match(II->getNextNode(),
+              m_Intrinsic<Intrinsic::experimental_guard>(m_Specific(IIOperand))))
+      return eraseInstFromFunction(*II);
+
+    // Canonicalize guard(a && b) -> guard(a); guard(b);
+    // Note: New guard intrinsics created here are registered by
+    // the InstCombineIRInserter object.
+    Function *GuardIntrinsic = II->getCalledFunction();
+    Value *A, *B;
+    OperandBundleDef DeoptOB(*II->getOperandBundle(LLVMContext::OB_deopt));
+    if (match(IIOperand, m_And(m_Value(A), m_Value(B)))) {
+      CallInst *GuardA =
+          Builder->CreateCall(GuardIntrinsic, A, {DeoptOB}, II->getName());
+      CallInst *GuardB =
+          Builder->CreateCall(GuardIntrinsic, B, {DeoptOB}, II->getName());
+      auto CC = II->getCallingConv();
+      GuardA->setCallingConv(CC);
+      GuardB->setCallingConv(CC);
+      return eraseInstFromFunction(*II);
+    }
+
+    // guard(!(a || b)) -> guard(!a); guard(!b);
+    if (match(IIOperand, m_Not(m_Or(m_Value(A), m_Value(B))))) {
+      CallInst *GuardA = Builder->CreateCall(
+          GuardIntrinsic, Builder->CreateNot(A), {DeoptOB}, II->getName());
+      CallInst *GuardB = Builder->CreateCall(
+          GuardIntrinsic, Builder->CreateNot(B), {DeoptOB}, II->getName());
+      auto CC = II->getCallingConv();
+      GuardA->setCallingConv(CC);
+      GuardB->setCallingConv(CC);
+      return eraseInstFromFunction(*II);
+    }
     break;
   }
   }

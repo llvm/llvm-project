@@ -62,6 +62,9 @@ extern char &SIShrinkInstructionsID;
 void initializeSIFixSGPRCopiesPass(PassRegistry &);
 extern char &SIFixSGPRCopiesID;
 
+void initializeSIFixVGPRCopiesPass(PassRegistry &);
+extern char &SIFixVGPRCopiesID;
+
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
 

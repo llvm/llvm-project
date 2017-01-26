@@ -145,7 +145,7 @@ int bar(int n){
 // CHECK:       store i8 [[FB]], i8* [[CONV]], align
 // CHECK:       [[ARG:%.+]] = load i[[SZ]], i[[SZ]]* [[CAPEC_ADDR]], align
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 3,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 3, {{.*}}, i32 1, i32 0)
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
@@ -173,7 +173,7 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 2,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK:       br label {{%?}}[[END:.+]]
 //
@@ -215,7 +215,7 @@ int bar(int n){
 // CHECK:       br i1 [[TB]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 1,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK:       br label {{%?}}[[END:.+]]
 //
@@ -241,7 +241,7 @@ int bar(int n){
 // CHECK:       br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
 //
 // CHECK:       [[IF_THEN]]
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 0,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 0, {{.*}}, i32 1, i32 0)
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK:       br label {{%?}}[[END:.+]]
 //
@@ -267,7 +267,7 @@ int bar(int n){
 //
 // CHECK: define {{.*}}[[FTEMPLATE]]
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 1,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 1, {{.*}}, i32 1, i32 0)
 // CHECK-NEXT:  store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK-NEXT:  [[RET2:%.+]] = load i32, i32* [[RHV]], align
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0
@@ -281,7 +281,7 @@ int bar(int n){
 //
 //
 //
-// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i32 -1, i8* @{{[^,]+}}, i32 2,
+// CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i32 -1, i8* @{{[^,]+}}, i32 2, {{.*}}, i32 1, i32 0)
 // CHECK-NEXT:  store i32 [[RET]], i32* [[RHV:%.+]], align
 // CHECK-NEXT:  [[RET2:%.+]] = load i32, i32* [[RHV]], align
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET2]], 0

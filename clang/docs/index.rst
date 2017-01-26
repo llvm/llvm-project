@@ -19,6 +19,7 @@ Using Clang as a Compiler
    UsersManual
    Toolchain
    LanguageExtensions
+   ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
    CrossCompilation

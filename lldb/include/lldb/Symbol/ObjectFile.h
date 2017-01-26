@@ -786,7 +786,7 @@ public:
   ///
   /// @return
   //------------------------------------------------------------------
-  virtual Error LoadInMemory(Target &target);
+  virtual Error LoadInMemory(Target &target, bool set_pc);
 
 protected:
   //------------------------------------------------------------------

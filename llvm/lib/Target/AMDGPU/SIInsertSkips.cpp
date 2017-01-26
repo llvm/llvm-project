@@ -263,6 +263,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
        BI != BE; BI = NextBB) {
     NextBB = std::next(BI);
     MachineBasicBlock &MBB = *BI;
+    bool HaveSkipBlock = false;
 
     if (!ExecBranchStack.empty() && ExecBranchStack.back() == &MBB) {
       // Reached convergence point for last divergent branch.
@@ -290,8 +291,14 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::S_BRANCH:
         // Optimize out branches to the next block.
         // FIXME: Shouldn't this be handled by BranchFolding?
-        if (MBB.isLayoutSuccessor(MI.getOperand(0).getMBB()))
+        if (MBB.isLayoutSuccessor(MI.getOperand(0).getMBB())) {
           MI.eraseFromParent();
+        } else if (HaveSkipBlock) {
+          // Remove the given unconditional branch when a skip block has been
+          // inserted after the current one and let skip the two instructions
+          // performing the kill if the exec mask is non-zero.
+          MI.eraseFromParent();
+        }
         break;
 
       case AMDGPU::SI_KILL_TERMINATOR:
@@ -300,9 +307,9 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
 
         if (ExecBranchStack.empty()) {
           if (skipIfDead(MI, *NextBB)) {
+            HaveSkipBlock = true;
             NextBB = std::next(BI);
             BE = MF.end();
-            Next = MBB.end();
           }
         } else {
           HaveKill = true;

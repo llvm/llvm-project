@@ -862,6 +862,23 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   }
 }
 
+Expected<BitcodeModule> clang::FindThinLTOModule(MemoryBufferRef MBRef) {
+  Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
+  if (!BMsOrErr)
+    return BMsOrErr.takeError();
+
+  // The bitcode file may contain multiple modules, we want the one with a
+  // summary.
+  for (BitcodeModule &BM : *BMsOrErr) {
+    Expected<bool> HasSummary = BM.hasSummary();
+    if (HasSummary && *HasSummary)
+      return BM;
+  }
+
+  return make_error<StringError>("Could not find module summary",
+                                 inconvertibleErrorCode());
+}
+
 static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
                               std::unique_ptr<raw_pwrite_stream> OS,
                               std::string SampleProfile) {
@@ -899,32 +916,15 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
       return;
     }
 
-    Expected<std::vector<BitcodeModule>> BMsOrErr =
-        getBitcodeModuleList(**MBOrErr);
-    if (!BMsOrErr) {
-      handleAllErrors(BMsOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+    Expected<BitcodeModule> BMOrErr = FindThinLTOModule(**MBOrErr);
+    if (!BMOrErr) {
+      handleAllErrors(BMOrErr.takeError(), [&](ErrorInfoBase &EIB) {
         errs() << "Error loading imported file '" << I.first()
                << "': " << EIB.message() << '\n';
       });
       return;
     }
-
-    // The bitcode file may contain multiple modules, we want the one with a
-    // summary.
-    bool FoundModule = false;
-    for (BitcodeModule &BM : *BMsOrErr) {
-      Expected<bool> HasSummary = BM.hasSummary();
-      if (HasSummary && *HasSummary) {
-        ModuleMap.insert({I.first(), BM});
-        FoundModule = true;
-        break;
-      }
-    }
-    if (!FoundModule) {
-      errs() << "Error loading imported file '" << I.first()
-             << "': Could not find module summary\n";
-      return;
-    }
+    ModuleMap.insert({I.first(), *BMOrErr});
 
     OwnedImports.push_back(std::move(*MBOrErr));
   }

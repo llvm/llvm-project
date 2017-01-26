@@ -219,8 +219,7 @@ HexagonBlockRanges::HexagonBlockRanges(MachineFunction &mf)
     TII(*HST.getInstrInfo()), TRI(*HST.getRegisterInfo()),
     Reserved(TRI.getReservedRegs(mf)) {
   // Consider all non-allocatable registers as reserved.
-  for (auto I = TRI.regclass_begin(), E = TRI.regclass_end(); I != E; ++I) {
-    auto *RC = *I;
+  for (const TargetRegisterClass *RC : TRI.regclasses()) {
     if (RC->isAllocatable())
       continue;
     for (unsigned R : *RC)

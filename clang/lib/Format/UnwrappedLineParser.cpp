@@ -1998,7 +1998,9 @@ LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
   for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
                                                     E = Line.Tokens.end();
        I != E; ++I) {
-    llvm::dbgs() << I->Tok->Tok.getName() << "[" << I->Tok->Type << "] ";
+    llvm::dbgs() << I->Tok->Tok.getName() << "["
+                 << "T=" << I->Tok->Type
+                 << ", OC=" << I->Tok->OriginalColumn << "] ";
   }
   for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
                                                     E = Line.Tokens.end();
@@ -2038,13 +2040,60 @@ bool UnwrappedLineParser::isOnNewLine(const FormatToken &FormatTok) {
          FormatTok.NewlinesBefore > 0;
 }
 
+static bool isLineComment(const FormatToken &FormatTok) {
+  return FormatTok.is(tok::comment) &&
+         FormatTok.TokenText.startswith("//");
+}
+
+// Checks if \p FormatTok is a line comment that continues the line comment
+// section on \p Line.
+static bool continuesLineComment(const FormatToken &FormatTok,
+                                 const UnwrappedLine &Line) {
+  if (Line.Tokens.empty())
+    return false;
+  const FormatToken &FirstLineTok = *Line.Tokens.front().Tok;
+  // If Line starts with a line comment, then FormatTok continues the comment
+  // section if its original column is greater or equal to the  original start
+  // column of the line.
+  //
+  // If Line starts with a a different token, then FormatTok continues the
+  // comment section if its original column greater than the original start
+  // column of the line.
+  //
+  // For example, the second line comment continues the first in these cases:
+  // // first line
+  // // second line
+  // and:
+  // // first line
+  //  // second line
+  // and:
+  // int i; // first line
+  //  // second line
+  //
+  // The second line comment doesn't continue the first in these cases:
+  //   // first line
+  //  // second line
+  // and:
+  // int i; // first line
+  // // second line
+  unsigned MinContinueColumn =
+      FirstLineTok.OriginalColumn +
+      ((isLineComment(FirstLineTok) && !FirstLineTok.Next) ? 0 : 1);
+  return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
+         isLineComment(*(Line.Tokens.back().Tok)) &&
+         FormatTok.OriginalColumn >= MinContinueColumn;
+}
+
 void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
   bool JustComments = Line->Tokens.empty();
   for (SmallVectorImpl<FormatToken *>::const_iterator
            I = CommentsBeforeNextToken.begin(),
            E = CommentsBeforeNextToken.end();
        I != E; ++I) {
-    if (isOnNewLine(**I) && JustComments)
+    // Line comments that belong to the same line comment section are put on the
+    // same line since later we might want to reflow content between them.
+    // See BreakableToken.
+    if (isOnNewLine(**I) && JustComments && !continuesLineComment(**I, *Line))
       addUnwrappedLine();
     pushToken(*I);
   }
@@ -2110,7 +2159,8 @@ void UnwrappedLineParser::readToken() {
 
     if (!FormatTok->Tok.is(tok::comment))
       return;
-    if (isOnNewLine(*FormatTok) || FormatTok->IsFirst) {
+    if (!continuesLineComment(*FormatTok, *Line) &&
+        (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {
       CommentsInCurrentLine = false;
     }
     if (CommentsInCurrentLine) {

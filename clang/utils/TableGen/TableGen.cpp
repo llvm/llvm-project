@@ -53,7 +53,8 @@ enum ActionType {
   GenArmNeonSema,
   GenArmNeonTest,
   GenAttrDocs,
-  GenDiagDocs
+  GenDiagDocs,
+  GenOptDocs
 };
 
 namespace {
@@ -135,7 +136,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
-                   "Generate attribute documentation")));
+                   "Generate diagnostic documentation"),
+        clEnumValN(GenOptDocs, "gen-opt-docs",
+                   "Generate option documentation")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",
@@ -237,6 +240,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenDiagDocs:
     EmitClangDiagDocs(Records, OS);
+    break;
+  case GenOptDocs:
+    EmitClangOptDocs(Records, OS);
     break;
   }
 

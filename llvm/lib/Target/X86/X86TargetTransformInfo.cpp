@@ -2147,7 +2147,7 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() {
   // TODO: We expect this to be beneficial regardless of arch,
   // but there are currently some unexplained performance artifacts on Atom.
   // As a temporary solution, disable on Atom.
-  return !(ST->isAtom() || ST->isSLM());
+  return !(ST->isAtom());
 }
 
 // Get estimation for interleaved load/store operations and strided load.

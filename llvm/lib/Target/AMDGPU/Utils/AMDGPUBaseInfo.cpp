@@ -127,6 +127,11 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.kernel_code_entry_byte_offset = sizeof(Header);
   // wavefront_size is specified as a power of 2: 2^6 = 64 threads.
   Header.wavefront_size = 6;
+
+  // If the code object does not support indirect functions, then the value must
+  // be 0xffffffff.
+  Header.call_convention = -1;
+
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
   Header.kernarg_segment_alignment = 4;

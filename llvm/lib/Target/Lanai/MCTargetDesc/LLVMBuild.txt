@@ -19,5 +19,5 @@
 type = Library
 name = LanaiDesc
 parent = Lanai
-required_libraries = LanaiInfo LanaiInstPrinter MC MCDisassembler Support
+required_libraries = LanaiInfo LanaiAsmPrinter MC MCDisassembler Support
 add_to_library_groups = Lanai

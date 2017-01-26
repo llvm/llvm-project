@@ -233,6 +233,10 @@ static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context) {
   if (DI.getSeverity() == DS_Error)
     *HasError = true;
 
+  if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
+    if (!Remark->isEnabled())
+      return;
+
   DiagnosticPrinterRawOStream DP(errs());
   errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
   DI.print(DP);

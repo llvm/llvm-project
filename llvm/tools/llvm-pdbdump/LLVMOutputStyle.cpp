@@ -23,18 +23,18 @@
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/EnumTables.h"
+#include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
+#include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
+#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Native/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Native/ModStream.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
+#include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
-#include "llvm/DebugInfo/PDB/Raw/EnumTables.h"
-#include "llvm/DebugInfo/PDB/Raw/GlobalsStream.h"
-#include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
-#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
-#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
-#include "llvm/DebugInfo/PDB/Raw/ModStream.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -510,17 +510,19 @@ static void printTypeIndexOffset(raw_ostream &OS,
   OS << "{" << TIOff.Type.getIndex() << ", " << TIOff.Offset << "}";
 }
 
-static void dumpTpiHash(ScopedPrinter &P, TpiStream &Tpi) {
-  if (!opts::raw::DumpTpiHash)
-    return;
-  DictScope DD(P, "Hash");
-  P.printNumber("Number of Hash Buckets", Tpi.NumHashBuckets());
-  P.printNumber("Hash Key Size", Tpi.getHashKeySize());
-  P.printList("Values", Tpi.getHashValues());
-  P.printList("Type Index Offsets", Tpi.getTypeIndexOffsets(),
-              printTypeIndexOffset);
-  P.printList("Hash Adjustments", Tpi.getHashAdjustments(),
-              printTypeIndexOffset);
+namespace {
+class RecordBytesVisitor : public TypeVisitorCallbacks {
+public:
+  explicit RecordBytesVisitor(ScopedPrinter &P) : P(P) {}
+
+  Error visitTypeEnd(CVType &Record) override {
+    P.printBinaryBlock("Bytes", Record.content());
+    return Error::success();
+  }
+
+private:
+  ScopedPrinter &P;
+};
 }
 
 Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
@@ -528,6 +530,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   bool DumpRecordBytes = false;
   bool DumpRecords = false;
+  bool DumpTpiHash = false;
   StringRef Label;
   StringRef VerLabel;
   if (StreamIdx == StreamTPI) {
@@ -537,6 +540,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     }
     DumpRecordBytes = opts::raw::DumpTpiRecordBytes;
     DumpRecords = opts::raw::DumpTpiRecords;
+    DumpTpiHash = opts::raw::DumpTpiHash;
     Label = "Type Info Stream (TPI)";
     VerLabel = "TPI Version";
   } else if (StreamIdx == StreamIPI) {
@@ -549,80 +553,98 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     Label = "Type Info Stream (IPI)";
     VerLabel = "IPI Version";
   }
-  if (!DumpRecordBytes && !DumpRecords && !opts::raw::DumpModuleSyms)
+  if (!DumpRecordBytes && !DumpRecords && !DumpTpiHash &&
+      !opts::raw::DumpModuleSyms)
     return Error::success();
+
+  bool IsSilentDatabaseBuild = !DumpRecordBytes && !DumpRecords && !DumpTpiHash;
 
   auto Tpi = (StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                       : File.getPDBIpiStream();
   if (!Tpi)
     return Tpi.takeError();
 
-  // Even if the user doesn't want to dump type records, we still need to
-  // iterate them in order to build the type database. So when they want to
-  // dump symbols but not types, don't stick a dumper on the end, just build
-  // the type database.
+  std::unique_ptr<DictScope> StreamScope;
+  std::unique_ptr<ListScope> RecordScope;
+
+  if (!IsSilentDatabaseBuild) {
+    StreamScope = llvm::make_unique<DictScope>(P, Label);
+    P.printNumber(VerLabel, Tpi->getTpiVersion());
+    P.printNumber("Record count", Tpi->NumTypeRecords());
+  }
+
   TypeDatabaseVisitor DBV(TypeDB);
   CompactTypeDumpVisitor CTDV(TypeDB, &P);
   TypeDumpVisitor TDV(TypeDB, &P, false);
+  RecordBytesVisitor RBV(P);
   TypeDeserializer Deserializer;
+
+  // We always need to deserialize and add it to the type database.  This is
+  // true if even if we're not dumping anything, because we could need the
+  // type database for the purposes of dumping symbols.
   TypeVisitorCallbackPipeline Pipeline;
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(DBV);
 
-  CVTypeVisitor Visitor(Pipeline);
-
-  if (DumpRecords || DumpRecordBytes) {
-    DictScope D(P, Label);
-
-    P.printNumber(VerLabel, Tpi->getTpiVersion());
-    P.printNumber("Record count", Tpi->NumTypeRecords());
-    ListScope L(P, "Records");
-
-    bool HadError = false;
+  // If we're in dump mode, add a dumper with the appropriate detail level.
+  if (DumpRecords) {
     if (opts::raw::CompactRecords)
       Pipeline.addCallbackToPipeline(CTDV);
     else
       Pipeline.addCallbackToPipeline(TDV);
-
-    for (auto Type : Tpi->types(&HadError)) {
-      std::unique_ptr<DictScope> Scope;
-      if (!opts::raw::CompactRecords)
-        Scope.reset(new DictScope(P, ""));
-
-      if (DumpRecords) {
-        if (auto EC = Visitor.visitTypeRecord(Type))
-          return EC;
-      }
-
-      if (DumpRecordBytes)
-        P.printBinaryBlock("Bytes", Type.content());
-    }
-    dumpTpiHash(P, *Tpi);
-    if (HadError)
-      return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "TPI stream contained corrupt record");
-    {
-      ListScope L(P, "TypeIndexOffsets");
-      for (const auto &IO : Tpi->getTypeIndexOffsets()) {
-        P.printString(formatv("Index: {0:x}, Offset: {1:N}", IO.Type.getIndex(),
-                              (uint32_t)IO.Offset)
-                          .str());
-      }
-    }
-
-  } else if (opts::raw::DumpModuleSyms) {
-
-    bool HadError = false;
-    for (auto Type : Tpi->types(&HadError)) {
-      if (auto EC = Visitor.visitTypeRecord(Type))
-        return EC;
-    }
-
-    dumpTpiHash(P, *Tpi);
-    if (HadError)
-      return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "TPI stream contained corrupt record");
   }
+  if (DumpRecordBytes)
+    Pipeline.addCallbackToPipeline(RBV);
+
+  CVTypeVisitor Visitor(Pipeline);
+
+  if (DumpRecords || DumpRecordBytes)
+    RecordScope = llvm::make_unique<ListScope>(P, "Records");
+
+  bool HadError = false;
+
+  TypeIndex T(TypeIndex::FirstNonSimpleIndex);
+  for (auto Type : Tpi->types(&HadError)) {
+    std::unique_ptr<DictScope> OneRecordScope;
+
+    if ((DumpRecords || DumpRecordBytes) && !opts::raw::CompactRecords)
+      OneRecordScope = llvm::make_unique<DictScope>(P, "");
+
+    if (auto EC = Visitor.visitTypeRecord(Type))
+      return EC;
+  }
+  if (HadError)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "TPI stream contained corrupt record");
+
+  if (DumpTpiHash) {
+    DictScope DD(P, "Hash");
+    P.printNumber("Number of Hash Buckets", Tpi->NumHashBuckets());
+    P.printNumber("Hash Key Size", Tpi->getHashKeySize());
+    P.printList("Values", Tpi->getHashValues());
+
+    ListScope LHA(P, "Adjusters");
+    auto ExpectedST = File.getStringTable();
+    if (!ExpectedST)
+      return ExpectedST.takeError();
+    const auto &ST = *ExpectedST;
+    for (const auto &E : Tpi->getHashAdjusters()) {
+      DictScope DHA(P);
+      StringRef Name = ST.getStringForID(E.first);
+      P.printString("Type", Name);
+      P.printHex("TI", E.second);
+    }
+  }
+
+  if (!IsSilentDatabaseBuild) {
+    ListScope L(P, "TypeIndexOffsets");
+    for (const auto &IO : Tpi->getTypeIndexOffsets()) {
+      P.printString(formatv("Index: {0:x}, Offset: {1:N}", IO.Type.getIndex(),
+                            (uint32_t)IO.Offset)
+                        .str());
+    }
+  }
+
   P.flush();
   return Error::success();
 }

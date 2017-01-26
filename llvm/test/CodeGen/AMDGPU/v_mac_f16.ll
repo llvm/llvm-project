@@ -1,10 +1,10 @@
 ; RUN: llc -march=amdgcn -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}mac_f16
-; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
-; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
-; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_ushort v[[A_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_ushort v[[B_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_ushort v[[C_F16:[0-9]+]]
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], v[[C_F16]]
@@ -283,9 +283,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16
-; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; GCN: buffer_load_dword v[[B_V2_F16:[0-9]+]]
-; GCN: buffer_load_dword v[[C_V2_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword v[[A_V2_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword v[[B_V2_F16:[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword v[[C_V2_F16:[0-9]+]]
 ; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
@@ -306,7 +306,7 @@ entry:
 ; VI:  v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[C_V2_F16]]
 ; VI:  v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[C_F16_1]]
 ; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_LO]]
-; GCN: buffer_store_dword v[[R_V2_F16]]
+; GCN: {{buffer|flat}}_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define void @mac_v2f16(
     <2 x half> addrspace(1)* %r,

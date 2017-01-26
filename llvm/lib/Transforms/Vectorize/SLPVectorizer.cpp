@@ -4262,7 +4262,7 @@ public:
     Builder.setFastMathFlags(Unsafe);
     unsigned i = 0;
 
-    for (; i < NumReducedVals - ReduxWidth + 1; i += ReduxWidth) {
+    while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ReductionOps);
       if (V.shouldReorder()) {
@@ -4270,7 +4270,7 @@ public:
         V.buildTree(Reversed, ReductionOps);
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
-        continue;
+        break;
 
       V.computeMinimumValueSizes();
 
@@ -4296,6 +4296,8 @@ public:
                                              ReducedSubTree, "bin.rdx");
       } else
         VectorizedTree = ReducedSubTree;
+      i += ReduxWidth;
+      ReduxWidth = PowerOf2Floor(NumReducedVals - i);
     }
 
     if (VectorizedTree) {

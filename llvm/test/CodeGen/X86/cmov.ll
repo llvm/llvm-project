@@ -70,7 +70,7 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 @g_100 = external global i8                       ; <i8*> [#uses=2]
 @_2E_str = external constant [15 x i8], align 1   ; <[15 x i8]*> [#uses=1]
 
-define i32 @test4() nounwind {
+define i1 @test4() nounwind {
 entry:
   %0 = load i8, i8* @g_3, align 1                     ; <i8> [#uses=2]
   %1 = sext i8 %0 to i32                          ; <i32> [#uses=1]
@@ -107,10 +107,11 @@ bb.i.i:                                           ; preds = %func_4.exit.i
 
 func_1.exit:                                      ; preds = %bb.i.i, %func_4.exit.i
   %g_96.tmp.0.i = phi i8 [ %g_96.promoted.i, %bb.i.i ], [ %.mux.i, %func_4.exit.i ] ; <i8> [#uses=2]
+  %ret = phi i1 [ 0, %bb.i.i ], [ %.not.i, %func_4.exit.i ]
   store i8 %g_96.tmp.0.i, i8* @g_96
   %6 = zext i8 %g_96.tmp.0.i to i32               ; <i32> [#uses=1]
   %7 = tail call i32 (i8*, ...) @printf(i8* noalias getelementptr ([15 x i8], [15 x i8]* @_2E_str, i64 0, i64 0), i32 %6) nounwind ; <i32> [#uses=0]
-  ret i32 0
+  ret i1 %ret
 }
 
 declare i32 @printf(i8* nocapture, ...) nounwind

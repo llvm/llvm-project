@@ -12,17 +12,20 @@
 //  vector.bool
 
 // template <class... Args> reference emplace_back(Args&&... args);
+// return type is 'reference' in C++17; 'void' before
 
 #include <vector>
 #include <cassert>
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
 {
     {
         typedef std::vector<bool> C;
-        typedef C::reference Ref;
         C c;
+#if TEST_STD_VER > 14
+        typedef C::reference Ref;
         Ref r1 = c.emplace_back();
         assert(c.size() == 1);
         assert(c.front() == false);
@@ -36,19 +39,27 @@ int main()
         r2 = false;
         assert(c.back() == false);
         r2 = true;
-        Ref r3 = c.emplace_back(1 == 1);
+#else
+        c.emplace_back();
+        assert(c.size() == 1);
+        assert(c.front() == false);
+        c.emplace_back(true);
+        assert(c.size() == 2);
+        assert(c.front() == false);
+        assert(c.back() == true);
+#endif
+        c.emplace_back(1 == 1);
         assert(c.size() == 3);
         assert(c.front() == false);
         assert(c[1] == true);
         assert(c.back() == true);
-        r3 = false;
-        assert(c.back() == false);
     }
     {
         typedef std::vector<bool, min_allocator<bool>> C;
-        typedef C::reference Ref;
         C c;
 
+#if TEST_STD_VER > 14
+        typedef C::reference Ref;
         Ref r1 = c.emplace_back();
         assert(c.size() == 1);
         assert(c.front() == false);
@@ -62,6 +73,15 @@ int main()
         r2 = false;
         assert(c.back() == false);
         r2 = true;
+#else
+        c.emplace_back();
+        assert(c.size() == 1);
+        assert(c.front() == false);
+        c.emplace_back(true);
+        assert(c.size() == 2);
+        assert(c.front() == false);
+        assert(c.back() == true);
+#endif
         c.emplace_back(1 == 1);
         assert(c.size() == 3);
         assert(c.front() == false);

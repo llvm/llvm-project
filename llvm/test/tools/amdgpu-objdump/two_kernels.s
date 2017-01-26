@@ -157,7 +157,7 @@ amd_kernel_code_t_minimal:
 // DIS:     group_segment_alignment = 4
 // DIS:     private_segment_alignment = 4
 // DIS:     wavefront_size = 6
-// DIS:     call_convention = 0
+// DIS:     call_convention = -1
 // DIS:     runtime_loader_kernel_symbol = 0
 // DIS: .end_amd_kernel_code_t
 

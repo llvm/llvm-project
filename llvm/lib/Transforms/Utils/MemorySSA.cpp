@@ -145,8 +145,8 @@ public:
 
 private:
   union {
-      ImmutableCallSite CS;
-      MemoryLocation Loc;
+    ImmutableCallSite CS;
+    MemoryLocation Loc;
   };
 };
 }
@@ -1247,6 +1247,13 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
     Res.first->second = make_unique<AccessList>();
   return Res.first->second.get();
 }
+MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
+  auto Res = PerBlockDefs.insert(std::make_pair(BB, nullptr));
+
+  if (Res.second)
+    Res.first->second = make_unique<DefsList>();
+  return Res.first->second.get();
+}
 
 /// This class is a batch walker of all MemoryUse's in the program, and points
 /// their defining access at the thing that actually clobbers them.  Because it
@@ -1477,14 +1484,8 @@ void MemorySSA::placePHINodes(
             });
 
   // Now place MemoryPhi nodes.
-  for (auto &BB : IDFBlocks) {
-    // Insert phi node
-    AccessList *Accesses = getOrCreateAccessList(BB);
-    MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
-    ValueToMemoryAccess[BB] = Phi;
-    // Phi's always are placed at the front of the block.
-    Accesses->push_front(Phi);
-  }
+  for (auto &BB : IDFBlocks)
+    createMemoryPhi(BB);
 }
 
 void MemorySSA::buildMemorySSA() {
@@ -1511,15 +1512,21 @@ void MemorySSA::buildMemorySSA() {
     BBNumbers[&B] = NextBBNum++;
     bool InsertIntoDef = false;
     AccessList *Accesses = nullptr;
+    DefsList *Defs = nullptr;
     for (Instruction &I : B) {
       MemoryUseOrDef *MUD = createNewAccess(&I);
       if (!MUD)
         continue;
-      InsertIntoDef |= isa<MemoryDef>(MUD);
 
       if (!Accesses)
         Accesses = getOrCreateAccessList(&B);
       Accesses->push_back(MUD);
+      if (isa<MemoryDef>(MUD)) {
+        InsertIntoDef = true;
+        if (!Defs)
+          Defs = getOrCreateDefsList(&B);
+        Defs->push_back(*MUD);
+      }
     }
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
@@ -1558,13 +1565,73 @@ MemorySSA::CachingWalker *MemorySSA::getWalkerImpl() {
   return Walker.get();
 }
 
+// This is a helper function used by the creation routines. It places NewAccess
+// into the access and defs lists for a given basic block, at the given
+// insertion point.
+void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
+                                        const BasicBlock *BB,
+                                        InsertionPlace Point) {
+  auto *Accesses = getOrCreateAccessList(BB);
+  if (Point == Beginning) {
+    // If it's a phi node, it goes first, otherwise, it goes after any phi
+    // nodes.
+    if (isa<MemoryPhi>(NewAccess)) {
+      Accesses->push_front(NewAccess);
+      auto *Defs = getOrCreateDefsList(BB);
+      Defs->push_front(*NewAccess);
+    } else {
+      auto AI = find_if_not(
+          *Accesses, [](const MemoryAccess &MA) { return isa<MemoryPhi>(MA); });
+      Accesses->insert(AI, NewAccess);
+      if (!isa<MemoryUse>(NewAccess)) {
+        auto *Defs = getOrCreateDefsList(BB);
+        auto DI = find_if_not(
+            *Defs, [](const MemoryAccess &MA) { return isa<MemoryPhi>(MA); });
+        Defs->insert(DI, *NewAccess);
+      }
+    }
+  } else {
+    Accesses->push_back(NewAccess);
+    if (!isa<MemoryUse>(NewAccess)) {
+      auto *Defs = getOrCreateDefsList(BB);
+      Defs->push_back(*NewAccess);
+    }
+  }
+}
+
+void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
+                                      AccessList::iterator InsertPt) {
+  auto *Accesses = getWritableBlockAccesses(BB);
+  bool WasEnd = InsertPt == Accesses->end();
+  Accesses->insert(AccessList::iterator(InsertPt), What);
+  if (!isa<MemoryUse>(What)) {
+    auto *Defs = getOrCreateDefsList(BB);
+    // If we got asked to insert at the end, we have an easy job, just shove it
+    // at the end. If we got asked to insert before an existing def, we also get
+    // an terator. If we got asked to insert before a use, we have to hunt for
+    // the next def.
+    if (WasEnd) {
+      Defs->push_back(*What);
+    } else if (isa<MemoryDef>(InsertPt)) {
+      Defs->insert(InsertPt->getDefsIterator(), *What);
+    } else {
+      while (InsertPt != Accesses->end() && !isa<MemoryDef>(InsertPt))
+        ++InsertPt;
+      // Either we found a def, or we are inserting at the end
+      if (InsertPt == Accesses->end())
+        Defs->push_back(*What);
+      else
+        Defs->insert(InsertPt->getDefsIterator(), *What);
+    }
+  }
+}
+
 MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
   assert(!getMemoryAccess(BB) && "MemoryPhi already exists for this BB");
-  AccessList *Accesses = getOrCreateAccessList(BB);
   MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
+  insertIntoListsForBlock(Phi, BB, Beginning);
   ValueToMemoryAccess[BB] = Phi;
   // Phi's always are placed at the front of the block.
-  Accesses->push_front(Phi);
   BlockNumberingValid.erase(BB);
   return Phi;
 }
@@ -1585,16 +1652,7 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
                                                 const BasicBlock *BB,
                                                 InsertionPlace Point) {
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  auto *Accesses = getOrCreateAccessList(BB);
-  if (Point == Beginning) {
-    // It goes after any phi nodes
-    auto AI = find_if(
-        *Accesses, [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
-
-    Accesses->insert(AI, NewAccess);
-  } else {
-    Accesses->push_back(NewAccess);
-  }
+  insertIntoListsForBlock(NewAccess, BB, Point);
   BlockNumberingValid.erase(BB);
   return NewAccess;
 }
@@ -1605,9 +1663,9 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessBefore(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
-  Accesses->insert(AccessList::iterator(InsertPt), NewAccess);
   BlockNumberingValid.erase(InsertPt->getBlock());
+  insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
+                        InsertPt->getIterator());
   return NewAccess;
 }
 
@@ -1617,16 +1675,16 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
-  Accesses->insertAfter(AccessList::iterator(InsertPt), NewAccess);
   BlockNumberingValid.erase(InsertPt->getBlock());
+  insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
+                        ++(InsertPt->getIterator()));
   return NewAccess;
 }
 
 void MemorySSA::spliceMemoryAccessAbove(MemoryDef *Where,
                                         MemoryUseOrDef *What) {
-  assert(What != getLiveOnEntryDef() &&
-         Where != getLiveOnEntryDef() && "Can't splice (above) LOE.");
+  assert(What != getLiveOnEntryDef() && Where != getLiveOnEntryDef() &&
+         "Can't splice (above) LOE.");
   assert(dominates(Where, What) && "Only upwards splices are permitted.");
 
   if (Where == What)
@@ -1761,6 +1819,16 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   if (VMA->second == MA)
     ValueToMemoryAccess.erase(VMA);
 
+  // The access list owns the reference, so we erase it from the non-owning list
+  // first.
+  if (!isa<MemoryUse>(MA)) {
+    auto DefsIt = PerBlockDefs.find(MA->getBlock());
+    std::unique_ptr<DefsList> &Defs = DefsIt->second;
+    Defs->remove(*MA);
+    if (Defs->empty())
+      PerBlockDefs.erase(DefsIt);
+  }
+
   auto AccessIt = PerBlockAccesses.find(MA->getBlock());
   std::unique_ptr<AccessList> &Accesses = AccessIt->second;
   Accesses->erase(MA);
@@ -1838,26 +1906,42 @@ void MemorySSA::verifyOrdering(Function &F) const {
   // lists think, as well as the order in the blocks vs the order in the access
   // lists.
   SmallVector<MemoryAccess *, 32> ActualAccesses;
+  SmallVector<MemoryAccess *, 32> ActualDefs;
   for (BasicBlock &B : F) {
     const AccessList *AL = getBlockAccesses(&B);
+    const auto *DL = getBlockDefs(&B);
     MemoryAccess *Phi = getMemoryAccess(&B);
-    if (Phi)
+    if (Phi) {
       ActualAccesses.push_back(Phi);
+      ActualDefs.push_back(Phi);
+    }
+
     for (Instruction &I : B) {
       MemoryAccess *MA = getMemoryAccess(&I);
-      assert((!MA || AL) && "We have memory affecting instructions "
-                            "in this block but they are not in the "
-                            "access list");
-      if (MA)
+      assert((!MA || (AL && (isa<MemoryUse>(MA) || DL))) &&
+             "We have memory affecting instructions "
+             "in this block but they are not in the "
+             "access list or defs list");
+      if (MA) {
         ActualAccesses.push_back(MA);
+        if (isa<MemoryDef>(MA))
+          ActualDefs.push_back(MA);
+      }
     }
     // Either we hit the assert, really have no accesses, or we have both
-    // accesses and an access list
-    if (!AL)
+    // accesses and an access list.
+    // Same with defs.
+    if (!AL && !DL)
       continue;
     assert(AL->size() == ActualAccesses.size() &&
            "We don't have the same number of accesses in the block as on the "
            "access list");
+    assert(DL ||
+           ActualDefs.size() == 0 &&
+               "Either we should have a defs list, or we should have no defs");
+    assert((!DL || DL->size() == ActualDefs.size()) &&
+           "We don't have the same number of defs in the block as on the "
+           "def list");
     auto ALI = AL->begin();
     auto AAI = ActualAccesses.begin();
     while (ALI != AL->end() && AAI != ActualAccesses.end()) {
@@ -1866,6 +1950,16 @@ void MemorySSA::verifyOrdering(Function &F) const {
       ++AAI;
     }
     ActualAccesses.clear();
+    if (DL) {
+      auto DLI = DL->begin();
+      auto ADI = ActualDefs.begin();
+      while (DLI != DL->end() && ADI != ActualDefs.end()) {
+        assert(&*DLI == *ADI && "Not the same defs in the same order");
+        ++DLI;
+        ++ADI;
+      }
+    }
+    ActualDefs.clear();
   }
 }
 

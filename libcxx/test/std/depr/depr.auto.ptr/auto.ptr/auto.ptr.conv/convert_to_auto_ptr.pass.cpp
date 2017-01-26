@@ -13,6 +13,8 @@
 
 // template<class Y> operator auto_ptr<Y>() throw();
 
+// REQUIRES-ANY: c++98, c++03, c++11, c++14
+
 #include <memory>
 #include <cassert>
 

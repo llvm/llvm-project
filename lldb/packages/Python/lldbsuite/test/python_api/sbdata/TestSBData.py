@@ -22,6 +22,26 @@ class SBDataAPICase(TestBase):
         self.line = line_number('main.cpp', '// set breakpoint here')
 
     @add_test_categories(['pyapi'])
+    def test_byte_order_and_address_byte_size(self):
+        """Test the SBData::SetData() to ensure the byte order and address 
+        byte size are obeyed"""
+        addr_data = '\x11\x22\x33\x44\x55\x66\x77\x88'
+        error = lldb.SBError()
+        data = lldb.SBData()
+        data.SetData(error, addr_data, lldb.eByteOrderBig, 4)
+        addr = data.GetAddress(error, 0)
+        self.assertTrue(addr == 0x11223344);
+        data.SetData(error, addr_data, lldb.eByteOrderBig, 8)
+        addr = data.GetAddress(error, 0)
+        self.assertTrue(addr == 0x1122334455667788);
+        data.SetData(error, addr_data, lldb.eByteOrderLittle, 4)
+        addr = data.GetAddress(error, 0)
+        self.assertTrue(addr == 0x44332211);
+        data.SetData(error, addr_data, lldb.eByteOrderLittle, 8)
+        addr = data.GetAddress(error, 0)
+        self.assertTrue(addr == 0x8877665544332211);
+
+    @add_test_categories(['pyapi'])
     def test_with_run_command(self):
         """Test the SBData APIs."""
         self.build()
