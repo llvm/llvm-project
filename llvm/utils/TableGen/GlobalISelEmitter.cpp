@@ -129,7 +129,8 @@ public:
   /// Construct a new operand predicate and add it to the matcher.
   template <class Kind, class... Args>
   Kind &addPredicate(Args&&... args) {
-    Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args...>(args)...));
+    Predicates.emplace_back(
+        llvm::make_unique<Kind>(std::forward<Args>(args)...));
     return *static_cast<Kind *>(Predicates.back().get());
   }
 
@@ -140,8 +141,8 @@ public:
   }
 
   /// Emit a C++ expression that tests whether all the predicates are met.
-  template <class Arg1>
-  void emitCxxPredicatesExpr(raw_ostream &OS, Arg1&& arg1) const {
+  template <class... Args>
+  void emitCxxPredicatesExpr(raw_ostream &OS, Args &&... args) const {
     if (Predicates.empty()) {
       OS << "true";
       return;
@@ -150,24 +151,7 @@ public:
     StringRef Separator = "";
     for (const auto &Predicate : predicates()) {
       OS << Separator << "(";
-      Predicate->emitCxxPredicateExpr(OS, std::forward<Arg1>(arg1));
-      OS << ")";
-      Separator = " && ";
-    }
-  }
-
-  template <class Arg1, class Arg2>
-  void emitCxxPredicatesExpr(raw_ostream &OS, Arg1&& arg1, Arg2&& arg2) const {
-    if (Predicates.empty()) {
-      OS << "true";
-      return;
-    }
-
-    StringRef Separator = "";
-    for (const auto &Predicate : predicates()) {
-      OS << Separator << "(";
-      Predicate->emitCxxPredicateExpr(OS, std::forward<Arg1>(arg1),
-                                      std::forward<Arg2>(arg2));
+      Predicate->emitCxxPredicateExpr(OS, std::forward<Args>(args)...);
       OS << ")";
       Separator = " && ";
     }
