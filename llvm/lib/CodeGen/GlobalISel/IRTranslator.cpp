@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -522,12 +523,60 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   switch (ID) {
   default:
     break;
-  case Intrinsic::dbg_declare:
-  case Intrinsic::dbg_value:
-    // FIXME: these obviously need to be supported properly.
-    if (!TPC->isGlobalISelAbortEnabled())
-      MF->getProperties().set(MachineFunctionProperties::Property::FailedISel);
+  case Intrinsic::dbg_declare: {
+    const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
+    assert(DI.getVariable() && "Missing variable");
+
+    const Value *Address = DI.getAddress();
+    if (!Address || isa<UndefValue>(Address)) {
+      DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+      return true;
+    }
+
+    unsigned Reg = getOrCreateVReg(*Address);
+    auto RegDef = MRI->def_instr_begin(Reg);
+    assert(DI.getVariable()->isValidLocationForIntrinsic(
+               MIRBuilder.getDebugLoc()) &&
+           "Expected inlined-at fields to agree");
+
+    if (RegDef != MRI->def_instr_end() &&
+        RegDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+      MIRBuilder.buildFIDbgValue(RegDef->getOperand(1).getIndex(),
+                                 DI.getVariable(), DI.getExpression());
+    } else
+      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
     return true;
+  }
+  case Intrinsic::dbg_value: {
+    // This form of DBG_VALUE is target-independent.
+    const DbgValueInst &DI = cast<DbgValueInst>(CI);
+    const Value *V = DI.getValue();
+    assert(DI.getVariable()->isValidLocationForIntrinsic(
+               MIRBuilder.getDebugLoc()) &&
+           "Expected inlined-at fields to agree");
+    if (!V) {
+      // Currently the optimizer can produce this; insert an undef to
+      // help debugging.  Probably the optimizer should not do this.
+      MIRBuilder.buildIndirectDbgValue(0, DI.getOffset(), DI.getVariable(),
+                                       DI.getExpression());
+    } else if (const auto *CI = dyn_cast<Constant>(V)) {
+      MIRBuilder.buildConstDbgValue(*CI, DI.getOffset(), DI.getVariable(),
+                                    DI.getExpression());
+    } else {
+      unsigned Reg = getOrCreateVReg(*V);
+      // FIXME: This does not handle register-indirect values at offset 0. The
+      // direct/indirect thing shouldn't really be handled by something as
+      // implicit as reg+noreg vs reg+imm in the first palce, but it seems
+      // pretty baked in right now.
+      if (DI.getOffset() != 0)
+        MIRBuilder.buildIndirectDbgValue(Reg, DI.getOffset(), DI.getVariable(),
+                                         DI.getExpression());
+      else
+        MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(),
+                                       DI.getExpression());
+    }
+    return true;
+  }
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDE, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
