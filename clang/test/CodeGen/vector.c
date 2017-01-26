@@ -60,23 +60,3 @@ void extractinttypes() {
   extern __typeof(_mm_extract_epi16(_mm_setzero_si128(), 3)) check_result_int;
   extern __typeof(_mm_extract_epi32(_mm_setzero_si128(), 3)) check_result_int;
 }
-
-// Test some logic around our lax vector comparison rules with integers.
-
-typedef int vec_int1 __attribute__((vector_size(4)));
-vec_int1 lax_vector_compare1(int x, vec_int1 y) {
-  y = x == y;
-  return y;
-}
-
-// CHECK: define i32 @lax_vector_compare1(i32 {{.*}}, i32 {{.*}})
-// CHECK: icmp eq <1 x i32>
-
-typedef int vec_int2 __attribute__((vector_size(8)));
-vec_int2 lax_vector_compare2(long long x, vec_int2 y) {
-  y = x == y;
-  return y;
-}
-
-// CHECK: define void @lax_vector_compare2(<2 x i32>* {{.*sret.*}}, i64 {{.*}}, i64 {{.*}})
-// CHECK: icmp eq <2 x i32>
