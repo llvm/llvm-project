@@ -708,10 +708,11 @@ define void @local_zextload_v4i8_to_v4i16(<4 x i16> addrspace(3)* %out, <4 x i8>
 ; FUNC-LABEL: {{^}}local_sextload_v4i8_to_v4i16:
 
 ; EG: LDS_READ_RET
+; TODO: these do LSHR + BFE_INT, instead of just BFE_INT/ASHR
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-; EG-DAG: ASHR
+; EG-DAG: BFE_INT
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
 define void @local_sextload_v4i8_to_v4i16(<4 x i16> addrspace(3)* %out, <4 x i8> addrspace(3)* %in) #0 {
@@ -740,14 +741,15 @@ define void @local_zextload_v8i8_to_v8i16(<8 x i16> addrspace(3)* %out, <8 x i8>
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
+; TODO: these do LSHR + BFE_INT, instead of just BFE_INT/ASHR
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-; EG-DAG: ASHR
-; EG-DAG: ASHR
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
@@ -786,6 +788,7 @@ define void @local_zextload_v16i8_to_v16i16(<16 x i16> addrspace(3)* %out, <16 x
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
+; TODO: these do LSHR + BFE_INT, instead of just BFE_INT/ASHR
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
@@ -798,10 +801,10 @@ define void @local_zextload_v16i8_to_v16i16(<16 x i16> addrspace(3)* %out, <16 x
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
@@ -860,6 +863,7 @@ define void @local_zextload_v32i8_to_v32i16(<32 x i16> addrspace(3)* %out, <32 x
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
+; TODO: these do LSHR + BFE_INT, instead of just BFE_INT/ASHR
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
@@ -884,14 +888,10 @@ define void @local_zextload_v32i8_to_v32i16(<32 x i16> addrspace(3)* %out, <32 x
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
 ; EG-DAG: BFE_INT
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
-; EG-DAG: ASHR
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
+; EG-DAG: BFE_INT
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
 ; EG: LDS_WRITE
