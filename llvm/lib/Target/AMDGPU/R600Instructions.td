@@ -727,6 +727,20 @@ def FLOOR : R600_1OP_Helper <0x14, "FLOOR", ffloor>;
 
 def MOV : R600_1OP <0x19, "MOV", []>;
 
+
+// This is a hack to get rid of DUMMY_CHAIN nodes.
+// Most DUMMY_CHAINs should be eliminated during legalization, but undef
+// values can sneak in some to selection.
+let isPseudo = 1, isCodeGenOnly = 1 in {
+def DUMMY_CHAIN : AMDGPUInst <
+  (outs),
+  (ins),
+  "DUMMY_CHAIN",
+  [(R600dummy_chain)]
+>;
+} // end let isPseudo = 1, isCodeGenOnly = 1
+
+
 let isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in {
 
 class MOV_IMM <ValueType vt, Operand immType> : AMDGPUInst <
