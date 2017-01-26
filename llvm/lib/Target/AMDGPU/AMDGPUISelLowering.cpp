@@ -492,6 +492,9 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case ISD::FMA:
   case ISD::FMAD:
   case ISD::FSIN:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::SIN_HW:
@@ -2924,9 +2927,12 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     return Res;
   }
   case ISD::FP_EXTEND:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT: // XXX - Should fround be handled?
+  case ISD::FSIN:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
-  case ISD::FSIN:
   case AMDGPUISD::SIN_HW: {
     SDValue CvtSrc = N0.getOperand(0);
     if (CvtSrc.getOpcode() == ISD::FNEG) {

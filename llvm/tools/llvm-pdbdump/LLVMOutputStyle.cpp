@@ -505,11 +505,6 @@ Error LLVMOutputStyle::dumpInfoStream() {
   return Error::success();
 }
 
-static void printTypeIndexOffset(raw_ostream &OS,
-                                 const TypeIndexOffset &TIOff) {
-  OS << "{" << TIOff.Type.getIndex() << ", " << TIOff.Offset << "}";
-}
-
 namespace {
 class RecordBytesVisitor : public TypeVisitorCallbacks {
 public:

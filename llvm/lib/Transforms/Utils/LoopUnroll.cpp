@@ -199,11 +199,14 @@ const Loop* llvm::addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
     assert(OriginalBB == OldLoop->getHeader() &&
            "Header should be first in RPO");
 
+    NewLoop = new Loop();
     Loop *NewLoopParent = NewLoops.lookup(OldLoop->getParentLoop());
-    assert(NewLoopParent &&
-           "Expected parent loop before sub-loop in RPO");
-    NewLoop = new Loop;
-    NewLoopParent->addChildLoop(NewLoop);
+
+    if (NewLoopParent)
+      NewLoopParent->addChildLoop(NewLoop);
+    else
+      LI->addTopLevelLoop(NewLoop);
+
     NewLoop->addBasicBlockToLoop(ClonedBB, *LI);
     return OldLoop;
   } else {

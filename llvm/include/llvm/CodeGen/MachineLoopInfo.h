@@ -60,6 +60,13 @@ public:
   /// multiple exiting blocks are present.
   MachineBasicBlock *findLoopControlBlock();
 
+  /// Return the debug location of the start of this loop.
+  /// This looks for a BB terminating instruction with a known debug
+  /// location by looking at the preheader and header blocks. If it
+  /// cannot find a terminating instruction with location information,
+  /// it returns an unknown location.
+  DebugLoc getStartLoc() const;
+
   void dump() const;
 
 private:

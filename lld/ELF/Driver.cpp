@@ -6,6 +6,22 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// The driver drives the entire linking process. It is responsible for
+// parsing command line options and doing whatever it is instructed to do.
+//
+// One notable thing in the LLD's driver when compared to other linkers is
+// that the LLD's driver is agnostic on the host operating system.
+// Other linkers usually have implicit default values (such as a dynamic
+// linker path or library paths) for each host OS.
+//
+// I don't think implicit default values are useful because they are
+// usually explicitly specified by the compiler driver. They can even
+// be harmful when you are doing cross-linking. Therefore, in LLD, we
+// simply trust the compiler driver to pass all required options to us
+// and don't try to make effort on our side.
+//
+//===----------------------------------------------------------------------===//
 
 #include "Driver.h"
 #include "Config.h"
@@ -340,6 +356,13 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
     return UnresolvedPolicy::NoUndef;
   if (Config->Relocatable)
     return UnresolvedPolicy::Ignore;
+
+  if (auto *Arg = Args.getLastArg(OPT_warn_undef, OPT_error_undef)) {
+    if (Arg->getOption().getID() == OPT_warn_undef)
+      return UnresolvedPolicy::Warn;
+
+    return UnresolvedPolicy::ReportError;
+  }
 
   if (auto *Arg = Args.getLastArg(OPT_unresolved_symbols)) {
     StringRef S = Arg->getValue();

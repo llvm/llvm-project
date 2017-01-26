@@ -123,7 +123,7 @@ l0.0.latch:
 ; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0
 ; CHECK-NOT: LoopUnrollPass
 ;
-; Partial unrolling occurs which introduces new child loops but not new sibling
+; Partial unrolling occurs which introduces both new child loops and new sibling
 ; loops. We only visit the child loops in a special mode, not by default.
 ; CHECK-CHILDREN: LoopUnrollPass on Loop at depth 3 containing: %l0.0.0<header>
 ; CHECK-CHILDREN-NOT: LoopUnrollPass
@@ -137,7 +137,13 @@ l0.0.latch:
 ; When we revisit children, we also revisit the current loop.
 ; CHECK-CHILDREN: LoopUnrollPass on Loop at depth 2 containing: %l0.0<header>
 ; CHECK-CHILDREN-NOT: LoopUnrollPass
-
+;
+; Revisit the children of the outer loop that are part of the prologue.
+; 
+; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.0.prol<header>
+; CHECK-NOT: LoopUnrollPass
+; CHECK: LoopUnrollPass on Loop at depth 2 containing: %l0.0.1.prol<header>
+; CHECK-NOT: LoopUnrollPass
 l0.latch:
   br label %l0
 ; CHECK: LoopUnrollPass on Loop at depth 1 containing: %l0<header>

@@ -67,7 +67,11 @@ public:
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
-  /// The new interface to emit remarks.
+  /// \brief Output the remark via the diagnostic handler and to the
+  /// optimization record file.
+  ///
+  /// This is the new interface that should be now used rather than the legacy
+  /// emit* APIs.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
 
   /// Emit an optimization-applied message.
@@ -224,7 +228,7 @@ private:
   Optional<uint64_t> computeHotness(const Value *V);
 
   /// Similar but use value from \p OptDiag and update hotness there.
-  void computeHotness(DiagnosticInfoOptimizationBase &OptDiag);
+  void computeHotness(DiagnosticInfoIROptimization &OptDiag);
 
   /// \brief Only allow verbose messages if we know we're filtering by hotness
   /// (BFI is only set in this case).
@@ -278,5 +282,11 @@ public:
   /// \brief Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
+
+namespace yaml {
+template <> struct MappingTraits<DiagnosticInfoOptimizationBase *> {
+  static void mapping(IO &io, DiagnosticInfoOptimizationBase *&OptDiag);
+};
+}
 }
 #endif // LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H

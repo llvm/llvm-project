@@ -234,7 +234,7 @@ void AggressiveDeadCodeElimination::initialize() {
         return Iter != end() && Iter->second;
       }
     } State;
-    
+
     State.reserve(F.size());
     // Iterate over blocks in depth-first pre-order and
     // treat all edges to a block already seen as loop back edges
@@ -594,12 +594,12 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
 
 // reverse top-sort order
 void AggressiveDeadCodeElimination::computeReversePostOrder() {
-  
+
   // This provides a post-order numbering of the reverse conrtol flow graph
   // Note that it is incomplete in the presence of infinite loops but we don't
   // need numbers blocks which don't reach the end of the functions since
   // all branches in those blocks are forced live.
-  
+
   // For each block without successors, extend the DFS from the bloack
   // backward through the graph
   SmallPtrSet<BasicBlock*, 16> Visited;
@@ -681,3 +681,4 @@ INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)
 
 FunctionPass *llvm::createAggressiveDCEPass() { return new ADCELegacyPass(); }
+
