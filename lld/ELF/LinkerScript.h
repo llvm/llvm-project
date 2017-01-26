@@ -198,7 +198,7 @@ struct MemoryRegion {
   uint64_t Length;
   uint64_t Offset;
   uint32_t Flags;
-  uint32_t NotFlags;
+  uint32_t NegFlags;
 };
 
 class LinkerScriptBase {

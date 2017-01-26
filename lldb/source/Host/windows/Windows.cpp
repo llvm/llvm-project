@@ -23,12 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// These prototypes are defined in <direct.h>, but it also defines chdir(),
-// giving multiply defined errors
-extern "C" {
-int _chdir(const char *path);
-}
-
 namespace {
 bool utf8ToWide(const char *utf8, wchar_t *buf, size_t bufSize) {
   const llvm::UTF8 *sourceStart = reinterpret_cast<const llvm::UTF8 *>(utf8);
@@ -188,9 +182,6 @@ char *basename(char *path) {
     return path; // no base name
   return &l1[1];
 }
-
-// use _chdir() instead of SetCurrentDirectory() because it updates errno
-int chdir(const char *path) { return _chdir(path); }
 
 char *dirname(char *path) {
   char *l1 = strrchr(path, '\\');

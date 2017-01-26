@@ -98,8 +98,10 @@
 		456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266B5ECF1460A68200E43F0A /* DNBArchImplARM64.cpp */; };
 		456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26ACA3340D3E956300A2120B /* CoreFoundation.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		4971AE7213D10F4F00649E37 /* HasAVX.s in Sources */ = {isa = PBXBuildFile; fileRef = 4971AE7113D10F4F00649E37 /* HasAVX.s */; };
+		49D404621E39260F00570CDC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AF48558C1D75126800D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
 		AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF48558B1D75126800D19C07 /* StdStringExtractor.cpp */; };
+		AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49D404611E39260F00570CDC /* Foundation.framework */; };
 		AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3363194A8B0B00FF05C6 /* Genealogy.cpp */; };
 /* End PBXBuildFile section */
 
@@ -210,6 +212,7 @@
 		456F67721AD46CE9002850C2 /* debugserver-nonui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "debugserver-nonui"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4971AE7013D10F4F00649E37 /* HasAVX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HasAVX.h; sourceTree = "<group>"; };
 		4971AE7113D10F4F00649E37 /* HasAVX.s */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; path = HasAVX.s; sourceTree = "<group>"; };
+		49D404611E39260F00570CDC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		49F530111331519C008956F6 /* MachRegisterStatesI386.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachRegisterStatesI386.h; sourceTree = "<group>"; };
 		49F5301213316D7F008956F6 /* MachRegisterStatesX86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachRegisterStatesX86_64.h; sourceTree = "<group>"; };
 		9457ECF61419864100DFE7D8 /* stack_logging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stack_logging.h; sourceTree = "<group>"; };
@@ -232,6 +235,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49D404621E39260F00570CDC /* Foundation.framework in Frameworks */,
 				26CE05CF115C36F70022F371 /* CoreFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -241,6 +245,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				456F676B1AD46CE9002850C2 /* CoreFoundation.framework in Frameworks */,
+				AFA3FCA11E39984900218D5E /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,6 +258,7 @@
 				26ACA3330D3E94F200A2120B /* Framework */,
 				26C637D50C71334A0024798E /* source */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
+				49D404601E39260F00570CDC /* Frameworks */,
 			);
 			name = dbgnub;
 			sourceTree = "<group>";
@@ -482,6 +488,14 @@
 			name = debugserver;
 			sourceTree = "<group>";
 			usesTabs = 0;
+		};
+		49D404601E39260F00570CDC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				49D404611E39260F00570CDC /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
@@ -874,8 +888,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -976,8 +988,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -1077,8 +1087,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -1519,8 +1527,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -1661,8 +1667,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -1877,8 +1881,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
@@ -2010,8 +2012,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,

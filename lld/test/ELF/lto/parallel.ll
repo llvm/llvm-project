@@ -1,7 +1,8 @@
 ; REQUIRES: x86
 ; RUN: llvm-as -o %t.bc %s
+; RUN: rm -f %t.lto.o %t1.lto.o
 ; RUN: ld.lld -m elf_x86_64 --lto-partitions=2 -save-temps -o %t %t.bc -shared
-; RUN: llvm-nm %t0.lto.o | FileCheck --check-prefix=CHECK0 %s
+; RUN: llvm-nm %t.lto.o | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-nm %t1.lto.o | FileCheck --check-prefix=CHECK1 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

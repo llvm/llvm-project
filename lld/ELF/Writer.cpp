@@ -425,12 +425,6 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   if (!B.isLocal() && !B.symbol()->IsUsedInRegularObj)
     return false;
 
-  // If --retain-symbols-file is given, we'll keep only symbols listed in that
-  // file.
-  if (Config->Discard == DiscardPolicy::RetainFile &&
-      !Config->RetainSymbolsFile.count(B.getName()))
-    return false;
-
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
     // Always include absolute symbols.
     if (!D->Section)
@@ -1027,6 +1021,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
   forEachRelSec(scanRelocations<ELFT>);
+
+  if (In<ELFT>::Plt && !In<ELFT>::Plt->empty())
+    In<ELFT>::Plt->addSymbols();
+  if (In<ELFT>::Iplt && !In<ELFT>::Iplt->empty())
+    In<ELFT>::Iplt->addSymbols();
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.

@@ -7,7 +7,8 @@
 Overview
 ========
 
-libc++ is a new implementation of the C++ standard library, targeting C++11.
+libc++ is a new implementation of the C++ standard library, targeting C++11 and
+above.
 
 * Features and Goals
 

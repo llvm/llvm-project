@@ -45,7 +45,10 @@ using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 std::string lld::toString(uint32_t Type) {
-  return getELFRelocationTypeName(elf::Config->EMachine, Type);
+  StringRef S = getELFRelocationTypeName(elf::Config->EMachine, Type);
+  if (S == "Unknown")
+    return ("Unknown (" + Twine(Type) + ")").str();
+  return S;
 }
 
 namespace lld {
@@ -223,6 +226,8 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
+  void addPltSymbols(InputSectionData *IS, uint64_t Off) const override;
+  void addPltHeaderSymbols(InputSectionData *ISD) const override;
   RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType, const InputFile *File,
                        const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -356,6 +361,7 @@ X86TargetInfo::X86TargetInfo() {
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
+  case R_386_8:
   case R_386_16:
   case R_386_32:
   case R_386_TLS_LDO_32:
@@ -366,6 +372,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLSLD;
   case R_386_PLT32:
     return R_PLT_PC;
+  case R_386_PC8:
   case R_386_PC16:
   case R_386_PC32:
     return R_PC;
@@ -386,8 +393,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_NONE:
     return R_HINT;
   default:
-    error("do not know how to handle relocation '" + toString(Type) + "' (" +
-          Twine(Type) + ")");
+    error("unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }
@@ -486,6 +492,9 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
   switch (Type) {
   default:
     return 0;
+  case R_386_8:
+  case R_386_PC8:
+    return *Buf;
   case R_386_16:
   case R_386_PC16:
     return read16le(Buf);
@@ -505,13 +514,15 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
   checkInt<32>(Loc, Val, Type);
 
-  // R_386_PC16 and R_386_16 are not part of the current i386 psABI. They are
-  // used by 16-bit x86 objects, like boot loaders.
-  if (Type == R_386_16 || Type == R_386_PC16) {
+  // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
+  // being used for some 16-bit programs such as boot loaders, so
+  // we want to support them.
+  if (Type == R_386_8 || Type == R_386_PC8)
+    *Loc = Val;
+  else if (Type == R_386_16 || Type == R_386_PC16)
     write16le(Loc, Val);
-    return;
-  }
-  write32le(Loc, Val);
+  else
+    write32le(Loc, Val);
 }
 
 void X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
@@ -663,8 +674,7 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_NONE:
     return R_HINT;
   default:
-    error("do not know how to handle relocation '" + toString(Type) + "' (" +
-          Twine(Type) + ")");
+    error("unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }
@@ -1617,7 +1627,8 @@ RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    fatal("do not know how to handle relocation " + Twine(Type));
+    error("unknown relocation type: " + toString(Type));
+    return R_HINT;
   }
 }
 
@@ -1731,6 +1742,12 @@ void ARMTargetInfo::writePltHeader(uint8_t *Buf) const {
   write32le(Buf + 16, GotPlt - L1 - 8);
 }
 
+void ARMTargetInfo::addPltHeaderSymbols(InputSectionData *ISD) const {
+  auto *IS = cast<InputSection<ELF32LE>>(ISD);
+  addSyntheticLocal("$a", STT_NOTYPE, 0, 0, IS);
+  addSyntheticLocal("$d", STT_NOTYPE, 16, 0, IS);
+}
+
 void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
                              uint64_t PltEntryAddr, int32_t Index,
                              unsigned RelOff) const {
@@ -1746,6 +1763,12 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t L1 = PltEntryAddr + 4;
   write32le(Buf + 12, GotEntryAddr - L1 - 8);
+}
+
+void ARMTargetInfo::addPltSymbols(InputSectionData *ISD, uint64_t Off) const {
+  auto *IS = cast<InputSection<ELF32LE>>(ISD);
+  addSyntheticLocal("$a", STT_NOTYPE, Off, 0, IS);
+  addSyntheticLocal("$d", STT_NOTYPE, Off + 12, 0, IS);
 }
 
 RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,

@@ -464,6 +464,7 @@ public:
   size_t getSize() const override;
   void addEntry(SymbolBody &Sym);
   bool empty() const override { return Entries.empty(); }
+  void addSymbols();
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
@@ -479,6 +480,7 @@ public:
   size_t getSize() const override;
   void addEntry(SymbolBody &Sym);
   bool empty() const override { return Entries.empty(); }
+  void addSymbols();
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
@@ -700,6 +702,10 @@ public:
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();
+template <class ELFT>
+SymbolBody *
+addSyntheticLocal(StringRef Name, uint8_t Type, typename ELFT::uint Value,
+                  typename ELFT::uint Size, InputSectionBase<ELFT> *Section);
 
 // Linker generated sections which can be used as inputs.
 template <class ELFT> struct In {

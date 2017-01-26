@@ -547,7 +547,7 @@ MemoryRegion *LinkerScript<ELFT>::findMemoryRegion(OutputSectionCommand *Cmd,
   // See if a region can be found by matching section flags.
   for (auto &MRI : Opt.MemoryRegions) {
     MemoryRegion &MR = MRI.second;
-    if ((MR.Flags & Sec->Flags) != 0 && (MR.NotFlags & Sec->Flags) == 0)
+    if ((MR.Flags & Sec->Flags) != 0 && (MR.NegFlags & Sec->Flags) == 0)
       return &MR;
   }
 
@@ -1017,7 +1017,6 @@ private:
   void readGroup();
   void readInclude();
   void readMemory();
-  std::pair<uint32_t, uint32_t> readMemoryAttributes();
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
@@ -1043,6 +1042,9 @@ private:
   SymbolAssignment *readProvideOrAssignment(StringRef Tok);
   void readSort();
   Expr readAssert();
+
+  uint64_t readMemoryAssignment(StringRef, StringRef, StringRef);
+  std::pair<uint32_t, uint32_t> readMemoryAttributes();
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
@@ -2000,52 +2002,48 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   return Ret;
 }
 
-// Parse the MEMORY command As specified in:
-// https://sourceware.org/binutils/docs/ld/MEMORY.html#MEMORY
+uint64_t ScriptParser::readMemoryAssignment(
+    StringRef S1, StringRef S2, StringRef S3) {
+  if (!(consume(S1) || consume(S2) || consume(S3))) {
+    setError("expected one of: " + S1 + ", " + S2 + ", or " + S3);
+    return 0;
+  }
+  expect("=");
+
+  // TODO: Fully support constant expressions.
+  uint64_t Val;
+  if (!readInteger(next(), Val))
+    setError("nonconstant expression for "+ S1);
+  return Val;
+}
+
+// Parse the MEMORY command as specified in:
+// https://sourceware.org/binutils/docs/ld/MEMORY.html
+//
+// MEMORY { name [(attr)] : ORIGIN = origin, LENGTH = len ... }
 void ScriptParser::readMemory() {
   expect("{");
   while (!Error && !consume("}")) {
     StringRef Name = next();
+
     uint32_t Flags = 0;
-    uint32_t NotFlags = 0;
+    uint32_t NegFlags = 0;
     if (consume("(")) {
-      std::tie(Flags, NotFlags) = readMemoryAttributes();
+      std::tie(Flags, NegFlags) = readMemoryAttributes();
       expect(")");
     }
     expect(":");
 
-    // Parse the ORIGIN.
-    if (!(consume("ORIGIN") || consume("org") || consume("o"))) {
-      setError("expected one of: ORIGIN, org, or o");
-      return;
-    }
-    expect("=");
-    uint64_t Origin;
-    // TODO: Fully support constant expressions.
-    if (!readInteger(next(), Origin)) {
-      setError("nonconstant expression for origin");
-      return;
-    }
+    uint64_t Origin = readMemoryAssignment("ORIGIN", "org", "o");
     expect(",");
+    uint64_t Length = readMemoryAssignment("LENGTH", "len", "l");
 
-    // Parse the LENGTH.
-    if (!(consume("LENGTH") || consume("len") || consume("l"))) {
-      setError("expected one of: LENGTH, len, or l");
-      return;
-    }
-    expect("=");
-    uint64_t Length;
-    // TODO: Fully support constant expressions.
-    if (!readInteger(next(), Length)) {
-      setError("nonconstant expression for length");
-      return;
-    }
     // Add the memory region to the region map (if it doesn't already exist).
     auto It = Opt.MemoryRegions.find(Name);
     if (It != Opt.MemoryRegions.end())
       setError("region '" + Name + "' already defined");
     else
-      Opt.MemoryRegions[Name] = {Name, Origin, Length, Origin, Flags, NotFlags};
+      Opt.MemoryRegions[Name] = {Name, Origin, Length, Origin, Flags, NegFlags};
   }
 }
 
@@ -2054,26 +2052,28 @@ void ScriptParser::readMemory() {
 // are only used when an explicit memory region name is not used.
 std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
   uint32_t Flags = 0;
-  uint32_t NotFlags = 0;
+  uint32_t NegFlags = 0;
   bool Invert = false;
-  for (char C : next()) {
+
+  for (char C : next().lower()) {
     uint32_t Flag = 0;
     if (C == '!')
       Invert = !Invert;
-    else if (tolower(C) == 'w')
+    else if (C == 'w')
       Flag = SHF_WRITE;
-    else if (tolower(C) == 'x')
+    else if (C == 'x')
       Flag = SHF_EXECINSTR;
-    else if (tolower(C) == 'a')
+    else if (C == 'a')
       Flag = SHF_ALLOC;
-    else if (tolower(C) != 'r')
+    else if (C != 'r')
       setError("invalid memory region attribute");
+
     if (Invert)
-      NotFlags |= Flag;
+      NegFlags |= Flag;
     else
       Flags |= Flag;
   }
-  return {Flags, NotFlags};
+  return {Flags, NegFlags};
 }
 
 void elf::readLinkerScript(MemoryBufferRef MB) {
