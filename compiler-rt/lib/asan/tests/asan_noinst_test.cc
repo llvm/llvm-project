@@ -210,6 +210,10 @@ void *ThreadedOneSizeMallocStress(void *unused) {
   return NULL;
 }
 
+#ifndef __powerpc64__
+// FIXME: This has not reliably worked on powerpc since r279664.  Re-enable
+// this once the problem is tracked down and fixed.
+
 TEST(AddressSanitizer, ThreadedOneSizeMallocStressTest) {
   const int kNumThreads = 4;
   pthread_t t[kNumThreads];
@@ -220,6 +224,7 @@ TEST(AddressSanitizer, ThreadedOneSizeMallocStressTest) {
     PTHREAD_JOIN(t[i], 0);
   }
 }
+#endif
 
 TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
   using __asan::kHighMemEnd;

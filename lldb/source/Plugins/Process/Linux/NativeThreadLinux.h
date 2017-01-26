@@ -10,10 +10,9 @@
 #ifndef liblldb_NativeThreadLinux_H_
 #define liblldb_NativeThreadLinux_H_
 
+#include "SingleStepCheck.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
-
-#include <sched.h>
 
 #include <map>
 #include <memory>
@@ -94,10 +93,6 @@ private:
 
   void SetStopped();
 
-  inline void MaybePrepareSingleStepWorkaround();
-
-  inline void MaybeCleanupSingleStepWorkaround();
-
   // ---------------------------------------------------------------------
   // Member Variables
   // ---------------------------------------------------------------------
@@ -107,7 +102,7 @@ private:
   std::string m_stop_description;
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
-  cpu_set_t m_original_cpu_set; // For single-step workaround.
+  llvm::Optional<SingleStepWorkaround> m_step_workaround;
 };
 
 typedef std::shared_ptr<NativeThreadLinux> NativeThreadLinuxSP;

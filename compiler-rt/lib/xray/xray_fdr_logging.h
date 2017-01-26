@@ -83,7 +83,7 @@ struct FDRLoggingOptions {
 };
 
 // Flight Data Recorder mode implementation interfaces.
-XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
+XRayLogInitStatus FDRLogging_init(size_t BufferSize, size_t BufferMax,
                                   void *Options, size_t OptionsSize);
 XRayLogInitStatus FDRLogging_finalize();
 void FDRLogging_handleArg0(int32_t FuncId, XRayEntryType Entry);

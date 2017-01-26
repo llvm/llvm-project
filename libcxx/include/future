@@ -156,7 +156,7 @@ public:
     ~future();
     future& operator=(const future& rhs) = delete;
     future& operator=(future&&) noexcept;
-    shared_future<R> share() noecept;
+    shared_future<R> share() noexcept;
 
     // retrieving the value
     R get();

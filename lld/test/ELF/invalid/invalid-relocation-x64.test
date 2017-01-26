@@ -26,5 +26,5 @@ Sections:
         Type:            R_X86_64_NONE
 
 # RUN: not ld.lld %p/Inputs/invalid-relocation-x64.elf -o %t2 2>&1 | FileCheck %s
-# CHECK: do not know how to handle relocation 'Unknown' (152)
-# CHECK: do not know how to handle relocation 'Unknown' (153)
+# CHECK: unknown relocation type: Unknown (152)
+# CHECK: unknown relocation type: Unknown (153)

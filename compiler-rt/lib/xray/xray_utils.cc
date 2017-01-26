@@ -16,6 +16,7 @@
 #include "xray_defs.h"
 #include "xray_flags.h"
 #include <cstdio>
+#include <errno.h>
 #include <fcntl.h>
 #include <iterator>
 #include <sys/types.h>
