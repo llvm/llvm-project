@@ -7548,22 +7548,6 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
         return IncompatibleVectors;
       }
     }
-
-    // When the RHS comes from another lax conversion (e.g. binops between
-    // scalars and vectors) the result is canonicalized as a vector. When the
-    // LHS is also a vector, the lax is allowed by the condition above. Handle
-    // the case where LHS is a scalar.
-    if (LHSType->isScalarType()) {
-      const VectorType *VecType = RHSType->getAs<VectorType>();
-      if (VecType && VecType->getNumElements() == 1 &&
-          isLaxVectorConversion(RHSType, LHSType)) {
-        ExprResult *VecExpr = &RHS;
-        *VecExpr = ImpCastExprToType(VecExpr->get(), LHSType, CK_BitCast);
-        Kind = CK_BitCast;
-        return Compatible;
-      }
-    }
-
     return Incompatible;
   }
 
@@ -8098,7 +8082,6 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
 
   // If there's an ext-vector type and a scalar, try to convert the scalar to
   // the vector element type and splat.
-  // FIXME: this should also work for regular vector types as supported in GCC.
   if (!RHSVecType && isa<ExtVectorType>(LHSVecType)) {
     if (!tryVectorConvertAndSplat(*this, &RHS, RHSType,
                                   LHSVecType->getElementType(), LHSType))
@@ -8111,31 +8094,14 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       return RHSType;
   }
 
-  // FIXME: The code below also handles convertion between vectors and
-  // non-scalars, we should break this down into fine grained specific checks
-  // and emit proper diagnostics.
-  QualType VecType = LHSVecType ? LHSType : RHSType;
-  const VectorType *VT = LHSVecType ? LHSVecType : RHSVecType;
-  QualType OtherType = LHSVecType ? RHSType : LHSType;
-  ExprResult *OtherExpr = LHSVecType ? &RHS : &LHS;
-  if (isLaxVectorConversion(OtherType, VecType)) {
-    // If we're allowing lax vector conversions, only the total (data) size
-    // needs to be the same. For non compound assignment, if one of the types is
-    // scalar, the result is always the vector type.
-    if (!IsCompAssign) {
-      *OtherExpr = ImpCastExprToType(OtherExpr->get(), VecType, CK_BitCast);
-      return VecType;
-    // In a compound assignment, lhs += rhs, 'lhs' is a lvalue src, forbidding
-    // any implicit cast. Here, the 'rhs' should be implicit casted to 'lhs'
-    // type. Note that this is already done by non-compound assignments in
-    // CheckAssignmentConstraints. If it's a scalar type, only bitcast for
-    // <1 x T> -> T. The result is also a vector type.
-    } else if (OtherType->isExtVectorType() ||
-               (OtherType->isScalarType() && VT->getNumElements() == 1)) {
-      ExprResult *RHSExpr = &RHS;
-      *RHSExpr = ImpCastExprToType(RHSExpr->get(), LHSType, CK_BitCast);
-      return VecType;
-    }
+  // If we're allowing lax vector conversions, only the total (data) size
+  // needs to be the same.
+  // FIXME: Should we really be allowing this?
+  // FIXME: We really just pick the LHS type arbitrarily?
+  if (isLaxVectorConversion(RHSType, LHSType)) {
+    QualType resultType = LHSType;
+    RHS = ImpCastExprToType(RHS.get(), resultType, CK_BitCast);
+    return resultType;
   }
 
   // Okay, the expression is invalid.
@@ -9741,7 +9707,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
   
   // Return a signed type for the vector.
-  return GetSignedVectorType(vType);
+  return GetSignedVectorType(LHSType);
 }
 
 QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
