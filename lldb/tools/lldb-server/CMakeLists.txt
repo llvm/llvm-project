@@ -196,7 +196,7 @@ else()
     target_link_libraries(lldb-server
                           -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group)
     target_link_libraries(lldb-server
-                          -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
+                          -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group)
     target_link_libraries(lldb-server
                           -Wl,--start-group ${LLVM_ALL_LIBS} -Wl,--end-group)
   else()
