@@ -4,7 +4,7 @@ cppcoreguidelines-pro-type-static-cast-downcast
 ===============================================
 
 This check flags all usages of ``static_cast``, where a base class is casted to
-a derived class. In those cases, a fixit is provided to convert the cast to a
+a derived class. In those cases, a fix-it is provided to convert the cast to a
 ``dynamic_cast``.
 
 Use of these casts can violate type safety and cause the program to access a
