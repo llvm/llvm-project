@@ -759,6 +759,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   SmallVector<unsigned, 2> Regs;
   SmallVector<uint64_t, 2> Offsets;
   if (unsigned Reg = TLI.getExceptionPointerRegister(PersonalityFn)) {
+    MBB.addLiveIn(Reg);
     unsigned VReg = MRI->createGenericVirtualRegister(Tys[0]);
     MIRBuilder.buildCopy(VReg, Reg);
     Regs.push_back(VReg);
@@ -766,6 +767,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   }
 
   if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn)) {
+    MBB.addLiveIn(Reg);
     unsigned VReg = MRI->createGenericVirtualRegister(Tys[1]);
     MIRBuilder.buildCopy(VReg, Reg);
     Regs.push_back(VReg);
