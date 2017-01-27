@@ -1209,6 +1209,13 @@
 			remoteGlobalIDString = 26680206115FD0ED008E1FE4;
 			remoteInfo = LLDB;
 		};
+		491B05731E3BD6AE00C8B789 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2689FFC913353D7A00698AC0;
+			remoteInfo = "lldb-core";
+		};
 		49753FAB1BEAB2BB00019E45 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
@@ -7021,6 +7028,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				491B05741E3BD6AE00C8B789 /* PBXTargetDependency */,
 			);
 			name = repl_swift;
 			productName = "repl-swift";
@@ -8407,6 +8415,11 @@
 			isa = PBXTargetDependency;
 			target = 26680206115FD0ED008E1FE4 /* LLDB */;
 			targetProxy = 26DF745F1A6DCDB300B85563 /* PBXContainerItemProxy */;
+		};
+		491B05741E3BD6AE00C8B789 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2689FFC913353D7A00698AC0 /* lldb-core */;
+			targetProxy = 491B05731E3BD6AE00C8B789 /* PBXContainerItemProxy */;
 		};
 		49753FAA1BEAB2BB00019E45 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
