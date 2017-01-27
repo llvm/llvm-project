@@ -282,12 +282,6 @@ def FeatureEnableSIScheduler : SubtargetFeature<"si-scheduler",
   "Enable SI Machine Scheduler"
 >;
 
-def FeatureNoAddr64 : SubtargetFeature<"mubuf-no-addr64",
-  "NoAddr64",
-  "true",
-  "MUBUF instructions have addr64 bit"
->;
-
 // Unless +-flat-for-global is specified, turn on FlatForGlobal for
 // all OS-es on VI and newer hardware to avoid assertion failures due
 // to missing ADDR64 variants of MUBUF instructions.
@@ -297,8 +291,7 @@ def FeatureNoAddr64 : SubtargetFeature<"mubuf-no-addr64",
 def FeatureFlatForGlobal : SubtargetFeature<"flat-for-global",
   "FlatForGlobal",
   "true",
-  "Force to generate flat instruction for global",
-  [FeatureNoAddr64]
+  "Force to generate flat instruction for global"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -350,8 +343,7 @@ def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
-   FeatureScalarStores, FeatureInv2PiInlineImm, 
-   FeatureNoAddr64
+   FeatureScalarStores, FeatureInv2PiInlineImm
   ]
 >;
 
