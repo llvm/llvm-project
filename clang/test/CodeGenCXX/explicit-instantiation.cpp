@@ -5,6 +5,9 @@
 // This check logically is attached to 'template int S<int>::i;' below.
 // CHECK: @_ZN1SIiE1iE = weak_odr global i32
 
+// This check is logically attached to 'template int ExportedStaticLocal::f<int>()' below.
+// CHECK-OPT: @_ZZN19ExportedStaticLocal1fIiEEvvE1i = linkonce_odr global
+
 template<typename T, typename U, typename Result>
 struct plus {
   Result operator()(const T& t, const U& u) const;
@@ -153,3 +156,17 @@ template <typename T> void S<T>::f() {}
 template <typename T> void S<T>::g() {}
 template <typename T> int S<T>::i;
 template <typename T> void S<T>::S2::h() {}
+
+namespace ExportedStaticLocal {
+void sink(int&);
+template <typename T>
+inline void f() {
+  static int i;
+  sink(i);
+}
+// See the check line at the top of the file.
+extern template void f<int>();
+void use() {
+  f<int>();
+}
+}
