@@ -3409,7 +3409,7 @@ static bool areOptimizationsEnabled(const ArgList &Args) {
   return false;
 }
 
-static bool mustUseFramePointerForTarget(const llvm::Triple &Triple) {
+static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   switch (Triple.getArch()){
   default:
     return false;
@@ -3475,7 +3475,7 @@ static bool shouldUseFramePointer(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_fno_omit_frame_pointer,
                                options::OPT_fomit_frame_pointer))
     return A->getOption().matches(options::OPT_fno_omit_frame_pointer) ||
-           mustUseFramePointerForTarget(Triple);
+           mustUseNonLeafFramePointerForTarget(Triple);
 
   if (Args.hasArg(options::OPT_pg))
     return true;
@@ -3487,8 +3487,7 @@ static bool shouldUseLeafFramePointer(const ArgList &Args,
                                       const llvm::Triple &Triple) {
   if (Arg *A = Args.getLastArg(options::OPT_mno_omit_leaf_frame_pointer,
                                options::OPT_momit_leaf_frame_pointer))
-    return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer) ||
-           mustUseFramePointerForTarget(Triple);
+    return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer);
 
   if (Args.hasArg(options::OPT_pg))
     return true;
