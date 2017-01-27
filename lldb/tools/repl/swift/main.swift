@@ -14,6 +14,7 @@
 // lands in an external Xcode build.
 #if XCODE_BUILD_ME || !_runtime(_ObjC)
 #if _runtime(_ObjC)
+// LLDB may not depend on overlays, so do not import any modules that LLDB doesn't build.
 import REPLTime
 #endif
 
