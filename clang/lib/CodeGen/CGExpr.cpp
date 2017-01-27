@@ -3335,7 +3335,9 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
     AlignmentSource AlignSource;
     Address Addr = EmitPointerWithAlignment(BaseExpr, &AlignSource);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
-    EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy);
+    bool SkipNullCheck = isa<llvm::ConstantPointerNull>(Addr.getPointer());
+    EmitTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
+                  /*Alignment=*/CharUnits::Zero(), SkipNullCheck);
     BaseLV = MakeAddrLValue(Addr, PtrTy, AlignSource);
   } else
     BaseLV = EmitCheckedLValue(BaseExpr, TCK_MemberAccess);
