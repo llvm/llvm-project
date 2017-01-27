@@ -477,6 +477,8 @@ bool IRTranslator::translateMemcpy(const CallInst &CI,
 
 void IRTranslator::getStackGuard(unsigned DstReg,
                                  MachineIRBuilder &MIRBuilder) {
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  MRI->setRegClass(DstReg, TRI->getPointerRegClass(*MF));
   auto MIB = MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD);
   MIB.addDef(DstReg);
 
