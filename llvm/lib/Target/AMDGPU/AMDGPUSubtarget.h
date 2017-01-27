@@ -311,22 +311,31 @@ public:
     return EnableXNACK;
   }
 
-  bool isAmdCodeObjectV2() const {
-    return isAmdHsaOS() || isMesa3DOS();
+  bool isMesaKernel(const MachineFunction &MF) const {
+    return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction()->getCallingConv());
+  }
+
+  // Covers VS/PS/CS graphics shaders
+  bool isMesaGfxShader(const MachineFunction &MF) const {
+    return isMesa3DOS() && AMDGPU::isShader(MF.getFunction()->getCallingConv());
+  }
+
+  bool isAmdCodeObjectV2(const MachineFunction &MF) const {
+    return isAmdHsaOS() || isMesaKernel(MF);
   }
 
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset() const {
-    return isAmdCodeObjectV2() ? 0 : 36;
+  unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {
+    return isAmdCodeObjectV2(MF) ? 0 : 36;
   }
 
   unsigned getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? 8 : 4;
   }
 
-  unsigned getImplicitArgNumBytes() const {
-    if (isMesa3DOS())
+  unsigned getImplicitArgNumBytes(const MachineFunction &MF) const {
+    if (isMesaKernel(MF))
       return 16;
     if (isAmdHsaOS() && isOpenCLEnv())
       return 32;
@@ -585,7 +594,7 @@ public:
     return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
-  unsigned getKernArgSegmentSize(unsigned ExplictArgBytes) const;
+  unsigned getKernArgSegmentSize(const MachineFunction &MF, unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
