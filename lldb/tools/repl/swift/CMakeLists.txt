@@ -20,8 +20,7 @@ endif()
 
 set(swift_compile_cmd "${LLDB_SWIFTC}"
                       -resource-dir "${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift"
-                      -module-cache-path "${module_cache_dir}"
-                      -I"${CMAKE_CURRENT_SOURCE_DIR}/REPLTime")
+                      -module-cache-path "${module_cache_dir}")
 
 if(CMAKE_CROSSCOMPILING)
   set(swift_compile_cmd ${swift_compile_cmd} -target "${LLVM_HOST_TRIPLE}" -sdk "${CMAKE_SYSROOT}")
