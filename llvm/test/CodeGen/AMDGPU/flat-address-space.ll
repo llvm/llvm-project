@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck  %s
-; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga < %s | FileCheck  %s
-; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck  %s
+; RUN: llc -O0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
 ; Disable optimizations in case there are optimizations added that
 ; specialize away generic pointer accesses.

@@ -86,6 +86,7 @@ protected:
   bool FP64Denormals;
   bool FPExceptions;
   bool FlatForGlobal;
+  bool NoAddr64;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
   bool EnableXNACK;

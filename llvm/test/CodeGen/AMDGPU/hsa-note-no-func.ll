@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx701 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx702 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI702 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA --check-prefix=HSA-CI700 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=tonga | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=tonga -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris10 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris11 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx800 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI800 %s

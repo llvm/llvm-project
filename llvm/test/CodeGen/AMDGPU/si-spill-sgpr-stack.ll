@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SGPR %s
-; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SMEM %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SGPR %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SMEM %s
 
 ; Make sure this doesn't crash.
 ; ALL-LABEL: {{^}}test:
