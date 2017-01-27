@@ -26,7 +26,7 @@
 			buildConfigurationList = 26CEF3B214FD592B007286B2 /* Build configuration list for PBXAggregateTarget "desktop" */;
 			buildPhases = (
 				AF90106415AB7D2900FF120D /* Copy Files */,
-				AF63C3A51A9FCFCF00D6A6B5 /* Copy Files */,
+				49ACF8361E3AF8A900FAF7FC /* Copy repl_swift */,
 			);
 			dependencies = (
 				26CEF3BB14FD595B007286B2 /* PBXTargetDependency */,
@@ -241,7 +241,6 @@
 		263C4938178B50C40070F12D /* SBModuleSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263C4937178B50C40070F12D /* SBModuleSpec.cpp */; };
 		263C493A178B50CF0070F12D /* SBModuleSpec.h in Headers */ = {isa = PBXBuildFile; fileRef = 263C4939178B50CF0070F12D /* SBModuleSpec.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		263E949F13661AEA00E7D1CE /* UnwindAssembly-x86.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263E949D13661AE400E7D1CE /* UnwindAssembly-x86.cpp */; };
-		263F921F1B4DFEEE001244A6 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C39010F3FA26009D5894 /* CoreFoundation.framework */; };
 		263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263FDE5F1A79A01500E68013 /* FormatEntity.cpp */; };
 		2640E19F15DC78FD00F23B50 /* Property.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2640E19E15DC78FD00F23B50 /* Property.cpp */; };
 		264297571D1DF247003F2BF4 /* SBMemoryRegionInfoList.h in Headers */ = {isa = PBXBuildFile; fileRef = 264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -270,10 +269,6 @@
 		265205A813D3E3F700132FE2 /* RegisterContextKDP_arm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265205A213D3E3F700132FE2 /* RegisterContextKDP_arm.cpp */; };
 		265205AA13D3E3F700132FE2 /* RegisterContextKDP_i386.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265205A413D3E3F700132FE2 /* RegisterContextKDP_i386.cpp */; };
 		265205AC13D3E3F700132FE2 /* RegisterContextKDP_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265205A613D3E3F700132FE2 /* RegisterContextKDP_x86_64.cpp */; };
-		2656BBC31AE0739C00441749 /* libedit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C32A10F3DFDD009D5894 /* libedit.dylib */; };
-		2656BBC41AE073A800441749 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2670F8111862B44A006B332C /* libncurses.dylib */; };
-		2656BBC51AE073AD00441749 /* libpanel.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 260157C41885F4FF00F875CF /* libpanel.dylib */; };
-		2656BBC61AE073B500441749 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 966C6B7818E6A56A0093F5EC /* libz.dylib */; };
 		2657AFB71B86910100958979 /* CompilerDeclContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2657AFB61B86910100958979 /* CompilerDeclContext.cpp */; };
 		2660AAB914622483003A9694 /* LLDBWrapPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A4EEB511682AAC007A372A /* LLDBWrapPython.cpp */; settings = {COMPILER_FLAGS = "-Dregister="; }; };
 		26651A18133BF9E0005B64B7 /* Opcode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26651A17133BF9DF005B64B7 /* Opcode.cpp */; };
@@ -796,7 +791,6 @@
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
 		49E431651BB5ED070085B52D /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
-		49FA9B44192282A100EE381B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9438E18B19217ABA00AE7A2A /* main.swift */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
@@ -875,7 +869,6 @@
 		942612F71B95000000EF842E /* LanguageCategory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942612F61B95000000EF842E /* LanguageCategory.cpp */; };
 		942612F81B952C9B00EF842E /* ObjCLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */; };
 		942829561A89614C00521B30 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942829551A89614C00521B30 /* JSON.cpp */; };
-		942829CC1A89839300521B30 /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
 		9428BC2C1C6E64E4002A24D7 /* LibCxxAtomic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */; };
 		942B8F781AC48287008C2EEF /* RegisterContextFreeBSD_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942B8F761AC48282008C2EEF /* RegisterContextFreeBSD_arm64.cpp */; };
 		942B8F7B1AC482E9008C2EEF /* RegisterContextPOSIX_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942B8F791AC482E5008C2EEF /* RegisterContextPOSIX_arm64.cpp */; };
@@ -1036,7 +1029,6 @@
 		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
 		AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */; };
 		AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */; };
-		AF63C3A61A9FCFDD00D6A6B5 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E08D1A033C700096C0EA /* ABISysV_ppc.cpp */; };
 		AF77E0931A033C7F0096C0EA /* ABISysV_ppc64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E0911A033C7F0096C0EA /* ABISysV_ppc64.cpp */; };
 		AF77E0A11A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E09A1A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp */; };
@@ -1334,17 +1326,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AF63C3A51A9FCFCF00D6A6B5 /* Copy Files */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 12;
-			dstPath = LLDB.framework/Resources;
-			dstSubfolderSpec = 16;
-			files = (
-				AF63C3A61A9FCFDD00D6A6B5 /* repl_swift in Copy Files */,
-			);
-			name = "Copy Files";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		AF90106415AB7D2900FF120D /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
@@ -1568,7 +1549,6 @@
 		257E47161AA56C2000A62F81 /* ModuleCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ModuleCache.h; path = source/Utility/ModuleCache.h; sourceTree = "<group>"; };
 		25EF23751AC09AD800908DF0 /* AdbClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdbClient.cpp; sourceTree = "<group>"; };
 		25EF23761AC09AD800908DF0 /* AdbClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdbClient.h; sourceTree = "<group>"; };
-		260157C41885F4FF00F875CF /* libpanel.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpanel.dylib; path = /usr/lib/libpanel.dylib; sourceTree = "<absolute>"; };
 		260223E7115F06D500A601A2 /* SBCommunication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBCommunication.h; path = include/lldb/API/SBCommunication.h; sourceTree = "<group>"; };
 		260223E8115F06E500A601A2 /* SBCommunication.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBCommunication.cpp; path = source/API/SBCommunication.cpp; sourceTree = "<group>"; };
 		26022531115F27FA00A601A2 /* SBFileSpec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBFileSpec.h; path = include/lldb/API/SBFileSpec.h; sourceTree = "<group>"; };
@@ -3377,19 +3357,6 @@
 				26F5C32D10F3DFDD009D5894 /* libtermcap.dylib in Frameworks */,
 				2668035C11601108008E1FE4 /* LLDB.framework in Frameworks */,
 				966C6B7918E6A56A0093F5EC /* libz.dylib in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		26F8EA1418F6096400EFD6B1 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				2656BBC31AE0739C00441749 /* libedit.dylib in Frameworks */,
-				2656BBC61AE073B500441749 /* libz.dylib in Frameworks */,
-				2656BBC51AE073AD00441749 /* libpanel.dylib in Frameworks */,
-				263F921F1B4DFEEE001244A6 /* CoreFoundation.framework in Frameworks */,
-				2656BBC41AE073A800441749 /* libncurses.dylib in Frameworks */,
-				942829CC1A89839300521B30 /* liblldb-core.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7049,8 +7016,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 26F8EA2118F6096500EFD6B1 /* Build configuration list for PBXNativeTarget "repl_swift" */;
 			buildPhases = (
-				26F8EA1318F6096400EFD6B1 /* Sources */,
-				26F8EA1418F6096400EFD6B1 /* Frameworks */,
 				26B60735191A961000523C8D /* Compile REPL */,
 			);
 			buildRules = (
@@ -7339,6 +7304,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ -n \"${DEBUGSERVER_DELETE_AFTER_BUILD}\" ]\n    then\n        rm -f \"${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/debugserver\"\n    fi\nfi\n";
+		};
+		49ACF8361E3AF8A900FAF7FC /* Copy repl_swift */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy repl_swift";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -e \"${BUILT_PRODUCTS_DIR}/repl_swift\" ]\nthen\n    cp \"${BUILT_PRODUCTS_DIR}/repl_swift\" \"${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources\"\nfi";
 		};
 		49DD45051B4EDB4A00DB3579 /* Install Swift compiler resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -8330,14 +8309,6 @@
 			files = (
 				26F5C27710F3D9E4009D5894 /* Driver.cpp in Sources */,
 				9AA69DA61188F52100D753A0 /* PseudoTerminal.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		26F8EA1318F6096400EFD6B1 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				49FA9B44192282A100EE381B /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -12225,13 +12196,9 @@
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
@@ -12267,13 +12234,9 @@
 				);
 				FRAMEWORK_VERSION = A;
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "resources/LLDB-Info.plist";
 				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)";
@@ -12364,12 +12327,8 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -13904,12 +13863,8 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
-					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
