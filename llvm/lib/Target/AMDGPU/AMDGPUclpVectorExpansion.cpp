@@ -5,7 +5,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief vector builtin expansion engine for clp.
+/// \brief Vector builtin expansion engine for clp.
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPU.h"
