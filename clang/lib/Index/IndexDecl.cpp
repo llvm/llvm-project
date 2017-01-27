@@ -92,7 +92,13 @@ public:
       Relations.emplace_back((unsigned)SymbolRole::RelationAccessorOf,
                              AssociatedProp);
 
-    if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic, Relations))
+    // getLocation() returns beginning token of a method declaration, but for
+    // indexing purposes we want to point to the base name.
+    SourceLocation MethodLoc = D->getSelectorStartLoc();
+    if (MethodLoc.isInvalid())
+      MethodLoc = D->getLocation();
+
+    if (!IndexCtx.handleDecl(D, MethodLoc, (unsigned)SymbolRole::Dynamic, Relations))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
     bool hasIBActionAndFirst = D->hasAttr<IBActionAttr>();

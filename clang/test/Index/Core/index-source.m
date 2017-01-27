@@ -3,10 +3,10 @@
 @interface Base
 // CHECK: [[@LINE-1]]:12 | class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Decl | rel: 0
 -(void)meth;
-// CHECK: [[@LINE-1]]:1 | instance-method/ObjC | meth | c:objc(cs)Base(im)meth | -[Base meth] | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE-1]]:8 | instance-method/ObjC | meth | c:objc(cs)Base(im)meth | -[Base meth] | Decl,Dyn,RelChild | rel: 1
 // CHECK-NEXT: RelChild | Base | c:objc(cs)Base
 +(Base*)class_meth;
-// CHECK: [[@LINE-1]]:1 | class-method/ObjC | class_meth | c:objc(cs)Base(cm)class_meth | +[Base class_meth] | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE-1]]:9 | class-method/ObjC | class_meth | c:objc(cs)Base(cm)class_meth | +[Base class_meth] | Decl,Dyn,RelChild | rel: 1
 // CHECK: [[@LINE-2]]:3 | class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | class_meth | c:objc(cs)Base(cm)class_meth
 
@@ -92,7 +92,7 @@ extern int setjmp(jmp_buf);
 
 @class I1;
 @interface I1
-// CHECK: [[@LINE+1]]:1 | instance-method/ObjC | meth | c:objc(cs)I1(im)meth | -[I1 meth] | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:8 | instance-method/ObjC | meth | c:objc(cs)I1(im)meth | -[I1 meth] | Decl,Dyn,RelChild | rel: 1
 -(void)meth;
 @end
 
@@ -117,7 +117,7 @@ extern int setjmp(jmp_buf);
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 @synthesize prop = _prop;
 
-// CHECK: [[@LINE+5]]:1 | instance-method(IB)/ObjC | doAction:foo: | c:objc(cs)I2(im)doAction:foo: | -[I2 doAction:foo:] | Def,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE+5]]:12 | instance-method(IB)/ObjC | doAction:foo: | c:objc(cs)I2(im)doAction:foo: | -[I2 doAction:foo:] | Def,Dyn,RelChild | rel: 1
 // CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
 // CHECK: [[@LINE+3]]:22 | class/ObjC | I1 | c:objc(cs)I1 | _OBJC_CLASS_$_I1 | Ref,RelCont,RelIBType | rel: 1
 // CHECK-NEXT: RelCont,RelIBType | doAction:foo: | c:objc(cs)I2(im)doAction:foo:
@@ -127,11 +127,11 @@ extern int setjmp(jmp_buf);
 
 @interface I3
 @property (readwrite) id prop;
-// CHECK: [[@LINE+3]]:1 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+3]]:6 | instance-method/acc-get/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Decl,Dyn,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
 // CHECK-NEXT: RelAcc | prop | c:objc(cs)I3(py)prop
 -(id)prop;
-// CHECK: [[@LINE+3]]:1 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Decl,Dyn,RelChild,RelAcc | rel: 2
+// CHECK: [[@LINE+3]]:8 | instance-method/acc-set/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Decl,Dyn,RelChild,RelAcc | rel: 2
 // CHECK-NEXT: RelChild | I3 | c:objc(cs)I3
 // CHECK-NEXT: RelAcc | prop | c:objc(cs)I3(py)prop
 -(void)setProp:(id)p;
