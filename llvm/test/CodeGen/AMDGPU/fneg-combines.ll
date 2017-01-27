@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -enable-unsafe-fp-math -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -7,8 +8,12 @@
 ; GCN-LABEL: {{^}}v_fneg_add_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_sub_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[B]]
-; GCN-NEXT: buffer_store_dword [[RESULT]]
+
+; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
+
+; GCN-NSZ: v_sub_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[B]]
+; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
 define void @v_fneg_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -72,8 +77,12 @@ define void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out, float addrsp
 ; GCN-LABEL: {{^}}v_fneg_add_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-NEXT: buffer_store_dword [[ADD]]
+
+; GCN-SAFE: v_subrev_f32_e32
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000,
+
+; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -92,8 +101,12 @@ define void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN-LABEL: {{^}}v_fneg_add_x_fneg_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
-; GCN-NEXT: buffer_store_dword [[ADD]]
+
+; GCN-SAFE: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
+
+; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -112,8 +125,12 @@ define void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)*
 ; GCN-LABEL: {{^}}v_fneg_add_fneg_fneg_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-NEXT: buffer_store_dword [[ADD]]
+
+; GCN-SAFE: v_sub_f32_e64 [[ADD:v[0-9]+]], -[[A]], [[B]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
+
+; GCN-NSZ: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -133,10 +150,16 @@ define void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(
 ; GCN-LABEL: {{^}}v_fneg_add_store_use_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; GCN-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-NEXT: buffer_store_dword [[NEG_ADD]]
-; GCN-NEXT: buffer_store_dword [[NEG_A]]
+
+; GCN-SAFE: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1{{$}}
+; GCN-SAFE: v_xor_b32_e32 [[NEG_A:v[0-9]+]], [[A]], [[SIGNBIT]]
+; GCN-SAFE: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-SAFE: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], [[ADD]], [[SIGNBIT]]
+
+; GCN-NSZ-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
+; GCN-NSZ-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
+; GCN-NSZ-NEXT: buffer_store_dword [[NEG_A]]
 define void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -156,10 +179,15 @@ define void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN-LABEL: {{^}}v_fneg_add_multi_use_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
-; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
-; GCN-NEXT: buffer_store_dword [[NEG_ADD]]
-; GCN-NEXT: buffer_store_dword [[MUL]]
+
+; GCN-SAFE-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
+; GCN-SAFE-DAG: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
+
+; GCN-NSZ-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
+; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
+; GCN-NSZ-NEXT: buffer_store_dword [[MUL]]
 define void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float %c) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -362,8 +390,12 @@ define void @v_fneg_mul_multi_use_fneg_x_f32(float addrspace(1)* %out, float add
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[RESULT]]
+
+; GCN-SAFE: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], [[C]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[RESULT]]
+
+; GCN-NSZ: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
 define void @v_fneg_fma_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -436,8 +468,12 @@ define void @v_fneg_fma_multi_use_fma_f32(float addrspace(1)* %out, float addrsp
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
+
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], -[[A]], [[B]], [[C]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 define void @v_fneg_fma_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -459,8 +495,12 @@ define void @v_fneg_fma_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
+
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], [[C]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 define void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -482,8 +522,12 @@ define void @v_fneg_fma_x_fneg_y_f32(float addrspace(1)* %out, float addrspace(1
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
+
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], -[[A]], -[[B]], [[C]]
+; GCN-SAFE: v_xor_b32_e32 v{{[[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 define void @v_fneg_fma_fneg_fneg_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -506,8 +550,12 @@ define void @v_fneg_fma_fneg_fneg_y_f32(float addrspace(1)* %out, float addrspac
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], [[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
+
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], -[[A]], [[B]], -[[C]]
+; GCN-SAFE: v_xor_b32_e32 v{{[[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], [[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 define void @v_fneg_fma_fneg_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -530,8 +578,12 @@ define void @v_fneg_fma_fneg_x_fneg_f32(float addrspace(1)* %out, float addrspac
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], [[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
+
+; GCN-NSZ-SAFE: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
+; GCN-NSZ-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ: v_fma_f32 [[FMA:v[0-9]+]], [[A]], -[[B]], [[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
 define void @v_fneg_fma_x_y_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -553,10 +605,15 @@ define void @v_fneg_fma_x_y_fneg_f32(float addrspace(1)* %out, float addrspace(1
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; GCN-DAG: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[FMA]]
-; GCN-NEXT: buffer_store_dword [[NEG_A]]
+
+; GCN-SAFE: v_xor_b32
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]], -[[A]],
+; GCN-SAFE: v_xor_b32
+
+; GCN-NSZ-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
+; GCN-NSZ-DAG: v_fma_f32 [[FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[FMA]]
+; GCN-NSZ-NEXT: buffer_store_dword [[NEG_A]]
 define void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -579,10 +636,14 @@ define void @v_fneg_fma_store_use_fneg_x_y_f32(float addrspace(1)* %out, float a
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
-; GCN-DAG: v_fma_f32 [[NEG_FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[NEG_FMA]]
-; GCN-NEXT: buffer_store_dword [[MUL]]
+
+; GCN: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
+; GCN-SAFE: v_fma_f32 [[FMA:v[0-9]+]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[FMA]]
+
+; GCN-NSZ-DAG: v_fma_f32 [[NEG_FMA:v[0-9]+]], [[A]], [[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[NEG_FMA]]
+; GCN-NSZ-NEXT: buffer_store_dword [[MUL]]
 define void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float %d) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -610,8 +671,12 @@ define void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)* %out, float a
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
-; GCN-NEXT: buffer_store_dword [[RESULT]]
+
+; GCN-SAFE: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[C]]
+
+; GCN-NSZ: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
+; GCN-NSZ-NEXT: buffer_store_dword [[RESULT]]
 define void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
