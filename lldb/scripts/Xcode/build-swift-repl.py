@@ -53,11 +53,20 @@ def module_cache_path():
     return os.path.join(lldb_build_path(), "repl_swift_module_cache")
 
 
+def inhibit_repl():
+    return False
+   
 def swiftc_path():
-    return os.path.join(
-        lldbbuild.expected_package_build_path_for("swift"),
-        "bin",
-        "swiftc")
+    ret = ""
+    if os.environ.get("CONFIGURATION") == "BuildAndIntegration":
+        ret = os.path.join(os.environ.get("TOOLCHAIN_DIR"), "usr", "bin", "swiftc")
+    else:
+        ret = os.path.join(
+            lldbbuild.expected_package_build_path_for("swift"),
+            "bin",
+            "swiftc")
+    print "swiftc is at " + ret
+    return ret
 
 
 def swift_target():
@@ -117,8 +126,9 @@ def strip_args_for_repl():
 
 # Core logic
 
-check_args()
-lldbbuild.run_in_directory(swiftc_args_for_repl(), lldb_build_path())
-lldbbuild.run_in_directory(strip_args_for_repl(), lldb_build_path())
+if not inhibit_repl():
+	check_args()
+	lldbbuild.run_in_directory(swiftc_args_for_repl(), lldb_build_path())
+	lldbbuild.run_in_directory(strip_args_for_repl(), lldb_build_path())
 
 sys.exit(0)
