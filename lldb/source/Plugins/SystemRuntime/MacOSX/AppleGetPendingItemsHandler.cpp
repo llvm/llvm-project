@@ -140,7 +140,7 @@ void AppleGetPendingItemsHandler::Detach() {
 lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
     Thread &thread, ValueList &get_pending_items_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
   DiagnosticManager diagnostics;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 

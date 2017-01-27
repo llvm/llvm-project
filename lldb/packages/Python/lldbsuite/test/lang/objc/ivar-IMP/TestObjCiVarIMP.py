@@ -31,6 +31,7 @@ class ObjCiVarIMPTestCase(TestBase):
 
     @skipUnlessDarwin
     @no_debug_info_test
+    @expectedFailureDarwin("rdar://23590082")
     def test_imp_ivar_type(self):
         """Test that dynamically discovered ivars of type IMP do not crash LLDB"""
         execute_command("make repro")

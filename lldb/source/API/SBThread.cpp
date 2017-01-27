@@ -425,6 +425,24 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 }
 
 SBValue SBThread::GetStopReturnValue() {
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopErrorValue() {
+  bool is_swift_error_value = false;
+  SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
+  if (!is_swift_error_value)
+    return SBValue();
+  else
+    return return_value;
+}
+
+SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
@@ -435,7 +453,8 @@ SBValue SBThread::GetStopReturnValue() {
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
       if (stop_info_sp) {
-        return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
+        return_valobj_sp =
+            StopInfo::GetReturnValueObject(stop_info_sp, is_swift_error_value);
       }
     } else {
       if (log)

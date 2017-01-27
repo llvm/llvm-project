@@ -352,8 +352,9 @@ void HexagonDYLDRendezvous::DumpToLog(Log *log) const {
   log->Printf("   State  : %s",
               (state == eConsistent)
                   ? "consistent"
-                  : (state == eAdd) ? "add" : (state == eDelete) ? "delete"
-                                                                 : "unknown");
+                  : (state == eAdd)
+                        ? "add"
+                        : (state == eDelete) ? "delete" : "unknown");
 
   iterator I = begin();
   iterator E = end();

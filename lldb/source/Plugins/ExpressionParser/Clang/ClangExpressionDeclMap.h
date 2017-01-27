@@ -445,7 +445,7 @@ private:
   /// Get this parser's ID for use in extracting parser- and JIT-specific
   /// data from persistent variables.
   //----------------------------------------------------------------------
-  uint64_t GetParserID() { return (uint64_t) this; }
+  uint64_t GetParserID() { return (uint64_t)this; }
 
   //------------------------------------------------------------------
   /// Given a target, find a data symbol that has the given name.

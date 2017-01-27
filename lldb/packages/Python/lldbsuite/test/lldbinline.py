@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
+import lldbsuite.test.test_categories as test_categories
 # System modules
 import os
 
@@ -22,7 +26,8 @@ def source_type(filename):
         '.cxx': 'CXX_SOURCES',
         '.cc': 'CXX_SOURCES',
         '.m': 'OBJC_SOURCES',
-        '.mm': 'OBJCXX_SOURCES'
+        '.mm': 'OBJCXX_SOURCES',
+        '.swift': 'SWIFT_SOURCES'
     }.get(extension, None)
 
 

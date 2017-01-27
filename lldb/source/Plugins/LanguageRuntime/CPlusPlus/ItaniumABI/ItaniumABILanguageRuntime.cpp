@@ -44,8 +44,9 @@ static const char *vtable_demangled_prefix = "vtable for ";
 bool ItaniumABILanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
   const bool check_cxx = true;
   const bool check_objc = false;
-  return in_value.GetCompilerType().IsPossibleDynamicType(NULL, check_cxx,
-                                                          check_objc);
+  const bool check_swift = false;
+  return in_value.GetCompilerType().IsPossibleDynamicType(
+      NULL, check_cxx, check_objc, check_swift);
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(

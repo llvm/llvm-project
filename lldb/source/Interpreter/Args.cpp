@@ -1322,6 +1322,88 @@ void Args::ParseArgsForCompletion(Options &options,
   }
 }
 
+bool Args::GetOptionValueAsString(const char *option, std::string &value) {
+  for (size_t ai = 0, ae = GetArgumentCount(); ai != ae; ++ai) {
+    const char *arg = GetArgumentAtIndex(ai);
+    const char *option_loc = strstr(arg, option);
+
+    const bool is_long_option = (option[0] == '-' && option[1] == '-');
+
+    if (option_loc == arg) {
+      const char *after_option = option_loc + strlen(option);
+
+      switch (*after_option) {
+      default:
+        if (is_long_option) {
+          continue;
+        } else {
+          value = after_option;
+          return true;
+        }
+        break;
+      case '=':
+        value = after_option + 1;
+        return true;
+      case '\0': {
+        const char *next_value = GetArgumentAtIndex(ai + 1);
+        if (next_value) {
+          value = next_value;
+          return true;
+        } else {
+          return false;
+        }
+      }
+      }
+    }
+  }
+
+  return false;
+}
+
+int Args::GetOptionValuesAsStrings(const char *option,
+                                   std::vector<std::string> &value) {
+  int ret = 0;
+
+  for (size_t ai = 0, ae = GetArgumentCount(); ai != ae; ++ai) {
+    const char *arg = GetArgumentAtIndex(ai);
+    const char *option_loc = strstr(arg, option);
+
+    const bool is_long_option = (option[0] == '-' && option[1] == '-');
+
+    if (option_loc == arg) {
+      const char *after_option = option_loc + strlen(option);
+
+      switch (*after_option) {
+      default:
+        if (is_long_option) {
+          continue;
+        } else {
+          value.push_back(after_option);
+          ++ret;
+        }
+        break;
+      case '=':
+        value.push_back(after_option + 1);
+        ++ret;
+        break;
+      case '\0': {
+        const char *next_value = GetArgumentAtIndex(ai + 1);
+        if (next_value) {
+          value.push_back(next_value);
+          ++ret;
+          ++ai;
+          break;
+        } else {
+          return ret;
+        }
+      }
+      }
+    }
+  }
+
+  return ret;
+}
+
 void Args::EncodeEscapeSequences(const char *src, std::string &dst) {
   dst.clear();
   if (src) {

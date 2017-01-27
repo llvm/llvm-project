@@ -25,6 +25,10 @@ class TestObjCStructArgument(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(
+        oslist=["macosx"],
+        debug_info="gmodules",
+        bugnumber="rdar://26558169,bugs.swift.org/SR-1766")
     def test_with_python_api(self):
         """Test passing structs to Objective-C methods."""
         self.build()

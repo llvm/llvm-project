@@ -527,6 +527,30 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
 
   UpdateBaseAddrIfNecessary(entry, file_path);
 
+  // The base_addr is not filled in for some case.
+  // Try to figure it out based on the load address of the object file.
+  // The issue observed for '/system/bin/linker' on Android L (5.0, 5.1)
+  if (entry.base_addr == 0) {
+    lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+    bool is_loaded = false;
+    Error error =
+        m_process->GetFileLoadAddress(entry.file_spec, is_loaded, load_addr);
+    if (error.Success() && is_loaded)
+      entry.base_addr = load_addr;
+  }
+
+  // The base_addr is not filled in for some case.
+  // Try to figure it out based on the load address of the object file.
+  // The issue observed for '/system/bin/linker' on Android L (5.0, 5.1)
+  if (entry.base_addr == 0) {
+    lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+    bool is_loaded = false;
+    Error error =
+        m_process->GetFileLoadAddress(entry.file_spec, is_loaded, load_addr);
+    if (error.Success() && is_loaded)
+      entry.base_addr = load_addr;
+  }
+
   return true;
 }
 
@@ -591,8 +615,9 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
   log->Printf("   State  : %s",
               (state == eConsistent)
                   ? "consistent"
-                  : (state == eAdd) ? "add" : (state == eDelete) ? "delete"
-                                                                 : "unknown");
+                  : (state == eAdd)
+                        ? "add"
+                        : (state == eDelete) ? "delete" : "unknown");
 
   iterator I = begin();
   iterator E = end();

@@ -113,6 +113,10 @@ const char *lldb_private::GetSectionTypeAsCString(lldb::SectionType sect_type) {
     return "absolute";
   case eSectionTypeOther:
     return "regular";
+  case eSectionTypeSwiftModules:
+    return "swift-modules";
+  case eSectionTypeDWARFAppleExternalTypes:
+    return "apple-external-types";
   }
   return "unknown";
 }

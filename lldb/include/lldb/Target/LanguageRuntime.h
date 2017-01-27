@@ -128,6 +128,11 @@ public:
                               bool throw_bp);
   Process *GetProcess() { return m_process; }
 
+  static lldb::LanguageType
+  GuessLanguageForSymbolByName(Target &target, const char *symbol_name);
+
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
+
   Target &GetTargetRef() { return m_process->GetTarget(); }
 
   virtual lldb::BreakpointResolverSP

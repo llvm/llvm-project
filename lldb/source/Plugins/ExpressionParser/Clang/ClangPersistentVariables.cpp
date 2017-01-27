@@ -8,12 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangPersistentVariables.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
 
+#include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)
+#include "lldb/Symbol/TypeSystem.h"
+
+#include "swift/AST/Decl.h"
+#include "swift/AST/Pattern.h"
 #include "clang/AST/Decl.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -23,7 +29,7 @@ using namespace lldb_private;
 
 ClangPersistentVariables::ClangPersistentVariables()
     : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
-      m_next_persistent_variable_id(0) {}
+      m_next_persistent_variable_id(0), m_next_persistent_error_id(0) {}
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
     const lldb::ValueObjectSP &valobj_sp) {
@@ -40,6 +46,9 @@ ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
 
 void ClangPersistentVariables::RemovePersistentVariable(
     lldb::ExpressionVariableSP variable) {
+  if (!variable)
+    return;
+
   RemoveVariable(variable);
 
   const char *name = variable->GetName().AsCString();
@@ -48,14 +57,56 @@ void ClangPersistentVariables::RemovePersistentVariable(
     return;
   name++;
 
-  if (strtoul(name, NULL, 0) == m_next_persistent_variable_id - 1)
-    m_next_persistent_variable_id--;
+  bool is_error = false;
+
+  if (llvm::isa<SwiftASTContext>(variable->GetCompilerType().GetTypeSystem())) {
+    switch (*name) {
+    case 'R':
+      break;
+    case 'E':
+      is_error = true;
+      break;
+    default:
+      return;
+    }
+    name++;
+  }
+
+  uint32_t value = strtoul(name, NULL, 0);
+  if (is_error) {
+    if (value == m_next_persistent_error_id - 1)
+      m_next_persistent_error_id--;
+  } else {
+    if (value == m_next_persistent_variable_id - 1)
+      m_next_persistent_variable_id--;
+  }
 }
 
-ConstString ClangPersistentVariables::GetNextPersistentVariableName() {
+ConstString
+ClangPersistentVariables::GetNextPersistentVariableName(bool is_error) {
   char name_cstr[256];
-  ::snprintf(name_cstr, sizeof(name_cstr), "$%u",
-             m_next_persistent_variable_id++);
+
+  const char *prefix = "$";
+
+  /* THIS NEEDS TO BE HANDLED BY SWIFT-SPECIFIC CODE
+      switch (language_type)
+      {
+      default:
+          break;
+      case lldb::eLanguageTypePLI:
+      case lldb::eLanguageTypeSwift:
+          if (is_error)
+              prefix = "$E";
+          else
+              prefix = "$R";
+          break;
+      }
+   */
+
+  ::snprintf(name_cstr, sizeof(name_cstr), "%s%u", prefix,
+             is_error ? m_next_persistent_error_id++
+                      : m_next_persistent_variable_id++);
+
   ConstString name(name_cstr);
   return name;
 }

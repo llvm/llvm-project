@@ -14,6 +14,8 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -84,6 +86,53 @@ TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
   if (type_system)
     type_system->SetSymbolFile(this);
   return type_system;
+}
+
+bool SymbolFile::ForceInlineSourceFileCheck() {
+  // Force checking for inline breakpoint locations for any JIT object files.
+  // If we have a symbol file for something that has been JIT'ed, chances
+  // are we used "#line" directives to point to the expression code and this
+  // means we will have DWARF line tables that have source implementation
+  // entries that do not match the compile unit source (usually a memory buffer)
+  // file. Returning true for JIT files means all breakpoints set by file and
+  // line
+  // will be found correctly.
+  return m_obj_file->GetType() == ObjectFile::eTypeJIT;
+}
+
+bool SymbolFile::SetLimitSourceFileRange(const FileSpec &file,
+                                         uint32_t first_line,
+                                         uint32_t last_line) {
+  if (file && first_line <= last_line) {
+    m_limit_source_ranges.push_back(SourceRange(file, first_line, last_line));
+    return true;
+  }
+  return false;
+}
+
+bool SymbolFile::SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                               uint32_t actual_line) {
+  if (!m_limit_source_ranges.empty()) {
+    bool file_match = false;
+    bool line_match = false;
+    for (const auto &range : m_limit_source_ranges) {
+      const auto &line_entry = sc.line_entry;
+      if (range.file == line_entry.file) {
+        file_match = true;
+        if (range.first_line <= actual_line && actual_line <= range.last_line)
+          line_match = true;
+      }
+    }
+    if (file_match && !line_match)
+      return true;
+  }
+  return false;
+}
+
+std::vector<lldb::DataBufferSP>
+SymbolFile::GetASTData(lldb::LanguageType language) {
+  // SymbolFile subclasses must add this functionality
+  return std::vector<lldb::DataBufferSP>();
 }
 
 uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,

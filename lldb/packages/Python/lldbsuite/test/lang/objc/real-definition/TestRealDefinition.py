@@ -54,6 +54,10 @@ class TestRealDefinition(TestBase):
                 "foo->_bar->_hidden_ivar = 0x"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        "rdar://23963377",
+        oslist=["macosx"],
+        debug_info="dsym")
     def test_frame_var_after_stop_at_implementation(self):
         """Test that we can find the implementation for an objective C type"""
         if self.getArchitecture() == 'i386':

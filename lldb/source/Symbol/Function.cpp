@@ -112,7 +112,7 @@ ConstString InlineFunctionInfo::GetName(LanguageType language) const {
 ConstString InlineFunctionInfo::GetDisplayName(LanguageType language) const {
   if (m_mangled)
     return m_mangled.GetDisplayDemangledName(language);
-  return m_name;
+  return GetName(language);
 }
 
 Declaration &InlineFunctionInfo::GetCallSite() { return m_call_decl; }
@@ -347,6 +347,8 @@ bool Function::IsTopLevelFunction() {
 }
 
 ConstString Function::GetDisplayName() const {
+  if (!m_mangled)
+    return GetName();
   return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 

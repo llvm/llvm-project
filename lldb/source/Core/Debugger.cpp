@@ -15,10 +15,13 @@
 #include <mutex>
 
 // Other libraries and framework includes
+#include "swift/Basic/Version.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 // Project includes
+#include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
@@ -42,6 +45,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
 #include "lldb/Interpreter/OptionValueString.h"
@@ -49,6 +53,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -63,6 +68,69 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+inline std::string FormatAnsiTerminalCodes(const char *format,
+                                           bool do_color = true) {
+  // Convert "${ansi.XXX}" tokens to ansi values or clear them if do_color is
+  // false.
+  static const struct {
+    const char *name;
+    const char *value;
+  } g_color_tokens[] = {
+      {"fg.black}", ANSI_ESCAPE1(ANSI_FG_COLOR_BLACK)},
+      {"fg.red}", ANSI_ESCAPE1(ANSI_FG_COLOR_RED)},
+      {"fg.green}", ANSI_ESCAPE1(ANSI_FG_COLOR_GREEN)},
+      {"fg.yellow}", ANSI_ESCAPE1(ANSI_FG_COLOR_YELLOW)},
+      {"fg.blue}", ANSI_ESCAPE1(ANSI_FG_COLOR_BLUE)},
+      {"fg.purple}", ANSI_ESCAPE1(ANSI_FG_COLOR_PURPLE)},
+      {"fg.cyan}", ANSI_ESCAPE1(ANSI_FG_COLOR_CYAN)},
+      {"fg.white}", ANSI_ESCAPE1(ANSI_FG_COLOR_WHITE)},
+      {"bg.black}", ANSI_ESCAPE1(ANSI_BG_COLOR_BLACK)},
+      {"bg.red}", ANSI_ESCAPE1(ANSI_BG_COLOR_RED)},
+      {"bg.green}", ANSI_ESCAPE1(ANSI_BG_COLOR_GREEN)},
+      {"bg.yellow}", ANSI_ESCAPE1(ANSI_BG_COLOR_YELLOW)},
+      {"bg.blue}", ANSI_ESCAPE1(ANSI_BG_COLOR_BLUE)},
+      {"bg.purple}", ANSI_ESCAPE1(ANSI_BG_COLOR_PURPLE)},
+      {"bg.cyan}", ANSI_ESCAPE1(ANSI_BG_COLOR_CYAN)},
+      {"bg.white}", ANSI_ESCAPE1(ANSI_BG_COLOR_WHITE)},
+      {"normal}", ANSI_ESCAPE1(ANSI_CTRL_NORMAL)},
+      {"bold}", ANSI_ESCAPE1(ANSI_CTRL_BOLD)},
+      {"faint}", ANSI_ESCAPE1(ANSI_CTRL_FAINT)},
+      {"italic}", ANSI_ESCAPE1(ANSI_CTRL_ITALIC)},
+      {"underline}", ANSI_ESCAPE1(ANSI_CTRL_UNDERLINE)},
+      {"slow-blink}", ANSI_ESCAPE1(ANSI_CTRL_SLOW_BLINK)},
+      {"fast-blink}", ANSI_ESCAPE1(ANSI_CTRL_FAST_BLINK)},
+      {"negative}", ANSI_ESCAPE1(ANSI_CTRL_IMAGE_NEGATIVE)},
+      {"conceal}", ANSI_ESCAPE1(ANSI_CTRL_CONCEAL)},
+      {"crossed-out}", ANSI_ESCAPE1(ANSI_CTRL_CROSSED_OUT)},
+  };
+  static const char tok_hdr[] = "${ansi.";
+
+  std::string fmt;
+  for (const char *p = format; *p; ++p) {
+    const char *tok_start = strstr(p, tok_hdr);
+    if (!tok_start) {
+      fmt.append(p, strlen(p));
+      break;
+    }
+
+    fmt.append(p, tok_start - p);
+    p = tok_start;
+
+    const char *tok_str = tok_start + sizeof(tok_hdr) - 1;
+    for (size_t i = 0; i < sizeof(g_color_tokens) / sizeof(g_color_tokens[0]);
+         ++i) {
+      if (!strncmp(tok_str, g_color_tokens[i].name,
+                   strlen(g_color_tokens[i].name))) {
+        if (do_color)
+          fmt.append(g_color_tokens[i].value);
+        p = tok_str + strlen(g_color_tokens[i].name) - 1;
+        break;
+      }
+    }
+  }
+  return fmt;
+}
 
 static lldb::user_id_t g_unique_id = 1;
 static size_t g_debugger_event_thread_stack_bytes = 8 * 1024 * 1024;
@@ -1047,6 +1115,42 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp) {
   }
 }
 
+// Pop 2 IOHandlers and don't active the second one after the first is popped
+uint32_t Debugger::PopIOHandlers(const IOHandlerSP &reader1_sp,
+                                 const IOHandlerSP &reader2_sp) {
+  uint32_t result = 0;
+
+  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+
+  // The reader on the stop of the stack is done, so let the next
+  // read on the stack refresh its prompt and if there is one...
+  if (!m_input_reader_stack.IsEmpty()) {
+    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+
+    if (!reader1_sp || reader1_sp.get() == reader_sp.get()) {
+      reader_sp->Deactivate();
+      reader_sp->Cancel();
+      m_input_reader_stack.Pop();
+      ++result;
+
+      reader_sp = m_input_reader_stack.Top();
+
+      if (reader2_sp && reader2_sp.get() == reader_sp.get()) {
+        m_input_reader_stack.Pop();
+        ++result;
+        reader_sp = m_input_reader_stack.Top();
+      }
+
+      if (reader_sp)
+        reader_sp->Activate();
+
+    } else if (PopIOHandler(reader2_sp)) {
+      ++result;
+    }
+  }
+  return result;
+}
+
 bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   if (!pop_reader_sp)
     return false;
@@ -1397,6 +1501,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   if (!gui_enabled) {
     bool pop_process_io_handler = false;
+    bool pop_command_interpreter = false;
     assert(process_sp);
 
     bool state_is_stopped = false;
@@ -1416,7 +1521,8 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     // Now display and STDOUT
@@ -1462,14 +1568,15 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     output_stream_sp->Flush();
     error_stream_sp->Flush();
 
     if (pop_process_io_handler)
-      process_sp->PopProcessIOHandler();
+      process_sp->PopProcessIOHandler(pop_command_interpreter);
   }
 }
 

@@ -13,6 +13,7 @@
 
 // Other libraries and framework includes
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -637,7 +638,14 @@ ClangModulesDeclVendor::Create(Target &target) {
                                                     source_buffer.release());
 
   std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+      new clang::CompilerInstance());
+
+  std::shared_ptr<clang::PCHContainerOperations> pch_operations =
+      instance->getPCHContainerOperations();
+  pch_operations->registerWriter(
+      llvm::make_unique<clang::ObjectFilePCHContainerWriter>());
+  pch_operations->registerReader(
+      llvm::make_unique<clang::ObjectFilePCHContainerReader>());
 
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);

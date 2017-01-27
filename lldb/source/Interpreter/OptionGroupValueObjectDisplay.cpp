@@ -47,7 +47,7 @@ static OptionDefinition g_option_table[] = {
      nullptr, 0, eArgTypeNone, "Show variable location information."},
     {LLDB_OPT_SET_1, false, "object-description", 'O',
      OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-     "Print as an Objective-C object."},
+     "Display using a language-specific description API, if possible."},
     {LLDB_OPT_SET_1, false, "ptr-depth", 'P', OptionParser::eRequiredArgument,
      nullptr, nullptr, 0, eArgTypeCount, "The number of pointers to be "
                                          "traversed when dumping values "
