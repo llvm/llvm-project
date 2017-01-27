@@ -12,6 +12,7 @@
 // <deque>
 
 // template <class... Args> reference emplace_back(Args&&... args);
+// return type is 'reference' in C++17; 'void' before
 
 #include <deque>
 #include <cstddef>
@@ -49,15 +50,21 @@ void
 test(C& c1)
 {
     typedef typename C::iterator I;
-    typedef typename C::reference Ref;
     std::size_t c1_osize = c1.size();
+#if TEST_STD_VER > 14
+    typedef typename C::reference Ref;
     Ref ref = c1.emplace_back(Emplaceable(1, 2.5));
+#else
+              c1.emplace_back(Emplaceable(1, 2.5));
+#endif
     assert(c1.size() == c1_osize + 1);
     assert(distance(c1.begin(), c1.end())
                == static_cast<std::ptrdiff_t>(c1.size()));
     I i = c1.end();
     assert(*--i == Emplaceable(1, 2.5));
+#if TEST_STD_VER > 14
     assert(&(*i) == &ref);
+#endif
 }
 
 template <class C>

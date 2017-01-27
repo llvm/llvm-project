@@ -70,9 +70,6 @@ Other notable changes are listed below:
   was disclosed originally on the binutils mailing list at
   `<https://sourceware.org/ml/libc-alpha/2016-12/msg00914.html>`.
 
-* Default image base address for x86-64 has been changed from 0x10000
-  to 0x200000 to make it huge-page friendly.
-
 * Compressed input sections are supported.
 
 * ``--oformat binary``, ``--section-start``, ``-Tbss``, ``-Tdata``,
@@ -83,6 +80,21 @@ Other notable changes are listed below:
 
 * A lot of linker script directives have been added.
 
+* Default image base address for x86-64 has changed from 0x10000 to
+  0x200000 to make it huge-page friendly.
+
+* AArch64 port now supports GNU ifunc, the ARM C++ exceptions ABI, TLS
+  relocations and static linking. Problems with dlopen() on systems
+  using eglibc fixed.
+
+* MIPS port now supports input files in new R6 revision of MIPS ABIs
+  or N32 ABI. Generated file now contains .MIPS.abiflags section and
+  complete set of ELF headers flags.
+
+* Relocations produced by the ``-mxgot`` compiler's flag is supported
+  for MIPS. Now it is possible to generate "large" GOT exceeds 64K
+  limit.
+
 COFF Improvements
 -----------------
 
@@ -90,4 +102,3 @@ COFF Improvements
   linker and optimizing file system operations. As a result of these
   improvements, LLD 4.0 has been measured to be about 2.5 times faster
   than LLD 3.9 when linking a large Chromium DLL.
-
