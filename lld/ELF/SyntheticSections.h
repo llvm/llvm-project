@@ -372,14 +372,14 @@ public:
 
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
+  static const OutputSectionBase *getOutputSection(SymbolBody *Sym);
+
   unsigned NumLocals = 0;
   StringTableSection<ELFT> &StrTabSec;
 
 private:
   void writeLocalSymbols(uint8_t *&Buf);
   void writeGlobalSymbols(uint8_t *Buf);
-
-  const OutputSectionBase *getOutputSection(SymbolBody *Sym);
 
   // A vector of symbols and their string table offsets.
   std::vector<SymbolTableEntry> Symbols;
