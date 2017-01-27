@@ -49,9 +49,9 @@
 
 // RUN: %clang -### -target armv7s-apple-ios8.0 -momit-leaf-frame-pointer %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=WARN-OMIT-LEAF-7S %s
-// WARN-OMIT-LEAF-7S: warning: optimization flag '-momit-leaf-frame-pointer' is not supported for target 'armv7s'
+// WARN-OMIT-LEAF-7S-NOT: warning: optimization flag '-momit-leaf-frame-pointer' is not supported for target 'armv7s'
 // WARN-OMIT-LEAF-7S: "-mdisable-fp-elim"
-// WARN-OMIT-LEAF-7S-NOT: "-momit-leaf-frame-pointer"
+// WARN-OMIT-LEAF-7S: "-momit-leaf-frame-pointer"
 
 // On the PS4, we default to omitting the frame pointer on leaf functions
 // (OMIT_LEAF check line is above)
