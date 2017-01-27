@@ -549,9 +549,9 @@ file, runs :program:`clang-tidy` and verifies messages and fixes with two
 separate `FileCheck`_ invocations: once with FileCheck's directive
 prefix set to ``CHECK-MESSAGES``, validating the diagnostic messages,
 and once with the directive prefix set to ``CHECK-FIXES``, running
-against the fixed code (i.e., the code after generated fixits are
+against the fixed code (i.e., the code after generated fix-its are
 applied). In particular, ``CHECK-FIXES:`` can be used to check
-that code was not modified by fixits, by checking that it is present
+that code was not modified by fix-its, by checking that it is present
 unchanged in the fixed code.  The full set of `FileCheck`_ directives
 is available (e.g., ``CHECK-MESSAGES-SAME:``, ``CHECK-MESSAGES-NOT:``), though
 typically the basic ``CHECK`` forms (``CHECK-MESSAGES`` and ``CHECK-FIXES``)

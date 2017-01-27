@@ -40,6 +40,12 @@
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
+#if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(no_thread_safety_analysis)
+#define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
+#else
+#define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
@@ -102,25 +108,25 @@ typedef DWORD __libcpp_tls_key;
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_mutex_lock(__libcpp_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 bool __libcpp_mutex_trylock(__libcpp_mutex_t *__m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_mutex_unlock(__libcpp_mutex_t *__m);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
@@ -133,10 +139,10 @@ int __libcpp_condvar_signal(__libcpp_condvar_t* __cv);
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m);
 
-_LIBCPP_THREAD_ABI_VISIBILITY
+_LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
                                timespec *__ts);
 

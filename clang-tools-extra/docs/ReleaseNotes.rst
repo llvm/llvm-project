@@ -57,7 +57,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+ - New `modernize-use-noexcept
+   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-noexcept.html>`_ check
+
+   Replaces dynamic exception specifications with ``noexcept`` or a user defined macro.
 
 Improvements to include-fixer
 -----------------------------

@@ -381,7 +381,7 @@ void Initialize(ThreadState *thr) {
   // Initialize thread 0.
   int tid = ThreadCreate(thr, 0, 0, true);
   CHECK_EQ(tid, 0);
-  ThreadStart(thr, tid, internal_getpid());
+  ThreadStart(thr, tid, GetTid());
 #if TSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
 #endif

@@ -196,6 +196,8 @@ tooling::Replacement createInsertion(SourceLocation Loc,
 // Returns the shortest qualified name for declaration `DeclName` in the
 // namespace `NsName`. For example, if `DeclName` is "a::b::X" and `NsName`
 // is "a::c::d", then "b::X" will be returned.
+// Note that if `DeclName` is `::b::X` and `NsName` is `::a::b`, this returns
+// "::b::X" instead of "b::X" since there will be a name conflict otherwise.
 // \param DeclName A fully qualified name, "::a::b::X" or "a::b::X".
 // \param NsName A fully qualified name, "::a::b" or "a::b". Global namespace
 //        will have empty name.
@@ -206,14 +208,42 @@ std::string getShortestQualifiedNameInNamespace(llvm::StringRef DeclName,
   if (DeclName.find(':') == llvm::StringRef::npos)
     return DeclName;
 
-  while (!DeclName.consume_front((NsName + "::").str())) {
-    const auto Pos = NsName.find_last_of(':');
-    if (Pos == llvm::StringRef::npos)
-      return DeclName;
-    assert(Pos > 0);
-    NsName = NsName.substr(0, Pos - 1);
+  llvm::SmallVector<llvm::StringRef, 4> NsNameSplitted;
+  NsName.split(NsNameSplitted, "::", /*MaxSplit=*/-1,
+               /*KeepEmpty=*/false);
+  llvm::SmallVector<llvm::StringRef, 4> DeclNsSplitted;
+  DeclName.split(DeclNsSplitted, "::", /*MaxSplit=*/-1,
+               /*KeepEmpty=*/false);
+  llvm::StringRef UnqualifiedDeclName = DeclNsSplitted.pop_back_val();
+  // If the Decl is in global namespace, there is no need to shorten it.
+  if (DeclNsSplitted.empty())
+    return UnqualifiedDeclName;
+  // If NsName is the global namespace, we can simply use the DeclName sans
+  // leading "::".
+  if (NsNameSplitted.empty())
+    return DeclName;
+
+  if (NsNameSplitted.front() != DeclNsSplitted.front()) {
+    // The DeclName must be fully-qualified, but we still need to decide if a
+    // leading "::" is necessary. For example, if `NsName` is "a::b::c" and the
+    // `DeclName` is "b::X", then the reference must be qualified as "::b::X"
+    // to avoid conflict.
+    if (llvm::is_contained(NsNameSplitted, DeclNsSplitted.front()))
+      return ("::" + DeclName).str();
+    return DeclName;
   }
-  return DeclName;
+  // Since there is already an overlap namespace, we know that `DeclName` can be
+  // shortened, so we reduce the longest common prefix.
+  auto DeclI = DeclNsSplitted.begin();
+  auto DeclE = DeclNsSplitted.end();
+  auto NsI = NsNameSplitted.begin();
+  auto NsE = NsNameSplitted.end();
+  for (; DeclI != DeclE && NsI != NsE && *DeclI == *NsI; ++DeclI, ++NsI) {
+  }
+  return (DeclI == DeclE)
+             ? UnqualifiedDeclName.str()
+             : (llvm::join(DeclI, DeclE, "::") + "::" + UnqualifiedDeclName)
+                   .str();
 }
 
 std::string wrapCodeInNamespace(StringRef NestedNs, std::string Code) {
@@ -673,9 +703,6 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
           Result.SourceManager->getSpellingLoc(Start),
           Result.SourceManager->getSpellingLoc(End)),
       *Result.SourceManager, Result.Context->getLangOpts());
-  // If the symbol is already fully qualified, no change needs to be make.
-  if (NestedName.startswith("::"))
-    return;
   std::string FromDeclName = FromDecl->getQualifiedNameAsString();
   std::string ReplaceName =
       getShortestQualifiedNameInNamespace(FromDeclName, NewNs);
@@ -744,7 +771,8 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
   }
   // If the new nested name in the new namespace is the same as it was in the
   // old namespace, we don't create replacement.
-  if (NestedName == ReplaceName)
+  if (NestedName == ReplaceName ||
+      (NestedName.startswith("::") && NestedName.drop_front(2) == ReplaceName))
     return;
   // If the reference need to be fully-qualified, add a leading "::" unless
   // NewNamespace is the global namespace.
