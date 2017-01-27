@@ -8865,22 +8865,30 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
     return GVA_Internal;
 
   if (VD->isStaticLocal()) {
-    GVALinkage StaticLocalLinkage = GVA_DiscardableODR;
     const DeclContext *LexicalContext = VD->getParentFunctionOrMethod();
     while (LexicalContext && !isa<FunctionDecl>(LexicalContext))
       LexicalContext = LexicalContext->getLexicalParent();
 
-    // Let the static local variable inherit its linkage from the nearest
-    // enclosing function.
-    if (LexicalContext)
-      StaticLocalLinkage =
-          Context.GetGVALinkageForFunction(cast<FunctionDecl>(LexicalContext));
+    // ObjC Blocks can create local variables that don't have a FunctionDecl
+    // LexicalContext.
+    if (!LexicalContext)
+      return GVA_DiscardableODR;
 
-    // GVA_StrongODR function linkage is stronger than what we need,
-    // downgrade to GVA_DiscardableODR.
-    // This allows us to discard the variable if we never end up needing it.
-    return StaticLocalLinkage == GVA_StrongODR ? GVA_DiscardableODR
-                                               : StaticLocalLinkage;
+    // Otherwise, let the static local variable inherit its linkage from the
+    // nearest enclosing function.
+    auto StaticLocalLinkage =
+        Context.GetGVALinkageForFunction(cast<FunctionDecl>(LexicalContext));
+
+    // Itanium ABI 5.2.2: "Each COMDAT group [for a static local variable] must
+    // be emitted in any object with references to the symbol for the object it
+    // contains, whether inline or out-of-line."
+    // Similar behavior is observed with MSVC. An alternative ABI could use
+    // StrongODR/AvailableExternally to match the function, but none are
+    // known/supported currently.
+    if (StaticLocalLinkage == GVA_StrongODR ||
+        StaticLocalLinkage == GVA_AvailableExternally)
+      return GVA_DiscardableODR;
+    return StaticLocalLinkage;
   }
 
   // MSVC treats in-class initialized static data members as definitions.
