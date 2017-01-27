@@ -28,6 +28,16 @@ def repl_executable():
 def repl_source_file():
     return sys.argv[2]
 
+
+def REPLTime_dir():
+    source_file = repl_source_file()
+    source_dir = os.path.dirname(source_file)
+    return os.path.join(source_dir, "REPLTime")
+
+
+def search_args_for_repl():
+    return ["-I" + REPLTime_dir()]
+
 # Xcode interface
 
 
@@ -106,10 +116,9 @@ def module_cache_args_for_repl():
 
 def swiftc_args_for_repl():
     return [swiftc_path(),
-            "-DXCODE_BUILD_ME"] + target_arg_for_repl() + ["-g",
-                                                           "-o",
+            "-DXCODE_BUILD_ME"] + target_arg_for_repl() + ["-o",
                                                            repl_executable(),
-                                                           repl_source_file()] + module_cache_args_for_repl() + linker_args_for_repl()
+                                                           repl_source_file()] + module_cache_args_for_repl() + search_args_for_repl() +  linker_args_for_repl()
 
 
 def strip_args_for_repl():
