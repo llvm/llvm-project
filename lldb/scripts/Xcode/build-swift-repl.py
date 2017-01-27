@@ -116,7 +116,8 @@ def module_cache_args_for_repl():
 
 def swiftc_args_for_repl():
     return [swiftc_path(),
-            "-DXCODE_BUILD_ME"] + target_arg_for_repl() + ["-o",
+            "-DXCODE_BUILD_ME"] + target_arg_for_repl() + ["-g",
+                                                           "-o",
                                                            repl_executable(),
                                                            repl_source_file()] + module_cache_args_for_repl() + search_args_for_repl() +  linker_args_for_repl()
 
