@@ -83,7 +83,7 @@ Other notable changes are listed below:
 * Default image base address for x86-64 has changed from 0x10000 to
   0x200000 to make it huge-page friendly.
 
-* AArch64 port now supports GNU ifunc, the ARM C++ exceptions ABI, TLS
+* ARM port now supports GNU ifunc, the ARM C++ exceptions ABI, TLS
   relocations and static linking. Problems with dlopen() on systems
   using eglibc fixed.
 
