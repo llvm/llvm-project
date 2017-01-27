@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 
@@ -98,11 +99,6 @@ static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
 extern "C" int HexagonTargetMachineModule;
 int HexagonTargetMachineModule = 0;
 
-extern "C" void LLVMInitializeHexagonTarget() {
-  // Register the target.
-  RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
-}
-
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   return new VLIWMachineScheduler(C, make_unique<ConvergingVLIWScheduler>());
 }
@@ -114,6 +110,8 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
 namespace llvm {
   extern char &HexagonExpandCondsetsID;
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
+  void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
+  Pass *createHexagonLoopIdiomPass();
 
   FunctionPass *createHexagonBitSimplify();
   FunctionPass *createHexagonBranchRelaxation();
@@ -148,6 +146,12 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   if (!RM.hasValue())
     return Reloc::Static;
   return *RM;
+}
+
+extern "C" void LLVMInitializeHexagonTarget() {
+  // Register the target.
+  RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
+  initializeHexagonLoopIdiomRecognizePass(*PassRegistry::getPassRegistry());
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -194,6 +198,14 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
     I = llvm::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
   }
   return I.get();
+}
+
+void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
+  PMB.addExtension(
+    PassManagerBuilder::EP_LateLoopOptimizations,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createHexagonLoopIdiomPass());
+    });
 }
 
 TargetIRAnalysis HexagonTargetMachine::getTargetIRAnalysis() {

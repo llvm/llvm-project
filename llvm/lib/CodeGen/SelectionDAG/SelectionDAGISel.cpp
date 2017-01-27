@@ -925,6 +925,50 @@ public:
 };
 } // end anonymous namespace
 
+static bool isStrictFPOp(SDNode *Node, unsigned &NewOpc) {
+  unsigned OrigOpc = Node->getOpcode();
+  switch (OrigOpc) {
+    case ISD::STRICT_FADD: NewOpc = ISD::FADD; return true;
+    case ISD::STRICT_FSUB: NewOpc = ISD::FSUB; return true;
+    case ISD::STRICT_FMUL: NewOpc = ISD::FMUL; return true;
+    case ISD::STRICT_FDIV: NewOpc = ISD::FDIV; return true;
+    case ISD::STRICT_FREM: NewOpc = ISD::FREM; return true;
+    default: return false;
+  }
+}
+
+SDNode* SelectionDAGISel::MutateStrictFPToFP(SDNode *Node, unsigned NewOpc) {
+  assert(((Node->getOpcode() == ISD::STRICT_FADD && NewOpc == ISD::FADD) ||
+          (Node->getOpcode() == ISD::STRICT_FSUB && NewOpc == ISD::FSUB) ||
+          (Node->getOpcode() == ISD::STRICT_FMUL && NewOpc == ISD::FMUL) ||
+          (Node->getOpcode() == ISD::STRICT_FDIV && NewOpc == ISD::FDIV) ||
+          (Node->getOpcode() == ISD::STRICT_FREM && NewOpc == ISD::FREM)) &&
+          "Unexpected StrictFP opcode!");
+
+  // We're taking this node out of the chain, so we need to re-link things.
+  SDValue InputChain = Node->getOperand(0);
+  SDValue OutputChain = SDValue(Node, 1);
+  CurDAG->ReplaceAllUsesOfValueWith(OutputChain, InputChain);
+
+  SDVTList VTs = CurDAG->getVTList(Node->getOperand(1).getValueType());
+  SDValue Ops[2] = { Node->getOperand(1), Node->getOperand(2) };
+  SDNode *Res = CurDAG->MorphNodeTo(Node, NewOpc, VTs, Ops);
+  
+  // MorphNodeTo can operate in two ways: if an existing node with the
+  // specified operands exists, it can just return it.  Otherwise, it
+  // updates the node in place to have the requested operands.
+  if (Res == Node) {
+    // If we updated the node in place, reset the node ID.  To the isel,
+    // this should be just like a newly allocated machine node.
+    Res->setNodeId(-1);
+  } else {
+    CurDAG->ReplaceAllUsesWith(Node, Res);
+    CurDAG->RemoveDeadNode(Node);
+  }
+
+  return Res; 
+}
+
 void SelectionDAGISel::DoInstructionSelection() {
   DEBUG(dbgs() << "===== Instruction selection begins: BB#"
         << FuncInfo->MBB->getNumber()
@@ -960,7 +1004,23 @@ void SelectionDAGISel::DoInstructionSelection() {
       if (Node->use_empty())
         continue;
 
+      // When we are using non-default rounding modes or FP exception behavior
+      // FP operations are represented by StrictFP pseudo-operations.  They
+      // need to be simplified here so that the target-specific instruction
+      // selectors know how to handle them.
+      //
+      // If the current node is a strict FP pseudo-op, the isStrictFPOp()
+      // function will provide the corresponding normal FP opcode to which the
+      // node should be mutated.
+      unsigned NormalFPOpc = ISD::UNDEF;
+      bool IsStrictFPOp = isStrictFPOp(Node, NormalFPOpc);
+      if (IsStrictFPOp)
+        Node = MutateStrictFPToFP(Node, NormalFPOpc);
+
       Select(Node);
+
+      // FIXME: Add code here to attach an implicit def and use of
+      // target-specific FP environment registers.
     }
 
     CurDAG->setRoot(Dummy.getValue());

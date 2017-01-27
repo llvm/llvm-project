@@ -127,6 +127,11 @@ static cl::opt<unsigned> MulOpsInlineThreshold(
     cl::desc("Threshold for inlining multiplication operands into a SCEV"),
     cl::init(1000));
 
+static cl::opt<unsigned> AddOpsInlineThreshold(
+    "scev-addops-inline-threshold", cl::Hidden,
+    cl::desc("Threshold for inlining multiplication operands into a SCEV"),
+    cl::init(500));
+
 static cl::opt<unsigned>
     MaxCompareDepth("scalar-evolution-max-compare-depth", cl::Hidden,
                     cl::desc("Maximum depth of recursive compare complexity"),
@@ -2219,6 +2224,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   if (Idx < Ops.size()) {
     bool DeletedAdd = false;
     while (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Ops[Idx])) {
+      if (Ops.size() > AddOpsInlineThreshold ||
+          Add->getNumOperands() > AddOpsInlineThreshold)
+        break;
       // If we have an add, expand the add operands onto the end of the operands
       // list.
       Ops.erase(Ops.begin()+Idx);

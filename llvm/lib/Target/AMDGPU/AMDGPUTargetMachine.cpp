@@ -33,6 +33,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -205,8 +206,12 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
     FSAttr.getValueAsString();
 }
 
-void AMDGPUTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
-  PM.add(createAMDGPUUnifyMetadataPass());
+void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+  Builder.addExtension(
+    PassManagerBuilder::EP_EarlyAsPossible,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createAMDGPUUnifyMetadataPass());
+    });
 }
 
 //===----------------------------------------------------------------------===//

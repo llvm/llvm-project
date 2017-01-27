@@ -402,7 +402,7 @@ static void yamlToPdb(StringRef Path) {
 
 static void pdb2Yaml(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
-  ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
 
   NativeSession *RS = static_cast<NativeSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();
@@ -414,7 +414,7 @@ static void pdb2Yaml(StringRef Path) {
 
 static void dumpRaw(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
-  ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
 
   NativeSession *RS = static_cast<NativeSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();

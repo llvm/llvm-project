@@ -10076,11 +10076,8 @@ Overview:
 """""""""
 
 The '``llvm.sqrt``' intrinsics return the sqrt of the specified operand,
-returning the same value as the libm '``sqrt``' functions would. Unlike
-``sqrt`` in libm, however, ``llvm.sqrt`` has undefined behavior for
-negative numbers other than -0.0 (which allows for better optimization,
-because there is no need to worry about errno being set).
-``llvm.sqrt(-0.0)`` is defined to return -0.0 like IEEE sqrt.
+returning the same value as the libm '``sqrt``' functions would, but without
+trapping or setting ``errno``.
 
 Arguments:
 """"""""""
@@ -11831,7 +11828,7 @@ The semantics of this operation are equivalent to a sequence of conditional scal
 
 ::
 
-       %res = call <4 x double> @llvm.masked.gather.v4f64 (<4 x double*> %ptrs, i32 8, <4 x i1>%mask, <4 x double> <true, true, true, true>)
+       %res = call <4 x double> @llvm.masked.gather.v4f64 (<4 x double*> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> undef)
 
        ;; The gather with all-true mask is equivalent to the following instruction sequence
        %ptr0 = extractelement <4 x double*> %ptrs, i32 0
@@ -12063,6 +12060,277 @@ Semantics:
 
 Returns another pointer that aliases its argument but which is considered different 
 for the purposes of ``load``/``store`` ``invariant.group`` metadata.
+
+Constrained Floating Point Intrinsics
+-------------------------------------
+
+These intrinsics are used to provide special handling of floating point
+operations when specific rounding mode or floating point exception behavior is
+required.  By default, LLVM optimization passes assume that the rounding mode is
+round-to-nearest and that floating point exceptions will not be monitored.
+Constrained FP intrinsics are used to support non-default rounding modes and
+accurately preserve exception behavior without compromising LLVM's ability to
+optimize FP code when the default behavior is used.
+
+Each of these intrinsics corresponds to a normal floating point operation.  The
+first two arguments and the return value are the same as the corresponding FP
+operation.
+
+The third argument is a metadata argument specifying the rounding mode to be
+assumed. This argument must be one of the following strings:
+
+::
+      "round.dynamic"
+      "round.tonearest"
+      "round.downward"
+      "round.upward"
+      "round.towardzero"
+
+If this argument is "round.dynamic" optimization passes must assume that the
+rounding mode is unknown and may change at runtime.  No transformations that
+depend on rounding mode may be performed in this case.
+
+The other possible values for the rounding mode argument correspond to the
+similarly named IEEE rounding modes.  If the argument is any of these values
+optimization passes may perform transformations as long as they are consistent
+with the specified rounding mode.
+
+For example, 'x-0'->'x' is not a valid transformation if the rounding mode is
+"round.downward" or "round.dynamic" because if the value of 'x' is +0 then
+'x-0' should evaluate to '-0' when rounding downward.  However, this
+transformation is legal for all other rounding modes.
+
+For values other than "round.dynamic" optimization passes may assume that the
+actual runtime rounding mode (as defined in a target-specific manner) matches
+the specified rounding mode, but this is not guaranteed.  Using a specific
+non-dynamic rounding mode which does not match the actual rounding mode at
+runtime results in undefined behavior.
+
+The fourth argument to the constrained floating point intrinsics specifies the
+required exception behavior.  This argument must be one of the following
+strings:
+
+::
+      "fpexcept.ignore"
+      "fpexcept.maytrap"
+      "fpexcept.strict"
+
+If this argument is "fpexcept.ignore" optimization passes may assume that the
+exception status flags will not be read and that floating point exceptions will
+be masked.  This allows transformations to be performed that may change the
+exception semantics of the original code.  For example, FP operations may be
+speculatively executed in this case whereas they must not be for either of the
+other possible values of this argument.
+
+If the exception behavior argument is "fpexcept.maytrap" optimization passes
+must avoid transformations that may raise exceptions that would not have been
+raised by the original code (such as speculatively executing FP operations), but
+passes are not required to preserve all exceptions that are implied by the
+original code.  For example, exceptions may be potentially hidden by constant
+folding.
+
+If the exception behavior argument is "fpexcept.strict" all transformations must
+strictly preserve the floating point exception semantics of the original code.
+Any FP exception that would have been raised by the original code must be raised
+by the transformed code, and the transformed code must not raise any FP
+exceptions that would not have been raised by the original code.  This is the
+exception behavior argument that will be used if the code being compiled reads 
+the FP exception status flags, but this mode can also be used with code that
+unmasks FP exceptions.
+
+The number and order of floating point exceptions is NOT guaranteed.  For
+example, a series of FP operations that each may raise exceptions may be
+vectorized into a single instruction that raises each unique exception a single
+time.
+
+
+'``llvm.experimental.constrained.fadd``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> 
+      @llvm.experimental.constrained.fadd(<type> <op1>, <type> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata  <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fadd``' intrinsic returns the sum of its
+two operands.
+
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.fadd``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
+of floating point values. Both arguments must have identical types.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+The value produced is the floating point sum of the two value operands and has
+the same type as the operands.
+
+
+'``llvm.experimental.constrained.fsub``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> 
+      @llvm.experimental.constrained.fsub(<type> <op1>, <type> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata  <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fsub``' intrinsic returns the difference
+of its two operands.
+
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.fsub``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
+of floating point values. Both arguments must have identical types.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+The value produced is the floating point difference of the two value operands
+and has the same type as the operands.
+
+
+'``llvm.experimental.constrained.fmul``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> 
+      @llvm.experimental.constrained.fmul(<type> <op1>, <type> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata  <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fmul``' intrinsic returns the product of
+its two operands.
+
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.fmul``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
+of floating point values. Both arguments must have identical types.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+The value produced is the floating point product of the two value operands and
+has the same type as the operands.
+
+
+'``llvm.experimental.constrained.fdiv``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> 
+      @llvm.experimental.constrained.fdiv(<type> <op1>, <type> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata  <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.fdiv``' intrinsic returns the quotient of
+its two operands.
+
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.fdiv``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
+of floating point values. Both arguments must have identical types.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+The value produced is the floating point quotient of the two value operands and
+has the same type as the operands.
+
+
+'``llvm.experimental.constrained.frem``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> 
+      @llvm.experimental.constrained.frem(<type> <op1>, <type> <op2>,
+                                          metadata <rounding mode>,
+                                          metadata  <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.frem``' intrinsic returns the remainder
+from the division of its two operands.
+
+
+Arguments:
+""""""""""
+
+The first two arguments to the '``llvm.experimental.constrained.frem``'
+intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector <t_vector>`
+of floating point values. Both arguments must have identical types.
+
+The third and fourth arguments specify the rounding mode and exception
+behavior as described above.  The rounding mode argument has no effect, since
+the result of frem is never rounded, but the argument is included for
+consistency with the other constrained floating point intrinsics.
+
+Semantics:
+""""""""""
+
+The value produced is the floating point remainder from the division of the two
+value operands and has the same type as the operands.  The remainder has the
+same sign as the dividend. 
+
 
 General Intrinsics
 ------------------

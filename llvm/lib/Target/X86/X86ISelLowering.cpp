@@ -4132,6 +4132,7 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
     return true;
   // 'Faux' Target Shuffles.
   case ISD::AND:
+  case X86ISD::ANDNP:
     return true;
   }
 }
@@ -5742,11 +5743,16 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
 
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
-  case ISD::AND: {
+  case ISD::AND:
+  case X86ISD::ANDNP: {
     // Attempt to decode as a per-byte mask.
     SmallBitVector UndefElts;
     SmallVector<APInt, 32> EltBits;
-    if (!getTargetConstantBitsFromNode(N.getOperand(1), 8, UndefElts, EltBits))
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+    bool IsAndN = (X86ISD::ANDNP == Opcode);
+    uint64_t ZeroMask = IsAndN ? 255 : 0;
+    if (!getTargetConstantBitsFromNode(IsAndN ? N0 : N1, 8, UndefElts, EltBits))
       return false;
     for (int i = 0, e = (int)EltBits.size(); i != e; ++i) {
       if (UndefElts[i]) {
@@ -5756,9 +5762,9 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       uint64_t ByteBits = EltBits[i].getZExtValue();
       if (ByteBits != 0 && ByteBits != 255)
         return false;
-      Mask.push_back(ByteBits == 0 ? SM_SentinelZero : i);
+      Mask.push_back(ByteBits == ZeroMask ? SM_SentinelZero : i);
     }
-    Ops.push_back(N.getOperand(0));
+    Ops.push_back(IsAndN ? N1 : N0);
     return true;
   }
   case X86ISD::VSHLI:
@@ -5806,6 +5812,25 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   }
 
   return false;
+}
+
+/// Removes unused shuffle source ops and adjusts the shuffle mask accordingly.
+static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Ops,
+                                              SmallVectorImpl<int> &Mask) {
+  int MaskWidth = Mask.size();
+  SmallVector<SDValue, 8> UsedOps;
+  for (int i = 0, e = Ops.size(); i < e; ++i) {
+    int lo = UsedOps.size() * MaskWidth;
+    int hi = lo + MaskWidth;
+    if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
+      UsedOps.push_back(Ops[i]);
+      continue;
+    }
+    for (int &M : Mask)
+      if (lo <= M)
+        M -= MaskWidth;
+  }
+  Ops = UsedOps;
 }
 
 /// Calls setTargetShuffleZeroElements to resolve a target shuffle mask's inputs
@@ -27490,20 +27515,8 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   }
 
   // Remove unused shuffle source ops.
-  SmallVector<SDValue, 8> UsedOps;
-  for (int i = 0, e = Ops.size(); i < e; ++i) {
-    int lo = UsedOps.size() * MaskWidth;
-    int hi = lo + MaskWidth;
-    if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
-      UsedOps.push_back(Ops[i]);
-      continue;
-    }
-    for (int &M : Mask)
-      if (lo <= M)
-        M -= MaskWidth;
-  }
-  assert(!UsedOps.empty() && "Shuffle with no inputs detected");
-  Ops = UsedOps;
+  resolveTargetShuffleInputsAndMask(Ops, Mask);
+  assert(!Ops.empty() && "Shuffle with no inputs detected");
 
   HasVariableMask |= isTargetShuffleVariableMask(Op.getOpcode());
 
@@ -33003,7 +33016,8 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
 /// Do target-specific dag combines on X86ISD::ANDNP nodes.
 static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
-                           const X86Subtarget &Subtarget) {
+                            TargetLowering::DAGCombinerInfo &DCI,
+                            const X86Subtarget &Subtarget) {
   // ANDNP(0, x) -> x
   if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
     return N->getOperand(1);
@@ -33011,6 +33025,19 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // ANDNP(x, 0) -> 0
   if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode()))
     return getZeroVector(N->getSimpleValueType(0), Subtarget, DAG, SDLoc(N));
+
+  EVT VT = N->getValueType(0);
+
+  // Attempt to recursively combine a bitmask ANDNP with shuffles.
+  if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
+    SDValue Op(N, 0);
+    SmallVector<int, 1> NonceMask; // Just a placeholder.
+    NonceMask.push_back(0);
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+                                      /*Depth*/ 1, /*HasVarMask*/ false, DAG,
+                                      DCI, Subtarget))
+      return SDValue(); // This routine will use CombineTo to replace N.
+  }
 
   return SDValue();
 }
@@ -34081,7 +34108,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FSUB:           return combineFaddFsub(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
-  case X86ISD::ANDNP:       return combineAndnp(N, DAG, Subtarget);
+  case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
   case X86ISD::FXOR:

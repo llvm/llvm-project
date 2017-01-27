@@ -429,6 +429,66 @@ define i11 @test23(i44 %A) {
   ret i11 %D
 }
 
+; Fold lshr (shl X, C), C -> and X, C' regardless of the number of uses of the shl.
+
+define i44 @shl_lshr_eq_amt_multi_use(i44 %A) {
+; CHECK-LABEL: @shl_lshr_eq_amt_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = shl i44 %A, 33
+; CHECK-NEXT:    [[C:%.*]] = and i44 %A, 2047
+; CHECK-NEXT:    [[D:%.*]] = or i44 [[B]], [[C]]
+; CHECK-NEXT:    ret i44 [[D]]
+;
+  %B = shl i44 %A, 33
+  %C = lshr i44 %B, 33
+  %D = add i44 %B, %C
+  ret i44 %D
+}
+
+; Fold vector lshr (shl X, C), C -> and X, C' regardless of the number of uses of the shl.
+
+define <2 x i44> @shl_lshr_eq_amt_multi_use_splat_vec(<2 x i44> %A) {
+; CHECK-LABEL: @shl_lshr_eq_amt_multi_use_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = shl <2 x i44> %A, <i44 33, i44 33>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i44> %A, <i44 2047, i44 2047>
+; CHECK-NEXT:    [[D:%.*]] = or <2 x i44> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i44> [[D]]
+;
+  %B = shl <2 x i44> %A, <i44 33, i44 33>
+  %C = lshr <2 x i44> %B, <i44 33, i44 33>
+  %D = add <2 x i44> %B, %C
+  ret <2 x i44> %D
+}
+
+; Fold shl (lshr X, C), C -> and X, C' regardless of the number of uses of the lshr.
+
+define i43 @lshr_shl_eq_amt_multi_use(i43 %A) {
+; CHECK-LABEL: @lshr_shl_eq_amt_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = lshr i43 %A, 23
+; CHECK-NEXT:    [[C:%.*]] = and i43 %A, -8388608
+; CHECK-NEXT:    [[D:%.*]] = mul i43 [[B]], [[C]]
+; CHECK-NEXT:    ret i43 [[D]]
+;
+  %B = lshr i43 %A, 23
+  %C = shl i43 %B, 23
+  %D = mul i43 %B, %C
+  ret i43 %D
+}
+
+; Fold vector shl (lshr X, C), C -> and X, C' regardless of the number of uses of the lshr.
+
+define <2 x i43> @lshr_shl_eq_amt_multi_use_splat_vec(<2 x i43> %A) {
+; CHECK-LABEL: @lshr_shl_eq_amt_multi_use_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i43> %A, <i43 23, i43 23>
+; CHECK-NEXT:    [[C:%.*]] = and <2 x i43> %A, <i43 -8388608, i43 -8388608>
+; CHECK-NEXT:    [[D:%.*]] = mul <2 x i43> [[B]], [[C]]
+; CHECK-NEXT:    ret <2 x i43> [[D]]
+;
+  %B = lshr <2 x i43> %A, <i43 23, i43 23>
+  %C = shl <2 x i43> %B, <i43 23, i43 23>
+  %D = mul <2 x i43> %B, %C
+  ret <2 x i43> %D
+}
+
 define i37 @test25(i37 %tmp.2, i37 %AA) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[TMP_3:%.*]] = and i37 %tmp.2, -131072

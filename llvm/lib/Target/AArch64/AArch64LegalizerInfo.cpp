@@ -36,7 +36,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
 
-  for (auto BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL}) {
+  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL}) {
     // These operations naturally get the right answer when used on
     // GPR32, even if the actual type is narrower.
     for (auto Ty : {s32, s64, v2s32, v4s32, v2s64})
@@ -52,7 +52,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   for (auto Ty : {s1, s8, s16, s32})
     setAction({G_GEP, 1, Ty}, WidenScalar);
 
-  for (auto BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
+  for (unsigned BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
@@ -60,25 +60,25 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
       setAction({BinOp, Ty}, WidenScalar);
   }
 
-  for (auto BinOp : { G_SREM, G_UREM })
+  for (unsigned BinOp : {G_SREM, G_UREM})
     for (auto Ty : { s1, s8, s16, s32, s64 })
       setAction({BinOp, Ty}, Lower);
 
-  for (auto Op : { G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO }) {
+  for (unsigned Op : {G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_SMULO, G_UMULO}) {
     for (auto Ty : { s32, s64 })
       setAction({Op, Ty}, Legal);
 
     setAction({Op, 1, s1}, Legal);
   }
 
-  for (auto BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 
   setAction({G_FREM, s32}, Libcall);
   setAction({G_FREM, s64}, Libcall);
 
-  for (auto MemOp : {G_LOAD, G_STORE}) {
+  for (unsigned MemOp : {G_LOAD, G_STORE}) {
     for (auto Ty : {s8, s16, s32, s64, p0, v2s32})
       setAction({MemOp, Ty}, Legal);
 

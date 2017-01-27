@@ -108,6 +108,9 @@ public:
   /// Set the debug location to \p DL for all the next build instructions.
   void setDebugLoc(const DebugLoc &DL) { this->DL = DL; }
 
+  /// Get the current instruction's debug location.
+  DebugLoc getDebugLoc() { return DL; }
+
   /// Build and insert <empty> = \p Opcode <empty>.
   /// The insertion point is the one set by the last call of either
   /// setBasicBlock or setMI.
@@ -126,6 +129,29 @@ public:
 
   /// Insert an existing instruction at the insertion point.
   MachineInstrBuilder insertInstr(MachineInstrBuilder MIB);
+
+  /// Build and insert a DBG_VALUE instruction expressing the fact that the
+  /// associated \p Variable lives in \p Reg (suitably modified by \p Expr).
+  MachineInstrBuilder buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
+                                          const MDNode *Expr);
+
+  /// Build and insert a DBG_VALUE instruction expressing the fact that the
+  /// associated \p Variable lives in memory at \p Reg + \p Offset (suitably
+  /// modified by \p Expr).
+  MachineInstrBuilder buildIndirectDbgValue(unsigned Reg, unsigned Offset,
+                                            const MDNode *Variable,
+                                            const MDNode *Expr);
+  /// Build and insert a DBG_VALUE instruction expressing the fact that the
+  /// associated \p Variable lives in the stack slot specified by \p FI
+  /// (suitably modified by \p Expr).
+  MachineInstrBuilder buildFIDbgValue(int FI, const MDNode *Variable,
+                                      const MDNode *Expr);
+
+  /// Build and insert a DBG_VALUE instructions specifying that \p Variable is
+  /// given by \p C (suitably modified by \p Expr).
+  MachineInstrBuilder buildConstDbgValue(const Constant &C, unsigned Offset,
+                                         const MDNode *Variable,
+                                         const MDNode *Expr);
 
   /// Build and insert \p Res<def> = G_FRAME_INDEX \p Idx
   ///

@@ -114,9 +114,9 @@ def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
 def PPCstfiwx : SDNode<"PPCISD::STFIWX", SDT_PPCstfiwx,
                        [SDNPHasChain, SDNPMayStore]>;
 def PPClfiwax : SDNode<"PPCISD::LFIWAX", SDT_PPClfiwx,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClfiwzx : SDNode<"PPCISD::LFIWZX", SDT_PPClfiwx,
-                       [SDNPHasChain, SDNPMayLoad]>;
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPClxsizx : SDNode<"PPCISD::LXSIZX", SDT_PPCLxsizx,
                        [SDNPHasChain, SDNPMayLoad]>;
 def PPCstxsix : SDNode<"PPCISD::STXSIX", SDT_PPCstxsix,
@@ -243,7 +243,7 @@ def PPCcondbranch : SDNode<"PPCISD::COND_BRANCH", SDT_PPCcondbr,
                            [SDNPHasChain, SDNPOptInGlue]>;
 
 def PPClbrx       : SDNode<"PPCISD::LBRX", SDT_PPClbrx,
-                           [SDNPHasChain, SDNPMayLoad]>;
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstbrx      : SDNode<"PPCISD::STBRX", SDT_PPCstbrx,
                            [SDNPHasChain, SDNPMayStore]>;
 
@@ -1642,7 +1642,7 @@ let usesCustomInserter = 1 in {
 }
 
 // Instructions to support atomic operations
-let mayLoad = 1, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
 def LBARX : XForm_1<31,  52, (outs gprc:$rD), (ins memrr:$src),
                     "lbarx $rD, $src", IIC_LdStLWARX, []>,
                     Requires<[HasPartwordAtomics]>;
@@ -1675,7 +1675,7 @@ def LWAT : X_RD5_RS5_IM5<31, 582, (outs gprc:$rD), (ins gprc:$rA, u5imm:$FC),
            Requires<[IsISA3_0]>;
 }
 
-let Defs = [CR0], mayStore = 1, hasSideEffects = 0 in {
+let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STBCX : XForm_1<31, 694, (outs), (ins gprc:$rS, memrr:$dst),
                     "stbcx. $rS, $dst", IIC_LdStSTWCX, []>,
                     isDOT, Requires<[HasPartwordAtomics]>;
@@ -1688,7 +1688,7 @@ def STWCX : XForm_1<31, 150, (outs), (ins gprc:$rS, memrr:$dst),
                     "stwcx. $rS, $dst", IIC_LdStSTWCX, []>, isDOT;
 }
 
-let mayStore = 1, hasSideEffects = 0 in
+let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$rS, gprc:$rA, u5imm:$FC),
                           "stwat $rS, $rA, $FC", IIC_LdStStore>,
             Requires<[IsISA3_0]>;
@@ -1734,7 +1734,7 @@ def LFD : DForm_1<50, (outs f8rc:$rD), (ins memri:$src),
 
 
 // Unindexed (r+i) Loads with Update (preinc).
-let mayLoad = 1, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
 def LBZU : DForm_1<35, (outs gprc:$rD, ptr_rc_nor0:$ea_result), (ins memri:$addr),
                    "lbzu $rD, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$addr.reg = $ea_result">,
@@ -1807,7 +1807,7 @@ def LFDUX : XForm_1<31, 631, (outs f8rc:$rD, ptr_rc_nor0:$ea_result),
 
 // Indexed (r+r) Loads.
 //
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayLoad = 1, mayStore = 0 in {
 def LBZX : XForm_1<31,  87, (outs gprc:$rD), (ins memrr:$src),
                    "lbzx $rD, $src", IIC_LdStLoad,
                    [(set i32:$rD, (zextloadi8 xaddr:$src))]>;
@@ -1821,8 +1821,6 @@ def LHZX : XForm_1<31, 279, (outs gprc:$rD), (ins memrr:$src),
 def LWZX : XForm_1<31,  23, (outs gprc:$rD), (ins memrr:$src),
                    "lwzx $rD, $src", IIC_LdStLoad,
                    [(set i32:$rD, (load xaddr:$src))]>;
-                   
-                   
 def LHBRX : XForm_1<31, 790, (outs gprc:$rD), (ins memrr:$src),
                    "lhbrx $rD, $src", IIC_LdStLoad,
                    [(set i32:$rD, (PPClbrx xoaddr:$src, i16))]>;
@@ -1854,7 +1852,7 @@ def LMW : DForm_1<46, (outs gprc:$rD), (ins memri:$src),
 //
 
 // Unindexed (r+i) Stores.
-let PPC970_Unit = 2 in {
+let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STB  : DForm_1<38, (outs), (ins gprc:$rS, memri:$src),
                    "stb $rS, $src", IIC_LdStStore,
                    [(truncstorei8 i32:$rS, iaddr:$src)]>;
@@ -1873,7 +1871,7 @@ def STFD : DForm_1<54, (outs), (ins f8rc:$rS, memri:$dst),
 }
 
 // Unindexed (r+i) Stores with Update (preinc).
-let PPC970_Unit = 2, mayStore = 1 in {
+let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$rS, memri:$dst),
                     "stbu $rS, $dst", IIC_LdStStoreUpd, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
@@ -1942,7 +1940,7 @@ def STFDX : XForm_28<31, 727, (outs), (ins f8rc:$frS, memrr:$dst),
 }
 
 // Indexed (r+r) Stores with Update (preinc).
-let PPC970_Unit = 2, mayStore = 1 in {
+let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STBUX : XForm_8<31, 247, (outs ptr_rc_nor0:$ea_res), (ins gprc:$rS, memrr:$dst),
                     "stbux $rS, $dst", IIC_LdStStoreUpd, []>,
                     RegConstraint<"$dst.ptrreg = $ea_res">, NoEncode<"$ea_res">,

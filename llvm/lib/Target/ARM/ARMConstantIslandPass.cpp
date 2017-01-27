@@ -14,26 +14,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
+#include "ARMBaseInstrInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMMachineFunctionInfo.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
+#include "ARMSubtarget.h"
+#include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <new>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-cp-islands"
@@ -49,7 +67,6 @@ STATISTIC(NumCBZ,        "Number of CBZ / CBNZ formed");
 STATISTIC(NumJTMoved,    "Number of jump table destination blocks moved");
 STATISTIC(NumJTInserted, "Number of jump table intermediate blocks inserted");
 
-
 static cl::opt<bool>
 AdjustJumpTableBlocks("arm-adjust-jump-tables", cl::Hidden, cl::init(true),
           cl::desc("Adjust basic block layout to better use TB[BH]"));
@@ -64,6 +81,7 @@ static cl::opt<bool> SynthesizeThumb1TBB(
              "equivalent to the TBB/TBH instructions"));
 
 namespace {
+
   /// ARMConstantIslands - Due to limited PC-relative displacements, ARM
   /// requires constant pool entries to be scattered among the instructions
   /// inside a function.  To do this, it completely ignores the normal LLVM
@@ -76,7 +94,6 @@ namespace {
   ///   CPE     - A constant pool entry that has been placed somewhere, which
   ///             tracks a list of users.
   class ARMConstantIslands : public MachineFunctionPass {
-
     std::vector<BasicBlockInfo> BBInfo;
 
     /// WaterList - A sorted list of basic blocks where islands could be placed
@@ -110,12 +127,14 @@ namespace {
       bool NegOk;
       bool IsSoImm;
       bool KnownAlignment;
+
       CPUser(MachineInstr *mi, MachineInstr *cpemi, unsigned maxdisp,
              bool neg, bool soimm)
         : MI(mi), CPEMI(cpemi), MaxDisp(maxdisp), NegOk(neg), IsSoImm(soimm),
           KnownAlignment(false) {
         HighWaterMark = CPEMI->getParent();
       }
+
       /// getMaxDisp - Returns the maximum displacement supported by MI.
       /// Correct for unknown alignment.
       /// Conservatively subtract 2 bytes to handle weird alignment effects.
@@ -135,6 +154,7 @@ namespace {
       MachineInstr *CPEMI;
       unsigned CPI;
       unsigned RefCount;
+
       CPEntry(MachineInstr *cpemi, unsigned cpi, unsigned rc = 0)
         : CPEMI(cpemi), CPI(cpi), RefCount(rc) {}
     };
@@ -148,7 +168,7 @@ namespace {
     /// The first half of CPEntries contains generic constants, the second half
     /// contains jump tables. Use getCombinedIndex on a generic CPEMI to look up
     /// which vector it will be in here.
-    std::vector<std::vector<CPEntry> > CPEntries;
+    std::vector<std::vector<CPEntry>> CPEntries;
 
     /// Maps a JT index to the offset in CPEntries containing copies of that
     /// table. The equivalent map for a CONSTPOOL_ENTRY is the identity.
@@ -167,6 +187,7 @@ namespace {
       unsigned MaxDisp : 31;
       bool isCond : 1;
       unsigned UncondBr;
+
       ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, unsigned ubr)
         : MI(mi), MaxDisp(maxdisp), isCond(cond), UncondBr(ubr) {}
     };
@@ -195,8 +216,10 @@ namespace {
     bool isThumb1;
     bool isThumb2;
     bool isPositionIndependentOrROPI;
+
   public:
     static char ID;
+
     ARMConstantIslands() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -264,8 +287,10 @@ namespace {
                              U.getMaxDisp(), U.NegOk, U.IsSoImm);
     }
   };
+
   char ARMConstantIslands::ID = 0;
-}
+
+} // end anonymous namespace
 
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void ARMConstantIslands::verify() {
@@ -307,12 +332,6 @@ void ARMConstantIslands::dumpBBs() {
              << format(" size=%#x\n", BBInfo[J].Size);
     }
   });
-}
-
-/// createARMConstantIslandPass - returns an instance of the constpool
-/// island pass.
-FunctionPass *llvm::createARMConstantIslandPass() {
-  return new ARMConstantIslands();
 }
 
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
@@ -872,7 +891,6 @@ void ARMConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB) {
                      CompareMBBNumbers);
   WaterList.insert(IP, NewBB);
 }
-
 
 /// Split the basic block containing MI into two blocks, which are joined by
 /// an unconditional branch.  Update data structures and renumber blocks to
@@ -1797,12 +1815,11 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
       Bits = 11;
       Scale = 2;
       break;
-    case ARM::t2Bcc: {
+    case ARM::t2Bcc:
       NewOpc = ARM::tBcc;
       Bits = 8;
       Scale = 2;
       break;
-    }
     }
     if (NewOpc) {
       unsigned MaxOffs = ((1 << (Bits-1))-1) * Scale;
@@ -2091,7 +2108,6 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
           continue;
       }
       
-      
       // Now safe to delete the load and lsl. The LEA will be removed later.
       CanDeleteLEA = true;
       Shift->eraseFromParent();
@@ -2258,4 +2274,10 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
 
   ++NumJTInserted;
   return NewBB;
+}
+
+/// createARMConstantIslandPass - returns an instance of the constpool
+/// island pass.
+FunctionPass *llvm::createARMConstantIslandPass() {
+  return new ARMConstantIslands();
 }

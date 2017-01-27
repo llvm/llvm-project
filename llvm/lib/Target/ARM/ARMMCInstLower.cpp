@@ -14,18 +14,27 @@
 
 #include "ARM.h"
 #include "ARMAsmPrinter.h"
+#include "ARMBaseInstrInfo.h"
+#include "ARMMachineFunctionInfo.h"
+#include "ARMSubtarget.h"
+#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMMCExpr.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCStreamer.h"
-using namespace llvm;
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
 
+using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
@@ -75,11 +84,10 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
         MO.getMBB()->getSymbol(), OutContext));
     break;
-  case MachineOperand::MO_GlobalAddress: {
+  case MachineOperand::MO_GlobalAddress:
     MCOp = GetSymbolRef(MO,
                         GetARMGVSymbol(MO.getGlobal(), MO.getTargetFlags()));
     break;
-  }
   case MachineOperand::MO_ExternalSymbol:
     MCOp = GetSymbolRef(MO,
                         GetExternalSymbolSymbol(MO.getSymbolName()));

@@ -19,6 +19,7 @@
 #include "ARMBaseRegisterInfo.h"
 #include "ARMConstantPoolValue.h"
 #include "ARMMachineFunctionInfo.h"
+#include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/Support/raw_ostream.h" // FIXME: for debug only. remove!
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-pseudo"

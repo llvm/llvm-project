@@ -26,6 +26,15 @@
 #include <cstring>
 #include <limits.h>
 
+#define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
+  do {                                                                         \
+    if (usesLayout<IEEEFloat>(getSemantics()))                                 \
+      return U.IEEE.METHOD_CALL;                                               \
+    if (usesLayout<DoubleAPFloat>(getSemantics()))                             \
+      return U.Double.METHOD_CALL;                                             \
+    llvm_unreachable("Unexpected semantics");                                  \
+  } while (false)
+
 using namespace llvm;
 
 /// A macro used to combine two fcCategory enums into one key which can be used
@@ -4418,11 +4427,7 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
 }
 
 APFloat::opStatus APFloat::convertFromString(StringRef Str, roundingMode RM) {
-  if (usesLayout<IEEEFloat>(getSemantics()))
-    return U.IEEE.convertFromString(Str, RM);
-  if (usesLayout<DoubleAPFloat>(getSemantics()))
-    return U.Double.convertFromString(Str, RM);
-  llvm_unreachable("Unexpected semantics");
+  APFLOAT_DISPATCH_ON_SEMANTICS(convertFromString(Str, RM));
 }
 
 hash_code hash_value(const APFloat &Arg) {
@@ -4512,3 +4517,5 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
 }
 
 } // End llvm namespace
+
+#undef APFLOAT_DISPATCH_ON_SEMANTICS

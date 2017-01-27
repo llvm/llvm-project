@@ -178,7 +178,7 @@ if(LLVM_DEPENDENCY_DEBUGGING)
   endif()
 endif()
 
-option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" OFF)
+option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" ON)
 if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
 endif()

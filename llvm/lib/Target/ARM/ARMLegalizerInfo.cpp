@@ -42,7 +42,7 @@ ARMLegalizerInfo::ARMLegalizerInfo() {
   for (auto Ty : {s1, s8, s16, s32})
     setAction({G_ADD, Ty}, Legal);
 
-  for (auto Op : {G_SEXT, G_ZEXT}) {
+  for (unsigned Op : {G_SEXT, G_ZEXT}) {
     setAction({Op, s32}, Legal);
     for (auto Ty : {s1, s8, s16})
       setAction({Op, 1, Ty}, Legal);
