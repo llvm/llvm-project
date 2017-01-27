@@ -116,7 +116,6 @@ Clang-Tidy Checks
    modernize-use-emplace
    modernize-use-equals-default
    modernize-use-equals-delete
-   modernize-use-noexcept
    modernize-use-nullptr
    modernize-use-override
    modernize-use-transparent-functors

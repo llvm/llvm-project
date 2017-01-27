@@ -1036,6 +1036,15 @@ TEST_F(FormatTestJS, RegexLiteralExamples) {
   verifyFormat("var regex = search.match(/(?:\?|&)times=([^?&]+)/i);");
 }
 
+TEST_F(FormatTestJS, IgnoresMpegTS) {
+  std::string MpegTS(200, ' ');
+  MpegTS.replace(0, strlen("nearlyLooks  +   like +   ts + code;  "),
+                 "nearlyLooks  +   like +   ts + code;  ");
+  MpegTS[0] = 0x47;
+  MpegTS[188] = 0x47;
+  verifyFormat(MpegTS, MpegTS);
+}
+
 TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat("var x: string;");
   verifyFormat("var x: {a: string; b: number;} = {};");

@@ -1255,9 +1255,19 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                                               RParenLoc);
   }
 
+  // C++1z [expr.type.conv]p1:
+  //   If the type is a placeholder for a deduced class type, [...perform class
+  //   template argument deduction...]
+  DeducedType *Deduced = Ty->getContainedDeducedType();
+  if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
+    Diag(TyBeginLoc, diag::err_deduced_class_template_not_supported);
+    return ExprError();
+  }
+
   bool ListInitialization = LParenLoc.isInvalid();
-  assert((!ListInitialization || (Exprs.size() == 1 && isa<InitListExpr>(Exprs[0])))
-         && "List initialization must have initializer list as expression.");
+  assert((!ListInitialization ||
+          (Exprs.size() == 1 && isa<InitListExpr>(Exprs[0]))) &&
+         "List initialization must have initializer list as expression.");
   SourceRange FullRange = SourceRange(TyBeginLoc,
       ListInitialization ? Exprs[0]->getSourceRange().getEnd() : RParenLoc);
 
@@ -1646,6 +1656,11 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (AllocType->isUndeducedType()) {
+    if (isa<DeducedTemplateSpecializationType>(
+            AllocType->getContainedDeducedType()))
+      return ExprError(Diag(TypeRange.getBegin(),
+                            diag::err_deduced_class_template_not_supported));
+
     if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);

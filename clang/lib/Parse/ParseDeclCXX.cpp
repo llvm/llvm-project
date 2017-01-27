@@ -1144,10 +1144,11 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
   // We have an identifier; check whether it is actually a type.
   IdentifierInfo *CorrectedII = nullptr;
-  ParsedType Type =
-      Actions.getTypeName(*Id, IdLoc, getCurScope(), &SS, true, false, nullptr,
-                          /*IsCtorOrDtorName=*/false,
-                          /*NonTrivialTypeSourceInfo=*/true, &CorrectedII);
+  ParsedType Type = Actions.getTypeName(
+      *Id, IdLoc, getCurScope(), &SS, true, false, nullptr,
+      /*IsCtorOrDtorName=*/false,
+      /*NonTrivialTypeSourceInfo=*/true,
+      /*IsClassTemplateDeductionContext*/ false, &CorrectedII);
   if (!Type) {
     Diag(IdLoc, diag::err_expected_class_name);
     return true;

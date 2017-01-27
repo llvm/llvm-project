@@ -5653,6 +5653,14 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     return Context.getAutoType(Deduced, Keyword, IsDependent);
   }
 
+  case TYPE_DEDUCED_TEMPLATE_SPECIALIZATION: {
+    TemplateName Name = ReadTemplateName(*Loc.F, Record, Idx);
+    QualType Deduced = readType(*Loc.F, Record, Idx);
+    bool IsDependent = Deduced.isNull() ? Record[Idx++] : false;
+    return Context.getDeducedTemplateSpecializationType(Name, Deduced,
+                                                        IsDependent);
+  }
+
   case TYPE_RECORD: {
     if (Record.size() != 2) {
       Error("incorrect encoding of record type");
@@ -6082,6 +6090,11 @@ void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
 
 void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation());
+}
+
+void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(
+    DeducedTemplateSpecializationTypeLoc TL) {
+  TL.setTemplateNameLoc(ReadSourceLocation());
 }
 
 void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {

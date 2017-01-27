@@ -1834,6 +1834,26 @@ private:
     llvm_unreachable("Missing DeclSpecContext case");
   }
 
+  /// Is this a context in which we can perform class template argument
+  /// deduction?
+  static bool isClassTemplateDeductionContext(DeclSpecContext DSC) {
+    switch (DSC) {
+    case DSC_normal:
+    case DSC_class:
+    case DSC_top_level:
+    case DSC_condition:
+    case DSC_type_specifier:
+      return true;
+
+    case DSC_objc_method_result:
+    case DSC_template_type_arg:
+    case DSC_trailing:
+    case DSC_alias_declaration:
+      return false;
+    }
+    llvm_unreachable("Missing DeclSpecContext case");
+  }
+
   /// Information on a C++0x for-range-initializer found while parsing a
   /// declaration which turns out to be a for-range-declaration.
   struct ForRangeInit {

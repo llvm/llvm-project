@@ -349,6 +349,15 @@ void ASTTypeWriter::VisitAutoType(const AutoType *T) {
   Code = TYPE_AUTO;
 }
 
+void ASTTypeWriter::VisitDeducedTemplateSpecializationType(
+    const DeducedTemplateSpecializationType *T) {
+  Record.AddTemplateName(T->getTemplateName());
+  Record.AddTypeRef(T->getDeducedType());
+  if (T->getDeducedType().isNull())
+    Record.push_back(T->isDependentType());
+  Code = TYPE_DEDUCED_TEMPLATE_SPECIALIZATION;
+}
+
 void ASTTypeWriter::VisitTagType(const TagType *T) {
   Record.push_back(T->isDependentType());
   Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
@@ -681,6 +690,11 @@ void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
 
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
+}
+
+void TypeLocWriter::VisitDeducedTemplateSpecializationTypeLoc(
+    DeducedTemplateSpecializationTypeLoc TL) {
+  Record.AddSourceLocation(TL.getTemplateNameLoc());
 }
 
 void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {

@@ -3976,7 +3976,8 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
       T = cast<DecltypeType>(Ty)->desugar();
       break;
     case Type::Auto:
-      T = cast<AutoType>(Ty)->getDeducedType();
+    case Type::DeducedTemplateSpecialization:
+      T = cast<DeducedType>(Ty)->getDeducedType();
       break;
     case Type::TypeOfExpr:
       T = cast<TypeOfExprType>(Ty)->getUnderlyingExpr()->getType();
@@ -13603,11 +13604,28 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
   }
 
   // Warn about implicitly autoreleasing indirect parameters captured by blocks.
-  if (auto *PT = dyn_cast<PointerType>(CaptureType)) {
+  if (const auto *PT = CaptureType->getAs<PointerType>()) {
+    // This function finds out whether there is an AttributedType of kind
+    // attr_objc_ownership in Ty. The existence of AttributedType of kind
+    // attr_objc_ownership implies __autoreleasing was explicitly specified
+    // rather than being added implicitly by the compiler.
+    auto IsObjCOwnershipAttributedType = [](QualType Ty) {
+      while (const auto *AttrTy = Ty->getAs<AttributedType>()) {
+        if (AttrTy->getAttrKind() == AttributedType::attr_objc_ownership)
+          return true;
+
+        // Peel off AttributedTypes that are not of kind objc_ownership.
+        Ty = AttrTy->getModifiedType();
+      }
+
+      return false;
+    };
+
     QualType PointeeTy = PT->getPointeeType();
-    if (isa<ObjCObjectPointerType>(PointeeTy.getCanonicalType()) &&
+
+    if (PointeeTy->getAs<ObjCObjectPointerType>() &&
         PointeeTy.getObjCLifetime() == Qualifiers::OCL_Autoreleasing &&
-        !isa<AttributedType>(PointeeTy)) {
+        !IsObjCOwnershipAttributedType(PointeeTy)) {
       if (BuildAndDiagnose) {
         SourceLocation VarLoc = Var->getLocation();
         S.Diag(Loc, diag::warn_block_capture_autoreleasing);

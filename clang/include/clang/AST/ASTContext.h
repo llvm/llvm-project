@@ -167,6 +167,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DependentUnaryTransformType>
     DependentUnaryTransformTypes;
   mutable llvm::FoldingSet<AutoType> AutoTypes;
+  mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
+    DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
   llvm::FoldingSet<AttributedType> AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
@@ -1411,6 +1413,11 @@ public:
 
   /// \brief C++11 deduction pattern for 'auto &&' type.
   QualType getAutoRRefDeductType() const;
+
+  /// \brief C++1z deduced class template specialization type.
+  QualType getDeducedTemplateSpecializationType(TemplateName Template,
+                                                QualType DeducedType,
+                                                bool IsDependent) const;
 
   /// \brief Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.

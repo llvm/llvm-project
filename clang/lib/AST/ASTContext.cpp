@@ -1877,8 +1877,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(cast<SubstTemplateTypeParmType>(T)->
                        getReplacementType().getTypePtr());
 
-  case Type::Auto: {
-    const AutoType *A = cast<AutoType>(T);
+  case Type::Auto:
+  case Type::DeducedTemplateSpecialization: {
+    const DeducedType *A = cast<DeducedType>(T);
     assert(!A->getDeducedType().isNull() &&
            "cannot request the size of an undeduced or dependent auto type");
     return getTypeInfo(A->getDeducedType().getTypePtr());
@@ -2765,6 +2766,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
     llvm_unreachable("type should never be variably-modified");
 
@@ -4428,6 +4430,28 @@ QualType ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
   if (InsertPos)
     AutoTypes.InsertNode(AT, InsertPos);
   return QualType(AT, 0);
+}
+
+/// Return the uniqued reference to the deduced template specialization type
+/// which has been deduced to the given type, or to the canonical undeduced
+/// such type, or the canonical deduced-but-dependent such type.
+QualType ASTContext::getDeducedTemplateSpecializationType(
+    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+  // Look in the folding set for an existing type.
+  void *InsertPos = nullptr;
+  llvm::FoldingSetNodeID ID;
+  DeducedTemplateSpecializationType::Profile(ID, Template, DeducedType,
+                                             IsDependent);
+  if (DeducedTemplateSpecializationType *DTST =
+          DeducedTemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(DTST, 0);
+
+  DeducedTemplateSpecializationType *DTST = new (*this, TypeAlignment)
+      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent);
+  Types.push_back(DTST);
+  if (InsertPos)
+    DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
+  return QualType(DTST, 0);
 }
 
 /// getAtomicType - Return the uniqued reference to the atomic type for
@@ -6328,6 +6352,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string& S,
   // We could see an undeduced auto type here during error recovery.
   // Just ignore it.
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
     return;
 
   case Type::Pipe:
@@ -8127,6 +8152,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     llvm_unreachable("Non-canonical and dependent types shouldn't get here");
 
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
   case Type::LValueReference:
   case Type::RValueReference:
   case Type::MemberPointer:

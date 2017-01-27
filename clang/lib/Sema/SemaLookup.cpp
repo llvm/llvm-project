@@ -2694,6 +2694,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
 
     // Non-deduced auto types only get here for error cases.
     case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
       break;
 
     // If T is an Objective-C object or interface type, or a pointer to an 

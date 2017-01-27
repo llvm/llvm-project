@@ -3185,8 +3185,7 @@ std::string HexagonToolChain::getHexagonTargetDir(
 Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
       const ArgList &Args) {
   StringRef Gn = "";
-  if (Arg *A = Args.getLastArg(options::OPT_G, options::OPT_G_EQ,
-                               options::OPT_msmall_data_threshold_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_G)) {
     Gn = A->getValue();
   } else if (Args.getLastArg(options::OPT_shared, options::OPT_fpic,
                              options::OPT_fPIC)) {

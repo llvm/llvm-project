@@ -1640,6 +1640,15 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   return Visit(TL.getOriginalLoc());
 }
 
+bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
+    DeducedTemplateSpecializationTypeLoc TL) {
+  if (VisitTemplateName(TL.getTypePtr()->getTemplateName(), 
+                        TL.getTemplateNameLoc()))
+    return true;
+  
+  return false;
+}
+
 bool CursorVisitor::VisitTemplateSpecializationTypeLoc(
                                              TemplateSpecializationTypeLoc TL) {
   // Visit the template name.

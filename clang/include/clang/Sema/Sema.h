@@ -1573,6 +1573,7 @@ public:
                          ParsedType ObjectType = nullptr,
                          bool IsCtorOrDtorName = false,
                          bool WantNontrivialTypeSourceInfo = false,
+                         bool IsClassTemplateDeductionContext = true,
                          IdentifierInfo **CorrectedII = nullptr);
   TypeSpecifierType isTagName(IdentifierInfo &II, Scope *S);
   bool isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S);

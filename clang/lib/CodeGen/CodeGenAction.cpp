@@ -860,9 +860,30 @@ std::unique_ptr<llvm::Module> CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   SourceManager &SM = CI.getSourceManager();
 
   // For ThinLTO backend invocations, ensure that the context
-  // merges types based on ODR identifiers.
-  if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty())
+  // merges types based on ODR identifiers. We also need to read
+  // the correct module out of a multi-module bitcode file.
+  if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
     VMContext->enableDebugTypeODRUniquing();
+
+    auto DiagErrors = [&](Error E) -> std::unique_ptr<llvm::Module> {
+      unsigned DiagID =
+          CI.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+      handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+        CI.getDiagnostics().Report(DiagID) << EIB.message();
+      });
+      return {};
+    };
+
+    Expected<llvm::BitcodeModule> BMOrErr = FindThinLTOModule(MBRef);
+    if (!BMOrErr)
+      return DiagErrors(BMOrErr.takeError());
+
+    Expected<std::unique_ptr<llvm::Module>> MOrErr =
+        BMOrErr->parseModule(*VMContext);
+    if (!MOrErr)
+      return DiagErrors(MOrErr.takeError());
+    return std::move(*MOrErr);
+  }
 
   llvm::SMDiagnostic Err;
   if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext))

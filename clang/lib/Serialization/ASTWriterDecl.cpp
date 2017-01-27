@@ -368,6 +368,7 @@ void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
   Record.push_back(D->isModed());
   if (D->isModed())
     Record.AddTypeRef(D->getUnderlyingType());
+  Record.AddDeclRef(D->getAnonDeclWithTypedefName(false));
 }
 
 void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
