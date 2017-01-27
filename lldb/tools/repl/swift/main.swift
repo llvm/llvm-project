@@ -14,7 +14,7 @@
 // lands in an external Xcode build.
 #if XCODE_BUILD_ME || !_runtime(_ObjC)
 #if _runtime(_ObjC)
-import REPLTime
+import Darwin
 #endif
 
 func repl_main() -> Int
@@ -38,13 +38,13 @@ func repl_main() -> Int
 // we want this program to exit without consuming 100% CPU, so we detect any loops
 // that take less than 100us and if we get three of them in a row, we exit.
 
-var timebase_info = REPLTime.mach_timebase_info(numer: 0, denom: 0)
-REPLTime.REPL_mach_timebase_info(&timebase_info)
+var timebase_info = mach_timebase_info(numer: 0, denom: 0)
+Darwin.mach_timebase_info(&timebase_info)
 var subsequent_short = 0
 while subsequent_short < 3 {
-    var start = REPLTime.REPL_mach_absolute_time()
+    var start = Darwin.mach_absolute_time()
     repl_main()
-    var end = REPLTime.REPL_mach_absolute_time()
+    var end = Darwin.mach_absolute_time()
     var elapsedTicks = end - start
     var elapsedNano = (elapsedTicks * UInt64(timebase_info.numer)) / UInt64(timebase_info.denom)
     if elapsedNano < 100000 {
