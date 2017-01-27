@@ -109,9 +109,11 @@ set(SWIFT_ALL_LIBS
     swiftBasic
     swiftAST
     swiftIDE
+    swiftIRGen
     swiftFrontend
     swiftSerialization
     swiftClangImporter
+    swiftMarkup
     swiftParse
     swiftSIL
     swiftSILOptimizer
