@@ -16,6 +16,7 @@ add_llvm_unittest(AnalysisTests
   MemoryBuiltinsTest.cpp
   ScalarEvolutionTest.cpp
   TBAATest.cpp
+  TargetLibraryInfoTest.cpp
   UnrollAnalyzer.cpp
   ValueTrackingTest.cpp
   )
