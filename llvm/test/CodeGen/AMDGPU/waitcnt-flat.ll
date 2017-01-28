@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global | FileCheck --check-prefix=GCN %s
 
 ; If flat_store_dword and flat_load_dword use different registers for the data
 ; operand, this test is not broken.  It just means it is no longer testing

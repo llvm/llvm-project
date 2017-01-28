@@ -167,6 +167,6 @@ define void @test_fold_canonicalize_snan3_value_f16(half addrspace(1)* %out) #1 
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind "target-features"="-fp16-denormals,-fp16-denormals" }
-attributes #3 = { nounwind "target-features"="+fp16-denormals,+fp64-denormals" }
+attributes #1 = { nounwind "target-features"="-flat-for-global" }
+attributes #2 = { nounwind "target-features"="-flat-for-global,-fp16-denormals,-fp16-denormals" }
+attributes #3 = { nounwind "target-features"="-flat-for-global,+fp16-denormals,+fp64-denormals" }

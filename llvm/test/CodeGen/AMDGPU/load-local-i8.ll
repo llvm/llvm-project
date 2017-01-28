@@ -142,7 +142,7 @@ define void @local_zextload_v2i8_to_v2i32(<2 x i32> addrspace(3)* %out, <2 x i8>
 ; GCN: s_mov_b32 m0
 ; GCN: ds_read_u16
 ; FIXME: Need to optimize this sequence to avoid extra shift on VI.
-;         t23: i16 = srl t39, Constant:i32<8> 
+;         t23: i16 = srl t39, Constant:i32<8>
 ;          t31: i32 = any_extend t23
 ;        t33: i32 = sign_extend_inreg t31, ValueType:ch:i8
 

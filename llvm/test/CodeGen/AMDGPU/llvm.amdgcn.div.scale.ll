@@ -322,7 +322,8 @@ define void @test_div_scale_f32_inline_imm_den(float addrspace(1)* %out, float a
 ; SI-LABEL: {{^}}test_div_scale_f32_fabs_num:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], |[[A]]|
+; SI: v_and_b32_e32 [[ABS_A:v[0-9]+]], 0x7fffffff, [[A]]
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], [[ABS_A]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
@@ -344,7 +345,8 @@ define void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspa
 ; SI-LABEL: {{^}}test_div_scale_f32_fabs_den:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], |[[B]]|, |[[B]]|, [[A]]
+; SI: v_and_b32_e32 [[ABS_B:v[0-9]+]], 0x7fffffff, [[B]]
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[ABS_B]], [[ABS_B]], [[A]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_fabs_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
