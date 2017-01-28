@@ -20,7 +20,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
 # RUN:         -mcpu=mips64r6 %S/Inputs/mips-dynamic.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
-# RUN:         -mcpu=octeon %s -o %t2.o
+# RUN:         -position-independent -mcpu=octeon %s -o %t2.o
 # RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 \
 # RUN:   | FileCheck -check-prefix=R6OCTEON %s
 
@@ -35,9 +35,9 @@
 # Check that lld take in account EF_MIPS_MACH_XXX ISA flags
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
-# RUN:         -mcpu=mips64 %S/Inputs/mips-dynamic.s -o %t1.o
+# RUN:         -position-independent -mcpu=mips64 %S/Inputs/mips-dynamic.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
-# RUN:         -mcpu=octeon %s -o %t2.o
+# RUN:         -position-independent -mcpu=octeon %s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
 # RUN: llvm-readobj -h %t.exe | FileCheck -check-prefix=OCTEON %s
 
@@ -79,8 +79,7 @@ __start:
 # OCTEON-NEXT:   EF_MIPS_ARCH_64R2
 # OCTEON-NEXT:   EF_MIPS_CPIC
 # OCTEON-NEXT:   EF_MIPS_MACH_OCTEON
-# OCTEON-NEXT:   EF_MIPS_PIC
-# OCTEON-NEXT: ]
+# OCTEON:      ]
 
 # N32O32: error: {{.*}}mips-elf-flags-err.s.tmp2.o is incompatible with {{.*}}mips-elf-flags-err.s.tmp1.o
 

@@ -350,29 +350,39 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
 }
 
 static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
+  // Find the last of --unresolved-symbols, --no-undefined and -z defs.
+  bool UnresolvedSymbolIsIgnoreAll = false;
+  bool ZDefs = false;
+  for (auto *Arg : Args) {
+    unsigned ID = Arg->getOption().getID();
+    if (ID == OPT_unresolved_symbols) {
+      StringRef S = Arg->getValue();
+      if (S == "ignore-all" || S == "ignore-in-object-files") {
+        ZDefs = false;
+        UnresolvedSymbolIsIgnoreAll = true;
+      } else if (S != "ignore-in-shared-libs" && S != "report-all") {
+        error("unknown --unresolved-symbols value: " + S);
+      }
+    } else if (ID == OPT_no_undefined ||
+               (ID == OPT_z && Arg->getValue() == StringRef("defs"))) {
+      ZDefs = true;
+      UnresolvedSymbolIsIgnoreAll = false;
+    }
+  }
+
   if (Args.hasArg(OPT_noinhibit_exec))
-    return UnresolvedPolicy::Warn;
-  if (Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs"))
-    return UnresolvedPolicy::NoUndef;
+    return UnresolvedPolicy::WarnAll;
   if (Config->Relocatable)
-    return UnresolvedPolicy::Ignore;
+    return UnresolvedPolicy::IgnoreAll;
 
-  if (auto *Arg = Args.getLastArg(OPT_warn_undef, OPT_error_undef)) {
-    if (Arg->getOption().getID() == OPT_warn_undef)
-      return UnresolvedPolicy::Warn;
-
+  if (ZDefs || (!Config->Shared && !UnresolvedSymbolIsIgnoreAll)) {
+    if (auto *Arg = Args.getLastArg(OPT_warn_undef, OPT_error_undef))
+      if (Arg->getOption().getID() == OPT_warn_undef)
+        return UnresolvedPolicy::Warn;
     return UnresolvedPolicy::ReportError;
   }
 
-  if (auto *Arg = Args.getLastArg(OPT_unresolved_symbols)) {
-    StringRef S = Arg->getValue();
-    if (S == "ignore-all" || S == "ignore-in-object-files")
-      return UnresolvedPolicy::Ignore;
-    if (S == "ignore-in-shared-libs" || S == "report-all")
-      return UnresolvedPolicy::ReportError;
-    error("unknown --unresolved-symbols value: " + S);
-  }
-  return UnresolvedPolicy::ReportError;
+  return UnresolvedPolicy::Ignore;
 }
 
 static Target2Policy getTarget2Option(opt::InputArgList &Args) {

@@ -43,6 +43,7 @@
 
 #include "Relocations.h"
 #include "Config.h"
+#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
@@ -52,6 +53,7 @@
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -300,16 +302,14 @@ template <class ELFT> static bool isAbsoluteValue(const SymbolBody &Body) {
 }
 
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC,
-                        R_THUNK_PLT_PC>(Expr);
+  return isRelExprOneOf<R_PLT_PC, R_PPC_PLT_OPD, R_PLT, R_PLT_PAGE_PC>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
   return isRelExprOneOf<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL,
-                        R_PAGE_PC, R_RELAX_GOT_PC, R_THUNK_PC, R_THUNK_PLT_PC>(
-      Expr);
+                        R_PAGE_PC, R_RELAX_GOT_PC>(Expr);
 }
 
 template <class ELFT>
@@ -321,8 +321,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_TLSGD,
                      R_GOT_PAGE_PC, R_GOT_PC, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
-                     R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
-                     R_THUNK_PC, R_THUNK_PLT_PC>(E))
+                     R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -467,7 +466,6 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     if (Expr == R_GOT_PC && !isAbsoluteValue<ELFT>(Body))
       Expr = Target->adjustRelaxExpr(Type, Data, Expr);
   }
-  Expr = Target->getThunkExpr(Expr, Type, &File, Body);
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body, S, RelOff))
     return Expr;
@@ -557,17 +555,17 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
 template <class ELFT>
 static void reportUndefined(SymbolBody &Sym, InputSectionBase<ELFT> &S,
                             typename ELFT::uint Offset) {
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
-    return;
-
-  if (Config->Shared && Sym.symbol()->Visibility == STV_DEFAULT &&
-      Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
+  bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
+                       Sym.getVisibility() == STV_DEFAULT;
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll ||
+      (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal))
     return;
 
   std::string Msg =
       S.getLocation(Offset) + ": undefined symbol '" + toString(Sym) + "'";
 
-  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::WarnAll ||
+      (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal))
     warn(Msg);
   else
     error(Msg);
@@ -685,7 +683,6 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
 
     if (needsPlt(Expr) ||
-        isRelExprOneOf<R_THUNK_ABS, R_THUNK_PC, R_THUNK_PLT_PC>(Expr) ||
         refersToGotEntry(Expr) || !isPreemptible(Body, Type)) {
       // If the relocation points to something in the file, we can process it.
       bool Constant =
@@ -805,33 +802,126 @@ template <class ELFT> void scanRelocations(InputSectionBase<ELFT> &S) {
     scanRelocs(S, S.rels());
 }
 
+// Insert the Thunks for OutputSection OS into their designated place
+// in the Sections vector, and recalculate the InputSection output section
+// offsets.
+// This may invalidate any output section offsets stored outside of InputSection
+template <class ELFT>
+static void mergeThunks(OutputSection<ELFT> *OS,
+                        std::vector<ThunkSection<ELFT> *> &Thunks) {
+  // Order Thunks in ascending OutSecOff
+  auto ThunkCmp = [](const ThunkSection<ELFT> *A, const ThunkSection<ELFT> *B) {
+    return A->OutSecOff < B->OutSecOff;
+  };
+  std::stable_sort(Thunks.begin(), Thunks.end(), ThunkCmp);
+
+  // Merge sorted vectors of Thunks and InputSections by OutSecOff
+  std::vector<InputSection<ELFT> *> Tmp;
+  Tmp.reserve(OS->Sections.size() + Thunks.size());
+  auto MergeCmp = [](const ThunkSection<ELFT> *Thunk,
+                     const InputSection<ELFT> *IS) {
+    // All thunks go before any non-executable InputSections
+    if ((IS->Flags & SHF_EXECINSTR) == 0)
+      return true;
+    // Some Thunk Sections such as the Mips LA25 thunk must be placed before
+    // the InputSections that they target. We represent this by assigning the
+    // ThunkSection the same OutSecOff and always placing the Thunk first if
+    // the OutSecOff values are the same.
+    return Thunk->OutSecOff <= IS->OutSecOff;
+  };
+  std::merge(OS->Sections.begin(), OS->Sections.end(), Thunks.begin(),
+             Thunks.end(), std::back_inserter(Tmp), MergeCmp);
+  OS->Sections = std::move(Tmp);
+  OS->Size = 0;
+  OS->assignOffsets();
+}
+
+// Process all relocations from the InputSections that have been assigned
+// to OutputSections and redirect through Thunks if needed.
+//
+// createThunks must be called after scanRelocs has created the Relocations for
+// each InputSection. It must be called before the static symbol table is
+// finalized. If any Thunks are added to an OutputSection the output section
+// offsets of the InputSections will change.
+//
+// FIXME: All Thunks are assumed to be in range of the relocation. Range
+// extension Thunks are not yet supported.
 template <class ELFT>
 void createThunks(ArrayRef<OutputSectionBase *> OutputSections) {
+  // Track Symbols that already have a Thunk
+  DenseMap<SymbolBody *, Thunk<ELFT> *> ThunkedSymbols;
+  // Track InputSections that have a ThunkSection placed in front
+  DenseMap<InputSection<ELFT> *, ThunkSection<ELFT> *> ThunkedSections;
+  // Track the ThunksSections that need to be inserted into an OutputSection
+  std::map<OutputSection<ELFT> *, std::vector<ThunkSection<ELFT> *>>
+      ThunkSections;
+
+  // Find or create a Thunk for Body for relocation Type
+  auto GetThunk = [&](SymbolBody &Body, uint32_t Type) {
+    auto res = ThunkedSymbols.insert({&Body, nullptr});
+    if (res.second == true)
+      res.first->second = addThunk<ELFT>(Type, Body);
+    return std::make_pair(res.first->second, res.second);
+  };
+
+  // Find or create a ThunkSection to be placed immediately before IS
+  auto GetISThunkSec = [&](InputSection<ELFT> *IS, OutputSection<ELFT> *OS) {
+    ThunkSection<ELFT> *TS = ThunkedSections.lookup(IS);
+    if (TS)
+      return TS;
+    auto *TOS = cast<OutputSection<ELFT>>(IS->OutSec);
+    TS = make<ThunkSection<ELFT>>(TOS, IS->OutSecOff);
+    ThunkSections[OS].push_back(TS);
+    ThunkedSections[IS] = TS;
+    return TS;
+  };
+  // Find or create a ThunkSection to be placed at the end of OS
+  auto GetOSThunkSec = [&](ThunkSection<ELFT> *&TS, OutputSection<ELFT> *OS) {
+    if (TS == nullptr) {
+      TS = make<ThunkSection<ELFT>>(OS, OS->Size);
+      ThunkSections[OS].push_back(TS);
+    }
+    return TS;
+  };
+  // Create all the Thunks and insert them into synthetic ThunkSections. The
+  // ThunkSections are later inserted back into the OutputSection.
+
+  // We separate the creation of ThunkSections from the insertion of the
+  // ThunkSections back into the OutputSection as ThunkSections are not always
+  // inserted into the same OutputSection as the caller.
   for (OutputSectionBase *Base : OutputSections) {
     auto *OS = dyn_cast<OutputSection<ELFT>>(Base);
     if (OS == nullptr)
       continue;
+
+    ThunkSection<ELFT> *OSTS = nullptr;
     for (InputSection<ELFT> *IS : OS->Sections) {
-      for (const Relocation &Rel : IS->Relocations) {
-        if (Rel.Sym == nullptr)
-          continue;
-        RelExpr Expr = Rel.Expr;
-        // Some targets might require creation of thunks for relocations.
-        // Now we support only MIPS which requires LA25 thunk to call PIC
-        // code from non-PIC one, and ARM which requires interworking.
-        if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
-            Expr == R_THUNK_PLT_PC)
-          addThunk<ELFT>(Rel.Type, *Rel.Sym, *IS);
+      for (Relocation &Rel : IS->Relocations) {
+        SymbolBody &Body = *Rel.Sym;
+        if (Target->needsThunk(Rel.Expr, Rel.Type, IS->getFile(), Body)) {
+          Thunk<ELFT> *T;
+          bool IsNew;
+          std::tie(T, IsNew) = GetThunk(Body, Rel.Type);
+          if (IsNew) {
+            // Find or create a ThunkSection for the new Thunk
+            ThunkSection<ELFT> *TS;
+            if (auto *TIS = T->getTargetInputSection())
+              TS = GetISThunkSec(TIS, OS);
+            else
+              TS = GetOSThunkSec(OSTS, OS);
+            TS->addThunk(T);
+          }
+          // Redirect relocation to Thunk, we never go via the PLT to a Thunk
+          Rel.Sym = T->ThunkSym;
+          Rel.Expr = fromPlt(Rel.Expr);
+        }
       }
     }
   }
-  // Added thunks may affect the output section offset
-  for (OutputSectionBase *Base : OutputSections)
-    if (auto *OS = dyn_cast<OutputSection<ELFT>>(Base))
-      if (OS->Type == SHT_PROGBITS) {
-        OS->Size = 0;
-        OS->assignOffsets();
-      }
+
+  // Merge all created synthetic ThunkSections back into OutputSection
+  for (auto &KV : ThunkSections)
+    mergeThunks<ELFT>(KV.first, KV.second);
 }
 
 template void scanRelocations<ELF32LE>(InputSectionBase<ELF32LE> &);

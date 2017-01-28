@@ -84,22 +84,6 @@ class kmp_flag {
     */
 };
 
-#if ! KMP_USE_MONITOR
-# if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
-   // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
-   extern double __kmp_ticks_per_nsec;
-#  define KMP_NOW() __kmp_hardware_timestamp()
-#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC * __kmp_ticks_per_nsec)
-#  define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
-# else
-   // System time is retrieved sporadically while blocking.
-   extern kmp_uint64 __kmp_now_nsec();
-#  define KMP_NOW() __kmp_now_nsec()
-#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC)
-#  define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
-# endif
-#endif
-
 /* Spin wait loop that first does pause, then yield, then sleep. A thread that calls __kmp_wait_*
    must make certain that another thread calls __kmp_release to wake it back up to prevent deadlocks!  */
 template <class C>
@@ -187,7 +171,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
                       th_gtid, __kmp_global.g.g_time.dt.t_value, hibernate,
                       hibernate - __kmp_global.g.g_time.dt.t_value));
 #else
-        hibernate_goal = KMP_NOW() + KMP_BLOCKTIME_INTERVAL();
+        hibernate_goal = KMP_NOW() + this_thr->th.th_team_bt_intervals;
         poll_count = 0;
 #endif // KMP_USE_MONITOR
     }
