@@ -58,7 +58,7 @@ int test1() {
 // RUN: c-index-test -index-file %s -target x86_64-apple-macosx10.7 > %t
 // RUN: FileCheck %s -input-file=%t
 // CHECK: [indexDeclaration]: kind: objc-class | name: I | {{.*}} | loc: 1:12
-// CHECK: [indexDeclaration]: kind: objc-instance-method | name: prop | {{.*}} | loc: 3:2
+// CHECK: [indexDeclaration]: kind: objc-instance-method | name: prop | {{.*}} | loc: 3:7
 // CHECK: [indexDeclaration]: kind: objc-property | name: prop | {{.*}} | loc: 2:25
 // CHECK: [indexDeclaration]: kind: objc-category | name:  | {{.*}} | loc: 6:12
 // CHECK: [indexDeclaration]: kind: objc-instance-method | name: setProp: | {{.*}} | loc: 7:33
@@ -82,5 +82,5 @@ int test1() {
 // CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 37:
 // CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 43:
 
-// CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 54:1 | {{.*}} | isRedecl: 0 | isDef: 0 |
+// CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 54:8 | {{.*}} | isRedecl: 0 | isDef: 0 |
 // CHECK: [indexDeclaration]: kind: objc-property | name: c | USR: c:objc(cs)I5(cpy)c | lang: ObjC | cursor: ObjCPropertyDecl=c:55:23 [class,] | loc: 55:23
