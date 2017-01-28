@@ -115,7 +115,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLTOObject() {
   // Compile bitcode files and replace bitcode symbols.
   LTO.reset(new BitcodeCompiler);
   for (BitcodeFile *F : BitcodeFiles)
-    LTO->add(*F);
+    LTO->add<ELFT>(*F);
 
   for (InputFile *File : LTO->compile()) {
     ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(File);
@@ -256,7 +256,7 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, bool IsLocal,
       insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, File);
   if (WasInserted) {
     S->Binding = Binding;
-    replaceBody<Undefined>(S, Name, IsLocal, StOther, Type, File);
+    replaceBody<Undefined<ELFT>>(S, Name, IsLocal, StOther, Type, File);
     return S;
   }
   if (Binding != STB_WEAK) {
@@ -428,7 +428,7 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
   // Make sure we preempt DSO symbols with default visibility.
   if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
-  if (WasInserted || isa<Undefined>(S->body())) {
+  if (WasInserted || isa<Undefined<ELFT>>(S->body())) {
     replaceBody<SharedSymbol<ELFT>>(S, F, Name, Sym, Verdef);
     if (!S->isWeak())
       F->IsUsed = true;

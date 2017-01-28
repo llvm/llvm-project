@@ -132,6 +132,14 @@ bool SymbolBody::isPreemptible() const {
   return true;
 }
 
+template <class ELFT> bool SymbolBody::hasThunk() const {
+  if (auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
+    return DR->ThunkData != nullptr;
+  if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
+    return S->ThunkData != nullptr;
+  return false;
+}
+
 template <class ELFT>
 typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
   typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
@@ -161,6 +169,16 @@ template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
     return In<ELFT>::Iplt->getVA() + PltIndex * Target->PltEntrySize;
   return In<ELFT>::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
+}
+
+template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
+  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(this))
+    return DR->ThunkData->getVA();
+  if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
+    return S->ThunkData->getVA();
+  if (const auto *S = dyn_cast<Undefined<ELFT>>(this))
+    return S->ThunkData->getVA();
+  fatal("getThunkVA() not supported for Symbol class\n");
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
@@ -223,8 +241,9 @@ template <class ELFT> bool DefinedRegular<ELFT>::isMipsPIC() const {
          (Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
-                     uint8_t Type, InputFile *File)
+template <typename ELFT>
+Undefined<ELFT>::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
+                           uint8_t Type, InputFile *File)
     : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {
   this->File = File;
 }
@@ -319,6 +338,11 @@ std::string lld::toString(const SymbolBody &B) {
   return B.getName();
 }
 
+template bool SymbolBody::hasThunk<ELF32LE>() const;
+template bool SymbolBody::hasThunk<ELF32BE>() const;
+template bool SymbolBody::hasThunk<ELF64LE>() const;
+template bool SymbolBody::hasThunk<ELF64BE>() const;
+
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;
 template uint64_t SymbolBody::template getVA<ELF64LE>(uint64_t) const;
@@ -339,6 +363,11 @@ template uint32_t SymbolBody::template getGotPltVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotPltVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotPltVA<ELF64BE>() const;
 
+template uint32_t SymbolBody::template getThunkVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getThunkVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getThunkVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getThunkVA<ELF64BE>() const;
+
 template uint32_t SymbolBody::template getGotPltOffset<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotPltOffset<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotPltOffset<ELF64LE>() const;
@@ -353,6 +382,11 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template class elf::Undefined<ELF32LE>;
+template class elf::Undefined<ELF32BE>;
+template class elf::Undefined<ELF64LE>;
+template class elf::Undefined<ELF64BE>;
 
 template class elf::SharedSymbol<ELF32LE>;
 template class elf::SharedSymbol<ELF32BE>;

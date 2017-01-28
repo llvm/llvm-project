@@ -1109,10 +1109,6 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                      options::OPT_fno_omit_frame_pointer, false))
       getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
           << "-fomit-frame-pointer" << BoundArch;
-    if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
-                     options::OPT_mno_omit_leaf_frame_pointer, false))
-      getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
-          << "-momit-leaf-frame-pointer" << BoundArch;
   }
 
   return DAL;
@@ -2892,6 +2888,9 @@ bool Generic_GCC::isPICDefault() const {
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return !getTriple().isOSBinFormatMachO() && !getTriple().isMacOSX();
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+    return true;
   default:
     return false;
   }

@@ -6956,8 +6956,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       (TAL == TAL_DeclSpec || TAL == TAL_DeclChunk)) {
     Declarator &D = state.getDeclarator();
     if (state.getCurrentChunkIndex() > 0 &&
-        D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
-            DeclaratorChunk::Pointer) {
+        (D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
+             DeclaratorChunk::Pointer ||
+         D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
+             DeclaratorChunk::BlockPointer)) {
       type = state.getSema().Context.getAddrSpaceQualType(
           type, LangAS::opencl_generic);
     } else if (state.getCurrentChunkIndex() == 0 &&

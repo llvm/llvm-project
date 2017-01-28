@@ -2961,7 +2961,6 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
     if (CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(Cand->getUnderlyingDecl())) {
       if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
         AddMethodCandidate(M, Cand, RD, ThisTy, Classification,
-                           /*ThisArg=*/nullptr,
                            llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
       else if (CtorInfo)
         AddOverloadCandidate(CtorInfo.Constructor, CtorInfo.FoundDecl,
@@ -2974,7 +2973,7 @@ Sema::SpecialMemberOverloadResult *Sema::LookupSpecialMember(CXXRecordDecl *RD,
       if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
         AddMethodTemplateCandidate(
             Tmpl, Cand, RD, nullptr, ThisTy, Classification,
-            /*ThisArg=*/nullptr, llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
+            llvm::makeArrayRef(&Arg, NumArgs), OCS, true);
       else if (CtorInfo)
         AddTemplateOverloadCandidate(
             CtorInfo.ConstructorTmpl, CtorInfo.FoundDecl, nullptr,

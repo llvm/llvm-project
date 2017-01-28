@@ -76,6 +76,7 @@ public:
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
+  template <class ELFT> bool hasThunk() const;
 
   template <class ELFT>
   typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
@@ -85,6 +86,7 @@ public:
   template <class ELFT> typename ELFT::uint getGotPltOffset() const;
   template <class ELFT> typename ELFT::uint getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
+  template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
   // The file from which this symbol was created.
@@ -208,6 +210,10 @@ public:
   // If this is null, the symbol is an absolute symbol.
   InputSectionBase<ELFT> *&Section;
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol.
+  Thunk<ELFT> *ThunkData = nullptr;
+
 private:
   static InputSectionBase<ELFT> *NullInputSection;
 };
@@ -236,7 +242,7 @@ public:
   const OutputSectionBase *Section;
 };
 
-class Undefined : public SymbolBody {
+template <class ELFT> class Undefined : public SymbolBody {
 public:
   Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
             InputFile *F);
@@ -245,6 +251,12 @@ public:
     return S->kind() == UndefinedKind;
   }
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol. When linking a DSO undefined
+  // symbols are implicitly imported, the symbol lookup will be performed by
+  // the dynamic loader. A call to an undefined symbol will be given a PLT
+  // entry and on ARM this may need a Thunk if the caller is in Thumb state.
+  Thunk<ELFT> *ThunkData = nullptr;
   InputFile *file() { return this->File; }
 };
 
@@ -279,6 +291,9 @@ public:
   // CopyOffset is significant only when needsCopy() is true.
   uintX_t CopyOffset = 0;
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol.
+  Thunk<ELFT> *ThunkData = nullptr;
   bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
 
   OutputSection<ELFT> *getBssSectionForCopy() const;
@@ -416,7 +431,8 @@ struct Symbol {
   // ELFT, and we verify this with the static_asserts in replaceBody.
   llvm::AlignedCharArrayUnion<
       DefinedCommon, DefinedRegular<llvm::object::ELF64LE>, DefinedSynthetic,
-      Undefined, SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Undefined<llvm::object::ELF64LE>, SharedSymbol<llvm::object::ELF64LE>,
+      LazyArchive, LazyObject>
       Body;
 
   SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }

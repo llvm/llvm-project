@@ -247,6 +247,10 @@ def err_test_module_file_extension_format : Error<
 def warn_drv_invoking_fallback : Warning<"falling back to %0">,
   InGroup<Fallback>;
 
+def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
+  InGroup<DiagGroup<"slash-u-filename">>;
+def note_use_dashdash : Note<"Use '--' to treat subsequent arguments as filenames">;
+
 def err_drv_ropi_rwpi_incompatible_with_pic : Error<
   "embedded and GOT-based position independence are incompatible">;
 def err_drv_ropi_incompatible_with_cxx : Error<

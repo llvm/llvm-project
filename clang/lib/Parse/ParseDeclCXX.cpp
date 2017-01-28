@@ -2960,56 +2960,50 @@ void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
 Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     AccessSpecifier &AS, ParsedAttributesWithRange &AccessAttrs,
     DeclSpec::TST TagType, Decl *TagDecl) {
-  if (getLangOpts().MicrosoftExt &&
-      Tok.isOneOf(tok::kw___if_exists, tok::kw___if_not_exists)) {
+  switch (Tok.getKind()) {
+  case tok::kw___if_exists:
+  case tok::kw___if_not_exists:
     ParseMicrosoftIfExistsClassDeclaration(TagType, AS);
     return nullptr;
-  }
 
-  // Check for extraneous top-level semicolon.
-  if (Tok.is(tok::semi)) {
+  case tok::semi:
+    // Check for extraneous top-level semicolon.
     ConsumeExtraSemi(InsideStruct, TagType);
     return nullptr;
-  }
 
-  if (Tok.is(tok::annot_pragma_vis)) {
+    // Handle pragmas that can appear as member declarations.
+  case tok::annot_pragma_vis:
     HandlePragmaVisibility();
     return nullptr;
-  }
-
-  if (Tok.is(tok::annot_pragma_pack)) {
+  case tok::annot_pragma_pack:
     HandlePragmaPack();
     return nullptr;
-  }
-
-  if (Tok.is(tok::annot_pragma_align)) {
+  case tok::annot_pragma_align:
     HandlePragmaAlign();
     return nullptr;
-  }
-
-  if (Tok.is(tok::annot_pragma_ms_pointers_to_members)) {
+  case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
-  }
-
-  if (Tok.is(tok::annot_pragma_ms_pragma)) {
+  case tok::annot_pragma_ms_pragma:
     HandlePragmaMSPragma();
     return nullptr;
-  }
-
-  if (Tok.is(tok::annot_pragma_ms_vtordisp)) {
+  case tok::annot_pragma_ms_vtordisp:
     HandlePragmaMSVtorDisp();
     return nullptr;
-  }
+  case tok::annot_pragma_dump:
+    HandlePragmaDump();
+    return nullptr;
 
-  // If we see a namespace here, a close brace was missing somewhere.
-  if (Tok.is(tok::kw_namespace)) {
+  case tok::kw_namespace:
+    // If we see a namespace here, a close brace was missing somewhere.
     DiagnoseUnexpectedNamespace(cast<NamedDecl>(TagDecl));
     return nullptr;
-  }
 
-  AccessSpecifier NewAS = getAccessSpecifierIfPresent();
-  if (NewAS != AS_none) {
+  case tok::kw_public:
+  case tok::kw_protected:
+  case tok::kw_private: {
+    AccessSpecifier NewAS = getAccessSpecifierIfPresent();
+    assert(NewAS != AS_none);
     // Current token is a C++ access specifier.
     AS = NewAS;
     SourceLocation ASLoc = Tok.getLocation();
@@ -3044,12 +3038,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return nullptr;
   }
 
-  if (Tok.is(tok::annot_pragma_openmp))
+  case tok::annot_pragma_openmp:
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, AccessAttrs, TagType,
                                                       TagDecl);
 
-  // Parse all the comma separated declarators.
-  return ParseCXXClassMemberDeclaration(AS, AccessAttrs.getList());
+  default:
+    return ParseCXXClassMemberDeclaration(AS, AccessAttrs.getList());
+  }
 }
 
 /// ParseCXXMemberSpecification - Parse the class definition.

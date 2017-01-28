@@ -2575,14 +2575,14 @@ public:
   void AddMethodCandidate(DeclAccessPair FoundDecl,
                           QualType ObjectType,
                           Expr::Classification ObjectClassification,
-                          Expr *ThisArg, ArrayRef<Expr *> Args,
+                          ArrayRef<Expr *> Args,
                           OverloadCandidateSet& CandidateSet,
                           bool SuppressUserConversion = false);
   void AddMethodCandidate(CXXMethodDecl *Method,
                           DeclAccessPair FoundDecl,
                           CXXRecordDecl *ActingContext, QualType ObjectType,
                           Expr::Classification ObjectClassification,
-                          Expr *ThisArg, ArrayRef<Expr *> Args,
+                          ArrayRef<Expr *> Args,
                           OverloadCandidateSet& CandidateSet,
                           bool SuppressUserConversions = false,
                           bool PartialOverloading = false,
@@ -2593,7 +2593,6 @@ public:
                                  TemplateArgumentListInfo *ExplicitTemplateArgs,
                                   QualType ObjectType,
                                   Expr::Classification ObjectClassification,
-                                  Expr *ThisArg,
                                   ArrayRef<Expr *> Args,
                                   OverloadCandidateSet& CandidateSet,
                                   bool SuppressUserConversions = false,
@@ -2667,37 +2666,27 @@ public:
   EnableIfAttr *CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
                               bool MissingImplicitThis = false);
 
-  /// Check the diagnose_if attributes on the given function. Returns the
-  /// first succesful fatal attribute, or null if calling Function(Args) isn't
-  /// an error.
+  /// Emit diagnostics for the diagnose_if attributes on Function, ignoring any
+  /// non-ArgDependent DiagnoseIfAttrs.
   ///
-  /// This only considers ArgDependent DiagnoseIfAttrs.
+  /// Argument-dependent diagnose_if attributes should be checked each time a
+  /// function is used as a direct callee of a function call.
   ///
-  /// This will populate Nonfatal with all non-error DiagnoseIfAttrs that
-  /// succeed. If this function returns non-null, the contents of Nonfatal are
-  /// unspecified.
-  DiagnoseIfAttr *
-  checkArgDependentDiagnoseIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
-                              SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal,
-                              bool MissingImplicitThis = false,
-                              Expr *ThisArg = nullptr);
+  /// Returns true if any errors were emitted.
+  bool diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+                                           const Expr *ThisArg,
+                                           ArrayRef<const Expr *> Args,
+                                           SourceLocation Loc);
 
-  /// Check the diagnose_if expressions on the given function. Returns the
-  /// first succesful fatal attribute, or null if using Function isn't
-  /// an error.
+  /// Emit diagnostics for the diagnose_if attributes on Function, ignoring any
+  /// ArgDependent DiagnoseIfAttrs.
   ///
-  /// This ignores all ArgDependent DiagnoseIfAttrs.
+  /// Argument-independent diagnose_if attributes should be checked on every use
+  /// of a function.
   ///
-  /// This will populate Nonfatal with all non-error DiagnoseIfAttrs that
-  /// succeed. If this function returns non-null, the contents of Nonfatal are
-  /// unspecified.
-  DiagnoseIfAttr *
-  checkArgIndependentDiagnoseIf(FunctionDecl *Function,
-                                SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal);
-
-  /// Emits the diagnostic contained in the given DiagnoseIfAttr at Loc. Also
-  /// emits a note about the location of said attribute.
-  void emitDiagnoseIfDiagnostic(SourceLocation Loc, const DiagnoseIfAttr *DIA);
+  /// Returns true if any errors were emitted.
+  bool diagnoseArgIndependentDiagnoseIfAttrs(const FunctionDecl *Function,
+                                             SourceLocation Loc);
 
   /// Returns whether the given function's address can be taken or not,
   /// optionally emitting a diagnostic if the address can't be taken.
@@ -9984,8 +9973,8 @@ private:
                             SourceLocation Loc);
 
   void checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
-                 ArrayRef<const Expr *> Args, bool IsMemberFunction,
-                 SourceLocation Loc, SourceRange Range,
+                 const Expr *ThisArg, ArrayRef<const Expr *> Args,
+                 bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
 
   bool CheckObjCString(Expr *Arg);
