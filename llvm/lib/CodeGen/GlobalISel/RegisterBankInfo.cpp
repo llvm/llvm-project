@@ -68,6 +68,8 @@ RegisterBankInfo::~RegisterBankInfo() {
     delete It.second;
   for (auto It : MapOfValueMappings)
     delete It.second;
+  for (auto It : MapOfOperandsMappings)
+    delete[] It.second;
 }
 
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
