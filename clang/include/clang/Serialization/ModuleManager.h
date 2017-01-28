@@ -228,8 +228,8 @@ public:
                             ModuleFile *&Module,
                             std::string &ErrorStr);
 
-  /// \brief Remove the given set of modules.
-  void removeModules(ModuleIterator first, ModuleIterator last,
+  /// \brief Remove the modules starting from First (to the end).
+  void removeModules(ModuleIterator First,
                      llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
                      ModuleMap *modMap);
 

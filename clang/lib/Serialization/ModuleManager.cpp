@@ -184,32 +184,35 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 }
 
 void ModuleManager::removeModules(
-    ModuleIterator first, ModuleIterator last,
+    ModuleIterator First,
     llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
     ModuleMap *modMap) {
-  if (first == last)
+  auto Last = end();
+  if (First == Last)
     return;
+
 
   // Explicitly clear VisitOrder since we might not notice it is stale.
   VisitOrder.clear();
 
   // Collect the set of module file pointers that we'll be removing.
   llvm::SmallPtrSet<ModuleFile *, 4> victimSet(
-      (llvm::pointer_iterator<ModuleIterator>(first)),
-      (llvm::pointer_iterator<ModuleIterator>(last)));
+      (llvm::pointer_iterator<ModuleIterator>(First)),
+      (llvm::pointer_iterator<ModuleIterator>(Last)));
 
   auto IsVictim = [&](ModuleFile *MF) {
     return victimSet.count(MF);
   };
   // Remove any references to the now-destroyed modules.
-  for (unsigned i = 0, n = Chain.size(); i != n; ++i) {
-    Chain[i]->ImportedBy.remove_if(IsVictim);
-  }
+  //
+  // FIXME: this should probably clean up Imports as well.
+  for (auto I = begin(); I != First; ++I)
+    I->ImportedBy.remove_if(IsVictim);
   Roots.erase(std::remove_if(Roots.begin(), Roots.end(), IsVictim),
               Roots.end());
 
   // Remove the modules from the PCH chain.
-  for (auto I = first; I != last; ++I) {
+  for (auto I = First; I != Last; ++I) {
     if (!I->isModule()) {
       PCHChain.erase(std::find(PCHChain.begin(), PCHChain.end(), &*I),
                      PCHChain.end());
@@ -218,7 +221,7 @@ void ModuleManager::removeModules(
   }
 
   // Delete the modules and erase them from the various structures.
-  for (ModuleIterator victim = first; victim != last; ++victim) {
+  for (ModuleIterator victim = First; victim != Last; ++victim) {
     Modules.erase(victim->File);
 
     if (modMap) {
@@ -236,8 +239,7 @@ void ModuleManager::removeModules(
   }
 
   // Delete the modules.
-  Chain.erase(Chain.begin() + (first - begin()),
-              Chain.begin() + (last - begin()));
+  Chain.erase(Chain.begin() + (First - begin()), Chain.end());
 }
 
 void
