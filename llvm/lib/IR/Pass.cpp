@@ -118,10 +118,12 @@ void Pass::print(raw_ostream &O,const Module*) const {
   O << "Pass::print not implemented for pass: '" << getPassName() << "'!\n";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // dump - call print(cerr);
 LLVM_DUMP_METHOD void Pass::dump() const {
   print(dbgs(), nullptr);
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // ImmutablePass Implementation

@@ -140,11 +140,12 @@ static cl::opt<unsigned>
 // Implementation of the SCEV class.
 //
 
-LLVM_DUMP_METHOD
-void SCEV::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SCEV::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
+#endif
 
 void SCEV::print(raw_ostream &OS) const {
   switch (static_cast<SCEVTypes>(getSCEVType())) {

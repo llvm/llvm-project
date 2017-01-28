@@ -385,14 +385,13 @@ void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-#ifndef NDEBUG
-
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void StackColoring::dumpBV(const char *tag,
                                             const BitVector &BV) const {
-  DEBUG(dbgs() << tag << " : { ");
+  dbgs() << tag << " : { ";
   for (unsigned I = 0, E = BV.size(); I != E; ++I)
-    DEBUG(dbgs() << BV.test(I) << " ");
-  DEBUG(dbgs() << "}\n");
+    dbgs() << BV.test(I) << " ";
+  dbgs() << "}\n";
 }
 
 LLVM_DUMP_METHOD void StackColoring::dumpBB(MachineBasicBlock *MBB) const {
@@ -408,20 +407,19 @@ LLVM_DUMP_METHOD void StackColoring::dumpBB(MachineBasicBlock *MBB) const {
 
 LLVM_DUMP_METHOD void StackColoring::dump() const {
   for (MachineBasicBlock *MBB : depth_first(MF)) {
-    DEBUG(dbgs() << "Inspecting block #" << MBB->getNumber() << " ["
-                 << MBB->getName() << "]\n");
-    DEBUG(dumpBB(MBB));
+    dbgs() << "Inspecting block #" << MBB->getNumber() << " ["
+           << MBB->getName() << "]\n";
+    dumpBB(MBB);
   }
 }
 
 LLVM_DUMP_METHOD void StackColoring::dumpIntervals() const {
   for (unsigned I = 0, E = Intervals.size(); I != E; ++I) {
-    DEBUG(dbgs() << "Interval[" << I << "]:\n");
-    DEBUG(Intervals[I]->dump());
+    dbgs() << "Interval[" << I << "]:\n";
+    Intervals[I]->dump();
   }
 }
-
-#endif // not NDEBUG
+#endif
 
 static inline int getStartOrEndSlot(const MachineInstr &MI)
 {

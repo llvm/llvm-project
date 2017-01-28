@@ -353,7 +353,9 @@ void ArgList::print(raw_ostream &O) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
+#endif
 
 //
 

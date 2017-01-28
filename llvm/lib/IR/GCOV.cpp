@@ -103,11 +103,17 @@ bool GCOVFile::readGCDA(GCOVBuffer &Buffer) {
   return true;
 }
 
+void GCOVFile::print(raw_ostream &OS) const {
+  for (const auto &FPtr : Functions)
+    FPtr->print(OS);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFile content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFile::dump() const {
-  for (const auto &FPtr : Functions)
-    FPtr->dump();
+  print(dbgs());
 }
+#endif
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
@@ -343,13 +349,19 @@ uint64_t GCOVFunction::getExitCount() const {
   return Blocks.back()->getCount();
 }
 
+void GCOVFunction::print(raw_ostream &OS) const {
+  OS << "===== " << Name << " (" << Ident << ") @ " << Filename << ":"
+     << LineNumber << "\n";
+  for (const auto &Block : Blocks)
+    Block->print(OS);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFunction content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFunction::dump() const {
-  dbgs() << "===== " << Name << " (" << Ident << ") @ " << Filename << ":"
-         << LineNumber << "\n";
-  for (const auto &Block : Blocks)
-    Block->dump();
+  print(dbgs());
 }
+#endif
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
@@ -400,28 +412,34 @@ void GCOVBlock::collectLineCounts(FileInfo &FI) {
     FI.addBlockLine(Parent.getFilename(), N, this);
 }
 
-/// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
-LLVM_DUMP_METHOD void GCOVBlock::dump() const {
-  dbgs() << "Block : " << Number << " Counter : " << Counter << "\n";
+void GCOVBlock::print(raw_ostream &OS) const {
+  OS << "Block : " << Number << " Counter : " << Counter << "\n";
   if (!SrcEdges.empty()) {
-    dbgs() << "\tSource Edges : ";
+    OS << "\tSource Edges : ";
     for (const GCOVEdge *Edge : SrcEdges)
-      dbgs() << Edge->Src.Number << " (" << Edge->Count << "), ";
-    dbgs() << "\n";
+      OS << Edge->Src.Number << " (" << Edge->Count << "), ";
+    OS << "\n";
   }
   if (!DstEdges.empty()) {
-    dbgs() << "\tDestination Edges : ";
+    OS << "\tDestination Edges : ";
     for (const GCOVEdge *Edge : DstEdges)
-      dbgs() << Edge->Dst.Number << " (" << Edge->Count << "), ";
-    dbgs() << "\n";
+      OS << Edge->Dst.Number << " (" << Edge->Count << "), ";
+    OS << "\n";
   }
   if (!Lines.empty()) {
-    dbgs() << "\tLines : ";
+    OS << "\tLines : ";
     for (uint32_t N : Lines)
-      dbgs() << (N) << ",";
-    dbgs() << "\n";
+      OS << (N) << ",";
+    OS << "\n";
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
+LLVM_DUMP_METHOD void GCOVBlock::dump() const {
+  print(dbgs());
+}
+#endif
 
 //===----------------------------------------------------------------------===//
 // FileInfo implementation.

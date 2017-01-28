@@ -8613,7 +8613,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   bool isThumb2 = Subtarget->isThumb2();
   switch (MI.getOpcode()) {
   default: {
-    MI.dump();
+    MI.print(errs());
     llvm_unreachable("Unexpected instr type to insert");
   }
 

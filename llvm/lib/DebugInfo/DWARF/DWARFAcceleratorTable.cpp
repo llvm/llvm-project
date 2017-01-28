@@ -46,7 +46,7 @@ bool DWARFAcceleratorTable::extract() {
   return true;
 }
 
-void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   // Dump the header.
   OS << "Magic = " << format("0x%08x", Hdr.Magic) << '\n'
      << "Version = " << format("0x%04x", Hdr.Version) << '\n'
