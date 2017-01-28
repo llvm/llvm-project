@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -enable-misched < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -enable-misched < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -enable-misched < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}frem_f32:
 ; GCN-DAG: buffer_load_dword [[X:v[0-9]+]], {{.*$}}

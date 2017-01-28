@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=MOVREL %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=MOVREL %s
-; RUN: llc -march=amdgcn -mcpu=tonga -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=IDXMODE %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=MOVREL %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=IDXMODE %s
 
 ; Tests for indirect addressing on SI, which is implemented using dynamic
 ; indexing of vectors.

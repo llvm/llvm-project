@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}atomic_add_i32_offset:
 ; GCN: buffer_atomic_add v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16{{$}}

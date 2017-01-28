@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
-; RUN: llc -march=amdgcn --misched=ilpmax -mcpu=SI -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
-; RUN: llc -march=amdgcn --misched=ilpmax -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=DEFAULT
+; RUN: llc -march=amdgcn --misched=ilpmax -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
+; RUN: llc -march=amdgcn --misched=ilpmax -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -strict-whitespace %s --check-prefix=ILPMAX
 ; The ilpmax scheduler is used for the second test to get the ordering we want for the test.
 
 ; DEFAULT-LABEL: {{^}}main:
