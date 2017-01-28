@@ -51,4 +51,6 @@ int lprofGetHostName(char *Name, int Len);
 unsigned lprofBoolCmpXchg(void **Ptr, void *OldV, void *NewV);
 void *lprofPtrFetchAdd(void **Mem, long ByteIncr);
 
+void lprofInstallSignalHandler(int sig, void(*handler)(int));
+
 #endif /* PROFILE_INSTRPROFILINGUTIL_H */

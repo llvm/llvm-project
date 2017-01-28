@@ -269,16 +269,9 @@ static void exitSignalHandler(int sig) {
 
 static void installExitSignalHandlers(void) {
   unsigned I;
-  struct sigaction sigact;
-  int err;
   for (I = 0; I < lprofCurFilename.NumExitSignals; ++I) {
-    memset(&sigact, 0, sizeof(sigact));
-    sigact.sa_handler = exitSignalHandler;
-    err = sigaction(lprofCurFilename.ExitOnSignals[I], &sigact, NULL);
-    if (err)
-      PROF_WARN(
-          "Unable to install an exit signal handler for %d (errno = %d).\n",
-          lprofCurFilename.ExitOnSignals[I], err);
+    lprofInstallSignalHandler(lprofCurFilename.ExitOnSignals[I],
+                              exitSignalHandler);
   }
 }
 
