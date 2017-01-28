@@ -1635,7 +1635,7 @@ public:
     unsigned Result = 0;
     for (ModuleConstIterator I = ModuleMgr.begin(),
         E = ModuleMgr.end(); I != E; ++I) {
-      Result += (*I)->NumPreprocessedEntities;
+      Result += I->NumPreprocessedEntities;
     }
 
     return Result;

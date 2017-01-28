@@ -481,7 +481,7 @@ bool PCHValidator::ReadDiagnosticOptions(
   // Note: ModuleMgr.rbegin() may not be the current module, but it must be in
   // the transitive closure of its imports, since unrelated modules cannot be
   // imported until after this module finishes validation.
-  ModuleFile *TopImport = *ModuleMgr.rbegin();
+  ModuleFile *TopImport = &*ModuleMgr.rbegin();
   while (!TopImport->ImportedBy.empty())
     TopImport = TopImport->ImportedBy[0];
   if (TopImport->Kind != MK_ImplicitModule)
@@ -1707,15 +1707,15 @@ void ASTReader::ReadDefinedMacros() {
   // Note that we are loading defined macros.
   Deserializing Macros(this);
 
-  for (auto &I : llvm::reverse(ModuleMgr)) {
-    BitstreamCursor &MacroCursor = I->MacroCursor;
+  for (ModuleFile &I : llvm::reverse(ModuleMgr)) {
+    BitstreamCursor &MacroCursor = I.MacroCursor;
 
     // If there was no preprocessor block, skip this file.
     if (MacroCursor.getBitcodeBytes().empty())
       continue;
 
     BitstreamCursor Cursor = MacroCursor;
-    Cursor.JumpToBit(I->MacroStartOffset);
+    Cursor.JumpToBit(I.MacroStartOffset);
 
     RecordData Record;
     while (true) {
@@ -1737,7 +1737,7 @@ void ASTReader::ReadDefinedMacros() {
 
         case PP_MACRO_OBJECT_LIKE:
         case PP_MACRO_FUNCTION_LIKE: {
-          IdentifierInfo *II = getLocalIdentifier(*I, Record[0]);
+          IdentifierInfo *II = getLocalIdentifier(I, Record[0]);
           if (II->isOutOfDate())
             updateOutOfDateIdentifier(*II);
           break;
@@ -3346,8 +3346,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   // usable header search context.
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
-  if (F.Kind == MK_ImplicitModule &&
-      (*ModuleMgr.begin())->Kind != MK_MainFile) {
+  if (F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
     Module *M = PP.getHeaderSearchInfo().lookupModule(F.ModuleName);
@@ -5297,8 +5296,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
   using DiagState = DiagnosticsEngine::DiagState;
   SmallVector<DiagState *, 32> DiagStates;
 
-  for (ModuleIterator I = ModuleMgr.begin(), E = ModuleMgr.end(); I != E; ++I) {
-    ModuleFile &F = *(*I);
+  for (ModuleFile &F : ModuleMgr) {
     unsigned Idx = 0;
     auto &Record = F.PragmaDiagMappings;
     if (Record.empty())
@@ -7134,18 +7132,15 @@ LLVM_DUMP_METHOD void ASTReader::dump() {
                   GlobalPreprocessedEntityMap);
 
   llvm::errs() << "\n*** PCH/Modules Loaded:";
-  for (ModuleManager::ModuleConstIterator M = ModuleMgr.begin(),
-                                       MEnd = ModuleMgr.end();
-       M != MEnd; ++M)
-    (*M)->dump();
+  for (ModuleFile &M : ModuleMgr)
+    M.dump();
 }
 
 /// Return the amount of memory used by memory buffers, breaking down
 /// by heap-backed versus mmap'ed memory.
 void ASTReader::getMemoryBufferSizes(MemoryBufferSizes &sizes) const {
-  for (ModuleConstIterator I = ModuleMgr.begin(),
-      E = ModuleMgr.end(); I != E; ++I) {
-    if (llvm::MemoryBuffer *buf = (*I)->Buffer.get()) {
+  for (ModuleFile &I : ModuleMgr) {
+    if (llvm::MemoryBuffer *buf = I.Buffer.get()) {
       size_t bytes = buf->getBufferSize();
       switch (buf->getBufferKind()) {
         case llvm::MemoryBuffer::MemoryBuffer_Malloc:

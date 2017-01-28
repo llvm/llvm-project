@@ -195,7 +195,9 @@ void ModuleManager::removeModules(
   VisitOrder.clear();
 
   // Collect the set of module file pointers that we'll be removing.
-  llvm::SmallPtrSet<ModuleFile *, 4> victimSet(first, last);
+  llvm::SmallPtrSet<ModuleFile *, 4> victimSet(
+      (llvm::pointer_iterator<ModuleIterator>(first)),
+      (llvm::pointer_iterator<ModuleIterator>(last)));
 
   auto IsVictim = [&](ModuleFile *MF) {
     return victimSet.count(MF);
@@ -209,8 +211,8 @@ void ModuleManager::removeModules(
 
   // Remove the modules from the PCH chain.
   for (auto I = first; I != last; ++I) {
-    if (!(*I)->isModule()) {
-      PCHChain.erase(std::find(PCHChain.begin(), PCHChain.end(), *I),
+    if (!I->isModule()) {
+      PCHChain.erase(std::find(PCHChain.begin(), PCHChain.end(), &*I),
                      PCHChain.end());
       break;
     }
@@ -218,10 +220,10 @@ void ModuleManager::removeModules(
 
   // Delete the modules and erase them from the various structures.
   for (ModuleIterator victim = first; victim != last; ++victim) {
-    Modules.erase((*victim)->File);
+    Modules.erase(victim->File);
 
     if (modMap) {
-      StringRef ModuleName = (*victim)->ModuleName;
+      StringRef ModuleName = victim->ModuleName;
       if (Module *mod = modMap->findModule(ModuleName)) {
         mod->setASTFile(nullptr);
       }
@@ -230,14 +232,15 @@ void ModuleManager::removeModules(
     // Files that didn't make it through ReadASTCore successfully will be
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
-    if (LoadedSuccessfully.count(*victim) == 0)
-      FileMgr.invalidateCache((*victim)->File);
+    if (LoadedSuccessfully.count(&*victim) == 0)
+      FileMgr.invalidateCache(victim->File);
 
-    delete *victim;
+    delete &*victim;
   }
 
   // Remove the modules from the chain.
-  Chain.erase(first, last);
+  Chain.erase(Chain.begin() + (first - begin()),
+              Chain.begin() + (last - begin()));
 }
 
 void
@@ -317,11 +320,11 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
     Queue.reserve(N);
     llvm::SmallVector<unsigned, 4> UnusedIncomingEdges;
     UnusedIncomingEdges.resize(size());
-    for (ModuleFile *M : llvm::reverse(*this)) {
-      unsigned Size = M->ImportedBy.size();
-      UnusedIncomingEdges[M->Index] = Size;
+    for (ModuleFile &M : llvm::reverse(*this)) {
+      unsigned Size = M.ImportedBy.size();
+      UnusedIncomingEdges[M.Index] = Size;
       if (!Size)
-        Queue.push_back(M);
+        Queue.push_back(&M);
     }
 
     // Traverse the graph, making sure to visit a module before visiting any
@@ -436,7 +439,7 @@ namespace llvm {
   struct GraphTraits<ModuleManager> {
     typedef ModuleFile *NodeRef;
     typedef llvm::SetVector<ModuleFile *>::const_iterator ChildIteratorType;
-    typedef ModuleManager::ModuleConstIterator nodes_iterator;
+    typedef pointer_iterator<ModuleManager::ModuleConstIterator> nodes_iterator;
 
     static ChildIteratorType child_begin(NodeRef Node) {
       return Node->Imports.begin();
@@ -447,11 +450,11 @@ namespace llvm {
     }
     
     static nodes_iterator nodes_begin(const ModuleManager &Manager) {
-      return Manager.begin();
+      return nodes_iterator(Manager.begin());
     }
     
     static nodes_iterator nodes_end(const ModuleManager &Manager) {
-      return Manager.end();
+      return nodes_iterator(Manager.end());
     }
   };
   
