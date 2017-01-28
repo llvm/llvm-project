@@ -21,6 +21,17 @@
     // On Unix-like systems (Linux* OS and OS X*) getpid() is declared in standard headers.
     #include <sys/types.h>
     #include <unistd.h>
+    #include <sys/syscall.h>
+    #if KMP_OS_DARWIN
+    //OS X
+    #define __kmp_gettid() syscall(SYS_thread_selfid)
+    #elif defined(SYS_gettid)
+    // Hopefully other Unix systems define SYS_gettid syscall for getting os thread id
+    #define __kmp_gettid() syscall(SYS_gettid)
+    #else
+    #warning No gettid found, use getpid instead
+    #define __kmp_gettid() getpid()
+    #endif
 
 #elif KMP_OS_WINDOWS
 
@@ -29,6 +40,7 @@
     // Let us simulate Unix.
     typedef int pid_t;
     #define getpid _getpid
+    #define __kmp_gettid() GetCurrentThreadId()
 
 #else
 

@@ -72,7 +72,7 @@ struct LookupResult {
 
   HostDataToTargetListTy::iterator Entry;
 
-  LookupResult() : Flags({0,0,0}), Entry(0) {}
+  LookupResult() : Flags({0,0,0}), Entry() {}
 };
 
 /// Map for shadow pointers
