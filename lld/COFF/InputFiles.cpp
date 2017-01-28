@@ -41,8 +41,6 @@ using namespace llvm::support::endian;
 
 using llvm::Triple;
 using llvm::support::ulittle32_t;
-using llvm::sys::fs::file_magic;
-using llvm::sys::fs::identify_magic;
 
 namespace lld {
 namespace coff {
