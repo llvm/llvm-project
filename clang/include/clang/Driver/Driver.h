@@ -284,13 +284,8 @@ public:
   bool isSaveTempsObj() const { return SaveTemps == SaveTempsObj; }
 
   bool embedBitcodeEnabled() const { return BitcodeEmbed != EmbedNone; }
-  bool embedBitcodeInObject() const {
-    // LTO has no object file output so ignore embed bitcode option in LTO.
-    return (BitcodeEmbed == EmbedBitcode) && !isUsingLTO();
-  }
-  bool embedBitcodeMarkerOnly() const {
-    return (BitcodeEmbed == EmbedMarker) && !isUsingLTO();
-  }
+  bool embedBitcodeInObject() const { return (BitcodeEmbed == EmbedBitcode); }
+  bool embedBitcodeMarkerOnly() const { return (BitcodeEmbed == EmbedMarker); }
 
   /// @}
   /// @name Primary Functionality
