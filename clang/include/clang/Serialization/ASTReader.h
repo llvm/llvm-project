@@ -405,6 +405,9 @@ private:
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
 
+  /// \brief The PCM manager which manages memory buffers for pcm files.
+  PCMCache *BufferMgr;
+
   /// \brief A dummy identifier resolver used to merge TU-scope declarations in
   /// C, for the cases where we don't have a Sema object to provide a real
   /// identifier resolver.
@@ -1166,14 +1169,20 @@ private:
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
-                                 unsigned ClientLoadCapabilities);
+                                 unsigned ClientLoadCapabilities,
+                                 ASTFileSignature ExpectedSignature);
+  ASTReadResult
+  findAndReadUnhashedControlBlock(ModuleFile &F, const ModuleFile *ImportedBy,
+                                  ASTFileSignature ExpectedSignature,
+                                  unsigned ClientLoadCapabilities);
   static ASTReadResult ReadOptionsBlock(
       llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
       bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
       std::string &SuggestedPredefines);
-  static ASTReadResult ReadDiagnosticOptionsBlock(ModuleFile *F,
-      llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
-      bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
+  static ASTReadResult ReadDiagnosticOptionsBlock(
+      ModuleFile *F, llvm::BitstreamCursor &Stream,
+      unsigned ClientLoadCapabilities, ASTFileSignature ExpectedSignature,
+      bool AllowCompatibleConfigurationMismatch, ASTReaderListener *Listener,
       bool ValidateDiagnosticOptions);
   ASTReadResult ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   ASTReadResult ReadExtensionBlock(ModuleFile &F);
