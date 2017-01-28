@@ -252,8 +252,8 @@ define void @fdiv_v4f32_arcp_math(<4 x float> addrspace(1)* %out, <4 x float> ad
   ret void
 }
 
-attributes #0 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="-fp32-denormals" }
-attributes #1 = { nounwind "enable-unsafe-fp-math"="true" "target-features"="-fp32-denormals" }
-attributes #2 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="+fp32-denormals" }
+attributes #0 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="-fp32-denormals,-flat-for-global" }
+attributes #1 = { nounwind "enable-unsafe-fp-math"="true" "target-features"="-fp32-denormals,-flat-for-global" }
+attributes #2 = { nounwind "enable-unsafe-fp-math"="false" "target-features"="+fp32-denormals,-flat-for-global" }
 
 !0 = !{float 2.500000e+00}

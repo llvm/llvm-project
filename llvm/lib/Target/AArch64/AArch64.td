@@ -85,9 +85,8 @@ def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
 def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
     "Misaligned128StoreIsSlow", "true", "Misaligned 128 bit stores are slow">;
 
-def FeatureAvoidQuadLdStPairs : SubtargetFeature<"no-quad-ldst-pairs",
-    "AvoidQuadLdStPairs", "true",
-    "Do not form quad load/store pair operations">;
+def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
+    "Paired128IsSlow", "true", "Paired 128 bit loads and stores are slow">;
 
 def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
     "alternate-sextload-cvt-f32-pattern", "UseAlternateSExtLoadCVTF32Pattern",
@@ -222,7 +221,7 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
 
 def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M1 processors",
-                                    [FeatureAvoidQuadLdStPairs,
+                                    [FeatureSlowPaired128,
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureCustomCheapAsMoveHandling,
@@ -236,7 +235,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
 
 def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M2/M3 processors",
-                                    [FeatureAvoidQuadLdStPairs,
+                                    [FeatureSlowPaired128,
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureCustomCheapAsMoveHandling,

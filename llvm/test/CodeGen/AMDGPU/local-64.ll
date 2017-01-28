@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=BOTH %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=BOTH %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=BOTH %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=BOTH %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=BOTH %s
 
 ; BOTH-LABEL: {{^}}local_i32_load
 ; BOTH: ds_read_b32 [[REG:v[0-9]+]], v{{[0-9]+}} offset:28

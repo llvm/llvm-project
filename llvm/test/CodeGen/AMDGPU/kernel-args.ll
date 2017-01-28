@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefixes=SI,GCN,MESA-GCN,FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefixes=VI,GCN,MESA-VI,MESA-GCN,FUNC
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefixes=VI,GCN,MESA-VI,MESA-GCN,FUNC
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs | FileCheck %s --check-prefixes=VI,GCN,HSA-VI,FUNC
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC

@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VCCZ-BUG %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VCCZ-BUG %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NOVCCZ-BUG %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NOVCCZ-BUG %s
 
 ; GCN-FUNC: {{^}}vccz_workaround:
 ; GCN: s_load_dword s{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0x0
