@@ -61,7 +61,9 @@ void Arg::print(raw_ostream& O) const {
   O << "]>\n";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Arg::dump() const { print(dbgs()); }
+#endif
 
 std::string Arg::getAsString(const ArgList &Args) const {
   SmallString<256> Res;

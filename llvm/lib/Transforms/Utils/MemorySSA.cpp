@@ -1597,6 +1597,7 @@ void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
       Defs->push_back(*NewAccess);
     }
   }
+  BlockNumberingValid.erase(BB);
 }
 
 void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
@@ -1624,15 +1625,34 @@ void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
         Defs->insert(InsertPt->getDefsIterator(), *What);
     }
   }
+  BlockNumberingValid.erase(BB);
+}
+
+// Move What before Where in the IR.  The end result is taht What will belong to
+// the right lists and have the right Block set, but will not otherwise be
+// correct. It will not have the right defining access, and if it is a def,
+// things below it will not properly be updated.
+void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
+                       AccessList::iterator Where) {
+  // Keep it in the lookup tables, remove from the lists
+  removeFromLists(What, false);
+  What->setBlock(BB);
+  insertIntoListsBefore(What, BB, Where);
+}
+
+void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
+                       InsertionPlace Point) {
+  removeFromLists(What, false);
+  What->setBlock(BB);
+  insertIntoListsForBlock(What, BB, Point);
 }
 
 MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
   assert(!getMemoryAccess(BB) && "MemoryPhi already exists for this BB");
   MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
+  // Phi's always are placed at the front of the block.
   insertIntoListsForBlock(Phi, BB, Beginning);
   ValueToMemoryAccess[BB] = Phi;
-  // Phi's always are placed at the front of the block.
-  BlockNumberingValid.erase(BB);
   return Phi;
 }
 
@@ -1653,7 +1673,6 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
                                                 InsertionPlace Point) {
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
   insertIntoListsForBlock(NewAccess, BB, Point);
-  BlockNumberingValid.erase(BB);
   return NewAccess;
 }
 
@@ -1663,7 +1682,6 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessBefore(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  BlockNumberingValid.erase(InsertPt->getBlock());
   insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
                         InsertPt->getIterator());
   return NewAccess;
@@ -1675,33 +1693,9 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  BlockNumberingValid.erase(InsertPt->getBlock());
   insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
                         ++(InsertPt->getIterator()));
   return NewAccess;
-}
-
-void MemorySSA::spliceMemoryAccessAbove(MemoryDef *Where,
-                                        MemoryUseOrDef *What) {
-  assert(What != getLiveOnEntryDef() && Where != getLiveOnEntryDef() &&
-         "Can't splice (above) LOE.");
-  assert(dominates(Where, What) && "Only upwards splices are permitted.");
-
-  if (Where == What)
-    return;
-  if (isa<MemoryDef>(What)) {
-    // TODO: possibly use removeMemoryAccess' more efficient RAUW
-    What->replaceAllUsesWith(What->getDefiningAccess());
-    What->setDefiningAccess(Where->getDefiningAccess());
-    Where->setDefiningAccess(What);
-  }
-  AccessList *Src = getWritableBlockAccesses(What->getBlock());
-  AccessList *Dest = getWritableBlockAccesses(Where->getBlock());
-  Dest->splice(AccessList::iterator(Where), *Src, What);
-
-  BlockNumberingValid.erase(What->getBlock());
-  if (What->getBlock() != Where->getBlock())
-    BlockNumberingValid.erase(Where->getBlock());
 }
 
 /// \brief Helper function to create new memory accesses
@@ -1795,9 +1789,6 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
 }
 
 /// \brief Properly remove \p MA from all of MemorySSA's lookup tables.
-///
-/// Because of the way the intrusive list and use lists work, it is important to
-/// do removal in the right order.
 void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   assert(MA->use_empty() &&
          "Trying to remove memory access that still has uses");
@@ -1818,7 +1809,15 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   auto VMA = ValueToMemoryAccess.find(MemoryInst);
   if (VMA->second == MA)
     ValueToMemoryAccess.erase(VMA);
+}
 
+/// \brief Properly remove \p MA from all of MemorySSA's lists.
+///
+/// Because of the way the intrusive list and use lists work, it is important to
+/// do removal in the right order.
+/// ShouldDelete defaults to true, and will cause the memory access to also be
+/// deleted, not just removed.
+void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   // The access list owns the reference, so we erase it from the non-owning list
   // first.
   if (!isa<MemoryUse>(MA)) {
@@ -1829,9 +1828,15 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
       PerBlockDefs.erase(DefsIt);
   }
 
+  // The erase call here will delete it. If we don't want it deleted, we call
+  // remove instead.
   auto AccessIt = PerBlockAccesses.find(MA->getBlock());
   std::unique_ptr<AccessList> &Accesses = AccessIt->second;
-  Accesses->erase(MA);
+  if (ShouldDelete)
+    Accesses->erase(MA);
+  else
+    Accesses->remove(MA);
+
   if (Accesses->empty())
     PerBlockAccesses.erase(AccessIt);
 }
@@ -1855,7 +1860,7 @@ void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {
   }
 
   // Re-point the uses at our defining access
-  if (!MA->use_empty()) {
+  if (!isa<MemoryUse>(MA) && !MA->use_empty()) {
     // Reset optimized on users of this store, and reset the uses.
     // A few notes:
     // 1. This is a slightly modified version of RAUW to avoid walking the
@@ -1880,6 +1885,7 @@ void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {
   // The call below to erase will destroy MA, so we can't change the order we
   // are doing things here
   removeFromLookups(MA);
+  removeFromLists(MA);
 }
 
 void MemorySSA::print(raw_ostream &OS) const {
@@ -1887,10 +1893,11 @@ void MemorySSA::print(raw_ostream &OS) const {
   F.print(OS, &Writer);
 }
 
-void MemorySSA::dump() const {
-  MemorySSAAnnotatedWriter Writer(this);
-  F.print(dbgs(), &Writer);
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MemorySSA::dump() const {
+  print(dbgs());
 }
+#endif
 
 void MemorySSA::verifyMemorySSA() const {
   verifyDefUses(F);
@@ -2160,8 +2167,11 @@ void MemoryUse::print(raw_ostream &OS) const {
 }
 
 void MemoryAccess::dump() const {
+  // Cannot completely remove virtual function even in release mode.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   print(dbgs());
   dbgs() << "\n";
+#endif
 }
 
 char MemorySSAPrinterLegacyPass::ID = 0;

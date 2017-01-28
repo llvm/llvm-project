@@ -574,6 +574,8 @@ void MipsAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   case MipsII::MO_GOT:      O << "%got(";    break;
   case MipsII::MO_ABS_HI:   O << "%hi(";     break;
   case MipsII::MO_ABS_LO:   O << "%lo(";     break;
+  case MipsII::MO_HIGHER:   O << "%higher("; break;
+  case MipsII::MO_HIGHEST:  O << "%highest(("; break;
   case MipsII::MO_TLSGD:    O << "%tlsgd(";  break;
   case MipsII::MO_GOTTPREL: O << "%gottprel("; break;
   case MipsII::MO_TPREL_HI: O << "%tprel_hi("; break;
@@ -698,7 +700,7 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
     //        Ideally it should test for properties of the ABI and not the ABI
     //        itself.
     //        For the moment, I'm only correcting enough to make MIPS-IV work.
-    if (!isPositionIndependent() && !ABI.IsN64())
+    if (!isPositionIndependent() && STI.hasSym32())
       TS.emitDirectiveOptionPic0();
   }
 

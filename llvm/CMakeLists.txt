@@ -978,3 +978,8 @@ if(LLVM_DISTRIBUTION_COMPONENTS)
     endif()
   endforeach()
 endif()
+
+# This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
+if (MSVC)
+  include(InstallRequiredSystemLibraries)
+endif()

@@ -320,8 +320,9 @@ void ARMConstantIslands::verify() {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
-void ARMConstantIslands::dumpBBs() {
+LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
   DEBUG({
     for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
       const BasicBlockInfo &BBI = BBInfo[J];
@@ -333,6 +334,7 @@ void ARMConstantIslands::dumpBBs() {
     }
   });
 }
+#endif
 
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;

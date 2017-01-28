@@ -2241,7 +2241,7 @@ std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
   return S.str();
 }
 
-
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APInt::dump() const {
   SmallString<40> S, U;
   this->toStringUnsigned(U);
@@ -2249,6 +2249,7 @@ LLVM_DUMP_METHOD void APInt::dump() const {
   dbgs() << "APInt(" << BitWidth << "b, "
          << U << "u " << S << "s)";
 }
+#endif
 
 void APInt::print(raw_ostream &OS, bool isSigned) const {
   SmallString<40> S;

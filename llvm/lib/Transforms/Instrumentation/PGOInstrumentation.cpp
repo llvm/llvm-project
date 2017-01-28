@@ -60,8 +60,8 @@
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -73,7 +73,9 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -152,6 +154,10 @@ static cl::opt<std::string>
                     cl::desc("The option to specify "
                              "the name of the function "
                              "whose CFG will be displayed."));
+
+// Command line option to turn on CFG dot dump of raw profile counts
+static cl::opt<bool> PGOViewRawCounts("pgo-view-raw-counts", cl::init(false),
+                                      cl::Hidden);
 
 // Command line option to turn on CFG dot dump after profile annotation.
 extern cl::opt<bool> PGOViewCounts;
@@ -690,6 +696,8 @@ public:
     return FuncInfo.findBBInfo(BB);
   }
 
+  Function &getFunc() const { return F; }
+
 private:
   Function &F;
   Module *M;
@@ -1227,6 +1235,13 @@ static bool annotateAllFunctions(
       NewBFI->view();
     }
 #endif
+    if (PGOViewRawCounts &&
+        (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
+      if (PGOViewFunction.empty())
+        WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
+      else
+        ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
+    }
   }
   M.setProfileSummary(PGOReader->getSummary().getMD(M.getContext()));
   // Set function hotness attribute from the profile.
@@ -1281,4 +1296,47 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
   };
 
   return annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI);
+}
+
+namespace llvm {
+template <> struct GraphTraits<PGOUseFunc *> {
+  typedef const BasicBlock *NodeRef;
+  typedef succ_const_iterator ChildIteratorType;
+  typedef pointer_iterator<Function::const_iterator> nodes_iterator;
+
+  static NodeRef getEntryNode(const PGOUseFunc *G) {
+    return &G->getFunc().front();
+  }
+  static ChildIteratorType child_begin(const NodeRef N) {
+    return succ_begin(N);
+  }
+  static ChildIteratorType child_end(const NodeRef N) { return succ_end(N); }
+  static nodes_iterator nodes_begin(const PGOUseFunc *G) {
+    return nodes_iterator(G->getFunc().begin());
+  }
+  static nodes_iterator nodes_end(const PGOUseFunc *G) {
+    return nodes_iterator(G->getFunc().end());
+  }
+};
+
+template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
+  explicit DOTGraphTraits(bool isSimple = false)
+      : DefaultDOTGraphTraits(isSimple) {}
+
+  static std::string getGraphName(const PGOUseFunc *G) {
+    return G->getFunc().getName();
+  }
+
+  std::string getNodeLabel(const BasicBlock *Node, const PGOUseFunc *Graph) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    OS << Node->getName().str() << " : ";
+    UseBBInfo *BI = Graph->findBBInfo(Node);
+    if (BI && BI->CountValid)
+      OS << BI->CountValue;
+    else
+      OS << "Unknown";
+    return Result;
+  }
+};
 }

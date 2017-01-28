@@ -97,11 +97,13 @@ bool MipsSEDAGToDAGISel::replaceUsesWithZeroReg(MachineRegisterInfo *MRI,
   // Check if MI is "addiu $dst, $zero, 0" or "daddiu $dst, $zero, 0".
   if ((MI.getOpcode() == Mips::ADDiu) &&
       (MI.getOperand(1).getReg() == Mips::ZERO) &&
+      (MI.getOperand(2).isImm()) &&
       (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
     ZeroReg = Mips::ZERO;
   } else if ((MI.getOpcode() == Mips::DADDiu) &&
              (MI.getOperand(1).getReg() == Mips::ZERO_64) &&
+             (MI.getOperand(2).isImm()) &&
              (MI.getOperand(2).getImm() == 0)) {
     DstReg = MI.getOperand(0).getReg();
     ZeroReg = Mips::ZERO_64;

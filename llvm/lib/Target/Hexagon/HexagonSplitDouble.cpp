@@ -131,13 +131,15 @@ namespace {
 INITIALIZE_PASS(HexagonSplitDoubleRegs, "hexagon-split-double",
   "Hexagon Split Double Registers", false, false)
 
-void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
       const USet &Part, const TargetRegisterInfo &TRI) {
   dbgs() << '{';
   for (auto I : Part)
     dbgs() << ' ' << PrintReg(I, &TRI);
   dbgs() << " }";
 }
+#endif
 
 bool HexagonSplitDoubleRegs::isInduction(unsigned Reg, LoopRegMap &IRM) const {
   for (auto I : IRM) {

@@ -1220,12 +1220,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
       }
 
       // For scalar derived SAIs we remap the alloca used for the derived value.
-      if (BasePtr == MA->getAccessInstruction()) {
-        if (DerivedSAI->isPHIKind())
-          PHIOpMap[BasePtr] = Alloca;
-        else
-          ScalarMap[BasePtr] = Alloca;
-      }
+      if (BasePtr == MA->getAccessInstruction())
+        ScalarMap[DerivedSAI] = Alloca;
     }
   }
 

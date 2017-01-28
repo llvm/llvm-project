@@ -37,12 +37,10 @@ entry:
 ; N32-BE-DAG:        lb [[R2:\$[0-9]+]], %lo(struct_byte)([[R1]])
 ; N32-BE-DAG:        dsll $2, [[R2]], 56
 
-; N64-LE-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_byte)($1)
-; N64-LE-DAG:        lb $2, 0([[R1]])
+; N64-LE-DAG:        lb $2, %lo(struct_byte)(${{[0-9]+}})
 
-; N64-BE-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_byte)($1)
-; N64-BE-DAG:        lb [[R2:\$[0-9]+]], 0([[R1]])
-; N64-BE-DAG:        dsll $2, [[R2]], 56
+; N64-BE-DAG:        lb [[R1:\$[0-9]+]], %lo(struct_byte)(${{[0-9]+}})
+; N64-BE-DAG:        dsll $2, [[R1]], 56
 
 ; This test is based on the way clang currently lowers {i8,i8} to {i16}.
 ; FIXME: It should probably work for without any lowering too but this doesn't
@@ -75,13 +73,15 @@ entry:
 ; N32-BE-DAG:        lh  [[R3:\$[0-9]+]], 8([[SP:\$sp]])
 ; N32-BE-DAG:        dsll $2, [[R3]], 48
 
-; N64-LE-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_2byte)($1)
-; N64-LE-DAG:        lhu [[R2:\$[0-9]+]], 0([[R1]])
+; N64-LE-DAG:        daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %hi(struct_2byte)
+; N64-LE-DAG:        dsll [[R1:\$[0-9]]], $[[R0]], 16
+; N64-LE-DAG:        lhu [[R2:\$[0-9]+]], %lo(struct_2byte)([[R1]])
 ; N64-LE-DAG:        sh  [[R2]], 8([[SP:\$sp]])
 ; N64-LE-DAG:        lh  $2, 8([[SP:\$sp]])
 
-; N64-BE-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_2byte)($1)
-; N64-BE-DAG:        lhu [[R2:\$[0-9]+]], 0([[R1]])
+; N64-BE-DAG:        daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, %hi(struct_2byte)
+; N64-BE-DAG:        dsll $[[R1:[0-9]]], $[[R0]], 16
+; N64-BE-DAG:        lhu [[R2:\$[0-9]+]], %lo(struct_2byte)($[[R1]])
 ; N64-BE-DAG:        sh  [[R2]], 8([[SP:\$sp]])
 ; N64-BE-DAG:        lh  [[R3:\$[0-9]+]], 8([[SP:\$sp]])
 ; N64-BE-DAG:        dsll $2, [[R3]], 48
@@ -126,14 +126,14 @@ entry:
 ; N32-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
 ; N32-BE-DAG:        dsll $2, [[R4]], 16
 
-; N64-LE-DAG:        ld  [[PTR:\$[0-9]+]], %got_disp(struct_3xi16)($1)
+; N64-LE-DAG:        daddiu [[PTR:\$[0-9]+]], [[R0:\$[0-9]+]], %lo(struct_3xi16)
 ; N64-LE-DAG:        lh [[R1:\$[0-9]+]], 4([[PTR]])
-; N64-LE-DAG:        lwu [[R2:\$[0-9]+]], 0([[PTR]])
+; N64-LE-DAG:        lwu [[R2:\$[0-9]+]], %lo(struct_3xi16)([[R0]])
 ; N64-LE-DAG:        dsll [[R3:\$[0-9]+]], [[R1]], 32
 ; N64-LE-DAG:        or $2, [[R2]], [[R3]]
 
-; N64-BE-DAG:        ld  [[PTR:\$[0-9]+]], %got_disp(struct_3xi16)($1)
-; N64-BE-DAG:        lw [[R1:\$[0-9]+]], 0([[PTR]])
+; N64-BE-DAG:        daddiu [[PTR:\$[0-9]+]], [[R0:\$[0-9]+]], %lo(struct_3xi16)
+; N64-BE-DAG:        lw [[R1:\$[0-9]+]], %lo(struct_3xi16)([[R0]])
 ; N64-BE-DAG:        dsll [[R2:\$[0-9]+]], [[R1]], 16
 ; N64-BE-DAG:        lhu [[R3:\$[0-9]+]], 4([[PTR]])
 ; N64-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
@@ -161,9 +161,8 @@ entry:
 ; N32:            jal memcpy
 
 ; sret pointer is already in $4
-; N64-DAG:        ld $5, %got_disp(struct_128xi16)(
-; N64-DAG:        ld $25, %call16(memcpy)(
-; N64:            jalr $25
+; N64-DAG:        lui ${{[0-9]}}, %highest(struct_128xi16)
+; N64:            jal memcpy
 
 ; Ensure that large structures (>128-bit) are returned indirectly.
 ; This will generate inlined memcpy's anyway so pick the smallest large
@@ -214,13 +213,14 @@ entry:
 ; N32-DAG:        sw [[T5]], 20([[RET_PTR]])
 
 ; sret pointer is already in $4
-; N64-DAG:        ld [[PTR:\$[0-9]+]], %got_disp(struct_6xi32)(
-; N64-DAG:        lw [[T0:\$[0-9]+]], 0([[PTR]])
+; N64-DAG:        lui [[PTR_HI:\$[0-9]+]], %highest(struct_6xi32)
+; N64-DAG:        daddiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_6xi32)
 ; N64-DAG:        lw [[T1:\$[0-9]+]], 4([[PTR]])
 ; N64-DAG:        lw [[T2:\$[0-9]+]], 8([[PTR]])
 ; N64-DAG:        lw [[T3:\$[0-9]+]], 12([[PTR]])
 ; N64-DAG:        lw [[T4:\$[0-9]+]], 16([[PTR]])
 ; N64-DAG:        lw [[T5:\$[0-9]+]], 20([[PTR]])
+; N64-DAG:        lw [[T0:\$[0-9]+]], %lo(struct_6xi32)([[PTR_HI]])
 ; N64-DAG:        sw [[T0]], 0($4)
 ; N64-DAG:        sw [[T1]], 4($4)
 ; N64-DAG:        sw [[T2]], 8($4)

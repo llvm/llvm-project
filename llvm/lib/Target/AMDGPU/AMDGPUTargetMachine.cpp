@@ -208,7 +208,7 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
 
 void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.addExtension(
-    PassManagerBuilder::EP_EarlyAsPossible,
+    PassManagerBuilder::EP_ModuleOptimizerEarly,
     [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
       PM.add(createAMDGPUUnifyMetadataPass());
     });

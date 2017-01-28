@@ -64,10 +64,10 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
     MCOperand MCOp;
     switch (MO.getType()) {
     default:
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_MachineBasicBlock:
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("MachineBasicBlock operand should have been rewritten");
     case MachineOperand::MO_Register: {
       // Ignore all implicit register operands.

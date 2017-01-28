@@ -1080,10 +1080,8 @@ int HexagonLoopIdiomRecognize::getSCEVStride(const SCEVAddRecExpr *S) {
 
 
 bool HexagonLoopIdiomRecognize::isLegalStore(Loop *CurLoop, StoreInst *SI) {
-  bool IsVolatile = false;
-  if (SI->isVolatile() && HexagonVolatileMemcpy)
-    IsVolatile = true;
-  else if (!SI->isSimple())
+  // Allow volatile stores if HexagonVolatileMemcpy is enabled.
+  if (!(SI->isVolatile() && HexagonVolatileMemcpy) && !SI->isSimple())
     return false;
 
   Value *StoredVal = SI->getValueOperand();

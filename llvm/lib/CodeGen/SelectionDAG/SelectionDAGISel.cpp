@@ -1535,7 +1535,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
           if (EnableFastISelVerbose || EnableFastISelAbort) {
             dbgs() << "FastISel missed call: ";
-            Inst->dump();
+            Inst->print(dbgs());
           }
           if (EnableFastISelAbort > 2)
             // FastISel selector couldn't handle something and bailed.
@@ -1579,7 +1579,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
           } else {
             dbgs() << "FastISel miss: ";
           }
-          Inst->dump();
+          Inst->print(dbgs());
         }
         if (ShouldAbort)
           // FastISel selector couldn't handle something and bailed.

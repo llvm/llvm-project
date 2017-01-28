@@ -4176,8 +4176,9 @@ public:
     ReductionPHI = Phi;
 
     // We currently only support adds.
-    if (ReductionOpcode != Instruction::Add &&
-        ReductionOpcode != Instruction::FAdd)
+    if ((ReductionOpcode != Instruction::Add &&
+         ReductionOpcode != Instruction::FAdd) ||
+        !B->isAssociative())
       return false;
 
     // Post order traverse the reduction tree starting at B. We only handle true
@@ -4189,31 +4190,12 @@ public:
       unsigned EdgeToVist = Stack.back().second++;
       bool IsReducedValue = TreeN->getOpcode() != ReductionOpcode;
 
-      // Only handle trees in the current basic block.
-      if (TreeN->getParent() != B->getParent())
-        return false;
-
-      // Each tree node needs to have one user except for the ultimate
-      // reduction.
-      if (!TreeN->hasOneUse() && TreeN != B)
-        return false;
-
       // Postorder vist.
       if (EdgeToVist == 2 || IsReducedValue) {
-        if (IsReducedValue) {
-          // Make sure that the opcodes of the operations that we are going to
-          // reduce match.
-          if (!ReducedValueOpcode)
-            ReducedValueOpcode = TreeN->getOpcode();
-          else if (ReducedValueOpcode != TreeN->getOpcode())
-            return false;
+        if (IsReducedValue)
           ReducedVals.push_back(TreeN);
-        } else {
-          // We need to be able to reassociate the adds.
-          if (!TreeN->isAssociative())
-            return false;
+        else
           ReductionOps.push_back(TreeN);
-        }
         // Retract.
         Stack.pop_back();
         continue;
@@ -4229,8 +4211,27 @@ public:
         // reduced value class.
         if (I && (!ReducedValueOpcode || I->getOpcode() == ReducedValueOpcode ||
                   I->getOpcode() == ReductionOpcode)) {
-          if (!ReducedValueOpcode && I->getOpcode() != ReductionOpcode)
+          // Only handle trees in the current basic block.
+          if (I->getParent() != B->getParent())
+            return false;
+
+          // Each tree node needs to have one user except for the ultimate
+          // reduction.
+          if (!I->hasOneUse() && I != B)
+            return false;
+
+          if (I->getOpcode() == ReductionOpcode) {
+            // We need to be able to reassociate the reduction operations.
+            if (!I->isAssociative())
+              return false;
+          } else if (ReducedValueOpcode &&
+                     ReducedValueOpcode != I->getOpcode()) {
+            // Make sure that the opcodes of the operations that we are going to
+            // reduce match.
+            return false;
+          } else if (!ReducedValueOpcode)
             ReducedValueOpcode = I->getOpcode();
+
           Stack.push_back(std::make_pair(I, 0));
           continue;
         }

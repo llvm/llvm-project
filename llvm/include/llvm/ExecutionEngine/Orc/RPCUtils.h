@@ -813,20 +813,20 @@ public:
     // Open the function call message.
     if (auto Err = C.startSendMessage(FnId, SeqNo)) {
       abandonPendingResponses();
-      return joinErrors(std::move(Err), C.endSendMessage());
+      return Err;
     }
 
     // Serialize the call arguments.
     if (auto Err = detail::HandlerTraits<typename Func::Type>::serializeArgs(
             C, Args...)) {
       abandonPendingResponses();
-      return joinErrors(std::move(Err), C.endSendMessage());
+      return Err;
     }
 
     // Close the function call messagee.
     if (auto Err = C.endSendMessage()) {
       abandonPendingResponses();
-      return std::move(Err);
+      return Err;
     }
 
     return Error::success();

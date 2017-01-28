@@ -334,11 +334,8 @@ manager:
 
     std::unique_ptr<TargetMachine> TM = ...;
     PassManagerBuilder PMBuilder(...);
-    PMBuilder.addExtension(
-        PassManagerBuilder::EP_EarlyAsPossible,
-        [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
-          TM->addEarlyAsPossiblePasses(PM);
-        });
+    if (TM)
+      TM->adjustPassManager(PMBuilder);
 
 Reflection Parameters
 ---------------------

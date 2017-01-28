@@ -2747,6 +2747,10 @@
 // CHECK:  encoding: [0xdd,0xc2]
         	ffree	%st(2)
 
+// CHECK: ffreep	%st(2)
+// CHECK:  encoding: [0xdf,0xc2]
+        	ffreep	%st(2)
+
 // CHECK: fnop
 // CHECK:  encoding: [0xd9,0xd0]
         	fnop
