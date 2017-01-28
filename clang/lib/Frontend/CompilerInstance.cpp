@@ -1094,7 +1094,9 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
 
   // Note that this module is part of the module build stack, so that we
   // can detect cycles in the module graph.
+  // PCMCache is part of the FileManager, so it is shared among threads.
   Instance.setFileManager(&ImportingInstance.getFileManager());
+  ImportingInstance.getFileManager().getPCMCache()->StartCompilation();
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
   SourceMgr.setModuleBuildStack(
@@ -1162,6 +1164,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     ImportingInstance.setBuildGlobalModuleIndex(true);
   }
 
+  ImportingInstance.getFileManager().getPCMCache()->EndCompilation();
   return !Instance.getDiagnostics().hasErrorOccurred();
 }
 

@@ -185,7 +185,7 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData() : Stream(Buffer), Writer(Stream, Buffer, { }) { }
+  ASTWriterData() : Stream(Buffer), Writer(Stream, Buffer, nullptr, { }) { }
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -923,9 +923,11 @@ class PrecompilePreambleConsumer : public PCHGenerator {
 
 public:
   PrecompilePreambleConsumer(ASTUnit &Unit, PrecompilePreambleAction *Action,
-                             const Preprocessor &PP, StringRef isysroot,
+                             const Preprocessor &PP, PCMCache *BufferMgr,
+                             StringRef isysroot,
                              std::unique_ptr<raw_ostream> Out)
       : PCHGenerator(PP, "", nullptr, isysroot, std::make_shared<PCHBuffer>(),
+                     BufferMgr,
                      ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Unit(Unit), Hash(Unit.getCurrentTopLevelHashValue()), Action(Action),
@@ -994,7 +996,8 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
       llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
                                            Unit.getCurrentTopLevelHashValue()));
   return llvm::make_unique<PrecompilePreambleConsumer>(
-      Unit, this, CI.getPreprocessor(), Sysroot, std::move(OS));
+      Unit, this, CI.getPreprocessor(), CI.getFileManager().getPCMCache(),
+      Sysroot, std::move(OS));
 }
 
 static bool isNonDriverDiag(const StoredDiagnostic &StoredDiag) {
@@ -2518,7 +2521,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ASTWriter Writer(Stream, Buffer, { });
+  ASTWriter Writer(Stream, Buffer, nullptr, { });
   return serializeUnit(Writer, Buffer, getSema(), hasErrors, OS);
 }
 
