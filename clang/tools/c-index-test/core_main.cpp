@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -48,6 +49,13 @@ static cl::extrahelp MoreHelp(
   "\nAdd \"-- <compiler arguments>\" at the end to setup the compiler "
   "invocation\n"
 );
+
+static cl::opt<std::string>
+ModuleFilePath("module-file",
+               cl::desc("Path to module file to print symbols from"));
+static cl::opt<std::string>
+  ModuleFormat("fmodule-format", cl::init("raw"),
+        cl::desc("Container format for clang modules and PCH, 'raw' or 'obj'"));
 
 }
 } // anonymous namespace
@@ -160,6 +168,39 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
   return false;
 }
 
+static bool printSourceSymbolsFromModule(StringRef modulePath,
+                                         StringRef format) {
+  FileSystemOptions FileSystemOpts;
+  auto pchContOps = std::make_shared<PCHContainerOperations>();
+  // Register the support for object-file-wrapped Clang modules.
+  pchContOps->registerReader(llvm::make_unique<ObjectFilePCHContainerReader>());
+  auto pchRdr = pchContOps->getReaderOrNull(format);
+  if (!pchRdr) {
+    errs() << "unknown module format: " << format << '\n';
+    return true;
+  }
+
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
+      modulePath, *pchRdr, Diags,
+      FileSystemOpts, /*UseDebugInfo=*/false,
+      /*OnlyLocalDecls=*/true, None,
+      /*CaptureDiagnostics=*/false,
+      /*AllowPCHWithCompilerErrors=*/true,
+      /*UserFilesAreVolatile=*/false);
+  if (!AU) {
+    errs() << "failed to create TU for: " << modulePath << '\n';
+    return true;
+  }
+
+  auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(outs());
+  IndexingOptions IndexOpts;
+  indexASTUnit(*AU, DataConsumer, IndexOpts);
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Helper Utils
 //===----------------------------------------------------------------------===//
@@ -219,6 +260,10 @@ int indextest_core_main(int argc, const char **argv) {
   }
 
   if (options::Action == ActionType::PrintSourceSymbols) {
+    if (!options::ModuleFilePath.empty()) {
+      return printSourceSymbolsFromModule(options::ModuleFilePath,
+                                          options::ModuleFormat);
+    }
     if (CompArgs.empty()) {
       errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
       return 1;

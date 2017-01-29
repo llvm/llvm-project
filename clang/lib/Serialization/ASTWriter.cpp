@@ -1435,17 +1435,17 @@ uint64_t ASTWriter::WriteControlBlock(Preprocessor &PP,
     serialization::ModuleManager &Mgr = Chain->getModuleManager();
     Record.clear();
 
-    for (auto *M : Mgr) {
+    for (ModuleFile &M : Mgr) {
       // Skip modules that weren't directly imported.
-      if (!M->isDirectlyImported())
+      if (!M.isDirectlyImported())
         continue;
 
-      Record.push_back((unsigned)M->Kind); // FIXME: Stable encoding
-      AddSourceLocation(M->ImportLoc, Record);
-      Record.push_back(M->File->getSize());
-      Record.push_back(getTimestampForOutput(M->File));
-      Record.push_back(M->Signature);
-      AddPath(M->FileName, Record);
+      Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
+      AddSourceLocation(M.ImportLoc, Record);
+      Record.push_back(M.File->getSize());
+      Record.push_back(getTimestampForOutput(M.File));
+      Record.push_back(M.Signature);
+      AddPath(M.FileName, Record);
     }
     Stream.EmitRecord(IMPORTS, Record);
   }
@@ -4606,10 +4606,10 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     SmallString<2048> Buffer;
     {
       llvm::raw_svector_ostream Out(Buffer);
-      for (ModuleFile *M : Chain->ModuleMgr) {
+      for (ModuleFile &M : Chain->ModuleMgr) {
         using namespace llvm::support;
         endian::Writer<little> LE(Out);
-        StringRef FileName = M->FileName;
+        StringRef FileName = M.FileName;
         LE.write<uint16_t>(FileName.size());
         Out.write(FileName.data(), FileName.size());
 
@@ -4627,15 +4627,15 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M->SLocEntryBaseOffset, M->LocalNumSLocEntries);
-        writeBaseIDOrNone(M->BaseIdentifierID, M->LocalNumIdentifiers);
-        writeBaseIDOrNone(M->BaseMacroID, M->LocalNumMacros);
-        writeBaseIDOrNone(M->BasePreprocessedEntityID,
-                          M->NumPreprocessedEntities);
-        writeBaseIDOrNone(M->BaseSubmoduleID, M->LocalNumSubmodules);
-        writeBaseIDOrNone(M->BaseSelectorID, M->LocalNumSelectors);
-        writeBaseIDOrNone(M->BaseDeclID, M->LocalNumDecls);
-        writeBaseIDOrNone(M->BaseTypeIndex, M->LocalNumTypes);
+        writeBaseIDOrNone(M.SLocEntryBaseOffset, M.LocalNumSLocEntries);
+        writeBaseIDOrNone(M.BaseIdentifierID, M.LocalNumIdentifiers);
+        writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
+        writeBaseIDOrNone(M.BasePreprocessedEntityID,
+                          M.NumPreprocessedEntities);
+        writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
+        writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
+        writeBaseIDOrNone(M.BaseDeclID, M.LocalNumDecls);
+        writeBaseIDOrNone(M.BaseTypeIndex, M.LocalNumTypes);
       }
     }
     RecordData::value_type Record[] = {MODULE_OFFSET_MAP};

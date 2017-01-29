@@ -348,7 +348,7 @@ protected:
   /// Handle users of @p Array outside the SCoP.
   ///
   /// @param S         The current SCoP.
-  /// @param Inst      The ScopArray to handle.
+  /// @param Inst      The ScopArrayInfo to handle.
   void handleOutsideUsers(const Scop &S, ScopArrayInfo *Array);
 
   /// Find scalar statements that have outside users.

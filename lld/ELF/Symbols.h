@@ -352,19 +352,19 @@ public:
 // DefinedRegular symbols.
 template <class ELFT> struct ElfSym {
   // The content for __ehdr_start symbol.
-  static DefinedRegular<ELFT> *EhdrStart;
+  static DefinedSynthetic *EhdrStart;
 
   // The content for _etext and etext symbols.
-  static DefinedRegular<ELFT> *Etext;
-  static DefinedRegular<ELFT> *Etext2;
+  static DefinedSynthetic *Etext;
+  static DefinedSynthetic *Etext2;
 
   // The content for _edata and edata symbols.
-  static DefinedRegular<ELFT> *Edata;
-  static DefinedRegular<ELFT> *Edata2;
+  static DefinedSynthetic *Edata;
+  static DefinedSynthetic *Edata2;
 
   // The content for _end and end symbols.
-  static DefinedRegular<ELFT> *End;
-  static DefinedRegular<ELFT> *End2;
+  static DefinedSynthetic *End;
+  static DefinedSynthetic *End2;
 
   // The content for _gp_disp/__gnu_local_gp symbols for MIPS target.
   static DefinedRegular<ELFT> *MipsGpDisp;
@@ -372,13 +372,13 @@ template <class ELFT> struct ElfSym {
   static DefinedRegular<ELFT> *MipsGp;
 };
 
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::EhdrStart;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext2;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata2;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End2;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::EhdrStart;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Etext2;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Edata;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::Edata2;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::End;
+template <class ELFT> DefinedSynthetic *ElfSym<ELFT>::End2;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGpDisp;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsLocalGp;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGp;

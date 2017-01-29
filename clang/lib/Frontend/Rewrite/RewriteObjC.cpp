@@ -3629,7 +3629,7 @@ static void BuildUniqueMethodName(std::string &Name,
   Name += "__" + MD->getSelector().getAsString();
   // Convert colons to underscores.
   std::string::size_type loc = 0;
-  while ((loc = Name.find(":", loc)) != std::string::npos)
+  while ((loc = Name.find(':', loc)) != std::string::npos)
     Name.replace(loc, 1, "_");
 }
 

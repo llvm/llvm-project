@@ -349,40 +349,53 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   }
 }
 
-static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
-  // Find the last of --unresolved-symbols, --no-undefined and -z defs.
-  bool UnresolvedSymbolIsIgnoreAll = false;
-  bool ZDefs = false;
-  for (auto *Arg : Args) {
-    unsigned ID = Arg->getOption().getID();
-    if (ID == OPT_unresolved_symbols) {
-      StringRef S = Arg->getValue();
-      if (S == "ignore-all" || S == "ignore-in-object-files") {
-        ZDefs = false;
-        UnresolvedSymbolIsIgnoreAll = true;
-      } else if (S != "ignore-in-shared-libs" && S != "report-all") {
-        error("unknown --unresolved-symbols value: " + S);
-      }
-    } else if (ID == OPT_no_undefined ||
-               (ID == OPT_z && Arg->getValue() == StringRef("defs"))) {
-      ZDefs = true;
-      UnresolvedSymbolIsIgnoreAll = false;
-    }
-  }
+static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
+                   bool Default) {
+  if (auto *Arg = Args.getLastArg(K1, K2))
+    return Arg->getOption().getID() == K1;
+  return Default;
+}
 
+// Determines what we should do if there are remaining unresolved
+// symbols after the name resolution.
+static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
+  // -noinhibit-exec or -r imply some default values.
   if (Args.hasArg(OPT_noinhibit_exec))
     return UnresolvedPolicy::WarnAll;
   if (Config->Relocatable)
     return UnresolvedPolicy::IgnoreAll;
 
-  if (ZDefs || (!Config->Shared && !UnresolvedSymbolIsIgnoreAll)) {
-    if (auto *Arg = Args.getLastArg(OPT_warn_undef, OPT_error_undef))
-      if (Arg->getOption().getID() == OPT_warn_undef)
-        return UnresolvedPolicy::Warn;
-    return UnresolvedPolicy::ReportError;
+  UnresolvedPolicy ErrorOrWarn =
+      getArg(Args, OPT_error_undef, OPT_warn_undef, true)
+          ? UnresolvedPolicy::ReportError
+          : UnresolvedPolicy::Warn;
+
+  // Process the last of -unresolved-symbols, -no-undefined or -z defs.
+  for (auto *Arg : llvm::reverse(Args)) {
+    switch (Arg->getOption().getID()) {
+    case OPT_unresolved_symbols: {
+      StringRef S = Arg->getValue();
+      if (S == "ignore-all" || S == "ignore-in-object-files")
+        return UnresolvedPolicy::Ignore;
+      if (S == "ignore-in-shared-libs" || S == "report-all")
+        return ErrorOrWarn;
+      error("unknown --unresolved-symbols value: " + S);
+      continue;
+    }
+    case OPT_no_undefined:
+      return ErrorOrWarn;
+    case OPT_z:
+      if (StringRef(Arg->getValue()) == "defs")
+        return ErrorOrWarn;
+      continue;
+    }
   }
 
-  return UnresolvedPolicy::Ignore;
+  // -shared implies -unresolved-symbols=ignore-all because missing
+  // symbols are likely to be resolved at runtime using other DSOs.
+  if (Config->Shared)
+    return UnresolvedPolicy::Ignore;
+  return ErrorOrWarn;
 }
 
 static Target2Policy getTarget2Option(opt::InputArgList &Args) {
@@ -407,13 +420,6 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
     error("unknown --oformat value: " + S);
   }
   return false;
-}
-
-static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
-                   bool Default) {
-  if (auto *Arg = Args.getLastArg(K1, K2))
-    return Arg->getOption().getID() == K1;
-  return Default;
 }
 
 static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
@@ -578,7 +584,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->SortSection = getSortKind(Args);
   Config->Target2 = getTarget2Option(Args);
-  Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+  Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
 
   if (Args.hasArg(OPT_print_map))
     Config->MapFile = "-";

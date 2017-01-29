@@ -11026,6 +11026,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           TC.getArch() == llvm::Triple::x86
               ? "-include:___asan_seh_interceptor"
               : "-include:__asan_seh_interceptor"));
+      // Make sure the linker consider all object files from the dynamic runtime
+      // thunk.
+      CmdArgs.push_back(Args.MakeArgString(std::string("-wholearchive:") +
+          TC.getCompilerRT(Args, "asan_dynamic_runtime_thunk")));
     } else if (DLL) {
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dll_thunk"));
     } else {

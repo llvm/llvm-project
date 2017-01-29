@@ -380,12 +380,15 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
     // to the parallel subfunction and each request for a scalar alloca slot
     // must be forwared to the temporary in-subfunction slot. This mapping is
     // removed when the subfunction has been generated and again normal host
-    // code is generated. As GlobalMap may be changed multiple times (for
-    // each parallel loop), is commonly only known after the initial alloca
-    // has been generated, and the original alloca value must be restored at
-    // the end, it is not possible to perform the GlobalMap lookup right after
-    // creating the alloca below, but instead we need to check GlobalMap at
-    // call to getOrCreateAlloca.
+    // code is generated. Due to the following reasons it is not possible to
+    // perform the GlobalMap lookup right after creating the alloca below, but
+    // instead we need to check GlobalMap at each call to getOrCreateAlloca:
+    //
+    //   1) GlobalMap may be changed multiple times (for each parallel loop),
+    //   2) The temporary mapping is commonly only known after the initial
+    //      alloca has already been generated, and
+    //   3) The original alloca value must be restored after leaving the
+    //      sub-function.
     if (Value *NewAddr = GlobalMap.lookup(&*Addr))
       return NewAddr;
     return Addr;
