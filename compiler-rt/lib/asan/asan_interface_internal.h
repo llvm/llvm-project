@@ -244,7 +244,7 @@ extern "C" {
   void __asan_allocas_unpoison(uptr top, uptr bottom);
 
   SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-  const char* __asan_default_suppressions();
+  /* OPTIONAL */ const char* __asan_default_suppressions();
 }  // extern "C"
 
 #endif  // ASAN_INTERFACE_INTERNAL_H
