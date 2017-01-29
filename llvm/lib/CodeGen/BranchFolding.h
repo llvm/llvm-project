@@ -122,6 +122,7 @@ namespace llvm {
                                   const MachineBasicBlock *MBB) const;
       raw_ostream &printBlockFreq(raw_ostream &OS,
                                   const BlockFrequency Freq) const;
+      void view(bool isSimple = true);
 
     private:
       const MachineBlockFrequencyInfo &MBFI;

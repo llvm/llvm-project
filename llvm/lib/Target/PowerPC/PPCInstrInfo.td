@@ -1508,8 +1508,14 @@ def DCBTST : DCB_Form_hint<246, (outs), (ins u5imm:$TH, memrr:$dst),
                       PPC970_DGroup_Single;
 } // hasSideEffects = 0
 
+def ICBLC  : XForm_icbt<31, 230, (outs), (ins u4imm:$CT, memrr:$src),
+                       "icblc $CT, $src", IIC_LdStStore>, Requires<[HasICBT]>;
+def ICBLQ  : XForm_icbt<31, 198, (outs), (ins u4imm:$CT, memrr:$src),
+                       "icblq. $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
 def ICBT  : XForm_icbt<31, 22, (outs), (ins u4imm:$CT, memrr:$src),
                        "icbt $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
+def ICBTLS : XForm_icbt<31, 486, (outs), (ins u4imm:$CT, memrr:$src),
+                       "icbtls $CT, $src", IIC_LdStLoad>, Requires<[HasICBT]>;
 
 def : Pat<(int_ppc_dcbt xoaddr:$dst),
           (DCBT 0, xoaddr:$dst)>;
@@ -2378,6 +2384,13 @@ def MTSPR : XFXForm_1<31, 467, (outs), (ins i32imm:$SPR, gprc:$RT),
 
 def MFTB : XFXForm_1<31, 371, (outs gprc:$RT), (ins i32imm:$SPR),
                      "mftb $RT, $SPR", IIC_SprMFTB>;
+
+def MFPMR : XFXForm_1<31, 334, (outs gprc:$RT), (ins i32imm:$SPR),
+                     "mfpmr $RT, $SPR", IIC_SprMFPMR>;
+
+def MTPMR : XFXForm_1<31, 462, (outs), (ins i32imm:$SPR, gprc:$RT),
+                     "mtpmr $SPR, $RT", IIC_SprMTPMR>;
+
 
 // A pseudo-instruction used to implement the read of the 64-bit cycle counter
 // on a 32-bit target.

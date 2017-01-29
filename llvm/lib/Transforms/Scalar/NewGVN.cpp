@@ -86,7 +86,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
-#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -889,8 +888,8 @@ bool NewGVN::setMemoryAccessEquivTo(MemoryAccess *From, CongruenceClass *To) {
     DEBUG(dbgs() << *To->RepMemoryAccess);
   } else {
     DEBUG(dbgs() << " equivalent to itself");
-    DEBUG(dbgs() << "\n");
   }
+  DEBUG(dbgs() << "\n");
 
   auto LookupResult = MemoryAccessToClass.find(From);
   bool Changed = false;

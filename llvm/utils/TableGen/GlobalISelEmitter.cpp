@@ -142,7 +142,7 @@ public:
 
   /// Emit a C++ expression that tests whether all the predicates are met.
   template <class... Args>
-  void emitCxxPredicatesExpr(raw_ostream &OS, Args &&... args) const {
+  void emitCxxPredicateListExpr(raw_ostream &OS, Args &&... args) const {
     if (Predicates.empty()) {
       OS << "true";
       return;
@@ -228,7 +228,7 @@ public:
   /// InsnVarName matches all the predicate and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
     OS << "(";
-    emitCxxPredicatesExpr(OS, InsnVarName, OpIdx);
+    emitCxxPredicateListExpr(OS, InsnVarName, OpIdx);
     OS << ")";
   }
 };
@@ -284,7 +284,7 @@ public:
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
-    emitCxxPredicatesExpr(OS, InsnVarName);
+    emitCxxPredicateListExpr(OS, InsnVarName);
     for (const auto &Operand : Operands) {
       OS << " && (";
       Operand.emitCxxPredicateExpr(OS, InsnVarName);

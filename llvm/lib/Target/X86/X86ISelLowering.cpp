@@ -30656,20 +30656,15 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   if (VT != MVT::v2i64 && VT != MVT::v4i64 && VT != MVT::v8i64)
     return SDValue();
 
-  // Canonicalize XOR to the left.
-  if (N1.getOpcode() == ISD::XOR)
-    std::swap(N0, N1);
+  if (N0.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode()))
+    return DAG.getNode(X86ISD::ANDNP, DL, VT, N0.getOperand(0), N1);
 
-  if (N0.getOpcode() != ISD::XOR)
-    return SDValue();
+  if (N1.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode()))
+    return DAG.getNode(X86ISD::ANDNP, DL, VT, N1.getOperand(0), N0);
 
-  SDValue N00 = N0->getOperand(0);
-  SDValue N01 = N0->getOperand(1);
-
-  if (!ISD::isBuildVectorAllOnes(N01.getNode()))
-    return SDValue();
-
-  return DAG.getNode(X86ISD::ANDNP, DL, VT, N00, N1);
+  return SDValue();
 }
 
 // On AVX/AVX2 the type v8i1 is legalized to v8i16, which is an XMM sized
