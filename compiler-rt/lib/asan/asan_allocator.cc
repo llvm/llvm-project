@@ -958,15 +958,13 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 // Provide default (no-op) implementation of malloc hooks.
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void __sanitizer_malloc_hook(void *ptr, uptr size) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook,
+                             void *ptr, uptr size) {
   (void)ptr;
   (void)size;
 }
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void __sanitizer_free_hook(void *ptr) {
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
   (void)ptr;
 }
-} // extern "C"
 #endif

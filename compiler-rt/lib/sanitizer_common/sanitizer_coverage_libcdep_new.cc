@@ -156,14 +156,13 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(  // NOLINT
   return __sancov::SanitizerDumpCoverage(pcs, len);
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
-__sanitizer_cov_trace_pc_guard(u32* guard) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard, u32* guard) {
   if (!*guard) return;
   __sancov::pc_guard_controller.TracePcGuard(guard, GET_CALLER_PC() - 1);
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
-__sanitizer_cov_trace_pc_guard_init(u32* start, u32* end) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_guard_init,
+                             u32* start, u32* end) {
   if (start == end || *start) return;
   __sancov::pc_guard_controller.InitTracePcGuard(start, end);
 }

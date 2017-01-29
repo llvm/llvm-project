@@ -186,9 +186,6 @@ void InitializeFlags() {
 
 }  // namespace __asan
 
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-const char* __asan_default_options() { return ""; }
-}  // extern "C"
-#endif
+SANITIZER_INTERFACE_WEAK_DEF(const char*, __asan_default_options, void) {
+  return "";
+}

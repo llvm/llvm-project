@@ -17,7 +17,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_win_defs.h"
 
 namespace __ubsan {
 
@@ -68,19 +67,8 @@ void InitializeFlags() {
 
 }  // namespace __ubsan
 
-extern "C" {
-
-#if !SANITIZER_SUPPORTS_WEAK_HOOKS
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-const char *__ubsan_default_options() { return ""; }
-#endif
-
-#if SANITIZER_WINDOWS
-const char *__ubsan_default_default_options() { return ""; }
-
-WIN_WEAK_ALIAS(__ubsan_default_options, __ubsan_default_default_options)
-#endif
-
-}  // extern "C"
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __ubsan_default_options, void) {
+  return "";
+}
 
 #endif  // CAN_SANITIZE_UB
