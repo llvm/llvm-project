@@ -165,9 +165,10 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Initialize the stream.
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
 
-  // Read the signature eagerly now so that we can check it.
-  if (checkSignature(ReadSignature(NewModule->Data), ExpectedSignature,
-                     ErrorStr))
+  // Read the signature eagerly now so that we can check it.  Avoid calling
+  // ReadSignature unless there's something to check though.
+  if (ExpectedSignature && checkSignature(ReadSignature(NewModule->Data),
+                                          ExpectedSignature, ErrorStr))
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
