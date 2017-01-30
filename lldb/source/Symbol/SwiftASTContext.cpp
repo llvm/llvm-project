@@ -5031,7 +5031,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
   } else if (auto enum_decl = swift_can_type->getEnumOrBoundGenericEnum()) {
     size_t num_nopayload = 0, num_payload = 0;
     for (auto the_case : enum_decl->getAllElements()) {
-      if (the_case->hasArgumentType()) {
+      if (the_case->getArgumentInterfaceType()) {
         num_payload = 1;
         break;
       } else {
@@ -8339,7 +8339,7 @@ bool SwiftASTContext::GetEnumTypeInfo(const CompilerType &type,
       auto iter = range.begin(), end = range.end();
       for (; iter != end; ++iter) {
         swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->hasArgumentType())
+        if (element_decl->getArgumentInterfaceType())
           num_payload_cases++;
         else
           num_nopayload_cases++;
@@ -8358,7 +8358,7 @@ bool SwiftASTContext::GetEnumTypeInfo(const CompilerType &type,
       auto iter = range.begin(), end = range.end();
       for (; iter != end; ++iter) {
         swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->hasArgumentType())
+        if (element_decl->getArgumentInterfaceType())
           num_payload_cases++;
         else
           num_nopayload_cases++;
