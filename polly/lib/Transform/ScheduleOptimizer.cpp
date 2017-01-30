@@ -867,8 +867,25 @@ createExtensionNode(__isl_take isl_schedule_node *Node,
 ///
 /// The packing transformation can be described as a data-layout
 /// transformation that requires to introduce a new array, copy data
-/// to the array, and change memory access locations of the compute kernel
-/// to reference the array.
+/// to the array, and change memory access locations to reference the array.
+/// It can be used to ensure that elements of the new array are read in-stride
+/// access, aligned to cache lines boundaries, and preloaded into certain cache
+/// levels.
+///
+/// As an example let us consider the packing of the array A that would help
+/// to read its elements with in-stride access. An access to the array A
+/// is represented by an access relation that has the form
+/// S[i, j, k] -> A[i, k]. The scheduling function of the SCoP statement S has
+/// the form S[i,j, k] -> [floor((j mod Nc) / Nr), floor((i mod Mc) / Mr),
+/// k mod Kc, j mod Nr, i mod Mr].
+///
+/// To ensure that elements of the array A are read in-stride access, we add
+/// a new array Packed_A[Mc/Mr][Kc][Mr] to the SCoP, using
+/// Scop::createScopArrayInfo, change the access relation
+/// S[i, j, k] -> A[i, k] to
+/// S[i, j, k] -> Packed_A[floor((i mod Mc) / Mr), k mod Kc, i mod Mr], using
+/// MemoryAccess::setNewAccessRelation, and copy the data to the array, using
+/// the copy statement created by Scop::addScopStmt.
 ///
 /// @param Node The schedule node to be optimized.
 /// @param MapOldIndVar The relation, which maps original induction variables

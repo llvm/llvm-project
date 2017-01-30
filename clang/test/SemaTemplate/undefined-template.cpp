@@ -134,6 +134,14 @@ void func_23(C1<int>::C2<long> *x) {
                         // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<long>::tmeth_2<int>' is explicitly instantiated in another translation unit}}
 }
 
+namespace test_24 {
+  template <typename T> struct X {
+    friend void g(int);
+    operator int() { return 0; }
+  };
+  void h(X<int> x) { g(x); } // no warning for use of 'g' despite the declaration having been instantiated from a template
+}
+
 int main() {
   return 0;
 }

@@ -30,5 +30,5 @@ has_disassembler = 1
 type = Library
 name = AMDGPUCodeGen
 parent = AMDGPU
-required_libraries = Analysis AsmPrinter CodeGen Core IPO MC AMDGPUAsmPrinter AMDGPUDesc AMDGPUInfo AMDGPUUtils Scalar SelectionDAG Support Target TransformUtils Vectorize
+required_libraries = Analysis AsmPrinter CodeGen Core IPO MC AMDGPUAsmPrinter AMDGPUDesc AMDGPUInfo AMDGPUUtils Scalar SelectionDAG Support Target TransformUtils Vectorize GlobalISel
 add_to_library_groups = AMDGPU

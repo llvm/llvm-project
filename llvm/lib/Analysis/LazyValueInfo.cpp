@@ -459,15 +459,15 @@ namespace {
 }
 
 void LazyValueInfoCache::eraseValue(Value *V) {
-  SmallVector<AssertingVH<BasicBlock>, 4> ToErase;
-  for (auto &I : OverDefinedCache) {
-    SmallPtrSetImpl<Value *> &ValueSet = I.second;
+  for (auto I = OverDefinedCache.begin(), E = OverDefinedCache.end(); I != E;) {
+    // Copy and increment the iterator immediately so we can erase behind
+    // ourselves.
+    auto Iter = I++;
+    SmallPtrSetImpl<Value *> &ValueSet = Iter->second;
     ValueSet.erase(V);
     if (ValueSet.empty())
-      ToErase.push_back(&*I.first);
+      OverDefinedCache.erase(Iter);
   }
-  for (auto &BB : ToErase)
-    OverDefinedCache.erase(&*BB);
 
   ValueCache.erase(V);
 }

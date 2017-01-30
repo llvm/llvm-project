@@ -244,24 +244,21 @@ define <8 x float> @insert_v8f32_z12345z7(<8 x float> %a) {
 define <4 x i32> @insert_v4i32_01z3(<4 x i32> %a) {
 ; SSE2-LABEL: insert_v4i32_01z3:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v4i32_01z3:
 ; SSE3:       # BB#0:
-; SSE3-NEXT:    xorl %eax, %eax
-; SSE3-NEXT:    movd %eax, %xmm1
+; SSE3-NEXT:    xorps %xmm1, %xmm1
 ; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v4i32_01z3:
 ; SSSE3:       # BB#0:
-; SSSE3-NEXT:    xorl %eax, %eax
-; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; SSSE3-NEXT:    retq
@@ -292,8 +289,7 @@ define <8 x i32> @insert_v8i32_z12345z7(<8 x i32> %a) {
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
 ; SSE2-NEXT:    retq
@@ -302,8 +298,7 @@ define <8 x i32> @insert_v8i32_z12345z7(<8 x i32> %a) {
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    xorps %xmm2, %xmm2
 ; SSE3-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; SSE3-NEXT:    xorl %eax, %eax
-; SSE3-NEXT:    movd %eax, %xmm2
+; SSE3-NEXT:    xorps %xmm2, %xmm2
 ; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[3,0]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
 ; SSE3-NEXT:    retq
@@ -312,8 +307,7 @@ define <8 x i32> @insert_v8i32_z12345z7(<8 x i32> %a) {
 ; SSSE3:       # BB#0:
 ; SSSE3-NEXT:    xorps %xmm2, %xmm2
 ; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; SSSE3-NEXT:    xorl %eax, %eax
-; SSSE3-NEXT:    movd %eax, %xmm2
+; SSSE3-NEXT:    xorps %xmm2, %xmm2
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[3,0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,2]
 ; SSSE3-NEXT:    retq
@@ -443,24 +437,12 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
 ; SSE2-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE3:       # BB#0:
-; SSE3-NEXT:    movdqa {{.*#+}} xmm1 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE3-NEXT:    pand %xmm1, %xmm0
-; SSE3-NEXT:    xorl %eax, %eax
-; SSE3-NEXT:    movd %eax, %xmm2
-; SSE3-NEXT:    pandn %xmm2, %xmm1
-; SSE3-NEXT:    por %xmm1, %xmm0
-; SSE3-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v16i8_z123456789ABCDEz:
@@ -489,25 +471,13 @@ define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
 define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; SSE2-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    pandn %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSE3:       # BB#0:
-; SSE3-NEXT:    movdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE3-NEXT:    pand %xmm2, %xmm0
-; SSE3-NEXT:    xorl %eax, %eax
-; SSE3-NEXT:    movd %eax, %xmm3
-; SSE3-NEXT:    pandn %xmm3, %xmm2
-; SSE3-NEXT:    por %xmm2, %xmm0
-; SSE3-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE3-NEXT:    andps {{.*}}(%rip), %xmm1
 ; SSE3-NEXT:    retq
 ;

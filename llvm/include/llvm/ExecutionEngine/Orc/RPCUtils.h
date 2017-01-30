@@ -813,20 +813,20 @@ public:
     // Open the function call message.
     if (auto Err = C.startSendMessage(FnId, SeqNo)) {
       abandonPendingResponses();
-      return joinErrors(std::move(Err), C.endSendMessage());
+      return Err;
     }
 
     // Serialize the call arguments.
     if (auto Err = detail::HandlerTraits<typename Func::Type>::serializeArgs(
             C, Args...)) {
       abandonPendingResponses();
-      return joinErrors(std::move(Err), C.endSendMessage());
+      return Err;
     }
 
     // Close the function call messagee.
     if (auto Err = C.endSendMessage()) {
       abandonPendingResponses();
-      return std::move(Err);
+      return Err;
     }
 
     return Error::success();
@@ -845,8 +845,10 @@ public:
   Error handleOne() {
     FunctionIdT FnId;
     SequenceNumberT SeqNo;
-    if (auto Err = C.startReceiveMessage(FnId, SeqNo))
+    if (auto Err = C.startReceiveMessage(FnId, SeqNo)) {
+      abandonPendingResponses();
       return Err;
+    }
     if (FnId == ResponseId)
       return handleResponse(SeqNo);
     auto I = Handlers.find(FnId);
@@ -1155,7 +1157,6 @@ public:
               return Error::success();
             },
             Args...)) {
-      this->abandonPendingResponses();
       RTraits::consumeAbandoned(FutureResult.get());
       return std::move(Err);
     }
@@ -1187,15 +1188,9 @@ public:
             typename AltRetT = typename Func::ReturnType>
   typename detail::ResultTraits<AltRetT>::ErrorReturnType
   callB(const ArgTs &... Args) {
-    if (auto FutureResOrErr = callNB<Func>(Args...)) {
-      if (auto Err = this->C.send()) {
-        this->abandonPendingResponses();
-        detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
-            std::move(FutureResOrErr->get()));
-        return std::move(Err);
-      }
+    if (auto FutureResOrErr = callNB<Func>(Args...))
       return FutureResOrErr->get();
-    } else
+    else
       return FutureResOrErr.takeError();
   }
 
@@ -1257,7 +1252,6 @@ public:
               return Error::success();
             },
             Args...)) {
-      this->abandonPendingResponses();
       detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
           std::move(Result));
       return std::move(Err);
@@ -1265,7 +1259,6 @@ public:
 
     while (!ReceivedResponse) {
       if (auto Err = this->handleOne()) {
-        this->abandonPendingResponses();
         detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
             std::move(Result));
         return std::move(Err);

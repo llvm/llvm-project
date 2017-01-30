@@ -15,6 +15,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Transforms/Utils/MemorySSAUpdater.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -104,11 +105,145 @@ TEST_F(MemorySSATest, CreateALoad) {
   EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
   MSSA.verifyMemorySSA();
 }
+TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
+  // We create a diamond, then build memoryssa with no memory accesses, and
+  // incrementally update it by inserting a store in the, entry, a load in the
+  // merge point, then a store in the branch, another load in the merge point,
+  // and then a store in the entry.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left, Left->begin());
+  Argument *PointerArg = &*F->arg_begin();
+  B.SetInsertPoint(Left);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(Right);
+  B.CreateBr(Merge);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+  // Add the store
+  B.SetInsertPoint(Entry, Entry->begin());
+  StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  MemoryAccess *EntryStoreAccess = MSSA.createMemoryAccessInBB(
+      EntryStore, nullptr, Entry, MemorySSA::Beginning);
+  Updater.insertDef(cast<MemoryDef>(EntryStoreAccess));
+
+  // Add the load
+  B.SetInsertPoint(Merge, Merge->begin());
+  LoadInst *FirstLoad = B.CreateLoad(PointerArg);
+
+  // MemoryPHI should not already exist.
+  MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_EQ(MP, nullptr);
+
+  // Create the load memory access
+  MemoryUse *FirstLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+      FirstLoad, nullptr, Merge, MemorySSA::Beginning));
+  Updater.insertUse(FirstLoadAccess);
+  // Should just have a load using the entry access, because it should discover
+  // the phi is trivial
+  EXPECT_EQ(FirstLoadAccess->getDefiningAccess(), EntryStoreAccess);
+
+  // Create a store on the left
+  // Add the store
+  B.SetInsertPoint(Left, Left->begin());
+  StoreInst *LeftStore = B.CreateStore(B.getInt8(16), PointerArg);
+  MemoryAccess *LeftStoreAccess = MSSA.createMemoryAccessInBB(
+      LeftStore, nullptr, Left, MemorySSA::Beginning);
+  Updater.insertDef(cast<MemoryDef>(LeftStoreAccess));
+  // We don't touch existing loads, so we need to create a new one to get a phi
+  // Add the second load
+  B.SetInsertPoint(Merge, Merge->begin());
+  LoadInst *SecondLoad = B.CreateLoad(PointerArg);
+
+  // MemoryPHI should not already exist.
+  MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_EQ(MP, nullptr);
+
+  // Create the load memory access
+  MemoryUse *SecondLoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+      SecondLoad, nullptr, Merge, MemorySSA::Beginning));
+  Updater.insertUse(SecondLoadAccess);
+  // Now the load should be a phi of the entry store and the left store
+  MemoryPhi *MergePhi =
+      dyn_cast<MemoryPhi>(SecondLoadAccess->getDefiningAccess());
+  EXPECT_NE(MergePhi, nullptr);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), LeftStoreAccess);
+  // Now create a store below the existing one in the entry
+  B.SetInsertPoint(Entry, --Entry->end());
+  StoreInst *SecondEntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  MemoryAccess *SecondEntryStoreAccess = MSSA.createMemoryAccessInBB(
+      SecondEntryStore, nullptr, Entry, MemorySSA::End);
+  Updater.insertDef(cast<MemoryDef>(SecondEntryStoreAccess));
+  // and make sure the phi below it got updated, despite being blocks away
+  MergePhi = dyn_cast<MemoryPhi>(SecondLoadAccess->getDefiningAccess());
+  EXPECT_NE(MergePhi, nullptr);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), SecondEntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), LeftStoreAccess);
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, CreateALoadUpdater) {
+  // We create a diamond, then build memoryssa with no memory accesses, and
+  // incrementally update it by inserting a store in one of the branches, and a
+  // load in the merge point
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left, Left->begin());
+  Argument *PointerArg = &*F->arg_begin();
+  B.SetInsertPoint(Left);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(Right);
+  B.CreateBr(Merge);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+  B.SetInsertPoint(Left, Left->begin());
+  // Add the store
+  StoreInst *SI = B.CreateStore(B.getInt8(16), PointerArg);
+  MemoryAccess *StoreAccess =
+      MSSA.createMemoryAccessInBB(SI, nullptr, Left, MemorySSA::Beginning);
+  Updater.insertDef(cast<MemoryDef>(StoreAccess));
+
+  // Add the load
+  B.SetInsertPoint(Merge, Merge->begin());
+  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+
+  // MemoryPHI should not already exist.
+  MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
+  EXPECT_EQ(MP, nullptr);
+
+  // Create the load memory acccess
+  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+      LoadInst, nullptr, Merge, MemorySSA::Beginning));
+  Updater.insertUse(LoadAccess);
+  MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
+  EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
+  MSSA.verifyMemorySSA();
+}
 
 TEST_F(MemorySSATest, MoveAStore) {
   // We create a diamond where there is a in the entry, a store on one side, and
   // a load at the end.  After building MemorySSA, we test updating by moving
-  // the store from the side block to the entry block.
+  // the store from the side block to the entry block. This destroys the old
+  // access.
   F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
       GlobalValue::ExternalLinkage, "F", &M);
@@ -137,6 +272,152 @@ TEST_F(MemorySSATest, MoveAStore) {
       SideStore, EntryStoreAccess, EntryStoreAccess);
   EntryStoreAccess->replaceAllUsesWith(NewStoreAccess);
   MSSA.removeMemoryAccess(SideStoreAccess);
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, MoveAStoreUpdater) {
+  // We create a diamond where there is a in the entry, a store on one side, and
+  // a load at the end.  After building MemorySSA, we test updating by moving
+  // the store from the side block to the entry block.  This destroys the old
+  // access.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+  B.SetInsertPoint(Merge);
+  auto *MergeLoad = B.CreateLoad(PointerArg);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Move the store
+  SideStore->moveBefore(Entry->getTerminator());
+  auto *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
+  auto *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
+  auto *NewStoreAccess = MSSA.createMemoryAccessAfter(
+      SideStore, EntryStoreAccess, EntryStoreAccess);
+  // Before, the load will point to a phi of the EntryStore and SideStore.
+  auto *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(MergeLoad));
+  EXPECT_TRUE(isa<MemoryPhi>(LoadAccess->getDefiningAccess()));
+  MemoryPhi *MergePhi = cast<MemoryPhi>(LoadAccess->getDefiningAccess());
+  EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), SideStoreAccess);
+  MSSA.removeMemoryAccess(SideStoreAccess);
+  Updater.insertDef(cast<MemoryDef>(NewStoreAccess));
+  // After it's a phi of the new side store access.
+  EXPECT_EQ(MergePhi->getIncomingValue(0), NewStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), NewStoreAccess);
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, MoveAStoreUpdaterMove) {
+  // We create a diamond where there is a in the entry, a store on one side, and
+  // a load at the end.  After building MemorySSA, we test updating by moving
+  // the store from the side block to the entry block.  This does not destroy
+  // the old access.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+  B.SetInsertPoint(Merge);
+  auto *MergeLoad = B.CreateLoad(PointerArg);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Move the store
+  auto *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
+  auto *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
+  // Before, the load will point to a phi of the EntryStore and SideStore.
+  auto *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(MergeLoad));
+  EXPECT_TRUE(isa<MemoryPhi>(LoadAccess->getDefiningAccess()));
+  MemoryPhi *MergePhi = cast<MemoryPhi>(LoadAccess->getDefiningAccess());
+  EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), SideStoreAccess);
+  SideStore->moveBefore(*EntryStore->getParent(), ++EntryStore->getIterator());
+  Updater.moveAfter(SideStoreAccess, EntryStoreAccess);
+  // After, it's a phi of the side store.
+  EXPECT_EQ(MergePhi->getIncomingValue(0), SideStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), SideStoreAccess);
+
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, MoveAStoreAllAround) {
+  // We create a diamond where there is a in the entry, a store on one side, and
+  // a load at the end.  After building MemorySSA, we test updating by moving
+  // the store from the side block to the entry block, then to the other side
+  // block, then to before the load.  This does not destroy the old access.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+  B.SetInsertPoint(Merge);
+  auto *MergeLoad = B.CreateLoad(PointerArg);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Move the store
+  auto *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
+  auto *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
+  // Before, the load will point to a phi of the EntryStore and SideStore.
+  auto *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(MergeLoad));
+  EXPECT_TRUE(isa<MemoryPhi>(LoadAccess->getDefiningAccess()));
+  MemoryPhi *MergePhi = cast<MemoryPhi>(LoadAccess->getDefiningAccess());
+  EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), SideStoreAccess);
+  // Move the store before the entry store
+  SideStore->moveBefore(*EntryStore->getParent(), EntryStore->getIterator());
+  Updater.moveBefore(SideStoreAccess, EntryStoreAccess);
+  // After, it's a phi of the entry store.
+  EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
+  MSSA.verifyMemorySSA();
+  // Now move the store to the right branch
+  SideStore->moveBefore(*Right, Right->begin());
+  Updater.moveToPlace(SideStoreAccess, Right, MemorySSA::Beginning);
+  MSSA.verifyMemorySSA();
+  EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), SideStoreAccess);
+  // Now move it before the load
+  SideStore->moveBefore(MergeLoad);
+  Updater.moveBefore(SideStoreAccess, LoadAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
+  EXPECT_EQ(MergePhi->getIncomingValue(1), EntryStoreAccess);
   MSSA.verifyMemorySSA();
 }
 
@@ -485,9 +766,8 @@ TEST_F(MemorySSATest, WalkerReopt) {
   EXPECT_EQ(NewLoadAccess->getDefiningAccess(), LoadClobber);
 }
 
-#if 0
-// Test out MemorySSA::spliceMemoryAccessAbove.
-TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
+// Test out MemorySSAUpdater::moveBefore
+TEST_F(MemorySSATest, MoveAboveMemoryDef) {
   F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
                        GlobalValue::ExternalLinkage, "F", &M);
   B.SetInsertPoint(BasicBlock::Create(C, "", F));
@@ -501,7 +781,6 @@ TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
   StoreInst *StoreB = B.CreateStore(ConstantInt::get(Int8, 0), B_);
   LoadInst *LoadB = B.CreateLoad(B_);
   StoreInst *StoreA1 = B.CreateStore(ConstantInt::get(Int8, 4), A);
-  // splice this above StoreB
   StoreInst *StoreC = B.CreateStore(ConstantInt::get(Int8, 4), C);
   StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 4), A);
   LoadInst *LoadC = B.CreateLoad(C);
@@ -510,9 +789,10 @@ TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAWalker &Walker = *Analyses->Walker;
 
+  MemorySSAUpdater Updater(&MSSA);
   StoreC->moveBefore(StoreB);
-  MSSA.spliceMemoryAccessAbove(cast<MemoryDef>(MSSA.getMemoryAccess(StoreB)),
-                               MSSA.getMemoryAccess(StoreC));
+  Updater.moveBefore(cast<MemoryDef>(MSSA.getMemoryAccess(StoreC)),
+                     cast<MemoryDef>(MSSA.getMemoryAccess(StoreB)));
 
   MSSA.verifyMemorySSA();
 
@@ -533,4 +813,43 @@ TEST_F(MemorySSATest, SpliceAboveMemoryDef) {
   EXPECT_TRUE(MSSA.locallyDominates(MSSA.getMemoryAccess(StoreA1),
                                     MSSA.getMemoryAccess(StoreA2)));
 }
-#endif
+
+TEST_F(MemorySSATest, Irreducible) {
+  // Create the equivalent of
+  // x = something
+  // if (...)
+  //    goto second_loop_entry
+  // while (...) {
+  // second_loop_entry:
+  // }
+  // use(x)
+
+  SmallVector<PHINode *, 8> Inserted;
+  IRBuilder<> B(C);
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  // Make blocks
+  BasicBlock *IfBB = BasicBlock::Create(C, "if", F);
+  BasicBlock *LoopStartBB = BasicBlock::Create(C, "loopstart", F);
+  BasicBlock *LoopMainBB = BasicBlock::Create(C, "loopmain", F);
+  BasicBlock *AfterLoopBB = BasicBlock::Create(C, "afterloop", F);
+  B.SetInsertPoint(IfBB);
+  B.CreateCondBr(B.getTrue(), LoopMainBB, LoopStartBB);
+  B.SetInsertPoint(LoopStartBB);
+  B.CreateBr(LoopMainBB);
+  B.SetInsertPoint(LoopMainBB);
+  B.CreateCondBr(B.getTrue(), LoopStartBB, AfterLoopBB);
+  B.SetInsertPoint(AfterLoopBB);
+  Argument *FirstArg = &*F->arg_begin();
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+  // Create the load memory acccess
+  LoadInst *LoadInst = B.CreateLoad(FirstArg);
+  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.createMemoryAccessInBB(
+      LoadInst, nullptr, AfterLoopBB, MemorySSA::Beginning));
+  Updater.insertUse(LoadAccess);
+  MSSA.verifyMemorySSA();
+}

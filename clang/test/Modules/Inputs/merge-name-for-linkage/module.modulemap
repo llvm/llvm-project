@@ -1,2 +1,3 @@
 module a { header "a.h" export * }
 module b { header "b.h" export * }
+module c { module c1 { header "c1.h" export * } module c2 { header "c2.h" export * } }

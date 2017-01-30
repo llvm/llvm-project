@@ -31,8 +31,8 @@ define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
-; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 [[TMP3]], [[SUM]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
+; CHECK-NEXT:    [[ADD_7:%.*]] = add i32 [[TMP4]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label %for.end, label %for.body
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 [[ADD_7]]

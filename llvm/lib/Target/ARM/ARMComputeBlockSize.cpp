@@ -8,7 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
+#include "ARMBaseInstrInfo.h"
 #include "ARMBasicBlockInfo.h"
+#include "ARMMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <vector>
+
 using namespace llvm;
 
 namespace llvm {
@@ -69,4 +77,4 @@ std::vector<BasicBlockInfo> computeAllBlockSizes(MachineFunction *MF) {
   return BBInfo;
 }
 
-} // end namespace
+} // end namespace llvm

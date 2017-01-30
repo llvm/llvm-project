@@ -353,45 +353,25 @@ foldShiftByConstOfShiftByConst(BinaryOperator &I, const APInt *COp1,
   // Combinations of right and left shifts will still be optimized in
   // DAGCombine where scalar evolution no longer applies.
 
+  Value *X = ShiftOp->getOperand(0);
+  unsigned ShiftAmt1 = ShAmt1->getLimitedValue();
+  unsigned ShiftAmt2 = COp1->getLimitedValue();
+  assert(ShiftAmt2 != 0 && "Should have been simplified earlier");
+  if (ShiftAmt1 == 0)
+    return nullptr; // Will be simplified in the future.
+
+  if (ShiftAmt1 == ShiftAmt2)
+    return nullptr;
+
   // FIXME: Everything under here should be extended to work with vector types.
 
   auto *ShiftAmt1C = dyn_cast<ConstantInt>(ShiftOp->getOperand(1));
   if (!ShiftAmt1C)
     return nullptr;
 
-  uint32_t ShiftAmt1 = ShiftAmt1C->getLimitedValue(TypeBits);
-  uint32_t ShiftAmt2 = COp1->getLimitedValue(TypeBits);
-  assert(ShiftAmt2 != 0 && "Should have been simplified earlier");
-  if (ShiftAmt1 == 0)
-    return nullptr; // Will be simplified in the future.
-
-  Value *X = ShiftOp->getOperand(0);
   IntegerType *Ty = cast<IntegerType>(I.getType());
-  if (ShiftAmt1 == ShiftAmt2) {
-    // If we have ((X << C) >>u C), turn this into X & (-1 >>u C).
-    if (I.getOpcode() == Instruction::LShr &&
-        ShiftOp->getOpcode() == Instruction::Shl) {
-      APInt Mask(APInt::getLowBitsSet(TypeBits, TypeBits - ShiftAmt1));
-      return BinaryOperator::CreateAnd(X,
-                                       ConstantInt::get(I.getContext(), Mask));
-    }
-  } else if (ShiftAmt1 < ShiftAmt2) {
+  if (ShiftAmt1 < ShiftAmt2) {
     uint32_t ShiftDiff = ShiftAmt2 - ShiftAmt1;
-
-    // (X >>?,exact C1) << C2 --> X << (C2-C1)
-    // The inexact version is deferred to DAGCombine so we don't hide shl
-    // behind a bit mask.
-    if (I.getOpcode() == Instruction::Shl &&
-        ShiftOp->getOpcode() != Instruction::Shl && ShiftOp->isExact()) {
-      assert(ShiftOp->getOpcode() == Instruction::LShr ||
-             ShiftOp->getOpcode() == Instruction::AShr);
-      ConstantInt *ShiftDiffCst = ConstantInt::get(Ty, ShiftDiff);
-      BinaryOperator *NewShl =
-          BinaryOperator::Create(Instruction::Shl, X, ShiftDiffCst);
-      NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-      NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
-      return NewShl;
-    }
 
     // (X << C1) >>u C2  --> X >>u (C2-C1) & (-1 >> C2)
     if (I.getOpcode() == Instruction::LShr &&
@@ -706,6 +686,8 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   const APInt *ShAmtAPInt;
   if (match(Op1, m_APInt(ShAmtAPInt))) {
     unsigned ShAmt = ShAmtAPInt->getZExtValue();
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    Type *Ty = I.getType();
 
     // shl (zext X), ShAmt --> zext (shl X, ShAmt)
     // This is only valid if X would have zeros shifted out.
@@ -714,14 +696,32 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       if (ShAmt < SrcWidth &&
           MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmt), 0, &I))
-        return new ZExtInst(Builder->CreateShl(X, ShAmt), I.getType());
+        return new ZExtInst(Builder->CreateShl(X, ShAmt), Ty);
+    }
+
+    // (X >>u C) << C --> X & (-1 << C)
+    if (match(Op0, m_LShr(m_Value(X), m_Specific(Op1)))) {
+      APInt Mask(APInt::getHighBitsSet(BitWidth, BitWidth - ShAmt));
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
+
+    const APInt *ShrAmt;
+    if (match(Op0, m_CombineOr(m_Exact(m_LShr(m_Value(X), m_APInt(ShrAmt))),
+                               m_Exact(m_AShr(m_Value(X), m_APInt(ShrAmt))))) &&
+        ShrAmt->ult(*ShAmtAPInt)) {
+      // If C1 < C2: (X >>?,exact C1) << C2 --> X << (C2 - C1)
+      // The inexact version is deferred to DAGCombine, so we don't hide shl
+      // behind a bit mask.
+      Constant *ShiftDiffCst = ConstantInt::get(Ty, *ShAmtAPInt - *ShrAmt);
+      auto *NewShl = BinaryOperator::Create(Instruction::Shl, X, ShiftDiffCst);
+      NewShl->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+      NewShl->setHasNoSignedWrap(I.hasNoSignedWrap());
+      return NewShl;
     }
 
     // If the shifted-out value is known-zero, then this is a NUW shift.
     if (!I.hasNoUnsignedWrap() &&
-        MaskedValueIsZero(
-            Op0, APInt::getHighBitsSet(ShAmtAPInt->getBitWidth(), ShAmt), 0,
-            &I)) {
+        MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, ShAmt), 0, &I)) {
       I.setHasNoUnsignedWrap();
       return &I;
     }
@@ -770,6 +770,13 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
       Constant *RHS = ConstantInt::getSigned(Op0->getType(), IsPop ? -1 : 0);
       Value *Cmp = Builder->CreateICmpEQ(II->getArgOperand(0), RHS);
       return new ZExtInst(Cmp, II->getType());
+    }
+
+    // (X << C) >>u C --> X & (-1 >>u C)
+    Value *X;
+    if (match(Op0, m_Shl(m_Value(X), m_Specific(Op1)))) {
+      APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt));
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(I.getType(), Mask));
     }
 
     // If the shifted-out value is known-zero, then this is an exact shift.

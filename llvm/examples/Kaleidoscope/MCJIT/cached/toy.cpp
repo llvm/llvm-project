@@ -1395,7 +1395,8 @@ static void HandleDefinition() {
     if (Function *LF = F->Codegen()) {
 #ifndef MINIMAL_STDERR_OUTPUT
       fprintf(stderr, "Read function definition:");
-      LF->dump();
+      LF->print(errs());
+      fprintf(stderr, "\n");
 #endif
     }
   } else {
@@ -1409,7 +1410,8 @@ static void HandleExtern() {
     if (Function *F = P->Codegen()) {
 #ifndef MINIMAL_STDERR_OUTPUT
       fprintf(stderr, "Read extern: ");
-      F->dump();
+      F->print(errs());
+      fprintf(stderr, "\n");
 #endif
     }
   } else {
@@ -1540,7 +1542,7 @@ int main(int argc, char **argv) {
 
 #ifndef MINIMAL_STDERR_OUTPUT
   // Print out all of the generated code.
-  TheHelper->dump();
+  TheHelper->print(errs());
 #endif
 
   return 0;

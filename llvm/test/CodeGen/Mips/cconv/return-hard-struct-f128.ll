@@ -29,8 +29,8 @@ entry:
 ; N32-DAG:        ld  [[R4:\$[0-9]+]], 8([[R3]])
 ; N32-DAG:        dmtc1 [[R4]], $f1
 
-; N64-DAG:        ld  [[R1:\$[0-9]+]], %got_disp(struct_fp128)($1)
-; N64-DAG:        ld  [[R2:\$[0-9]+]], 0([[R1]])
+; N64-DAG:        lui  [[R1:\$[0-9]+]], %highest(struct_fp128)
+; N64-DAG:        ld  [[R2:\$[0-9]+]], %lo(struct_fp128)([[R1]])
 ; N64-DAG:        dmtc1 [[R2]], $f0
 ; N64-DAG:        ld  [[R4:\$[0-9]+]], 8([[R1]])
 ; N64-DAG:        dmtc1 [[R4]], $f1

@@ -12,6 +12,7 @@ import tempfile
 import functools
 import subprocess
 import logging
+from libscanbuild import run_command
 from libscanbuild.compilation import classify_source, compiler_language
 from libscanbuild.clang import get_version, get_arguments
 from libscanbuild.shell import decode
@@ -100,7 +101,7 @@ def run(opts):
 
 
 @require(['clang', 'directory', 'flags', 'file', 'output_dir', 'language',
-          'error_type', 'error_output', 'exit_code'])
+          'error_output', 'exit_code'])
 def report_failure(opts):
     """ Create report when analyzer failed.
 
@@ -108,30 +109,36 @@ def report_failure(opts):
     randomly. The compiler output also captured into '.stderr.txt' file.
     And some more execution context also saved into '.info.txt' file. """
 
-    def extension(opts):
+    def extension():
         """ Generate preprocessor file extension. """
 
         mapping = {'objective-c++': '.mii', 'objective-c': '.mi', 'c++': '.ii'}
         return mapping.get(opts['language'], '.i')
 
-    def destination(opts):
+    def destination():
         """ Creates failures directory if not exits yet. """
 
-        name = os.path.join(opts['output_dir'], 'failures')
-        if not os.path.isdir(name):
-            os.makedirs(name)
-        return name
+        failures_dir = os.path.join(opts['output_dir'], 'failures')
+        if not os.path.isdir(failures_dir):
+            os.makedirs(failures_dir)
+        return failures_dir
 
-    error = opts['error_type']
-    (handle, name) = tempfile.mkstemp(suffix=extension(opts),
+    # Classify error type: when Clang terminated by a signal it's a 'Crash'.
+    # (python subprocess Popen.returncode is negative when child terminated
+    # by signal.) Everything else is 'Other Error'.
+    error = 'crash' if opts['exit_code'] < 0 else 'other_error'
+    # Create preprocessor output file name. (This is blindly following the
+    # Perl implementation.)
+    (handle, name) = tempfile.mkstemp(suffix=extension(),
                                       prefix='clang_' + error + '_',
-                                      dir=destination(opts))
+                                      dir=destination())
     os.close(handle)
+    # Execute Clang again, but run the syntax check only.
     cwd = opts['directory']
-    cmd = get_arguments([opts['clang'], '-fsyntax-only', '-E'] +
-                        opts['flags'] + [opts['file'], '-o', name], cwd)
-    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
-    subprocess.call(cmd, cwd=cwd)
+    cmd = get_arguments(
+        [opts['clang'], '-fsyntax-only', '-E'
+         ] + opts['flags'] + [opts['file'], '-o', name], cwd)
+    run_command(cmd, cwd=cwd)
     # write general information about the crash
     with open(name + '.info.txt', 'w') as handle:
         handle.write(opts['file'] + os.linesep)
@@ -144,11 +151,6 @@ def report_failure(opts):
     with open(name + '.stderr.txt', 'w') as handle:
         handle.writelines(opts['error_output'])
         handle.close()
-    # return with the previous step exit code and output
-    return {
-        'error_output': opts['error_output'],
-        'exit_code': opts['exit_code']
-    }
 
 
 @require(['clang', 'directory', 'flags', 'direct_args', 'file', 'output_dir',
@@ -158,7 +160,7 @@ def run_analyzer(opts, continuation=report_failure):
     output of the analysis and returns with it. If failure reports are
     requested, it calls the continuation to generate it. """
 
-    def output():
+    def target():
         """ Creates output file name for reports. """
         if opts['output_format'] in {'plist', 'plist-html'}:
             (handle, name) = tempfile.mkstemp(prefix='report-',
@@ -168,30 +170,20 @@ def run_analyzer(opts, continuation=report_failure):
             return name
         return opts['output_dir']
 
-    cwd = opts['directory']
-    cmd = get_arguments([opts['clang'], '--analyze'] + opts['direct_args'] +
-                        opts['flags'] + [opts['file'], '-o', output()],
-                        cwd)
-    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
-    child = subprocess.Popen(cmd,
-                             cwd=cwd,
-                             universal_newlines=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-    output = child.stdout.readlines()
-    child.stdout.close()
-    # do report details if it were asked
-    child.wait()
-    if opts.get('output_failures', False) and child.returncode:
-        error_type = 'crash' if child.returncode & 127 else 'other_error'
-        opts.update({
-            'error_type': error_type,
-            'error_output': output,
-            'exit_code': child.returncode
-        })
-        return continuation(opts)
-    # return the output for logging and exit code for testing
-    return {'error_output': output, 'exit_code': child.returncode}
+    try:
+        cwd = opts['directory']
+        cmd = get_arguments([opts['clang'], '--analyze'] +
+                            opts['direct_args'] + opts['flags'] +
+                            [opts['file'], '-o', target()],
+                            cwd)
+        output = run_command(cmd, cwd=cwd)
+        return {'error_output': output, 'exit_code': 0}
+    except subprocess.CalledProcessError as ex:
+        result = {'error_output': ex.output, 'exit_code': ex.returncode}
+        if opts.get('output_failures', False):
+            opts.update(result)
+            continuation(opts)
+        return result
 
 
 @require(['flags', 'force_debug'])

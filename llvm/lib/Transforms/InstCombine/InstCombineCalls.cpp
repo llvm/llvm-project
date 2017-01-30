@@ -1498,6 +1498,254 @@ static bool removeTriviallyEmptyRange(IntrinsicInst &I, unsigned StartID,
   return false;
 }
 
+// Convert NVVM intrinsics to target-generic LLVM code where possible.
+static Instruction *SimplifyNVVMIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
+  // Each NVVM intrinsic we can simplify can be replaced with one of:
+  //
+  //  * an LLVM intrinsic,
+  //  * an LLVM cast operation,
+  //  * an LLVM binary operation, or
+  //  * ad-hoc LLVM IR for the particular operation.
+
+  // Some transformations are only valid when the module's
+  // flush-denormals-to-zero (ftz) setting is true/false, whereas other
+  // transformations are valid regardless of the module's ftz setting.
+  enum FtzRequirementTy {
+    FTZ_Any,       // Any ftz setting is ok.
+    FTZ_MustBeOn,  // Transformation is valid only if ftz is on.
+    FTZ_MustBeOff, // Transformation is valid only if ftz is off.
+  };
+  // Classes of NVVM intrinsics that can't be replaced one-to-one with a
+  // target-generic intrinsic, cast op, or binary op but that we can nonetheless
+  // simplify.
+  enum SpecialCase {
+    SPC_Reciprocal,
+  };
+
+  // SimplifyAction is a poor-man's variant (plus an additional flag) that
+  // represents how to replace an NVVM intrinsic with target-generic LLVM IR.
+  struct SimplifyAction {
+    // Invariant: At most one of these Optionals has a value.
+    Optional<Intrinsic::ID> IID;
+    Optional<Instruction::CastOps> CastOp;
+    Optional<Instruction::BinaryOps> BinaryOp;
+    Optional<SpecialCase> Special;
+
+    FtzRequirementTy FtzRequirement = FTZ_Any;
+
+    SimplifyAction() = default;
+
+    SimplifyAction(Intrinsic::ID IID, FtzRequirementTy FtzReq)
+        : IID(IID), FtzRequirement(FtzReq) {}
+
+    // Cast operations don't have anything to do with FTZ, so we skip that
+    // argument.
+    SimplifyAction(Instruction::CastOps CastOp) : CastOp(CastOp) {}
+
+    SimplifyAction(Instruction::BinaryOps BinaryOp, FtzRequirementTy FtzReq)
+        : BinaryOp(BinaryOp), FtzRequirement(FtzReq) {}
+
+    SimplifyAction(SpecialCase Special, FtzRequirementTy FtzReq)
+        : Special(Special), FtzRequirement(FtzReq) {}
+  };
+
+  // Try to generate a SimplifyAction describing how to replace our
+  // IntrinsicInstr with target-generic LLVM IR.
+  const SimplifyAction Action = [II]() -> SimplifyAction {
+    switch (II->getIntrinsicID()) {
+
+    // NVVM intrinsics that map directly to LLVM intrinsics.
+    case Intrinsic::nvvm_ceil_d:
+      return {Intrinsic::ceil, FTZ_Any};
+    case Intrinsic::nvvm_ceil_f:
+      return {Intrinsic::ceil, FTZ_MustBeOff};
+    case Intrinsic::nvvm_ceil_ftz_f:
+      return {Intrinsic::ceil, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fabs_d:
+      return {Intrinsic::fabs, FTZ_Any};
+    case Intrinsic::nvvm_fabs_f:
+      return {Intrinsic::fabs, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fabs_ftz_f:
+      return {Intrinsic::fabs, FTZ_MustBeOn};
+    case Intrinsic::nvvm_floor_d:
+      return {Intrinsic::floor, FTZ_Any};
+    case Intrinsic::nvvm_floor_f:
+      return {Intrinsic::floor, FTZ_MustBeOff};
+    case Intrinsic::nvvm_floor_ftz_f:
+      return {Intrinsic::floor, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fma_rn_d:
+      return {Intrinsic::fma, FTZ_Any};
+    case Intrinsic::nvvm_fma_rn_f:
+      return {Intrinsic::fma, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fma_rn_ftz_f:
+      return {Intrinsic::fma, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmax_d:
+      return {Intrinsic::maxnum, FTZ_Any};
+    case Intrinsic::nvvm_fmax_f:
+      return {Intrinsic::maxnum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmax_ftz_f:
+      return {Intrinsic::maxnum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmin_d:
+      return {Intrinsic::minnum, FTZ_Any};
+    case Intrinsic::nvvm_fmin_f:
+      return {Intrinsic::minnum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmin_ftz_f:
+      return {Intrinsic::minnum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_round_d:
+      return {Intrinsic::round, FTZ_Any};
+    case Intrinsic::nvvm_round_f:
+      return {Intrinsic::round, FTZ_MustBeOff};
+    case Intrinsic::nvvm_round_ftz_f:
+      return {Intrinsic::round, FTZ_MustBeOn};
+    case Intrinsic::nvvm_sqrt_rn_d:
+      return {Intrinsic::sqrt, FTZ_Any};
+    case Intrinsic::nvvm_sqrt_f:
+      // nvvm_sqrt_f is a special case.  For  most intrinsics, foo_ftz_f is the
+      // ftz version, and foo_f is the non-ftz version.  But nvvm_sqrt_f adopts
+      // the ftz-ness of the surrounding code.  sqrt_rn_f and sqrt_rn_ftz_f are
+      // the versions with explicit ftz-ness.
+      return {Intrinsic::sqrt, FTZ_Any};
+    case Intrinsic::nvvm_sqrt_rn_f:
+      return {Intrinsic::sqrt, FTZ_MustBeOff};
+    case Intrinsic::nvvm_sqrt_rn_ftz_f:
+      return {Intrinsic::sqrt, FTZ_MustBeOn};
+    case Intrinsic::nvvm_trunc_d:
+      return {Intrinsic::trunc, FTZ_Any};
+    case Intrinsic::nvvm_trunc_f:
+      return {Intrinsic::trunc, FTZ_MustBeOff};
+    case Intrinsic::nvvm_trunc_ftz_f:
+      return {Intrinsic::trunc, FTZ_MustBeOn};
+
+    // NVVM intrinsics that map to LLVM cast operations.
+    //
+    // Note that llvm's target-generic conversion operators correspond to the rz
+    // (round to zero) versions of the nvvm conversion intrinsics, even though
+    // most everything else here uses the rn (round to nearest even) nvvm ops.
+    case Intrinsic::nvvm_d2i_rz:
+    case Intrinsic::nvvm_f2i_rz:
+    case Intrinsic::nvvm_d2ll_rz:
+    case Intrinsic::nvvm_f2ll_rz:
+      return {Instruction::FPToSI};
+    case Intrinsic::nvvm_d2ui_rz:
+    case Intrinsic::nvvm_f2ui_rz:
+    case Intrinsic::nvvm_d2ull_rz:
+    case Intrinsic::nvvm_f2ull_rz:
+      return {Instruction::FPToUI};
+    case Intrinsic::nvvm_i2d_rz:
+    case Intrinsic::nvvm_i2f_rz:
+    case Intrinsic::nvvm_ll2d_rz:
+    case Intrinsic::nvvm_ll2f_rz:
+      return {Instruction::SIToFP};
+    case Intrinsic::nvvm_ui2d_rz:
+    case Intrinsic::nvvm_ui2f_rz:
+    case Intrinsic::nvvm_ull2d_rz:
+    case Intrinsic::nvvm_ull2f_rz:
+      return {Instruction::UIToFP};
+
+    // NVVM intrinsics that map to LLVM binary ops.
+    case Intrinsic::nvvm_add_rn_d:
+      return {Instruction::FAdd, FTZ_Any};
+    case Intrinsic::nvvm_add_rn_f:
+      return {Instruction::FAdd, FTZ_MustBeOff};
+    case Intrinsic::nvvm_add_rn_ftz_f:
+      return {Instruction::FAdd, FTZ_MustBeOn};
+    case Intrinsic::nvvm_mul_rn_d:
+      return {Instruction::FMul, FTZ_Any};
+    case Intrinsic::nvvm_mul_rn_f:
+      return {Instruction::FMul, FTZ_MustBeOff};
+    case Intrinsic::nvvm_mul_rn_ftz_f:
+      return {Instruction::FMul, FTZ_MustBeOn};
+    case Intrinsic::nvvm_div_rn_d:
+      return {Instruction::FDiv, FTZ_Any};
+    case Intrinsic::nvvm_div_rn_f:
+      return {Instruction::FDiv, FTZ_MustBeOff};
+    case Intrinsic::nvvm_div_rn_ftz_f:
+      return {Instruction::FDiv, FTZ_MustBeOn};
+
+    // The remainder of cases are NVVM intrinsics that map to LLVM idioms, but
+    // need special handling.
+    //
+    // We seem to be mising intrinsics for rcp.approx.{ftz.}f32, which is just
+    // as well.
+    case Intrinsic::nvvm_rcp_rn_d:
+      return {SPC_Reciprocal, FTZ_Any};
+    case Intrinsic::nvvm_rcp_rn_f:
+      return {SPC_Reciprocal, FTZ_MustBeOff};
+    case Intrinsic::nvvm_rcp_rn_ftz_f:
+      return {SPC_Reciprocal, FTZ_MustBeOn};
+
+    // We do not currently simplify intrinsics that give an approximate answer.
+    // These include:
+    //
+    //   - nvvm_cos_approx_{f,ftz_f}
+    //   - nvvm_ex2_approx_{d,f,ftz_f}
+    //   - nvvm_lg2_approx_{d,f,ftz_f}
+    //   - nvvm_sin_approx_{f,ftz_f}
+    //   - nvvm_sqrt_approx_{f,ftz_f}
+    //   - nvvm_rsqrt_approx_{d,f,ftz_f}
+    //   - nvvm_div_approx_{ftz_d,ftz_f,f}
+    //   - nvvm_rcp_approx_ftz_d
+    //
+    // Ideally we'd encode them as e.g. "fast call @llvm.cos", where "fast"
+    // means that fastmath is enabled in the intrinsic.  Unfortunately only
+    // binary operators (currently) have a fastmath bit in SelectionDAG, so this
+    // information gets lost and we can't select on it.
+    //
+    // TODO: div and rcp are lowered to a binary op, so these we could in theory
+    // lower them to "fast fdiv".
+
+    default:
+      return {};
+    }
+  }();
+
+  // If Action.FtzRequirementTy is not satisfied by the module's ftz state, we
+  // can bail out now.  (Notice that in the case that IID is not an NVVM
+  // intrinsic, we don't have to look up any module metadata, as
+  // FtzRequirementTy will be FTZ_Any.)
+  if (Action.FtzRequirement != FTZ_Any) {
+    bool FtzEnabled =
+        II->getFunction()->getFnAttribute("nvptx-f32ftz").getValueAsString() ==
+        "true";
+
+    if (FtzEnabled != (Action.FtzRequirement == FTZ_MustBeOn))
+      return nullptr;
+  }
+
+  // Simplify to target-generic intrinsic.
+  if (Action.IID) {
+    SmallVector<Value *, 4> Args(II->arg_operands());
+    // All the target-generic intrinsics currently of interest to us have one
+    // type argument, equal to that of the nvvm intrinsic's argument.
+    Type *Tys[] = {II->getArgOperand(0)->getType()};
+    return CallInst::Create(
+        Intrinsic::getDeclaration(II->getModule(), *Action.IID, Tys), Args);
+  }
+
+  // Simplify to target-generic binary op.
+  if (Action.BinaryOp)
+    return BinaryOperator::Create(*Action.BinaryOp, II->getArgOperand(0),
+                                  II->getArgOperand(1), II->getName());
+
+  // Simplify to target-generic cast op.
+  if (Action.CastOp)
+    return CastInst::Create(*Action.CastOp, II->getArgOperand(0), II->getType(),
+                            II->getName());
+
+  // All that's left are the special cases.
+  if (!Action.Special)
+    return nullptr;
+
+  switch (*Action.Special) {
+  case SPC_Reciprocal:
+    // Simplify reciprocal.
+    return BinaryOperator::Create(
+        Instruction::FDiv, ConstantFP::get(II->getArgOperand(0)->getType(), 1),
+        II->getArgOperand(0), II->getName());
+  }
+  llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
+}
+
 Instruction *InstCombiner::visitVAStartInst(VAStartInst &I) {
   removeTriviallyEmptyRange(I, Intrinsic::vastart, Intrinsic::vaend, *this);
   return nullptr;
@@ -1586,6 +1834,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     if (Changed) return II;
   }
+
+  if (Instruction *I = SimplifyNVVMIntrinsic(II, *this))
+    return I;
 
   auto SimplifyDemandedVectorEltsLow = [this](Value *Op, unsigned Width,
                                               unsigned DemandedWidth) {
@@ -2306,6 +2557,44 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
 
+  case Intrinsic::x86_pclmulqdq: {
+    if (auto *C = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
+      unsigned Imm = C->getZExtValue();
+
+      bool MadeChange = false;
+      Value *Arg0 = II->getArgOperand(0);
+      Value *Arg1 = II->getArgOperand(1);
+      unsigned VWidth = Arg0->getType()->getVectorNumElements();
+      APInt DemandedElts(VWidth, 0);
+
+      APInt UndefElts1(VWidth, 0);
+      DemandedElts = (Imm & 0x01) ? 2 : 1;
+      if (Value *V = SimplifyDemandedVectorElts(Arg0, DemandedElts,
+                                                UndefElts1)) {
+        II->setArgOperand(0, V);
+        MadeChange = true;
+      }
+
+      APInt UndefElts2(VWidth, 0);
+      DemandedElts = (Imm & 0x10) ? 2 : 1;
+      if (Value *V = SimplifyDemandedVectorElts(Arg1, DemandedElts,
+                                                UndefElts2)) {
+        II->setArgOperand(1, V);
+        MadeChange = true;
+      }
+
+      // If both input elements are undef, the result is undef.
+      if (UndefElts1[(Imm & 0x01) ? 1 : 0] ||
+          UndefElts2[(Imm & 0x10) ? 1 : 0])
+        return replaceInstUsesWith(*II,
+                                   ConstantAggregateZero::get(II->getType()));
+
+      if (MadeChange)
+        return II;
+    }
+    break;
+  }
+
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))
       return replaceInstUsesWith(*II, V);
@@ -2972,35 +3261,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (match(II->getNextNode(),
               m_Intrinsic<Intrinsic::experimental_guard>(m_Specific(IIOperand))))
       return eraseInstFromFunction(*II);
-
-    // Canonicalize guard(a && b) -> guard(a); guard(b);
-    // Note: New guard intrinsics created here are registered by
-    // the InstCombineIRInserter object.
-    Function *GuardIntrinsic = II->getCalledFunction();
-    Value *A, *B;
-    OperandBundleDef DeoptOB(*II->getOperandBundle(LLVMContext::OB_deopt));
-    if (match(IIOperand, m_And(m_Value(A), m_Value(B)))) {
-      CallInst *GuardA =
-          Builder->CreateCall(GuardIntrinsic, A, {DeoptOB}, II->getName());
-      CallInst *GuardB =
-          Builder->CreateCall(GuardIntrinsic, B, {DeoptOB}, II->getName());
-      auto CC = II->getCallingConv();
-      GuardA->setCallingConv(CC);
-      GuardB->setCallingConv(CC);
-      return eraseInstFromFunction(*II);
-    }
-
-    // guard(!(a || b)) -> guard(!a); guard(!b);
-    if (match(IIOperand, m_Not(m_Or(m_Value(A), m_Value(B))))) {
-      CallInst *GuardA = Builder->CreateCall(
-          GuardIntrinsic, Builder->CreateNot(A), {DeoptOB}, II->getName());
-      CallInst *GuardB = Builder->CreateCall(
-          GuardIntrinsic, Builder->CreateNot(B), {DeoptOB}, II->getName());
-      auto CC = II->getCallingConv();
-      GuardA->setCallingConv(CC);
-      GuardB->setCallingConv(CC);
-      return eraseInstFromFunction(*II);
-    }
     break;
   }
   }

@@ -9,8 +9,7 @@ Since Clang command line interface is so rich, but this project is using only
 a subset of that, it makes sense to create a function specific wrapper. """
 
 import re
-import subprocess
-import logging
+from libscanbuild import run_command
 from libscanbuild.shell import decode
 
 __all__ = ['get_version', 'get_arguments', 'get_checkers']
@@ -25,8 +24,9 @@ def get_version(clang):
     :param clang:   the compiler we are using
     :return:        the version string printed to stderr """
 
-    output = subprocess.check_output([clang, '-v'], stderr=subprocess.STDOUT)
-    return output.decode('utf-8').splitlines()[0]
+    output = run_command([clang, '-v'])
+    # the relevant version info is in the first line
+    return output[0]
 
 
 def get_arguments(command, cwd):
@@ -38,12 +38,11 @@ def get_arguments(command, cwd):
 
     cmd = command[:]
     cmd.insert(1, '-###')
-    logging.debug('exec command in %s: %s', cwd, ' '.join(cmd))
 
-    output = subprocess.check_output(cmd, cwd=cwd, stderr=subprocess.STDOUT)
+    output = run_command(cmd, cwd=cwd)
     # The relevant information is in the last line of the output.
     # Don't check if finding last line fails, would throw exception anyway.
-    last_line = output.decode('utf-8').splitlines()[-1]
+    last_line = output[-1]
     if re.search(r'clang(.*): error:', last_line):
         raise Exception(last_line)
     return decode(last_line)
@@ -141,9 +140,7 @@ def get_checkers(clang, plugins):
     load = [elem for plugin in plugins for elem in ['-load', plugin]]
     cmd = [clang, '-cc1'] + load + ['-analyzer-checker-help']
 
-    logging.debug('exec command: %s', ' '.join(cmd))
-    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-    lines = output.decode('utf-8').splitlines()
+    lines = run_command(cmd)
 
     is_active_checker = is_active(get_active_checkers(clang, plugins))
 

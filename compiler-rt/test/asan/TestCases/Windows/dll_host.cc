@@ -41,6 +41,7 @@
 // RUN: echo "=== NOTE === If you see a mismatch below, please update asan_win_dll_thunk.cc"
 // RUN: diff %t.dll_imports-sorted %t.exported_wrappers-sorted
 // REQUIRES: asan-static-runtime
+// XFAIL: win
 
 #include <stdio.h>
 #include <windows.h>

@@ -619,6 +619,10 @@ void StoredDiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level Level,
     StoredDiags.emplace_back(Level, Info);
 }
 
+IntrusiveRefCntPtr<ASTReader> ASTUnit::getASTReader() const {
+  return Reader;
+}
+
 ASTMutationListener *ASTUnit::getASTMutationListener() {
   if (WriterData)
     return &WriterData->Writer;

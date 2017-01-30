@@ -50,12 +50,11 @@ static cl::opt<bool> DebugPrinting(
 
 BlockGenerator::BlockGenerator(
     PollyIRBuilder &B, LoopInfo &LI, ScalarEvolution &SE, DominatorTree &DT,
-    ScalarAllocaMapTy &ScalarMap, ScalarAllocaMapTy &PHIOpMap,
-    EscapeUsersAllocaMapTy &EscapeMap, ValueMapT &GlobalMap,
-    IslExprBuilder *ExprBuilder, BasicBlock *StartBlock)
+    AllocaMapTy &ScalarMap, EscapeUsersAllocaMapTy &EscapeMap,
+    ValueMapT &GlobalMap, IslExprBuilder *ExprBuilder, BasicBlock *StartBlock)
     : Builder(B), LI(LI), SE(SE), ExprBuilder(ExprBuilder), DT(DT),
-      EntryBB(nullptr), PHIOpMap(PHIOpMap), ScalarMap(ScalarMap),
-      EscapeMap(EscapeMap), GlobalMap(GlobalMap), StartBlock(StartBlock) {}
+      EntryBB(nullptr), ScalarMap(ScalarMap), EscapeMap(EscapeMap),
+      GlobalMap(GlobalMap), StartBlock(StartBlock) {}
 
 Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
                                              ValueMapT &BBMap,
@@ -214,13 +213,7 @@ BlockGenerator::getImplicitAddress(MemoryAccess &Access, Loop *L,
                                     LTS, NewAccesses, Access.getId(),
                                     Access.getAccessValue()->getType());
 
-  if (Access.isLatestValueKind() || Access.isLatestExitPHIKind())
-    return getOrCreateScalarAlloca(Access.getBaseAddr());
-
-  if (Access.isLatestPHIKind())
-    return getOrCreatePHIAlloca(Access.getBaseAddr());
-
-  llvm_unreachable("Unknown access type");
+  return getOrCreateAlloca(Access);
 }
 
 Loop *BlockGenerator::getLoopForStmt(const ScopStmt &Stmt) const {
@@ -366,53 +359,59 @@ void BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB, BasicBlock *CopyBB,
     copyInstruction(Stmt, &Inst, BBMap, LTS, NewAccesses);
 }
 
-Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
-                                         ScalarAllocaMapTy &Map,
-                                         const char *NameExt) {
-  // If no alloca was found create one and insert it in the entry block.
-  if (!Map.count(ScalarBase)) {
-    auto *Ty = ScalarBase->getType();
-    auto NewAddr = new AllocaInst(Ty, ScalarBase->getName() + NameExt);
-    EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
-    NewAddr->insertBefore(&*EntryBB->getFirstInsertionPt());
-    Map[ScalarBase] = NewAddr;
-  }
-
-  auto Addr = Map[ScalarBase];
-
-  if (auto NewAddr = GlobalMap.lookup(Addr))
-    return NewAddr;
-
-  return Addr;
-}
-
 Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
-  assert(!Access.isArrayKind() && "Trying to get alloca for array kind");
+  assert(!Access.isLatestArrayKind() && "Trying to get alloca for array kind");
 
-  if (Access.isPHIKind())
-    return getOrCreatePHIAlloca(Access.getBaseAddr());
-  else
-    return getOrCreateScalarAlloca(Access.getBaseAddr());
+  return getOrCreateAlloca(Access.getLatestScopArrayInfo());
 }
 
 Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
   assert(!Array->isArrayKind() && "Trying to get alloca for array kind");
 
+  auto &Addr = ScalarMap[Array];
+
+  if (Addr) {
+    // Allow allocas to be (temporarily) redirected once by adding a new
+    // old-alloca-addr to new-addr mapping to GlobalMap. This funcitionality
+    // is used for example by the OpenMP code generation where a first use
+    // of a scalar while still in the host code allocates a normal alloca with
+    // getOrCreateAlloca. When the values of this scalar are accessed during
+    // the generation of the parallel subfunction, these values are copied over
+    // to the parallel subfunction and each request for a scalar alloca slot
+    // must be forwared to the temporary in-subfunction slot. This mapping is
+    // removed when the subfunction has been generated and again normal host
+    // code is generated. Due to the following reasons it is not possible to
+    // perform the GlobalMap lookup right after creating the alloca below, but
+    // instead we need to check GlobalMap at each call to getOrCreateAlloca:
+    //
+    //   1) GlobalMap may be changed multiple times (for each parallel loop),
+    //   2) The temporary mapping is commonly only known after the initial
+    //      alloca has already been generated, and
+    //   3) The original alloca value must be restored after leaving the
+    //      sub-function.
+    if (Value *NewAddr = GlobalMap.lookup(&*Addr))
+      return NewAddr;
+    return Addr;
+  }
+
+  Type *Ty = Array->getElementType();
+  Value *ScalarBase = Array->getBasePtr();
+  std::string NameExt;
   if (Array->isPHIKind())
-    return getOrCreatePHIAlloca(Array->getBasePtr());
+    NameExt = ".phiops";
   else
-    return getOrCreateScalarAlloca(Array->getBasePtr());
+    NameExt = ".s2a";
+
+  Addr = new AllocaInst(Ty, ScalarBase->getName() + NameExt);
+  EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
+  Addr->insertBefore(&*EntryBB->getFirstInsertionPt());
+
+  return Addr;
 }
 
-Value *BlockGenerator::getOrCreateScalarAlloca(Value *ScalarBase) {
-  return getOrCreateAlloca(ScalarBase, ScalarMap, ".s2a");
-}
+void BlockGenerator::handleOutsideUsers(const Scop &S, ScopArrayInfo *Array) {
+  Instruction *Inst = cast<Instruction>(Array->getBasePtr());
 
-Value *BlockGenerator::getOrCreatePHIAlloca(Value *ScalarBase) {
-  return getOrCreateAlloca(ScalarBase, PHIOpMap, ".phiops");
-}
-
-void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
   // If there are escape users we get the alloca for this instruction and put it
   // in the EscapeMap for later finalization. Lastly, if the instruction was
   // copied multiple times we already did this and can exit.
@@ -438,7 +437,7 @@ void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
     return;
 
   // Get or create an escape alloca for this instruction.
-  auto *ScalarAddr = getOrCreateScalarAlloca(Inst);
+  auto *ScalarAddr = getOrCreateAlloca(Array);
 
   // Remember that this instruction has escape uses and the escape alloca.
   EscapeMap[Inst] = std::make_pair(ScalarAddr, std::move(EscapeUsers));
@@ -548,7 +547,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
 
       Value *ScalarValue = PHI->getIncomingValue(Idx);
 
-      Builder.CreateStore(ScalarValue, getOrCreatePHIAlloca(PHI));
+      Builder.CreateStore(ScalarValue, getOrCreateAlloca(Array));
       continue;
     }
 
@@ -565,8 +564,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
       if (!S.hasSingleExitEdge() && PHI->getBasicBlockIndex(ExitBB) >= 0)
         continue;
 
-    Builder.CreateStore(Array->getBasePtr(),
-                        getOrCreateScalarAlloca(Array->getBasePtr()));
+    Builder.CreateStore(Array->getBasePtr(), getOrCreateAlloca(Array));
   }
 }
 
@@ -636,7 +634,7 @@ void BlockGenerator::findOutsideUsers(Scop &S) {
     if (!S.contains(Inst))
       continue;
 
-    handleOutsideUsers(S, Inst);
+    handleOutsideUsers(S, Array);
   }
 }
 
@@ -671,7 +669,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
       continue;
 
     std::string Name = PHI->getName();
-    Value *ScalarAddr = getOrCreateScalarAlloca(PHI);
+    Value *ScalarAddr = getOrCreateAlloca(SAI);
     Value *Reload = Builder.CreateLoad(ScalarAddr, Name + ".ph.final_reload");
     Reload = Builder.CreateBitOrPointerCast(Reload, PHI->getType());
     Value *OriginalValue = PHI->getIncomingValueForBlock(MergeBB);

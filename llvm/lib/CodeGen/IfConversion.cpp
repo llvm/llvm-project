@@ -588,19 +588,6 @@ bool IfConverter::ValidTriangle(BBInfo &TrueBBI, BBInfo &FalseBBI,
   return TExit && TExit == FalseBBI.BB;
 }
 
-/// Shrink the provided inclusive range by one instruction.
-/// If the range was one instruction (\p It == \p Begin), It is not modified,
-/// but \p Empty is set to true.
-static inline void shrinkInclusiveRange(
-    MachineBasicBlock::iterator &Begin,
-    MachineBasicBlock::iterator &It,
-    bool &Empty) {
-  if (It == Begin)
-    Empty = true;
-  else
-    It--;
-}
-
 /// Count duplicated instructions and move the iterators to show where they
 /// are.
 /// @param TIB True Iterator Begin
@@ -633,10 +620,8 @@ bool IfConverter::CountDuplicatedInstructions(
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE);
-    if(TIB == TIE)
-      break;
     FIB = skipDebugInstructionsForward(FIB, FIE);
-    if(FIB == FIE)
+    if (TIB == TIE || FIB == FIE)
       break;
     if (!TIB->isIdenticalTo(*FIB))
       break;
@@ -656,58 +641,42 @@ bool IfConverter::CountDuplicatedInstructions(
   if (TIB == TIE || FIB == FIE)
     return true;
   // Now, in preparation for counting duplicate instructions at the ends of the
-  // blocks, move the end iterators up past any branch instructions.
-  --TIE;
-  --FIE;
-
-  // After this point TIB and TIE define an inclusive range, which means that
-  // TIB == TIE is true when there is one more instruction to consider, not at
-  // the end. Because we may not be able to go before TIB, we need a flag to
-  // indicate a completely empty range.
-  bool TEmpty = false, FEmpty = false;
-
-  // Upon exit TIE and FIE will both point at the last non-shared instruction.
-  // They need to be moved forward to point past the last non-shared
-  // instruction if the range they delimit is non-empty.
-  auto IncrementEndIteratorsOnExit = make_scope_exit([&]() {
-    if (!TEmpty)
-      ++TIE;
-    if (!FEmpty)
-      ++FIE;
-  });
+  // blocks, switch to reverse_iterators. Note that getReverse() returns an
+  // iterator that points to the same instruction, unlike std::reverse_iterator.
+  // We have to do our own shifting so that we get the same range.
+  MachineBasicBlock::reverse_iterator RTIE = std::next(TIE.getReverse());
+  MachineBasicBlock::reverse_iterator RFIE = std::next(FIE.getReverse());
+  const MachineBasicBlock::reverse_iterator RTIB = std::next(TIB.getReverse());
+  const MachineBasicBlock::reverse_iterator RFIB = std::next(FIB.getReverse());
 
   if (!TBB.succ_empty() || !FBB.succ_empty()) {
     if (SkipUnconditionalBranches) {
-      while (!TEmpty && TIE->isUnconditionalBranch())
-        shrinkInclusiveRange(TIB, TIE, TEmpty);
-      while (!FEmpty && FIE->isUnconditionalBranch())
-        shrinkInclusiveRange(FIB, FIE, FEmpty);
+      while (RTIE != RTIB && RTIE->isUnconditionalBranch())
+        ++RTIE;
+      while (RFIE != RFIB && RFIE->isUnconditionalBranch())
+        ++RFIE;
     }
   }
 
-  // If Dups1 includes all of a block, then don't count duplicate
-  // instructions at the end of the blocks.
-  if (TEmpty || FEmpty)
-    return true;
-
   // Count duplicate instructions at the ends of the blocks.
-  while (!TEmpty && !FEmpty) {
+  while (RTIE != RTIB && RFIE != RFIB) {
     // Skip dbg_value instructions. These do not count.
-    TIE = skipDebugInstructionsBackward(TIE, TIB);
-    FIE = skipDebugInstructionsBackward(FIE, FIB);
-    TEmpty = TIE == TIB && TIE->isDebugValue();
-    FEmpty = FIE == FIB && FIE->isDebugValue();
-    if (TEmpty || FEmpty)
+    // Note that these are reverse iterators going forward.
+    RTIE = skipDebugInstructionsForward(RTIE, RTIB);
+    RFIE = skipDebugInstructionsForward(RFIE, RFIB);
+    if (RTIE == RTIB || RFIE == RFIB)
       break;
-    if (!TIE->isIdenticalTo(*FIE))
+    if (!RTIE->isIdenticalTo(*RFIE))
       break;
     // We have to verify that any branch instructions are the same, and then we
     // don't count them toward the # of duplicate instructions.
-    if (!TIE->isBranch())
+    if (!RTIE->isBranch())
       ++Dups2;
-    shrinkInclusiveRange(TIB, TIE, TEmpty);
-    shrinkInclusiveRange(FIB, FIE, FEmpty);
+    ++RTIE;
+    ++RFIE;
   }
+  TIE = std::next(RTIE.getReverse());
+  FIE = std::next(RFIE.getReverse());
   return true;
 }
 
@@ -741,25 +710,21 @@ bool IfConverter::RescanInstructions(
 static void verifySameBranchInstructions(
     MachineBasicBlock *MBB1,
     MachineBasicBlock *MBB2) {
-  MachineBasicBlock::iterator B1 = MBB1->begin();
-  MachineBasicBlock::iterator B2 = MBB2->begin();
-  MachineBasicBlock::iterator E1 = std::prev(MBB1->end());
-  MachineBasicBlock::iterator E2 = std::prev(MBB2->end());
-  bool Empty1 = false, Empty2 = false;
-  while (!Empty1 && !Empty2) {
-    E1 = skipDebugInstructionsBackward(E1, B1);
-    E2 = skipDebugInstructionsBackward(E2, B2);
-    Empty1 = E1 == B1 && E1->isDebugValue();
-    Empty2 = E2 == B2 && E2->isDebugValue();
-
-    if (Empty1 && Empty2)
+  const MachineBasicBlock::reverse_iterator B1 = MBB1->rend();
+  const MachineBasicBlock::reverse_iterator B2 = MBB2->rend();
+  MachineBasicBlock::reverse_iterator E1 = MBB1->rbegin();
+  MachineBasicBlock::reverse_iterator E2 = MBB2->rbegin();
+  while (E1 != B1 && E2 != B2) {
+    skipDebugInstructionsForward(E1, B1);
+    skipDebugInstructionsForward(E2, B2);
+    if (E1 == B1 && E2 == B2)
       break;
 
-    if (Empty1) {
+    if (E1 == B1) {
       assert(!E2->isBranch() && "Branch mis-match, one block is empty.");
       break;
     }
-    if (Empty2) {
+    if (E2 == B2) {
       assert(!E1->isBranch() && "Branch mis-match, one block is empty.");
       break;
     }
@@ -769,8 +734,8 @@ static void verifySameBranchInstructions(
              "Branch mis-match, branch instructions don't match.");
     else
       break;
-    shrinkInclusiveRange(B1, E1, Empty1);
-    shrinkInclusiveRange(B2, E2, Empty2);
+    ++E1;
+    ++E2;
   }
 }
 #endif

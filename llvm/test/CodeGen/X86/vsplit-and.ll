@@ -6,11 +6,11 @@ define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind read
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
-; CHECK-NEXT:    pxor %xmm0, %xmm3
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm1
-; CHECK-NEXT:    pandn %xmm3, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pxor %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne <2 x i64> %src1, zeroinitializer
   %cmp2 = icmp ne <2 x i64> %src2, zeroinitializer

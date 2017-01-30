@@ -10,7 +10,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
-using llvm::APInt;
 
 using clang::analyze_os_log::OSLogBufferItem;
 using clang::analyze_os_log::OSLogBufferLayout;

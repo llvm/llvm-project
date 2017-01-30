@@ -313,11 +313,15 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                   InstrStage<5, [E5500_CFX_0]>],
                                  [9, 2], // Latency = 5, Repeat rate = 5
                                  [E5500_GPR_Bypass, E5500_CR_Bypass]>,
-  InstrItinData<IIC_SprMFMSR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
-                                  InstrStage<4, [E5500_SFX0]>],
+  InstrItinData<IIC_SprMFPMR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+                                  InstrStage<4, [E5500_CFX_0]>],
                                  [8, 2], // Latency = 4, Repeat rate = 4
                                  [E5500_GPR_Bypass, E5500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFSPR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+                                  InstrStage<1, [E5500_CFX_0]>],
+                                 [5], // Latency = 1, Repeat rate = 1
+                                 [E5500_GPR_Bypass]>,
+  InstrItinData<IIC_SprMTPMR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_CFX_0]>],
                                  [5], // Latency = 1, Repeat rate = 1
                                  [E5500_GPR_Bypass]>,
@@ -326,7 +330,7 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                  [8, 2], // Latency = 4, Repeat rate = 4
                                  [NoBypass, E5500_GPR_Bypass]>,
   InstrItinData<IIC_SprMTSPR,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
-                                  InstrStage<1, [E5500_SFX0, E5500_SFX1]>],
+                                  InstrStage<1, [E5500_CFX_0]>],
                                  [5], // Latency = 1, Repeat rate = 1
                                  [E5500_GPR_Bypass]>,
   InstrItinData<IIC_FPGeneral,   [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,

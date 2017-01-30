@@ -1439,7 +1439,7 @@ int main() {
   DBuilder->finalize();
 
   // Print out all of the generated code.
-  TheModule->dump();
+  TheModule->print(errs(), nullptr);
 
   return 0;
 }

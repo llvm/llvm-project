@@ -49,7 +49,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
 ; The first argument is floating point so floating point registers are used.
 ; The first argument is the same for O32/N32/N64 but the second argument differs
@@ -111,8 +111,8 @@ entry:
 ; ALL-LABEL: float_args:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
-; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:           ld [[R1:\$[0-9]]], %got_disp(floats)(
+; SYM32-DAG:           addiu  [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
+; SYM64-DAG:           daddiu [[R1:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
 
 ; The first argument is floating point so floating point registers are used.
 ; The first argument is the same for O32/N32/N64 but the second argument differs
@@ -164,9 +164,9 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]]], %got_disp(bytes)(
+; SYM64-DAG:           daddiu [[R1:\$[0-9]]], ${{[0-9]+}}, %lo(bytes)
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
 ; The first argument is the same in O32/N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])
@@ -195,9 +195,9 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]]], %got_disp(bytes)(
+; SYM64-DAG:           daddiu [[R1:\$[0-9]]], ${{[0-9]+}}, %lo(bytes)
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(floats)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
 
 ; The first argument is the same in O32/N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])

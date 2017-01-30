@@ -87,7 +87,7 @@
   } while (0)
 
 #define _LIBUNWIND_LOG(msg, ...)                                               \
-  fprintf(stderr, "libunwind: " msg "\n", ##__VA_ARGS__)
+  fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
 
 #if defined(_LIBUNWIND_HAS_NO_THREADS)
   // only used with pthread calls, not needed for the single-threaded builds

@@ -776,23 +776,29 @@ def KryoWrite_4cyc_X_X_115ln :
 }
 def : InstRW<[KryoWrite_4cyc_X_X_115ln],
 	(instregex "FCVTZ(S|U)(v2f64|v4f32|(v2i64|v4i32)(_shift)?)$")>;
-def KryoWrite_1cyc_XA_Y_noRSV_43ln :
+def KryoWrite_10cyc_XA_Y_noRSV_43ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 3;
+	let Latency = 10; let NumMicroOps = 3;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_noRSV_43ln],
-	(instrs FDIVDrr, FDIVSrr)>;
-def KryoWrite_1cyc_XA_Y_noRSV_121ln :
+def : InstRW<[KryoWrite_10cyc_XA_Y_noRSV_43ln],
+	(instrs FDIVSrr)>;
+def KryoWrite_14cyc_XA_Y_noRSV_43ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 3;
+	let Latency = 14; let NumMicroOps = 3;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_noRSV_121ln],
+def : InstRW<[KryoWrite_14cyc_XA_Y_noRSV_43ln],
+	(instrs FDIVDrr)>;
+def KryoWrite_10cyc_XA_Y_noRSV_121ln :
+	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
+	let Latency = 10; let NumMicroOps = 3;
+}
+def : InstRW<[KryoWrite_10cyc_XA_Y_noRSV_121ln],
 	(instrs FDIVv2f32)>;
-def KryoWrite_1cyc_XA_Y_XA_Y_123ln :
+def KryoWrite_14cyc_XA_Y_XA_Y_123ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY, KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 4;
+	let Latency = 14; let NumMicroOps = 4;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_XA_Y_123ln],
+def : InstRW<[KryoWrite_14cyc_XA_Y_XA_Y_123ln],
 	(instrs FDIVv2f64, FDIVv4f32)>;
 def KryoWrite_5cyc_X_noRSV_55ln :
 	SchedWriteRes<[KryoUnitX]> {
@@ -968,24 +974,36 @@ def KryoWrite_2cyc_XY_XY_109ln :
 }
 def : InstRW<[KryoWrite_2cyc_XY_XY_109ln],
 	(instregex "FRINT(A|I|M|N|P|X|Z)(v2f64|v4f32)")>;
-def KryoWrite_1cyc_XA_Y_noRSV_42ln :
+def KryoWrite_12cyc_XA_Y_noRSV_42ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 3;
+	let Latency = 12; let NumMicroOps = 3;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_noRSV_42ln],
-	(instregex "FSQRT(S|D)r")>;
-def KryoWrite_1cyc_XA_Y_noRSV_120ln :
+def : InstRW<[KryoWrite_12cyc_XA_Y_noRSV_42ln],
+	(instrs FSQRTSr)>;
+def KryoWrite_21cyc_XA_Y_noRSV_42ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 3;
+	let Latency = 21; let NumMicroOps = 3;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_noRSV_120ln],
-	(instregex "FSQRTv2f32")>;
-def KryoWrite_1cyc_XA_Y_XA_Y_122ln :
+def : InstRW<[KryoWrite_21cyc_XA_Y_noRSV_42ln],
+	(instrs FSQRTDr)>;
+def KryoWrite_12cyc_XA_Y_noRSV_120ln :
+	SchedWriteRes<[KryoUnitXA, KryoUnitY]> {
+	let Latency = 12; let NumMicroOps = 3;
+}
+def : InstRW<[KryoWrite_12cyc_XA_Y_noRSV_120ln],
+	(instrs FSQRTv2f32)>;
+def KryoWrite_21cyc_XA_Y_XA_Y_122ln :
 	SchedWriteRes<[KryoUnitXA, KryoUnitY, KryoUnitXA, KryoUnitY]> {
-	let Latency = 1; let NumMicroOps = 4;
+	let Latency = 21; let NumMicroOps = 4;
 }
-def : InstRW<[KryoWrite_1cyc_XA_Y_XA_Y_122ln],
-	(instregex "FSQRT(v2f64|v4f32)")>;
+def : InstRW<[KryoWrite_21cyc_XA_Y_XA_Y_122ln],
+	(instrs FSQRTv4f32)>;
+def KryoWrite_36cyc_XA_Y_XA_Y_122ln :
+	SchedWriteRes<[KryoUnitXA, KryoUnitY, KryoUnitXA, KryoUnitY]> {
+	let Latency = 36; let NumMicroOps = 4;
+}
+def : InstRW<[KryoWrite_36cyc_XA_Y_XA_Y_122ln],
+	(instrs FSQRTv2f64)>;
 def KryoWrite_1cyc_X_201ln :
 	SchedWriteRes<[KryoUnitX]> {
 	let Latency = 1; let NumMicroOps = 1;

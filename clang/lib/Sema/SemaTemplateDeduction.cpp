@@ -1723,6 +1723,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
     case Type::Decltype:
     case Type::UnaryTransform:
     case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
     case Type::DependentTemplateSpecialization:
     case Type::PackExpansion:
     case Type::Pipe:
@@ -5152,8 +5153,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     break;
 
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
     MarkUsedTemplateParameters(Ctx,
-                               cast<AutoType>(T)->getDeducedType(),
+                               cast<DeducedType>(T)->getDeducedType(),
                                OnlyDeduced, Depth, Used);
 
   // None of these types have any template parameters in them.

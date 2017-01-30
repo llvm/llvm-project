@@ -245,6 +245,12 @@ namespace ISD {
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 
+    /// Constrained versions of the binary floating point operators.
+    /// These will be lowered to the simple operators before final selection.
+    /// They are used to limit optimizations while the DAG is being
+    /// optimized.
+    STRICT_FADD, STRICT_FSUB, STRICT_FMUL, STRICT_FDIV, STRICT_FREM,
+
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,
 

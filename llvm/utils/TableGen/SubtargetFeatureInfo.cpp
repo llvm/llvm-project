@@ -16,10 +16,11 @@
 
 using namespace llvm;
 
-void SubtargetFeatureInfo::dump() const {
-  errs() << getEnumName() << " " << Index << "\n";
-  TheDef->dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SubtargetFeatureInfo::dump() const {
+  errs() << getEnumName() << " " << Index << "\n" << *TheDef;
 }
+#endif
 
 std::vector<std::pair<Record *, SubtargetFeatureInfo>>
 SubtargetFeatureInfo::getAll(const RecordKeeper &Records) {

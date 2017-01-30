@@ -899,7 +899,6 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
       if (I.mayHaveSideEffects())
         return false;
 
-    // FIXME: add check for constant foldable switch instructions.
     if (BranchInst *BI = dyn_cast<BranchInst>(CurrentTerm)) {
       if (BI->isUnconditional()) {
         CurrentBB = BI->getSuccessor(0);
@@ -911,7 +910,16 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
         // Found a trivial condition candidate: non-foldable conditional branch.
         break;
       }
-    } else {
+    } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurrentTerm)) {
+      // At this point, any constant-foldable instructions should have probably
+      // been folded.
+      ConstantInt *Cond = dyn_cast<ConstantInt>(SI->getCondition());
+      if (!Cond)
+        break;
+      // Find the target block we are definitely going to.
+      CurrentBB = SI->findCaseValue(Cond).getCaseSuccessor();
+    } else { 
+      // We do not understand these terminator instructions.
       break;
     }
 

@@ -126,7 +126,6 @@ public:
                            // bit of data.
     lldb::StopInfoSP stop_info_sp; // You have to restore the stop info or you
                                    // might continue with the wrong signals.
-    std::vector<lldb::ThreadPlanSP> m_completed_plan_stack;
     lldb::RegisterCheckpointSP
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
@@ -1030,15 +1029,6 @@ public:
   bool WasThreadPlanDiscarded(ThreadPlan *plan);
 
   //------------------------------------------------------------------
-  /// Check if we have completed plan to override breakpoint stop reason
-  ///
-  /// @return
-  ///     Returns true if completed plan stack is not empty
-  ///     false otherwise.
-  //------------------------------------------------------------------
-  bool CompletedPlanOverridesBreakpoint();
-                   
-  //------------------------------------------------------------------
   /// Queues a generic thread plan.
   ///
   /// @param[in] plan_sp
@@ -1222,8 +1212,6 @@ public:
   }
 
   void SetStopInfo(const lldb::StopInfoSP &stop_info_sp);
-
-  void ResetStopInfo();
 
   void SetShouldReportStop(Vote vote);
 

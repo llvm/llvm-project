@@ -1255,7 +1255,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 
     switch (Opc) {
     default:
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
     case ARM::tPUSH:
       // Special case here: no src & dst reg, but two extra imp ops.
@@ -1291,7 +1291,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       int64_t Offset = 0;
       switch (Opc) {
       default:
-        MI->dump();
+        MI->print(errs());
         llvm_unreachable("Unsupported opcode for unwinding information");
       case ARM::MOVr:
       case ARM::tMOVr:
@@ -1346,11 +1346,11 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         }
       }
     } else if (DstReg == ARM::SP) {
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
     }
     else {
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
     }
   }

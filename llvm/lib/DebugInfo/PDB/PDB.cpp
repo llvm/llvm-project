@@ -27,7 +27,7 @@ using namespace llvm::pdb;
 Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
                                 std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
-  if (Type == PDB_ReaderType::Raw)
+  if (Type == PDB_ReaderType::Native)
     return NativeSession::createFromPdb(Path, Session);
 
 #if LLVM_ENABLE_DIA_SDK
@@ -40,7 +40,7 @@ Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
 Error llvm::pdb::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
                                 std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
-  if (Type == PDB_ReaderType::Raw)
+  if (Type == PDB_ReaderType::Native)
     return NativeSession::createFromExe(Path, Session);
 
 #if LLVM_ENABLE_DIA_SDK

@@ -1577,20 +1577,6 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
-int X86TTIImpl::getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
-  assert (Ty->isVectorTy() && "Can only scalarize vectors");
-  int Cost = 0;
-
-  for (int i = 0, e = Ty->getVectorNumElements(); i < e; ++i) {
-    if (Insert)
-      Cost += getVectorInstrCost(Instruction::InsertElement, Ty, i);
-    if (Extract)
-      Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, i);
-  }
-
-  return Cost;
-}
-
 int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
                                 unsigned AddressSpace) {
   // Handle non-power-of-two vectors such as <3 x float>

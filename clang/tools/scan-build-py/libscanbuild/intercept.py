@@ -31,7 +31,7 @@ import argparse
 import logging
 import subprocess
 from libear import build_libear, TemporaryDirectory
-from libscanbuild import command_entry_point
+from libscanbuild import command_entry_point, run_command
 from libscanbuild import duplicate_check, tempdir, initialize_logging
 from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
@@ -44,6 +44,7 @@ US = chr(0x1f)
 
 COMPILER_WRAPPER_CC = 'intercept-cc'
 COMPILER_WRAPPER_CXX = 'intercept-c++'
+WRAPPER_ONLY_PLATFORMS = frozenset({'win32', 'cygwin'})
 
 
 @command_entry_point
@@ -101,11 +102,8 @@ def capture(args, bin_dir):
         exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
             for filename in sorted(glob.iglob(os.path.join(tmp_dir, '*.cmd'))))
-        # do post processing only if that was requested
-        if 'raw_entries' not in args or not args.raw_entries:
-            entries = post_processing(exec_traces)
-        else:
-            entries = exec_traces
+        # do post processing
+        entries = post_processing(exec_traces)
         # dump the compilation database
         with open(args.cdb, 'w+') as handle:
             json.dump(list(entries), handle, sort_keys=True, indent=4)
@@ -238,22 +236,19 @@ def is_preload_disabled(platform):
     the path and, if so, (2) whether the output of executing 'csrutil status'
     contains 'System Integrity Protection status: enabled'.
 
-    Same problem on linux when SELinux is enabled. The status query program
-    'sestatus' and the output when it's enabled 'SELinux status: enabled'. """
+    :param platform: name of the platform (returned by sys.platform),
+    :return: True if library preload will fail by the dynamic linker. """
 
-    if platform == 'darwin':
-        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+    if platform in WRAPPER_ONLY_PLATFORMS:
+        return True
+    elif platform == 'darwin':
         command = ['csrutil', 'status']
-    elif platform in {'linux', 'linux2'}:
-        pattern = re.compile(r'SELinux status:\s+enabled')
-        command = ['sestatus']
+        pattern = re.compile(r'System Integrity Protection status:\s+enabled')
+        try:
+            return any(pattern.match(line) for line in run_command(command))
+        except:
+            return False
     else:
-        return False
-
-    try:
-        lines = subprocess.check_output(command).decode('utf-8')
-        return any((pattern.match(line) for line in lines.splitlines()))
-    except:
         return False
 
 
@@ -295,13 +290,6 @@ def create_parser():
         '--append',
         action='store_true',
         help="""Append new entries to existing compilation database.""")
-    group.add_argument(
-        '--disable-filter', '-n',
-        dest='raw_entries',
-        action='store_true',
-        help="""Intercepted child process creation calls (exec calls) are all
-                logged to the output. The output is not a compilation database.
-                This flag is for debug purposes.""")
 
     advanced = parser.add_argument_group('advanced options')
     advanced.add_argument(

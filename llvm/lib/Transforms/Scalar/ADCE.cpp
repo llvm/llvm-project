@@ -681,4 +681,3 @@ INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)
 
 FunctionPass *llvm::createAggressiveDCEPass() { return new ADCELegacyPass(); }
-

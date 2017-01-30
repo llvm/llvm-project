@@ -1097,8 +1097,11 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
 
-      // Here we cannot lower to an intrinsic because C99 sqrt() and llvm.sqrt
-      // are not guaranteed to have the same semantics.
+      // TODO: If the pow call is an intrinsic, we should lower to the sqrt
+      // intrinsic, so we match errno semantics.  We also should check that the
+      // target can in fact lower the sqrt intrinsic -- we currently have no way
+      // to ask this question other than asking whether the target has a sqrt
+      // libcall, which is a sufficient but not necessary condition.
       Value *Sqrt = emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
                                          Callee->getAttributes());
 
@@ -1115,8 +1118,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
 
-      // Unlike other math intrinsics, sqrt has differerent semantics
-      // from the libc function. See LangRef for details.
+      // TODO: As above, we should lower to the sqrt intrinsic if the pow is an
+      // intrinsic, to match errno semantics.
       return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
                                   Callee->getAttributes());
     }
@@ -1127,6 +1130,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     // TODO: In finite-only mode, this could be just fabs(sqrt(x)).
     Value *Inf = ConstantFP::getInfinity(CI->getType());
     Value *NegInf = ConstantFP::getInfinity(CI->getType(), true);
+
+    // TODO: As above, we should lower to the sqrt intrinsic if the pow is an
+    // intrinsic, to match errno semantics.
     Value *Sqrt = emitUnaryFloatFnCall(Op1, "sqrt", B, Callee->getAttributes());
 
     Module *M = Callee->getParent();
@@ -1309,8 +1315,11 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
+  // TODO: Once we have a way (other than checking for the existince of the
+  // libcall) to tell whether our target can lower @llvm.sqrt, relax the
+  // condition below.
   if (TLI->has(LibFunc_sqrtf) && (Callee->getName() == "sqrt" ||
-                             Callee->getIntrinsicID() == Intrinsic::sqrt))
+                                  Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
   if (!CI->hasUnsafeAlgebra())

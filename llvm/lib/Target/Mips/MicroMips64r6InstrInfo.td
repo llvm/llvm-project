@@ -475,29 +475,11 @@ defm : MaterializeImms<i64, ZERO_64, DADDIU_MM64R6, LUi64, ORi64>;
 //
 //===----------------------------------------------------------------------===//
 
-def : MipsPat<(MipsLo tglobaladdr:$in),
-              (DADDIU_MM64R6 ZERO_64, tglobaladdr:$in)>, ISA_MICROMIPS64R6;
-def : MipsPat<(MipsLo tblockaddress:$in),
-              (DADDIU_MM64R6 ZERO_64, tblockaddress:$in)>, ISA_MICROMIPS64R6;
-def : MipsPat<(MipsLo tjumptable:$in),
-              (DADDIU_MM64R6 ZERO_64, tjumptable:$in)>, ISA_MICROMIPS64R6;
-def : MipsPat<(MipsLo tconstpool:$in),
-              (DADDIU_MM64R6 ZERO_64, tconstpool:$in)>, ISA_MICROMIPS64R6;
-def : MipsPat<(MipsLo tglobaltlsaddr:$in),
-              (DADDIU_MM64R6 ZERO_64, tglobaltlsaddr:$in)>, ISA_MICROMIPS64R6;
-def : MipsPat<(MipsLo texternalsym:$in),
-              (DADDIU_MM64R6 ZERO_64, texternalsym:$in)>, ISA_MICROMIPS64R6;
+defm : MipsHiLoRelocs<LUi64, DADDIU_MM64R6, ZERO_64, GPR64Opnd>, SYM_32,
+                      ISA_MICROMIPS64R6;
 
-def : MipsPat<(add GPR64:$hi, (MipsLo tglobaladdr:$lo)),
-              (DADDIU_MM64R6 GPR64:$hi, tglobaladdr:$lo)>, ISA_MICROMIPS64R6;
-def : MipsPat<(add GPR64:$hi, (MipsLo tblockaddress:$lo)),
-              (DADDIU_MM64R6 GPR64:$hi, tblockaddress:$lo)>, ISA_MICROMIPS64R6;
-def : MipsPat<(add GPR64:$hi, (MipsLo tjumptable:$lo)),
-              (DADDIU_MM64R6 GPR64:$hi, tjumptable:$lo)>, ISA_MICROMIPS64R6;
-def : MipsPat<(add GPR64:$hi, (MipsLo tconstpool:$lo)),
-              (DADDIU_MM64R6 GPR64:$hi, tconstpool:$lo)>, ISA_MICROMIPS64R6;
-def : MipsPat<(add GPR64:$hi, (MipsLo tglobaltlsaddr:$lo)),
-              (DADDIU_MM64R6 GPR64:$hi, tglobaltlsaddr:$lo)>, ISA_MICROMIPS64R6;
+defm : MipsHighestHigherHiLoRelocs<LUi64, DADDIU_MM64R6>, SYM_64,
+                                   ISA_MICROMIPS64R6;
 
 def : MipsPat<(addc GPR64:$lhs, GPR64:$rhs),
               (DADDU_MM64R6 GPR64:$lhs, GPR64:$rhs)>, ISA_MICROMIPS64R6;

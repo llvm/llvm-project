@@ -59,9 +59,19 @@ def MipsTailCall : SDNode<"MipsISD::TailCall", SDT_MipsJmpLink,
 // Hi and Lo nodes are used to handle global addresses. Used on
 // MipsISelLowering to lower stuff like GlobalAddress, ExternalSymbol
 // static model. (nothing to do with Mips Registers Hi and Lo)
+
+// Hi is the odd node out, on MIPS64 it can expand to either daddiu when
+// using static relocations with 64 bit symbols, or lui when using 32 bit
+// symbols.
+def MipsHigher : SDNode<"MipsISD::Higher", SDTIntUnaryOp>;
+def MipsHighest : SDNode<"MipsISD::Highest", SDTIntUnaryOp>;
 def MipsHi    : SDNode<"MipsISD::Hi", SDTIntUnaryOp>;
 def MipsLo    : SDNode<"MipsISD::Lo", SDTIntUnaryOp>;
+
 def MipsGPRel : SDNode<"MipsISD::GPRel", SDTIntUnaryOp>;
+
+// Hi node for accessing the GOT.
+def MipsGotHi : SDNode<"MipsISD::GotHi", SDTIntUnaryOp>;
 
 // TlsGd node is used to handle General Dynamic TLS
 def MipsTlsGd : SDNode<"MipsISD::TlsGd", SDTIntUnaryOp>;
@@ -205,6 +215,10 @@ def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
                       AssemblerPredicate<"!FeatureCnMips">;
+def IsSym32     :     Predicate<"Subtarget->HasSym32()">,
+                      AssemblerPredicate<"FeatureSym32">;
+def IsSym64     :     Predicate<"!Subtarget->HasSym32()">,
+                      AssemblerPredicate<"!FeatureSym32">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
@@ -235,6 +249,14 @@ class GPR_64 { list<Predicate> GPRPredicates = [IsGP64bit]; }
 
 class PTR_32 { list<Predicate> PTRPredicates = [IsPTR32bit]; }
 class PTR_64 { list<Predicate> PTRPredicates = [IsPTR64bit]; }
+
+//===----------------------------------------------------------------------===//
+// Mips Symbol size adjectives.
+// They are mutally exculsive.
+//===----------------------------------------------------------------------===//
+
+class SYM_32 { list<Predicate> SYMPredicates = [IsSym32]; }
+class SYM_64 { list<Predicate> SYMPredicates = [IsSym64]; }
 
 //===----------------------------------------------------------------------===//
 // Mips ISA/ASE membership and instruction group membership adjectives.
@@ -2647,30 +2669,40 @@ def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
 def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL texternalsym:$dst)>;
 // hi/lo relocs
-def : MipsPat<(MipsHi tglobaladdr:$in), (LUi tglobaladdr:$in)>;
-def : MipsPat<(MipsHi tblockaddress:$in), (LUi tblockaddress:$in)>;
-def : MipsPat<(MipsHi tjumptable:$in), (LUi tjumptable:$in)>;
-def : MipsPat<(MipsHi tconstpool:$in), (LUi tconstpool:$in)>;
-def : MipsPat<(MipsHi tglobaltlsaddr:$in), (LUi tglobaltlsaddr:$in)>;
-def : MipsPat<(MipsHi texternalsym:$in), (LUi texternalsym:$in)>;
+multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
+                          Register ZeroReg, RegisterOperand GPROpnd> {
+  def : MipsPat<(MipsHi tglobaladdr:$in), (Lui tglobaladdr:$in)>;
+  def : MipsPat<(MipsHi tblockaddress:$in), (Lui tblockaddress:$in)>;
+  def : MipsPat<(MipsHi tjumptable:$in), (Lui tjumptable:$in)>;
+  def : MipsPat<(MipsHi tconstpool:$in), (Lui tconstpool:$in)>;
+  def : MipsPat<(MipsHi tglobaltlsaddr:$in), (Lui tglobaltlsaddr:$in)>;
+  def : MipsPat<(MipsHi texternalsym:$in), (Lui texternalsym:$in)>;
 
-def : MipsPat<(MipsLo tglobaladdr:$in), (ADDiu ZERO, tglobaladdr:$in)>;
-def : MipsPat<(MipsLo tblockaddress:$in), (ADDiu ZERO, tblockaddress:$in)>;
-def : MipsPat<(MipsLo tjumptable:$in), (ADDiu ZERO, tjumptable:$in)>;
-def : MipsPat<(MipsLo tconstpool:$in), (ADDiu ZERO, tconstpool:$in)>;
-def : MipsPat<(MipsLo tglobaltlsaddr:$in), (ADDiu ZERO, tglobaltlsaddr:$in)>;
-def : MipsPat<(MipsLo texternalsym:$in), (ADDiu ZERO, texternalsym:$in)>;
+  def : MipsPat<(MipsLo tglobaladdr:$in), (Addiu ZeroReg, tglobaladdr:$in)>;
+  def : MipsPat<(MipsLo tblockaddress:$in),
+                (Addiu ZeroReg, tblockaddress:$in)>;
+  def : MipsPat<(MipsLo tjumptable:$in), (Addiu ZeroReg, tjumptable:$in)>;
+  def : MipsPat<(MipsLo tconstpool:$in), (Addiu ZeroReg, tconstpool:$in)>;
+  def : MipsPat<(MipsLo tglobaltlsaddr:$in),
+                (Addiu ZeroReg, tglobaltlsaddr:$in)>;
+  def : MipsPat<(MipsLo texternalsym:$in), (Addiu ZeroReg, texternalsym:$in)>;
 
-def : MipsPat<(add GPR32:$hi, (MipsLo tglobaladdr:$lo)),
-              (ADDiu GPR32:$hi, tglobaladdr:$lo)>;
-def : MipsPat<(add GPR32:$hi, (MipsLo tblockaddress:$lo)),
-              (ADDiu GPR32:$hi, tblockaddress:$lo)>;
-def : MipsPat<(add GPR32:$hi, (MipsLo tjumptable:$lo)),
-              (ADDiu GPR32:$hi, tjumptable:$lo)>;
-def : MipsPat<(add GPR32:$hi, (MipsLo tconstpool:$lo)),
-              (ADDiu GPR32:$hi, tconstpool:$lo)>;
-def : MipsPat<(add GPR32:$hi, (MipsLo tglobaltlsaddr:$lo)),
-              (ADDiu GPR32:$hi, tglobaltlsaddr:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo tglobaladdr:$lo)),
+              (Addiu GPROpnd:$hi, tglobaladdr:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo tblockaddress:$lo)),
+              (Addiu GPROpnd:$hi, tblockaddress:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo tjumptable:$lo)),
+              (Addiu GPROpnd:$hi, tjumptable:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo tconstpool:$lo)),
+              (Addiu GPROpnd:$hi, tconstpool:$lo)>;
+  def : MipsPat<(add GPROpnd:$hi, (MipsLo tglobaltlsaddr:$lo)),
+              (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
+}
+
+defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>;
+
+def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>;
+def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>;
 
 // gp_rel relocs
 def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),

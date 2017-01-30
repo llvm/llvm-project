@@ -173,10 +173,12 @@ void Twine::printRepr(raw_ostream &OS) const {
   OS << ")";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Twine::dump() const {
   print(dbgs());
 }
 
-void Twine::dumpRepr() const {
+LLVM_DUMP_METHOD void Twine::dumpRepr() const {
   printRepr(dbgs());
 }
+#endif

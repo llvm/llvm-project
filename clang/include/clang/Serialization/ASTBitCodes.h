@@ -591,6 +591,8 @@ namespace clang {
 
       /// \brief Record code for declarations associated with OpenCL extensions.
       OPENCL_EXTENSION_DECLS = 59,
+
+      MODULAR_CODEGEN_DECLS = 60,
     };
 
     /// \brief Record types used within a source manager block.
@@ -914,7 +916,9 @@ namespace clang {
       /// \brief A PipeType record.
       TYPE_PIPE                  = 43,
       /// \brief An ObjCTypeParamType record.
-      TYPE_OBJC_TYPE_PARAM       = 44
+      TYPE_OBJC_TYPE_PARAM       = 44,
+      /// \brief A DeducedTemplateSpecializationType record.
+      TYPE_DEDUCED_TEMPLATE_SPECIALIZATION = 45
     };
 
     /// \brief The type IDs for special types constructed by semantic

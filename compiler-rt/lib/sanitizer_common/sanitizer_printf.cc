@@ -214,15 +214,11 @@ void SetPrintfAndReportCallback(void (*callback)(const char *)) {
 }
 
 // Can be overriden in frontend.
-#if SANITIZER_SUPPORTS_WEAK_HOOKS
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void OnPrint(const char *str) {
-  (void)str;
-}
-#elif SANITIZER_GO && defined(TSAN_EXTERNAL_HOOKS)
-void OnPrint(const char *str);
+#if SANITIZER_GO && defined(TSAN_EXTERNAL_HOOKS)
+// Implementation must be defined in frontend.
+extern "C" void OnPrint(const char *str);
 #else
-void OnPrint(const char *str) {
+SANITIZER_INTERFACE_WEAK_DEF(void, OnPrint, const char *str) {
   (void)str;
 }
 #endif

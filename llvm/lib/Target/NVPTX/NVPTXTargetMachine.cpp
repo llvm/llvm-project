@@ -28,6 +28,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -167,9 +168,13 @@ TargetPassConfig *NVPTXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new NVPTXPassConfig(this, PM);
 }
 
-void NVPTXTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
-  PM.add(createNVVMReflectPass());
-  PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
+void NVPTXTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+  Builder.addExtension(
+    PassManagerBuilder::EP_EarlyAsPossible,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createNVVMReflectPass());
+      PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
+    });
 }
 
 TargetIRAnalysis NVPTXTargetMachine::getTargetIRAnalysis() {

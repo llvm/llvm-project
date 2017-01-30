@@ -203,19 +203,19 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // source address with a single pointer.
   def int_ppc_altivec_stvx :
               Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                        [IntrArgMemOnly]>;
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvxl :
               Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                        [IntrArgMemOnly]>;
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvebx :
               Intrinsic<[], [llvm_v16i8_ty, llvm_ptr_ty],
-                        [IntrArgMemOnly]>;
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvehx :
               Intrinsic<[], [llvm_v8i16_ty, llvm_ptr_ty],
-                        [IntrArgMemOnly]>;
+                        [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_altivec_stvewx :
               Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
-                        [IntrArgMemOnly]>;
+                        [IntrWriteMem, IntrArgMemOnly]>;
 
   // Comparisons setting a vector.
   def int_ppc_altivec_vcmpbfp : GCCBuiltin<"__builtin_altivec_vcmpbfp">,
@@ -749,20 +749,20 @@ def int_ppc_vsx_lxvll :
       IntrArgMemOnly]>;
 def int_ppc_vsx_stxvl :
       Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
-      [IntrArgMemOnly]>;
+      [IntrWriteMem, IntrArgMemOnly]>;
 def int_ppc_vsx_stxvll :
       Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty, llvm_i64_ty],
-      [IntrArgMemOnly]>;
+      [IntrWriteMem, IntrArgMemOnly]>;
 
 // Vector store.
-def int_ppc_vsx_stxvw4x :
-      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty], [IntrArgMemOnly]>;
-def int_ppc_vsx_stxvd2x :
-      Intrinsic<[], [llvm_v2f64_ty, llvm_ptr_ty], [IntrArgMemOnly]>;
-def int_ppc_vsx_stxvw4x_be :
-      Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty], [IntrArgMemOnly]>;
-def int_ppc_vsx_stxvd2x_be :
-      Intrinsic<[], [llvm_v2f64_ty, llvm_ptr_ty], [IntrArgMemOnly]>;
+def int_ppc_vsx_stxvw4x : Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
+                                    [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvd2x : Intrinsic<[], [llvm_v2f64_ty, llvm_ptr_ty],
+                                    [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvw4x_be : Intrinsic<[], [llvm_v4i32_ty, llvm_ptr_ty],
+                                       [IntrWriteMem, IntrArgMemOnly]>;
+def int_ppc_vsx_stxvd2x_be : Intrinsic<[], [llvm_v2f64_ty, llvm_ptr_ty],
+                                       [IntrWriteMem, IntrArgMemOnly]>;
 // Vector and scalar maximum.
 def int_ppc_vsx_xvmaxdp : PowerPC_VSX_Vec_DDD_Intrinsic<"xvmaxdp">;
 def int_ppc_vsx_xvmaxsp : PowerPC_VSX_Vec_FFF_Intrinsic<"xvmaxsp">;
@@ -953,7 +953,7 @@ class PowerPC_QPX_LoadPerm_Intrinsic<string GCCIntSuffix>
 class PowerPC_QPX_Store_Intrinsic<string GCCIntSuffix>
   : PowerPC_QPX_Intrinsic<GCCIntSuffix,
                           [], [llvm_v4f64_ty, llvm_ptr_ty],
-                          [IntrArgMemOnly]>;
+                          [IntrWriteMem, IntrArgMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC QPX Intrinsic Definitions.

@@ -1692,12 +1692,12 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
   }
 }
 
-LLVM_DUMP_METHOD void MachineInstr::dump(const TargetInstrInfo *TII) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
-  print(dbgs(), false /* SkipOpers */, TII);
-#endif
+  print(dbgs());
 }
+#endif
 
 void MachineInstr::print(raw_ostream &OS, bool SkipOpers,
                          const TargetInstrInfo *TII) const {

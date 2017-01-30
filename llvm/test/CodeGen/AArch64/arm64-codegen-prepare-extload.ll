@@ -636,3 +636,24 @@ define i64 @doNotPromoteBecauseOfPairedLoad(i32* %p, i32 %cst) {
   %final = add i64 %sextres, %zextLd0
   ret i64 %final
 }
+
+define i64 @promoteZextShl(i1 %c, i16* %P) {
+entry:
+; OPTALL-LABEL: promoteZextShl
+; OPTALL-LABEL: entry:
+; OPT: %[[LD:.*]] = load i16, i16* %P
+; OPT: %[[EXT:.*]] = zext i16 %[[LD]] to i64
+; OPT-LABEL: if.then:
+; OPT: shl nsw i64 %[[EXT]], 1
+; DISABLE-LABEL: if.then:
+; DISABLE: %r = sext i32 %shl2 to i64
+  %ld = load i16, i16* %P
+  br i1 %c, label %end, label %if.then
+if.then:
+  %z = zext i16 %ld to i32
+  %shl2 = shl nsw i32 %z, 1
+  %r = sext i32 %shl2 to i64
+  ret i64 %r
+end:
+  ret i64 0
+}

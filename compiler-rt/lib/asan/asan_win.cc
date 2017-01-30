@@ -43,18 +43,6 @@ uptr __asan_get_shadow_memory_dynamic_address() {
   __asan_init();
   return __asan_shadow_memory_dynamic_address;
 }
-
-void __sanitizer_default_malloc_hook(void *ptr, uptr size) { }
-void __sanitizer_default_free_hook(void *ptr) { }
-const char* __asan_default_default_options() { return ""; }
-const char* __asan_default_default_suppressions() { return ""; }
-void __asan_default_on_error() {}
-
-WIN_WEAK_ALIAS(__sanitizer_malloc_hook, __sanitizer_default_malloc_hook)
-WIN_WEAK_ALIAS(__sanitizer_free_hook, __sanitizer_default_free_hook)
-WIN_WEAK_ALIAS(__asan_default_options, __asan_default_default_options)
-WIN_WEAK_ALIAS(__asan_default_suppressions, __asan_default_default_suppressions)
-WIN_WEAK_ALIAS(__asan_on_error, __asan_default_on_error)
 }  // extern "C"
 
 // ---------------------- Windows-specific interceptors ---------------- {{{

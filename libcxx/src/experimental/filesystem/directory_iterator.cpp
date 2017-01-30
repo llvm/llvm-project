@@ -12,19 +12,6 @@ inline error_code capture_errno() {
 }
 
 template <class ...Args>
-inline bool capture_error_or_throw(std::error_code* user_ec,
-                                   const char* msg, Args&&... args)
-{
-    std::error_code my_ec = capture_errno();
-    if (user_ec) {
-        *user_ec = my_ec;
-        return true;
-    }
-    __throw_filesystem_error(msg, std::forward<Args>(args)..., my_ec);
-    return false;
-}
-
-template <class ...Args>
 inline bool set_or_throw(std::error_code& my_ec,
                                std::error_code* user_ec,
                                const char* msg, Args&&... args)
@@ -37,10 +24,7 @@ inline bool set_or_throw(std::error_code& my_ec,
     return false;
 }
 
-typedef path::string_type string_type;
-
-
-inline string_type posix_readdir(DIR *dir_stream, error_code& ec) {
+inline path::string_type posix_readdir(DIR *dir_stream, error_code& ec) {
     struct dirent* dir_entry_ptr = nullptr;
     errno = 0; // zero errno in order to detect errors
     if ((dir_entry_ptr = ::readdir(dir_stream)) == nullptr) {
@@ -149,7 +133,7 @@ directory_iterator& directory_iterator::__increment(error_code *ec)
 
 }
 
-directory_entry const& directory_iterator::__deref() const {
+directory_entry const& directory_iterator::__dereference() const {
     _LIBCPP_ASSERT(__imp_, "Attempting to dereference an invalid iterator");
     return __imp_->__entry_;
 }
@@ -195,7 +179,7 @@ int recursive_directory_iterator::depth() const {
     return __imp_->__stack_.size() - 1;
 }
 
-const directory_entry& recursive_directory_iterator::__deref() const {
+const directory_entry& recursive_directory_iterator::__dereference() const {
     return __imp_->__stack_.top().__entry_;
 }
 

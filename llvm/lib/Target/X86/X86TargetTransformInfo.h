@@ -33,8 +33,6 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
   const X86Subtarget *ST;
   const X86TargetLowering *TLI;
 
-  int getScalarizationOverhead(Type *Ty, bool Insert, bool Extract);
-
   const X86Subtarget *getST() const { return ST; }
   const X86TargetLowering *getTLI() const { return TLI; }
 

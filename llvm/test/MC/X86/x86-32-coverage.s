@@ -281,6 +281,10 @@
 // CHECK:  encoding: [0xfb]
         	sti
 
+// CHECK: salc
+// CHECK:  encoding: [0xd6]
+        	salc
+
 // CHECK: addb	$254, 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0x80,0x84,0xcb,0xef,0xbe,0xad,0xde,0xfe]
         	addb	$0xfe,0xdeadbeef(%ebx,%ecx,8)
@@ -2746,6 +2750,10 @@
 // CHECK: ffree	%st(2)
 // CHECK:  encoding: [0xdd,0xc2]
         	ffree	%st(2)
+
+// CHECK: ffreep	%st(2)
+// CHECK:  encoding: [0xdf,0xc2]
+        	ffreep	%st(2)
 
 // CHECK: fnop
 // CHECK:  encoding: [0xd9,0xd0]

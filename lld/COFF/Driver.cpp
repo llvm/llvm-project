@@ -41,7 +41,6 @@
 using namespace llvm;
 using namespace llvm::COFF;
 using llvm::sys::Process;
-using llvm::sys::fs::OpenFlags;
 using llvm::sys::fs::file_magic;
 using llvm::sys::fs::identify_magic;
 

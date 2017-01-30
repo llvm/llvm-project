@@ -442,6 +442,12 @@
 // Xclang: "-cc1"
 // Xclang: "hellocc1"
 
+// Files under /Users are often confused with the /U flag. (This could happen
+// for other flags too, but this is the one people run into.)
+// RUN: %clang_cl /c /Users/me/myfile.c -### 2>&1 | FileCheck -check-prefix=SlashU %s
+// SlashU: warning: '/Users/me/myfile.c' treated as the '/U' option
+// SlashU: note: Use '--' to treat subsequent arguments as filenames
+
 // RTTI is on by default. /GR- controls -fno-rtti-data.
 // RUN: %clang_cl /c /GR- -### -- %s 2>&1 | FileCheck -check-prefix=NoRTTI %s
 // NoRTTI: "-fno-rtti-data"

@@ -7,3 +7,4 @@ typedef pthread_mutex_t pthread_mutex_t;
 pthread_mutex_t x;
 #include "b.h"
 pthread_mutex_t y;
+merged_after_definition z;

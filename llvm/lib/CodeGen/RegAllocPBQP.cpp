@@ -840,7 +840,8 @@ static Printable PrintNodeInfo(PBQP::RegAlloc::PBQPRAGraph::NodeId NId,
   });
 }
 
-void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
   for (auto NId : nodeIds()) {
     const Vector &Costs = getNodeCosts(NId);
     assert(Costs.getLength() != 0 && "Empty vector in graph.");
@@ -861,7 +862,10 @@ void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
   }
 }
 
-LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump() const { dump(dbgs()); }
+LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump() const {
+  dump(dbgs());
+}
+#endif
 
 void PBQP::RegAlloc::PBQPRAGraph::printDot(raw_ostream &OS) const {
   OS << "graph {\n";
