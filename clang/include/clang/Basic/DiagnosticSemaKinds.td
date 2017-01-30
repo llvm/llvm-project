@@ -1884,11 +1884,6 @@ def err_auto_not_allowed : Error<
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration}1">;
-def err_dependent_deduced_tst : Error<
-  "typename specifier refers to "
-  "%select{class template|function template|variable template|alias template|"
-  "template template parameter|template}0 member in %1; "
-  "argument deduction not allowed here">;
 def err_auto_not_allowed_var_inst : Error<
   "'auto' variable template instantiation is not allowed">;
 def err_auto_var_requires_init : Error<

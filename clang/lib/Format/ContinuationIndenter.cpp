@@ -199,7 +199,14 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   if (startsSegmentOfBuilderTypeCall(Current) &&
       (State.Stack.back().CallContinuation != 0 ||
-       State.Stack.back().BreakBeforeParameter))
+       State.Stack.back().BreakBeforeParameter) &&
+      // JavaScript is treated different here as there is a frequent pattern:
+      //   SomeFunction(function() {
+      //     ...
+      //   }.bind(...));
+      // FIXME: We should find a more generic solution to this problem.
+      !(State.Column <= NewLineColumn &&
+        Style.Language == FormatStyle::LK_JavaScript))
     return true;
 
   if (State.Column <= NewLineColumn)

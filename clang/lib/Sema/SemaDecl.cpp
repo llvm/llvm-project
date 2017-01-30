@@ -60,6 +60,11 @@ Sema::DeclGroupPtrTy Sema::ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType) {
   return DeclGroupPtrTy::make(DeclGroupRef(Ptr));
 }
 
+static bool isTypeTemplate(NamedDecl *ND) {
+  return isa<ClassTemplateDecl>(ND) || isa<TypeAliasTemplateDecl>(ND) ||
+         isa<TemplateTemplateParmDecl>(ND);
+}
+
 namespace {
 
 class TypeNameValidatorCCC : public CorrectionCandidateCallback {
@@ -76,7 +81,7 @@ class TypeNameValidatorCCC : public CorrectionCandidateCallback {
   bool ValidateCandidate(const TypoCorrection &candidate) override {
     if (NamedDecl *ND = candidate.getCorrectionDecl()) {
       bool IsType = isa<TypeDecl>(ND) || isa<ObjCInterfaceDecl>(ND);
-      bool AllowedTemplate = AllowTemplates && getAsTypeTemplateDecl(ND);
+      bool AllowedTemplate = AllowTemplates && isTypeTemplate(ND);
       return (IsType || AllowedTemplate) &&
              (AllowInvalidDecl || !ND->isInvalidDecl());
     }
@@ -400,7 +405,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     for (LookupResult::iterator Res = Result.begin(), ResEnd = Result.end();
          Res != ResEnd; ++Res) {
       if (isa<TypeDecl>(*Res) || isa<ObjCInterfaceDecl>(*Res) ||
-          (AllowDeducedTemplate && getAsTypeTemplateDecl(*Res))) {
+          (AllowDeducedTemplate && isTypeTemplate(*Res))) {
         if (!IIDecl ||
             (*Res)->getLocation().getRawEncoding() <
               IIDecl->getLocation().getRawEncoding())
@@ -453,10 +458,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
       T = Context.getObjCInterfaceType(IDecl);
-  } else if (AllowDeducedTemplate) {
-    if (auto *TD = getAsTypeTemplateDecl(IIDecl))
-      T = Context.getDeducedTemplateSpecializationType(TemplateName(TD),
-                                                       QualType(), false);
+  } else if (AllowDeducedTemplate && isTypeTemplate(IIDecl)) {
+    T = Context.getDeducedTemplateSpecializationType(
+        TemplateName(cast<TemplateDecl>(IIDecl)), QualType(), false);
   }
 
   if (T.isNull()) {

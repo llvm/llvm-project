@@ -1490,16 +1490,12 @@ TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
 /// a cast expression) or that the entity has no name (e.g., an
 /// unnamed function parameter).
 ///
-/// \param AllowDeducedTST Whether a DeducedTemplateSpecializationType is
-/// acceptable as the top level type of the result.
-///
 /// \returns If the instantiation succeeds, the instantiated
 /// type. Otherwise, produces diagnostics and returns a NULL type.
 TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
                                 const MultiLevelTemplateArgumentList &Args,
                                 SourceLocation Loc,
-                                DeclarationName Entity,
-                                bool AllowDeducedTST) {
+                                DeclarationName Entity) {
   assert(!ActiveTemplateInstantiations.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
@@ -1509,8 +1505,7 @@ TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,
     return T;
 
   TemplateInstantiator Instantiator(*this, Args, Loc, Entity);
-  return AllowDeducedTST ? Instantiator.TransformTypeWithDeducedTST(T)
-                         : Instantiator.TransformType(T);
+  return Instantiator.TransformType(T);
 }
 
 TypeSourceInfo *Sema::SubstType(TypeLoc TL,

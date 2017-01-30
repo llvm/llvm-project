@@ -657,9 +657,10 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              ArrayRef<BindingDecl*> *Bindings) {
 
   // Do substitution on the type of the declaration
-  TypeSourceInfo *DI = SemaRef.SubstType(
-      D->getTypeSourceInfo(), TemplateArgs, D->getTypeSpecStartLoc(),
-      D->getDeclName(), /*AllowDeducedTST*/true);
+  TypeSourceInfo *DI = SemaRef.SubstType(D->getTypeSourceInfo(),
+                                         TemplateArgs,
+                                         D->getTypeSpecStartLoc(),
+                                         D->getDeclName());
   if (!DI)
     return nullptr;
 

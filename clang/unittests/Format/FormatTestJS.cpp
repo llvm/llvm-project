@@ -497,6 +497,11 @@ TEST_F(FormatTestJS, ArrayLiterals) {
                "    [];");
 
   verifyFormat("someFunction([], {a: a});");
+
+  verifyFormat("var string = [\n"
+               "  'aaaaaa',\n"
+               "  'bbbbbb',\n"
+               "].join('+');");
 }
 
 TEST_F(FormatTestJS, ColumnLayoutForArrayLiterals) {
@@ -586,6 +591,11 @@ TEST_F(FormatTestJS, FunctionLiterals) {
                "  doSomething();\n"
                "  doSomething();\n"
                "}, this));");
+
+  verifyFormat("SomeFunction(function() {\n"
+               "  foo();\n"
+               "  bar();\n"
+               "}.bind(this));");
 
   // FIXME: This is bad, we should be wrapping before "function() {".
   verifyFormat("someFunction(function() {\n"
