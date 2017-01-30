@@ -90,6 +90,8 @@ public:
   /// initializers themselves.
   CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;
 
+  ExtKind hasExternalDefinitions(unsigned ID) override;
+
   /// \brief Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,

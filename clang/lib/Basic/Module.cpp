@@ -34,7 +34,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsInferred(false), IsSwiftInferImportAsMember(false),
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
-      NoUndeclaredIncludes(false), NameVisibility(Hidden) {
+      NoUndeclaredIncludes(false), WithCodegen(false), NameVisibility(Hidden) {
   if (Parent) {
     if (!Parent->isAvailable())
       IsAvailable = false;

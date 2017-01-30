@@ -2153,7 +2153,7 @@ void ASTWriter::WriteDeclAbbrevs() {
 /// relatively painless since they would presumably only do it for top-level
 /// decls.
 static bool isRequiredDecl(const Decl *D, ASTContext &Context,
-                           bool WritingModule) {
+                           bool WritingModule, bool ModularCode) {
   // An ObjCMethodDecl is never considered as "required" because its
   // implementation container always is.
 
@@ -2169,7 +2169,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
     return false;
   }
 
-  return Context.DeclMustBeEmitted(D);
+  return Context.DeclMustBeEmitted(D, ModularCode);
 }
 
 void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
@@ -2213,8 +2213,11 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
 
   // Note declarations that should be deserialized eagerly so that we can add
   // them to a record in the AST file later.
-  if (isRequiredDecl(D, Context, WritingModule))
+  if (isRequiredDecl(D, Context, WritingModule, false))
     EagerlyDeserializedDecls.push_back(ID);
+  else if (Context.getLangOpts().ModularCodegen && WritingModule &&
+           isRequiredDecl(D, Context, true, true))
+    ModularCodegenDecls.push_back(ID);
 }
 
 void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {

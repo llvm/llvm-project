@@ -8877,8 +8877,22 @@ static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
 }
 
 GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
-  return adjustGVALinkageForAttributes(
+  auto L = adjustGVALinkageForAttributes(
       *this, basicGVALinkageForFunction(*this, FD), FD);
+  auto EK = ExternalASTSource::EK_ReplyHazy;
+  if (auto *Ext = getExternalSource())
+    EK = Ext->hasExternalDefinitions(FD->getOwningModuleID());
+  switch (EK) {
+  case ExternalASTSource::EK_Never:
+    if (L == GVA_DiscardableODR)
+      return GVA_StrongODR;
+    break;
+  case ExternalASTSource::EK_Always:
+    return GVA_AvailableExternally;
+  case ExternalASTSource::EK_ReplyHazy:
+    break;
+  }
+  return L;
 }
 
 static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
@@ -8963,7 +8977,7 @@ GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) {
       *this, basicGVALinkageForVariable(*this, VD), VD);
 }
 
-bool ASTContext::DeclMustBeEmitted(const Decl *D) {
+bool ASTContext::DeclMustBeEmitted(const Decl *D, bool ForModularCodegen) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->isFileVarDecl())
       return false;
@@ -9027,10 +9041,15 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       }
     }
 
+    GVALinkage Linkage = GetGVALinkageForFunction(FD);
+
+    if (Linkage == GVA_DiscardableODR && ForModularCodegen)
+      return true;
+
     // static, static inline, always_inline, and extern inline functions can
     // always be deferred.  Normal inline functions can be deferred in C99/C++.
     // Implicit template instantiations can also be deferred in C++.
-    return !isDiscardableGVALinkage(GetGVALinkageForFunction(FD));
+    return !isDiscardableGVALinkage(Linkage);
   }
   
   const VarDecl *VD = cast<VarDecl>(D);

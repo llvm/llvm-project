@@ -307,6 +307,17 @@ public:
   ///
   QualType TransformType(TypeLocBuilder &TLB, TypeLoc TL);
 
+  /// \brief Transform a type that is permitted to produce a
+  /// DeducedTemplateSpecializationType.
+  ///
+  /// This is used in the (relatively rare) contexts where it is acceptable
+  /// for transformation to produce a class template type with deduced
+  /// template arguments.
+  /// @{
+  QualType TransformTypeWithDeducedTST(QualType T);
+  TypeSourceInfo *TransformTypeWithDeducedTST(TypeSourceInfo *DI);
+  /// @}
+
   /// \brief Transform the given statement.
   ///
   /// By default, this routine transforms a statement by delegating to the
@@ -898,7 +909,7 @@ public:
   /// By default, builds a new ParenType type from the inner type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildParenType(QualType InnerType) {
-    return SemaRef.Context.getParenType(InnerType);
+    return SemaRef.BuildParenType(InnerType);
   }
 
   /// \brief Build a new qualified name type.
@@ -968,7 +979,8 @@ public:
                                     SourceLocation KeywordLoc,
                                     NestedNameSpecifierLoc QualifierLoc,
                                     const IdentifierInfo *Id,
-                                    SourceLocation IdLoc) {
+                                    SourceLocation IdLoc,
+                                    bool DeducedTSTContext) {
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
 
@@ -980,9 +992,25 @@ public:
                                                     Id);
     }
 
-    if (Keyword == ETK_None || Keyword == ETK_Typename)
-      return SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
-                                       *Id, IdLoc);
+    if (Keyword == ETK_None || Keyword == ETK_Typename) {
+      QualType T = SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
+                                             *Id, IdLoc);
+      // If a dependent name resolves to a deduced template specialization type,
+      // check that we're in one of the syntactic contexts permitting it.
+      if (!DeducedTSTContext) {
+        if (auto *Deduced = dyn_cast_or_null<DeducedTemplateSpecializationType>(
+                T.isNull() ? nullptr : T->getContainedDeducedType())) {
+          SemaRef.Diag(IdLoc, diag::err_dependent_deduced_tst)
+            << (int)SemaRef.getTemplateNameKindForDiagnostics(
+                   Deduced->getTemplateName())
+            << QualType(QualifierLoc.getNestedNameSpecifier()->getAsType(), 0);
+          if (auto *TD = Deduced->getTemplateName().getAsTemplateDecl())
+            SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
+          return QualType();
+        }
+      }
+      return T;
+    }
 
     TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
 
@@ -3157,6 +3185,10 @@ private:
   TypeSourceInfo *TransformTSIInObjectScope(TypeLoc TL, QualType ObjectType,
                                             NamedDecl *FirstQualifierInScope,
                                             CXXScopeSpec &SS);
+
+  QualType TransformDependentNameType(TypeLocBuilder &TLB,
+                                      DependentNameTypeLoc TL,
+                                      bool DeducibleTSTContext);
 };
 
 template<typename Derived>
@@ -4046,6 +4078,52 @@ TreeTransform<Derived>::TransformType(TypeLocBuilder &TLB, TypeLoc T) {
   }
 
   llvm_unreachable("unhandled type loc!");
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformTypeWithDeducedTST(QualType T) {
+  if (!isa<DependentNameType>(T))
+    return TransformType(T);
+
+  if (getDerived().AlreadyTransformed(T))
+    return T;
+  TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(T,
+                                                getDerived().getBaseLocation());
+  TypeSourceInfo *NewDI = getDerived().TransformTypeWithDeducedTST(DI);
+  return NewDI ? NewDI->getType() : QualType();
+}
+
+template<typename Derived>
+TypeSourceInfo *
+TreeTransform<Derived>::TransformTypeWithDeducedTST(TypeSourceInfo *DI) {
+  if (!isa<DependentNameType>(DI->getType()))
+    return TransformType(DI);
+
+  // Refine the base location to the type's location.
+  TemporaryBase Rebase(*this, DI->getTypeLoc().getBeginLoc(),
+                       getDerived().getBaseEntity());
+  if (getDerived().AlreadyTransformed(DI->getType()))
+    return DI;
+
+  TypeLocBuilder TLB;
+
+  TypeLoc TL = DI->getTypeLoc();
+  TLB.reserve(TL.getFullDataSize());
+
+  Qualifiers Quals;
+  if (auto QTL = TL.getAs<QualifiedTypeLoc>()) {
+    Quals = QTL.getType().getLocalQualifiers();
+    TL = QTL.getUnqualifiedLoc();
+  }
+
+  auto DNTL = TL.castAs<DependentNameTypeLoc>();
+
+  QualType Result = getDerived().TransformDependentNameType(
+      TLB, DNTL, /*DeducedTSTContext*/true);
+  if (Result.isNull())
+    return nullptr;
+
+  return TLB.getTypeSourceInfo(SemaRef.Context, Result);
 }
 
 /// FIXME: By default, this routine adds type qualifiers only to types
@@ -5854,8 +5932,14 @@ TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
 }
 
 template<typename Derived>
-QualType TreeTransform<Derived>::TransformDependentNameType(TypeLocBuilder &TLB,
-                                                      DependentNameTypeLoc TL) {
+QualType TreeTransform<Derived>::TransformDependentNameType(
+    TypeLocBuilder &TLB, DependentNameTypeLoc TL) {
+  return TransformDependentNameType(TLB, TL, false);
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformDependentNameType(
+    TypeLocBuilder &TLB, DependentNameTypeLoc TL, bool DeducedTSTContext) {
   const DependentNameType *T = TL.getTypePtr();
 
   NestedNameSpecifierLoc QualifierLoc
@@ -5868,7 +5952,8 @@ QualType TreeTransform<Derived>::TransformDependentNameType(TypeLocBuilder &TLB,
                                             TL.getElaboratedKeywordLoc(),
                                             QualifierLoc,
                                             T->getIdentifier(),
-                                            TL.getNameLoc());
+                                            TL.getNameLoc(),
+                                            DeducedTSTContext);
   if (Result.isNull())
     return QualType();
 
@@ -9474,7 +9559,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXFunctionalCastExpr(
                                                      CXXFunctionalCastExpr *E) {
-  TypeSourceInfo *Type = getDerived().TransformType(E->getTypeInfoAsWritten());
+  TypeSourceInfo *Type =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeInfoAsWritten());
   if (!Type)
     return ExprError();
 
@@ -9663,8 +9749,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
   // Transform the type that we're allocating
-  TypeSourceInfo *AllocTypeInfo
-    = getDerived().TransformType(E->getAllocatedTypeSourceInfo());
+  TypeSourceInfo *AllocTypeInfo =
+      getDerived().TransformTypeWithDeducedTST(E->getAllocatedTypeSourceInfo());
   if (!AllocTypeInfo)
     return ExprError();
 
@@ -10375,7 +10461,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
                                                     CXXTemporaryObjectExpr *E) {
-  TypeSourceInfo *T = getDerived().TransformType(E->getTypeSourceInfo());
+  TypeSourceInfo *T =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeSourceInfo());
   if (!T)
     return ExprError();
 
@@ -10672,7 +10759,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
                                                   CXXUnresolvedConstructExpr *E) {
-  TypeSourceInfo *T = getDerived().TransformType(E->getTypeSourceInfo());
+  TypeSourceInfo *T =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeSourceInfo());
   if (!T)
     return ExprError();
 

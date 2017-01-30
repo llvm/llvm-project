@@ -211,6 +211,10 @@ public:
   /// \brief The input files that have been loaded from this AST file.
   std::vector<InputFile> InputFilesLoaded;
 
+  // All user input files reside at the index range [0, NumUserInputFiles), and
+  // system input files reside at [NumUserInputFiles, InputFilesLoaded.size()).
+  unsigned NumUserInputFiles = 0;
+
   /// \brief If non-zero, specifies the time when we last validated input
   /// files.  Zero means we never validated them.
   ///

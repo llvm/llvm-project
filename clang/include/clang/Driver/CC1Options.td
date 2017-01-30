@@ -432,6 +432,10 @@ def fmodules_local_submodule_visibility :
   Flag<["-"], "fmodules-local-submodule-visibility">,
   HelpText<"Enforce name visibility rules across submodules of the same "
            "top-level module.">;
+def fmodule_codegen :
+  Flag<["-"], "fmodules-codegen">,
+  HelpText<"Generate code for uses of this module that assumes an explicit "
+           "object file will be built for the module">;
 def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
   HelpText<"Select the container format for clang modules and PCH. "
            "Supported options are 'raw' and 'obj'.">;

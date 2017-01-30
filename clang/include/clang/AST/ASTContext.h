@@ -2494,7 +2494,7 @@ public:
   ///
   /// \returns true if the function/var must be CodeGen'ed/deserialized even if
   /// it is not used.
-  bool DeclMustBeEmitted(const Decl *D);
+  bool DeclMustBeEmitted(const Decl *D, bool ForModularCodegen = false);
 
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD);

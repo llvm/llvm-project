@@ -1044,6 +1044,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(IDENTIFIER_OFFSET);
   RECORD(IDENTIFIER_TABLE);
   RECORD(EAGERLY_DESERIALIZED_DECLS);
+  RECORD(MODULAR_CODEGEN_DECLS);
   RECORD(SPECIAL_TYPES);
   RECORD(STATISTICS);
   RECORD(TENTATIVE_DEFINITIONS);
@@ -2590,6 +2591,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExplicit...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExportWild...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ConfigMacrosExh...
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // WithCodegen
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
   unsigned DefinitionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
@@ -2678,11 +2680,19 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the definition of the block.
     {
-      RecordData::value_type Record[] = {
-          SUBMODULE_DEFINITION, ID, ParentID, Mod->IsFramework, Mod->IsExplicit,
-          Mod->IsSystem, Mod->IsExternC, Mod->IsSwiftInferImportAsMember,
-          Mod->InferSubmodules, Mod->InferExplicitSubmodules,
-          Mod->InferExportWildcard, Mod->ConfigMacrosExhaustive};
+      RecordData::value_type Record[] = {SUBMODULE_DEFINITION,
+                                         ID,
+                                         ParentID,
+                                         Mod->IsFramework,
+                                         Mod->IsExplicit,
+                                         Mod->IsSystem,
+                                         Mod->IsExternC,
+                                         Mod->IsSwiftInferImportAsMember,
+                                         Mod->InferSubmodules,
+                                         Mod->InferExplicitSubmodules,
+                                         Mod->InferExportWildcard,
+                                         Mod->ConfigMacrosExhaustive,
+                                         Mod->WithCodegen};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -4694,6 +4704,9 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Write the record containing external, unnamed definitions.
   if (!EagerlyDeserializedDecls.empty())
     Stream.EmitRecord(EAGERLY_DESERIALIZED_DECLS, EagerlyDeserializedDecls);
+
+  if (Context.getLangOpts().ModularCodegen)
+    Stream.EmitRecord(MODULAR_CODEGEN_DECLS, ModularCodegenDecls);
 
   // Write the record containing tentative definitions.
   if (!TentativeDefinitions.empty())

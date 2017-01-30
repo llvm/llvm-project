@@ -1,4 +1,4 @@
-//===----- CGCUDABuiltin.cpp - Codegen for CUDA builtins ------------------===//
+//===------ CGGPUBuiltin.cpp - Codegen for GPU builtins -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generates code for built-in CUDA calls which are not runtime-specific.
-// (Runtime-specific codegen lives in CGCUDARuntime.)
+// Generates code for built-in GPU calls which are not runtime-specific.
+// (Runtime-specific codegen lives in programming model specific files.)
 //
 //===----------------------------------------------------------------------===//
 
@@ -67,10 +67,9 @@ static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
 // Note that by the time this function runs, E's args have already undergone the
 // standard C vararg promotion (short -> int, float -> double, etc.).
 RValue
-CodeGenFunction::EmitCUDADevicePrintfCallExpr(const CallExpr *E,
-                                              ReturnValueSlot ReturnValue) {
-  assert(getLangOpts().CUDA);
-  assert(getLangOpts().CUDAIsDevice);
+CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
+                                               ReturnValueSlot ReturnValue) {
+  assert(getTarget().getTriple().isNVPTX());
   assert(E->getBuiltinCallee() == Builtin::BIprintf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 

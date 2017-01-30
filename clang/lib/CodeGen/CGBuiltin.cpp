@@ -2620,8 +2620,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
         Arg));
   }
   case Builtin::BIprintf:
-    if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
-      return EmitCUDADevicePrintfCallExpr(E, ReturnValue);
+    if (getTarget().getTriple().isNVPTX())
+      return EmitNVPTXDevicePrintfCallExpr(E, ReturnValue);
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:
