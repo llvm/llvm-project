@@ -737,7 +737,11 @@ bool IRTranslator::translateInvoke(const User &U,
   for (auto &Arg: I.arg_operands())
     Args.emplace_back(getOrCreateVReg(*Arg), Arg->getType());
 
-  if (!CLI->lowerCall(MIRBuilder, MachineOperand::CreateGA(Fn, 0),
+  auto CalleeMO =
+      Fn ? MachineOperand::CreateGA(Fn, 0)
+         : MachineOperand::CreateReg(getOrCreateVReg(*Callee), false);
+
+  if (!CLI->lowerCall(MIRBuilder, CalleeMO,
                       CallLowering::ArgInfo(Res, I.getType()), Args))
     return false;
 

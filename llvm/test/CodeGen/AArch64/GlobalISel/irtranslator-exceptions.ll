@@ -6,7 +6,7 @@ declare i32 @foo(i32)
 declare i32 @__gxx_personality_v0(...)
 declare i32 @llvm.eh.typeid.for(i8*)
 
-; CHECK: name: bar
+; CHECK-LABEL: name: bar
 ; CHECK: body:
 ; CHECK-NEXT:   bb.1 (%ir-block.0):
 ; CHECK:     successors: %[[GOOD:bb.[0-9]+.continue]]{{.*}}%[[BAD:bb.[0-9]+.broken]]
@@ -42,4 +42,18 @@ continue:
   %sel.int = tail call i32 @llvm.eh.typeid.for(i8* bitcast(i8** @_ZTIi to i8*))
   %res.good = insertvalue { i8*, i32 } undef, i32 %sel.int, 1
   ret { i8*, i32 } %res.good
+}
+
+; CHECK-LABEL: name: test_invoke_indirect
+; CHECK: [[CALLEE:%[0-9]+]](p0) = COPY %x0
+; CHECK: BLR [[CALLEE]]
+define void @test_invoke_indirect(void()* %callee) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  invoke void %callee() to label %continue unwind label %broken
+
+broken:
+  landingpad { i8*, i32 } catch i8* bitcast(i8** @_ZTIi to i8*)
+  ret void
+
+continue:
+  ret void
 }
