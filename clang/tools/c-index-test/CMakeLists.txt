@@ -27,6 +27,7 @@ else()
     clangCodeGen
     clangFrontend
     clangIndex
+    clangSerialization
   )
 endif()
 
