@@ -61,7 +61,8 @@ public:
     return TLOF.get();
   }
 
-  void addEarlyAsPossiblePasses(PassManagerBase &PM) override;
+  void adjustPassManager(PassManagerBuilder &) override;
+
   TargetIRAnalysis getTargetIRAnalysis() override;
 
 }; // NVPTXTargetMachine.

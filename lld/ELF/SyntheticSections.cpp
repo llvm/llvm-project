@@ -1122,6 +1122,8 @@ template <class ELFT>
 size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
   auto I = llvm::find_if(
       Symbols, [&](const SymbolTableEntry &E) { return E.Symbol == Body; });
+  if (I == Symbols.end())
+    return 0;
   return I - Symbols.begin() + 1;
 }
 

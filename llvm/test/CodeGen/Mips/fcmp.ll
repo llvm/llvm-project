@@ -1076,12 +1076,12 @@ entry:
 ; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.s    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI32_0)(
+; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %lo(.LCPI32_0)(
 ; 64-C-DAG:      c.ole.s  $[[T0]], $[[T1]]
 ; 64-C-DAG:      bc1t
 
 ; 64-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI32_0)(
+; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %lo(.LCPI32_0)(
 ; 64-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
@@ -1102,16 +1102,17 @@ entry:
 ; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
 ; MM32R6-DAG:    bnez     $[[T5]],
 
-; MM64R6-DAG:    lui      $[[T0:[0-9]+]], %hi(%neg(%gp_rel(bug1_f32)))
-; MM64R6-DAG:    daddu    $[[T1:[0-9]+]], $[[T0]], $25
-; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %lo(%neg(%gp_rel(bug1_f32)))
-; MM64R6-DAG:    add.s    $[[T3:f[0-9]+]], $f13, $f12
-; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page(.LCPI32_0)($[[T2]])
-; MM64R6-DAG:    lwc1     $[[T5:f[0-9]+]], %got_ofst(.LCPI32_0)($[[T4]])
-; MM64R6-DAG:    cmp.le.s $[[T6:f[0-9]+]], $[[T3]], $[[T5]]
-; MM64R6-DAG:    mfc1     $[[T7:[0-9]+]], $[[T6]]
-; MM64R6-DAG:    andi16   $[[T8:[0-9]+]], $[[T7]], 1
-; MM64R6-DAG:    bnez     $[[T8]],
+; MM64R6-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
+; MM64R6-DAG:    lui      $[[T1:[0-9]+]], %highest(.LCPI32_0)
+; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %higher(.LCPI32_0)
+; MM64R6-DAG:    dsll     $[[T3:[0-9]+]], $[[T2]], 16
+; MM64R6-DAG:    daddiu   $[[T4:[0-9]+]], $[[T3]], %hi(.LCPI32_0)
+; MM64R6-DAG:    dsll     $[[T5:[0-9]+]], $[[T4]], 16
+; MM64R6-DAG:    lwc1     $[[T6:f[0-9]+]], %lo(.LCPI32_0)($[[T5]])
+; MM64R6-DAG:    cmp.le.s $[[T7:f[0-9]+]], $[[T0]], $[[T6]]
+; MM64R6-DAG:    mfc1     $[[T8:[0-9]+]], $[[T7]]
+; MM64R6-DAG:    andi16   $[[T9:[0-9]+]], $[[T8]], 1
+; MM64R6-DAG:    bnez     $[[T9]],
 
   %add = fadd fast float %at, %angle
   %cmp = fcmp ogt float %add, 1.000000e+00
@@ -1145,12 +1146,12 @@ entry:
 ; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI33_0)(
+; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
 ; 64-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
 ; 64-C-DAG:      bc1t
 
 ; 64-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI33_0)(
+; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
 ; 64-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
@@ -1171,16 +1172,17 @@ entry:
 ; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
 ; MM32R6-DAG:    bnez     $[[T5]],
 
-; MM64R6-DAG:    lui      $[[T0:[0-9]+]], %hi(%neg(%gp_rel(bug1_f64)))
-; MM64R6-DAG:    daddu    $[[T1:[0-9]+]], $[[T0]], $25
-; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %lo(%neg(%gp_rel(bug1_f64)))
-; MM64R6-DAG:    add.d    $[[T3:f[0-9]+]], $f13, $f12
-; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page(.LCPI33_0)($[[T2]])
-; MM64R6-DAG:    ldc1     $[[T5:f[0-9]+]], %got_ofst(.LCPI33_0)($[[T4]])
-; MM64R6-DAG:    cmp.le.d $[[T6:f[0-9]+]], $[[T3]], $[[T5]]
-; MM64R6-DAG:    mfc1     $[[T7:[0-9]+]], $[[T6]]
-; MM64R6-DAG:    andi16   $[[T8:[0-9]+]], $[[T7]], 1
-; MM64R6-DAG:    bnez     $[[T8]],
+; MM64R6-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
+; MM64R6-DAG:    lui      $[[T1:[0-9]+]], %highest(.LCPI33_0)
+; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %higher(.LCPI33_0)
+; MM64R6-DAG:    dsll     $[[T3:[0-9]+]], $[[T2]], 16
+; MM64R6-DAG:    daddiu   $[[T4:[0-9]+]], $[[T3]], %hi(.LCPI33_0)
+; MM64R6-DAG:    dsll     $[[T5:[0-9]+]], $[[T4]], 16
+; MM64R6-DAG:    ldc1     $[[T6:f[0-9]+]], %lo(.LCPI33_0)($[[T5]])
+; MM64R6-DAG:    cmp.le.d $[[T7:f[0-9]+]], $[[T0]], $[[T6]]
+; MM64R6-DAG:    mfc1     $[[T8:[0-9]+]], $[[T7]]
+; MM64R6-DAG:    andi16   $[[T9:[0-9]+]], $[[T8]], 1
+; MM64R6-DAG:    bnez     $[[T9]],
 
   %add = fadd fast double %at, %angle
   %cmp = fcmp ogt double %add, 1.000000e+00

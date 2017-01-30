@@ -37,3 +37,26 @@ L0:
 L1:
   ret void
 }
+
+; This loop has different uniform instructions before and after LCSSA.
+define void @test3() {
+entry:
+  %add41 = add i32 undef, undef
+  %idxprom4736 = zext i32 %add41 to i64
+  br label %while.body
+
+while.body:
+  %idxprom4738 = phi i64 [ %idxprom47, %while.body ], [ %idxprom4736, %entry ]
+  %pos.337 = phi i32 [ %inc46, %while.body ], [ %add41, %entry ]
+  %inc46 = add i32 %pos.337, 1
+  %arrayidx48 = getelementptr inbounds [1024 x i8], [1024 x i8]* undef, i64 0, i64 %idxprom4738
+  store i8 0, i8* %arrayidx48, align 1
+  %and43 = and i32 %inc46, 3
+  %cmp44 = icmp eq i32 %and43, 0
+  %idxprom47 = zext i32 %inc46 to i64
+  br i1 %cmp44, label %while.end, label %while.body
+
+while.end:
+  %add58 = add i32 %inc46, 4
+  ret void
+}

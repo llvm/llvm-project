@@ -66,7 +66,7 @@ public:
       : S(S), Builder(Builder), Annotator(Annotator),
         ExprBuilder(S, Builder, IDToValue, ValueMap, DL, SE, DT, LI,
                     StartBlock),
-        BlockGen(Builder, LI, SE, DT, ScalarMap, PHIOpMap, EscapeMap, ValueMap,
+        BlockGen(Builder, LI, SE, DT, ScalarMap, EscapeMap, ValueMap,
                  &ExprBuilder, StartBlock),
         RegionGen(BlockGen), P(P), DL(DL), LI(LI), SE(SE), DT(DT),
         StartBlock(StartBlock) {}
@@ -125,10 +125,7 @@ protected:
   ///@{
 
   /// See BlockGenerator::ScalarMap.
-  BlockGenerator::ScalarAllocaMapTy ScalarMap;
-
-  /// See BlockGenerator::PhiOpMap.
-  BlockGenerator::ScalarAllocaMapTy PHIOpMap;
+  BlockGenerator::AllocaMapTy ScalarMap;
 
   /// See BlockGenerator::EscapeMap.
   BlockGenerator::EscapeUsersAllocaMapTy EscapeMap;

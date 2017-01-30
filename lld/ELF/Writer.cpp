@@ -68,7 +68,7 @@ private:
   void setPhdrs();
   void fixHeaders();
   void fixSectionAlignments();
-  void fixAbsoluteSymbols();
+  void fixPredefinedSymbols();
   void openFile();
   void writeHeader();
   void writeSections();
@@ -208,7 +208,7 @@ template <class ELFT> void Writer<ELFT>::run() {
       assignFileOffsetsBinary();
 
     setPhdrs();
-    fixAbsoluteSymbols();
+    fixPredefinedSymbols();
   }
 
   // It does not make sense try to open the file if we have error already.
@@ -648,12 +648,14 @@ void PhdrEntry::add(OutputSectionBase *Sec) {
 }
 
 template <class ELFT>
-static void addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
-                                 typename ELFT::uint Val,
-                                 uint8_t StOther = STV_HIDDEN) {
+static DefinedSynthetic *
+addOptionalSynthetic(StringRef Name, OutputSectionBase *Sec,
+                     typename ELFT::uint Val, uint8_t StOther = STV_HIDDEN) {
   if (SymbolBody *S = Symtab<ELFT>::X->find(Name))
     if (!S->isInCurrentDSO())
-      Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther);
+      return cast<DefinedSynthetic>(
+          Symtab<ELFT>::X->addSynthetic(Name, Sec, Val, StOther)->body());
+  return nullptr;
 }
 
 template <class ELFT>
@@ -750,14 +752,16 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (ScriptConfig->HasSections)
     return;
 
-  ElfSym<ELFT>::EhdrStart = Symtab<ELFT>::X->addIgnored("__ehdr_start");
+  // __ehdr_start is the location of program headers.
+  ElfSym<ELFT>::EhdrStart =
+      addOptionalSynthetic<ELFT>("__ehdr_start", Out<ELFT>::ProgramHeaders, 0);
 
-  auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
-                       DefinedRegular<ELFT> *&Sym2) {
-    Sym1 = Symtab<ELFT>::X->addIgnored(S, STV_DEFAULT);
+  auto Define = [](StringRef S, DefinedSynthetic *&Sym1,
+                   DefinedSynthetic *&Sym2) {
+    Sym1 = addOptionalSynthetic<ELFT>(S, nullptr, 0, STV_DEFAULT);
     assert(S.startswith("_"));
     S = S.substr(1);
-    Sym2 = Symtab<ELFT>::X->addIgnored(S, STV_DEFAULT);
+    Sym2 = addOptionalSynthetic<ELFT>(S, nullptr, 0, STV_DEFAULT);
   };
 
   Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
@@ -1055,6 +1059,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   removeUnusedSyntheticSections<ELFT>(OutputSections);
 
   sortSections();
+
+  // This is a bit of a hack. A value of 0 means undef, so we set it
+  // to 1 t make __ehdr_start defined. The section number is not
+  // particularly relevant.
+  Out<ELFT>::ProgramHeaders->SectionIndex = 1;
 
   unsigned I = 1;
   for (OutputSectionBase *Sec : OutputSections) {
@@ -1548,34 +1557,44 @@ static uint16_t getELFType() {
 }
 
 // This function is called after we have assigned address and size
-// to each section. This function fixes some predefined absolute
+// to each section. This function fixes some predefined
 // symbol values that depend on section address and size.
-template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
-  // __ehdr_start is the location of program headers.
-  if (ElfSym<ELFT>::EhdrStart)
-    ElfSym<ELFT>::EhdrStart->Value = Out<ELFT>::ProgramHeaders->Addr;
-
-  auto Set = [](DefinedRegular<ELFT> *S1, DefinedRegular<ELFT> *S2, uintX_t V) {
-    if (S1)
-      S1->Value = V;
-    if (S2)
-      S2->Value = V;
+template <class ELFT> void Writer<ELFT>::fixPredefinedSymbols() {
+  auto Set = [](DefinedSynthetic *S1, DefinedSynthetic *S2,
+                OutputSectionBase *Sec, uint64_t Value) {
+    if (S1) {
+      S1->Section = Sec;
+      S1->Value = Value;
+    }
+    if (S2) {
+      S2->Section = Sec;
+      S2->Value = Value;
+    }
   };
 
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
   // _end is the first location after the uninitialized data region.
+  PhdrEntry *Last = nullptr;
+  PhdrEntry *LastRO = nullptr;
+  PhdrEntry *LastRW = nullptr;
   for (PhdrEntry &P : Phdrs) {
     if (P.p_type != PT_LOAD)
       continue;
-    Set(ElfSym<ELFT>::End, ElfSym<ELFT>::End2, P.p_vaddr + P.p_memsz);
-
-    uintX_t Val = P.p_vaddr + P.p_filesz;
+    Last = &P;
     if (P.p_flags & PF_W)
-      Set(ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2, Val);
+      LastRW = &P;
     else
-      Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, Val);
+      LastRO = &P;
   }
+  if (Last)
+    Set(ElfSym<ELFT>::End, ElfSym<ELFT>::End2, Last->First, Last->p_memsz);
+  if (LastRO)
+    Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, LastRO->First,
+        LastRO->p_filesz);
+  if (LastRW)
+    Set(ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2, LastRW->First,
+        LastRW->p_filesz);
 
   // Setup MIPS _gp_disp/__gnu_local_gp symbols which should
   // be equal to the _gp symbol's value.

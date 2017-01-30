@@ -1035,7 +1035,10 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
 ; CHECK-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds float, float* [[X]], i64 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[ARRAYIDX3_5]], align 4
 ; CHECK-NEXT:    [[ADD4_5:%.*]] = fadd fast float [[TMP6]], [[ADD4_4]]
-; CHECK-NEXT:    ret float [[ADD4_5]]
+; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds float, float* [[X]], i64 7
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX3_6]], align 4
+; CHECK-NEXT:    [[ADD4_6:%.*]] = fadd fast float [[TMP7]], [[ADD4_5]]
+; CHECK-NEXT:    ret float [[ADD4_6]]
 ;
   entry:
   %mul = mul nsw i32 %b, %a
@@ -1064,6 +1067,9 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
   %arrayidx3.5 = getelementptr inbounds float, float* %x, i64 6
   %6 = load float, float* %arrayidx3.5, align 4
   %add4.5 = fadd fast float %6, %add4.4
-  ret float %add4.5
+  %arrayidx3.6 = getelementptr inbounds float, float* %x, i64 7
+  %7 = load float, float* %arrayidx3.6, align 4
+  %add4.6 = fadd fast float %7, %add4.5
+  ret float %add4.6
 }
 

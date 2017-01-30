@@ -63,6 +63,10 @@ class DocBrief<code descr> { code DocBrief = descr; }
 // documentation.
 class DocFlatten { bit DocFlatten = 1; }
 
+// Indicates that this warning is ignored, but accepted with a warning for
+// GCC compatibility.
+class IgnoredGCCCompat : Flags<[HelpHidden]> {}
+
 /////////
 // Groups
 
@@ -76,7 +80,12 @@ def CompileOnly_Group : OptionGroup<"<CompileOnly group>">,
 Flags controlling the behavior of Clang during compilation. These flags have
 no effect during actions that do not perform compilation.}]>;
 
-def IncludePath_Group : OptionGroup<"<I/i group>">, Group<CompileOnly_Group>,
+def Preprocessor_Group : OptionGroup<"<Preprocessor group>">,
+                         Group<CompileOnly_Group>,
+                         DocName<"Preprocessor flags">, DocBrief<[{
+Flags controlling the behavior of the Clang preprocessor.}]>;
+
+def IncludePath_Group : OptionGroup<"<I/i group>">, Group<Preprocessor_Group>,
                         DocName<"Include path management">,
                         DocBrief<[{
 Flags controlling how ``#include``\s are resolved to files.}]>;
@@ -85,12 +94,12 @@ def I_Group : OptionGroup<"<I group>">, Group<IncludePath_Group>, DocFlatten;
 def i_Group : OptionGroup<"<i group>">, Group<IncludePath_Group>, DocFlatten;
 def clang_i_Group : OptionGroup<"<clang i group>">, Group<i_Group>, DocFlatten;
 
-def M_Group : OptionGroup<"<M group>">, Group<CompileOnly_Group>,
+def M_Group : OptionGroup<"<M group>">, Group<Preprocessor_Group>,
               DocName<"Dependency file generation">, DocBrief<[{
 Flags controlling generation of a dependency file for ``make``-like build
 systems.}]>;
 
-def d_Group : OptionGroup<"<d group>">, Group<CompileOnly_Group>,
+def d_Group : OptionGroup<"<d group>">, Group<Preprocessor_Group>,
               DocName<"Dumping preprocessor state">, DocBrief<[{
 Flags allowing the state of the preprocessor to be dumped in various ways.}]>;
 
@@ -158,6 +167,17 @@ def gTune_Group : OptionGroup<"<gTune group>">, Group<g_Group>,
                   DocName<"Debugger to tune debug information for">;
 def g_flags_Group : OptionGroup<"<g flags group>">, Group<DebugInfo_Group>,
                     DocName<"Debug information flags">;
+
+def StaticAnalyzer_Group : OptionGroup<"<Static analyzer group>">,
+                           DocName<"Static analyzer flags">, DocBrief<[{
+Flags controlling the behavior of the Clang Static Analyzer.}]>;
+
+// gfortran options that we recognize in the driver and pass along when
+// invoking GCC to compile Fortran code.
+def gfortran_Group : OptionGroup<"<gfortran group>">,
+                     DocName<"Fortran compilation flags">, DocBrief<[{
+Flags that will be passed onto the ``gfortran`` compiler when Clang is given
+a Fortran input.}]>;
 
 def Link_Group : OptionGroup<"<T/e/s/t/u group>">, DocName<"Linker flags">,
                  DocBrief<[{Flags that are passed on to the linker}]>;
@@ -297,23 +317,34 @@ def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[DriverOption, CoreOption]>,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
     Flags<[DriverOption, CoreOption]>;
-def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>;
-def B : JoinedOrSeparate<["-"], "B">;
-def CC : Flag<["-"], "CC">, Flags<[CC1Option]>;
-def C : Flag<["-"], "C">, Flags<[CC1Option]>;
-def D : JoinedOrSeparate<["-"], "D">, Group<CompileOnly_Group>, Flags<[CC1Option]>;
+def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>, Group<gfortran_Group>;
+def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<dir>">,
+    HelpText<"Add <dir> to search path for binaries and object files used implicitly">;
+def CC : Flag<["-"], "CC">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
+    HelpText<"Include comments from within macros in preprocessed output">;
+def C : Flag<["-"], "C">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
+    HelpText<"Include comments in preprocessed output">;
+def D : JoinedOrSeparate<["-"], "D">, Group<Preprocessor_Group>,
+    Flags<[CC1Option]>, MetaVarName<"<macro>=<value>">,
+    HelpText<"Define <macro> to <value> (or 1 if <value> omitted)">;
 def E : Flag<["-"], "E">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,
-  HelpText<"Only run the preprocessor">;
+    HelpText<"Only run the preprocessor">;
 def F : JoinedOrSeparate<["-"], "F">, Flags<[RenderJoined,CC1Option]>,
     HelpText<"Add directory to framework include search path">;
-def G : JoinedOrSeparate<["-"], "G">, Flags<[DriverOption]>;
-def G_EQ : Joined<["-"], "G=">, Flags<[DriverOption]>;
-def H : Flag<["-"], "H">, Flags<[CC1Option]>,
+def G : JoinedOrSeparate<["-"], "G">, Flags<[DriverOption]>, Group<m_Group>,
+    MetaVarName<"<size>">, HelpText<"Put objects of at most <size> bytes "
+    "into small data section (MIPS / Hexagon)">;
+def G_EQ : Joined<["-"], "G=">, Flags<[DriverOption]>, Group<m_Group>, Alias<G>;
+def H : Flag<["-"], "H">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
     HelpText<"Show header includes and nesting depth">;
-def I_ : Flag<["-"], "I-">, Group<I_Group>;
-def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>, Flags<[CC1Option,CC1AsOption]>,
+def I_ : Flag<["-"], "I-">, Group<I_Group>,
+    HelpText<"Restrict all prior -I flags to double-quoted inclusion and "
+             "remove current directory from include path">;
+def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
+    Flags<[CC1Option,CC1AsOption]>, MetaVarName<"<dir>">,
     HelpText<"Add directory to include search path">;
-def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>;
+def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
+    MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
@@ -337,9 +368,9 @@ def MT : JoinedOrSeparate<["-"], "MT">, Group<M_Group>, Flags<[CC1Option]>,
     HelpText<"Specify name of main file output in depfile">;
 def MV : Flag<["-"], "MV">, Group<M_Group>, Flags<[CC1Option]>,
     HelpText<"Use NMake/Jom format for the depfile">;
-def Mach : Flag<["-"], "Mach">;
-def O0 : Flag<["-"], "O0">, Group<O_Group>, Flags<[CC1Option]>;
-def O4 : Flag<["-"], "O4">, Group<O_Group>, Flags<[CC1Option]>;
+def Mach : Flag<["-"], "Mach">, Group<Link_Group>;
+def O0 : Flag<["-"], "O0">, Group<O_Group>, Flags<[CC1Option, HelpHidden]>;
+def O4 : Flag<["-"], "O4">, Group<O_Group>, Flags<[CC1Option, HelpHidden]>;
 def ObjCXX : Flag<["-"], "ObjC++">, Flags<[DriverOption]>,
   HelpText<"Treat source input files as Objective-C++ inputs">;
 def ObjC : Flag<["-"], "ObjC">, Flags<[DriverOption]>,
@@ -347,12 +378,12 @@ def ObjC : Flag<["-"], "ObjC">, Flags<[DriverOption]>,
 def O : Joined<["-"], "O">, Group<O_Group>, Flags<[CC1Option]>;
 def O_flag : Flag<["-"], "O">, Flags<[CC1Option]>, Alias<O>, AliasArgs<["2"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>, Flags<[CC1Option]>;
-def P : Flag<["-"], "P">, Flags<[CC1Option]>,
+def P : Flag<["-"], "P">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">;
-def Qn : Flag<["-"], "Qn">;
+def Qn : Flag<["-"], "Qn">, IgnoredGCCCompat;
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">, Flags<[DriverOption, CoreOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
-def Q : Flag<["-"], "Q">;
+def Q : Flag<["-"], "Q">, IgnoredGCCCompat;
 def Rpass_EQ : Joined<["-"], "Rpass=">, Group<R_value_Group>, Flags<[CC1Option]>,
   HelpText<"Report transformations performed by optimization passes whose "
            "name matches the given POSIX regular expression">;
@@ -368,20 +399,25 @@ def R_Joined : Joined<["-"], "R">, Group<R_Group>, Flags<[CC1Option, CoreOption]
   MetaVarName<"<remark>">, HelpText<"Enable the specified remark">;
 def S : Flag<["-"], "S">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,
   HelpText<"Only run preprocess and compilation steps">;
-def Tbss : JoinedOrSeparate<["-"], "Tbss">, Group<T_Group>;
-def Tdata : JoinedOrSeparate<["-"], "Tdata">, Group<T_Group>;
-def Ttext : JoinedOrSeparate<["-"], "Ttext">, Group<T_Group>;
-def T : JoinedOrSeparate<["-"], "T">, Group<T_Group>;
-def U : JoinedOrSeparate<["-"], "U">, Group<CompileOnly_Group>, Flags<[CC1Option]>;
+def Tbss : JoinedOrSeparate<["-"], "Tbss">, Group<T_Group>,
+  MetaVarName<"<addr">, HelpText<"Set starting address of BSS to <addr>">;
+def Tdata : JoinedOrSeparate<["-"], "Tdata">, Group<T_Group>,
+  MetaVarName<"<addr">, HelpText<"Set starting address of BSS to <addr>">;
+def Ttext : JoinedOrSeparate<["-"], "Ttext">, Group<T_Group>,
+  MetaVarName<"<addr">, HelpText<"Set starting address of BSS to <addr>">;
+def T : JoinedOrSeparate<["-"], "T">, Group<T_Group>,
+  MetaVarName<"<script>">, HelpText<"Specify <script> as linker script">;
+def U : JoinedOrSeparate<["-"], "U">, Group<Preprocessor_Group>,
+  Flags<[CC1Option]>, MetaVarName<"<macro>">, HelpText<"Undefine macro <macro>">;
 def V : JoinedOrSeparate<["-"], "V">, Flags<[DriverOption, Unsupported]>;
 def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   HelpText<"Pass the comma separated arguments in <arg> to the assembler">,
   MetaVarName<"<arg>">;
-def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[CC1Option]>;
-def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[CC1Option]>;
-def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>, Flags<[CC1Option]>;
+def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
+def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
+def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>, Flags<[CC1Option]>;
-def Wextra : Flag<["-"], "Wextra">, Group<W_Group>, Flags<[CC1Option]>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass the comma separated arguments in <arg> to the linker">,
   MetaVarName<"<arg>">, Group<Link_Group>;
@@ -392,16 +428,18 @@ def Wnonportable_cfstrings : Joined<["-"], "Wnonportable-cfstrings">, Group<W_Gr
   Flags<[CC1Option]>;
 def Wp_COMMA : CommaJoined<["-"], "Wp,">,
   HelpText<"Pass the comma separated arguments in <arg> to the preprocessor">,
-  MetaVarName<"<arg>">;
-def Wwrite_strings : Flag<["-"], "Wwrite-strings">, Group<W_Group>, Flags<[CC1Option]>;
-def Wno_write_strings : Flag<["-"], "Wno-write-strings">, Group<W_Group>, Flags<[CC1Option]>;
+  MetaVarName<"<arg>">, Group<Preprocessor_Group>;
+def Wwrite_strings : Flag<["-"], "Wwrite-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
+def Wno_write_strings : Flag<["-"], "Wno-write-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def W_Joined : Joined<["-"], "W">, Group<W_Group>, Flags<[CC1Option, CoreOption]>,
   MetaVarName<"<warning>">, HelpText<"Enable the specified warning">;
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
-  HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
+  Group<StaticAnalyzer_Group>;
 def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[DriverOption]>;
 def Xassembler : Separate<["-"], "Xassembler">,
-  HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">,
+  Group<CompileOnly_Group>;
 def Xclang : Separate<["-"], "Xclang">,
   HelpText<"Pass <arg> to the clang compiler">, MetaVarName<"<arg>">,
   Flags<[DriverOption, CoreOption]>, Group<CompileOnly_Group>;
@@ -415,11 +453,12 @@ def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
 def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
-def Xpreprocessor : Separate<["-"], "Xpreprocessor">,
+def Xpreprocessor : Separate<["-"], "Xpreprocessor">, Group<Preprocessor_Group>,
   HelpText<"Pass <arg> to the preprocessor">, MetaVarName<"<arg>">;
-def X_Flag : Flag<["-"], "X">;
-def X_Joined : Joined<["-"], "X">;
+def X_Flag : Flag<["-"], "X">, Group<Link_Group>;
+def X_Joined : Joined<["-"], "X">, IgnoredGCCCompat;
 def Z_Flag : Flag<["-"], "Z">, Group<Link_Group>;
+// FIXME: All we do with this is reject it. Remove.
 def Z_Joined : Joined<["-"], "Z">;
 def all__load : Flag<["-"], "all_load">;
 def allowable__client : Separate<["-"], "allowable_client">;
@@ -465,7 +504,7 @@ def current__version : JoinedOrSeparate<["-"], "current_version">;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   HelpText<"Add directory to the C++ SYSTEM include search path">, Flags<[CC1Option]>,
   MetaVarName<"<directory>">;
-def c : Flag<["-"], "c">, Flags<[DriverOption]>,
+def c : Flag<["-"], "c">, Flags<[DriverOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
 def cuda_device_only : Flag<["--"], "cuda-device-only">,
   HelpText<"Compile CUDA code for device only">;
@@ -1806,7 +1845,8 @@ def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-comp
   HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;
-def msmall_data_threshold_EQ : Joined <["-"], "msmall-data-threshold=">, Group<m_Group>;
+def msmall_data_threshold_EQ : Joined <["-"], "msmall-data-threshold=">,
+  Group<m_Group>, Alias<G>;
 def msoft_float : Flag<["-"], "msoft-float">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Use software floating point">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
@@ -2393,13 +2433,6 @@ defm whole_program : BooleanFFlag<"whole-program">, Group<clang_ignored_gcc_opti
 defm devirtualize : BooleanFFlag<"devirtualize">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm devirtualize_speculatively : BooleanFFlag<"devirtualize-speculatively">,
     Group<clang_ignored_gcc_optimization_f_Group>;
-
-// gfortran options that we recognize in the driver and pass along when
-// invoking GCC to compile Fortran code.
-def gfortran_Group : OptionGroup<"<gfortran group>">,
-                     DocName<"Fortran compilation flags">, DocBrief<[{
-Flags that will be passed onto the ``gfortran`` compiler when Clang is given
-a Fortran input.}]>;
 
 // Generic gfortran options.
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;

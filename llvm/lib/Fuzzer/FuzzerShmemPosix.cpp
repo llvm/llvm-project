@@ -16,6 +16,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -86,9 +87,13 @@ void SharedMemoryRegion::Post(int Idx) {
 
 void SharedMemoryRegion::Wait(int Idx) {
   assert(Idx == 0 || Idx == 1);
-  if (sem_wait((sem_t*)Semaphore[Idx])) {
-    Printf("ERROR: sem_wait failed\n");
-    exit(1);
+  for (int i = 0; i < 10 && sem_wait((sem_t*)Semaphore[Idx]); i++) {
+    // sem_wait may fail if interrupted by a signal.
+    sleep(i);
+    if (i)
+      Printf("%s: sem_wait[%d] failed %s\n", i < 9 ? "WARNING" : "ERROR", i,
+             strerror(errno));
+    if (i == 9) abort();
   }
 }
 

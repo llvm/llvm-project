@@ -205,6 +205,8 @@ public:
   /// and headers from used modules.
   unsigned NoUndeclaredIncludes : 1;
 
+  unsigned WithCodegen : 1;
+
   /// \brief Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {

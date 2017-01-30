@@ -256,6 +256,7 @@ static bool format(StringRef FileName) {
     llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
     return true;
   }
+
   if (SortIncludes.getNumOccurrences() != 0)
     FormatStyle->SortIncludes = SortIncludes;
   unsigned CursorPosition = Cursor;

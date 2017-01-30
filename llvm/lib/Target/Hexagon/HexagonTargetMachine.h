@@ -37,6 +37,7 @@ public:
 
   static unsigned getModuleMatchQuality(const Module &M);
 
+  void adjustPassManager(PassManagerBuilder &PMB) override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetIRAnalysis getTargetIRAnalysis() override;
 

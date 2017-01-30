@@ -5,6 +5,7 @@
 // RUN:    | grep "__asan_" | sed "s/___asan_/__asan_/" \
 // RUN:    | sed -E "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:    | grep -v "__asan_default_options" \
+// RUN:    | grep -v "__asan_default_suppressions" \
 // RUN:    | grep -v "__asan_stack_" \
 // RUN:    | grep -v "__asan_on_error" > %t.symbols
 // RUN: cat %p/../../../../lib/asan/asan_interface_internal.h \

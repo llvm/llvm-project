@@ -128,7 +128,7 @@ define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %m
 ; ALL-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; ALL-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm1 {%k1}
-; ALL-NEXT:    vmovaps %zmm1, %zmm0
+; ALL-NEXT:    vmovapd %zmm1, %zmm0
 ; ALL-NEXT:    retq
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
   %b = insertelement <8 x double> undef, double %a, i32 0
@@ -406,14 +406,14 @@ declare void @func_f32(float)
 define <16 x float> @broadcast_ss_spill(float %x) {
 ; ALL-LABEL: broadcast_ss_spill:
 ; ALL:       # BB#0:
-; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    subq $24, %rsp
 ; ALL-NEXT:  .Lcfi0:
-; ALL-NEXT:    .cfi_def_cfa_offset 16
+; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
+; ALL-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; ALL-NEXT:    callq func_f32
-; ALL-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %zmm0 # 4-byte Folded Reload
-; ALL-NEXT:    popq %rax
+; ALL-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload
+; ALL-NEXT:    addq $24, %rsp
 ; ALL-NEXT:    retq
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -426,14 +426,14 @@ declare void @func_f64(double)
 define <8 x double> @broadcast_sd_spill(double %x) {
 ; ALL-LABEL: broadcast_sd_spill:
 ; ALL:       # BB#0:
-; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    subq $24, %rsp
 ; ALL-NEXT:  .Lcfi1:
-; ALL-NEXT:    .cfi_def_cfa_offset 16
+; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
+; ALL-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; ALL-NEXT:    callq func_f64
-; ALL-NEXT:    vbroadcastsd (%rsp), %zmm0 # 8-byte Folded Reload
-; ALL-NEXT:    popq %rax
+; ALL-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload
+; ALL-NEXT:    addq $24, %rsp
 ; ALL-NEXT:    retq
   %a  = fadd double %x, %x
   call void @func_f64(double %a)

@@ -84,7 +84,6 @@ static cl::alias InstrMapFormat2("t", cl::aliasopt(InstrMapFormat),
                                  cl::desc("Alias for -instr-map-format"),
                                  cl::sub(Convert));
 
-using llvm::yaml::IO;
 using llvm::yaml::Output;
 
 void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {

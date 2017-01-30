@@ -366,11 +366,13 @@ static Printable PrintNodeId(const SDNode &Node) {
   });
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SDNode::dump() const { dump(nullptr); }
-void SDNode::dump(const SelectionDAG *G) const {
+LLVM_DUMP_METHOD void SDNode::dump(const SelectionDAG *G) const {
   print(dbgs(), G);
   dbgs() << '\n';
 }
+#endif
 
 void SDNode::print_types(raw_ostream &OS, const SelectionDAG *G) const {
   for (unsigned i = 0, e = getNumValues(); i != e; ++i) {
@@ -416,7 +418,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << '<' << CSDN->getValueAPF().convertToDouble() << '>';
     else {
       OS << "<APFloat(";
-      CSDN->getValueAPF().bitcastToAPInt().dump();
+      CSDN->getValueAPF().bitcastToAPInt().print(OS, false);
       OS << ")>";
     }
   } else if (const GlobalAddressSDNode *GADN =
@@ -566,6 +568,7 @@ static bool shouldPrintInline(const SDNode &Node) {
   return Node.getNumOperands() == 0;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   for (const SDValue &Op : N->op_values()) {
     if (shouldPrintInline(*Op.getNode()))
@@ -592,6 +595,7 @@ LLVM_DUMP_METHOD void SelectionDAG::dump() const {
   if (getRoot().getNode()) DumpNodes(getRoot().getNode(), 2, this);
   dbgs() << "\n\n";
 }
+#endif
 
 void SDNode::printr(raw_ostream &OS, const SelectionDAG *G) const {
   OS << PrintNodeId(*this) << ": ";
@@ -618,6 +622,7 @@ static bool printOperand(raw_ostream &OS, const SelectionDAG *G,
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 typedef SmallPtrSet<const SDNode *, 32> VisitedSDNodeSet;
 static void DumpNodesr(raw_ostream &OS, const SDNode *N, unsigned indent,
                        const SelectionDAG *G, VisitedSDNodeSet &once) {
@@ -646,15 +651,16 @@ static void DumpNodesr(raw_ostream &OS, const SDNode *N, unsigned indent,
     DumpNodesr(OS, Op.getNode(), indent+2, G, once);
 }
 
-void SDNode::dumpr() const {
+LLVM_DUMP_METHOD void SDNode::dumpr() const {
   VisitedSDNodeSet once;
   DumpNodesr(dbgs(), this, 0, nullptr, once);
 }
 
-void SDNode::dumpr(const SelectionDAG *G) const {
+LLVM_DUMP_METHOD void SDNode::dumpr(const SelectionDAG *G) const {
   VisitedSDNodeSet once;
   DumpNodesr(dbgs(), this, 0, G, once);
 }
+#endif
 
 static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
                                   const SelectionDAG *G, unsigned depth,
@@ -688,14 +694,17 @@ void SDNode::printrFull(raw_ostream &OS, const SelectionDAG *G) const {
   printrWithDepth(OS, G, 10);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void SDNode::dumprWithDepth(const SelectionDAG *G, unsigned depth) const {
   printrWithDepth(dbgs(), G, depth);
 }
 
-void SDNode::dumprFull(const SelectionDAG *G) const {
+LLVM_DUMP_METHOD void SDNode::dumprFull(const SelectionDAG *G) const {
   // Don't print impossibly deep things.
   dumprWithDepth(G, 10);
 }
+#endif
 
 void SDNode::print(raw_ostream &OS, const SelectionDAG *G) const {
   printr(OS, G);

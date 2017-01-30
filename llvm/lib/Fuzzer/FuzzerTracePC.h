@@ -33,6 +33,7 @@ struct TableOfRecentCompares {
   struct Pair {
     T A, B;
   };
+  ATTRIBUTE_NO_SANITIZE_ALL
   void Insert(size_t Idx, T Arg1, T Arg2) {
     Idx = Idx % kSize;
     Table[Idx].A = Arg1;
@@ -46,21 +47,16 @@ struct TableOfRecentCompares {
 
 class TracePC {
  public:
-  static const size_t kFeatureSetSize = ValueBitMap::kNumberOfItems;
 
   void HandleTrace(uint32_t *guard, uintptr_t PC);
   void HandleInit(uint32_t *start, uint32_t *stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
-  void HandleValueProfile(size_t Value) { ValueProfileMap.AddValue(Value); }
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
   template <class Callback> size_t CollectFeatures(Callback CB);
-  bool UpdateValueProfileMap(ValueBitMap *MaxValueProfileMap) {
-    return UseValueProfile && MaxValueProfileMap->MergeFrom(ValueProfileMap);
-  }
 
   void ResetMaps() {
     ValueProfileMap.Reset();

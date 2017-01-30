@@ -3,10 +3,13 @@
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
-"""
-This module responsible to run the Clang static analyzer against any build
-and generate reports.
-"""
+""" This module is a collection of methods commonly used in this project. """
+import functools
+import logging
+import os
+import os.path
+import subprocess
+import sys
 
 
 def duplicate_check(method):
@@ -33,16 +36,35 @@ def duplicate_check(method):
 def tempdir():
     """ Return the default temorary directory. """
 
-    from os import getenv
-    return getenv('TMPDIR', getenv('TEMP', getenv('TMP', '/tmp')))
+    return os.getenv('TMPDIR', os.getenv('TEMP', os.getenv('TMP', '/tmp')))
+
+
+def run_command(command, cwd=None):
+    """ Run a given command and report the execution.
+
+    :param command: array of tokens
+    :param cwd: the working directory where the command will be executed
+    :return: output of the command
+    """
+    def decode_when_needed(result):
+        """ check_output returns bytes or string depend on python version """
+        return result.decode('utf-8') if isinstance(result, bytes) else result
+
+    try:
+        directory = os.path.abspath(cwd) if cwd else os.getcwd()
+        logging.debug('exec command %s in %s', command, directory)
+        output = subprocess.check_output(command,
+                                         cwd=directory,
+                                         stderr=subprocess.STDOUT)
+        return decode_when_needed(output).splitlines()
+    except subprocess.CalledProcessError as ex:
+        ex.output = decode_when_needed(ex.output).splitlines()
+        raise ex
 
 
 def initialize_logging(verbose_level):
     """ Output content controlled by the verbosity level. """
 
-    import sys
-    import os.path
-    import logging
     level = logging.WARNING - min(logging.WARNING, (10 * verbose_level))
 
     if verbose_level <= 3:
@@ -56,9 +78,6 @@ def initialize_logging(verbose_level):
 
 def command_entry_point(function):
     """ Decorator for command entry points. """
-
-    import functools
-    import logging
 
     @functools.wraps(function)
     def wrapper(*args, **kwargs):

@@ -1176,16 +1176,6 @@ bool AMDGPUDAGToDAGISel::SelectFlat(SDValue Addr,
   return true;
 }
 
-///
-/// \param EncodedOffset This is the immediate value that will be encoded
-///        directly into the instruction.  On SI/CI the \p EncodedOffset
-///        will be in units of dwords and on VI+ it will be units of bytes.
-static bool isLegalSMRDImmOffset(const AMDGPUSubtarget *ST,
-                                 int64_t EncodedOffset) {
-  return ST->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS ?
-     isUInt<8>(EncodedOffset) : isUInt<20>(EncodedOffset);
-}
-
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
                                           SDValue &Offset, bool &Imm) const {
 
@@ -1197,10 +1187,9 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   SDLoc SL(ByteOffsetNode);
   AMDGPUSubtarget::Generation Gen = Subtarget->getGeneration();
   int64_t ByteOffset = C->getSExtValue();
-  int64_t EncodedOffset = Gen < AMDGPUSubtarget::VOLCANIC_ISLANDS ?
-      ByteOffset >> 2 : ByteOffset;
+  int64_t EncodedOffset = AMDGPU::getSMRDEncodedOffset(*Subtarget, ByteOffset);
 
-  if (isLegalSMRDImmOffset(Subtarget, EncodedOffset)) {
+  if (AMDGPU::isLegalSMRDImmOffset(*Subtarget, ByteOffset)) {
     Offset = CurDAG->getTargetConstant(EncodedOffset, SL, MVT::i32);
     Imm = true;
     return true;

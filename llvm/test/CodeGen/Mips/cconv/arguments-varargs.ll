@@ -85,7 +85,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(hwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
 ; ALL-DAG:       sh [[ARG1]], 2([[GV]])
 
@@ -203,7 +203,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(words)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
 ; ALL-DAG:       sw [[ARG1]], 4([[GV]])
 
@@ -324,7 +324,7 @@ entry:
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(dwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; NEW-DAG:       ld [[ARG1:\$[0-9]+]], 0([[VA]])
 ; NEW-DAG:       sd [[ARG1]], 8([[GV]])
 
@@ -448,7 +448,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(hwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
 ; ALL-DAG:       sh [[ARG1]], 2([[GV]])
 
@@ -566,7 +566,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(words)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
 ; ALL-DAG:       sw [[ARG1]], 4([[GV]])
 
@@ -687,7 +687,7 @@ entry:
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(dwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; NEW-DAG:       ld [[ARG1:\$[0-9]+]], 0([[VA]])
 ; NEW-DAG:       sd [[ARG1]], 8([[GV]])
 
@@ -810,7 +810,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(hwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(hwords)
 
 ; ALL-DAG:       sh [[ARG1]], 2([[GV]])
 
@@ -927,7 +927,7 @@ entry:
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(words)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(words)
 
 ; ALL-DAG:       sw [[ARG1]], 4([[GV]])
 
@@ -1047,7 +1047,7 @@ entry:
 ; O32-DAG:       sw [[ARG1]], 12([[GV]])
 
 ; N32-DAG:       addiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; N64-DAG:       ld [[GV:\$[0-9]+]], %got_disp(dwords)(
+; N64-DAG:       daddiu [[GV:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 ; NEW-DAG:       ld [[ARG1:\$[0-9]+]], 0([[VA]])
 ; NEW-DAG:       sd [[ARG1]], 8([[GV]])
 

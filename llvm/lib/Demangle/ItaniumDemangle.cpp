@@ -1402,7 +1402,8 @@ static const char *parse_function_type(const char *first, const char *last,
         int ref_qual = 0;
         while (true) {
           if (t == last) {
-            db.names.pop_back();
+            if (!db.names.empty())
+              db.names.pop_back();
             return first;
           }
           if (*t == 'E') {

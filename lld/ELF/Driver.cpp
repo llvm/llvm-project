@@ -94,10 +94,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
-          .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
-          .Case("elf32ltsmip", {ELF32LEKind, EM_MIPS})
-          .Case("elf32btsmipn32", {ELF32BEKind, EM_MIPS})
-          .Case("elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
+          .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
+          .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
@@ -349,30 +347,53 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   }
 }
 
-static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
+static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
+                   bool Default) {
+  if (auto *Arg = Args.getLastArg(K1, K2))
+    return Arg->getOption().getID() == K1;
+  return Default;
+}
+
+// Determines what we should do if there are remaining unresolved
+// symbols after the name resolution.
+static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
+  // -noinhibit-exec or -r imply some default values.
   if (Args.hasArg(OPT_noinhibit_exec))
-    return UnresolvedPolicy::Warn;
-  if (Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs"))
-    return UnresolvedPolicy::NoUndef;
+    return UnresolvedPolicy::WarnAll;
   if (Config->Relocatable)
+    return UnresolvedPolicy::IgnoreAll;
+
+  UnresolvedPolicy ErrorOrWarn =
+      getArg(Args, OPT_error_undef, OPT_warn_undef, true)
+          ? UnresolvedPolicy::ReportError
+          : UnresolvedPolicy::Warn;
+
+  // Process the last of -unresolved-symbols, -no-undefined or -z defs.
+  for (auto *Arg : llvm::reverse(Args)) {
+    switch (Arg->getOption().getID()) {
+    case OPT_unresolved_symbols: {
+      StringRef S = Arg->getValue();
+      if (S == "ignore-all" || S == "ignore-in-object-files")
+        return UnresolvedPolicy::Ignore;
+      if (S == "ignore-in-shared-libs" || S == "report-all")
+        return ErrorOrWarn;
+      error("unknown --unresolved-symbols value: " + S);
+      continue;
+    }
+    case OPT_no_undefined:
+      return ErrorOrWarn;
+    case OPT_z:
+      if (StringRef(Arg->getValue()) == "defs")
+        return ErrorOrWarn;
+      continue;
+    }
+  }
+
+  // -shared implies -unresolved-symbols=ignore-all because missing
+  // symbols are likely to be resolved at runtime using other DSOs.
+  if (Config->Shared)
     return UnresolvedPolicy::Ignore;
-
-  if (auto *Arg = Args.getLastArg(OPT_warn_undef, OPT_error_undef)) {
-    if (Arg->getOption().getID() == OPT_warn_undef)
-      return UnresolvedPolicy::Warn;
-
-    return UnresolvedPolicy::ReportError;
-  }
-
-  if (auto *Arg = Args.getLastArg(OPT_unresolved_symbols)) {
-    StringRef S = Arg->getValue();
-    if (S == "ignore-all" || S == "ignore-in-object-files")
-      return UnresolvedPolicy::Ignore;
-    if (S == "ignore-in-shared-libs" || S == "report-all")
-      return UnresolvedPolicy::ReportError;
-    error("unknown --unresolved-symbols value: " + S);
-  }
-  return UnresolvedPolicy::ReportError;
+  return ErrorOrWarn;
 }
 
 static Target2Policy getTarget2Option(opt::InputArgList &Args) {
@@ -397,13 +418,6 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
     error("unknown --oformat value: " + S);
   }
   return false;
-}
-
-static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
-                   bool Default) {
-  if (auto *Arg = Args.getLastArg(K1, K2))
-    return Arg->getOption().getID() == K1;
-  return Default;
 }
 
 static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
@@ -568,7 +582,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->SortSection = getSortKind(Args);
   Config->Target2 = getTarget2Option(Args);
-  Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
+  Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
 
   if (Args.hasArg(OPT_print_map))
     Config->MapFile = "-";

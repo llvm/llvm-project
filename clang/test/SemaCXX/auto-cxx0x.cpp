@@ -6,3 +6,5 @@ void f() {
 }
 
 typedef auto PR25449(); // expected-error {{'auto' not allowed in typedef}}
+
+thread_local auto x; // expected-error {{requires an initializer}}

@@ -61,7 +61,8 @@ namespace {
       return GV != nullptr || CP != nullptr || ES != nullptr || JT != -1;
     }
 
-    void dump() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump() {
       errs() << "MSP430ISelAddressMode " << this << '\n';
       if (BaseType == RegBase && Base.Reg.getNode() != nullptr) {
         errs() << "Base.Reg ";
@@ -83,6 +84,7 @@ namespace {
       } else if (JT != -1)
         errs() << " JT" << JT << " Align" << Align << '\n';
     }
+#endif
   };
 }
 

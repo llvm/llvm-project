@@ -2778,12 +2778,20 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     distributeTypeAttrsFromDeclarator(state, T);
 
   // C++11 [dcl.spec.auto]p5: reject 'auto' if it is not in an allowed context.
-  if (D.getDeclSpec().containsPlaceholderType()) {
+  if (DeducedType *Deduced = T->getContainedDeducedType()) {
+    AutoType *Auto = dyn_cast<AutoType>(Deduced);
     int Error = -1;
+
+    // Is this a 'auto' or 'decltype(auto)' type (as opposed to __auto_type or
+    // class template argument deduction)?
+    bool IsCXXAutoType =
+        (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
 
     switch (D.getContext()) {
     case Declarator::LambdaExprContext:
-      llvm_unreachable("Can't specify a type specifier in lambda grammar");
+      // Declared return type of a lambda-declarator is implicit and is always
+      // 'auto'.
+      break;
     case Declarator::ObjCParameterContext:
     case Declarator::ObjCResultContext:
     case Declarator::PrototypeContext:
@@ -2791,8 +2799,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       break;
     case Declarator::LambdaExprParameterContext:
       // In C++14, generic lambdas allow 'auto' in their parameters.
-      if (!(SemaRef.getLangOpts().CPlusPlus14 
-              && D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto))
+      if (!SemaRef.getLangOpts().CPlusPlus14 ||
+          !Auto || Auto->getKeyword() != AutoTypeKeyword::Auto)
         Error = 16;
       break;
     case Declarator::MemberContext: {
@@ -2807,6 +2815,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       case TTK_Class:  Error = 5; /* Class member */ break;
       case TTK_Interface: Error = 6; /* Interface member */ break;
       }
+      if (D.getDeclSpec().isFriendSpecified())
+        Error = 20; // Friend type
       break;
     }
     case Declarator::CXXCatchContext:
@@ -2814,8 +2824,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       Error = 7; // Exception declaration
       break;
     case Declarator::TemplateParamContext:
-      if (!SemaRef.getLangOpts().CPlusPlus1z)
-        Error = 8; // Template parameter
+      if (isa<DeducedTemplateSpecializationType>(Deduced))
+        Error = 19; // Template parameter
+      else if (!SemaRef.getLangOpts().CPlusPlus1z)
+        Error = 8; // Template parameter (until C++1z)
       break;
     case Declarator::BlockLiteralContext:
       Error = 9; // Block literal
@@ -2828,15 +2840,17 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       Error = 12; // Type alias
       break;
     case Declarator::TrailingReturnContext:
-      if (!SemaRef.getLangOpts().CPlusPlus14 ||
-          D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto_type)
+      if (!SemaRef.getLangOpts().CPlusPlus14 || !IsCXXAutoType)
         Error = 13; // Function return type
       break;
     case Declarator::ConversionIdContext:
-      if (!SemaRef.getLangOpts().CPlusPlus14 ||
-          D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto_type)
+      if (!SemaRef.getLangOpts().CPlusPlus14 || !IsCXXAutoType)
         Error = 14; // conversion-type-id
       break;
+    case Declarator::FunctionalCastContext:
+      if (isa<DeducedTemplateSpecializationType>(Deduced))
+        break;
+      LLVM_FALLTHROUGH;
     case Declarator::TypeNameContext:
       Error = 15; // Generic
       break;
@@ -2845,9 +2859,14 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::ForContext:
     case Declarator::InitStmtContext:
     case Declarator::ConditionContext:
+      // FIXME: P0091R3 (erroneously) does not permit class template argument
+      // deduction in conditions, for-init-statements, and other declarations
+      // that are not simple-declarations.
       break;
     case Declarator::CXXNewContext:
-      if (D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto_type)
+      // FIXME: P0091R3 does not permit class template argument deduction here,
+      // but we follow GCC and allow it anyway.
+      if (!IsCXXAutoType && !isa<DeducedTemplateSpecializationType>(Deduced))
         Error = 17; // 'new' type
       break;
     case Declarator::KNRTypeListContext:
@@ -2861,8 +2880,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     // In Objective-C it is an error to use 'auto' on a function declarator
     // (and everywhere for '__auto_type').
     if (D.isFunctionDeclarator() &&
-        (!SemaRef.getLangOpts().CPlusPlus11 ||
-         D.getDeclSpec().getTypeSpecType() == DeclSpec::TST_auto_type))
+        (!SemaRef.getLangOpts().CPlusPlus11 || !IsCXXAutoType))
       Error = 13;
 
     bool HaveTrailing = false;
@@ -2872,8 +2890,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     // level. Check all declarator chunks (outermost first) anyway, to give
     // better diagnostics.
     // We don't support '__auto_type' with trailing return types.
-    if (SemaRef.getLangOpts().CPlusPlus11 &&
-        D.getDeclSpec().getTypeSpecType() != DeclSpec::TST_auto_type) {
+    // FIXME: Should we only do this for 'auto' and not 'decltype(auto)'?
+    if (SemaRef.getLangOpts().CPlusPlus11 && IsCXXAutoType) {
       for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
         unsigned chunkIndex = e - i - 1;
         state.setCurrentChunkIndex(chunkIndex);
@@ -2894,15 +2912,28 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       AutoRange = D.getName().getSourceRange();
 
     if (Error != -1) {
-      unsigned Keyword;
-      switch (D.getDeclSpec().getTypeSpecType()) {
-      case DeclSpec::TST_auto: Keyword = 0; break;
-      case DeclSpec::TST_decltype_auto: Keyword = 1; break;
-      case DeclSpec::TST_auto_type: Keyword = 2; break;
-      default: llvm_unreachable("unknown auto TypeSpecType");
+      unsigned Kind;
+      if (Auto) {
+        switch (Auto->getKeyword()) {
+        case AutoTypeKeyword::Auto: Kind = 0; break;
+        case AutoTypeKeyword::DecltypeAuto: Kind = 1; break;
+        case AutoTypeKeyword::GNUAutoType: Kind = 2; break;
+        }
+      } else {
+        assert(isa<DeducedTemplateSpecializationType>(Deduced) &&
+               "unknown auto type");
+        Kind = 3;
       }
+
+      auto *DTST = dyn_cast<DeducedTemplateSpecializationType>(Deduced);
+      TemplateName TN = DTST ? DTST->getTemplateName() : TemplateName();
+
       SemaRef.Diag(AutoRange.getBegin(), diag::err_auto_not_allowed)
-        << Keyword << Error << AutoRange;
+        << Kind << Error << (int)SemaRef.getTemplateNameKindForDiagnostics(TN)
+        << QualType(Deduced, 0) << AutoRange;
+      if (auto *TD = TN.getAsTemplateDecl())
+        SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
+
       T = SemaRef.Context.IntTy;
       D.setInvalidType(true);
     } else if (!HaveTrailing) {
@@ -2942,6 +2973,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       DiagID = diag::err_type_defined_in_alias_template;
       break;
     case Declarator::TypeNameContext:
+    case Declarator::FunctionalCastContext:
     case Declarator::ConversionIdContext:
     case Declarator::TemplateParamContext:
     case Declarator::CXXNewContext:
@@ -3623,17 +3655,32 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // If T is 'decltype(auto)', the only declarators we can have are parens
   // and at most one function declarator if this is a function declaration.
-  if (const AutoType *AT = T->getAs<AutoType>()) {
-    if (AT->isDecltypeAuto()) {
+  // If T is a deduced class template specialization type, we can have no
+  // declarator chunks at all.
+  if (auto *DT = T->getAs<DeducedType>()) {
+    const AutoType *AT = T->getAs<AutoType>();
+    bool IsClassTemplateDeduction = isa<DeducedTemplateSpecializationType>(DT);
+    if ((AT && AT->isDecltypeAuto()) || IsClassTemplateDeduction) {
       for (unsigned I = 0, E = D.getNumTypeObjects(); I != E; ++I) {
         unsigned Index = E - I - 1;
         DeclaratorChunk &DeclChunk = D.getTypeObject(Index);
-        unsigned DiagId = diag::err_decltype_auto_compound_type;
+        unsigned DiagId = IsClassTemplateDeduction
+                              ? diag::err_deduced_class_template_compound_type
+                              : diag::err_decltype_auto_compound_type;
         unsigned DiagKind = 0;
         switch (DeclChunk.Kind) {
         case DeclaratorChunk::Paren:
+          // FIXME: Rejecting this is a little silly.
+          if (IsClassTemplateDeduction) {
+            DiagKind = 4;
+            break;
+          }
           continue;
         case DeclaratorChunk::Function: {
+          if (IsClassTemplateDeduction) {
+            DiagKind = 3;
+            break;
+          }
           unsigned FnIndex;
           if (D.isFunctionDeclarationContext() &&
               D.isFunctionDeclarator(FnIndex) && FnIndex == Index)
@@ -3834,6 +3881,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::TemplateParamContext:
     case Declarator::TemplateTypeArgContext:
     case Declarator::TypeNameContext:
+    case Declarator::FunctionalCastContext:
       // Don't infer in these contexts.
       break;
     }
@@ -4713,6 +4761,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::ObjCParameterContext:  // FIXME: special diagnostic here?
     case Declarator::ObjCResultContext:     // FIXME: special diagnostic here?
     case Declarator::TypeNameContext:
+    case Declarator::FunctionalCastContext:
     case Declarator::CXXNewContext:
     case Declarator::AliasDeclContext:
     case Declarator::AliasTemplateContext:
@@ -6893,8 +6942,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       (TAL == TAL_DeclSpec || TAL == TAL_DeclChunk)) {
     Declarator &D = state.getDeclarator();
     if (state.getCurrentChunkIndex() > 0 &&
-        D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
-            DeclaratorChunk::Pointer) {
+        (D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
+             DeclaratorChunk::Pointer ||
+         D.getTypeObject(state.getCurrentChunkIndex() - 1).Kind ==
+             DeclaratorChunk::BlockPointer)) {
       type = state.getSema().Context.getAddrSpaceQualType(
           type, LangAS::opencl_generic);
     } else if (state.getCurrentChunkIndex() == 0 &&

@@ -16,21 +16,21 @@
 #define LLVM_LIB_TARGET_ARM_ARM_H
 
 #include "llvm/Support/CodeGen.h"
-#include "ARMBasicBlockInfo.h"
 #include <functional>
+#include <vector>
 
 namespace llvm {
 
 class ARMAsmPrinter;
 class ARMBaseTargetMachine;
+struct BasicBlockInfo;
 class Function;
 class FunctionPass;
-class ImmutablePass;
+class MachineBasicBlock;
+class MachineFunction;
 class MachineInstr;
 class MCInst;
 class PassRegistry;
-class TargetLowering;
-class TargetMachine;
 
 FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
                                CodeGenOpt::Level OptLevel);
@@ -54,6 +54,6 @@ std::vector<BasicBlockInfo> computeAllBlockSizes(MachineFunction *MF);
 void initializeARMLoadStoreOptPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
 
-} // end namespace llvm;
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARM_H

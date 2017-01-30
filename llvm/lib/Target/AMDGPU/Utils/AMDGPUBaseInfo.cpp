@@ -9,7 +9,9 @@
 #include "AMDGPUBaseInfo.h"
 #include "AMDGPU.h"
 #include "SIDefines.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
@@ -333,12 +335,14 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 }
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  assert(OpNo <= Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  assert(OpNo <= Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -354,6 +358,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 }
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  assert(OpNo <= Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
@@ -397,6 +402,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
+  assert(OpNo <= Desc.NumOperands);
   unsigned RCID = Desc.OpInfo[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
@@ -461,6 +467,33 @@ bool isInlinableLiteral16(int16_t Literal, bool HasInv2Pi) {
          Val == 0x4400 || // 4.0
          Val == 0xC400 || // -4.0
          Val == 0x3118;   // 1/2pi
+}
+
+bool isUniformMMO(const MachineMemOperand *MMO) {
+  const Value *Ptr = MMO->getValue();
+  // UndefValue means this is a load of a kernel input.  These are uniform.
+  // Sometimes LDS instructions have constant pointers.
+  // If Ptr is null, then that means this mem operand contains a
+  // PseudoSourceValue like GOT.
+  if (!Ptr || isa<UndefValue>(Ptr) || isa<Argument>(Ptr) ||
+      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
+    return true;
+
+  const Instruction *I = dyn_cast<Instruction>(Ptr);
+  return I && I->getMetadata("amdgpu.uniform");
+}
+
+int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
+  if (isSI(ST) || isCI(ST))
+    return ByteOffset >> 2;
+
+  return ByteOffset;
+}
+
+bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
+  int64_t EncodedOffset = getSMRDEncodedOffset(ST, ByteOffset);
+  return isSI(ST) || isCI(ST) ? isUInt<8>(EncodedOffset) :
+                                isUInt<20>(EncodedOffset);
 }
 
 } // End namespace AMDGPU

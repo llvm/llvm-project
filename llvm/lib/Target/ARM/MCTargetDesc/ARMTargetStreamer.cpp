@@ -10,20 +10,21 @@
 // This file implements the ARMTargetStreamer class.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/ADT/MapVector.h"
+
 #include "llvm/MC/ConstantPools.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
+
 //
 // ARMTargetStreamer Implemenation
 //
+
 ARMTargetStreamer::ARMTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S), ConstantPools(new AssemblerConstantPools()) {}
 
-ARMTargetStreamer::~ARMTargetStreamer() {}
+ARMTargetStreamer::~ARMTargetStreamer() = default;
 
 // The constant pool handling is shared by all ARMTargetStreamer
 // implementations.
@@ -73,5 +74,4 @@ void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {}
 void
 ARMTargetStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) {}
-
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}

@@ -524,6 +524,8 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_GOT16:
   case ELF::R_MIPS16_GOT16:
   case ELF::R_MICROMIPS_GOT16:
+  case ELF::R_MIPS_HIGHER:
+  case ELF::R_MIPS_HIGHEST:
   case ELF::R_MIPS_HI16:
   case ELF::R_MIPS16_HI16:
   case ELF::R_MICROMIPS_HI16:
@@ -567,8 +569,6 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_INSERT_A:
   case ELF::R_MIPS_INSERT_B:
   case ELF::R_MIPS_DELETE:
-  case ELF::R_MIPS_HIGHER:
-  case ELF::R_MIPS_HIGHEST:
   case ELF::R_MIPS_CALL_HI16:
   case ELF::R_MIPS_CALL_LO16:
   case ELF::R_MIPS_SCN_DISP:

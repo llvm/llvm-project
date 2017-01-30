@@ -2326,6 +2326,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
         return DAG.getNode(Opcode, DL, WidenVT, InOp);
       return DAG.getNode(Opcode, DL, WidenVT, InOp, N->getOperand(1), Flags);
     }
+    if (WidenVT.getSizeInBits() == InVT.getSizeInBits()) {
+      // If both input and result vector types are of same width, extend
+      // operations should be done with SIGN/ZERO_EXTEND_VECTOR_INREG, which
+      // accepts fewer elements in the result than in the input.
+      if (Opcode == ISD::SIGN_EXTEND)
+        return DAG.getSignExtendVectorInReg(InOp, DL, WidenVT);
+      if (Opcode == ISD::ZERO_EXTEND)
+        return DAG.getZeroExtendVectorInReg(InOp, DL, WidenVT);
+    }
   }
 
   if (TLI.isTypeLegal(InWidenVT)) {

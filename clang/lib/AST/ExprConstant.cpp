@@ -7004,6 +7004,7 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
   case Type::Vector:
   case Type::ExtVector:
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:

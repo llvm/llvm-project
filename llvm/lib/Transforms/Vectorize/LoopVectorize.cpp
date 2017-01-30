@@ -3598,41 +3598,6 @@ static Value *addFastMathFlag(Value *V) {
   return V;
 }
 
-/// \brief Estimate the overhead of scalarizing a value based on its type.
-/// Insert and Extract are set if the result needs to be inserted and/or
-/// extracted from vectors.
-static unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract,
-                                         const TargetTransformInfo &TTI) {
-  if (Ty->isVoidTy())
-    return 0;
-
-  assert(Ty->isVectorTy() && "Can only scalarize vectors");
-  unsigned Cost = 0;
-
-  for (unsigned I = 0, E = Ty->getVectorNumElements(); I < E; ++I) {
-    if (Extract)
-      Cost += TTI.getVectorInstrCost(Instruction::ExtractElement, Ty, I);
-    if (Insert)
-      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, I);
-  }
-
-  return Cost;
-}
-
-/// \brief Estimate the overhead of scalarizing an Instruction based on the
-/// types of its operands and return value.
-static unsigned getScalarizationOverhead(SmallVectorImpl<Type *> &OpTys,
-                                         Type *RetTy,
-                                         const TargetTransformInfo &TTI) {
-  unsigned ScalarizationCost =
-      getScalarizationOverhead(RetTy, true, false, TTI);
-
-  for (Type *Ty : OpTys)
-    ScalarizationCost += getScalarizationOverhead(Ty, false, true, TTI);
-
-  return ScalarizationCost;
-}
-
 /// \brief Estimate the overhead of scalarizing an instruction. This is a
 /// convenience wrapper for the type-based getScalarizationOverhead API.
 static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
@@ -3640,14 +3605,20 @@ static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
   if (VF == 1)
     return 0;
 
+  unsigned Cost = 0;
   Type *RetTy = ToVectorTy(I->getType(), VF);
+  if (!RetTy->isVoidTy())
+    Cost += TTI.getScalarizationOverhead(RetTy, true, false);
 
-  SmallVector<Type *, 4> OpTys;
-  unsigned OperandsNum = I->getNumOperands();
-  for (unsigned OpInd = 0; OpInd < OperandsNum; ++OpInd)
-    OpTys.push_back(ToVectorTy(I->getOperand(OpInd)->getType(), VF));
+  if (CallInst *CI = dyn_cast<CallInst>(I)) {
+    SmallVector<const Value *, 4> Operands(CI->arg_operands());
+    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
+  } else {
+    SmallVector<const Value *, 4> Operands(I->operand_values());
+    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
+  }
 
-  return getScalarizationOverhead(OpTys, RetTy, TTI);
+  return Cost;
 }
 
 // Estimate cost of a call instruction CI if it were vectorized with factor VF.
@@ -3680,7 +3651,7 @@ static unsigned getVectorCallCost(CallInst *CI, unsigned VF,
 
   // Compute costs of unpacking argument values for the scalar calls and
   // packing the return values to a vector.
-  unsigned ScalarizationCost = getScalarizationOverhead(Tys, RetTy, TTI);
+  unsigned ScalarizationCost = getScalarizationOverhead(CI, VF, TTI);
 
   unsigned Cost = ScalarCallCost * VF + ScalarizationCost;
 
@@ -6713,8 +6684,8 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     // Compute the scalarization overhead of needed insertelement instructions
     // and phi nodes.
     if (Legal->isScalarWithPredication(I) && !I->getType()->isVoidTy()) {
-      ScalarCost += getScalarizationOverhead(ToVectorTy(I->getType(), VF), true,
-                                             false, TTI);
+      ScalarCost += TTI.getScalarizationOverhead(ToVectorTy(I->getType(), VF),
+                                                 true, false);
       ScalarCost += VF * TTI.getCFInstrCost(Instruction::PHI);
     }
 
@@ -6729,8 +6700,8 @@ int LoopVectorizationCostModel::computePredInstDiscount(
         if (canBeScalarized(J))
           Worklist.push_back(J);
         else if (needsExtract(J))
-          ScalarCost += getScalarizationOverhead(ToVectorTy(J->getType(), VF),
-                                                 false, true, TTI);
+          ScalarCost += TTI.getScalarizationOverhead(
+                              ToVectorTy(J->getType(),VF), false, true);
       }
 
     // Scale the total scalar cost by block probability.
@@ -7540,8 +7511,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
   }
 
-  formLCSSARecursively(*L, *DT, LI, SE);
-
   using namespace ore;
   if (!VectorizeLoop) {
     assert(IC > 1 && "interleave count should not be 1 or 0");
@@ -7638,8 +7607,15 @@ bool LoopVectorizePass::runImpl(
   LoopsAnalyzed += Worklist.size();
 
   // Now walk the identified inner loops.
-  while (!Worklist.empty())
-    Changed |= processLoop(Worklist.pop_back_val());
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+
+    // For the inner loops we actually process, form LCSSA to simplify the
+    // transform.
+    Changed |= formLCSSARecursively(*L, *DT, LI, SE);
+
+    Changed |= processLoop(L);
+  }
 
   // Process each loop nest in the function.
   return Changed;

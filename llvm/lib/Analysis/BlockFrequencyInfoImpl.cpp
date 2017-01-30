@@ -28,7 +28,9 @@ ScaledNumber<uint64_t> BlockMass::toScaled() const {
   return ScaledNumber<uint64_t>(getMass() + 1, -64);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void BlockMass::dump() const { print(dbgs()); }
+#endif
 
 static char getHexDigit(int N) {
   assert(N < 16);

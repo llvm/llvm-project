@@ -4088,11 +4088,6 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
         Constant *CMinus1 = ConstantInt::get(Op0->getType(), *CmpC - 1);
         return new ICmpInst(ICmpInst::ICMP_EQ, Op0, CMinus1);
       }
-      // (x <u 2147483648) -> (x >s -1)  -> true if sign bit clear
-      if (CmpC->isMinSignedValue()) {
-        Constant *AllOnes = Constant::getAllOnesValue(Op0->getType());
-        return new ICmpInst(ICmpInst::ICMP_SGT, Op0, AllOnes);
-      }
     }
     break;
   }
@@ -4112,11 +4107,6 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
       if (*CmpC == Op0Max - 1)
         return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
                             ConstantInt::get(Op1->getType(), *CmpC + 1));
-
-      // (x >u 2147483647) -> (x <s 0)  -> true if sign bit set
-      if (CmpC->isMaxSignedValue())
-        return new ICmpInst(ICmpInst::ICMP_SLT, Op0,
-                            Constant::getNullValue(Op0->getType()));
     }
     break;
   }
@@ -4347,6 +4337,27 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
       if ((SI->getOperand(1) == Op0 && SI->getOperand(2) == Op1) ||
           (SI->getOperand(2) == Op0 && SI->getOperand(1) == Op1))
         return nullptr;
+
+  // FIXME: We only do this after checking for min/max to prevent infinite
+  // looping caused by a reverse canonicalization of these patterns for min/max.
+  // FIXME: The organization of folds is a mess. These would naturally go into
+  // canonicalizeCmpWithConstant(), but we can't move all of the above folds
+  // down here after the min/max restriction.
+  ICmpInst::Predicate Pred = I.getPredicate();
+  const APInt *C;
+  if (match(Op1, m_APInt(C))) {
+    // For i32: x >u 2147483647 -> x <s 0  -> true if sign bit set
+    if (Pred == ICmpInst::ICMP_UGT && C->isMaxSignedValue()) {
+      Constant *Zero = Constant::getNullValue(Op0->getType());
+      return new ICmpInst(ICmpInst::ICMP_SLT, Op0, Zero);
+    }
+
+    // For i32: x <u 2147483648 -> x >s -1  -> true if sign bit clear
+    if (Pred == ICmpInst::ICMP_ULT && C->isMinSignedValue()) {
+      Constant *AllOnes = Constant::getAllOnesValue(Op0->getType());
+      return new ICmpInst(ICmpInst::ICMP_SGT, Op0, AllOnes);
+    }
+  }
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
     return Res;

@@ -13,25 +13,27 @@
 
 #include "ARMSubtarget.h"
 #include "ARMFrameLowering.h"
-#include "ARMISelLowering.h"
 #include "ARMInstrInfo.h"
-#include "ARMMachineFunctionInfo.h"
-#include "ARMSelectionDAGInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "Thumb1FrameLowering.h"
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Attributes.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/TargetParser.h"
+#include <cassert>
+#include <string>
 
 using namespace llvm;
 
@@ -104,7 +106,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                     : !isThumb()
                           ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                           : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
-      TLInfo(TM, *this), GISel() {}
+      TLInfo(TM, *this) {}
 
 const CallLowering *ARMSubtarget::getCallLowering() const {
   assert(GISel && "Access to GlobalISel APIs not set");
@@ -148,11 +150,11 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
     if (isTargetDarwin()) {
       StringRef ArchName = TargetTriple.getArchName();
-      unsigned ArchKind = llvm::ARM::parseArch(ArchName);
-      if (ArchKind == llvm::ARM::AK_ARMV7S)
+      unsigned ArchKind = ARM::parseArch(ArchName);
+      if (ArchKind == ARM::AK_ARMV7S)
         // Default to the Swift CPU when targeting armv7s/thumbv7s.
         CPUString = "swift";
-      else if (ArchKind == llvm::ARM::AK_ARMV7K)
+      else if (ArchKind == ARM::AK_ARMV7K)
         // Default to the Cortex-a7 CPU when targeting armv7k/thumbv7k.
         // ARMv7k does not use SjLj exception handling.
         CPUString = "cortex-a7";

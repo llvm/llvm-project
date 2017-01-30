@@ -883,6 +883,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::DeducedTemplateSpecialization: {
+    auto *DT1 = cast<DeducedTemplateSpecializationType>(T1);
+    auto *DT2 = cast<DeducedTemplateSpecializationType>(T2);
+    if (!IsStructurallyEquivalent(Context,
+                                  DT1->getTemplateName(),
+                                  DT2->getTemplateName()))
+      return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  DT1->getDeducedType(),
+                                  DT2->getDeducedType()))
+      return false;
+    break;
+  }
+
   case Type::Record:
   case Type::Enum:
     if (!IsStructurallyEquivalent(Context,

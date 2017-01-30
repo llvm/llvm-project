@@ -1,7 +1,9 @@
 ; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s --check-prefixes=ALL,R6
-; RUN: llc -march=mips -mcpu=mips64r6 -target-abi=n64 < %s | FileCheck %s --check-prefixes=ALL,R6
+; RUN: llc -march=mips -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic \
+; RUN:     < %s | FileCheck %s --check-prefixes=ALL,R6
 ; RUN: llc -march=mips -mcpu=mips32 < %s | FileCheck %s --check-prefixes=ALL,PRER6
-; RUN: llc -march=mips -mcpu=mips64 -target-abi=n64 < %s | FileCheck %s --check-prefixes=ALL,PRER6
+; RUN: llc -march=mips -mcpu=mips64 -target-abi=n64 -relocation-model=pic \
+; RUN:     < %s | FileCheck %s --check-prefixes=ALL,PRER6
 
 
 %struct.anon = type { [63 x i32], i32, i32 }

@@ -552,7 +552,9 @@ public:
     os << "\n";
   }
 
-  void dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
+#endif
 };
 
 /// This class repesents the scheduled code.  The main data structure is a
@@ -3980,5 +3982,7 @@ void SMSchedule::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Utility function used for debugging to print the schedule.
-void SMSchedule::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void SMSchedule::dump() const { print(dbgs()); }
+#endif

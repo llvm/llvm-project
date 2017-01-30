@@ -365,6 +365,7 @@ private:
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
   SmallVector<uint64_t, 16> EagerlyDeserializedDecls;
+  SmallVector<uint64_t, 16> ModularCodegenDecls;
 
   /// \brief DeclContexts that have received extensions since their serialized
   /// form.

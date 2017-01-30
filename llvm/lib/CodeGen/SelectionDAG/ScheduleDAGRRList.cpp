@@ -1787,7 +1787,7 @@ public:
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump(ScheduleDAG *DAG) const override {
+  LLVM_DUMP_METHOD void dump(ScheduleDAG *DAG) const override {
     // Emulate pop() without clobbering NodeQueueIds.
     std::vector<SUnit*> DumpQueue = Queue;
     SF DumpPicker = Picker;
@@ -1923,8 +1923,8 @@ unsigned RegReductionPQBase::getNodePriority(const SUnit *SU) const {
 //                     Register Pressure Tracking
 //===----------------------------------------------------------------------===//
 
-void RegReductionPQBase::dumpRegPressure() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void RegReductionPQBase::dumpRegPressure() const {
   for (const TargetRegisterClass *RC : TRI->regclasses()) {
     unsigned Id = RC->getID();
     unsigned RP = RegPressure[Id];
@@ -1932,8 +1932,8 @@ void RegReductionPQBase::dumpRegPressure() const {
     DEBUG(dbgs() << TRI->getRegClassName(RC) << ": " << RP << " / "
           << RegLimit[Id] << '\n');
   }
-#endif
 }
+#endif
 
 bool RegReductionPQBase::HighRegPressure(const SUnit *SU) const {
   if (!TLI)
@@ -2089,7 +2089,7 @@ void RegReductionPQBase::scheduledNode(SUnit *SU) {
       RegPressure[RCId] -= Cost;
     }
   }
-  dumpRegPressure();
+  DEBUG(dumpRegPressure());
 }
 
 void RegReductionPQBase::unscheduledNode(SUnit *SU) {
@@ -2169,7 +2169,7 @@ void RegReductionPQBase::unscheduledNode(SUnit *SU) {
     }
   }
 
-  dumpRegPressure();
+  DEBUG(dumpRegPressure());
 }
 
 //===----------------------------------------------------------------------===//

@@ -34,6 +34,7 @@ class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
+class PassManagerBuilder;
 class Target;
 class TargetIntrinsicInfo;
 class TargetIRAnalysis;
@@ -205,10 +206,9 @@ public:
   /// uses this to answer queries about the IR.
   virtual TargetIRAnalysis getTargetIRAnalysis();
 
-  /// Add target-specific function passes that should be run as early as
-  /// possible in the optimization pipeline.  Most TargetMachines have no such
-  /// passes.
-  virtual void addEarlyAsPossiblePasses(PassManagerBase &) {}
+  /// Allow the target to modify the pass manager, e.g. by calling
+  /// PassManagerBuilder::addExtension.
+  virtual void adjustPassManager(PassManagerBuilder &) {}
 
   /// These enums are meant to be passed into addPassesToEmitFile to indicate
   /// what type of file to emit, and returned by it to indicate what type of

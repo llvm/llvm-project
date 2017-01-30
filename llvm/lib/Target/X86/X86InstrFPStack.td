@@ -631,6 +631,9 @@ let Defs = [FPSW] in
 def FNINIT : I<0xDB, MRM_E3, (outs), (ins), "fninit", [], IIC_FNINIT>;
 def FFREE : FPI<0xDD, MRM0r, (outs), (ins RST:$reg),
                 "ffree\t$reg", IIC_FFREE>;
+def FFREEP : FPI<0xDF, MRM0r, (outs), (ins RST:$reg),
+                "ffreep\t$reg", IIC_FFREE>;
+
 // Clear exceptions
 
 let Defs = [FPSW] in

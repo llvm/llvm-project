@@ -1,5 +1,17 @@
 // RUN: %clang_cc1 -analyze -analyzer-checker=debug.DumpCallGraph %s -fblocks 2>&1 | FileCheck %s
 
+int get5() {
+  return 5;
+}
+
+int add(int val1, int val2) {
+  return val1 + val2;
+}
+
+int test_add() {
+  return add(10, get5());
+}
+
 static void mmm(int y) {
   if (y != 0)
       y++;
@@ -32,7 +44,7 @@ void eee() {}
 void fff() { eee(); }
 
 // CHECK:--- Call graph Dump ---
-// CHECK-NEXT: {{Function: < root > calls: mmm foo aaa < > bbb ccc ddd eee fff $}}
+// CHECK-NEXT: {{Function: < root > calls: get5 add test_add mmm foo aaa < > bbb ccc ddd eee fff $}}
 // CHECK-NEXT: {{Function: fff calls: eee $}}
 // CHECK-NEXT: {{Function: eee calls: $}}
 // CHECK-NEXT: {{Function: ddd calls: ccc $}}
@@ -42,3 +54,6 @@ void fff() { eee(); }
 // CHECK-NEXT: {{Function: aaa calls: foo $}}
 // CHECK-NEXT: {{Function: foo calls: mmm $}}
 // CHECK-NEXT: {{Function: mmm calls: $}}
+// CHECK-NEXT: {{Function: test_add calls: add get5 $}}
+// CHECK-NEXT: {{Function: add calls: $}}
+// CHECK-NEXT: {{Function: get5 calls: $}}

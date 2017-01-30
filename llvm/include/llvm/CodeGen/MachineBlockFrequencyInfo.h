@@ -56,7 +56,7 @@ public:
 
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;
-  void view() const;
+  void view(bool isSimple = true) const;
 
   // Print the block frequency Freq to OS using the current functions entry
   // frequency to convert freq into a relative decimal form.

@@ -229,7 +229,7 @@ public:
   void print(raw_ostream &os, ModuleSlotTracker &MST,
              const TargetRegisterInfo *TRI = nullptr,
              const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
-  LLVM_DUMP_METHOD void dump() const;
+  void dump() const;
 
   //===--------------------------------------------------------------------===//
   // Accessors that tell you what kind of MachineOperand you're looking at.

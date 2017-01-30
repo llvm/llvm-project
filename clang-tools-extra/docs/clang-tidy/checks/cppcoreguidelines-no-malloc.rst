@@ -9,8 +9,8 @@ of an appropriate RAII object.
 See `C++ Core Guidelines
 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-mallocfree>`.
 
-There is no attempt made to provide fixit hints, since manual resource management isn't
-easily transformed automatically into RAII.
+There is no attempt made to provide fix-it hints, since manual resource
+management isn't easily transformed automatically into RAII.
 
 .. code-block:: c++
 

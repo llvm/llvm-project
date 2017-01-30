@@ -169,7 +169,6 @@ define i32 @vnum_test3(i32* %data) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[I_0]], 30
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB11:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    store i32 0, i32* [[TMP9]], align 4
 ; CHECK-NEXT:    br label [[BB14]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 1
@@ -228,6 +227,53 @@ bb23:                                             ; preds = %bb4
   ret i32 %p.0
 }
 
+;; This is an irreducible test case that will cause a memoryphi node loop
+;; in the two block.
+;; it's equivalent to something like
+;; *a = 0
+;; if (<....>) goto loopmiddle
+;; loopstart:
+;; loopmiddle:
+;; load *a
+;; *a = 0
+;; if (<....>) goto loopstart otherwise goto loopend
+;; loopend:
+;; load *a
+;; add the results of the loads
+;; return them
+;;
+;; Both loads should equal 0, but it requires being
+;; completely optimistic about MemoryPhis, otherwise
+;; we will not be able to see through the cycle.
+define i8 @quux(i8* noalias %arg, i8* noalias %arg2) {
+; CHECK-LABEL: @quux(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    store i8 0, i8* [[ARG:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB2]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret i8 0
+;
+bb:
+  store i8 0, i8 *%arg
+  br i1 undef, label %bb2, label %bb1
+
+bb1:                                              ; preds = %bb2, %bb
+  br label %bb2
+
+bb2:                                              ; preds = %bb1, %bb
+  %tmp2 = load i8, i8* %arg
+  store i8 0, i8 *%arg
+  br i1 undef, label %bb1, label %bb3
+
+bb3:                                              ; preds = %bb2
+  %tmp = load i8, i8* %arg
+  %tmp3 = add i8 %tmp, %tmp2
+  ret i8 %tmp3
+}
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0, !0, !0}

@@ -74,7 +74,7 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
   }
 
   if (DumpGCOV)
-    GF.dump();
+    GF.print(errs());
 
   FileInfo FI(Options);
   GF.collectLineCounts(FI);

@@ -55,7 +55,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]+]], %got_disp(bytes)(
+; SYM64-DAG:           daddiu [[R1:\$[0-9]+]], ${{[0-9]+}},  %lo(bytes)
 
 ; The first four arguments are the same in O32/N32/N64
 ; ALL-DAG:           sb $4, 1([[R1]])
@@ -120,9 +120,9 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]+]], %got_disp(bytes)(
+; SYM64-DAG:           daddiu [[R1:\$[0-9]+]], ${{[0-9]+}},  %lo(bytes)
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
-; SYM64-DAG:           ld [[R2:\$[0-9]+]], %got_disp(dwords)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(dwords)
 
 ; The first argument is the same in O32/N32/N64.
 ; ALL-DAG:           sb $4, 1([[R1]])

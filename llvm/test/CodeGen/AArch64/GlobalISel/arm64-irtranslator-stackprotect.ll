@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-apple-ios %s -stop-after=irtranslator -o - -global-isel | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios %s -stop-after=irtranslator -o - -global-isel | FileCheck %s
 
 
 ; CHECK: name: test_stack_guard

@@ -412,4 +412,9 @@ if(LLDB_USE_BUILTIN_DEMANGLER)
     add_definitions(-DLLDB_USE_BUILTIN_DEMANGLER)
 endif()
 
+if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
+    ((ANDROID_ABI MATCHES "armeabi") OR (ANDROID_ABI MATCHES "mips")))
+  add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
+endif()
+
 find_package(Backtrace)

@@ -37,13 +37,22 @@ namespace llvm {
       // Tail call
       TailCall,
 
-      // Get the Higher 16 bits from a 32-bit immediate
+      // Get the Highest (63-48) 16 bits from a 64-bit immediate
+      Highest,
+
+      // Get the Higher (47-32) 16 bits from a 64-bit immediate
+      Higher,
+
+      // Get the High 16 bits from a 32/64-bit immediate
       // No relation with Mips Hi register
       Hi,
 
-      // Get the Lower 16 bits from a 32-bit immediate
+      // Get the Lower 16 bits from a 32/64-bit immediate
       // No relation with Mips Lo register
       Lo,
+
+      // Get the High 16 bits from a 32 bit immediate for accessing the GOT.
+      GotHi,
 
       // Handle gp_rel (small data/bss sections) relocation.
       GPRel,
@@ -297,7 +306,7 @@ namespace llvm {
     }
 
     bool isJumpTableRelative() const override {
-      return getTargetMachine().isPositionIndependent() || ABI.IsN64();
+      return getTargetMachine().isPositionIndependent();
     }
 
   protected:
@@ -344,8 +353,8 @@ namespace llvm {
                                   SelectionDAG &DAG, unsigned HiFlag,
                                   unsigned LoFlag, SDValue Chain,
                                   const MachinePointerInfo &PtrInfo) const {
-      SDValue Hi =
-          DAG.getNode(MipsISD::Hi, DL, Ty, getTargetNode(N, Ty, DAG, HiFlag));
+      SDValue Hi = DAG.getNode(MipsISD::GotHi, DL, Ty,
+                               getTargetNode(N, Ty, DAG, HiFlag));
       Hi = DAG.getNode(ISD::ADD, DL, Ty, Hi, getGlobalReg(DAG, Ty));
       SDValue Wrapper = DAG.getNode(MipsISD::Wrapper, DL, Ty, Hi,
                                     getTargetNode(N, Ty, DAG, LoFlag));
@@ -356,6 +365,8 @@ namespace llvm {
     // computing a symbol's address in non-PIC mode:
     //
     // (add %hi(sym), %lo(sym))
+    //
+    // This method covers O32, N32 and N64 in sym32 mode.
     template <class NodeTy>
     SDValue getAddrNonPIC(NodeTy *N, const SDLoc &DL, EVT Ty,
                           SelectionDAG &DAG) const {
@@ -364,7 +375,37 @@ namespace llvm {
       return DAG.getNode(ISD::ADD, DL, Ty,
                          DAG.getNode(MipsISD::Hi, DL, Ty, Hi),
                          DAG.getNode(MipsISD::Lo, DL, Ty, Lo));
-    }
+   }
+
+   // This method creates the following nodes, which are necessary for
+   // computing a symbol's address in non-PIC mode for N64.
+   //
+   // (add (shl (add (shl (add %highest(sym), %higher(sim)), 16), %high(sym)),
+   //            16), %lo(%sym))
+   //
+   // FIXME: This method is not efficent for (micro)MIPS64R6.
+   template <class NodeTy>
+   SDValue getAddrNonPICSym64(NodeTy *N, const SDLoc &DL, EVT Ty,
+                          SelectionDAG &DAG) const {
+      SDValue Hi = getTargetNode(N, Ty, DAG, MipsII::MO_ABS_HI);
+      SDValue Lo = getTargetNode(N, Ty, DAG, MipsII::MO_ABS_LO);
+
+      SDValue Highest =
+          DAG.getNode(MipsISD::Highest, DL, Ty,
+                      getTargetNode(N, Ty, DAG, MipsII::MO_HIGHEST));
+      SDValue Higher = getTargetNode(N, Ty, DAG, MipsII::MO_HIGHER);
+      SDValue HigherPart =
+          DAG.getNode(ISD::ADD, DL, Ty, Highest,
+                      DAG.getNode(MipsISD::Higher, DL, Ty, Higher));
+      SDValue Cst = DAG.getConstant(16, DL, MVT::i32);
+      SDValue Shift = DAG.getNode(ISD::SHL, DL, Ty, HigherPart, Cst);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, Ty, Shift,
+                                DAG.getNode(MipsISD::Hi, DL, Ty, Hi));
+      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, Ty, Add, Cst);
+
+      return DAG.getNode(ISD::ADD, DL, Ty, Shift2,
+                         DAG.getNode(MipsISD::Lo, DL, Ty, Lo));
+   }
 
     // This method creates the following nodes, which are necessary for
     // computing a symbol's address using gp-relative addressing:

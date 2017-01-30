@@ -8,11 +8,70 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLTools.h"
 #include "gtest/gtest.h"
+#include "isl/stream.h"
 #include "isl/val.h"
 
 using namespace llvm;
 using namespace polly;
+
+static IslPtr<isl_space> parseSpace(isl_ctx *Ctx, const char *Str) {
+  isl_stream *Stream = isl_stream_new_str(Ctx, Str);
+  auto Obj = isl_stream_read_obj(Stream);
+
+  IslPtr<isl_space> Result;
+  if (Obj.type == isl_obj_set)
+    Result = give(isl_set_get_space(static_cast<isl_set *>(Obj.v)));
+  else if (Obj.type == isl_obj_map)
+    Result = give(isl_map_get_space(static_cast<isl_map *>(Obj.v)));
+
+  isl_stream_free(Stream);
+  if (Obj.type)
+    Obj.type->free(Obj.v);
+  return Result;
+}
+
+#define SPACE(Str) parseSpace(Ctx.get(), Str)
+
+#define SET(Str) give(isl_set_read_from_str(Ctx.get(), Str))
+#define MAP(Str) give(isl_map_read_from_str(Ctx.get(), Str))
+
+#define USET(Str) give(isl_union_set_read_from_str(Ctx.get(), Str))
+#define UMAP(Str) give(isl_union_map_read_from_str(Ctx.get(), Str))
+
+static bool operator==(const IslPtr<isl_space> &LHS,
+                       const IslPtr<isl_space> &RHS) {
+  auto IsEqual = isl_space_is_equal(LHS.keep(), RHS.keep());
+  EXPECT_NE(isl_bool_error, IsEqual);
+  return IsEqual;
+}
+
+static bool operator==(const IslPtr<isl_set> &LHS, const IslPtr<isl_set> &RHS) {
+  auto IsEqual = isl_set_is_equal(LHS.keep(), RHS.keep());
+  EXPECT_NE(isl_bool_error, IsEqual);
+  return IsEqual;
+}
+
+static bool operator==(const IslPtr<isl_map> &LHS, const IslPtr<isl_map> &RHS) {
+  auto IsEqual = isl_map_is_equal(LHS.keep(), RHS.keep());
+  EXPECT_NE(isl_bool_error, IsEqual);
+  return IsEqual;
+}
+
+static bool operator==(const IslPtr<isl_union_set> &LHS,
+                       const IslPtr<isl_union_set> &RHS) {
+  auto IsEqual = isl_union_set_is_equal(LHS.keep(), RHS.keep());
+  EXPECT_NE(isl_bool_error, IsEqual);
+  return IsEqual;
+}
+
+static bool operator==(const IslPtr<isl_union_map> &LHS,
+                       const IslPtr<isl_union_map> &RHS) {
+  auto IsEqual = isl_union_map_is_equal(LHS.keep(), RHS.keep());
+  EXPECT_NE(isl_bool_error, IsEqual);
+  return IsEqual;
+}
 
 namespace {
 
@@ -340,6 +399,243 @@ TEST(Isl, Foreach) {
         });
     EXPECT_EQ(1, NumPieces);
   }
+}
+
+TEST(ISLTools, beforeScatter) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage with isl_map
+  EXPECT_EQ(MAP("{ [] -> [i] : i <= 0 }"),
+            beforeScatter(MAP("{ [] -> [0] }"), false));
+  EXPECT_EQ(MAP("{ [] -> [i] : i < 0 }"),
+            beforeScatter(MAP("{ [] -> [0] }"), true));
+
+  // Basic usage with isl_union_map
+  EXPECT_EQ(UMAP("{ A[] -> [i] : i <= 0; B[] -> [i] : i <= 0 }"),
+            beforeScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"), false));
+  EXPECT_EQ(UMAP("{ A[] -> [i] : i < 0; B[] -> [i] : i < 0 }"),
+            beforeScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"), true));
+
+  // More than one dimension
+  EXPECT_EQ(UMAP("{ [] -> [i, j] : i < 0;  [] -> [i, j] : i = 0 and j <= 0 }"),
+            beforeScatter(UMAP("{ [] -> [0, 0] }"), false));
+  EXPECT_EQ(UMAP("{ [] -> [i, j] : i < 0;  [] -> [i, j] : i = 0 and j < 0 }"),
+            beforeScatter(UMAP("{ [] -> [0, 0] }"), true));
+
+  // Functional
+  EXPECT_EQ(UMAP("{ [i] -> [j] : j <= i }"),
+            beforeScatter(UMAP("{ [i] -> [i] }"), false));
+  EXPECT_EQ(UMAP("{ [i] -> [j] : j < i }"),
+            beforeScatter(UMAP("{ [i] -> [i] }"), true));
+
+  // Parametrized
+  EXPECT_EQ(UMAP("[i] -> { [] -> [j] : j <= i }"),
+            beforeScatter(UMAP("[i] -> { [] -> [i] }"), false));
+  EXPECT_EQ(UMAP("[i] -> { [] -> [j] : j < i }"),
+            beforeScatter(UMAP("[i] -> { [] -> [i] }"), true));
+
+  // More than one range
+  EXPECT_EQ(UMAP("{ [] -> [i] : i <= 10 }"),
+            beforeScatter(UMAP("{ [] -> [0]; [] -> [10] }"), false));
+  EXPECT_EQ(UMAP("{ [] -> [i] : i < 10 }"),
+            beforeScatter(UMAP("{ [] -> [0]; [] -> [10] }"), true));
+
+  // Edge case: empty
+  EXPECT_EQ(UMAP("{ [] -> [i] : 1 = 0 }"),
+            beforeScatter(UMAP("{ [] -> [i] : 1 = 0 }"), false));
+  EXPECT_EQ(UMAP("{ [] -> [i] : 1 = 0 }"),
+            beforeScatter(UMAP("{ [] -> [i] : 1 = 0 }"), true));
+}
+
+TEST(ISLTools, afterScatter) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage with isl_map
+  EXPECT_EQ(MAP("{ [] -> [i] : i >= 0 }"),
+            afterScatter(MAP("{ [] -> [0] }"), false));
+  EXPECT_EQ(MAP("{ [] -> [i] : i > 0 }"),
+            afterScatter(MAP("{ [] -> [0] }"), true));
+
+  // Basic usage with isl_union_map
+  EXPECT_EQ(UMAP("{ A[] -> [i] : i >= 0; B[] -> [i] : i >= 0 }"),
+            afterScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"), false));
+  EXPECT_EQ(UMAP("{ A[] -> [i] : i > 0; B[] -> [i] : i > 0 }"),
+            afterScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"), true));
+
+  // More than one dimension
+  EXPECT_EQ(UMAP("{ [] -> [i, j] : i > 0;  [] -> [i, j] : i = 0 and j >= 0 }"),
+            afterScatter(UMAP("{ [] -> [0, 0] }"), false));
+  EXPECT_EQ(UMAP("{ [] -> [i, j] : i > 0;  [] -> [i, j] : i = 0 and j > 0 }"),
+            afterScatter(UMAP("{ [] -> [0, 0] }"), true));
+
+  // Functional
+  EXPECT_EQ(UMAP("{ [i] -> [j] : j >= i }"),
+            afterScatter(UMAP("{ [i] -> [i] }"), false));
+  EXPECT_EQ(UMAP("{ [i] -> [j] : j > i }"),
+            afterScatter(UMAP("{ [i] -> [i] }"), true));
+
+  // Parametrized
+  EXPECT_EQ(UMAP("[i] -> { [] -> [j] : j >= i }"),
+            afterScatter(UMAP("[i] -> { [] -> [i] }"), false));
+  EXPECT_EQ(UMAP("[i] -> { [] -> [j] : j > i }"),
+            afterScatter(UMAP("[i] -> { [] -> [i] }"), true));
+
+  // More than one range
+  EXPECT_EQ(UMAP("{ [] -> [i] : i >= 0 }"),
+            afterScatter(UMAP("{ [] -> [0]; [] -> [10] }"), false));
+  EXPECT_EQ(UMAP("{ [] -> [i] : i > 0 }"),
+            afterScatter(UMAP("{ [] -> [0]; [] -> [10] }"), true));
+
+  // Edge case: empty
+  EXPECT_EQ(UMAP("{ }"), afterScatter(UMAP("{ }"), false));
+  EXPECT_EQ(UMAP("{ }"), afterScatter(UMAP("{ }"), true));
+}
+
+TEST(ISLTools, betweenScatter) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage with isl_map
+  EXPECT_EQ(MAP("{ [] -> [i] : 0 < i < 10 }"),
+            betweenScatter(MAP("{ [] -> [0] }"), MAP("{ [] -> [10] }"), false,
+                           false));
+  EXPECT_EQ(
+      MAP("{ [] -> [i] : 0 <= i < 10 }"),
+      betweenScatter(MAP("{ [] -> [0] }"), MAP("{ [] -> [10] }"), true, false));
+  EXPECT_EQ(
+      MAP("{ [] -> [i] : 0 < i <= 10 }"),
+      betweenScatter(MAP("{ [] -> [0] }"), MAP("{ [] -> [10] }"), false, true));
+  EXPECT_EQ(
+      MAP("{ [] -> [i] : 0 <= i <= 10 }"),
+      betweenScatter(MAP("{ [] -> [0] }"), MAP("{ [] -> [10] }"), true, true));
+
+  // Basic usage with isl_union_map
+  EXPECT_EQ(UMAP("{ A[] -> [i] : 0 < i < 10; B[] -> [i] : 0 < i < 10 }"),
+            betweenScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"),
+                           UMAP("{ A[] -> [10]; B[] -> [10] }"), false, false));
+  EXPECT_EQ(UMAP("{ A[] -> [i] : 0 <= i < 10; B[] -> [i] : 0 <= i < 10 }"),
+            betweenScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"),
+                           UMAP("{ A[] -> [10]; B[] -> [10] }"), true, false));
+  EXPECT_EQ(UMAP("{ A[] -> [i] : 0 < i <= 10; B[] -> [i] : 0 < i <= 10 }"),
+            betweenScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"),
+                           UMAP("{ A[] -> [10]; B[] -> [10] }"), false, true));
+  EXPECT_EQ(UMAP("{ A[] -> [i] : 0 <= i <= 10; B[] -> [i] : 0 <= i <= 10 }"),
+            betweenScatter(UMAP("{ A[] -> [0]; B[] -> [0] }"),
+                           UMAP("{ A[] -> [10]; B[] -> [10] }"), true, true));
+}
+
+TEST(ISLTools, singleton) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // No element found
+  EXPECT_EQ(SET("{ [] : 1 = 0 }"), singleton(USET("{ }"), SPACE("{ [] }")));
+  EXPECT_EQ(MAP("{ [] -> [] : 1 = 0  }"),
+            singleton(UMAP("{  }"), SPACE("{ [] -> [] }")));
+
+  // One element found
+  EXPECT_EQ(SET("{ [] }"), singleton(USET("{ [] }"), SPACE("{ [] }")));
+  EXPECT_EQ(MAP("{ [] -> [] }"),
+            singleton(UMAP("{ [] -> [] }"), SPACE("{ [] -> [] }")));
+
+  // Many elements found
+  EXPECT_EQ(SET("{ [i] : 0 <= i < 10 }"),
+            singleton(USET("{ [i] : 0 <= i < 10 }"), SPACE("{ [i] }")));
+  EXPECT_EQ(
+      MAP("{ [i] -> [i] : 0 <= i < 10 }"),
+      singleton(UMAP("{ [i] -> [i] : 0 <= i < 10 }"), SPACE("{ [i] -> [j] }")));
+
+  // Different parameters
+  EXPECT_EQ(SET("[i] -> { [i] }"),
+            singleton(USET("[i] -> { [i] }"), SPACE("{ [i] }")));
+  EXPECT_EQ(MAP("[i] -> { [i] -> [i] }"),
+            singleton(UMAP("[i] -> { [i] -> [i] }"), SPACE("{ [i] -> [j] }")));
+}
+
+TEST(ISLTools, getNumScatterDims) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ [] -> [] }")));
+  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ [] -> [i] }")));
+  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ [] -> [i,j] }")));
+  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ [] -> [i,j,k] }")));
+
+  // Different scatter spaces
+  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ A[] -> []; [] -> []}")));
+  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ A[] -> []; [] -> [i] }")));
+  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
+  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
+}
+
+TEST(ISLTools, getScatterSpace) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(SPACE("{ [] }"), getScatterSpace(UMAP("{ [] -> [] }")));
+  EXPECT_EQ(SPACE("{ [i] }"), getScatterSpace(UMAP("{ [] -> [i] }")));
+  EXPECT_EQ(SPACE("{ [i,j] }"), getScatterSpace(UMAP("{ [] -> [i,j] }")));
+  EXPECT_EQ(SPACE("{ [i,j,k] }"), getScatterSpace(UMAP("{ [] -> [i,j,k] }")));
+
+  // Different scatter spaces
+  EXPECT_EQ(SPACE("{ [] }"), getScatterSpace(UMAP("{ A[] -> []; [] -> [] }")));
+  EXPECT_EQ(SPACE("{ [i] }"),
+            getScatterSpace(UMAP("{ A[] -> []; [] -> [i] }")));
+  EXPECT_EQ(SPACE("{ [i,j] }"),
+            getScatterSpace(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
+  EXPECT_EQ(SPACE("{ [i,j,k] }"),
+            getScatterSpace(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
+}
+
+TEST(ISLTools, makeIdentityMap) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(UMAP("{ [i] -> [i] }"), makeIdentityMap(USET("{ [0] }"), false));
+  EXPECT_EQ(UMAP("{ [0] -> [0] }"), makeIdentityMap(USET("{ [0] }"), true));
+
+  // Multiple spaces
+  EXPECT_EQ(UMAP("{ [] -> []; [i] -> [i] }"),
+            makeIdentityMap(USET("{ []; [0] }"), false));
+  EXPECT_EQ(UMAP("{ [] -> []; [0] -> [0] }"),
+            makeIdentityMap(USET("{ []; [0] }"), true));
+
+  // Edge case: empty
+  EXPECT_EQ(UMAP("{ }"), makeIdentityMap(USET("{ }"), false));
+  EXPECT_EQ(UMAP("{ }"), makeIdentityMap(USET("{ }"), true));
+}
+
+TEST(ISLTools, reverseDomain) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(MAP("{ [B[] -> A[]] -> [] }"),
+            reverseDomain(MAP("{ [A[] -> B[]] -> [] }")));
+  EXPECT_EQ(UMAP("{ [B[] -> A[]] -> [] }"),
+            reverseDomain(UMAP("{ [A[] -> B[]] -> [] }")));
+}
+
+TEST(ISLTools, shiftDim) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  // Basic usage
+  EXPECT_EQ(SET("{ [1] }"), shiftDim(SET("{ [0] }"), 0, 1));
+  EXPECT_EQ(USET("{ [1] }"), shiftDim(USET("{ [0] }"), 0, 1));
+
+  // From-end indexing
+  EXPECT_EQ(USET("{ [0,0,1] }"), shiftDim(USET("{ [0,0,0] }"), -1, 1));
+  EXPECT_EQ(USET("{ [0,1,0] }"), shiftDim(USET("{ [0,0,0] }"), -2, 1));
+  EXPECT_EQ(USET("{ [1,0,0] }"), shiftDim(USET("{ [0,0,0] }"), -3, 1));
+
+  // Parametrized
+  EXPECT_EQ(USET("[n] -> { [n+1] }"), shiftDim(USET("[n] -> { [n] }"), 0, 1));
 }
 
 } // anonymous namespace

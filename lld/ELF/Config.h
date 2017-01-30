@@ -41,7 +41,7 @@ enum class DiscardPolicy { Default, All, Locals, None };
 enum class StripPolicy { None, All, Debug };
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { NoUndef, ReportError, Warn, Ignore };
+enum class UnresolvedPolicy { ReportError, Warn, WarnAll, Ignore, IgnoreAll };
 
 // For --sort-section and linkerscript sorting rules.
 enum class SortSectionPolicy { Default, None, Alignment, Name, Priority };

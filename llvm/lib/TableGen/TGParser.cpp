@@ -54,6 +54,7 @@ struct SubMultiClassReference {
   void dump() const;
 };
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
   errs() << "Multiclass:\n";
 
@@ -63,6 +64,7 @@ LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
   for (Init *TA : TemplateArgs)
     TA->dump();
 }
+#endif
 
 } // end namespace llvm
 
@@ -945,7 +947,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       else if (ListInit *Arg0 = dyn_cast<ListInit>(InitList[0]))
         Type = Arg0->getType();
       else {
-        InitList[0]->dump();
+        InitList[0]->print(errs());
         Error(OpLoc, "expected a list");
         return nullptr;
       }

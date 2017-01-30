@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -stop-after=legalizer %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-apple-ios -verify-machineinstrs -global-isel -stop-after=legalizer %s -o - | FileCheck %s
 
 @_ZTIi = external global i8*
 

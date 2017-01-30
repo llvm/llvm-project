@@ -36,6 +36,12 @@ let isConvergent = 1 in {
 def INT_BARRIER0 : NVPTXInst<(outs), (ins),
                   "bar.sync \t0;",
       [(int_nvvm_barrier0)]>;
+def INT_BARRIERN : NVPTXInst<(outs), (ins Int32Regs:$src1),
+                  "bar.sync \t$src1;",
+      [(int_nvvm_barrier_n Int32Regs:$src1)]>;
+def INT_BARRIER : NVPTXInst<(outs), (ins Int32Regs:$src1, Int32Regs:$src2),
+                  "bar.sync \t$src1, $src2;",
+      [(int_nvvm_barrier Int32Regs:$src1, Int32Regs:$src2)]>;
 def INT_BARRIER0_POPC : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",

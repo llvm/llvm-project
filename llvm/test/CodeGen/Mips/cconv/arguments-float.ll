@@ -49,7 +49,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The first argument is floating point but soft-float is enabled so floating
@@ -132,7 +132,7 @@ entry:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
 ; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(floats)(
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The first argument is floating point but soft-float is enabled so floating
@@ -180,10 +180,10 @@ entry:
 ; ALL-LABEL: double_arg2:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
-; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]]], %got_disp(bytes)(
-; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(doubles)(
+; SYM32-DAG:           addiu  [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
+; SYM64-DAG:           daddiu [[R1:\$[0-9]]], ${{[0-9]+}}, %lo(bytes)
+; SYM32-DAG:           addiu  [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(doubles)
+; SYM64-DAG:           daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(doubles)
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The first argument isn't floating point so floating point registers are not
@@ -207,10 +207,11 @@ entry:
 ; ALL-LABEL: float_arg2:
 ; We won't test the way the global address is calculated in this test. This is
 ; just to get the register number for the other checks.
-; SYM32-DAG:           addiu [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
-; SYM64-DAG:           ld [[R1:\$[0-9]]], %got_disp(bytes)(
-; SYM32-DAG:           addiu [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
-; SYM64-DAG:           ld [[R2:\$[0-9]]], %got_disp(floats)(
+; SYM32-DAG:         addiu  [[R1:\$[0-9]+]], ${{[0-9]+}}, %lo(bytes)
+; SYM64-DAG:         daddiu [[R1:\$[0-9]]], ${{[0-9]+}}, %lo(bytes)
+; SYM32-DAG:         addiu  [[R2:\$[0-9]+]], ${{[0-9]+}}, %lo(floats)
+; SYM64-DAG:         daddiu [[R2:\$[0-9]]], ${{[0-9]+}}, %lo(floats)
+
 
 ; The first four arguments are the same in O32/N32/N64.
 ; The first argument isn't floating point so floating point registers are not

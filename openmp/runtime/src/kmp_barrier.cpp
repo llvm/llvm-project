@@ -1130,8 +1130,10 @@ __kmp_barrier(enum barrier_type bt, int gtid, int is_split, size_t reduce_size,
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
 #if KMP_USE_MONITOR
             this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
-#endif
             this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
+#else
+            this_thr->th.th_team_bt_intervals = KMP_BLOCKTIME_INTERVAL();
+#endif
         }
 
 #if USE_ITT_BUILD
@@ -1453,8 +1455,10 @@ __kmp_join_barrier(int gtid)
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
 #if KMP_USE_MONITOR
         this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
-#endif
         this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
+#else
+        this_thr->th.th_team_bt_intervals = KMP_BLOCKTIME_INTERVAL();
+#endif
     }
 
 #if USE_ITT_BUILD
@@ -1644,8 +1648,10 @@ __kmp_fork_barrier(int gtid, int tid)
         if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
 #if KMP_USE_MONITOR
             this_thr->th.th_team_bt_intervals = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_intervals;
-#endif
             this_thr->th.th_team_bt_set = team->t.t_implicit_task_taskdata[tid].td_icvs.bt_set;
+#else
+            this_thr->th.th_team_bt_intervals = KMP_BLOCKTIME_INTERVAL();
+#endif
         }
     } // master
 

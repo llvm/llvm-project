@@ -7159,11 +7159,6 @@ bool SDNode::hasPredecessor(const SDNode *N) const {
   return hasPredecessorHelper(N, Visited, Worklist);
 }
 
-uint64_t SDNode::getConstantOperandVal(unsigned Num) const {
-  assert(Num < NumOperands && "Invalid child # of SDNode!");
-  return cast<ConstantSDNode>(OperandList[Num])->getZExtValue();
-}
-
 const SDNodeFlags *SDNode::getFlags() const {
   if (auto *FlagsNode = dyn_cast<BinaryWithFlagsSDNode>(this))
     return &FlagsNode->Flags;

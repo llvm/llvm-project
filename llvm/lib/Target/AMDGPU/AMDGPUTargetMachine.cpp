@@ -33,6 +33,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -218,8 +219,12 @@ void AMDGPUTargetMachine::addPreLinkPasses(PassManagerBase & PM) {
   PM.add(llvm::createAMDGPUclpVectorExpansionPass());
 }
 
-void AMDGPUTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
-  PM.add(createAMDGPUUnifyMetadataPass());
+void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+  Builder.addExtension(
+    PassManagerBuilder::EP_ModuleOptimizerEarly,
+    [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      PM.add(createAMDGPUUnifyMetadataPass());
+    });
 }
 
 //===----------------------------------------------------------------------===//
