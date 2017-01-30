@@ -130,7 +130,9 @@ private:
   /// Translate an LLVM store instruction into generic IR.
   bool translateStore(const User &U, MachineIRBuilder &MIRBuilder);
 
-  bool translateMemcpy(const CallInst &CI, MachineIRBuilder &MIRBuilder);
+  /// Translate an LLVM string intrinsic (memcpy, memset, ...).
+  bool translateMemfunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
+                        unsigned Intrinsic);
 
   void getStackGuard(unsigned DstReg, MachineIRBuilder &MIRBuilder);
 
