@@ -141,15 +141,19 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   for (auto &VRegToType : MRI.getVRegToType()) {
     unsigned VReg = VRegToType.first;
     auto *RC = MRI.getRegClassOrNull(VReg);
-    auto *MI = MRI.def_instr_begin(VReg) == MRI.def_instr_end()
-                   ? nullptr
-                   : &*MRI.def_instr_begin(VReg);
-    if (!RC) {
+    MachineInstr *MI = nullptr;
+    if (MRI.def_instr_begin(VReg) != MRI.def_instr_end())
+      MI = &*MRI.def_instr_begin(VReg);
+    else if (MRI.use_instr_begin(VReg) != MRI.use_instr_end())
+      MI = &*MRI.use_instr_begin(VReg);
+
+    if (MI && !RC) {
       if (TPC.isGlobalISelAbortEnabled())
         reportSelectionError(MF, MI, "VReg has no regclass after selection");
       Failed = true;
       break;
-    }
+    } else if (!RC)
+      continue;
 
     if (VRegToType.second.isValid() &&
         VRegToType.second.getSizeInBits() > (RC->getSize() * 8)) {
