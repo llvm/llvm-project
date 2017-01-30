@@ -29,6 +29,7 @@
 #include <cassert>
 #include <cstdint>
 #include <list>
+#include <map>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -232,59 +233,97 @@ private:
   /// \brief Keeps and automatically disposes all DiagStates that we create.
   std::list<DiagState> DiagStates;
 
-  /// \brief Represents a point in source where the diagnostic state was
-  /// modified because of a pragma.
-  ///
-  /// 'Loc' can be null if the point represents the diagnostic state
-  /// modifications done through the command-line.
-  struct DiagStatePoint {
-    DiagState *State;
-    FullSourceLoc Loc;
-    DiagStatePoint(DiagState *State, FullSourceLoc Loc)
-      : State(State), Loc(Loc) { } 
-    
-    bool operator<(const DiagStatePoint &RHS) const {
-      // If Loc is invalid it means it came from <command-line>, in which case
-      // we regard it as coming before any valid source location.
-      if (RHS.Loc.isInvalid())
-        return false;
-      if (Loc.isInvalid())
-        return true;
-      return Loc.isBeforeInTranslationUnitThan(RHS.Loc);
+  /// A mapping from files to the diagnostic states for those files. Lazily
+  /// built on demand for files in which the diagnostic state has not changed.
+  class DiagStateMap {
+  public:
+    /// Add an initial diagnostic state.
+    void appendFirst(DiagState *State);
+    /// Add a new latest state point.
+    void append(SourceManager &SrcMgr, SourceLocation Loc, DiagState *State);
+    /// Look up the diagnostic state at a given source location.
+    DiagState *lookup(SourceManager &SrcMgr, SourceLocation Loc) const;
+    /// Determine whether this map is empty.
+    bool empty() const { return Files.empty(); }
+    /// Clear out this map.
+    void clear() {
+      Files.clear();
+      FirstDiagState = CurDiagState = nullptr;
+      CurDiagStateLoc = SourceLocation();
     }
+
+    /// Grab the most-recently-added state point.
+    DiagState *getCurDiagState() const { return CurDiagState; }
+    /// Get the location at which a diagnostic state was last added.
+    SourceLocation getCurDiagStateLoc() const { return CurDiagStateLoc; }
+
+  private:
+    /// \brief Represents a point in source where the diagnostic state was
+    /// modified because of a pragma.
+    ///
+    /// 'Loc' can be null if the point represents the diagnostic state
+    /// modifications done through the command-line.
+    struct DiagStatePoint {
+      DiagState *State;
+      unsigned Offset;
+      DiagStatePoint(DiagState *State, unsigned Offset)
+        : State(State), Offset(Offset) { } 
+    };
+
+    /// Description of the diagnostic states and state transitions for a
+    /// particular FileID.
+    struct File {
+      /// The diagnostic state for the parent file. This is strictly redundant,
+      /// as looking up the DecomposedIncludedLoc for the FileID in the Files
+      /// map would give us this, but we cache it here for performance.
+      File *Parent = nullptr;
+      /// The offset of this file within its parent.
+      unsigned ParentOffset = 0;
+      /// Whether this file has any local (not imported from an AST file)
+      /// diagnostic state transitions.
+      bool HasLocalTransitions = false;
+      /// The points within the file where the state changes. There will always
+      /// be at least one of these (the state on entry to the file).
+      llvm::SmallVector<DiagStatePoint, 4> StateTransitions;
+
+      DiagState *lookup(unsigned Offset) const;
+    };
+
+    /// The diagnostic states for each file.
+    mutable std::map<FileID, File> Files;
+
+    /// The initial diagnostic state.
+    DiagState *FirstDiagState;
+    /// The current diagnostic state.
+    DiagState *CurDiagState;
+    /// The location at which the current diagnostic state was established.
+    SourceLocation CurDiagStateLoc;
+
+    /// Get the diagnostic state information for a file.
+    File *getFile(SourceManager &SrcMgr, FileID ID) const;
+
+    friend class ASTReader;
+    friend class ASTWriter;
   };
 
-  /// \brief A sorted vector of all DiagStatePoints representing changes in
-  /// diagnostic state due to diagnostic pragmas.
-  ///
-  /// The vector is always sorted according to the SourceLocation of the
-  /// DiagStatePoint.
-  typedef std::vector<DiagStatePoint> DiagStatePointsTy;
-  mutable DiagStatePointsTy DiagStatePoints;
+  DiagStateMap DiagStatesByLoc;
 
   /// \brief Keeps the DiagState that was active during each diagnostic 'push'
   /// so we can get back at it when we 'pop'.
   std::vector<DiagState *> DiagStateOnPushStack;
 
   DiagState *GetCurDiagState() const {
-    assert(!DiagStatePoints.empty());
-    return DiagStatePoints.back().State;
+    return DiagStatesByLoc.getCurDiagState();
   }
 
-  void PushDiagStatePoint(DiagState *State, SourceLocation L) {
-    FullSourceLoc Loc(L, getSourceManager());
-    // Make sure that DiagStatePoints is always sorted according to Loc.
-    assert(Loc.isValid() && "Adding invalid loc point");
-    assert(!DiagStatePoints.empty() &&
-           (DiagStatePoints.back().Loc.isInvalid() ||
-            DiagStatePoints.back().Loc.isBeforeInTranslationUnitThan(Loc)) &&
-           "Previous point loc comes after or is the same as new one");
-    DiagStatePoints.push_back(DiagStatePoint(State, Loc));
-  }
+  void PushDiagStatePoint(DiagState *State, SourceLocation L);
 
   /// \brief Finds the DiagStatePoint that contains the diagnostic state of
   /// the given source location.
-  DiagStatePointsTy::iterator GetDiagStatePointForLoc(SourceLocation Loc) const;
+  DiagState *GetDiagStateForLoc(SourceLocation Loc) const {
+    return SourceMgr ? DiagStatesByLoc.lookup(*SourceMgr, Loc)
+                     : DiagStatesByLoc.getCurDiagState();
+  }
 
   /// \brief Sticky flag set to \c true when an error is emitted.
   bool ErrorOccurred;
@@ -390,7 +429,11 @@ public:
     assert(SourceMgr && "SourceManager not set!");
     return *SourceMgr;
   }
-  void setSourceManager(SourceManager *SrcMgr) { SourceMgr = SrcMgr; }
+  void setSourceManager(SourceManager *SrcMgr) {
+    assert(DiagStatesByLoc.empty() &&
+           "Leftover diag state from a different SourceManager.");
+    SourceMgr = SrcMgr;
+  }
 
   //===--------------------------------------------------------------------===//
   //  DiagnosticsEngine characterization methods, used by a client to customize
