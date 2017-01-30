@@ -2751,8 +2751,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     SmallVector<std::pair<Value *, SanitizerMask>, 2> Checks;
-    llvm::Value *WidthMinusOne = GetWidthMinusOneValue(Ops.LHS, Ops.RHS);
-    llvm::Value *ValidExponent = Builder.CreateICmpULE(Ops.RHS, WidthMinusOne);
+    llvm::Value *WidthMinusOne = GetWidthMinusOneValue(Ops.LHS, RHS);
+    llvm::Value *ValidExponent = Builder.CreateICmpULE(RHS, WidthMinusOne);
 
     if (SanitizeExponent) {
       Checks.push_back(
