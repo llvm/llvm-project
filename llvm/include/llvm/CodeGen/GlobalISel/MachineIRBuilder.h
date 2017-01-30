@@ -322,6 +322,16 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildBrCond(unsigned Tst, MachineBasicBlock &BB);
 
+  /// Build and insert G_BRINDIRECT \p Tgt
+  ///
+  /// G_BRINDIRECT is an indirect branch to \p Tgt.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Tgt must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildBrIndirect(unsigned Tgt);
+
   /// Build and insert \p Res = G_CONSTANT \p Val
   ///
   /// G_CONSTANT is an integer constant with the specified size and value. \p
