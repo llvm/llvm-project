@@ -123,6 +123,7 @@ set(SWIFT_ALL_LIBS
     swiftASTSectionImporter
     swiftRemoteAST
     swiftLLVMPasses
+    swiftOption
     )
 
 set(LLDB_SYSTEM_LIBS)
@@ -165,6 +166,16 @@ if(LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
 else()
   list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(UUID_LIBRARIES "ole32.lib")
+else()
+  find_package(UUID REQUIRED)
+endif()
+
+if(UUID_LIBRARIES)
+  list(APPEND LLDB_SYSTEM_LIBS ${UUID_LIBRARIES})
 endif()
 
 set(LLVM_LINK_COMPONENTS
