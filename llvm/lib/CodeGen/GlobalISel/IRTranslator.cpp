@@ -801,8 +801,17 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn)) {
     MBB.addLiveIn(Reg);
+
+    // N.b. the exception selector register always has pointer type and may not
+    // match the actual IR-level type in the landingpad so an extra cast is
+    // needed.
+    unsigned PtrVReg = MRI->createGenericVirtualRegister(Tys[0]);
+    MIRBuilder.buildCopy(PtrVReg, Reg);
+
     unsigned VReg = MRI->createGenericVirtualRegister(Tys[1]);
-    MIRBuilder.buildCopy(VReg, Reg);
+    MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
+        .addDef(VReg)
+        .addUse(PtrVReg);
     Regs.push_back(VReg);
     Offsets.push_back(Tys[0].getSizeInBits());
   }
