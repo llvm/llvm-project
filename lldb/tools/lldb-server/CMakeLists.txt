@@ -99,6 +99,7 @@ set(CLANG_ALL_LIBS
     clangDriver
     clangEdit
     clangFrontend
+    clangIndex
     clangLex
     clangParse
     clangRewrite
@@ -117,9 +118,11 @@ set(SWIFT_ALL_LIBS
     swiftParse
     swiftSema
     swiftSIL
+    swiftSILGen
     swiftSILOptimizer
     swiftASTSectionImporter
     swiftRemoteAST
+    swiftLLVMPasses
     )
 
 set(LLDB_SYSTEM_LIBS)
@@ -155,6 +158,13 @@ if (LLVM_BUILD_STATIC)
   if (NOT LLDB_DISABLE_CURSES)
     list(APPEND LLDB_SYSTEM_LIBS gpm)
   endif()
+endif()
+
+if(LLDB_BUILT_STANDALONE)
+  # this needs to be linked statially
+  list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
+else()
+  list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
 endif()
 
 set(LLVM_LINK_COMPONENTS
