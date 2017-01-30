@@ -1268,6 +1268,7 @@ private:
   llvm::iterator_range<PreprocessingRecord::iterator>
   getModulePreprocessedEntities(ModuleFile &Mod) const;
 
+public:
   class ModuleDeclIterator
       : public llvm::iterator_adaptor_base<
             ModuleDeclIterator, const serialization::LocalDeclID *,
@@ -1298,6 +1299,7 @@ private:
   llvm::iterator_range<ModuleDeclIterator>
   getModuleFileLevelDecls(ModuleFile &Mod);
 
+private:
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
 
@@ -2188,6 +2190,12 @@ public:
 
   /// \brief Loads comments ranges.
   void ReadComments() override;
+
+  /// Visit all the input files of the given module file.
+  void visitInputFiles(serialization::ModuleFile &MF,
+                       bool IncludeSystem, bool Complain,
+          llvm::function_ref<void(const serialization::InputFile &IF,
+                                  bool isSystem)> Visitor);
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
 };

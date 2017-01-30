@@ -2513,6 +2513,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.InputFileOffsets =
           (const llvm::support::unaligned_uint64_t *)Blob.data();
       F.InputFilesLoaded.resize(NumInputs);
+      F.NumUserInputFiles = NumUserInputs;
       break;
     }
   }
@@ -8531,6 +8532,21 @@ void ASTReader::ReadComments() {
     std::sort(Comments.begin(), Comments.end(),
               BeforeThanCompare<RawComment>(SourceMgr));
     Context.Comments.addDeserializedComments(Comments);
+  }
+}
+
+void ASTReader::visitInputFiles(serialization::ModuleFile &MF,
+                                bool IncludeSystem, bool Complain,
+                    llvm::function_ref<void(const serialization::InputFile &IF,
+                                            bool isSystem)> Visitor) {
+  unsigned NumUserInputs = MF.NumUserInputFiles;
+  unsigned NumInputs = MF.InputFilesLoaded.size();
+  assert(NumUserInputs <= NumInputs);
+  unsigned N = IncludeSystem ? NumInputs : NumUserInputs;
+  for (unsigned I = 0; I < N; ++I) {
+    bool IsSystem = I >= NumUserInputs;
+    InputFile IF = getInputFile(MF, I+1, Complain);
+    Visitor(IF, IsSystem);
   }
 }
 

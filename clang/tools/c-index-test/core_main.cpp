@@ -16,6 +16,7 @@
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Index/CodegenNameGenerator.h"
+#include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +50,10 @@ static cl::extrahelp MoreHelp(
   "\nAdd \"-- <compiler arguments>\" at the end to setup the compiler "
   "invocation\n"
 );
+
+static cl::opt<bool>
+DumpModuleImports("dump-imported-module-files",
+               cl::desc("Print symbols and input files from imported modules"));
 
 static cl::opt<std::string>
 ModuleFilePath("module-file",
@@ -142,7 +147,19 @@ public:
 // Print Source Symbols
 //===----------------------------------------------------------------------===//
 
-static bool printSourceSymbols(ArrayRef<const char *> Args) {
+static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
+                                 ASTReader &Reader,
+                                 raw_ostream &OS) {
+  OS << "---- Module Inputs ----\n";
+  Reader.visitInputFiles(Mod, /*IncludeSystem=*/true, /*Complain=*/false,
+                        [&](const serialization::InputFile &IF, bool isSystem) {
+    OS << (isSystem ? "system" : "user") << " | ";
+    OS << IF.getFile()->getName() << '\n';
+  });
+}
+
+static bool printSourceSymbols(ArrayRef<const char *> Args,
+                               bool dumpModuleImports) {
   SmallVector<const char *, 4> ArgsWithProgName;
   ArgsWithProgName.push_back("clang");
   ArgsWithProgName.append(Args.begin(), Args.end());
@@ -152,7 +169,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
   if (!CInvok)
     return true;
 
-  auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(outs());
+  raw_ostream &OS = outs();
+  auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(OS);
   IndexingOptions IndexOpts;
   std::unique_ptr<FrontendAction> IndexAction;
   IndexAction = createIndexingAction(DataConsumer, IndexOpts,
@@ -164,6 +182,17 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
 
   if (!Unit)
     return true;
+
+  if (dumpModuleImports) {
+    if (auto Reader = Unit->getASTReader()) {
+      Reader->getModuleManager().visit([&](serialization::ModuleFile &Mod) -> bool {
+        OS << "==== Module " << Mod.ModuleName << " ====\n";
+        indexModuleFile(Mod, *Reader, DataConsumer, IndexOpts);
+        dumpModuleFileInputs(Mod, *Reader, OS);
+        return true; // skip module dependencies.
+      });
+    }
+  }
 
   return false;
 }
@@ -268,7 +297,7 @@ int indextest_core_main(int argc, const char **argv) {
       errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
       return 1;
     }
-    return printSourceSymbols(CompArgs);
+    return printSourceSymbols(CompArgs, options::DumpModuleImports);
   }
 
   return 0;
