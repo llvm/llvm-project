@@ -142,9 +142,9 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     unsigned VReg = VRegToType.first;
     auto *RC = MRI.getRegClassOrNull(VReg);
     MachineInstr *MI = nullptr;
-    if (MRI.def_instr_begin(VReg) != MRI.def_instr_end())
+    if (!MRI.def_empty(VReg))
       MI = &*MRI.def_instr_begin(VReg);
-    else if (MRI.use_instr_begin(VReg) != MRI.use_instr_end())
+    else if (!MRI.use_empty(VReg))
       MI = &*MRI.use_instr_begin(VReg);
 
     if (MI && !RC) {
