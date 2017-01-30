@@ -115,6 +115,7 @@ set(SWIFT_ALL_LIBS
     swiftClangImporter
     swiftMarkup
     swiftParse
+    swiftSema
     swiftSIL
     swiftSILOptimizer
     swiftASTSectionImporter
