@@ -83,8 +83,8 @@ RUN: not llvm-objdump -t %p/Inputs/macho-invalid-section-index-getSectionRawName
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-objdump %s
 INVALID-SECTION-IDX-SYMBOL-SEC-objdump: truncated or malformed object (bad section index: 66 for symbol at index 8)
 
-RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
-INVALID-HEADER: The file was not recognized as a valid object file
+RUN: llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
+INVALID-HEADER: is not an object file
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
 INCOMPLETE-SEGMENT-LOADC: truncated or malformed object (load commands extend past the end of the file)
