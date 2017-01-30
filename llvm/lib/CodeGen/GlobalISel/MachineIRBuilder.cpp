@@ -217,6 +217,10 @@ MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BR).addMBB(&Dest);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
+  return buildInstr(TargetOpcode::G_BRINDIRECT).addUse(Tgt);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
   return buildInstr(TargetOpcode::COPY).addDef(Res).addUse(Op);
 }

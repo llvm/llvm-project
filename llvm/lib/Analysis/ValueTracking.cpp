@@ -4156,58 +4156,64 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 
 static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
                               Instruction::CastOps *CastOp) {
-  CastInst *CI = dyn_cast<CastInst>(V1);
-  Constant *C = dyn_cast<Constant>(V2);
-  if (!CI)
+  auto *Cast1 = dyn_cast<CastInst>(V1);
+  if (!Cast1)
     return nullptr;
-  *CastOp = CI->getOpcode();
 
-  if (auto *CI2 = dyn_cast<CastInst>(V2)) {
-    // If V1 and V2 are both the same cast from the same type, we can look
-    // through V1.
-    if (CI2->getOpcode() == CI->getOpcode() &&
-        CI2->getSrcTy() == CI->getSrcTy())
-      return CI2->getOperand(0);
-    return nullptr;
-  } else if (!C) {
+  *CastOp = Cast1->getOpcode();
+  Type *SrcTy = Cast1->getSrcTy();
+  if (auto *Cast2 = dyn_cast<CastInst>(V2)) {
+    // If V1 and V2 are both the same cast from the same type, look through V1.
+    if (*CastOp == Cast2->getOpcode() && SrcTy == Cast2->getSrcTy())
+      return Cast2->getOperand(0);
     return nullptr;
   }
 
+  auto *C = dyn_cast<Constant>(V2);
+  if (!C)
+    return nullptr;
+
   Constant *CastedTo = nullptr;
-
-  if (isa<ZExtInst>(CI) && CmpI->isUnsigned())
-    CastedTo = ConstantExpr::getTrunc(C, CI->getSrcTy());
-
-  if (isa<SExtInst>(CI) && CmpI->isSigned())
-    CastedTo = ConstantExpr::getTrunc(C, CI->getSrcTy(), true);
-
-  if (isa<TruncInst>(CI))
-    CastedTo = ConstantExpr::getIntegerCast(C, CI->getSrcTy(), CmpI->isSigned());
-
-  if (isa<FPTruncInst>(CI))
-    CastedTo = ConstantExpr::getFPExtend(C, CI->getSrcTy(), true);
-
-  if (isa<FPExtInst>(CI))
-    CastedTo = ConstantExpr::getFPTrunc(C, CI->getSrcTy(), true);
-
-  if (isa<FPToUIInst>(CI))
-    CastedTo = ConstantExpr::getUIToFP(C, CI->getSrcTy(), true);
-
-  if (isa<FPToSIInst>(CI))
-    CastedTo = ConstantExpr::getSIToFP(C, CI->getSrcTy(), true);
-
-  if (isa<UIToFPInst>(CI))
-    CastedTo = ConstantExpr::getFPToUI(C, CI->getSrcTy(), true);
-
-  if (isa<SIToFPInst>(CI))
-    CastedTo = ConstantExpr::getFPToSI(C, CI->getSrcTy(), true);
+  switch (*CastOp) {
+  case Instruction::ZExt:
+    if (CmpI->isUnsigned())
+      CastedTo = ConstantExpr::getTrunc(C, SrcTy);
+    break;
+  case Instruction::SExt:
+    if (CmpI->isSigned())
+      CastedTo = ConstantExpr::getTrunc(C, SrcTy, true);
+    break;
+  case Instruction::Trunc:
+    CastedTo = ConstantExpr::getIntegerCast(C, SrcTy, CmpI->isSigned());
+    break;
+  case Instruction::FPTrunc:
+    CastedTo = ConstantExpr::getFPExtend(C, SrcTy, true);
+    break;
+  case Instruction::FPExt:
+    CastedTo = ConstantExpr::getFPTrunc(C, SrcTy, true);
+    break;
+  case Instruction::FPToUI:
+    CastedTo = ConstantExpr::getUIToFP(C, SrcTy, true);
+    break;
+  case Instruction::FPToSI:
+    CastedTo = ConstantExpr::getSIToFP(C, SrcTy, true);
+    break;
+  case Instruction::UIToFP:
+    CastedTo = ConstantExpr::getFPToUI(C, SrcTy, true);
+    break;
+  case Instruction::SIToFP:
+    CastedTo = ConstantExpr::getFPToSI(C, SrcTy, true);
+    break;
+  default:
+    break;
+  }
 
   if (!CastedTo)
     return nullptr;
 
-  Constant *CastedBack =
-      ConstantExpr::getCast(CI->getOpcode(), CastedTo, C->getType(), true);
   // Make sure the cast doesn't lose any information.
+  Constant *CastedBack =
+      ConstantExpr::getCast(*CastOp, CastedTo, C->getType(), true);
   if (CastedBack != C)
     return nullptr;
 

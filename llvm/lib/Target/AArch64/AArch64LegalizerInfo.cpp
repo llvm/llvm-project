@@ -167,6 +167,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   // Control-flow
   for (auto Ty : {s1, s8, s16, s32})
     setAction({G_BRCOND, Ty}, Legal);
+  setAction({G_BRINDIRECT, p0}, Legal);
 
   // Select
   for (auto Ty : {s1, s8, s16, s32, s64, p0})

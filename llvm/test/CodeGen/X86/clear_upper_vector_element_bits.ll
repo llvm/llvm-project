@@ -301,9 +301,8 @@ define <16 x i8> @_clearupper16xi8a(<16 x i8>) nounwind {
 define <2 x i64> @_clearupper2xi64b(<2 x i64>) nounwind {
 ; SSE-LABEL: _clearupper2xi64b:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm1[2,0]
@@ -356,32 +355,7 @@ define <4 x i32> @_clearupper4xi32b(<4 x i32>) nounwind {
 define <8 x i16> @_clearupper8xi16b(<8 x i16>) nounwind {
 ; SSE-LABEL: _clearupper8xi16b:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    psllw $8, %xmm3
-; SSE-NEXT:    pandn %xmm3, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    pslld $24, %xmm3
-; SSE-NEXT:    pandn %xmm3, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    psllq $40, %xmm3
-; SSE-NEXT:    pandn %xmm3, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    psllq $56, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _clearupper8xi16b:

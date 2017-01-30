@@ -7679,7 +7679,7 @@ makes sense:
 .. code-block:: c
 
     // Let's assume that we vectorize the following loop:
-    double *A, B; int *C;
+    double *A, *B; int *C;
     for (int i = 0; i < size; ++i) {
       A[i] = B[C[i]];
     }

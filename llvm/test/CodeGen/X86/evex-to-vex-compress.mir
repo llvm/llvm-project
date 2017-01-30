@@ -691,14 +691,10 @@ body: |
   %ymm0 = VBROADCASTSDZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VBROADCASTSDYrr             %xmm0
   %ymm0 = VBROADCASTSDZ256r                    %xmm0                                          
-  ; CHECK: %ymm0 = VBROADCASTSDYrr             %xmm0
-  %ymm0 = VBROADCASTSDZ256r_s                  %xmm0                                          
   ; CHECK: %ymm0 = VBROADCASTSSYrm             %rip, 1, _, %rax, _
   %ymm0 = VBROADCASTSSZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VBROADCASTSSYrr             %xmm0
   %ymm0 = VBROADCASTSSZ256r                    %xmm0                                          
-  ; CHECK: %ymm0 = VBROADCASTSSYrr             %xmm0
-  %ymm0 = VBROADCASTSSZ256r_s                  %xmm0                                          
   ; CHECK: %ymm0 = VPBROADCASTBYrm             %rip, 1, _, %rax, _
   %ymm0 = VPBROADCASTBZ256m                    %rip, 1, _, %rax, _                            
   ; CHECK: %ymm0 = VPBROADCASTBYrr             %xmm0
@@ -1695,8 +1691,6 @@ body: |
   %xmm0 = VBROADCASTSSZ128m                    %rip, _, _, _, _                                    
   ; CHECK: %xmm0 = VBROADCASTSSrr              %xmm0
   %xmm0 = VBROADCASTSSZ128r                    %xmm0                                               
-  ; CHECK: %xmm0 = VBROADCASTSSrr              %xmm0
-  %xmm0 = VBROADCASTSSZ128r_s                  %xmm0                                               
   ; CHECK: %xmm0 = VPBROADCASTBrm              %rip, _, _, _, _
   %xmm0 = VPBROADCASTBZ128m                    %rip, _, _, _, _                                    
   ; CHECK: %xmm0 = VPBROADCASTBrr              %xmm0
@@ -2928,14 +2922,10 @@ body: |
   %ymm16 = VBROADCASTSDZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VBROADCASTSDZ256r          %xmm0
   %ymm16 = VBROADCASTSDZ256r                   %xmm0                                         
-  ; CHECK: %ymm16 = VBROADCASTSDZ256r_s        %xmm0
-  %ymm16 = VBROADCASTSDZ256r_s                 %xmm0                                         
   ; CHECK: %ymm16 = VBROADCASTSSZ256m          %rip, 1, _, %rax, _
   %ymm16 = VBROADCASTSSZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VBROADCASTSSZ256r          %xmm0
   %ymm16 = VBROADCASTSSZ256r                   %xmm0                                         
-  ; CHECK: %ymm16 = VBROADCASTSSZ256r_s        %xmm0
-  %ymm16 = VBROADCASTSSZ256r_s                 %xmm0                                         
   ; CHECK: %ymm16 = VPBROADCASTBZ256m          %rip, 1, _, %rax, _
   %ymm16 = VPBROADCASTBZ256m                   %rip, 1, _, %rax, _                           
   ; CHECK: %ymm16 = VPBROADCASTBZ256r          %xmm0
@@ -3932,8 +3922,6 @@ body: |
   %xmm16 = VBROADCASTSSZ128m                   %rip, _, _, _, _                                          
   ; CHECK: %xmm16 = VBROADCASTSSZ128r          %xmm16
   %xmm16 = VBROADCASTSSZ128r                   %xmm16                                                    
-  ; CHECK: %xmm16 = VBROADCASTSSZ128r_s        %xmm16
-  %xmm16 = VBROADCASTSSZ128r_s                 %xmm16                                                    
   ; CHECK: %xmm16 = VPBROADCASTBZ128m          %rip, _, _, _, _
   %xmm16 = VPBROADCASTBZ128m                   %rip, _, _, _, _                                          
   ; CHECK: %xmm16 = VPBROADCASTBZ128r          %xmm16

@@ -79,6 +79,7 @@
 
   define void @unconditional_br() { ret void }
   define void @conditional_br() { ret void }
+  define void @indirect_br() { ret void }
 
   define void @load_s64_gpr(i64* %addr) { ret void }
   define void @load_s32_gpr(i32* %addr) { ret void }
@@ -1506,6 +1507,28 @@ body:             |
     %0(s1) = COPY %w0
     G_BRCOND %0(s1), %bb.1
     G_BR %bb.0
+
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: indirect_br
+name:            indirect_br
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# CHECK:   bb.0:
+# CHECK:    %0 = COPY %x0
+# CHECK:    BR %0
+body:             |
+  bb.0:
+    successors: %bb.0, %bb.1
+    %0(p0) = COPY %x0
+    G_BRINDIRECT %0(p0)
 
   bb.1:
 ...

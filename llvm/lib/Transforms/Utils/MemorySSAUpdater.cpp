@@ -243,17 +243,13 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD) {
   // of that thing with us, since we are in the way of whatever was there
   // before.
   // We now define that def's memorydefs and memoryphis
-  if (DefBeforeSameBlock) {
-    for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end();
-         UI != UE;) {
-      Use &U = *UI++;
-      // Leave the uses alone
-      if (isa<MemoryUse>(U.getUser()))
-        continue;
-      U.set(MD);
-    }
+  for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end(); UI != UE;) {
+    Use &U = *UI++;
+    // Leave the uses alone
+    if (isa<MemoryUse>(U.getUser()))
+      continue;
+    U.set(MD);
   }
-
   // and that def is now our defining access.
   // We change them in this order otherwise we will appear in the use list
   // above and reset ourselves.
@@ -349,9 +345,8 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<MemoryAccess *> &Vars) {
 }
 
 // Move What before Where in the MemorySSA IR.
-template <class WhereType>
 void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
-                              WhereType Where) {
+                              MemorySSA::AccessList::iterator Where) {
   // Replace all our users with our defining access.
   What->replaceAllUsesWith(What->getDefiningAccess());
 
@@ -364,7 +359,6 @@ void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
   else
     insertUse(cast<MemoryUse>(What));
 }
-
 // Move What before Where in the MemorySSA IR.
 void MemorySSAUpdater::moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where) {
   moveTo(What, Where->getBlock(), Where->getIterator());
@@ -375,8 +369,4 @@ void MemorySSAUpdater::moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where) {
   moveTo(What, Where->getBlock(), ++Where->getIterator());
 }
 
-void MemorySSAUpdater::moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
-                                   MemorySSA::InsertionPlace Where) {
-  return moveTo(What, BB, Where);
-}
 } // namespace llvm

@@ -24,9 +24,10 @@
 // That's it.
 //
 // For moving, first, move the instruction itself using the normal SSA
-// instruction moving API, then just call moveBefore, moveAfter,or moveTo with
-// the right arguments.
+// instruction moving API, then just call moveBefore or moveAfter with the right
+// arguments.
 //
+// walk memory instructions using a use/def graph.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_MEMORYSSAUPDATER_H
@@ -67,13 +68,10 @@ public:
   void insertUse(MemoryUse *Use);
   void moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
-  void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
-                   MemorySSA::InsertionPlace Where);
+
 private:
-  // Move What before Where in the MemorySSA IR.
-  template <class WhereType>
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB,
-              WhereType Where);
+              MemorySSA::AccessList::iterator Where);
   MemoryAccess *getPreviousDef(MemoryAccess *);
   MemoryAccess *getPreviousDefInBlock(MemoryAccess *);
   MemoryAccess *getPreviousDefFromEnd(BasicBlock *);

@@ -3598,22 +3598,6 @@ static Value *addFastMathFlag(Value *V) {
   return V;
 }
 
-/// \brief Estimate the overhead of scalarizing an Instruction based on the
-/// types of its operands and return value.
-static unsigned getScalarizationOverhead(SmallVectorImpl<Type *> &OpTys,
-                                         Type *RetTy,
-                                         const TargetTransformInfo &TTI) {
-  unsigned ScalarizationCost = 0;
-
-  if (!RetTy->isVoidTy())
-    ScalarizationCost += TTI.getScalarizationOverhead(RetTy, true, false);
-
-  for (Type *Ty : OpTys)
-    ScalarizationCost += TTI.getScalarizationOverhead(Ty, false, true);
-
-  return ScalarizationCost;
-}
-
 /// \brief Estimate the overhead of scalarizing an instruction. This is a
 /// convenience wrapper for the type-based getScalarizationOverhead API.
 static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
@@ -3626,8 +3610,13 @@ static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
   if (!RetTy->isVoidTy())
     Cost += TTI.getScalarizationOverhead(RetTy, true, false);
 
-  SmallVector<const Value *, 4> Operands(I->operand_values());
-  Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
+  if (CallInst *CI = dyn_cast<CallInst>(I)) {
+    SmallVector<const Value *, 4> Operands(CI->arg_operands());
+    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
+  } else {
+    SmallVector<const Value *, 4> Operands(I->operand_values());
+    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
+  }
 
   return Cost;
 }
@@ -3662,7 +3651,7 @@ static unsigned getVectorCallCost(CallInst *CI, unsigned VF,
 
   // Compute costs of unpacking argument values for the scalar calls and
   // packing the return values to a vector.
-  unsigned ScalarizationCost = getScalarizationOverhead(Tys, RetTy, TTI);
+  unsigned ScalarizationCost = getScalarizationOverhead(CI, VF, TTI);
 
   unsigned Cost = ScalarCallCost * VF + ScalarizationCost;
 
