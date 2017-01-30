@@ -1291,11 +1291,14 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
   }
 
   std::string getNodeLabel(NodeRef Node, const BlockFrequencyInfoT *Graph,
-                           GVDAGType GType) {
+                           GVDAGType GType, int layout_order = -1) {
     std::string Result;
     raw_string_ostream OS(Result);
 
-    OS << Node->getName().str() << " : ";
+    if (layout_order != -1)
+      OS << Node->getName() << "[" << layout_order << "] : ";
+    else
+      OS << Node->getName() << " : ";
     switch (GType) {
     case GVDT_Fraction:
       Graph->printBlockFreq(OS, Node);

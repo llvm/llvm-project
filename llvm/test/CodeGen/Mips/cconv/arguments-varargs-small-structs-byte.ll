@@ -259,7 +259,9 @@ entry:
   call void (i8*, ...) @varArgF_SmallStruct(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i32 0, i32 0), i64 inreg %3)
   ret void
  ; CHECK-LABEL: smallStruct_8b:
+ ; Check that the structure is not shifted before the pointer to str is loaded.
  ; CHECK-NOT: dsll
+ ; CHECK: lui
 }
 
 define void @smallStruct_9b(%struct.SmallStruct_9b* %ss) #0 {

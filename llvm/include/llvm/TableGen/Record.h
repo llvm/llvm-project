@@ -1462,6 +1462,7 @@ public:
     ResolveFirst = b;
   }
 
+  void print(raw_ostream &OS) const;
   void dump() const;
 
   //===--------------------------------------------------------------------===//

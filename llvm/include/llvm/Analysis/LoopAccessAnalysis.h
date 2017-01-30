@@ -690,6 +690,11 @@ int64_t getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
                      const ValueToValueMap &StridesMap = ValueToValueMap(),
                      bool Assume = false, bool ShouldCheckWrap = true);
 
+/// \brief Saves the sorted memory accesses in vector argument 'Sorted' after
+/// sorting the jumbled memory accesses.
+void sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+                     ScalarEvolution &SE, SmallVectorImpl<Value *> &Sorted);
+
 /// \brief Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass. 
 bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,

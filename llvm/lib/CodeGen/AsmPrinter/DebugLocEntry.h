@@ -76,7 +76,8 @@ public:
     const DIExpression *getExpression() const { return Expression; }
     friend bool operator==(const Value &, const Value &);
     friend bool operator<(const Value &, const Value &);
-    void dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump() const {
       if (isLocation()) {
         llvm::dbgs() << "Loc = { reg=" << Loc.getReg() << " ";
         if (Loc.isIndirect())
@@ -90,6 +91,7 @@ public:
       if (Expression)
         Expression->dump();
     }
+#endif
   };
 
 private:

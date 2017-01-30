@@ -20,7 +20,7 @@ declare double @floor(double) nounwind readnone
 ; Check call16.
 ;
 ; SOFT-LABEL: f64add:
-; SOFT: ld $25, %call16(__adddf3)
+; SOFT: jal __adddf3
 
 define double @f64add(double %a, double %b) {
 entry:

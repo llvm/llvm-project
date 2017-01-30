@@ -16,6 +16,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -168,6 +169,10 @@ public:
 
   /// Return a descriptor for the corresponding module, if one exists.
   virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
+
+  enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
+
+  virtual ExtKind hasExternalDefinitions(unsigned ID);
 
   /// \brief Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.

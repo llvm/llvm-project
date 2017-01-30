@@ -15,6 +15,13 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+
+import functools
+from collections import defaultdict
+import itertools
+from multiprocessing import Pool
+from multiprocessing import Lock, cpu_count
+import errno
 import argparse
 import os.path
 import re
@@ -24,34 +31,33 @@ from pygments import highlight
 from pygments.lexers.c_cpp import CppLexer
 from pygments.formatters import HtmlFormatter
 
-parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('yaml_files', nargs='+')
-parser.add_argument('output_dir')
-parser.add_argument('-source-dir', '-s', default='', help='set source directory')
-args = parser.parse_args()
-
 p = subprocess.Popen(['c++filt', '-n'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+p_lock = Lock()
 
 
 def demangle(name):
-    p.stdin.write(name + '\n')
-    return p.stdout.readline().rstrip()
+    with p_lock:
+        p.stdin.write(name + '\n')
+        return p.stdout.readline().rstrip()
 
+# This allows passing the global context to the child processes.
+class Context:
+    def __init__(self, max_hotness = 0, caller_loc = dict()):
+       self.max_hotness = max_hotness
 
-class Remark(yaml.YAMLObject):
-    max_hotness = 0
+       # Map function names to their source location for function where inlining happened
+       self.caller_loc = caller_loc
 
-    # Work-around for http://pyyaml.org/ticket/154.
-    yaml_loader = Loader
-
-    @classmethod
-    def should_display_hotness(cls):
+    def should_display_hotness(self):
         # If max_hotness is 0 at the end, we assume hotness information is
         # missing and no relative hotness information is displayed
-        return cls.max_hotness != 0
+        return self.max_hotness != 0
 
-    # Map function names to their source location for function where inlining happened
-    caller_loc = dict()
+context = Context()
+
+class Remark(yaml.YAMLObject):
+    # Work-around for http://pyyaml.org/ticket/154.
+    yaml_loader = Loader
 
     def __getattr__(self, name):
         # If hotness is missing, assume 0
@@ -113,14 +119,14 @@ class Remark(yaml.YAMLObject):
 
     @property
     def RelativeHotness(self):
-        if Remark.should_display_hotness():
-            return "{}%".format(int(round(self.Hotness * 100 / Remark.max_hotness)))
+        if context.should_display_hotness():
+            return "{}%".format(int(round(self.Hotness * 100 / context.max_hotness)))
         else:
             return ''
 
     @property
     def key(self):
-        return (self.__class__, self.Pass, self.Name, self.File, self.Line, self.Column, self.message)
+        return (self.__class__, self.Pass, self.Name, self.File, self.Line, self.Column, self.Function)
 
 
 class Analysis(Remark):
@@ -156,16 +162,16 @@ class Missed(Remark):
 
 
 class SourceFileRenderer:
-    def __init__(self, filename):
+    def __init__(self, source_dir, output_dir, filename):
         existing_filename = None
         if os.path.exists(filename):
             existing_filename = filename
         else:
-            fn = os.path.join(args.source_dir, filename)
+            fn = os.path.join(source_dir, filename)
             if os.path.exists(fn):
                 existing_filename = fn
 
-        self.stream = open(os.path.join(args.output_dir, SourceFileRenderer.html_file_name(filename)), 'w')
+        self.stream = open(os.path.join(output_dir, SourceFileRenderer.html_file_name(filename)), 'w')
         if existing_filename:
             self.source_stream = open(existing_filename)
         else:
@@ -191,7 +197,8 @@ class SourceFileRenderer:
 
     def render_inline_remarks(self, r, line):
         inlining_context = r.DemangledFunctionName
-        dl = Remark.caller_loc.get(r.Function)
+        print
+        dl = context.caller_loc.get(r.Function)
         if dl:
             link = Remark.make_link(dl['File'], dl['Line'] - 2)
             inlining_context = "<a href={link}>{r.DemangledFunctionName}</a>".format(**locals())
@@ -243,8 +250,8 @@ class SourceFileRenderer:
 
 
 class IndexRenderer:
-    def __init__(self):
-        self.stream = open(os.path.join(args.output_dir, 'index.html'), 'w')
+    def __init__(self, output_dir):
+        self.stream = open(os.path.join(output_dir, 'index.html'), 'w')
 
     def render_entry(self, r):
         print('''
@@ -278,41 +285,112 @@ class IndexRenderer:
 </html>''', file=self.stream)
 
 
-all_remarks = dict()
-file_remarks = dict()
+def get_remarks(input_file):
+    max_hotness = 0
+    all_remarks = dict()
+    file_remarks = defaultdict(functools.partial(defaultdict, list))
 
-for input_file in args.yaml_files:
-    f = open(input_file)
-    docs = yaml.load_all(f, Loader=Loader)
-    for remark in docs:
-        # Avoid remarks withoug debug location or if they are duplicated
-        if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
-            continue
-        all_remarks[remark.key] = remark
+    with open(input_file) as f:
+        docs = yaml.load_all(f, Loader=Loader)
 
-        file_remarks.setdefault(remark.File, dict()).setdefault(remark.Line, []).append(remark)
+        for remark in docs:
+            # Avoid remarks withoug debug location or if they are duplicated
+            if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
+                continue
+            all_remarks[remark.key] = remark
 
-        Remark.max_hotness = max(Remark.max_hotness, remark.Hotness)
+            file_remarks[remark.File][remark.Line].append(remark)
 
-# Set up a map between function names and their source location for function where inlining happened
-for remark in all_remarks.itervalues():
-    if type(remark) == Passed and remark.Pass == "inline" and remark.Name == "Inlined":
-        for arg in remark.Args:
-            caller = arg.get('Caller')
-            if caller:
-                    Remark.caller_loc[caller] = arg['DebugLoc']
+            max_hotness = max(max_hotness, remark.Hotness)
 
-if Remark.should_display_hotness():
-    sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: r.Hotness, reverse=True)
-else:
-    sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.File, r.Line, r.Column))
+    return max_hotness, all_remarks, file_remarks
 
-if not os.path.exists(args.output_dir):
-    os.mkdir(args.output_dir)
 
-for (filename, remarks) in file_remarks.iteritems():
-    SourceFileRenderer(filename).render(remarks)
+def _render_file(source_dir, output_dir, ctx, entry):
+    global context
+    context = ctx
+    filename, remarks = entry
+    SourceFileRenderer(source_dir, output_dir, filename).render(remarks)
 
-IndexRenderer().render(sorted_remarks)
 
-shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)), "style.css"), args.output_dir)
+def gather_results(pool, filenames):
+    remarks = pool.map(get_remarks, filenames)
+
+    def merge_file_remarks(file_remarks_job, all_remarks, merged):
+        for filename, d in file_remarks_job.iteritems():
+            for line, remarks in d.iteritems():
+                for remark in remarks:
+                    if remark.key not in all_remarks:
+                        merged[filename][line].append(remark)
+
+    all_remarks = dict()
+    file_remarks = defaultdict(functools.partial(defaultdict, list))
+    for _, all_remarks_job, file_remarks_job in remarks:
+        merge_file_remarks(file_remarks_job, all_remarks, file_remarks)
+        all_remarks.update(all_remarks_job)
+
+    context.max_hotness = max(entry[0] for entry in remarks)
+
+    return all_remarks, file_remarks
+
+
+def map_remarks(all_remarks):
+    # Set up a map between function names and their source location for
+    # function where inlining happened
+    for remark in all_remarks.itervalues():
+        if isinstance(remark, Passed) and remark.Pass == "inline" and remark.Name == "Inlined":
+            for arg in remark.Args:
+                caller = arg.get('Caller')
+                if caller:
+                    context.caller_loc[caller] = arg['DebugLoc']
+
+
+def generate_report(pool, all_remarks, file_remarks, source_dir, output_dir):
+    try:
+        os.makedirs(output_dir)
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(output_dir):
+            pass
+        else:
+            raise
+
+    _render_file_bound = functools.partial(_render_file, source_dir, output_dir, context)
+    pool.map(_render_file_bound, file_remarks.items())
+
+    if context.should_display_hotness():
+        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.Hotness, r.__dict__), reverse=True)
+    else:
+        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.File, r.Line, r.Column, r.__dict__))
+    IndexRenderer(args.output_dir).render(sorted_remarks)
+
+    shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+            "style.css"), output_dir)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('yaml_files', nargs='+')
+    parser.add_argument('output_dir')
+    parser.add_argument(
+        '--jobs',
+        '-j',
+        default=cpu_count(),
+        type=int,
+        help='Max job count (defaults to current CPU count)')
+    parser.add_argument(
+        '-source-dir',
+        '-s',
+        default='',
+        help='set source directory')
+    args = parser.parse_args()
+
+    if len(args.yaml_files) == 0:
+        parser.print_help()
+        sys.exit(1)
+
+    pool = Pool(processes=args.jobs)
+    all_remarks, file_remarks = gather_results(pool, args.yaml_files)
+
+    map_remarks(all_remarks)
+
+    generate_report(pool, all_remarks, file_remarks, args.source_dir, args.output_dir)

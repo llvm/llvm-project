@@ -198,6 +198,7 @@ getExecutionModeForDirective(CodeGenModule &CGM,
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   switch (DirectiveKind) {
   case OMPD_target:
+  case OMPD_target_teams:
     return CGOpenMPRuntimeNVPTX::ExecutionMode::Generic;
   case OMPD_target_parallel:
     return CGOpenMPRuntimeNVPTX::ExecutionMode::Spmd;

@@ -66,8 +66,8 @@ DebugLoc DebugLoc::get(unsigned Line, unsigned Col, const MDNode *Scope,
                          const_cast<MDNode *>(InlinedAt));
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugLoc::dump() const {
-#ifndef NDEBUG
   if (!Loc)
     return;
 
@@ -79,8 +79,8 @@ LLVM_DUMP_METHOD void DebugLoc::dump() const {
     InlinedAtDL.dump();
   } else
     dbgs() << "\n";
-#endif
 }
+#endif
 
 void DebugLoc::print(raw_ostream &OS) const {
   if (!Loc)

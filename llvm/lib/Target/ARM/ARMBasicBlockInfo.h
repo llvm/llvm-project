@@ -14,9 +14,9 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMBASICBLOCKINFO_H
 #define LLVM_LIB_TARGET_ARM_ARMBASICBLOCKINFO_H
 
-#include "ARM.h"
-#include "ARMMachineFunctionInfo.h"
-using namespace llvm;
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cstdint>
 
 namespace llvm {
 
@@ -44,31 +44,30 @@ struct BasicBlockInfo {
   ///
   /// Because worst case padding is used, the computed offset of an aligned
   /// block may not actually be aligned.
-  unsigned Offset;
+  unsigned Offset = 0;
 
   /// Size - Size of the basic block in bytes.  If the block contains
   /// inline assembly, this is a worst case estimate.
   ///
   /// The size does not include any alignment padding whether from the
   /// beginning of the block, or from an aligned jump table at the end.
-  unsigned Size;
+  unsigned Size = 0;
 
   /// KnownBits - The number of low bits in Offset that are known to be
   /// exact.  The remaining bits of Offset are an upper bound.
-  uint8_t KnownBits;
+  uint8_t KnownBits = 0;
 
   /// Unalign - When non-zero, the block contains instructions (inline asm)
   /// of unknown size.  The real size may be smaller than Size bytes by a
   /// multiple of 1 << Unalign.
-  uint8_t Unalign;
+  uint8_t Unalign = 0;
 
   /// PostAlign - When non-zero, the block terminator contains a .align
   /// directive, so the end of the block is aligned to 1 << PostAlign
   /// bytes.
-  uint8_t PostAlign;
+  uint8_t PostAlign = 0;
 
-  BasicBlockInfo() : Offset(0), Size(0), KnownBits(0), Unalign(0),
-    PostAlign(0) {}
+  BasicBlockInfo() = default;
 
   /// Compute the number of known offset bits internally to this block.
   /// This number should be used to predict worst case padding when
@@ -107,4 +106,4 @@ struct BasicBlockInfo {
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARMBASICBLOCKINFO_H

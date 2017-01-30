@@ -153,9 +153,7 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
 
 bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
                            const XRaySledEntry &Sled) XRAY_NEVER_INSTRUMENT {
-  // FIXME: In the future we'd need to distinguish between non-tail exits and
-  // tail exits for better information preservation.
-  return patchSled(Enable, FuncId, Sled, __xray_FunctionExit);
+  return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
 }
 
 } // namespace __xray

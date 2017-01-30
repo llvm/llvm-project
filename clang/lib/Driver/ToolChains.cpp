@@ -1109,10 +1109,6 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                      options::OPT_fno_omit_frame_pointer, false))
       getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
           << "-fomit-frame-pointer" << BoundArch;
-    if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
-                     options::OPT_mno_omit_leaf_frame_pointer, false))
-      getDriver().Diag(clang::diag::warn_drv_unsupported_opt_for_target)
-          << "-momit-leaf-frame-pointer" << BoundArch;
   }
 
   return DAL;
@@ -2892,6 +2888,9 @@ bool Generic_GCC::isPICDefault() const {
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return !getTriple().isOSBinFormatMachO() && !getTriple().isMacOSX();
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+    return true;
   default:
     return false;
   }
@@ -3185,8 +3184,7 @@ std::string HexagonToolChain::getHexagonTargetDir(
 Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
       const ArgList &Args) {
   StringRef Gn = "";
-  if (Arg *A = Args.getLastArg(options::OPT_G, options::OPT_G_EQ,
-                               options::OPT_msmall_data_threshold_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_G)) {
     Gn = A->getValue();
   } else if (Args.getLastArg(options::OPT_shared, options::OPT_fpic,
                              options::OPT_fPIC)) {

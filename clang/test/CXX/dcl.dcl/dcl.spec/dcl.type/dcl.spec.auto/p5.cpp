@@ -9,7 +9,7 @@ struct S {
 
   void f() throw (auto); // expected-error{{'auto' not allowed here}}
 
-  friend auto; // expected-error{{'auto' not allowed in non-static struct member}}
+  friend auto; // expected-error{{'auto' not allowed in friend declaration}}
 
   operator auto(); // expected-error{{'auto' not allowed in conversion function type}}
 };

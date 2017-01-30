@@ -217,6 +217,42 @@ phi.block:
   ret i32 12
 }
 
+; Tests for indirect br.
+; CHECK-LABEL: name: indirectbr
+; CHECK: body:
+;
+; ABI/constant lowering and IR-level entry basic block.
+; CHECK: {{bb.[0-9]+.entry}}:
+; Make sure we have one successor
+; CHECK-NEXT: successors: %[[BB_L1:bb.[0-9]+.L1]](0x80000000)
+; CHECK: G_BR %[[BB_L1]]
+;
+; Check basic block L1 has 2 successors: BBL1 and BBL2
+; CHECK: [[BB_L1]] (address-taken):
+; CHECK-NEXT: successors: %[[BB_L1]](0x40000000),
+; CHECK:                  %[[BB_L2:bb.[0-9]+.L2]](0x40000000)
+; CHECK: G_BRINDIRECT %{{[0-9]+}}(p0)
+;
+; Check basic block L2 is the return basic block
+; CHECK: [[BB_L2]] (address-taken):
+; CHECK-NEXT: RET_ReallyLR
+
+@indirectbr.L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@indirectbr, %L1), i8* blockaddress(@indirectbr, %L2), i8* null], align 8
+
+define void @indirectbr() {
+entry:
+  br label %L1
+L1:                                               ; preds = %entry, %L1
+  %i = phi i32 [ 0, %entry ], [ %inc, %L1 ]
+  %inc = add i32 %i, 1
+  %idxprom = zext i32 %i to i64
+  %arrayidx = getelementptr inbounds [3 x i8*], [3 x i8*]* @indirectbr.L, i64 0, i64 %idxprom
+  %brtarget = load i8*, i8** %arrayidx, align 8
+  indirectbr i8* %brtarget, [label %L1, label %L2]
+L2:                                               ; preds = %L1
+  ret void
+}
+
 ; Tests for or.
 ; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0

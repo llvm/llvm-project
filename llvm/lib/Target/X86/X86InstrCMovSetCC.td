@@ -110,3 +110,9 @@ defm SETGE : SETCC<0x9D, "setge", X86_COND_GE>;  // signed greater or equal
 defm SETLE : SETCC<0x9E, "setle", X86_COND_LE>;  // signed less than or equal
 defm SETG  : SETCC<0x9F, "setg",  X86_COND_G>;   // signed greater than
 
+// SALC is an undocumented instruction. Information for this instruction can be found
+// here http://www.rcollins.org/secrets/opcodes/SALC.html
+// Set AL if carry. 
+let Uses = [EFLAGS], Defs = [AL] in {
+  def SALC : I<0xD6, RawFrm, (outs), (ins), "salc", []>, Requires<[Not64BitMode]>;
+}

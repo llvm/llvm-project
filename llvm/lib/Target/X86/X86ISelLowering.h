@@ -320,6 +320,9 @@ namespace llvm {
       // Vector shift elements by immediate
       VSHLI, VSRLI, VSRAI,
 
+      // Shifts of mask registers.
+      KSHIFTL, KSHIFTR,
+
       // Bit rotate by immediate
       VROTLI, VROTRI,
 

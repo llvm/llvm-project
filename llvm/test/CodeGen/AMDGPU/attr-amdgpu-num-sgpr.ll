@@ -4,16 +4,11 @@
 ; If spilling to smem, additional registers are used for the resource
 ; descriptor.
 
-; ALL-LABEL: {{^}}max_12_sgprs:
+; ALL-LABEL: {{^}}max_9_sgprs:
 
-; FIXME: Should be ablo to skip this copying of the private segment
-; buffer because all the SGPR spills are to VGPRs.
-
-; ALL: s_mov_b64 s[10:11], s[2:3]
-; ALL: s_mov_b64 s[8:9], s[0:1]
 ; ALL: SGPRBlocks: 1
-; ALL: NumSGPRsForWavesPerEU: 14
-define void @max_12_sgprs(i32 addrspace(1)* %out1,
+; ALL: NumSGPRsForWavesPerEU: 9
+define void @max_9_sgprs(i32 addrspace(1)* %out1,
 
                           i32 addrspace(1)* %out2,
                           i32 addrspace(1)* %out3,

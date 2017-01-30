@@ -162,7 +162,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
     LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
     C.emitError("Illegal instruction detected: " + Err);
-    MI->dump();
+    MI->print(errs());
   }
 
   if (MI->isBundle()) {

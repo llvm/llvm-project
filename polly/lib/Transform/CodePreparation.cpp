@@ -41,8 +41,6 @@ class CodePreparation : public FunctionPass {
 
   void clear();
 
-  bool eliminatePHINodes(Function &F);
-
 public:
   static char ID;
 

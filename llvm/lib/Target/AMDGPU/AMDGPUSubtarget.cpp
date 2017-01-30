@@ -49,6 +49,13 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   ParseSubtargetFeatures(GPU, FullFS);
 
+  // Unless +-flat-for-global is specified, turn on FlatForGlobal for all OS-es
+  // on VI and newer hardware to avoid assertion failures due to missing ADDR64
+  // variants of MUBUF instructions.
+  if (!hasAddr64() && !FS.contains("flat-for-global")) {
+    FlatForGlobal = true;
+  }
+
   // FIXME: I don't think think Evergreen has any useful support for
   // denormals, but should be checked. Should we issue a warning somewhere
   // if someone tries to enable these?
@@ -82,7 +89,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64FP16Denormals(false),
     FPExceptions(false),
     FlatForGlobal(false),
-    NoAddr64(false),
     UnalignedScratchAccess(false),
     UnalignedBufferAccess(false),
 

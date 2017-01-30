@@ -28,6 +28,11 @@ ExternalASTSource::getSourceDescriptor(unsigned ID) {
   return None;
 }
 
+ExternalASTSource::ExtKind
+ExternalASTSource::hasExternalDefinitions(unsigned ID) {
+  return EK_ReplyHazy;
+}
+
 ExternalASTSource::ASTSourceDescriptor::ASTSourceDescriptor(const Module &M)
   : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)

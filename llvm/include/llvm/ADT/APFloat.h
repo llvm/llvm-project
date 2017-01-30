@@ -21,6 +21,15 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
+#define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
+  do {                                                                         \
+    if (usesLayout<IEEEFloat>(getSemantics()))                                 \
+      return U.IEEE.METHOD_CALL;                                               \
+    if (usesLayout<DoubleAPFloat>(getSemantics()))                             \
+      return U.Double.METHOD_CALL;                                             \
+    llvm_unreachable("Unexpected semantics");                                  \
+  } while (false)
+
 namespace llvm {
 
 struct fltSemantics;
@@ -771,76 +780,24 @@ class APFloat : public APFloatBase {
     llvm_unreachable("Unexpected semantics");
   }
 
-  void makeZero(bool Neg) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.makeZero(Neg);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.makeZero(Neg);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
-  }
+  void makeZero(bool Neg) { APFLOAT_DISPATCH_ON_SEMANTICS(makeZero(Neg)); }
 
-  void makeInf(bool Neg) {
-    if (usesLayout<IEEEFloat>(*U.semantics)) {
-      U.IEEE.makeInf(Neg);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(*U.semantics)) {
-      U.Double.makeInf(Neg);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
-  }
+  void makeInf(bool Neg) { APFLOAT_DISPATCH_ON_SEMANTICS(makeInf(Neg)); }
 
   void makeNaN(bool SNaN, bool Neg, const APInt *fill) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.makeNaN(SNaN, Neg, fill);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      return U.Double.makeNaN(SNaN, Neg, fill);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(makeNaN(SNaN, Neg, fill));
   }
 
   void makeLargest(bool Neg) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.makeLargest(Neg);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.makeLargest(Neg);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(makeLargest(Neg));
   }
 
   void makeSmallest(bool Neg) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.makeSmallest(Neg);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.makeSmallest(Neg);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(makeSmallest(Neg));
   }
 
   void makeSmallestNormalized(bool Neg) {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.makeSmallestNormalized(Neg);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.makeSmallestNormalized(Neg);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(makeSmallestNormalized(Neg));
   }
 
   // FIXME: This is due to clang 3.3 (or older version) always checks for the
@@ -879,13 +836,7 @@ public:
 
   ~APFloat() = default;
 
-  bool needsCleanup() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.needsCleanup();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.needsCleanup();
-    llvm_unreachable("Unexpected semantics");
-  }
+  bool needsCleanup() const { APFLOAT_DISPATCH_ON_SEMANTICS(needsCleanup()); }
 
   /// Factory for Positive and Negative Zero.
   ///
@@ -1044,21 +995,13 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
   opStatus roundToIntegral(roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.roundToIntegral(RM);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.roundToIntegral(RM);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(roundToIntegral(RM));
   }
 
   // TODO: bool parameters are not readable and a source of bugs.
   // Do something.
   opStatus next(bool nextDown) {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.next(nextDown);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.next(nextDown);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(next(nextDown));
   }
 
   /// Add two APFloats, rounding ties to the nearest even.
@@ -1093,17 +1036,7 @@ public:
     return Result;
   }
 
-  void changeSign() {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.changeSign();
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.changeSign();
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
-  }
+  void changeSign() { APFLOAT_DISPATCH_ON_SEMANTICS(changeSign()); }
   void clearSign() {
     if (isNegative())
       changeSign();
@@ -1125,51 +1058,30 @@ public:
   opStatus convertToInteger(integerPart *Input, unsigned int Width,
                             bool IsSigned, roundingMode RM,
                             bool *IsExact) const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.convertToInteger(Input, Width, IsSigned, RM, IsExact);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.convertToInteger(Input, Width, IsSigned, RM, IsExact);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(
+        convertToInteger(Input, Width, IsSigned, RM, IsExact));
   }
   opStatus convertToInteger(APSInt &Result, roundingMode RM,
                             bool *IsExact) const;
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                             roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.convertFromAPInt(Input, IsSigned, RM);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.convertFromAPInt(Input, IsSigned, RM);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
   opStatus convertFromSignExtendedInteger(const integerPart *Input,
                                           unsigned int InputSize, bool IsSigned,
                                           roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.convertFromSignExtendedInteger(Input, InputSize, IsSigned,
-                                                   RM);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.convertFromSignExtendedInteger(Input, InputSize, IsSigned,
-                                                     RM);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(
+        convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM));
   }
   opStatus convertFromZeroExtendedInteger(const integerPart *Input,
                                           unsigned int InputSize, bool IsSigned,
                                           roundingMode RM) {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.convertFromZeroExtendedInteger(Input, InputSize, IsSigned,
-                                                   RM);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.convertFromZeroExtendedInteger(Input, InputSize, IsSigned,
-                                                     RM);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(
+        convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
   }
   opStatus convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.bitcastToAPInt();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.bitcastToAPInt();
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
   double convertToDouble() const { return getIEEE().convertToDouble(); }
   float convertToFloat() const { return getIEEE().convertToFloat(); }
@@ -1198,11 +1110,8 @@ public:
 
   unsigned int convertToHexString(char *DST, unsigned int HexDigits,
                                   bool UpperCase, roundingMode RM) const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.convertToHexString(DST, HexDigits, UpperCase, RM);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.convertToHexString(DST, HexDigits, UpperCase, RM);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(
+        convertToHexString(DST, HexDigits, UpperCase, RM));
   }
 
   bool isZero() const { return getCategory() == fcZero; }
@@ -1210,13 +1119,7 @@ public:
   bool isNaN() const { return getCategory() == fcNaN; }
 
   bool isNegative() const { return getIEEE().isNegative(); }
-  bool isDenormal() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.isDenormal();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.isDenormal();
-    llvm_unreachable("Unexpected semantics");
-  }
+  bool isDenormal() const { APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal()); }
   bool isSignaling() const { return getIEEE().isSignaling(); }
 
   bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
@@ -1228,53 +1131,24 @@ public:
   bool isFiniteNonZero() const { return isFinite() && !isZero(); }
   bool isPosZero() const { return isZero() && !isNegative(); }
   bool isNegZero() const { return isZero() && isNegative(); }
-  bool isSmallest() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.isSmallest();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.isSmallest();
-    llvm_unreachable("Unexpected semantics");
-  }
-  bool isLargest() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.isLargest();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.isLargest();
-    llvm_unreachable("Unexpected semantics");
-  }
-  bool isInteger() const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.isInteger();
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.isInteger();
-    llvm_unreachable("Unexpected semantics");
-  }
+  bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
+  bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
+  bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
 
   APFloat &operator=(const APFloat &RHS) = default;
   APFloat &operator=(APFloat &&RHS) = default;
 
   void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision = 0,
                 unsigned FormatMaxPadding = 3) const {
-    if (usesLayout<IEEEFloat>(getSemantics())) {
-      U.IEEE.toString(Str, FormatPrecision, FormatMaxPadding);
-      return;
-    }
-    if (usesLayout<DoubleAPFloat>(getSemantics())) {
-      U.Double.toString(Str, FormatPrecision, FormatMaxPadding);
-      return;
-    }
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(
+        toString(Str, FormatPrecision, FormatMaxPadding));
   }
 
   void print(raw_ostream &) const;
   void dump() const;
 
   bool getExactInverse(APFloat *inv) const {
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.getExactInverse(inv);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.getExactInverse(inv);
-    llvm_unreachable("Unexpected semantics");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
   }
 
   friend hash_code hash_value(const APFloat &Arg);
@@ -1345,4 +1219,5 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
 
 } // namespace llvm
 
+#undef APFLOAT_DISPATCH_ON_SEMANTICS
 #endif // LLVM_ADT_APFLOAT_H

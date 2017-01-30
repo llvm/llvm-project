@@ -94,6 +94,15 @@ MultiplexExternalSemaSource::GetExternalCXXCtorInitializers(uint64_t Offset) {
   return nullptr;
 }
 
+ExternalASTSource::ExtKind
+MultiplexExternalSemaSource::hasExternalDefinitions(unsigned int ID) {
+  for (const auto &S : Sources)
+    if (auto EK = S->hasExternalDefinitions(ID))
+      if (EK != EK_ReplyHazy)
+        return EK;
+  return EK_ReplyHazy;
+}
+
 bool MultiplexExternalSemaSource::
 FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name) {
   bool AnyDeclsFound = false;

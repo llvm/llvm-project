@@ -733,6 +733,13 @@ let TargetPrefix = "nvvm" in {
   // intrinsics in this file, this one is a user-facing API.
   def int_nvvm_barrier0 : GCCBuiltin<"__syncthreads">,
       Intrinsic<[], [], [IntrConvergent]>;
+  // Synchronize all threads in the CTA at barrier 'n'.
+  def int_nvvm_barrier_n : GCCBuiltin<"__nvvm_bar_n">,
+      Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>;
+  // Synchronize 'm', a multiple of warp size, (arg 2) threads in
+  // the CTA at barrier 'n' (arg 1).
+  def int_nvvm_barrier : GCCBuiltin<"__nvvm_bar">,
+      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>;
   def int_nvvm_barrier0_popc : GCCBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent]>;
   def int_nvvm_barrier0_and : GCCBuiltin<"__nvvm_bar0_and">,

@@ -11,11 +11,11 @@
 ; CHECK-LABEL: @zg
 ; CHECK: xxspltd
 ; CHECK-NEXT: xxspltd
-; CHECK-NEXT: xxswapd
 ; CHECK-NEXT: xvmuldp
 ; CHECK-NEXT: xvmuldp
 ; CHECK-NEXT: xvsubdp
 ; CHECK-NEXT: xvadddp
+; CHECK-NEXT: xxswapd
 ; CHECK-NEXT: xxpermdi
 ; CHECK-NEXT: xvsubdp
 ; CHECK-NEXT: xxswapd

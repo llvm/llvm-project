@@ -119,6 +119,10 @@ public:
 
   NVPTXInferAddressSpaces() : FunctionPass(ID) {}
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+  }
+
   bool runOnFunction(Function &F) override;
 
 private:

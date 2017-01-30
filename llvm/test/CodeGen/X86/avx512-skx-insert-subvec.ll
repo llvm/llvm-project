@@ -167,3 +167,15 @@ define <2 x i1> @test10(<4 x i1> %a, <4 x i1> %b) {
   %res = shufflevector <4 x i1> %a, <4 x i1> %b, <2 x i32> <i32 2, i32 3>
   ret <2 x i1> %res
 }
+
+define <8 x i1> @test11(<4 x i1> %a, <4 x i1>%b) {
+; CHECK-LABEL: test11:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
+; CHECK-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; CHECK-NEXT:    kshiftlb $4, %k0, %k0
+; CHECK-NEXT:    vpmovm2w %k0, %xmm0
+; CHECK-NEXT:    retq
+  %res = shufflevector <4 x i1> %a, <4 x i1> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 2, i32 3>
+  ret <8 x i1> %res
+}

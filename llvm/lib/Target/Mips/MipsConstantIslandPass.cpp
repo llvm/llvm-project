@@ -417,16 +417,16 @@ bool MipsConstantIslands::isOffsetInRange
   return isOffsetInRange(UserOffset, TrialOffset,
                          U.getMaxDisp(), U.NegOk);
 }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
-void MipsConstantIslands::dumpBBs() {
-  DEBUG({
-    for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
-      const BasicBlockInfo &BBI = BBInfo[J];
-      dbgs() << format("%08x BB#%u\t", BBI.Offset, J)
-             << format(" size=%#x\n", BBInfo[J].Size);
-    }
-  });
+LLVM_DUMP_METHOD void MipsConstantIslands::dumpBBs() {
+  for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
+    const BasicBlockInfo &BBI = BBInfo[J];
+    dbgs() << format("%08x BB#%u\t", BBI.Offset, J)
+           << format(" size=%#x\n", BBInfo[J].Size);
+  }
 }
+#endif
 /// Returns a pass that converts branches to long branches.
 FunctionPass *llvm::createMipsConstantIslandPass() {
   return new MipsConstantIslands();

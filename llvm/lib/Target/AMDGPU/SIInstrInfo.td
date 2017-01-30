@@ -266,10 +266,6 @@ def SIMM16bit : PatLeaf <(imm),
   [{return isInt<16>(N->getSExtValue());}]
 >;
 
-def IMM20bit : PatLeaf <(imm),
-  [{return isUInt<20>(N->getZExtValue());}]
->;
-
 class InlineImm <ValueType vt> : PatLeaf <(vt imm), [{
   return isInlineImmediate(N);
 }]>;
@@ -667,6 +663,7 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _si : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
                 EXPe {
+        let AssemblerPredicates = [isSICI];
         let DecoderNamespace = "SICI";
         let DisableDecoder = DisableSIDecoder;
       }
@@ -674,6 +671,7 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _vi : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
                 EXPe_vi {
+        let AssemblerPredicates = [isVI];
         let DecoderNamespace = "VI";
         let DisableDecoder = DisableVIDecoder;
       }

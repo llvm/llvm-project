@@ -43,9 +43,32 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
                           "integer fractional block frequency representation."),
                clEnumValN(GVDT_Count, "count", "display a graph using the real "
                                                "profile count if available.")));
+// Similar option above, but used to control BFI display only after MBP pass
+cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
+    "view-block-layout-with-bfi", cl::Hidden,
+    cl::desc(
+        "Pop up a window to show a dag displaying MBP layout and associated "
+        "block frequencies of the CFG."),
+    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
+               clEnumValN(GVDT_Fraction, "fraction",
+                          "display a graph using the "
+                          "fractional block frequency representation."),
+               clEnumValN(GVDT_Integer, "integer",
+                          "display a graph using the raw "
+                          "integer fractional block frequency representation."),
+               clEnumValN(GVDT_Count, "count",
+                          "display a graph using the real "
+                          "profile count if available.")));
 
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 extern cl::opt<unsigned> ViewHotFreqPercent;
+
+static GVDAGType getGVDT() {
+  if (ViewBlockLayoutWithBFI != GVDT_None)
+    return ViewBlockLayoutWithBFI;
+
+  return ViewMachineBlockFreqPropagationDAG;
+}
 
 namespace llvm {
 
@@ -80,12 +103,32 @@ template <>
 struct DOTGraphTraits<MachineBlockFrequencyInfo *>
     : public MBFIDOTGraphTraitsBase {
   explicit DOTGraphTraits(bool isSimple = false)
-      : MBFIDOTGraphTraitsBase(isSimple) {}
+      : MBFIDOTGraphTraitsBase(isSimple), CurFunc(nullptr), LayoutOrderMap() {}
+
+  const MachineFunction *CurFunc;
+  DenseMap<const MachineBasicBlock *, int> LayoutOrderMap;
 
   std::string getNodeLabel(const MachineBasicBlock *Node,
                            const MachineBlockFrequencyInfo *Graph) {
-    return MBFIDOTGraphTraitsBase::getNodeLabel(
-        Node, Graph, ViewMachineBlockFreqPropagationDAG);
+
+    int layout_order = -1;
+    // Attach additional ordering information if 'isSimple' is false.
+    if (!isSimple()) {
+      const MachineFunction *F = Node->getParent();
+      if (!CurFunc || F != CurFunc) {
+        if (CurFunc)
+          LayoutOrderMap.clear();
+
+        CurFunc = F;
+        int O = 0;
+        for (auto MBI = F->begin(); MBI != F->end(); ++MBI, ++O) {
+          LayoutOrderMap[&*MBI] = O;
+        }
+      }
+      layout_order = LayoutOrderMap[Node];
+    }
+    return MBFIDOTGraphTraitsBase::getNodeLabel(Node, Graph, getGVDT(),
+                                                layout_order);
   }
 
   std::string getNodeAttributes(const MachineBasicBlock *Node,
@@ -148,11 +191,11 @@ void MachineBlockFrequencyInfo::releaseMemory() { MBFI.reset(); }
 
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
-void MachineBlockFrequencyInfo::view() const {
+void MachineBlockFrequencyInfo::view(bool isSimple) const {
 // This code is only for debugging.
 #ifndef NDEBUG
   ViewGraph(const_cast<MachineBlockFrequencyInfo *>(this),
-            "MachineBlockFrequencyDAGs");
+            "MachineBlockFrequencyDAGs", isSimple);
 #else
   errs() << "MachineBlockFrequencyInfo::view is only available in debug builds "
             "on systems with Graphviz or gv!\n";

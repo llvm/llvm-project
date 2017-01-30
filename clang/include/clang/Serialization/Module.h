@@ -100,13 +100,14 @@ typedef unsigned ASTFileSignature;
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, unsigned Generation);
+  ModuleFile(ModuleKind Kind, unsigned Generation)
+      : Kind(Kind), Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
 
   /// \brief The index of this module in the list of modules.
-  unsigned Index;
+  unsigned Index = 0;
 
   /// \brief The type of this module.
   ModuleKind Kind;
@@ -144,21 +145,21 @@ public:
   std::string ModuleMapPath;
 
   /// \brief Whether this precompiled header is a relocatable PCH file.
-  bool RelocatablePCH;
+  bool RelocatablePCH = false;
 
   /// \brief Whether timestamps are included in this module file.
-  bool HasTimestamps;
+  bool HasTimestamps = false;
 
   /// \brief The file entry for the module file.
-  const FileEntry *File;
+  const FileEntry *File = nullptr;
 
   /// \brief The signature of the module file, which may be used along with size
   /// and modification time to identify this particular file.
-  ASTFileSignature Signature;
+  ASTFileSignature Signature = 0;
 
   /// \brief Whether this module has been directly imported by the
   /// user.
-  bool DirectlyImported;
+  bool DirectlyImported = false;
 
   /// \brief The generation of which this module file is a part.
   unsigned Generation;
@@ -168,10 +169,10 @@ public:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
   /// \brief The size of this file, in bits.
-  uint64_t SizeInBits;
+  uint64_t SizeInBits = 0;
 
   /// \brief The global bit offset (or base) of this module
-  uint64_t GlobalBitOffset;
+  uint64_t GlobalBitOffset = 0;
 
   /// \brief The serialized bitstream data for this file.
   StringRef Data;
@@ -205,16 +206,20 @@ public:
   llvm::BitstreamCursor InputFilesCursor;
 
   /// \brief Offsets for all of the input file entries in the AST file.
-  const llvm::support::unaligned_uint64_t *InputFileOffsets;
+  const llvm::support::unaligned_uint64_t *InputFileOffsets = nullptr;
 
   /// \brief The input files that have been loaded from this AST file.
   std::vector<InputFile> InputFilesLoaded;
+
+  // All user input files reside at the index range [0, NumUserInputFiles), and
+  // system input files reside at [NumUserInputFiles, InputFilesLoaded.size()).
+  unsigned NumUserInputFiles = 0;
 
   /// \brief If non-zero, specifies the time when we last validated input
   /// files.  Zero means we never validated them.
   ///
   /// The time is specified in seconds since the start of the Epoch.
-  uint64_t InputFilesValidationTimestamp;
+  uint64_t InputFilesValidationTimestamp = 0;
 
   // === Source Locations ===
 
@@ -222,17 +227,17 @@ public:
   llvm::BitstreamCursor SLocEntryCursor;
 
   /// \brief The number of source location entries in this AST file.
-  unsigned LocalNumSLocEntries;
+  unsigned LocalNumSLocEntries = 0;
 
   /// \brief The base ID in the source manager's view of this module.
-  int SLocEntryBaseID;
+  int SLocEntryBaseID = 0;
 
   /// \brief The base offset in the source manager's view of this module.
-  unsigned SLocEntryBaseOffset;
+  unsigned SLocEntryBaseOffset = 0;
 
   /// \brief Offsets for all of the source location entries in the
   /// AST file.
-  const uint32_t *SLocEntryOffsets;
+  const uint32_t *SLocEntryOffsets = nullptr;
 
   /// \brief SLocEntries that we're going to preload.
   SmallVector<uint64_t, 4> PreloadSLocEntries;
@@ -243,17 +248,17 @@ public:
   // === Identifiers ===
 
   /// \brief The number of identifiers in this AST file.
-  unsigned LocalNumIdentifiers;
+  unsigned LocalNumIdentifiers = 0;
 
   /// \brief Offsets into the identifier table data.
   ///
   /// This array is indexed by the identifier ID (-1), and provides
   /// the offset into IdentifierTableData where the string data is
   /// stored.
-  const uint32_t *IdentifierOffsets;
+  const uint32_t *IdentifierOffsets = nullptr;
 
   /// \brief Base identifier ID for identifiers local to this module.
-  serialization::IdentID BaseIdentifierID;
+  serialization::IdentID BaseIdentifierID = 0;
 
   /// \brief Remapping table for identifier IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> IdentifierRemap;
@@ -262,11 +267,11 @@ public:
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
   /// table for identifiers actually lives.
-  const char *IdentifierTableData;
+  const char *IdentifierTableData = nullptr;
 
   /// \brief A pointer to an on-disk hash table of opaque type
   /// IdentifierHashTable.
-  void *IdentifierLookupTable;
+  void *IdentifierLookupTable = nullptr;
 
   /// \brief Offsets of identifiers that we're going to preload within
   /// IdentifierTableData.
@@ -279,23 +284,23 @@ public:
   llvm::BitstreamCursor MacroCursor;
 
   /// \brief The number of macros in this AST file.
-  unsigned LocalNumMacros;
+  unsigned LocalNumMacros = 0;
 
   /// \brief Offsets of macros in the preprocessor block.
   ///
   /// This array is indexed by the macro ID (-1), and provides
   /// the offset into the preprocessor block where macro definitions are
   /// stored.
-  const uint32_t *MacroOffsets;
+  const uint32_t *MacroOffsets = nullptr;
 
   /// \brief Base macro ID for macros local to this module.
-  serialization::MacroID BaseMacroID;
+  serialization::MacroID BaseMacroID = 0;
 
   /// \brief Remapping table for macro IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> MacroRemap;
 
   /// \brief The offset of the start of the set of defined macros.
-  uint64_t MacroStartOffset;
+  uint64_t MacroStartOffset = 0;
 
   // === Detailed PreprocessingRecord ===
 
@@ -304,40 +309,40 @@ public:
   llvm::BitstreamCursor PreprocessorDetailCursor;
 
   /// \brief The offset of the start of the preprocessor detail cursor.
-  uint64_t PreprocessorDetailStartOffset;
+  uint64_t PreprocessorDetailStartOffset = 0;
 
   /// \brief Base preprocessed entity ID for preprocessed entities local to
   /// this module.
-  serialization::PreprocessedEntityID BasePreprocessedEntityID;
+  serialization::PreprocessedEntityID BasePreprocessedEntityID = 0;
 
   /// \brief Remapping table for preprocessed entity IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> PreprocessedEntityRemap;
 
-  const PPEntityOffset *PreprocessedEntityOffsets;
-  unsigned NumPreprocessedEntities;
+  const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
+  unsigned NumPreprocessedEntities = 0;
 
   // === Header search information ===
 
   /// \brief The number of local HeaderFileInfo structures.
-  unsigned LocalNumHeaderFileInfos;
+  unsigned LocalNumHeaderFileInfos = 0;
 
   /// \brief Actual data for the on-disk hash table of header file
   /// information.
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
   /// table for header file information actually lives.
-  const char *HeaderFileInfoTableData;
+  const char *HeaderFileInfoTableData = nullptr;
 
   /// \brief The on-disk hash table that contains information about each of
   /// the header files.
-  void *HeaderFileInfoTable;
+  void *HeaderFileInfoTable = nullptr;
 
   // === Submodule information ===  
   /// \brief The number of submodules in this module.
-  unsigned LocalNumSubmodules;
+  unsigned LocalNumSubmodules = 0;
   
   /// \brief Base submodule ID for submodules local to this module.
-  serialization::SubmoduleID BaseSubmoduleID;
+  serialization::SubmoduleID BaseSubmoduleID = 0;
   
   /// \brief Remapping table for submodule IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> SubmoduleRemap;
@@ -347,14 +352,14 @@ public:
   /// \brief The number of selectors new to this file.
   ///
   /// This is the number of entries in SelectorOffsets.
-  unsigned LocalNumSelectors;
+  unsigned LocalNumSelectors = 0;
 
   /// \brief Offsets into the selector lookup table's data array
   /// where each selector resides.
-  const uint32_t *SelectorOffsets;
+  const uint32_t *SelectorOffsets = nullptr;
 
   /// \brief Base selector ID for selectors local to this module.
-  serialization::SelectorID BaseSelectorID;
+  serialization::SelectorID BaseSelectorID = 0;
 
   /// \brief Remapping table for selector IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> SelectorRemap;
@@ -362,14 +367,14 @@ public:
   /// \brief A pointer to the character data that comprises the selector table
   ///
   /// The SelectorOffsets table refers into this memory.
-  const unsigned char *SelectorLookupTableData;
+  const unsigned char *SelectorLookupTableData = nullptr;
 
   /// \brief A pointer to an on-disk hash table of opaque type
   /// ASTSelectorLookupTable.
   ///
   /// This hash table provides the IDs of all selectors, and the associated
   /// instance and factory methods.
-  void *SelectorLookupTable;
+  void *SelectorLookupTable = nullptr;
 
   // === Declarations ===
 
@@ -379,14 +384,14 @@ public:
   llvm::BitstreamCursor DeclsCursor;
 
   /// \brief The number of declarations in this AST file.
-  unsigned LocalNumDecls;
+  unsigned LocalNumDecls = 0;
 
   /// \brief Offset of each declaration within the bitstream, indexed
   /// by the declaration ID (-1).
-  const DeclOffset *DeclOffsets;
+  const DeclOffset *DeclOffsets = nullptr;
 
   /// \brief Base declaration ID for declarations local to this module.
-  serialization::DeclID BaseDeclID;
+  serialization::DeclID BaseDeclID = 0;
 
   /// \brief Remapping table for declaration IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> DeclRemap;
@@ -401,15 +406,15 @@ public:
   llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
 
   /// \brief Array of file-level DeclIDs sorted by file.
-  const serialization::DeclID *FileSortedDecls;
-  unsigned NumFileSortedDecls;
+  const serialization::DeclID *FileSortedDecls = nullptr;
+  unsigned NumFileSortedDecls = 0;
 
   /// \brief Array of category list location information within this 
   /// module file, sorted by the definition ID.
-  const serialization::ObjCCategoriesInfo *ObjCCategoriesMap;
+  const serialization::ObjCCategoriesInfo *ObjCCategoriesMap = nullptr;
   
   /// \brief The number of redeclaration info entries in ObjCCategoriesMap.
-  unsigned LocalNumObjCCategoriesInMap;
+  unsigned LocalNumObjCCategoriesInMap = 0;
   
   /// \brief The Objective-C category lists for categories known to this
   /// module.
@@ -418,15 +423,15 @@ public:
   // === Types ===
 
   /// \brief The number of types in this AST file.
-  unsigned LocalNumTypes;
+  unsigned LocalNumTypes = 0;
 
   /// \brief Offset of each type within the bitstream, indexed by the
   /// type ID, or the representation of a Type*.
-  const uint32_t *TypeOffsets;
+  const uint32_t *TypeOffsets = nullptr;
 
   /// \brief Base type ID for types local to this module as represented in
   /// the global type ID space.
-  serialization::TypeID BaseTypeIndex;
+  serialization::TypeID BaseTypeIndex = 0;
 
   /// \brief Remapping table for type IDs in this module.
   ContinuousRangeMap<uint32_t, int, 2> TypeRemap;

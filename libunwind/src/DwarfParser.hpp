@@ -416,7 +416,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       offset = (int64_t)addressSpace.getULEB128(p, instructionsEnd)
                                                   * cieInfo.dataAlignFactor;
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_offset_extended, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_offset_extended DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterInCFA;
@@ -428,7 +429,9 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_restore_extended:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_restore_extended, reg too big");
+        fprintf(
+            stderr,
+            "malformed DW_CFA_restore_extended DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg] = initialState.savedRegisters[reg];
@@ -437,7 +440,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_undefined:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_undefined, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_undefined DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterUnused;
@@ -446,7 +450,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_same_value:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_same_value, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_same_value DWARF unwind, reg too big\n");
         return false;
       }
       // <rdar://problem/8456377> DW_CFA_same_value unsupported
@@ -462,11 +467,13 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       reg2 = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_register, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_register DWARF unwind, reg too big\n");
         return false;
       }
       if (reg2 > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_register, reg2 too big");
+        fprintf(stderr,
+                "malformed DW_CFA_register DWARF unwind, reg2 too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterInRegister;
@@ -505,7 +512,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       offset = (int64_t)addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_def_cfa, reg too big");
+        fprintf(stderr, "malformed DW_CFA_def_cfa DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -516,7 +523,9 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_def_cfa_register:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_def_cfa_register, reg too big");
+        fprintf(
+            stderr,
+            "malformed DW_CFA_def_cfa_register DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -541,7 +550,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_expression:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_expression, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_expression DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterAtExpression;
@@ -556,8 +566,9 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_offset_extended_sf:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG(
-            "malformed DWARF DW_CFA_offset_extended_sf, reg too big");
+        fprintf(
+            stderr,
+            "malformed DW_CFA_offset_extended_sf DWARF unwind, reg too big\n");
         return false;
       }
       offset =
@@ -573,7 +584,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       offset =
           addressSpace.getSLEB128(p, instructionsEnd) * cieInfo.dataAlignFactor;
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_def_cfa_sf, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_def_cfa_sf DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -602,7 +614,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_val_offset_sf:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_val_offset_sf, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_val_offset_sf DWARF unwind, reg too big\n");
         return false;
       }
       offset =
@@ -616,7 +629,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_val_expression:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG("malformed DWARF DW_CFA_val_expression, reg too big");
+        fprintf(stderr,
+                "malformed DW_CFA_val_expression DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterIsExpression;
@@ -635,8 +649,8 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_GNU_negative_offset_extended:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        _LIBUNWIND_LOG(
-            "malformed DWARF DW_CFA_GNU_negative_offset_extended, reg too big");
+        fprintf(stderr, "malformed DW_CFA_GNU_negative_offset_extended DWARF "
+                        "unwind, reg too big\n");
         return false;
       }
       offset = (int64_t)addressSpace.getULEB128(p, instructionsEnd)

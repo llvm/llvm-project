@@ -1153,7 +1153,7 @@ public:
              const TargetInstrInfo *TII = nullptr) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST, bool SkipOpers = false,
              const TargetInstrInfo *TII = nullptr) const;
-  void dump(const TargetInstrInfo *TII = nullptr) const;
+  void dump() const;
 
   //===--------------------------------------------------------------------===//
   // Accessors used to build up machine instructions.

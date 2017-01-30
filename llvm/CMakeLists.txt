@@ -178,7 +178,7 @@ if(LLVM_DEPENDENCY_DEBUGGING)
   endif()
 endif()
 
-option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" OFF)
+option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" ON)
 if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
 endif()
@@ -977,4 +977,9 @@ if(LLVM_DISTRIBUTION_COMPONENTS)
       message(FATAL_ERROR "Specified distribution component '${target}' doesn't have an install target")
     endif()
   endforeach()
+endif()
+
+# This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
+if (MSVC)
+  include(InstallRequiredSystemLibraries)
 endif()

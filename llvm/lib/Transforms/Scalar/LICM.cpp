@@ -1224,10 +1224,7 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
 
   auto mergeLoop = [&](Loop *L) {
     // Loop over the body of this loop, looking for calls, invokes, and stores.
-    // Because subloops have already been incorporated into AST, we skip blocks
-    // in subloops.
     for (BasicBlock *BB : L->blocks())
-      if (LI->getLoopFor(BB) == L) // Ignore blocks in subloops.
         CurAST->add(*BB);          // Incorporate the specified basic block
   };
 

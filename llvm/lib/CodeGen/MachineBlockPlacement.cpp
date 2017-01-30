@@ -32,6 +32,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -145,6 +146,11 @@ static cl::opt<unsigned> TailDuplicatePlacementThreshold(
 
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
+
+#ifndef NDEBUG
+extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
+extern cl::opt<std::string> ViewBlockFreqFuncName;
+#endif
 
 namespace {
 class BlockChain;
@@ -2067,6 +2073,14 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
         MBI->setAlignment(AlignAllNonFallThruBlocks);
     }
   }
+#ifndef NDEBUG
+  if (ViewBlockLayoutWithBFI != GVDT_None &&
+      (ViewBlockFreqFuncName.empty() ||
+       F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
+    MBFI->view(false);
+  }
+#endif
+
 
   // We always return true as we have no way to track whether the final order
   // differs from the original order.

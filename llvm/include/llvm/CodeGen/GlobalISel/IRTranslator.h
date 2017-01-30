@@ -190,6 +190,8 @@ private:
 
   bool translateSwitch(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateIndirectBr(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateExtractValue(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertValue(const User &U, MachineIRBuilder &MIRBuilder);
@@ -304,9 +306,6 @@ private:
 
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
-  bool translateIndirectBr(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
-  }
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;
   }

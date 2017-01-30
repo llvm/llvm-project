@@ -5,8 +5,8 @@
 
 ; RUN: llc -march=mips64 -mcpu=mips64 -target-abi=n64 -relocation-model=pic < \
 ; RUN:     %s | FileCheck %s -check-prefixes=ALL,N64,HARD-FLOAT
-; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -relocation-model=pic < \
-; RUN:     %s | FileCheck %s -check-prefixes=ALL,N64,HARD-FLOAT
+; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -relocation-model=pic \
+; RUN:     < %s | FileCheck %s -check-prefixes=ALL,N64,HARD-FLOAT
 
 ; RUN: llc -march=mips64 -mcpu=mips64 -mattr=+soft-float -target-abi=n32 \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,N32,SOFT-FLOAT
@@ -14,9 +14,11 @@
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,N32,SOFT-FLOAT
 
 ; RUN: llc -march=mips64 -mcpu=mips64 -mattr=+soft-float -target-abi=n64 < %s \
-; RUN: | FileCheck %s -check-prefixes=ALL,N64,SOFT-FLOAT
+; RUN:     -relocation-model=pic | FileCheck %s \
+; RUN:     -check-prefixes=ALL,N64,SOFT-FLOAT
 ; RUN: llc -march=mips64el -mcpu=mips64 -mattr=+soft-float -target-abi=n64 < \
-; RUN:     %s | FileCheck %s -check-prefixes=ALL,N64,SOFT-FLOAT
+; RUN:     %s -relocation-model=pic | FileCheck %s \
+; RUN:     -check-prefixes=ALL,N64,SOFT-FLOAT
 
 @fp128 = global fp128 zeroinitializer
 

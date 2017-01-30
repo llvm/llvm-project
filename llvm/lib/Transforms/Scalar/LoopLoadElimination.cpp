@@ -20,13 +20,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/LoopLoadElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -45,9 +46,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
-#include <forward_list>
-#include <cassert>
 #include <algorithm>
+#include <cassert>
+#include <forward_list>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -558,6 +559,32 @@ private:
   PredicatedScalarEvolution PSE;
 };
 
+static bool
+eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
+                          function_ref<const LoopAccessInfo &(Loop &)> GetLAI) {
+  // Build up a worklist of inner-loops to transform to avoid iterator
+  // invalidation.
+  // FIXME: This logic comes from other passes that actually change the loop
+  // nest structure. It isn't clear this is necessary (or useful) for a pass
+  // which merely optimizes the use of loads in a loop.
+  SmallVector<Loop *, 8> Worklist;
+
+  for (Loop *TopLevelLoop : LI)
+    for (Loop *L : depth_first(TopLevelLoop))
+      // We only handle inner-most loops.
+      if (L->empty())
+        Worklist.push_back(L);
+
+  // Now walk the identified inner loops.
+  bool Changed = false;
+  for (Loop *L : Worklist) {
+    // The actual work is performed by LoadEliminationForLoop.
+    LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT);
+    Changed |= LEL.processLoop();
+  }
+  return Changed;
+}
+
 /// \brief The pass.  Most of the work is delegated to the per-loop
 /// LoadEliminationForLoop class.
 class LoopLoadElimination : public FunctionPass {
@@ -570,32 +597,14 @@ public:
     if (skipFunction(F))
       return false;
 
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-    // Build up a worklist of inner-loops to vectorize. This is necessary as the
-    // act of distributing a loop creates new loops and can invalidate iterators
-    // across the loops.
-    SmallVector<Loop *, 8> Worklist;
-
-    for (Loop *TopLevelLoop : *LI)
-      for (Loop *L : depth_first(TopLevelLoop))
-        // We only handle inner-most loops.
-        if (L->empty())
-          Worklist.push_back(L);
-
-    // Now walk the identified inner loops.
-    bool Changed = false;
-    for (Loop *L : Worklist) {
-      const LoopAccessInfo &LAI = LAA->getInfo(L);
-      // The actual work is performed by LoadEliminationForLoop.
-      LoadEliminationForLoop LEL(L, LI, LAI, DT);
-      Changed |= LEL.processLoop();
-    }
+    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &LAA = getAnalysis<LoopAccessLegacyAnalysis>();
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
     // Process each loop nest in the function.
-    return Changed;
+    return eliminateLoadsAcrossLoops(
+        F, LI, DT,
+        [&LAA](Loop &L) -> const LoopAccessInfo & { return LAA.getInfo(&L); });
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -629,6 +638,30 @@ namespace llvm {
 
 FunctionPass *createLoopLoadEliminationPass() {
   return new LoopLoadElimination();
+}
+
+PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &AA = AM.getResult<AAManager>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+
+  auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+  bool Changed = eliminateLoadsAcrossLoops(
+      F, LI, DT, [&](Loop &L) -> const LoopAccessInfo & {
+        LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI};
+        return LAM.getResult<LoopAccessAnalysis>(L, AR);
+      });
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  return PA;
 }
 
 } // end namespace llvm

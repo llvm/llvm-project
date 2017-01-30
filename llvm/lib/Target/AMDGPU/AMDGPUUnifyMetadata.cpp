@@ -38,21 +38,13 @@ namespace {
   } // end namespace kOCLMD
 
   /// \brief Unify multiple OpenCL metadata due to linking.
-  class AMDGPUUnifyMetadata : public FunctionPass {
+  class AMDGPUUnifyMetadata : public ModulePass {
   public:
     static char ID;
-
-    explicit AMDGPUUnifyMetadata() : FunctionPass(ID) {}
+    explicit AMDGPUUnifyMetadata() : ModulePass(ID) {};
 
   private:
-    // This should really be a module pass but we have to run it as early
-    // as possible, so given function passes are executed first and
-    // TargetMachine::addEarlyAsPossiblePasses() expects only function passes
-    // it has to be a function pass.
     virtual bool runOnModule(Module &M);
-
-    // \todo: Convert to a module pass.
-    bool runOnFunction(Function &F) override;
 
     /// \brief Unify version metadata.
     /// \return true if changes are made.
@@ -126,7 +118,7 @@ INITIALIZE_PASS(AMDGPUUnifyMetadata, "amdgpu-unify-metadata",
                 "Unify multiple OpenCL metadata due to linking",
                 false, false)
 
-FunctionPass* llvm::createAMDGPUUnifyMetadataPass() {
+ModulePass* llvm::createAMDGPUUnifyMetadataPass() {
   return new AMDGPUUnifyMetadata();
 }
 
@@ -151,8 +143,4 @@ bool AMDGPUUnifyMetadata::runOnModule(Module &M) {
     Changed |= unifyExtensionMD(M, I);
 
   return Changed;
-}
-
-bool AMDGPUUnifyMetadata::runOnFunction(Function &F) {
-  return runOnModule(*F.getParent());
 }

@@ -1559,25 +1559,29 @@ TagDecl *Type::getAsTagDecl() const {
 }
 
 namespace {
-  class GetContainedAutoVisitor :
-    public TypeVisitor<GetContainedAutoVisitor, Type*> {
+  class GetContainedDeducedTypeVisitor :
+    public TypeVisitor<GetContainedDeducedTypeVisitor, Type*> {
     bool Syntactic;
   public:
-    GetContainedAutoVisitor(bool Syntactic = false) : Syntactic(Syntactic) {}
+    GetContainedDeducedTypeVisitor(bool Syntactic = false)
+        : Syntactic(Syntactic) {}
 
-    using TypeVisitor<GetContainedAutoVisitor, Type*>::Visit;
+    using TypeVisitor<GetContainedDeducedTypeVisitor, Type*>::Visit;
     Type *Visit(QualType T) {
       if (T.isNull())
         return nullptr;
       return Visit(T.getTypePtr());
     }
 
-    // The 'auto' type itself.
-    Type *VisitAutoType(const AutoType *AT) {
-      return const_cast<AutoType*>(AT);
+    // The deduced type itself.
+    Type *VisitDeducedType(const DeducedType *AT) {
+      return const_cast<DeducedType*>(AT);
     }
 
     // Only these types can contain the desired 'auto' type.
+    Type *VisitElaboratedType(const ElaboratedType *T) {
+      return Visit(T->getNamedType());
+    }
     Type *VisitPointerType(const PointerType *T) {
       return Visit(T->getPointeeType());
     }
@@ -1620,13 +1624,14 @@ namespace {
   };
 }
 
-AutoType *Type::getContainedAutoType() const {
-  return cast_or_null<AutoType>(GetContainedAutoVisitor().Visit(this));
+DeducedType *Type::getContainedDeducedType() const {
+  return cast_or_null<DeducedType>(
+      GetContainedDeducedTypeVisitor().Visit(this));
 }
 
 bool Type::hasAutoForTrailingReturnType() const {
   return dyn_cast_or_null<FunctionType>(
-      GetContainedAutoVisitor(true).Visit(this));
+      GetContainedDeducedTypeVisitor(true).Visit(this));
 }
 
 bool Type::hasIntegerRepresentation() const {
@@ -3378,6 +3383,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return CachedProperties(ExternalLinkage, false);
 
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
     // Give non-deduced 'auto' types external linkage. We should only see them
     // here in error recovery.
     return CachedProperties(ExternalLinkage, false);
@@ -3485,6 +3491,7 @@ static LinkageInfo computeLinkageInfo(const Type *T) {
     return LinkageInfo::external();
 
   case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
     return LinkageInfo::external();
 
   case Type::Record:
@@ -3621,7 +3628,8 @@ bool Type::canHaveNullability() const {
 
   // auto is considered dependent when it isn't deduced.
   case Type::Auto:
-    return !cast<AutoType>(type.getTypePtr())->isDeduced();
+  case Type::DeducedTemplateSpecialization:
+    return !cast<DeducedType>(type.getTypePtr())->isDeduced();
 
   case Type::Builtin:
     switch (cast<BuiltinType>(type.getTypePtr())->getKind()) {

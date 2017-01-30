@@ -150,7 +150,9 @@ private:
     /// dominates MBB.
     bool dominates(MachineBasicBlock &MBB) const { return UVS.dominates(&MBB); }
 
-    void dump() const { MI.dump(); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump() const { MI.dump(); }
+#endif
 
     bool operator==(const VarLoc &Other) const {
       return Var == Other.Var && Loc.Hash == Other.Loc.Hash;
@@ -282,6 +284,7 @@ void LiveDebugValues::getAnalysisUsage(AnalysisUsage &AU) const {
 //            Debug Range Extension Implementation
 //===----------------------------------------------------------------------===//
 
+#ifndef NDEBUG
 void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
                                        const VarLocInMBB &V,
                                        const VarLocMap &VarLocIDs,
@@ -300,6 +303,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
   }
   Out << "\n";
 }
+#endif
 
 /// End all previous ranges related to @MI and start a new range from @MI
 /// if it is a DBG_VALUE instr.

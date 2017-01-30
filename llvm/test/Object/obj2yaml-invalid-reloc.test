@@ -1,0 +1,37 @@
+RUN: obj2yaml %p/Inputs/invalid-reloc.elf-x86-64 | FileCheck %s
+
+CHECK: --- !ELF
+CHECK-NEXT: FileHeader:
+CHECK-NEXT:   Class:           ELFCLASS64
+CHECK-NEXT:   Data:            ELFDATA2LSB
+CHECK-NEXT:   OSABI:           ELFOSABI_FREEBSD
+CHECK-NEXT:   Type:            ET_REL
+CHECK-NEXT:   Machine:         EM_X86_64
+CHECK-NEXT: Sections:
+CHECK-NEXT:   - Name:            .text
+CHECK-NEXT:     Type:            SHT_PROGBITS
+CHECK-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+CHECK-NEXT:     AddressAlign:    0x0000000000000004
+CHECK-NEXT:     Content:         4833C0C390
+CHECK-NEXT:   - Name:            .rela.text
+CHECK-NEXT:     Type:            SHT_RELA
+CHECK-NEXT:     Link:            .symtab
+CHECK-NEXT:     AddressAlign:    0x0000000000000008
+CHECK-NEXT:     Info:            .text
+CHECK-NEXT:     Relocations:
+CHECK-NEXT:       - Offset:          0x0000000000000000
+CHECK-NEXT:         Symbol:          ''
+CHECK-NEXT:         Type:            R_X86_64_NONE
+CHECK-NEXT: Symbols:
+CHECK-NEXT:   Local:
+CHECK-NEXT:     - Name:            rb_ary_new_capa
+CHECK-NEXT:       Type:            STT_FUNC
+CHECK-NEXT:       Section:         .text
+CHECK-NEXT:       Size:            0x0000000000000005
+CHECK-NEXT:   Global:
+CHECK-NEXT:     - Name:            __dtraceenabled_ruby___array-create
+CHECK-NEXT:     - Name:            '$dtrace1316529.rb_ary_new_capa'
+CHECK-NEXT:       Type:            STT_FUNC
+CHECK-NEXT:       Section:         .text
+CHECK-NEXT:       Size:            0x0000000000000005
+CHECK-NEXT:       Visibility:      STV_HIDDEN

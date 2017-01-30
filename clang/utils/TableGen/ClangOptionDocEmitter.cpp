@@ -140,7 +140,7 @@ Documentation extractDocumentation(RecordKeeper &Records) {
 }
 
 // Get the first and successive separators to use for an OptionKind.
-std::pair<StringRef,StringRef> getSeparatorsForKind(Record *OptionKind) {
+std::pair<StringRef,StringRef> getSeparatorsForKind(const Record *OptionKind) {
   return StringSwitch<std::pair<StringRef, StringRef>>(OptionKind->getName())
     .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE",
            "KIND_JOINED_AND_SEPARATE",
@@ -153,7 +153,7 @@ const unsigned UnlimitedArgs = unsigned(-1);
 
 // Get the number of arguments expected for an option, or -1 if any number of
 // arguments are accepted.
-unsigned getNumArgsForKind(Record *OptionKind, Record *Option) {
+unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
     .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
     .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
@@ -186,6 +186,13 @@ std::string escapeRST(StringRef Str) {
     Out.push_back(K);
   }
   return Out;
+}
+
+StringRef getSphinxOptionID(StringRef OptionName) {
+  for (auto I = OptionName.begin(), E = OptionName.end(); I != E; ++I)
+    if (!isalnum(*I) && *I != '-')
+      return OptionName.substr(0, I - OptionName.begin());
+  return OptionName;
 }
 
 bool canSphinxCopeWithOption(const Record *Option) {
@@ -221,8 +228,8 @@ std::string getRSTStringWithTextFallback(const Record *R, StringRef Primary,
   return StringRef();
 }
 
-void emitOptionWithArgs(StringRef Prefix, Record *Option,
-                               ArrayRef<std::string> Args, raw_ostream &OS) {
+void emitOptionWithArgs(StringRef Prefix, const Record *Option,
+                        ArrayRef<std::string> Args, raw_ostream &OS) {
   OS << Prefix << escapeRST(Option->getValueAsString("Name"));
 
   std::pair<StringRef, StringRef> Separators =
@@ -235,7 +242,7 @@ void emitOptionWithArgs(StringRef Prefix, Record *Option,
   }
 }
 
-void emitOptionName(StringRef Prefix, Record *Option, raw_ostream &OS) {
+void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
   // Find the arguments to list after the option.
   unsigned NumArgs = getNumArgsForKind(Option->getValueAsDef("Kind"), Option);
 
@@ -266,7 +273,7 @@ void emitOptionName(StringRef Prefix, Record *Option, raw_ostream &OS) {
   }
 }
 
-bool emitOptionNames(Record *Option, raw_ostream &OS, bool EmittedAny) {
+bool emitOptionNames(const Record *Option, raw_ostream &OS, bool EmittedAny) {
   for (auto &Prefix : Option->getValueAsListOfStrings("Prefixes")) {
     if (EmittedAny)
       OS << ", ";
@@ -274,6 +281,16 @@ bool emitOptionNames(Record *Option, raw_ostream &OS, bool EmittedAny) {
     EmittedAny = true;
   }
   return EmittedAny;
+}
+
+template <typename Fn>
+void forEachOptionName(const DocumentedOption &Option, const Record *DocInfo,
+                       Fn F) {
+  F(Option.Option);
+
+  for (auto *Alias : Option.Aliases)
+    if (!isExcluded(Alias, DocInfo) && canSphinxCopeWithOption(Option.Option))
+      F(Alias);
 }
 
 void emitOption(const DocumentedOption &Option, const Record *DocInfo,
@@ -289,17 +306,33 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   // HACK: Emit a different program name with each option to work around
   // sphinx's inability to cope with options that differ only by punctuation
   // (eg -ObjC vs -ObjC++, -G vs -G=).
-  static int Emitted = 0;
-  OS << ".. program:: " << DocInfo->getValueAsString("Program") << Emitted++
-     << "\n";
+  std::vector<std::string> SphinxOptionIDs;
+  forEachOptionName(Option, DocInfo, [&](const Record *Option) {
+    for (auto &Prefix : Option->getValueAsListOfStrings("Prefixes"))
+      SphinxOptionIDs.push_back(
+          getSphinxOptionID(Prefix + Option->getValueAsString("Name")));
+  });
+  assert(!SphinxOptionIDs.empty() && "no flags for option");
+  static std::map<std::string, int> NextSuffix;
+  int SphinxWorkaroundSuffix = NextSuffix[*std::max_element(
+      SphinxOptionIDs.begin(), SphinxOptionIDs.end(),
+      [&](const std::string &A, const std::string &B) {
+        return NextSuffix[A] < NextSuffix[B];
+      })];
+  for (auto &S : SphinxOptionIDs)
+    NextSuffix[S] = SphinxWorkaroundSuffix + 1;
+  if (SphinxWorkaroundSuffix)
+    OS << ".. program:: " << DocInfo->getValueAsString("Program")
+       << SphinxWorkaroundSuffix << "\n";
 
   // Emit the names of the option.
   OS << ".. option:: ";
-  bool EmittedAny = emitOptionNames(Option.Option, OS, false);
-  for (auto *Alias : Option.Aliases)
-    if (!isExcluded(Alias, DocInfo) && canSphinxCopeWithOption(Option.Option))
-      EmittedAny = emitOptionNames(Alias, OS, EmittedAny);
-  assert(EmittedAny && "no flags for option");
+  bool EmittedAny = false;
+  forEachOptionName(Option, DocInfo, [&](const Record *Option) {
+    EmittedAny = emitOptionNames(Option, OS, EmittedAny);
+  });
+  if (SphinxWorkaroundSuffix)
+    OS << "\n.. program:: " << DocInfo->getValueAsString("Program");
   OS << "\n\n";
 
   // Emit the description, if we have one.

@@ -525,6 +525,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_BRINDIRECT: {
+    I.setDesc(TII.get(AArch64::BR));
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;

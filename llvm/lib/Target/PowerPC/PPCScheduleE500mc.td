@@ -249,6 +249,10 @@ def PPCE500mcItineraries : ProcessorItineraries<
                                   InstrStage<5, [E500_SFX0]>],
                                  [8, 1],
                                  [E500_GPR_Bypass, E500_CR_Bypass]>,
+  InstrItinData<IIC_SprMFPMR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+                                  InstrStage<4, [E500_SFX0]>],
+                                 [7, 1], // Latency = 4, Repeat rate = 4
+                                 [E500_GPR_Bypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFMSR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<4, [E500_SFX0]>],
                                  [7, 1], // Latency = 4, Repeat rate = 4
@@ -257,6 +261,10 @@ def PPCE500mcItineraries : ProcessorItineraries<
                                   InstrStage<1, [E500_SFX0, E500_SFX1]>],
                                  [4, 1], // Latency = 1, Repeat rate = 1
                                  [E500_GPR_Bypass, E500_CR_Bypass]>,
+  InstrItinData<IIC_SprMTPMR,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+                                  InstrStage<1, [E500_SFX0]>],
+                                 [4, 1], // Latency = 1, Repeat rate = 1
+                                 [E500_CR_Bypass, E500_GPR_Bypass]>,
   InstrItinData<IIC_SprMFTB,     [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<4, [E500_SFX0]>],
                                  [7, 1], // Latency = 4, Repeat rate = 4

@@ -497,6 +497,11 @@ TEST_F(FormatTestJS, ArrayLiterals) {
                "    [];");
 
   verifyFormat("someFunction([], {a: a});");
+
+  verifyFormat("var string = [\n"
+               "  'aaaaaa',\n"
+               "  'bbbbbb',\n"
+               "].join('+');");
 }
 
 TEST_F(FormatTestJS, ColumnLayoutForArrayLiterals) {
@@ -586,6 +591,11 @@ TEST_F(FormatTestJS, FunctionLiterals) {
                "  doSomething();\n"
                "  doSomething();\n"
                "}, this));");
+
+  verifyFormat("SomeFunction(function() {\n"
+               "  foo();\n"
+               "  bar();\n"
+               "}.bind(this));");
 
   // FIXME: This is bad, we should be wrapping before "function() {".
   verifyFormat("someFunction(function() {\n"
@@ -1034,6 +1044,15 @@ TEST_F(FormatTestJS, RegexLiteralLength) {
 
 TEST_F(FormatTestJS, RegexLiteralExamples) {
   verifyFormat("var regex = search.match(/(?:\?|&)times=([^?&]+)/i);");
+}
+
+TEST_F(FormatTestJS, IgnoresMpegTS) {
+  std::string MpegTS(200, ' ');
+  MpegTS.replace(0, strlen("nearlyLooks  +   like +   ts + code;  "),
+                 "nearlyLooks  +   like +   ts + code;  ");
+  MpegTS[0] = 0x47;
+  MpegTS[188] = 0x47;
+  verifyFormat(MpegTS, MpegTS);
 }
 
 TEST_F(FormatTestJS, TypeAnnotations) {

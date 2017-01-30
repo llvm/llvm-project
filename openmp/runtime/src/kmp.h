@@ -889,6 +889,20 @@ extern int __kmp_place_num_threads_per_core;
 #define KMP_INTERVALS_FROM_BLOCKTIME(blocktime, monitor_wakeups)  \
                                  ( ( (blocktime) + (KMP_BLOCKTIME_MULTIPLIER / (monitor_wakeups)) - 1 ) /  \
                                    (KMP_BLOCKTIME_MULTIPLIER / (monitor_wakeups)) )
+#else
+# if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
+   // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
+   extern double __kmp_ticks_per_nsec;
+#  define KMP_NOW() __kmp_hardware_timestamp()
+#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC * __kmp_ticks_per_nsec)
+#  define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
+# else
+   // System time is retrieved sporadically while blocking.
+   extern kmp_uint64 __kmp_now_nsec();
+#  define KMP_NOW() __kmp_now_nsec()
+#  define KMP_BLOCKTIME_INTERVAL() (__kmp_dflt_blocktime * KMP_USEC_PER_SEC)
+#  define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
+# endif
 #endif // KMP_USE_MONITOR
 
 #define KMP_MIN_STATSCOLS       40
@@ -2220,8 +2234,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
     /* to exist (from the POV of worker threads).                            */
 #if KMP_USE_MONITOR
     int               th_team_bt_intervals;
-#endif
     int               th_team_bt_set;
+#else
+    kmp_uint64        th_team_bt_intervals;
+#endif
 
 
 #if KMP_AFFINITY_SUPPORTED

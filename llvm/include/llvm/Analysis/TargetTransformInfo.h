@@ -411,6 +411,11 @@ public:
   /// containing this constant value for the target.
   bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
+  unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) const;
+
+  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                            unsigned VF) const;
+
   /// \brief Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
@@ -743,6 +748,10 @@ public:
   virtual unsigned getJumpBufSize() = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
+  virtual unsigned
+  getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) = 0;
+  virtual unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                                    unsigned VF) = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -933,6 +942,15 @@ public:
   bool shouldBuildLookupTablesForConstant(Constant *C) override {
     return Impl.shouldBuildLookupTablesForConstant(C);
   }
+  unsigned getScalarizationOverhead(Type *Ty, bool Insert,
+                                    bool Extract) override {
+    return Impl.getScalarizationOverhead(Ty, Insert, Extract);
+  }
+  unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                            unsigned VF) override {
+    return Impl.getOperandsScalarizationOverhead(Args, VF);
+  }
+
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);
   }

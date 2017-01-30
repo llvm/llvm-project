@@ -228,10 +228,18 @@ std::error_code ELFDumper<ELFT>::dumpRelocation(const RelT *Rel,
     return errorToErrorCode(StrTabOrErr.takeError());
   StringRef StrTab = *StrTabOrErr;
 
-  Expected<StringRef> NameOrErr = Sym->getName(StrTab);
-  if (!NameOrErr)
-    return errorToErrorCode(NameOrErr.takeError());
-  R.Symbol = NameOrErr.get();
+  if (Sym) {
+    Expected<StringRef> NameOrErr = Sym->getName(StrTab);
+    if (!NameOrErr)
+      return errorToErrorCode(NameOrErr.takeError());
+    R.Symbol = NameOrErr.get();
+  } else {
+    // We have some edge cases of relocations without a symbol associated,
+    // e.g. an object containing the invalid (according to the System V
+    // ABI) R_X86_64_NONE reloc. Create a symbol with an empty name instead
+    // of crashing.
+    R.Symbol = "";
+  }
 
   return obj2yaml_error::success;
 }

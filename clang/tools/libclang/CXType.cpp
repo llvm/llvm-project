@@ -452,7 +452,8 @@ try_again:
     break;
 
   case Type::Auto:
-    TP = cast<AutoType>(TP)->getDeducedType().getTypePtrOrNull();
+  case Type::DeducedTemplateSpecialization:
+    TP = cast<DeducedType>(TP)->getDeducedType().getTypePtrOrNull();
     if (TP)
       goto try_again;
     break;

@@ -85,6 +85,22 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
   llvm_unreachable("Unsupported opcode");
 }
 
+/// Select the opcode for simple loads. For types smaller than 32 bits, the
+/// value will be zero extended.
+static unsigned selectLoadOpCode(unsigned Size) {
+  switch (Size) {
+  case 1:
+  case 8:
+    return ARM::LDRBi12;
+  case 16:
+    return ARM::LDRH;
+  case 32:
+    return ARM::LDRi12;
+  }
+
+  llvm_unreachable("Unsupported size");
+}
+
 bool ARMInstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -167,10 +183,22 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(ARM::ADDri));
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
-  case G_LOAD:
-    I.setDesc(TII.get(ARM::LDRi12));
+  case G_LOAD: {
+    LLT ValTy = MRI.getType(I.getOperand(0).getReg());
+    const auto ValSize = ValTy.getSizeInBits();
+
+    if (ValSize != 32 && ValSize != 16 && ValSize != 8 && ValSize != 1)
+      return false;
+
+    const auto NewOpc = selectLoadOpCode(ValSize);
+    I.setDesc(TII.get(NewOpc));
+
+    if (NewOpc == ARM::LDRH)
+      // LDRH has a funny addressing mode (there's already a FIXME for it).
+      MIB.addReg(0);
     MIB.addImm(0).add(predOps(ARMCC::AL));
     break;
+  }
   default:
     return false;
   }

@@ -82,8 +82,8 @@ entry:
   ret i32 %sum
 }
 
-define i32 @test_many_args(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) {
-; CHECK-LABEL: name: test_many_args
+define i32 @test_stack_args(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) {
+; CHECK-LABEL: name: test_stack_args
 ; CHECK: fixedStack:
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 4
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 4
@@ -97,4 +97,40 @@ define i32 @test_many_args(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5)
 entry:
   %sum = add i32 %p2, %p5
   ret i32 %sum
+}
+
+define i16 @test_stack_args_signext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
+                                    i8 signext %p4, i16 signext %p5) {
+; CHECK-LABEL: name: test_stack_args_signext
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[VREGP1:%[0-9]+]]{{.*}} = COPY %r1
+; CHECK: [[FIP5:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P5]]
+; CHECK: [[VREGP5:%[0-9]+]]{{.*}} = G_LOAD [[FIP5]](p0)
+; CHECK: [[SUM:%[0-9]+]]{{.*}} = G_ADD [[VREGP1]], [[VREGP5]]
+; CHECK: %r0 = COPY [[SUM]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %sum = add i16 %p1, %p5
+  ret i16 %sum
+}
+
+define i8 @test_stack_args_zeroext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
+                                    i8 zeroext %p4, i16 zeroext %p5) {
+; CHECK-LABEL: name: test_stack_args_zeroext
+; CHECK: fixedStack:
+; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
+; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[VREGP2:%[0-9]+]]{{.*}} = COPY %r2
+; CHECK: [[FIP4:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P4]]
+; CHECK: [[VREGP4:%[0-9]+]]{{.*}} = G_LOAD [[FIP4]](p0)
+; CHECK: [[SUM:%[0-9]+]]{{.*}} = G_ADD [[VREGP2]], [[VREGP4]]
+; CHECK: %r0 = COPY [[SUM]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %sum = add i8 %p2, %p4
+  ret i8 %sum
 }

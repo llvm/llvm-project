@@ -1058,6 +1058,37 @@ static unsigned getAddressSpaceOperand(Value *I) {
   return -1;
 }
 
+/// Saves the memory accesses after sorting it into vector argument 'Sorted'.
+void llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+                         ScalarEvolution &SE,
+                         SmallVectorImpl<Value *> &Sorted) {
+  SmallVector<std::pair<int, Value *>, 4> OffValPairs;
+  for (auto *Val : VL) {
+    // Compute the constant offset from the base pointer of each memory accesses
+    // and insert into the vector of key,value pair which needs to be sorted.
+    Value *Ptr = getPointerOperand(Val);
+    unsigned AS = getAddressSpaceOperand(Val);
+    unsigned PtrBitWidth = DL.getPointerSizeInBits(AS);
+    Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
+    APInt Size(PtrBitWidth, DL.getTypeStoreSize(Ty));
+
+    // FIXME: Currently the offsets are assumed to be constant.However this not
+    // always true as offsets can be variables also and we would need to
+    // consider the difference of the variable offsets.
+    APInt Offset(PtrBitWidth, 0);
+    Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+    OffValPairs.push_back(std::make_pair(Offset.getSExtValue(), Val));
+  }
+  std::sort(OffValPairs.begin(), OffValPairs.end(),
+            [](const std::pair<int, Value *> &Left,
+               const std::pair<int, Value *> &Right) {
+              return Left.first < Right.first;
+            });
+
+  for (auto& it : OffValPairs)
+    Sorted.push_back(it.second);
+}
+
 /// Returns true if the memory operations \p A and \p B are consecutive.
 bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                ScalarEvolution &SE, bool CheckType) {
