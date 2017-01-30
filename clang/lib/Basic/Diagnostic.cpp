@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -137,7 +138,7 @@ void DiagnosticsEngine::Reset() {
   // Create a DiagState and DiagStatePoint representing diagnostic changes
   // through command-line.
   DiagStates.emplace_back();
-  DiagStatePoints.push_back(DiagStatePoint(&DiagStates.back(), FullSourceLoc()));
+  DiagStatePoints.emplace_back(&DiagStates.back(), SourceLocation());
 }
 
 void DiagnosticsEngine::SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1,
@@ -157,6 +158,18 @@ void DiagnosticsEngine::ReportDelayed() {
   DelayedDiagArg2.clear();
 }
 
+void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
+                                           SourceLocation Loc) {
+  // Make sure that DiagStatePoints is always sorted according to Loc.
+  assert(Loc.isValid() && "Adding invalid loc point");
+  assert(!DiagStatePoints.empty() &&
+         (DiagStatePoints.back().Loc.isInvalid() ||
+          getSourceManager().isBeforeInTranslationUnit(
+              DiagStatePoints.back().Loc, Loc)) &&
+         "Previous point loc comes after or is the same as new one");
+  DiagStatePoints.push_back(DiagStatePoint(State, Loc));
+}
+
 DiagnosticsEngine::DiagStatePointsTy::iterator
 DiagnosticsEngine::GetDiagStatePointForLoc(SourceLocation L) const {
   assert(!DiagStatePoints.empty());
@@ -171,11 +184,21 @@ DiagnosticsEngine::GetDiagStatePointForLoc(SourceLocation L) const {
     return DiagStatePoints.end() - 1;
 
   DiagStatePointsTy::iterator Pos = DiagStatePoints.end();
-  FullSourceLoc LastStateChangePos = DiagStatePoints.back().Loc;
+  SourceLocation LastStateChangePos = DiagStatePoints.back().Loc;
   if (LastStateChangePos.isValid() &&
       Loc.isBeforeInTranslationUnitThan(LastStateChangePos))
-    Pos = std::upper_bound(DiagStatePoints.begin(), DiagStatePoints.end(),
-                           DiagStatePoint(nullptr, Loc));
+    Pos = std::upper_bound(
+        DiagStatePoints.begin(), DiagStatePoints.end(),
+        DiagStatePoint(nullptr, Loc),
+        [this](const DiagStatePoint &LHS, const DiagStatePoint &RHS) {
+          // If Loc is invalid it means it came from <command-line>, in which
+          // case we regard it as coming before any valid source location.
+          if (RHS.Loc.isInvalid())
+            return false;
+          if (LHS.Loc.isInvalid())
+            return true;
+          return SourceMgr->isBeforeInTranslationUnit(LHS.Loc, RHS.Loc);
+        });
   --Pos;
   return Pos;
 }
@@ -190,8 +213,8 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   assert(!DiagStatePoints.empty());
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
-  FullSourceLoc Loc = SourceMgr? FullSourceLoc(L, *SourceMgr) : FullSourceLoc();
-  FullSourceLoc LastStateChangePos = DiagStatePoints.back().Loc;
+  SourceLocation Loc = SourceMgr ? L : SourceLocation();
+  SourceLocation LastStateChangePos = DiagStatePoints.back().Loc;
   // Don't allow a mapping to a warning override an error/fatal mapping.
   if (Map == diag::Severity::Warning) {
     DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
@@ -210,7 +233,7 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   // Another common case; modifying diagnostic state in a source location
   // after the previous one.
   if ((Loc.isValid() && LastStateChangePos.isInvalid()) ||
-      LastStateChangePos.isBeforeInTranslationUnitThan(Loc)) {
+      SourceMgr->isBeforeInTranslationUnit(LastStateChangePos, Loc)) {
     // A diagnostic pragma occurred, create a new DiagState initialized with
     // the current one and a new DiagStatePoint to record at which location
     // the new state became active.
@@ -240,12 +263,11 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
 
   // Create a new state/point and fit it into the vector of DiagStatePoints
   // so that the vector is always ordered according to location.
-  assert(Pos->Loc.isBeforeInTranslationUnitThan(Loc));
+  assert(SourceMgr->isBeforeInTranslationUnit(Pos->Loc, Loc));
   DiagStates.push_back(*Pos->State);
   DiagState *NewState = &DiagStates.back();
   NewState->setMapping(Diag, Mapping);
-  DiagStatePoints.insert(Pos+1, DiagStatePoint(NewState,
-                                               FullSourceLoc(Loc, *SourceMgr)));
+  DiagStatePoints.insert(Pos + 1, DiagStatePoint(NewState, Loc));
 }
 
 bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
