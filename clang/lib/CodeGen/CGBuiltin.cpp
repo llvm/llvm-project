@@ -8397,7 +8397,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_classf:
   case AMDGPU::BI__builtin_amdgcn_classh:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_class);
-
+  case AMDGPU::BI__builtin_amdgcn_fmed3f:
+    return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_fmed3);
   case AMDGPU::BI__builtin_amdgcn_read_exec: {
     CallInst *CI = cast<CallInst>(
       EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, true, "exec"));

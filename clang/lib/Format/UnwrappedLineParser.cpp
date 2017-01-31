@@ -2051,14 +2051,19 @@ static bool continuesLineComment(const FormatToken &FormatTok,
                                  const UnwrappedLine &Line) {
   if (Line.Tokens.empty())
     return false;
-  const FormatToken &FirstLineTok = *Line.Tokens.front().Tok;
+
   // If Line starts with a line comment, then FormatTok continues the comment
-  // section if its original column is greater or equal to the  original start
+  // section if its original column is greater or equal to the original start
   // column of the line.
   //
-  // If Line starts with a a different token, then FormatTok continues the
-  // comment section if its original column greater than the original start
-  // column of the line.
+  // Define the min column token of a line as follows: if a line ends in '{' or
+  // contains a '{' followed by a line comment, then the min column token is
+  // that '{'. Otherwise, the min column token of the line is the first token of
+  // the line.
+  //
+  // If Line starts with a token other than a line comment, then FormatTok
+  // continues the comment section if its original column is greater than the
+  // original start column of the min column token of the line.
   //
   // For example, the second line comment continues the first in these cases:
   // // first line
@@ -2069,6 +2074,11 @@ static bool continuesLineComment(const FormatToken &FormatTok,
   // and:
   // int i; // first line
   //  // second line
+  // and:
+  // do { // first line
+  //      // second line
+  //   int i;
+  // } while (true);
   //
   // The second line comment doesn't continue the first in these cases:
   //   // first line
@@ -2076,9 +2086,31 @@ static bool continuesLineComment(const FormatToken &FormatTok,
   // and:
   // int i; // first line
   // // second line
+  // and:
+  // do { // first line
+  //   // second line
+  //   int i;
+  // } while (true);
+  const FormatToken *MinColumnToken = Line.Tokens.front().Tok;
+
+  // Scan for '{//'. If found, use the column of '{' as a min column for line
+  // comment section continuation.
+  const FormatToken *PreviousToken = nullptr;
+  for (const UnwrappedLineNode Node : Line.Tokens) {
+    if (PreviousToken && PreviousToken->is(tok::l_brace) &&
+        isLineComment(*Node.Tok)) {
+      MinColumnToken = PreviousToken;
+      break;
+    }
+    PreviousToken = Node.Tok;
+  }
+  if (PreviousToken && PreviousToken->is(tok::l_brace)) {
+    MinColumnToken = PreviousToken;
+  }
+
   unsigned MinContinueColumn =
-      FirstLineTok.OriginalColumn +
-      ((isLineComment(FirstLineTok) && !FirstLineTok.Next) ? 0 : 1);
+      MinColumnToken->OriginalColumn +
+      (isLineComment(*MinColumnToken) ? 0 : 1);
   return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
          isLineComment(*(Line.Tokens.back().Tok)) &&
          FormatTok.OriginalColumn >= MinContinueColumn;

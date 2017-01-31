@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -fsyntax-only -fcxx-exceptions -verify -std=c++11 -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -fsyntax-only -fcxx-exceptions -verify -std=c++11 -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -1303,7 +1303,7 @@ namespace ConvertedConstantExpr {
     eo = (m +
           n // expected-error {{not a constant expression}}
           ),
-    eq = reinterpret_cast<int>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
+    eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
 }
 
@@ -1420,8 +1420,8 @@ namespace Fold {
   // otherwise a constant expression.
   #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 
-  constexpr int n = (int)(char*)123; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
-  constexpr int m = fold((int)(char*)123); // ok
+  constexpr int n = (long)(char*)123; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int m = fold((long)(char*)123); // ok
   static_assert(m == 123, "");
 
   #undef fold
@@ -2136,3 +2136,17 @@ void g() {
 
 } //end ns PR28366
 
+namespace PointerArithmeticOverflow {
+  int n;
+  int a[1];
+  constexpr int *b = &n + 1 + (long)-1;
+  constexpr int *c = &n + 1 + (unsigned long)-1; // expected-error {{constant expression}} expected-note {{cannot refer to element 1844}}
+  constexpr int *d = &n + 1 - (unsigned long)1;
+  constexpr int *e = a + 1 + (long)-1;
+  constexpr int *f = a + 1 + (unsigned long)-1; // expected-error {{constant expression}} expected-note {{cannot refer to element 1844}}
+  constexpr int *g = a + 1 - (unsigned long)1;
+
+  constexpr int *p = (&n + 1) + (unsigned __int128)-1; // expected-error {{constant expression}} expected-note {{cannot refer to element 3402}}
+  constexpr int *q = (&n + 1) - (unsigned __int128)-1; // expected-error {{constant expression}} expected-note {{cannot refer to element -3402}}
+  constexpr int *r = &(&n + 1)[(unsigned __int128)-1]; // expected-error {{constant expression}} expected-note {{cannot refer to element 3402}}
+}

@@ -642,7 +642,11 @@ BreakableLineCommentSection::BreakableLineCommentSection(
     Prefix.resize(Lines.size());
     OriginalPrefix.resize(Lines.size());
     for (size_t i = FirstLineIndex, e = Lines.size(); i < e; ++i) {
-      StringRef IndentPrefix = getLineCommentIndentPrefix(Lines[i]);
+      // We need to trim the blanks in case this is not the first line in a
+      // multiline comment. Then the indent is included in Lines[i].
+      StringRef IndentPrefix =
+          getLineCommentIndentPrefix(Lines[i].ltrim(Blanks));
+      assert(IndentPrefix.startswith("//"));
       OriginalPrefix[i] = Prefix[i] = IndentPrefix;
       if (Lines[i].size() > Prefix[i].size() &&
           isAlphanumeric(Lines[i][Prefix[i].size()])) {

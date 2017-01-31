@@ -1386,6 +1386,18 @@ TEST_F(FormatTest, SplitsLongCxxComments) {
       "#define XXX // q w e r\n"
       "            // t y u i",
       format("#define XXX //q w e r t y u i", getLLVMStyleWithColumns(22)));
+  EXPECT_EQ("{\n"
+            "  //\n"
+            "  //\\\n"
+            "  // long 1 2 3 4\n"
+            "  // 5\n"
+            "}",
+            format("{\n"
+                   "  //\n"
+                   "  //\\\n"
+                   "  // long 1 2 3 4 5\n"
+                   "}",
+                   getLLVMStyleWithColumns(20)));
 }
 
 TEST_F(FormatTest, PreservesHangingIndentInCxxComments) {
@@ -1781,6 +1793,64 @@ TEST_F(FormatTest, CommentsInStaticInitializers) {
                "    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // comment\n"
                "    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // comment\n"
                "    0x00, 0x00, 0x00, 0x00};            // comment\n");
+}
+
+TEST_F(FormatTest, LineCommentsAfterRightBrace) {
+  EXPECT_EQ("if (true) { // comment about branch\n"
+            "  // comment about f\n"
+            "  f();\n"
+            "}",
+            format("if (true) { // comment about branch\n"
+                   "  // comment about f\n"
+                   "  f();\n"
+                   "}",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("if (1) { // if line 1\n"
+            "         // if line 2\n"
+            "         // if line 3\n"
+            "  // f line 1\n"
+            "  // f line 2\n"
+            "  f();\n"
+            "} else { // else line 1\n"
+            "         // else line 2\n"
+            "         // else line 3\n"
+            "  // g line 1\n"
+            "  g();\n"
+            "}",
+            format("if (1) { // if line 1\n"
+                   "          // if line 2\n"
+                   "        // if line 3\n"
+                   "  // f line 1\n"
+                   "    // f line 2\n"
+                   "  f();\n"
+                   "} else { // else line 1\n"
+                   "        // else line 2\n"
+                   "         // else line 3\n"
+                   "  // g line 1\n"
+                   "  g();\n"
+                   "}"));
+  EXPECT_EQ("do { // line 1\n"
+            "     // line 2\n"
+            "     // line 3\n"
+            "  f();\n"
+            "} while (true);",
+            format("do { // line 1\n"
+                   "     // line 2\n"
+                   "   // line 3\n"
+                   "  f();\n"
+                   "} while (true);",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("while (a < b) { // line 1\n"
+            "  // line 2\n"
+            "  // line 3\n"
+            "  f();\n"
+            "}",
+            format("while (a < b) {// line 1\n"
+                   "  // line 2\n"
+                   "  // line 3\n"
+                   "  f();\n"
+                   "}",
+                   getLLVMStyleWithColumns(80)));
 }
 
 TEST_F(FormatTest, ReflowsComments) {
