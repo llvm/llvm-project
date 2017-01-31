@@ -162,6 +162,10 @@ if (${get_python_libdir})
   endif()
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+ set(EXTRA_LIBS kvm)
+endif ()
+
 add_lldb_library(lldbHost
   ${HOST_SOURCES}
   
@@ -172,11 +176,8 @@ add_lldb_library(lldbHost
     lldbTarget
     lldbUtility
     ${LLDB_PLUGINS}
+    ${EXTRA_LIBS}
   
   LINK_COMPONENTS
     Support
   )
-
-if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-target_link_libraries(lldbHost kvm)
-endif ()
