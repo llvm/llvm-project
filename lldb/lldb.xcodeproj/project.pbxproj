@@ -771,6 +771,7 @@
 		492E8B021BA37DC80034B4D7 /* SwiftExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
+		4947DE4A1E3C0B20008D6ED0 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4947DE491E3C0B20008D6ED0 /* main.c */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
 		49724D991AD6ED390033C538 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
@@ -2623,6 +2624,7 @@
 		49445C2512245E3600C11A81 /* ClangExpressionParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangExpressionParser.cpp; path = ExpressionParser/Clang/ClangExpressionParser.cpp; sourceTree = "<group>"; };
 		49445C2912245E5500C11A81 /* ClangExpressionParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangExpressionParser.h; path = ExpressionParser/Clang/ClangExpressionParser.h; sourceTree = "<group>"; };
 		49445E341225AB6A00C11A81 /* ClangUserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangUserExpression.h; path = ExpressionParser/Clang/ClangUserExpression.h; sourceTree = "<group>"; };
+		4947DE491E3C0B20008D6ED0 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		4959511B1A1BC48100F6F8FC /* ClangModulesDeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangModulesDeclVendor.h; path = ExpressionParser/Clang/ClangModulesDeclVendor.h; sourceTree = "<group>"; };
 		4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangModulesDeclVendor.cpp; path = ExpressionParser/Clang/ClangModulesDeclVendor.cpp; sourceTree = "<group>"; };
 		495B38431489714C002708C5 /* ClangExternalASTSourceCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClangExternalASTSourceCommon.h; path = include/lldb/Symbol/ClangExternalASTSourceCommon.h; sourceTree = "<group>"; };
@@ -5885,6 +5887,7 @@
 			isa = PBXGroup;
 			children = (
 				9438E18B19217ABA00AE7A2A /* main.swift */,
+				4947DE491E3C0B20008D6ED0 /* main.c */,
 			);
 			path = swift;
 			sourceTree = "<group>";
@@ -7023,7 +7026,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 26F8EA2118F6096500EFD6B1 /* Build configuration list for PBXNativeTarget "repl_swift" */;
 			buildPhases = (
-				26B60735191A961000523C8D /* Compile REPL */,
+				4947DE481E3C0AF4008D6ED0 /* Sources */,
 			);
 			buildRules = (
 			);
@@ -7269,21 +7272,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
 			shellScript = "if [ \"${CONFIGURATION}\" == CustomSwift-* ]\nthen\n    LLDB_PATH_TO_LLVM_BUILD=\"${LLDB_PATH_TO_LLVM_BUILD}\"\n    LLDB_PATH_TO_SWIFT_BUILD=\"${LLDB_PATH_TO_SWIFT_BUILD}\"\n    LLDB_PATH_TO_CMARK_BUILD=\"${LLDB_PATH_TO_CMARK_BUILD}\"\n    /usr/bin/env python $SRCROOT/scripts/Xcode/build-llvm.py\nelse\n    /usr/bin/env python $SRCROOT/scripts/Xcode/build-llvm.py\nfi\n\n";
-		};
-		26B60735191A961000523C8D /* Compile REPL */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/tools/repl/swift/main.swift",
-			);
-			name = "Compile REPL";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = "/bin/sh -x";
-			shellScript = "/usr/bin/env python $SRCROOT/scripts/Xcode/build-swift-repl.py \"$CONFIGURATION_BUILD_DIR/$EXECUTABLE_NAME\" \"$SCRIPT_INPUT_FILE_0\"\n";
 		};
 		26DC6A5813380D4300FF7998 /* Prepare Swig Bindings */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -8320,6 +8308,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4947DE481E3C0AF4008D6ED0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4947DE4A1E3C0B20008D6ED0 /* main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		94A9285D1A92B81600771D51 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -9272,9 +9268,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -9283,7 +9281,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -11149,9 +11152,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -11165,7 +11170,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -11186,9 +11196,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -11202,7 +11214,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -11223,9 +11240,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -11234,10 +11253,16 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
@@ -11255,9 +11280,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -11266,12 +11293,17 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				OTHER_SWIFT_FLAGS = "-DXCODE_BUILD_ME";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
@@ -12501,9 +12533,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -12517,7 +12551,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -13433,9 +13472,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -13449,7 +13490,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -14016,9 +14062,11 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				COPY_PHASE_STRIP = YES;
+				COPY_PHASE_STRIP = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -14027,7 +14075,12 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = "-Wparentheses";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"${REPL_SWIFT_LINKER_FLAGS}",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REPL_SWIFT_LINKER_FLAGS = "-L${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Swift/macosx -L${TOOLCHAIN_DIR}/usr/lib/swift/macosx/  -lswiftCore";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
