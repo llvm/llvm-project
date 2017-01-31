@@ -69,5 +69,24 @@ add_lldb_library(lldbCore
   ValueObjectSyntheticFilter.cpp
   ValueObjectVariable.cpp
   VMRange.cpp
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginProcessUtility
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+    lldbPluginObjectFileJIT
+    lldbPluginExpressionParserClang
+
+  LINK_COMPONENTS
+    Support
+    Demangle
   )
 

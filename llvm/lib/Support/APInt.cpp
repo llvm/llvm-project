@@ -2247,7 +2247,7 @@ LLVM_DUMP_METHOD void APInt::dump() const {
   this->toStringUnsigned(U);
   this->toStringSigned(S);
   dbgs() << "APInt(" << BitWidth << "b, "
-         << U << "u " << S << "s)";
+         << U << "u " << S << "s)\n";
 }
 #endif
 

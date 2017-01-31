@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
+declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
@@ -20,6 +21,40 @@ define void @v_test_canonicalize_var_f16(half addrspace(1)* %out) #1 {
 define void @s_test_canonicalize_var_f16(half addrspace(1)* %out, i16 zeroext %val.arg) #1 {
   %val = bitcast i16 %val.arg to half
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
+  store half %canonicalized, half addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_f16:
+; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, |{{v[0-9]+}}|
+; GCN: buffer_store_short [[REG]]
+define void @v_test_canonicalize_fabs_var_f16(half addrspace(1)* %out) #1 {
+  %val = load half, half addrspace(1)* %out
+  %val.fabs = call half @llvm.fabs.f16(half %val)
+  %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs)
+  store half %canonicalized, half addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_f16:
+; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, -|{{v[0-9]+}}|
+; GCN: buffer_store_short [[REG]]
+define void @v_test_canonicalize_fneg_fabs_var_f16(half addrspace(1)* %out) #1 {
+  %val = load half, half addrspace(1)* %out
+  %val.fabs = call half @llvm.fabs.f16(half %val)
+  %val.fabs.fneg = fsub half -0.0, %val.fabs
+  %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs.fneg)
+  store half %canonicalized, half addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_f16:
+; GCN: v_mul_f16_e64 [[REG:v[0-9]+]], 1.0, -{{v[0-9]+}}
+; GCN: buffer_store_short [[REG]]
+define void @v_test_canonicalize_fneg_var_f16(half addrspace(1)* %out) #1 {
+  %val = load half, half addrspace(1)* %out
+  %val.fneg = fsub half -0.0, %val
+  %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
   store half %canonicalized, half addrspace(1)* %out
   ret void
 }

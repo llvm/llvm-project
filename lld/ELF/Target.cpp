@@ -393,7 +393,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_NONE:
     return R_HINT;
   default:
-    error("unknown relocation type: " + toString(Type));
+    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }
@@ -512,17 +512,24 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
-  checkInt<32>(Loc, Val, Type);
-
   // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
   // being used for some 16-bit programs such as boot loaders, so
   // we want to support them.
-  if (Type == R_386_8 || Type == R_386_PC8)
+  switch (Type) {
+  case R_386_8:
+  case R_386_PC8:
+    checkInt<8>(Loc, Val, Type);
     *Loc = Val;
-  else if (Type == R_386_16 || Type == R_386_PC16)
+    break;
+  case R_386_16:
+  case R_386_PC16:
+    checkInt<16>(Loc, Val, Type);
     write16le(Loc, Val);
-  else
+    break;
+  default:
+    checkInt<32>(Loc, Val, Type);
     write32le(Loc, Val);
+  }
 }
 
 void X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
@@ -674,7 +681,7 @@ RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_X86_64_NONE:
     return R_HINT;
   default:
-    error("unknown relocation type: " + toString(Type));
+    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }
@@ -1627,7 +1634,7 @@ RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    error("unknown relocation type: " + toString(Type));
+    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
     return R_HINT;
   }
 }

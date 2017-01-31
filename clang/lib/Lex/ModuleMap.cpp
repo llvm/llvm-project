@@ -1501,7 +1501,6 @@ void ModuleMapParser::parseModuleDecl() {
       (!ActiveModule->Parent && ModuleName == "Darwin"))
     ActiveModule->NoUndeclaredIncludes = true;
   ActiveModule->Directory = Directory;
-  ActiveModule->WithCodegen = L.getLangOpts().ModularCodegen;
 
   if (!ActiveModule->Parent) {
     StringRef MapFileName(ModuleMapFile->getName());

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
 ; Note: The SI-FMA conversions of type x * (y + 1) --> x * y + x would be
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
@@ -308,8 +308,14 @@ define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %o
 ; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32{{$}}
-; SI: v_fma_f64 [[FMA0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]], -[[Z]]
-; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[FMA0]]
+
+; SI-SAFE: v_mul_f64 [[TMP0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]]
+; SI-SAFE: v_fma_f64 [[TMP1:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[TMP0]]
+; SI-SAFE: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[TMP1]], -[[Z]]
+
+; SI-UNSAFE: v_fma_f64 [[FMA0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]], -[[Z]]
+; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[FMA0]]
+
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
@@ -343,8 +349,14 @@ define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %
 ; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
 ; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32{{$}}
-; SI: v_fma_f64 [[FMA0:v\[[0-9]+:[0-9]+\]]], -[[U]], [[V]], [[X]]
-; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[Y]], [[Z]], [[FMA0]]
+
+; SI-SAFE: v_mul_f64 [[TMP0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]]
+; SI-SAFE: v_fma_f64 [[TMP1:v\[[0-9]+:[0-9]+\]]], [[Y]], [[Z]], [[TMP0]]
+; SI-SAFE: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], -[[TMP1]]
+
+; SI-UNSAFE: v_fma_f64 [[FMA0:v\[[0-9]+:[0-9]+\]]], -[[U]], [[V]], [[X]]
+; SI-UNSAFE: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[Y]], [[Z]], [[FMA0]]
+
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
