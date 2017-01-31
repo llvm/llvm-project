@@ -176,7 +176,7 @@ __start:
 # CHECK-NEXT:     Offset: 0x20010
 # CHECK-NEXT:     Size: 48
 # CHECK-NEXT:     Link: 10
-# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     Info: 2
 # CHECK-NEXT:     AddressAlignment: 4
 # CHECK-NEXT:     EntrySize: 16
 # CHECK-NEXT:   }

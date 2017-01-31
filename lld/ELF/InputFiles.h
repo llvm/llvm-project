@@ -180,10 +180,6 @@ public:
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.
   uint32_t MipsGp0 = 0;
 
-  // The number is the offset in the string table. It will be used as the
-  // st_name of the symbol.
-  std::vector<std::pair<const DefinedRegular<ELFT> *, unsigned>> KeptLocalSyms;
-
   // Name of source file obtained from STT_FILE symbol value,
   // or empty string if there is no such symbol in object file
   // symbol table.
