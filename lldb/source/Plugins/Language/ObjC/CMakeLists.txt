@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginObjCLanguage
+add_lldb_library(lldbPluginObjCLanguage PLUGIN
   ObjCLanguage.cpp
   CF.cpp
   Cocoa.cpp
@@ -10,4 +10,15 @@ add_lldb_library(lldbPluginObjCLanguage
   NSIndexPath.cpp
   NSSet.cpp
   NSString.cpp
+
+  LINK_LIBS
+    clangAST
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginAppleObjCRuntime
 )
