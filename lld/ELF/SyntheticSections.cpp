@@ -1065,22 +1065,21 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   this->OutSec->Info = this->Info = NumLocals + 1;
   this->OutSec->Entsize = this->Entsize;
 
-  if (Config->Relocatable) {
-    size_t I = NumLocals;
-    for (const SymbolTableEntry &S : Symbols)
-      S.Symbol->DynsymIndex = ++I;
+  if (Config->Relocatable)
+    return;
+
+  if (!StrTabSec.isDynamic()) {
+    auto GlobBegin = Symbols.begin() + NumLocals;
+    auto It = std::stable_partition(
+        GlobBegin, Symbols.end(), [](const SymbolTableEntry &S) {
+          return S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+        });
+    // update sh_info with number of Global symbols output with computed
+    // binding of STB_LOCAL
+    this->OutSec->Info = this->Info = 1 + It - Symbols.begin();
     return;
   }
 
-  if (!StrTabSec.isDynamic()) {
-    std::stable_sort(
-        Symbols.begin(), Symbols.end(),
-        [](const SymbolTableEntry &L, const SymbolTableEntry &R) {
-          return L.Symbol->symbol()->computeBinding() == STB_LOCAL &&
-                 R.Symbol->symbol()->computeBinding() != STB_LOCAL;
-        });
-    return;
-  }
   if (In<ELFT>::GnuHashTab)
     // NB: It also sorts Symbols to meet the GNU hash table requirements.
     In<ELFT>::GnuHashTab->addSymbols(Symbols);
@@ -1094,8 +1093,23 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
     S.Symbol->DynsymIndex = ++I;
 }
 
-template <class ELFT> void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+template <class ELFT> void SymbolTableSection<ELFT>::addGlobal(SymbolBody *B) {
   Symbols.push_back({B, StrTabSec.addString(B->getName(), false)});
+}
+
+template <class ELFT> void SymbolTableSection<ELFT>::addLocal(SymbolBody *B) {
+  assert(!StrTabSec.isDynamic());
+  ++NumLocals;
+  Symbols.push_back({B, StrTabSec.addString(B->getName())});
+}
+
+template <class ELFT>
+size_t SymbolTableSection<ELFT>::getSymbolIndex(SymbolBody *Body) {
+  auto I = llvm::find_if(
+      Symbols, [&](const SymbolTableEntry &E) { return E.Symbol == Body; });
+  if (I == Symbols.end())
+    return 0;
+  return I - Symbols.begin() + 1;
 }
 
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1113,26 +1127,24 @@ template <class ELFT>
 void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
-  for (ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
-    for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
-         File->KeptLocalSyms) {
-      const DefinedRegular<ELFT> &Body = *P.first;
-      InputSectionBase<ELFT> *Section = Body.Section;
-      auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
-      if (!Section) {
-        ESym->st_shndx = SHN_ABS;
-        ESym->st_value = Body.Value;
-      } else {
-        const OutputSectionBase *OutSec = Section->OutSec;
-        ESym->st_shndx = OutSec->SectionIndex;
-        ESym->st_value = OutSec->Addr + Section->getOffset(Body);
-      }
-      ESym->st_name = P.second;
-      ESym->st_size = Body.template getSize<ELFT>();
-      ESym->setBindingAndType(STB_LOCAL, Body.Type);
-      Buf += sizeof(*ESym);
+  for (auto I = Symbols.begin(); I != Symbols.begin() + NumLocals; ++I) {
+    const DefinedRegular<ELFT> &Body = *cast<DefinedRegular<ELFT>>(I->Symbol);
+    InputSectionBase<ELFT> *Section = Body.Section;
+    auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
+
+    if (!Section) {
+      ESym->st_shndx = SHN_ABS;
+      ESym->st_value = Body.Value;
+    } else {
+      const OutputSectionBase *OutSec = Section->OutSec;
+      ESym->st_shndx = OutSec->SectionIndex;
+      ESym->st_value = OutSec->Addr + Section->getOffset(Body);
     }
+    ESym->st_name = I->StrTabOffset;
+    ESym->st_size = Body.template getSize<ELFT>();
+    ESym->setBindingAndType(STB_LOCAL, Body.Type);
+    Buf += sizeof(*ESym);
   }
 }
 
@@ -1141,7 +1153,9 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
   // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-  for (const SymbolTableEntry &S : Symbols) {
+
+  for (auto I = Symbols.begin() + NumLocals; I != Symbols.end(); ++I) {
+    const SymbolTableEntry &S = *I;
     SymbolBody *Body = S.Symbol;
     size_t StrOff = S.StrTabOffset;
 

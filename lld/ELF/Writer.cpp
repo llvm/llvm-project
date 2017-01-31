@@ -455,11 +455,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       InputSectionBase<ELFT> *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, B->getName(), *B))
         continue;
-      ++In<ELFT>::SymTab->NumLocals;
-      if (Config->Relocatable)
-        B->DynsymIndex = In<ELFT>::SymTab->NumLocals;
-      F->KeptLocalSyms.push_back(std::make_pair(
-          DR, In<ELFT>::SymTab->StrTabSec.addString(B->getName())));
+      In<ELFT>::SymTab->addLocal(B);
     }
   }
 }
@@ -1024,10 +1020,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (!includeInSymtab<ELFT>(*Body))
       continue;
     if (In<ELFT>::SymTab)
-      In<ELFT>::SymTab->addSymbol(Body);
+      In<ELFT>::SymTab->addGlobal(Body);
 
     if (In<ELFT>::DynSymTab && S->includeInDynsym()) {
-      In<ELFT>::DynSymTab->addSymbol(Body);
+      In<ELFT>::DynSymTab->addGlobal(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         if (SS->file()->isNeeded())
           In<ELFT>::VerNeed->addSymbol(SS);
