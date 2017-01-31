@@ -23,6 +23,9 @@
 // the Coroutine library.
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TRANSFORMS_COROUTINES_COROINSTR_H
+#define LLVM_LIB_TRANSFORMS_COROUTINES_COROINSTR_H
+
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 
@@ -316,3 +319,5 @@ public:
 };
 
 } // End namespace llvm.
+
+#endif

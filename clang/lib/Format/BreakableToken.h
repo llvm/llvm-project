@@ -149,14 +149,12 @@ public:
   virtual void updateNextToken(LineState &State) const {}
 
 protected:
-  BreakableToken(const FormatToken &Tok, unsigned IndentLevel,
-                 bool InPPDirective, encoding::Encoding Encoding,
-                 const FormatStyle &Style)
-      : Tok(Tok), IndentLevel(IndentLevel), InPPDirective(InPPDirective),
-        Encoding(Encoding), Style(Style) {}
+  BreakableToken(const FormatToken &Tok, bool InPPDirective,
+                 encoding::Encoding Encoding, const FormatStyle &Style)
+      : Tok(Tok), InPPDirective(InPPDirective), Encoding(Encoding),
+        Style(Style) {}
 
   const FormatToken &Tok;
-  const unsigned IndentLevel;
   const bool InPPDirective;
   const encoding::Encoding Encoding;
   const FormatStyle &Style;
@@ -172,10 +170,9 @@ public:
                                    StringRef::size_type Length) const override;
 
 protected:
-  BreakableSingleLineToken(const FormatToken &Tok, unsigned IndentLevel,
-                           unsigned StartColumn, StringRef Prefix,
-                           StringRef Postfix, bool InPPDirective,
-                           encoding::Encoding Encoding,
+  BreakableSingleLineToken(const FormatToken &Tok, unsigned StartColumn,
+                           StringRef Prefix, StringRef Postfix,
+                           bool InPPDirective, encoding::Encoding Encoding,
                            const FormatStyle &Style);
 
   // The column in which the token starts.
@@ -194,10 +191,10 @@ public:
   ///
   /// \p StartColumn specifies the column in which the token will start
   /// after formatting.
-  BreakableStringLiteral(const FormatToken &Tok, unsigned IndentLevel,
-                         unsigned StartColumn, StringRef Prefix,
-                         StringRef Postfix, bool InPPDirective,
-                         encoding::Encoding Encoding, const FormatStyle &Style);
+  BreakableStringLiteral(const FormatToken &Tok, unsigned StartColumn,
+                         StringRef Prefix, StringRef Postfix,
+                         bool InPPDirective, encoding::Encoding Encoding,
+                         const FormatStyle &Style);
 
   Split getSplit(unsigned LineIndex, unsigned TailOffset,
                  unsigned ColumnLimit) const override;
@@ -215,10 +212,10 @@ protected:
   /// after formatting, while \p OriginalStartColumn specifies in which
   /// column the comment started before formatting.
   /// If the comment starts a line after formatting, set \p FirstInLine to true.
-  BreakableComment(const FormatToken &Token, unsigned IndentLevel,
-                   unsigned StartColumn, unsigned OriginalStartColumn,
-                   bool FirstInLine, bool InPPDirective,
-                   encoding::Encoding Encoding, const FormatStyle &Style);
+  BreakableComment(const FormatToken &Token, unsigned StartColumn,
+                   unsigned OriginalStartColumn, bool FirstInLine,
+                   bool InPPDirective, encoding::Encoding Encoding,
+                   const FormatStyle &Style);
 
 public:
   unsigned getLineCount() const override;
@@ -299,10 +296,10 @@ protected:
 
 class BreakableBlockComment : public BreakableComment {
 public:
-  BreakableBlockComment(const FormatToken &Token, unsigned IndentLevel,
-                        unsigned StartColumn, unsigned OriginalStartColumn,
-                        bool FirstInLine, bool InPPDirective,
-                        encoding::Encoding Encoding, const FormatStyle &Style);
+  BreakableBlockComment(const FormatToken &Token, unsigned StartColumn,
+                        unsigned OriginalStartColumn, bool FirstInLine,
+                        bool InPPDirective, encoding::Encoding Encoding,
+                        const FormatStyle &Style);
 
   unsigned getLineLengthAfterSplit(unsigned LineIndex,
                                    unsigned TailOffset,
@@ -363,8 +360,7 @@ private:
 
 class BreakableLineCommentSection : public BreakableComment {
 public:
-  BreakableLineCommentSection(const FormatToken &Token, unsigned IndentLevel,
-                              unsigned StartColumn,
+  BreakableLineCommentSection(const FormatToken &Token, unsigned StartColumn,
                               unsigned OriginalStartColumn, bool FirstInLine,
                               bool InPPDirective, encoding::Encoding Encoding,
                               const FormatStyle &Style);

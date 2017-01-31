@@ -966,17 +966,8 @@ def FDIV32ri_prec :
             Requires<[reqPTX20]>;
 
 //
-// F32 rsqrt
+// FMA
 //
-
-def RSQRTF32approx1r : NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$b),
-                       "rsqrt.approx.f32 \t$dst, $b;", []>;
-
-// Convert 1.0f/sqrt(x) to rsqrt.approx.f32.  (There is an rsqrt.approx.f64, but
-// it's emulated in software.)
-def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f Float32Regs:$b)),
-         (RSQRTF32approx1r Float32Regs:$b)>,
-         Requires<[do_DIVF32_FULL, do_SQRTF32_APPROX, doNoF32FTZ]>;
 
 multiclass FMA<string OpcStr, RegisterClass RC, Operand ImmCls, Predicate Pred> {
    def rrr : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),

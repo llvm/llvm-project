@@ -4256,20 +4256,6 @@ defm PSHUFHW : sse2_pshuffle<"pshufhw", v8i16, v16i16, X86PShufhw,
 defm PSHUFLW : sse2_pshuffle<"pshuflw", v8i16, v16i16, X86PShuflw,
                              NoVLX_Or_NoBWI>, XD;
 
-let Predicates = [HasAVX] in {
-  def : Pat<(v4f32 (X86PShufd (loadv4f32 addr:$src1), (i8 imm:$imm))),
-            (VPSHUFDmi addr:$src1, imm:$imm)>;
-  def : Pat<(v4f32 (X86PShufd VR128:$src1, (i8 imm:$imm))),
-            (VPSHUFDri VR128:$src1, imm:$imm)>;
-}
-
-let Predicates = [UseSSE2] in {
-  def : Pat<(v4f32 (X86PShufd (memopv4f32 addr:$src1), (i8 imm:$imm))),
-            (PSHUFDmi addr:$src1, imm:$imm)>;
-  def : Pat<(v4f32 (X86PShufd VR128:$src1, (i8 imm:$imm))),
-            (PSHUFDri VR128:$src1, imm:$imm)>;
-}
-
 //===---------------------------------------------------------------------===//
 // Packed Integer Pack Instructions (SSE & AVX)
 //===---------------------------------------------------------------------===//
@@ -8020,41 +8006,6 @@ let ExeDomain = SSEPackedDouble in {
                                loadv4i64, v4f64, v4i64>, VEX_L;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-def : Pat<(v8f32 (X86VPermilpv VR256:$src1, (v8i32 VR256:$src2))),
-          (VPERMILPSYrr VR256:$src1, VR256:$src2)>;
-def : Pat<(v8f32 (X86VPermilpv VR256:$src1, (bc_v8i32 (loadv4i64 addr:$src2)))),
-          (VPERMILPSYrm VR256:$src1, addr:$src2)>;
-def : Pat<(v4f64 (X86VPermilpv VR256:$src1, (v4i64 VR256:$src2))),
-          (VPERMILPDYrr VR256:$src1, VR256:$src2)>;
-def : Pat<(v4f64 (X86VPermilpv VR256:$src1, (loadv4i64 addr:$src2))),
-          (VPERMILPDYrm VR256:$src1, addr:$src2)>;
-
-def : Pat<(v8i32 (X86VPermilpi VR256:$src1, (i8 imm:$imm))),
-          (VPERMILPSYri VR256:$src1, imm:$imm)>;
-def : Pat<(v4i64 (X86VPermilpi VR256:$src1, (i8 imm:$imm))),
-          (VPERMILPDYri VR256:$src1, imm:$imm)>;
-def : Pat<(v8i32 (X86VPermilpi (bc_v8i32 (loadv4i64 addr:$src1)),
-                               (i8 imm:$imm))),
-          (VPERMILPSYmi addr:$src1, imm:$imm)>;
-def : Pat<(v4i64 (X86VPermilpi (loadv4i64 addr:$src1), (i8 imm:$imm))),
-          (VPERMILPDYmi addr:$src1, imm:$imm)>;
-
-def : Pat<(v4f32 (X86VPermilpv VR128:$src1, (v4i32 VR128:$src2))),
-          (VPERMILPSrr VR128:$src1, VR128:$src2)>;
-def : Pat<(v4f32 (X86VPermilpv VR128:$src1, (bc_v4i32 (loadv2i64 addr:$src2)))),
-          (VPERMILPSrm VR128:$src1, addr:$src2)>;
-def : Pat<(v2f64 (X86VPermilpv VR128:$src1, (v2i64 VR128:$src2))),
-          (VPERMILPDrr VR128:$src1, VR128:$src2)>;
-def : Pat<(v2f64 (X86VPermilpv VR128:$src1, (loadv2i64 addr:$src2))),
-          (VPERMILPDrm VR128:$src1, addr:$src2)>;
-
-def : Pat<(v2i64 (X86VPermilpi VR128:$src1, (i8 imm:$imm))),
-          (VPERMILPDri VR128:$src1, imm:$imm)>;
-def : Pat<(v2i64 (X86VPermilpi (loadv2i64 addr:$src1), (i8 imm:$imm))),
-          (VPERMILPDmi addr:$src1, imm:$imm)>;
-}
-
 //===----------------------------------------------------------------------===//
 // VPERM2F128 - Permute Floating-Point Values in 128-bit chunks
 //
@@ -8334,18 +8285,13 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
 }
 let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
-            (VBROADCASTSSrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
+            (VPBROADCASTDrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
   def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
-            (VBROADCASTSSYrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
-  def : Pat<(v4i64 (X86VBroadcast GR64:$src)),
-            (VBROADCASTSDYrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
-
-  // The patterns for VPBROADCASTD are not needed because they would match
-  // the exact same thing as VBROADCASTSS patterns.
-
+            (VPBROADCASTDYrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
   def : Pat<(v2i64 (X86VBroadcast GR64:$src)),
-        (VPBROADCASTQrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
-  // The v4i64 pattern is not needed because VBROADCASTSDYrr already match.
+            (VPBROADCASTQrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
+  def : Pat<(v4i64 (X86VBroadcast GR64:$src)),
+            (VPBROADCASTQYrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
 }
 
 // AVX1 broadcast patterns
@@ -8368,15 +8314,15 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Predicates = [HasAVX1Only] in {
   def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
-            (VPSHUFDri (COPY_TO_REGCLASS FR32:$src, VR128), 0)>;
+            (VPERMILPSri (COPY_TO_REGCLASS FR32:$src, VR128), 0)>;
   def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
             (VINSERTF128rr (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
-              (VPSHUFDri (COPY_TO_REGCLASS FR32:$src, VR128), 0), sub_xmm),
-              (VPSHUFDri (COPY_TO_REGCLASS FR32:$src, VR128), 0), 1)>;
+              (VPERMILPSri (COPY_TO_REGCLASS FR32:$src, VR128), 0), sub_xmm),
+              (VPERMILPSri (COPY_TO_REGCLASS FR32:$src, VR128), 0), 1)>;
   def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
             (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
-              (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), sub_xmm),
-              (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), 1)>;
+              (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128)), sub_xmm),
+              (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128)), 1)>;
 
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
             (VPSHUFDri (COPY_TO_REGCLASS GR32:$src, VR128), 0)>;
@@ -8390,7 +8336,7 @@ let Predicates = [HasAVX1Only] in {
               (VPSHUFDri (COPY_TO_REGCLASS GR64:$src, VR128), 0x44), 1)>;
 
   def : Pat<(v2i64 (X86VBroadcast i64:$src)),
-              (VMOVDDUPrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
+            (VPSHUFDri (COPY_TO_REGCLASS GR64:$src, VR128), 0x44)>;
 }
 
 //===----------------------------------------------------------------------===//

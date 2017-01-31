@@ -40,6 +40,10 @@
 #include <pthread_np.h>
 #endif
 
+#if defined(__NetBSD__)
+#include <lwp.h>
+#endif
+
 // C++ Includes
 
 // Other libraries and framework includes
@@ -320,6 +324,8 @@ lldb::tid_t Host::GetCurrentThreadID() {
   return thread_self;
 #elif defined(__FreeBSD__)
   return lldb::tid_t(pthread_getthreadid_np());
+#elif defined(__NetBSD__)
+  return lldb::tid_t(_lwp_self());
 #elif defined(__ANDROID__)
   return lldb::tid_t(gettid());
 #elif defined(__linux__)

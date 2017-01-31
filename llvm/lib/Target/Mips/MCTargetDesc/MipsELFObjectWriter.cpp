@@ -7,33 +7,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-#include <list>
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <list>
+#include <utility>
 
 #define DEBUG_TYPE "mips-elf-object-writer"
 
 using namespace llvm;
 
 namespace {
+
 /// Holds additional information needed by the relocation ordering algorithm.
 struct MipsRelocationEntry {
   const ELFRelocationEntry R; ///< The relocation.
-  bool Matched;               ///< Is this relocation part of a match.
+  bool Matched = false;       ///< Is this relocation part of a match.
 
-  MipsRelocationEntry(const ELFRelocationEntry &R) : R(R), Matched(false) {}
+  MipsRelocationEntry(const ELFRelocationEntry &R) : R(R) {}
 
   void print(raw_ostream &Out) const {
     R.print(Out);
@@ -53,23 +58,33 @@ public:
   MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI, bool _isN64,
                       bool IsLittleEndian);
 
-  ~MipsELFObjectWriter() override;
+  ~MipsELFObjectWriter() override = default;
 
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCSymbol &Sym,
                                unsigned Type) const override;
-  virtual void sortRelocs(const MCAssembler &Asm,
-                          std::vector<ELFRelocationEntry> &Relocs) override;
+  void sortRelocs(const MCAssembler &Asm,
+                  std::vector<ELFRelocationEntry> &Relocs) override;
 };
+
+/// The possible results of the Predicate function used by find_best.
+enum FindBestPredicateResult {
+  FindBest_NoMatch = 0,  ///< The current element is not a match.
+  FindBest_Match,        ///< The current element is a match but better ones are
+                         ///  possible.
+  FindBest_PerfectMatch, ///< The current element is an unbeatable match.
+};
+
+} // end anonymous namespace
 
 /// Copy elements in the range [First, Last) to d1 when the predicate is true or
 /// d2 when the predicate is false. This is essentially both std::copy_if and
 /// std::remove_copy_if combined into a single pass.
 template <class InputIt, class OutputIt1, class OutputIt2, class UnaryPredicate>
-std::pair<OutputIt1, OutputIt2> copy_if_else(InputIt First, InputIt Last,
-                                             OutputIt1 d1, OutputIt2 d2,
-                                             UnaryPredicate Predicate) {
+static std::pair<OutputIt1, OutputIt2> copy_if_else(InputIt First, InputIt Last,
+                                                    OutputIt1 d1, OutputIt2 d2,
+                                                    UnaryPredicate Predicate) {
   for (InputIt I = First; I != Last; ++I) {
     if (Predicate(*I)) {
       *d1 = *I;
@@ -83,14 +98,6 @@ std::pair<OutputIt1, OutputIt2> copy_if_else(InputIt First, InputIt Last,
   return std::make_pair(d1, d2);
 }
 
-/// The possible results of the Predicate function used by find_best.
-enum FindBestPredicateResult {
-  FindBest_NoMatch = 0,  ///< The current element is not a match.
-  FindBest_Match,        ///< The current element is a match but better ones are
-                         ///  possible.
-  FindBest_PerfectMatch, ///< The current element is an unbeatable match.
-};
-
 /// Find the best match in the range [First, Last).
 ///
 /// An element matches when Predicate(X) returns FindBest_Match or
@@ -101,8 +108,8 @@ enum FindBestPredicateResult {
 /// This is similar to std::find_if but finds the best of multiple possible
 /// matches.
 template <class InputIt, class UnaryPredicate, class Comparator>
-InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
-                  Comparator BetterThan) {
+static InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
+                         Comparator BetterThan) {
   InputIt Best = Last;
 
   for (InputIt I = First; I != Last; ++I) {
@@ -202,15 +209,11 @@ static void dumpRelocs(const char *Prefix, const Container &Relocs) {
 }
 #endif
 
-} // end anonymous namespace
-
 MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
                                          bool _isN64, bool IsLittleEndian)
     : MCELFObjectTargetWriter(_is64Bit, OSABI, ELF::EM_MIPS,
                               /*HasRelocationAddend*/ _isN64,
                               /*IsN64*/ _isN64) {}
-
-MipsELFObjectWriter::~MipsELFObjectWriter() {}
 
 unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
@@ -419,7 +422,6 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
 /// always match using the expressions from the source.
 void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                                      std::vector<ELFRelocationEntry> &Relocs) {
-
   // We do not need to sort the relocation table for RELA relocations which
   // N32/N64 uses as the relocation addend contains the value we require,
   // rather than it being split across a pair of relocations.

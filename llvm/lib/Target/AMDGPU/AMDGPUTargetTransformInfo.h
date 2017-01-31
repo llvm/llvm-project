@@ -32,6 +32,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   const AMDGPUSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
+  bool IsGraphicsShader;
 
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
@@ -62,7 +63,8 @@ public:
   explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(TM->getSubtargetImpl(F)),
-      TLI(ST->getTargetLowering()) {}
+      TLI(ST->getTargetLowering()),
+      IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
 
   bool hasBranchDivergence() { return true; }
 
@@ -90,6 +92,14 @@ public:
 
   int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
+
+  unsigned getFlatAddressSpace() const {
+    // Don't bother running InferAddressSpaces pass on graphics shaders which
+    // don't use flat addressing.
+    if (IsGraphicsShader)
+      return -1;
+    return ST->hasFlatAddressSpace() ? AMDGPUAS::FLAT_ADDRESS : -1;
+  }
 
   unsigned getVectorSplitCost() { return 0; }
 };

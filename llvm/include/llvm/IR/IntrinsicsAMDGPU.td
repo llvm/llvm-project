@@ -206,6 +206,11 @@ def int_amdgcn_class : Intrinsic<
   [llvm_i1_ty], [llvm_anyfloat_ty, llvm_i32_ty], [IntrNoMem]
 >;
 
+def int_amdgcn_fmed3 : GCCBuiltin<"__builtin_amdgcn_fmed3">,
+  Intrinsic<[llvm_anyfloat_ty],
+    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]
+>;
+
 def int_amdgcn_cubeid : GCCBuiltin<"__builtin_amdgcn_cubeid">,
   Intrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]

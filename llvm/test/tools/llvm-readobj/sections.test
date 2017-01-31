@@ -14,6 +14,8 @@ RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
 RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
+RUN: llvm-readobj -s %p/Inputs/trivial.obj.wasm \
+RUN:   | FileCheck %s -check-prefix WASM
 
 COFF:      Sections [
 COFF-NEXT:   Section {
@@ -490,3 +492,47 @@ MACHO-ARM-NEXT:    Reserved1: 0x0
 MACHO-ARM-NEXT:    Reserved2: 0x0
 MACHO-ARM-NEXT:  }
 MACHO-ARM-NEXT:]
+
+WASM: Sections [
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: TYPE (0x1)
+WASM-NEXT:     Size: 15
+WASM-NEXT:     Offset: 8
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: IMPORT (0x2)
+WASM-NEXT:     Size: 11
+WASM-NEXT:     Offset: 25
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: FUNCTION (0x3)
+WASM-NEXT:     Size: 3
+WASM-NEXT:     Offset: 38
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: TABLE (0x4)
+WASM-NEXT:     Size: 5
+WASM-NEXT:     Offset: 43
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: EXPORT (0x7)
+WASM-NEXT:     Size: 14
+WASM-NEXT:     Offset: 50
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: ELEM (0x9)
+WASM-NEXT:     Size: 7
+WASM-NEXT:     Offset: 66
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: CODE (0xA)
+WASM-NEXT:     Size: 42
+WASM-NEXT:     Offset: 75
+WASM-NEXT:   }
+WASM-NEXT:   Section {
+WASM-NEXT:     Type: CUSTOM (0x0)
+WASM-NEXT:     Size: 44
+WASM-NEXT:     Offset: 119
+WASM-NEXT:     Name: name
+WASM-NEXT:   }
+WASM-NEXT: ]

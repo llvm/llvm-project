@@ -777,7 +777,7 @@ define void @test_arg_v8i32(<8 x i32> %arg, <8 x i32>* %dst) {
 ;
 ; VLX-LABEL: test_arg_v8i32:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
+; VLX-NEXT:    vmovntps %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <8 x i32> %arg, <8 x i32>* %dst, align 32, !nontemporal !1
   ret void
@@ -798,7 +798,7 @@ define void @test_arg_v4f64(<4 x double> %arg, <4 x double>* %dst) {
 ;
 ; VLX-LABEL: test_arg_v4f64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vmovntpd %ymm0, (%rdi)
+; VLX-NEXT:    vmovntps %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x double> %arg, <4 x double>* %dst, align 32, !nontemporal !1
   ret void
@@ -819,7 +819,7 @@ define void @test_arg_v4i64(<4 x i64> %arg, <4 x i64>* %dst) {
 ;
 ; VLX-LABEL: test_arg_v4i64:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
+; VLX-NEXT:    vmovntps %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <4 x i64> %arg, <4 x i64>* %dst, align 32, !nontemporal !1
   ret void
@@ -840,7 +840,7 @@ define void @test_arg_v16i16(<16 x i16> %arg, <16 x i16>* %dst) {
 ;
 ; VLX-LABEL: test_arg_v16i16:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
+; VLX-NEXT:    vmovntps %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <16 x i16> %arg, <16 x i16>* %dst, align 32, !nontemporal !1
   ret void
@@ -861,7 +861,7 @@ define void @test_arg_v32i8(<32 x i8> %arg, <32 x i8>* %dst) {
 ;
 ; VLX-LABEL: test_arg_v32i8:
 ; VLX:       # BB#0:
-; VLX-NEXT:    vmovntdq %ymm0, (%rdi)
+; VLX-NEXT:    vmovntps %ymm0, (%rdi)
 ; VLX-NEXT:    retq
   store <32 x i8> %arg, <32 x i8>* %dst, align 32, !nontemporal !1
   ret void

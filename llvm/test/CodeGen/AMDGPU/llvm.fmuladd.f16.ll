@@ -40,10 +40,9 @@ define void @fmuladd_f16(
 ; GCN-LABEL: {{^}}fmuladd_f16_imm_a
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], 0x4200{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], v[[C_F16]]
-; SI:  v_mac_f32_e32 v[[C_F32]], v[[A_F32]], v[[B_F32]]
+; SI:  v_mac_f32_e32 v[[C_F32]], 0x40400000, v[[B_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[C_F32]]
 ; SI:  buffer_store_short v[[R_F16]]
 
@@ -69,10 +68,9 @@ define void @fmuladd_f16_imm_a(
 ; GCN-LABEL: {{^}}fmuladd_f16_imm_b
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], 0x4200{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], v[[C_F16]]
-; SI:  v_mac_f32_e32 v[[C_F32]], v[[B_F32]], v[[A_F32]]
+; SI:  v_mac_f32_e32 v[[C_F32]], 0x40400000, v[[B_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[C_F32]]
 ; SI:  buffer_store_short v[[R_F16]]
 

@@ -96,6 +96,10 @@ std::error_code createMachODumper(const object::ObjectFile *Obj,
                                   ScopedPrinter &Writer,
                                   std::unique_ptr<ObjDumper> &Result);
 
+std::error_code createWasmDumper(const object::ObjectFile *Obj,
+                                 ScopedPrinter &Writer,
+                                 std::unique_ptr<ObjDumper> &Result);
+
 void dumpCOFFImportFile(const object::COFFImportFile *File);
 
 void dumpCodeViewMergedTypes(ScopedPrinter &Writer,

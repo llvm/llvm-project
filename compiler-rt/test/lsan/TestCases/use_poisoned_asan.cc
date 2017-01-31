@@ -1,6 +1,6 @@
 // ASan-poisoned memory should be ignored if use_poisoned is false.
 // REQUIRES: asan
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
+// RUN: LSAN_BASE="detect_leaks=1:report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
 // RUN: LSAN_OPTIONS=$LSAN_BASE:"use_poisoned=0" not %run %t 2>&1 | FileCheck %s
 // RUN: LSAN_OPTIONS=$LSAN_BASE:"use_poisoned=1" %run %t 2>&1

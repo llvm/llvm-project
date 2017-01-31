@@ -37,10 +37,19 @@ define void @s_addk_i32_k1(i32 addrspace(1)* %out, i32 %b) {
 }
 
 ; SI-LABEL: {{^}}s_addk_i32_k2:
-; SI: s_addk_i32 {{s[0-9]+}}, 0xffef{{$}}
+; SI: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, 17
 ; SI: s_endpgm
 define void @s_addk_i32_k2(i32 addrspace(1)* %out, i32 %b) {
   %add = add i32 %b, -17
+  store i32 %add, i32 addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}s_addk_i32_k3:
+; SI: s_addk_i32 {{s[0-9]+}}, 0xffbf{{$}}
+; SI: s_endpgm
+define void @s_addk_i32_k3(i32 addrspace(1)* %out, i32 %b) {
+  %add = add i32 %b, -65
   store i32 %add, i32 addrspace(1)* %out
   ret void
 }

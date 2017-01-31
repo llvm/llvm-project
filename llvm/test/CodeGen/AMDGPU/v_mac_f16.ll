@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-; GCN-LABEL: {{^}}mac_f16
+; GCN-LABEL: {{^}}mac_f16:
 ; GCN: {{buffer|flat}}_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: {{buffer|flat}}_load_ushort v[[B_F16:[0-9]+]]
 ; GCN: {{buffer|flat}}_load_ushort v[[C_F16:[0-9]+]]
@@ -135,9 +135,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_a_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; GCN-LABEL: {{^}}mac_f16_neg_a_safe_fp_math:
+; SI:  v_sub_f32_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A]]
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A]]
@@ -160,9 +159,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_b_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; GCN-LABEL: {{^}}mac_f16_neg_b_safe_fp_math:
+; SI:  v_sub_f32_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v[[NEG_A]], v{{[0-9]+}}
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A]], v{{[0-9]+}}
@@ -185,9 +183,8 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_f16_neg_c_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; GCN-LABEL: {{^}}mac_f16_neg_c_safe_fp_math:
+; SI:  v_sub_f32_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v[[NEG_A]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:  v_sub_f16_e32 v[[NEG_A:[0-9]+]], 0, v{{[0-9]+}}
 ; VI:  v_mac_f16_e32 v[[NEG_A]], v{{[0-9]+}}, v{{[0-9]+}}
@@ -439,10 +436,9 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}mac_v2f16_neg_a_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A0:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
-; SI:  v_subrev_f32_e32 v[[NEG_A1:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; GCN-LABEL: {{^}}mac_v2f16_neg_a_safe_fp_math:
+; SI:  v_sub_f32_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
+; SI:  v_sub_f32_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]]
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 ; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
@@ -469,9 +465,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_b_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A0:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
-; SI:  v_subrev_f32_e32 v[[NEG_A1:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; SI:  v_sub_f32_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
+; SI:  v_sub_f32_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 ; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
@@ -498,9 +493,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_c_safe_fp_math
-; SI:  v_cvt_f32_f16_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI:  v_subrev_f32_e32 v[[NEG_A0:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
-; SI:  v_subrev_f32_e32 v[[NEG_A1:[0-9]+]], v{{[0-9]+}}, v[[ZERO]]
+; SI:  v_sub_f32_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}
+; SI:  v_sub_f32_e32 v[[NEG_A1:[0-9]+]], 0, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v[[NEG_A0]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI:  v_mac_f32_e32 v[[NEG_A1]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:  v_sub_f16_e32 v[[NEG_A0:[0-9]+]], 0, v{{[0-9]+}}

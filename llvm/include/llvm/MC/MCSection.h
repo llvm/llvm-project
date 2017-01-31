@@ -29,6 +29,7 @@ class MCExpr;
 class MCFragment;
 class MCSection;
 class MCSymbol;
+class Triple;
 class raw_ostream;
 
 template <> struct ilist_alloc_traits<MCFragment> {
@@ -169,7 +170,8 @@ public:
 
   void dump();
 
-  virtual void PrintSwitchToSection(const MCAsmInfo &MAI, raw_ostream &OS,
+  virtual void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+                                    raw_ostream &OS,
                                     const MCExpr *Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill

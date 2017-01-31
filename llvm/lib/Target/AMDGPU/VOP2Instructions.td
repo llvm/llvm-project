@@ -494,6 +494,14 @@ def : Pat <
   (V_CNDMASK_B32_e64 (i32 0), (i32 -1), $src)
 >;
 
+// Undo sub x, c -> add x, -c canonicalization since c is more likely
+// an inline immediate than -c.
+// TODO: Also do for 64-bit.
+def : Pat<
+  (add i16:$src0, (i16 NegSubInlineConst16:$src1)),
+  (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
+>;
+
 } // End Predicates = [isVI]
 
 //===----------------------------------------------------------------------===//

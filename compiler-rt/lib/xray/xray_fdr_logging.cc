@@ -59,7 +59,7 @@ XRayLogInitStatus FDRLogging_init(std::size_t BufferSize, std::size_t BufferMax,
                                   size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   assert(OptionsSize == sizeof(FDRLoggingOptions));
   XRayLogInitStatus CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  if (!LoggingStatus.compare_exchange_weak(
+  if (!LoggingStatus.compare_exchange_strong(
           CurrentStatus, XRayLogInitStatus::XRAY_LOG_INITIALIZING,
           std::memory_order_release, std::memory_order_relaxed))
     return CurrentStatus;
@@ -91,7 +91,7 @@ XRayLogFlushStatus FDRLogging_flush() XRAY_NEVER_INSTRUMENT {
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
 
   XRayLogFlushStatus Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
-  if (!LogFlushStatus.compare_exchange_weak(
+  if (!LogFlushStatus.compare_exchange_strong(
           Result, XRayLogFlushStatus::XRAY_LOG_FLUSHING,
           std::memory_order_release, std::memory_order_relaxed))
     return Result;
@@ -143,7 +143,7 @@ XRayLogFlushStatus FDRLogging_flush() XRAY_NEVER_INSTRUMENT {
 
 XRayLogInitStatus FDRLogging_finalize() XRAY_NEVER_INSTRUMENT {
   XRayLogInitStatus CurrentStatus = XRayLogInitStatus::XRAY_LOG_INITIALIZED;
-  if (!LoggingStatus.compare_exchange_weak(
+  if (!LoggingStatus.compare_exchange_strong(
           CurrentStatus, XRayLogInitStatus::XRAY_LOG_FINALIZING,
           std::memory_order_release, std::memory_order_relaxed))
     return CurrentStatus;
@@ -159,7 +159,7 @@ XRayLogInitStatus FDRLogging_finalize() XRAY_NEVER_INSTRUMENT {
 
 XRayLogInitStatus FDRLogging_reset() XRAY_NEVER_INSTRUMENT {
   XRayLogInitStatus CurrentStatus = XRayLogInitStatus::XRAY_LOG_FINALIZED;
-  if (!LoggingStatus.compare_exchange_weak(
+  if (!LoggingStatus.compare_exchange_strong(
           CurrentStatus, XRayLogInitStatus::XRAY_LOG_UNINITIALIZED,
           std::memory_order_release, std::memory_order_relaxed))
     return CurrentStatus;

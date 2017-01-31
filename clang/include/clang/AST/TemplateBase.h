@@ -119,10 +119,7 @@ private:
   
 public:
   /// \brief Construct an empty, invalid template argument.
-  TemplateArgument() {
-    TypeOrValue.Kind = Null;
-    TypeOrValue.V = 0;
-  }
+  constexpr TemplateArgument() : TypeOrValue({Null, 0}) {}
 
   /// \brief Construct a template type argument.
   TemplateArgument(QualType T, bool isNullPtr = false) {
@@ -388,8 +385,8 @@ private:
   };
 
 public:
-  TemplateArgumentLocInfo();
-  
+  constexpr TemplateArgumentLocInfo() : Template({nullptr, nullptr, 0, 0}) {}
+
   TemplateArgumentLocInfo(TypeSourceInfo *TInfo) : Declarator(TInfo) {}
   
   TemplateArgumentLocInfo(Expr *E) : Expression(E) {}
@@ -433,7 +430,7 @@ class TemplateArgumentLoc {
   TemplateArgumentLocInfo LocInfo;
 
 public:
-  TemplateArgumentLoc() {}
+  constexpr TemplateArgumentLoc() {}
 
   TemplateArgumentLoc(const TemplateArgument &Argument,
                       TemplateArgumentLocInfo Opaque)

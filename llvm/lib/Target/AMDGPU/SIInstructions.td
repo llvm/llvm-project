@@ -1125,6 +1125,29 @@ def : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64>;
 def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
 def : IntMed3Pat<V_MED3_U32, umax, umax_oneuse, umin_oneuse>;
 
+// This matches 16 permutations of
+// max(min(x, y), min(max(x, y), z))
+class FPMed3Pat<ValueType vt,
+                Instruction med3Inst> : Pat<
+  (fmaxnum (fminnum_oneuse (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
+                           (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
+           (fminnum_oneuse (fmaxnum_oneuse (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
+                                           (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
+                           (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
+  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : FPMed3Pat<f32, V_MED3_F32>;
+
+
+// Undo sub x, c -> add x, -c canonicalization since c is more likely
+// an inline immediate than -c.
+// TODO: Also do for 64-bit.
+def : Pat<
+  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
+>;
+
 //============================================================================//
 // Assembler aliases
 //============================================================================//

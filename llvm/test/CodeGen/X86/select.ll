@@ -678,3 +678,17 @@ entry:
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1
 }
+
+define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
+; CHECK-LABEL: select_or_1:
+; MCU:    andl $1, %ecx
+; MCU-NEXT:    negl %ecx
+; MCU-NEXT:    andl %edx, %ecx
+; MCU-NEXT:    orl %ecx, %eax
+entry:
+ %and = and i32 %cond, 1
+ %cmp10 = icmp eq i32 %and, 0
+ %0 = or i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}

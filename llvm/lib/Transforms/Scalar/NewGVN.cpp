@@ -2106,21 +2106,27 @@ void NewGVN::deleteInstructionsInBlock(BasicBlock *BB) {
   DEBUG(dbgs() << "  BasicBlock Dead:" << *BB);
   ++NumGVNBlocksDeleted;
 
-  // Change to unreachable does not handle destroying phi nodes. We just replace
-  // the users with undef.
-  if (BB->empty())
-    return;
-  auto BBI = BB->begin();
-  while (auto *Phi = dyn_cast<PHINode>(BBI)) {
-    Phi->replaceAllUsesWith(UndefValue::get(Phi->getType()));
-    ++BBI;
-  }
+  // Delete the instructions backwards, as it has a reduced likelihood of having
+  // to update as many def-use and use-def chains. Start after the terminator.
+  auto StartPoint = BB->rbegin();
+  ++StartPoint;
+  // Note that we explicitly recalculate BB->rend() on each iteration,
+  // as it may change when we remove the first instruction.
+  for (BasicBlock::reverse_iterator I(StartPoint); I != BB->rend();) {
+    Instruction &Inst = *I++;
+    if (!Inst.use_empty())
+      Inst.replaceAllUsesWith(UndefValue::get(Inst.getType()));
+    if (isa<LandingPadInst>(Inst))
+      continue;
 
-  Instruction *ToKill = &*BBI;
-  // Nothing but phi nodes, so nothing left to remove.
-  if (!ToKill)
-    return;
-  NumGVNInstrDeleted += changeToUnreachable(ToKill, false);
+    Inst.eraseFromParent();
+    ++NumGVNInstrDeleted;
+  }
+  // Now insert something that simplifycfg will turn into an unreachable.
+  Type *Int8Ty = Type::getInt8Ty(BB->getContext());
+  new StoreInst(UndefValue::get(Int8Ty),
+                Constant::getNullValue(Int8Ty->getPointerTo()),
+                BB->getTerminator());
 }
 
 void NewGVN::markInstructionForDeletion(Instruction *I) {

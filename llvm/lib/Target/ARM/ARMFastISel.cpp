@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
+#include "ARMBaseInstrInfo.h"
 #include "ARMBaseRegisterInfo.h"
 #include "ARMCallingConv.h"
 #include "ARMConstantPoolValue.h"
@@ -21,30 +22,61 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "MCTargetDesc/ARMBaseInfo.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include <cassert>
+#include <cstdint>
+#include <utility>
+
 using namespace llvm;
 
 namespace {
@@ -54,24 +86,22 @@ namespace {
     enum {
       RegBase,
       FrameIndexBase
-    } BaseType;
+    } BaseType = RegBase;
 
     union {
       unsigned Reg;
       int FI;
     } Base;
 
-    int Offset;
+    int Offset = 0;
 
     // Innocuous defaults for our address.
-    Address()
-     : BaseType(RegBase), Offset(0) {
-       Base.Reg = 0;
-     }
+    Address() {
+      Base.Reg = 0;
+    }
   } Address;
 
 class ARMFastISel final : public FastISel {
-
   /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
   /// make the right decision when generating code for different targets.
   const ARMSubtarget *Subtarget;
@@ -99,8 +129,9 @@ class ARMFastISel final : public FastISel {
       Context = &funcInfo.Fn->getContext();
     }
 
-    // Code from FastISel.cpp.
   private:
+    // Code from FastISel.cpp.
+
     unsigned fastEmitInst_r(unsigned MachineInstOpcode,
                             const TargetRegisterClass *RC,
                             unsigned Op0, bool Op0IsKill);
@@ -117,18 +148,18 @@ class ARMFastISel final : public FastISel {
                             uint64_t Imm);
 
     // Backend specific FastISel code.
-  private:
+
     bool fastSelectInstruction(const Instruction *I) override;
     unsigned fastMaterializeConstant(const Constant *C) override;
     unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
     bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                              const LoadInst *LI) override;
     bool fastLowerArguments() override;
-  private:
+
   #include "ARMGenFastISel.inc"
 
     // Instruction selection routines.
-  private:
+
     bool SelectLoad(const Instruction *I);
     bool SelectStore(const Instruction *I);
     bool SelectBranch(const Instruction *I);
@@ -151,7 +182,7 @@ class ARMFastISel final : public FastISel {
     bool SelectShift(const Instruction *I, ARM_AM::ShiftOpc ShiftTy);
 
     // Utility routines.
-  private:
+
     bool isPositionIndependent() const;
     bool isTypeLegal(Type *Ty, MVT &VT);
     bool isLoadTypeLegal(Type *Ty, MVT &VT);
@@ -179,7 +210,7 @@ class ARMFastISel final : public FastISel {
     const TargetLowering *getTargetLowering() { return &TLI; }
 
     // Call handling routines.
-  private:
+
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC,
                                   bool Return,
                                   bool isVarArg);
@@ -198,7 +229,7 @@ class ARMFastISel final : public FastISel {
     bool ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call);
 
     // OptionalDef handling routines.
-  private:
+
     bool isARMNEONPred(const MachineInstr *MI);
     bool DefinesOptionalPredicate(MachineInstr *MI, bool *CPSR);
     const MachineInstrBuilder &AddOptionalDefs(const MachineInstrBuilder &MIB);
@@ -430,7 +461,6 @@ unsigned ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
 }
 
 unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
-
   if (VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8 && VT != MVT::i1)
     return 0;
 
@@ -735,7 +765,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
           TmpOffset += SL->getElementOffset(Idx);
         } else {
           uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
-          for (;;) {
+          while (true) {
             if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
               // Constant-offset addressing.
               TmpOffset += CI->getSExtValue() * S;
@@ -967,7 +997,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   // Create the base instruction, then add the operands.
   if (allocReg)
     ResultReg = createResultReg(RC);
-  assert (ResultReg > 255 && "Expected an allocated virtual register.");
+  assert(ResultReg > 255 && "Expected an allocated virtual register.");
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                     TII.get(Opc), ResultReg);
   AddLoadStoreOperands(VT, Addr, MIB, MachineMemOperand::MOLoad, useAM3);
@@ -1212,7 +1242,6 @@ bool ARMFastISel::SelectBranch(const Instruction *I) {
   // behavior.
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
     if (CI->hasOneUse() && (CI->getParent() == I->getParent())) {
-
       // Get the compare predicate.
       // Try to take advantage of fallthrough opportunities.
       CmpInst::Predicate Predicate = CI->getPredicate();
@@ -1592,7 +1621,7 @@ bool ARMFastISel::SelectSelect(const Instruction *I) {
   bool UseImm = false;
   bool isNegativeImm = false;
   if (const ConstantInt *ConstInt = dyn_cast<ConstantInt>(I->getOperand(2))) {
-    assert (VT == MVT::i32 && "Expecting an i32.");
+    assert(VT == MVT::i32 && "Expecting an i32.");
     Imm = (int)ConstInt->getValue().getZExtValue();
     if (Imm < 0) {
       isNegativeImm = true;
@@ -1922,7 +1951,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       case CCValAssign::SExt: {
         MVT DestVT = VA.getLocVT();
         Arg = ARMEmitIntExt(ArgVT, Arg, DestVT, /*isZExt*/false);
-        assert (Arg != 0 && "Failed to emit a sext");
+        assert(Arg != 0 && "Failed to emit a sext");
         ArgVT = DestVT;
         break;
       }
@@ -1931,7 +1960,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       case CCValAssign::ZExt: {
         MVT DestVT = VA.getLocVT();
         Arg = ARMEmitIntExt(ArgVT, Arg, DestVT, /*isZExt*/true);
-        assert (Arg != 0 && "Failed to emit a zext");
+        assert(Arg != 0 && "Failed to emit a zext");
         ArgVT = DestVT;
         break;
       }
@@ -2414,7 +2443,7 @@ bool ARMFastISel::ARMTryEmitSmallMemCpy(Address Dest, Address Src,
       else if (Len >= 2)
         VT = MVT::i16;
       else {
-        assert (Len == 1 && "Expected a length of 1!");
+        assert(Len == 1 && "Expected a length of 1!");
         VT = MVT::i8;
       }
     } else {
@@ -2429,9 +2458,9 @@ bool ARMFastISel::ARMTryEmitSmallMemCpy(Address Dest, Address Src,
     bool RV;
     unsigned ResultReg;
     RV = ARMEmitLoad(VT, ResultReg, Src);
-    assert (RV == true && "Should be able to handle this load.");
+    assert(RV && "Should be able to handle this load.");
     RV = ARMEmitStore(VT, ResultReg, Dest);
-    assert (RV == true && "Should be able to handle this store.");
+    assert(RV && "Should be able to handle this store.");
     (void)RV;
 
     unsigned Size = VT.getSizeInBits()/8;
@@ -2777,7 +2806,6 @@ bool ARMFastISel::SelectShift(const Instruction *I,
 
 // TODO: SoftFP support.
 bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
-
   switch (I->getOpcode()) {
     case Instruction::Load:
       return SelectLoad(I);
@@ -2847,6 +2875,7 @@ bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
 }
 
 namespace {
+
 // This table describes sign- and zero-extend instructions which can be
 // folded into a preceding load. All of these extends have an immediate
 // (sometimes a mask and sometimes a shift) that's applied after
@@ -2863,7 +2892,8 @@ const struct FoldableLoadExtendsStruct {
   { { ARM::SXTB,  ARM::t2SXTB  },   0, 0, MVT::i8  },
   { { ARM::UXTB,  ARM::t2UXTB  },   0, 1, MVT::i8  }
 };
-}
+
+} // end anonymous namespace
 
 /// \brief The specified machine instr operand is a vreg, and that
 /// vreg is being provided by the specified load instruction.  If possible,
@@ -3008,7 +3038,6 @@ bool ARMFastISel::fastLowerArguments() {
     }
   }
 
-
   static const MCPhysReg GPRArgRegs[] = {
     ARM::R0, ARM::R1, ARM::R2, ARM::R3
   };
@@ -3033,6 +3062,7 @@ bool ARMFastISel::fastLowerArguments() {
 }
 
 namespace llvm {
+
   FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
                                 const TargetLibraryInfo *libInfo) {
     if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
@@ -3040,4 +3070,5 @@ namespace llvm {
 
     return nullptr;
   }
-}
+
+} // end namespace llvm

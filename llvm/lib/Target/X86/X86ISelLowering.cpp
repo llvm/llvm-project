@@ -5397,6 +5397,7 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   case X86ISD::BLENDI:
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeBLENDMask(VT, cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
+    IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::SHUFP:
     ImmN = N->getOperand(N->getNumOperands()-1);
@@ -5769,6 +5770,35 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Ops.push_back(IsAndN ? N1 : N0);
     return true;
   }
+  case X86ISD::PINSRW: {
+    SDValue InVec = N.getOperand(0);
+    SDValue InScl = N.getOperand(1);
+    uint64_t InIdx = N.getConstantOperandVal(2);
+    assert(InIdx < NumElts && "Illegal insertion index");
+
+    // Attempt to recognise a PINSRW(VEC, 0, Idx) shuffle pattern.
+    if (X86::isZeroNode(InScl)) {
+      Ops.push_back(InVec);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Mask.push_back(i == InIdx ? SM_SentinelZero : i);
+      return true;
+    }
+
+    // Attempt to recognise a PINSRW(ASSERTZEXT(PEXTRW)) shuffle pattern.
+    // TODO: Expand this to support PINSRB/INSERT_VECTOR_ELT/etc.
+    if (InScl.getOpcode() != ISD::AssertZext ||
+        InScl.getOperand(0).getOpcode() != X86ISD::PEXTRW)
+      return false;
+
+    SDValue ExVec = InScl.getOperand(0).getOperand(0);
+    uint64_t ExIdx = InScl.getOperand(0).getConstantOperandVal(1);
+    assert(ExIdx < NumElts && "Illegal extraction index");
+    Ops.push_back(InVec);
+    Ops.push_back(ExVec);
+    for (unsigned i = 0; i != NumElts; ++i)
+      Mask.push_back(i == InIdx ? NumElts + ExIdx : i);
+    return true;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
@@ -5840,31 +5870,13 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Ops,
 /// remaining input indices in case we now have a unary shuffle and adjust the
 /// Op0/Op1 inputs accordingly.
 /// Returns true if the target shuffle mask was decoded.
-static bool resolveTargetShuffleInputs(SDValue Op, SDValue &Op0, SDValue &Op1,
+static bool resolveTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Ops,
                                        SmallVectorImpl<int> &Mask) {
-  SmallVector<SDValue, 2> Ops;
   if (!setTargetShuffleZeroElements(Op, Mask, Ops))
     if (!getFauxShuffleMask(Op, Mask, Ops))
       return false;
 
-  int NumElts = Mask.size();
-  bool Op0InUse = any_of(Mask, [NumElts](int Idx) {
-    return 0 <= Idx && Idx < NumElts;
-  });
-  bool Op1InUse = any_of(Mask, [NumElts](int Idx) { return NumElts <= Idx; });
-
-  Op0 = Op0InUse ? Ops[0] : SDValue();
-  Op1 = Op1InUse ? Ops[1] : SDValue();
-
-  // We're only using Op1 - commute the mask and inputs.
-  if (!Op0InUse && Op1InUse) {
-    for (int &M : Mask)
-      if (NumElts <= M)
-        M -= NumElts;
-    Op0 = Op1;
-    Op1 = SDValue();
-  }
-
+  resolveTargetShuffleInputsAndMask(Ops, Mask);
   return true;
 }
 
@@ -10620,7 +10632,7 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   };
   if ((NumLToL == 3 && NumHToL == 1) || (NumLToL == 1 && NumHToL == 3))
     return balanceSides(LToLInputs, HToLInputs, HToHInputs, LToHInputs, 0, 4);
-  else if ((NumHToH == 3 && NumLToH == 1) || (NumHToH == 1 && NumLToH == 3))
+  if ((NumHToH == 3 && NumLToH == 1) || (NumHToH == 1 && NumLToH == 3))
     return balanceSides(HToHInputs, LToHInputs, LToLInputs, HToLInputs, 4, 0);
 
   // At this point there are at most two inputs to the low and high halves from
@@ -17395,7 +17407,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
               DAG.getNode(ISD::ANY_EXTEND, DL, VT, CmpOp0.getOperand(0)),
               DAG.getConstant(1, DL, VT));
         else
-          Neg = Cmp;
+          Neg = CmpOp0;
         SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
                                    Neg); // -(and (x, 0x1))
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
@@ -27464,10 +27476,14 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
          "Can only combine shuffles of the same vector register size.");
 
   // Extract target shuffle mask and resolve sentinels and inputs.
-  SDValue Input0, Input1;
   SmallVector<int, 16> OpMask;
-  if (!resolveTargetShuffleInputs(Op, Input0, Input1, OpMask))
+  SmallVector<SDValue, 2> OpInputs;
+  if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask))
     return false;
+
+  assert(OpInputs.size() <= 2 && "Too many shuffle inputs");
+  SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
+  SDValue Input1 = (OpInputs.size() > 1 ? OpInputs[1] : SDValue());
 
   // Add the inputs to the Ops list, avoiding duplicates.
   SmallVector<SDValue, 8> Ops(SrcOps.begin(), SrcOps.end());
@@ -30588,6 +30604,25 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
     return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 
+  return SDValue();
+}
+
+static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const X86Subtarget &Subtarget) {
+  assert(
+      ((N->getOpcode() == X86ISD::PINSRB && N->getValueType(0) == MVT::v16i8) ||
+       (N->getOpcode() == X86ISD::PINSRW &&
+        N->getValueType(0) == MVT::v8i16)) &&
+      "Unexpected vector insertion");
+
+  // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
+  SDValue Op(N, 0);
+  SmallVector<int, 1> NonceMask; // Just a placeholder.
+  NonceMask.push_back(0);
+  combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+                                /*Depth*/ 1, /*HasVarMask*/ false, DAG,
+                                DCI, Subtarget);
   return SDValue();
 }
 
@@ -34153,6 +34188,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);
   case X86ISD::VSEXT:
   case X86ISD::VZEXT:       return combineVSZext(N, DAG, DCI, Subtarget);
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW:      return combineVectorInsert(N, DAG, DCI, Subtarget);
   case X86ISD::SHUFP:       // Handle all target specific shuffles
   case X86ISD::INSERTPS:
   case X86ISD::PALIGNR:
