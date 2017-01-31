@@ -733,17 +733,12 @@ bool IRTranslator::translateInvoke(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(BeginSymbol);
 
   unsigned Res = I.getType()->isVoidTy() ? 0 : getOrCreateVReg(I);
-  SmallVector<CallLowering::ArgInfo, 8> Args;
+  SmallVector<unsigned, 8> Args;
   for (auto &Arg: I.arg_operands())
-    Args.emplace_back(getOrCreateVReg(*Arg), Arg->getType());
+    Args.push_back(getOrCreateVReg(*Arg));
 
-  auto CalleeMO =
-      Fn ? MachineOperand::CreateGA(Fn, 0)
-         : MachineOperand::CreateReg(getOrCreateVReg(*Callee), false);
-
-  if (!CLI->lowerCall(MIRBuilder, CalleeMO,
-                      CallLowering::ArgInfo(Res, I.getType()), Args))
-    return false;
+ CLI->lowerCall(MIRBuilder, I, Res, Args,
+                 [&]() { return getOrCreateVReg(*I.getCalledValue()); });
 
   MCSymbol *EndSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
