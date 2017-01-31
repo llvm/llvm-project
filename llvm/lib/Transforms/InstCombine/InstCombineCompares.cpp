@@ -884,6 +884,10 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
+  // Make sure the pointers have the same type.
+  if (GEPLHS->getType() != RHS->getType())
+    return nullptr;
+
   Value *PtrBase, *Index;
   std::tie(PtrBase, Index) = getAsConstantIndexedAddress(GEPLHS, DL);
 

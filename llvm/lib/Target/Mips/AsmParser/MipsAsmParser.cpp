@@ -413,6 +413,7 @@ public:
     Match_RequiresDifferentOperands,
     Match_RequiresNoZeroRegister,
     Match_RequiresSameSrcAndDst,
+    Match_NoFCCRegisterForCurrentISA,
     Match_NonZeroOperandForSync,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
@@ -1461,8 +1462,6 @@ public:
   bool isFCCAsmReg() const {
     if (!(isRegIdx() && RegIdx.Kind & RegKind_FCC))
       return false;
-    if (!AsmParser.hasEightFccRegisters())
-      return RegIdx.Index == 0;
     return RegIdx.Index <= 7;
   }
   bool isACCAsmReg() const {
@@ -4053,6 +4052,7 @@ MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
     return Match_RequiresSameSrcAndDst;
   }
 }
+
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   switch (Inst.getOpcode()) {
   // As described by the MIPSR6 spec, daui must not use the zero operand for
@@ -4131,9 +4131,15 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;
     return Match_Success;
-  default:
-    return Match_Success;
   }
+
+  uint64_t TSFlags = getInstDesc(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & MipsII::HasFCCRegOperand) &&
+      (Inst.getOperand(0).getReg() != Mips::FCC0) && !hasEightFccRegisters())
+    return Match_NoFCCRegisterForCurrentISA;
+
+  return Match_Success;
+
 }
 
 static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
@@ -4191,6 +4197,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "invalid operand ($zero) for instruction");
   case Match_RequiresSameSrcAndDst:
     return Error(IDLoc, "source and destination must match");
+  case Match_NoFCCRegisterForCurrentISA:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "non-zero fcc register doesn't exist in current ISA level");
   case Match_Immz:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo), "expected '0'");
   case Match_UImm1_0:

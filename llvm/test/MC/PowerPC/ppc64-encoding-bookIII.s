@@ -197,3 +197,16 @@
 # CHECK-BE: tlbsx 11, 12                    # encoding: [0x7c,0x0b,0x67,0x24]
 # CHECK-LE: tlbsx 11, 12                    # encoding: [0x24,0x67,0x0b,0x7c]
             tlbsx %r11, %r12
+
+# CHECK-BE: mfpmr 5, 400                    # encoding: [0x7c,0xb0,0x62,0x9c]
+# CHECK-LE: mfpmr 5, 400                    # encoding: [0x9c,0x62,0xb0,0x7c]
+            mfpmr 5, 400
+# CHECK-BE: mtpmr 400, 6                    # encoding: [0x7c,0xd0,0x63,0x9c]
+# CHECK-LE: mtpmr 400, 6                    # encoding: [0x9c,0x63,0xd0,0x7c]
+            mtpmr 400, 6
+# CHECK-BE: icblc 0, 0, 8                      # encoding: [0x7c,0x00,0x41,0xcc]
+# CHECK-LE: icblc 0, 0, 8                      # encoding: [0xcc,0x41,0x00,0x7c]
+            icblc 0, 0, 8
+# CHECK-BE: icbtls 0, 0, 9                     # encoding: [0x7c,0x00,0x4b,0xcc]
+# CHECK-LE: icbtls 0, 0, 9                     # encoding: [0xcc,0x4b,0x00,0x7c]
+            icbtls 0, 0, 9

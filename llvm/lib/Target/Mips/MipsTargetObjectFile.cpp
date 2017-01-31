@@ -148,3 +148,11 @@ MCSection *MipsTargetObjectFile::getSectionForConstant(const DataLayout &DL,
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C, Align);
 }
+
+const MCExpr *
+MipsTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  return MCBinaryExpr::createAdd(
+      Expr, MCConstantExpr::create(0x8000, getContext()), getContext());
+}

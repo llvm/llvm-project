@@ -27,9 +27,20 @@ def SUXC1_MM : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>,
                SWXC1_FM_MM<0x188>, INSN_MIPS5_32R2_NOT_32R6_64R6;
 
 def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>,
-                  CEQS_FM_MM<0>;
+                  CEQS_FM_MM<0> {
+  // FIXME: This is a required to work around the fact that these instructions
+  //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
+  //        fcc register set is used directly.
+  bits<3> fcc = 0;
+}
+
 def FCMP_D32_MM : MMRel, CEQS_FT<"d", AFGR64, II_C_CC_D, MipsFPCmp>,
-                  CEQS_FM_MM<1>;
+                  CEQS_FM_MM<1> {
+  // FIXME: This is a required to work around the fact that these instructions
+  //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
+  //        fcc register set is used directly.
+  bits<3> fcc = 0;
+}
 
 def BC1F_MM : MMRel, BC1F_FT<"bc1f", brtarget_mm, II_BC1F, MIPS_BRANCH_F>,
               BC1F_FM_MM<0x1c>, ISA_MIPS1_NOT_32R6_64R6;
@@ -164,6 +175,98 @@ let AdditionalPredicates = [InMicroMips] in {
     def SWC1_MM : MMRel, SW_FT<"swc1", FGR32Opnd, mem_mm_16, II_SWC1, store>,
                   LW_FM_MM<0x26>;
   }
+
+  multiclass C_COND_MM<string TypeStr, RegisterOperand RC, bits<2> fmt,
+                      InstrItinClass itin> {
+    def C_F_#NAME#_MM : MMRel, C_COND_FT<"f", TypeStr, RC, itin>,
+                    C_COND_FM_MM<fmt, 0> {
+      let BaseOpcode = "c.f."#NAME;
+      let isCommutable = 1;
+    }
+    def C_UN_#NAME#_MM : MMRel, C_COND_FT<"un", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 1> {
+      let BaseOpcode = "c.un."#NAME;
+      let isCommutable = 1;
+    }
+    def C_EQ_#NAME#_MM : MMRel, C_COND_FT<"eq", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 2> {
+      let BaseOpcode = "c.eq."#NAME;
+      let isCommutable = 1;
+    }
+    def C_UEQ_#NAME#_MM : MMRel, C_COND_FT<"ueq", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 3> {
+      let BaseOpcode = "c.ueq."#NAME;
+      let isCommutable = 1;
+    }
+    def C_OLT_#NAME#_MM : MMRel, C_COND_FT<"olt", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 4> {
+      let BaseOpcode = "c.olt."#NAME;
+    }
+    def C_ULT_#NAME#_MM : MMRel, C_COND_FT<"ult", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 5> {
+      let BaseOpcode = "c.ult."#NAME;
+    }
+    def C_OLE_#NAME#_MM : MMRel, C_COND_FT<"ole", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 6> {
+      let BaseOpcode = "c.ole."#NAME;
+    }
+    def C_ULE_#NAME#_MM : MMRel, C_COND_FT<"ule", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 7> {
+      let BaseOpcode = "c.ule."#NAME;
+    }
+    def C_SF_#NAME#_MM : MMRel, C_COND_FT<"sf", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 8> {
+      let BaseOpcode = "c.sf."#NAME;
+      let isCommutable = 1;
+    }
+    def C_NGLE_#NAME#_MM : MMRel, C_COND_FT<"ngle", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 9> {
+      let BaseOpcode = "c.ngle."#NAME;
+    }
+    def C_SEQ_#NAME#_MM : MMRel, C_COND_FT<"seq", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 10> {
+      let BaseOpcode = "c.seq."#NAME;
+      let isCommutable = 1;
+    }
+    def C_NGL_#NAME#_MM : MMRel, C_COND_FT<"ngl", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 11> {
+      let BaseOpcode = "c.ngl."#NAME;
+    }
+    def C_LT_#NAME#_MM : MMRel, C_COND_FT<"lt", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 12> {
+      let BaseOpcode = "c.lt."#NAME;
+    }
+    def C_NGE_#NAME#_MM : MMRel, C_COND_FT<"nge", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 13> {
+      let BaseOpcode = "c.nge."#NAME;
+    }
+    def C_LE_#NAME#_MM : MMRel, C_COND_FT<"le", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 14> {
+      let BaseOpcode = "c.le."#NAME;
+    }
+    def C_NGT_#NAME#_MM : MMRel, C_COND_FT<"ngt", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 15> {
+      let BaseOpcode = "c.ngt."#NAME;
+    }
+  }
+
+  defm S   : C_COND_MM<"s", FGR32Opnd, 0b00, II_C_CC_S>,
+             ISA_MIPS1_NOT_32R6_64R6;
+  defm D32 : C_COND_MM<"d", AFGR64Opnd, 0b01, II_C_CC_D>,
+             ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+  let DecoderNamespace = "Mips64" in
+  defm D64 : C_COND_MM<"d", FGR64Opnd, 0b01, II_C_CC_D>,
+                ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+
+  defm S_MM   : C_COND_ALIASES<"s", FGR32Opnd>, HARDFLOAT,
+                ISA_MIPS1_NOT_32R6_64R6;
+  defm D32_MM : C_COND_ALIASES<"d", AFGR64Opnd>, HARDFLOAT,
+                ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+  defm D64_MM : C_COND_ALIASES<"d", FGR64Opnd>, HARDFLOAT,
+                ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+
+  defm : BC1_ALIASES<BC1T_MM, "bc1t", BC1F_MM, "bc1f">,
+         ISA_MIPS1_NOT_32R6_64R6, HARDFLOAT;
 }
 
 //===----------------------------------------------------------------------===//
