@@ -289,6 +289,7 @@ public:
   Instruction *visitLoadInst(LoadInst &LI);
   Instruction *visitStoreInst(StoreInst &SI);
   Instruction *visitBranchInst(BranchInst &BI);
+  Instruction *visitFenceInst(FenceInst &FI);
   Instruction *visitSwitchInst(SwitchInst &SI);
   Instruction *visitReturnInst(ReturnInst &RI);
   Instruction *visitInsertValueInst(InsertValueInst &IV);
@@ -314,8 +315,8 @@ public:
                                  const unsigned SIOpd);
 
 private:
-  bool ShouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
-  bool ShouldChangeType(Type *From, Type *To) const;
+  bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
+  bool shouldChangeType(Type *From, Type *To) const;
   Value *dyn_castNegVal(Value *V) const;
   Value *dyn_castFNegVal(Value *V, bool NoSignedZero = false) const;
   Type *FindElementAtOffset(PointerType *PtrTy, int64_t Offset,

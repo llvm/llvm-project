@@ -5770,13 +5770,14 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Ops.push_back(IsAndN ? N1 : N0);
     return true;
   }
+  case X86ISD::PINSRB:
   case X86ISD::PINSRW: {
     SDValue InVec = N.getOperand(0);
     SDValue InScl = N.getOperand(1);
     uint64_t InIdx = N.getConstantOperandVal(2);
     assert(InIdx < NumElts && "Illegal insertion index");
 
-    // Attempt to recognise a PINSRW(VEC, 0, Idx) shuffle pattern.
+    // Attempt to recognise a PINSR*(VEC, 0, Idx) shuffle pattern.
     if (X86::isZeroNode(InScl)) {
       Ops.push_back(InVec);
       for (unsigned i = 0; i != NumElts; ++i)
@@ -5784,10 +5785,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       return true;
     }
 
-    // Attempt to recognise a PINSRW(ASSERTZEXT(PEXTRW)) shuffle pattern.
-    // TODO: Expand this to support PINSRB/INSERT_VECTOR_ELT/etc.
+    // Attempt to recognise a PINSR*(ASSERTZEXT(PEXTR*)) shuffle pattern.
+    // TODO: Expand this to support INSERT_VECTOR_ELT/etc.
+    unsigned ExOp =
+        (X86ISD::PINSRB == Opcode ? X86ISD::PEXTRB : X86ISD::PEXTRW);
     if (InScl.getOpcode() != ISD::AssertZext ||
-        InScl.getOperand(0).getOpcode() != X86ISD::PEXTRW)
+        InScl.getOperand(0).getOpcode() != ExOp)
       return false;
 
     SDValue ExVec = InScl.getOperand(0).getOperand(0);
@@ -30610,10 +30613,11 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
-  unsigned Opcode = N->getOpcode();
-  assert(((X86ISD::PINSRB == Opcode && N->getValueType(0) ==MVT::v16i8) ||
-          (X86ISD::PINSRW == Opcode && N->getValueType(0) ==MVT::v8i16)) &&
-         "Unexpected vector insertion");
+  assert(
+      ((N->getOpcode() == X86ISD::PINSRB && N->getValueType(0) == MVT::v16i8) ||
+       (N->getOpcode() == X86ISD::PINSRW &&
+        N->getValueType(0) == MVT::v8i16)) &&
+      "Unexpected vector insertion");
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);

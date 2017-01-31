@@ -23,9 +23,10 @@ function(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT"
     ""
-    "DEPENDS"
+    "DEPENDS;LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
+  list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if (MSVC_IDE OR XCODE)
     string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
@@ -56,22 +57,19 @@ function(add_lldb_library name)
   if (PARAM_OBJECT)
     add_library(${name} ${libkind} ${srcs})
   else()
-    if (PARAM_SHARED)
-      if (LLDB_LINKER_SUPPORTS_GROUPS)
-        llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
-                                -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group
-                                -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group
-                                DEPENDS ${PARAM_DEPENDS}
-          )
-      else()
-        llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
-                                ${LLDB_USED_LIBS} ${CLANG_USED_LIBS}
-                                DEPENDS ${PARAM_DEPENDS}
-          )
-      endif()
-    else()
-      llvm_add_library(${name} ${libkind} ${srcs} DEPENDS ${PARAM_DEPENDS})
+    if (PARAM_SHARED AND LLDB_LINKER_SUPPORTS_GROUPS)
+      set(start_group -Wl,--start-group)
+      set(end_group -Wl,--end-group)
     endif()
+    llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
+                                ${start_group}
+                                ${LLDB_USED_LIBS}
+                                ${end_group}
+                                ${start_group}
+                                ${CLANG_USED_LIBS}
+                                ${end_group}
+                                ${PARAM_LINK_LIBS}
+                                DEPENDS ${PARAM_DEPENDS})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
@@ -112,8 +110,17 @@ function(add_lldb_library name)
 endfunction(add_lldb_library)
 
 function(add_lldb_executable name)
-  cmake_parse_arguments(ARG "INCLUDE_IN_FRAMEWORK;GENERATE_INSTALL" "" "" ${ARGN})
+  cmake_parse_arguments(ARG
+    "INCLUDE_IN_FRAMEWORK;GENERATE_INSTALL"
+    ""
+    "LINK_LIBS;LINK_COMPONENTS"
+    ${ARGN}
+    )
+
+  list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
+
+  target_link_libraries(${name} ${ARG_LINK_LIBS})
   set_target_properties(${name} PROPERTIES
     FOLDER "lldb executables")
 

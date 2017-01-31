@@ -208,6 +208,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_SECREL: return "SECREL32";
   case VK_SIZE: return "SIZE";
   case VK_WEAKREF: return "WEAKREF";
+  case VK_X86_ABS8: return "ABS8";
   case VK_ARM_NONE: return "none";
   case VK_ARM_GOT_PREL: return "GOT_PREL";
   case VK_ARM_TARGET1: return "target1";
@@ -317,6 +318,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("imgrel", VK_COFF_IMGREL32)
     .Case("secrel32", VK_SECREL)
     .Case("size", VK_SIZE)
+    .Case("abs8", VK_X86_ABS8)
     .Case("l", VK_PPC_LO)
     .Case("h", VK_PPC_HI)
     .Case("ha", VK_PPC_HA)

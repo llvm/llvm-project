@@ -1,8 +1,9 @@
 # This file allows users to call find_package(Clang) and pick up our targets.
 
-find_package(LLVM REQUIRED CONFIG)
-
 @CLANG_CONFIG_CODE@
+
+find_package(LLVM REQUIRED CONFIG
+             HINTS "@CLANG_CONFIG_LLVM_CMAKE_DIR@")
 
 set(CLANG_EXPORTED_TARGETS "@CLANG_EXPORTS@")
 set(CLANG_CMAKE_DIR "@CLANG_CONFIG_CMAKE_DIR@")

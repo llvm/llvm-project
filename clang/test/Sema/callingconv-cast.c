@@ -15,6 +15,13 @@ void mismatched_before_winapi(int x) {}
 // expected-note@+1 3 {{consider defining 'mismatched' with the 'stdcall' calling convention}}
 void mismatched(int x) {}
 
+// expected-note@+1 {{consider defining 'mismatched_declaration' with the 'stdcall' calling convention}}
+void mismatched_declaration(int x);
+
+// expected-note@+1 {{consider defining 'suggest_fix_first_redecl' with the 'stdcall' calling convention}}
+void suggest_fix_first_redecl(int x);
+void suggest_fix_first_redecl(int x);
+
 typedef void (WINAPI *callback_t)(int);
 void take_callback(callback_t callback);
 
@@ -45,6 +52,12 @@ int main() {
 
   // Another way to suppress the warning.
   take_callback((callback_t)(void*)mismatched);
+
+  // Warn on declarations as well as definitions.
+  // expected-warning@+1 {{cast between incompatible calling conventions 'cdecl' and 'stdcall'}}
+  take_callback((callback_t)mismatched_declaration);
+  // expected-warning@+1 {{cast between incompatible calling conventions 'cdecl' and 'stdcall'}}
+  take_callback((callback_t)suggest_fix_first_redecl);
 
   // Don't warn, because we're casting from stdcall to cdecl. Usually that means
   // the programmer is rinsing the function pointer through some kind of opaque

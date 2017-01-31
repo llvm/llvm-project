@@ -431,3 +431,23 @@ class Invalid {
 
 // The constructor definition should not have errors
 Invalid::~Invalid() {}
+
+namespace PR30361 {
+template <typename T>
+struct C1 {
+  ~C1() {}
+  operator C1<T>* () { return nullptr; }
+  void foo1();
+};
+
+template<typename T>
+void C1<T>::foo1() {
+  C1::operator C1<T>*();
+  C1::~C1();
+}
+
+void foo1() {
+  C1<int> x;
+  x.foo1();
+}
+}

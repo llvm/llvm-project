@@ -1060,18 +1060,18 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 def : BFEPattern <V_BFE_U32, S_MOV_B32>;
 
 def : Pat<
-  (fcanonicalize f16:$src),
-  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), 0, $src, 0, 0)
+  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src, 0, 0)
 >;
 
 def : Pat<
-  (fcanonicalize f32:$src),
-  (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), 0, $src, 0, 0)
+  (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+  (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src, 0, 0)
 >;
 
 def : Pat<
-  (fcanonicalize f64:$src),
-  (V_MUL_F64 0, CONST.FP64_ONE, 0, $src, 0, 0)
+  (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+  (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src, 0, 0)
 >;
 
 // Allow integer inputs

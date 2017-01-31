@@ -919,6 +919,19 @@ void X86AsmPrinter::LowerFAULTING_LOAD_OP(const MachineInstr &MI,
   OutStreamer->EmitInstruction(LoadMI, getSubtargetInfo());
 }
 
+void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
+                                     X86MCInstLower &MCIL) {
+  bool Is64Bits = Subtarget->is64Bit();
+  MCContext &Ctx = OutStreamer->getContext();
+  MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
+  const MCSymbolRefExpr *Op =
+      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_None, Ctx);
+
+  EmitAndCountInstruction(
+      MCInstBuilder(Is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)
+          .addExpr(Op));
+}
+
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
                                       X86MCInstLower &MCIL) {
   // PATCHABLE_OP minsize, opcode, operands
@@ -1376,6 +1389,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::FAULTING_LOAD_OP:
     return LowerFAULTING_LOAD_OP(*MI, MCInstLowering);
+
+  case TargetOpcode::FENTRY_CALL:
+    return LowerFENTRY_CALL(*MI, MCInstLowering);
 
   case TargetOpcode::PATCHABLE_OP:
     return LowerPATCHABLE_OP(*MI, MCInstLowering);

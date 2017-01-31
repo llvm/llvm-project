@@ -1,4 +1,4 @@
-//===- llvm/Transforms/Utils/VectorUtils.h - Vector utilities -*- C++ -*-=====//
+//===- llvm/Analysis/VectorUtils.h - Vector utilities -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
-#define LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
+#ifndef LLVM_ANALYSIS_VECTORUTILS_H
+#define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"

@@ -860,8 +860,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   // inlining, we just add an attribute to insert a mcount call in backend.
   // The attribute "counting-function" is set to mcount function name which is
   // architecture dependent.
-  if (CGM.getCodeGenOpts().InstrumentForProfiling)
-    Fn->addFnAttr("counting-function", getTarget().getMCountName());
+  if (CGM.getCodeGenOpts().InstrumentForProfiling) {
+    if (CGM.getCodeGenOpts().CallFEntry)
+      Fn->addFnAttr("fentry-call", "true");
+    else
+      Fn->addFnAttr("counting-function", getTarget().getMCountName());
+  }
 
   if (RetTy->isVoidType()) {
     // Void type; nothing to return.

@@ -107,6 +107,9 @@ HANDLE_TARGET_OPCODE(LIFETIME_END)
 /// that must lie within the function and not contain another stackmap.
 HANDLE_TARGET_OPCODE(STACKMAP)
 
+/// FEntry all - This is a marker instruction which gets translated into a raw fentry call.
+HANDLE_TARGET_OPCODE(FENTRY_CALL)
+
 /// Patchable call instruction - this instruction represents a call to a
 /// constant address, followed by a series of NOPs. It is intended to
 /// support optimizations for dynamic languages (such as javascript) that

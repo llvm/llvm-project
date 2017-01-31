@@ -52,6 +52,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <cctype>
 
@@ -614,14 +615,14 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// Iteratively traverse all callsites of the function \p F, and find if
 /// the corresponding inlined instance exists and is hot in profile. If
 /// it is hot enough, inline the callsites and adds new callsites of the
-/// callee into the caller.
-///
-/// TODO: investigate the possibility of not invoking InlineFunction directly.
+/// callee into the caller. If the call is an indirect call, first promote
+/// it to direct call. Each indirect call is limited with a single target.
 ///
 /// \param F function to perform iterative inlining.
 ///
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(Function &F) {
+  DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
   LLVMContext &Ctx = F.getContext();
   std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
@@ -647,10 +648,28 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
     }
     for (auto I : CIS) {
       InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
-      CallSite CS(I);
-      Function *CalledFunction = CS.getCalledFunction();
+      Function *CalledFunction = CallSite(I).getCalledFunction();
+      Instruction *DI = I;
+      if (!CalledFunction && !PromotedInsns.count(I)) {
+        auto CalleeFunctionName = findCalleeFunctionSamples(*I)->getName();
+        const char *Reason = "Callee function not available";
+        CalledFunction = F.getParent()->getFunction(CalleeFunctionName);
+        if (CalledFunction && isLegalToPromote(I, CalledFunction, &Reason)) {
+          // The indirect target was promoted and inlined in the profile, as a
+          // result, we do not have profile info for the branch probability.
+          // We set the probability to 80% taken to indicate that the static
+          // call is likely taken.
+          DI = promoteIndirectCall(I, CalledFunction, 80, 100);
+          PromotedInsns.insert(I);
+        } else {
+          DEBUG(dbgs() << "\nFailed to promote indirect call to "
+                       << CalleeFunctionName << " because " << Reason << "\n");
+          continue;
+        }
+      }
       if (!CalledFunction || !CalledFunction->getSubprogram())
         continue;
+      CallSite CS(DI);
       DebugLoc DLoc = I->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
       if (InlineFunction(CS, IFI)) {

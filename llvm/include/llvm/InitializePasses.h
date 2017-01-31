@@ -131,6 +131,7 @@ void initializeGVNHoistLegacyPassPass(PassRegistry &);
 void initializeExpandISelPseudosPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExternalAAWrapperPassPass(PassRegistry&);
+void initializeFEntryInserterPass(PassRegistry &);
 void initializeFinalizeMachineBundlesPass(PassRegistry&);
 void initializeFlattenCFGPassPass(PassRegistry&);
 void initializeFloat2IntLegacyPassPass(PassRegistry&);
