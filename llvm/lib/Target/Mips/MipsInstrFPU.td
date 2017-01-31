@@ -219,6 +219,7 @@ class BC1F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
   let isTerminator = 1;
   let hasDelaySlot = DelaySlot;
   let Defs = [AT];
+  let hasFCCRegOperand = 1;
 }
 
 class CEQS_FT<string typestr, RegisterClass RC, InstrItinClass Itin,
@@ -229,41 +230,106 @@ class CEQS_FT<string typestr, RegisterClass RC, InstrItinClass Itin,
          !strconcat("c.$cond.", typestr)>, HARDFLOAT {
   let Defs = [FCC0];
   let isCodeGenOnly = 1;
+  let hasFCCRegOperand = 1;
 }
 
+
+// Note: MIPS-IV introduced $fcc1-$fcc7 and renamed FCSR31[23] $fcc0. Rather
+//       duplicating the instruction definition for MIPS1 - MIPS3, we expand
+//       c.cond.ft if necessary, and reject it after constructing the
+//       instruction if the ISA doesn't support it.
 class C_COND_FT<string CondStr, string Typestr, RegisterOperand RC,
                 InstrItinClass itin>  :
-   InstSE<(outs), (ins RC:$fs, RC:$ft),
-          !strconcat("c.", CondStr, ".", Typestr, "\t$fs, $ft"), [], itin,
-          FrmFR>, HARDFLOAT;
+   InstSE<(outs FCCRegsOpnd:$fcc), (ins RC:$fs, RC:$ft),
+          !strconcat("c.", CondStr, ".", Typestr, "\t$fcc, $fs, $ft"), [], itin,
+          FrmFR>, HARDFLOAT {
+  let isCompare = 1;
+  let hasFCCRegOperand = 1;
+}
+
 
 multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
                     InstrItinClass itin> {
-  def C_F_#NAME : C_COND_FT<"f", TypeStr, RC, itin>, C_COND_FM<fmt, 0>;
-  def C_UN_#NAME : C_COND_FT<"un", TypeStr, RC, itin>, C_COND_FM<fmt, 1>;
-  def C_EQ_#NAME : C_COND_FT<"eq", TypeStr, RC, itin>, C_COND_FM<fmt, 2>;
-  def C_UEQ_#NAME : C_COND_FT<"ueq", TypeStr, RC, itin>, C_COND_FM<fmt, 3>;
-  def C_OLT_#NAME : C_COND_FT<"olt", TypeStr, RC, itin>, C_COND_FM<fmt, 4>;
-  def C_ULT_#NAME : C_COND_FT<"ult", TypeStr, RC, itin>, C_COND_FM<fmt, 5>;
-  def C_OLE_#NAME : C_COND_FT<"ole", TypeStr, RC, itin>, C_COND_FM<fmt, 6>;
-  def C_ULE_#NAME : C_COND_FT<"ule", TypeStr, RC, itin>, C_COND_FM<fmt, 7>;
-  def C_SF_#NAME : C_COND_FT<"sf", TypeStr, RC, itin>, C_COND_FM<fmt, 8>;
-  def C_NGLE_#NAME : C_COND_FT<"ngle", TypeStr, RC, itin>, C_COND_FM<fmt, 9>;
-  def C_SEQ_#NAME : C_COND_FT<"seq", TypeStr, RC, itin>, C_COND_FM<fmt, 10>;
-  def C_NGL_#NAME : C_COND_FT<"ngl", TypeStr, RC, itin>, C_COND_FM<fmt, 11>;
-  def C_LT_#NAME : C_COND_FT<"lt", TypeStr, RC, itin>, C_COND_FM<fmt, 12>;
-  def C_NGE_#NAME : C_COND_FT<"nge", TypeStr, RC, itin>, C_COND_FM<fmt, 13>;
-  def C_LE_#NAME : C_COND_FT<"le", TypeStr, RC, itin>, C_COND_FM<fmt, 14>;
-  def C_NGT_#NAME : C_COND_FT<"ngt", TypeStr, RC, itin>, C_COND_FM<fmt, 15>;
+  def C_F_#NAME : MMRel, C_COND_FT<"f", TypeStr, RC, itin>,
+                  C_COND_FM<fmt, 0> {
+    let BaseOpcode = "c.f."#NAME;
+    let isCommutable = 1;
+  }
+  def C_UN_#NAME : MMRel, C_COND_FT<"un", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 1> {
+    let BaseOpcode = "c.un."#NAME;
+    let isCommutable = 1;
+  }
+  def C_EQ_#NAME : MMRel, C_COND_FT<"eq", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 2> {
+    let BaseOpcode = "c.eq."#NAME;
+    let isCommutable = 1;
+  }
+  def C_UEQ_#NAME : MMRel, C_COND_FT<"ueq", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 3> {
+    let BaseOpcode = "c.ueq."#NAME;
+    let isCommutable = 1;
+  }
+  def C_OLT_#NAME : MMRel, C_COND_FT<"olt", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 4> {
+    let BaseOpcode = "c.olt."#NAME;
+  }
+  def C_ULT_#NAME : MMRel, C_COND_FT<"ult", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 5> {
+    let BaseOpcode = "c.ult."#NAME;
+  }
+  def C_OLE_#NAME : MMRel, C_COND_FT<"ole", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 6> {
+    let BaseOpcode = "c.ole."#NAME;
+  }
+  def C_ULE_#NAME : MMRel, C_COND_FT<"ule", TypeStr, RC, itin>,
+                     C_COND_FM<fmt, 7> {
+    let BaseOpcode = "c.ule."#NAME;
+  }
+  def C_SF_#NAME : MMRel, C_COND_FT<"sf", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 8> {
+    let BaseOpcode = "c.sf."#NAME;
+    let isCommutable = 1;
+  }
+  def C_NGLE_#NAME : MMRel, C_COND_FT<"ngle", TypeStr, RC, itin>,
+                     C_COND_FM<fmt, 9> {
+    let BaseOpcode = "c.ngle."#NAME;
+  }
+  def C_SEQ_#NAME : MMRel, C_COND_FT<"seq", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 10> {
+    let BaseOpcode = "c.seq."#NAME;
+    let isCommutable = 1;
+  }
+  def C_NGL_#NAME : MMRel, C_COND_FT<"ngl", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 11> {
+    let BaseOpcode = "c.ngl."#NAME;
+  }
+  def C_LT_#NAME : MMRel, C_COND_FT<"lt", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 12> {
+    let BaseOpcode = "c.lt."#NAME;
+  }
+  def C_NGE_#NAME : MMRel, C_COND_FT<"nge", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 13> {
+    let BaseOpcode = "c.nge."#NAME;
+  }
+  def C_LE_#NAME : MMRel, C_COND_FT<"le", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 14> {
+    let BaseOpcode = "c.le."#NAME;
+  }
+  def C_NGT_#NAME : MMRel, C_COND_FT<"ngt", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 15> {
+    let BaseOpcode = "c.ngt."#NAME;
+  }
 }
 
+let AdditionalPredicates = [NotInMicroMips] in {
 defm S : C_COND_M<"s", FGR32Opnd, 16, II_C_CC_S>, ISA_MIPS1_NOT_32R6_64R6;
 defm D32 : C_COND_M<"d", AFGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
            FGR_32;
 let DecoderNamespace = "Mips64" in
 defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
            FGR_64;
-
+}
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
@@ -549,13 +615,29 @@ def BC1TL : MMRel, BC1F_FT<"bc1tl", brtarget, II_BC1TL, MIPS_BRANCH_T, 0>,
 /// Floating Point Compare
 let AdditionalPredicates = [NotInMicroMips] in {
   def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>, CEQS_FM<16>,
-                 ISA_MIPS1_NOT_32R6_64R6;
+                 ISA_MIPS1_NOT_32R6_64R6 {
+
+  // FIXME: This is a required to work around the fact that these instructions
+  //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
+  //        fcc register set is used directly.
+  bits<3> fcc = 0;
+  }
   def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, II_C_CC_D, MipsFPCmp>, CEQS_FM<17>,
-                 ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+                 ISA_MIPS1_NOT_32R6_64R6, FGR_32 {
+  // FIXME: This is a required to work around the fact that these instructions
+  //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
+  //        fcc register set is used directly.
+  bits<3> fcc = 0;
+  }
 }
 let DecoderNamespace = "Mips64" in
 def FCMP_D64 : CEQS_FT<"d", FGR64, II_C_CC_D, MipsFPCmp>, CEQS_FM<17>,
-               ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+               ISA_MIPS1_NOT_32R6_64R6, FGR_64 {
+  // FIXME: This is a required to work around the fact that thiese instructions
+  //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
+  //        fcc register set is used directly.
+  bits<3> fcc = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // Floating Point Pseudo-Instructions
@@ -602,15 +684,6 @@ def PseudoTRUNC_W_D : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//
-def : MipsInstAlias<"bc1t $offset", (BC1T FCC0, brtarget:$offset)>,
-      ISA_MIPS1_NOT_32R6_64R6, HARDFLOAT;
-def : MipsInstAlias<"bc1tl $offset", (BC1TL FCC0, brtarget:$offset)>,
-      ISA_MIPS2_NOT_32R6_64R6, HARDFLOAT;
-def : MipsInstAlias<"bc1f $offset", (BC1F FCC0, brtarget:$offset)>,
-      ISA_MIPS1_NOT_32R6_64R6, HARDFLOAT;
-def : MipsInstAlias<"bc1fl $offset", (BC1FL FCC0, brtarget:$offset)>,
-      ISA_MIPS2_NOT_32R6_64R6, HARDFLOAT;
-
 def : MipsInstAlias
         <"s.s $fd, $addr", (SWC1 FGR32Opnd:$fd, mem_simm16:$addr), 0>,
       ISA_MIPS2, HARDFLOAT;
@@ -630,6 +703,80 @@ def : MipsInstAlias
 def : MipsInstAlias
         <"l.d $fd, $addr", (LDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
+
+multiclass C_COND_ALIASES<string TypeStr, RegisterOperand RC> {
+  def : MipsInstAlias<!strconcat("c.f.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_F_"#NAME) FCC0,
+                                                       RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.un.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_UN_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.eq.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_EQ_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ueq.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_UEQ_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.olt.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_OLT_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ult.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_ULT_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ole.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_OLE_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ule.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_ULE_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.sf.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_SF_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ngle.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_NGLE_"#NAME) FCC0,
+                                                          RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.seq.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_SEQ_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ngl.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_NGL_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.lt.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_LT_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.nge.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_NGE_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.le.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_LE_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ngt.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_NGT_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+}
+
+multiclass BC1_ALIASES<Instruction BCTrue, string BCTrueString,
+                       Instruction BCFalse, string BCFalseString> {
+  def : MipsInstAlias<!strconcat(BCTrueString, " $offset"),
+                                (BCTrue FCC0, brtarget:$offset), 1>;
+
+  def : MipsInstAlias<!strconcat(BCFalseString, " $offset"),
+                                (BCFalse FCC0, brtarget:$offset), 1>;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  defm S   : C_COND_ALIASES<"s", FGR32Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6;
+  defm D32 : C_COND_ALIASES<"d", AFGR64Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+  defm D64 : C_COND_ALIASES<"d", FGR64Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+
+  defm : BC1_ALIASES<BC1T, "bc1t", BC1F, "bc1f">, ISA_MIPS1_NOT_32R6_64R6,
+         HARDFLOAT;
+  defm : BC1_ALIASES<BC1TL, "bc1tl", BC1FL, "bc1fl">, ISA_MIPS2_NOT_32R6_64R6,
+         HARDFLOAT;
+}
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//

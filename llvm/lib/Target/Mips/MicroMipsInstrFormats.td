@@ -766,6 +766,7 @@ class SWXC1_FM_MM<bits<9> funct> : MMArch {
 class CEQS_FM_MM<bits<2> fmt> : MMArch {
   bits<5> fs;
   bits<5> ft;
+  bits<3> fcc;
   bits<4> cond;
 
   bits<32> Inst;
@@ -773,11 +774,15 @@ class CEQS_FM_MM<bits<2> fmt> : MMArch {
   let Inst{31-26} = 0x15;
   let Inst{25-21} = ft;
   let Inst{20-16} = fs;
-  let Inst{15-13} = 0x0;  // cc
+  let Inst{15-13} = fcc;
   let Inst{12}    = 0;
   let Inst{11-10} = fmt;
   let Inst{9-6}   = cond;
   let Inst{5-0}   = 0x3c;
+}
+
+class C_COND_FM_MM<bits <2> fmt, bits<4> c> : CEQS_FM_MM<fmt> {
+  let cond = c;
 }
 
 class BC1F_FM_MM<bits<5> tf> : MMArch {

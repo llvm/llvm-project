@@ -44,3 +44,35 @@
         pul.ps    $f9,$f30,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         puu.ps    $f24,$f9,$f2        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         sub.ps    $f5,$f14,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
+        c.eq.s    $fcc1, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.f.s     $fcc4, $f2, $f7     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.le.s    $fcc6, $f2, $f4     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.lt.s    $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.nge.s   $fcc3, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngl.s   $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngle.s  $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngt.s   $fcc5, $f8, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ole.s   $fcc3, $f7, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.olt.s   $fcc6, $f2, $f7     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.seq.s   $fcc7, $f1, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.sf.s    $fcc4, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ueq.s   $fcc6, $f3, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ule.s   $fcc7, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ult.s   $fcc7, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.un.s    $fcc1, $f2, $f4     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.eq.d    $fcc1, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.f.d     $fcc4, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.le.d    $fcc6, $f2, $f4     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.lt.d    $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.nge.d   $fcc3, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngl.d   $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngle.d  $fcc2, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ngt.d   $fcc5, $f8, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ole.d   $fcc3, $f8, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.olt.d   $fcc6, $f2, $f8     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.seq.d   $fcc7, $f1, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.sf.d    $fcc4, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ueq.d   $fcc6, $f3, $f2     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ule.d   $fcc7, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.ult.d   $fcc7, $f2, $f6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
+        c.un.d    $fcc1, $f2, $f4     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
