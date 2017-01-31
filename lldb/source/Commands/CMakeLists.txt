@@ -29,4 +29,19 @@ add_lldb_library(lldbCommands
   CommandObjectWatchpoint.cpp
   CommandObjectWatchpointCommand.cpp
   CommandObjectLanguage.cpp
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginExpressionParserClang
+
+  LINK_COMPONENTS
+    Support
   )

@@ -20,4 +20,16 @@ add_lldb_library(lldbBreakpoint
   Watchpoint.cpp
   WatchpointList.cpp
   WatchpointOptions.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbExpression
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+
+  LINK_COMPONENTS
+    Support
   )

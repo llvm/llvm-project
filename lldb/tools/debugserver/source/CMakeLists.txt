@@ -33,7 +33,12 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
     )
 endif ()
 
-add_library(lldbDebugserverCommon
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  find_library(COCOA_LIBRARY Cocoa)
+  add_subdirectory(MacOSX)
+endif()
+
+add_lldb_library(lldbDebugserverCommon
   debugserver.cpp
   DNBArch.cpp
   DNBBreakpoint.cpp
@@ -58,11 +63,13 @@ add_library(lldbDebugserverCommon
   RNBSocket.cpp
   SysSignal.cpp
   TTYState.cpp
+
+  LINK_LIBS
+    lldbHost
+    ${COCOA_LIBRARY}
   )
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  find_library(COCOA_LIBRARY Cocoa)
-  target_link_libraries(lldbDebugserverCommon ${COCOA_LIBRARY})
-  add_subdirectory(MacOSX)
-endif()
+
+
+
 

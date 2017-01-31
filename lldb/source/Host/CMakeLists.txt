@@ -55,6 +55,10 @@ add_host_subdirectory(posix
   posix/ConnectionFileDescriptorPosix.cpp
   )
 
+if(NOT LLDB_DISABLE_PYTHON)
+  list(APPEND LLDB_PLUGINS lldbPluginScriptInterpreterPython)
+endif()
+
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
     windows/ConnectionGenericFileWindows.cpp
@@ -158,7 +162,20 @@ if (${get_python_libdir})
   endif()
 endif()
 
-add_lldb_library(lldbHost ${HOST_SOURCES})
+add_lldb_library(lldbHost
+  ${HOST_SOURCES}
+  
+  LINK_LIBS
+    lldbCore
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    ${LLDB_PLUGINS}
+  
+  LINK_COMPONENTS
+    Support
+  )
 
 if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
 target_link_libraries(lldbHost kvm)
