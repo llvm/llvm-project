@@ -15,5 +15,6 @@ add_llvm_tool(llvm-readobj
   llvm-readobj.cpp
   MachODumper.cpp
   ObjDumper.cpp
+  WasmDumper.cpp
   Win64EHDumper.cpp
   )

@@ -7,47 +7,67 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MipsABIFlagsSection.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
-#include "MipsRegisterInfo.h"
-#include "MipsTargetObjectFile.h"
 #include "MipsTargetStreamer.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-asm-parser"
 
 namespace llvm {
+
 class MCInstrInfo;
-}
+
+} // end namespace llvm
 
 namespace {
+
 class MipsAssemblerOptions {
 public:
-  MipsAssemblerOptions(const FeatureBitset &Features_) :
-    ATReg(1), Reorder(true), Macro(true), Features(Features_) {}
+  MipsAssemblerOptions(const FeatureBitset &Features_) : Features(Features_) {}
 
   MipsAssemblerOptions(const MipsAssemblerOptions *Opts) {
     ATReg = Opts->getATRegIndex();
@@ -84,12 +104,13 @@ public:
   static const FeatureBitset AllArchRelatedMask;
 
 private:
-  unsigned ATReg;
-  bool Reorder;
-  bool Macro;
+  unsigned ATReg = 1;
+  bool Reorder = true;
+  bool Macro = true;
   FeatureBitset Features;
 };
-}
+
+} // end anonymous namespace
 
 const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
     Mips::FeatureMips1, Mips::FeatureMips2, Mips::FeatureMips3,
@@ -103,6 +124,7 @@ const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
 };
 
 namespace {
+
 class MipsAsmParser : public MCTargetAsmParser {
   MipsTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
@@ -466,9 +488,11 @@ public:
   bool isGP64bit() const {
     return getSTI().getFeatureBits()[Mips::FeatureGP64Bit];
   }
+
   bool isFP64bit() const {
     return getSTI().getFeatureBits()[Mips::FeatureFP64Bit];
   }
+
   const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_N32() const { return ABI.IsN32(); }
   bool isABI_N64() const { return ABI.IsN64(); }
@@ -484,48 +508,63 @@ public:
   bool inMicroMipsMode() const {
     return getSTI().getFeatureBits()[Mips::FeatureMicroMips];
   }
+
   bool hasMips1() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips1];
   }
+
   bool hasMips2() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips2];
   }
+
   bool hasMips3() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips3];
   }
+
   bool hasMips4() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips4];
   }
+
   bool hasMips5() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips5];
   }
+
   bool hasMips32() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips32];
   }
+
   bool hasMips64() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips64];
   }
+
   bool hasMips32r2() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips32r2];
   }
+
   bool hasMips64r2() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips64r2];
   }
+
   bool hasMips32r3() const {
     return (getSTI().getFeatureBits()[Mips::FeatureMips32r3]);
   }
+
   bool hasMips64r3() const {
     return (getSTI().getFeatureBits()[Mips::FeatureMips64r3]);
   }
+
   bool hasMips32r5() const {
     return (getSTI().getFeatureBits()[Mips::FeatureMips32r5]);
   }
+
   bool hasMips64r5() const {
     return (getSTI().getFeatureBits()[Mips::FeatureMips64r5]);
   }
+
   bool hasMips32r6() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips32r6];
   }
+
   bool hasMips64r6() const {
     return getSTI().getFeatureBits()[Mips::FeatureMips64r6];
   }
@@ -533,15 +572,19 @@ public:
   bool hasDSP() const {
     return getSTI().getFeatureBits()[Mips::FeatureDSP];
   }
+
   bool hasDSPR2() const {
     return getSTI().getFeatureBits()[Mips::FeatureDSPR2];
   }
+
   bool hasDSPR3() const {
     return getSTI().getFeatureBits()[Mips::FeatureDSPR3];
   }
+
   bool hasMSA() const {
     return getSTI().getFeatureBits()[Mips::FeatureMSA];
   }
+
   bool hasCnMips() const {
     return (getSTI().getFeatureBits()[Mips::FeatureCnMips]);
   }
@@ -627,9 +670,6 @@ public:
     }
   }
 };
-}
-
-namespace {
 
 /// MipsOperand - Instances of this class represent a parsed Mips machine
 /// instruction.
@@ -670,6 +710,22 @@ private:
 public:
   MipsOperand(KindTy K, MipsAsmParser &Parser)
       : MCParsedAsmOperand(), Kind(K), AsmParser(Parser) {}
+
+  ~MipsOperand() override {
+    switch (Kind) {
+    case k_Immediate:
+      break;
+    case k_Memory:
+      delete Mem.Base;
+      break;
+    case k_RegList:
+      delete RegList.List;
+    case k_RegisterIndex:
+    case k_Token:
+    case k_RegPair:
+      break;
+    }
+  }
 
 private:
   /// For diagnostics, and checking the assembler temporary
@@ -716,7 +772,7 @@ private:
                                                 const MCRegisterInfo *RegInfo,
                                                 SMLoc S, SMLoc E,
                                                 MipsAsmParser &Parser) {
-    auto Op = make_unique<MipsOperand>(k_RegisterIndex, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_RegisterIndex, Parser);
     Op->RegIdx.Index = Index;
     Op->RegIdx.RegInfo = RegInfo;
     Op->RegIdx.Kind = RegKind;
@@ -1104,45 +1160,58 @@ public:
     // $0/$zero here so that MCK_ZERO works correctly.
     return isGPRAsmReg() && RegIdx.Index == 0;
   }
+
   bool isRegIdx() const { return Kind == k_RegisterIndex; }
   bool isImm() const override { return Kind == k_Immediate; }
+
   bool isConstantImm() const {
     int64_t Res;
     return isImm() && getImm()->evaluateAsAbsolute(Res);
   }
+
   bool isConstantImmz() const {
     return isConstantImm() && getConstantImm() == 0;
   }
+
   template <unsigned Bits, int Offset = 0> bool isConstantUImm() const {
     return isConstantImm() && isUInt<Bits>(getConstantImm() - Offset);
   }
+
   template <unsigned Bits> bool isSImm() const {
     return isConstantImm() ? isInt<Bits>(getConstantImm()) : isImm();
   }
+
   template <unsigned Bits> bool isUImm() const {
     return isConstantImm() ? isUInt<Bits>(getConstantImm()) : isImm();
   }
+
   template <unsigned Bits> bool isAnyImm() const {
     return isConstantImm() ? (isInt<Bits>(getConstantImm()) ||
                               isUInt<Bits>(getConstantImm()))
                            : isImm();
   }
+
   template <unsigned Bits, int Offset = 0> bool isConstantSImm() const {
     return isConstantImm() && isInt<Bits>(getConstantImm() - Offset);
   }
+
   template <unsigned Bottom, unsigned Top> bool isConstantUImmRange() const {
     return isConstantImm() && getConstantImm() >= Bottom &&
            getConstantImm() <= Top;
   }
+
   bool isToken() const override {
     // Note: It's not possible to pretend that other operand kinds are tokens.
     // The matcher emitter checks tokens first.
     return Kind == k_Token;
   }
+
   bool isMem() const override { return Kind == k_Memory; }
+
   bool isConstantMemOff() const {
     return isMem() && isa<MCConstantExpr>(getMemOff());
   }
+
   // Allow relocation operators.
   // FIXME: This predicate and others need to look through binary expressions
   //        and determine whether a Value is a constant or not.
@@ -1160,28 +1229,34 @@ public:
     bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
     return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
   }
+
   bool isMemWithGRPMM16Base() const {
     return isMem() && getMemBase()->isMM16AsmReg();
   }
+
   template <unsigned Bits> bool isMemWithUimmOffsetSP() const {
     return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
       && getMemBase()->isRegIdx() && (getMemBase()->getGPR32Reg() == Mips::SP);
   }
+
   template <unsigned Bits> bool isMemWithUimmWordAlignedOffsetSP() const {
     return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
       && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
       && (getMemBase()->getGPR32Reg() == Mips::SP);
   }
+
   template <unsigned Bits> bool isMemWithSimmWordAlignedOffsetGP() const {
     return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff())
       && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
       && (getMemBase()->getGPR32Reg() == Mips::GP);
   }
+
   template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledUImm() const {
     return isConstantImm() &&
            isShiftedUInt<Bits, ShiftLeftAmount>(getConstantImm());
   }
+
   template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledSImm() const {
     if (isConstantImm() && isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm()))
@@ -1193,6 +1268,7 @@ public:
     bool Success = getImm()->evaluateAsRelocatable(Res, nullptr, nullptr);
     return Success && isShiftedInt<Bits, ShiftLeftAmount>(Res.getConstant());
   }
+
   bool isRegList16() const {
     if (!isRegList())
       return false;
@@ -1217,14 +1293,18 @@ public:
 
     return true;
   }
+
   bool isInvNum() const { return Kind == k_Immediate; }
+
   bool isLSAImm() const {
     if (!isConstantImm())
       return false;
     int64_t Val = getConstantImm();
     return 1 <= Val && Val <= 4;
   }
+
   bool isRegList() const { return Kind == k_RegList; }
+
   bool isMovePRegPair() const {
     if (Kind != k_RegList || RegList.List->size() != 2)
       return false;
@@ -1257,6 +1337,7 @@ public:
     assert(Kind == k_Token && "Invalid access!");
     return StringRef(Tok.Data, Tok.Length);
   }
+
   bool isRegPair() const {
     return Kind == k_RegPair && RegIdx.Index <= 30;
   }
@@ -1310,7 +1391,7 @@ public:
 
   static std::unique_ptr<MipsOperand> CreateToken(StringRef Str, SMLoc S,
                                                   MipsAsmParser &Parser) {
-    auto Op = make_unique<MipsOperand>(k_Token, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_Token, Parser);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
     Op->StartLoc = S;
@@ -1385,7 +1466,7 @@ public:
 
   static std::unique_ptr<MipsOperand>
   CreateImm(const MCExpr *Val, SMLoc S, SMLoc E, MipsAsmParser &Parser) {
-    auto Op = make_unique<MipsOperand>(k_Immediate, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_Immediate, Parser);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1395,7 +1476,7 @@ public:
   static std::unique_ptr<MipsOperand>
   CreateMem(std::unique_ptr<MipsOperand> Base, const MCExpr *Off, SMLoc S,
             SMLoc E, MipsAsmParser &Parser) {
-    auto Op = make_unique<MipsOperand>(k_Memory, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_Memory, Parser);
     Op->Mem.Base = Base.release();
     Op->Mem.Off = Off;
     Op->StartLoc = S;
@@ -1406,9 +1487,9 @@ public:
   static std::unique_ptr<MipsOperand>
   CreateRegList(SmallVectorImpl<unsigned> &Regs, SMLoc StartLoc, SMLoc EndLoc,
                 MipsAsmParser &Parser) {
-    assert (Regs.size() > 0 && "Empty list not allowed");
+    assert(Regs.size() > 0 && "Empty list not allowed");
 
-    auto Op = make_unique<MipsOperand>(k_RegList, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_RegList, Parser);
     Op->RegList.List = new SmallVector<unsigned, 10>(Regs.begin(), Regs.end());
     Op->StartLoc = StartLoc;
     Op->EndLoc = EndLoc;
@@ -1418,7 +1499,7 @@ public:
   static std::unique_ptr<MipsOperand> CreateRegPair(const MipsOperand &MOP,
                                                     SMLoc S, SMLoc E,
                                                     MipsAsmParser &Parser) {
-    auto Op = make_unique<MipsOperand>(k_RegPair, Parser);
+    auto Op = llvm::make_unique<MipsOperand>(k_RegPair, Parser);
     Op->RegIdx.Index = MOP.RegIdx.Index;
     Op->RegIdx.RegInfo = MOP.RegIdx.RegInfo;
     Op->RegIdx.Kind = MOP.RegIdx.Kind;
@@ -1430,11 +1511,13 @@ public:
   bool isGPRAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_GPR && RegIdx.Index <= 31;
   }
+
   bool isMM16AsmReg() const {
     if (!(isRegIdx() && RegIdx.Kind))
       return false;
     return ((RegIdx.Index >= 2 && RegIdx.Index <= 7)
             || RegIdx.Index == 16 || RegIdx.Index == 17);
+
   }
   bool isMM16AsmRegZero() const {
     if (!(isRegIdx() && RegIdx.Kind))
@@ -1443,42 +1526,53 @@ public:
             (RegIdx.Index >= 2 && RegIdx.Index <= 7) ||
             RegIdx.Index == 17);
   }
+
   bool isMM16AsmRegMoveP() const {
     if (!(isRegIdx() && RegIdx.Kind))
       return false;
     return (RegIdx.Index == 0 || (RegIdx.Index >= 2 && RegIdx.Index <= 3) ||
       (RegIdx.Index >= 16 && RegIdx.Index <= 20));
   }
+
   bool isFGRAsmReg() const {
     // AFGR64 is $0-$15 but we handle this in getAFGR64()
     return isRegIdx() && RegIdx.Kind & RegKind_FGR && RegIdx.Index <= 31;
   }
+
   bool isHWRegsAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_HWRegs && RegIdx.Index <= 31;
   }
+
   bool isCCRAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_CCR && RegIdx.Index <= 31;
   }
+
   bool isFCCAsmReg() const {
     if (!(isRegIdx() && RegIdx.Kind & RegKind_FCC))
       return false;
     return RegIdx.Index <= 7;
   }
+
   bool isACCAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_ACC && RegIdx.Index <= 3;
   }
+
   bool isCOP0AsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_COP0 && RegIdx.Index <= 31;
   }
+
   bool isCOP2AsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_COP2 && RegIdx.Index <= 31;
   }
+
   bool isCOP3AsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_COP3 && RegIdx.Index <= 31;
   }
+
   bool isMSA128AsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_MSA128 && RegIdx.Index <= 31;
   }
+
   bool isMSACtrlAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_MSACtrl && RegIdx.Index <= 7;
   }
@@ -1487,22 +1581,6 @@ public:
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
-
-  virtual ~MipsOperand() {
-    switch (Kind) {
-    case k_Immediate:
-      break;
-    case k_Memory:
-      delete Mem.Base;
-      break;
-    case k_RegList:
-      delete RegList.List;
-    case k_RegisterIndex:
-    case k_Token:
-    case k_RegPair:
-      break;
-    }
-  }
 
   void print(raw_ostream &OS) const override {
     switch (Kind) {
@@ -1553,11 +1631,15 @@ public:
     }
   }
 }; // class MipsOperand
-} // namespace
+
+} // end anonymous namespace
 
 namespace llvm {
+
 extern const MCInstrDesc MipsInsts[];
-}
+
+} // end namespace llvm
+
 static const MCInstrDesc &getInstDesc(unsigned Opcode) {
   return MipsInsts[Opcode];
 }
@@ -2904,9 +2986,9 @@ bool MipsAsmParser::expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc,
   unsigned Opcode = Inst.getOpcode();
   unsigned NewOpcode = Opcode == Mips::SWM_MM ? Mips::SWM32_MM : Mips::LWM32_MM;
 
-  assert (Inst.getOperand(OpNum - 1).isImm() &&
-          Inst.getOperand(OpNum - 2).isReg() &&
-          Inst.getOperand(OpNum - 3).isReg() && "Invalid instruction operand.");
+  assert(Inst.getOperand(OpNum - 1).isImm() &&
+         Inst.getOperand(OpNum - 2).isReg() &&
+         Inst.getOperand(OpNum - 3).isReg() && "Invalid instruction operand.");
 
   if (OpNum < 8 && Inst.getOperand(OpNum - 1).getImm() <= 60 &&
       Inst.getOperand(OpNum - 1).getImm() >= 0 &&
@@ -3503,10 +3585,10 @@ bool MipsAsmParser::expandAliasImmediate(MCInst &Inst, SMLoc IDLoc,
                                          const MCSubtargetInfo *STI) {
   MipsTargetStreamer &TOut = getTargetStreamer();
 
-  assert (Inst.getNumOperands() == 3 && "Invalid operand count");
-  assert (Inst.getOperand(0).isReg() &&
-          Inst.getOperand(1).isReg() &&
-          Inst.getOperand(2).isImm() && "Invalid instruction operand.");
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm() && "Invalid instruction operand.");
 
   unsigned ATReg = Mips::NoRegister;
   unsigned FinalDstReg = Mips::NoRegister;
@@ -3578,7 +3660,6 @@ bool MipsAsmParser::expandRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   unsigned SecondShift = Mips::NOP;
 
   if (hasMips32r2()) {
-
     if (DReg == SReg) {
       TmpReg = getATReg(Inst.getLoc());
       if (!TmpReg)
@@ -3600,7 +3681,6 @@ bool MipsAsmParser::expandRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   if (hasMips32()) {
-
     switch (Inst.getOpcode()) {
     default:
       llvm_unreachable("unexpected instruction opcode");
@@ -3642,7 +3722,6 @@ bool MipsAsmParser::expandRotationImm(MCInst &Inst, SMLoc IDLoc,
   unsigned SecondShift = Mips::NOP;
 
   if (hasMips32r2()) {
-
     if (Inst.getOpcode() == Mips::ROLImm) {
       uint64_t MaxShift = 32;
       uint64_t ShiftValue = ImmValue;
@@ -3661,7 +3740,6 @@ bool MipsAsmParser::expandRotationImm(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (hasMips32()) {
-
     if (ImmValue == 0) {
       TOut.emitRRI(Mips::SRL, DReg, SReg, 0, Inst.getLoc(), STI);
       return false;
@@ -3707,7 +3785,6 @@ bool MipsAsmParser::expandDRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   unsigned SecondShift = Mips::NOP;
 
   if (hasMips64r2()) {
-
     if (TmpReg == SReg) {
       TmpReg = getATReg(Inst.getLoc());
       if (!TmpReg)
@@ -3729,7 +3806,6 @@ bool MipsAsmParser::expandDRotation(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   if (hasMips64()) {
-
     switch (Inst.getOpcode()) {
     default:
       llvm_unreachable("unexpected instruction opcode");
@@ -3773,7 +3849,6 @@ bool MipsAsmParser::expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
   MCInst TmpInst;
 
   if (hasMips64r2()) {
-
     unsigned FinalOpcode = Mips::NOP;
     if (ImmValue == 0)
       FinalOpcode = Mips::DROTR;
@@ -3801,7 +3876,6 @@ bool MipsAsmParser::expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (hasMips64()) {
-
     if (ImmValue == 0) {
       TOut.emitRRI(Mips::DSRL, DReg, SReg, 0, Inst.getLoc(), STI);
       return false;
@@ -3985,7 +4059,6 @@ bool MipsAsmParser::expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
 bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                const MCSubtargetInfo *STI) {
-
   warnIfNoMacro(IDLoc);
   MipsTargetStreamer &TOut = getTargetStreamer();
 
@@ -4158,17 +4231,15 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
                                             bool MatchingInlineAsm) {
-
   MCInst Inst;
   unsigned MatchResult =
       MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
 
   switch (MatchResult) {
-  case Match_Success: {
+  case Match_Success:
     if (processInstruction(Inst, IDLoc, Out, STI))
       return true;
     return false;
-  }
   case Match_MissingFeature:
     Error(IDLoc, "instruction requires a CPU feature not currently enabled");
     return true;
@@ -4441,7 +4512,6 @@ int MipsAsmParser::matchHWRegsRegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchFPURegisterName(StringRef Name) {
-
   if (Name[0] == 'f') {
     StringRef NumString = Name.substr(1);
     unsigned IntVal;
@@ -4455,7 +4525,6 @@ int MipsAsmParser::matchFPURegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
-
   if (Name.startswith("fcc")) {
     StringRef NumString = Name.substr(3);
     unsigned IntVal;
@@ -4469,7 +4538,6 @@ int MipsAsmParser::matchFCCRegisterName(StringRef Name) {
 }
 
 int MipsAsmParser::matchACRegisterName(StringRef Name) {
-
   if (Name.startswith("ac")) {
     StringRef NumString = Name.substr(2);
     unsigned IntVal;
@@ -4589,7 +4657,6 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 }
 
 bool MipsAsmParser::isEvaluated(const MCExpr *Expr) {
-
   switch (Expr->getKind()) {
   case MCExpr::Constant:
     return true;
@@ -5522,7 +5589,7 @@ bool MipsAsmParser::parseSetPushDirective() {
 
   // Create a copy of the current assembler options environment and push it.
   AssemblerOptions.push_back(
-              make_unique<MipsAssemblerOptions>(AssemblerOptions.back().get()));
+        llvm::make_unique<MipsAssemblerOptions>(AssemblerOptions.back().get()));
 
   getTargetStreamer().emitDirectiveSetPush();
   return false;
@@ -6001,7 +6068,7 @@ bool MipsAsmParser::parseDirectiveSet() {
 bool MipsAsmParser::parseDataDirective(unsigned Size, SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       const MCExpr *Value;
       if (getParser().parseExpression(Value))
         return true;

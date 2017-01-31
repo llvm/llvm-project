@@ -1,4 +1,4 @@
-//===- FastISelEmitter.cpp - Generate an instruction selector -------------===//
+///===- FastISelEmitter.cpp - Generate an instruction selector -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -640,12 +640,9 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OneHadNoPredicate = true;
     } else {
       if (OneHadNoPredicate) {
-        // FIXME: This should be a PrintError once the x86 target
-        // fixes PR21575.
-        PrintWarning("Multiple instructions match and one with no "
-                     "predicate came before one with a predicate!  "
-                     "name:" + Memo.Name + "  predicate: " + 
-                     PredicateCheck);
+        PrintFatalError("Multiple instructions match and one with no "
+                        "predicate came before one with a predicate!  "
+                        "name:" + Memo.Name + "  predicate: " + PredicateCheck);
       }
       OS << "  if (" + PredicateCheck + ") {\n";
       OS << "  ";

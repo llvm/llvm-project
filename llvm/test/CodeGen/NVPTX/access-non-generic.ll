@@ -1,6 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
-; RUN: opt < %s -S -nvptx-infer-addrspace | FileCheck %s --check-prefix IR
+; RUN: opt -mtriple=nvptx-- < %s -S -infer-address-spaces | FileCheck %s --check-prefix IR
+; RUN: opt -mtriple=nvptx64-- < %s -S -infer-address-spaces | FileCheck %s --check-prefix IR
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4
 @scalar = internal addrspace(3) global float 0.000000e+00, align 4

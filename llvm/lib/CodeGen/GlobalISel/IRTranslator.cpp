@@ -468,13 +468,12 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   return true;
 }
 
-bool IRTranslator::translateMemcpy(const CallInst &CI,
-                                   MachineIRBuilder &MIRBuilder) {
+bool IRTranslator::translateMemfunc(const CallInst &CI,
+                                    MachineIRBuilder &MIRBuilder,
+                                    unsigned ID) {
   LLT SizeTy{*CI.getArgOperand(2)->getType(), *DL};
-  if (cast<PointerType>(CI.getArgOperand(0)->getType())->getAddressSpace() !=
-          0 ||
-      cast<PointerType>(CI.getArgOperand(1)->getType())->getAddressSpace() !=
-          0 ||
+  Type *DstTy = CI.getArgOperand(0)->getType();
+  if (cast<PointerType>(DstTy)->getAddressSpace() != 0 ||
       SizeTy.getSizeInBits() != DL->getPointerSizeInBits(0))
     return false;
 
@@ -484,9 +483,24 @@ bool IRTranslator::translateMemcpy(const CallInst &CI,
     Args.emplace_back(getOrCreateVReg(*Arg), Arg->getType());
   }
 
-  MachineOperand Callee = MachineOperand::CreateES("memcpy");
+  const char *Callee;
+  switch (ID) {
+  case Intrinsic::memmove:
+  case Intrinsic::memcpy: {
+    Type *SrcTy = CI.getArgOperand(1)->getType();
+    if(cast<PointerType>(SrcTy)->getAddressSpace() != 0)
+      return false;
+    Callee = ID == Intrinsic::memcpy ? "memcpy" : "memmove";
+    break;
+  }
+  case Intrinsic::memset:
+    Callee = "memset";
+    break;
+  default:
+    return false;
+  }
 
-  return CLI->lowerCall(MIRBuilder, Callee,
+  return CLI->lowerCall(MIRBuilder, MachineOperand::CreateES(Callee),
                         CallLowering::ArgInfo(0, CI.getType()), Args);
 }
 
@@ -607,7 +621,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::smul_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SMULO, MIRBuilder);
   case Intrinsic::memcpy:
-    return translateMemcpy(CI, MIRBuilder);
+  case Intrinsic::memmove:
+  case Intrinsic::memset:
+    return translateMemfunc(CI, MIRBuilder, ID);
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     unsigned Reg = getOrCreateVReg(CI);
@@ -721,7 +737,11 @@ bool IRTranslator::translateInvoke(const User &U,
   for (auto &Arg: I.arg_operands())
     Args.emplace_back(getOrCreateVReg(*Arg), Arg->getType());
 
-  if (!CLI->lowerCall(MIRBuilder, MachineOperand::CreateGA(Fn, 0),
+  auto CalleeMO =
+      Fn ? MachineOperand::CreateGA(Fn, 0)
+         : MachineOperand::CreateReg(getOrCreateVReg(*Callee), false);
+
+  if (!CLI->lowerCall(MIRBuilder, CalleeMO,
                       CallLowering::ArgInfo(Res, I.getType()), Args))
     return false;
 
@@ -785,8 +805,17 @@ bool IRTranslator::translateLandingPad(const User &U,
 
   if (unsigned Reg = TLI.getExceptionSelectorRegister(PersonalityFn)) {
     MBB.addLiveIn(Reg);
+
+    // N.b. the exception selector register always has pointer type and may not
+    // match the actual IR-level type in the landingpad so an extra cast is
+    // needed.
+    unsigned PtrVReg = MRI->createGenericVirtualRegister(Tys[0]);
+    MIRBuilder.buildCopy(PtrVReg, Reg);
+
     unsigned VReg = MRI->createGenericVirtualRegister(Tys[1]);
-    MIRBuilder.buildCopy(VReg, Reg);
+    MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
+        .addDef(VReg)
+        .addUse(PtrVReg);
     Regs.push_back(VReg);
     Offsets.push_back(Tys[0].getSizeInBits());
   }

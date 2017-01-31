@@ -751,20 +751,20 @@ enum : unsigned {
 
   // Start of target-specific flags.
 
-  /// XCORE_SHF_CP_SECTION - All sections with the "c" flag are grouped
-  /// together by the linker to form the constant pool and the cp register is
-  /// set to the start of the constant pool by the boot code.
-  XCORE_SHF_CP_SECTION = 0x800U,
-
-  /// XCORE_SHF_DP_SECTION - All sections with the "d" flag are grouped
-  /// together by the linker to form the data section and the dp register is
-  /// set to the start of the section by the boot code.
-  XCORE_SHF_DP_SECTION = 0x1000U,
-
   SHF_MASKOS = 0x0ff00000,
 
   // Bits indicating processor-specific flags.
   SHF_MASKPROC = 0xf0000000,
+
+  /// All sections with the "d" flag are grouped together by the linker to form
+  /// the data section and the dp register is set to the start of the section by
+  /// the boot code.
+  XCORE_SHF_DP_SECTION = 0x10000000,
+
+  /// All sections with the "c" flag are grouped together by the linker to form
+  /// the constant pool and the cp register is set to the start of the constant
+  /// pool by the boot code.
+  XCORE_SHF_CP_SECTION = 0x20000000,
 
   // If an object file section does not have this flag set, then it may not hold
   // more than 2GB and can be freely referred to in objects using smaller code

@@ -32,7 +32,8 @@ define void @fma_f16(
 ; GCN-LABEL: {{^}}fma_f16_imm_a
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], 0x4200{{$}}
+
+; SI:  v_mov_b32_e32 v[[A_F32:[0-9]+]], 0x40400000{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], v[[C_F16]]
 ; SI:  v_fma_f32 v[[R_F32:[0-9]+]], v[[A_F32:[0-9]]], v[[B_F32:[0-9]]], v[[C_F32:[0-9]]]
@@ -55,7 +56,7 @@ define void @fma_f16_imm_a(
 ; GCN-LABEL: {{^}}fma_f16_imm_b
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[C_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], 0x4200{{$}}
+; SI:  v_mov_b32_e32 v[[B_F32:[0-9]+]], 0x40400000{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], v[[C_F16]]
 ; SI:  v_fma_f32 v[[R_F32:[0-9]+]], v[[A_F32:[0-9]]], v[[B_F32:[0-9]]], v[[C_F32:[0-9]]]
@@ -78,7 +79,7 @@ define void @fma_f16_imm_b(
 ; GCN-LABEL: {{^}}fma_f16_imm_c
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], 0x4200{{$}}
+; SI:  v_mov_b32_e32 v[[C_F32:[0-9]+]], 0x40400000{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
 ; SI:  v_fma_f32 v[[R_F32:[0-9]+]], v[[A_F32:[0-9]]], v[[B_F32:[0-9]]], v[[C_F32:[0-9]]]
@@ -138,7 +139,7 @@ define void @fma_v2f16(
 ; GCN-LABEL: {{^}}fma_v2f16_imm_a
 ; GCN: buffer_load_dword v[[B_V2_F16:[0-9]+]]
 ; GCN: buffer_load_dword v[[C_V2_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], 0x4200{{$}}
+; SI:  v_mov_b32_e32 v[[A_F32:[0-9]+]], 0x40400000{{$}}
 ; VI:  v_mov_b32_e32 v[[A_F16:[0-9]+]], 0x4200{{$}}
 ; GCN: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
@@ -171,7 +172,7 @@ define void @fma_v2f16_imm_a(
 ; GCN-LABEL: {{^}}fma_v2f16_imm_b
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
 ; GCN: buffer_load_dword v[[C_V2_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], 0x4200{{$}}
+; SI:  v_mov_b32_e32 v[[B_F32:[0-9]+]], 0x40400000{{$}}
 ; VI:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x4200{{$}}
 ; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
@@ -204,7 +205,7 @@ define void @fma_v2f16_imm_b(
 ; GCN-LABEL: {{^}}fma_v2f16_imm_c
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
 ; GCN: buffer_load_dword v[[B_V2_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[C_F32:[0-9]+]], 0x4200{{$}}
+; SI:  v_mov_b32_e32 v[[C_F32:[0-9]+]], 0x40400000{{$}}
 ; VI:  v_mov_b32_e32 v[[C_F16:[0-9]+]], 0x4200{{$}}
 ; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]

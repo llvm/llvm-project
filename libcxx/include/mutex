@@ -559,7 +559,6 @@ public:
 #endif
 
 template <class _Fp>
-inline _LIBCPP_INLINE_VISIBILITY
 void
 __call_once_proxy(void* __vp)
 {

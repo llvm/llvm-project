@@ -1597,6 +1597,7 @@ void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
       Defs->push_back(*NewAccess);
     }
   }
+  BlockNumberingValid.erase(BB);
 }
 
 void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
@@ -1624,6 +1625,7 @@ void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
         Defs->insert(InsertPt->getDefsIterator(), *What);
     }
   }
+  BlockNumberingValid.erase(BB);
 }
 
 // Move What before Where in the IR.  The end result is taht What will belong to
@@ -1638,13 +1640,19 @@ void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
   insertIntoListsBefore(What, BB, Where);
 }
 
+void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
+                       InsertionPlace Point) {
+  removeFromLists(What, false);
+  What->setBlock(BB);
+  insertIntoListsForBlock(What, BB, Point);
+}
+
 MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
   assert(!getMemoryAccess(BB) && "MemoryPhi already exists for this BB");
   MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
+  // Phi's always are placed at the front of the block.
   insertIntoListsForBlock(Phi, BB, Beginning);
   ValueToMemoryAccess[BB] = Phi;
-  // Phi's always are placed at the front of the block.
-  BlockNumberingValid.erase(BB);
   return Phi;
 }
 
@@ -1665,7 +1673,6 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
                                                 InsertionPlace Point) {
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
   insertIntoListsForBlock(NewAccess, BB, Point);
-  BlockNumberingValid.erase(BB);
   return NewAccess;
 }
 
@@ -1675,7 +1682,6 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessBefore(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  BlockNumberingValid.erase(InsertPt->getBlock());
   insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
                         InsertPt->getIterator());
   return NewAccess;
@@ -1687,7 +1693,6 @@ MemoryUseOrDef *MemorySSA::createMemoryAccessAfter(Instruction *I,
   assert(I->getParent() == InsertPt->getBlock() &&
          "New and old access must be in the same block");
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
-  BlockNumberingValid.erase(InsertPt->getBlock());
   insertIntoListsBefore(NewAccess, InsertPt->getBlock(),
                         ++(InsertPt->getIterator()));
   return NewAccess;

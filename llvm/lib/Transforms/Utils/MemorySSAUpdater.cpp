@@ -210,15 +210,19 @@ void MemorySSAUpdater::insertUse(MemoryUse *MU) {
   // to do.
 }
 
+// Set every incoming edge {BB, MP->getBlock()} of MemoryPhi MP to NewDef.
 void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
                                MemoryAccess *NewDef) {
   // Replace any operand with us an incoming block with the new defining
   // access.
   int i = MP->getBasicBlockIndex(BB);
   assert(i != -1 && "Should have found the basic block in the phi");
-  while (MP->getIncomingBlock(i) == BB) {
-    // Unlike above, there is already a phi node here, so we only need
-    // to set the right value.
+  // We can't just compare i against getNumOperands since one is signed and the
+  // other not. So use it to index into the block iterator.
+  for (auto BBIter = MP->block_begin() + i; BBIter != MP->block_end();
+       ++BBIter) {
+    if (*BBIter != BB)
+      break;
     MP->setIncomingValue(i, NewDef);
     ++i;
   }
@@ -243,13 +247,17 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD) {
   // of that thing with us, since we are in the way of whatever was there
   // before.
   // We now define that def's memorydefs and memoryphis
-  for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end(); UI != UE;) {
-    Use &U = *UI++;
-    // Leave the uses alone
-    if (isa<MemoryUse>(U.getUser()))
-      continue;
-    U.set(MD);
+  if (DefBeforeSameBlock) {
+    for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end();
+         UI != UE;) {
+      Use &U = *UI++;
+      // Leave the uses alone
+      if (isa<MemoryUse>(U.getUser()))
+        continue;
+      U.set(MD);
+    }
   }
+
   // and that def is now our defining access.
   // We change them in this order otherwise we will appear in the use list
   // above and reset ourselves.
@@ -345,8 +353,9 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<MemoryAccess *> &Vars) {
 }
 
 // Move What before Where in the MemorySSA IR.
+template <class WhereType>
 void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
-                              MemorySSA::AccessList::iterator Where) {
+                              WhereType Where) {
   // Replace all our users with our defining access.
   What->replaceAllUsesWith(What->getDefiningAccess());
 
@@ -359,6 +368,7 @@ void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
   else
     insertUse(cast<MemoryUse>(What));
 }
+
 // Move What before Where in the MemorySSA IR.
 void MemorySSAUpdater::moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where) {
   moveTo(What, Where->getBlock(), Where->getIterator());
@@ -369,4 +379,8 @@ void MemorySSAUpdater::moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where) {
   moveTo(What, Where->getBlock(), ++Where->getIterator());
 }
 
+void MemorySSAUpdater::moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
+                                   MemorySSA::InsertionPlace Where) {
+  return moveTo(What, BB, Where);
+}
 } // namespace llvm

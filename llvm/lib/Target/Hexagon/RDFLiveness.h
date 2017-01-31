@@ -33,7 +33,7 @@ namespace rdf {
     // This is really a std::map, except that it provides a non-trivial
     // default constructor to the element accessed via [].
     struct LiveMapType {
-      LiveMapType(const TargetRegisterInfo &tri) : Empty(tri) {}
+      LiveMapType(const PhysicalRegisterInfo &pri) : Empty(pri) {}
 
       RegisterAggr &operator[] (MachineBasicBlock *B) {
         return Map.emplace(B, Empty).first->second;
@@ -49,9 +49,9 @@ namespace rdf {
     typedef std::map<RegisterId,NodeRefSet> RefMap;
 
     Liveness(MachineRegisterInfo &mri, const DataFlowGraph &g)
-      : DFG(g), TRI(g.getTRI()), MDT(g.getDT()), MDF(g.getDF()),
-        MRI(mri), LiveMap(g.getTRI()), Empty(), NoRegs(g.getTRI()),
-        Trace(false) {}
+      : DFG(g), TRI(g.getTRI()), PRI(g.getPRI()), MDT(g.getDT()),
+        MDF(g.getDF()), MRI(mri), LiveMap(g.getPRI()), Empty(),
+        NoRegs(g.getPRI()), Trace(false) {}
 
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
         bool FullChain, const RegisterAggr &DefRRs);
@@ -87,6 +87,7 @@ namespace rdf {
   private:
     const DataFlowGraph &DFG;
     const TargetRegisterInfo &TRI;
+    const PhysicalRegisterInfo &PRI;
     const MachineDominatorTree &MDT;
     const MachineDominanceFrontier &MDF;
     MachineRegisterInfo &MRI;

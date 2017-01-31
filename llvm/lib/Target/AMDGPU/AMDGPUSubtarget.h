@@ -312,6 +312,10 @@ public:
     return EnableXNACK;
   }
 
+  bool hasFlatAddressSpace() const {
+    return FlatAddressSpace;
+  }
+
   bool isMesaKernel(const MachineFunction &MF) const {
     return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction()->getCallingConv());
   }
@@ -517,6 +521,21 @@ public:
     return GISel->getCallLowering();
   }
 
+  const InstructionSelector *getInstructionSelector() const override {
+    assert(GISel && "Access to GlobalISel APIs not set");
+    return GISel->getInstructionSelector();
+  }
+
+  const LegalizerInfo *getLegalizerInfo() const override {
+    assert(GISel && "Access to GlobalISel APIs not set");
+    return GISel->getLegalizerInfo();
+  }
+
+  const RegisterBankInfo *getRegBankInfo() const override {
+    assert(GISel && "Access to GlobalISel APIs not set");
+    return GISel->getRegBankInfo();
+  }
+
   const SIRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
   }
@@ -537,10 +556,6 @@ public:
 
   unsigned getMaxNumUserSGPRs() const {
     return 16;
-  }
-
-  bool hasFlatAddressSpace() const {
-    return FlatAddressSpace;
   }
 
   bool hasSMemRealTime() const {

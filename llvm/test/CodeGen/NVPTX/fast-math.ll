@@ -1,23 +1,89 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 
-declare float @llvm.nvvm.sqrt.f(float)
+declare float @llvm.sqrt.f32(float)
+declare double @llvm.sqrt.f64(double)
 
-; CHECK-LABEL: sqrt_div
+; CHECK-LABEL: sqrt_div(
 ; CHECK: sqrt.rn.f32
 ; CHECK: div.rn.f32
 define float @sqrt_div(float %a, float %b) {
-  %t1 = tail call float @llvm.nvvm.sqrt.f(float %a)
+  %t1 = tail call float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
 }
 
-; CHECK-LABEL: sqrt_div_fast
+; CHECK-LABEL: sqrt_div_fast(
 ; CHECK: sqrt.approx.f32
 ; CHECK: div.approx.f32
 define float @sqrt_div_fast(float %a, float %b) #0 {
-  %t1 = tail call float @llvm.nvvm.sqrt.f(float %a)
+  %t1 = tail call float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
+}
+
+; CHECK-LABEL: sqrt_div_ftz(
+; CHECK: sqrt.rn.ftz.f32
+; CHECK: div.rn.ftz.f32
+define float @sqrt_div_ftz(float %a, float %b) #1 {
+  %t1 = tail call float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv float %t1, %b
+  ret float %t2
+}
+
+; CHECK-LABEL: sqrt_div_fast_ftz(
+; CHECK: sqrt.approx.ftz.f32
+; CHECK: div.approx.ftz.f32
+define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
+  %t1 = tail call float @llvm.sqrt.f32(float %a)
+  %t2 = fdiv float %t1, %b
+  ret float %t2
+}
+
+; There are no fast-math or ftz versions of sqrt and div for f64.  We use
+; x * rsqrt(x) for sqrt(x), and emit a vanilla divide.
+
+; CHECK-LABEL: sqrt_div_fast_ftz_f64(
+; CHECK: rsqrt.approx.f64
+; CHECK: mul.f64
+; CHECK: div.rn.f64
+define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
+  %t1 = tail call double @llvm.sqrt.f64(double %a)
+  %t2 = fdiv double %t1, %b
+  ret double %t2
+}
+
+; CHECK-LABEL: rsqrt(
+; CHECK-NOT: rsqrt.approx
+; CHECK: sqrt.rn.f32
+; CHECK-NOT: rsqrt.approx
+define float @rsqrt(float %a) {
+  %b = tail call float @llvm.sqrt.f32(float %a)
+  %ret = fdiv float 1.0, %b
+  ret float %ret
+}
+
+; CHECK-LABEL: rsqrt_fast(
+; CHECK-NOT: div.
+; CHECK-NOT: sqrt.
+; CHECK: rsqrt.approx.f32
+; CHECK-NOT: div.
+; CHECK-NOT: sqrt.
+define float @rsqrt_fast(float %a) #0 {
+  %b = tail call float @llvm.sqrt.f32(float %a)
+  %ret = fdiv float 1.0, %b
+  ret float %ret
+}
+
+; CHECK-LABEL: rsqrt_fast_ftz(
+; CHECK-NOT: div.
+; CHECK-NOT: sqrt.
+; CHECK: rsqrt.approx.ftz.f32
+; CHECK-NOT: div.
+; CHECK-NOT: sqrt.
+define float @rsqrt_fast_ftz(float %a) #0 #1 {
+  %b = tail call float @llvm.sqrt.f32(float %a)
+  %ret = fdiv float 1.0, %b
+  ret float %ret
 }
 
 ; CHECK-LABEL: fadd

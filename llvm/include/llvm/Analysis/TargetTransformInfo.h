@@ -226,6 +226,24 @@ public:
   /// starting with the sources of divergence.
   bool isSourceOfDivergence(const Value *V) const;
 
+  /// Returns the address space ID for a target's 'flat' address space. Note
+  /// this is not necessarily the same as addrspace(0), which LLVM sometimes
+  /// refers to as the generic address space. The flat address space is a
+  /// generic address space that can be used access multiple segments of memory
+  /// with different address spaces. Access of a memory location through a
+  /// pointer with this address space is expected to be legal but slower
+  /// compared to the same memory location accessed through a pointer with a
+  /// different address space.
+  //
+  /// This is for for targets with different pointer representations which can
+  /// be converted with the addrspacecast instruction. If a pointer is converted
+  /// to this address space, optimizations should attempt to replace the access
+  /// with the source address space.
+  ///
+  /// \returns ~0u if the target does not have such a flat address space to
+  /// optimize away.
+  unsigned getFlatAddressSpace() const;
+
   /// \brief Test whether calls to a function lower to actual program function
   /// calls.
   ///
@@ -725,6 +743,7 @@ public:
   virtual int getUserCost(const User *U) = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
+  virtual unsigned getFlatAddressSpace() = 0;
   virtual bool isLoweredToCall(const Function *F) = 0;
   virtual void getUnrollingPreferences(Loop *L, UnrollingPreferences &UP) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
@@ -888,6 +907,11 @@ public:
   bool isSourceOfDivergence(const Value *V) override {
     return Impl.isSourceOfDivergence(V);
   }
+
+  unsigned getFlatAddressSpace() override {
+    return Impl.getFlatAddressSpace();
+  }
+
   bool isLoweredToCall(const Function *F) override {
     return Impl.isLoweredToCall(F);
   }

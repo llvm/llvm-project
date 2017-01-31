@@ -689,6 +689,7 @@ protected:
   // for moves.  It does not always leave the IR in a correct state, and relies
   // on the updater to fixup what it breaks, so it is not public.
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
+  void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
 
 private:
   class CachingWalker;

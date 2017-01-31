@@ -307,7 +307,7 @@ private:
   std::vector<unsigned> OpcodeOffset;
 
   void UpdateChains(SDNode *NodeToMatch, SDValue InputChain,
-                    const SmallVectorImpl<SDNode *> &ChainNodesMatched,
+                    SmallVectorImpl<SDNode *> &ChainNodesMatched,
                     bool isMorphNodeTo);
 };
 

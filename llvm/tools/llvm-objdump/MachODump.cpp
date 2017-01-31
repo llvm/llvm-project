@@ -1566,8 +1566,13 @@ void llvm::ParseInputMachO(StringRef Filename) {
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
-  if (!BinaryOrErr)
-    report_error(Filename, BinaryOrErr.takeError());
+  if (!BinaryOrErr) {
+    if (auto E = isNotObjectErrorInvalidFileType(BinaryOrErr.takeError()))
+      report_error(Filename, std::move(E));
+    else
+      outs() << Filename << ": is not an object file\n";
+    return;
+  }
   Binary &Bin = *BinaryOrErr.get().getBinary();
 
   if (Archive *A = dyn_cast<Archive>(&Bin)) {

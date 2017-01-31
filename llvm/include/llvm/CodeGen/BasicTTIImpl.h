@@ -93,6 +93,11 @@ public:
 
   bool isSourceOfDivergence(const Value *V) { return false; }
 
+  unsigned getFlatAddressSpace() {
+    // Return an invalid address space.
+    return -1;
+  }
+
   bool isLegalAddImmediate(int64_t imm) {
     return getTLI()->isLegalAddImmediate(imm);
   }

@@ -318,8 +318,8 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
-define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
-; X32-LABEL: buildvector_v4f23_0404:
+define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
+; X32-LABEL: buildvector_v4f32_0404:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -328,7 +328,7 @@ define void @buildvector_v4f23_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X32-NEXT:    vmovaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: buildvector_v4f23_0404:
+; X64-LABEL: buildvector_v4f32_0404:
 ; X64:       # BB#0:
 ; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[0],xmm1[0]
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)

@@ -38,7 +38,7 @@ struct WasmSection {
 };
 
 enum : unsigned {
-  WASM_SEC_USER = 0,     // User-defined section
+  WASM_SEC_CUSTOM = 0,   // Custom / User-defined section
   WASM_SEC_TYPE = 1,     // Function signature declarations
   WASM_SEC_IMPORT = 2,   // Import declarations
   WASM_SEC_FUNCTION = 3, // Function declarations
