@@ -519,6 +519,8 @@ public:
 
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
+  IntrusiveRefCntPtr<ASTReader> getASTReader() const;
+
   StringRef getOriginalSourceFileName() {
     return OriginalSourceFile;
   }
