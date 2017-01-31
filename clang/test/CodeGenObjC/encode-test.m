@@ -180,3 +180,14 @@ const char g14[] = @encode(__typeof__(*test_id));
 
 // CHECK: @g15 = constant [2 x i8] c":\00"
 const char g15[] = @encode(SEL);
+
+typedef typeof(sizeof(int)) size_t;
+size_t strlen(const char *s);
+
+// CHECK-LABEL: @test_strlen(
+// CHECK: %[[i:.*]] = alloca i32
+// CHECK: store i32 1, i32* %[[i]]
+void test_strlen() {
+  const char array[] = @encode(int);
+  int i = strlen(array);
+}
