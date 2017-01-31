@@ -17,6 +17,7 @@ import time
 # Third-party modules
 from six import StringIO as SixStringIO
 import six
+from lldbsuite.support import seven
 
 # LLDB modules
 import lldb
@@ -1311,3 +1312,11 @@ def wait_for_file_on_target(testcase, file_path, max_attempts=6):
         err.Success() and retcode == 0, "Failed to read file %s: %s, retcode: %d" %
         (file_path, err.GetCString(), retcode))
     return data
+
+def execute_command(command):
+    #print('%% %s' % (command))
+    (exit_status, output) = seven.get_command_status_output(command)
+    # if output:
+    #    print(output)
+    #print('status = %u' % (exit_status))
+    return exit_status
