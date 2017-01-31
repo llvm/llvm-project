@@ -613,6 +613,13 @@ TEST(Interception, PatchableFunctionPadding) {
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode6, override, prefix));
 }
 
+TEST(Interception, EmptyExportTable) {
+  // We try to get a pointer to a function from an executable that doesn't
+  // export any symbol (empty export table).
+  uptr FunPtr = InternalGetProcAddress((void *)GetModuleHandleA(0), "example");
+  EXPECT_EQ(0U, FunPtr);
+}
+
 }  // namespace __interception
 
 #endif  // SANITIZER_WINDOWS

@@ -144,6 +144,14 @@ append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANIT
 append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 
+# The following is a workaround for powerpc64le. This is the only architecture
+# that requires -fno-function-sections to work properly. If lacking, the ASan
+# Linux test function-sections-are-bad.cc fails with the following error:
+# 'undefined symbol: __sanitizer_unaligned_load32'.
+if(DEFINED TARGET_powerpc64le_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+endif()
+
 if(MSVC)
   # Replace the /M[DT][d] flags with /MT, and strip any definitions of _DEBUG,
   # which cause definition mismatches at link time.
