@@ -179,7 +179,8 @@ void WalkAST::VisitCXXMemberCallExpr(CallExpr *CE) {
   }
 
   // Get the callee.
-  const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(CE->getDirectCallee());
+  const CXXMethodDecl *MD =
+      dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
   if (MD && MD->isVirtual() && !callIsNonVirtual && !MD->hasAttr<FinalAttr>() &&
       !MD->getParent()->hasAttr<FinalAttr>())
     ReportVirtualCall(CE, MD->isPure());
