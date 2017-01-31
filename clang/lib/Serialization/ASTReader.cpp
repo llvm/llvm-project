@@ -4050,16 +4050,18 @@ ASTReader::ASTReadResult ASTReader::findAndReadUnhashedControlBlock(
     // If this module was validated as a system module, and it is now a
     // non-system module, emit a warning about ignoring differences in
     // diagnostic options.
+    //
+    // In any case, if it has been validated in this process somehow, we're
+    // stuck with it (and it should be good enough!).
     bool IsSystem;
     if (BufferMgr->isValidatedByAncestor(F.FileName, IsSystem)) {
       if (IsSystem) {
         Module *M = getTopImportImplicitModule(ModuleMgr, PP);
         assert(M && "missing module");
-        if (!M->IsSystem) {
+        if (!M->IsSystem)
           Diag(diag::warn_module_system_bit_conflict) << F.FileName;
-          return Success;
-        }
       }
+      return Success;
     }
   }
 

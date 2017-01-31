@@ -93,13 +93,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     New->FileName = FileName.str();
     New->File = Entry;
     New->ImportLoc = ImportLoc;
-    Chain.push_back(New);
-    if (!New->isModule())
-      PCHChain.push_back(New);
-    if (!ImportedBy)
-      Roots.push_back(New);
     NewModule = true;
-    ModuleEntry = New;
 
     New->InputFilesValidationTimestamp = 0;
     if (New->Kind == MK_ImplicitModule) {
@@ -146,6 +140,34 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
     // Initialize the stream.
     PCHContainerRdr.ExtractPCH(New->Buffer->getMemBufferRef(), New->StreamFile);
+
+    if (ExpectedSignature != ASTFileSignature({{0}})) {
+      // Check the signature before hooking it up, so we can still delete it
+      // safely.
+      New->Signature = ReadSignature(New->StreamFile);
+      if (New->Signature != ExpectedSignature) {
+        ErrorStr = New->Signature != ASTFileSignature({{0}})
+                       ? "signature mismatch"
+                       : "could not read module signature";
+
+        bool IsSystem;
+        if (!FileMgr.getPCMCache()->isValidatedByAncestor(New->FileName,
+                                                          IsSystem)) {
+          FileMgr.invalidateCache(New->File);
+          FileMgr.getPCMCache()->removeFromConsistentBuffer(New->FileName);
+        }
+        delete New;
+        return OutOfDate;
+      }
+    }
+
+    // We're keeping this module.  Hook it up.
+    Chain.push_back(New);
+    if (!New->isModule())
+      PCHChain.push_back(New);
+    if (!ImportedBy)
+      Roots.push_back(New);
+    ModuleEntry = New;
   } else if (ExpectedSignature != ASTFileSignature({{0}})) {
     // Only check the signature here if the module has already been loaded.  New
     // modules may be invalidated and rebuilt, and the logic for that is in
