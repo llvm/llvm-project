@@ -1,7 +1,13 @@
-set(LLVM_LINK_COMPONENTS
-    DebugInfoPDB)
-
-add_lldb_library(lldbPluginSymbolFilePDB
+add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
   PDBASTParser.cpp
   SymbolFilePDB.cpp
+
+  LINK_LIBS
+    clangAST
+    clangLex
+    lldbCore
+    lldbSymbol
+  LINK_COMPONENTS
+    DebugInfoPDB
+    Support
   )
