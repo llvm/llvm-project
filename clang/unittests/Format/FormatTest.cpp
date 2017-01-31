@@ -934,6 +934,24 @@ TEST_F(FormatTest, UnderstandsSingleLineComments) {
                "  VAL_B\n"
                "};");
 
+  EXPECT_EQ("enum A {\n"
+            "  // line a\n"
+            "  a,\n"
+            "  b, // line b\n"
+            "\n"
+            "  // line c\n"
+            "  c\n"
+            "};",
+            format("enum A {\n"
+                   "  // line a\n"
+                   "  a,\n"
+                   "  b, // line b\n"
+                   "\n"
+                   "  // line c\n"
+                   "  c\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
       "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; // Trailing comment");
@@ -1386,6 +1404,18 @@ TEST_F(FormatTest, SplitsLongCxxComments) {
       "#define XXX // q w e r\n"
       "            // t y u i",
       format("#define XXX //q w e r t y u i", getLLVMStyleWithColumns(22)));
+  EXPECT_EQ("{\n"
+            "  //\n"
+            "  //\\\n"
+            "  // long 1 2 3 4\n"
+            "  // 5\n"
+            "}",
+            format("{\n"
+                   "  //\n"
+                   "  //\\\n"
+                   "  // long 1 2 3 4 5\n"
+                   "}",
+                   getLLVMStyleWithColumns(20)));
 }
 
 TEST_F(FormatTest, PreservesHangingIndentInCxxComments) {
@@ -1783,6 +1813,64 @@ TEST_F(FormatTest, CommentsInStaticInitializers) {
                "    0x00, 0x00, 0x00, 0x00};            // comment\n");
 }
 
+TEST_F(FormatTest, LineCommentsAfterRightBrace) {
+  EXPECT_EQ("if (true) { // comment about branch\n"
+            "  // comment about f\n"
+            "  f();\n"
+            "}",
+            format("if (true) { // comment about branch\n"
+                   "  // comment about f\n"
+                   "  f();\n"
+                   "}",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("if (1) { // if line 1\n"
+            "         // if line 2\n"
+            "         // if line 3\n"
+            "  // f line 1\n"
+            "  // f line 2\n"
+            "  f();\n"
+            "} else { // else line 1\n"
+            "         // else line 2\n"
+            "         // else line 3\n"
+            "  // g line 1\n"
+            "  g();\n"
+            "}",
+            format("if (1) { // if line 1\n"
+                   "          // if line 2\n"
+                   "        // if line 3\n"
+                   "  // f line 1\n"
+                   "    // f line 2\n"
+                   "  f();\n"
+                   "} else { // else line 1\n"
+                   "        // else line 2\n"
+                   "         // else line 3\n"
+                   "  // g line 1\n"
+                   "  g();\n"
+                   "}"));
+  EXPECT_EQ("do { // line 1\n"
+            "     // line 2\n"
+            "     // line 3\n"
+            "  f();\n"
+            "} while (true);",
+            format("do { // line 1\n"
+                   "     // line 2\n"
+                   "   // line 3\n"
+                   "  f();\n"
+                   "} while (true);",
+                   getLLVMStyleWithColumns(80)));
+  EXPECT_EQ("while (a < b) { // line 1\n"
+            "  // line 2\n"
+            "  // line 3\n"
+            "  f();\n"
+            "}",
+            format("while (a < b) {// line 1\n"
+                   "  // line 2\n"
+                   "  // line 3\n"
+                   "  f();\n"
+                   "}",
+                   getLLVMStyleWithColumns(80)));
+}
+
 TEST_F(FormatTest, ReflowsComments) {
   // Break a long line and reflow with the full next line.
   EXPECT_EQ("// long long long\n"
@@ -1870,6 +1958,23 @@ TEST_F(FormatTest, ReflowsComments) {
             format("/* long long long long\n"
                    " * long\n"
                    " * longg */",
+                   getLLVMStyleWithColumns(20)));
+
+  // Reflow lines with leading whitespace.
+  EXPECT_EQ("{\n"
+            "  /*\n"
+            "   * long long long\n"
+            "   * long long long\n"
+            "   * long long long\n"
+            "   */\n"
+            "}",
+            format("{\n"
+                   "/*\n"
+                   " * long long long long\n"
+                   " *   long\n"
+                   " * long long long long\n"
+                   " */\n"
+                   "}",
                    getLLVMStyleWithColumns(20)));
 
   // Break single line block comments that are first in the line with ' *'
@@ -2174,6 +2279,15 @@ TEST_F(FormatTest, ReflowsComments) {
                 "// long long long long\n"
                 "// ... --- ...",
                 getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with '@'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// @param arg",
+            format("// long long long long\n"
+                   "// @param arg",
+                   getLLVMStyleWithColumns(20)));
+
   // Reflow lines that have a non-punctuation character among their first 2
   // characters.
   EXPECT_EQ("// long long long\n"

@@ -307,6 +307,17 @@ public:
   ///
   QualType TransformType(TypeLocBuilder &TLB, TypeLoc TL);
 
+  /// \brief Transform a type that is permitted to produce a
+  /// DeducedTemplateSpecializationType.
+  ///
+  /// This is used in the (relatively rare) contexts where it is acceptable
+  /// for transformation to produce a class template type with deduced
+  /// template arguments.
+  /// @{
+  QualType TransformTypeWithDeducedTST(QualType T);
+  TypeSourceInfo *TransformTypeWithDeducedTST(TypeSourceInfo *DI);
+  /// @}
+
   /// \brief Transform the given statement.
   ///
   /// By default, this routine transforms a statement by delegating to the
@@ -672,6 +683,16 @@ public:
   OMPClause *Transform ## Class(Class *S);
 #include "clang/Basic/OpenMPKinds.def"
 
+  /// \brief Build a new qualified type given its unqualified type and type
+  /// qualifiers.
+  ///
+  /// By default, this routine adds type qualifiers only to types that can
+  /// have qualifiers, and silently suppresses those qualifiers that are not
+  /// permitted. Subclasses may override this routine to provide different
+  /// behavior.
+  QualType RebuildQualifiedType(QualType T, SourceLocation Loc,
+                                Qualifiers Quals);
+
   /// \brief Build a new pointer type given its pointee type.
   ///
   /// By default, performs semantic analysis when building the pointer type.
@@ -898,7 +919,7 @@ public:
   /// By default, builds a new ParenType type from the inner type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildParenType(QualType InnerType) {
-    return SemaRef.Context.getParenType(InnerType);
+    return SemaRef.BuildParenType(InnerType);
   }
 
   /// \brief Build a new qualified name type.
@@ -968,7 +989,8 @@ public:
                                     SourceLocation KeywordLoc,
                                     NestedNameSpecifierLoc QualifierLoc,
                                     const IdentifierInfo *Id,
-                                    SourceLocation IdLoc) {
+                                    SourceLocation IdLoc,
+                                    bool DeducedTSTContext) {
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
 
@@ -980,9 +1002,25 @@ public:
                                                     Id);
     }
 
-    if (Keyword == ETK_None || Keyword == ETK_Typename)
-      return SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
-                                       *Id, IdLoc);
+    if (Keyword == ETK_None || Keyword == ETK_Typename) {
+      QualType T = SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
+                                             *Id, IdLoc);
+      // If a dependent name resolves to a deduced template specialization type,
+      // check that we're in one of the syntactic contexts permitting it.
+      if (!DeducedTSTContext) {
+        if (auto *Deduced = dyn_cast_or_null<DeducedTemplateSpecializationType>(
+                T.isNull() ? nullptr : T->getContainedDeducedType())) {
+          SemaRef.Diag(IdLoc, diag::err_dependent_deduced_tst)
+            << (int)SemaRef.getTemplateNameKindForDiagnostics(
+                   Deduced->getTemplateName())
+            << QualType(QualifierLoc.getNestedNameSpecifier()->getAsType(), 0);
+          if (auto *TD = Deduced->getTemplateName().getAsTemplateDecl())
+            SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
+          return QualType();
+        }
+      }
+      return T;
+    }
 
     TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
 
@@ -3157,6 +3195,10 @@ private:
   TypeSourceInfo *TransformTSIInObjectScope(TypeLoc TL, QualType ObjectType,
                                             NamedDecl *FirstQualifierInScope,
                                             CXXScopeSpec &SS);
+
+  QualType TransformDependentNameType(TypeLocBuilder &TLB,
+                                      DependentNameTypeLoc TL,
+                                      bool DeducibleTSTContext);
 };
 
 template<typename Derived>
@@ -4048,11 +4090,57 @@ TreeTransform<Derived>::TransformType(TypeLocBuilder &TLB, TypeLoc T) {
   llvm_unreachable("unhandled type loc!");
 }
 
-/// FIXME: By default, this routine adds type qualifiers only to types
-/// that can have qualifiers, and silently suppresses those qualifiers
-/// that are not permitted (e.g., qualifiers on reference or function
-/// types). This is the right thing for template instantiation, but
-/// probably not for other clients.
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformTypeWithDeducedTST(QualType T) {
+  if (!isa<DependentNameType>(T))
+    return TransformType(T);
+
+  if (getDerived().AlreadyTransformed(T))
+    return T;
+  TypeSourceInfo *DI = getSema().Context.getTrivialTypeSourceInfo(T,
+                                                getDerived().getBaseLocation());
+  TypeSourceInfo *NewDI = getDerived().TransformTypeWithDeducedTST(DI);
+  return NewDI ? NewDI->getType() : QualType();
+}
+
+template<typename Derived>
+TypeSourceInfo *
+TreeTransform<Derived>::TransformTypeWithDeducedTST(TypeSourceInfo *DI) {
+  if (!isa<DependentNameType>(DI->getType()))
+    return TransformType(DI);
+
+  // Refine the base location to the type's location.
+  TemporaryBase Rebase(*this, DI->getTypeLoc().getBeginLoc(),
+                       getDerived().getBaseEntity());
+  if (getDerived().AlreadyTransformed(DI->getType()))
+    return DI;
+
+  TypeLocBuilder TLB;
+
+  TypeLoc TL = DI->getTypeLoc();
+  TLB.reserve(TL.getFullDataSize());
+
+  Qualifiers Quals;
+  auto QTL = TL.getAs<QualifiedTypeLoc>();
+  if (QTL)
+    TL = QTL.getUnqualifiedLoc();
+
+  auto DNTL = TL.castAs<DependentNameTypeLoc>();
+
+  QualType Result = getDerived().TransformDependentNameType(
+      TLB, DNTL, /*DeducedTSTContext*/true);
+  if (Result.isNull())
+    return nullptr;
+
+  if (QTL) {
+    Result = getDerived().RebuildQualifiedType(
+        Result, QTL.getBeginLoc(), QTL.getType().getLocalQualifiers());
+    TLB.TypeWasModifiedSafely(Result);
+  }
+
+  return TLB.getTypeSourceInfo(SemaRef.Context, Result);
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformQualifiedType(TypeLocBuilder &TLB,
@@ -4063,64 +4151,71 @@ TreeTransform<Derived>::TransformQualifiedType(TypeLocBuilder &TLB,
   if (Result.isNull())
     return QualType();
 
-  // Silently suppress qualifiers if the result type can't be qualified.
-  // FIXME: this is the right thing for template instantiation, but
-  // probably not for other clients.
-  if (Result->isFunctionType() || Result->isReferenceType())
-    return Result;
+  Result = getDerived().RebuildQualifiedType(Result, T.getBeginLoc(), Quals);
+
+  // RebuildQualifiedType might have updated the type, but not in a way
+  // that invalidates the TypeLoc. (There's no location information for
+  // qualifiers.)
+  TLB.TypeWasModifiedSafely(Result);
+
+  return Result;
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
+                                                      SourceLocation Loc,
+                                                      Qualifiers Quals) {
+  // C++ [dcl.fct]p7:
+  //   [When] adding cv-qualifications on top of the function type [...] the
+  //   cv-qualifiers are ignored.
+  // C++ [dcl.ref]p1:
+  //   when the cv-qualifiers are introduced through the use of a typedef-name
+  //   or decltype-specifier [...] the cv-qualifiers are ignored.
+  // Note that [dcl.ref]p1 lists all cases in which cv-qualifiers can be
+  // applied to a reference type.
+  // FIXME: This removes all qualifiers, not just cv-qualifiers!
+  if (T->isFunctionType() || T->isReferenceType())
+    return T;
 
   // Suppress Objective-C lifetime qualifiers if they don't make sense for the
   // resulting type.
   if (Quals.hasObjCLifetime()) {
-    if (!Result->isObjCLifetimeType() && !Result->isDependentType())
+    if (!T->isObjCLifetimeType() && !T->isDependentType())
       Quals.removeObjCLifetime();
-    else if (Result.getObjCLifetime()) {
+    else if (T.getObjCLifetime()) {
       // Objective-C ARC:
       //   A lifetime qualifier applied to a substituted template parameter
       //   overrides the lifetime qualifier from the template argument.
       const AutoType *AutoTy;
       if (const SubstTemplateTypeParmType *SubstTypeParam
-                                = dyn_cast<SubstTemplateTypeParmType>(Result)) {
+                                = dyn_cast<SubstTemplateTypeParmType>(T)) {
         QualType Replacement = SubstTypeParam->getReplacementType();
         Qualifiers Qs = Replacement.getQualifiers();
         Qs.removeObjCLifetime();
-        Replacement
-          = SemaRef.Context.getQualifiedType(Replacement.getUnqualifiedType(),
-                                             Qs);
-        Result = SemaRef.Context.getSubstTemplateTypeParmType(
-                                        SubstTypeParam->getReplacedParameter(),
-                                                              Replacement);
-        TLB.TypeWasModifiedSafely(Result);
-      } else if ((AutoTy = dyn_cast<AutoType>(Result)) && AutoTy->isDeduced()) {
+        Replacement = SemaRef.Context.getQualifiedType(
+            Replacement.getUnqualifiedType(), Qs);
+        T = SemaRef.Context.getSubstTemplateTypeParmType(
+            SubstTypeParam->getReplacedParameter(), Replacement);
+      } else if ((AutoTy = dyn_cast<AutoType>(T)) && AutoTy->isDeduced()) {
         // 'auto' types behave the same way as template parameters.
         QualType Deduced = AutoTy->getDeducedType();
         Qualifiers Qs = Deduced.getQualifiers();
         Qs.removeObjCLifetime();
-        Deduced = SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(),
-                                                   Qs);
-        Result = SemaRef.Context.getAutoType(Deduced, AutoTy->getKeyword(),
-                                AutoTy->isDependentType());
-        TLB.TypeWasModifiedSafely(Result);
+        Deduced =
+            SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(), Qs);
+        T = SemaRef.Context.getAutoType(Deduced, AutoTy->getKeyword(),
+                                        AutoTy->isDependentType());
       } else {
         // Otherwise, complain about the addition of a qualifier to an
         // already-qualified type.
-        SourceRange R = T.getUnqualifiedLoc().getSourceRange();
-        SemaRef.Diag(R.getBegin(), diag::err_attr_objc_ownership_redundant)
-          << Result << R;
-
+        // FIXME: Why is this check not in Sema::BuildQualifiedType?
+        SemaRef.Diag(Loc, diag::err_attr_objc_ownership_redundant) << T;
         Quals.removeObjCLifetime();
       }
     }
   }
-  if (!Quals.empty()) {
-    Result = SemaRef.BuildQualifiedType(Result, T.getBeginLoc(), Quals);
-    // BuildQualifiedType might not add qualifiers if they are invalid.
-    if (Result.hasLocalQualifiers())
-      TLB.push<QualifiedTypeLoc>(Result);
-    // No location information to preserve.
-  }
 
-  return Result;
+  return SemaRef.BuildQualifiedType(T, Loc, Quals);
 }
 
 template<typename Derived>
@@ -5854,8 +5949,14 @@ TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
 }
 
 template<typename Derived>
-QualType TreeTransform<Derived>::TransformDependentNameType(TypeLocBuilder &TLB,
-                                                      DependentNameTypeLoc TL) {
+QualType TreeTransform<Derived>::TransformDependentNameType(
+    TypeLocBuilder &TLB, DependentNameTypeLoc TL) {
+  return TransformDependentNameType(TLB, TL, false);
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformDependentNameType(
+    TypeLocBuilder &TLB, DependentNameTypeLoc TL, bool DeducedTSTContext) {
   const DependentNameType *T = TL.getTypePtr();
 
   NestedNameSpecifierLoc QualifierLoc
@@ -5868,7 +5969,8 @@ QualType TreeTransform<Derived>::TransformDependentNameType(TypeLocBuilder &TLB,
                                             TL.getElaboratedKeywordLoc(),
                                             QualifierLoc,
                                             T->getIdentifier(),
-                                            TL.getNameLoc());
+                                            TL.getNameLoc(),
+                                            DeducedTSTContext);
   if (Result.isNull())
     return QualType();
 
@@ -9474,7 +9576,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXFunctionalCastExpr(
                                                      CXXFunctionalCastExpr *E) {
-  TypeSourceInfo *Type = getDerived().TransformType(E->getTypeInfoAsWritten());
+  TypeSourceInfo *Type =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeInfoAsWritten());
   if (!Type)
     return ExprError();
 
@@ -9663,8 +9766,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
   // Transform the type that we're allocating
-  TypeSourceInfo *AllocTypeInfo
-    = getDerived().TransformType(E->getAllocatedTypeSourceInfo());
+  TypeSourceInfo *AllocTypeInfo =
+      getDerived().TransformTypeWithDeducedTST(E->getAllocatedTypeSourceInfo());
   if (!AllocTypeInfo)
     return ExprError();
 
@@ -10375,7 +10478,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
                                                     CXXTemporaryObjectExpr *E) {
-  TypeSourceInfo *T = getDerived().TransformType(E->getTypeSourceInfo());
+  TypeSourceInfo *T =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeSourceInfo());
   if (!T)
     return ExprError();
 
@@ -10672,7 +10776,8 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
                                                   CXXUnresolvedConstructExpr *E) {
-  TypeSourceInfo *T = getDerived().TransformType(E->getTypeSourceInfo());
+  TypeSourceInfo *T =
+      getDerived().TransformTypeWithDeducedTST(E->getTypeSourceInfo());
   if (!T)
     return ExprError();
 

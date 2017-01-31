@@ -152,7 +152,7 @@ entry:
 ; X32:       retl
 ;
 ; X64-LABEL: TestFPTruncF128_F64:
-; X64:       movapd      vf128(%rip), %xmm0
+; X64:       movaps      vf128(%rip), %xmm0
 ; X64-NEXT:  callq       __trunctfdf2
 ; X64-NEXT:  movsd       %xmm0, vf64(%rip)
 ; X64:       retq

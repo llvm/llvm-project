@@ -1043,6 +1043,50 @@ NVPTXTargetLowering::getPreferredVectorAction(EVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
+SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
+                                             int Enabled, int &ExtraSteps,
+                                             bool &UseOneConst,
+                                             bool Reciprocal) const {
+  if (!(Enabled == ReciprocalEstimate::Enabled ||
+        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
+    return SDValue();
+
+  if (ExtraSteps == ReciprocalEstimate::Unspecified)
+    ExtraSteps = 0;
+
+  SDLoc DL(Operand);
+  EVT VT = Operand.getValueType();
+  bool Ftz = useF32FTZ(DAG.getMachineFunction());
+
+  auto MakeIntrinsicCall = [&](Intrinsic::ID IID) {
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       DAG.getConstant(IID, DL, MVT::i32), Operand);
+  };
+
+  // The sqrt and rsqrt refinement processes assume we always start out with an
+  // approximation of the rsqrt.  Therefore, if we're going to do any refinement
+  // (i.e. ExtraSteps > 0), we must return an rsqrt.  But if we're *not* doing
+  // any refinement, we must return a regular sqrt.
+  if (Reciprocal || ExtraSteps > 0) {
+    if (VT == MVT::f32)
+      return MakeIntrinsicCall(Ftz ? Intrinsic::nvvm_rsqrt_approx_ftz_f
+                                   : Intrinsic::nvvm_rsqrt_approx_f);
+    else if (VT == MVT::f64)
+      return MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d);
+    else
+      return SDValue();
+  } else {
+    if (VT == MVT::f32)
+      return MakeIntrinsicCall(Ftz ? Intrinsic::nvvm_sqrt_approx_ftz_f
+                                   : Intrinsic::nvvm_sqrt_approx_f);
+    else {
+      // There's no sqrt.approx.f64 instruction, so we emit x * rsqrt(x).
+      return DAG.getNode(ISD::FMUL, DL, VT, Operand,
+                         MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d));
+    }
+  }
+}
+
 SDValue
 NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);

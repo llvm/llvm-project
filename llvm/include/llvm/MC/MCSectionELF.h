@@ -78,7 +78,8 @@ public:
   void setFlags(unsigned F) { Flags = F; }
   const MCSymbolELF *getGroup() const { return Group; }
 
-  void PrintSwitchToSection(const MCAsmInfo &MAI, raw_ostream &OS,
+  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+                            raw_ostream &OS,
                             const MCExpr *Subsection) const override;
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;

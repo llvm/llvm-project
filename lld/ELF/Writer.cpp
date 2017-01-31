@@ -1498,7 +1498,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       // The glibc dynamic loader rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
       // rounds up.
-      P.p_memsz = alignTo(P.p_memsz, Config->MaxPageSize);
+      P.p_memsz = alignTo(P.p_memsz, Target->PageSize);
     }
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,

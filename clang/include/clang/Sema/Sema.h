@@ -7359,7 +7359,8 @@ public:
 
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
-                            SourceLocation Loc, DeclarationName Entity);
+                            SourceLocation Loc, DeclarationName Entity,
+                            bool AllowDeducedTST = false);
 
   QualType SubstType(QualType T,
                      const MultiLevelTemplateArgumentList &TemplateArgs,

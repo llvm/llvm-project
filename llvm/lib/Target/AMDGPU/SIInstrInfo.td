@@ -295,6 +295,19 @@ class VGPRImm <dag frag> : PatLeaf<frag, [{
   return Limit < 10;
 }]>;
 
+def NegateImm : SDNodeXForm<imm, [{
+  return CurDAG->getConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
+// TODO: When FP inline imm values work?
+def NegSubInlineConst32 : ImmLeaf<i32, [{
+  return Imm < -16 && Imm >= -64;
+}], NegateImm>;
+
+def NegSubInlineConst16 : ImmLeaf<i16, [{
+  return Imm < -16 && Imm >= -64;
+}], NegateImm>;
+
 //===----------------------------------------------------------------------===//
 // Custom Operands
 //===----------------------------------------------------------------------===//
@@ -589,6 +602,9 @@ def VOP3Mods0Clamp : ComplexPattern<untyped, 3, "SelectVOP3Mods0Clamp">;
 def VOP3Mods0Clamp0OMod : ComplexPattern<untyped, 4, "SelectVOP3Mods0Clamp0OMod">;
 def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
 def VOP3NoMods : ComplexPattern<untyped, 2, "SelectVOP3NoMods">;
+
+// VOP3Mods, but the input source is known to never be NaN.
+def VOP3Mods_nnan : ComplexPattern<fAny, 2, "SelectVOP3Mods_NNaN">;
 
 //===----------------------------------------------------------------------===//
 // SI assembler operands

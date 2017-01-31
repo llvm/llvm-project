@@ -9,7 +9,7 @@
 ; Test f32
 define float @f1(float %a, float %b, float %f) {
 ; CHECK-LABEL: f1:
-; CHECK: lcebr
+; CHECK: ltebr
 ; CHECK-NEXT: ber %r14
   %neg = fsub float -0.0, %f
   %cond = fcmp oeq float %neg, 0.0
@@ -20,7 +20,7 @@ define float @f1(float %a, float %b, float %f) {
 ; Test f64
 define double @f2(double %a, double %b, double %f) {
 ; CHECK-LABEL: f2:
-; CHECK: lcdbr
+; CHECK: ltdbr
 ; CHECK-NEXT: ber %r14
   %neg = fsub double -0.0, %f
   %cond = fcmp oeq double %neg, 0.0
@@ -33,7 +33,7 @@ define double @f2(double %a, double %b, double %f) {
 declare float @llvm.fabs.f32(float %f)
 define float @f3(float %a, float %b, float %f) {
 ; CHECK-LABEL: f3:
-; CHECK: lnebr
+; CHECK: lpebr
 ; CHECK-NEXT: ber %r14
   %abs = call float @llvm.fabs.f32(float %f)
   %neg = fsub float -0.0, %abs
@@ -46,7 +46,7 @@ define float @f3(float %a, float %b, float %f) {
 declare double @llvm.fabs.f64(double %f)
 define double @f4(double %a, double %b, double %f) {
 ; CHECK-LABEL: f4:
-; CHECK: lndbr
+; CHECK: lpdbr
 ; CHECK-NEXT: ber %r14
   %abs = call double @llvm.fabs.f64(double %f)
   %neg = fsub double -0.0, %abs

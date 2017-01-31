@@ -25,9 +25,8 @@ entry:
 
 ; GCN-LABEL: {{^}}fmul_f16_imm_a
 ; GCN: buffer_load_ushort v[[B_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], 0x4200{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], v[[B_F16]]
-; SI:  v_mul_f32_e32 v[[R_F32:[0-9]+]], v[[A_F32]], v[[B_F32]]
+; SI:  v_mul_f32_e32 v[[R_F32:[0-9]+]], 0x40400000, v[[B_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[R_F32]]
 ; VI:  v_mul_f16_e32 v[[R_F16:[0-9]+]], 0x4200, v[[B_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
@@ -44,10 +43,10 @@ entry:
 
 ; GCN-LABEL: {{^}}fmul_f16_imm_b
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32:[0-9]+]], 0x4400{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
-; SI:  v_mul_f32_e32 v[[R_F32:[0-9]+]], v[[B_F32]], v[[A_F32]]
+; SI:  v_mul_f32_e32 v[[R_F32:[0-9]+]], 4.0, v[[A_F32]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[R_F32]]
+
 ; VI:  v_mul_f16_e32 v[[R_F16:[0-9]+]], 4.0, v[[A_F16]]
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
@@ -95,14 +94,12 @@ entry:
 
 ; GCN-LABEL: {{^}}fmul_v2f16_imm_a
 ; GCN: buffer_load_dword v[[B_V2_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], 0x4200{{$}}
-; SI:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], 0x4400{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32_0:[0-9]+]], v[[B_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[B_F16_1:[0-9]+]], 16, v[[B_V2_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[B_F32_1:[0-9]+]], v[[B_F16_1]]
-; SI:  v_mul_f32_e32 v[[R_F32_0:[0-9]+]], v[[A_F32_0]], v[[B_F32_0]]
+; SI:  v_mul_f32_e32 v[[R_F32_0:[0-9]+]], 0x40400000, v[[B_F32_0]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[R_F32_0]]
-; SI:  v_mul_f32_e32 v[[R_F32_1:[0-9]+]], v[[A_F32_1]], v[[B_F32_1]]
+; SI:  v_mul_f32_e32 v[[R_F32_1:[0-9]+]], 4.0, v[[B_F32_1]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 ; VI:  v_mul_f16_e32 v[[R_F16_0:[0-9]+]], 0x4200, v[[B_V2_F16]]
 ; VI:  v_mul_f16_e32 v[[R_F16_1:[0-9]+]], 4.0, v[[B_F16_1]]
@@ -123,14 +120,12 @@ entry:
 
 ; GCN-LABEL: {{^}}fmul_v2f16_imm_b
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; SI:  v_cvt_f32_f16_e32 v[[B_F32_0:[0-9]+]], 0x4400{{$}}
-; SI:  v_cvt_f32_f16_e32 v[[B_F32_1:[0-9]+]], 0x4200{{$}}
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
 ; GCN: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; SI:  v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
-; SI:  v_mul_f32_e32 v[[R_F32_0:[0-9]+]], v[[B_F32_0]], v[[A_F32_0]]
+; SI:  v_mul_f32_e32 v[[R_F32_0:[0-9]+]], 4.0, v[[A_F32_0]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[R_F32_0]]
-; SI:  v_mul_f32_e32 v[[R_F32_1:[0-9]+]], v[[B_F32_1]], v[[A_F32_1]]
+; SI:  v_mul_f32_e32 v[[R_F32_1:[0-9]+]], 0x40400000, v[[A_F32_1]]
 ; SI:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 ; VI:  v_mul_f16_e32 v[[R_F16_0:[0-9]+]], 4.0, v[[A_V2_F16]]
 ; VI:  v_mul_f16_e32 v[[R_F16_1:[0-9]+]], 0x4200, v[[A_F16_1]]

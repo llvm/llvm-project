@@ -790,6 +790,8 @@ define i32 @test45(i32 %a) nounwind {
   ret i32 %z
 }
 
+; (X >>?exact C1) << C2 --> X >>?exact (C1-C2)
+
 define i32 @test46(i32 %a) {
 ; CHECK-LABEL: @test46(
 ; CHECK-NEXT:    [[Z:%.*]] = ashr exact i32 %a, 2
@@ -800,14 +802,40 @@ define i32 @test46(i32 %a) {
   ret i32 %z
 }
 
-define i32 @test47(i32 %a) {
-; CHECK-LABEL: @test47(
-; CHECK-NEXT:    [[Z:%.*]] = lshr exact i32 %a, 2
-; CHECK-NEXT:    ret i32 [[Z]]
+; (X >>?exact C1) << C2 --> X >>?exact (C1-C2)
+
+define <2 x i32> @test46_splat_vec(<2 x i32> %a) {
+; CHECK-LABEL: @test46_splat_vec(
+; CHECK-NEXT:    [[Z:%.*]] = ashr exact <2 x i32> %a, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
-  %y = lshr exact i32 %a, 3
-  %z = shl i32 %y, 1
-  ret i32 %z
+  %y = ashr exact <2 x i32> %a, <i32 3, i32 3>
+  %z = shl <2 x i32> %y, <i32 1, i32 1>
+  ret <2 x i32> %z
+}
+
+; (X >>?exact C1) << C2 --> X >>?exact (C1-C2)
+
+define i8 @test47(i8 %a) {
+; CHECK-LABEL: @test47(
+; CHECK-NEXT:    [[Z:%.*]] = lshr exact i8 %a, 2
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %y = lshr exact i8 %a, 3
+  %z = shl i8 %y, 1
+  ret i8 %z
+}
+
+; (X >>?exact C1) << C2 --> X >>?exact (C1-C2)
+
+define <2 x i8> @test47_splat_vec(<2 x i8> %a) {
+; CHECK-LABEL: @test47_splat_vec(
+; CHECK-NEXT:    [[Z:%.*]] = lshr exact <2 x i8> %a, <i8 2, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[Z]]
+;
+  %y = lshr exact <2 x i8> %a, <i8 3, i8 3>
+  %z = shl <2 x i8> %y, <i8 1, i8 1>
+  ret <2 x i8> %z
 }
 
 ; (X >>u,exact C1) << C2 --> X << (C2-C1) when C2 > C1
@@ -882,6 +910,8 @@ define <2 x i32> @test49_splat_vec(<2 x i32> %x) {
   ret <2 x i32> %B
 }
 
+; (X <<nsw C1) >>s C2 --> X >>s (C2-C1)
+
 define i32 @test50(i32 %x) {
 ; CHECK-LABEL: @test50(
 ; CHECK-NEXT:    [[B:%.*]] = ashr i32 %x, 2
@@ -891,6 +921,21 @@ define i32 @test50(i32 %x) {
   %B = ashr i32 %A, 3
   ret i32 %B
 }
+
+; (X <<nsw C1) >>s C2 --> X >>s (C2-C1)
+; Also, check that exact is propagated.
+
+define <2 x i32> @test50_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test50_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %A = shl nsw <2 x i32> %x, <i32 1, i32 1>
+  %B = ashr exact <2 x i32> %A, <i32 3, i32 3>
+  ret <2 x i32> %B
+}
+
+; (X <<nuw C1) >>u C2 --> X >>u (C2-C1)
 
 define i32 @test51(i32 %x) {
 ; CHECK-LABEL: @test51(
@@ -902,6 +947,48 @@ define i32 @test51(i32 %x) {
   ret i32 %B
 }
 
+; (X <<nuw C1) >>u C2 --> X >>u (C2-C1) with splats
+; Also, check that exact is propagated.
+
+define <2 x i32> @test51_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test51_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = lshr exact <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %A = shl nuw <2 x i32> %x, <i32 1, i32 1>
+  %B = lshr exact <2 x i32> %A, <i32 3, i32 3>
+  ret <2 x i32> %B
+}
+
+; (X << C1) >>u C2  --> X >>u (C2-C1) & (-1 >> C2)
+; Also, check that exact is propagated.
+
+define i32 @test51_no_nuw(i32 %x) {
+; CHECK-LABEL: @test51_no_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 %x, 2
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[TMP1]], 536870911
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %A = shl i32 %x, 1
+  %B = lshr exact i32 %A, 3
+  ret i32 %B
+}
+
+; (X << C1) >>u C2  --> X >>u (C2-C1) & (-1 >> C2)
+
+define <2 x i32> @test51_no_nuw_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test51_no_nuw_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[TMP1]], <i32 536870911, i32 536870911>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %A = shl <2 x i32> %x, <i32 1, i32 1>
+  %B = lshr <2 x i32> %A, <i32 3, i32 3>
+  ret <2 x i32> %B
+}
+
+; (X <<nsw C1) >>s C2 --> X <<nsw (C1 - C2)
+
 define i32 @test52(i32 %x) {
 ; CHECK-LABEL: @test52(
 ; CHECK-NEXT:    [[B:%.*]] = shl nsw i32 %x, 2
@@ -912,6 +999,20 @@ define i32 @test52(i32 %x) {
   ret i32 %B
 }
 
+; (X <<nsw C1) >>s C2 --> X <<nsw (C1 - C2)
+
+define <2 x i32> @test52_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test52_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = shl nsw <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %A = shl nsw <2 x i32> %x, <i32 3, i32 3>
+  %B = ashr <2 x i32> %A, <i32 1, i32 1>
+  ret <2 x i32> %B
+}
+
+; (X <<nuw C1) >>u C2 --> X <<nuw (C1 - C2)
+
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
 ; CHECK-NEXT:    [[B:%.*]] = shl nuw i32 %x, 2
@@ -920,6 +1021,45 @@ define i32 @test53(i32 %x) {
   %A = shl nuw i32 %x, 3
   %B = lshr i32 %A, 1
   ret i32 %B
+}
+
+; (X <<nuw C1) >>u C2 --> X <<nuw (C1 - C2)
+
+define <2 x i32> @test53_splat_vec(<2 x i32> %x) {
+; CHECK-LABEL: @test53_splat_vec(
+; CHECK-NEXT:    [[B:%.*]] = shl nuw <2 x i32> %x, <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %A = shl nuw <2 x i32> %x, <i32 3, i32 3>
+  %B = lshr <2 x i32> %A, <i32 1, i32 1>
+  ret <2 x i32> %B
+}
+
+; (X << C1) >>u C2  --> X << (C1 - C2) & (-1 >> C2)
+
+define i8 @test53_no_nuw(i8 %x) {
+; CHECK-LABEL: @test53_no_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 %x, 2
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[TMP1]], 124
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %A = shl i8 %x, 3
+  %B = lshr i8 %A, 1
+  ret i8 %B
+}
+
+; (X << C1) >>u C2  --> X << (C1 - C2) & (-1 >> C2)
+; FIXME: Demanded bits should change the mask constant as it does for the scalar case.
+
+define <2 x i8> @test53_no_nuw_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @test53_no_nuw_splat_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> %x, <i8 2, i8 2>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i8> [[B]]
+;
+  %A = shl <2 x i8> %x, <i8 3, i8 3>
+  %B = lshr <2 x i8> %A, <i8 1, i8 1>
+  ret <2 x i8> %B
 }
 
 define i32 @test54(i32 %x) {

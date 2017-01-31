@@ -8628,6 +8628,7 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::MOVUPSmr,   X86::MOVUPDmr,  X86::MOVDQUmr  },
   { X86::MOVUPSrm,   X86::MOVUPDrm,  X86::MOVDQUrm  },
   { X86::MOVLPSmr,   X86::MOVLPDmr,  X86::MOVPQI2QImr },
+  { X86::MOVSDmr,    X86::MOVSDmr,   X86::MOVPQI2QImr },
   { X86::MOVSSmr,    X86::MOVSSmr,   X86::MOVPDI2DImr },
   { X86::MOVSDrm,    X86::MOVSDrm,   X86::MOVQI2PQIrm },
   { X86::MOVSSrm,    X86::MOVSSrm,   X86::MOVDI2PDIrm },
@@ -8647,6 +8648,7 @@ static const uint16_t ReplaceableInstrs[][3] = {
   { X86::VMOVUPSmr,  X86::VMOVUPDmr,  X86::VMOVDQUmr  },
   { X86::VMOVUPSrm,  X86::VMOVUPDrm,  X86::VMOVDQUrm  },
   { X86::VMOVLPSmr,  X86::VMOVLPDmr,  X86::VMOVPQI2QImr },
+  { X86::VMOVSDmr,   X86::VMOVSDmr,   X86::VMOVPQI2QImr },
   { X86::VMOVSSmr,   X86::VMOVSSmr,   X86::VMOVPDI2DImr },
   { X86::VMOVSDrm,   X86::VMOVSDrm,   X86::VMOVQI2PQIrm },
   { X86::VMOVSSrm,   X86::VMOVSSrm,   X86::VMOVDI2PDIrm },
@@ -8669,7 +8671,7 @@ static const uint16_t ReplaceableInstrs[][3] = {
   // AVX512 support
   { X86::VMOVLPSZ128mr,  X86::VMOVLPDZ128mr,  X86::VMOVPQI2QIZmr  },
   { X86::VMOVNTPSZ128mr, X86::VMOVNTPDZ128mr, X86::VMOVNTDQZ128mr },
-  { X86::VMOVNTPSZ128mr, X86::VMOVNTPDZ128mr, X86::VMOVNTDQZ128mr },
+  { X86::VMOVNTPSZ256mr, X86::VMOVNTPDZ256mr, X86::VMOVNTDQZ256mr },
   { X86::VMOVNTPSZmr,    X86::VMOVNTPDZmr,    X86::VMOVNTDQZmr    },
   { X86::VMOVSDZmr,      X86::VMOVSDZmr,      X86::VMOVPQI2QIZmr  },
   { X86::VMOVSSZmr,      X86::VMOVSSZmr,      X86::VMOVPDI2DIZmr  },
@@ -8975,14 +8977,17 @@ X86InstrInfo::getExecutionDomain(const MachineInstr &MI) const {
       validDomains = Subtarget.hasAVX2() ? 0xe : 0x6;
     } else if (lookupAVX512(opcode, domain, ReplaceableInstrsAVX512)) {
       validDomains = 0xe;
-    } else if (lookupAVX512(opcode, domain, ReplaceableInstrsAVX512DQ)) {
-      validDomains = Subtarget.hasDQI() ? 0xe : 0x8;
-    } else if (const uint16_t *table = lookupAVX512(opcode, domain,
+    } else if (Subtarget.hasDQI() && lookupAVX512(opcode, domain,
+                                                  ReplaceableInstrsAVX512DQ)) {
+      validDomains = 0xe;
+    } else if (Subtarget.hasDQI()) {
+      if (const uint16_t *table = lookupAVX512(opcode, domain,
                                              ReplaceableInstrsAVX512DQMasked)) {
-      if (domain == 1 || (domain == 3 && table[3] == opcode))
-        validDomains = Subtarget.hasDQI() ? 0xa : 0x8;
-      else
-        validDomains = Subtarget.hasDQI() ? 0xc : 0x8;
+        if (domain == 1 || (domain == 3 && table[3] == opcode))
+          validDomains = 0xa;
+        else
+          validDomains = 0xc;
+      }
     }
   }
   return std::make_pair(domain, validDomains);

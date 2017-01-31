@@ -1367,12 +1367,28 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const basic_string& __str, true_type)
         {
-            if (__alloc() != __str.__alloc())
+            if (__alloc() == __str.__alloc())
+                __alloc() = __str.__alloc();
+            else
             {
-                clear();
-                shrink_to_fit();
+                if (!__str.__is_long())
+                {
+                    clear();
+                    shrink_to_fit();
+                    __alloc() = __str.__alloc();
+                }
+                else
+                {
+                    allocator_type __a = __str.__alloc();
+                    pointer __p = __alloc_traits::allocate(__a, __str.__get_long_cap());
+                    clear();
+                    shrink_to_fit();
+                    __alloc() = _VSTD::move(__a);
+                    __set_long_pointer(__p);
+                    __set_long_cap(__str.__get_long_cap());
+                    __set_long_size(__str.size());
+                }
             }
-            __alloc() = __str.__alloc();
         }
 
     _LIBCPP_INLINE_VISIBILITY

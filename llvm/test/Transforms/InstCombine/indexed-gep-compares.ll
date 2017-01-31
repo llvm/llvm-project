@@ -188,3 +188,20 @@ bb10:
 
 
 declare i32 @__gxx_personality_v0(...)
+
+define i1 @test8(i64* %in, i64 %offset) {
+entry:
+
+ %ld = load i64, i64* %in, align 8
+ %casti8 = inttoptr i64 %ld to i8*
+ %gepi8 = getelementptr inbounds i8, i8* %casti8, i64 %offset
+ %cast = bitcast i8* %gepi8 to i32**
+ %ptrcast = inttoptr i64 %ld to i32**
+ %gepi32 = getelementptr inbounds i32*, i32** %ptrcast, i64 1
+ %cmp = icmp eq i32** %gepi32, %cast
+ ret i1 %cmp
+
+
+; CHECK-LABEL: @test8(
+; CHECK-NOT: icmp eq i32 %{{[0-9A-Za-z.]+}}, 1
+}

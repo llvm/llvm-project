@@ -15,7 +15,8 @@ declare void @_Unwind_Resume(i8*)
 ; CHECK:   [[LP]] (landing-pad):
 ; CHECK:     EH_LABEL
 ; CHECK:     [[PTR:%[0-9]+]](p0) = COPY %x0
-; CHECK:     [[SEL:%[0-9]+]](s32) = COPY %x1
+; CHECK:     [[SEL_PTR:%[0-9]+]](p0) = COPY %x1
+; CHECK:     [[SEL:%[0-9]+]](s32) = G_PTRTOINT [[SEL_PTR]]
 ; CHECK-NOT: G_SEQUENCE
 ; CHECK-NOT: G_EXTRACT
 ; CHECK:     G_STORE [[PTR]](p0), {{%[0-9]+}}(p0)

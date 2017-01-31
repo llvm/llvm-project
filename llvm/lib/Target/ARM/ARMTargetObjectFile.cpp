@@ -7,17 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetObjectFile.h"
+#include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/Mangler.h"
+#include "ARMTargetObjectFile.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ELF.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
+
 using namespace llvm;
 using namespace dwarf;
 

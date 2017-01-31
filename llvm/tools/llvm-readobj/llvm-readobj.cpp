@@ -358,6 +358,8 @@ static std::error_code createDumper(const ObjectFile *Obj,
     return createELFDumper(Obj, Writer, Result);
   if (Obj->isMachO())
     return createMachODumper(Obj, Writer, Result);
+  if (Obj->isWasm())
+    return createWasmDumper(Obj, Writer, Result);
 
   return readobj_error::unsupported_obj_file_format;
 }

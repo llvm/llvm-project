@@ -2751,8 +2751,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     SmallVector<std::pair<Value *, SanitizerMask>, 2> Checks;
-    llvm::Value *WidthMinusOne = GetWidthMinusOneValue(Ops.LHS, RHS);
-    llvm::Value *ValidExponent = Builder.CreateICmpULE(RHS, WidthMinusOne);
+    llvm::Value *WidthMinusOne = GetWidthMinusOneValue(Ops.LHS, Ops.RHS);
+    llvm::Value *ValidExponent = Builder.CreateICmpULE(Ops.RHS, WidthMinusOne);
 
     if (SanitizeExponent) {
       Checks.push_back(
@@ -2767,12 +2767,14 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
       llvm::BasicBlock *Cont = CGF.createBasicBlock("cont");
       llvm::BasicBlock *CheckShiftBase = CGF.createBasicBlock("check");
       Builder.CreateCondBr(ValidExponent, CheckShiftBase, Cont);
+      llvm::Value *PromotedWidthMinusOne =
+          (RHS == Ops.RHS) ? WidthMinusOne
+                           : GetWidthMinusOneValue(Ops.LHS, RHS);
       CGF.EmitBlock(CheckShiftBase);
-      llvm::Value *BitsShiftedOff =
-        Builder.CreateLShr(Ops.LHS,
-                           Builder.CreateSub(WidthMinusOne, RHS, "shl.zeros",
-                                             /*NUW*/true, /*NSW*/true),
-                           "shl.check");
+      llvm::Value *BitsShiftedOff = Builder.CreateLShr(
+          Ops.LHS, Builder.CreateSub(PromotedWidthMinusOne, RHS, "shl.zeros",
+                                     /*NUW*/ true, /*NSW*/ true),
+          "shl.check");
       if (CGF.getLangOpts().CPlusPlus) {
         // In C99, we are not permitted to shift a 1 bit into the sign bit.
         // Under C++11's rules, shifting a 1 bit into the sign bit is

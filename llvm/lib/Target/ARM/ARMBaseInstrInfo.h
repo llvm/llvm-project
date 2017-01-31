@@ -17,16 +17,21 @@
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/Support/CodeGen.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include <array>
+#include <cstdint>
 
 #define GET_INSTRINFO_HEADER
 #include "ARMGenInstrInfo.inc"
 
 namespace llvm {
-  class ARMSubtarget;
-  class ARMBaseRegisterInfo;
+
+class ARMBaseRegisterInfo;
+class ARMSubtarget;
 
 class ARMBaseInstrInfo : public ARMGenInstrInfo {
   const ARMSubtarget &Subtarget;
@@ -108,7 +113,7 @@ public:
 
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
-  virtual unsigned getUnindexedOpcode(unsigned Opc) const =0;
+  virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
   MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
                                       MachineInstr &MI,
@@ -409,13 +414,13 @@ public:
 static inline std::array<MachineOperand, 2> predOps(ARMCC::CondCodes Pred,
                                                     unsigned PredReg = 0) {
   return {{MachineOperand::CreateImm(static_cast<int64_t>(Pred)),
-           MachineOperand::CreateReg(PredReg, 0)}};
+           MachineOperand::CreateReg(PredReg, false)}};
 }
 
 /// Get the operand corresponding to the conditional code result. By default,
 /// this is 0 (no register).
 static inline MachineOperand condCodeOp(unsigned CCReg = 0) {
-  return MachineOperand::CreateReg(CCReg, 0);
+  return MachineOperand::CreateReg(CCReg, false);
 }
 
 /// Get the operand corresponding to the conditional code result for Thumb1.
@@ -522,6 +527,6 @@ bool rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                          unsigned FrameReg, int &Offset,
                          const ARMBaseInstrInfo &TII);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H

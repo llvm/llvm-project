@@ -118,3 +118,9 @@ foo2:
 @ CHECK-ERRORS: error: instruction requires: arm-mode
 @ CHECK-ERRORS: error: immediate value expected for vector index
 @ CHECK-ERRORS: error: instruction requires: arm-mode
+
+        @ SWP(B) is an ARM-only instruction
+        swp  r0, r1, [r2]
+        swpb r3, r4, [r5]
+@ CHECK-ERRORS: error: instruction requires: arm-mode
+@ CHECK-ERRORS: error: instruction requires: arm-mode

@@ -8792,8 +8792,18 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
                                        Context.getTypeDeclType(Type));
     }
 
-    // FIXME: Form a deduced template specialization type if we get a template
-    // declaration here.
+    // C++ [dcl.type.simple]p2:
+    //   A type-specifier of the form
+    //     typename[opt] nested-name-specifier[opt] template-name
+    //   is a placeholder for a deduced class type [...].
+    if (getLangOpts().CPlusPlus1z) {
+      if (auto *TD = getAsTypeTemplateDecl(Result.getFoundDecl())) {
+        return Context.getElaboratedType(
+            Keyword, QualifierLoc.getNestedNameSpecifier(),
+            Context.getDeducedTemplateSpecializationType(TemplateName(TD),
+                                                         QualType(), false));
+      }
+    }
 
     DiagID = diag::err_typename_nested_not_type;
     Referenced = Result.getFoundDecl();

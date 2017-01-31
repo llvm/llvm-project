@@ -1,0 +1,69 @@
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=regbankselect -global-isel %s -verify-machineinstrs -o - | FileCheck %s
+
+# REQUIRES: global-isel
+
+--- |
+  define void @load_constant(i32 addrspace(2)* %ptr0) { ret void }
+  define void @load_global_uniform(i32 addrspace(1)* %ptr1) {
+    %tmp0 = load i32, i32 addrspace(1)* %ptr1
+    ret void
+  }
+  define void @load_global_non_uniform(i32 addrspace(1)* %ptr2) {
+    %tmp0 = call i32 @llvm.amdgcn.workitem.id.x() #0
+    %tmp1 = getelementptr i32, i32 addrspace(1)* %ptr2, i32 %tmp0
+    %tmp2 = load i32, i32 addrspace(1)* %tmp1
+    ret void
+  }
+  declare i32 @llvm.amdgcn.workitem.id.x() #0
+  attributes #0 = { nounwind readnone }
+...
+
+---
+name : load_constant
+legalized: true
+
+# CHECK-LABEL: name: load_constant
+# CHECK: registers:
+# CHECK: - { id: 0, class: sgpr }
+# CHECK: - { id: 1, class: sgpr }
+
+body: |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+    %0:_(p2) = COPY %sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr0)
+...
+
+---
+name: load_global_uniform
+legalized: true
+
+# CHECK-LABEL: name: load_global_uniform
+# CHECK: registers:
+# CHECK: - { id: 0, class: sgpr }
+# CHECK: - { id: 1, class: sgpr }
+
+body: |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+    %0:_(p1) = COPY %sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr1)
+...
+
+---
+name: load_global_non_uniform
+legalized: true
+
+# CHECK-LABEL: name: load_global_non_uniform
+# CHECK: registers:
+# CHECK: - { id: 0, class: sgpr }
+# CHECK: - { id: 1, class: vgpr }
+# CHECK: - { id: 2, class: vgpr }
+
+
+body: |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+    %0:_(p1) = COPY %sgpr0_sgpr1
+    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.tmp1)
+...

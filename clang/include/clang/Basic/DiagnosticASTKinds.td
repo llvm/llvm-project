@@ -44,7 +44,8 @@ def note_constexpr_non_global : Note<
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
-  "%select{array of %2 elements|non-array object}1 in a constant expression">;
+  "%select{array of %2 element%plural{1:|:s}2|non-array object}1 "
+  "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<

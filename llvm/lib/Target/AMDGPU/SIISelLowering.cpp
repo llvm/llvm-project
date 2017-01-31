@@ -199,6 +199,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   setOperationAction(ISD::BR_CC, MVT::f64, Expand);
 
+  setOperationAction(ISD::UADDO, MVT::i32, Legal);
+  setOperationAction(ISD::USUBO, MVT::i32, Legal);
+
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
   for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32, MVT::v2i64, MVT::v2f64}) {
@@ -2803,6 +2806,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::SETCC, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), DAG.getCondCode(CCOpcode));
   }
+  case Intrinsic::amdgcn_fmed3:
+    return DAG.getNode(AMDGPUISD::FMED3, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
                        Op.getOperand(1), Op.getOperand(2));

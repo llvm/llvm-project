@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7a--none-eabi"
 
 ; CHECK-LABEL: test_vec3:
-; CHECK-DAG: vcvtb.f32.f16 [[SREG1:s[0-9]+]],
+; CHECK-DAG: vmov.f32 [[SREG1:s[0-9]+]], #1.200000e+01
 ; CHECK-DAG: vcvt.f32.s32 [[SREG2:s[0-9]+]],
 ; CHECK-DAG: vcvtb.f16.f32 [[SREG3:s[0-9]+]], [[SREG2]]
 ; CHECK-DAG: vcvtb.f32.f16 [[SREG4:s[0-9]+]], [[SREG3]]

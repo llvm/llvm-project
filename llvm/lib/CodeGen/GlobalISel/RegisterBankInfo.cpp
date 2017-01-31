@@ -63,15 +63,6 @@ RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
 #endif // NDEBUG
 }
 
-RegisterBankInfo::~RegisterBankInfo() {
-  for (auto It : MapOfPartialMappings)
-    delete It.second;
-  for (auto It : MapOfValueMappings)
-    delete It.second;
-  for (auto It : MapOfOperandsMappings)
-    delete[] It.second;
-}
-
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
@@ -236,8 +227,8 @@ RegisterBankInfo::getPartialMapping(unsigned StartIdx, unsigned Length,
 
   ++NumPartialMappingsCreated;
 
-  const PartialMapping *&PartMapping = MapOfPartialMappings[Hash];
-  PartMapping = new PartialMapping{StartIdx, Length, RegBank};
+  auto &PartMapping = MapOfPartialMappings[Hash];
+  PartMapping = llvm::make_unique<PartialMapping>(StartIdx, Length, RegBank);
   return *PartMapping;
 }
 
@@ -270,8 +261,8 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
 
   ++NumValueMappingsCreated;
 
-  const ValueMapping *&ValMapping = MapOfValueMappings[Hash];
-  ValMapping = new ValueMapping{BreakDown, NumBreakDowns};
+  auto &ValMapping = MapOfValueMappings[Hash];
+  ValMapping = llvm::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
   return *ValMapping;
 }
 
@@ -284,9 +275,9 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
   // The addresses of the value mapping are unique.
   // Therefore, we can use them directly to hash the operand mapping.
   hash_code Hash = hash_combine_range(Begin, End);
-  const auto &It = MapOfOperandsMappings.find(Hash);
-  if (It != MapOfOperandsMappings.end())
-    return It->second;
+  auto &Res = MapOfOperandsMappings[Hash];
+  if (Res)
+    return Res.get();
 
   ++NumOperandsMappingsCreated;
 
@@ -295,8 +286,7 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
   // mapping, because we use the pointer of the ValueMapping
   // to hash and we expect them to uniquely identify an instance
   // of value mapping.
-  ValueMapping *&Res = MapOfOperandsMappings[Hash];
-  Res = new ValueMapping[std::distance(Begin, End)];
+  Res = llvm::make_unique<ValueMapping[]>(std::distance(Begin, End));
   unsigned Idx = 0;
   for (Iterator It = Begin; It != End; ++It, ++Idx) {
     const ValueMapping *ValMap = *It;
@@ -304,7 +294,7 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
       continue;
     Res[Idx] = *ValMap;
   }
-  return Res;
+  return Res.get();
 }
 
 const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(

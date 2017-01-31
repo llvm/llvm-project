@@ -26,6 +26,12 @@ RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 RUN:   | FileCheck %s -check-prefix COFF-IMPORTLIB
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-lanai \
 RUN:   | FileCheck %s -check-prefix ELF-LANAI
+# trivial.obj.wasm was generated using wast2wasm which is part of the wabt
+# project (https://github.com/WebAssembly/wabt) using the following command:
+# $ wast2wasm --debug-names ./test/roundtrip/generate-some-names.txt -o \
+#   trivial.obj.wasm
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.wasm \
+RUN:   | FileCheck %s -check-prefix WASM
 
 COFF-ARM:      File: {{(.*[/\\])?}}trivial.obj.coff-arm
 COFF-ARM-NEXT: Format: COFF-ARM
@@ -367,3 +373,8 @@ ELF-LANAI-NEXT:   SectionHeaderEntrySize: 40
 ELF-LANAI-NEXT:   SectionHeaderCount: 8
 ELF-LANAI-NEXT:   StringTableSectionIndex: 1
 ELF-LANAI-NEXT: }
+
+WASM: Format: WASM
+WASM-NEXT: Arch: wasm32
+WASM-NEXT: AddressSize: 32bit
+WASM-NEXT: Version: 0xD

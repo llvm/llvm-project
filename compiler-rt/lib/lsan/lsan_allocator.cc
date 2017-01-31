@@ -28,12 +28,21 @@ namespace __lsan {
 struct ChunkMetadata {
   u8 allocated : 8;  // Must be first.
   ChunkTag tag : 2;
+#if SANITIZER_WORDSIZE == 64
   uptr requested_size : 54;
+#else
+  uptr requested_size : 32;
+  uptr padding : 22;
+#endif
   u32 stack_trace_id;
 };
 
-#if defined(__mips64) || defined(__aarch64__)
+#if defined(__mips64) || defined(__aarch64__) || defined(__i386__)
+#if defined(__i386__)
+static const uptr kMaxAllowedMallocSize = 1UL << 30;
+#else
 static const uptr kMaxAllowedMallocSize = 4UL << 30;
+#endif
 static const uptr kRegionSizeLog = 20;
 static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
 typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;

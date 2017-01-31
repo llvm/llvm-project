@@ -56,11 +56,6 @@ void _free_base(void *ptr) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
-void cfree(void *ptr) {
-  CHECK(!"cfree() should not be used on Windows");
-}
-
-ALLOCATION_FUNCTION_ATTRIBUTE
 void *malloc(size_t size) {
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);

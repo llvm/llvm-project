@@ -7,16 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsBaseInfo.h"
-#include "MipsInstrInfo.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 
 using namespace llvm;
 
@@ -24,7 +23,7 @@ static cl::opt<bool>
 FixGlobalBaseReg("mips-fix-global-base-reg", cl::Hidden, cl::init(true),
                  cl::desc("Always use $gp as the global base register."));
 
-MipsFunctionInfo::~MipsFunctionInfo() {}
+MipsFunctionInfo::~MipsFunctionInfo() = default;
 
 bool MipsFunctionInfo::globalBaseRegSet() const {
   return GlobalBaseReg;
@@ -101,4 +100,4 @@ int MipsFunctionInfo::getMoveF64ViaSpillFI(const TargetRegisterClass *RC) {
   return MoveF64ViaSpillFI;
 }
 
-void MipsFunctionInfo::anchor() { }
+void MipsFunctionInfo::anchor() {}

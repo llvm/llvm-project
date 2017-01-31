@@ -22,8 +22,18 @@
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
+// LeakSanitizer relies on some Glibc's internals (e.g. TLS machinery) thus
+// supported for Linux only. Also, LSan doesn't like 32 bit architectures
+// because of "small" (4 bytes) pointer size that leads to high false negative
+// ratio on large leaks. But we still want to have it for some 32 bit arches
+// (e.g. x86), see https://github.com/google/sanitizers/issues/403.
+// To enable LeakSanitizer on new architecture, one need to implement
+// internal_clone function as well as (probably) adjust TLS machinery for
+// new architecture inside sanitizer library.
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID) && (SANITIZER_WORDSIZE == 64) \
      && (defined(__x86_64__) ||  defined(__mips64) ||  defined(__aarch64__))
+#define CAN_SANITIZE_LEAKS 1
+#elif SANITIZER_LINUX && !SANITIZER_ANDROID && defined(__i386__)
 #define CAN_SANITIZE_LEAKS 1
 #else
 #define CAN_SANITIZE_LEAKS 0

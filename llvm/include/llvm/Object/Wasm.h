@@ -87,8 +87,8 @@ protected:
 
 private:
   const uint8_t *getPtr(size_t Offset) const;
-  Error parseUserSection(wasm::WasmSection &Sec, const uint8_t *Ptr,
-                         size_t Length);
+  Error parseCustomSection(wasm::WasmSection &Sec, const uint8_t *Ptr,
+                           size_t Length);
 
   wasm::WasmObjectHeader Header;
   std::vector<wasm::WasmSection> Sections;

@@ -158,8 +158,9 @@ struct MemAccessTy {
 
   bool operator!=(MemAccessTy Other) const { return !(*this == Other); }
 
-  static MemAccessTy getUnknown(LLVMContext &Ctx) {
-    return MemAccessTy(Type::getVoidTy(Ctx), UnknownAddressSpace);
+  static MemAccessTy getUnknown(LLVMContext &Ctx,
+                                unsigned AS = UnknownAddressSpace) {
+    return MemAccessTy(Type::getVoidTy(Ctx), AS);
   }
 };
 
@@ -2284,8 +2285,10 @@ bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
   // TODO: Be less conservative when the type is similar and can use the same
   // addressing modes.
   if (Kind == LSRUse::Address) {
-    if (AccessTy != LU.AccessTy)
-      NewAccessTy = MemAccessTy::getUnknown(AccessTy.MemTy->getContext());
+    if (AccessTy.MemTy != LU.AccessTy.MemTy) {
+      NewAccessTy = MemAccessTy::getUnknown(AccessTy.MemTy->getContext(),
+                                            AccessTy.AddrSpace);
+    }
   }
 
   // Conservatively assume HasBaseReg is true for now.
