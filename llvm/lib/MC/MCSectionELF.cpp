@@ -53,7 +53,7 @@ static void printName(raw_ostream &OS, StringRef Name) {
   OS << '"';
 }
 
-void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI,
+void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                         raw_ostream &OS,
                                         const MCExpr *Subsection) const {
 
@@ -106,12 +106,17 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI,
     OS << 'T';
 
   // If there are target-specific flags, print them.
-  if (Flags & ELF::XCORE_SHF_CP_SECTION)
-    OS << 'c';
-  if (Flags & ELF::XCORE_SHF_DP_SECTION)
-    OS << 'd';
-  if (Flags & ELF::SHF_ARM_PURECODE)
-    OS << 'y';
+  Triple::ArchType Arch = T.getArch();
+  if (Arch == Triple::xcore) {
+    if (Flags & ELF::XCORE_SHF_CP_SECTION)
+      OS << 'c';
+    if (Flags & ELF::XCORE_SHF_DP_SECTION)
+      OS << 'd';
+  } else if (Arch == Triple::arm || Arch == Triple::armeb ||
+             Arch == Triple::thumb || Arch == Triple::thumbeb) {
+    if (Flags & ELF::SHF_ARM_PURECODE)
+      OS << 'y';
+  }
 
   OS << '"';
 

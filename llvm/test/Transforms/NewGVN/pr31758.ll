@@ -15,7 +15,8 @@ define void @tinkywinky() {
 ; CHECK-NEXT:    [[TMP136:%.*]] = load %struct.patatino*, %struct.patatino** [[TMP91]], align 8
 ; CHECK-NEXT:    br label [[BB90]]
 ; CHECK:       bb138:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    br label [[BB138:%.*]]
 ;
 bb:
   br label %bb90

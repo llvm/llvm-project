@@ -1635,11 +1635,8 @@ public:
   /// reader.
   unsigned getTotalNumPreprocessedEntities() const {
     unsigned Result = 0;
-    for (ModuleConstIterator I = ModuleMgr.begin(),
-        E = ModuleMgr.end(); I != E; ++I) {
-      Result += I->NumPreprocessedEntities;
-    }
-
+    for (const auto &M : ModuleMgr)
+      Result += M.NumPreprocessedEntities;
     return Result;
   }
 

@@ -270,9 +270,7 @@ static uptr TlsPreTcbSize() {
 # endif
   const uptr kTlsAlign = 16;
   const uptr kTlsPreTcbSize =
-    (ThreadDescriptorSize() + kTcbHead + kTlsAlign - 1) & ~(kTlsAlign - 1);
-  InitTlsSize();
-  g_tls_size = (g_tls_size + kTlsPreTcbSize + kTlsAlign -1) & ~(kTlsAlign - 1);
+      RoundUpTo(ThreadDescriptorSize() + kTcbHead, kTlsAlign);
   return kTlsPreTcbSize;
 }
 #endif
@@ -379,6 +377,8 @@ uptr GetTlsSize() {
   uptr addr, size;
   GetTls(&addr, &size);
   return size;
+#elif defined(__mips__) || defined(__powerpc64__)
+  return RoundUpTo(g_tls_size + TlsPreTcbSize(), 16);
 #else
   return g_tls_size;
 #endif

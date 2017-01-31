@@ -25,64 +25,60 @@ operator()(const Change &C1, const Change &C2) const {
       C2.OriginalWhitespaceRange.getBegin());
 }
 
-WhitespaceManager::Change::Change(
-    bool CreateReplacement, SourceRange OriginalWhitespaceRange,
-    unsigned IndentLevel, int Spaces, unsigned StartOfTokenColumn,
-    unsigned NewlinesBefore, StringRef PreviousLinePostfix,
-    StringRef CurrentLinePrefix, tok::TokenKind Kind, bool ContinuesPPDirective,
-    bool IsStartOfDeclName, bool IsInsideToken)
-    : CreateReplacement(CreateReplacement),
+WhitespaceManager::Change::Change(const FormatToken &Tok,
+                                  bool CreateReplacement,
+                                  SourceRange OriginalWhitespaceRange,
+                                  int Spaces, unsigned StartOfTokenColumn,
+                                  unsigned NewlinesBefore,
+                                  StringRef PreviousLinePostfix,
+                                  StringRef CurrentLinePrefix,
+                                  bool ContinuesPPDirective, bool IsInsideToken)
+    : Tok(&Tok), CreateReplacement(CreateReplacement),
       OriginalWhitespaceRange(OriginalWhitespaceRange),
       StartOfTokenColumn(StartOfTokenColumn), NewlinesBefore(NewlinesBefore),
       PreviousLinePostfix(PreviousLinePostfix),
-      CurrentLinePrefix(CurrentLinePrefix), Kind(Kind),
-      ContinuesPPDirective(ContinuesPPDirective),
-      IsStartOfDeclName(IsStartOfDeclName), IndentLevel(IndentLevel),
-      Spaces(Spaces), IsInsideToken(IsInsideToken), IsTrailingComment(false),
-      TokenLength(0), PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
+      CurrentLinePrefix(CurrentLinePrefix),
+      ContinuesPPDirective(ContinuesPPDirective), Spaces(Spaces),
+      IsInsideToken(IsInsideToken), IsTrailingComment(false), TokenLength(0),
+      PreviousEndOfTokenColumn(0), EscapedNewlineColumn(0),
       StartOfBlockComment(nullptr), IndentationOffset(0) {}
 
 void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
-                                          unsigned IndentLevel, unsigned Spaces,
+                                          unsigned Spaces,
                                           unsigned StartOfTokenColumn,
                                           bool InPPDirective) {
   if (Tok.Finalized)
     return;
   Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
-  Changes.push_back(
-      Change(/*CreateReplacement=*/true, Tok.WhitespaceRange, IndentLevel,
-             Spaces, StartOfTokenColumn, Newlines, "", "", Tok.Tok.getKind(),
-             InPPDirective && !Tok.IsFirst,
-             Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
-             /*IsInsideToken=*/false));
+  Changes.push_back(Change(Tok, /*CreateReplacement=*/true,
+                           Tok.WhitespaceRange, Spaces, StartOfTokenColumn,
+                           Newlines, "", "", InPPDirective && !Tok.IsFirst,
+                           /*IsInsideToken=*/false));
 }
 
 void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
                                             bool InPPDirective) {
   if (Tok.Finalized)
     return;
-  Changes.push_back(Change(
-      /*CreateReplacement=*/false, Tok.WhitespaceRange, /*IndentLevel=*/0,
-      /*Spaces=*/0, Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
-      Tok.Tok.getKind(), InPPDirective && !Tok.IsFirst,
-      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
-      /*IsInsideToken=*/false));
+  Changes.push_back(Change(Tok, /*CreateReplacement=*/false,
+                           Tok.WhitespaceRange, /*Spaces=*/0,
+                           Tok.OriginalColumn, Tok.NewlinesBefore, "", "",
+                           InPPDirective && !Tok.IsFirst,
+                           /*IsInsideToken=*/false));
 }
 
 void WhitespaceManager::replaceWhitespaceInToken(
     const FormatToken &Tok, unsigned Offset, unsigned ReplaceChars,
     StringRef PreviousPostfix, StringRef CurrentPrefix, bool InPPDirective,
-    unsigned Newlines, unsigned IndentLevel, int Spaces) {
+    unsigned Newlines, int Spaces) {
   if (Tok.Finalized)
     return;
   SourceLocation Start = Tok.getStartOfNonWhitespace().getLocWithOffset(Offset);
-  Changes.push_back(Change(
-      true, SourceRange(Start, Start.getLocWithOffset(ReplaceChars)),
-      IndentLevel, Spaces, std::max(0, Spaces), Newlines, PreviousPostfix,
-      CurrentPrefix, Tok.is(TT_LineComment) ? tok::comment : tok::unknown,
-      InPPDirective && !Tok.IsFirst,
-      Tok.is(TT_StartOfName) || Tok.is(TT_FunctionDeclarationName),
-      /*IsInsideToken=*/Newlines == 0));
+  Changes.push_back(
+      Change(Tok, /*CreateReplacement=*/true,
+             SourceRange(Start, Start.getLocWithOffset(ReplaceChars)), Spaces,
+             std::max(0, Spaces), Newlines, PreviousPostfix, CurrentPrefix,
+             InPPDirective && !Tok.IsFirst, /*IsInsideToken=*/true));
 }
 
 const tooling::Replacements &WhitespaceManager::generateReplacements() {
@@ -125,9 +121,9 @@ void WhitespaceManager::calculateLineBreakInformation() {
         Changes[i - 1].StartOfTokenColumn + Changes[i - 1].TokenLength;
 
     Changes[i - 1].IsTrailingComment =
-        (Changes[i].NewlinesBefore > 0 || Changes[i].Kind == tok::eof ||
-         (Changes[i].IsInsideToken && Changes[i].Kind == tok::comment)) &&
-        Changes[i - 1].Kind == tok::comment &&
+        (Changes[i].NewlinesBefore > 0 || Changes[i].Tok->is(tok::eof) ||
+         (Changes[i].IsInsideToken && Changes[i].Tok->is(tok::comment))) &&
+        Changes[i - 1].Tok->is(tok::comment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
@@ -163,7 +159,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
   // FIXME: The last token is currently not always an eof token; in those
   // cases, setting TokenLength of the last token to 0 is wrong.
   Changes.back().TokenLength = 0;
-  Changes.back().IsTrailingComment = Changes.back().Kind == tok::comment;
+  Changes.back().IsTrailingComment = Changes.back().Tok->is(tok::comment);
 
   const WhitespaceManager::Change *LastBlockComment = nullptr;
   for (auto &Change : Changes) {
@@ -173,13 +169,15 @@ void WhitespaceManager::calculateLineBreakInformation() {
       Change.IsTrailingComment = false;
     Change.StartOfBlockComment = nullptr;
     Change.IndentationOffset = 0;
-    if (Change.Kind == tok::comment) {
-      LastBlockComment = &Change;
-    } else if (Change.Kind == tok::unknown) {
-      if ((Change.StartOfBlockComment = LastBlockComment))
-        Change.IndentationOffset =
-            Change.StartOfTokenColumn -
-            Change.StartOfBlockComment->StartOfTokenColumn;
+    if (Change.Tok->is(tok::comment)) {
+      if (Change.Tok->is(TT_LineComment) || !Change.IsInsideToken)
+        LastBlockComment = &Change;
+      else {
+        if ((Change.StartOfBlockComment = LastBlockComment))
+          Change.IndentationOffset =
+              Change.StartOfTokenColumn -
+              Change.StartOfBlockComment->StartOfTokenColumn;
+      }
     } else {
       LastBlockComment = nullptr;
     }
@@ -278,15 +276,13 @@ static void AlignTokens(const FormatStyle &Style, F &&Matches,
       FoundMatchOnLine = false;
     }
 
-    if (Changes[i].Kind == tok::comma) {
+    if (Changes[i].Tok->is(tok::comma)) {
       ++CommasBeforeMatch;
-    } else if (Changes[i].Kind == tok::r_brace ||
-               Changes[i].Kind == tok::r_paren ||
-               Changes[i].Kind == tok::r_square) {
+    } else if (Changes[i].Tok->isOneOf(tok::r_brace, tok::r_paren,
+                                       tok::r_square)) {
       --NestingLevel;
-    } else if (Changes[i].Kind == tok::l_brace ||
-               Changes[i].Kind == tok::l_paren ||
-               Changes[i].Kind == tok::l_square) {
+    } else if (Changes[i].Tok->isOneOf(tok::l_brace, tok::l_paren,
+                                       tok::l_square)) {
       // We want sequences to skip over child scopes if possible, but not the
       // other way around.
       NestingLevelOfLastMatch = std::min(NestingLevelOfLastMatch, NestingLevel);
@@ -345,7 +341,7 @@ void WhitespaceManager::alignConsecutiveAssignments() {
                 if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
                   return false;
 
-                return C.Kind == tok::equal;
+                return C.Tok->is(tok::equal);
               },
               Changes);
 }
@@ -361,7 +357,11 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   //   float const* v2;
   //   SomeVeryLongType const& v3;
 
-  AlignTokens(Style, [](Change const &C) { return C.IsStartOfDeclName; },
+  AlignTokens(Style,
+              [](Change const &C) {
+                return C.Tok->isOneOf(TT_StartOfName,
+                                      TT_FunctionDeclarationName);
+              },
               Changes);
 }
 
@@ -391,17 +391,14 @@ void WhitespaceManager::alignTrailingComments() {
     // If this comment follows an } in column 0, it probably documents the
     // closing of a namespace and we don't want to align it.
     bool FollowsRBraceInColumn0 = i > 0 && Changes[i].NewlinesBefore == 0 &&
-                                  Changes[i - 1].Kind == tok::r_brace &&
+                                  Changes[i - 1].Tok->is(tok::r_brace) &&
                                   Changes[i - 1].StartOfTokenColumn == 0;
     bool WasAlignedWithStartOfNextLine = false;
     if (Changes[i].NewlinesBefore == 1) { // A comment on its own line.
       unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
           Changes[i].OriginalWhitespaceRange.getEnd());
       for (unsigned j = i + 1; j != e; ++j) {
-        if (Changes[j].Kind == tok::comment ||
-            Changes[j].Kind == tok::unknown)
-          // Skip over comments and unknown tokens. "unknown tokens are used for
-          // the continuation of multiline comments.
+        if (Changes[j].Tok->is(tok::comment))
           continue;
 
         unsigned NextColumn = SourceMgr.getSpellingColumnNumber(
@@ -512,7 +509,8 @@ void WhitespaceManager::generateChanges() {
                           C.PreviousEndOfTokenColumn, C.EscapedNewlineColumn);
       else
         appendNewlineText(ReplacementText, C.NewlinesBefore);
-      appendIndentText(ReplacementText, C.IndentLevel, std::max(0, C.Spaces),
+      appendIndentText(ReplacementText, C.Tok->IndentLevel,
+                       std::max(0, C.Spaces),
                        C.StartOfTokenColumn - std::max(0, C.Spaces));
       ReplacementText.append(C.CurrentLinePrefix);
       storeReplacement(C.OriginalWhitespaceRange, ReplacementText);

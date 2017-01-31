@@ -10,20 +10,38 @@
 #include "ARM.h"
 #include "ARMBaseInstrInfo.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
+#include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h" // To access Function attributes
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <iterator>
 #include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "t2-reduce-size"
@@ -40,6 +58,7 @@ static cl::opt<int> ReduceLimitLdSt("t2-reduce-limit3",
                                      cl::init(-1), cl::Hidden);
 
 namespace {
+
   /// ReduceTable - A static table with information on mapping from wide
   /// opcodes to narrow
   struct ReduceEntry {
@@ -139,10 +158,11 @@ namespace {
   class Thumb2SizeReduce : public MachineFunctionPass {
   public:
     static char ID;
-    Thumb2SizeReduce(std::function<bool(const Function &)> Ftor);
 
     const Thumb2InstrInfo *TII;
     const ARMSubtarget *STI;
+
+    Thumb2SizeReduce(std::function<bool(const Function &)> Ftor);
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -201,19 +221,21 @@ namespace {
 
     struct MBBInfo {
       // The flags leaving this block have high latency.
-      bool HighLatencyCPSR;
+      bool HighLatencyCPSR = false;
       // Has this block been visited yet?
-      bool Visited;
+      bool Visited = false;
 
-      MBBInfo() : HighLatencyCPSR(false), Visited(false) {}
+      MBBInfo() = default;
     };
 
     SmallVector<MBBInfo, 8> BlockInfo;
 
     std::function<bool(const Function &)> PredicateFtor;
   };
+
   char Thumb2SizeReduce::ID = 0;
-}
+
+} // end anonymous namespace
 
 Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
     : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
@@ -490,14 +512,13 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     isLdStMul = true;
     break;
   }
-  case ARM::t2STMIA: {
+  case ARM::t2STMIA:
     // If the base register is killed, we don't care what its value is after the
     // instruction, so we can use an updating STMIA.
     if (!MI->getOperand(0).isKill())
       return false;
 
     break;
-  }
   case ARM::t2LDMIA_RET: {
     unsigned BaseReg = MI->getOperand(1).getReg();
     if (BaseReg != ARM::SP)
@@ -653,11 +674,10 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
     if (getInstrPredicate(*MI, PredReg) == ARMCC::AL) {
       switch (Opc) {
       default: break;
-      case ARM::t2ADDSri: {
+      case ARM::t2ADDSri:
         if (ReduceTo2Addr(MBB, MI, Entry, LiveCPSR, IsSelfLoop))
           return true;
         LLVM_FALLTHROUGH;
-      }
       case ARM::t2ADDSrr:
         return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
       }
@@ -699,7 +719,6 @@ bool
 Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
                                 const ReduceEntry &Entry,
                                 bool LiveCPSR, bool IsSelfLoop) {
-
   if (ReduceLimit2Addr != -1 && ((int)Num2Addrs >= ReduceLimit2Addr))
     return false;
 

@@ -80,7 +80,7 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
   State.Column = FirstIndent;
   State.Line = Line;
   State.NextToken = Line->First;
-  State.Stack.push_back(ParenState(FirstIndent, Line->Level, FirstIndent,
+  State.Stack.push_back(ParenState(FirstIndent, FirstIndent,
                                    /*AvoidBinPacking=*/false,
                                    /*NoLineBreak=*/false));
   State.LineContainsContinuedForLoopSection = false;
@@ -347,8 +347,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   unsigned Spaces = Current.SpacesRequiredBefore + ExtraSpaces;
 
   if (!DryRun)
-    Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, /*IndentLevel=*/0,
-                                  Spaces, State.Column + Spaces);
+    Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
+                                  State.Column + Spaces);
 
   if (Current.is(TT_SelectorName) &&
       !State.Stack.back().ObjCSelectorNameFound) {
@@ -574,9 +574,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   if (!DryRun) {
     unsigned Newlines = std::max(
         1u, std::min(Current.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1));
-    Whitespaces.replaceWhitespace(Current, Newlines,
-                                  State.Stack.back().IndentLevel, State.Column,
-                                  State.Column, State.Line->InPPDirective);
+    Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
+                                  State.Line->InPPDirective);
   }
 
   if (!Current.isTrailingComment())
@@ -953,7 +952,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   }
 
   unsigned NewIndent;
-  unsigned NewIndentLevel = State.Stack.back().IndentLevel;
   unsigned LastSpace = State.Stack.back().LastSpace;
   bool AvoidBinPacking;
   bool BreakBeforeParameter = false;
@@ -963,7 +961,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.opensBlockOrBlockTypeList(Style)) {
       NewIndent = State.Stack.back().NestedBlockIndent + Style.IndentWidth;
       NewIndent = std::min(State.Column + 2, NewIndent);
-      ++NewIndentLevel;
     } else {
       NewIndent = State.Stack.back().LastSpace + Style.ContinuationIndentWidth;
     }
@@ -1032,8 +1029,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
        State.Stack.back().NoLineBreakInOperand ||
        (Current.is(TT_TemplateOpener) &&
         State.Stack.back().ContainsUnwrappedBuilder));
-  State.Stack.push_back(ParenState(NewIndent, NewIndentLevel, LastSpace,
-                                   AvoidBinPacking, NoLineBreak));
+  State.Stack.push_back(
+      ParenState(NewIndent, LastSpace, AvoidBinPacking, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = BreakBeforeParameter;
   State.Stack.back().HasMultipleNestedBlocks = Current.BlockParameterCount > 1;
@@ -1067,10 +1064,9 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
       NestedBlockIndent + (State.NextToken->is(TT_ObjCBlockLBrace)
                                ? Style.ObjCBlockIndentWidth
                                : Style.IndentWidth);
-  State.Stack.push_back(ParenState(
-      NewIndent, /*NewIndentLevel=*/State.Stack.back().IndentLevel + 1,
-      State.Stack.back().LastSpace, /*AvoidBinPacking=*/true,
-      /*NoLineBreak=*/false));
+  State.Stack.push_back(ParenState(NewIndent, State.Stack.back().LastSpace,
+                                   /*AvoidBinPacking=*/true,
+                                   /*NoLineBreak=*/false));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = true;
 }
@@ -1153,9 +1149,9 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||
         (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
-      Token.reset(new BreakableStringLiteral(
-          Current, State.Line->Level, StartColumn, Prefix, Postfix,
-          State.Line->InPPDirective, Encoding, Style));
+      Token.reset(new BreakableStringLiteral(Current, StartColumn, Prefix,
+                                             Postfix, State.Line->InPPDirective,
+                                             Encoding, Style));
     } else {
       return 0;
     }
@@ -1168,8 +1164,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
         switchesFormatting(Current))
       return addMultilineToken(Current, State);
     Token.reset(new BreakableBlockComment(
-        Current, State.Line->Level, StartColumn, Current.OriginalColumn,
-        !Current.Previous, State.Line->InPPDirective, Encoding, Style));
+        Current, StartColumn, Current.OriginalColumn, !Current.Previous,
+        State.Line->InPPDirective, Encoding, Style));
   } else if (Current.is(TT_LineComment) &&
              (Current.Previous == nullptr ||
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
@@ -1178,8 +1174,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
         switchesFormatting(Current))
       return 0;
     Token.reset(new BreakableLineCommentSection(
-        Current, State.Line->Level, StartColumn, Current.OriginalColumn,
-        !Current.Previous,
+        Current, StartColumn, Current.OriginalColumn, !Current.Previous,
         /*InPPDirective=*/false, Encoding, Style));
     // We don't insert backslashes when breaking line comments.
     ColumnLimit = Style.ColumnLimit;

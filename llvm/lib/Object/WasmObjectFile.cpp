@@ -83,16 +83,17 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
   while (Ptr < Eof) {
     if ((Err = readSection(Sec, Ptr, getPtr(0))))
       return;
-    if (Sec.Type == wasm::WASM_SEC_USER) {
-      if ((Err = parseUserSection(Sec, Sec.Content.data(), Sec.Content.size())))
+    if (Sec.Type == wasm::WASM_SEC_CUSTOM) {
+      if ((Err =
+               parseCustomSection(Sec, Sec.Content.data(), Sec.Content.size())))
         return;
     }
     Sections.push_back(Sec);
   }
 }
 
-Error WasmObjectFile::parseUserSection(wasm::WasmSection &Sec,
-                                       const uint8_t *Ptr, size_t Length) {
+Error WasmObjectFile::parseCustomSection(wasm::WasmSection &Sec,
+                                         const uint8_t *Ptr, size_t Length) {
   Sec.Name = readString(Ptr);
   return Error::success();
 }
@@ -186,7 +187,7 @@ std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
     ECase(ELEM);
     ECase(CODE);
     ECase(DATA);
-  case wasm::WASM_SEC_USER:
+  case wasm::WASM_SEC_CUSTOM:
     Res = S.Name;
     break;
   default:

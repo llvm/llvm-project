@@ -621,8 +621,7 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     }
 
     NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-    Value = DAG.getNode(ISD::BUILD_VECTOR, dl,
-                        Op.getNode()->getValueType(0), Vals);
+    Value = DAG.getBuildVector(Op.getNode()->getValueType(0), dl, Vals);
   } else {
     SDValue Scalarized = TLI.scalarizeVectorLoad(LD, DAG);
 
@@ -720,8 +719,6 @@ SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
   assert(VT.isVector() && !Mask.getValueType().isVector()
          && Op1.getValueType() == Op2.getValueType() && "Invalid type");
 
-  unsigned NumElem = VT.getVectorNumElements();
-
   // If we can't even use the basic vector operations of
   // AND,OR,XOR, we will have to scalarize the op.
   // Notice that the operation may be 'promoted' which means that it is
@@ -745,8 +742,7 @@ SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
           DAG.getConstant(0, DL, BitTy));
 
   // Broadcast the mask so that the entire vector is all-one or all zero.
-  SmallVector<SDValue, 8> Ops(NumElem, Mask);
-  Mask = DAG.getNode(ISD::BUILD_VECTOR, DL, MaskTy, Ops);
+  Mask = DAG.getSplatBuildVector(MaskTy, DL, Mask);
 
   // Bitcast the operands to be the same type as the mask.
   // This is needed when we select between FP types because
@@ -1102,7 +1098,7 @@ SDValue VectorLegalizer::UnrollVSETCC(SDValue Op) {
                                            (EltVT.getSizeInBits()), dl, EltVT),
                            DAG.getConstant(0, dl, EltVT));
   }
-  return DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
+  return DAG.getBuildVector(VT, dl, Ops);
 }
 
 }

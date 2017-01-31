@@ -553,6 +553,9 @@
 # CHECK-BE: vor 2, 3, 4                     # encoding: [0x10,0x43,0x24,0x84]
 # CHECK-LE: vor 2, 3, 4                     # encoding: [0x84,0x24,0x43,0x10]
             vor 2, 3, 4
+# CHECK-BE: vmr 2, 3                        # encoding: [0x10,0x43,0x1c,0x84]
+# CHECK-LE: vmr 2, 3                        # encoding: [0x84,0x1c,0x43,0x10]
+            vmr 2, 3
 # CHECK-BE: vxor 2, 3, 4                    # encoding: [0x10,0x43,0x24,0xc4]
 # CHECK-LE: vxor 2, 3, 4                    # encoding: [0xc4,0x24,0x43,0x10]
             vxor 2, 3, 4

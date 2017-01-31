@@ -28,6 +28,40 @@ entry:
   ret <4 x i64> %vecinit6.i
 }
 
+define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: A2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%ecx), %edx
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    movl %ecx, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
+; X32-NEXT:    vmovd %edx, %xmm0
+; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: A2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    vmovq %rax, %xmm0
+; X64-NEXT:    movq %rax, (%rsi)
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load i64, i64* %ptr, align 8
+  store i64 %q, i64* %ptr2, align 8 ; to create a chain to prevent broadcast
+  %vecinit.i = insertelement <4 x i64> undef, i64 %q, i32 0
+  %vecinit2.i = insertelement <4 x i64> %vecinit.i, i64 %q, i32 1
+  %vecinit4.i = insertelement <4 x i64> %vecinit2.i, i64 %q, i32 2
+  %vecinit6.i = insertelement <4 x i64> %vecinit4.i, i64 %q, i32 3
+  ret <4 x i64> %vecinit6.i
+}
+
 define <8 x i32> @B(i32* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: B:
 ; X32:       ## BB#0: ## %entry
@@ -48,6 +82,64 @@ entry:
   ret <8 x i32> %vecinit6.i
 }
 
+define <8 x i32> @B2(i32* %ptr) nounwind uwtable readnone ssp {
+; X32-LABEL: B2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vbroadcastss (%eax), %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: B2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load i32, i32* %ptr, align 4
+  %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
+  %vecinit2.i = insertelement <8 x i32> %vecinit.i, i32 %q, i32 1
+  %vecinit4.i = insertelement <8 x i32> %vecinit2.i, i32 %q, i32 2
+  %vecinit6.i = insertelement <8 x i32> %vecinit4.i, i32 %q, i32 3
+  %vecinit8.i = insertelement <8 x i32> %vecinit6.i, i32 %q, i32 4
+  %vecinit10.i = insertelement <8 x i32> %vecinit8.i, i32 %q, i32 5
+  %vecinit12.i = insertelement <8 x i32> %vecinit10.i, i32 %q, i32 6
+  %vecinit14.i = insertelement <8 x i32> %vecinit12.i, i32 %q, i32 7
+  ret <8 x i32> %vecinit14.i
+}
+
+define <8 x i32> @B3(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: B3:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%ecx), %ecx
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: B3:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load i32, i32* %ptr, align 4
+  store i32 %q, i32* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %vecinit.i = insertelement <8 x i32> undef, i32 %q, i32 0
+  %vecinit2.i = insertelement <8 x i32> %vecinit.i, i32 %q, i32 1
+  %vecinit4.i = insertelement <8 x i32> %vecinit2.i, i32 %q, i32 2
+  %vecinit6.i = insertelement <8 x i32> %vecinit4.i, i32 %q, i32 3
+  %vecinit8.i = insertelement <8 x i32> %vecinit6.i, i32 %q, i32 4
+  %vecinit10.i = insertelement <8 x i32> %vecinit8.i, i32 %q, i32 5
+  %vecinit12.i = insertelement <8 x i32> %vecinit10.i, i32 %q, i32 6
+  %vecinit14.i = insertelement <8 x i32> %vecinit12.i, i32 %q, i32 7
+  ret <8 x i32> %vecinit14.i
+}
+
 define <4 x double> @C(double* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: C:
 ; X32:       ## BB#0: ## %entry
@@ -61,6 +153,34 @@ define <4 x double> @C(double* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    retq
 entry:
   %q = load double, double* %ptr, align 8
+  %vecinit.i = insertelement <4 x double> undef, double %q, i32 0
+  %vecinit2.i = insertelement <4 x double> %vecinit.i, double %q, i32 1
+  %vecinit4.i = insertelement <4 x double> %vecinit2.i, double %q, i32 2
+  %vecinit6.i = insertelement <4 x double> %vecinit4.i, double %q, i32 3
+  ret <4 x double> %vecinit6.i
+}
+
+define <4 x double> @C2(double* %ptr, double* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: C2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovsd %xmm0, (%eax)
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: C2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd %xmm0, (%rsi)
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load double, double* %ptr, align 8
+  store double %q, double* %ptr2, align 8 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <4 x double> %vecinit.i, double %q, i32 1
   %vecinit4.i = insertelement <4 x double> %vecinit2.i, double %q, i32 2
@@ -88,6 +208,62 @@ entry:
   ret <8 x float> %vecinit6.i
 }
 
+define <8 x float> @D2(float* %ptr) nounwind uwtable readnone ssp {
+; X32-LABEL: D2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vbroadcastss (%eax), %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: D2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load float, float* %ptr, align 4
+  %vecinit.i = insertelement <8 x float> undef, float %q, i32 0
+  %vecinit2.i = insertelement <8 x float> %vecinit.i, float %q, i32 1
+  %vecinit4.i = insertelement <8 x float> %vecinit2.i, float %q, i32 2
+  %vecinit6.i = insertelement <8 x float> %vecinit4.i, float %q, i32 3
+  %vecinit8.i = insertelement <8 x float> %vecinit6.i, float %q, i32 4
+  %vecinit10.i = insertelement <8 x float> %vecinit8.i, float %q, i32 5
+  %vecinit12.i = insertelement <8 x float> %vecinit10.i, float %q, i32 6
+  %vecinit14.i = insertelement <8 x float> %vecinit12.i, float %q, i32 7
+  ret <8 x float> %vecinit14.i
+}
+
+define <8 x float> @D3(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: D3:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovss %xmm0, (%eax)
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: D3:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovss %xmm0, (%rsi)
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+entry:
+  %q = load float, float* %ptr, align 4
+  store float %q, float* %ptr2, align 4 ; to create a chain to prevent broadcast
+  %vecinit.i = insertelement <8 x float> undef, float %q, i32 0
+  %vecinit2.i = insertelement <8 x float> %vecinit.i, float %q, i32 1
+  %vecinit4.i = insertelement <8 x float> %vecinit2.i, float %q, i32 2
+  %vecinit6.i = insertelement <8 x float> %vecinit4.i, float %q, i32 3
+  %vecinit8.i = insertelement <8 x float> %vecinit6.i, float %q, i32 4
+  %vecinit10.i = insertelement <8 x float> %vecinit8.i, float %q, i32 5
+  %vecinit12.i = insertelement <8 x float> %vecinit10.i, float %q, i32 6
+  %vecinit14.i = insertelement <8 x float> %vecinit12.i, float %q, i32 7
+  ret <8 x float> %vecinit14.i
+}
+
 ;;;; 128-bit versions
 
 define <4 x float> @e(float* %ptr) nounwind uwtable readnone ssp {
@@ -103,6 +279,32 @@ define <4 x float> @e(float* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    retq
 entry:
   %q = load float, float* %ptr, align 4
+  %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
+  %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
+  %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
+  %vecinit6.i = insertelement <4 x float> %vecinit4.i, float %q, i32 3
+  ret <4 x float> %vecinit6.i
+}
+
+define <4 x float> @e2(float* %ptr, float* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: e2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovss %xmm0, (%eax)
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: e2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovss %xmm0, (%rsi)
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    retq
+entry:
+  %q = load float, float* %ptr, align 4
+  store float %q, float* %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0
   %vecinit2.i = insertelement <4 x float> %vecinit.i, float %q, i32 1
   %vecinit4.i = insertelement <4 x float> %vecinit2.i, float %q, i32 2
@@ -143,6 +345,34 @@ define <4 x i32> @F(i32* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    retq
 entry:
   %q = load i32, i32* %ptr, align 4
+  %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
+  %vecinit2.i = insertelement <4 x i32> %vecinit.i, i32 %q, i32 1
+  %vecinit4.i = insertelement <4 x i32> %vecinit2.i, i32 %q, i32 2
+  %vecinit6.i = insertelement <4 x i32> %vecinit4.i, i32 %q, i32 3
+  ret <4 x i32> %vecinit6.i
+}
+
+define <4 x i32> @F2(i32* %ptr, i32* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: F2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%ecx), %ecx
+; X32-NEXT:    movl %ecx, (%eax)
+; X32-NEXT:    vmovd %ecx, %xmm0
+; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: F2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    retq
+entry:
+  %q = load i32, i32* %ptr, align 4
+  store i32 %q, i32* %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <4 x i32> undef, i32 %q, i32 0
   %vecinit2.i = insertelement <4 x i32> %vecinit.i, i32 %q, i32 1
   %vecinit4.i = insertelement <4 x i32> %vecinit2.i, i32 %q, i32 2
@@ -382,6 +612,36 @@ entry:
   ret <2 x i64> %vecinit2.i
 }
 
+define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: G2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl (%ecx), %edx
+; X32-NEXT:    movl 4(%ecx), %ecx
+; X32-NEXT:    movl %ecx, 4(%eax)
+; X32-NEXT:    movl %edx, (%eax)
+; X32-NEXT:    vmovd %edx, %xmm0
+; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: G2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, (%rsi)
+; X64-NEXT:    vmovq %rax, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-NEXT:    retq
+entry:
+  %q = load i64, i64* %ptr, align 8
+  store i64 %q, i64* %ptr2, align 8 ; to create a chain to prevent broadcast
+  %vecinit.i = insertelement <2 x i64> undef, i64 %q, i32 0
+  %vecinit2.i = insertelement <2 x i64> %vecinit.i, i64 %q, i32 1
+  ret <2 x i64> %vecinit2.i
+}
+
 define <4 x i32> @H(<4 x i32> %a) {
 ; X32-LABEL: H:
 ; X32:       ## BB#0: ## %entry
@@ -410,6 +670,30 @@ define <2 x double> @I(double* %ptr) nounwind uwtable readnone ssp {
 ; X64-NEXT:    retq
 entry:
   %q = load double, double* %ptr, align 4
+  %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
+  %vecinit2.i = insertelement <2 x double> %vecinit.i, double %q, i32 1
+  ret <2 x double> %vecinit2.i
+}
+
+define <2 x double> @I2(double* %ptr, double* %ptr2) nounwind uwtable readnone ssp {
+; X32-LABEL: I2:
+; X32:       ## BB#0: ## %entry
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovsd %xmm0, (%eax)
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: I2:
+; X64:       ## BB#0: ## %entry
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd %xmm0, (%rsi)
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    retq
+entry:
+  %q = load double, double* %ptr, align 4
+  store double %q, double* %ptr2, align 4 ; to create a chain to prevent broadcast
   %vecinit.i = insertelement <2 x double> undef, double %q, i32 0
   %vecinit2.i = insertelement <2 x double> %vecinit.i, double %q, i32 1
   ret <2 x double> %vecinit2.i

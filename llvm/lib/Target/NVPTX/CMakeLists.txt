@@ -17,7 +17,6 @@ set(NVPTXCodeGen_sources
   NVPTXISelDAGToDAG.cpp
   NVPTXISelLowering.cpp
   NVPTXImageOptimizer.cpp
-  NVPTXInferAddressSpaces.cpp
   NVPTXInstrInfo.cpp
   NVPTXLowerAggrCopies.cpp
   NVPTXLowerArgs.cpp

@@ -1,6 +1,6 @@
 // Print matched suppressions only if print_suppressions=1 AND at least one is
 // matched. Default is print_suppressions=true.
-// RUN: LSAN_BASE="use_registers=0:use_stacks=0"
+// RUN: LSAN_BASE="detect_leaks=1:use_registers=0:use_stacks=0"
 // RUN: %clangxx_lsan %s -o %t
 // RUN: LSAN_OPTIONS=$LSAN_BASE:print_suppressions=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-dont-print
 // RUN: LSAN_OPTIONS=$LSAN_BASE %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-dont-print

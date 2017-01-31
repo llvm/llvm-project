@@ -396,6 +396,13 @@ void test_get_local_id(int d, global int *out)
 	}
 }
 
+// CHECK-LABEL: @test_fmed3_f32
+// CHECK: call float @llvm.amdgcn.fmed3.f32(
+void test_fmed3_f32(global float* out, float a, float b, float c)
+{
+  *out = __builtin_amdgcn_fmed3f(a, b, c);
+}
+
 // CHECK-DAG: [[WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: attributes #[[NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[READ_EXEC_ATTRS]] = { convergent }

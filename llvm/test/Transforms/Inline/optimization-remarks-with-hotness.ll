@@ -4,8 +4,7 @@
 
 ; CHECK: foo should always be inlined (cost=always) (hotness: 30)
 ; CHECK: foo inlined into bar (hotness: 30)
-; CHECK: foz should never be inlined (cost=never) (hotness: 30)
-; CHECK: foz will not be inlined into bar (hotness: 30)
+; CHECK: foz not inlined into bar because it should never be inlined (cost=never) (hotness: 30)
 
 ; Function Attrs: alwaysinline nounwind uwtable
 define i32 @foo() #0 !prof !1 {

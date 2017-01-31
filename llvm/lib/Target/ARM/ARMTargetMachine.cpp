@@ -10,30 +10,49 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetMachine.h"
 #include "ARM.h"
 #include "ARMCallLowering.h"
-#include "ARMFrameLowering.h"
 #include "ARMInstructionSelector.h"
 #include "ARMLegalizerInfo.h"
 #include "ARMRegisterBankInfo.h"
+#include "ARMSubtarget.h"
+#include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
+#include <cassert>
+#include <memory>
+#include <string>
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -72,10 +91,10 @@ extern "C" void LLVMInitializeARMTarget() {
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO())
-    return make_unique<TargetLoweringObjectFileMachO>();
+    return llvm::make_unique<TargetLoweringObjectFileMachO>();
   if (TT.isOSWindows())
-    return make_unique<TargetLoweringObjectFileCOFF>();
-  return make_unique<ARMElfTargetObjectFile>();
+    return llvm::make_unique<TargetLoweringObjectFileCOFF>();
+  return llvm::make_unique<ARMElfTargetObjectFile>();
 }
 
 static ARMBaseTargetMachine::ARMABI
@@ -94,13 +113,13 @@ computeTargetABI(const Triple &TT, StringRef CPU,
   ARMBaseTargetMachine::ARMABI TargetABI =
       ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
 
-  unsigned ArchKind = llvm::ARM::parseCPUArch(CPU);
-  StringRef ArchName = llvm::ARM::getArchName(ArchKind);
+  unsigned ArchKind = ARM::parseCPUArch(CPU);
+  StringRef ArchName = ARM::getArchName(ArchKind);
   // FIXME: This is duplicated code from the front end and should be unified.
   if (TT.isOSBinFormatMachO()) {
-    if (TT.getEnvironment() == llvm::Triple::EABI ||
-        (TT.getOS() == llvm::Triple::UnknownOS && TT.isOSBinFormatMachO()) ||
-        llvm::ARM::parseArchProfile(ArchName) == llvm::ARM::PK_M) {
+    if (TT.getEnvironment() == Triple::EABI ||
+        (TT.getOS() == Triple::UnknownOS && TT.isOSBinFormatMachO()) ||
+        ARM::parseArchProfile(ArchName) == ARM::PK_M) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
     } else if (TT.isWatchABI()) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS16;
@@ -113,16 +132,16 @@ computeTargetABI(const Triple &TT, StringRef CPU,
   } else {
     // Select the default based on the platform.
     switch (TT.getEnvironment()) {
-    case llvm::Triple::Android:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::MuslEABI:
-    case llvm::Triple::MuslEABIHF:
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::EABI:
+    case Triple::Android:
+    case Triple::GNUEABI:
+    case Triple::GNUEABIHF:
+    case Triple::MuslEABI:
+    case Triple::MuslEABIHF:
+    case Triple::EABIHF:
+    case Triple::EABI:
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
       break;
-    case llvm::Triple::GNU:
+    case Triple::GNU:
       TargetABI = ARMBaseTargetMachine::ARM_ABI_APCS;
       break;
     default:
@@ -141,7 +160,7 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      const TargetOptions &Options,
                                      bool isLittle) {
   auto ABI = computeTargetABI(TT, CPU, Options);
-  std::string Ret = "";
+  std::string Ret;
 
   if (isLittle)
     // Little endian.
@@ -238,29 +257,35 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   }
 }
 
-ARMBaseTargetMachine::~ARMBaseTargetMachine() {}
+ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 
 #ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
+
 struct ARMGISelActualAccessor : public GISelAccessor {
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
+
   const InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
+
   const LegalizerInfo *getLegalizerInfo() const override {
     return Legalizer.get();
   }
+
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
   }
 };
-} // End anonymous namespace.
+
+} // end anonymous namespace
 #endif
 
 const ARMSubtarget *
@@ -390,6 +415,7 @@ ThumbBETargetMachine::ThumbBETargetMachine(const Target &T, const Triple &TT,
     : ThumbTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 namespace {
+
 /// ARM Code Generator Pass Configuration Options.
 class ARMPassConfig : public TargetPassConfig {
 public:
@@ -413,7 +439,8 @@ public:
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
-} // namespace
+
+} // end anonymous namespace
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(this, PM);

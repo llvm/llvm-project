@@ -50,12 +50,14 @@ INTERCEPTOR(void, free, void *ptr) {
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 
+#if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void, cfree, void *ptr) {
   GET_STACK_TRACE_FREE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
+#endif // SANITIZER_INTERCEPT_CFREE
 
 INTERCEPTOR(void*, malloc, uptr size) {
   if (UNLIKELY(!asan_inited))
@@ -91,12 +93,8 @@ INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   return asan_realloc(ptr, size, &stack);
 }
 
+#if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {
-  GET_STACK_TRACE_MALLOC;
-  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
-}
-
-INTERCEPTOR(void*, aligned_alloc, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
   return asan_memalign(boundary, size, &stack, FROM_MALLOC);
 }
@@ -107,6 +105,12 @@ INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
   DTLS_on_libc_memalign(res, size);
   return res;
 }
+#endif // SANITIZER_INTERCEPT_MEMALIGN
+
+INTERCEPTOR(void*, aligned_alloc, uptr boundary, uptr size) {
+  GET_STACK_TRACE_MALLOC;
+  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
+}
 
 INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
   GET_CURRENT_PC_BP_SP;
@@ -114,6 +118,7 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
   return asan_malloc_usable_size(ptr, pc, bp);
 }
 
+#if SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 // We avoid including malloc.h for portability reasons.
 // man mallinfo says the fields are "long", but the implementation uses int.
 // It doesn't matter much -- we just need to make sure that the libc's mallinfo
@@ -131,6 +136,7 @@ INTERCEPTOR(struct fake_mallinfo, mallinfo, void) {
 INTERCEPTOR(int, mallopt, int cmd, int value) {
   return -1;
 }
+#endif // SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   GET_STACK_TRACE_MALLOC;
@@ -143,10 +149,12 @@ INTERCEPTOR(void*, valloc, uptr size) {
   return asan_valloc(size, &stack);
 }
 
+#if SANITIZER_INTERCEPT_PVALLOC
 INTERCEPTOR(void*, pvalloc, uptr size) {
   GET_STACK_TRACE_MALLOC;
   return asan_pvalloc(size, &stack);
 }
+#endif // SANITIZER_INTERCEPT_PVALLOC
 
 INTERCEPTOR(void, malloc_stats, void) {
   __asan_print_accumulated_stats();

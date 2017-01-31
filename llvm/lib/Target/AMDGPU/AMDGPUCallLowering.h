@@ -22,6 +22,13 @@ namespace llvm {
 class AMDGPUTargetLowering;
 
 class AMDGPUCallLowering: public CallLowering {
+
+  unsigned lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
+                             unsigned Offset) const;
+
+  void lowerParameter(MachineIRBuilder &MIRBuilder, Type *ParamTy,
+                      unsigned Offset, unsigned DstReg) const;
+
  public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
@@ -29,6 +36,7 @@ class AMDGPUCallLowering: public CallLowering {
                    unsigned VReg) const override;
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
+  CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
 };
 } // End of namespace llvm;
 #endif

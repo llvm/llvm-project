@@ -859,7 +859,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -876,7 +876,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -893,7 +893,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -910,7 +910,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -927,9 +927,9 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bc 12, [[REG1]], .LBB[[BB1:[0-9_]+]]
-; CHECK: vor 3, 2, 2
+; CHECK: vmr 3, 2
 ; CHECK: .LBB[[BB1]]
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -946,7 +946,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -963,7 +963,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -980,7 +980,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -997,7 +997,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1014,7 +1014,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1062,7 +1062,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1079,7 +1079,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1096,7 +1096,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1113,7 +1113,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1130,9 +1130,9 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bc 12, [[REG1]], .LBB[[BB55:[0-9_]+]]
-; CHECK: vor 3, 2, 2
+; CHECK: vmr 3, 2
 ; CHECK: .LBB[[BB55]]
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1149,7 +1149,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1166,7 +1166,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crorc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1183,7 +1183,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1200,7 +1200,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crandc [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 
@@ -1217,7 +1217,7 @@ entry:
 ; CHECK-DAG: fcmpu {{[0-9]+}}, 1, 2
 ; CHECK: crxor [[REG1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
 ; CHECK: bclr 12, [[REG1]], 0
-; CHECK: vor 2, 3, 3
+; CHECK: vmr 2, 3
 ; CHECK: blr
 }
 

@@ -2946,6 +2946,16 @@ inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
   return P.get<TemplateTemplateParmDecl*>();
 }
 
+inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
+  auto *TD = dyn_cast<TemplateDecl>(D);
+  return TD && (isa<ClassTemplateDecl>(TD) ||
+                isa<ClassTemplatePartialSpecializationDecl>(TD) ||
+                isa<TypeAliasTemplateDecl>(TD) ||
+                isa<TemplateTemplateParmDecl>(TD))
+             ? TD
+             : nullptr;
+}
+
 } /* end of namespace clang */
 
 #endif

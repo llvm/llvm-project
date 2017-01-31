@@ -7,6 +7,9 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 
 namespace llvm {
+class HexagonInstrInfo;
+class HexagonRegisterInfo;
+
 class HexagonPacketizerList : public VLIWPacketizerList {
   // Vector of instructions assigned to the packet that has just been created.
   std::vector<MachineInstr*> OldPacketMIs;

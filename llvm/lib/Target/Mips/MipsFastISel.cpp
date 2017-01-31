@@ -1,4 +1,4 @@
-//===-- MipsFastISel.cpp - Mips FastISel implementation --------------------===//
+//===-- MipsFastISel.cpp - Mips FastISel implementation -------------------===//
 //
 // The LLVM Compiler Infrastructure
 //
@@ -14,24 +14,62 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MipsCCState.h"
 #include "MipsInstrInfo.h"
 #include "MipsISelLowering.h"
 #include "MipsMachineFunction.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetLowering.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <new>
 
 #define DEBUG_TYPE "mips-fastisel"
 
@@ -47,35 +85,40 @@ class MipsFastISel final : public FastISel {
     typedef enum { RegBase, FrameIndexBase } BaseKind;
 
   private:
-    BaseKind Kind;
+    BaseKind Kind = RegBase;
     union {
       unsigned Reg;
       int FI;
     } Base;
 
-    int64_t Offset;
+    int64_t Offset = 0;
 
-    const GlobalValue *GV;
+    const GlobalValue *GV = nullptr;
 
   public:
     // Innocuous defaults for our address.
-    Address() : Kind(RegBase), Offset(0), GV(0) { Base.Reg = 0; }
+    Address() { Base.Reg = 0; }
+
     void setKind(BaseKind K) { Kind = K; }
     BaseKind getKind() const { return Kind; }
     bool isRegBase() const { return Kind == RegBase; }
     bool isFIBase() const { return Kind == FrameIndexBase; }
+
     void setReg(unsigned Reg) {
       assert(isRegBase() && "Invalid base register access!");
       Base.Reg = Reg;
     }
+
     unsigned getReg() const {
       assert(isRegBase() && "Invalid base register access!");
       return Base.Reg;
     }
+
     void setFI(unsigned FI) {
       assert(isFIBase() && "Invalid base frame index access!");
       Base.FI = FI;
     }
+
     unsigned getFI() const {
       assert(isFIBase() && "Invalid base frame index access!");
       return Base.FI;
@@ -165,14 +208,17 @@ private:
   MachineInstrBuilder emitInst(unsigned Opc) {
     return BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc));
   }
+
   MachineInstrBuilder emitInst(unsigned Opc, unsigned DstReg) {
     return BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
                    DstReg);
   }
+
   MachineInstrBuilder emitInstStore(unsigned Opc, unsigned SrcReg,
                                     unsigned MemReg, int64_t MemOffset) {
     return emitInst(Opc).addReg(SrcReg).addReg(MemReg).addImm(MemOffset);
   }
+
   MachineInstrBuilder emitInstLoad(unsigned Opc, unsigned DstReg,
                                    unsigned MemReg, int64_t MemOffset) {
     return emitInst(Opc, DstReg).addReg(MemReg).addImm(MemOffset);
@@ -198,6 +244,7 @@ private:
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
+
   const MipsABIInfo &getABI() const {
     return static_cast<const MipsTargetMachine &>(TM).getABI();
   }
@@ -220,7 +267,8 @@ public:
 
 #include "MipsGenFastISel.inc"
 };
-} // end anonymous namespace.
+
+} // end anonymous namespace
 
 static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
@@ -414,7 +462,6 @@ unsigned MipsFastISel::fastMaterializeConstant(const Constant *C) {
 }
 
 bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
-
   const User *U = nullptr;
   unsigned Opcode = Instruction::UserOp1;
   if (const Instruction *I = dyn_cast<Instruction>(Obj)) {
@@ -432,10 +479,9 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   switch (Opcode) {
   default:
     break;
-  case Instruction::BitCast: {
+  case Instruction::BitCast:
     // Look through bitcasts.
     return computeAddress(U->getOperand(0), Addr);
-  }
   case Instruction::GetElementPtr: {
     Address SavedAddr = Addr;
     int64_t TmpOffset = Addr.getOffset();
@@ -451,7 +497,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
         TmpOffset += SL->getElementOffset(Idx);
       } else {
         uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
-        for (;;) {
+        while (true) {
           if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
             // Constant-offset addressing.
             TmpOffset += CI->getSExtValue() * S;
@@ -613,14 +659,12 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
     break;
   }
-  case CmpInst::ICMP_UGT: {
+  case CmpInst::ICMP_UGT:
     emitInst(Mips::SLTu, ResultReg).addReg(RightReg).addReg(LeftReg);
     break;
-  }
-  case CmpInst::ICMP_ULT: {
+  case CmpInst::ICMP_ULT:
     emitInst(Mips::SLTu, ResultReg).addReg(LeftReg).addReg(RightReg);
     break;
-  }
   case CmpInst::ICMP_UGE: {
     unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLTu, TempReg).addReg(LeftReg).addReg(RightReg);
@@ -633,14 +677,12 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     emitInst(Mips::XORi, ResultReg).addReg(TempReg).addImm(1);
     break;
   }
-  case CmpInst::ICMP_SGT: {
+  case CmpInst::ICMP_SGT:
     emitInst(Mips::SLT, ResultReg).addReg(RightReg).addReg(LeftReg);
     break;
-  }
-  case CmpInst::ICMP_SLT: {
+  case CmpInst::ICMP_SLT:
     emitInst(Mips::SLT, ResultReg).addReg(LeftReg).addReg(RightReg);
     break;
-  }
   case CmpInst::ICMP_SGE: {
     unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::SLT, TempReg).addReg(LeftReg).addReg(RightReg);
@@ -709,6 +751,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   }
   return true;
 }
+
 bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
                             unsigned Alignment) {
   //
@@ -716,35 +759,30 @@ bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   //
   unsigned Opc;
   switch (VT.SimpleTy) {
-  case MVT::i32: {
+  case MVT::i32:
     ResultReg = createResultReg(&Mips::GPR32RegClass);
     Opc = Mips::LW;
     break;
-  }
-  case MVT::i16: {
+  case MVT::i16:
     ResultReg = createResultReg(&Mips::GPR32RegClass);
     Opc = Mips::LHu;
     break;
-  }
-  case MVT::i8: {
+  case MVT::i8:
     ResultReg = createResultReg(&Mips::GPR32RegClass);
     Opc = Mips::LBu;
     break;
-  }
-  case MVT::f32: {
+  case MVT::f32:
     if (UnsupportedFPMode)
       return false;
     ResultReg = createResultReg(&Mips::FGR32RegClass);
     Opc = Mips::LWC1;
     break;
-  }
-  case MVT::f64: {
+  case MVT::f64:
     if (UnsupportedFPMode)
       return false;
     ResultReg = createResultReg(&Mips::AFGR64RegClass);
     Opc = Mips::LDC1;
     break;
-  }
   default:
     return false;
   }
@@ -1730,6 +1768,7 @@ bool MipsFastISel::selectTrunc(const Instruction *I) {
   updateValueMap(I, SrcReg);
   return true;
 }
+
 bool MipsFastISel::selectIntExt(const Instruction *I) {
   Type *DestTy = I->getType();
   Value *Src = I->getOperand(0);
@@ -1757,6 +1796,7 @@ bool MipsFastISel::selectIntExt(const Instruction *I) {
   updateValueMap(I, ResultReg);
   return true;
 }
+
 bool MipsFastISel::emitIntSExt32r1(MVT SrcVT, unsigned SrcReg, MVT DestVT,
                                    unsigned DestReg) {
   unsigned ShiftAmt;
@@ -2074,8 +2114,10 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 }
 
 namespace llvm {
+
 FastISel *Mips::createFastISel(FunctionLoweringInfo &funcInfo,
                                const TargetLibraryInfo *libInfo) {
   return new MipsFastISel(funcInfo, libInfo);
 }
-}
+
+} // end namespace llvm

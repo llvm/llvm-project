@@ -392,7 +392,9 @@ void MCAsmStreamer::emitExplicitComments() {
 void MCAsmStreamer::ChangeSection(MCSection *Section,
                                   const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
-  Section->PrintSwitchToSection(*MAI, OS, Subsection);
+  Section->PrintSwitchToSection(
+      *MAI, getContext().getObjectFileInfo()->getTargetTriple(), OS,
+      Subsection);
 }
 
 void MCAsmStreamer::EmitLabel(MCSymbol *Symbol) {
