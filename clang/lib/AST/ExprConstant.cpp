@@ -2362,7 +2362,14 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
 /// Extract the value of a character from a string literal.
 static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
                                             uint64_t Index) {
-  // FIXME: Support ObjCEncodeExpr, MakeStringConstant
+  // FIXME: Support MakeStringConstant
+  if (const auto *ObjCEnc = dyn_cast<ObjCEncodeExpr>(Lit)) {
+    std::string Str;
+    Info.Ctx.getObjCEncodingForType(ObjCEnc->getEncodedType(), Str);
+    assert(Index <= Str.size() && "Index too large");
+    return APSInt::getUnsigned(Str.c_str()[Index]);
+  }
+
   if (auto PE = dyn_cast<PredefinedExpr>(Lit))
     Lit = PE->getFunctionName();
   const StringLiteral *S = cast<StringLiteral>(Lit);
