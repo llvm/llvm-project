@@ -14,8 +14,13 @@
 #include <memory>
 
 namespace clang {
+  class ASTReader;
   class ASTUnit;
   class FrontendAction;
+
+namespace serialization {
+  class ModuleFile;
+}
 
 namespace index {
   class IndexDataConsumer;
@@ -41,6 +46,11 @@ createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
 void indexASTUnit(ASTUnit &Unit,
                   std::shared_ptr<IndexDataConsumer> DataConsumer,
                   IndexingOptions Opts);
+
+void indexModuleFile(serialization::ModuleFile &Mod,
+                     ASTReader &Reader,
+                     std::shared_ptr<IndexDataConsumer> DataConsumer,
+                     IndexingOptions Opts);
 
 } // namespace index
 } // namespace clang
