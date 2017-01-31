@@ -140,6 +140,7 @@ public:
   void EmitStartOfAsmFile(Module &M) override;
   void EmitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
+  void EmitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 }
 

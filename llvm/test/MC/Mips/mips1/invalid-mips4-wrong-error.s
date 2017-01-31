@@ -6,8 +6,8 @@
 # RUN: FileCheck %s < %t1
 
 	.set noat
-        bc1fl     $fcc7,27          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        bc1tl     $fcc7,27          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        bc1fl     $fcc7,27          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+        bc1tl     $fcc7,27          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         ldc2      $8,-21181($at)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         ldc2      $20,-1024($s2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         ldl       $24,-4167($24)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
