@@ -96,6 +96,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   default:
     llvm_unreachable("Unimplemented");
   case MCSymbolRefExpr::VK_None:
+  case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
     case RT64_64:
       return IsPCRel ? ELF::R_X86_64_PC64 : ELF::R_X86_64_64;
@@ -219,6 +220,7 @@ static unsigned getRelocType32(MCContext &Ctx,
   default:
     llvm_unreachable("Unimplemented");
   case MCSymbolRefExpr::VK_None:
+  case MCSymbolRefExpr::VK_X86_ABS8:
     switch (Type) {
     case RT32_32:
       return IsPCRel ? ELF::R_386_PC32 : ELF::R_386_32;

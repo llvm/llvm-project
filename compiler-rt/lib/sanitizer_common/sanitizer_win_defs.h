@@ -23,7 +23,8 @@
 #endif
 
 // Intermediate macro to ensure the parameter is expanded before stringified.
-#define STRINGIFY(A) #A
+#define STRINGIFY_(A) #A
+#define STRINGIFY(A) STRINGIFY_(A)
 
 // ----------------- A workaround for the absence of weak symbols --------------
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
@@ -45,12 +46,9 @@
 // So, a workaround is to force linkage with the modules that include weak
 // definitions, with the following macro: WIN_FORCE_LINK()
 
-#define WIN_WEAK_ALIAS_(Name, Default)                                         \
+#define WIN_WEAK_ALIAS(Name, Default)                                          \
   __pragma(comment(linker, "/alternatename:" WIN_SYM_PREFIX STRINGIFY(Name) "="\
                                              WIN_SYM_PREFIX STRINGIFY(Default)))
-
-#define WIN_WEAK_ALIAS(Name, Default)                                          \
-  WIN_WEAK_ALIAS_(Name, Default)
 
 #define WIN_FORCE_LINK(Name)                                                   \
   __pragma(comment(linker, "/include:" WIN_SYM_PREFIX STRINGIFY(Name)))

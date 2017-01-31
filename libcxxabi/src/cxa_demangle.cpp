@@ -4345,6 +4345,8 @@ parse_call_offset(const char* first, const char* last)
 //                    # base is the nominal target function of thunk
 //                ::= GV <object name> # Guard variable for one-time initialization
 //                                     # No <type>
+//                ::= TW <object name> # Thread-local wrapper
+//                ::= TH <object name> # Thread-local initialization
 //      extension ::= TC <first type> <number> _ <second type> # construction vtable for second-in-first
 //      extension ::= GR <object name> # reference temporary for object
 
@@ -4446,6 +4448,28 @@ parse_special_name(const char* first, const char* last, C& db)
                             first = t1;
                         }
                     }
+                }
+                break;
+            case 'W':
+                // TW <object name> # Thread-local wrapper
+                t = parse_name(first + 2, last, db);
+                if (t != first + 2) 
+                {
+                    if (db.names.empty())
+                    return first;
+                    db.names.back().first.insert(0, "thread-local wrapper routine for ");
+                    first = t;
+                }
+                break;
+            case 'H':
+                //TH <object name> # Thread-local initialization
+                t = parse_name(first + 2, last, db);
+                if (t != first + 2) 
+                {
+                    if (db.names.empty())
+                    return first;
+                    db.names.back().first.insert(0, "thread-local initialization routine for ");
+                    first = t;
                 }
                 break;
             default:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fmodules-ts -std=c++1z -triple=x86_64-linux-gnu -emit-module-interface %s -o %t.pcm
+// RUN: %clang_cc1 -fmodules-ts -std=c++1z -triple=x86_64-linux-gnu -fmodules-codegen -emit-module-interface %s -o %t.pcm
 // RUN: %clang_cc1 -fmodules-ts -std=c++1z -triple=x86_64-linux-gnu %t.pcm -emit-llvm -o - | FileCheck %s
 
 module FooBar;
@@ -7,6 +7,9 @@ export {
   // CHECK-LABEL: define i32 @_Z1fv(
   int f() { return 0; }
 }
+
+// CHECK-LABEL: define weak_odr void @_Z2f2v(
+inline void f2() { }
 
 // FIXME: Emit global variables and their initializers with this TU.
 // Emit an initialization function that other TUs can call, with guard variable.

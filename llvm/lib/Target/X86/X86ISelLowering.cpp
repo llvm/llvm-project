@@ -5770,13 +5770,14 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Ops.push_back(IsAndN ? N1 : N0);
     return true;
   }
+  case X86ISD::PINSRB:
   case X86ISD::PINSRW: {
     SDValue InVec = N.getOperand(0);
     SDValue InScl = N.getOperand(1);
     uint64_t InIdx = N.getConstantOperandVal(2);
     assert(InIdx < NumElts && "Illegal insertion index");
 
-    // Attempt to recognise a PINSRW(VEC, 0, Idx) shuffle pattern.
+    // Attempt to recognise a PINSR*(VEC, 0, Idx) shuffle pattern.
     if (X86::isZeroNode(InScl)) {
       Ops.push_back(InVec);
       for (unsigned i = 0; i != NumElts; ++i)
@@ -5784,10 +5785,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       return true;
     }
 
-    // Attempt to recognise a PINSRW(ASSERTZEXT(PEXTRW)) shuffle pattern.
-    // TODO: Expand this to support PINSRB/INSERT_VECTOR_ELT/etc.
+    // Attempt to recognise a PINSR*(ASSERTZEXT(PEXTR*)) shuffle pattern.
+    // TODO: Expand this to support INSERT_VECTOR_ELT/etc.
+    unsigned ExOp =
+        (X86ISD::PINSRB == Opcode ? X86ISD::PEXTRB : X86ISD::PEXTRW);
     if (InScl.getOpcode() != ISD::AssertZext ||
-        InScl.getOperand(0).getOpcode() != X86ISD::PEXTRW)
+        InScl.getOperand(0).getOpcode() != ExOp)
       return false;
 
     SDValue ExVec = InScl.getOperand(0).getOperand(0);

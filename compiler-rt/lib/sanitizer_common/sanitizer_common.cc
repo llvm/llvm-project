@@ -489,7 +489,8 @@ void __sanitizer_set_report_fd(void *fd) {
   report_file.fd_pid = internal_getpid();
 }
 
-void __sanitizer_report_error_summary(const char *error_summary) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_report_error_summary,
+                             const char *error_summary) {
   Printf("%s\n", error_summary);
 }
 

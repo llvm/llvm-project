@@ -1371,6 +1371,25 @@ TEST_F(FormatTest, SplitsLongCxxComments) {
             format("//Even if it makes the line exceed the column limit",
                    getLLVMStyleWithColumns(51)));
   EXPECT_EQ("//--But not here", format("//--But not here", getLLVMStyle()));
+  EXPECT_EQ("/// line 1\n"
+            "// add leading whitespace",
+            format("/// line 1\n"
+                   "//add leading whitespace",
+                   getLLVMStyleWithColumns(30)));
+  EXPECT_EQ("/// line 1\n"
+            "/// line 2\n"
+            "//! line 3\n"
+            "//! line 4\n"
+            "//! line 5\n"
+            "// line 6\n"
+            "// line 7",
+            format("///line 1\n"
+                   "///line 2\n"
+                   "//! line 3\n"
+                   "//!line 4\n"
+                   "//!line 5\n"
+                   "// line 6\n"
+                   "//line 7", getLLVMStyleWithColumns(20)));
 
   EXPECT_EQ("// aa bb cc dd",
             format("// aa bb             cc dd                   ",

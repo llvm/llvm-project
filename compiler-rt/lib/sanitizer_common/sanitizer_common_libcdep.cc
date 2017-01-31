@@ -162,8 +162,8 @@ void MaybeStartBackgroudThread() {
 
 }  // namespace __sanitizer
 
-void NOINLINE
-__sanitizer_sandbox_on_notify(__sanitizer_sandbox_arguments *args) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_sandbox_on_notify,
+                             __sanitizer_sandbox_arguments *args) {
   __sanitizer::PrepareForSandboxing(args);
   if (__sanitizer::sandboxing_callback)
     __sanitizer::sandboxing_callback();

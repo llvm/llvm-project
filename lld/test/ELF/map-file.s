@@ -24,7 +24,7 @@ bar:
 .long bar - .
 .long zed - .
 local:
-.comm   common,4,4
+.comm   common,4,16
 
 // CHECK:      Address          Size             Align Out     In      File    Symbol
 // CHECK-NEXT: 0000000000200158 0000000000000030     8 .eh_frame
@@ -45,8 +45,8 @@ local:
 // CHECK-NEXT: 0000000000201014 0000000000000000     0                         bah
 // CHECK-NEXT: 0000000000201014 0000000000000001     4                 {{.*}}{{/|\\}}map-file.s.tmp4.a(map-file.s.tmp4.o)
 // CHECK-NEXT: 0000000000201014 0000000000000000     0                         baz
-// CHECK-NEXT: 0000000000202000 0000000000000004     4 .bss
-// CHECK-NEXT: 0000000000202000 0000000000000004     4         COMMON
+// CHECK-NEXT: 0000000000202000 0000000000000004    16 .bss
+// CHECK-NEXT: 0000000000202000 0000000000000004    16         COMMON
 // CHECK-NEXT: 0000000000000000 0000000000000008     1 .comment
 // CHECK-NEXT: 0000000000000000 00000000000000f0     8 .symtab
 // CHECK-NEXT: 0000000000000000 00000000000000f0     8         .symtab

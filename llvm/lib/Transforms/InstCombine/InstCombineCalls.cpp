@@ -3268,6 +3268,15 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   return visitCallSite(II);
 }
 
+// Fence instruction simplification
+Instruction *InstCombiner::visitFenceInst(FenceInst &FI) {
+  // Remove identical consecutive fences.
+  if (auto *NFI = dyn_cast<FenceInst>(FI.getNextNode()))
+    if (FI.isIdenticalTo(NFI))
+      return eraseInstFromFunction(FI);
+  return nullptr;
+}
+
 // InvokeInst simplification
 //
 Instruction *InstCombiner::visitInvokeInst(InvokeInst &II) {

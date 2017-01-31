@@ -6798,8 +6798,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         MCInst Inst;
 
         uint64_t PC = SectAddress + Index;
+        SmallVector<char, 64> AnnotationsBytes;
+        raw_svector_ostream Annotations(AnnotationsBytes);
         if (DisAsm->getInstruction(Inst, InstSize, Bytes.slice(Index), PC,
-                                   DebugOut, nulls())) {
+                                   DebugOut, Annotations)) {
           if (!NoLeadingAddr) {
             if (FullLeadingAddr) {
               if (MachOOF->is64Bit())
@@ -6814,7 +6816,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << "\t";
             dumpBytes(makeArrayRef(Bytes.data() + Index, InstSize), outs());
           }
-          IP->printInst(&Inst, outs(), "", *STI);
+          StringRef AnnotationsStr = Annotations.str();
+          IP->printInst(&Inst, outs(), AnnotationsStr, *STI);
           outs() << "\n";
         } else {
           unsigned int Arch = MachOOF->getArch();

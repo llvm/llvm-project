@@ -985,10 +985,21 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     //                       int> v);
     // FIXME: We likely want to do this for more combinations of brackets.
     // Verify that it is wanted for ObjC, too.
-    if (Current.Tok.getKind() == tok::less &&
-        Current.ParentBracket == tok::l_paren) {
+    if (Current.is(tok::less) && Current.ParentBracket == tok::l_paren) {
       NewIndent = std::max(NewIndent, State.Stack.back().Indent);
       LastSpace = std::max(LastSpace, State.Stack.back().Indent);
+    }
+
+    // JavaScript template strings are special as we always want to indent
+    // nested expressions relative to the ${}. Otherwise, this can create quite
+    // a mess.
+    if (Current.is(TT_TemplateString)) {
+      unsigned Column = Current.IsMultiline
+                            ? Current.LastLineColumnWidth
+                            : State.Column + Current.ColumnWidth;
+      NewIndent = Column;
+      LastSpace = Column;
+      NestedBlockIndent = Column;
     }
 
     AvoidBinPacking =

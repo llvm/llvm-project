@@ -1401,6 +1401,63 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "         aaaaaaaaaaaaa:${  aaaaaaa. aaaaa} aaaaaaaa`;");
 }
 
+TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {
+  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                               bbbb}`;",
+               "var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                               bbbb}`;");
+  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                               aaaaa +  //\n"
+               "                               bbbb}`;",
+               "var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                               aaaaa +  //\n"
+               "                               bbbb}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                        bbbb}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${   aaaaa  +  //\n"
+               "                        bbbb }`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                        aaaaa +  //\n"
+               "                        bbbb}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${     //\n"
+               "                        aaaaa  +  //\n"
+               "                        bbbb}`  ;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${someFunction(\n"
+               "                            aaaaa +  //\n"
+               "                            bbbb)}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${ someFunction  (\n"
+               "                            aaaaa  +   //\n"
+               "                            bbbb)}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction(\n"
+               "                            aaaaa +  //\n"
+               "                            bbbb)}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction (\n"
+               "                            aaaaa  +   //\n"
+               "                            bbbb)}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction({\n"
+               "                          aaaa: aaaaa,\n"
+               "                          bbbb: bbbbb,\n"
+               "                        })}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction ({\n"
+               "                          aaaa:  aaaaa,\n"
+               "                          bbbb:  bbbbb,\n"
+               "                        })}`;");
+}
+
 TEST_F(FormatTestJS, TemplateStringASI) {
   verifyFormat("var x = `hello${world}`;", "var x = `hello${\n"
                                            "    world\n"

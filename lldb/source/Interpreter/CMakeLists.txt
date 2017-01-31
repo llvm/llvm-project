@@ -43,4 +43,15 @@ add_lldb_library(lldbInterpreter
   Options.cpp
   Property.cpp
   ScriptInterpreter.cpp
+
+  LINK_LIBS
+    lldbCommands
+    lldbCore
+    lldbDataFormatters
+    lldbHost
+    lldbTarget
+    lldbUtility
+
+  LINK_COMPONENTS
+    Support
   )

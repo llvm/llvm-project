@@ -74,9 +74,9 @@ public:
 
   SubtargetFeatures getFeatures() const override;
 
-  SubtargetFeatures getMIPSFeatures() const override;
+  SubtargetFeatures getMIPSFeatures() const;
 
-  SubtargetFeatures getARMFeatures() const override;
+  SubtargetFeatures getARMFeatures() const;
 
   void setARMSubArch(Triple &TheTriple) const override;
 };

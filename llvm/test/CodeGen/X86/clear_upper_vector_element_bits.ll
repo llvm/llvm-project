@@ -184,37 +184,10 @@ define <16 x i8> @_clearupper16xi8a(<16 x i8>) nounwind {
 ; AVX-LABEL: _clearupper16xi8a:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    vpextrb $1, %xmm0, %ecx
 ; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpextrb $1, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $2, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $3, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $4, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $5, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $6, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $7, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $8, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $9, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $10, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $11, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $12, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $13, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $14, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrb $15, %xmm0, %eax
-; AVX-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm0
+; AVX-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7]
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x0  = extractelement <16 x i8> %0, i32 0
@@ -342,15 +315,7 @@ define <8 x i16> @_clearupper8xi16b(<8 x i16>) nounwind {
 ;
 ; AVX-LABEL: _clearupper8xi16b:
 ; AVX:       # BB#0:
-; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x8 = bitcast <8 x i16> %0 to <16 x i8>
   %r0 = insertelement <16 x i8> %x8, i8 zeroinitializer, i32 1

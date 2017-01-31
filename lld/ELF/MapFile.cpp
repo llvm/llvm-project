@@ -35,7 +35,7 @@ using namespace lld::elf;
 
 static void writeOutSecLine(raw_fd_ostream &OS, int Width, uint64_t Address,
                             uint64_t Size, uint64_t Align, StringRef Name) {
-  OS << format("%0*llx %0*llx %5llx ", Width, Address, Width, Size, Align)
+  OS << format("%0*llx %0*llx %5lld ", Width, Address, Width, Size, Align)
      << left_justify(Name, 7);
 }
 

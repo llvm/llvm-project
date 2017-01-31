@@ -796,10 +796,13 @@ void BreakableLineCommentSection::replaceWhitespaceBefore(
     } else {
       // This is the first line for the current token, but no reflow with the
       // previous token is necessary. However, we still may need to adjust the
-      // start column.
+      // start column. Note that ContentColumn[LineIndex] is the expected
+      // content column after a possible update to the prefix, hence the prefix
+      // length change is included.
       unsigned LineColumn =
           ContentColumn[LineIndex] -
-          (Content[LineIndex].data() - Lines[LineIndex].data());
+          (Content[LineIndex].data() - Lines[LineIndex].data()) +
+          (OriginalPrefix[LineIndex].size() - Prefix[LineIndex].size());
       if (tokenAt(LineIndex).OriginalColumn != LineColumn) {
         Whitespaces.replaceWhitespace(*Tokens[LineIndex],
                                       /*Newlines=*/1,
@@ -813,13 +816,14 @@ void BreakableLineCommentSection::replaceWhitespaceBefore(
                                         /*InPPDirective=*/false);
       }
     }
-  } else if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
-    // This is not the first line of the token. Adjust the prefix if necessary.
+  }
+  if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
+    // Adjust the prefix if necessary.
 
     // Take care of the space possibly introduced after a decoration.
     assert(Prefix[LineIndex] == (OriginalPrefix[LineIndex] + " ").str() &&
-           "Expecting a block comment decoration to differ from original by "
-           "at most a space");
+           "Expecting a line comment prefix to differ from original by at most "
+           "a space");
     Whitespaces.replaceWhitespaceInToken(
         tokenAt(LineIndex), OriginalPrefix[LineIndex].size(), 0, "", "",
         /*InPPDirective=*/false, /*Newlines=*/0, /*Spaces=*/1);
