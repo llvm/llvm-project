@@ -160,7 +160,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_BRCOND, Ty}, Legal);
 
   // Select
-  for (auto Ty : {s1, s8, s16, s32, s64})
+  for (auto Ty : {s1, s8, s16, s32, s64, p0})
     setAction({G_SELECT, Ty}, Legal);
 
   setAction({G_SELECT, 1, s1}, Legal);
