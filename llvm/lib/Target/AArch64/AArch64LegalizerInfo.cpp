@@ -151,9 +151,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({G_UITOFP, 1, Ty}, Legal);
   }
   for (auto Ty : { s1, s8, s16 }) {
-    // FIXME: These should be widened on types smaller than s32.
-    setAction({G_FPTOSI, 0, Ty}, Legal);
-    setAction({G_FPTOUI, 0, Ty}, Legal);
+    setAction({G_FPTOSI, 0, Ty}, WidenScalar);
+    setAction({G_FPTOUI, 0, Ty}, WidenScalar);
     setAction({G_SITOFP, 1, Ty}, WidenScalar);
     setAction({G_UITOFP, 1, Ty}, WidenScalar);
   }
