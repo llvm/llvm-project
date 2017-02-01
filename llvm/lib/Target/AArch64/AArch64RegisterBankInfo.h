@@ -70,51 +70,28 @@ public:
 
   static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
                                      PartialMappingIdx LastAlias,
-                                     ArrayRef<PartialMappingIdx> Order) {
-    if (Order.front() != FirstAlias)
-      return false;
-    if (Order.back() != LastAlias)
-      return false;
-    if (Order.front() > Order.back())
-      return false;
+                                     ArrayRef<PartialMappingIdx> Order);
 
-    PartialMappingIdx Previous = Order.front();
-    bool First = true;
-    for (const auto &Current : Order) {
-      if (First) {
-        First = false;
-        continue;
-      }
-      if (Previous + 1 != Current)
-        return false;
-      Previous = Current;
-    }
-    return true;
-  }
+  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, unsigned Size);
 
-  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, unsigned Size) {
-    if (RBIdx == PMI_FirstGPR) {
-      if (Size <= 32)
-        return 0;
-      if (Size <= 64)
-        return 1;
-      llvm_unreachable("Unexpected size");
-    }
-    if (RBIdx == PMI_FirstFPR) {
-      if (Size <= 32)
-        return 0;
-      if (Size <= 64)
-        return 1;
-      if (Size <= 128)
-        return 2;
-      if (Size <= 256)
-        return 3;
-      if (Size <= 512)
-        return 4;
-      llvm_unreachable("Unexpected size");
-    }
-    llvm_unreachable("Unexpected bank");
-}
+  /// Get the pointer to the ValueMapping representing the RegisterBank
+  /// at \p RBIdx with a size of \p Size.
+  ///
+  /// The returned mapping works for instructions with the same kind of
+  /// operands for up to 3 operands.
+  ///
+  /// \pre \p RBIdx != PartialMappingIdx::None
+  static const RegisterBankInfo::ValueMapping *
+  getValueMapping(PartialMappingIdx RBIdx, unsigned Size);
+
+  /// Get the pointer to the ValueMapping of the operands of a copy
+  /// instruction from a GPR or FPR register to a GPR or FPR register
+  /// with a size of \p Size.
+  ///
+  /// If \p DstIsGPR is true, the destination of the copy is on GPR,
+  /// otherwise it is on FPR. Same thing for \p SrcIsGPR.
+  static const RegisterBankInfo::ValueMapping *
+  getCopyMapping(bool DstIsGPR, bool SrcIsGPR, unsigned Size);
 };
 
 /// This class provides the information for the target register banks.
