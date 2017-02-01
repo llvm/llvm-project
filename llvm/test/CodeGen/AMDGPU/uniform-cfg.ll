@@ -252,9 +252,11 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; GCN: s_cmp_lt_i32 [[COND]], 1
 ; GCN: s_cbranch_scc1 [[EXIT:[A-Za-z0-9_]+]]
 ; GCN: v_cmp_gt_i32_e64 vcc, [[COND]], 0{{$}}
-; GCN: s_cbranch_vccnz [[EXIT]]
-; GCN: buffer_store
+; GCN: s_cbranch_vccz [[BODY:[A-Za-z0-9_]+]]
 ; GCN: {{^}}[[EXIT]]:
+; GCN: s_endpgm
+; GCN: {{^}}[[BODY]]:
+; GCN: buffer_store
 ; GCN: s_endpgm
 define void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, i32 addrspace(1)* %out) {
 bb:
@@ -302,9 +304,10 @@ done:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
-; GCN: s_cbranch_execz [[ENDIF_LABEL:[0-9_A-Za-z]+]]
 ; GCN: s_cmp_lg_u32 {{s[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[ENDIF_LABEL]]
+; GCN: s_cbranch_scc0 [[IF_UNIFORM_LABEL:[A-Z0-9_a-z]+]]
+; GCN: s_endpgm
+; GCN: {{^}}[[IF_UNIFORM_LABEL]]:
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
 define void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) {
@@ -328,14 +331,13 @@ endif:
 
 ; GCN-LABEL: {{^}}divergent_inside_uniform:
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[ENDIF_LABEL:[0-9_A-Za-z]+]]
+; GCN: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+; GCN: [[IF_LABEL]]:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN: s_xor_b64  [[MASK1:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
 ; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN: buffer_store_dword [[ONE]]
-; GCN: [[ENDIF_LABEL]]:
-; GCN: s_endpgm
 define void @divergent_inside_uniform(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %u_cmp = icmp eq i32 %cond, 0
@@ -363,11 +365,11 @@ endif:
 ; GCN: buffer_store_dword [[ONE]]
 ; GCN: s_or_b64 exec, exec, [[MASK]]
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 0
-; GCN: s_cbranch_scc1 [[EXIT:[A-Z0-9_]+]]
+; GCN: s_cbranch_scc0 [[IF_UNIFORM:[A-Z0-9_]+]]
+; GCN: s_endpgm
+; GCN: [[IF_UNIFORM]]:
 ; GCN: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN: buffer_store_dword [[TWO]]
-; GCN: [[EXIT]]:
-; GCN: s_endpgm
 define void @divergent_if_uniform_if(i32 addrspace(1)* %out, i32 %cond) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0

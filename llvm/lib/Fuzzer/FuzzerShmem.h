@@ -22,10 +22,9 @@ namespace fuzzer {
 
 class SharedMemoryRegion {
  public:
-  bool Create(const char *Name, size_t Size);
+  bool Create(const char *Name);
   bool Open(const char *Name);
   bool Destroy(const char *Name);
-  size_t GetSize() const { return Size; }
   uint8_t *GetData() { return Data; }
   void PostServer() {Post(0);}
   void WaitServer() {Wait(0);}
@@ -33,7 +32,7 @@ class SharedMemoryRegion {
   void WaitClient() {Wait(1);}
 
   size_t WriteByteArray(const uint8_t *Bytes, size_t N) {
-    N = std::min(N, GetSize() - sizeof(N));
+    assert(N <= kShmemSize - sizeof(N));
     memcpy(GetData(), &N, sizeof(N));
     memcpy(GetData() + sizeof(N), Bytes, N);
     assert(N == ReadByteArraySize());
@@ -50,6 +49,8 @@ class SharedMemoryRegion {
   bool IsClient() const { return Data && !IAmServer; }
 
 private:
+
+  static const size_t kShmemSize = 1 << 22;
   bool IAmServer;
   std::string Path(const char *Name);
   std::string SemName(const char *Name, int Idx);
@@ -57,7 +58,6 @@ private:
   void Wait(int Idx);
 
   bool Map(int fd);
-  size_t Size = 0;
   uint8_t *Data = nullptr;
   void *Semaphore[2];
 };

@@ -884,6 +884,10 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
+  // Make sure the pointers have the same type.
+  if (GEPLHS->getType() != RHS->getType())
+    return nullptr;
+
   Value *PtrBase, *Index;
   std::tie(PtrBase, Index) = getAsConstantIndexedAddress(GEPLHS, DL);
 
@@ -1659,7 +1663,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
       (Cmp.isEquality() || (!C1->isNegative() && !C2->isNegative()))) {
     // TODO: Is this a good transform for vectors? Wider types may reduce
     // throughput. Should this transform be limited (even for scalars) by using
-    // ShouldChangeType()?
+    // shouldChangeType()?
     if (!Cmp.getType()->isVectorTy()) {
       Type *WideType = W->getType();
       unsigned WideScalarBits = WideType->getScalarSizeInBits();

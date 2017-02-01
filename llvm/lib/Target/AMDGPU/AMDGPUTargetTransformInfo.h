@@ -98,7 +98,8 @@ public:
     // don't use flat addressing.
     if (IsGraphicsShader)
       return -1;
-    return ST->hasFlatAddressSpace() ? AMDGPUAS::FLAT_ADDRESS : -1;
+    return ST->hasFlatAddressSpace() ?
+      AMDGPUAS::FLAT_ADDRESS : AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
   }
 
   unsigned getVectorSplitCost() { return 0; }

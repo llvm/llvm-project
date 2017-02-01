@@ -2252,15 +2252,19 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::BGTULImmMacro:
     return expandCondBranches(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::SDivMacro:
+  case Mips::SDivIMacro:
     return expandDiv(Inst, IDLoc, Out, STI, false, true) ? MER_Fail
                                                          : MER_Success;
   case Mips::DSDivMacro:
+  case Mips::DSDivIMacro:
     return expandDiv(Inst, IDLoc, Out, STI, true, true) ? MER_Fail
                                                         : MER_Success;
   case Mips::UDivMacro:
+  case Mips::UDivIMacro:
     return expandDiv(Inst, IDLoc, Out, STI, false, false) ? MER_Fail
                                                           : MER_Success;
   case Mips::DUDivMacro:
+  case Mips::DUDivIMacro:
     return expandDiv(Inst, IDLoc, Out, STI, true, false) ? MER_Fail
                                                          : MER_Success;
   case Mips::PseudoTRUNC_W_S:
@@ -3282,21 +3286,66 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   assert(RsRegOp.isReg() && "expected register operand kind");
   unsigned RsReg = RsRegOp.getReg();
 
-  const MCOperand &RtRegOp = Inst.getOperand(2);
-  assert(RtRegOp.isReg() && "expected register operand kind");
-  unsigned RtReg = RtRegOp.getReg();
+  unsigned RtReg;
+  int64_t ImmValue;
+
+  const MCOperand &RtOp = Inst.getOperand(2);
+  assert((RtOp.isReg() || RtOp.isImm()) &&
+         "expected register or immediate operand kind");
+  if (RtOp.isReg())
+    RtReg = RtOp.getReg();
+  else
+    ImmValue = RtOp.getImm();
+
   unsigned DivOp;
   unsigned ZeroReg;
+  unsigned SubOp;
 
   if (IsMips64) {
     DivOp = Signed ? Mips::DSDIV : Mips::DUDIV;
     ZeroReg = Mips::ZERO_64;
+    SubOp = Mips::DSUB;
   } else {
     DivOp = Signed ? Mips::SDIV : Mips::UDIV;
     ZeroReg = Mips::ZERO;
+    SubOp = Mips::SUB;
   }
 
   bool UseTraps = useTraps();
+
+  if (RtOp.isImm()) {
+    unsigned ATReg = getATReg(IDLoc);
+    if (!ATReg)
+      return true;
+
+    if (ImmValue == 0) {
+      if (RsReg == Mips::ZERO || RsReg == Mips::ZERO_64)
+        Warning(IDLoc, "dividing zero by zero");
+      else
+        Warning(IDLoc, "division by zero");
+      if (UseTraps)
+        TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
+      else
+        TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
+      return false;
+    }
+
+    if (ImmValue == 1) {
+      TOut.emitRRR(Mips::ADDu, RdReg, RsReg, Mips::ZERO, IDLoc, STI);
+      return false;
+    } else if (Signed && ImmValue == -1) {
+      TOut.emitRRR(SubOp, RdReg, Mips::ZERO, RsReg, IDLoc, STI);
+      return false;
+    } else {
+      if (loadImmediate(ImmValue, ATReg, Mips::NoRegister, isInt<32>(ImmValue),
+                        false, Inst.getLoc(), Out, STI))
+        return true;
+      TOut.emitRR(DivOp, RsReg, ATReg, IDLoc, STI);
+      TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
+      return false;
+    }
+    return true;
+  }
 
   if (RsReg == Mips::ZERO || RsReg == Mips::ZERO_64) {
     if (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64)

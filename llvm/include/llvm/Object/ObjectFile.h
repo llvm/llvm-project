@@ -267,8 +267,6 @@ public:
   virtual StringRef getFileFormatName() const = 0;
   virtual /* Triple::ArchType */ unsigned getArch() const = 0;
   virtual SubtargetFeatures getFeatures() const = 0;
-  virtual SubtargetFeatures getMIPSFeatures() const { return SubtargetFeatures(); }
-  virtual SubtargetFeatures getARMFeatures() const { return SubtargetFeatures(); }
   virtual void setARMSubArch(Triple &TheTriple) const { }
 
   /// Returns platform-specific object flags, if any.

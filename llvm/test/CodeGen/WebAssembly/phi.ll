@@ -8,8 +8,9 @@ target triple = "wasm32-unknown-unknown"
 ; Basic phi triangle.
 
 ; CHECK-LABEL: test0:
-; CHECK: div_s $[[NUM0:[0-9]+]]=, $0, $pop[[NUM1:[0-9]+]]{{$}}
-; CHECK: return $[[NUM0]]{{$}}
+; CHECK: return $0
+; CHECK: div_s $push[[NUM0:[0-9]+]]=, $0, $pop[[NUM1:[0-9]+]]{{$}}
+; CHECK: return $pop[[NUM0]]{{$}}
 define i32 @test0(i32 %p) {
 entry:
   %t = icmp slt i32 %p, 0

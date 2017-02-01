@@ -998,6 +998,15 @@ def PATCHABLE_TAIL_CALL : Instruction {
   let hasSideEffects = 1;
   let isReturn = 1;
 }
+def FENTRY_CALL : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "# FEntry call";
+  let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

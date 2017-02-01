@@ -158,11 +158,16 @@ class ImplicitNullChecks : public MachineFunctionPass {
                                    MachineBasicBlock *HandlerMBB);
   void rewriteNullChecks(ArrayRef<NullCheck> NullCheckList);
 
-  /// Is \p MI a memory operation that can be used to implicitly null check the
-  /// value in \p PointerReg?  \p PrevInsts is the set of instruction seen since
+  enum SuitabilityResult { SR_Suitable, SR_Unsuitable, SR_Impossible };
+
+  /// Return SR_Suitable if \p MI a memory operation that can be used to
+  /// implicitly null check the value in \p PointerReg, SR_Unsuitable if
+  /// \p MI cannot be used to null check and SR_Impossible if there is
+  /// no sense to continue lookup due to any other instruction will not be able
+  /// to be used. \p PrevInsts is the set of instruction seen since
   /// the explicit null check on \p PointerReg.
-  bool isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
-                          ArrayRef<MachineInstr *> PrevInsts);
+  SuitabilityResult isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
+                                       ArrayRef<MachineInstr *> PrevInsts);
 
   /// Return true if \p FaultingMI can be hoisted from after the the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
@@ -283,30 +288,33 @@ static bool AnyAliasLiveIn(const TargetRegisterInfo *TRI,
   return false;
 }
 
-bool ImplicitNullChecks::isSuitableMemoryOp(
-    MachineInstr &MI, unsigned PointerReg, ArrayRef<MachineInstr *> PrevInsts) {
+ImplicitNullChecks::SuitabilityResult
+ImplicitNullChecks::isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
+                                       ArrayRef<MachineInstr *> PrevInsts) {
   int64_t Offset;
   unsigned BaseReg;
 
   if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI) ||
       BaseReg != PointerReg)
-    return false;
+    return SR_Unsuitable;
 
   // We want the load to be issued at a sane offset from PointerReg, so that
   // if PointerReg is null then the load reliably page faults.
   if (!(MI.mayLoad() && !MI.isPredicable() && Offset < PageSize))
-    return false;
+    return SR_Unsuitable;
 
   // Finally, we need to make sure that the load instruction actually is
   // loading from PointerReg, and there isn't some re-definition of PointerReg
   // between the compare and the load.
+  // If PointerReg has been redefined before then there is no sense to continue
+  // lookup due to this condition will fail for any further instruction.
   for (auto *PrevMI : PrevInsts)
     for (auto &PrevMO : PrevMI->operands())
       if (PrevMO.isReg() && PrevMO.getReg() &&
           TRI->regsOverlap(PrevMO.getReg(), PointerReg))
-        return false;
+        return SR_Impossible;
 
-  return true;
+  return SR_Suitable;
 }
 
 bool ImplicitNullChecks::canHoistLoadInst(
@@ -481,9 +489,11 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
       return false;
 
     MachineInstr *Dependence;
-    if (isSuitableMemoryOp(MI, PointerReg, InstsSeenSoFar) &&
-        canHoistLoadInst(&MI, PointerReg, InstsSeenSoFar, NullSucc,
-                         Dependence)) {
+    SuitabilityResult SR = isSuitableMemoryOp(MI, PointerReg, InstsSeenSoFar);
+    if (SR == SR_Impossible)
+      return false;
+    if (SR == SR_Suitable && canHoistLoadInst(&MI, PointerReg, InstsSeenSoFar,
+                                              NullSucc, Dependence)) {
       NullCheckList.emplace_back(&MI, MBP.ConditionDef, &MBB, NotNullSucc,
                                  NullSucc, Dependence);
       return true;

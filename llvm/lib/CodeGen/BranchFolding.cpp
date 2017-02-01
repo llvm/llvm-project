@@ -500,6 +500,11 @@ BranchFolder::MBFIWrapper::printBlockFreq(raw_ostream &OS,
 
 void BranchFolder::MBFIWrapper::view(bool isSimple) { MBFI.view(isSimple); }
 
+uint64_t
+BranchFolder::MBFIWrapper::getEntryFreq() const {
+  return MBFI.getEntryFreq();
+}
+
 /// CountTerminators - Count the number of terminators in the given
 /// block and set I to the position of the first non-terminator, if there
 /// is one, or MBB->end() otherwise.

@@ -699,6 +699,27 @@ public:
   void writeTo(uint8_t *Buf) override;
 };
 
+// A container for one or more linker generated thunks. Instances of these
+// thunks including ARM interworking and Mips LA25 PI to non-PI thunks.
+template <class ELFT> class ThunkSection : public SyntheticSection<ELFT> {
+public:
+  // ThunkSection in OS, with desired OutSecOff of Off
+  ThunkSection(OutputSectionBase *OS, uint64_t Off);
+
+  // Add a newly created Thunk to this container:
+  // Thunk is given offset from start of this InputSection
+  // Thunk defines a symbol in this InputSection that can be used as target
+  // of a relocation
+  void addThunk(Thunk<ELFT> *T);
+  size_t getSize() const override { return Size; }
+  void writeTo(uint8_t *Buf) override;
+  InputSection<ELFT> *getTargetInputSection() const;
+
+private:
+  std::vector<const Thunk<ELFT> *> Thunks;
+  size_t Size = 0;
+};
+
 template <class ELFT> InputSection<ELFT> *createCommonSection();
 template <class ELFT> InputSection<ELFT> *createInterpSection();
 template <class ELFT> MergeInputSection<ELFT> *createCommentSection();

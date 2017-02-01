@@ -1,6 +1,6 @@
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -e sum -c sum \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -e sum -c sum \
 #RUN:    | FileCheck %s -check-prefix=EDGE
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -v sum -b sum \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -v sum -b sum \
 #RUN:    | FileCheck %s -check-prefix=VERTEX
 ---
 header:

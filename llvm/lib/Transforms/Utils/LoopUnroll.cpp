@@ -472,19 +472,16 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
       Header->getParent()->getBasicBlockList().push_back(New);
 
+      assert(*BB != Header || LI->getLoopFor(*BB) == L &&
+             "Header should not be in a sub-loop");
       // Tell LI about New.
-      if (*BB == Header) {
-        assert(LI->getLoopFor(*BB) == L && "Header should not be in a sub-loop");
-        L->addBasicBlockToLoop(New, *LI);
-      } else {
-        const Loop *OldLoop = addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
-        if (OldLoop) {
-          LoopsToSimplify.insert(NewLoops[OldLoop]);
+      const Loop *OldLoop = addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
+      if (OldLoop) {
+        LoopsToSimplify.insert(NewLoops[OldLoop]);
 
-          // Forget the old loop, since its inputs may have changed.
-          if (SE)
-            SE->forgetLoop(OldLoop);
-        }
+        // Forget the old loop, since its inputs may have changed.
+        if (SE)
+          SE->forgetLoop(OldLoop);
       }
 
       if (*BB == Header)

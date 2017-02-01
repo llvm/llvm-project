@@ -29,15 +29,18 @@ class DIPrinter {
   bool PrintFunctionNames;
   bool PrintPretty;
   int PrintSourceContext;
+  bool Verbose;
 
   void print(const DILineInfo &Info, bool Inlined);
   void printContext(const std::string &FileName, int64_t Line);
 
 public:
   DIPrinter(raw_ostream &OS, bool PrintFunctionNames = true,
-            bool PrintPretty = false, int PrintSourceContext = 0)
+            bool PrintPretty = false, int PrintSourceContext = 0,
+            bool Verbose = false)
       : OS(OS), PrintFunctionNames(PrintFunctionNames),
-        PrintPretty(PrintPretty), PrintSourceContext(PrintSourceContext) {}
+        PrintPretty(PrintPretty), PrintSourceContext(PrintSourceContext),
+        Verbose(Verbose) {}
 
   DIPrinter &operator<<(const DILineInfo &Info);
   DIPrinter &operator<<(const DIInliningInfo &Info);

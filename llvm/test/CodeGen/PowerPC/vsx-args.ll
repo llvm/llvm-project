@@ -13,10 +13,10 @@ entry:
   ret <2 x double> %v
 
 ; CHECK-LABEL: @main
-; CHECK-DAG: vor [[V:[0-9]+]], 2, 2
-; CHECK-DAG: vor 2, 3, 3
-; CHECK-DAG: vor 3, 4, 4
-; CHECK-DAG: vor 4, [[V]], [[V]]
+; CHECK-DAG: vmr [[V:[0-9]+]], 2
+; CHECK-DAG: vmr 2, 3
+; CHECK-DAG: vmr 3, 4
+; CHECK-DAG: vmr 4, [[V]]
 ; CHECK: bl sv
 ; CHECK: lxvd2x [[VC:[0-9]+]],
 ; CHECK: xvadddp 34, 34, [[VC]]
@@ -24,8 +24,8 @@ entry:
 
 ; CHECK-FISL-LABEL: @main
 ; CHECK-FISL: stxvd2x 34
-; CHECK-FISL: vor 2, 3, 3
-; CHECK-FISL: vor 3, 4, 4
+; CHECK-FISL: vmr 2, 3
+; CHECK-FISL: vmr 3, 4
 ; CHECK-FISL: lxvd2x 36
 ; CHECK-FISL: bl sv
 ; CHECK-FISL: lxvd2x [[VC:[0-9]+]],

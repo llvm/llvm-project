@@ -141,7 +141,6 @@ private:
   void inferAddressSpaces(const std::vector<Value *> &Postorder,
                           ValueToAddrSpaceMapTy *InferredAddrSpace) const;
 
-  bool handleComplexPtrUse(User &U, Value *OldV, Value *NewV) const;
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
 
   // Changes the flat address expressions in function F to point to specific
@@ -194,6 +193,7 @@ static bool isAddressExpression(const Value &V) {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
   case Instruction::GetElementPtr:
+  case Instruction::Select:
     return true;
   default:
     return false;
@@ -216,6 +216,8 @@ static SmallVector<Value *, 2> getPointerOperands(const Value &V) {
   case Instruction::AddrSpaceCast:
   case Instruction::GetElementPtr:
     return {Op.getOperand(0)};
+  case Instruction::Select:
+    return {Op.getOperand(1), Op.getOperand(2)};
   default:
     llvm_unreachable("Unexpected instruction type.");
   }
@@ -413,6 +415,11 @@ static Value *cloneInstructionWithNewAddressSpace(
     NewGEP->setIsInBounds(GEP->isInBounds());
     return NewGEP;
   }
+  case Instruction::Select: {
+    assert(I->getType()->isPointerTy());
+    return SelectInst::Create(I->getOperand(0), NewPointerOperands[1],
+                              NewPointerOperands[2], "", nullptr, I);
+  }
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -583,14 +590,12 @@ Optional<unsigned> InferAddressSpaces::updateAddressSpace(
   // of all its pointer operands.
   unsigned NewAS = UninitializedAddressSpace;
   for (Value *PtrOperand : getPointerOperands(V)) {
-    unsigned OperandAS;
-    if (InferredAddrSpace.count(PtrOperand))
-      OperandAS = InferredAddrSpace.lookup(PtrOperand);
-    else
-      OperandAS = PtrOperand->getType()->getPointerAddressSpace();
-    NewAS = joinAddressSpaces(NewAS, OperandAS);
+    auto I = InferredAddrSpace.find(PtrOperand);
+    unsigned OperandAS = I != InferredAddrSpace.end() ?
+      I->second : PtrOperand->getType()->getPointerAddressSpace();
 
     // join(flat, *) = flat. So we can break if NewAS is already flat.
+    NewAS = joinAddressSpaces(NewAS, OperandAS);
     if (NewAS == FlatAddrSpace)
       break;
   }
@@ -675,10 +680,15 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI,
 // \p returns true if it is OK to change the address space of constant \p C with
 // a ConstantExpr addrspacecast.
 bool InferAddressSpaces::isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const {
-  if (C->getType()->getPointerAddressSpace() == NewAS)
+  unsigned SrcAS = C->getType()->getPointerAddressSpace();
+  if (SrcAS == NewAS || isa<UndefValue>(C))
     return true;
 
-  if (isa<UndefValue>(C) || isa<ConstantPointerNull>(C))
+  // Prevent illegal casts between different non-flat address spaces.
+  if (SrcAS != FlatAddrSpace && NewAS != FlatAddrSpace)
+    return false;
+
+  if (isa<ConstantPointerNull>(C))
     return true;
 
   if (auto *Op = dyn_cast<Operator>(C)) {

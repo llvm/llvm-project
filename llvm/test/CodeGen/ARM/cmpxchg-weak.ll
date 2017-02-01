@@ -13,14 +13,16 @@ define void @test_cmpxchg_weak(i32 *%addr, i32 %desired, i32 %new) {
 ; CHECK-NEXT:     dmb ish
 ; CHECK-NEXT:     strex   [[SUCCESS:r[0-9]+]], r2, [r0]
 ; CHECK-NEXT:     cmp     [[SUCCESS]], #0
-; CHECK-NEXT:     bne     [[FAILBB:LBB[0-9]+_[0-9]+]]
+; CHECK-NEXT:     beq     [[SUCCESSBB:LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: BB#2:
-; CHECK-NEXT:     dmb     ish
 ; CHECK-NEXT:     str     r3, [r0]
 ; CHECK-NEXT:     bx      lr
 ; CHECK-NEXT: [[LDFAILBB]]:
 ; CHECK-NEXT:     clrex
-; CHECK-NEXT: [[FAILBB]]:
+; CHECK-NEXT:     str     r3, [r0]
+; CHECK-NEXT:     bx      lr
+; CHECK-NEXT: [[SUCCESSBB]]:
+; CHECK-NEXT:     dmb     ish
 ; CHECK-NEXT:     str     r3, [r0]
 ; CHECK-NEXT:     bx      lr
 

@@ -194,6 +194,8 @@ public:
     VK_SIZE,      // symbol@SIZE
     VK_WEAKREF,   // The link between the symbols in .weakref foo, bar
 
+    VK_X86_ABS8,
+
     VK_ARM_NONE,
     VK_ARM_GOT_PREL,
     VK_ARM_TARGET1,

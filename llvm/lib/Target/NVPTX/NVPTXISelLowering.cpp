@@ -1080,9 +1080,14 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
       return MakeIntrinsicCall(Ftz ? Intrinsic::nvvm_sqrt_approx_ftz_f
                                    : Intrinsic::nvvm_sqrt_approx_f);
     else {
-      // There's no sqrt.approx.f64 instruction, so we emit x * rsqrt(x).
-      return DAG.getNode(ISD::FMUL, DL, VT, Operand,
-                         MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d));
+      // There's no sqrt.approx.f64 instruction, so we emit
+      // reciprocal(rsqrt(x)).  This is faster than
+      // select(x == 0, 0, x * rsqrt(x)).  (In fact, it's faster than plain
+      // x * rsqrt(x).)
+      return DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, VT,
+          DAG.getConstant(Intrinsic::nvvm_rcp_approx_ftz_d, DL, MVT::i32),
+          MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d));
     }
   }
 }

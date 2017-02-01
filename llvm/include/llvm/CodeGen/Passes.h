@@ -286,6 +286,9 @@ namespace llvm {
   /// the target platform.
   extern char &XRayInstrumentationID;
 
+  /// This pass inserts FEntry calls
+  extern char &FEntryInserterID;
+
   /// \brief This pass implements the "patchable-function" attribute.
   extern char &PatchableFunctionID;
 

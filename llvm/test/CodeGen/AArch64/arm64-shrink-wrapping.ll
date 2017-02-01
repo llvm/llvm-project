@@ -346,19 +346,15 @@ entry:
 ; CHECK-NEXT: sub w1, w1, #1
 ; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
 ; CHECK-NEXT: cbnz w1, [[LOOP_LABEL]]
-; DISABLE-NEXT: b [[IFEND_LABEL]]
-;
-; DISABLE: [[ELSE_LABEL]]: ; %if.else
-; DISABLE: lsl w0, w1, #1
-;
-; CHECK: [[IFEND_LABEL]]:
+; CHECK-NEXT: [[IFEND_LABEL]]:
 ; Epilogue code.
 ; CHECK: add sp, sp, #16
 ; CHECK-NEXT: ret
 ;
-; ENABLE: [[ELSE_LABEL]]: ; %if.else
-; ENABLE-NEXT: lsl w0, w1, #1
-; ENABLE_NEXT: ret
+; CHECK: [[ELSE_LABEL]]: ; %if.else
+; CHECK-NEXT: lsl w0, w1, #1
+; DISABLE-NEXT: add sp, sp, #16
+; CHECK-NEXT: ret
 define i32 @variadicFunc(i32 %cond, i32 %count, ...) #0 {
 entry:
   %ap = alloca i8*, align 8

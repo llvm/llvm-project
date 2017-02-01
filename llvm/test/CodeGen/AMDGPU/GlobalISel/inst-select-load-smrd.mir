@@ -52,11 +52,11 @@ regBankSelected: true
 # SIVI: [[K_LO:%[0-9]+]] = S_MOV_B32 4294967292
 # SIVI: [[K_HI:%[0-9]+]] = S_MOV_B32 3
 # SIVI: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# SIVI: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# SIVI: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
+# SIVI-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
+# SIVI-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
 # SIVI: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# SIVI: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
+# SIVI-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
+# SIVI-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
 # SIVI: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # SIVI: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
@@ -66,11 +66,11 @@ regBankSelected: true
 # GCN: [[K_LO:%[0-9]+]] = S_MOV_B32 0
 # GCN: [[K_HI:%[0-9]+]] = S_MOV_B32 4
 # GCN: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# GCN: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# GCN: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
+# GCN-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
+# GCN-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
 # GCN: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# GCN: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# GCN: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
+# GCN-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
+# GCN-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
 # GCN: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # GCN: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
@@ -87,11 +87,11 @@ regBankSelected: true
 # SIVI: [[K_LO:%[0-9]+]] = S_MOV_B32 0
 # SIVI: [[K_HI:%[0-9]+]] = S_MOV_B32 1
 # SIVI: [[K:%[0-9]+]] = REG_SEQUENCE [[K_LO]], 1, [[K_HI]], 2
-# SIVI: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
-# SIVI: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
+# SIVI-DAG: [[K_SUB0:%[0-9]+]] = COPY [[K]].sub0
+# SIVI-DAG: [[PTR_LO:%[0-9]+]] = COPY [[PTR]].sub0
 # SIVI: [[ADD_PTR_LO:%[0-9]+]] = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
-# SIVI: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
+# SIVI-DAG: [[K_SUB1:%[0-9]+]] = COPY [[K]].sub1
+# SIVI-DAG: [[PTR_HI:%[0-9]+]] = COPY [[PTR]].sub1
 # SIVI: [[ADD_PTR_HI:%[0-9]+]] = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
 # SIVI: [[ADD_PTR:%[0-9]+]] = REG_SEQUENCE [[ADD_PTR_LO]], 1, [[ADD_PTR_HI]], 2
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0

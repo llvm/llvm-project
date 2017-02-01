@@ -43,6 +43,7 @@ set(sources
   X86EvexToVex.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp
+  X86MacroFusion.cpp
   X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
   X86RegisterInfo.cpp
