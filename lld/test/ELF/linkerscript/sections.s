@@ -93,6 +93,11 @@
 # SEC-MULTI: 6 .shstrtab     00000035 {{[0-9a-f]*}}
 # SEC-MULTI: 7 .strtab       00000008 {{[0-9a-f]*}}
 
+# Input section pattern contains additional semicolon.
+# Case found in linux kernel script. Check we are able to parse it.
+# RUN: echo "SECTIONS { .text : { ;;*(.text);;S = 0;; } }" > %t.script
+# RUN: ld.lld -o /dev/null --script %t.script %t
+
 .globl _start
 _start:
     mov $60, %rax

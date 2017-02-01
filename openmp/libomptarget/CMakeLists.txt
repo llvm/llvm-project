@@ -107,6 +107,9 @@ if(LIBOMPTARGET_HAVE_STD_CPP11_FLAG)
     set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
+  # Build offloading plugins and device RTLs if they are available.
+  add_subdirectory(plugins)
+  
   # Add tests.
   add_subdirectory(test)
   

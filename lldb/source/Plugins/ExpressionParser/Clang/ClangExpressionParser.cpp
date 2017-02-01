@@ -35,7 +35,6 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/Sema/SemaConsumer.h"
-#include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"

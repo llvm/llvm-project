@@ -198,6 +198,7 @@ void __kmpc_push_target_tripcount(int32_t device_id, uint64_t loop_tripcount);
     fprintf(stderr, __VA_ARGS__);                                              \
   }
 
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #define DPxMOD "0x%0*" PRIxPTR
 #define DPxPTR(ptr) ((int)(2*sizeof(uintptr_t))), ((uintptr_t) (ptr))
