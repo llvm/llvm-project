@@ -317,12 +317,18 @@ public:
 
     /// The final mapping of the instruction.
     const InstructionMapping &getInstrMapping() const { return InstrMapping; }
+
+    /// The MachineRegisterInfo we used to realize the mapping.
+    MachineRegisterInfo &getMRI() const { return MRI; }
     /// @}
 
     /// Create as many new virtual registers as needed for the mapping of the \p
     /// OpIdx-th operand.
     /// The number of registers is determined by the number of breakdown for the
     /// related operand in the instruction mapping.
+    /// The type of the new registers is a plain scalar of the right size.
+    /// The proper type is expected to be set when the mapping is applied to
+    /// the instruction(s) that realizes the mapping.
     ///
     /// \pre getMI().getOperand(OpIdx).isReg()
     ///
@@ -487,6 +493,12 @@ protected:
   /// Basically, that means that \p OpdMapper.getMI() is left untouched
   /// aside from the reassignment of the register operand that have been
   /// remapped.
+  ///
+  /// The type of all the new registers that have been created by the
+  /// mapper are properly remapped to the type of the original registers
+  /// they replace. In other words, the semantic of the instruction does
+  /// not change, only the register banks.
+  ///
   /// If the mapping of one of the operand spans several registers, this
   /// method will abort as this is not like a default mapping anymore.
   ///
