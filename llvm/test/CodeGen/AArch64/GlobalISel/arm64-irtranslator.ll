@@ -1054,6 +1054,34 @@ define void @test_memcpy(i8* %dst, i8* %src, i64 %size) {
   ret void
 }
 
+declare void @llvm.memmove.p0i8.p0i8.i64(i8*, i8*, i64, i32 %align, i1 %volatile)
+define void @test_memmove(i8* %dst, i8* %src, i64 %size) {
+; CHECK-LABEL: name: test_memmove
+; CHECK: [[DST:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[SRC:%[0-9]+]](p0) = COPY %x1
+; CHECK: [[SIZE:%[0-9]+]](s64) = COPY %x2
+; CHECK: %x0 = COPY [[DST]]
+; CHECK: %x1 = COPY [[SRC]]
+; CHECK: %x2 = COPY [[SIZE]]
+; CHECK: BL $memmove, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i32 1, i1 0)
+  ret void
+}
+
+declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i32 %align, i1 %volatile)
+define void @test_memset(i8* %dst, i8 %val, i64 %size) {
+; CHECK-LABEL: name: test_memset
+; CHECK: [[DST:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[SRC:%[0-9]+]](s8) = COPY %w1
+; CHECK: [[SIZE:%[0-9]+]](s64) = COPY %x2
+; CHECK: %x0 = COPY [[DST]]
+; CHECK: %w1 = COPY [[SRC]]
+; CHECK: %x2 = COPY [[SIZE]]
+; CHECK: BL $memset, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %w1, implicit %x2
+  call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i32 1, i1 0)
+  ret void
+}
+
 declare i64 @llvm.objectsize.i64(i8*, i1)
 declare i32 @llvm.objectsize.i32(i8*, i1)
 define void @test_objectsize(i8* %addr0, i8* %addr1) {
