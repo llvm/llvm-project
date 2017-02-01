@@ -1,4 +1,8 @@
 ; REQUIRES: object-emission
+; RUN: %llc_dwarf -O0 -filetype=obj < %S/gmlt.ll | llvm-dwarfdump - | FileCheck %S/gmlt.ll
+
+; There's a darwin specific test in X86/gmlt, so it's okay to XFAIL this here.
+; XFAIL: darwin
 
 ; Generated from the following source compiled with clang++ -gmlt:
 ; void f1() {}
@@ -75,13 +79,6 @@
 ; CHECK: NULL
 ; CHECK-NOT: {{DW_TAG|DW_AT}}
 ; CHECK: NULL
-
-; PROFILING: DW_TAG_subprogram
-; PROFILING: DW_AT_name {{.*}} "f1"
-; With -debug-info-for-profiling, we need to emit decl_file a-nd decl_line
-; of the subprogram.
-; PROFILING: DW_AT_decl_file
-; PROFILING: DW_AT_decl_line
 
 ; CHECK: .debug_ranges contents:
 

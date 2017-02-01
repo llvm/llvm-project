@@ -1195,7 +1195,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   // If -fdebug-info-for-profiling is enabled, need to emit the subprogram
   // and its source location.
   bool SkipSPSourceLocation = SkipSPAttributes &&
-                              !Asm->TM.Options.DebugInfoForProfiling;
+                              !CUNode->getDebugInfoForProfiling();
   if (!SkipSPSourceLocation)
     if (applySubprogramDefinitionAttributes(SP, SPDie))
       return;
