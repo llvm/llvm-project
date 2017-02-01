@@ -342,7 +342,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
   }
 
   // See if this is a deleted function.
-  SmallVector<DiagnoseIfAttr *, 4> DiagnoseIfWarnings;
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isDeleted()) {
       auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
@@ -365,11 +364,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
     if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
       return true;
 
-    if (const DiagnoseIfAttr *A =
-            checkArgIndependentDiagnoseIf(FD, DiagnoseIfWarnings)) {
-      emitDiagnoseIfDiagnostic(Loc, A);
+    if (diagnoseArgIndependentDiagnoseIfAttrs(FD, Loc))
       return true;
-    }
   }
 
   // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions
@@ -384,9 +380,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
     Diag(D->getLocation(), diag::note_entity_declared_at) << D;
     return true;
   }
-
-  for (const auto *W : DiagnoseIfWarnings)
-    emitDiagnoseIfDiagnostic(Loc, W);
 
   DiagnoseAvailabilityOfDecl(*this, D, Loc, UnknownObjCClass,
                              ObjCPropertyAccess);
@@ -5189,16 +5182,6 @@ static void checkDirectCallValidity(Sema &S, const Expr *Fn,
         << Attr->getCond()->getSourceRange() << Attr->getMessage();
     return;
   }
-
-  SmallVector<DiagnoseIfAttr *, 4> Nonfatal;
-  if (const DiagnoseIfAttr *Attr = S.checkArgDependentDiagnoseIf(
-          Callee, ArgExprs, Nonfatal, /*MissingImplicitThis=*/true)) {
-    S.emitDiagnoseIfDiagnostic(Fn->getLocStart(), Attr);
-    return;
-  }
-
-  for (const auto *W : Nonfatal)
-    S.emitDiagnoseIfDiagnostic(Fn->getLocStart(), W);
 }
 
 /// ActOnCallExpr - Handle a call to Fn with the specified array of arguments.
