@@ -130,7 +130,8 @@ body: |
     %1:_(s1) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s32_s1
-    ; CHECK: %2(s32) = G_SITOFP %1
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s32) = G_SITOFP %3
     %2:_(s32) = G_SITOFP %1
 ...
 
@@ -143,7 +144,8 @@ body: |
     %1:_(s1) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s32_s1
-    ; CHECK: %2(s32) = G_UITOFP %1
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s32) = G_UITOFP %3
     %2:_(s32) = G_UITOFP %1
 ...
 
@@ -156,7 +158,8 @@ body: |
     %1:_(s8) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s64_s8
-    ; CHECK: %2(s64) = G_SITOFP %1
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s64) = G_SITOFP %3
     %2:_(s64) = G_SITOFP %1
 ...
 
@@ -169,7 +172,8 @@ body: |
     %1:_(s8) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s64_s8
-    ; CHECK: %2(s64) = G_UITOFP %1
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s64) = G_UITOFP %3
     %2:_(s64) = G_UITOFP %1
 ...
 
@@ -182,7 +186,8 @@ body: |
     %1:_(s16) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_sitofp_s32_s16
-    ; CHECK: %2(s32) = G_SITOFP %1
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s32) = G_SITOFP %3
     %2:_(s32) = G_SITOFP %1
 ...
 
@@ -195,6 +200,7 @@ body: |
     %1:_(s16) = G_TRUNC %0
 
     ; CHECK-LABEL: name: test_uitofp_s32_s16
-    ; CHECK: %2(s32) = G_UITOFP %1
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s32) = G_UITOFP %3
     %2:_(s32) = G_UITOFP %1
 ...
