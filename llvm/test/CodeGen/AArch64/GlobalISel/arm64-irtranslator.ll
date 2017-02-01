@@ -168,6 +168,55 @@ return:
   ret i32 %res
 }
 
+  ; The switch lowering code changes the CFG, which means that the original
+  ; %entry block is no longer a predecessor for the phi instruction. We need to
+  ; use the correct lowered MachineBasicBlock instead.
+; CHECK-LABEL: name: test_cfg_remap
+
+; CHECK: bb.5.entry:
+; CHECK-NEXT: successors: %[[PHI_BLOCK:bb.[0-9]+.phi.block]]
+; CHECK: G_BR %[[PHI_BLOCK]]
+
+; CHECK: [[PHI_BLOCK]]:
+; CHECK-NEXT: PHI %{{.*}}(s32), %bb.5.entry
+define i32 @test_cfg_remap(i32 %in) {
+entry:
+  switch i32 %in, label %phi.block [i32 1, label %next
+                                    i32 57, label %other]
+
+next:
+  br label %phi.block
+
+other:
+  ret i32 undef
+
+phi.block:
+  %res = phi i32 [1, %entry], [42, %next]
+  ret i32 %res
+}
+
+; CHECK-LABEL: name: test_cfg_remap_multiple_preds
+; CHECK: PHI [[ENTRY:%.*]](s32), %bb.{{[0-9]+}}.entry, [[ENTRY]](s32), %bb.{{[0-9]+}}.entry
+define i32 @test_cfg_remap_multiple_preds(i32 %in) {
+entry:
+  switch i32 %in, label %odd [i32 1, label %next
+                              i32 57, label %other
+                              i32 128, label %phi.block
+                              i32 256, label %phi.block]
+odd:
+  unreachable
+
+next:
+  br label %phi.block
+
+other:
+  ret i32 undef
+
+phi.block:
+  %res = phi i32 [1, %entry], [1, %entry], [42, %next]
+  ret i32 12
+}
+
 ; Tests for or.
 ; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](s64) = COPY %x0
