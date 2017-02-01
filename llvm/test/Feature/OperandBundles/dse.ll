@@ -39,7 +39,7 @@ define void @test_2() {
   ret void
 
 ; CHECK:  tail call void @f() [ "deopt"(i8* %m) ]
-; CHECK-NEXT  ret void
+; CHECK-NEXT:  ret void
 }
 
 define i8* @test_3() {

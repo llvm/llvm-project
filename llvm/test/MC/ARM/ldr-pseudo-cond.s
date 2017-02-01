@@ -37,7 +37,7 @@ f2:
 @ CHECK-ARM moveq r2, #520093696
 @ CHECK-THUMB2 moveq.w r2, #520093696
   ldrne r3, = 0x00001234
-@ CHECK movwne r2, #4660
+@ CHECK: movwne r3, #4660
 
 @
 @ Constant Pools

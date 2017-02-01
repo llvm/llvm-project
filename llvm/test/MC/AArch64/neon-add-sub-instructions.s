@@ -67,7 +67,7 @@
          fsub v0.2d, v1.2d, v2.2d
 
 // CHECK: fsub v0.4h, v1.4h, v2.4h       // encoding: [0x20,0x14,0xc2,0x0e]
-// CHECK; fsub v0.8h, v1.8h, v2.8h       // encoding: [0x20,0x14,0xc2,0x4e]
+// CHECK: fsub v0.8h, v1.8h, v2.8h       // encoding: [0x20,0x14,0xc2,0x4e]
 // CHECK: fsub v0.2s, v1.2s, v2.2s       // encoding: [0x20,0xd4,0xa2,0x0e]
 // CHECK: fsub v0.4s, v1.4s, v2.4s       // encoding: [0x20,0xd4,0xa2,0x4e]
 // CHECK: fsub v0.2d, v1.2d, v2.2d       // encoding: [0x20,0xd4,0xe2,0x4e]

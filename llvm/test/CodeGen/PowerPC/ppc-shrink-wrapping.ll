@@ -403,7 +403,7 @@ entry:
 ; CHECK: [[ELSE_LABEL]]
 ; CHECK-NEXT: slwi 3, 4, 1
 ; DISABLE: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; CHECK-NEXT blr
+; CHECK-NEXT: blr
 ; 
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
