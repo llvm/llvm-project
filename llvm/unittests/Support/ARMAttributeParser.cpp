@@ -26,12 +26,13 @@ struct AttributeSection {
 };
 
 bool testBuildAttr(unsigned Tag, unsigned Value,
-                      unsigned ExpectedTag, unsigned ExpectedValue) {
+                   unsigned ExpectedTag, unsigned ExpectedValue) {
   std::string buffer;
   raw_string_ostream OS(buffer);
   AttributeSection Section(Tag, Value);
   Section.write(OS);
-  ArrayRef<uint8_t> Bytes((uint8_t*)OS.str().c_str(), OS.str().size());
+  ArrayRef<uint8_t> Bytes(
+    reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
 
   ARMAttributeParser Parser;
   Parser.Parse(Bytes, true);

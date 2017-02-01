@@ -33,7 +33,7 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/linux/ProcessLauncherLinux.h"
+#include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
@@ -332,7 +332,7 @@ Error NativeProcessLinux::LaunchInferior(MainLoop &mainloop,
   MaybeLogLaunchInfo(launch_info);
 
   ::pid_t pid =
-      ProcessLauncherLinux().LaunchProcess(launch_info, error).GetProcessId();
+      ProcessLauncherPosixFork().LaunchProcess(launch_info, error).GetProcessId();
   if (error.Fail())
     return error;
 

@@ -26,7 +26,7 @@ static cl::opt<bool> EnableMacroFusion("aarch64-misched-fusion", cl::Hidden,
 
 namespace {
 
-/// \brief Verify that the instruction pair, \param First and \param Second,
+/// \brief Verify that the instruction pair, First and Second,
 /// should be scheduled back to back.  Given an anchor instruction, if the other
 /// instruction is unspecified, then verify that the anchor instruction may be
 /// part of a pair at all.
@@ -158,7 +158,7 @@ static bool shouldScheduleAdjacent(const AArch64InstrInfo &TII,
 }
 
 /// \brief Implement the fusion of instruction pairs in the scheduling
-/// \param DAG, anchored at the instruction in \param ASU. \param Preds
+/// DAG, anchored at the instruction in ASU. Preds
 /// indicates if its dependencies in \param APreds are predecessors instead of
 /// successors.
 static bool scheduleAdjacentImpl(ScheduleDAGMI *DAG, SUnit *ASU,

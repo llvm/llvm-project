@@ -276,9 +276,8 @@ void Dependences::addPrivatizationDependences() {
     *PrivMap = isl_union_map_apply_range(isl_union_map_copy(*Map),
                                          isl_union_map_copy(TC_RED));
     *PrivMap = isl_union_map_union(
-        *PrivMap,
-        isl_union_map_apply_range(isl_union_map_copy(TC_RED),
-                                  isl_union_map_copy(*Map)));
+        *PrivMap, isl_union_map_apply_range(isl_union_map_copy(TC_RED),
+                                            isl_union_map_copy(*Map)));
 
     *Map = isl_union_map_union(*Map, *PrivMap);
   }

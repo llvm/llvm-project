@@ -362,9 +362,8 @@ TEST(Isl, Foreach) {
     EXPECT_EQ(isl_stat_error,
               foreachEltWithBreak(
                   TestMap, [&](IslPtr<isl_basic_map> BMap) -> isl_stat {
-                    EXPECT_EQ(
-                        isl_bool_true,
-                        isl_basic_map_is_equal(BMap.keep(), TestBMap.keep()));
+                    EXPECT_EQ(isl_bool_true, isl_basic_map_is_equal(
+                                                 BMap.keep(), TestBMap.keep()));
                     NumBMaps++;
                     return isl_stat_error;
                   }));

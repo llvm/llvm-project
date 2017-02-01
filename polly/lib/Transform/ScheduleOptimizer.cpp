@@ -1083,9 +1083,8 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(
     return true;
   auto *NewScheduleMap = isl_schedule_get_map(NewSchedule);
   isl_union_map *OldSchedule = S.getSchedule();
-  assert(OldSchedule &&
-         "Only IslScheduleOptimizer can insert extension nodes "
-         "that make Scop::getSchedule() return nullptr.");
+  assert(OldSchedule && "Only IslScheduleOptimizer can insert extension nodes "
+                        "that make Scop::getSchedule() return nullptr.");
   bool changed = !isl_union_map_is_equal(OldSchedule, NewScheduleMap);
   isl_union_map_free(OldSchedule);
   isl_union_map_free(NewScheduleMap);

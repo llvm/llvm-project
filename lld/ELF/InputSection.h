@@ -280,17 +280,6 @@ public:
 
   InputSectionBase<ELFT> *getRelocatedSection();
 
-  // Register thunk related to the symbol. When the section is written
-  // to a mmap'ed file, target is requested to write an actual thunk code.
-  // Now thunks is supported for MIPS and ARM target only.
-  void addThunk(const Thunk<ELFT> *T);
-
-  // The offset of synthetic thunk code from beginning of this section.
-  uint64_t getThunkOff() const;
-
-  // Size of chunk with thunks code.
-  uint64_t getThunksSize() const;
-
   template <class RelTy>
   void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
@@ -303,8 +292,6 @@ public:
 private:
   template <class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
-
-  llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
 
 template <class ELFT> InputSection<ELFT> InputSection<ELFT>::Discarded;

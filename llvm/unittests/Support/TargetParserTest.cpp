@@ -246,6 +246,10 @@ TEST(TargetParserTest, testARMCPU) {
                          ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                          ARM::AEK_HWDIV | ARM::AEK_DSP,
                          "8-A"));
+  EXPECT_TRUE(testARMCPU("cortex-m23", "armv8-m.base", "none",
+                         ARM::AEK_HWDIV, "8-M.Baseline"));
+  EXPECT_TRUE(testARMCPU("cortex-m33", "armv8-m.main", "fpv5-sp-d16",
+                         ARM::AEK_HWDIV | ARM::AEK_DSP, "8-M.Mainline"));
   EXPECT_TRUE(testARMCPU("iwmmxt", "iwmmxt", "none",
                          ARM::AEK_NONE, "iwmmxt"));
   EXPECT_TRUE(testARMCPU("xscale", "xscale", "none",
