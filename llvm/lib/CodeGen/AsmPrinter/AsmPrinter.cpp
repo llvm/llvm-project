@@ -567,6 +567,15 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   OutStreamer->AddBlankLine();
 }
 
+/// Emit the directive and value for debug thread local expression
+///
+/// \p Value - The value to emit.
+/// \p Size - The size of the integer (in bytes) to emit.
+void AsmPrinter::EmitDebugValue(const MCExpr *Value,
+                                      unsigned Size) const {
+  OutStreamer->EmitValue(Value, Size);
+}
+
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
 void AsmPrinter::EmitFunctionHeader() {

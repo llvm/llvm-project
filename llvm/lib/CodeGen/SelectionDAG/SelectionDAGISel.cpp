@@ -2248,7 +2248,7 @@ GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
 /// to use the new results.
 void SelectionDAGISel::UpdateChains(
     SDNode *NodeToMatch, SDValue InputChain,
-    const SmallVectorImpl<SDNode *> &ChainNodesMatched, bool isMorphNodeTo) {
+    SmallVectorImpl<SDNode *> &ChainNodesMatched, bool isMorphNodeTo) {
   SmallVector<SDNode*, 4> NowDeadNodes;
 
   // Now that all the normal results are replaced, we replace the chain and
@@ -2260,6 +2260,11 @@ void SelectionDAGISel::UpdateChains(
     // Replace all the chain results with the final chain we ended up with.
     for (unsigned i = 0, e = ChainNodesMatched.size(); i != e; ++i) {
       SDNode *ChainNode = ChainNodesMatched[i];
+      // If ChainNode is null, it's because we replaced it on a previous
+      // iteration and we cleared it out of the map. Just skip it.
+      if (!ChainNode)
+        continue;
+
       assert(ChainNode->getOpcode() != ISD::DELETED_NODE &&
              "Deleted node left in chain");
 
@@ -2272,6 +2277,11 @@ void SelectionDAGISel::UpdateChains(
       if (ChainVal.getValueType() == MVT::Glue)
         ChainVal = ChainVal.getValue(ChainVal->getNumValues()-2);
       assert(ChainVal.getValueType() == MVT::Other && "Not a chain?");
+      SelectionDAG::DAGNodeDeletedListener NDL(
+          *CurDAG, [&](SDNode *N, SDNode *E) {
+            std::replace(ChainNodesMatched.begin(), ChainNodesMatched.end(), N,
+                         static_cast<SDNode *>(nullptr));
+          });
       CurDAG->ReplaceAllUsesOfValueWith(ChainVal, InputChain);
 
       // If the node became dead and we haven't already seen it, delete it.

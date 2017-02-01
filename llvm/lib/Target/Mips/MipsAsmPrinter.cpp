@@ -1037,6 +1037,22 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   // TODO: implement
 }
 
+// Emit .dtprelword or .dtpreldword directive
+// and value for debug thread local expression.
+void MipsAsmPrinter::EmitDebugValue(const MCExpr *Value,
+                                          unsigned Size) const {
+  switch (Size) {
+  case 4:
+    OutStreamer->EmitDTPRel32Value(Value);
+    break;
+  case 8:
+    OutStreamer->EmitDTPRel64Value(Value);
+    break;
+  default:
+    llvm_unreachable("Unexpected size of expression value.");
+  }
+}
+
 // Align all targets of indirect branches on bundle size.  Used only if target
 // is NaCl.
 void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
