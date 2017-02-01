@@ -26,7 +26,7 @@ static cl::opt<bool> EnableMacroFusion("x86-misched-fusion", cl::Hidden,
 
 namespace {
 
-/// \brief Verify that the instruction pair, \param First and \param Second,
+/// \brief Verify that the instruction pair, First and Second,
 /// should be scheduled back to back.  If either instruction is unspecified,
 /// then verify that the other instruction may be part of a pair at all.
 static bool shouldScheduleAdjacent(const X86Subtarget &ST,

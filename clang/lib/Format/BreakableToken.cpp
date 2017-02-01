@@ -803,18 +803,16 @@ void BreakableLineCommentSection::replaceWhitespaceBefore(
           ContentColumn[LineIndex] -
           (Content[LineIndex].data() - Lines[LineIndex].data()) +
           (OriginalPrefix[LineIndex].size() - Prefix[LineIndex].size());
-      if (tokenAt(LineIndex).OriginalColumn != LineColumn) {
-        Whitespaces.replaceWhitespace(*Tokens[LineIndex],
-                                      /*Newlines=*/1,
-                                      /*Spaces=*/LineColumn,
-                                      /*StartOfTokenColumn=*/LineColumn,
-                                      /*InPPDirective=*/false);
-      } else {
-        // The whitespace preceding the first line of this token does not need
-        // to be touched.
-        Whitespaces.addUntouchableToken(tokenAt(LineIndex),
-                                        /*InPPDirective=*/false);
-      }
+
+      // We always want to create a replacement instead of adding an untouchable
+      // token, even if LineColumn is the same as the original column of the
+      // token. This is because WhitespaceManager doesn't align trailing
+      // comments if they are untouchable.
+      Whitespaces.replaceWhitespace(*Tokens[LineIndex],
+                                    /*Newlines=*/1,
+                                    /*Spaces=*/LineColumn,
+                                    /*StartOfTokenColumn=*/LineColumn,
+                                    /*InPPDirective=*/false);
     }
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {

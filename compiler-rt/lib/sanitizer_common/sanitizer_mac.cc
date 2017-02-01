@@ -402,6 +402,8 @@ bool IsHandledDeadlySignal(int signum) {
     return true;
   if (common_flags()->handle_sigill && signum == SIGILL)
     return true;
+  if (common_flags()->handle_sigfpe && signum == SIGFPE)
+    return true;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 

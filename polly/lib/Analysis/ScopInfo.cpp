@@ -2183,9 +2183,8 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
   isl_union_set *Locations = isl_union_map_range(Accesses);
   Locations = isl_union_set_coalesce(Locations);
   Locations = isl_union_set_detect_equalities(Locations);
-  bool Valid = (0 ==
-                isl_union_set_foreach_set(Locations, buildMinMaxAccess,
-                                          &MinMaxAccesses));
+  bool Valid = (0 == isl_union_set_foreach_set(Locations, buildMinMaxAccess,
+                                               &MinMaxAccesses));
   isl_union_set_free(Locations);
   return Valid;
 }

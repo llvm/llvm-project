@@ -487,9 +487,8 @@ public:
 
     Values.insert(Unknown->getValue());
     Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
-    if (!Inst ||
-        (Inst->getOpcode() != Instruction::SRem &&
-         Inst->getOpcode() != Instruction::SDiv))
+    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
+                  Inst->getOpcode() != Instruction::SDiv))
       return false;
 
     auto *Dividend = SE.getSCEV(Inst->getOperand(1));

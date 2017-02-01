@@ -296,9 +296,8 @@ private:
     else
       IP = RTCBB->getParent()->getEntryBlock().getTerminator();
 
-    if (!Inst ||
-        (Inst->getOpcode() != Instruction::SRem &&
-         Inst->getOpcode() != Instruction::SDiv))
+    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
+                  Inst->getOpcode() != Instruction::SDiv))
       return visitGenericInst(E, Inst, IP);
 
     const SCEV *LHSScev = SE.getSCEV(Inst->getOperand(0));
