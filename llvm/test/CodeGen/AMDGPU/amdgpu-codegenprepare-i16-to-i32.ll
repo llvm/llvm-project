@@ -6,7 +6,7 @@
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @add_i3(i3 %a, i3 %b) {
@@ -19,7 +19,7 @@ define i3 @add_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @add_nsw_i3(i3 %a, i3 %b) {
@@ -32,7 +32,7 @@ define i3 @add_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @add_nuw_i3(i3 %a, i3 %b) {
@@ -58,7 +58,7 @@ define i3 @add_nuw_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = sub i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @sub_i3(i3 %a, i3 %b) {
@@ -84,7 +84,7 @@ define i3 @sub_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @sub_nuw_i3(i3 %a, i3 %b) {
@@ -110,7 +110,7 @@ define i3 @sub_nuw_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @mul_i3(i3 %a, i3 %b) {
@@ -123,7 +123,7 @@ define i3 @mul_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @mul_nsw_i3(i3 %a, i3 %b) {
@@ -136,7 +136,7 @@ define i3 @mul_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @mul_nuw_i3(i3 %a, i3 %b) {
@@ -188,7 +188,7 @@ define i3 @srem_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @shl_i3(i3 %a, i3 %b) {
@@ -201,7 +201,7 @@ define i3 @shl_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @shl_nsw_i3(i3 %a, i3 %b) {
@@ -214,7 +214,7 @@ define i3 @shl_nsw_i3(i3 %a, i3 %b) {
 ; SI-NEXT: ret i3 %r
 ; VI: %[[A_32:[0-9]+]] = zext i3 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i3 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_3:[0-9]+]] = trunc i32 %[[R_32]] to i3
 ; VI-NEXT: ret i3 %[[R_3]]
 define i3 @shl_nuw_i3(i3 %a, i3 %b) {
@@ -525,7 +525,7 @@ define i3 @bitreverse_i3(i3 %a) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @add_i16(i16 %a, i16 %b) {
@@ -559,7 +559,7 @@ define i16 @constant_add_nuw_i16() {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @add_nsw_i16(i16 %a, i16 %b) {
@@ -572,7 +572,7 @@ define i16 @add_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = add nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @add_nuw_i16(i16 %a, i16 %b) {
@@ -598,7 +598,7 @@ define i16 @add_nuw_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = sub i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @sub_i16(i16 %a, i16 %b) {
@@ -624,7 +624,7 @@ define i16 @sub_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @sub_nuw_i16(i16 %a, i16 %b) {
@@ -650,7 +650,7 @@ define i16 @sub_nuw_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @mul_i16(i16 %a, i16 %b) {
@@ -663,7 +663,7 @@ define i16 @mul_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @mul_nsw_i16(i16 %a, i16 %b) {
@@ -676,7 +676,7 @@ define i16 @mul_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @mul_nuw_i16(i16 %a, i16 %b) {
@@ -728,7 +728,7 @@ define i16 @srem_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @shl_i16(i16 %a, i16 %b) {
@@ -741,7 +741,7 @@ define i16 @shl_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nsw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @shl_nsw_i16(i16 %a, i16 %b) {
@@ -754,7 +754,7 @@ define i16 @shl_nsw_i16(i16 %a, i16 %b) {
 ; SI-NEXT: ret i16 %r
 ; VI: %[[A_32:[0-9]+]] = zext i16 %a to i32
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext i16 %b to i32
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw i32 %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw i32 %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc i32 %[[R_32]] to i16
 ; VI-NEXT: ret i16 %[[R_16]]
 define i16 @shl_nuw_i16(i16 %a, i16 %b) {
@@ -1072,7 +1072,7 @@ define i16 @bitreverse_i16(i16 %a) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @add_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1085,7 +1085,7 @@ define <3 x i15> @add_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @add_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1098,7 +1098,7 @@ define <3 x i15> @add_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @add_nuw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1124,7 +1124,7 @@ define <3 x i15> @add_nuw_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = sub <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @sub_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1150,7 +1150,7 @@ define <3 x i15> @sub_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @sub_nuw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1176,7 +1176,7 @@ define <3 x i15> @sub_nuw_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @mul_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1189,7 +1189,7 @@ define <3 x i15> @mul_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @mul_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1202,7 +1202,7 @@ define <3 x i15> @mul_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @mul_nuw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1254,7 +1254,7 @@ define <3 x i15> @srem_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @shl_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1267,7 +1267,7 @@ define <3 x i15> @shl_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @shl_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1280,7 +1280,7 @@ define <3 x i15> @shl_nsw_3xi15(<3 x i15> %a, <3 x i15> %b) {
 ; SI-NEXT: ret <3 x i15> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i15> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i15> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_15:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i15>
 ; VI-NEXT: ret <3 x i15> %[[R_15]]
 define <3 x i15> @shl_nuw_3xi15(<3 x i15> %a, <3 x i15> %b) {
@@ -1591,7 +1591,7 @@ define <3 x i15> @bitreverse_3xi15(<3 x i15> %a) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @add_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1604,7 +1604,7 @@ define <3 x i16> @add_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @add_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1617,7 +1617,7 @@ define <3 x i16> @add_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = add nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = add nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @add_nuw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1643,7 +1643,7 @@ define <3 x i16> @add_nuw_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = sub <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @sub_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1669,7 +1669,7 @@ define <3 x i16> @sub_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = sub nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @sub_nuw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1695,7 +1695,7 @@ define <3 x i16> @sub_nuw_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @mul_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1708,7 +1708,7 @@ define <3 x i16> @mul_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @mul_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1721,7 +1721,7 @@ define <3 x i16> @mul_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = mul nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @mul_nuw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1773,7 +1773,7 @@ define <3 x i16> @srem_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @shl_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1786,7 +1786,7 @@ define <3 x i16> @shl_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nsw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @shl_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
@@ -1799,7 +1799,7 @@ define <3 x i16> @shl_nsw_3xi16(<3 x i16> %a, <3 x i16> %b) {
 ; SI-NEXT: ret <3 x i16> %r
 ; VI: %[[A_32:[0-9]+]] = zext <3 x i16> %a to <3 x i32>
 ; VI-NEXT: %[[B_32:[0-9]+]] = zext <3 x i16> %b to <3 x i32>
-; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw <3 x i32> %[[A_32]], %[[B_32]]
+; VI-NEXT: %[[R_32:[0-9]+]] = shl nuw nsw <3 x i32> %[[A_32]], %[[B_32]]
 ; VI-NEXT: %[[R_16:[0-9]+]] = trunc <3 x i32> %[[R_32]] to <3 x i16>
 ; VI-NEXT: ret <3 x i16> %[[R_16]]
 define <3 x i16> @shl_nuw_3xi16(<3 x i16> %a, <3 x i16> %b) {

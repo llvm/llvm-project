@@ -110,16 +110,6 @@ static bool isTrivialOperatorNode(const TreePatternNode *N) {
 
 //===- Matchers -----------------------------------------------------------===//
 
-struct MatchAction {
-  virtual ~MatchAction() {}
-  virtual void emit(raw_ostream &OS) const = 0;
-};
-
-raw_ostream &operator<<(raw_ostream &S, const MatchAction &A) {
-  A.emit(S);
-  return S;
-}
-
 template <class PredicateTy> class PredicateListMatcher {
 private:
   typedef std::vector<std::unique_ptr<PredicateTy>> PredicateVec;
@@ -293,11 +283,22 @@ public:
   }
 };
 
-struct MutateOpcode : public MatchAction {
-  MutateOpcode(const CodeGenInstruction *I) : I(I) {}
+//===- Actions ------------------------------------------------------------===//
+
+class MatchAction {
+public:
+  virtual ~MatchAction() {}
+  virtual void emitCxxActionStmts(raw_ostream &OS) const = 0;
+};
+
+class MutateOpcodeAction : public MatchAction {
+private:
   const CodeGenInstruction *I;
 
-  virtual void emit(raw_ostream &OS) const {
+public:
+  MutateOpcodeAction(const CodeGenInstruction *I) : I(I) {}
+
+  virtual void emitCxxActionStmts(raw_ostream &OS) const {
     OS << "I.setDesc(TII.get(" << I->Namespace << "::" << I->TheDef->getName()
        << "));";
   }
@@ -312,15 +313,21 @@ class RuleMatcher {
   const PatternToMatch &P;
 
   std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
+  std::vector<std::unique_ptr<MatchAction>> Actions;
 
 public:
-  std::vector<std::unique_ptr<MatchAction>> Actions;
 
   RuleMatcher(const PatternToMatch &P) : P(P) {}
 
   InstructionMatcher &addInstructionMatcher() {
     Matchers.emplace_back(new InstructionMatcher());
     return *Matchers.back();
+  }
+
+  template <class Kind, class... Args>
+  Kind &addAction(Args&&... args) {
+    Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
+    return *static_cast<Kind *>(Actions.back().get());
   }
 
   void emit(raw_ostream &OS) {
@@ -344,8 +351,11 @@ public:
     Matchers.front()->emitCxxPredicateExpr(OS, "I");
     OS << ") {\n";
 
-    for (auto &MA : Actions)
-      OS << "    " << *MA << "\n";
+    for (const auto &MA : Actions) {
+      OS << "    ";
+      MA->emitCxxActionStmts(OS);
+      OS << "\n";
+    }
 
     OS << "    constrainSelectedInstRegOperands(I, TII, TRI, RBI);\n";
     OS << "    return true;\n";
@@ -410,7 +420,7 @@ GlobalISelEmitter::runOnPattern(const PatternToMatch &P, raw_ostream &OS) {
   // The operators look good: match the opcode and mutate it to the new one.
   InstructionMatcher &InsnMatcher = M.addInstructionMatcher();
   InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
-  M.Actions.emplace_back(new MutateOpcode(&DstI));
+  M.addAction<MutateOpcodeAction>(&DstI);
 
   // Next, analyze the children, only accepting patterns that don't require
   // any change to operands.

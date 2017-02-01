@@ -1076,7 +1076,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->Kind == TNK_Type_template ||
         TemplateId->Kind == TNK_Dependent_template_name) {
-      AnnotateTemplateIdTokenAsType();
+      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       ParsedType Type = getTypeAnnotation(Tok);
@@ -1124,10 +1124,10 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     // Parse the full template-id, then turn it into a type.
     if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
-                                TemplateName, true))
+                                TemplateName))
       return true;
-    if (TNK == TNK_Dependent_template_name)
-      AnnotateTemplateIdTokenAsType();
+    if (TNK == TNK_Type_template || TNK == TNK_Dependent_template_name)
+      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
 
     // If we didn't end up with a typename token, there's nothing more we
     // can do.
@@ -1145,7 +1145,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   // We have an identifier; check whether it is actually a type.
   IdentifierInfo *CorrectedII = nullptr;
   ParsedType Type = Actions.getTypeName(
-      *Id, IdLoc, getCurScope(), &SS, true, false, nullptr,
+      *Id, IdLoc, getCurScope(), &SS, /*IsClassName=*/true, false, nullptr,
       /*IsCtorOrDtorName=*/false,
       /*NonTrivialTypeSourceInfo=*/true,
       /*IsClassTemplateDeductionContext*/ false, &CorrectedII);
@@ -3377,7 +3377,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->Kind == TNK_Type_template ||
         TemplateId->Kind == TNK_Dependent_template_name) {
-      AnnotateTemplateIdTokenAsType();
+      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);
     }

@@ -253,7 +253,7 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
 
       unsigned RegB = MOB.getReg();
 
-      if (TRI->regsOverlap(RegA, RegB))
+      if (TRI->regsOverlap(RegA, RegB) && (MOA.isDef() || MOB.isDef()))
         return false;
     }
   }
@@ -310,7 +310,7 @@ ImplicitNullChecks::isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
   // lookup due to this condition will fail for any further instruction.
   for (auto *PrevMI : PrevInsts)
     for (auto &PrevMO : PrevMI->operands())
-      if (PrevMO.isReg() && PrevMO.getReg() &&
+      if (PrevMO.isReg() && PrevMO.getReg() && PrevMO.isDef() &&
           TRI->regsOverlap(PrevMO.getReg(), PointerReg))
         return SR_Impossible;
 
@@ -367,7 +367,8 @@ bool ImplicitNullChecks::canHoistLoadInst(
     // The Dependency can't be re-defining the base register -- then we won't
     // get the memory operation on the address we want.  This is already
     // checked in \c IsSuitableMemoryOp.
-    assert(!TRI->regsOverlap(DependenceMO.getReg(), PointerReg) &&
+    assert(!(DependenceMO.isDef() &&
+             TRI->regsOverlap(DependenceMO.getReg(), PointerReg)) &&
            "Should have been checked before!");
   }
 

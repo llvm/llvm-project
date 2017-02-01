@@ -6030,6 +6030,14 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetAtDirective();
   } else if (Tok.getString() == "arch") {
     return parseSetArchDirective();
+  } else if (Tok.getString() == "bopt") {
+    Warning(Tok.getLoc(), "'bopt' feature is unsupported");
+    getParser().Lex();
+    return false;
+  } else if (Tok.getString() == "nobopt") {
+    // We're already running in nobopt mode, so nothing to do.
+    getParser().Lex();
+    return false;
   } else if (Tok.getString() == "fp") {
     return parseSetFpDirective();
   } else if (Tok.getString() == "oddspreg") {

@@ -192,5 +192,3 @@ if(NOT LLVM_LINK_LLVM_DYLIB)
 endif()
 
 target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
-
-set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})

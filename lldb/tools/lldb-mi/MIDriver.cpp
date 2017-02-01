@@ -509,7 +509,7 @@ bool CMIDriver::StartWorkerThreads() {
     const CMIUtilString errMsg = CMIUtilString::Format(
         MIRSRC(IDS_THREADMGR_ERR_THREAD_FAIL_CREATE),
         CMICmnThreadMgrStd::Instance().GetErrorDescription().c_str());
-    SetErrorDescriptionn(errMsg);
+    SetErrorDescription(errMsg);
     return MIstatus::failure;
   }
 

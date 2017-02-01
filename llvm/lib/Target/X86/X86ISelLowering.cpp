@@ -5956,8 +5956,7 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
                                        unsigned NumNonZero, unsigned NumZero,
                                        SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
+                                       const X86Subtarget &Subtarget) {
   if (NumNonZero > 8)
     return SDValue();
 
@@ -6026,8 +6025,7 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
                                      unsigned NumNonZero, unsigned NumZero,
                                      SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   if (NumNonZero > 4)
     return SDValue();
 
@@ -6055,8 +6053,7 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
 
 /// Custom lower build_vector of v4i32 or v4f32.
 static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   // Find all zeroable elements.
   std::bitset<4> Zeroable;
   for (int i=0; i < 4; ++i) {
@@ -7601,17 +7598,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // If element VT is < 32 bits, convert it to inserts into a zero vector.
   if (EVTBits == 8 && NumElems == 16)
     if (SDValue V = LowerBuildVectorv16i8(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   if (EVTBits == 16 && NumElems == 8)
     if (SDValue V = LowerBuildVectorv8i16(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits and has 4 elems, try to generate an INSERTPS
   if (EVTBits == 32 && NumElems == 4)
-    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget, *this))
+    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits, turn it into a number of shuffles.
@@ -13921,25 +13918,27 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   }
   assert(VT.is128BitVector() && "Only 128-bit vector types should be left!");
 
-  if (Subtarget.hasSSE41()) {
-    if (EltVT.getSizeInBits() == 8 || EltVT.getSizeInBits() == 16) {
-      unsigned Opc;
-      if (VT == MVT::v8i16) {
-        Opc = X86ISD::PINSRW;
-      } else {
-        assert(VT == MVT::v16i8);
-        Opc = X86ISD::PINSRB;
-      }
-
-      // Transform it so it match pinsr{b,w} which expects a GR32 as its second
-      // argument.
-      if (N1.getValueType() != MVT::i32)
-        N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-      if (N2.getValueType() != MVT::i32)
-        N2 = DAG.getIntPtrConstant(IdxVal, dl);
-      return DAG.getNode(Opc, dl, VT, N0, N1, N2);
+  // Transform it so it match pinsr{b,w} which expects a GR32 as its second
+  // argument. SSE41 required for pinsrb.
+  if (VT == MVT::v8i16 || (VT == MVT::v16i8 && Subtarget.hasSSE41())) {
+    unsigned Opc;
+    if (VT == MVT::v8i16) {
+      assert(Subtarget.hasSSE2() && "SSE2 required for PINSRW");
+      Opc = X86ISD::PINSRW;
+    } else {
+      assert(VT == MVT::v16i8 && "PINSRB requires v16i8 vector");
+      assert(Subtarget.hasSSE41() && "SSE41 required for PINSRB");
+      Opc = X86ISD::PINSRB;
     }
 
+    if (N1.getValueType() != MVT::i32)
+      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
+    if (N2.getValueType() != MVT::i32)
+      N2 = DAG.getIntPtrConstant(IdxVal, dl);
+    return DAG.getNode(Opc, dl, VT, N0, N1, N2);
+  }
+
+  if (Subtarget.hasSSE41()) {
     if (EltVT == MVT::f32) {
       // Bits [7:6] of the constant are the source select. This will always be
       //   zero here. The DAG Combiner may combine an extract_elt index into
@@ -13969,24 +13968,11 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       return DAG.getNode(X86ISD::INSERTPS, dl, VT, N0, N1, N2);
     }
 
-    if (EltVT == MVT::i32 || EltVT == MVT::i64) {
-      // PINSR* works with constant index.
+    // PINSR* works with constant index.
+    if (EltVT == MVT::i32 || EltVT == MVT::i64)
       return Op;
-    }
   }
 
-  if (EltVT == MVT::i8)
-    return SDValue();
-
-  if (EltVT.getSizeInBits() == 16) {
-    // Transform it so it match pinsrw which expects a 16-bit value in a GR32
-    // as its second argument.
-    if (N1.getValueType() != MVT::i32)
-      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-    if (N2.getValueType() != MVT::i32)
-      N2 = DAG.getIntPtrConstant(IdxVal, dl);
-    return DAG.getNode(X86ISD::PINSRW, dl, VT, N0, N1, N2);
-  }
   return SDValue();
 }
 

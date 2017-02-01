@@ -788,6 +788,23 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
           APInt::getHighBitsSet(BitWidth, RHSKnownZero.countLeadingOnes());
     }
   }
+
+  // If assumptions conflict with each other or previous known bits, then we
+  // have a logical fallacy. This should only happen when a program has
+  // undefined behavior. We can't assert/crash, so clear out the known bits and
+  // hope for the best.
+
+  // FIXME: Publish a warning/remark that we have encountered UB or the compiler
+  // is broken.
+
+  // FIXME: Implement a stronger version of "I give up" by invalidating/clearing
+  // the assumption cache. This should indicate that the cache is corrupted so
+  // future callers will not waste time repopulating it with faulty assumptions.
+
+  if ((KnownZero & KnownOne) != 0) {
+    KnownZero.clearAllBits();
+    KnownOne.clearAllBits();
+  }
 }
 
 // Compute known bits from a shift operator, including those with a

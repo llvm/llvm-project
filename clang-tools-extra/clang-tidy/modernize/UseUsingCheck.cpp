@@ -79,11 +79,6 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   auto &Context = *Result.Context;
   auto &SM = *Result.SourceManager;
 
-  if (auto *D = MatchedDecl->getUnderlyingType()->getAsCXXRecordDecl()) {
-    //TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
-    llvm::errs() << D->getNameAsString() << "\n";
-  }
-
   auto Diag =
       diag(MatchedDecl->getLocStart(), "use 'using' instead of 'typedef'");
 
