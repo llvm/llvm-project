@@ -23,8 +23,9 @@
 
 using namespace llvm;
 
+template<typename CallInstTy>
 bool CallLowering::lowerCall(
-    MachineIRBuilder &MIRBuilder, const CallInst &CI, unsigned ResReg,
+    MachineIRBuilder &MIRBuilder, const CallInstTy &CI, unsigned ResReg,
     ArrayRef<unsigned> ArgRegs, std::function<unsigned()> GetCalleeReg) const {
   auto &DL = CI.getParent()->getParent()->getParent()->getDataLayout();
 
@@ -54,6 +55,16 @@ bool CallLowering::lowerCall(
 
   return lowerCall(MIRBuilder, Callee, OrigRet, OrigArgs);
 }
+
+template bool
+CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallInst &CI,
+                        unsigned ResReg, ArrayRef<unsigned> ArgRegs,
+                        std::function<unsigned()> GetCalleeReg) const;
+
+template bool
+CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const InvokeInst &CI,
+                        unsigned ResReg, ArrayRef<unsigned> ArgRegs,
+                        std::function<unsigned()> GetCalleeReg) const;
 
 template <typename FuncInfoTy>
 void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,

@@ -57,3 +57,34 @@ broken:
 continue:
   ret void
 }
+
+; CHECK-LABEL: name: test_invoke_varargs
+
+; CHECK: [[NULL:%[0-9]+]](p0) = G_CONSTANT i64 0
+; CHECK: [[ANSWER:%[0-9]+]](s32) = G_CONSTANT i32 42
+; CHECK: [[ONE:%[0-9]+]](s32) = G_FCONSTANT float 1.0
+
+; CHECK: %x0 = COPY [[NULL]]
+
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFFSET:%[0-9]+]](s64) = G_CONSTANT i64 0
+; CHECK: [[SLOT:%[0-9]+]](p0) = G_GEP [[SP]], [[OFFSET]](s64)
+; CHECK: G_STORE [[ANSWER]](s32), [[SLOT]]
+
+; CHECK: [[SP:%[0-9]+]](p0) = COPY %sp
+; CHECK: [[OFFSET:%[0-9]+]](s64) = G_CONSTANT i64 8
+; CHECK: [[SLOT:%[0-9]+]](p0) = G_GEP [[SP]], [[OFFSET]](s64)
+; CHECK: G_STORE [[ONE]](s32), [[SLOT]]
+
+; CHECK: BL @printf
+declare void @printf(i8*, ...)
+define void @test_invoke_varargs() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  invoke void(i8*, ...) @printf(i8* null, i32 42, float 1.0) to label %continue unwind label %broken
+
+broken:
+  landingpad { i8*, i32 } catch i8* bitcast(i8** @_ZTIi to i8*)
+  ret void
+
+continue:
+  ret void
+}
