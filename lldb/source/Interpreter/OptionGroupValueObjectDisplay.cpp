@@ -17,7 +17,6 @@
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Utils.h"
 
 #include "llvm/ADT/ArrayRef.h"
 

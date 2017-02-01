@@ -1064,7 +1064,12 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 /// If there was a failure when forming the type from the template-id,
 /// a type annotation token will still be created, but will have a
 /// NULL type pointer to signify an error.
-void Parser::AnnotateTemplateIdTokenAsType() {
+///
+/// \param IsClassName Is this template-id appearing in a context where we
+/// know it names a class, such as in an elaborated-type-specifier or
+/// base-specifier? ('typename' and 'template' are unneeded and disallowed
+/// in those contexts.)
+void Parser::AnnotateTemplateIdTokenAsType(bool IsClassName) {
   assert(Tok.is(tok::annot_template_id) && "Requires template-id tokens");
 
   TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
@@ -1083,7 +1088,9 @@ void Parser::AnnotateTemplateIdTokenAsType() {
                                   TemplateId->TemplateNameLoc,
                                   TemplateId->LAngleLoc,
                                   TemplateArgsPtr,
-                                  TemplateId->RAngleLoc);
+                                  TemplateId->RAngleLoc,
+                                  /*IsCtorOrDtorName*/false,
+                                  IsClassName);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
   setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());

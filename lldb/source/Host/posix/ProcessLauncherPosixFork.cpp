@@ -23,6 +23,7 @@
 
 #ifdef __ANDROID__
 #include <android/api-level.h>
+#define PT_TRACE_ME PTRACE_TRACEME
 #endif
 
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 21

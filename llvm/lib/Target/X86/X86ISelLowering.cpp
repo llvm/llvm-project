@@ -5956,8 +5956,7 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
                                        unsigned NumNonZero, unsigned NumZero,
                                        SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
+                                       const X86Subtarget &Subtarget) {
   if (NumNonZero > 8)
     return SDValue();
 
@@ -6026,8 +6025,7 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
                                      unsigned NumNonZero, unsigned NumZero,
                                      SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   if (NumNonZero > 4)
     return SDValue();
 
@@ -6055,8 +6053,7 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
 
 /// Custom lower build_vector of v4i32 or v4f32.
 static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   // Find all zeroable elements.
   std::bitset<4> Zeroable;
   for (int i=0; i < 4; ++i) {
@@ -7601,17 +7598,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // If element VT is < 32 bits, convert it to inserts into a zero vector.
   if (EVTBits == 8 && NumElems == 16)
     if (SDValue V = LowerBuildVectorv16i8(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   if (EVTBits == 16 && NumElems == 8)
     if (SDValue V = LowerBuildVectorv8i16(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits and has 4 elems, try to generate an INSERTPS
   if (EVTBits == 32 && NumElems == 4)
-    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget, *this))
+    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits, turn it into a number of shuffles.

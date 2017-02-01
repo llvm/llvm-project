@@ -67,16 +67,19 @@ getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
     Token Tok;
     if (TheLexer.LexFromRawLexer(Tok))
       break;
-    if (Tok.getLocation() == Range.getEnd() || Tok.getKind() == tok::eof)
+    if (Tok.getLocation() == Range.getEnd() || Tok.is(tok::eof))
       break;
 
-    if (Tok.getKind() == tok::comment) {
+    if (Tok.is(tok::comment)) {
       std::pair<FileID, unsigned> CommentLoc =
           SM.getDecomposedLoc(Tok.getLocation());
       assert(CommentLoc.first == BeginLoc.first);
       Comments.emplace_back(
           Tok.getLocation(),
           StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()));
+    } else {
+      // Clear comments found before the different token, e.g. comma.
+      Comments.clear();
     }
   }
 

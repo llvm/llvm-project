@@ -2426,17 +2426,36 @@ Sema::ActOnTemplateIdType(CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                           SourceLocation LAngleLoc,
                           ASTTemplateArgsPtr TemplateArgsIn,
                           SourceLocation RAngleLoc,
-                          bool IsCtorOrDtorName) {
+                          bool IsCtorOrDtorName, bool IsClassName) {
   if (SS.isInvalid())
     return true;
 
-  // Per C++ [class.qual]p2, if the template-id was an injected-class-name,
-  // it's not actually allowed to be used as a type in most cases. Because
-  // we annotate it before we know whether it's valid, we have to check for
-  // this case here.
-  if (!IsCtorOrDtorName) {
-    auto *LookupRD =
-        dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS, true));
+  if (!IsCtorOrDtorName && !IsClassName && SS.isSet()) {
+    DeclContext *LookupCtx = computeDeclContext(SS, /*EnteringContext*/false);
+
+    // C++ [temp.res]p3:
+    //   A qualified-id that refers to a type and in which the
+    //   nested-name-specifier depends on a template-parameter (14.6.2)
+    //   shall be prefixed by the keyword typename to indicate that the
+    //   qualified-id denotes a type, forming an
+    //   elaborated-type-specifier (7.1.5.3).
+    if (!LookupCtx && isDependentScopeSpecifier(SS)) {
+      Diag(SS.getBeginLoc(), diag::err_typename_missing_template)
+        << SS.getScopeRep() << TemplateII->getName();
+      // Recover as if 'typename' were specified.
+      // FIXME: This is not quite correct recovery as we don't transform SS
+      // into the corresponding dependent form (and we don't diagnose missing
+      // 'template' keywords within SS as a result).
+      return ActOnTypenameType(nullptr, SourceLocation(), SS, TemplateKWLoc,
+                               TemplateD, TemplateII, TemplateIILoc, LAngleLoc,
+                               TemplateArgsIn, RAngleLoc);
+    }
+
+    // Per C++ [class.qual]p2, if the template-id was an injected-class-name,
+    // it's not actually allowed to be used as a type in most cases. Because
+    // we annotate it before we know whether it's valid, we have to check for
+    // this case here.
+    auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
     if (LookupRD && LookupRD->getIdentifier() == TemplateII) {
       Diag(TemplateIILoc,
            TemplateKWLoc.isInvalid()
@@ -8588,13 +8607,15 @@ Sema::ActOnTypenameType(Scope *S,
 
   // Strangely, non-type results are not ignored by this lookup, so the
   // program is ill-formed if it finds an injected-class-name.
-  auto *LookupRD =
-      dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS, true));
-  if (LookupRD && LookupRD->getIdentifier() == TemplateII) {
-    Diag(TemplateIILoc,
-         diag::ext_out_of_line_qualified_id_type_names_constructor)
-      << TemplateII << 0 /*injected-class-name used as template name*/
-      << (TemplateKWLoc.isValid() ? 1 : 0 /*'template'/'typename' keyword*/);
+  if (TypenameLoc.isValid()) {
+    auto *LookupRD =
+        dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS, false));
+    if (LookupRD && LookupRD->getIdentifier() == TemplateII) {
+      Diag(TemplateIILoc,
+           diag::ext_out_of_line_qualified_id_type_names_constructor)
+        << TemplateII << 0 /*injected-class-name used as template name*/
+        << (TemplateKWLoc.isValid() ? 1 : 0 /*'template'/'typename' keyword*/);
+    }
   }
 
   // Translate the parser's template argument list in our AST format.

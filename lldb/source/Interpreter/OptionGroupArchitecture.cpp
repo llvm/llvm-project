@@ -13,7 +13,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Utility/Utils.h"
 
 using namespace lldb;
 using namespace lldb_private;

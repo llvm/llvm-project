@@ -623,7 +623,7 @@ Error Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   return error;
 }
 
-// LaunchProcessPosixSpawn for Apple, Linux, FreeBSD and other GLIBC
+// LaunchProcessPosixSpawn for Apple, Linux, FreeBSD, NetBSD and other GLIBC
 // systems
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) ||        \

@@ -135,6 +135,13 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
     case OPT_INPUT:
       OS << quote(rewritePath(Arg->getValue())) << "\n";
       break;
+    case OPT_o:
+      // If -o path contains directories, "lld @response.txt" will likely
+      // fail because the archive we are creating doesn't contain empty
+      // directories for the output path (-o doesn't create directories).
+      // Strip directories to prevent the issue.
+      OS << "-o " << quote(sys::path::filename(Arg->getValue())) << "\n";
+      break;
     case OPT_L:
     case OPT_dynamic_list:
     case OPT_rpath:
