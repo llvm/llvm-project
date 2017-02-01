@@ -297,7 +297,7 @@ __start:
 # CHECK-NEXT:     VirtualAddress: 0x30000
 # CHECK-NEXT:     PhysicalAddress: 0x30000
 # CHECK-NEXT:     FileSize: 8
-# CHECK-NEXT:     MemSize: 65536
+# CHECK-NEXT:     MemSize: 4096
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]
