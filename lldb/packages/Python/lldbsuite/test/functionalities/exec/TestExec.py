@@ -12,16 +12,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
-def execute_command(command):
-    #print('%% %s' % (command))
-    (exit_status, output) = seven.get_command_status_output(command)
-    # if output:
-    #    print(output)
-    #print('status = %u' % (exit_status))
-    return exit_status
-
-
 class ExecTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -33,15 +23,15 @@ class ExecTestCase(TestBase):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join(os.getcwd(), "main.cpp")
             o_file = os.path.join(os.getcwd(), "main.o")
-            execute_command(
+            lldbutil.execute_command(
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -c -o '%s'" %
                 (os.environ["CC"], source, o_file))
-            execute_command(
+            lldbutil.execute_command(
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s'" %
                 (os.environ["CC"], o_file))
             if self.debug_info != "dsym":
                 dsym_path = os.path.join(os.getcwd(), "a.out.dSYM")
-                execute_command("rm -rf '%s'" % (dsym_path))
+                lldbutil.execute_command("rm -rf '%s'" % (dsym_path))
         else:
             self.build()
 
