@@ -168,7 +168,14 @@ void RegisterBankEmitter::emitBaseClassDefinition(
 static void visitRegisterBankClasses(
     CodeGenRegBank &RegisterClassHierarchy, const CodeGenRegisterClass *RC,
     const Twine Kind,
-    std::function<void(const CodeGenRegisterClass *, StringRef)> VisitFn) {
+    std::function<void(const CodeGenRegisterClass *, StringRef)> VisitFn,
+    SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
+
+  // Make sure we only visit each class once to avoid infinite loops.
+  if (VisitedRCs.count(RC))
+    return;
+  VisitedRCs.insert(RC);
+
   // Visit each explicitly named class.
   VisitFn(RC, Kind.str());
 
@@ -180,7 +187,7 @@ static void visitRegisterBankClasses(
     if (RC != &PossibleSubclass && RC->hasSubClass(&PossibleSubclass))
       visitRegisterBankClasses(RegisterClassHierarchy, &PossibleSubclass,
                                TmpKind + " " + RC->getName() + " subclass",
-                               VisitFn);
+                               VisitFn, VisitedRCs);
 
     // Visit each class that contains only subregisters of RC with a common
     // subregister-index.
@@ -273,6 +280,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
 
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
+    SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
     RegisterBank Bank(*V);
 
     for (const CodeGenRegisterClass *RC :
@@ -282,7 +290,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
           [&Bank](const CodeGenRegisterClass *RC, StringRef Kind) {
             DEBUG(dbgs() << "Added " << RC->getName() << "(" << Kind << ")\n");
             Bank.addRegisterClass(RC);
-          });
+          }, VisitedRCs);
     }
 
     Banks.push_back(Bank);
