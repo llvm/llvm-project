@@ -177,6 +177,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
       MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
       MIRBuilder.buildGEP(SrcReg, MI.getOperand(1).getReg(), Offset);
+      // TODO: This is conservatively correct, but we probably want to split the
+      // memory operands in the future.
       MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
 
       DstRegs.push_back(DstReg);
@@ -202,6 +204,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
       MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
       MIRBuilder.buildGEP(DstReg, MI.getOperand(1).getReg(), Offset);
+      // TODO: This is conservatively correct, but we probably want to split the
+      // memory operands in the future.
       MIRBuilder.buildStore(SrcRegs[i], DstReg, **MI.memoperands_begin());
     }
     MI.eraseFromParent();
