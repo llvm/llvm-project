@@ -13,6 +13,8 @@ void g() {
   // CHECK-MESSAGES: :[[@LINE-5]]:19: note: 'y' declared here
   f(/*y=*/0, /*z=*/0);
   // CHECK-FIXES: {{^}}  f(/*y=*/0, /*z=*/0);
+
+  ffff(0 /*aaaa=*/, /*bbbb*/ 0); // Unsupported formats.
 }
 
 struct Closure {};

@@ -1208,7 +1208,6 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   PhdrEntry TlsHdr(PT_TLS, PF_R);
   PhdrEntry RelRo(PT_GNU_RELRO, PF_R);
-  PhdrEntry Note(PT_NOTE, PF_R);
   for (OutputSectionBase *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
@@ -1237,8 +1236,6 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
     if (isRelroSection<ELFT>(Sec))
       RelRo.add(Sec);
-    if (Sec->Type == SHT_NOTE)
-      Note.add(Sec);
   }
 
   // Add the TLS segment unless it's empty.
@@ -1287,8 +1284,17 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   if (Config->ZWxneeded)
     AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
-  if (Note.First)
-    Ret.push_back(std::move(Note));
+  // Create one PT_NOTE per a group of contiguous .note sections.
+  PhdrEntry *Note = nullptr;
+  for (OutputSectionBase *Sec : OutputSections) {
+    if (Sec->Type == SHT_NOTE) {
+      if (!Note || Script<ELFT>::X->hasLMA(Sec->getName()))
+        Note = AddHdr(PT_NOTE, PF_R);
+      Note->add(Sec);
+    } else {
+      Note = nullptr;
+    }
+  }
   return Ret;
 }
 

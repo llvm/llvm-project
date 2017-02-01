@@ -19,7 +19,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConvertEnum.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -78,15 +77,13 @@ Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
     if (prev_plan) {
       Vote prev_vote = prev_plan->ShouldReportStop(event_ptr);
       if (log)
-        log->Printf("ThreadPlan::ShouldReportStop() returning previous thread "
-                    "plan vote: %s",
-                    GetVoteAsCString(prev_vote));
+        log->Format(__FILE__, __FUNCTION__,
+                    "returning previous thread plan vote: {0}", prev_vote);
       return prev_vote;
     }
   }
   if (log)
-    log->Printf("ThreadPlan::ShouldReportStop() returning vote: %s",
-                GetVoteAsCString(m_stop_vote));
+    log->Printf("Returning vote: {0}", m_stop_vote);
   return m_stop_vote;
 }
 

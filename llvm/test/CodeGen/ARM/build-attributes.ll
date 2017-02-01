@@ -102,6 +102,10 @@
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -mattr=+fp-only-sp  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M7-FAST
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 | FileCheck %s --check-prefix=CORTEX-M7-DOUBLE
 ; RUN: llc < %s -mtriple=thumbv7em-linux-gnueabi -mcpu=cortex-m7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m23 | FileCheck %s --check-prefix=CORTEX-M23
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=CORTEX-M33
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-M33-FAST
+; RUN: llc < %s -mtriple=thumbv8-linux-gnueabi -mcpu=cortex-m33 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4 | FileCheck %s --check-prefix=CORTEX-R4
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r4f | FileCheck %s --check-prefix=CORTEX-R4F
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r5 | FileCheck %s --check-prefix=CORTEX-R5
@@ -209,6 +213,12 @@
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-vfp2,-fp16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NOFPU
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 -mattr=-neon,+fp-only-sp,+d16 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-SP
 ; RUN: llc < %s -mtriple=arm-none-none-eabi -mcpu=cortex-r52 | FileCheck %s --check-prefix=ARMv8R --check-prefix=ARMv8R-NEON
+
+; ARMv8-M
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m23 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m23 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv8-none-none-eabi -mcpu=cortex-m33 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 
 ; XSCALE:      .eabi_attribute 6, 5
 ; XSCALE:      .eabi_attribute 8, 1
@@ -1309,6 +1319,55 @@
 ; CORTEX-A32-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A32-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-A32-FAST:  .eabi_attribute 23, 1
+
+; CORTEX-M23:  .cpu cortex-m23
+; CORTEX-M23:  .eabi_attribute 6, 16
+; CORTEX-M23:  .eabi_attribute 7, 77
+; CORTEX-M23:  .eabi_attribute 8, 0
+; CORTEX-M23:  .eabi_attribute 9, 3
+; CORTEX-M23:  .eabi_attribute 17, 1
+;; We default to IEEE 754 compliance
+; CORTEX-M23-NOT:   .eabi_attribute 19
+; CORTEX-M23:  .eabi_attribute 20, 1
+; CORTEX-M23:  .eabi_attribute 21, 1
+; CORTEX-M23:  .eabi_attribute 23, 3
+; CORTEX-M23:  .eabi_attribute 34, 1
+; CORTEX-M23:  .eabi_attribute 24, 1
+; CORTEX-M23-NOT:  .eabi_attribute 27
+; CORTEX-M23-NOT:  .eabi_attribute 28
+; CORTEX-M23:  .eabi_attribute 25, 1
+; CORTEX-M23:  .eabi_attribute 38, 1
+; CORTEX-M23:  .eabi_attribute 14, 0
+; CORTEX-M23-NOT:  .eabi_attribute 44
+
+; CORTEX-M33:  .cpu cortex-m33
+; CORTEX-M33:  .eabi_attribute 6, 17
+; CORTEX-M33:  .eabi_attribute 7, 77
+; CORTEX-M33:  .eabi_attribute 8, 0
+; CORTEX-M33:  .eabi_attribute 9, 3
+; CORTEX-M33:  .fpu fpv5-sp-d16
+; CORTEX-M33:  .eabi_attribute 17, 1
+;; We default to IEEE 754 compliance
+; CORTEX-M23-NOT:   .eabi_attribute 19
+; CORTEX-M33:  .eabi_attribute 20, 1
+; CORTEX-M33:  .eabi_attribute 21, 1
+; CORTEX-M33:  .eabi_attribute 23, 3
+; CORTEX-M33:  .eabi_attribute 34, 1
+; CORTEX-M33:  .eabi_attribute 24, 1
+; CORTEX-M33:  .eabi_attribute 25, 1
+; CORTEX-M33:  .eabi_attribute 27, 1
+; CORTEX-M33-NOT:  .eabi_attribute 28
+; CORTEX-M33:  .eabi_attribute 36, 1
+; CORTEX-M33:  .eabi_attribute 38, 1
+; CORTEX-M33:  .eabi_attribute 46, 1
+; CORTEX-M33-NOT:  .eabi_attribute 44
+; CORTEX-M33:  .eabi_attribute 14, 0
+
+; CORTEX-M33-FAST-NOT:   .eabi_attribute 19
+; CORTEX-M33-FAST:  .eabi_attribute 20, 2
+; CORTEX-M33-FAST-NOT:  .eabi_attribute 21
+; CORTEX-M33-FAST-NOT:  .eabi_attribute 22
+; CORTEX-M33-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A35:  .cpu cortex-a35
 ; CORTEX-A35:  .eabi_attribute 6, 14

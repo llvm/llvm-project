@@ -14,6 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-pdbdump.h"
+
+#include "Analyze.h"
 #include "LLVMOutputStyle.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
@@ -85,6 +87,10 @@ cl::SubCommand
 cl::SubCommand
     PdbToYamlSubcommand("pdb2yaml",
                         "Generate a detailed YAML description of a PDB File");
+
+cl::SubCommand
+    AnalyzeSubcommand("analyze",
+                      "Analyze various aspects of a PDB's structure");
 
 cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering Options");
@@ -318,6 +324,14 @@ cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(PdbToYamlSubcommand));
 }
+
+namespace analyze {
+cl::opt<bool> StringTable("hash-collisions", cl::desc("Find hash collisions"),
+                          cl::sub(AnalyzeSubcommand), cl::init(false));
+cl::list<std::string> InputFilename(cl::Positional,
+                                    cl::desc("<input PDB file>"), cl::Required,
+                                    cl::sub(AnalyzeSubcommand));
+}
 }
 
 static ExitOnError ExitOnErr;
@@ -419,6 +433,17 @@ static void dumpRaw(StringRef Path) {
   NativeSession *RS = static_cast<NativeSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();
   auto O = llvm::make_unique<LLVMOutputStyle>(File);
+
+  ExitOnErr(O->dump());
+}
+
+static void dumpAnalysis(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::Native, Path, Session));
+
+  NativeSession *NS = static_cast<NativeSession *>(Session.get());
+  PDBFile &File = NS->getPDBFile();
+  auto O = llvm::make_unique<AnalysisStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -608,6 +633,8 @@ int main(int argc_, const char *argv_[]) {
     pdb2Yaml(opts::pdb2yaml::InputFilename.front());
   } else if (opts::YamlToPdbSubcommand) {
     yamlToPdb(opts::yaml2pdb::InputFilename.front());
+  } else if (opts::AnalyzeSubcommand) {
+    dumpAnalysis(opts::analyze::InputFilename.front());
   } else if (opts::PrettySubcommand) {
     if (opts::pretty::Lines)
       opts::pretty::Compilands = true;

@@ -15,7 +15,6 @@
 // Project includes
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Utility/Utils.h"
 
 using namespace lldb;
 using namespace lldb_private;

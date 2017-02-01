@@ -459,7 +459,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   if (Op.getValueType() == MVT::f16 && N->getValueType(0) != MVT::f32) {
     Op = DAG.getNode(ISD::FP_EXTEND, SDLoc(N), MVT::f32, Op);
     if (getTypeAction(MVT::f32) == TargetLowering::TypeSoftenFloat)
-      SoftenFloatResult(Op.getNode(), 0);
+      AddToWorklist(Op.getNode());
   }
 
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat) {
@@ -472,8 +472,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftenFloat)
-    Op = GetSoftenedFloat(Op);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
   return TLI.makeLibCall(DAG, LC, NVT, Op, false, SDLoc(N)).first;
 }

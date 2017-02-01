@@ -191,6 +191,11 @@ private:
   void SplitInteger(SDValue Op, EVT LoVT, EVT HiVT,
                     SDValue &Lo, SDValue &Hi);
 
+  void AddToWorklist(SDNode *N) {
+    N->setNodeId(ReadyToProcess);
+    Worklist.push_back(N);
+  }
+
   //===--------------------------------------------------------------------===//
   // Integer Promotion Support: LegalizeIntegerTypes.cpp
   //===--------------------------------------------------------------------===//

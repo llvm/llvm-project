@@ -122,7 +122,7 @@ void CMICmnBase::ClrErrorDescription() const {
 // Return:  None.
 // Throws:  None.
 //--
-void CMICmnBase::SetErrorDescriptionn(const CMIUtilString vFormat, ...) const {
+void CMICmnBase::SetErrorDescriptionn(const char *vFormat, ...) const {
   va_list args;
   va_start(args, vFormat);
   CMIUtilString strResult = CMIUtilString::FormatValist(vFormat, args);

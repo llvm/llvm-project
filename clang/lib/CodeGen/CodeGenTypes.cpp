@@ -738,7 +738,7 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert (T->isAnyPointerType() && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
   return isZeroInitializable(T);
 }
 

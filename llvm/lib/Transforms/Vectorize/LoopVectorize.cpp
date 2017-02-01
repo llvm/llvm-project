@@ -2550,102 +2550,6 @@ Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
                                      "reverse");
 }
 
-// Get a mask to interleave \p NumVec vectors into a wide vector.
-// I.e.  <0, VF, VF*2, ..., VF*(NumVec-1), 1, VF+1, VF*2+1, ...>
-// E.g. For 2 interleaved vectors, if VF is 4, the mask is:
-//      <0, 4, 1, 5, 2, 6, 3, 7>
-static Constant *getInterleavedMask(IRBuilder<> &Builder, unsigned VF,
-                                    unsigned NumVec) {
-  SmallVector<Constant *, 16> Mask;
-  for (unsigned i = 0; i < VF; i++)
-    for (unsigned j = 0; j < NumVec; j++)
-      Mask.push_back(Builder.getInt32(j * VF + i));
-
-  return ConstantVector::get(Mask);
-}
-
-// Get the strided mask starting from index \p Start.
-// I.e.  <Start, Start + Stride, ..., Start + Stride*(VF-1)>
-static Constant *getStridedMask(IRBuilder<> &Builder, unsigned Start,
-                                unsigned Stride, unsigned VF) {
-  SmallVector<Constant *, 16> Mask;
-  for (unsigned i = 0; i < VF; i++)
-    Mask.push_back(Builder.getInt32(Start + i * Stride));
-
-  return ConstantVector::get(Mask);
-}
-
-// Get a mask of two parts: The first part consists of sequential integers
-// starting from 0, The second part consists of UNDEFs.
-// I.e. <0, 1, 2, ..., NumInt - 1, undef, ..., undef>
-static Constant *getSequentialMask(IRBuilder<> &Builder, unsigned NumInt,
-                                   unsigned NumUndef) {
-  SmallVector<Constant *, 16> Mask;
-  for (unsigned i = 0; i < NumInt; i++)
-    Mask.push_back(Builder.getInt32(i));
-
-  Constant *Undef = UndefValue::get(Builder.getInt32Ty());
-  for (unsigned i = 0; i < NumUndef; i++)
-    Mask.push_back(Undef);
-
-  return ConstantVector::get(Mask);
-}
-
-// Concatenate two vectors with the same element type. The 2nd vector should
-// not have more elements than the 1st vector. If the 2nd vector has less
-// elements, extend it with UNDEFs.
-static Value *ConcatenateTwoVectors(IRBuilder<> &Builder, Value *V1,
-                                    Value *V2) {
-  VectorType *VecTy1 = dyn_cast<VectorType>(V1->getType());
-  VectorType *VecTy2 = dyn_cast<VectorType>(V2->getType());
-  assert(VecTy1 && VecTy2 &&
-         VecTy1->getScalarType() == VecTy2->getScalarType() &&
-         "Expect two vectors with the same element type");
-
-  unsigned NumElts1 = VecTy1->getNumElements();
-  unsigned NumElts2 = VecTy2->getNumElements();
-  assert(NumElts1 >= NumElts2 && "Unexpect the first vector has less elements");
-
-  if (NumElts1 > NumElts2) {
-    // Extend with UNDEFs.
-    Constant *ExtMask =
-        getSequentialMask(Builder, NumElts2, NumElts1 - NumElts2);
-    V2 = Builder.CreateShuffleVector(V2, UndefValue::get(VecTy2), ExtMask);
-  }
-
-  Constant *Mask = getSequentialMask(Builder, NumElts1 + NumElts2, 0);
-  return Builder.CreateShuffleVector(V1, V2, Mask);
-}
-
-// Concatenate vectors in the given list. All vectors have the same type.
-static Value *ConcatenateVectors(IRBuilder<> &Builder,
-                                 ArrayRef<Value *> InputList) {
-  unsigned NumVec = InputList.size();
-  assert(NumVec > 1 && "Should be at least two vectors");
-
-  SmallVector<Value *, 8> ResList;
-  ResList.append(InputList.begin(), InputList.end());
-  do {
-    SmallVector<Value *, 8> TmpList;
-    for (unsigned i = 0; i < NumVec - 1; i += 2) {
-      Value *V0 = ResList[i], *V1 = ResList[i + 1];
-      assert((V0->getType() == V1->getType() || i == NumVec - 2) &&
-             "Only the last vector may have a different type");
-
-      TmpList.push_back(ConcatenateTwoVectors(Builder, V0, V1));
-    }
-
-    // Push the last vector if the total number of vectors is odd.
-    if (NumVec % 2 != 0)
-      TmpList.push_back(ResList[NumVec - 1]);
-
-    ResList = TmpList;
-    NumVec = ResList.size();
-  } while (NumVec > 1);
-
-  return ResList[0];
-}
-
 // Try to vectorize the interleave group that \p Instr belongs to.
 //
 // E.g. Translate following interleaved load group (factor = 3):
@@ -2751,7 +2655,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
         continue;
 
       VectorParts Entry(UF);
-      Constant *StrideMask = getStridedMask(Builder, I, InterleaveFactor, VF);
+      Constant *StrideMask = createStrideMask(Builder, I, InterleaveFactor, VF);
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], UndefVec, StrideMask, "strided.vec");
@@ -2795,10 +2699,10 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     }
 
     // Concatenate all vectors into a wide vector.
-    Value *WideVec = ConcatenateVectors(Builder, StoredVecs);
+    Value *WideVec = concatenateVectors(Builder, StoredVecs);
 
     // Interleave the elements in the wide vector.
-    Constant *IMask = getInterleavedMask(Builder, VF, InterleaveFactor);
+    Constant *IMask = createInterleaveMask(Builder, VF, InterleaveFactor);
     Value *IVec = Builder.CreateShuffleVector(WideVec, UndefVec, IMask,
                                               "interleaved.vec");
 

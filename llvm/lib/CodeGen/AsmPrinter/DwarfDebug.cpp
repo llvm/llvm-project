@@ -1217,7 +1217,6 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
-    assert(DbgValues.empty());
     // FIXME: This wouldn't be true in LTO with a -g (with inlining) CU followed
     // by a -gmlt CU. Add a test and remove this assertion.
     assert(AbstractVariables.empty());

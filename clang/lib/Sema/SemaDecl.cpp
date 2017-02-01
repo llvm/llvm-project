@@ -5702,13 +5702,17 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
   if (OldDecl->isInvalidDecl())
     return;
 
+  bool IsTemplate = false;
   if (TemplateDecl *OldTD = dyn_cast<TemplateDecl>(OldDecl)) {
     OldDecl = OldTD->getTemplatedDecl();
+    IsTemplate = true;
     if (!IsSpecialization)
       IsDefinition = false;
   }
-  if (TemplateDecl *NewTD = dyn_cast<TemplateDecl>(NewDecl))
+  if (TemplateDecl *NewTD = dyn_cast<TemplateDecl>(NewDecl)) {
     NewDecl = NewTD->getTemplatedDecl();
+    IsTemplate = true;
+  }
 
   if (!OldDecl || !NewDecl)
     return;
@@ -5761,9 +5765,10 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
   }
 
   // A redeclaration is not allowed to drop a dllimport attribute, the only
-  // exceptions being inline function definitions, local extern declarations,
-  // qualified friend declarations or special MSVC extension: in the last case,
-  // the declaration is treated as if it were marked dllexport.
+  // exceptions being inline function definitions (except for function
+  // templates), local extern declarations, qualified friend declarations or
+  // special MSVC extension: in the last case, the declaration is treated as if
+  // it were marked dllexport.
   bool IsInline = false, IsStaticDataMember = false, IsQualifiedFriend = false;
   bool IsMicrosoft = S.Context.getTargetInfo().getCXXABI().isMicrosoft();
   if (const auto *VD = dyn_cast<VarDecl>(NewDecl)) {
@@ -5778,7 +5783,8 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
                         FD->getFriendObjectKind() == Decl::FOK_Declared;
   }
 
-  if (OldImportAttr && !HasNewAttr && !IsInline && !IsStaticDataMember &&
+  if (OldImportAttr && !HasNewAttr &&
+      (!IsInline || (IsMicrosoft && IsTemplate)) && !IsStaticDataMember &&
       !NewDecl->isLocalExternDecl() && !IsQualifiedFriend) {
     if (IsMicrosoft && IsDefinition) {
       S.Diag(NewDecl->getLocation(),

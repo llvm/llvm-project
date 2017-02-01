@@ -1,0 +1,36 @@
+#static volatile int do_mul;
+#static volatile int do_inc;
+#
+#int main () {
+#  int x = 1;
+#  if (do_mul) x *= 2; else x /= 2;
+#  return do_inc ? ++x : --x;
+#}
+#Build as : clang -g -O2 discrim.c -o discrim
+
+RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/discrim.inp | FileCheck %s
+
+#CHECK: some text
+
+#CHECK: 0x4004f2
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Line: 6
+#CHECK-NEXT: Column: 7
+#CHECK-NOT: Discriminator: 0
+
+#CHECK: 0x400509
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Line: 7
+#CHECK-NEXT: Column: 3
+#CHECK-NEXT: Discriminator: 1
+
+#CHECK: 0x40050d
+#CHECK-NEXT: main
+#CHECK-NEXT: Filename: /tmp{{[\\/]}}discrim.c
+#CHECK-NEXT: Line: 7
+#CHECK-NEXT: Column: 3
+#CHECK-NEXT: Discriminator: 2
+
+#CHECK: some more text
