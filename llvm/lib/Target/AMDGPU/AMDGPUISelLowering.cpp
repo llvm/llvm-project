@@ -972,14 +972,11 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 }
 
 /// \brief Generate Min/Max node
-SDValue AMDGPUTargetLowering::CombineFMinMaxLegacy(const SDLoc &DL, EVT VT,
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
                                                    SDValue LHS, SDValue RHS,
                                                    SDValue True, SDValue False,
                                                    SDValue CC,
                                                    DAGCombinerInfo &DCI) const {
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-    return SDValue();
-
   if (!(LHS == True && RHS == False) && !(LHS == False && RHS == True))
     return SDValue();
 
@@ -2830,14 +2827,14 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
       SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
       return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
     }
-  }
 
-  if (VT == MVT::f32 && Cond.hasOneUse()) {
-    SDValue MinMax
-      = CombineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
-    // Revisit this node so we can catch min3/max3/med3 patterns.
-    //DCI.AddToWorklist(MinMax.getNode());
-    return MinMax;
+    if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
+      SDValue MinMax
+        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+      // Revisit this node so we can catch min3/max3/med3 patterns.
+      //DCI.AddToWorklist(MinMax.getNode());
+      return MinMax;
+    }
   }
 
   // There's no reason to not do this if the condition has other uses.

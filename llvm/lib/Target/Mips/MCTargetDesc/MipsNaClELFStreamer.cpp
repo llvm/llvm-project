@@ -20,7 +20,11 @@
 #include "Mips.h"
 #include "MipsELFStreamer.h"
 #include "MipsMCNaCl.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -38,14 +42,14 @@ class MipsNaClELFStreamer : public MipsELFStreamer {
 public:
   MipsNaClELFStreamer(MCContext &Context, MCAsmBackend &TAB,
                       raw_pwrite_stream &OS, MCCodeEmitter *Emitter)
-      : MipsELFStreamer(Context, TAB, OS, Emitter), PendingCall(false) {}
+      : MipsELFStreamer(Context, TAB, OS, Emitter) {}
 
-  ~MipsNaClELFStreamer() override {}
+  ~MipsNaClELFStreamer() override = default;
 
 private:
   // Whether we started the sandboxing sequence for calls.  Calls are bundled
   // with branch delays and aligned to the bundle end.
-  bool PendingCall;
+  bool PendingCall = false;
 
   bool isIndirectJump(const MCInst &MI) {
     if (MI.getOpcode() == Mips::JALR) {
@@ -265,4 +269,4 @@ MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context, MCAsmBackend &TAB,
   return S;
 }
 
-}
+} // end namespace llvm

@@ -5,6 +5,7 @@
 // RUN:  | grep -o "\(__asan_\|__ubsan_\|__sancov_\|__sanitizer_\)[^ ]*"       \
 // RUN:  | grep -v "__sanitizer_syscall"                                       \
 // RUN:  | grep -v "__sanitizer_weak_hook"                                     \
+// RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss"                    \
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //

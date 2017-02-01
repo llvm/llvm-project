@@ -1,22 +1,14 @@
 ; RUN: llc -o - %s -mattr=+arith-cbz-fusion | FileCheck %s
 ; RUN: llc -o - %s -mcpu=cyclone | FileCheck %s
 
-target triple = "arm64-apple-ios"
+target triple = "aarch64-unknown"
 
 declare void @foobar(i32 %v0, i32 %v1)
 
 ; Make sure sub is scheduled in front of cbnz
 ; CHECK-LABEL: test_sub_cbz:
-; CHECK: add w[[ADDRES:[0-9]+]], w1, #7
 ; CHECK: sub w[[SUBRES:[0-9]+]], w0, #13
-; CHECK-NEXT: cbnz w[[SUBRES]], [[SKIPBLOCK:LBB[0-9_]+]]
-; CHECK: mov [[REGTY:[x,w]]]0, [[REGTY]][[ADDRES]]
-; CHECK: mov [[REGTY]]1, [[REGTY]][[SUBRES]]
-; CHECK: bl _foobar
-; CHECK: [[SKIPBLOCK]]:
-; CHECK: mov [[REGTY]]0, [[REGTY]][[SUBRES]]
-; CHECK: mov [[REGTY]]1, [[REGTY]][[ADDRES]]
-; CHECK: bl _foobar
+; CHECK-NEXT: cbnz w[[SUBRES]], {{.?LBB[0-9_]+}}
 define void @test_sub_cbz(i32 %a0, i32 %a1) {
 entry:
   ; except for the fusion opportunity the sub/add should be equal so the

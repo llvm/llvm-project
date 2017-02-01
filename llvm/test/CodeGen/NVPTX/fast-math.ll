@@ -40,11 +40,11 @@ define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
 }
 
 ; There are no fast-math or ftz versions of sqrt and div for f64.  We use
-; x * rsqrt(x) for sqrt(x), and emit a vanilla divide.
+; reciprocal(rsqrt(x)) for sqrt(x), and emit a vanilla divide.
 
 ; CHECK-LABEL: sqrt_div_fast_ftz_f64(
 ; CHECK: rsqrt.approx.f64
-; CHECK: mul.f64
+; CHECK: rcp.approx.ftz.f64
 ; CHECK: div.rn.f64
 define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
   %t1 = tail call double @llvm.sqrt.f64(double %a)

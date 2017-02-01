@@ -320,10 +320,10 @@ define i32 @test_cmpxchg_fail_order1(i32 *%addr, i32 %desired, i32 %new) {
 ; CHECK:     strex   [[SUCCESS:r[0-9]+]], r2, [r[[ADDR]]]
 ; CHECK:     cmp     [[SUCCESS]], #0
 ; CHECK:     bne     [[LOOP_BB]]
-; CHECK:     b       [[END_BB:\.?LBB[0-9]+_[0-9]+]]
+; CHECK:     dmb     ish
+; CHECK:     bx      lr
 ; CHECK: [[FAIL_BB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: [[END_BB]]:
 ; CHECK:     dmb     ish
 ; CHECK:     bx      lr
 

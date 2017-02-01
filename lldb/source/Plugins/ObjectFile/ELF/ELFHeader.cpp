@@ -81,6 +81,39 @@ ByteOrder ELFHeader::GetByteOrder() const {
   return eByteOrderInvalid;
 }
 
+bool ELFHeader::HasHeaderExtension() const {
+  bool result = false;
+
+  // Check if any of these values looks like sentinel.
+  result |= e_phnum_hdr == 0xFFFF; // PN_XNUM
+  result |= e_shnum_hdr == SHN_UNDEF;
+  result |= e_shstrndx_hdr == SHN_XINDEX;
+
+  // If header extension is present, the section offset cannot be null.
+  result &= e_shoff != 0;
+
+  // Done.
+  return result;
+}
+
+void ELFHeader::ParseHeaderExtension(lldb_private::DataExtractor &data) {
+  // Extract section #0 header.
+  ELFSectionHeader section_zero;
+  lldb::offset_t offset = 0;
+  lldb_private::DataExtractor sh_data(data, e_shoff, e_shentsize);
+  bool ok = section_zero.Parse(sh_data, &offset);
+
+  // If we succeeded, fix the header.
+  if (ok) {
+    if (e_phnum_hdr == 0xFFFF) // PN_XNUM
+      e_phnum = section_zero.sh_info;
+    if (e_shnum_hdr == SHN_UNDEF)
+      e_shnum = section_zero.sh_size;
+    if (e_shstrndx_hdr == SHN_XINDEX)
+      e_shstrndx = section_zero.sh_link;
+  }
+}
+
 bool ELFHeader::Parse(lldb_private::DataExtractor &data,
                       lldb::offset_t *offset) {
   // Read e_ident.  This provides byte order and address size info.
@@ -111,6 +144,16 @@ bool ELFHeader::Parse(lldb_private::DataExtractor &data,
   // e_shstrndx.
   if (data.GetU16(offset, &e_ehsize, 6) == NULL)
     return false;
+
+  // Initialize e_phnum, e_shnum, and e_shstrndx with the values
+  // read from the header.
+  e_phnum = e_phnum_hdr;
+  e_shnum = e_shnum_hdr;
+  e_shstrndx = e_shstrndx_hdr;
+
+  // See if we have extended header in section #0.
+  if (HasHeaderExtension())
+    ParseHeaderExtension(data);
 
   return true;
 }

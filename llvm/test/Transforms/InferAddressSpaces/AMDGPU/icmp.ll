@@ -78,10 +78,19 @@ define i1 @icmp_group_flat_cmp_constant_inttoptr(i32 addrspace(3)* %group.ptr.0)
 }
 
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null(
-; CHECK: %cmp = icmp eq i32 addrspace(3)* %group.ptr.0, addrspacecast (i32* null to i32 addrspace(3)*)
+; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+; CHECK: %cmp = icmp eq i32 addrspace(4)* %1, addrspacecast (i32* null to i32 addrspace(4)*)
 define i1 @icmp_mismatch_flat_group_private_cmp_null(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %cmp = icmp eq i32 addrspace(4)* %cast0, addrspacecast (i32* null to i32 addrspace(4)*)
+  ret i1 %cmp
+}
+
+; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_undef(
+; CHECK: %cmp = icmp eq i32 addrspace(3)* %group.ptr.0, undef
+define i1 @icmp_mismatch_flat_group_private_cmp_undef(i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %cmp = icmp eq i32 addrspace(4)* %cast0, addrspacecast (i32* undef to i32 addrspace(4)*)
   ret i1 %cmp
 }
 
@@ -114,7 +123,8 @@ define i1 @icmp_group_flat_cmp_undef(i32 addrspace(3)* %group.ptr.0) #0 {
 
 ; Test non-canonical orders
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null_swap(
-; CHECK: %cmp = icmp eq i32 addrspace(3)* addrspacecast (i32* null to i32 addrspace(3)*), %group.ptr.0
+; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+; CHECK: %cmp = icmp eq i32 addrspace(4)* addrspacecast (i32* null to i32 addrspace(4)*), %1
 define i1 @icmp_mismatch_flat_group_private_cmp_null_swap(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %cmp = icmp eq i32 addrspace(4)* addrspacecast (i32* null to i32 addrspace(4)*), %cast0
@@ -126,6 +136,14 @@ define i1 @icmp_mismatch_flat_group_private_cmp_null_swap(i32 addrspace(3)* %gro
 define i1 @icmp_group_flat_cmp_undef_swap(i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %cmp = icmp eq i32 addrspace(4)* undef, %cast0
+  ret i1 %cmp
+}
+
+; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_undef_swap(
+; CHECK: %cmp = icmp eq i32 addrspace(3)* undef, %group.ptr.0
+define i1 @icmp_mismatch_flat_group_private_cmp_undef_swap(i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %cmp = icmp eq i32 addrspace(4)* addrspacecast (i32* undef to i32 addrspace(4)*), %cast0
   ret i1 %cmp
 }
 

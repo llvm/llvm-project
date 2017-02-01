@@ -1175,9 +1175,9 @@ void HexagonLoopIdiomRecognize::collectStores(Loop *CurLoop, BasicBlock *BB,
 
 bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
       StoreInst *SI, const SCEV *BECount) {
-  assert(SI->isSimple() || (SI->isVolatile() && HexagonVolatileMemcpy) &&
-             "Expected only non-volatile stores, or Hexagon-specific memcpy"
-             "to volatile destination.");
+  assert((SI->isSimple() || (SI->isVolatile() && HexagonVolatileMemcpy)) &&
+         "Expected only non-volatile stores, or Hexagon-specific memcpy"
+         "to volatile destination.");
 
   Value *StorePtr = SI->getPointerOperand();
   auto *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));

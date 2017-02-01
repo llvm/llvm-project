@@ -26,7 +26,7 @@ t:
   call void @x()
   call void @x()
   call void @x()
-  ; CHECK: cbnz
+  ; CHECK: cbz
   %q = icmp eq i32 %y, 0
   br i1 %q, label %t2, label %f
 

@@ -24,6 +24,7 @@
 #include "llvm/Support/ELF.h"
 
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 class DataExtractor;
@@ -65,10 +66,17 @@ struct ELFHeader {
   elf_half e_machine;   ///< Target architecture.
   elf_half e_ehsize;    ///< Byte size of the ELF header.
   elf_half e_phentsize; ///< Size of a program header table entry.
-  elf_half e_phnum;     ///< Number of program header entries.
+  elf_half e_phnum_hdr; ///< Number of program header entries.
   elf_half e_shentsize; ///< Size of a section header table entry.
-  elf_half e_shnum;     ///< Number of section header entries.
-  elf_half e_shstrndx;  ///< String table section index.
+  elf_half e_shnum_hdr; ///< Number of section header entries.
+  elf_half e_shstrndx_hdr; ///< String table section index.
+
+  // In some cases these numbers do not fit in 16 bits and they are
+  // stored outside of the header in section #0. Here are the actual
+  // values.
+  elf_word e_phnum;     ///< Number of program header entries.
+  elf_word e_shnum;     ///< Number of section header entries.
+  elf_word e_shstrndx;  ///< String table section index.
 
   ELFHeader();
 
@@ -100,6 +108,14 @@ struct ELFHeader {
   //--------------------------------------------------------------------------
   /// The jump slot relocation type of this ELF.
   unsigned GetRelocationJumpSlotType() const;
+
+  //--------------------------------------------------------------------------
+  /// Check if there should be header extension in section header #0
+  ///
+  /// @return
+  ///    True if parsing the ELFHeader requires reading header extension
+  ///    and false otherwise.
+  bool HasHeaderExtension() const;
 
   //--------------------------------------------------------------------------
   /// Parse an ELFHeader entry starting at position \p offset and
@@ -137,6 +153,16 @@ struct ELFHeader {
   ///    The number of bytes forming an address in the ELF file (either 4 or
   ///    8), else zero if the address size could not be determined.
   static unsigned AddressSizeInBytes(const uint8_t *magic);
+
+private:
+
+  //--------------------------------------------------------------------------
+  /// Parse an ELFHeader header extension entry.  This method is called
+  /// by Parse().
+  ///
+  /// @param[in] data
+  ///    The DataExtractor to read from.
+  void ParseHeaderExtension(lldb_private::DataExtractor &data);
 };
 
 //------------------------------------------------------------------------------

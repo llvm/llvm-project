@@ -59,9 +59,11 @@ define float @test_sqrt_ftz(float %a) #0 #1 {
 
 ; CHECK-LABEL test_sqrt64
 define double @test_sqrt64(double %a) #0 {
-; There's no sqrt.approx.f64 instruction; we emit x * rsqrt.approx.f64(x).
+; There's no sqrt.approx.f64 instruction; we emit
+; reciprocal(rsqrt.approx.f64(x)).  There's no non-ftz approximate reciprocal,
+; so we just use the ftz version.
 ; CHECK: rsqrt.approx.f64
-; CHECK: mul.f64
+; CHECK: rcp.approx.ftz.f64
   %ret = tail call double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
@@ -70,7 +72,7 @@ define double @test_sqrt64(double %a) #0 {
 define double @test_sqrt64_ftz(double %a) #0 #1 {
 ; There's no sqrt.approx.ftz.f64 instruction; we just use the non-ftz version.
 ; CHECK: rsqrt.approx.f64
-; CHECK: mul.f64
+; CHECK: rcp.approx.ftz.f64
   %ret = tail call double @llvm.sqrt.f64(double %a)
   ret double %ret
 }

@@ -36,8 +36,8 @@ define double @rdar_7859988(double %x, double %y) nounwind readnone optsize ssp 
 
 entry:
   %mul = fmul double %x, %y
-  %cmp = fcmp une double %mul, 0.000000e+00
-  br i1 %cmp, label %bb2, label %bb1
+  %cmp = fcmp oeq double %mul, 0.000000e+00
+  br i1 %cmp, label %bb1, label %bb2
 
 bb1:
   %add = fadd double %mul, -1.000000e+00

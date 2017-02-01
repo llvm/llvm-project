@@ -17,7 +17,7 @@ entry:
   %sum1 = add i32 %sumin, 1
   %val1 = load i32, i32* %ptr
   %p = icmp eq i32 %sumin, 0
-  br i1 %p, label %true, label %end
+  br i1 %p, label %true, label %end, !prof !1
 true:
   %sum2 = add i32 %sum1, 1
   %ptr2 = getelementptr i32, i32* %ptr, i32 1
@@ -53,3 +53,5 @@ end:
   ret i32 %valmerge
 }
 declare void @llvm.prefetch(i8*, i32, i32, i32) nounwind
+
+!1 = !{!"branch_weights", i32 2, i32 1}

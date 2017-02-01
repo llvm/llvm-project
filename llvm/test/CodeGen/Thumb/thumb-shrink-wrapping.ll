@@ -1,11 +1,12 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumb-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V4T
-; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=true -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumbv5-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE --check-prefix=ENABLE-V5T
-; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumb-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumb-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V4T
-; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -mtriple=thumbv5-macho \
+; RUN: llc %s -o - -enable-shrink-wrap=false -ifcvt-fn-start=1 -ifcvt-fn-stop=0 -tail-dup-placement=0 -mtriple=thumbv5-macho \
 ; RUN:      | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE --check-prefix=DISABLE-V5T
+
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
 ; This allows to have a better control on what the allocation will do.
@@ -15,6 +16,8 @@
 ; edges.
 ; Also disable the late if-converter as it makes harder to reason on
 ; the diffs.
+; Disable tail-duplication during placement, as v4t vs v5t get different
+; results due to branches not being analyzable under v5
 
 ; Initial motivating example: Simple diamond with a call just on one side.
 ; CHECK-LABEL: foo:

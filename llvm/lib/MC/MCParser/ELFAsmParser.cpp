@@ -142,6 +142,10 @@ private:
   bool ParseSectionName(StringRef &SectionName);
   bool ParseSectionArguments(bool IsPush, SMLoc loc);
   unsigned parseSunStyleSectionFlags();
+  bool maybeParseSectionType(StringRef &TypeName);
+  bool parseMergeSize(int64_t &Size);
+  bool parseGroup(StringRef &GroupName);
+  bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
 }
@@ -366,6 +370,72 @@ bool ELFAsmParser::ParseDirectiveSection(StringRef, SMLoc loc) {
   return ParseSectionArguments(/*IsPush=*/false, loc);
 }
 
+bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
+  MCAsmLexer &L = getLexer();
+  if (L.isNot(AsmToken::Comma))
+    return false;
+  Lex();
+  if (L.isNot(AsmToken::At) && L.isNot(AsmToken::Percent) &&
+      L.isNot(AsmToken::String))
+    return TokError("expected '@<type>', '%<type>' or \"<type>\"");
+  if (!L.is(AsmToken::String))
+    Lex();
+  if (getParser().parseIdentifier(TypeName))
+    return TokError("expected identifier in directive");
+  return false;
+}
+
+bool ELFAsmParser::parseMergeSize(int64_t &Size) {
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected the entry size");
+  Lex();
+  if (getParser().parseAbsoluteExpression(Size))
+    return true;
+  if (Size <= 0)
+    return TokError("entry size must be positive");
+  return false;
+}
+
+bool ELFAsmParser::parseGroup(StringRef &GroupName) {
+  MCAsmLexer &L = getLexer();
+  if (L.isNot(AsmToken::Comma))
+    return TokError("expected group name");
+  Lex();
+  if (getParser().parseIdentifier(GroupName))
+    return true;
+  if (L.is(AsmToken::Comma)) {
+    Lex();
+    StringRef Linkage;
+    if (getParser().parseIdentifier(Linkage))
+      return true;
+    if (Linkage != "comdat")
+      return TokError("Linkage must be 'comdat'");
+  }
+  return false;
+}
+
+bool ELFAsmParser::maybeParseUniqueID(int64_t &UniqueID) {
+  MCAsmLexer &L = getLexer();
+  if (L.isNot(AsmToken::Comma))
+    return false;
+  Lex();
+  StringRef UniqueStr;
+  if (getParser().parseIdentifier(UniqueStr))
+    return TokError("expected identifier in directive");
+  if (UniqueStr != "unique")
+    return TokError("expected 'unique'");
+  if (L.isNot(AsmToken::Comma))
+    return TokError("expected commma");
+  Lex();
+  if (getParser().parseAbsoluteExpression(UniqueID))
+    return true;
+  if (UniqueID < 0)
+    return TokError("unique id must be positive");
+  if (!isUInt<32>(UniqueID) || UniqueID == ~0U)
+    return TokError("unique id is too large");
+  return false;
+}
+
 bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef SectionName;
 
@@ -422,65 +492,27 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
       return TokError("Section cannot specifiy a group name while also acting "
                       "as a member of the last group");
 
-    if (getLexer().isNot(AsmToken::Comma)) {
+    if (maybeParseSectionType(TypeName))
+      return true;
+
+    MCAsmLexer &L = getLexer();
+    if (TypeName.empty()) {
       if (Mergeable)
         return TokError("Mergeable section must specify the type");
       if (Group)
         return TokError("Group section must specify the type");
-    } else {
-      Lex();
-      if (getLexer().is(AsmToken::At) || getLexer().is(AsmToken::Percent) ||
-          getLexer().is(AsmToken::String)) {
-        if (!getLexer().is(AsmToken::String))
-          Lex();
-      } else
-        return TokError("expected '@<type>', '%<type>' or \"<type>\"");
-
-      if (getParser().parseIdentifier(TypeName))
-        return TokError("expected identifier in directive");
-
-      if (Mergeable) {
-        if (getLexer().isNot(AsmToken::Comma))
-          return TokError("expected the entry size");
-        Lex();
-        if (getParser().parseAbsoluteExpression(Size))
-          return true;
-        if (Size <= 0)
-          return TokError("entry size must be positive");
-      }
-
-      if (Group) {
-        if (getLexer().isNot(AsmToken::Comma))
-          return TokError("expected group name");
-        Lex();
-        if (getParser().parseIdentifier(GroupName))
-          return true;
-        if (getLexer().is(AsmToken::Comma)) {
-          Lex();
-          StringRef Linkage;
-          if (getParser().parseIdentifier(Linkage))
-            return true;
-          if (Linkage != "comdat")
-            return TokError("Linkage must be 'comdat'");
-        }
-      }
-      if (getLexer().is(AsmToken::Comma)) {
-        Lex();
-        if (getParser().parseIdentifier(UniqueStr))
-          return TokError("expected identifier in directive");
-        if (UniqueStr != "unique")
-          return TokError("expected 'unique'");
-        if (getLexer().isNot(AsmToken::Comma))
-          return TokError("expected commma");
-        Lex();
-        if (getParser().parseAbsoluteExpression(UniqueID))
-          return true;
-        if (UniqueID < 0)
-          return TokError("unique id must be positive");
-        if (!isUInt<32>(UniqueID) || UniqueID == ~0U)
-          return TokError("unique id is too large");
-      }
+      if (L.isNot(AsmToken::EndOfStatement))
+        return TokError("unexpected token in directive");
     }
+
+    if (Mergeable)
+      if (parseMergeSize(Size))
+        return true;
+    if (Group)
+      if (parseGroup(GroupName))
+        return true;
+    if (maybeParseUniqueID(UniqueID))
+      return true;
   }
 
 EndStmt:

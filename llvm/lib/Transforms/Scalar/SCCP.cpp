@@ -1712,7 +1712,10 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
 
     // If this is an exact definition of this function, then we can propagate
     // information about its result into callsites of it.
-    if (F.hasExactDefinition())
+    // Don't touch naked functions. They may contain asm returning a
+    // value we don't see, so we may end up interprocedurally propagating
+    // the return value incorrectly.
+    if (F.hasExactDefinition() && !F.hasFnAttribute(Attribute::Naked))
       Solver.AddTrackedFunction(&F);
 
     // If this function only has direct calls that we can see, we can track its

@@ -17,17 +17,17 @@
 #include <system_error>
 #include <utility>
 
-#include "xray-extract.h"
 #include "xray-graph.h"
 #include "xray-registry.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 #include "llvm/XRay/YAMLXRayRecord.h"
 
 using namespace llvm;
-using namespace xray;
+using namespace llvm::xray;
 
 // Setup llvm-xray graph subcommand and its options.
 static cl::SubCommand Graph("graph", "Generate function-call graph");
@@ -48,26 +48,13 @@ static cl::opt<std::string>
 static cl::alias GraphOutput2("o", cl::aliasopt(GraphOutput),
                               cl::desc("Alias for -output"), cl::sub(Graph));
 
-static cl::opt<std::string>
-    GraphInstrMap("instr_map",
-                  cl::desc("binary with the instrumrntation map, or "
-                           "a separate instrumentation map"),
-                  cl::value_desc("binary with xray_instr_map"), cl::sub(Graph),
-                  cl::init(""));
+static cl::opt<std::string> GraphInstrMap(
+    "instr_map", cl::desc("binary with the instrumrntation map, or "
+                          "a separate instrumentation map"),
+    cl::value_desc("binary with xray_instr_map"), cl::sub(Graph), cl::init(""));
 static cl::alias GraphInstrMap2("m", cl::aliasopt(GraphInstrMap),
                                 cl::desc("alias for -instr_map"),
                                 cl::sub(Graph));
-
-static cl::opt<InstrumentationMapExtractor::InputFormats> InstrMapFormat(
-    "instr-map-format", cl::desc("format of instrumentation map"),
-    cl::values(clEnumValN(InstrumentationMapExtractor::InputFormats::ELF, "elf",
-                          "instrumentation map in an ELF header"),
-               clEnumValN(InstrumentationMapExtractor::InputFormats::YAML,
-                          "yaml", "instrumentation map in YAML")),
-    cl::sub(Graph), cl::init(InstrumentationMapExtractor::InputFormats::ELF));
-static cl::alias InstrMapFormat2("t", cl::aliasopt(InstrMapFormat),
-                                 cl::desc("Alias for -instr-map-format"),
-                                 cl::sub(Graph));
 
 static cl::opt<bool> GraphDeduceSiblingCalls(
     "deduce-sibling-calls",
@@ -535,50 +522,44 @@ void GraphRenderer::exportGraphAsDOT(raw_ostream &OS, const XRayFileHeader &H,
 // FIXME: include additional filtering and annalysis passes to provide more
 // specific useful information.
 static CommandRegistration Unused(&Graph, []() -> Error {
-  int Fd;
-  auto EC = sys::fs::openFileForRead(GraphInput, Fd);
-  if (EC)
-    return make_error<StringError>(
-        Twine("Cannot open file '") + GraphInput + "'", EC);
+  InstrumentationMap Map;
+  if (!GraphInstrMap.empty()) {
+    auto InstrumentationMapOrError = loadInstrumentationMap(GraphInstrMap);
+    if (!InstrumentationMapOrError)
+      return joinErrors(
+          make_error<StringError>(
+              Twine("Cannot open instrumentation map '") + GraphInstrMap + "'",
+              std::make_error_code(std::errc::invalid_argument)),
+          InstrumentationMapOrError.takeError());
+    Map = std::move(*InstrumentationMapOrError);
+  }
 
-  Error Err = Error::success();
-  xray::InstrumentationMapExtractor Extractor(GraphInstrMap, InstrMapFormat,
-                                              Err);
-  handleAllErrors(std::move(Err),
-                  [&](const ErrorInfoBase &E) { E.log(errs()); });
-
-  const auto &FunctionAddresses = Extractor.getFunctionAddresses();
-
+  const auto &FunctionAddresses = Map.getFunctionAddresses();
   symbolize::LLVMSymbolizer::Options Opts(
       symbolize::FunctionNameKind::LinkageName, true, true, false, "");
-
   symbolize::LLVMSymbolizer Symbolizer(Opts);
-
   llvm::xray::FuncIdConversionHelper FuncIdHelper(GraphInstrMap, Symbolizer,
                                                   FunctionAddresses);
-
   xray::GraphRenderer GR(FuncIdHelper, GraphDeduceSiblingCalls);
-
+  std::error_code EC;
   raw_fd_ostream OS(GraphOutput, EC, sys::fs::OpenFlags::F_Text);
-
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + GraphOutput + "' for writing.", EC);
 
   auto TraceOrErr = loadTraceFile(GraphInput, true);
-
-  if (!TraceOrErr) {
+  if (!TraceOrErr)
     return joinErrors(
         make_error<StringError>(Twine("Failed loading input file '") +
                                     GraphInput + "'",
                                 make_error_code(llvm::errc::invalid_argument)),
-        std::move(Err));
-  }
+        TraceOrErr.takeError());
 
   auto &Trace = *TraceOrErr;
   const auto &Header = Trace.getFileHeader();
+
+  // Here we generate the call graph from entries we find in the trace.
   for (const auto &Record : Trace) {
-    // Generate graph.
     auto E = GR.accountRecord(Record);
     if (!E)
       continue;
@@ -592,12 +573,16 @@ static CommandRegistration Unused(&Graph, []() -> Error {
     }
 
     if (!GraphKeepGoing)
-      return joinErrors(std::move(E), std::move(Err));
+      return joinErrors(make_error<StringError>(
+                            "Error encountered generating the call graph.",
+                            std::make_error_code(std::errc::invalid_argument)),
+                        std::move(E));
+
     handleAllErrors(std::move(E),
                     [&](const ErrorInfoBase &E) { E.log(errs()); });
   }
 
   GR.exportGraphAsDOT(OS, Header, GraphEdgeLabel, GraphEdgeColorType,
                       GraphVertexLabel, GraphVertexColorType);
-  return Err;
+  return Error::success();
 });

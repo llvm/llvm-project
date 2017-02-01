@@ -4,7 +4,7 @@ declare void @x()
 
 define void @f0(i32 %x) optsize {
   ; CHECK-LABEL: f0:
-  ; CHECK: cbnz
+  ; CHECK: cbz
   %p = icmp eq i32 %x, 0
   br i1 %p, label %t, label %f
 

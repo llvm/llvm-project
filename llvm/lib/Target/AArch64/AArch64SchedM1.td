@@ -366,7 +366,8 @@ def : InstRW<[M1WriteNALU1],  (instregex "^ZIP[12]v")>;
 // Cryptography instructions.
 def M1WriteAES : SchedWriteRes<[M1UnitNCRYPT]> { let Latency = 1; }
 def M1ReadAES  : SchedReadAdvance<1, [M1WriteAES]>;
-def : InstRW<[M1WriteAES, M1ReadAES], (instregex "^AES")>;
+def : InstRW<[M1WriteAES], (instregex "^AES[DE]")>;
+def : InstRW<[M1WriteAES, M1ReadAES], (instregex "^AESI?MC")>;
 
 def : InstRW<[M1WriteNCRYPT1], (instregex "^PMUL")>;
 def : InstRW<[M1WriteNCRYPT1], (instregex "^SHA1(H|SU)")>;

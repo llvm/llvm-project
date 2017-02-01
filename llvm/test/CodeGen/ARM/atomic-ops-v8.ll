@@ -1045,20 +1045,21 @@ define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind 
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: strexb [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-ARM-NEXT: bx lr
    ret i8 %old
 }
 
@@ -1078,20 +1079,21 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
   ;  function there.
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlexh [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-ARM-NEXT: bx lr
    ret i16 %old
 }
 
@@ -1110,20 +1112,21 @@ define void @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
 ; CHECK-NEXT: cmp r[[OLD]], r0
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlex [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK: str{{(.w)?}} r[[OLD]],
+; CHECK-NEXT: bx lr
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 
 ; CHECK: str{{(.w)?}} r[[OLD]],
+; CHECK-ARM-NEXT: bx lr
    ret void
 }
 
@@ -1148,16 +1151,16 @@ define void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-BE-DAG: eor{{(\.w)?}} [[MISMATCH_LO:r[0-9]+|lr]], [[OLD1]], r0
 ; CHECK-ARM-BE: orrs{{(\.w)?}} {{r[0-9]+}}, [[MISMATCH_HI]], [[MISMATCH_LO]]
 ; CHECK-THUMB-BE: orrs{{(\.w)?}} {{(r[0-9]+, )?}}[[MISMATCH_LO]], [[MISMATCH_HI]]
-; CHECK-NEXT: bne .LBB{{[0-9]+}}_3
+; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
 ; CHECK-NEXT: BB#2:
   ; As above, r2, r3 is a reasonable guess.
 ; CHECK: strexd [[STATUS:r[0-9]+]], r2, r3, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
-; CHECK-NEXT: b .LBB{{[0-9]+}}_4
-; CHECK-NEXT: .LBB{{[0-9]+}}_3:
-; CHECK-NEXT: clrex
+; CHECK: strd [[OLD1]], [[OLD2]], [r[[ADDR]]]
+; CHECK-NEXT: pop
 ; CHECK-NEXT: .LBB{{[0-9]+}}_4:
+; CHECK-NEXT: clrex
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
 

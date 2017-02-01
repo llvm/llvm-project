@@ -7,7 +7,7 @@ define void @test() nounwind {
 entry:
   %0 = load i32, i32* @j, align 4
   %cmp = icmp eq i32 %0, 0
-  br i1 %cmp, label %if.then, label %if.end
+  br i1 %cmp, label %if.then, label %if.end, !prof !1
 
 ; 16:	bnez	${{[0-9]+}}, $[[LABEL:[0-9A-Ba-b_]+]]
 ; 16:   lw ${{[0-9]+}}, %got(result)(${{[0-9]+}})
@@ -21,4 +21,4 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-
+!1 = !{!"branch_weights", i32 2, i32 1}

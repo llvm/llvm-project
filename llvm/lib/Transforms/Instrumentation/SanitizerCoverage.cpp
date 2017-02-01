@@ -78,7 +78,6 @@ static const char *const SanCovTraceSwitchName = "__sanitizer_cov_trace_switch";
 static const char *const SanCovModuleCtorName = "sancov.module_ctor";
 static const uint64_t SanCtorAndDtorPriority = 2;
 
-static const char *const SanCovTracePCGuardSection = "__sancov_guards";
 static const char *const SanCovTracePCGuardName =
     "__sanitizer_cov_trace_pc_guard";
 static const char *const SanCovTracePCGuardInitName =
@@ -138,6 +137,24 @@ static cl::opt<bool>
 static cl::opt<bool> ClUse8bitCounters("sanitizer-coverage-8bit-counters",
                                        cl::desc("Experimental 8-bit counters"),
                                        cl::Hidden, cl::init(false));
+
+static StringRef getSanCovTracePCGuardSection(const Module &M) {
+  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
+             ? "__DATA,__sancov_guards"
+             : "__sancov_guards";
+}
+
+static StringRef getSanCovTracePCGuardSectionStart(const Module &M) {
+  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
+             ? "\1section$start$__DATA$__sancov_guards"
+             : "__start___sancov_guards";
+}
+
+static StringRef getSanCovTracePCGuardSectionEnd(const Module &M) {
+  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
+             ? "\1section$end$__DATA$__sancov_guards"
+             : "__stop___sancov_guards";
+}
 
 namespace {
 
@@ -363,20 +380,20 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   if (Options.TracePCGuard) {
     if (HasSancovGuardsSection) {
       Function *CtorFunc;
-      std::string SectionName(SanCovTracePCGuardSection);
-      GlobalVariable *Bounds[2];
-      const char *Prefix[2] = {"__start_", "__stop_"};
-      for (int i = 0; i < 2; i++) {
-        Bounds[i] = new GlobalVariable(M, Int32PtrTy, false,
-                                       GlobalVariable::ExternalLinkage, nullptr,
-                                       Prefix[i] + SectionName);
-        Bounds[i]->setVisibility(GlobalValue::HiddenVisibility);
-      }
+      GlobalVariable *SecStart = new GlobalVariable(
+          M, Int32PtrTy, false, GlobalVariable::ExternalLinkage, nullptr,
+          getSanCovTracePCGuardSectionStart(*CurModule));
+      SecStart->setVisibility(GlobalValue::HiddenVisibility);
+      GlobalVariable *SecEnd = new GlobalVariable(
+          M, Int32PtrTy, false, GlobalVariable::ExternalLinkage, nullptr,
+          getSanCovTracePCGuardSectionEnd(*CurModule));
+      SecEnd->setVisibility(GlobalValue::HiddenVisibility);
+
       std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
           M, SanCovModuleCtorName, SanCovTracePCGuardInitName,
           {Int32PtrTy, Int32PtrTy},
-          {IRB.CreatePointerCast(Bounds[0], Int32PtrTy),
-            IRB.CreatePointerCast(Bounds[1], Int32PtrTy)});
+          {IRB.CreatePointerCast(SecStart, Int32PtrTy),
+            IRB.CreatePointerCast(SecEnd, Int32PtrTy)});
 
       appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority);
     }
@@ -517,7 +534,7 @@ void SanitizerCoverageModule::CreateFunctionGuardArray(size_t NumGuards,
       Constant::getNullValue(ArrayOfInt32Ty), "__sancov_gen_");
   if (auto Comdat = F.getComdat())
     FunctionGuardArray->setComdat(Comdat);
-  FunctionGuardArray->setSection(SanCovTracePCGuardSection);
+  FunctionGuardArray->setSection(getSanCovTracePCGuardSection(*CurModule));
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
