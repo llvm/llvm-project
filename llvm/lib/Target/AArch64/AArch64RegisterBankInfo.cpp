@@ -1,4 +1,4 @@
-//===- AArch64RegisterBankInfo.cpp -------------------------------*- C++ -*-==//
+//===- AArch64RegisterBankInfo.cpp ----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,13 +13,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
-#include "AArch64InstrInfo.h" // For XXXRegClassID.
+#include "AArch64InstrInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
 
 #define GET_TARGET_REGBANK_IMPL
 #include "AArch64GenRegisterBank.inc"
@@ -95,7 +103,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     assert(                                                                    \
         checkPartialMap(PartialMappingIdx::Idx, ValStartIdx, ValLength, RB) && \
         #Idx " is incorrectly initialized");                                   \
-  } while (0)
+  } while (false)
 
   CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
   CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
@@ -112,7 +120,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
                              PartialMappingIdx::PMI_First##RBName, Size,       \
                              Offset) &&                                        \
            #RBName #Size " " #Offset " is incorrectly initialized");           \
-  } while (0)
+  } while (false)
 
 #define CHECK_VALUEMAP(RBName, Size) CHECK_VALUEMAP_IMPL(RBName, Size, 0)
 
@@ -131,7 +139,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     CHECK_VALUEMAP_IMPL(RBName, Size, 0);                                      \
     CHECK_VALUEMAP_IMPL(RBName, Size, 1);                                      \
     CHECK_VALUEMAP_IMPL(RBName, Size, 2);                                      \
-  } while (0)
+  } while (false)
 
   CHECK_VALUEMAP_3OPS(GPR, 32);
   CHECK_VALUEMAP_3OPS(GPR, 64);
@@ -159,7 +167,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
            Map[1].NumBreakDowns == 1 && #RBNameSrc #Size                       \
            " Src is incorrectly initialized");                                 \
                                                                                \
-  } while (0)
+  } while (false)
 
   CHECK_VALUEMAP_CROSSREGCPY(GPR, GPR, 32);
   CHECK_VALUEMAP_CROSSREGCPY(GPR, FPR, 32);
@@ -338,13 +346,12 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   switch (OpdMapper.getMI().getOpcode()) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_BITCAST:
-  case TargetOpcode::G_LOAD: {
+  case TargetOpcode::G_LOAD:
     // Those ID must match getInstrAlternativeMappings.
     assert((OpdMapper.getInstrMapping().getID() >= 1 &&
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
-  }
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
@@ -494,21 +501,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // fine-tune the computed mapping.
   switch (Opc) {
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
+  case TargetOpcode::G_UITOFP:
     OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
     break;
-  }
   case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI: {
+  case TargetOpcode::G_FPTOUI:
     OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
     break;
-  }
-  case TargetOpcode::G_FCMP: {
+  case TargetOpcode::G_FCMP:
     OpRegBankIdx = {PMI_FirstGPR,
                     /* Predicate */ PMI_None, PMI_FirstFPR, PMI_FirstFPR};
     break;
-  }
-  case TargetOpcode::G_BITCAST: {
+  case TargetOpcode::G_BITCAST:
     // This is going to be a cross register bank copy and this is expensive.
     if (OpRegBankIdx[0] != OpRegBankIdx[1])
       Cost = copyCost(
@@ -516,8 +520,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           *AArch64GenRegisterBankInfo::PartMappings[OpRegBankIdx[1]].RegBank,
           OpSize[0]);
     break;
-  }
-  case TargetOpcode::G_LOAD: {
+  case TargetOpcode::G_LOAD:
     // Loading in vector unit is slightly more expensive.
     // This is actually only true for the LD1R and co instructions,
     // but anyway for the fast mode this number does not matter and
@@ -526,7 +529,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // FIXME: Should be derived from the scheduling model.
     if (OpRegBankIdx[0] >= PMI_FirstFPR)
       Cost = 2;
-  }
+    break;
   }
 
   // Finally construct the computed mapping.
