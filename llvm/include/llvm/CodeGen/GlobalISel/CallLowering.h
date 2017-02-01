@@ -35,9 +35,11 @@ public:
     unsigned Reg;
     Type *Ty;
     ISD::ArgFlagsTy Flags;
+    bool IsFixed;
 
-    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{})
-        : Reg(Reg), Ty(Ty), Flags(Flags) {}
+    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{},
+            bool IsFixed = true)
+        : Reg(Reg), Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -70,13 +72,21 @@ public:
 
     unsigned extendRegister(unsigned ValReg, CCValAssign &VA);
 
-    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-        : MIRBuilder(MIRBuilder), MRI(MRI) {}
+    virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                           CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
+                           CCState &State) {
+      return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
+    }
+
+    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                 CCAssignFn *AssignFn)
+      : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn) {}
 
     virtual ~ValueHandler() {}
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
+    CCAssignFn *AssignFn;
   };
 
 protected:
@@ -96,12 +106,12 @@ protected:
   void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
-  /// Invoke the \p AssignFn on each of the given \p Args and then use
+  /// Invoke Handler::assignArg on each of the given \p Args and then use
   /// \p Callback to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool handleAssignments(MachineIRBuilder &MIRBuilder, CCAssignFn *AssignFn,
-                         ArrayRef<ArgInfo> Args, ValueHandler &Callback) const;
+  bool handleAssignments(MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
+                         ValueHandler &Callback) const;
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
