@@ -12,12 +12,6 @@
 #include <cassert>
 #include <cstdlib>
 
-// Clang emits a warning on converting an object of type nullptr_t to bool,
-// even in generic code. Suppress it.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wnull-conversion"
-#endif
-
 struct A {};
 
 template<typename T, bool CanCatchNullptr>
@@ -25,7 +19,7 @@ static void catch_nullptr_test() {
   try {
     throw nullptr;
   } catch (T &p) {
-    assert(CanCatchNullptr && !p);
+    assert(CanCatchNullptr && !static_cast<bool>(p));
   } catch (...) {
     assert(!CanCatchNullptr);
   }
