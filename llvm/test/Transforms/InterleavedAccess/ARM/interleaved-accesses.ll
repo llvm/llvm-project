@@ -626,3 +626,21 @@ define void @store_general_mask_factor3_midstart_pass(<12 x i32>* %ptr, <32 x i3
   store <12 x i32> %interleaved.vec, <12 x i32>* %ptr, align 4
   ret void
 }
+
+@g = external global <4 x float>
+
+; The following does not give a valid interleaved store
+; NEON-LABEL: define void @no_interleave
+; NEON-NOT: call void @llvm.arm.neon.vst2
+; NEON: shufflevector
+; NEON: store
+; NEON: ret void
+; NO_NEON-LABEL: define void @no_interleave
+; NO_NEON: shufflevector
+; NO_NEON: store
+; NO_NEON: ret void
+define void @no_interleave(<4 x float> %a0) {
+  %v0 = shufflevector <4 x float> %a0, <4 x float> %a0, <4 x i32> <i32 0, i32 7, i32 1, i32 undef>
+  store <4 x float> %v0, <4 x float>* @g, align 16
+  ret void
+}
