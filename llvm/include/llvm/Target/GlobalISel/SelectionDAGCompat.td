@@ -26,4 +26,20 @@ class GINodeEquiv<Instruction i, SDNode node> {
 }
 
 def : GINodeEquiv<G_ADD, add>;
+def : GINodeEquiv<G_SUB, sub>;
+def : GINodeEquiv<G_MUL, mul>;
+
+def : GINodeEquiv<G_OR, or>;
+def : GINodeEquiv<G_XOR, xor>;
+def : GINodeEquiv<G_AND, and>;
+
+def : GINodeEquiv<G_SHL, shl>;
+def : GINodeEquiv<G_LSHR, srl>;
+def : GINodeEquiv<G_ASHR, sra>;
+
+def : GINodeEquiv<G_SDIV, sdiv>;
+def : GINodeEquiv<G_UDIV, udiv>;
+def : GINodeEquiv<G_SREM, srem>;
+def : GINodeEquiv<G_UREM, urem>;
+
 def : GINodeEquiv<G_BR, br>;
