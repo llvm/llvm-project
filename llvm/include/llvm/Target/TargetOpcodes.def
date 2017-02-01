@@ -251,6 +251,9 @@ HANDLE_TARGET_OPCODE(G_STORE)
 /// Generic conditional branch instruction.
 HANDLE_TARGET_OPCODE(G_BRCOND)
 
+/// Generic indirect branch instruction.
+HANDLE_TARGET_OPCODE(G_BRINDIRECT)
+
 /// Generic intrinsic use (without side effects).
 HANDLE_TARGET_OPCODE(G_INTRINSIC)
 

@@ -252,6 +252,21 @@ bool IRTranslator::translateSwitch(const User &U,
   return true;
 }
 
+bool IRTranslator::translateIndirectBr(const User &U,
+                                       MachineIRBuilder &MIRBuilder) {
+  const IndirectBrInst &BrInst = cast<IndirectBrInst>(U);
+
+  const unsigned Tgt = getOrCreateVReg(*BrInst.getAddress());
+  MIRBuilder.buildBrIndirect(Tgt);
+
+  // Link successors.
+  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+  for (const BasicBlock *Succ : BrInst.successors())
+    CurBB.addSuccessor(&getOrCreateBB(*Succ));
+
+  return true;
+}
+
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
 
