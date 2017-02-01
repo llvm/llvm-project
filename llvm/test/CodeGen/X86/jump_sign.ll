@@ -6,7 +6,7 @@ entry:
 ; CHECK: jns
 	%tmp1 = add i32 %X, 1		; <i32> [#uses=1]
 	%tmp = icmp slt i32 %tmp1, 0		; <i1> [#uses=1]
-	br i1 %tmp, label %cond_true, label %cond_next
+	br i1 %tmp, label %cond_true, label %cond_next, !prof !1
 
 cond_true:		; preds = %entry
 	%tmp2 = tail call i32 (...) @bar( )		; <i32> [#uses=0]
@@ -303,3 +303,5 @@ if.then:
 if.end:
   ret i32 undef
 }
+
+!1 = !{!"branch_weights", i32 2, i32 1}

@@ -56,6 +56,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp
   AArch64PromoteConstant.cpp
   AArch64PBQPRegAlloc.cpp

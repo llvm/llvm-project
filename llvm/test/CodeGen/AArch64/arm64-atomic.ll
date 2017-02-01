@@ -9,10 +9,10 @@ define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
 ; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], w2, [x[[ADDR]]]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: b      [[EXITBB:.?LBB[0-9_]+]]
+; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: [[EXITBB]]:
+; CHECK-NEXT: ret
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
@@ -27,10 +27,12 @@ define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
 ; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], [[NEW]], [x0]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: b      [[EXITBB:.?LBB[0-9_]+]]
+; CHECK-NEXT: mov    x0, x[[ADDR]]
+; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: [[EXITBB]]:
+; CHECK-NEXT: mov    x0, x[[ADDR]]
+; CHECK-NEXT: ret
   %new = load i32, i32* %pnew
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
@@ -41,15 +43,15 @@ define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LABEL: val_compare_and_swap_rel:
 ; CHECK-NEXT: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
-; CHECK-NEXT: ldaxr  [[RESULT:w[0-9]+]], [x[[ADDR]]
+; CHECK-NEXT: ldaxr  [[RESULT:w[0-9]+]], [x[[ADDR]]]
 ; CHECK-NEXT: cmp    [[RESULT]], w1
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
-; CHECK-NEXT: stlxr  [[SCRATCH_REG:w[0-9]+]], w2, [x[[ADDR]]
+; CHECK-NEXT: stlxr  [[SCRATCH_REG:w[0-9]+]], w2, [x[[ADDR]]]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: b      [[EXITBB:.?LBB[0-9_]+]]
+; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: [[EXITBB]]:
+; CHECK-NEXT: ret
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acq_rel monotonic
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
@@ -64,10 +66,10 @@ define i64 @val_compare_and_swap_64(i64* %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
 ; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], x2, [x[[ADDR]]]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: b      [[EXITBB:.?LBB[0-9_]+]]
+; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: [[EXITBB]]:
+; CHECK-NEXT: ret
   %pair = cmpxchg i64* %p, i64 %cmp, i64 %new monotonic monotonic
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val

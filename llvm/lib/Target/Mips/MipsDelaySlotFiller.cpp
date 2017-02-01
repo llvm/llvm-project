@@ -14,21 +14,39 @@
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
+#include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <memory>
+#include <utility>
 
 using namespace llvm;
 
@@ -84,6 +102,7 @@ static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 );
 
 namespace {
+
   typedef MachineBasicBlock::iterator Iter;
   typedef MachineBasicBlock::reverse_iterator ReverseIter;
   typedef SmallDenseMap<MachineBasicBlock*, MachineInstr*, 2> BB2BrMap;
@@ -91,6 +110,7 @@ namespace {
   class RegDefsUses {
   public:
     RegDefsUses(const TargetRegisterInfo &TRI);
+
     void init(const MachineInstr &MI);
 
     /// This function sets all caller-saved registers in Defs.
@@ -120,18 +140,18 @@ namespace {
   /// Base class for inspecting loads and stores.
   class InspectMemInstr {
   public:
-    InspectMemInstr(bool ForbidMemInstr_)
-      : OrigSeenLoad(false), OrigSeenStore(false), SeenLoad(false),
-        SeenStore(false), ForbidMemInstr(ForbidMemInstr_) {}
+    InspectMemInstr(bool ForbidMemInstr_) : ForbidMemInstr(ForbidMemInstr_) {}
+    virtual ~InspectMemInstr() = default;
 
     /// Return true if MI cannot be moved to delay slot.
     bool hasHazard(const MachineInstr &MI);
 
-    virtual ~InspectMemInstr() {}
-
   protected:
     /// Flags indicating whether loads or stores have been seen.
-    bool OrigSeenLoad, OrigSeenStore, SeenLoad, SeenStore;
+    bool OrigSeenLoad = false;
+    bool OrigSeenStore = false;
+    bool SeenLoad = false;
+    bool SeenStore = false;
 
     /// Memory instructions are not allowed to move to delay slot if this flag
     /// is true.
@@ -145,6 +165,7 @@ namespace {
   class NoMemInstr : public InspectMemInstr {
   public:
     NoMemInstr() : InspectMemInstr(true) {}
+
   private:
     bool hasHazard_(const MachineInstr &MI) override { return true; }
   };
@@ -153,6 +174,7 @@ namespace {
   class LoadFromStackOrConst : public InspectMemInstr {
   public:
     LoadFromStackOrConst() : InspectMemInstr(false) {}
+
   private:
     bool hasHazard_(const MachineInstr &MI) override;
   };
@@ -183,7 +205,8 @@ namespace {
 
     /// Flags indicating whether loads or stores with no underlying objects have
     /// been seen.
-    bool SeenNoObjLoad, SeenNoObjStore;
+    bool SeenNoObjLoad = false;
+    bool SeenNoObjStore = false;
   };
 
   class Filler : public MachineFunctionPass {
@@ -271,8 +294,10 @@ namespace {
 
     static char ID;
   };
+
   char Filler::ID = 0;
-} // end of anonymous namespace
+
+} // end anonymous namespace
 
 static bool hasUnoccupiedSlot(const MachineInstr *MI) {
   return MI->hasDelaySlot() && !MI->isBundledWithSucc();
@@ -458,8 +483,7 @@ bool LoadFromStackOrConst::hasHazard_(const MachineInstr &MI) {
 }
 
 MemDefsUses::MemDefsUses(const DataLayout &DL, const MachineFrameInfo *MFI_)
-    : InspectMemInstr(false), MFI(MFI_), DL(DL), SeenNoObjLoad(false),
-      SeenNoObjStore(false) {}
+    : InspectMemInstr(false), MFI(MFI_), DL(DL) {}
 
 bool MemDefsUses::hasHazard_(const MachineInstr &MI) {
   bool HasHazard = false;
@@ -644,12 +668,6 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   }
 
   return Changed;
-}
-
-/// createMipsDelaySlotFillerPass - Returns a pass that fills in delay
-/// slots in Mips MachineFunctions
-FunctionPass *llvm::createMipsDelaySlotFillerPass(MipsTargetMachine &tm) {
-  return new Filler(tm);
 }
 
 template<typename IterTy>
@@ -888,4 +906,10 @@ bool Filler::terminateSearch(const MachineInstr &Candidate) const {
   return (Candidate.isTerminator() || Candidate.isCall() ||
           Candidate.isPosition() || Candidate.isInlineAsm() ||
           Candidate.hasUnmodeledSideEffects());
+}
+
+/// createMipsDelaySlotFillerPass - Returns a pass that fills in delay
+/// slots in Mips MachineFunctions
+FunctionPass *llvm::createMipsDelaySlotFillerPass(MipsTargetMachine &tm) {
+  return new Filler(tm);
 }

@@ -1,19 +1,19 @@
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d \
 #RUN:    | FileCheck %s -check-prefix=EMPTY
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e count \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e count \
 #RUN:    | FileCheck %s -check-prefix=COUNT
 #
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e min \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e min \
 #RUN:    | FileCheck %s -check-prefix=TIME
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e med \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e med \
 #RUN:    | FileCheck %s -check-prefix=TIME
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e 90p \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e 90p \
 #RUN:    | FileCheck %s -check-prefix=TIME
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e 99p \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e 99p \
 #RUN:    | FileCheck %s -check-prefix=TIME
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e max \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e max \
 #RUN:    | FileCheck %s -check-prefix=TIME
-#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -t yaml -d -e sum \
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e sum \
 #RUN:    | FileCheck %s -check-prefix=TIME
 #
 ---

@@ -103,6 +103,14 @@ def FeatureArithmeticCbzFusion : SubtargetFeature<
     "arith-cbz-fusion", "HasArithmeticCbzFusion", "true",
     "CPU fuses arithmetic + cbz/cbnz operations">;
 
+def FeatureFuseAES : SubtargetFeature<
+    "fuse-aes", "HasFuseAES", "true",
+    "CPU fuses AES crypto operations">;
+
+def FeatureFuseLiterals : SubtargetFeature<
+    "fuse-literals", "HasFuseLiterals", "true",
+    "CPU fuses literal generation operations">;
+
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
@@ -184,6 +192,8 @@ def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    FeatureCrypto,
                                    FeatureCustomCheapAsMoveHandling,
                                    FeatureFPARMv8,
+                                   FeatureFuseAES,
+                                   FeatureFuseLiterals,
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeaturePostRAScheduler,
@@ -230,6 +240,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                      FeatureCrypto,
                                      FeatureCustomCheapAsMoveHandling,
                                      FeatureFPARMv8,
+                                     FeatureFuseAES,
                                      FeatureNEON,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,

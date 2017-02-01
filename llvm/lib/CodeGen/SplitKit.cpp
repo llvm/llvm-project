@@ -522,6 +522,27 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
     Def = LIS.getSlotIndexes()
               ->insertMachineInstrInMaps(*CopyMI, Late)
               .getRegSlot();
+    if (LI->hasSubRanges()) {
+      LaneBitmask LM = LaneBitmask::getNone();
+      for (LiveInterval::SubRange &S : LI->subranges())
+        LM |= S.LaneMask;
+
+      if (MRI.getMaxLaneMaskForVReg(LI->reg) != LM) {
+        // Find subreg for the lane mask.
+        unsigned SubIdx = 0;
+        for (unsigned I = 1, E = TRI.getNumSubRegIndices(); I < E; ++I) {
+          if (TRI.getSubRegIndexLaneMask(I) == LM) {
+            SubIdx = I;
+            break;
+          }
+        }
+        if (SubIdx == 0)
+          report_fatal_error("Cannot find subreg index to cover all alive lanes");
+        CopyMI->getOperand(0).setSubReg(SubIdx);
+        CopyMI->getOperand(1).setSubReg(SubIdx);
+        CopyMI->getOperand(0).setIsUndef(true);
+      }
+    }
     ++NumCopies;
   }
 

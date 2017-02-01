@@ -4,10 +4,14 @@
 
 // RUN: %clang_asan -dead_strip -O2 %s -o %t.exe
 //
+// note: we can not use -D on Darwin.
 // RUN: nm -g `%clang_asan %s -fsanitize=address -### 2>&1 | grep "libclang_rt.asan_osx_dynamic.dylib" | sed -e 's/.*"\(.*libclang_rt.asan_osx_dynamic.dylib\)".*/\1/'` \
+// RUN:  | grep " [TU] "                                                       \
 // RUN:  | grep -o "\(__asan_\|__ubsan_\|__sancov_\|__sanitizer_\)[^ ]*"       \
 // RUN:  | grep -v "__sanitizer_syscall"                                       \
 // RUN:  | grep -v "__sanitizer_weak_hook"                                     \
+// RUN:  | grep -v "__sanitizer_mz"                                            \
+// RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss"                    \
 // RUN:  | sed -e "s/__asan_version_mismatch_check_v[0-9]+/__asan_version_mismatch_check/" \
 // RUN:  > %t.exports
 //

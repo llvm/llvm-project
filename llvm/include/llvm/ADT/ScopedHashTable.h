@@ -182,8 +182,8 @@ public:
     return TopLevelMap.count(Key);
   }
 
-  V lookup(const K &Key) {
-    typename DenseMap<K, ValTy*, KInfo>::iterator I = TopLevelMap.find(Key);
+  V lookup(const K &Key) const {
+    auto I = TopLevelMap.find(Key);
     if (I != TopLevelMap.end())
       return I->second->getValue();
 
