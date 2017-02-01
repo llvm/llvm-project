@@ -21,9 +21,17 @@ if (LLDB_BUILT_STANDALONE)
 endif()
 
 function(add_lldb_unittest test_name)
+  cmake_parse_arguments(ARG
+    ""
+    ""
+    "LINK_LIBS;LINK_COMPONENTS"
+    ${ARGN})
+
+  list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
+
   add_unittest(LLDBUnitTests
     ${test_name}
-    ${ARGN}
+    ${ARG_UNPARSED_ARGUMENTS}
     )
 
   add_custom_command(
@@ -32,8 +40,7 @@ function(add_lldb_unittest test_name)
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/Inputs)
 
   lldb_link_common_libs(${test_name} EXE)
-  target_link_libraries(${test_name} ${SWIFT_ALL_LIBS} ${CLANG_ALL_LIBS} ${LLDB_SYSTEM_LIBS})
-  llvm_config(${test_name} ${LLVM_LINK_COMPONENTS})
+  target_link_libraries(${test_name} ${SWIFT_ALL_LIBS} ${CLANG_USED_LIBS} ${LLDB_SYSTEM_LIBS} ${ARG_LINK_LIBS})
 endfunction()
 
 function(add_unittest_inputs test_name inputs)

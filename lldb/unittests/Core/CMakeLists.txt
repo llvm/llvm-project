@@ -7,4 +7,10 @@ add_lldb_unittest(LLDBCoreTests
   ScalarTest.cpp
   StructuredDataTest.cpp
   TimerTest.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbHost
+  LINK_COMPONENTS
+    Support
   )
