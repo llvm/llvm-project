@@ -2124,7 +2124,12 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
        I != E; ++I) {
     // Line comments that belong to the same line comment section are put on the
     // same line since later we might want to reflow content between them.
-    // See BreakableToken.
+    // Additional fine-grained breaking of line comment sections is controlled
+    // by the class BreakableLineCommentSection in case it is desirable to keep
+    // several line comment sections in the same unwrapped line.
+    //
+    // FIXME: Consider putting separate line comment sections as children to the
+    // unwrapped line instead.
     if (isOnNewLine(**I) && JustComments && !continuesLineComment(**I, *Line))
       addUnwrappedLine();
     pushToken(*I);

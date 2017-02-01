@@ -1388,6 +1388,74 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "var y;");
   // Escaped dollar.
   verifyFormat("var x = ` \\${foo}`;\n");
+
+  // The token stream can contain two string_literals in sequence, but that
+  // doesn't mean that they are implicitly concatenated in JavaScript.
+  verifyFormat("var f = `aaaa ${a ? 'a' : 'b'}`;");
+
+  // Ensure that scopes are appropriately set around evaluated expressions in
+  // template strings.
+  verifyFormat("var f = `aaaaaaaaaaaaa:${aaaaaaa.aaaaa} aaaaaaaa\n"
+               "         aaaaaaaaaaaaa:${aaaaaaa.aaaaa} aaaaaaaa`;",
+               "var f = `aaaaaaaaaaaaa:${aaaaaaa.  aaaaa} aaaaaaaa\n"
+               "         aaaaaaaaaaaaa:${  aaaaaaa. aaaaa} aaaaaaaa`;");
+}
+
+TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {
+  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                               bbbb}`;",
+               "var f = `aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                               bbbb}`;");
+  verifyFormat("var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                               aaaaa +  //\n"
+               "                               bbbb}`;",
+               "var f = `aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                               aaaaa +  //\n"
+               "                               bbbb}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${aaaaa +  //\n"
+               "                        bbbb}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${   aaaaa  +  //\n"
+               "                        bbbb }`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${         //\n"
+               "                        aaaaa +  //\n"
+               "                        bbbb}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${     //\n"
+               "                        aaaaa  +  //\n"
+               "                        bbbb}`  ;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${someFunction(\n"
+               "                            aaaaa +  //\n"
+               "                            bbbb)}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${ someFunction  (\n"
+               "                            aaaaa  +   //\n"
+               "                            bbbb)}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction(\n"
+               "                            aaaaa +  //\n"
+               "                            bbbb)}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction (\n"
+               "                            aaaaa  +   //\n"
+               "                            bbbb)}`;");
+  verifyFormat("var f = `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction({\n"
+               "                          aaaa: aaaaa,\n"
+               "                          bbbb: bbbbb,\n"
+               "                        })}`;",
+               "var f  =  `\n"
+               "  aaaaaaaaaaaaaaaaaa: ${  //\n"
+               "                        someFunction ({\n"
+               "                          aaaa:  aaaaa,\n"
+               "                          bbbb:  bbbbb,\n"
+               "                        })}`;");
 }
 
 TEST_F(FormatTestJS, TemplateStringASI) {

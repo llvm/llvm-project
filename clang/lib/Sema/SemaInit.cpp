@@ -4679,15 +4679,7 @@ static void TryUserDefinedConversion(Sema &S,
 
     // Try to complete the type we're converting to.
     if (S.isCompleteType(Kind.getLocation(), DestType)) {
-      DeclContext::lookup_result R = S.LookupConstructors(DestRecordDecl);
-      // The container holding the constructors can under certain conditions
-      // be changed while iterating. To be safe we copy the lookup results
-      // to a new container.
-      SmallVector<NamedDecl*, 8> CopyOfCon(R.begin(), R.end());
-      for (SmallVectorImpl<NamedDecl *>::iterator
-             Con = CopyOfCon.begin(), ConEnd = CopyOfCon.end();
-           Con != ConEnd; ++Con) {
-        NamedDecl *D = *Con;
+      for (NamedDecl *D : S.LookupConstructors(DestRecordDecl)) {
         auto Info = getConstructorInfo(D);
         if (!Info.Constructor)
           continue;

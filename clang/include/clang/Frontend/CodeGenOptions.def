@@ -83,6 +83,7 @@ CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
 VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
 
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
+CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions to
                                      ///< be generated.
 CODEGENOPT(PrepareForLTO     , 1, 0) ///< Set when -flto is enabled on the

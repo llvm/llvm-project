@@ -1763,13 +1763,12 @@ static void DiagnoseCallingConvCast(Sema &Self, const ExprResult &SrcExpr,
   if (!DRE)
     return;
   auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl());
-  const FunctionDecl *Definition;
-  if (!FD || !FD->hasBody(Definition))
+  if (!FD)
     return;
 
   // Only warn if we are casting from the default convention to a non-default
   // convention. This can happen when the programmer forgot to apply the calling
-  // convention to the function definition and then inserted this cast to
+  // convention to the function declaration and then inserted this cast to
   // satisfy the type system.
   CallingConv DefaultCC = Self.getASTContext().getDefaultCallingConvention(
       FD->isVariadic(), FD->isCXXInstanceMember());
@@ -1792,7 +1791,7 @@ static void DiagnoseCallingConvCast(Sema &Self, const ExprResult &SrcExpr,
   // whose address was taken. Try to use the latest macro for the convention.
   // For example, users probably want to write "WINAPI" instead of "__stdcall"
   // to match the Windows header declarations.
-  SourceLocation NameLoc = Definition->getNameInfo().getLoc();
+  SourceLocation NameLoc = FD->getFirstDecl()->getNameInfo().getLoc();
   Preprocessor &PP = Self.getPreprocessor();
   SmallVector<TokenValue, 6> AttrTokens;
   SmallString<64> CCAttrText;

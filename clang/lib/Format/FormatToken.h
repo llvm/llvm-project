@@ -220,6 +220,9 @@ struct FormatToken {
   /// [], {} or <>.
   unsigned NestingLevel = 0;
 
+  /// \brief The indent level of this token. Copied from the surrounding line.
+  unsigned IndentLevel = 0;
+
   /// \brief Penalty for inserting a line break before this token.
   unsigned SplitPenalty = 0;
 
@@ -334,11 +337,15 @@ struct FormatToken {
 
   /// \brief Returns whether \p Tok is ([{ or a template opening <.
   bool opensScope() const {
+    if (is(TT_TemplateString) && TokenText.endswith("${"))
+      return true;
     return isOneOf(tok::l_paren, tok::l_brace, tok::l_square,
                    TT_TemplateOpener);
   }
   /// \brief Returns whether \p Tok is )]} or a template closing >.
   bool closesScope() const {
+    if (is(TT_TemplateString) && TokenText.startswith("}"))
+      return true;
     return isOneOf(tok::r_paren, tok::r_brace, tok::r_square,
                    TT_TemplateCloser);
   }

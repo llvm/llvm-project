@@ -146,23 +146,19 @@ private:
 };
 
 struct ParenState {
-  ParenState(unsigned Indent, unsigned IndentLevel, unsigned LastSpace,
-             bool AvoidBinPacking, bool NoLineBreak)
-      : Indent(Indent), IndentLevel(IndentLevel), LastSpace(LastSpace),
-        NestedBlockIndent(Indent), BreakBeforeClosingBrace(false),
-        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
-        NoLineBreak(NoLineBreak), NoLineBreakInOperand(false),
-        LastOperatorWrapped(true), ContainsLineBreak(false),
-        ContainsUnwrappedBuilder(false), AlignColons(true),
-        ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
-        NestedBlockInlined(false) {}
+  ParenState(unsigned Indent, unsigned LastSpace, bool AvoidBinPacking,
+             bool NoLineBreak)
+      : Indent(Indent), LastSpace(LastSpace), NestedBlockIndent(Indent),
+        BreakBeforeClosingBrace(false), AvoidBinPacking(AvoidBinPacking),
+        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
+        NoLineBreakInOperand(false), LastOperatorWrapped(true),
+        ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
+        AlignColons(true), ObjCSelectorNameFound(false),
+        HasMultipleNestedBlocks(false), NestedBlockInlined(false) {}
 
   /// \brief The position to which a specific parenthesis level needs to be
   /// indented.
   unsigned Indent;
-
-  /// \brief The number of indentation levels of the block.
-  unsigned IndentLevel;
 
   /// \brief The position of the last space on each level.
   ///
