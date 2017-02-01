@@ -883,8 +883,8 @@ bool MIParser::parseRegister(unsigned &Reg, VRegInfo *&Info) {
 }
 
 bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
-  if (Token.isNot(MIToken::Identifier))
-    return error("expected a register class or register bank name");
+  if (Token.isNot(MIToken::Identifier) && Token.isNot(MIToken::underscore))
+    return error("expected '_', register class, or register bank name");
   StringRef::iterator Loc = Token.location();
   StringRef Name = Token.stringValue();
 
@@ -914,26 +914,30 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
     llvm_unreachable("Unexpected register kind");
   }
 
-  // Should be a register bank.
-  auto RBNameI = PFS.Names2RegBanks.find(Name);
-  lex();
-  if (RBNameI == PFS.Names2RegBanks.end())
-    return error(Loc, "expected a register class or register bank name");
+  // Should be a register bank or a generic register.
+  const RegisterBank *RegBank = nullptr;
+  if (Name != "_") {
+    auto RBNameI = PFS.Names2RegBanks.find(Name);
+    if (RBNameI == PFS.Names2RegBanks.end())
+      return error(Loc, "expected '_', register class, or register bank name");
+    RegBank = RBNameI->getValue();
+  }
 
-  const RegisterBank &RegBank = *RBNameI->getValue();
+  lex();
+
   switch (RegInfo.Kind) {
   case VRegInfo::UNKNOWN:
   case VRegInfo::GENERIC:
   case VRegInfo::REGBANK:
-    RegInfo.Kind = VRegInfo::REGBANK;
-    if (RegInfo.Explicit && RegInfo.D.RegBank != &RegBank)
-      return error(Loc, "conflicting register banks");
-    RegInfo.D.RegBank = &RegBank;
+    RegInfo.Kind = RegBank ? VRegInfo::REGBANK : VRegInfo::GENERIC;
+    if (RegInfo.Explicit && RegInfo.D.RegBank != RegBank)
+      return error(Loc, "conflicting generic register banks");
+    RegInfo.D.RegBank = RegBank;
     RegInfo.Explicit = true;
     return false;
 
   case VRegInfo::NORMAL:
-    return error(Loc, "register class specification on normal register");
+    return error(Loc, "register bank specification on normal register");
   }
   llvm_unreachable("Unexpected register kind");
 }
