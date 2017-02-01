@@ -65,5 +65,6 @@ int main()
     vBool.push_back(true);
     vBool.push_back(true);
 
-    return 0; // Set break point at this line.
+    printf ("size: %d", (int) vBool.size()); // Set break point at this line.
+    return 0; 
 }

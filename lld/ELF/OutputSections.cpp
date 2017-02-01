@@ -640,6 +640,18 @@ static uint64_t getIncompatibleFlags(uint64_t Flags) {
   return Flags & (SHF_ALLOC | SHF_TLS);
 }
 
+// We allow sections of types listed below to merged into a
+// single progbits section. This is typically done by linker
+// scripts. Merging nobits and progbits will force disk space
+// to be allocated for nobits sections. Other ones don't require
+// any special treatment on top of progbits, so there doesn't
+// seem to be a harm in merging them.
+static bool canMergeToProgbits(unsigned Type) {
+  return Type == SHT_NOBITS || Type == SHT_PROGBITS || Type == SHT_INIT_ARRAY ||
+         Type == SHT_PREINIT_ARRAY || Type == SHT_FINI_ARRAY ||
+         Type == SHT_NOTE;
+}
+
 template <class ELFT>
 std::pair<OutputSectionBase *, bool>
 OutputSectionFactory<ELFT>::create(const SectionKey &Key,
@@ -650,14 +662,13 @@ OutputSectionFactory<ELFT>::create(const SectionKey &Key,
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(C->Flags))
       error("Section has flags incompatible with others with the same name " +
             toString(C));
-    // Convert notbits to progbits if they are mixed. This happens is some
-    // linker scripts.
-    if (Sec->Type == SHT_NOBITS && C->Type == SHT_PROGBITS)
-      Sec->Type = SHT_PROGBITS;
-    if (Sec->Type != C->Type &&
-        !(Sec->Type == SHT_PROGBITS && C->Type == SHT_NOBITS))
-      error("Section has different type from others with the same name " +
-            toString(C));
+    if (Sec->Type != C->Type) {
+      if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(C->Type))
+        Sec->Type = SHT_PROGBITS;
+      else
+        error("Section has different type from others with the same name " +
+              toString(C));
+    }
     Sec->Flags |= Flags;
     return {Sec, false};
   }

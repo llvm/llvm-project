@@ -16,4 +16,12 @@ add_lldb_library(lldbUtility
   StringLexer.cpp
   TaskPool.cpp
   UriParser.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbHost
+    lldbTarget
+
+  LINK_COMPONENTS
+    Support
   )

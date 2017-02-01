@@ -18,6 +18,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 template <class T>
 struct alloc_imp {
     bool active;
@@ -44,7 +45,7 @@ struct poca_alloc {
 
     alloc_imp<T> *imp;
 
-    poca_alloc(alloc_imp<T> *imp) : imp (imp) {}
+    poca_alloc(alloc_imp<T> *imp_) : imp (imp_) {}
 
     template <class U>
     poca_alloc(const poca_alloc<U>& other) : imp(other.imp) {}
@@ -65,6 +66,15 @@ bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs)
     return lhs.imp != rhs.imp;
 }
 
+template <class S>
+void test_assign(S &s1, const S& s2)
+{
+	try { s1 = s2; }
+	catch ( std::bad_alloc &) { return; }
+	assert(false);
+}
+#endif
+
 
 
 template <class S>
@@ -77,16 +87,6 @@ test(S s1, const typename S::allocator_type& a)
     assert(s2.capacity() >= s2.size());
     assert(s2.get_allocator() == a);
 }
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-template <class S>
-void test_assign(S &s1, const S& s2)
-{
-	try { s1 = s2; }
-	catch ( std::bad_alloc &) { return; }
-	assert(false);
-}
-#endif
 
 int main()
 {

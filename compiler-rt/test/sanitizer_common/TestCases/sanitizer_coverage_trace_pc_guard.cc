@@ -1,7 +1,8 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// XFAIL: tsan,darwin,powerpc64,s390x
+// UNSUPPORTED: i386-darwin
+// XFAIL: tsan,powerpc64,s390x
 //
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR
@@ -35,7 +36,7 @@ int main() {
 // CHECK-NEXT: foo
 // CHECK-NEXT: SanitizerCoverage: ./sanitizer_coverage_trace_pc_guard.{{.*}}.sancov 2 PCs written
 //
-// CHECK-SANCOV: sanitizer_coverage_trace_pc_guard.cc:22 foo
-// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard.cc:27 main
+// CHECK-SANCOV: sanitizer_coverage_trace_pc_guard.cc:23 foo
+// CHECK-SANCOV-NEXT: sanitizer_coverage_trace_pc_guard.cc:28 main
 //
 // CHECK-NOCOV-NOT: SanitizerCoverage

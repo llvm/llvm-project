@@ -5,7 +5,7 @@
 # RUN: FileCheck %s < %T/bar.map
 
 # CHECK:      Address  Size     Align Out     In      File    Symbol
-# CHECK-NEXT: 00001000 00000006  1000 .text  
-# CHECK-NEXT: 00001000 00000006    10         .text$mn
-# CHECK-NEXT: 00001000 00000006    10                 {{.*}}lldmap.test.tmp.obj
+# CHECK-NEXT: 00001000 00000006  4096 .text
+# CHECK-NEXT: 00001000 00000006    16         .text$mn
+# CHECK-NEXT: 00001000 00000006    16                 {{.*}}lldmap.test.tmp.obj
 # CHECK-NEXT: 00001000 00000006     0                         main   

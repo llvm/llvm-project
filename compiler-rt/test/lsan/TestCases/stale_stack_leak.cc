@@ -3,6 +3,9 @@
 // RUN: %clangxx_lsan %s -o %t
 // RUN: LSAN_OPTIONS=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 // RUN: LSAN_OPTIONS=$LSAN_BASE":exitcode=0" %run %t 2>&1 | FileCheck --check-prefix=CHECK-sanity %s
+//
+// x86 passes parameters through stack that may lead to false negatives
+// UNSUPPORTED: x86
 
 #include <stdio.h>
 #include <stdlib.h>

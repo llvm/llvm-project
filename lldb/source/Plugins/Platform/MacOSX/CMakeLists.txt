@@ -24,4 +24,19 @@ else()
     ${PLUGIN_PLATFORM_MACOSX_DARWIN_ONLY_SOURCES})
 endif()
 
-add_lldb_library(lldbPluginPlatformMacOSX ${PLUGIN_PLATFORM_MACOSX_SOURCES})
+add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
+  ${PLUGIN_PLATFORM_MACOSX_SOURCES}
+  
+  LINK_LIBS
+    clangBasic
+    lldbBreakpoint
+    lldbCore
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginPlatformPOSIX
+  LINK_COMPONENTS
+    Support
+    )

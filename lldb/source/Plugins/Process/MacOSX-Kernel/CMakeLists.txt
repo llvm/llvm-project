@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginProcessMacOSXKernel
+add_lldb_library(lldbPluginProcessMacOSXKernel PLUGIN
   CommunicationKDP.cpp
   ProcessKDP.cpp
   ProcessKDPLog.cpp
@@ -7,4 +7,16 @@ add_lldb_library(lldbPluginProcessMacOSXKernel
   RegisterContextKDP_i386.cpp
   RegisterContextKDP_x86_64.cpp
   ThreadKDP.cpp
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbCore
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginDynamicLoaderDarwinKernel
+    lldbPluginDynamicLoaderStatic
+    lldbPluginProcessUtility
   )
