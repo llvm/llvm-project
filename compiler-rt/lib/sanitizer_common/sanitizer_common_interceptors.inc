@@ -44,15 +44,9 @@
 #include <stdarg.h>
 
 #if SANITIZER_INTERCEPTOR_HOOKS
-#define CALL_WEAK_INTERCEPTOR_HOOK(f, ...)                                     \
-  do {                                                                         \
-    if (f)                                                                     \
-      f(__VA_ARGS__);                                                          \
-  } while (false);
-#define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...)                                  \
-  extern "C" {                                                                 \
-  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void f(__VA_ARGS__);  \
-  } // extern "C"
+#define CALL_WEAK_INTERCEPTOR_HOOK(f, ...) f(__VA_ARGS__);
+#define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...) \
+  SANITIZER_INTERFACE_WEAK_DEF(void, f, __VA_ARGS__) {}
 #else
 #define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...)
 #define CALL_WEAK_INTERCEPTOR_HOOK(f, ...)

@@ -424,7 +424,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         (P->is(TT_BinaryOperator) &&
          Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None) ||
         (P->is(TT_ConditionalExpr) && Style.BreakBeforeTernaryOperators);
-    if (!BreakBeforeOperator ||
+    // Don't do this if there are only two operands. In these cases, there is
+    // always a nice vertical separation between them and the extra line break
+    // does not help.
+    bool HasTwoOperands =
+        P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
+    if ((!BreakBeforeOperator && !HasTwoOperands) ||
         (!State.Stack.back().LastOperatorWrapped && BreakBeforeOperator))
       State.Stack.back().NoLineBreakInOperand = true;
   }

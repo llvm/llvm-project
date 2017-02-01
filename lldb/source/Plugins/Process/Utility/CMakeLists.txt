@@ -1,6 +1,6 @@
 include_directories(../../../Utility/)
 
-add_lldb_library(lldbPluginProcessUtility
+add_lldb_library(lldbPluginProcessUtility PLUGIN
   DynamicRegisterInfo.cpp
   FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
@@ -46,4 +46,17 @@ add_lldb_library(lldbPluginProcessUtility
   ThreadMemory.cpp
   UnwindLLDB.cpp
   UnwindMacOSXFrameBackchain.cpp
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginProcessElfCore
+  LINK_COMPONENTS
+    Support
   )

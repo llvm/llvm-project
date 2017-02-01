@@ -21,12 +21,16 @@ function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
-    "MODULE;SHARED;STATIC;OBJECT"
+    "MODULE;SHARED;STATIC;OBJECT;PLUGIN"
     ""
     "DEPENDS;LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
+
+  if(PARAM_PLUGIN)
+    set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
+  endif()
 
   if (MSVC_IDE OR XCODE)
     string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})

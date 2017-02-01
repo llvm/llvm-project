@@ -329,6 +329,10 @@ public:
     return isAmdHsaOS() || isMesaKernel(MF);
   }
 
+  bool hasFminFmaxLegacy() const {
+    return getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  }
+
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {

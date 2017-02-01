@@ -14,6 +14,7 @@
 #include "X86TargetMachine.h"
 #include "X86.h"
 #include "X86CallLowering.h"
+#include "X86MacroFusion.h"
 #include "X86TargetObjectFile.h"
 #include "X86TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
@@ -289,7 +290,7 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    DAG->addMutation(createMacroFusionDAGMutation(DAG->TII));
+    DAG->addMutation(createX86MacroFusionDAGMutation());
     return DAG;
   }
 

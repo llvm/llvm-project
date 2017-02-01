@@ -20,6 +20,14 @@ elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
     )
 endif()
 
-add_lldb_library(lldbPluginProcessWindowsCommon
+add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   ${PROC_WINDOWS_COMMON_SOURCES}
+
+  LINK_LIBS
+    lldbCore
+    lldbHost
+    lldbInterpreter
+    lldbTarget
+  LINK_COMPONENTS
+    Support
   )

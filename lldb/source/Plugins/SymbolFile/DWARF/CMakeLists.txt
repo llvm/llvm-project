@@ -1,4 +1,4 @@
-add_lldb_library(lldbPluginSymbolFileDWARF
+add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DIERef.cpp
   DWARFAbbreviationDeclaration.cpp
   DWARFASTParserClang.cpp
@@ -32,4 +32,20 @@ add_lldb_library(lldbPluginSymbolFileDWARF
   SymbolFileDWARFDwo.cpp
   SymbolFileDWARFDebugMap.cpp
   UniqueDWARFASTType.cpp
+
+  LINK_LIBS
+    clangAST
+    clangBasic
+    lldbCore
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbPluginObjCLanguage
+    lldbPluginCPlusPlusLanguage
+    lldbPluginExpressionParserClang
+  LINK_COMPONENTS
+    Support
   )

@@ -36,4 +36,25 @@ add_lldb_library(lldbSymbol
   Variable.cpp
   VariableList.cpp
   VerifyDecl.cpp
+
+  LINK_LIBS
+    clangAST
+    clangBasic
+    clangFrontend
+    lldbCore
+    lldbDataFormatters
+    lldbExpression
+    lldbHost
+    lldbTarget
+    lldbUtility
+    lldbPluginExpressionParserClang
+    lldbPluginExpressionParserGo
+    lldbPluginSymbolFileDWARF
+    lldbPluginSymbolFilePDB
+    lldbPluginObjectContainerBSDArchive
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+
+  LINK_COMPONENTS
+    Support
   )

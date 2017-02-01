@@ -28,14 +28,6 @@ add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
           ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
   )
 
-set(DEBUGSERVER_USED_LIBS
-  lldbDebugserverCommon
-  lldbUtility
-  lldbDebugserverMacOSX_I386
-  lldbDebugserverMacOSX_X86_64
-  lldbDebugserverMacOSX_DarwinLog
-  )
-
 add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
   HasAVX.s
   CFBundle.cpp
@@ -51,6 +43,12 @@ add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK
   OsLogger.cpp
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE}
+
+  LINK_LIBS
+    lldbDebugserverCommon
+    lldbDebugserverMacOSX_I386
+    lldbDebugserverMacOSX_X86_64
+    lldbDebugserverMacOSX_DarwinLog
   )
 
 set_source_files_properties(
@@ -58,8 +56,6 @@ set_source_files_properties(
   # Necessary since compilation will fail with stand-alone assembler
   PROPERTIES LANGUAGE C COMPILE_FLAGS "-x assembler-with-cpp"
   )
-
-target_link_libraries(debugserver ${DEBUGSERVER_USED_LIBS})
 
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")

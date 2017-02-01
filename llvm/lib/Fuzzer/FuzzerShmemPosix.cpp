@@ -35,17 +35,17 @@ std::string SharedMemoryRegion::SemName(const char *Name, int Idx) {
 }
 
 bool SharedMemoryRegion::Map(int fd) {
-  Data = (uint8_t *)mmap(0, Size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
+  Data =
+      (uint8_t *)mmap(0, kShmemSize, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
   if (Data == (uint8_t*)-1)
     return false;
   return true;
 }
 
-bool SharedMemoryRegion::Create(const char *Name, size_t Size) {
+bool SharedMemoryRegion::Create(const char *Name) {
   int fd = open(Path(Name).c_str(), O_CREAT | O_RDWR, 0777);
   if (fd < 0) return false;
-  if (ftruncate(fd, Size) < 0) return false;
-  this->Size = Size;
+  if (ftruncate(fd, kShmemSize) < 0) return false;
   if (!Map(fd))
     return false;
   for (int i = 0; i < 2; i++) {
@@ -64,7 +64,7 @@ bool SharedMemoryRegion::Open(const char *Name) {
   struct stat stat_res;
   if (0 != fstat(fd, &stat_res))
     return false;
-  Size = stat_res.st_size;
+  assert(stat_res.st_size == kShmemSize);
   if (!Map(fd))
     return false;
   for (int i = 0; i < 2; i++) {

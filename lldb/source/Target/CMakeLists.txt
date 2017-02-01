@@ -58,4 +58,20 @@ add_lldb_library(lldbTarget
   ThreadSpec.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp
+
+  LINK_LIBS
+    lldbBreakpoint
+    lldbCore
+    lldbExpression
+    lldbHost
+    lldbInterpreter
+    lldbSymbol
+    lldbUtility
+    lldbPluginExpressionParserClang
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjCLanguage
+    lldbPluginProcessUtility
+
+  LINK_COMPONENTS
+    Support
   )

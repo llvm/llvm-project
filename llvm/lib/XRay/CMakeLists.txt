@@ -1,4 +1,5 @@
 add_llvm_library(LLVMXRay
+  InstrumentationMap.cpp
   Trace.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -7,7 +8,9 @@ add_llvm_library(LLVMXRay
 
   DEPENDS
   LLVMSupport
+  LLVMObject
 
   LINK_LIBS
   LLVMSupport
+  LLVMObject
   )

@@ -16,4 +16,14 @@ add_lldb_library(lldbDataFormatters
   TypeValidator.cpp
   ValueObjectPrinter.cpp
   VectorType.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbInterpreter
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+  
+  LINK_COMPONENTS
+    Support
   )

@@ -1,0 +1,15 @@
+VERS1.0 {
+  global:
+    __tgt_rtl_is_valid_binary;
+    __tgt_rtl_number_of_devices;
+    __tgt_rtl_init_device;
+    __tgt_rtl_load_binary;
+    __tgt_rtl_data_alloc;
+    __tgt_rtl_data_submit;
+    __tgt_rtl_data_retrieve;
+    __tgt_rtl_data_delete;
+    __tgt_rtl_run_target_team_region;
+    __tgt_rtl_run_target_region;
+  local:
+    *;
+};
