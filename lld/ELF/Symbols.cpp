@@ -73,6 +73,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     return VA;
   }
   case SymbolBody::DefinedCommonKind:
+    if (!Config->DefineCommon)
+      return 0;
     return In<ELFT>::Common->OutSec->Addr + In<ELFT>::Common->OutSecOff +
            cast<DefinedCommon>(Body).Offset;
   case SymbolBody::SharedKind: {

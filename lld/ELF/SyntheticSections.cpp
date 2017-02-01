@@ -59,6 +59,9 @@ template <class ELFT> InputSection<ELFT> *elf::createCommonSection() {
                                        ArrayRef<uint8_t>(), "COMMON");
   Ret->Live = true;
 
+  if (!Config->DefineCommon)
+    return Ret;
+
   // Sort the common symbols by alignment as an heuristic to pack them better.
   std::vector<DefinedCommon *> Syms = getCommonSymbols<ELFT>();
   std::stable_sort(Syms.begin(), Syms.end(),
@@ -1168,10 +1171,14 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setVisibility(Body->symbol()->Visibility);
     ESym->st_value = Body->getVA<ELFT>();
 
-    if (const OutputSectionBase *OutSec = getOutputSection(Body))
+    if (const OutputSectionBase *OutSec = getOutputSection(Body)) {
       ESym->st_shndx = OutSec->SectionIndex;
-    else if (isa<DefinedRegular<ELFT>>(Body))
+    } else if (isa<DefinedRegular<ELFT>>(Body)) {
       ESym->st_shndx = SHN_ABS;
+    } else if (isa<DefinedCommon>(Body)) {
+      ESym->st_shndx = SHN_COMMON;
+      ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
+    }
 
     if (Config->EMachine == EM_MIPS) {
       // On MIPS we need to mark symbol which has a PLT entry and requires
@@ -1203,6 +1210,8 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     break;
   }
   case SymbolBody::DefinedCommonKind:
+    if (!Config->DefineCommon)
+      return nullptr;
     return In<ELFT>::Common->OutSec;
   case SymbolBody::SharedKind: {
     auto &SS = cast<SharedSymbol<ELFT>>(*Sym);
