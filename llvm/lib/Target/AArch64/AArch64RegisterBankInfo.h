@@ -27,14 +27,75 @@ enum {
   CCRRegBankID = 2, /// Conditional register: NZCV.
   NumRegisterBanks
 };
-
-extern RegisterBank GPRRegBank;
-extern RegisterBank FPRRegBank;
-extern RegisterBank CCRRegBank;
 } // End AArch64 namespace.
 
+class AArch64GenRegisterBankInfo : public RegisterBankInfo {
+private:
+  static RegisterBank *RegBanks[];
+
+protected:
+  AArch64GenRegisterBankInfo();
+
+public:
+  static RegisterBankInfo::PartialMapping PartMappings[];
+  static RegisterBankInfo::ValueMapping ValMappings[];
+  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
+                              unsigned ValLength, const RegisterBank &RB);
+  static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
+                                unsigned Size, unsigned Offset);
+  enum PartialMappingIdx {
+    PMI_None = -1,
+    PMI_GPR32 = 1,
+    PMI_GPR64,
+    PMI_FPR32,
+    PMI_FPR64,
+    PMI_FPR128,
+    PMI_FPR256,
+    PMI_FPR512,
+    PMI_FirstGPR = PMI_GPR32,
+    PMI_LastGPR = PMI_GPR64,
+    PMI_FirstFPR = PMI_FPR32,
+    PMI_LastFPR = PMI_FPR512,
+    PMI_Min = PMI_FirstGPR,
+  };
+
+  enum ValueMappingIdx {
+    First3OpsIdx = 0,
+    Last3OpsIdx = 18,
+    DistanceBetweenRegBanks = 3,
+    FirstCrossRegCpyIdx = 21,
+    LastCrossRegCpyIdx = 27,
+    DistanceBetweenCrossRegCpy = 2
+  };
+
+  static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
+                                     PartialMappingIdx LastAlias,
+                                     ArrayRef<PartialMappingIdx> Order) {
+    if (Order.front() != FirstAlias)
+      return false;
+    if (Order.back() != LastAlias)
+      return false;
+    if (Order.front() > Order.back())
+      return false;
+
+    PartialMappingIdx Previous = Order.front();
+    bool First = true;
+    for (const auto &Current : Order) {
+      if (First) {
+        First = false;
+        continue;
+      }
+      if (Previous + 1 != Current)
+        return false;
+      Previous = Current;
+    }
+    return true;
+  }
+
+};
+
 /// This class provides the information for the target register banks.
-class AArch64RegisterBankInfo final : public RegisterBankInfo {
+class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 
