@@ -749,6 +749,7 @@ bool IRTranslator::translateInvoke(const User &U,
   MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
   MIRBuilder.getMBB().addSuccessor(&ReturnMBB);
   MIRBuilder.getMBB().addSuccessor(&EHPadMBB);
+  MIRBuilder.buildBr(ReturnMBB);
 
   return true;
 }
