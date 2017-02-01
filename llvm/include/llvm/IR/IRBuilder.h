@@ -75,7 +75,7 @@ class IRBuilderCallbackInserter : IRBuilderDefaultInserter {
 
 public:
   IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
-      : Callback(Callback) {}
+      : Callback(std::move(Callback)) {}
 
 protected:
   void InsertHelper(Instruction *I, const Twine &Name,

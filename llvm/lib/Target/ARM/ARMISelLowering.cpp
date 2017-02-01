@@ -2934,7 +2934,7 @@ static bool isSimpleType(Type *T) {
 }
 
 static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
-                                     EVT PtrVT, SDLoc dl) {
+                                     EVT PtrVT, const SDLoc &dl) {
   // If we're creating a pool entry for a constant global with unnamed address,
   // and the global is small enough, we can emit it inline into the constant pool
   // to save ourselves an indirection.

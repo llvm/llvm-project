@@ -48,7 +48,7 @@ public:
   }
 
   explicit SimpleInliner(InlineParams Params)
-      : LegacyInlinerBase(ID), Params(Params) {
+      : LegacyInlinerBase(ID), Params(std::move(Params)) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 

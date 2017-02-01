@@ -27,7 +27,7 @@ public:
   TypeIndex getNextTypeIndex() const;
 
   /// Records the name of a type, and reserves its type index.
-  void recordType(StringRef Name, CVType Data);
+  void recordType(StringRef Name, const CVType &Data);
 
   /// Saves the name in a StringSet and creates a stable StringRef.
   StringRef saveTypeName(StringRef TypeName);

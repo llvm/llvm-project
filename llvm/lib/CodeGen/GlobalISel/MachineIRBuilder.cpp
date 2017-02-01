@@ -54,7 +54,7 @@ void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
 
 void MachineIRBuilder::recordInsertions(
     std::function<void(MachineInstr *)> Inserted) {
-  InsertedInstr = Inserted;
+  InsertedInstr = std::move(Inserted);
 }
 
 void MachineIRBuilder::stopRecordingInsertions() {

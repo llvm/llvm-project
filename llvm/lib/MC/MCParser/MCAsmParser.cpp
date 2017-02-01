@@ -118,7 +118,7 @@ bool MCAsmParser::addErrorSuffix(const Twine &Suffix) {
   return true;
 }
 
-bool MCAsmParser::parseMany(std::function<bool()> parseOne, bool hasComma) {
+bool MCAsmParser::parseMany(function_ref<bool()> parseOne, bool hasComma) {
   if (parseOptionalToken(AsmToken::EndOfStatement))
     return false;
   while (1) {
