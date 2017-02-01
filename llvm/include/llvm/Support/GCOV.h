@@ -248,6 +248,7 @@ public:
   bool readGCNO(GCOVBuffer &Buffer);
   bool readGCDA(GCOVBuffer &Buffer);
   uint32_t getChecksum() const { return Checksum; }
+  void print(raw_ostream &OS) const;
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
@@ -290,6 +291,7 @@ public:
     return make_range(block_begin(), block_end());
   }
 
+  void print(raw_ostream &OS) const;
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 
@@ -361,6 +363,7 @@ public:
     return make_range(dst_begin(), dst_end());
   }
 
+  void print(raw_ostream &OS) const;
   void dump() const;
   void collectLineCounts(FileInfo &FI);
 

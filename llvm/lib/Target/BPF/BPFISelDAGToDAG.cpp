@@ -138,7 +138,7 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
     else
       errs() << "Error: ";
     errs() << "Unsupport signed division for DAG: ";
-    Node->dump(CurDAG);
+    Node->print(errs(), CurDAG);
     errs() << "Please convert to unsigned div/mod.\n";
     break;
   }

@@ -112,8 +112,11 @@ void DIEAbbrev::print(raw_ostream &O) {
   }
 }
 
-LLVM_DUMP_METHOD
-void DIEAbbrev::dump() { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void DIEAbbrev::dump() {
+  print(dbgs());
+}
+#endif
 
 //===----------------------------------------------------------------------===//
 // DIEAbbrevSet Implementation
@@ -249,10 +252,11 @@ void DIE::print(raw_ostream &O, unsigned IndentCount) const {
   O << "\n";
 }
 
-LLVM_DUMP_METHOD
-void DIE::dump() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void DIE::dump() {
   print(dbgs());
 }
+#endif
 
 unsigned DIE::computeOffsetsAndAbbrevs(const AsmPrinter *AP,
                                        DIEAbbrevSet &AbbrevSet,
@@ -340,10 +344,11 @@ void DIEValue::print(raw_ostream &O) const {
   }
 }
 
-LLVM_DUMP_METHOD
-void DIEValue::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void DIEValue::dump() const {
   print(dbgs());
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // DIEInteger Implementation

@@ -108,9 +108,11 @@ void LazyCallGraph::Node::removeEdgeInternal(Function &Target) {
   EdgeIndexMap.erase(IndexMapI);
 }
 
-void LazyCallGraph::Node::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LazyCallGraph::Node::dump() const {
   dbgs() << *this << '\n';
 }
+#endif
 
 LazyCallGraph::LazyCallGraph(Module &M) : NextDFSNumber(0) {
   DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
@@ -167,9 +169,11 @@ LazyCallGraph &LazyCallGraph::operator=(LazyCallGraph &&G) {
   return *this;
 }
 
-void LazyCallGraph::SCC::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LazyCallGraph::SCC::dump() const {
   dbgs() << *this << '\n';
 }
+#endif
 
 #ifndef NDEBUG
 void LazyCallGraph::SCC::verify() {
@@ -243,9 +247,11 @@ bool LazyCallGraph::SCC::isAncestorOf(const SCC &TargetC) const {
 
 LazyCallGraph::RefSCC::RefSCC(LazyCallGraph &G) : G(&G) {}
 
-void LazyCallGraph::RefSCC::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LazyCallGraph::RefSCC::dump() const {
   dbgs() << *this << '\n';
 }
+#endif
 
 #ifndef NDEBUG
 void LazyCallGraph::RefSCC::verify() {

@@ -829,7 +829,7 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
       continue;
     }
     default:
-      Intr->dump();
+      Intr->print(errs());
       llvm_unreachable("Don't know how to promote alloca intrinsic use.");
     }
   }

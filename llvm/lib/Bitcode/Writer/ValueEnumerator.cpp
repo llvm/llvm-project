@@ -432,12 +432,14 @@ unsigned ValueEnumerator::getValueID(const Value *V) const {
   return I->second-1;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ValueEnumerator::dump() const {
   print(dbgs(), ValueMap, "Default");
   dbgs() << '\n';
   print(dbgs(), MetadataMap, "MetaData");
   dbgs() << '\n';
 }
+#endif
 
 void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
                             const char *Name) const {
@@ -452,7 +454,8 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
       OS << "Value: " << V->getName();
     else
       OS << "Value: [null]\n";
-    V->dump();
+    V->print(errs());
+    errs() << '\n';
 
     OS << " Uses(" << std::distance(V->use_begin(),V->use_end()) << "):";
     for (const Use &U : V->uses()) {

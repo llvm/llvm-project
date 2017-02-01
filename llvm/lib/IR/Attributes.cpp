@@ -581,9 +581,11 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 // AttributeSetImpl Definition
 //===----------------------------------------------------------------------===//
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeSetImpl::dump() const {
   AttributeSet(const_cast<AttributeSetImpl *>(this)).dump();
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // AttributeSet Construction and Mutation Methods
@@ -1115,6 +1117,7 @@ AttributeSet AttributeSet::getSlotAttributes(unsigned Slot) const {
   return pImpl->getSlotAttributes(Slot);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeSet::dump() const {
   dbgs() << "PAL[\n";
 
@@ -1130,6 +1133,7 @@ LLVM_DUMP_METHOD void AttributeSet::dump() const {
 
   dbgs() << "]\n";
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // AttrBuilder Method Implementations

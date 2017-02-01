@@ -35,7 +35,7 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      getAnalysis<DominatorTreeWrapperPass>().dump();
+      getAnalysis<DominatorTreeWrapperPass>().print(dbgs());
       return false;
     }
   };

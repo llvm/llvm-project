@@ -4189,6 +4189,8 @@ void APFloat::print(raw_ostream &OS) const {
   OS << Buffer << "\n";
 }
 
-void APFloat::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void APFloat::dump() const { print(dbgs()); }
+#endif
 
 } // End llvm namespace

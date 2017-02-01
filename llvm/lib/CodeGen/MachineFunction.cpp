@@ -956,7 +956,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MachineFrameInfo::dump(const MachineFunction &MF) const {
+LLVM_DUMP_METHOD void MachineFrameInfo::dump(const MachineFunction &MF) const {
   print(MF, dbgs());
 }
 #endif

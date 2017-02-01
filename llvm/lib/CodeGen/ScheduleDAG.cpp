@@ -310,6 +310,7 @@ void SUnit::biasCriticalPath() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void SUnit::print(raw_ostream &OS, const ScheduleDAG *DAG) const {
   if (this == &DAG->ExitSU)
     OS << "ExitSU";
@@ -321,13 +322,13 @@ void SUnit::print(raw_ostream &OS, const ScheduleDAG *DAG) const {
 
 /// SUnit - Scheduling unit. It's an wrapper around either a single SDNode or
 /// a group of nodes flagged together.
-void SUnit::dump(const ScheduleDAG *G) const {
+LLVM_DUMP_METHOD void SUnit::dump(const ScheduleDAG *G) const {
   print(dbgs(), G);
   dbgs() << ": ";
   G->dumpNode(this);
 }
 
-void SUnit::dumpAll(const ScheduleDAG *G) const {
+LLVM_DUMP_METHOD void SUnit::dumpAll(const ScheduleDAG *G) const {
   dump(G);
 
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";
