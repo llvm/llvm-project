@@ -129,7 +129,7 @@ public:
   /// Construct a new operand predicate and add it to the matcher.
   template <class Kind, class... Args>
   Kind &addPredicate(Args&&... args) {
-    Predicates.emplace_back(make_unique<Kind>(std::forward<Args...>(args)...));
+    Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args...>(args)...));
     return *static_cast<Kind *>(Predicates.back().get());
   }
 
