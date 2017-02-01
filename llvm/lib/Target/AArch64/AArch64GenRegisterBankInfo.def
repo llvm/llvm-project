@@ -299,13 +299,26 @@ AArch64GenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx,
   return &ValMappings[ValMappingIdx];
 }
 
+AArch64GenRegisterBankInfo::PartialMappingIdx
+    AArch64GenRegisterBankInfo::BankIDToCopyMapIdx[]{
+        PMI_FirstGPR, // GPR
+        PMI_FirstFPR, // FPR
+        PMI_None,     // CCR
+    };
+
 const RegisterBankInfo::ValueMapping *
-AArch64GenRegisterBankInfo::getCopyMapping(bool DstIsGPR, bool SrcIsGPR,
-                                           unsigned Size) {
-  PartialMappingIdx DstRBIdx = DstIsGPR ? PMI_FirstGPR : PMI_FirstFPR;
-  PartialMappingIdx SrcRBIdx = SrcIsGPR ? PMI_FirstGPR : PMI_FirstFPR;
+AArch64GenRegisterBankInfo::getCopyMapping(unsigned DstBankID,
+                                           unsigned SrcBankID, unsigned Size) {
+  assert(DstBankID < AArch64::NumRegisterBanks && "Invalid bank ID");
+  assert(SrcBankID < AArch64::NumRegisterBanks && "Invalid bank ID");
+  PartialMappingIdx DstRBIdx = BankIDToCopyMapIdx[DstBankID];
+  PartialMappingIdx SrcRBIdx = BankIDToCopyMapIdx[SrcBankID];
+  assert(DstRBIdx != PMI_None && "No such mapping");
+  assert(SrcRBIdx != PMI_None && "No such mapping");
+
   if (DstRBIdx == SrcRBIdx)
     return getValueMapping(DstRBIdx, Size);
+
   assert(Size <= 64 && "GPR cannot handle that size");
   unsigned ValMappingIdx =
       FirstCrossRegCpyIdx +
