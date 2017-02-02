@@ -19,10 +19,11 @@ using namespace llvm;
 
 const unsigned RegisterBank::InvalidID = UINT_MAX;
 
-RegisterBank::RegisterBank(unsigned ID, const char *Name, unsigned Size,
-                           const uint32_t *CoveredClasses)
+RegisterBank::RegisterBank(
+    unsigned ID, const char *Name, unsigned Size,
+    const uint32_t *CoveredClasses, unsigned NumRegClasses)
     : ID(ID), Name(Name), Size(Size) {
-  ContainedRegClasses.resize(200);
+  ContainedRegClasses.resize(NumRegClasses);
   ContainedRegClasses.setBitsInMask(CoveredClasses);
 }
 
@@ -75,9 +76,11 @@ bool RegisterBank::operator==(const RegisterBank &OtherRB) const {
   return &OtherRB == this;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBank::dump(const TargetRegisterInfo *TRI) const {
   print(dbgs(), /* IsForDebug */ true, TRI);
 }
+#endif
 
 void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
                          const TargetRegisterInfo *TRI) const {

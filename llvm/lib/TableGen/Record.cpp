@@ -40,7 +40,9 @@ IntRecTy IntRecTy::Shared;
 StringRecTy StringRecTy::Shared;
 DagRecTy DagRecTy::Shared;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecTy::dump() const { print(errs()); }
+#endif
 
 ListRecTy *RecTy::getListTy() {
   if (!ListTy)
@@ -161,7 +163,9 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
 //===----------------------------------------------------------------------===//
 
 void Init::anchor() { }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
+#endif
 
 UnsetInit *UnsetInit::get() {
   static UnsetInit TheInit;
@@ -1591,7 +1595,9 @@ StringRef RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
+#endif
 
 void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (getPrefix()) OS << "field ";
@@ -1673,7 +1679,9 @@ void Record::resolveReferencesTo(const RecordVal *RV) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
+#endif
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << R.getNameInitAsString();
@@ -1865,6 +1873,7 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
     FieldName + "' does not have a dag initializer!");
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MultiClass::dump() const {
   errs() << "Record:\n";
   Rec.dump();
@@ -1875,6 +1884,7 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
 }
 
 LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
+#endif
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";

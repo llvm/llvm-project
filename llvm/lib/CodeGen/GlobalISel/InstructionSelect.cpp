@@ -44,8 +44,8 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-static void reportSelectionError(const MachineInstr *MI, const Twine &Message) {
-  const MachineFunction &MF = *MI->getParent()->getParent();
+static void reportSelectionError(const MachineFunction &MF,
+                                 const MachineInstr *MI, const Twine &Message) {
   std::string ErrStorage;
   raw_string_ostream Err(ErrStorage);
   Err << Message << ":\nIn function: " << MF.getName() << '\n';
@@ -83,7 +83,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
-          reportSelectionError(&MI, "Instruction is not legal");
+          reportSelectionError(MF, &MI, "Instruction is not legal");
 
 #endif
   // FIXME: We could introduce new blocks and will need to fix the outer loop.
@@ -118,9 +118,8 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       if (!ISel->select(MI)) {
         if (TPC.isGlobalISelAbortEnabled())
           // FIXME: It would be nice to dump all inserted instructions.  It's
-          // not
-          // obvious how, esp. considering select() can insert after MI.
-          reportSelectionError(&MI, "Cannot select");
+          // not obvious how, esp. considering select() can insert after MI.
+          reportSelectionError(MF, &MI, "Cannot select");
         Failed = true;
         break;
       }
@@ -142,21 +141,25 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   for (auto &VRegToType : MRI.getVRegToType()) {
     unsigned VReg = VRegToType.first;
     auto *RC = MRI.getRegClassOrNull(VReg);
-    auto *MI = MRI.def_instr_begin(VReg) == MRI.def_instr_end()
-                   ? nullptr
-                   : &*MRI.def_instr_begin(VReg);
-    if (!RC) {
+    MachineInstr *MI = nullptr;
+    if (!MRI.def_empty(VReg))
+      MI = &*MRI.def_instr_begin(VReg);
+    else if (!MRI.use_empty(VReg))
+      MI = &*MRI.use_instr_begin(VReg);
+
+    if (MI && !RC) {
       if (TPC.isGlobalISelAbortEnabled())
-        reportSelectionError(MI, "VReg as no regclass after selection");
+        reportSelectionError(MF, MI, "VReg has no regclass after selection");
       Failed = true;
       break;
-    }
+    } else if (!RC)
+      continue;
 
     if (VRegToType.second.isValid() &&
         VRegToType.second.getSizeInBits() > (RC->getSize() * 8)) {
       if (TPC.isGlobalISelAbortEnabled())
         reportSelectionError(
-            MI, "VReg has explicit size different from class size");
+            MF, MI, "VReg has explicit size different from class size");
       Failed = true;
       break;
     }

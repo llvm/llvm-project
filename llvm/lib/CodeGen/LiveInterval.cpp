@@ -1032,6 +1032,7 @@ void LiveInterval::verify(const MachineRegisterInfo *MRI) const {
 // When they exist, Spills.back().start <= LastStart,
 //                 and WriteI[-1].start <= LastStart.
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LiveRangeUpdater::print(raw_ostream &OS) const {
   if (!isDirty()) {
     if (LR)
@@ -1058,6 +1059,7 @@ void LiveRangeUpdater::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LiveRangeUpdater::dump() const {
   print(errs());
 }
+#endif
 
 // Determine if A and B should be coalesced.
 static inline bool coalescable(const LiveRange::Segment &A,

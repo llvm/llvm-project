@@ -120,12 +120,11 @@ void LivePhysRegs::print(raw_ostream &OS) const {
   OS << "\n";
 }
 
-/// Dumps the currently live registers to the debug output.
-LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
   dbgs() << "  " << *this;
-#endif
 }
+#endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
                              unsigned Reg) const {

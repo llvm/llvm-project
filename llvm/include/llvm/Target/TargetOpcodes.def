@@ -251,6 +251,9 @@ HANDLE_TARGET_OPCODE(G_STORE)
 /// Generic conditional branch instruction.
 HANDLE_TARGET_OPCODE(G_BRCOND)
 
+/// Generic indirect branch instruction.
+HANDLE_TARGET_OPCODE(G_BRINDIRECT)
+
 /// Generic intrinsic use (without side effects).
 HANDLE_TARGET_OPCODE(G_INTRINSIC)
 
@@ -353,7 +356,7 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
 
-/// Generic unsigned-int to float conversion
+/// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_GEP)
 
 /// Generic BRANCH instruction. This is an unconditional branch.

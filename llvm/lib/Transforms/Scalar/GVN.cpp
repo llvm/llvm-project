@@ -598,8 +598,8 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   return PA;
 }
 
-LLVM_DUMP_METHOD
-void GVN::dump(DenseMap<uint32_t, Value*>& d) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) {
   errs() << "{\n";
   for (DenseMap<uint32_t, Value*>::iterator I = d.begin(),
        E = d.end(); I != E; ++I) {
@@ -608,6 +608,7 @@ void GVN::dump(DenseMap<uint32_t, Value*>& d) {
   }
   errs() << "}\n";
 }
+#endif
 
 /// Return true if we can prove that the value
 /// we're analyzing is fully available in the specified block.  As we go, keep

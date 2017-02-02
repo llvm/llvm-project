@@ -945,7 +945,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       else if (ListInit *Arg0 = dyn_cast<ListInit>(InitList[0]))
         Type = Arg0->getType();
       else {
-        InitList[0]->dump();
+        InitList[0]->print(errs());
         Error(OpLoc, "expected a list");
         return nullptr;
       }

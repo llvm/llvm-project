@@ -194,7 +194,7 @@ void simplifyExternals(Module &M) {
 }
 
 void filterModule(
-    Module *M, std::function<bool(const GlobalValue *)> ShouldKeepDefinition) {
+    Module *M, function_ref<bool(const GlobalValue *)> ShouldKeepDefinition) {
   for (Function &F : *M) {
     if (ShouldKeepDefinition(&F))
       continue;

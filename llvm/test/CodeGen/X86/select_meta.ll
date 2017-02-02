@@ -13,4 +13,4 @@ define i32 @foo(i32, i32, i32) {
 
 !0 = !{!"clang version 4.0.0 (trunk 279683)"}
 !1 = !{!"branch_weights", i32 1000, i32 1 }
-; CHECK ![[WT]] = !{!"branch_weights", i32 1000, i32 1 }
+; CHECK: ![[WT]] = !{!"branch_weights", i32 1000, i32 1}

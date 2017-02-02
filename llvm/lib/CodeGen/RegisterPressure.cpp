@@ -52,6 +52,7 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void llvm::dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                               const TargetRegisterInfo *TRI) {
@@ -97,6 +98,7 @@ void RegPressureTracker::dump() const {
   P.dump(TRI);
 }
 
+LLVM_DUMP_METHOD
 void PressureDiff::dump(const TargetRegisterInfo &TRI) const {
   const char *sep = "";
   for (const PressureChange &Change : *this) {
@@ -108,6 +110,7 @@ void PressureDiff::dump(const TargetRegisterInfo &TRI) const {
   }
   dbgs() << '\n';
 }
+#endif
 
 void RegPressureTracker::increaseRegPressure(unsigned RegUnit,
                                              LaneBitmask PreviousMask,

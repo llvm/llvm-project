@@ -445,4 +445,13 @@ def G_BRCOND : Instruction {
   let isTerminator = 1;
 }
 
+// Generic indirect branch.
+def G_BRINDIRECT : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 // TODO: Add the other generic opcodes.

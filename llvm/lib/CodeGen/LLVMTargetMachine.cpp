@@ -85,7 +85,7 @@ void LLVMTargetMachine::initAsmInfo() {
 LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      StringRef DataLayoutString,
                                      const Triple &TT, StringRef CPU,
-                                     StringRef FS, TargetOptions Options,
+                                     StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
                                      CodeGenOpt::Level OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {

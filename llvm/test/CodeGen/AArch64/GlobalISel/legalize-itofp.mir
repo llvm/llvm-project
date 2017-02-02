@@ -1,0 +1,206 @@
+# RUN: llc -O0 -run-pass=legalizer -global-isel %s -o - 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+
+  define void @test_sitofp_s32_s32() { ret void }
+  define void @test_uitofp_s32_s32() { ret void }
+  define void @test_sitofp_s32_s64() { ret void }
+  define void @test_uitofp_s32_s64() { ret void }
+
+  define void @test_sitofp_s64_s32() { ret void }
+  define void @test_uitofp_s64_s32() { ret void }
+  define void @test_sitofp_s64_s64() { ret void }
+  define void @test_uitofp_s64_s64() { ret void }
+
+  define void @test_sitofp_s32_s1() { ret void }
+  define void @test_uitofp_s32_s1() { ret void }
+
+  define void @test_sitofp_s64_s8() { ret void }
+  define void @test_uitofp_s64_s8() { ret void }
+
+  define void @test_sitofp_s32_s16() { ret void }
+  define void @test_uitofp_s32_s16() { ret void }
+...
+
+---
+name:            test_sitofp_s32_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_s32
+    ; CHECK: %1(s32) = G_SITOFP %0
+    %1:_(s32) = G_SITOFP %0
+...
+
+---
+name:            test_uitofp_s32_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_uitofp_s32_s32
+    ; CHECK: %1(s32) = G_UITOFP %0
+    %1:_(s32) = G_UITOFP %0
+...
+
+---
+name:            test_sitofp_s32_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_s64
+    ; CHECK: %1(s32) = G_SITOFP %0
+    %1:_(s32) = G_SITOFP %0
+...
+
+---
+name:            test_uitofp_s32_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_uitofp_s32_s64
+    ; CHECK: %1(s32) = G_UITOFP %0
+    %1:_(s32) = G_UITOFP %0
+...
+
+---
+name:            test_sitofp_s64_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_sitofp_s64_s32
+    ; CHECK: %1(s64) = G_SITOFP %0
+    %1:_(s64) = G_SITOFP %0
+...
+
+---
+name:            test_uitofp_s64_s32
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+
+    ; CHECK-LABEL: name: test_uitofp_s64_s32
+    ; CHECK: %1(s64) = G_UITOFP %0
+    %1:_(s64) = G_UITOFP %0
+...
+
+---
+name:            test_sitofp_s64_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_sitofp_s64_s64
+    ; CHECK: %1(s64) = G_SITOFP %0
+    %1:_(s64) = G_SITOFP %0
+...
+
+---
+name:            test_uitofp_s64_s64
+body: |
+  bb.0:
+    liveins: %x0
+    %0:_(s64) = COPY %x0
+
+    ; CHECK-LABEL: name: test_uitofp_s64_s64
+    ; CHECK: %1(s64) = G_UITOFP %0
+    %1:_(s64) = G_UITOFP %0
+...
+
+
+---
+name:            test_sitofp_s32_s1
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s1) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_s1
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s32) = G_SITOFP %3
+    %2:_(s32) = G_SITOFP %1
+...
+
+---
+name:            test_uitofp_s32_s1
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s1) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_uitofp_s32_s1
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s32) = G_UITOFP %3
+    %2:_(s32) = G_UITOFP %1
+...
+
+---
+name:            test_sitofp_s64_s8
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s8) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_sitofp_s64_s8
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s64) = G_SITOFP %3
+    %2:_(s64) = G_SITOFP %1
+...
+
+---
+name:            test_uitofp_s64_s8
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s8) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_uitofp_s64_s8
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s64) = G_UITOFP %3
+    %2:_(s64) = G_UITOFP %1
+...
+
+---
+name:            test_sitofp_s32_s16
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s16) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_s16
+    ; CHECK: %3(s32) = G_SEXT %1
+    ; CHECK: %2(s32) = G_SITOFP %3
+    %2:_(s32) = G_SITOFP %1
+...
+
+---
+name:            test_uitofp_s32_s16
+body: |
+  bb.0:
+    liveins: %w0
+    %0:_(s32) = COPY %w0
+    %1:_(s16) = G_TRUNC %0
+
+    ; CHECK-LABEL: name: test_uitofp_s32_s16
+    ; CHECK: %3(s32) = G_ZEXT %1
+    ; CHECK: %2(s32) = G_UITOFP %3
+    %2:_(s32) = G_UITOFP %1
+...

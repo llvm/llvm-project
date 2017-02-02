@@ -236,14 +236,14 @@ define void @test_zero_reg(i32* %addr) {
 define <2 x float> @test_vreg_64bit(<2 x float> %in) nounwind {
   ; CHECK-LABEL: test_vreg_64bit:
   %1 = tail call <2 x float> asm sideeffect "fadd ${0}.2s, ${1}.2s, ${1}.2s", "={v14},w"(<2 x float> %in) nounwind
-  ; CHECK fadd v14.2s, v0.2s, v0.2s:
+  ; CHECK: fadd v14.2s, v0.2s, v0.2s
   ret <2 x float> %1
 }
 
 define <4 x float> @test_vreg_128bit(<4 x float> %in) nounwind {
   ; CHECK-LABEL: test_vreg_128bit:
   %1 = tail call <4 x float> asm sideeffect "fadd ${0}.4s, ${1}.4s, ${1}.4s", "={v14},w"(<4 x float> %in) nounwind
-  ; CHECK fadd v14.4s, v0.4s, v0.4s:
+  ; CHECK: fadd v14.4s, v0.4s, v0.4s
   ret <4 x float> %1
 }
 

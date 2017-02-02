@@ -46,7 +46,7 @@ static void commitEntry(StringRef TempFilename, StringRef EntryPath) {
   }
 }
 
-NativeObjectCache lto::localCache(std::string CacheDirectoryPath,
+NativeObjectCache lto::localCache(StringRef CacheDirectoryPath,
                                   AddFileFn AddFile) {
   return [=](unsigned Task, StringRef Key) -> AddStreamFn {
     // First, see if we have a cache hit.
@@ -68,8 +68,9 @@ NativeObjectCache lto::localCache(std::string CacheDirectoryPath,
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddFileFn AddFile,
                   std::string TempFilename, std::string EntryPath,
                   unsigned Task)
-          : NativeObjectStream(std::move(OS)), AddFile(AddFile),
-            TempFilename(TempFilename), EntryPath(EntryPath), Task(Task) {}
+          : NativeObjectStream(std::move(OS)), AddFile(std::move(AddFile)),
+            TempFilename(std::move(TempFilename)),
+            EntryPath(std::move(EntryPath)), Task(Task) {}
 
       ~CacheStream() {
         // Make sure the file is closed before committing it.

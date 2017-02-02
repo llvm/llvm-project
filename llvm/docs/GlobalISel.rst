@@ -358,41 +358,6 @@ existing patterns (as any pattern we can select is by definition legal).
 Expanding that to describe legalization actions is a much larger but
 potentially useful project.
 
-.. _milegalizer-scalar-narrow:
-
-Scalar narrow types
-^^^^^^^^^^^^^^^^^^^
-
-In the AArch64 port, we currently mark as legal operations on narrow integer
-types that have a legal equivalent in a wider type.
-
-For example, this:
-
-     %2(GPR,s8) = G_ADD %0, %1
-
-is selected to a 32-bit instruction:
-
-     %2(GPR32) = ADDWrr %0, %1
-
-This avoids unnecessarily legalizing operations that can be seen as legal:
-8-bit additions are supported, but happen to have a 32-bit result with the high
-24 bits undefined.
-
-``TODO``:
-This has implications regarding vreg classes (as narrow values can now be
-represented by wider vregs) and should be investigated further.
-
-``TODO``:
-In particular, s1 comparison results can be represented as wider values in
-different ways.
-SelectionDAG has the notion of BooleanContents, which allows targets to choose
-what true and false are when in a larger register:
-
-* ``ZeroOrOne`` --- if only 0 and 1 are valid bools, even in a larger register.
-* ``ZeroOrMinusOne`` --- if -1 is true (common for vector instructions,
-  where compares produce -1).
-* ``Undefined`` --- if only the low bit is relevant in determining truth.
-
 .. _milegalizer-non-power-of-2:
 
 Non-power of 2 types

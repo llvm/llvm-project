@@ -45,8 +45,15 @@ body: |
     ; CHECK: [[RHS32:%[0-9]+]](s32) = G_SEXT %7
     ; CHECK: [[QUOT32:%[0-9]+]](s32) = G_SDIV [[LHS32]], [[RHS32]]
     ; CHECK: [[QUOT:%[0-9]+]](s8) = G_TRUNC [[QUOT32]]
-    ; CHECK: [[PROD:%[0-9]+]](s8) = G_MUL [[QUOT]], %7
-    ; CHECK: [[RES:%[0-9]+]](s8) = G_SUB %6, [[PROD]]
+
+    ; CHECK: [[QUOT32_2:%.*]](s32) = G_ANYEXT [[QUOT]](s8)
+    ; CHECK: [[RHS32_2:%.*]](s32) = G_ANYEXT %7(s8)
+    ; CHECK: [[PROD32:%.*]](s32) = G_MUL [[QUOT32_2]], [[RHS32_2]]
+    ; CHECK: [[PROD:%.*]](s8) = G_TRUNC [[PROD32]](s32)
+
+    ; CHECK: [[LHS32_2:%.*]](s32) = G_ANYEXT %6(s8)
+    ; CHECK: [[PROD32_2:%.*]](s32) = G_ANYEXT [[PROD]](s8)
+    ; CHECK: [[RES:%[0-9]+]](s32) = G_SUB [[LHS32_2]], [[PROD32_2]]
     %6(s8) = G_TRUNC %0
     %7(s8) = G_TRUNC %1
     %8(s8) = G_SREM %6, %7

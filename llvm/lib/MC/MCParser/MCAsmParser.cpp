@@ -118,7 +118,7 @@ bool MCAsmParser::addErrorSuffix(const Twine &Suffix) {
   return true;
 }
 
-bool MCAsmParser::parseMany(std::function<bool()> parseOne, bool hasComma) {
+bool MCAsmParser::parseMany(function_ref<bool()> parseOne, bool hasComma) {
   if (parseOptionalToken(AsmToken::EndOfStatement))
     return false;
   while (1) {
@@ -137,6 +137,9 @@ bool MCAsmParser::parseExpression(const MCExpr *&Res) {
   return parseExpression(Res, L);
 }
 
-LLVM_DUMP_METHOD void MCParsedAsmOperand::dump() const {
+void MCParsedAsmOperand::dump() const {
+  // Cannot completely remove virtual function even in release mode.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "  " << *this;
+#endif
 }

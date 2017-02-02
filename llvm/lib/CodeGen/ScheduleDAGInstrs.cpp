@@ -1319,6 +1319,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
 }
 
 void ScheduleDAGInstrs::dumpNode(const SUnit *SU) const {
+  // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   SU->getInstr()->dump();
 #endif
@@ -1626,8 +1627,8 @@ void SchedDFSResult::scheduleTree(unsigned SubtreeID) {
   }
 }
 
-LLVM_DUMP_METHOD
-void ILPValue::print(raw_ostream &OS) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ILPValue::print(raw_ostream &OS) const {
   OS << InstrCount << " / " << Length << " = ";
   if (!Length)
     OS << "BADILP";
@@ -1635,8 +1636,7 @@ void ILPValue::print(raw_ostream &OS) const {
     OS << format("%g", ((double)InstrCount / Length));
 }
 
-LLVM_DUMP_METHOD
-void ILPValue::dump() const {
+LLVM_DUMP_METHOD void ILPValue::dump() const {
   dbgs() << *this << '\n';
 }
 
@@ -1649,3 +1649,4 @@ raw_ostream &operator<<(raw_ostream &OS, const ILPValue &Val) {
 }
 
 } // namespace llvm
+#endif

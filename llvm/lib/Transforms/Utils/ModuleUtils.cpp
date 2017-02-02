@@ -130,7 +130,8 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
 Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
   if (isa<Function>(FuncOrBitcast))
     return cast<Function>(FuncOrBitcast);
-  FuncOrBitcast->dump();
+  FuncOrBitcast->print(errs());
+  errs() << '\n';
   std::string Err;
   raw_string_ostream Stream(Err);
   Stream << "Sanitizer interface function redefined: " << *FuncOrBitcast;

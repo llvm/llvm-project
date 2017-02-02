@@ -36,13 +36,13 @@ ib:                                               ; preds = %if6
   %r4 = mul i64 %r3, %r0
   %r5 = add i64 %r2, %r4
   %r6 = icmp ult i64 %r5, undef
-; CHECK  %2 = mul i64 %lsr.iv, %r3
-; CHECK  %3 = add i64 %1, -1
-; CHECK  %4 = add i64 %0, %r3
-; CHECK  %r6
+; CHECK:  %2 = mul i64 %lsr.iv, %r3
+; CHECK:  %3 = add i64 %2, -1
+; CHECK:  %4 = add i64 %0, %3
+; CHECK:  %r6
   %r7 = getelementptr i64, i64* undef, i64 %r5
   store i64 1, i64* %r7, align 8
-; CHECK  %5 = mul i64 %lsr.iv, %r3
-; CHECK  %6 = add i64 %5, -1
+; CHECK:  %5 = mul i64 %lsr.iv, %r3
+; CHECK:  %6 = add i64 %5, -1
   br label %L
 }

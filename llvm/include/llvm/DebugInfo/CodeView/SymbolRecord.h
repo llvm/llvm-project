@@ -176,7 +176,7 @@ struct BinaryAnnotationIterator {
     return Data == Other.Data;
   }
 
-  bool operator!=(BinaryAnnotationIterator Other) const {
+  bool operator!=(const BinaryAnnotationIterator &Other) const {
     return !(*this == Other);
   }
 

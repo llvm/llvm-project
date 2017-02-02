@@ -63,13 +63,6 @@ RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
 #endif // NDEBUG
 }
 
-RegisterBankInfo::~RegisterBankInfo() {
-  for (auto It : MapOfPartialMappings)
-    delete It.second;
-  for (auto It : MapOfValueMappings)
-    delete It.second;
-}
-
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
@@ -234,8 +227,8 @@ RegisterBankInfo::getPartialMapping(unsigned StartIdx, unsigned Length,
 
   ++NumPartialMappingsCreated;
 
-  const PartialMapping *&PartMapping = MapOfPartialMappings[Hash];
-  PartMapping = new PartialMapping{StartIdx, Length, RegBank};
+  auto &PartMapping = MapOfPartialMappings[Hash];
+  PartMapping = llvm::make_unique<PartialMapping>(StartIdx, Length, RegBank);
   return *PartMapping;
 }
 
@@ -268,8 +261,8 @@ RegisterBankInfo::getValueMapping(const PartialMapping *BreakDown,
 
   ++NumValueMappingsCreated;
 
-  const ValueMapping *&ValMapping = MapOfValueMappings[Hash];
-  ValMapping = new ValueMapping{BreakDown, NumBreakDowns};
+  auto &ValMapping = MapOfValueMappings[Hash];
+  ValMapping = llvm::make_unique<ValueMapping>(BreakDown, NumBreakDowns);
   return *ValMapping;
 }
 
@@ -282,9 +275,9 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
   // The addresses of the value mapping are unique.
   // Therefore, we can use them directly to hash the operand mapping.
   hash_code Hash = hash_combine_range(Begin, End);
-  const auto &It = MapOfOperandsMappings.find(Hash);
-  if (It != MapOfOperandsMappings.end())
-    return It->second;
+  auto &Res = MapOfOperandsMappings[Hash];
+  if (Res)
+    return Res.get();
 
   ++NumOperandsMappingsCreated;
 
@@ -293,8 +286,7 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
   // mapping, because we use the pointer of the ValueMapping
   // to hash and we expect them to uniquely identify an instance
   // of value mapping.
-  ValueMapping *&Res = MapOfOperandsMappings[Hash];
-  Res = new ValueMapping[std::distance(Begin, End)];
+  Res = llvm::make_unique<ValueMapping[]>(std::distance(Begin, End));
   unsigned Idx = 0;
   for (Iterator It = Begin; It != End; ++It, ++Idx) {
     const ValueMapping *ValMap = *It;
@@ -302,7 +294,7 @@ RegisterBankInfo::getOperandsMapping(Iterator Begin, Iterator End) const {
       continue;
     Res[Idx] = *ValMap;
   }
-  return Res;
+  return Res.get();
 }
 
 const RegisterBankInfo::ValueMapping *RegisterBankInfo::getOperandsMapping(
@@ -349,6 +341,7 @@ RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
 
 void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   MachineInstr &MI = OpdMapper.getMI();
+  MachineRegisterInfo &MRI = OpdMapper.getMRI();
   DEBUG(dbgs() << "Applying default-like mapping\n");
   for (unsigned OpIdx = 0,
                 EndIdx = OpdMapper.getInstrMapping().getNumOperands();
@@ -368,9 +361,25 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       DEBUG(dbgs() << " has not been repaired, nothing to be done\n");
       continue;
     }
-    DEBUG(dbgs() << " changed, replace " << MO.getReg());
-    MO.setReg(*NewRegs.begin());
-    DEBUG(dbgs() << " with " << MO.getReg());
+    unsigned OrigReg = MO.getReg();
+    unsigned NewReg = *NewRegs.begin();
+    DEBUG(dbgs() << " changed, replace " << PrintReg(OrigReg, nullptr));
+    MO.setReg(NewReg);
+    DEBUG(dbgs() << " with " << PrintReg(NewReg, nullptr));
+
+    // The OperandsMapper creates plain scalar, we may have to fix that.
+    // Check if the types match and if not, fix that.
+    LLT OrigTy = MRI.getType(OrigReg);
+    LLT NewTy = MRI.getType(NewReg);
+    if (OrigTy != NewTy) {
+      assert(OrigTy.getSizeInBits() == NewTy.getSizeInBits() &&
+             "Types with difference size cannot be handled by the default "
+             "mapping");
+      DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "
+                   << OrigTy);
+      MRI.setType(NewReg, OrigTy);
+    }
+    DEBUG(dbgs() << '\n');
   }
 }
 
@@ -400,10 +409,12 @@ unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
 //------------------------------------------------------------------------------
 // Helper classes implementation.
 //------------------------------------------------------------------------------
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::PartialMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
+#endif
 
 bool RegisterBankInfo::PartialMapping::verify() const {
   assert(RegBank && "Register bank not set");
@@ -451,10 +462,12 @@ bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::ValueMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
+#endif
 
 void RegisterBankInfo::ValueMapping::print(raw_ostream &OS) const {
   OS << "#BreakDown: " << NumBreakDowns << " ";
@@ -503,10 +516,12 @@ bool RegisterBankInfo::InstructionMapping::verify(
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::InstructionMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
+#endif
 
 void RegisterBankInfo::InstructionMapping::print(raw_ostream &OS) const {
   OS << "ID: " << getID() << " Cost: " << getCost() << " Mapping: ";
@@ -576,6 +591,11 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
   for (unsigned &NewVReg : NewVRegsForOpIdx) {
     assert(PartMap != ValMapping.end() && "Out-of-bound access");
     assert(NewVReg == 0 && "Register has already been created");
+    // The new registers are always bound to scalar with the right size.
+    // The actual type has to be set when the target does the mapping
+    // of the instruction.
+    // The rationale is that this generic code cannot guess how the
+    // target plans to split the input type.
     NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
@@ -619,10 +639,12 @@ RegisterBankInfo::OperandsMapper::getVRegs(unsigned OpIdx,
   return Res;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::OperandsMapper::dump() const {
   print(dbgs(), true);
   dbgs() << '\n';
 }
+#endif
 
 void RegisterBankInfo::OperandsMapper::print(raw_ostream &OS,
                                              bool ForDebug) const {

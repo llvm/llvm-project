@@ -126,14 +126,16 @@ void BranchRelaxation::verify() {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
-void BranchRelaxation::dumpBBs() {
+LLVM_DUMP_METHOD void BranchRelaxation::dumpBBs() {
   for (auto &MBB : *MF) {
     const BasicBlockInfo &BBI = BlockInfo[MBB.getNumber()];
     dbgs() << format("BB#%u\toffset=%08x\t", MBB.getNumber(), BBI.Offset)
            << format("size=%#x\n", BBI.Size);
   }
 }
+#endif
 
 /// scanFunction - Do the initial scan of the function, building up
 /// information about each block.

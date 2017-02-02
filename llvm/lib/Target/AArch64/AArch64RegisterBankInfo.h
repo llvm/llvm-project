@@ -16,25 +16,77 @@
 
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 
+#define GET_REGBANK_DECLARATIONS
+#include "AArch64GenRegisterBank.inc"
+
 namespace llvm {
 
 class TargetRegisterInfo;
 
-namespace AArch64 {
-enum {
-  GPRRegBankID = 0, /// General Purpose Registers: W, X.
-  FPRRegBankID = 1, /// Floating Point/Vector Registers: B, H, S, D, Q.
-  CCRRegBankID = 2, /// Conditional register: NZCV.
-  NumRegisterBanks
+class AArch64GenRegisterBankInfo : public RegisterBankInfo {
+protected:
+
+  enum PartialMappingIdx {
+    PMI_None = -1,
+    PMI_FPR32 = 1,
+    PMI_FPR64,
+    PMI_FPR128,
+    PMI_FPR256,
+    PMI_FPR512,
+    PMI_GPR32,
+    PMI_GPR64,
+    PMI_FirstGPR = PMI_GPR32,
+    PMI_LastGPR = PMI_GPR64,
+    PMI_FirstFPR = PMI_FPR32,
+    PMI_LastFPR = PMI_FPR512,
+    PMI_Min = PMI_FirstFPR,
+  };
+
+  static RegisterBankInfo::PartialMapping PartMappings[];
+  static RegisterBankInfo::ValueMapping ValMappings[];
+  static PartialMappingIdx BankIDToCopyMapIdx[];
+
+  enum ValueMappingIdx {
+    First3OpsIdx = 0,
+    Last3OpsIdx = 18,
+    DistanceBetweenRegBanks = 3,
+    FirstCrossRegCpyIdx = 21,
+    LastCrossRegCpyIdx = 33,
+    DistanceBetweenCrossRegCpy = 2
+  };
+
+  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
+                              unsigned ValLength, const RegisterBank &RB);
+  static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
+                                unsigned Size, unsigned Offset);
+  static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
+                                     PartialMappingIdx LastAlias,
+                                     ArrayRef<PartialMappingIdx> Order);
+
+  static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, unsigned Size);
+
+  /// Get the pointer to the ValueMapping representing the RegisterBank
+  /// at \p RBIdx with a size of \p Size.
+  ///
+  /// The returned mapping works for instructions with the same kind of
+  /// operands for up to 3 operands.
+  ///
+  /// \pre \p RBIdx != PartialMappingIdx::None
+  static const RegisterBankInfo::ValueMapping *
+  getValueMapping(PartialMappingIdx RBIdx, unsigned Size);
+
+  /// Get the pointer to the ValueMapping of the operands of a copy
+  /// instruction from the \p SrcBankID register bank to the \p DstBankID
+  /// register bank with a size of \p Size.
+  static const RegisterBankInfo::ValueMapping *
+  getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
+
+#define GET_TARGET_REGBANK_CLASS
+#include "AArch64GenRegisterBank.inc"
 };
 
-extern RegisterBank GPRRegBank;
-extern RegisterBank FPRRegBank;
-extern RegisterBank CCRRegBank;
-} // End AArch64 namespace.
-
 /// This class provides the information for the target register banks.
-class AArch64RegisterBankInfo final : public RegisterBankInfo {
+class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 

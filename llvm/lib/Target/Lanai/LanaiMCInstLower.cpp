@@ -130,7 +130,7 @@ void LanaiMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       MCOp = LowerSymbolOperand(MO, GetConstantPoolIndexSymbol(MO));
       break;
     default:
-      MI->dump();
+      MI->print(errs());
       llvm_unreachable("unknown operand type");
     }
 

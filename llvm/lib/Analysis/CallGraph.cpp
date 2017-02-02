@@ -125,8 +125,9 @@ void CallGraph::print(raw_ostream &OS) const {
     CN->print(OS);
 }
 
-LLVM_DUMP_METHOD
-void CallGraph::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
+#endif
 
 // removeFunctionFromModule - Unlink the function from this module, returning
 // it.  Because this removes the function from the module, the call graph node
@@ -194,8 +195,9 @@ void CallGraphNode::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-LLVM_DUMP_METHOD
-void CallGraphNode::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void CallGraphNode::dump() const { print(dbgs()); }
+#endif
 
 /// removeCallEdgeFor - This method removes the edge in the node for the
 /// specified call site.  Note that this method takes linear time, so it
@@ -307,8 +309,10 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
   G->print(OS);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
+#endif
 
 namespace {
 struct CallGraphPrinterLegacyPass : public ModulePass {

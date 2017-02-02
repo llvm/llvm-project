@@ -55,9 +55,9 @@ class MIRParserImpl {
   StringMap<std::unique_ptr<yaml::MachineFunction>> Functions;
   SlotMapping IRSlots;
   /// Maps from register class names to register classes.
-  StringMap<const TargetRegisterClass *> Names2RegClasses;
+  Name2RegClassMap Names2RegClasses;
   /// Maps from register bank names to register banks.
-  StringMap<const RegisterBank *> Names2RegBanks;
+  Name2RegBankMap Names2RegBanks;
 
 public:
   MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents, StringRef Filename,
@@ -325,6 +325,8 @@ bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
     return error(Twine("no machine function information for function '") +
                  MF.getName() + "' in the MIR file");
   // TODO: Recreate the machine function.
+  initNames2RegClasses(MF);
+  initNames2RegBanks(MF);
   const yaml::MachineFunction &YamlMF = *It->getValue();
   if (YamlMF.Alignment)
     MF.setAlignment(YamlMF.Alignment);
@@ -338,7 +340,8 @@ bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
   if (YamlMF.Selected)
     MF.getProperties().set(MachineFunctionProperties::Property::Selected);
 
-  PerFunctionMIParsingState PFS(MF, SM, IRSlots);
+  PerFunctionMIParsingState PFS(MF, SM, IRSlots, Names2RegClasses,
+                                Names2RegBanks);
   if (parseRegisterInfo(PFS, YamlMF))
     return true;
   if (!YamlMF.Constants.empty()) {
@@ -818,7 +821,6 @@ void MIRParserImpl::initNames2RegBanks(const MachineFunction &MF) {
 
 const TargetRegisterClass *MIRParserImpl::getRegClass(const MachineFunction &MF,
                                                       StringRef Name) {
-  initNames2RegClasses(MF);
   auto RegClassInfo = Names2RegClasses.find(Name);
   if (RegClassInfo == Names2RegClasses.end())
     return nullptr;
@@ -827,7 +829,6 @@ const TargetRegisterClass *MIRParserImpl::getRegClass(const MachineFunction &MF,
 
 const RegisterBank *MIRParserImpl::getRegBank(const MachineFunction &MF,
                                               StringRef Name) {
-  initNames2RegBanks(MF);
   auto RegBankInfo = Names2RegBanks.find(Name);
   if (RegBankInfo == Names2RegBanks.end())
     return nullptr;

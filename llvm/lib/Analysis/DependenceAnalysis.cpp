@@ -385,9 +385,9 @@ void DependenceInfo::Constraint::setAny(ScalarEvolution *NewSE) {
   Kind = Any;
 }
 
-
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // For debugging purposes. Dumps the constraint out to OS.
-void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
+LLVM_DUMP_METHOD void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
   if (isEmpty())
     OS << " Empty\n";
   else if (isAny())
@@ -403,6 +403,7 @@ void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
   else
     llvm_unreachable("unknown constraint type in Constraint::dump");
 }
+#endif
 
 
 // Updates X with the intersection

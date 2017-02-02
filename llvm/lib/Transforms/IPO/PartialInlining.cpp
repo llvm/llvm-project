@@ -33,7 +33,7 @@ STATISTIC(NumPartialInlined, "Number of functions partially inlined");
 
 namespace {
 struct PartialInlinerImpl {
-  PartialInlinerImpl(InlineFunctionInfo IFI) : IFI(IFI) {}
+  PartialInlinerImpl(InlineFunctionInfo IFI) : IFI(std::move(IFI)) {}
   bool run(Module &M);
   Function *unswitchFunction(Function *F);
 

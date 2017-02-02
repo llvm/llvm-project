@@ -14,6 +14,7 @@ tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
 if(LLVM_BUILD_GLOBAL_ISEL)
+  tablegen(LLVM AArch64GenRegisterBank.inc -gen-register-bank)
   tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 endif()
 

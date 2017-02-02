@@ -277,8 +277,8 @@ entry:
   %0 = tail call <2 x i64> @llvm.ppc.vsx.xvxexpdp(<2 x double> %a)
   ret <2 x i64> %0
 ; CHECK-LABEL: testXVXEXPDP
-; CHECK xvxexpdp 34, 34
-; CHECK blr
+; CHECK: xvxexpdp 34, 34
+; CHECK: blr
 }
 ; Function Attrs: nounwind readnone
 declare <2 x i64>@llvm.ppc.vsx.xvxexpdp(<2 x double>)
@@ -289,8 +289,8 @@ entry:
   %0 = tail call <4 x i32> @llvm.ppc.vsx.xvxsigsp(<4 x float> %a)
   ret <4 x i32> %0
 ; CHECK-LABEL: testXVXSIGSP
-; CHECK xvxsigsp 34, 34
-; CHECK blr
+; CHECK: xvxsigsp 34, 34
+; CHECK: blr
 }
 ; Function Attrs: nounwind readnone
 declare <4 x i32> @llvm.ppc.vsx.xvxsigsp(<4 x float>)
@@ -301,8 +301,8 @@ entry:
   %0 = tail call <2 x i64> @llvm.ppc.vsx.xvxsigdp(<2 x double> %a)
   ret <2 x i64> %0
 ; CHECK-LABEL: testXVXSIGDP
-; CHECK xvxsigdp 34, 34
-; CHECK blr
+; CHECK: xvxsigdp 34, 34
+; CHECK: blr
 }
 ; Function Attrs: nounwind readnone
 declare <2 x i64> @llvm.ppc.vsx.xvxsigdp(<2 x double>)
