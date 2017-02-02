@@ -26,10 +26,18 @@ class TestIndirectEnumVariables(TestBase):
 
     @decorators.swiftTest
     @decorators.skipIf(bugnumber='rdar://27568868', oslist=['linux'])
-    def test_indirect_enum_variables(self):
-        """Tests that indirect Enum variables display correctly"""
+    def test_indirect_cases_variables(self):
+        """Tests that indirect Enum variables display correctly when cases are indirect"""
         self.build()
-        self.do_test()
+        self.do_test("indirect case break here")
+
+    @decorators.skipIf(bugnumber='rdar://27568868', oslist=['linux'])
+    @decorators.expectedFailureAll(
+        bugnumber="rdar://29953436")
+    def test_indirect_enum_variables(self):
+        """Tests that indirect Enum variables display correctly when enum is indirect"""
+        self.build()
+        self.do_test("indirect enum break here")
 
     def setUp(self):
         TestBase.setUp(self)
@@ -78,7 +86,7 @@ class TestIndirectEnumVariables(TestBase):
                     child.GetSummary() == child_summary, "%s.GetSummary() == %s" %
                     (child.GetName(), child_summary))
 
-    def do_test(self):
+    def do_test(self, break_pattern):
         """Tests that indirect Enum variables display correctly"""
         exe_name = "a.out"
         exe = os.path.join(os.getcwd(), exe_name)
@@ -89,7 +97,7 @@ class TestIndirectEnumVariables(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
+            break_pattern, self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
