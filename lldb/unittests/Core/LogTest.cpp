@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/Log.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

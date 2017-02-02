@@ -18,11 +18,11 @@
 // Project includes
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

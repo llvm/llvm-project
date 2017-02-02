@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeBreakpointList_h_
 #define liblldb_NativeBreakpointList_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-forward.h"
 // #include "lldb/Host/NativeBreakpoint.h"
 

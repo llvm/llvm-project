@@ -23,7 +23,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 class MappedHash {
 public:

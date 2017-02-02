@@ -21,13 +21,13 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Flags.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Predicate.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

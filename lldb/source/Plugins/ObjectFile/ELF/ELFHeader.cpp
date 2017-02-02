@@ -11,7 +11,7 @@
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 #include "ELFHeader.h"
 

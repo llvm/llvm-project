@@ -12,10 +12,10 @@
 #include "NativeRegisterContextLinux_s390x.h"
 
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/Error.h"
 
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 

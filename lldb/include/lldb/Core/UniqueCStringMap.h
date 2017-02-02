@@ -17,7 +17,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/RegularExpression.h"
+#include "lldb/Utility/RegularExpression.h"
+
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 

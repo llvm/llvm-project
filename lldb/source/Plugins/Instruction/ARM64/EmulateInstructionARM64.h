@@ -16,8 +16,8 @@
 // Project includes
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Utility/Error.h"
 
 class EmulateInstructionARM64 : public lldb_private::EmulateInstruction {
 public:

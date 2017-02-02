@@ -17,12 +17,12 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/CompactUnwindInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/MathExtras.h"
 

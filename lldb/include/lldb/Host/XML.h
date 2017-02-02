@@ -24,8 +24,8 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

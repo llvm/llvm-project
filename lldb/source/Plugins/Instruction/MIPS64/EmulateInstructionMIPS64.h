@@ -15,8 +15,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Utility/Error.h"
 
 namespace llvm {
 class MCDisassembler;

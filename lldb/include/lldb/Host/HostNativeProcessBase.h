@@ -10,8 +10,8 @@
 #ifndef lldb_Host_HostNativeProcessBase_h_
 #define lldb_Host_HostNativeProcessBase_h_
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 

@@ -72,9 +72,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -90,6 +88,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace clang;
 using namespace llvm;

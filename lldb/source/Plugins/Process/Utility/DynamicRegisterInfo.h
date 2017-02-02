@@ -17,8 +17,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 class DynamicRegisterInfo {

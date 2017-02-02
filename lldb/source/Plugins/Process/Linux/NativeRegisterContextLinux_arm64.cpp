@@ -17,10 +17,10 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/Error.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"

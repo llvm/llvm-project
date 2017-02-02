@@ -12,10 +12,10 @@
 #include <algorithm>
 #include <set>
 
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"

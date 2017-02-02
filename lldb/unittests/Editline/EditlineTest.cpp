@@ -19,10 +19,10 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/PseudoTerminal.h"
 
 namespace {

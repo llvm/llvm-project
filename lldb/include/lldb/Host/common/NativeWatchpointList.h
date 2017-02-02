@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeWatchpointList_h_
 #define liblldb_NativeWatchpointList_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-forward.h"
 
 #include <map>

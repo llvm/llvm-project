@@ -15,9 +15,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

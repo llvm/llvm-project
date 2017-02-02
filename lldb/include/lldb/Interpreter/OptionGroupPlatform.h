@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

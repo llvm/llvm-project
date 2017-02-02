@@ -11,8 +11,8 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

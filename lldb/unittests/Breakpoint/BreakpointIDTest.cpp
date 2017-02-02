@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Breakpoint/BreakpointID.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/ADT/StringRef.h"
 

@@ -18,7 +18,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -26,6 +25,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "JITLoaderGDB.h"
 

@@ -10,7 +10,7 @@
 #include "DWARFDebugArangeSet.h"
 
 #include "SymbolFileDWARF.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include <assert.h>
 
 using namespace lldb_private;

@@ -29,13 +29,13 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/CleanUp.h"
+#include "lldb/Utility/StreamString.h"
 #include "mach/machine.h"
 
 using namespace lldb;

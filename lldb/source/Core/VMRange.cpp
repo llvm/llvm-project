@@ -9,8 +9,8 @@
 
 #include "lldb/lldb-private.h"
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/VMRange.h"
+#include "lldb/Utility/Stream.h"
 #include <algorithm>
 
 using namespace lldb;

@@ -27,7 +27,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -36,6 +35,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Stream.h"
 
 #include "lldb/lldb-enumerations.h"
 

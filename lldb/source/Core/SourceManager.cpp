@@ -16,14 +16,14 @@
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

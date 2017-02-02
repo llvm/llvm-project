@@ -14,8 +14,8 @@
 
 #include "llvm/Support/ErrorHandling.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/IOObject.h"
+#include "lldb/Utility/Error.h"
 
 namespace lldb_private {
 

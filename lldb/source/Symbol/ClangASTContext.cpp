@@ -74,7 +74,6 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
@@ -93,6 +92,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"

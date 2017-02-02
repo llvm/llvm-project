@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 #include "lldb/Host/ThisThread.h"
 #include "lldb/Host/windows/windows.h"

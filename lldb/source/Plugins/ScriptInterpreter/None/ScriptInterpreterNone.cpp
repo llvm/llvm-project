@@ -10,10 +10,10 @@
 #include "ScriptInterpreterNone.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Utility/Stream.h"
 
 #include <mutex>
 

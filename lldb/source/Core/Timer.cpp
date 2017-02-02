@@ -13,8 +13,8 @@
 #include <mutex>
 #include <vector>
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/Stream.h"
 
 #include <stdio.h>
 

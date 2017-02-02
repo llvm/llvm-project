@@ -31,9 +31,9 @@
 // Project includes
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 
 class DWARFASTParserClang;

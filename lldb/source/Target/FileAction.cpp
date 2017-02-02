@@ -9,9 +9,9 @@
 
 #include <fcntl.h>
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Target/FileAction.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 

@@ -15,9 +15,7 @@
 // Project includes
 #include "ObjCLanguage.h"
 
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -25,6 +23,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "CF.h"
 #include "Cocoa.h"

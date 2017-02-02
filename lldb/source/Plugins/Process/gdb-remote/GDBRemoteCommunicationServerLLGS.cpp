@@ -25,7 +25,6 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/Endian.h"
@@ -42,6 +41,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ScopedPrinter.h"
 

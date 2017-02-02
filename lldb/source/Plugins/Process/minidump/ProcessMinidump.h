@@ -15,11 +15,11 @@
 #include "MinidumpTypes.h"
 
 // Other libraries and framework includes
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"

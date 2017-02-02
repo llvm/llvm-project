@@ -11,11 +11,11 @@
 
 #include "llvm/Support/ErrorHandling.h"
 
-#include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

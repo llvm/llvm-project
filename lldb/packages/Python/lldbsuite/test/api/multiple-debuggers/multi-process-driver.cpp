@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBCommandInterpreter.h"

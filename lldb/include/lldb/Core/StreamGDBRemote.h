@@ -17,7 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 
 namespace lldb_private {
 

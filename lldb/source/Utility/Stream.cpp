@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Host/PosixApi.h"
 #include <stddef.h>
@@ -208,7 +208,8 @@ size_t Stream::Indent(const char *s) {
 }
 
 size_t Stream::Indent(llvm::StringRef str) {
-  return Printf("%*.*s%s", m_indent_level, m_indent_level, "", str.str().c_str());
+  return Printf("%*.*s%s", m_indent_level, m_indent_level, "",
+                str.str().c_str());
 }
 
 //------------------------------------------------------------------

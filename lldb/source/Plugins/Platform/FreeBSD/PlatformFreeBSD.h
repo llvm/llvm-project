@@ -60,10 +60,6 @@ public:
                         std::string *command_output,
                         uint32_t timeout_sec) override;
 
-  Error ResolveExecutable(const ModuleSpec &module_spec,
-                          lldb::ModuleSP &module_sp,
-                          const FileSpecList *module_search_paths_ptr) override;
-
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 

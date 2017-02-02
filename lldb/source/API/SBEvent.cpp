@@ -12,12 +12,12 @@
 #include "lldb/API/SBStream.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

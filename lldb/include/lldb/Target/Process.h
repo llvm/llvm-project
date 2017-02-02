@@ -30,7 +30,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
@@ -48,6 +47,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"

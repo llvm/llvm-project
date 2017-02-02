@@ -16,9 +16,7 @@
 #include "llvm/IR/DerivedTypes.h"
 
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -33,6 +31,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

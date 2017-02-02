@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Core/StructuredData.h"
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/MachO.h"
 

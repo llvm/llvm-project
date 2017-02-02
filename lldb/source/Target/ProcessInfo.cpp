@@ -15,8 +15,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/SmallString.h"
 

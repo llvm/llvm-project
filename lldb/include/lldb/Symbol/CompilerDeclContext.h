@@ -12,7 +12,7 @@
 
 #include <vector>
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

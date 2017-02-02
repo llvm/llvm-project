@@ -9,19 +9,19 @@
 
 #include "lldb/Symbol/CompilerType.h"
 
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <iterator>
 #include <mutex>

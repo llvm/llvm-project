@@ -14,8 +14,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/Error.h"
 
 namespace lldb_private {
 class FileCache {

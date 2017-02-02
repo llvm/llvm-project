@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/Error.h"
 #include "gtest/gtest.h"
-#include "lldb/Core/Error.h"
 
 using namespace lldb_private;
 

@@ -14,11 +14,11 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

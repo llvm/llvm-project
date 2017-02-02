@@ -23,7 +23,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

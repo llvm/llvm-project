@@ -28,7 +28,6 @@
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamCallback.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObject.h"
@@ -59,6 +58,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
