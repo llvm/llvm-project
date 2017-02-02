@@ -44,7 +44,7 @@ namespace HexagonII {
     TypeV4LDST  = 9,
     TypeNV      = 10,
     TypeDUPLEX  = 11,
-    TypeCOMPOUND = 12,
+    TypeCJ      = 12,
     TypeCVI_FIRST     = 13,
     TypeCVI_VA        = TypeCVI_FIRST,
     TypeCVI_VA_DV     = 14,
@@ -63,8 +63,8 @@ namespace HexagonII {
     TypeCVI_VM_STU    = 27,
     TypeCVI_HIST      = 28,
     TypeCVI_LAST      = TypeCVI_HIST,
-    TypePREFIX  = 30, // Such as extenders.
-    TypeENDLOOP = 31  // Such as end of a HW loop.
+    TypeEXTENDER      = 30,
+    TypeENDLOOP       = 31  // Such as end of a HW loop.
   };
 
   enum SubTarget {

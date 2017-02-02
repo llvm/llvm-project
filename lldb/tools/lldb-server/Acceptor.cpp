@@ -12,9 +12,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "Utility/UriParser.h"
 

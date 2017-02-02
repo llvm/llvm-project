@@ -20,10 +20,8 @@
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -39,6 +37,8 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 #define DEFAULT_DISASM_BYTE_SIZE 32

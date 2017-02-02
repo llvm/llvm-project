@@ -13,8 +13,7 @@
 ; DW_OP_GNU_push_tls_address
 ; CHECK-NEXT: .byte 224
 ; check that the expected TLS address description is the first thing in the debug_addr section
-; CHECK: debug_addr
-; CHECK-NEXT: .Laddr_sec:
+; CHECK: .section .debug_addr,"",@progbits
 ; CHECK-NEXT: .quad tls@DTPREL+32768
 
 source_filename = "test/DebugInfo/PowerPC/tls-fission.ll"

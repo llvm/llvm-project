@@ -11,8 +11,8 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

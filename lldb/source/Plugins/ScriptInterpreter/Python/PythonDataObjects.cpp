@@ -17,10 +17,10 @@
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Stream.h"
 
 #include "llvm/Support/ConvertUTF.h"
 

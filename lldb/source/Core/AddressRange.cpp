@@ -9,9 +9,9 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -10,7 +10,7 @@
 #ifndef utility_JSON_h_
 #define utility_JSON_h_
 
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringExtractor.h"
 
 #include <inttypes.h>

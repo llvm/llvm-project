@@ -524,8 +524,7 @@ public:
     bool Relaxable = false;
     // Branches and loop-setup insns are handled as necessary by relaxation.
     if (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeJ ||
-        (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) ==
-             HexagonII::TypeCOMPOUND &&
+        (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeCJ &&
          MCID.isBranch()) ||
         (llvm::HexagonMCInstrInfo::getType(*MCII, HMI) == HexagonII::TypeNV &&
          MCID.isBranch()) ||

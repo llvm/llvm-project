@@ -18,8 +18,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

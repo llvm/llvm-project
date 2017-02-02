@@ -13,8 +13,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Disassembler.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 #include <functional>
 

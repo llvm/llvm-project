@@ -14,8 +14,6 @@
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Process.h"
@@ -24,6 +22,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -21,20 +21,20 @@
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/StreamString.h"
 
 // Define these constants from Linux mman.h for use when targeting
 // remote linux systems even when host has different values.
@@ -203,131 +203,6 @@ void PlatformLinux::Terminate() {
   }
 
   PlatformPOSIX::Terminate();
-}
-
-Error PlatformLinux::ResolveExecutable(
-    const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
-    const FileSpecList *module_search_paths_ptr) {
-  Error error;
-  // Nothing special to do here, just use the actual file and architecture
-
-  char exe_path[PATH_MAX];
-  ModuleSpec resolved_module_spec(ms);
-
-  if (IsHost()) {
-    // If we have "ls" as the exe_file, resolve the executable location based on
-    // the current path variables
-    if (!resolved_module_spec.GetFileSpec().Exists()) {
-      resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true);
-    }
-
-    if (!resolved_module_spec.GetFileSpec().Exists())
-      resolved_module_spec.GetFileSpec().ResolveExecutableLocation();
-
-    if (resolved_module_spec.GetFileSpec().Exists())
-      error.Clear();
-    else {
-      error.SetErrorStringWithFormat(
-          "unable to find executable for '%s'",
-          resolved_module_spec.GetFileSpec().GetPath().c_str());
-    }
-  } else {
-    if (m_remote_platform_sp) {
-      error =
-          GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                              module_search_paths_ptr, *m_remote_platform_sp);
-    } else {
-      // We may connect to a process and use the provided executable (Don't use
-      // local $PATH).
-
-      if (resolved_module_spec.GetFileSpec().Exists())
-        error.Clear();
-      else
-        error.SetErrorStringWithFormat("the platform is not currently "
-                                       "connected, and '%s' doesn't exist in "
-                                       "the system root.",
-                                       exe_path);
-    }
-  }
-
-  if (error.Success()) {
-    if (resolved_module_spec.GetArchitecture().IsValid()) {
-      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                          NULL, NULL, NULL);
-      if (error.Fail()) {
-        // If we failed, it may be because the vendor and os aren't known. If
-        // that is the
-        // case, try setting them to the host architecture and give it another
-        // try.
-        llvm::Triple &module_triple =
-            resolved_module_spec.GetArchitecture().GetTriple();
-        bool is_vendor_specified =
-            (module_triple.getVendor() != llvm::Triple::UnknownVendor);
-        bool is_os_specified =
-            (module_triple.getOS() != llvm::Triple::UnknownOS);
-        if (!is_vendor_specified || !is_os_specified) {
-          const llvm::Triple &host_triple =
-              HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple();
-
-          if (!is_vendor_specified)
-            module_triple.setVendorName(host_triple.getVendorName());
-          if (!is_os_specified)
-            module_triple.setOSName(host_triple.getOSName());
-
-          error = ModuleList::GetSharedModule(resolved_module_spec,
-                                              exe_module_sp, NULL, NULL, NULL);
-        }
-      }
-
-      // TODO find out why exe_module_sp might be NULL
-      if (!exe_module_sp || exe_module_sp->GetObjectFile() == NULL) {
-        exe_module_sp.reset();
-        error.SetErrorStringWithFormat(
-            "'%s' doesn't contain the architecture %s",
-            resolved_module_spec.GetFileSpec().GetPath().c_str(),
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
-      }
-    } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
-      StreamString arch_names;
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, resolved_module_spec.GetArchitecture());
-           ++idx) {
-        error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                            NULL, NULL, NULL);
-        // Did we find an executable using one of the
-        if (error.Success()) {
-          if (exe_module_sp && exe_module_sp->GetObjectFile())
-            break;
-          else
-            error.SetErrorToGenericError();
-        }
-
-        if (idx > 0)
-          arch_names.PutCString(", ");
-        arch_names.PutCString(
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
-      }
-
-      if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
-          error.SetErrorStringWithFormat(
-              "'%s' doesn't contain any '%s' platform architectures: %s",
-              resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetData());
-        } else {
-          error.SetErrorStringWithFormat(
-              "'%s' is not readable",
-              resolved_module_spec.GetFileSpec().GetPath().c_str());
-        }
-      }
-    }
-  }
-
-  return error;
 }
 
 Error PlatformLinux::GetFileWithUUID(const FileSpec &platform_file,

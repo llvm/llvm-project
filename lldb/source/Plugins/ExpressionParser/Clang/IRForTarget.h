@@ -11,11 +11,11 @@
 #ifndef liblldb_IRForTarget_h_
 #define liblldb_IRForTarget_h_
 
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
-#include "lldb/Core/Stream.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/TaggedASTType.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Pass.h"
 

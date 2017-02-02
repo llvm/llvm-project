@@ -45,10 +45,6 @@ public:
   //------------------------------------------------------------
   // lldb_private::Platform functions
   //------------------------------------------------------------
-  Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
-                          lldb::ModuleSP &module_sp,
-                          const FileSpecList *module_search_paths_ptr) override;
-
   const char *GetDescription() override {
     return GetPluginDescriptionStatic(IsHost());
   }

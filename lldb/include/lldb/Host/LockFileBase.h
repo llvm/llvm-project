@@ -10,7 +10,7 @@
 #ifndef liblldb_Host_LockFileBase_h_
 #define liblldb_Host_LockFileBase_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 #include <functional>
 

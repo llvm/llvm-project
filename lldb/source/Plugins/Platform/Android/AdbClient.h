@@ -10,7 +10,7 @@
 #ifndef liblldb_AdbClient_h_
 #define liblldb_AdbClient_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include <chrono>
 #include <functional>
 #include <list>

@@ -199,11 +199,14 @@ void llvm::thinLTOResolveWeakForLinkerInIndex(
 
 static void thinLTOInternalizeAndPromoteGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &S : GVSummaryList) {
-    if (isExported(S->modulePath(), GUID)) {
+    auto ExportResolution = isExported(S->modulePath(), GUID);
+    if (ExportResolution != Internal) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
+      if (ExportResolution == Hidden)
+        S->setAutoHide();
     } else if (!GlobalValue::isLocalLinkage(S->linkage()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
@@ -213,7 +216,7 @@ static void thinLTOInternalizeAndPromoteGUID(
 // as external and non-exported values as internal.
 void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(I.second, I.first, isExported);
 }
@@ -921,11 +924,20 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
                             const GlobalValueSummary *S) {
       return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
     };
-    auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    auto isExported = [&](StringRef ModuleIdentifier,
+                          GlobalValue::GUID GUID) -> SummaryResolution {
       const auto &ExportList = ExportLists.find(ModuleIdentifier);
-      return (ExportList != ExportLists.end() &&
-              ExportList->second.count(GUID)) ||
-             ExportedGUIDs.count(GUID);
+      if ((ExportList != ExportLists.end() && ExportList->second.count(GUID)) ||
+          ExportedGUIDs.count(GUID)) {
+        // We could do better by hiding when a symbol is in
+        // GUIDPreservedSymbols because it is only referenced from regular LTO
+        // or from native files and not outside the final binary, but that's
+        // something the native linker could do as gwell.
+        if (GUIDPreservedSymbols.count(GUID))
+          return Exported;
+        return Hidden;
+      }
+      return Internal;
     };
     thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
 

@@ -19,8 +19,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private.h"
 

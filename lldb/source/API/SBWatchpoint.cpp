@@ -17,10 +17,10 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 

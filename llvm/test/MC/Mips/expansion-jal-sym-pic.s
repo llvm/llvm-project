@@ -151,37 +151,35 @@ local_label:
   jal .text
   nop
 
-# FIXME: The .text section MCSymbol isn't created when printing assembly. However,
-# it is created when generating an ELF object file.
 # Expanding "jal .text":
-# O32-FIXME: lw    $25, %call16(.text)($gp)        # encoding: [0x8f,0x99,A,A]
-# O32-FIXME:                                       #   fixup A - offset: 0, value: %got(.text), kind: fixup_Mips_GOT_CALL
+# O32: lw	$25, %got(.text)($gp)   # encoding: [0x8f,0x99,A,A]
+# O32-NEXT:                                       #   fixup A - offset: 0, value: %got(.text), kind: fixup_Mips_GOT
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
-# ELF-O32-NEXT:                 R_MIPS_CALL16 .text
+# ELF-O32-NEXT:                 R_MIPS_GOT16 .text
 
-# N32-FIXME: lw  $25, %call16(.text)($gp)          # encoding: [0x8f,0x99,A,A]
-# N32-FIXME:                                       #   fixup A - offset: 0, value: %call16(.text), kind: fixup_Mips_GOT_DISP
+# N32: lw	$25, %got_disp(.text)($gp) # encoding: [0x8f,0x99,A,A]
+# N32-NEXT:                                       #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
-# ELF-N32-NEXT:                 R_MIPS_CALL16/R_MIPS_NONE/R_MIPS_NONE .text
+# ELF-N32-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE	.text
 
-# N64-FIXME: ld  $25, %call16(.text)($gp)          # encoding: [0xdf,0x99,A,A]
-# N64-FIXME:                                       #   fixup A - offset: 0, value: %call16(.text), kind: fixup_Mips_GOT_DISP
+# N64: ld	$25, %got_disp(.text)($gp) # encoding: [0xdf,0x99,A,A]
+# N64-NEXT:                                       #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
 
 # ELF-N64:      df 99 00 00 ld $25, 0($gp)
-# ELF-N64-NEXT:                 R_MIPS_CALL16/R_MIPS_NONE/R_MIPS_NONE .text
+# ELF-N64-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE	.text
 
-# O32-MM-FIXME: lw    $25, %got(.text)($gp)      # encoding: [0xff,0x3c,A,A]
-# O32-MM-FIXME:                                  #   fixup A - offset: 0, value: %got(.text), kind: fixup_MICROMIPS_GOT16
-# O32-MM-FIXME: addiu $25, $25, %lo(.text)       # encoding: [0x33,0x39,A,A]
-# O32-MM-FIXME:                                  #   fixup A - offset: 0, value: %lo(.text), kind: fixup_MICROMIPS_LO16
+# O32-MM: lw    $25, %got(.text)($gp)      # encoding: [0xff,0x3c,A,A]
+# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got(.text), kind: fixup_MICROMIPS_GOT16
+# O32-MM-NEXT: addiu $25, $25, %lo(.text)       # encoding: [0x33,0x39,A,A]
+# O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %lo(.text), kind: fixup_MICROMIPS_LO16
 
-# N32-MM-FIXME: lw    $25, %got_disp(.text)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM-FIXME:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
+# N32-MM: lw    $25, %got_disp(.text)($gp) # encoding: [0xff,0x3c,A,A]
+# N32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
 
-# N64-MM-FIXME: ld    $25, %got_disp(.text)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM-FIXME:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
+# N64-MM: ld    $25, %got_disp(.text)($gp) # encoding: [0xdf,0x99,A,A]
+# N64-MM-NEXT:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -199,7 +197,7 @@ local_label:
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
-# ELF-O32-NEXT: 27 39 00 54 addiu $25, $25, 84
+# ELF-O32-NEXT: 27 39 00 58 	addiu	$25, $25, 88
 # ELF-O32-NEXT:                 R_MIPS_LO16 .text
 
 # N32: lw  $25, %got_disp($tmp0)($gp) # encoding: [0x8f,0x99,A,A]
@@ -241,7 +239,7 @@ local_label:
 
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
-# ELF-O32-NEXT: 27 39 00 60 addiu $25, $25, 96
+# ELF-O32-NEXT: 27 39 00 64 	addiu	$25, $25, 100
 # ELF-O32-NEXT:                 R_MIPS_LO16 .text
 
 # N32-FIXME: lw  $25, %got_disp(forward_local)($gp)            # encoding: [0x8f,0x99,A,A]

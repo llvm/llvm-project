@@ -79,7 +79,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     auto &Elem = V[KeyInt];
     for (auto &FSum : FSums) {
       GlobalValueSummary::GVFlags GVFlags(GlobalValue::ExternalLinkage, false,
-                                          false);
+                                          false, /* AutoHide */ false);
       Elem.push_back(llvm::make_unique<FunctionSummary>(
           GVFlags, 0, ArrayRef<ValueInfo>{},
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests)));

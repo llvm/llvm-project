@@ -15,10 +15,10 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

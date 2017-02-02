@@ -74,6 +74,9 @@ def bb_op : Operand<OtherVT>;
 let OperandType = "OPERAND_LOCAL" in
 def local_op : Operand<i32>;
 
+let OperandType = "OPERAND_GLOBAL" in
+def global_op : Operand<i32>;
+
 let OperandType = "OPERAND_I32IMM" in
 def i32imm_op : Operand<i32>;
 
@@ -177,6 +180,18 @@ let hasSideEffects = 0 in {
   let mayStore = 1, isAsCheapAsAMove = 1 in
   def TEE_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local, vt:$src), [],
                          "tee_local\t$res, $local, $src", 0x22>;
+
+  // Unused values must be dropped in some contexts.
+  def DROP_#vt : I<(outs), (ins vt:$src), [],
+                   "drop\t$src", 0x1a>;
+
+  let mayLoad = 1 in
+  def GET_GLOBAL_#vt : I<(outs vt:$res), (ins global_op:$local), [],
+                         "get_global\t$res, $local", 0x23>;
+
+  let mayStore = 1 in
+  def SET_GLOBAL_#vt : I<(outs), (ins global_op:$local, vt:$src), [],
+                         "set_global\t$local, $src", 0x24>;
 
 } // hasSideEffects = 0
 }

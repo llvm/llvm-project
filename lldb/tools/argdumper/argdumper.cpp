@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StreamString.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <iostream>
 

@@ -371,22 +371,6 @@ uint64_t ELFObjectWriter::SymbolValue(const MCSymbol &Sym,
 
 void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                const MCAsmLayout &Layout) {
-  // Section symbols are used as definitions for undefined symbols with matching
-  // names. If there are multiple sections with the same name, the first one is
-  // used.
-  for (const MCSection &Sec : Asm) {
-    const MCSymbol *Begin = Sec.getBeginSymbol();
-    if (!Begin)
-      continue;
-
-    const MCSymbol *Alias = Asm.getContext().lookupSymbol(Begin->getName());
-    if (!Alias || !Alias->isUndefined())
-      continue;
-
-    Renames.insert(
-        std::make_pair(cast<MCSymbolELF>(Alias), cast<MCSymbolELF>(Begin)));
-  }
-
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
   for (const MCSymbol &A : Asm.symbols()) {

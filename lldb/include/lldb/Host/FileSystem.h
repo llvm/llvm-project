@@ -10,8 +10,8 @@
 #ifndef liblldb_Host_FileSystem_h
 #define liblldb_Host_FileSystem_h
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/Error.h"
 #include "llvm/Support/Chrono.h"
 
 #include "lldb/lldb-types.h"

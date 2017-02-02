@@ -34,7 +34,6 @@
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -42,8 +41,9 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
 
-#include "lldb/Core/RegularExpression.h"
+#include "lldb/Utility/RegularExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;

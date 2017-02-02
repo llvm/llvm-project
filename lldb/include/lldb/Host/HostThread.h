@@ -10,8 +10,8 @@
 #ifndef lldb_Host_HostThread_h_
 #define lldb_Host_HostThread_h_
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/HostNativeThreadForward.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-types.h"
 
 #include <memory>

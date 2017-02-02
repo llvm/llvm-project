@@ -37,7 +37,6 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
@@ -61,6 +60,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "../source/Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"

@@ -23,7 +23,6 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
@@ -33,6 +32,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/StreamString.h"
 
 #ifndef __APPLE__
 #include "Utility/UuidCompatibility.h"

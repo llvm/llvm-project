@@ -16,11 +16,11 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

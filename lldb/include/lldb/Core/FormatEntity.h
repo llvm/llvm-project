@@ -17,7 +17,7 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 
 namespace llvm {

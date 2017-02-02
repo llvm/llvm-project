@@ -18,7 +18,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/UserExpression.h"
@@ -30,6 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

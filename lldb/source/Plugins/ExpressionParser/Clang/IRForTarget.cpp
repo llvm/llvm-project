@@ -25,11 +25,9 @@
 
 #include "clang/AST/ASTContext.h"
 
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -37,6 +35,8 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <map>
 

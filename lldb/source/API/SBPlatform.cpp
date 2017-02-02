@@ -13,11 +13,11 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
 
 #include <functional>
 

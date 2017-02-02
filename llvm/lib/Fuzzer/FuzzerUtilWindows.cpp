@@ -28,7 +28,7 @@ namespace fuzzer {
 
 static const FuzzingOptions* HandlerOpt = nullptr;
 
-LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo) {
+static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo) {
   switch (ExceptionInfo->ExceptionRecord->ExceptionCode) {
     case EXCEPTION_ACCESS_VIOLATION:
     case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
@@ -126,10 +126,7 @@ void SetSignalHandler(const FuzzingOptions& Options) {
 
   if (Options.HandleSegv || Options.HandleBus || Options.HandleIll ||
       Options.HandleFpe)
-    if (!AddVectoredExceptionHandler(1, ExceptionHandler)) {
-      Printf("libFuzzer: AddVectoredExceptionHandler failed.\n");
-      exit(1);
-    }
+    SetUnhandledExceptionFilter(ExceptionHandler);
 
   if (Options.HandleAbrt)
     if (SIG_ERR == signal(SIGABRT, CrashHandler)) {

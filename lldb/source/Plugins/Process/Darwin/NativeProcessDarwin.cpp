@@ -21,9 +21,9 @@
 // LLDB includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "CFBundle.h"
 #include "CFString.h"

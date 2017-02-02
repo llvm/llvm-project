@@ -21,7 +21,7 @@
 
 // LLDB Headers
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;

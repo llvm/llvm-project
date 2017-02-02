@@ -47,6 +47,7 @@ struct TableOfRecentCompares {
 
 class TracePC {
  public:
+  static const size_t kNumPCs = 1 << 21;
 
   void HandleTrace(uint32_t *guard, uintptr_t PC);
   void HandleInit(uint32_t *start, uint32_t *stop);
@@ -60,7 +61,7 @@ class TracePC {
 
   void ResetMaps() {
     ValueProfileMap.Reset();
-    memset(Counters, 0, GetNumPCs());
+    memset(Counters(), 0, GetNumPCs());
   }
 
   void UpdateFeatureSet(size_t CurrentElementIdx, size_t CurrentElementSize);
@@ -85,7 +86,7 @@ class TracePC {
   size_t GetNumPCs() const { return Min(kNumPCs, NumGuards + 1); }
   uintptr_t GetPC(size_t Idx) {
     assert(Idx < GetNumPCs());
-    return PCs[Idx];
+    return PCs()[Idx];
   }
 
 private:
@@ -101,9 +102,8 @@ private:
   size_t NumModules;  // linker-initialized.
   size_t NumGuards;  // linker-initialized.
 
-  static const size_t kNumPCs = 1 << 21;
-  alignas(8) uint8_t Counters[kNumPCs];
-  uintptr_t PCs[kNumPCs];
+  uint8_t *Counters() const;
+  uintptr_t *PCs() const;
 
   std::set<uintptr_t> *PrintedPCs;
 
@@ -115,6 +115,7 @@ size_t TracePC::CollectFeatures(Callback CB) {
   if (!UsingTracePcGuard()) return 0;
   size_t Res = 0;
   const size_t Step = 8;
+  uint8_t *Counters = this->Counters();
   assert(reinterpret_cast<uintptr_t>(Counters) % Step == 0);
   size_t N = GetNumPCs();
   N = (N + Step - 1) & ~(Step - 1);  // Round up.

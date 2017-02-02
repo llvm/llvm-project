@@ -12,10 +12,10 @@
 
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {

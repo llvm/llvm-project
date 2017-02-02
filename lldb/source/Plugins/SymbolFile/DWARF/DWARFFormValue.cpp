@@ -9,8 +9,8 @@
 
 #include <assert.h>
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Utility/Stream.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFFormValue.h"

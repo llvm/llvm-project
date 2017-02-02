@@ -15,7 +15,6 @@
 // Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -25,6 +24,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

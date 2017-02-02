@@ -1213,7 +1213,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     BreakableToken::Split SplitBefore(StringRef::npos, 0);
     if (ReflowInProgress) {
       SplitBefore = Token->getSplitBefore(LineIndex, RemainingTokenColumns,
-                                          RemainingSpace);
+                                          RemainingSpace, CommentPragmasRegex);
     }
     ReflowInProgress = SplitBefore.first != StringRef::npos;
     unsigned TailOffset =

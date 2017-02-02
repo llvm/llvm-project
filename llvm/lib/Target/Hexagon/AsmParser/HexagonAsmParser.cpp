@@ -1756,8 +1756,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
           TmpInst.setOpcode(Hexagon::L2_loadrdgp);
 
         TmpInst.addOperand(MO_0);
-        TmpInst.addOperand(
-            MCOperand::createExpr(MCSymbolRefExpr::create(Sym, getContext())));
+        TmpInst.addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+          MCSymbolRefExpr::create(Sym, getContext()), getContext())));
         Inst = TmpInst;
       }
     }

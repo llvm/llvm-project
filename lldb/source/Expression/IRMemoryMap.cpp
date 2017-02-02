@@ -10,12 +10,12 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb_private;

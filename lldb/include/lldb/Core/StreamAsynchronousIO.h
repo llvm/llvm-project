@@ -13,7 +13,7 @@
 
 #include <string>
 
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
 

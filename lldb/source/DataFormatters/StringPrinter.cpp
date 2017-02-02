@@ -11,11 +11,11 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/Support/ConvertUTF.h"
 

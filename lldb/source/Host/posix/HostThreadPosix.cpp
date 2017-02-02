@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/HostThreadPosix.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 #include <errno.h>
 #include <pthread.h>

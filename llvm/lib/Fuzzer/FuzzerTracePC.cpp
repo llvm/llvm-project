@@ -24,21 +24,36 @@
 #include <set>
 #include <sstream>
 
+// The coverage counters and PCs.
+// These are declared as global variables named "__sancov_*" to simplify
+// experiments with inlined instrumentation.
+alignas(8) uint8_t
+    __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
+
 namespace fuzzer {
 
 TracePC TPC;
 
+uint8_t *TracePC::Counters() const {
+  return __sancov_trace_pc_guard_8bit_counters;
+}
+
+uintptr_t *TracePC::PCs() const {
+  return __sancov_trace_pc_pcs;
+}
+
 ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::HandleTrace(uint32_t *Guard, uintptr_t PC) {
   uint32_t Idx = *Guard;
-  PCs[Idx] = PC;
-  Counters[Idx]++;
+  __sancov_trace_pc_pcs[Idx] = PC;
+  __sancov_trace_pc_guard_8bit_counters[Idx]++;
 }
 
 size_t TracePC::GetTotalPCCoverage() {
   size_t Res = 0;
   for (size_t i = 1, N = GetNumPCs(); i < N; i++)
-    if (PCs[i])
+    if (PCs()[i])
       Res++;
   return Res;
 }
@@ -81,16 +96,16 @@ void TracePC::InitializePrintNewPCs() {
   assert(!PrintedPCs);
   PrintedPCs = new std::set<uintptr_t>;
   for (size_t i = 1; i < GetNumPCs(); i++)
-    if (PCs[i])
-      PrintedPCs->insert(PCs[i]);
+    if (PCs()[i])
+      PrintedPCs->insert(PCs()[i]);
 }
 
 void TracePC::PrintNewPCs() {
   if (!DoPrintNewPCs) return;
   assert(PrintedPCs);
   for (size_t i = 1; i < GetNumPCs(); i++)
-    if (PCs[i] && PrintedPCs->insert(PCs[i]).second)
-      PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs[i]);
+    if (PCs()[i] && PrintedPCs->insert(PCs()[i]).second)
+      PrintPC("\tNEW_PC: %p %F %L\n", "\tNEW_PC: %p\n", PCs()[i]);
 }
 
 void TracePC::PrintCoverage() {
@@ -107,16 +122,17 @@ void TracePC::PrintCoverage() {
       CoveredLines;
   Printf("COVERAGE:\n");
   for (size_t i = 1; i < GetNumPCs(); i++) {
-    if (!PCs[i]) continue;
-    std::string FileStr = DescribePC("%s", PCs[i]);
+    uintptr_t PC = PCs()[i];
+    if (!PC) continue;
+    std::string FileStr = DescribePC("%s", PC);
     if (!IsInterestingCoverageFile(FileStr)) continue;
-    std::string FixedPCStr = DescribePC("%p", PCs[i]);
-    std::string FunctionStr = DescribePC("%F", PCs[i]);
-    std::string LineStr = DescribePC("%l", PCs[i]);
+    std::string FixedPCStr = DescribePC("%p", PC);
+    std::string FunctionStr = DescribePC("%F", PC);
+    std::string LineStr = DescribePC("%l", PC);
     char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
     void *OffsetRaw = nullptr;
     if (!EF->__sanitizer_get_module_and_offset_for_pc(
-            reinterpret_cast<void *>(PCs[i]), ModulePathRaw,
+            reinterpret_cast<void *>(PC), ModulePathRaw,
             sizeof(ModulePathRaw), &OffsetRaw))
       continue;
     std::string Module = ModulePathRaw;
@@ -207,7 +223,7 @@ void TracePC::DumpCoverage() {
   if (EF->__sanitizer_dump_coverage) {
     std::vector<uintptr_t> PCsCopy(GetNumPCs());
     for (size_t i = 0; i < GetNumPCs(); i++)
-      PCsCopy[i] = PCs[i] ? GetPreviousInstructionPc(PCs[i]) : 0;
+      PCsCopy[i] = PCs()[i] ? GetPreviousInstructionPc(PCs()[i]) : 0;
     EF->__sanitizer_dump_coverage(PCsCopy.data(), PCsCopy.size());
   }
 }

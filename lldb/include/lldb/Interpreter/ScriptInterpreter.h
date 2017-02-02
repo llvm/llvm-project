@@ -18,9 +18,9 @@
 
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/Error.h"
 
 #include "lldb/Utility/PseudoTerminal.h"
 

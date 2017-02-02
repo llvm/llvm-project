@@ -12,11 +12,9 @@
 
 // Project includes
 #include "lldb/Expression/LLVMUserExpression.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
@@ -38,6 +36,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 

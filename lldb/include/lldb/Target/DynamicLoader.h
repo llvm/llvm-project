@@ -11,9 +11,9 @@
 #define liblldb_DynamicLoader_h_
 
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/UUID.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

@@ -28,7 +28,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "block-freq"
 
-#ifndef NDEBUG
 
 static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
     "view-machine-block-freq-propagation-dags", cl::Hidden,
@@ -60,7 +59,11 @@ cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
                           "display a graph using the real "
                           "profile count if available.")));
 
+// Command line option to specify the name of the function for CFG dump
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
+// Command line option to specify hot frequency threshold.
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-hot-freq-perc=
 extern cl::opt<unsigned> ViewHotFreqPercent;
 
 static GVDAGType getGVDT() {
@@ -145,7 +148,6 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
 };
 
 } // end namespace llvm
-#endif
 
 INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, "machine-block-freq",
                       "Machine Block Frequency Analysis", true, true)
@@ -177,13 +179,11 @@ bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
   if (!MBFI)
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MLI);
-#ifndef NDEBUG
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
-#endif
   return false;
 }
 
@@ -193,13 +193,8 @@ void MachineBlockFrequencyInfo::releaseMemory() { MBFI.reset(); }
 /// rendered using dot.
 void MachineBlockFrequencyInfo::view(bool isSimple) const {
 // This code is only for debugging.
-#ifndef NDEBUG
   ViewGraph(const_cast<MachineBlockFrequencyInfo *>(this),
             "MachineBlockFrequencyDAGs", isSimple);
-#else
-  errs() << "MachineBlockFrequencyInfo::view is only available in debug builds "
-            "on systems with Graphviz or gv!\n";
-#endif // NDEBUG
 }
 
 BlockFrequency

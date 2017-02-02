@@ -46,11 +46,11 @@
 
 // Project includes
 #include "lldb/Core/DataBufferMemoryMap.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -16,6 +16,7 @@
 namespace clang {
 class Decl;
 class MacroDefinitionRecord;
+class SourceLocation;
 class SourceManager;
 
 namespace index {
@@ -53,6 +54,8 @@ void generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS);
 ///
 /// \returns true on error, false on success.
 bool generateUSRForMacro(const MacroDefinitionRecord *MD,
+                         const SourceManager &SM, SmallVectorImpl<char> &Buf);
+bool generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
                          const SourceManager &SM, SmallVectorImpl<char> &Buf);
 
 } // namespace index

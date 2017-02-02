@@ -28,13 +28,13 @@
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Logging.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/Timer.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>

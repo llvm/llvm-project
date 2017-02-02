@@ -13,10 +13,10 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/ARMUtils.h"

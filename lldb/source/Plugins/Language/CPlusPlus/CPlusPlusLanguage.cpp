@@ -23,16 +23,16 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/FastDemangle.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "BlockPointer.h"
 #include "CxxStringTypes.h"
