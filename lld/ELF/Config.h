@@ -98,6 +98,7 @@ struct Configuration {
   bool Bsymbolic;
   bool BsymbolicFunctions;
   bool ColorDiagnostics = false;
+  bool DefineCommon;
   bool Demangle = true;
   bool DisableVerify;
   bool EhFrameHdr;

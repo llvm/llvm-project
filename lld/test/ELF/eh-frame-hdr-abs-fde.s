@@ -9,10 +9,10 @@
 # REQUIRES: mips
 
 # CHECK:      Contents of section .eh_frame_hdr:
-# CHECK-NEXT:  10148 011b033b 00000010 00000001 0000feb8
-#                                               ^-- 0x20000 - 0x10148
+# CHECK-NEXT:  10128 011b033b 00000010 00000001 0000fed8
+#                                               ^-- 0x20000 - 0x10138
 #                                                   .text   - .eh_frame_hdr
-# CHECK-NEXT:  10158 0000002c
+# CHECK-NEXT:  10138 0000002c
 # CHECK:      Contents of section .text:
 # CHECK-NEXT:  20000 00000000
 

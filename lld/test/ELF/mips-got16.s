@@ -29,16 +29,16 @@
 # GOT-NEXT: ]
 
 # GOT:      Primary GOT {
-# GOT-NEXT:   Canonical gp value: 0x57FF0
+# GOT-NEXT:   Canonical gp value:
 # GOT-NEXT:   Reserved entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50000
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32752
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Purpose: Lazy resolver
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50004
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32748
 # GOT-NEXT:       Initial: 0x80000000
 # GOT-NEXT:       Purpose: Module pointer (GNU extension)
@@ -46,44 +46,44 @@
 # GOT-NEXT:   ]
 # GOT-NEXT:   Local entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50008
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32744
 # GOT-NEXT:       Initial: 0x10000
 #                          ^-- (0x1002c + 0x8000) & ~0xffff
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x5000C
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32740
 # GOT-NEXT:       Initial: 0x20000
 #                          ^-- redundant unused entry
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50010
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32736
 # GOT-NEXT:       Initial: 0x20000
 #                          ^-- redundant unused entry
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50014
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32732
 # GOT-NEXT:       Initial: 0x30000
 #                          ^-- (0x29000 + 0x8000) & ~0xffff
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50018
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32728
 # GOT-NEXT:       Initial: 0x40000
 #                          ^-- (0x29000 + 0x10004 + 0x8000) & ~0xffff
 #                          ^-- (0x29000 + 0x18004 + 0x8000) & ~0xffff
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x5001C
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32724
 # GOT-NEXT:       Initial: 0x50000
 #                          ^-- redundant unused entry
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50020
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32720
 # GOT-NEXT:       Initial: 0x41008
 #                          ^-- 'bar' address
@@ -91,7 +91,7 @@
 # GOT-NEXT:   ]
 # GOT-NEXT:   Global entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x50024
+# GOT-NEXT:       Address:
 # GOT-NEXT:       Access: -32716
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Value: 0x0
