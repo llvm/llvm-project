@@ -46,7 +46,7 @@
 ; CHECK: DW_TAG_variable
 ; Make sure this is relocatable.
 ; and test that we don't create the labels to emit a correct COFF relocation
-; ELF-ASM: .quad .Lsection_info+[[TYPE]] # DW_AT_type
+; ELF-ASM: .quad .debug_info+[[TYPE]] # DW_AT_type
 ; COFF-ASM: .secrel32 .Lsection_info+[[TYPE]] # DW_AT_type
 ; DARWIN-ASM2: .quad [[TYPE]] ## DW_AT_type
 ; DARWIN-ASM4: .long [[TYPE]] ## DW_AT_type
