@@ -843,6 +843,9 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
     Env = IsELF;
     initELFMCObjectFileInfo(TT);
     break;
+  case Triple::Wasm:
+    report_fatal_error("Cannot initialize MC for wasm object file format yet.");
+    break;
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot initialize MC for unknown object file format.");
     break;
