@@ -1,3 +1,5 @@
+REQUIRES: posix
+
 RUN: LLVMFuzzer-EquivalenceATest -run_equivalence_server=EQUIV_TEST & export APID=$!
 RUN: sleep 3
 RUN: not LLVMFuzzer-EquivalenceBTest -use_equivalence_server=EQUIV_TEST -max_len=4096 2>&1 | FileCheck %s

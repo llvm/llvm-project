@@ -108,7 +108,7 @@ namespace llvm {
           DisableIntegratedAS(false), CompressDebugSections(false),
           RelaxELFRelocations(false), FunctionSections(false),
           DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
-          EmulatedTLS(false), EnableIPRA(false), DebugInfoForProfiling(false) {}
+          EmulatedTLS(false), EnableIPRA(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -225,9 +225,6 @@ namespace llvm {
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;
 
-    /// This flag enables emitting extra debug info for sample profiling.
-    unsigned DebugInfoForProfiling : 1;
-
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
     /// Default selects the target's default behavior. Soft selects the ABI for
@@ -302,8 +299,7 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(FPDenormalMode) &&
     ARE_EQUAL(ExceptionModel) &&
     ARE_EQUAL(MCOptions) &&
-    ARE_EQUAL(EnableIPRA) &&
-    ARE_EQUAL(DebugInfoForProfiling);
+    ARE_EQUAL(EnableIPRA);
 #undef ARE_EQUAL
 }
 

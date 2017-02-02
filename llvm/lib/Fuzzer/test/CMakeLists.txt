@@ -226,6 +226,10 @@ set(TestBinaries ${TestBinaries} LLVMFuzzer-DSOTest)
 # Note this is done after declaring all tests so we can inform lit if any tests
 # need to be disabled.
 ###############################################################################
+set(LIBFUZZER_POSIX 1)
+if (MSVC)
+  set(LIBFUZZER_POSIX 0)
+endif()
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in

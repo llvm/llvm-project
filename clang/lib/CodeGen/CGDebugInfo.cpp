@@ -509,7 +509,8 @@ void CGDebugInfo::CreateCompileUnit() {
                                    Checksum),
       Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
       CGM.getCodeGenOpts().SplitDwarfFile, EmissionKind, 0 /* DWOid */,
-      CGM.getCodeGenOpts().SplitDwarfInlining);
+      CGM.getCodeGenOpts().SplitDwarfInlining,
+      CGM.getCodeGenOpts().DebugInfoForProfiling);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {

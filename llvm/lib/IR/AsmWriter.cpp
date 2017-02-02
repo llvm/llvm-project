@@ -1688,6 +1688,8 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printMetadata("macros", N->getRawMacros());
   Printer.printInt("dwoId", N->getDWOId());
   Printer.printBool("splitDebugInlining", N->getSplitDebugInlining(), true);
+  Printer.printBool("debugInfoForProfiling", N->getDebugInfoForProfiling(),
+                    false);
   Out << ")";
 }
 

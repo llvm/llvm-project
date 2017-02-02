@@ -1715,12 +1715,7 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     // Don't touch naked functions. They may contain asm returning a
     // value we don't see, so we may end up interprocedurally propagating
     // the return value incorrectly.
-    // Also, don't touch functions marked as noinline. Trivial functions may
-    // essentially be inlined because of return value propagation.
-    // (e.g. int tinkywinky(void) { return 666; })
-    if (F.hasExactDefinition() &&
-        !(F.hasFnAttribute(Attribute::Naked) ||
-          F.hasFnAttribute(Attribute::NoInline)))
+    if (F.hasExactDefinition() && !F.hasFnAttribute(Attribute::Naked))
       Solver.AddTrackedFunction(&F);
 
     // If this function only has direct calls that we can see, we can track its

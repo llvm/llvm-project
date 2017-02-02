@@ -870,9 +870,6 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   if (DGV && !DGV->isDeclarationForLinker())
     return false;
 
-  if (SGV.hasAvailableExternallyLinkage())
-    return true;
-
   if (SGV.isDeclaration() || DoneLinkingBodies)
     return false;
 

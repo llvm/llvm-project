@@ -420,7 +420,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       P->getPrecedence() != prec::Assignment &&
       P->getPrecedence() != prec::Relational) {
     bool BreakBeforeOperator =
-        P->is(tok::lessless) ||
+        P->MustBreakBefore || P->is(tok::lessless) ||
         (P->is(TT_BinaryOperator) &&
          Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None) ||
         (P->is(TT_ConditionalExpr) && Style.BreakBeforeTernaryOperators);

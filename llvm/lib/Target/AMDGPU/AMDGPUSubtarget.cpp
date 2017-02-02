@@ -132,62 +132,26 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   initializeSubtargetDependencies(TT, GPU, FS);
 }
 
-// FIXME: These limits are for SI. Did they change with the larger maximum LDS
-// size?
-unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves) const {
-  switch (NWaves) {
-  case 10:
-    return 1638;
-  case 9:
-    return 1820;
-  case 8:
-    return 2048;
-  case 7:
-    return 2340;
-  case 6:
-    return 2730;
-  case 5:
-    return 3276;
-  case 4:
-    return 4096;
-  case 3:
-    return 5461;
-  case 2:
-    return 8192;
-  default:
+unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
+  const Function &F) const {
+  if (NWaves == 1)
     return getLocalMemorySize();
-  }
+  unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
+  unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  unsigned MaxWaves = getMaxWavesPerEU();
+  return getLocalMemorySize() * MaxWaves / WorkGroupsPerCu / NWaves;
 }
 
-unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes) const {
-  if (Bytes <= 1638)
-    return 10;
-
-  if (Bytes <= 1820)
-    return 9;
-
-  if (Bytes <= 2048)
-    return 8;
-
-  if (Bytes <= 2340)
-    return 7;
-
-  if (Bytes <= 2730)
-    return 6;
-
-  if (Bytes <= 3276)
-    return 5;
-
-  if (Bytes <= 4096)
-    return 4;
-
-  if (Bytes <= 5461)
-    return 3;
-
-  if (Bytes <= 8192)
-    return 2;
-
-  return 1;
+unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
+  const Function &F) const {
+  unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
+  unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
+  unsigned MaxWaves = getMaxWavesPerEU();
+  unsigned Limit = getLocalMemorySize() * MaxWaves / WorkGroupsPerCu;
+  unsigned NumWaves = Limit / (Bytes ? Bytes : 1u);
+  NumWaves = std::min(NumWaves, MaxWaves);
+  NumWaves = std::max(NumWaves, 1u);
+  return NumWaves;
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(

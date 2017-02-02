@@ -62,6 +62,12 @@ table {
   text-align: left;
   background-color: #ffe1a6;
 }
+.column-entry-0 {
+  background-color: #ffffff;
+}
+.column-entry-1 {
+  background-color: #eeeeee;
+}
 .line-number {
   text-align: right;
   color: #aaa;

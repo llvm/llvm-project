@@ -27,7 +27,7 @@ int f2(void) { return 43; }
 #else
 
 // CHECK-NO-BC-LABEL: define i32 @g
-// CHECK-NO-BC: ret i32 %call
+// CHECK-NO-BC: ret i32 42
 int g(void) {
   return f();
 }

@@ -1,4 +1,4 @@
-//===-- llvm/lib/Target/AArch64/AArch64CallLowering.cpp - Call lowering ---===//
+//===--- AArch64CallLowering.cpp - Call lowering --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,15 +15,34 @@
 
 #include "AArch64CallLowering.h"
 #include "AArch64ISelLowering.h"
-
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
@@ -31,8 +50,7 @@ using namespace llvm;
 #endif
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
-  : CallLowering(&TLI) {
-}
+  : CallLowering(&TLI) {}
 
 struct IncomingArgHandler : public CallLowering::ValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
@@ -131,10 +149,10 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
-  virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                         CCValAssign::LocInfo LocInfo,
-                         const CallLowering::ArgInfo &Info,
-                         CCState &State) override {
+  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info,
+                 CCState &State) override {
     if (Info.IsFixed)
       return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
     return  AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);

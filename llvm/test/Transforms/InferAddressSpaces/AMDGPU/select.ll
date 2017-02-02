@@ -55,18 +55,24 @@ define void @store_select_mismatch_group_private_flat(i1 %c, i32 addrspace(3)* %
 @lds1 = internal addrspace(3) global i32 456, align 4
 
 ; CHECK-LABEL: @constexpr_select_group_flat(
-; CHCK: %tmp = load i32, i32 addrspace(3)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(3)* @lds0, i32 addrspace(3)* @lds1)
+; CHECK: %tmp = load i32, i32 addrspace(3)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(3)* @lds0, i32 addrspace(3)* @lds1)
 define i32 @constexpr_select_group_flat() #0 {
 bb:
   %tmp = load i32, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds1 to i32 addrspace(4)*))
   ret i32 %tmp
 }
 
-; FIXME: Should be able to cast the constants
+; CHECK-LABEL: @constexpr_select_group_global_flat_mismatch(
+; CHECK: %tmp = load i32, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*))
+define i32 @constexpr_select_group_global_flat_mismatch() #0 {
+bb:
+  %tmp = load i32, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*))
+  ret i32 %tmp
+}
+
 ; CHECK-LABEL: @store_select_group_flat_null(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
-; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* null
-; CHECK: store i32 -1, i32 addrspace(4)* %select
+; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*)
+; CHECK: store i32 -1, i32 addrspace(3)* %select
 define void @store_select_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* null
@@ -75,9 +81,8 @@ define void @store_select_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0)
 }
 
 ; CHECK-LABEL: @store_select_group_flat_null_swap(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
-; CHECK: %select = select i1 %c, i32 addrspace(4)* null, i32 addrspace(4)* %1
-; CHECK: store i32 -1, i32 addrspace(4)* %select
+; CHECK: %select = select i1 %c, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*), i32 addrspace(3)* %group.ptr.0
+; CHECK: store i32 -1, i32 addrspace(3)* %select
 define void @store_select_group_flat_null_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* null, i32 addrspace(4)* %cast0
@@ -85,11 +90,9 @@ define void @store_select_group_flat_null_swap(i1 %c, i32 addrspace(3)* %group.p
   ret void
 }
 
-
 ; CHECK-LABEL: @store_select_group_flat_undef(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
-; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* undef
-; CHECK: store i32 -1, i32 addrspace(4)* %select
+; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* undef
+; CHECK: store i32 -1, i32 addrspace(3)* %select
 define void @store_select_group_flat_undef(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* undef
@@ -98,13 +101,24 @@ define void @store_select_group_flat_undef(i1 %c, i32 addrspace(3)* %group.ptr.0
 }
 
 ; CHECK-LABEL: @store_select_group_flat_undef_swap(
-; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
-; CHECK: %select = select i1 %c, i32 addrspace(4)* undef, i32 addrspace(4)* %1
-; CHECK: store i32 -1, i32 addrspace(4)* %select
+; CHECK: %select = select i1 %c, i32 addrspace(3)* undef, i32 addrspace(3)* %group.ptr.0
+; CHECK: store i32 -1, i32 addrspace(3)* %select
 define void @store_select_group_flat_undef_swap(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* undef, i32 addrspace(4)* %cast0
   store i32 -1, i32 addrspace(4)* %select
+  ret void
+}
+
+; CHECK-LABEL: @store_select_gep_group_flat_null(
+; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* null to i32 addrspace(3)*)
+; CHECK: %gep = getelementptr i32, i32 addrspace(3)* %select, i64 16
+; CHECK: store i32 -1, i32 addrspace(3)* %gep
+define void @store_select_gep_group_flat_null(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* null
+  %gep = getelementptr i32, i32 addrspace(4)* %select, i64 16
+  store i32 -1, i32 addrspace(4)* %gep
   ret void
 }
 
@@ -116,6 +130,26 @@ define void @store_select_group_flat_undef_swap(i1 %c, i32 addrspace(3)* %group.
 define void @store_select_group_flat_constexpr(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
   %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
   %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds1 to i32 addrspace(4)*)
+  store i32 7, i32 addrspace(4)* %select
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_flat_inttoptr_flat(
+; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* addrspacecast (i32 addrspace(4)* inttoptr (i64 12345 to i32 addrspace(4)*) to i32 addrspace(3)*)
+; CHECK: store i32 7, i32 addrspace(3)* %select
+define void @store_select_group_flat_inttoptr_flat(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* inttoptr (i64 12345 to i32 addrspace(4)*)
+  store i32 7, i32 addrspace(4)* %select
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_flat_inttoptr_group(
+; CHECK: %select = select i1 %c, i32 addrspace(3)* %group.ptr.0, i32 addrspace(3)* inttoptr (i32 400 to i32 addrspace(3)*)
+; CHECK-NEXT: store i32 7, i32 addrspace(3)* %select
+define void @store_select_group_flat_inttoptr_group(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i32 400 to i32 addrspace(3)*) to i32 addrspace(4)*)
   store i32 7, i32 addrspace(4)* %select
   ret void
 }
@@ -142,6 +176,70 @@ define void @store_select_group_global_mismatch_flat_constexpr_swap(i1 %c, i32 a
   ret void
 }
 
+; CHECK-LABEL: @store_select_group_global_mismatch_null_null(
+; CHECK: %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)
+; CHECK: store i32 7, i32 addrspace(4)* %select
+define void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
+  %select = select i1 %c, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)
+  store i32 7, i32 addrspace(4)* %select
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_null_null_constexpr(
+; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+define void @store_select_group_global_mismatch_null_null_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_gv_null_constexpr(
+; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+define void @store_select_group_global_mismatch_gv_null_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @lds0 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_null_gv_constexpr(
+; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)), align 4
+define void @store_select_group_global_mismatch_null_gv_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* @global0 to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_inttoptr_null_constexpr(
+; CHECK: store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i64 123 to i32 addrspace(3)*) to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+define void @store_select_group_global_mismatch_inttoptr_null_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* inttoptr (i64 123 to i32 addrspace(3)*) to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_inttoptr_flat_null_constexpr(
+; CHECK: store i32 7, i32 addrspace(1)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(1)* addrspacecast (i32 addrspace(4)* inttoptr (i64 123 to i32 addrspace(4)*) to i32 addrspace(1)*), i32 addrspace(1)* null), align 4
+define void @store_select_group_global_mismatch_inttoptr_flat_null_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* inttoptr (i64 123 to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* null to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+; CHECK-LABEL: @store_select_group_global_mismatch_undef_undef_constexpr(
+; CHECK: store i32 7, i32 addrspace(3)* null
+define void @store_select_group_global_mismatch_undef_undef_constexpr() #0 {
+  store i32 7, i32 addrspace(4)* select (i1 icmp eq (i32 ptrtoint (i32 addrspace(3)* @lds1 to i32), i32 4), i32 addrspace(4)* addrspacecast (i32 addrspace(3)* null to i32 addrspace(4)*), i32 addrspace(4)* addrspacecast (i32 addrspace(1)* undef to i32 addrspace(4)*)), align 4
+  ret void
+}
+
+@lds2 = external addrspace(3) global [1024 x i32], align 4
+
+; CHECK-LABEL: @store_select_group_constexpr_ptrtoint(
+; CHECK: %1 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+; CHECK: %select = select i1 %c, i32 addrspace(4)* %1, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* inttoptr (i32 add (i32 ptrtoint ([1024 x i32] addrspace(3)* @lds2 to i32), i32 124) to i32 addrspace(1)*) to i32 addrspace(4)*)
+; CHECK: store i32 7, i32 addrspace(4)* %select
+define void @store_select_group_constexpr_ptrtoint(i1 %c, i32 addrspace(3)* %group.ptr.0) #0 {
+  %cast0 = addrspacecast i32 addrspace(3)* %group.ptr.0 to i32 addrspace(4)*
+  %select = select i1 %c, i32 addrspace(4)* %cast0, i32 addrspace(4)* addrspacecast (i32 addrspace(1)* inttoptr (i32 add (i32 ptrtoint ([1024 x i32] addrspace(3)* @lds2 to i32), i32 124) to i32 addrspace(1)*) to i32 addrspace(4)*)
+  store i32 7, i32 addrspace(4)* %select
+  ret void
+}
+
 ; CHECK-LABEL: @store_select_group_flat_vector(
 ; CHECK: %cast0 = addrspacecast <2 x i32 addrspace(3)*> %group.ptr.0 to <2 x i32 addrspace(4)*>
 ; CHECK: %cast1 = addrspacecast <2 x i32 addrspace(3)*> %group.ptr.1 to <2 x i32 addrspace(4)*>
@@ -160,6 +258,7 @@ define void @store_select_group_flat_vector(i1 %c, <2 x i32 addrspace(3)*> %grou
   store i32 -2, i32 addrspace(4)* %extract1
   ret void
 }
+
 attributes #0 = { nounwind }
 
 !0 = !{!"branch_weights", i32 2, i32 10}

@@ -11,7 +11,7 @@ declare void @f()
 define void @foo(i64 %val) {
   %shr = lshr i64 %val, zext (i8 ptrtoint (i8* @align to i8) to i64)
   %shl = shl i64 %val, zext (i8 sub (i8 64, i8 ptrtoint (i8* @align to i8)) to i64)
-  ; CHECK: rorq $align, %rdi
+  ; CHECK: rorq $align@ABS8, %rdi
   %ror = or i64 %shr, %shl
   %cmp = icmp ult i64 %ror, 109
   br i1 %cmp, label %t, label %f
@@ -24,4 +24,4 @@ f:
   ret void
 }
 
-!0 = !{i64 0, i64 256}
+!0 = !{i64 0, i64 128}

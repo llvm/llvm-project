@@ -55,9 +55,7 @@ namespace {
 class TypeStreamMerger : public TypeVisitorCallbacks {
 public:
   TypeStreamMerger(TypeTableBuilder &DestStream)
-      : DestStream(DestStream), FieldListBuilder(DestStream) {
-    assert(!hadError());
-  }
+      : DestStream(DestStream), FieldListBuilder(DestStream) {}
 
 /// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
@@ -74,12 +72,15 @@ public:
   Error visitTypeEnd(CVType &Record) override;
   Error visitMemberEnd(CVMemberRecord &Record) override;
 
-  bool mergeStream(const CVTypeArray &Types);
+  Error mergeStream(const CVTypeArray &Types);
 
 private:
   template <typename RecordType>
   Error visitKnownRecordImpl(RecordType &Record) {
-    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);
+    if (!Record.remapTypeIndices(IndexMap))
+      LastError = joinErrors(
+          std::move(*LastError),
+          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
     IndexMap.push_back(DestStream.writeKnownType(Record));
     return Error::success();
   }
@@ -94,14 +95,15 @@ private:
 
   template <typename RecordType>
   Error visitKnownMemberRecordImpl(RecordType &Record) {
-    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);
+    if (!Record.remapTypeIndices(IndexMap))
+      LastError = joinErrors(
+          std::move(*LastError),
+          llvm::make_error<CodeViewError>(cv_error_code::corrupt_record));
     FieldListBuilder.writeMemberType(Record);
     return Error::success();
   }
 
-  bool hadError() { return FoundBadTypeIndex; }
-
-  bool FoundBadTypeIndex = false;
+  Optional<Error> LastError;
 
   BumpPtrAllocator Allocator;
 
@@ -163,9 +165,10 @@ Error TypeStreamMerger::visitUnknownType(CVType &Rec) {
   return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
-bool TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
+Error TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   assert(IndexMap.empty());
   TypeVisitorCallbackPipeline Pipeline;
+  LastError = Error::success();
 
   TypeDeserializer Deserializer;
   Pipeline.addCallbackToPipeline(Deserializer);
@@ -173,15 +176,16 @@ bool TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
 
   CVTypeVisitor Visitor(Pipeline);
 
-  if (auto EC = Visitor.visitTypeStream(Types)) {
-    consumeError(std::move(EC));
-    return false;
-  }
+  if (auto EC = Visitor.visitTypeStream(Types))
+    return EC;
   IndexMap.clear();
-  return !hadError();
+
+  Error Ret = std::move(*LastError);
+  LastError.reset();
+  return Ret;
 }
 
-bool llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestStream,
-                                      const CVTypeArray &Types) {
+Error llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestStream,
+                                       const CVTypeArray &Types) {
   return TypeStreamMerger(DestStream).mergeStream(Types);
 }
