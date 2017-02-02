@@ -514,7 +514,10 @@ public:
     // Dump the contents of the temporary file if that was requested.
     if (DumpTemporaryFiles) {
       errs() << ";\n; Object file bundler IR file.\n;\n";
-      AuxModule.get()->dump();
+      AuxModule.get()->print(errs(), nullptr,
+                             /*ShouldPreserveUseListOrder=*/false,
+                             /*IsForDebug=*/true);
+      errs() << '\n';
     }
 
     // Find clang in order to create the bundle binary.

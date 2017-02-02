@@ -675,26 +675,6 @@ namespace clang {
     /// to be used while performing partial ordering of function templates.
     unsigned ExplicitCallArguments;
 
-    /// The number of diagnose_if attributes that this overload triggered.
-    /// If any of the triggered attributes are errors, this won't count
-    /// diagnose_if warnings.
-    unsigned NumTriggeredDiagnoseIfs = 0;
-
-    /// Basically a TinyPtrVector<DiagnoseIfAttr *> that doesn't own the vector:
-    /// If NumTriggeredDiagnoseIfs is 0 or 1, this is a DiagnoseIfAttr *,
-    /// otherwise it's a pointer to an array of `NumTriggeredDiagnoseIfs`
-    /// DiagnoseIfAttr *s.
-    llvm::PointerUnion<DiagnoseIfAttr *, DiagnoseIfAttr **> DiagnoseIfInfo;
-
-    /// Gets an ArrayRef for the data at DiagnoseIfInfo. Note that this may give
-    /// you a pointer into DiagnoseIfInfo.
-    ArrayRef<DiagnoseIfAttr *> getDiagnoseIfInfo() const {
-      auto *Ptr = NumTriggeredDiagnoseIfs <= 1
-                      ? DiagnoseIfInfo.getAddrOfPtr1()
-                      : DiagnoseIfInfo.get<DiagnoseIfAttr **>();
-      return {Ptr, NumTriggeredDiagnoseIfs};
-    }
-
     union {
       DeductionFailureInfo DeductionFailure;
       
@@ -759,9 +739,8 @@ namespace clang {
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<Decl *, 16> Functions;
 
-    // Allocator for ConversionSequenceLists and DiagnoseIfAttr* arrays.
-    // We store the first few of each of these inline to avoid allocation for
-    // small sets.
+    // Allocator for ConversionSequenceLists. We store the first few of these
+    // inline to avoid allocation for small sets.
     llvm::BumpPtrAllocator SlabAllocator;
 
     SourceLocation Loc;
@@ -776,6 +755,8 @@ namespace clang {
     /// from the slab allocator.
     /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
     /// instead.
+    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
+    /// want to un-generalize this?
     template <typename T>
     T *slabAllocate(unsigned N) {
       // It's simpler if this doesn't need to consider alignment.
@@ -808,11 +789,6 @@ namespace clang {
 
     SourceLocation getLocation() const { return Loc; }
     CandidateSetKind getKind() const { return Kind; }
-
-    /// Make a DiagnoseIfAttr* array in a block of memory that will live for
-    /// as long as this OverloadCandidateSet. Returns a pointer to the start
-    /// of that array.
-    DiagnoseIfAttr **addDiagnoseIfComplaints(ArrayRef<DiagnoseIfAttr *> CA);
 
     /// \brief Determine when this overload candidate will be new to the
     /// overload set.

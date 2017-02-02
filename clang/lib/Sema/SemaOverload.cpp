@@ -839,18 +839,10 @@ void OverloadCandidateSet::destroyCandidates() {
 
 void OverloadCandidateSet::clear() {
   destroyCandidates();
-  // DiagnoseIfAttrs are just pointers, so we don't need to destroy them.
   SlabAllocator.Reset();
   NumInlineBytesUsed = 0;
   Candidates.clear();
   Functions.clear();
-}
-
-DiagnoseIfAttr **
-OverloadCandidateSet::addDiagnoseIfComplaints(ArrayRef<DiagnoseIfAttr *> CA) {
-  auto *DIA = slabAllocate<DiagnoseIfAttr *>(CA.size());
-  std::uninitialized_copy(CA.begin(), CA.end(), DIA);
-  return DIA;
 }
 
 namespace {
@@ -5831,28 +5823,6 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
-static void initDiagnoseIfComplaint(Sema &S, OverloadCandidateSet &CandidateSet,
-                                    OverloadCandidate &Candidate,
-                                    FunctionDecl *Function,
-                                    ArrayRef<Expr *> Args,
-                                    bool MissingImplicitThis = false,
-                                    Expr *ExplicitThis = nullptr) {
-  SmallVector<DiagnoseIfAttr *, 8> Results;
-  if (DiagnoseIfAttr *DIA = S.checkArgDependentDiagnoseIf(
-          Function, Args, Results, MissingImplicitThis, ExplicitThis)) {
-    Results.clear();
-    Results.push_back(DIA);
-  }
-
-  Candidate.NumTriggeredDiagnoseIfs = Results.size();
-  if (Results.empty())
-    Candidate.DiagnoseIfInfo = nullptr;
-  else if (Results.size() == 1)
-    Candidate.DiagnoseIfInfo = Results[0];
-  else
-    Candidate.DiagnoseIfInfo = CandidateSet.addDiagnoseIfComplaints(Results);
-}
-
 /// AddOverloadCandidate - Adds the given function to the set of
 /// candidate functions, using the given function call arguments.  If
 /// @p SuppressUserConversions, then don't allow user-defined
@@ -5886,10 +5856,9 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
       // object argument (C++ [over.call.func]p3), and the acting context
       // is irrelevant.
       AddMethodCandidate(Method, FoundDecl, Method->getParent(), QualType(),
-                         Expr::Classification::makeSimpleLValue(),
-                         /*ThisArg=*/nullptr, Args, CandidateSet,
-                         SuppressUserConversions, PartialOverloading,
-                         EarlyConversions);
+                         Expr::Classification::makeSimpleLValue(), Args,
+                         CandidateSet, SuppressUserConversions,
+                         PartialOverloading, EarlyConversions);
       return;
     }
     // We treat a constructor like a non-member function, since its object
@@ -6050,8 +6019,6 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
     Candidate.FailureKind = ovl_fail_ext_disabled;
     return;
   }
-
-  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Function, Args);
 }
 
 ObjCMethodDecl *
@@ -6260,85 +6227,73 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
   return nullptr;
 }
 
-static bool gatherDiagnoseIfAttrs(FunctionDecl *Function, bool ArgDependent,
-                                  SmallVectorImpl<DiagnoseIfAttr *> &Errors,
-                                  SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal) {
-  for (auto *DIA : Function->specific_attrs<DiagnoseIfAttr>())
-    if (ArgDependent == DIA->getArgDependent()) {
-      if (DIA->isError())
-        Errors.push_back(DIA);
-      else
-        Nonfatal.push_back(DIA);
-    }
-
-  return !Errors.empty() || !Nonfatal.empty();
-}
-
 template <typename CheckFn>
-static DiagnoseIfAttr *
-checkDiagnoseIfAttrsWith(const SmallVectorImpl<DiagnoseIfAttr *> &Errors,
-                         SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal,
-                         CheckFn &&IsSuccessful) {
+static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const FunctionDecl *FD,
+                                        bool ArgDependent, SourceLocation Loc,
+                                        CheckFn &&IsSuccessful) {
+  SmallVector<const DiagnoseIfAttr *, 8> Attrs;
+  for (const auto *DIA : FD->specific_attrs<DiagnoseIfAttr>()) {
+    if (ArgDependent == DIA->getArgDependent())
+      Attrs.push_back(DIA);
+  }
+
+  // Common case: No diagnose_if attributes, so we can quit early.
+  if (Attrs.empty())
+    return false;
+
+  auto WarningBegin = std::stable_partition(
+      Attrs.begin(), Attrs.end(),
+      [](const DiagnoseIfAttr *DIA) { return DIA->isError(); });
+
   // Note that diagnose_if attributes are late-parsed, so they appear in the
   // correct order (unlike enable_if attributes).
-  auto ErrAttr = llvm::find_if(Errors, IsSuccessful);
-  if (ErrAttr != Errors.end())
-    return *ErrAttr;
+  auto ErrAttr = llvm::find_if(llvm::make_range(Attrs.begin(), WarningBegin),
+                               IsSuccessful);
+  if (ErrAttr != WarningBegin) {
+    const DiagnoseIfAttr *DIA = *ErrAttr;
+    S.Diag(Loc, diag::err_diagnose_if_succeeded) << DIA->getMessage();
+    S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+        << DIA->getParent() << DIA->getCond()->getSourceRange();
+    return true;
+  }
 
-  llvm::erase_if(Nonfatal, [&](DiagnoseIfAttr *A) { return !IsSuccessful(A); });
-  return nullptr;
+  for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
+    if (IsSuccessful(DIA)) {
+      S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
+      S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+          << DIA->getParent() << DIA->getCond()->getSourceRange();
+    }
+
+  return false;
 }
 
-DiagnoseIfAttr *
-Sema::checkArgDependentDiagnoseIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
-                                  SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal,
-                                  bool MissingImplicitThis,
-                                  Expr *ThisArg) {
-  SmallVector<DiagnoseIfAttr *, 4> Errors;
-  if (!gatherDiagnoseIfAttrs(Function, /*ArgDependent=*/true, Errors, Nonfatal))
-    return nullptr;
-
-  SFINAETrap Trap(*this);
-  SmallVector<Expr *, 16> ConvertedArgs;
-  Expr *ConvertedThis;
-  if (!convertArgsForAvailabilityChecks(*this, Function, ThisArg, Args, Trap,
-                                        MissingImplicitThis, ConvertedThis,
-                                        ConvertedArgs))
-    return nullptr;
-
-  return checkDiagnoseIfAttrsWith(Errors, Nonfatal, [&](DiagnoseIfAttr *DIA) {
-    APValue Result;
-    // It's sane to use the same ConvertedArgs for any redecl of this function,
-    // since EvaluateWithSubstitution only cares about the position of each
-    // argument in the arg list, not the ParmVarDecl* it maps to.
-    if (!DIA->getCond()->EvaluateWithSubstitution(
-            Result, Context, DIA->getParent(), ConvertedArgs, ConvertedThis))
-      return false;
-    return Result.isInt() && Result.getInt().getBoolValue();
-  });
+bool Sema::diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+                                               const Expr *ThisArg,
+                                               ArrayRef<const Expr *> Args,
+                                               SourceLocation Loc) {
+  return diagnoseDiagnoseIfAttrsWith(
+      *this, Function, /*ArgDependent=*/true, Loc,
+      [&](const DiagnoseIfAttr *DIA) {
+        APValue Result;
+        // It's sane to use the same Args for any redecl of this function, since
+        // EvaluateWithSubstitution only cares about the position of each
+        // argument in the arg list, not the ParmVarDecl* it maps to.
+        if (!DIA->getCond()->EvaluateWithSubstitution(
+                Result, Context, DIA->getParent(), Args, ThisArg))
+          return false;
+        return Result.isInt() && Result.getInt().getBoolValue();
+      });
 }
 
-DiagnoseIfAttr *Sema::checkArgIndependentDiagnoseIf(
-    FunctionDecl *Function, SmallVectorImpl<DiagnoseIfAttr *> &Nonfatal) {
-  SmallVector<DiagnoseIfAttr *, 4> Errors;
-  if (!gatherDiagnoseIfAttrs(Function, /*ArgDependent=*/false, Errors,
-                             Nonfatal))
-    return nullptr;
-
-  return checkDiagnoseIfAttrsWith(Errors, Nonfatal, [&](DiagnoseIfAttr *DIA) {
-    bool Result;
-    return DIA->getCond()->EvaluateAsBooleanCondition(Result, Context) &&
-           Result;
-  });
-}
-
-void Sema::emitDiagnoseIfDiagnostic(SourceLocation Loc,
-                                    const DiagnoseIfAttr *DIA) {
-  auto Code = DIA->isError() ? diag::err_diagnose_if_succeeded
-                             : diag::warn_diagnose_if_succeeded;
-  Diag(Loc, Code) << DIA->getMessage();
-  Diag(DIA->getLocation(), diag::note_from_diagnose_if)
-      << DIA->getParent() << DIA->getCond()->getSourceRange();
+bool Sema::diagnoseArgIndependentDiagnoseIfAttrs(const FunctionDecl *Function,
+                                                 SourceLocation Loc) {
+  return diagnoseDiagnoseIfAttrsWith(
+      *this, Function, /*ArgDependent=*/false, Loc,
+      [&](const DiagnoseIfAttr *DIA) {
+        bool Result;
+        return DIA->getCond()->EvaluateAsBooleanCondition(Result, Context) &&
+               Result;
+      });
 }
 
 /// \brief Add all of the function declarations in the given function set to
@@ -6356,8 +6311,8 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
         AddMethodCandidate(cast<CXXMethodDecl>(FD), F.getPair(),
                            cast<CXXMethodDecl>(FD)->getParent(),
                            Args[0]->getType(), Args[0]->Classify(Context),
-                           Args[0], Args.slice(1), CandidateSet,
-                           SuppressUserConversions, PartialOverloading);
+                           Args.slice(1), CandidateSet, SuppressUserConversions,
+                           PartialOverloading);
       else
         AddOverloadCandidate(FD, F.getPair(), Args, CandidateSet,
                              SuppressUserConversions, PartialOverloading);
@@ -6369,7 +6324,7 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
             FunTmpl, F.getPair(),
             cast<CXXRecordDecl>(FunTmpl->getDeclContext()),
             ExplicitTemplateArgs, Args[0]->getType(),
-            Args[0]->Classify(Context), Args[0], Args.slice(1), CandidateSet,
+            Args[0]->Classify(Context), Args.slice(1), CandidateSet,
             SuppressUserConversions, PartialOverloading);
       else
         AddTemplateOverloadCandidate(FunTmpl, F.getPair(),
@@ -6385,7 +6340,6 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
 void Sema::AddMethodCandidate(DeclAccessPair FoundDecl,
                               QualType ObjectType,
                               Expr::Classification ObjectClassification,
-                              Expr *ThisArg,
                               ArrayRef<Expr *> Args,
                               OverloadCandidateSet& CandidateSet,
                               bool SuppressUserConversions) {
@@ -6399,15 +6353,13 @@ void Sema::AddMethodCandidate(DeclAccessPair FoundDecl,
     assert(isa<CXXMethodDecl>(TD->getTemplatedDecl()) &&
            "Expected a member function template");
     AddMethodTemplateCandidate(TD, FoundDecl, ActingContext,
-                               /*ExplicitArgs*/ nullptr,
-                               ObjectType, ObjectClassification,
-                               ThisArg, Args, CandidateSet,
+                               /*ExplicitArgs*/ nullptr, ObjectType,
+                               ObjectClassification, Args, CandidateSet,
                                SuppressUserConversions);
   } else {
     AddMethodCandidate(cast<CXXMethodDecl>(Decl), FoundDecl, ActingContext,
-                       ObjectType, ObjectClassification,
-                       ThisArg, Args,
-                       CandidateSet, SuppressUserConversions);
+                       ObjectType, ObjectClassification, Args, CandidateSet,
+                       SuppressUserConversions);
   }
 }
 
@@ -6422,7 +6374,7 @@ void
 Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
                          CXXRecordDecl *ActingContext, QualType ObjectType,
                          Expr::Classification ObjectClassification,
-                         Expr *ThisArg, ArrayRef<Expr *> Args,
+                         ArrayRef<Expr *> Args,
                          OverloadCandidateSet &CandidateSet,
                          bool SuppressUserConversions,
                          bool PartialOverloading,
@@ -6544,9 +6496,6 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
-
-  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Method, Args,
-                          /*MissingImplicitThis=*/!ThisArg, ThisArg);
 }
 
 /// \brief Add a C++ member function template as a candidate to the candidate
@@ -6559,7 +6508,6 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
                                  TemplateArgumentListInfo *ExplicitTemplateArgs,
                                  QualType ObjectType,
                                  Expr::Classification ObjectClassification,
-                                 Expr *ThisArg,
                                  ArrayRef<Expr *> Args,
                                  OverloadCandidateSet& CandidateSet,
                                  bool SuppressUserConversions,
@@ -6613,9 +6561,9 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
   assert(isa<CXXMethodDecl>(Specialization) &&
          "Specialization is not a member function?");
   AddMethodCandidate(cast<CXXMethodDecl>(Specialization), FoundDecl,
-                     ActingContext, ObjectType, ObjectClassification,
-                     /*ThisArg=*/ThisArg, Args, CandidateSet,
-                     SuppressUserConversions, PartialOverloading, Conversions);
+                     ActingContext, ObjectType, ObjectClassification, Args,
+                     CandidateSet, SuppressUserConversions, PartialOverloading,
+                     Conversions);
 }
 
 /// \brief Add a C++ function template specialization as a candidate
@@ -6942,8 +6890,6 @@ Sema::AddConversionCandidate(CXXConversionDecl *Conversion,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
-
-  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Conversion, None, false, From);
 }
 
 /// \brief Adds a conversion function template specialization
@@ -7096,8 +7042,6 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
     Candidate.DeductionFailure.Data = FailedAttr;
     return;
   }
-
-  initDiagnoseIfComplaint(*this, CandidateSet, Candidate, Conversion, None);
 }
 
 /// \brief Add overload candidates for overloaded operators that are
@@ -7146,7 +7090,7 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
          Oper != OperEnd;
          ++Oper)
       AddMethodCandidate(Oper.getPair(), Args[0]->getType(),
-                         Args[0]->Classify(Context), Args[0], Args.slice(1),
+                         Args[0]->Classify(Context), Args.slice(1),
                          CandidateSet, /*SuppressUserConversions=*/false);
   }
 }
@@ -9178,17 +9122,6 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
   }
 }
 
-static bool isCandidateUnavailableDueToDiagnoseIf(const OverloadCandidate &OC) {
-  ArrayRef<DiagnoseIfAttr *> Info = OC.getDiagnoseIfInfo();
-  if (!Info.empty() && Info[0]->isError())
-    return true;
-
-  assert(llvm::all_of(Info,
-                      [](const DiagnoseIfAttr *A) { return !A->isError(); }) &&
-         "DiagnoseIf info shouldn't have mixed warnings and errors.");
-  return false;
-}
-
 /// \brief Computes the best viable function (C++ 13.3.3)
 /// within an overload candidate set.
 ///
@@ -9267,18 +9200,12 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Best is the best viable function.
   if (Best->Function &&
       (Best->Function->isDeleted() ||
-       S.isFunctionConsideredUnavailable(Best->Function) ||
-       isCandidateUnavailableDueToDiagnoseIf(*Best)))
+       S.isFunctionConsideredUnavailable(Best->Function)))
     return OR_Deleted;
 
   if (!EquivalentCands.empty())
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
-
-  for (const auto *W : Best->getDiagnoseIfInfo()) {
-    assert(W->isWarning() && "Errors should've been caught earlier!");
-    S.emitDiagnoseIfDiagnostic(Loc, W);
-  }
 
   return OR_Success;
 }
@@ -10160,14 +10087,6 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         << FnKind << FnDesc
         << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
-      return;
-    }
-    if (isCandidateUnavailableDueToDiagnoseIf(*Cand)) {
-      auto *A = Cand->DiagnoseIfInfo.get<DiagnoseIfAttr *>();
-      assert(A->isError() && "Non-error diagnose_if disables a candidate?");
-      S.Diag(Cand->Function->getLocation(),
-             diag::note_ovl_candidate_disabled_by_function_cond_attr)
-          << A->getCond()->getSourceRange() << A->getMessage();
       return;
     }
 
@@ -12113,6 +12032,10 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
 
+      if (CheckFunctionCall(FnDecl, TheCall,
+                            FnDecl->getType()->castAs<FunctionProtoType>()))
+        return ExprError();
+
       return MaybeBindToTemporary(TheCall);
     } else {
       // We matched a built-in operator. Convert the arguments, then
@@ -12343,16 +12266,20 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           return ExprError();
 
         ArrayRef<const Expr *> ArgsArray(Args, 2);
+        const Expr *ImplicitThis = nullptr;
         // Cut off the implicit 'this'.
-        if (isa<CXXMethodDecl>(FnDecl))
+        if (isa<CXXMethodDecl>(FnDecl)) {
+          ImplicitThis = ArgsArray[0];
           ArgsArray = ArgsArray.slice(1);
+        }
 
         // Check for a self move.
         if (Op == OO_Equal)
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
 
-        checkCall(FnDecl, nullptr, ArgsArray, isa<CXXMethodDecl>(FnDecl), OpLoc, 
-                  TheCall->getSourceRange(), VariadicDoesNotApply);
+        checkCall(FnDecl, nullptr, ImplicitThis, ArgsArray,
+                  isa<CXXMethodDecl>(FnDecl), OpLoc, TheCall->getSourceRange(),
+                  VariadicDoesNotApply);
 
         return MaybeBindToTemporary(TheCall);
       } else {
@@ -12561,6 +12488,10 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
 
+        if (CheckFunctionCall(Method, TheCall,
+                              Method->getType()->castAs<FunctionProtoType>()))
+          return ExprError();
+
         return MaybeBindToTemporary(TheCall);
       } else {
         // We matched a built-in operator. Convert the arguments, then
@@ -12727,16 +12658,6 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       TemplateArgs = &TemplateArgsBuffer;
     }
 
-    // Poor-programmer's Lazy<Expr *>; isImplicitAccess requires stripping
-    // parens/casts, which would be nice to avoid potentially doing multiple
-    // times.
-    llvm::Optional<Expr *> UnresolvedBase;
-    auto GetUnresolvedBase = [&] {
-      if (!UnresolvedBase.hasValue())
-        UnresolvedBase =
-          UnresExpr->isImplicitAccess() ? nullptr : UnresExpr->getBase();
-      return *UnresolvedBase;
-    };
     for (UnresolvedMemberExpr::decls_iterator I = UnresExpr->decls_begin(),
            E = UnresExpr->decls_end(); I != E; ++I) {
 
@@ -12757,14 +12678,12 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           continue;
 
         AddMethodCandidate(Method, I.getPair(), ActingDC, ObjectType,
-                           ObjectClassification,
-                           /*ThisArg=*/GetUnresolvedBase(), Args, CandidateSet,
+                           ObjectClassification, Args, CandidateSet,
                            /*SuppressUserConversions=*/false);
       } else {
         AddMethodTemplateCandidate(
             cast<FunctionTemplateDecl>(Func), I.getPair(), ActingDC,
-            TemplateArgs, ObjectType, ObjectClassification,
-            /*ThisArg=*/GetUnresolvedBase(), Args, CandidateSet,
+            TemplateArgs, ObjectType, ObjectClassification, Args, CandidateSet,
             /*SuppressUsedConversions=*/false);
       }
     }
@@ -12882,16 +12801,6 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           << Attr->getCond()->getSourceRange() << Attr->getMessage();
       return ExprError();
     }
-
-    SmallVector<DiagnoseIfAttr *, 4> Nonfatal;
-    if (const DiagnoseIfAttr *Attr = checkArgDependentDiagnoseIf(
-            Method, Args, Nonfatal, false, MemE->getBase())) {
-      emitDiagnoseIfDiagnostic(MemE->getMemberLoc(), Attr);
-      return ExprError();
-    }
-
-    for (const auto *Attr : Nonfatal)
-      emitDiagnoseIfDiagnostic(MemE->getMemberLoc(), Attr);
   }
 
   if ((isa<CXXConstructorDecl>(CurContext) || 
@@ -12970,9 +12879,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Object.get()->getType(),
-                       Object.get()->Classify(Context),
-                       Object.get(), Args, CandidateSet,
-                       /*SuppressUserConversions=*/ false);
+                       Object.get()->Classify(Context), Args, CandidateSet,
+                       /*SuppressUserConversions=*/false);
   }
 
   // C++ [over.call.object]p2:
@@ -13247,8 +13155,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
     AddMethodCandidate(Oper.getPair(), Base->getType(), Base->Classify(Context),
-                       Base, None, CandidateSet,
-                       /*SuppressUserConversions=*/false);
+                       None, CandidateSet, /*SuppressUserConversions=*/false);
   }
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
@@ -13322,7 +13229,11 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
                                       Base, ResultTy, VK, OpLoc, false);
 
   if (CheckCallReturnType(Method->getReturnType(), OpLoc, TheCall, Method))
-          return ExprError();
+    return ExprError();
+
+  if (CheckFunctionCall(Method, TheCall,
+                        Method->getType()->castAs<FunctionProtoType>()))
+    return ExprError();
 
   return MaybeBindToTemporary(TheCall);
 }
