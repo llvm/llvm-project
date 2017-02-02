@@ -318,6 +318,7 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
+; FIXME: Duplicated load in i686
 define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X32-LABEL: buildvector_v4f32_0404:
 ; X32:       # BB#0:
@@ -341,6 +342,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
   ret void
 }
 
+; FIXME: Failed to fold to vpermil2ps
 define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr) {
 ; X32-LABEL: buildvector_v4f32_07z6:
 ; X32:       # BB#0:

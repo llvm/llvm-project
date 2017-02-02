@@ -52,12 +52,18 @@ void thinLTOResolveWeakForLinkerInIndex(
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage);
 
+/// This enum is used for the returned value of the callback passed to
+/// thinLTOInternalizeAndPromoteInIndex, it indicates if a symbol can be made
+/// Internal (only referenced from its defining object), Hidden (
+/// outside the DSO), or Exported (exposed as public API for the DSO).
+enum SummaryResolution { Internal, Hidden, Exported };
+
 /// Update the linkages in the given \p Index to mark exported values
 /// as external and non-exported values as internal. The ThinLTO backends
 /// must apply the changes to the Module via thinLTOInternalizeModule.
 void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported);
+    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported);
 
 namespace lto {
 

@@ -3056,7 +3056,7 @@ class CJInst_tstbit_R0<string px, bit np, string tnt>
   : InstHexagon<(outs), (ins IntRegs:$Rs, brtarget:$r9_2),
   ""#px#" = tstbit($Rs, #0); if ("
     #!if(np, "!","")#""#px#".new) jump:"#tnt#" $r9_2",
-  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>, OpcodeHexagon {
+  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCJ>, OpcodeHexagon {
   bits<4> Rs;
   bits<11> r9_2;
 
@@ -3102,7 +3102,7 @@ class CJInst_RR<string px, string op, bit np, string tnt>
   : InstHexagon<(outs), (ins IntRegs:$Rs, IntRegs:$Rt, brtarget:$r9_2),
   ""#px#" = cmp."#op#"($Rs, $Rt); if ("
    #!if(np, "!","")#""#px#".new) jump:"#tnt#" $r9_2",
-  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>, OpcodeHexagon {
+  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCJ>, OpcodeHexagon {
   bits<4> Rs;
   bits<4> Rt;
   bits<11> r9_2;
@@ -3156,7 +3156,7 @@ class CJInst_RU5<string px, string op, bit np, string tnt>
   : InstHexagon<(outs), (ins IntRegs:$Rs, u5_0Imm:$U5, brtarget:$r9_2),
   ""#px#" = cmp."#op#"($Rs, #$U5); if ("
     #!if(np, "!","")#""#px#".new) jump:"#tnt#" $r9_2",
-  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>, OpcodeHexagon {
+  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCJ>, OpcodeHexagon {
   bits<4> Rs;
   bits<5> U5;
   bits<11> r9_2;
@@ -3211,7 +3211,7 @@ class CJInst_Rn1<string px, string op, bit np, string tnt>
   : InstHexagon<(outs), (ins IntRegs:$Rs, n1Const:$n1, brtarget:$r9_2),
   ""#px#" = cmp."#op#"($Rs,#$n1); if ("
   #!if(np, "!","")#""#px#".new) jump:"#tnt#" $r9_2",
-  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>, OpcodeHexagon {
+  [], "", COMPOUND_CJ_ARCHDEPSLOT, TypeCJ>, OpcodeHexagon {
   bits<4> Rs;
   bits<11> r9_2;
 

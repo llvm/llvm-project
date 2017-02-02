@@ -438,7 +438,7 @@ bool HexagonMCInstrInfo::isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI) {
 
 bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  return (getType(MCII, MCI) == HexagonII::TypeCOMPOUND);
+  return getType(MCII, MCI) == HexagonII::TypeCJ;
 }
 
 bool HexagonMCInstrInfo::isDblRegForSubInst(unsigned Reg) {
@@ -470,7 +470,7 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
     return true;
   // Branch insns are handled as necessary by relaxation.
   if ((HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeJ) ||
-      (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCOMPOUND &&
+      (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCJ &&
        HexagonMCInstrInfo::getDesc(MCII, MCI).isBranch()) ||
       (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNV &&
        HexagonMCInstrInfo::getDesc(MCII, MCI).isBranch()))

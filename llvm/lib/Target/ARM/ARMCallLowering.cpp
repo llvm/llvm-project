@@ -19,6 +19,7 @@
 #include "ARMISelLowering.h"
 #include "ARMSubtarget.h"
 
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -33,7 +34,7 @@ ARMCallLowering::ARMCallLowering(const ARMTargetLowering &TLI)
 
 static bool isSupportedType(const DataLayout &DL, const ARMTargetLowering &TLI,
                             Type *T) {
-  EVT VT = TLI.getValueType(DL, T);
+  EVT VT = TLI.getValueType(DL, T, true);
   if (!VT.isSimple() || !VT.isInteger() || VT.isVector())
     return false;
 
@@ -74,6 +75,25 @@ struct FuncReturnHandler : public CallLowering::ValueHandler {
 };
 } // End anonymous namespace.
 
+void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
+                                        SmallVectorImpl<ArgInfo> &SplitArgs,
+                                        const DataLayout &DL,
+                                        MachineRegisterInfo &MRI) const {
+  const ARMTargetLowering &TLI = *getTLI<ARMTargetLowering>();
+  LLVMContext &Ctx = OrigArg.Ty->getContext();
+
+  SmallVector<EVT, 4> SplitVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
+
+  assert(SplitVTs.size() == 1 && "Unsupported type");
+
+  // Even if there is no splitting to do, we still want to replace the original
+  // type (e.g. pointer type -> integer).
+  SplitArgs.emplace_back(OrigArg.Reg, SplitVTs[0].getTypeForEVT(Ctx),
+                         OrigArg.Flags, OrigArg.IsFixed);
+}
+
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p MIRBuilder's insertion point is correct.
 bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
@@ -91,14 +111,16 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
 
+  SmallVector<ArgInfo, 4> SplitVTs;
+  ArgInfo RetInfo(VReg, Val->getType());
+  setArgFlags(RetInfo, AttributeSet::ReturnIndex, DL, F);
+  splitToValueTypes(RetInfo, SplitVTs, DL, MF.getRegInfo());
+
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForReturn(F.getCallingConv(), F.isVarArg());
 
-  ArgInfo RetInfo(VReg, Val->getType());
-  setArgFlags(RetInfo, AttributeSet::ReturnIndex, DL, F);
-
   FuncReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret, AssignFn);
-  return handleAssignments(MIRBuilder, RetInfo, RetHandler);
+  return handleAssignments(MIRBuilder, SplitVTs, RetHandler);
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -179,7 +201,8 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.isVarArg())
     return false;
 
-  auto DL = MIRBuilder.getMF().getDataLayout();
+  auto &MF = MIRBuilder.getMF();
+  auto DL = MF.getDataLayout();
   auto &TLI = *getTLI<ARMTargetLowering>();
 
   if (TLI.getSubtarget()->isThumb())
@@ -198,7 +221,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : Args) {
     ArgInfo AInfo(VRegs[Idx], Arg.getType());
     setArgFlags(AInfo, Idx + 1, DL, F);
-    ArgInfos.push_back(AInfo);
+    splitToValueTypes(AInfo, ArgInfos, DL, MF.getRegInfo());
     Idx++;
   }
 

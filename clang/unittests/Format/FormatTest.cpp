@@ -951,7 +951,46 @@ TEST_F(FormatTest, UnderstandsSingleLineComments) {
                    "  c\n"
                    "};",
                    getLLVMStyleWithColumns(20)));
-
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "  // line 2\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "  // line 2\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "     // line 2\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "   // line 2\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "  // line 2\n"
+            "  b\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "  // line 2\n"
+                   "  b\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "     // line 2\n"
+            "  b\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "   // line 2\n"
+                   "  b\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
       "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; // Trailing comment");
@@ -2329,6 +2368,22 @@ TEST_F(FormatTest, ReflowsComments) {
             "// XXX: long",
             format("// long long long long\n"
                    "// XXX: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow comment pragmas.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// IWYU pragma:",
+            format("// long long long long\n"
+                   "// IWYU pragma:",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("/* long long long\n"
+            " * long\n"
+            " * IWYU pragma:\n"
+            " */",
+            format("/* long long long long\n"
+                   " * IWYU pragma:\n"
+                   " */",
                    getLLVMStyleWithColumns(20)));
 
   // Reflow lines that have a non-punctuation character among their first 2

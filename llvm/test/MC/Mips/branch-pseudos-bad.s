@@ -20,6 +20,10 @@ local_label:
   bgtu $7, $8, local_label
 # CHECK: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
 
+  beql $7, 256, local_label
+# CHECK: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
+  bnel $7, 256, local_label
+# CHECK: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
   bltl $7, $8, local_label
 # CHECK: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
   bltul $7, $8, local_label

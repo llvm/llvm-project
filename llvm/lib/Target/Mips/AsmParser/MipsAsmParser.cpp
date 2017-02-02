@@ -2217,6 +2217,8 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandJalWithRegs(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::BneImm:
   case Mips::BeqImm:
+  case Mips::BEQLImmMacro:
+  case Mips::BNELImmMacro:
     return expandBranchImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::BLT:
   case Mips::BLE:
@@ -2855,6 +2857,8 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   assert((MemOffsetOp.isImm() || MemOffsetOp.isExpr()) &&
          "expected immediate or expression operand");
 
+  bool IsLikely = false;
+
   unsigned OpCode = 0;
   switch(Inst.getOpcode()) {
     case Mips::BneImm:
@@ -2863,16 +2867,29 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     case Mips::BeqImm:
       OpCode = Mips::BEQ;
       break;
+    case Mips::BEQLImmMacro:
+      OpCode = Mips::BEQL;
+      IsLikely = true;
+      break;
+    case Mips::BNELImmMacro:
+      OpCode = Mips::BNEL;
+      IsLikely = true;
+      break;
     default:
       llvm_unreachable("Unknown immediate branch pseudo-instruction.");
       break;
   }
 
   int64_t ImmValue = ImmOp.getImm();
-  if (ImmValue == 0)
-    TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::ZERO, MemOffsetOp, IDLoc,
-                 STI);
-  else {
+  if (ImmValue == 0) {
+    if (IsLikely) {
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::ZERO,
+                   MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
+      TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+    } else
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), Mips::ZERO, MemOffsetOp, IDLoc,
+              STI);
+  } else {
     warnIfNoMacro(IDLoc);
 
     unsigned ATReg = getATReg(IDLoc);
@@ -2883,7 +2900,12 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                       IDLoc, Out, STI))
       return true;
 
-    TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg, MemOffsetOp, IDLoc, STI);
+    if (IsLikely) {
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg,
+              MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
+      TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
+    } else
+      TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg, MemOffsetOp, IDLoc, STI);
   }
   return false;
 }

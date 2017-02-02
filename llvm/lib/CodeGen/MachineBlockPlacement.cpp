@@ -160,10 +160,8 @@ static cl::opt<unsigned> TailDupPlacementPenalty(
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 
-#ifndef NDEBUG
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 extern cl::opt<std::string> ViewBlockFreqFuncName;
-#endif
 
 namespace {
 class BlockChain;
@@ -2365,13 +2363,11 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
         MBI->setAlignment(AlignAllNonFallThruBlocks);
     }
   }
-#ifndef NDEBUG
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
     MBFI->view(false);
   }
-#endif
 
 
   // We always return true as we have no way to track whether the final order

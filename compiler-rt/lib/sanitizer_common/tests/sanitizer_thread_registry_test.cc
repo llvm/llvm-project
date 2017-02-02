@@ -67,7 +67,7 @@ static void MarkUidAsPresent(ThreadContextBase *tctx, void *arg) {
 static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   // Create and start a main thread.
   EXPECT_EQ(0U, registry->CreateThread(get_uid(0), true, -1, 0));
-  registry->StartThread(0, 0, 0);
+  registry->StartThread(0, 0, false, 0);
   // Create a bunch of threads.
   for (u32 i = 1; i <= 10; i++) {
     EXPECT_EQ(i, registry->CreateThread(get_uid(i), is_detached(i), 0, 0));
@@ -75,7 +75,7 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   CheckThreadQuantity(registry, 11, 1, 11);
   // Start some of them.
   for (u32 i = 1; i <= 5; i++) {
-    registry->StartThread(i, 0, 0);
+    registry->StartThread(i, 0, false, 0);
   }
   CheckThreadQuantity(registry, 11, 6, 11);
   // Finish, create and start more threads.
@@ -85,7 +85,7 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
       registry->JoinThread(i, 0);
   }
   for (u32 i = 6; i <= 10; i++) {
-    registry->StartThread(i, 0, 0);
+    registry->StartThread(i, 0, false, 0);
   }
   std::vector<u32> new_tids;
   for (u32 i = 11; i <= 15; i++) {
@@ -112,7 +112,7 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   }
   for (u32 i = 0; i < new_tids.size(); i++) {
     u32 tid = new_tids[i];
-    registry->StartThread(tid, 0, 0);
+    registry->StartThread(tid, 0, false, 0);
     registry->DetachThread(tid, 0);
     registry->FinishThread(tid);
   }
@@ -189,7 +189,7 @@ void *RunThread(void *arg) {
     tids.push_back(
         args->registry->CreateThread(0, false, 0, (void*)args->shard));
   for (int i = 0; i < kThreadsPerShard; i++)
-    args->registry->StartThread(tids[i], 0, (void*)args->shard);
+    args->registry->StartThread(tids[i], 0, false, (void*)args->shard);
   for (int i = 0; i < kThreadsPerShard; i++)
     args->registry->FinishThread(tids[i]);
   for (int i = 0; i < kThreadsPerShard; i++)
@@ -200,7 +200,7 @@ void *RunThread(void *arg) {
 static void ThreadedTestRegistry(ThreadRegistry *registry) {
   // Create and start a main thread.
   EXPECT_EQ(0U, registry->CreateThread(0, true, -1, 0));
-  registry->StartThread(0, 0, 0);
+  registry->StartThread(0, 0, false, 0);
   pthread_t threads[kNumShards];
   RunThreadArgs args[kNumShards];
   for (int i = 0; i < kNumShards; i++) {

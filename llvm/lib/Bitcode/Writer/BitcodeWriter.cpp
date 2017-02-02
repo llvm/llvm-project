@@ -971,13 +971,13 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
 static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   uint64_t RawFlags = 0;
 
-  RawFlags |= Flags.NotEligibleToImport; // bool
-  RawFlags |= (Flags.LiveRoot << 1);
   // Linkage don't need to be remapped at that time for the summary. Any future
   // change to the getEncodedLinkage() function will need to be taken into
   // account here as well.
-  RawFlags = (RawFlags << 4) | Flags.Linkage; // 4 bits
-
+  RawFlags |= Flags.Linkage;                    // 4 bits linkage
+  RawFlags |= (Flags.NotEligibleToImport << 4); // bool
+  RawFlags |= (Flags.LiveRoot << 5);            // bool
+  RawFlags |= (Flags.AutoHide << 6);            // bool
   return RawFlags;
 }
 

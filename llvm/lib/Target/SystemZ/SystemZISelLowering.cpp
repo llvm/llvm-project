@@ -194,6 +194,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UMUL_LOHI, VT, Custom);
 
       // Only z196 and above have native support for conversions to unsigned.
+      // On z10, promoting to i64 doesn't generate an inexact condition for
+      // values that are outside the i32 range but in the i64 range, so use
+      // the default expansion.
       if (!Subtarget.hasFPExtension())
         setOperationAction(ISD::FP_TO_UINT, VT, Expand);
     }

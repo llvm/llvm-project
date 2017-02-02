@@ -202,7 +202,8 @@ UnwrappedLineParser::UnwrappedLineParser(const FormatStyle &Style,
                                          ArrayRef<FormatToken *> Tokens,
                                          UnwrappedLineConsumer &Callback)
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
-      CurrentLines(&Lines), Style(Style), Keywords(Keywords), Tokens(nullptr),
+      CurrentLines(&Lines), Style(Style), Keywords(Keywords),
+      CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1) {}
 
 void UnwrappedLineParser::reset() {
@@ -2048,8 +2049,16 @@ static bool isLineComment(const FormatToken &FormatTok) {
 // Checks if \p FormatTok is a line comment that continues the line comment
 // section on \p Line.
 static bool continuesLineComment(const FormatToken &FormatTok,
-                                 const UnwrappedLine &Line) {
+                                 const UnwrappedLine &Line,
+                                 llvm::Regex &CommentPragmasRegex) {
   if (Line.Tokens.empty())
+    return false;
+
+  StringRef IndentContent = FormatTok.TokenText;
+  if (FormatTok.TokenText.startswith("//") ||
+      FormatTok.TokenText.startswith("/*"))
+    IndentContent = FormatTok.TokenText.substr(2);
+  if (CommentPragmasRegex.match(IndentContent))
     return false;
 
   // If Line starts with a line comment, then FormatTok continues the comment
@@ -2066,31 +2075,58 @@ static bool continuesLineComment(const FormatToken &FormatTok,
   // original start column of the min column token of the line.
   //
   // For example, the second line comment continues the first in these cases:
+  //
   // // first line
   // // second line
+  //
   // and:
+  //
   // // first line
   //  // second line
+  //
   // and:
+  //
   // int i; // first line
   //  // second line
+  //
   // and:
+  //
   // do { // first line
   //      // second line
   //   int i;
   // } while (true);
   //
+  // and:
+  //
+  // enum {
+  //   a, // first line
+  //    // second line
+  //   b
+  // };
+  //
   // The second line comment doesn't continue the first in these cases:
+  //
   //   // first line
   //  // second line
+  //
   // and:
+  //
   // int i; // first line
   // // second line
+  //
   // and:
+  //
   // do { // first line
   //   // second line
   //   int i;
   // } while (true);
+  //
+  // and:
+  //
+  // enum {
+  //   a, // first line
+  //   // second line
+  // };
   const FormatToken *MinColumnToken = Line.Tokens.front().Tok;
 
   // Scan for '{//'. If found, use the column of '{' as a min column for line
@@ -2103,6 +2139,11 @@ static bool continuesLineComment(const FormatToken &FormatTok,
       break;
     }
     PreviousToken = Node.Tok;
+
+    // Grab the last newline preceding a token in this unwrapped line.
+    if (Node.Tok->NewlinesBefore > 0) {
+      MinColumnToken = Node.Tok;
+    }
   }
   if (PreviousToken && PreviousToken->is(tok::l_brace)) {
     MinColumnToken = PreviousToken;
@@ -2130,7 +2171,9 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
     //
     // FIXME: Consider putting separate line comment sections as children to the
     // unwrapped line instead.
-    if (isOnNewLine(**I) && JustComments && !continuesLineComment(**I, *Line))
+    (*I)->ContinuesLineCommentSection =
+        continuesLineComment(**I, *Line, CommentPragmasRegex);
+    if (isOnNewLine(**I) && JustComments && !(*I)->ContinuesLineCommentSection)
       addUnwrappedLine();
     pushToken(*I);
   }
@@ -2196,7 +2239,9 @@ void UnwrappedLineParser::readToken() {
 
     if (!FormatTok->Tok.is(tok::comment))
       return;
-    if (!continuesLineComment(*FormatTok, *Line) &&
+    FormatTok->ContinuesLineCommentSection =
+        continuesLineComment(*FormatTok, *Line, CommentPragmasRegex);
+    if (!FormatTok->ContinuesLineCommentSection &&
         (isOnNewLine(*FormatTok) || FormatTok->IsFirst)) {
       CommentsInCurrentLine = false;
     }

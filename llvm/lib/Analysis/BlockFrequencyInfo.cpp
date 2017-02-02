@@ -26,7 +26,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "block-freq"
 
-#ifndef NDEBUG
 static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
     "view-block-freq-propagation-dags", cl::Hidden,
     cl::desc("Pop up a window to show a dag displaying how block "
@@ -116,7 +115,6 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
 };
 
 } // end namespace llvm
-#endif
 
 BlockFrequencyInfo::BlockFrequencyInfo() {}
 
@@ -156,13 +154,11 @@ void BlockFrequencyInfo::calculate(const Function &F,
   if (!BFI)
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, LI);
-#ifndef NDEBUG
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
-#endif
 }
 
 BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
@@ -214,13 +210,7 @@ void BlockFrequencyInfo::setBlockFreqAndScale(
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
 void BlockFrequencyInfo::view() const {
-// This code is only for debugging.
-#ifndef NDEBUG
   ViewGraph(const_cast<BlockFrequencyInfo *>(this), "BlockFrequencyDAGs");
-#else
-  errs() << "BlockFrequencyInfo::view is only available in debug builds on "
-            "systems with Graphviz or gv!\n";
-#endif // NDEBUG
 }
 
 const Function *BlockFrequencyInfo::getFunction() const {

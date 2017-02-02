@@ -44,7 +44,7 @@ namespace HexagonII {
     TypeV4LDST  = 9,
     TypeNV      = 10,
     TypeDUPLEX  = 11,
-    TypeCOMPOUND = 12,
+    TypeCJ      = 12,
     TypeCVI_FIRST     = 13,
     TypeCVI_VA        = TypeCVI_FIRST,
     TypeCVI_VA_DV     = 14,

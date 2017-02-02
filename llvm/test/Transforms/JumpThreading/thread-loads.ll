@@ -302,6 +302,85 @@ ret2:
   ret void
 }
 
+define i32 @fn_SinglePred(i1 %c2,i64* %P) {
+; CHECK-LABEL: @fn_SinglePred
+; CHECK-LABEL: entry:
+; CHECK: %[[L1:.*]] = load i64, i64* %P
+; CHECK: br i1 %c, label %cond3, label %cond1
+; CHECK-LABEL: cond2:
+; CHECK-NOT: load
+; CHECK: %[[PHI:.*]] = phi i64 [ %[[L1]], %cond1 ]
+; CHECK: call void @fn2(i64 %[[PHI]])
+; CHECK: br label %end
+; CHECK-LABEL: cond3:
+; CHECK: call void @fn2(i64 %l1)
+; CHECK: call void @fn3(i64 %l1)
+
+entry:
+  %l1 = load i64, i64* %P
+  %c = icmp eq i64 %l1, 0
+  br i1 %c, label %cond2, label %cond1
+
+cond1:
+  br i1 %c2, label %cond2, label %end
+
+cond2:
+  %l2 = load i64, i64* %P
+  call void @fn2(i64 %l2)
+  %c3 = icmp eq i64 %l2,  0
+  br i1 %c3, label %cond3, label %end
+
+cond3:
+  call void @fn3(i64 %l2)
+  br label %end
+
+end:
+  ret i32 0
+}
+
+define i32 @fn_SinglePredMultihop(i1 %c1, i1 %c2,i64* %P) {
+; CHECK-LABEL: @fn_SinglePredMultihop
+; CHECK-LABEL: entry:
+; CHECK: %[[L1:.*]] = load i64, i64* %P
+; CHECK: br i1 %c0, label %cond3, label %cond0
+; CHECK-LABEL: cond2:
+; CHECK-NOT: load
+; CHECK: %[[PHI:.*]] = phi i64 [ %[[L1]], %cond1 ]
+; CHECK: call void @fn2(i64 %[[PHI]])
+; CHECK: br label %end
+; CHECK-LABEL: cond3:
+; CHECK: call void @fn2(i64 %l1)
+; CHECK: call void @fn3(i64 %l1)
+
+entry:
+  %l1 = load i64, i64* %P
+  %c0 = icmp eq i64 %l1, 0
+  br i1 %c0, label %cond2, label %cond0
+
+cond0:
+  br i1 %c1, label %cond1, label %end
+
+cond1:
+  br i1 %c2, label %cond2, label %end
+
+cond2:
+  %l2 = load i64, i64* %P
+  call void @fn2(i64 %l2)
+  %c3 = icmp eq i64 %l2,  0
+  br i1 %c3, label %cond3, label %end
+
+cond3:
+  call void @fn3(i64 %l2)
+  br label %end
+
+end:
+  ret i32 0
+}
+
+declare void @fn2(i64)
+declare void @fn3(i64)
+
+
 !0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

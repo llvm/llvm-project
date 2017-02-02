@@ -1223,7 +1223,6 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-#ifndef NDEBUG
     if (PGOViewCounts &&
         (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
       LoopInfo LI{DominatorTree(F)};
@@ -1234,7 +1233,6 @@ static bool annotateAllFunctions(
 
       NewBFI->view();
     }
-#endif
     if (PGOViewRawCounts &&
         (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
       if (PGOViewFunction.empty())

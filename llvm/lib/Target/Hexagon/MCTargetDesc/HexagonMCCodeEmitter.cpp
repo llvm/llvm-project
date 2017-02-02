@@ -35,31 +35,32 @@ STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 HexagonMCCodeEmitter::HexagonMCCodeEmitter(MCInstrInfo const &aMII,
                                            MCContext &aMCT)
     : MCT(aMCT), MCII(aMII), Addend(new unsigned(0)),
-      Extended(new bool(false)), CurrentBundle(new MCInst const *) {}
+      Extended(new bool(false)), CurrentBundle(new MCInst const *),
+      CurrentIndex(new size_t(0)) {}
 
-uint32_t HexagonMCCodeEmitter::parseBits(size_t Instruction, size_t Last,
+uint32_t HexagonMCCodeEmitter::parseBits(size_t Last,
                                          MCInst const &MCB,
                                          MCInst const &MCI) const {
   bool Duplex = HexagonMCInstrInfo::isDuplex(MCII, MCI);
-  if (Instruction == 0) {
+  if (*CurrentIndex == 0) {
     if (HexagonMCInstrInfo::isInnerLoop(MCB)) {
       assert(!Duplex);
-      assert(Instruction != Last);
+      assert(*CurrentIndex != Last);
       return HexagonII::INST_PARSE_LOOP_END;
     }
   }
-  if (Instruction == 1) {
+  if (*CurrentIndex == 1) {
     if (HexagonMCInstrInfo::isOuterLoop(MCB)) {
       assert(!Duplex);
-      assert(Instruction != Last);
+      assert(*CurrentIndex != Last);
       return HexagonII::INST_PARSE_LOOP_END;
     }
   }
   if (Duplex) {
-    assert(Instruction == Last);
+    assert(*CurrentIndex == Last);
     return HexagonII::INST_PARSE_DUPLEX;
   }
-  if(Instruction == Last)
+  if(*CurrentIndex == Last)
     return HexagonII::INST_PARSE_PACKET_END;
   return HexagonII::INST_PARSE_NOT_END;
 }
@@ -74,7 +75,7 @@ void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
   *Addend = 0;
   *Extended = false;
   *CurrentBundle = &MI;
-  size_t Instruction = 0;
+  *CurrentIndex = 0;
   size_t Last = HexagonMCInstrInfo::bundleSize(HMB) - 1;
   for (auto &I : HexagonMCInstrInfo::bundleInstructions(HMB)) {
     MCInst &HMI = const_cast<MCInst &>(*I.getInst());
@@ -82,11 +83,10 @@ void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
                                 computeAvailableFeatures(STI.getFeatureBits()));
 
     EncodeSingleInstruction(HMI, OS, Fixups, STI,
-                            parseBits(Instruction, Last, HMB, HMI),
-                            Instruction);
+                            parseBits(Last, HMB, HMI));
     *Extended = HexagonMCInstrInfo::isImmext(HMI);
     *Addend += HEXAGON_INSTR_SIZE;
-    ++Instruction;
+    ++*CurrentIndex;
   }
   return;
 }
@@ -107,106 +107,39 @@ static bool RegisterMatches(unsigned Consumer, unsigned Producer,
 /// EncodeSingleInstruction - Emit a single
 void HexagonMCCodeEmitter::EncodeSingleInstruction(
     const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI, uint32_t Parse, size_t Index) const {
-  MCInst HMB = MI;
-  assert(!HexagonMCInstrInfo::isBundle(HMB));
+    const MCSubtargetInfo &STI, uint32_t Parse) const {
+  assert(!HexagonMCInstrInfo::isBundle(MI));
   uint64_t Binary;
-
-  // Compound instructions are limited to using registers 0-7 and 16-23
-  // and here we make a map 16-23 to 8-15 so they can be correctly encoded.
-  static unsigned RegMap[8] = {Hexagon::R8,  Hexagon::R9,  Hexagon::R10,
-                               Hexagon::R11, Hexagon::R12, Hexagon::R13,
-                               Hexagon::R14, Hexagon::R15};
 
   // Pseudo instructions don't get encoded and shouldn't be here
   // in the first place!
-  assert(!HexagonMCInstrInfo::getDesc(MCII, HMB).isPseudo() &&
+  assert(!HexagonMCInstrInfo::getDesc(MCII, MI).isPseudo() &&
          "pseudo-instruction found");
   DEBUG(dbgs() << "Encoding insn"
-                  " `" << HexagonMCInstrInfo::getName(MCII, HMB) << "'"
+                  " `" << HexagonMCInstrInfo::getName(MCII, MI) << "'"
                                                                     "\n");
 
-  if (llvm::HexagonMCInstrInfo::getType(MCII, HMB) == HexagonII::TypeCOMPOUND) {
-    for (unsigned i = 0; i < HMB.getNumOperands(); ++i)
-      if (HMB.getOperand(i).isReg()) {
-        unsigned Reg =
-            MCT.getRegisterInfo()->getEncodingValue(HMB.getOperand(i).getReg());
-        if ((Reg <= 23) && (Reg >= 16))
-          HMB.getOperand(i).setReg(RegMap[Reg - 16]);
-      }
-  }
-
-  if (HexagonMCInstrInfo::isNewValue(MCII, HMB)) {
-    // Calculate the new value distance to the associated producer
-    MCOperand &MCO =
-        HMB.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, HMB));
-    unsigned SOffset = 0;
-    unsigned VOffset = 0;
-    unsigned Register = MCO.getReg();
-    unsigned Register1;
-    unsigned Register2;
-    auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
-    auto i = Instructions.begin() + Index - 1;
-    for (;; --i) {
-      assert(i != Instructions.begin() - 1 && "Couldn't find producer");
-      MCInst const &Inst = *i->getInst();
-      if (HexagonMCInstrInfo::isImmext(Inst))
-        continue;
-      ++SOffset;
-      if (HexagonMCInstrInfo::isVector(MCII, Inst))
-        // Vector instructions don't count scalars
-        ++VOffset;
-      Register1 =
-          HexagonMCInstrInfo::hasNewValue(MCII, Inst)
-              ? HexagonMCInstrInfo::getNewValueOperand(MCII, Inst).getReg()
-              : static_cast<unsigned>(Hexagon::NoRegister);
-      Register2 =
-          HexagonMCInstrInfo::hasNewValue2(MCII, Inst)
-              ? HexagonMCInstrInfo::getNewValueOperand2(MCII, Inst).getReg()
-              : static_cast<unsigned>(Hexagon::NoRegister);
-      if (!RegisterMatches(Register, Register1, Register2))
-        // This isn't the register we're looking for
-        continue;
-      if (!HexagonMCInstrInfo::isPredicated(MCII, Inst))
-        // Producer is unpredicated
-        break;
-      assert(HexagonMCInstrInfo::isPredicated(MCII, HMB) &&
-             "Unpredicated consumer depending on predicated producer");
-      if (HexagonMCInstrInfo::isPredicatedTrue(MCII, Inst) ==
-          HexagonMCInstrInfo::isPredicatedTrue(MCII, HMB))
-        // Producer predicate sense matched ours
-        break;
-    }
-    // Hexagon PRM 10.11 Construct Nt from distance
-    unsigned Offset =
-        HexagonMCInstrInfo::isVector(MCII, HMB) ? VOffset : SOffset;
-    Offset <<= 1;
-    Offset |=
-        HexagonMCInstrInfo::SubregisterBit(Register, Register1, Register2);
-    MCO.setReg(Offset + Hexagon::R0);
-  }
-
-  Binary = getBinaryCodeForInstr(HMB, Fixups, STI);
+  Binary = getBinaryCodeForInstr(MI, Fixups, STI);
   // Check for unimplemented instructions. Immediate extenders
   // are encoded as zero, so they need to be accounted for.
   if ((!Binary) &&
-      ((HMB.getOpcode() != DuplexIClass0) && (HMB.getOpcode() != A4_ext) &&
-       (HMB.getOpcode() != A4_ext_b) && (HMB.getOpcode() != A4_ext_c) &&
-       (HMB.getOpcode() != A4_ext_g))) {
+      ((MI.getOpcode() != DuplexIClass0) && (MI.getOpcode() != A4_ext) &&
+       (MI.getOpcode() != A4_ext_b) && (MI.getOpcode() != A4_ext_c) &&
+       (MI.getOpcode() != A4_ext_g))) {
     DEBUG(dbgs() << "Unimplemented inst: "
-                    " `" << HexagonMCInstrInfo::getName(MCII, HMB) << "'"
+                    " `" << HexagonMCInstrInfo::getName(MCII, MI) << "'"
                                                                       "\n");
     llvm_unreachable("Unimplemented Instruction");
   }
   Binary |= Parse;
 
   // if we need to emit a duplexed instruction
-  if (HMB.getOpcode() >= Hexagon::DuplexIClass0 &&
-      HMB.getOpcode() <= Hexagon::DuplexIClassF) {
+  if (MI.getOpcode() >= Hexagon::DuplexIClass0 &&
+      MI.getOpcode() <= Hexagon::DuplexIClassF) {
     assert(Parse == HexagonII::INST_PARSE_DUPLEX &&
            "Emitting duplex without duplex parse bits");
     unsigned dupIClass;
-    switch (HMB.getOpcode()) {
+    switch (MI.getOpcode()) {
     case Hexagon::DuplexIClass0:
       dupIClass = 0;
       break;
@@ -264,8 +197,8 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
     // Last bit is moved to bit position 13
     Binary = ((dupIClass & 0xE) << (29 - 1)) | ((dupIClass & 0x1) << 13);
 
-    const MCInst *subInst0 = HMB.getOperand(0).getInst();
-    const MCInst *subInst1 = HMB.getOperand(1).getInst();
+    const MCInst *subInst0 = MI.getOperand(0).getInst();
+    const MCInst *subInst1 = MI.getOperand(1).getInst();
 
     // get subinstruction slot 0
     unsigned subInstSlot0Bits = getBinaryCodeForInstr(*subInst0, Fixups, STI);
@@ -795,10 +728,62 @@ unsigned
 HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         MCSubtargetInfo const &STI) const {
+
+  if (HexagonMCInstrInfo::isNewValue(MCII, MI) &&
+      &MO == &MI.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, MI))) {
+    // Calculate the new value distance to the associated producer
+    MCOperand const &MCO =
+      MI.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, MI));
+    unsigned SOffset = 0;
+    unsigned VOffset = 0;
+    unsigned Register = MCO.getReg();
+    unsigned Register1;
+    unsigned Register2;
+    auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
+    auto i = Instructions.begin() + *CurrentIndex - 1;
+    for (;; --i) {
+      assert(i != Instructions.begin() - 1 && "Couldn't find producer");
+      MCInst const &Inst = *i->getInst();
+      if (HexagonMCInstrInfo::isImmext(Inst))
+        continue;
+      ++SOffset;
+      if (HexagonMCInstrInfo::isVector(MCII, Inst))
+        // Vector instructions don't count scalars
+        ++VOffset;
+      Register1 =
+        HexagonMCInstrInfo::hasNewValue(MCII, Inst)
+        ? HexagonMCInstrInfo::getNewValueOperand(MCII, Inst).getReg()
+        : static_cast<unsigned>(Hexagon::NoRegister);
+      Register2 =
+        HexagonMCInstrInfo::hasNewValue2(MCII, Inst)
+        ? HexagonMCInstrInfo::getNewValueOperand2(MCII, Inst).getReg()
+        : static_cast<unsigned>(Hexagon::NoRegister);
+      if (!RegisterMatches(Register, Register1, Register2))
+        // This isn't the register we're looking for
+        continue;
+      if (!HexagonMCInstrInfo::isPredicated(MCII, Inst))
+        // Producer is unpredicated
+        break;
+      assert(HexagonMCInstrInfo::isPredicated(MCII, MI) &&
+        "Unpredicated consumer depending on predicated producer");
+      if (HexagonMCInstrInfo::isPredicatedTrue(MCII, Inst) ==
+        HexagonMCInstrInfo::isPredicatedTrue(MCII, MI))
+        // Producer predicate sense matched ours
+        break;
+    }
+    // Hexagon PRM 10.11 Construct Nt from distance
+    unsigned Offset =
+      HexagonMCInstrInfo::isVector(MCII, MI) ? VOffset : SOffset;
+    Offset <<= 1;
+    Offset |=
+      HexagonMCInstrInfo::SubregisterBit(Register, Register1, Register2);
+    return Offset;
+  }
   assert(!MO.isImm());
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
-    if (HexagonMCInstrInfo::isSubInstruction(MI))
+    if (HexagonMCInstrInfo::isSubInstruction(MI) ||
+        llvm::HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCJ)
       return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);
     switch(MI.getOpcode()){
     case Hexagon::A2_tfrrcr:

@@ -19,6 +19,7 @@
 #include "FormatToken.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Format/Format.h"
+#include "llvm/Support/Regex.h"
 #include <list>
 #include <stack>
 
@@ -161,6 +162,8 @@ private:
 
   const FormatStyle &Style;
   const AdditionalKeywords &Keywords;
+  
+  llvm::Regex CommentPragmasRegex;
 
   FormatTokenSource *Tokens;
   UnwrappedLineConsumer &Callback;
