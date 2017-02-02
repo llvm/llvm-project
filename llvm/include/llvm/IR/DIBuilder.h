@@ -105,13 +105,17 @@ namespace llvm {
     ///                      out into.
     /// \param Kind          The kind of debug information to generate.
     /// \param DWOId         The DWOId if this is a split skeleton compile unit.
+    /// \param SplitDebugInlining    Whether to emit inline debug info.
+    /// \param DebugInfoFOrProfiling Whether to emit extra debug info for
+    ///                              profile collection.
     DICompileUnit *
     createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
                       bool isOptimized, StringRef Flags, unsigned RV,
                       StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
-                      uint64_t DWOId = 0, bool SplitDebugInlining = true);
+                      uint64_t DWOId = 0, bool SplitDebugInlining = true,
+                      bool DebugInfoForProfiling = false);
 
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.

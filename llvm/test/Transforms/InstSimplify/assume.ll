@@ -28,8 +28,7 @@ define i64 @PR31809() {
 
 ; Similar to above: there's no way to know which assumption is truthful,
 ; so just don't crash. The second icmp+assume gets processed later, so that
-; determines the return value. This can be improved by permanently invalidating
-; the cached assumptions for this function. 
+; determines the return value.
 
 define i8 @conflicting_assumptions(i8 %x) {
 ; CHECK-LABEL: @conflicting_assumptions(

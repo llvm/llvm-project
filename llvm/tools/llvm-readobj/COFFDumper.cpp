@@ -1086,8 +1086,10 @@ void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVTypes) {
         error(object_error::parse_failed);
       }
 
-      if (!mergeTypeStreams(CVTypes, Types))
+      if (auto EC = mergeTypeStreams(CVTypes, Types)) {
+        consumeError(std::move(EC));
         return error(object_error::parse_failed);
+      }
     }
   }
 }

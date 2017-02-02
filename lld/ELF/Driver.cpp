@@ -575,7 +575,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
-  Config->ZStackSize = getZOptionValue(Args, "stack-size", -1);
+  Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   Config->OFormatBinary = isOutputFormatBinary(Args);

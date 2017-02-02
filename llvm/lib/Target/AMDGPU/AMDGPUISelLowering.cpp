@@ -479,6 +479,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FNEG);
+  setTargetDAGCombine(ISD::FABS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2968,6 +2969,45 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue Neg = DAG.getNode(ISD::FNEG, SL, CvtSrc.getValueType(), CvtSrc);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Neg, N0.getOperand(1));
   }
+  case ISD::FP16_TO_FP: {
+    // v_cvt_f32_f16 supports source modifiers on pre-VI targets without legal
+    // f16, but legalization of f16 fneg ends up pulling it out of the source.
+    // Put the fneg back as a legal source operation that can be matched later.
+    SDLoc SL(N);
+
+    SDValue Src = N0.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+
+    // fneg (fp16_to_fp x) -> fp16_to_fp (xor x, 0x8000)
+    SDValue IntFNeg = DAG.getNode(ISD::XOR, SL, SrcVT, Src,
+                                  DAG.getConstant(0x8000, SL, SrcVT));
+    return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFNeg);
+  }
+  default:
+    return SDValue();
+  }
+}
+
+SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+
+  if (!N0.hasOneUse())
+    return SDValue();
+
+  switch (N0.getOpcode()) {
+  case ISD::FP16_TO_FP: {
+    assert(!Subtarget->has16BitInsts() && "should only see if f16 is illegal");
+    SDLoc SL(N);
+    SDValue Src = N0.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+
+    // fabs (fp16_to_fp x) -> fp16_to_fp (and x, 0x7fff)
+    SDValue IntFAbs = DAG.getNode(ISD::AND, SL, SrcVT, Src,
+                                  DAG.getConstant(0x7fff, SL, SrcVT));
+    return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFAbs);
+  }
   default:
     return SDValue();
   }
@@ -3080,6 +3120,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performSelectCombine(N, DCI);
   case ISD::FNEG:
     return performFNegCombine(N, DCI);
+  case ISD::FABS:
+    return performFAbsCombine(N, DCI);
   case AMDGPUISD::BFE_I32:
   case AMDGPUISD::BFE_U32: {
     assert(!N->getValueType(0).isVector() &&

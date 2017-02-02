@@ -797,10 +797,6 @@ static void computeKnownBitsFromAssume(const Value *V, APInt &KnownZero,
   // FIXME: Publish a warning/remark that we have encountered UB or the compiler
   // is broken.
 
-  // FIXME: Implement a stronger version of "I give up" by invalidating/clearing
-  // the assumption cache. This should indicate that the cache is corrupted so
-  // future callers will not waste time repopulating it with faulty assumptions.
-
   if ((KnownZero & KnownOne) != 0) {
     KnownZero.clearAllBits();
     KnownOne.clearAllBits();

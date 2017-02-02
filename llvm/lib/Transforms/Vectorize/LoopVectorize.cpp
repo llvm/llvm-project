@@ -1513,13 +1513,17 @@ static void emitMissedWarning(Function *F, Loop *L,
 
   if (LH.getForce() == LoopVectorizeHints::FK_Enabled) {
     if (LH.getWidth() != 1)
-      emitLoopVectorizeWarning(
-          F->getContext(), *F, L->getStartLoc(),
-          "failed explicitly specified loop vectorization");
+      ORE->emit(DiagnosticInfoOptimizationFailure(
+                    DEBUG_TYPE, "FailedRequestedVectorization",
+                    L->getStartLoc(), L->getHeader())
+                << "loop not vectorized: "
+                << "failed explicitly specified loop vectorization");
     else if (LH.getInterleave() != 1)
-      emitLoopInterleaveWarning(
-          F->getContext(), *F, L->getStartLoc(),
-          "failed explicitly specified loop interleaving");
+      ORE->emit(DiagnosticInfoOptimizationFailure(
+                    DEBUG_TYPE, "FailedRequestedInterleaving", L->getStartLoc(),
+                    L->getHeader())
+                << "loop not interleaved: "
+                << "failed explicitly specified loop interleaving");
   }
 }
 

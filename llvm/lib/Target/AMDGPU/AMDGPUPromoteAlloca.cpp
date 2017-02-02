@@ -204,7 +204,8 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
     }
   }
 
-  unsigned MaxOccupancy = ST.getOccupancyWithLocalMemSize(CurrentLocalMemUsage);
+  unsigned MaxOccupancy = ST.getOccupancyWithLocalMemSize(CurrentLocalMemUsage,
+                                                          F);
 
   // Restrict local memory usage so that we don't drastically reduce occupancy,
   // unless it is already significantly reduced.
@@ -225,7 +226,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
 
   // Round up to the next tier of usage.
   unsigned MaxSizeWithWaveCount
-    = ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy);
+    = ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy, F);
 
   // Program is possibly broken by using more local mem than available.
   if (CurrentLocalMemUsage > MaxSizeWithWaveCount)

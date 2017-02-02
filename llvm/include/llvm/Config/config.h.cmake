@@ -51,6 +51,9 @@
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
 
+/* Define if dladdr() is available on this platform. */
+#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
+
 /* Define to 1 if you have the <errno.h> header file. */
 #cmakedefine HAVE_ERRNO_H ${HAVE_ERRNO_H}
 

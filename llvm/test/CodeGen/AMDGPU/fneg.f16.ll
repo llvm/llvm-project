@@ -15,13 +15,9 @@ define void @s_fneg_f16(half addrspace(1)* %out, half %in) {
 
 ; FUNC-LABEL: {{^}}v_fneg_f16:
 ; GCN: flat_load_ushort [[VAL:v[0-9]+]],
-
-; CI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[VAL]]
-; CI: v_cvt_f16_f32_e64 [[CVT1:v[0-9]+]], -[[CVT0]]
-; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[CVT1]]
-
-; VI: v_xor_b32_e32 [[XOR:v[0-9]+]], 0x8000, [[VAL]]
+; GCN: v_xor_b32_e32 [[XOR:v[0-9]+]], 0x8000, [[VAL]]
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[XOR]]
+; SI: buffer_store_short [[XOR]]
 define void @v_fneg_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
   %val = load half, half addrspace(1)* %in, align 2
   %fneg = fsub half -0.000000e+00, %val
@@ -45,8 +41,9 @@ define void @fneg_free_f16(half addrspace(1)* %out, i16 %in) {
 ; FUNC-LABEL: {{^}}v_fneg_fold_f16:
 ; GCN: flat_load_ushort [[NEG_VALUE:v[0-9]+]]
 
-; CI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[CVT0]]
-; CI: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[CVT0]], [[CVT0]]
+; CI-DAG: v_cvt_f32_f16_e32 [[CVT_VAL:v[0-9]+]], [[NEG_VALUE]]
+; CI-DAG: v_cvt_f32_f16_e64 [[NEG_CVT0:v[0-9]+]], -[[NEG_VALUE]]
+; CI: v_mul_f32_e32 [[MUL:v[0-9]+]], [[CVT_VAL]], [[NEG_CVT0]]
 ; CI: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], [[MUL]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[CVT1]]
 

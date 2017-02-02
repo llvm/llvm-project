@@ -274,11 +274,12 @@ public:
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount) const;
+  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
+                                           const Function &) const;
 
   /// Inverse of getMaxLocalMemWithWaveCount. Return the maximum wavecount if
   /// the given LDS memory size is the only constraint.
-  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes) const;
+  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
 
   bool hasFP16Denormals() const {
     return FP64FP16Denormals;

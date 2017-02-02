@@ -215,6 +215,7 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_GOT:       RefKind = MCSymbolRefExpr::VK_GOT; break;
   case X86II::MO_GOTOFF:    RefKind = MCSymbolRefExpr::VK_GOTOFF; break;
   case X86II::MO_PLT:       RefKind = MCSymbolRefExpr::VK_PLT; break;
+  case X86II::MO_ABS8:      RefKind = MCSymbolRefExpr::VK_X86_ABS8; break;
   case X86II::MO_PIC_BASE_OFFSET:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
     Expr = MCSymbolRefExpr::create(Sym, Ctx);

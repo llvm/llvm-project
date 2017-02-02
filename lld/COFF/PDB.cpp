@@ -96,8 +96,8 @@ static std::vector<uint8_t> mergeDebugT(SymbolTable *Symtab) {
     msf::StreamReader Reader(Stream);
     if (auto EC = Reader.readArray(Types, Reader.getLength()))
       fatal(EC, "Reader::readArray failed");
-    if (!codeview::mergeTypeStreams(Builder, Types))
-      fatal("codeview::mergeTypeStreams failed");
+    if (auto Err = codeview::mergeTypeStreams(Builder, Types))
+      fatal(Err, "codeview::mergeTypeStreams failed");
   }
 
   // Construct section contents.

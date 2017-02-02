@@ -53,3 +53,59 @@ void f(bool _with_underscores_);
 void ignores_underscores() {
   f(/*With_Underscores=*/false);
 }
+
+// gmock
+namespace testing {
+namespace internal {
+
+template <typename F>
+struct Function;
+
+template <typename R>
+struct Function<R()> {
+  typedef R Result;
+};
+
+template <typename R, typename A1>
+struct Function<R(A1)>
+    : Function<R()> {
+  typedef A1 Argument1;
+};
+
+template <typename R, typename A1, typename A2>
+struct Function<R(A1, A2)>
+    : Function<R(A1)> {
+  typedef A2 Argument2;
+};
+} // namespace internal
+} // namespace testing
+
+#define GMOCK_RESULT_(tn, ...) \
+    tn ::testing::internal::Function<__VA_ARGS__>::Result
+#define GMOCK_ARG_(tn, N, ...) \
+    tn ::testing::internal::Function<__VA_ARGS__>::Argument##N
+#define GMOCK_METHOD2_(tn, constness, ct, Method, ...) \
+  GMOCK_RESULT_(tn, __VA_ARGS__) ct Method( \
+      GMOCK_ARG_(tn, 1, __VA_ARGS__) gmock_a1, \
+      GMOCK_ARG_(tn, 2, __VA_ARGS__) gmock_a2) constness
+#define MOCK_METHOD2(m, ...) GMOCK_METHOD2_(, , , m, __VA_ARGS__)
+
+class Base {
+ public:
+  virtual void Method(int param_one_base, int param_two_base);
+};
+class Derived : public Base {
+ public:
+  virtual void Method(int param_one, int param_two);
+};
+class MockDerived : public Derived {
+ public:
+  MOCK_METHOD2(Method, void(int, int));
+};
+
+void test_gmock() {
+  MockDerived m;
+  m.Method(/*param_one=*/1, /*param_tw=*/2);
+// CHECK-MESSAGES: [[@LINE-1]]:29: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-FIXES:   m.Method(/*param_one=*/1, /*param_two=*/2);
+}
