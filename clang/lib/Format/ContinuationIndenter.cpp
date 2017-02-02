@@ -429,7 +429,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // does not help.
     bool HasTwoOperands =
         P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
-    if ((!BreakBeforeOperator && !HasTwoOperands) ||
+    if ((!BreakBeforeOperator && !(HasTwoOperands && Style.AlignOperands)) ||
         (!State.Stack.back().LastOperatorWrapped && BreakBeforeOperator))
       State.Stack.back().NoLineBreakInOperand = true;
   }

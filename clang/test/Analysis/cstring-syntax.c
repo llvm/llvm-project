@@ -10,4 +10,6 @@ void testStrncat(const char *src) {
   strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(dest)); // expected-warning {{Potential buffer overflow. Replace with}}
   strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(dest) - strlen(dest)); // expected-warning {{Potential buffer overflow. Replace with}}
   strncat(dest, src, sizeof(src)); // expected-warning {{Potential buffer overflow. Replace with}}
+  // Should not crash when sizeof has a type argument.
+  strncat(dest, "AAAAAAAAAAAAAAAAAAAAAAAAAAA", sizeof(char));
 }

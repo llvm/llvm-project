@@ -24,6 +24,7 @@ static const char *ReportTypeDescription(ReportType typ) {
   if (typ == ReportTypeVptrRace) return "data-race-vptr";
   if (typ == ReportTypeUseAfterFree) return "heap-use-after-free";
   if (typ == ReportTypeVptrUseAfterFree) return "heap-use-after-free-vptr";
+  if (typ == ReportTypeExternalRace) return "external-race";
   if (typ == ReportTypeThreadLeak) return "thread-leak";
   if (typ == ReportTypeMutexDestroyLocked) return "locked-mutex-destroy";
   if (typ == ReportTypeMutexDoubleLock) return "mutex-double-lock";

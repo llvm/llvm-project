@@ -35,7 +35,7 @@ ARMLegalizerInfo::ARMLegalizerInfo() {
 
   setAction({G_FRAME_INDEX, p0}, Legal);
 
-  for (auto Ty : {s1, s8, s16, s32})
+  for (auto Ty : {s1, s8, s16, s32, p0})
     setAction({G_LOAD, Ty}, Legal);
   setAction({G_LOAD, 1, p0}, Legal);
 

@@ -97,7 +97,7 @@ void ThreadStart(u32 tid, uptr os_id) {
   args.tls_end = args.tls_begin + tls_size;
   GetAllocatorCacheRange(&args.cache_begin, &args.cache_end);
   args.dtls = DTLS_Get();
-  thread_registry->StartThread(tid, os_id, &args);
+  thread_registry->StartThread(tid, os_id, /*workerthread*/ false, &args);
 }
 
 void ThreadFinish() {
