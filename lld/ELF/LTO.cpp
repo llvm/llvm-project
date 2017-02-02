@@ -96,12 +96,12 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-template <class ELFT> static void undefine(Symbol *S) {
-  replaceBody<Undefined<ELFT>>(S, S->body()->getName(), /*IsLocal=*/false,
-                               STV_DEFAULT, S->body()->Type, nullptr);
+static void undefine(Symbol *S) {
+  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->body()->Type, nullptr);
 }
 
-template <class ELFT> void BitcodeCompiler::add(BitcodeFile &F) {
+void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
   std::vector<Symbol *> Syms = F.getSymbols();
@@ -126,7 +126,7 @@ template <class ELFT> void BitcodeCompiler::add(BitcodeFile &F) {
     R.VisibleToRegularObj =
         Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
     if (R.Prevailing)
-      undefine<ELFT>(Sym);
+      undefine(Sym);
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }
@@ -157,8 +157,3 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
   return Ret;
 }
-
-template void BitcodeCompiler::template add<ELF32LE>(BitcodeFile &);
-template void BitcodeCompiler::template add<ELF32BE>(BitcodeFile &);
-template void BitcodeCompiler::template add<ELF64LE>(BitcodeFile &);
-template void BitcodeCompiler::template add<ELF64BE>(BitcodeFile &);

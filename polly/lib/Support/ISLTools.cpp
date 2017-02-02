@@ -142,10 +142,9 @@ IslPtr<isl_map> polly::singleton(IslPtr<isl_union_map> UMap,
     return give(isl_map_empty(ExpectedSpace.take()));
 
   auto Result = give(isl_map_from_union_map(UMap.take()));
-  assert(
-      !Result ||
-      isl_space_has_equal_tuples(give(isl_map_get_space(Result.keep())).keep(),
-                                 ExpectedSpace.keep()) == isl_bool_true);
+  assert(!Result || isl_space_has_equal_tuples(
+                        give(isl_map_get_space(Result.keep())).keep(),
+                        ExpectedSpace.keep()) == isl_bool_true);
   return Result;
 }
 
@@ -158,10 +157,9 @@ IslPtr<isl_set> polly::singleton(IslPtr<isl_union_set> USet,
     return give(isl_set_empty(ExpectedSpace.copy()));
 
   auto Result = give(isl_set_from_union_set(USet.take()));
-  assert(
-      !Result ||
-      isl_space_has_equal_tuples(give(isl_set_get_space(Result.keep())).keep(),
-                                 ExpectedSpace.keep()) == isl_bool_true);
+  assert(!Result || isl_space_has_equal_tuples(
+                        give(isl_set_get_space(Result.keep())).keep(),
+                        ExpectedSpace.keep()) == isl_bool_true);
   return Result;
 }
 

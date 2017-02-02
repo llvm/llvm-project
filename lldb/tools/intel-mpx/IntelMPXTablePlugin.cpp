@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // C++ includes
+#include <cerrno>
 #include <string>
 
 // Project includes

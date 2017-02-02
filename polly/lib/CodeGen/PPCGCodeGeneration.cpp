@@ -603,9 +603,8 @@ void GPUNodeBuilder::createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  Builder.CreateCall(F,
-                     {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
-                      BlockDimZ, Parameters});
+  Builder.CreateCall(F, {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                         BlockDimZ, Parameters});
 }
 
 void GPUNodeBuilder::createCallFreeKernel(Value *GPUKernel) {
@@ -836,9 +835,8 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
 
   if (Offset) {
     Size = Builder.CreateSub(
-        Size,
-        Builder.CreateMul(Offset,
-                          Builder.getInt64(ScopArray->getElemSizeInBytes())));
+        Size, Builder.CreateMul(
+                  Offset, Builder.getInt64(ScopArray->getElemSizeInBytes())));
   }
 
   if (Direction == HOST_TO_DEVICE)

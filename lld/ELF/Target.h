@@ -41,8 +41,8 @@ public:
   virtual void writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
                         uint64_t PltEntryAddr, int32_t Index,
                         unsigned RelOff) const {}
-  virtual void addPltHeaderSymbols(InputSectionData* IS) const {}
-  virtual void addPltSymbols(InputSectionData* IS, uint64_t Off) const {}
+  virtual void addPltHeaderSymbols(InputSectionData *IS) const {}
+  virtual void addPltSymbols(InputSectionData *IS, uint64_t Off) const {}
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the
@@ -51,14 +51,9 @@ public:
   virtual bool usesOnlyLowPageBits(uint32_t Type) const;
 
   // Decide whether a Thunk is needed for the relocation from File
-  // targeting S. Returns one of:
-  // Expr if there is no Thunk required
-  // R_THUNK_ABS if thunk is required and expression is absolute
-  // R_THUNK_PC if thunk is required and expression is pc rel
-  // R_THUNK_PLT_PC if thunk is required to PLT entry and expression is pc rel
-  virtual RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
-                               const InputFile *File,
-                               const SymbolBody &S) const;
+  // targeting S.
+  virtual bool needsThunk(RelExpr Expr, uint32_t RelocType,
+                          const InputFile *File, const SymbolBody &S) const;
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
   virtual ~TargetInfo();

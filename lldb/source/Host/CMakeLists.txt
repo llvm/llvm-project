@@ -90,6 +90,7 @@ else()
     posix/LockFilePosix.cpp
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
+    posix/ProcessLauncherPosixFork.cpp
     )
 
   if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
@@ -122,7 +123,6 @@ else()
       linux/HostInfoLinux.cpp
       linux/HostThreadLinux.cpp
       linux/LibcGlue.cpp
-      linux/ProcessLauncherLinux.cpp
       linux/ThisThread.cpp
       )
     list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)

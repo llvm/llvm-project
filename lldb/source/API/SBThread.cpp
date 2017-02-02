@@ -595,8 +595,8 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   }
 
   if (log)
-    log->Printf("SBThread(%p)::GetInfoItemByPathAsString () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), strm.GetData());
+    log->Printf("SBThread(%p)::GetInfoItemByPathAsString (\"%s\") => \"%s\"",
+                static_cast<void *>(exe_ctx.GetThreadPtr()), path, strm.GetData());
 
   return success;
 }

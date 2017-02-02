@@ -41,7 +41,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/Utils.h"
 
 // Define these constants from POSIX mman.h rather than include the file
 // so that they will be correct even when compiled on Linux.

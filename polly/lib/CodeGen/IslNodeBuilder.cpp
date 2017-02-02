@@ -458,9 +458,8 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
   CmpInst::Predicate Predicate;
   bool Parallel;
 
-  Parallel =
-      KnownParallel ||
-      (IslAstInfo::isParallel(For) && !IslAstInfo::isReductionParallel(For));
+  Parallel = KnownParallel || (IslAstInfo::isParallel(For) &&
+                               !IslAstInfo::isReductionParallel(For));
 
   Body = isl_ast_node_for_get_body(For);
 
@@ -933,9 +932,8 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           // there is a statement or the domain is not empty Inst is not dead.
           auto MemInst = MemAccInst::dyn_cast(Inst);
           auto Address = MemInst ? MemInst.getPointerOperand() : nullptr;
-          if (Address &&
-              SE.getUnknown(UndefValue::get(Address->getType())) ==
-                  SE.getPointerBase(SE.getSCEV(Address))) {
+          if (Address && SE.getUnknown(UndefValue::get(Address->getType())) ==
+                             SE.getPointerBase(SE.getSCEV(Address))) {
           } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
