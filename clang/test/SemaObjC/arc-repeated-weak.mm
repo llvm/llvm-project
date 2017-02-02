@@ -462,3 +462,16 @@ void foo() {
   use(NSBundle.foo2.weakProp); // expected-warning{{weak property 'weakProp' may be accessed multiple times}}
   use(NSBundle2.foo2.weakProp); // expected-note{{also accessed here}}
 }
+
+// This used to crash in the constructor of WeakObjectProfileTy when a
+// DeclRefExpr was passed that didn't reference a VarDecl.
+
+typedef INTF * INTFPtrTy;
+
+enum E {
+  e1
+};
+
+void foo1() {
+  INTFPtrTy tmp = (INTFPtrTy)e1; // expected-error{{cast of 'E' to 'INTFPtrTy' (aka 'INTF *') is disallowed with ARC}}
+}

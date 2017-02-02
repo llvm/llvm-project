@@ -61,7 +61,7 @@ struct X {
 
 template<class... Members>
 template<int i>
-X<Members...>::get_t<i> X<Members...>::get()
+typename X<Members...>::template get_t<i> X<Members...>::get()
 {
   return 0;
 }

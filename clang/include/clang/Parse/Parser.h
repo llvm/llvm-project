@@ -2702,7 +2702,7 @@ private:
                                SourceLocation TemplateKWLoc,
                                UnqualifiedId &TemplateName,
                                bool AllowTypeAnnotation = true);
-  void AnnotateTemplateIdTokenAsType();
+  void AnnotateTemplateIdTokenAsType(bool IsClassName = false);
   bool IsTemplateArgumentList(unsigned Skip = 0);
   bool ParseTemplateArgumentList(TemplateArgList &TemplateArgs);
   ParsedTemplateArgument ParseTemplateTemplateArgument();

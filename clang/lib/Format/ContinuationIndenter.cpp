@@ -420,7 +420,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       P->getPrecedence() != prec::Assignment &&
       P->getPrecedence() != prec::Relational) {
     bool BreakBeforeOperator =
-        P->is(tok::lessless) ||
+        P->MustBreakBefore || P->is(tok::lessless) ||
         (P->is(TT_BinaryOperator) &&
          Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None) ||
         (P->is(TT_ConditionalExpr) && Style.BreakBeforeTernaryOperators);
@@ -429,7 +429,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // does not help.
     bool HasTwoOperands =
         P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
-    if ((!BreakBeforeOperator && !HasTwoOperands) ||
+    if ((!BreakBeforeOperator && !(HasTwoOperands && Style.AlignOperands)) ||
         (!State.Stack.back().LastOperatorWrapped && BreakBeforeOperator))
       State.Stack.back().NoLineBreakInOperand = true;
   }

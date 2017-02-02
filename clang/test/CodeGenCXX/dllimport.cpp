@@ -405,17 +405,17 @@ USE(inlineFuncTmpl1<ImplicitInst_Imported>)
 template<typename T> inline void __attribute__((dllimport)) inlineFuncTmpl2() {}
 USE(inlineFuncTmpl2<ImplicitInst_Imported>)
 
-// MSC-DAG: declare dllimport void @"\01??$inlineFuncTmplDecl@UImplicitInst_Imported@@@@YAXXZ"()
+// MSC-DAG: define linkonce_odr void @"\01??$inlineFuncTmplDecl@UImplicitInst_Imported@@@@YAXXZ"()
 // GNU-DAG: define linkonce_odr void @_Z18inlineFuncTmplDeclI21ImplicitInst_ImportedEvv()
-// MO1-DAG: define available_externally dllimport void @"\01??$inlineFuncTmplDecl@UImplicitInst_Imported@@@@YAXXZ"()
+// MO1-DAG: define linkonce_odr void @"\01??$inlineFuncTmplDecl@UImplicitInst_Imported@@@@YAXXZ"()
 // GO1-DAG: define linkonce_odr void @_Z18inlineFuncTmplDeclI21ImplicitInst_ImportedEvv()
 template<typename T> __declspec(dllimport) inline void inlineFuncTmplDecl();
 template<typename T>                              void inlineFuncTmplDecl() {}
 USE(inlineFuncTmplDecl<ImplicitInst_Imported>)
 
-// MSC-DAG: declare dllimport void @"\01??$inlineFuncTmplDef@UImplicitInst_Imported@@@@YAXXZ"()
+// MSC-DAG: define linkonce_odr void @"\01??$inlineFuncTmplDef@UImplicitInst_Imported@@@@YAXXZ"()
 // GNU-DAG: define linkonce_odr void @_Z17inlineFuncTmplDefI21ImplicitInst_ImportedEvv()
-// MO1-DAG: define available_externally dllimport void @"\01??$inlineFuncTmplDef@UImplicitInst_Imported@@@@YAXXZ"()
+// MO1-DAG: define linkonce_odr void @"\01??$inlineFuncTmplDef@UImplicitInst_Imported@@@@YAXXZ"()
 // GO1-DAG: define linkonce_odr void @_Z17inlineFuncTmplDefI21ImplicitInst_ImportedEvv()
 template<typename T> __declspec(dllimport) void inlineFuncTmplDef();
 template<typename T>                inline void inlineFuncTmplDef() {}
@@ -449,7 +449,7 @@ USE(funcTmplRedecl3<ImplicitInst_NotImported>)
 // GNU-DAG: declare             void @_Z15funcTmplFriend2I24ImplicitInst_NotImportedEvv()
 // MSC-DAG: define linkonce_odr void @"\01??$funcTmplFriend3@UImplicitInst_NotImported@@@@YAXXZ"()
 // GNU-DAG: define linkonce_odr void @_Z15funcTmplFriend3I24ImplicitInst_NotImportedEvv()
-// MSC-DAG: declare dllimport   void @"\01??$funcTmplFriend4@UImplicitInst_Imported@@@@YAXXZ"()
+// MSC-DAG: define linkonce_odr void @"\01??$funcTmplFriend4@UImplicitInst_Imported@@@@YAXXZ"()
 // GNU-DAG: define linkonce_odr void @_Z15funcTmplFriend4I21ImplicitInst_ImportedEvv()
 struct FuncTmplFriend {
   template<typename T> friend __declspec(dllimport) void funcTmplFriend1();

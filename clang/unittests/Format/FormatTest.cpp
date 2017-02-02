@@ -4151,9 +4151,22 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                Style);
 }
 
+TEST_F(FormatTest, EnforcedOperatorWraps) {
+  // Here we'd like to wrap after the || operators, but a comment is forcing an
+  // earlier wrap.
+  verifyFormat("bool x = aaaaa //\n"
+               "         || bbbbb\n"
+               "         //\n"
+               "         || cccc;");
+}
+
 TEST_F(FormatTest, NoOperandAlignment) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignOperands = false;
+  verifyFormat("aaaaaaaaaaaaaa(aaaaaaaaaaaa,\n"
+               "               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa +\n"
+               "                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
+               Style);
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   verifyFormat("bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "            + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"

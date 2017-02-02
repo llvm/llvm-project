@@ -142,13 +142,13 @@ class CompilerInstance : public ModuleLoader {
 
   /// \brief Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
-  bool BuildGlobalModuleIndex;
+  bool BuildGlobalModuleIndex = false;
 
   /// \brief We have a full global module index, with all modules.
-  bool HaveFullGlobalModuleIndex;
+  bool HaveFullGlobalModuleIndex = false;
 
   /// \brief One or more modules failed to build.
-  bool ModuleBuildFailed;
+  bool ModuleBuildFailed = false;
 
   /// \brief Holds information about the output file.
   ///
