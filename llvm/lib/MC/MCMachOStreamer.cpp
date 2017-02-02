@@ -142,7 +142,8 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   if (SegName == "__TEXT" && SecName == "__eh_frame")
     return true;
 
-  if (SegName == "__DATA" && SecName == "__nl_symbol_ptr")
+  if (SegName == "__DATA" && (SecName == "__nl_symbol_ptr" ||
+                              SecName == "__thread_ptr"))
     return true;
 
   return false;
