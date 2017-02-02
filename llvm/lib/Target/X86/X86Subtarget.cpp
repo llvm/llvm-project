@@ -15,6 +15,7 @@
 #include "X86InstrInfo.h"
 #include "X86TargetMachine.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/CommandLine.h"
@@ -93,8 +94,17 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return X86II::MO_NO_FLAG;
 
   // Absolute symbols can be referenced directly.
-  if (GV && GV->isAbsoluteSymbolRef())
-    return X86II::MO_NO_FLAG;
+  if (GV) {
+    if (Optional<ConstantRange> CR = GV->getAbsoluteSymbolRange()) {
+      // See if we can use the 8-bit immediate form. Note that some instructions
+      // will sign extend the immediate operand, so to be conservative we only
+      // accept the range [0,128).
+      if (CR->getUnsignedMax().ult(128))
+        return X86II::MO_ABS8;
+      else
+        return X86II::MO_NO_FLAG;
+    }
+  }
 
   if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);

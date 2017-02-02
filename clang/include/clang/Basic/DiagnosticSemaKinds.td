@@ -7041,7 +7041,7 @@ def err_incomplete_type_used_in_type_trait_expr : Error<
 def err_require_constant_init_failed : Error<
   "variable does not have a constant initializer">;
 def note_declared_required_constant_init_here : Note<
-  "required by 'require_constant_initializer' attribute here">;
+  "required by 'require_constant_initialization' attribute here">;
 
 def err_dimension_expr_not_constant_integer : Error<
   "dimension expression does not evaluate to a constant unsigned int">;

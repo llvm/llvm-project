@@ -234,7 +234,7 @@ def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
-def trace_symbol : J<"trace-symbol=">, HelpText<"Trace references to symbols">;
+def trace_symbol : S<"trace-symbol">, HelpText<"Trace references to symbols">;
 
 def undefined: S<"undefined">,
   HelpText<"Force undefined symbol during linking">;
@@ -315,6 +315,7 @@ def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
 def alias_Tbss: J<"Tbss=">, Alias<Tbss>;
 def alias_Tdata: J<"Tdata=">, Alias<Tdata>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
+def trace_trace_symbol_eq : J<"trace-symbol=">, Alias<trace_symbol>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
 def alias_Ttext: J<"Ttext=">, Alias<Ttext>;
 def alias_Ttext_segment: S<"Ttext-segment">, Alias<Ttext>;

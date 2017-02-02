@@ -86,6 +86,19 @@ entry:
 ; PTX-NEXT:   @%p[[PRED]] bra LBB[[LABEL]]
 }
 
+define i8* @volatile_memset_caller(i8* %dst, i32 %c, i64 %n) #0 {
+entry:
+  %0 = trunc i32 %c to i8
+  tail call void @llvm.memset.p0i8.i64(i8* %dst, i8 %0, i64 %n, i32 1, i1 true)
+  ret i8* %dst
+
+; IR-LABEL:   @volatile_memset_caller
+; IR:         [[VAL:%[0-9]+]] = trunc i32 %c to i8
+; IR:         loadstoreloop:
+; IR:         [[STOREPTR:%[0-9]+]] = getelementptr inbounds i8, i8* %dst, i64
+; IR-NEXT:    store volatile i8 [[VAL]], i8* [[STOREPTR]]
+}
+
 define i8* @memmove_caller(i8* %dst, i8* %src, i64 %n) #0 {
 entry:
   tail call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %n, i32 1, i1 false)

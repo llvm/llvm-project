@@ -1044,15 +1044,17 @@ private:
   unsigned EmissionKind;
   uint64_t DWOId;
   bool SplitDebugInlining;
+  bool DebugInfoForProfiling;
 
   DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
                 bool IsOptimized, unsigned RuntimeVersion,
                 unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
-                ArrayRef<Metadata *> Ops)
+                bool DebugInfoForProfiling, ArrayRef<Metadata *> Ops)
       : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
         SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
         RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind),
-        DWOId(DWOId), SplitDebugInlining(SplitDebugInlining) {
+        DWOId(DWOId), SplitDebugInlining(SplitDebugInlining),
+        DebugInfoForProfiling(DebugInfoForProfiling) {
     assert(Storage != Uniqued);
   }
   ~DICompileUnit() = default;
@@ -1065,15 +1067,16 @@ private:
           DIScopeArray RetainedTypes,
           DIGlobalVariableExpressionArray GlobalVariables,
           DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
-          uint64_t DWOId, bool SplitDebugInlining, StorageType Storage,
-          bool ShouldCreate = true) {
+          uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, SourceLanguage, File,
                    getCanonicalMDString(Context, Producer), IsOptimized,
                    getCanonicalMDString(Context, Flags), RuntimeVersion,
                    getCanonicalMDString(Context, SplitDebugFilename),
                    EmissionKind, EnumTypes.get(), RetainedTypes.get(),
                    GlobalVariables.get(), ImportedEntities.get(), Macros.get(),
-                   DWOId, SplitDebugInlining, Storage, ShouldCreate);
+                   DWOId, SplitDebugInlining, DebugInfoForProfiling, Storage,
+                   ShouldCreate);
   }
   static DICompileUnit *
   getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
@@ -1082,7 +1085,8 @@ private:
           unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
           Metadata *GlobalVariables, Metadata *ImportedEntities,
           Metadata *Macros, uint64_t DWOId, bool SplitDebugInlining,
-          StorageType Storage, bool ShouldCreate = true);
+          bool DebugInfoForProfiling, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDICompileUnit cloneImpl() const {
     return getTemporary(getContext(), getSourceLanguage(), getFile(),
@@ -1090,7 +1094,8 @@ private:
                         getRuntimeVersion(), getSplitDebugFilename(),
                         getEmissionKind(), getEnumTypes(), getRetainedTypes(),
                         getGlobalVariables(), getImportedEntities(),
-                        getMacros(), DWOId, getSplitDebugInlining());
+                        getMacros(), DWOId, getSplitDebugInlining(),
+                        getDebugInfoForProfiling());
   }
 
 public:
@@ -1105,10 +1110,11 @@ public:
        DICompositeTypeArray EnumTypes, DIScopeArray RetainedTypes,
        DIGlobalVariableExpressionArray GlobalVariables,
        DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
-       uint64_t DWOId, bool SplitDebugInlining),
+       uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
-       GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining))
+       GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
+       DebugInfoForProfiling))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, Metadata *File, MDString *Producer,
@@ -1116,10 +1122,11 @@ public:
        MDString *SplitDebugFilename, unsigned EmissionKind, Metadata *EnumTypes,
        Metadata *RetainedTypes, Metadata *GlobalVariables,
        Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
-       bool SplitDebugInlining),
+       bool SplitDebugInlining, bool DebugInfoForProfiling),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
-       GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining))
+       GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
+       DebugInfoForProfiling))
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
@@ -1129,6 +1136,7 @@ public:
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;
   }
+  bool getDebugInfoForProfiling() const { return DebugInfoForProfiling; }
   StringRef getProducer() const { return getStringOperand(1); }
   StringRef getFlags() const { return getStringOperand(2); }
   StringRef getSplitDebugFilename() const { return getStringOperand(3); }
