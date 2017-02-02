@@ -91,10 +91,6 @@ enum {
   // 96-127 reserved
 };
 
-const char *GetRegisterName(unsigned reg_num, bool altnernate_name);
-
-bool GetRegisterInfo(unsigned reg_num, lldb_private::RegisterInfo &reg_info);
-
 } // namespace arm64_dwarf
 
 #endif // utility_ARM64_DWARF_Registers_h_

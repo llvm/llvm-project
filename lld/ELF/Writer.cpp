@@ -1193,32 +1193,18 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   };
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
-  PhdrEntry &Hdr = *AddHdr(PT_PHDR, PF_R);
-  Hdr.add(Out<ELFT>::ProgramHeaders);
+  AddHdr(PT_PHDR, PF_R)->add(Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  if (OutputSectionBase *Sec = findSection(".interp")) {
-    PhdrEntry &Hdr = *AddHdr(PT_INTERP, Sec->getPhdrFlags());
-    Hdr.add(Sec);
-  }
+  if (OutputSectionBase *Sec = findSection(".interp"))
+    AddHdr(PT_INTERP, Sec->getPhdrFlags())->add(Sec);
 
   // Add the first PT_LOAD segment for regular output sections.
   uintX_t Flags = computeFlags<ELFT>(PF_R);
   PhdrEntry *Load = AddHdr(PT_LOAD, Flags);
-
-  PhdrEntry TlsHdr(PT_TLS, PF_R);
-  PhdrEntry RelRo(PT_GNU_RELRO, PF_R);
-  PhdrEntry Note(PT_NOTE, PF_R);
   for (OutputSectionBase *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_ALLOC))
       break;
-
-    // If we meet TLS section then we create TLS header
-    // and put all TLS sections inside for further use when
-    // assign addresses.
-    if (Sec->Flags & SHF_TLS)
-      TlsHdr.add(Sec);
-
     if (!needsPtLoad<ELFT>(Sec))
       continue;
 
@@ -1234,51 +1220,45 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     }
 
     Load->add(Sec);
-
-    if (isRelroSection<ELFT>(Sec))
-      RelRo.add(Sec);
-    if (Sec->Type == SHT_NOTE)
-      Note.add(Sec);
   }
 
-  // Add the TLS segment unless it's empty.
+  // Add a TLS segment if any.
+  PhdrEntry TlsHdr(PT_TLS, PF_R);
+  for (OutputSectionBase *Sec : OutputSections)
+    if (Sec->Flags & SHF_TLS)
+      TlsHdr.add(Sec);
   if (TlsHdr.First)
     Ret.push_back(std::move(TlsHdr));
 
   // Add an entry for .dynamic.
-  if (In<ELFT>::DynSymTab) {
-    PhdrEntry &H =
-        *AddHdr(PT_DYNAMIC, In<ELFT>::Dynamic->OutSec->getPhdrFlags());
-    H.add(In<ELFT>::Dynamic->OutSec);
-  }
+  if (In<ELFT>::DynSymTab)
+    AddHdr(PT_DYNAMIC, In<ELFT>::Dynamic->OutSec->getPhdrFlags())
+        ->add(In<ELFT>::Dynamic->OutSec);
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
+  PhdrEntry RelRo(PT_GNU_RELRO, PF_R);
+  for (OutputSectionBase *Sec : OutputSections)
+    if (needsPtLoad<ELFT>(Sec) && isRelroSection<ELFT>(Sec))
+      RelRo.add(Sec);
   if (RelRo.First)
     Ret.push_back(std::move(RelRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (!Out<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr) {
-    PhdrEntry &Hdr =
-        *AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags());
-    Hdr.add(In<ELFT>::EhFrameHdr->OutSec);
-  }
+  if (!Out<ELFT>::EhFrame->empty() && In<ELFT>::EhFrameHdr)
+    AddHdr(PT_GNU_EH_FRAME, In<ELFT>::EhFrameHdr->OutSec->getPhdrFlags())
+        ->add(In<ELFT>::EhFrameHdr->OutSec);
 
   // PT_OPENBSD_RANDOMIZE specifies the location and size of a part of the
   // memory image of the program that must be filled with random data before any
   // code in the object is executed.
-  if (OutputSectionBase *Sec = findSection(".openbsd.randomdata")) {
-    PhdrEntry &Hdr = *AddHdr(PT_OPENBSD_RANDOMIZE, Sec->getPhdrFlags());
-    Hdr.add(Sec);
-  }
+  if (OutputSectionBase *Sec = findSection(".openbsd.randomdata"))
+    AddHdr(PT_OPENBSD_RANDOMIZE, Sec->getPhdrFlags())->add(Sec);
 
   // PT_GNU_STACK is a special section to tell the loader to make the
   // pages for the stack non-executable.
-  if (!Config->ZExecstack) {
-    PhdrEntry &Hdr = *AddHdr(PT_GNU_STACK, PF_R | PF_W);
-    if (Config->ZStackSize != uint64_t(-1))
-      Hdr.p_memsz = Config->ZStackSize;
-  }
+  if (!Config->ZExecstack)
+    AddHdr(PT_GNU_STACK, PF_R | PF_W)->p_memsz = Config->ZStackSize;
 
   // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable
   // is expected to perform W^X violations, such as calling mprotect(2) or
@@ -1287,8 +1267,17 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   if (Config->ZWxneeded)
     AddHdr(PT_OPENBSD_WXNEEDED, PF_X);
 
-  if (Note.First)
-    Ret.push_back(std::move(Note));
+  // Create one PT_NOTE per a group of contiguous .note sections.
+  PhdrEntry *Note = nullptr;
+  for (OutputSectionBase *Sec : OutputSections) {
+    if (Sec->Type == SHT_NOTE) {
+      if (!Note || Script<ELFT>::X->hasLMA(Sec->getName()))
+        Note = AddHdr(PT_NOTE, PF_R);
+      Note->add(Sec);
+    } else {
+      Note = nullptr;
+    }
+  }
   return Ret;
 }
 

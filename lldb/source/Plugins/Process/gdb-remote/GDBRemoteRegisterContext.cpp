@@ -19,7 +19,6 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Utils.h"
 // Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"

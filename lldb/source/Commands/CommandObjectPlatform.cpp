@@ -27,7 +27,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Utils.h"
 
 #include "llvm/ADT/SmallString.h"
 

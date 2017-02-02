@@ -120,4 +120,7 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
   return patchSled(Enable, FuncId, Sled, __xray_FunctionTailExit);
 }
 
+// FIXME: Maybe implement this better?
+bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
+
 } // namespace __xray

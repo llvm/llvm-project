@@ -67,16 +67,19 @@ getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
     Token Tok;
     if (TheLexer.LexFromRawLexer(Tok))
       break;
-    if (Tok.getLocation() == Range.getEnd() || Tok.getKind() == tok::eof)
+    if (Tok.getLocation() == Range.getEnd() || Tok.is(tok::eof))
       break;
 
-    if (Tok.getKind() == tok::comment) {
+    if (Tok.is(tok::comment)) {
       std::pair<FileID, unsigned> CommentLoc =
           SM.getDecomposedLoc(Tok.getLocation());
       assert(CommentLoc.first == BeginLoc.first);
       Comments.emplace_back(
           Tok.getLocation(),
           StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()));
+    } else {
+      // Clear comments found before the different token, e.g. comma.
+      Comments.clear();
     }
   }
 
@@ -176,12 +179,29 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   }
 }
 
+static const FunctionDecl *resolveMocks(const MatchFinder::MatchResult &Result,
+                                        const FunctionDecl *Func) {
+  if (auto *Method = dyn_cast<CXXMethodDecl>(Func)) {
+    if (Method->getLocation().isMacroID() &&
+        Lexer::getImmediateMacroName(Method->getLocation(),
+                                     *Result.SourceManager,
+                                     Result.Context->getLangOpts())
+            .contains("MOCK_METHOD") &&
+        Method->size_overridden_methods() != 0) {
+      Func = *Method->begin_overridden_methods();
+    }
+  }
+  return Func;
+}
+
 void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
   if (const auto *Call = dyn_cast<CallExpr>(E)) {
     const FunctionDecl *Callee = Call->getDirectCallee();
     if (!Callee)
       return;
+
+    Callee = resolveMocks(Result, Callee);
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getLocEnd(),
                   llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
