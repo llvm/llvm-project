@@ -35,6 +35,9 @@ ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
   CPU = 0;
   return TS.tv_sec * NanosecondsPerSecond + TS.tv_nsec;
 }
-}
+
+bool probeRequiredCPUFeatures();
+
+} // namespace __xray
 
 #endif // XRAY_EMULATE_TSC_H

@@ -2306,6 +2306,30 @@ TEST_F(FormatTest, ReflowsComments) {
             format("// long long long long\n"
                    "// @param arg",
                    getLLVMStyleWithColumns(20)));
+  
+  // Don't reflow lines starting with 'TODO'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// TODO: long",
+            format("// long long long long\n"
+                   "// TODO: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with 'FIXME'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// FIXME: long",
+            format("// long long long long\n"
+                   "// FIXME: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with 'XXX'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// XXX: long",
+            format("// long long long long\n"
+                   "// XXX: long",
+                   getLLVMStyleWithColumns(20)));
 
   // Reflow lines that have a non-punctuation character among their first 2
   // characters.
@@ -4163,6 +4187,10 @@ TEST_F(FormatTest, EnforcedOperatorWraps) {
 TEST_F(FormatTest, NoOperandAlignment) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignOperands = false;
+  verifyFormat("aaaaaaaaaaaaaa(aaaaaaaaaaaa,\n"
+               "               aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa +\n"
+               "                   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);",
+               Style);
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   verifyFormat("bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "            + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"

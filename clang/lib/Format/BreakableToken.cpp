@@ -301,12 +301,21 @@ const FormatToken &BreakableComment::tokenAt(unsigned LineIndex) const {
 
 static bool mayReflowContent(StringRef Content) {
   Content = Content.trim(Blanks);
+  // Lines starting with '@' commonly have special meaning.
+  static const SmallVector<StringRef, 4> kSpecialMeaningPrefixes = {
+      "@", "TODO", "FIXME", "XXX"};
+  bool hasSpecialMeaningPrefix = false;
+  for (StringRef Prefix : kSpecialMeaningPrefixes) {
+    if (Content.startswith(Prefix)) {
+      hasSpecialMeaningPrefix = true;
+      break;
+    }
+  }
   // Simple heuristic for what to reflow: content should contain at least two
   // characters and either the first or second character must be
   // non-punctuation.
-  return Content.size() >= 2 &&
-         // Lines starting with '@' commonly have special meaning.
-         !Content.startswith("@") && !Content.endswith("\\") &&
+  return Content.size() >= 2 && !hasSpecialMeaningPrefix &&
+         !Content.endswith("\\") &&
          // Note that this is UTF-8 safe, since if isPunctuation(Content[0]) is
          // true, then the first code point must be 1 byte long.
          (!isPunctuation(Content[0]) || !isPunctuation(Content[1]));

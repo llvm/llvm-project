@@ -9956,7 +9956,7 @@ bool Expr::EvalResult::isGlobalLValue() const {
 // Note that to reduce code duplication, this helper does no evaluation
 // itself; the caller checks whether the expression is evaluatable, and
 // in the rare cases where CheckICE actually cares about the evaluated
-// value, it calls into Evalute.
+// value, it calls into Evaluate.
 
 namespace {
 
