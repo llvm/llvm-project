@@ -1905,6 +1905,8 @@ static bool isLoadIncOrDecStore(StoreSDNode *StoreNode, unsigned Opc,
       SDValue Op = Chain.getOperand(i);
       if (Op == Load.getValue(1)) {
         ChainCheck = true;
+        // Drop Load, but keep its chain. No cycle check necessary.
+        ChainOps.push_back(Load.getOperand(0));
         continue;
       }
 

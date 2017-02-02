@@ -911,21 +911,30 @@ bool clang::index::generateUSRForDecl(const Decl *D,
 bool clang::index::generateUSRForMacro(const MacroDefinitionRecord *MD,
                                        const SourceManager &SM,
                                        SmallVectorImpl<char> &Buf) {
+  if (!MD)
+    return true;
+  return generateUSRForMacro(MD->getName()->getName(), MD->getLocation(),
+                             SM, Buf);
+
+}
+
+bool clang::index::generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
+                                       const SourceManager &SM,
+                                       SmallVectorImpl<char> &Buf) {
   // Don't generate USRs for things with invalid locations.
-  if (!MD || MD->getLocation().isInvalid())
+  if (MacroName.empty() || Loc.isInvalid())
     return true;
 
   llvm::raw_svector_ostream Out(Buf);
 
   // Assume that system headers are sane.  Don't put source location
   // information into the USR if the macro comes from a system header.
-  SourceLocation Loc = MD->getLocation();
   bool ShouldGenerateLocation = !SM.isInSystemHeader(Loc);
 
   Out << getUSRSpacePrefix();
   if (ShouldGenerateLocation)
     printLoc(Out, Loc, SM, /*IncludeOffset=*/true);
   Out << "@macro@";
-  Out << MD->getName()->getName();
+  Out << MacroName;
   return false;
 }

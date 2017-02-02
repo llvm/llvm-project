@@ -347,12 +347,18 @@ static Value *operandWithNewAddressSpaceOrCreateUndef(
     const ValueToValueMapTy &ValueWithNewAddrSpace,
     SmallVectorImpl<const Use *> *UndefUsesToFix) {
   Value *Operand = OperandUse.get();
+
+  Type *NewPtrTy =
+      Operand->getType()->getPointerElementType()->getPointerTo(NewAddrSpace);
+
+  if (Constant *C = dyn_cast<Constant>(Operand))
+    return ConstantExpr::getAddrSpaceCast(C, NewPtrTy);
+
   if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand))
     return NewOperand;
 
   UndefUsesToFix->push_back(&OperandUse);
-  return UndefValue::get(
-    Operand->getType()->getPointerElementType()->getPointerTo(NewAddrSpace));
+  return UndefValue::get(NewPtrTy);
 }
 
 // Returns a clone of `I` with its operands converted to those specified in
@@ -440,6 +446,18 @@ static Value *cloneConstantExprWithNewAddressSpace(
     assert(CE->getOperand(0)->getType()->getPointerAddressSpace() ==
            NewAddrSpace);
     return ConstantExpr::getBitCast(CE->getOperand(0), TargetType);
+  }
+
+  if (CE->getOpcode() == Instruction::Select) {
+    Constant *Src0 = CE->getOperand(1);
+    Constant *Src1 = CE->getOperand(2);
+    if (Src0->getType()->getPointerAddressSpace() ==
+        Src1->getType()->getPointerAddressSpace()) {
+
+      return ConstantExpr::getSelect(
+          CE->getOperand(0), ConstantExpr::getAddrSpaceCast(Src0, TargetType),
+          ConstantExpr::getAddrSpaceCast(Src1, TargetType));
+    }
   }
 
   // Computes the operands of the new constant expression.
@@ -589,15 +607,47 @@ Optional<unsigned> InferAddressSpaces::updateAddressSpace(
   // The new inferred address space equals the join of the address spaces
   // of all its pointer operands.
   unsigned NewAS = UninitializedAddressSpace;
-  for (Value *PtrOperand : getPointerOperands(V)) {
-    auto I = InferredAddrSpace.find(PtrOperand);
-    unsigned OperandAS = I != InferredAddrSpace.end() ?
-      I->second : PtrOperand->getType()->getPointerAddressSpace();
 
-    // join(flat, *) = flat. So we can break if NewAS is already flat.
-    NewAS = joinAddressSpaces(NewAS, OperandAS);
-    if (NewAS == FlatAddrSpace)
-      break;
+  const Operator &Op = cast<Operator>(V);
+  if (Op.getOpcode() == Instruction::Select) {
+    Value *Src0 = Op.getOperand(1);
+    Value *Src1 = Op.getOperand(2);
+
+    auto I = InferredAddrSpace.find(Src0);
+    unsigned Src0AS = (I != InferredAddrSpace.end()) ?
+      I->second : Src0->getType()->getPointerAddressSpace();
+
+    auto J = InferredAddrSpace.find(Src1);
+    unsigned Src1AS = (J != InferredAddrSpace.end()) ?
+      J->second : Src1->getType()->getPointerAddressSpace();
+
+    auto *C0 = dyn_cast<Constant>(Src0);
+    auto *C1 = dyn_cast<Constant>(Src1);
+
+    // If one of the inputs is a constant, we may be able to do a constant
+    // addrspacecast of it. Defer inferring the address space until the input
+    // address space is known.
+    if ((C1 && Src0AS == UninitializedAddressSpace) ||
+        (C0 && Src1AS == UninitializedAddressSpace))
+      return None;
+
+    if (C0 && isSafeToCastConstAddrSpace(C0, Src1AS))
+      NewAS = Src1AS;
+    else if (C1 && isSafeToCastConstAddrSpace(C1, Src0AS))
+      NewAS = Src0AS;
+    else
+      NewAS = joinAddressSpaces(Src0AS, Src1AS);
+  } else {
+    for (Value *PtrOperand : getPointerOperands(V)) {
+      auto I = InferredAddrSpace.find(PtrOperand);
+      unsigned OperandAS = I != InferredAddrSpace.end() ?
+        I->second : PtrOperand->getType()->getPointerAddressSpace();
+
+      // join(flat, *) = flat. So we can break if NewAS is already flat.
+      NewAS = joinAddressSpaces(NewAS, OperandAS);
+      if (NewAS == FlatAddrSpace)
+        break;
+    }
   }
 
   unsigned OldAS = InferredAddrSpace.lookup(&V);
@@ -680,6 +730,8 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
 // \p returns true if it is OK to change the address space of constant \p C with
 // a ConstantExpr addrspacecast.
 bool InferAddressSpaces::isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const {
+  assert(NewAS != UninitializedAddressSpace);
+
   unsigned SrcAS = C->getType()->getPointerAddressSpace();
   if (SrcAS == NewAS || isa<UndefValue>(C))
     return true;

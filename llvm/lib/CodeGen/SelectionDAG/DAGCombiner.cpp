@@ -1805,7 +1805,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     // and similar xforms where the inner op is either ~0 or 0.
     if (NumSignBits == DestBits &&
         isOneConstantOrOneSplatConstant(N1->getOperand(1)))
-      return DAG.getNode(ISD::SUB, DL, VT, N->getOperand(0), AndOp0);
+      return DAG.getNode(ISD::SUB, DL, VT, N0, AndOp0);
   }
 
   // add (sext i1), X -> sub X, (zext i1)

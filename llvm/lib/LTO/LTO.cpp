@@ -199,11 +199,14 @@ void llvm::thinLTOResolveWeakForLinkerInIndex(
 
 static void thinLTOInternalizeAndPromoteGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &S : GVSummaryList) {
-    if (isExported(S->modulePath(), GUID)) {
+    auto ExportResolution = isExported(S->modulePath(), GUID);
+    if (ExportResolution != Internal) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
+      if (ExportResolution == Hidden)
+        S->setAutoHide();
     } else if (!GlobalValue::isLocalLinkage(S->linkage()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
@@ -213,7 +216,7 @@ static void thinLTOInternalizeAndPromoteGUID(
 // as external and non-exported values as internal.
 void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(I.second, I.first, isExported);
 }
@@ -446,6 +449,11 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     if (GV.hasAppendingLinkage())
       Keep.push_back(&GV);
 
+  DenseSet<GlobalObject *> AliasedGlobals;
+  for (auto &GA : M.aliases())
+    if (GlobalObject *GO = GA.getBaseObject())
+      AliasedGlobals.insert(GO);
+
   for (const InputFile::Symbol &Sym :
        make_range(InputFile::symbol_iterator(SymTab.symbols().begin(), SymTab,
                                              nullptr),
@@ -455,20 +463,37 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     SymbolResolution Res = *ResI++;
     addSymbolToGlobalRes(Used, Sym, Res, 0);
 
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
-      continue;
-    if (Res.Prevailing && Sym.isGV()) {
+    if (Sym.isGV()) {
       GlobalValue *GV = Sym.getGV();
-      Keep.push_back(GV);
-      switch (GV->getLinkage()) {
-      default:
-        break;
-      case GlobalValue::LinkOnceAnyLinkage:
-        GV->setLinkage(GlobalValue::WeakAnyLinkage);
-        break;
-      case GlobalValue::LinkOnceODRLinkage:
-        GV->setLinkage(GlobalValue::WeakODRLinkage);
-        break;
+      if (Res.Prevailing) {
+        if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+          continue;
+        Keep.push_back(GV);
+        switch (GV->getLinkage()) {
+        default:
+          break;
+        case GlobalValue::LinkOnceAnyLinkage:
+          GV->setLinkage(GlobalValue::WeakAnyLinkage);
+          break;
+        case GlobalValue::LinkOnceODRLinkage:
+          GV->setLinkage(GlobalValue::WeakODRLinkage);
+          break;
+        }
+      } else if (isa<GlobalObject>(GV) &&
+                 (GV->hasLinkOnceODRLinkage() || GV->hasWeakODRLinkage() ||
+                  GV->hasAvailableExternallyLinkage()) &&
+                 !AliasedGlobals.count(cast<GlobalObject>(GV))) {
+        // Either of the above three types of linkage indicates that the
+        // chosen prevailing symbol will have the same semantics as this copy of
+        // the symbol, so we can link it with available_externally linkage. We
+        // only need to do this if the symbol is undefined.
+        GlobalValue *CombinedGV =
+            RegularLTO.CombinedModule->getNamedValue(GV->getName());
+        if (!CombinedGV || CombinedGV->isDeclaration()) {
+          Keep.push_back(GV);
+          GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
+          cast<GlobalObject>(GV)->setComdat(nullptr);
+        }
       }
     }
     // Common resolution: collect the maximum size/alignment over all commons.
@@ -899,11 +924,20 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
                             const GlobalValueSummary *S) {
       return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
     };
-    auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    auto isExported = [&](StringRef ModuleIdentifier,
+                          GlobalValue::GUID GUID) -> SummaryResolution {
       const auto &ExportList = ExportLists.find(ModuleIdentifier);
-      return (ExportList != ExportLists.end() &&
-              ExportList->second.count(GUID)) ||
-             ExportedGUIDs.count(GUID);
+      if ((ExportList != ExportLists.end() && ExportList->second.count(GUID)) ||
+          ExportedGUIDs.count(GUID)) {
+        // We could do better by hiding when a symbol is in
+        // GUIDPreservedSymbols because it is only referenced from regular LTO
+        // or from native files and not outside the final binary, but that's
+        // something the native linker could do as gwell.
+        if (GUIDPreservedSymbols.count(GUID))
+          return Exported;
+        return Hidden;
+      }
+      return Internal;
     };
     thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
 

@@ -1824,7 +1824,8 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
     return AMDGPU::isInlinableLiteral64(Imm.getSExtValue(),
                                         ST.hasInv2PiInlineImm());
   case 16:
-    return AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
+    return ST.has16BitInsts() &&
+           AMDGPU::isInlinableLiteral16(Imm.getSExtValue(),
                                         ST.hasInv2PiInlineImm());
   default:
     llvm_unreachable("invalid bitwidth");
@@ -1854,8 +1855,13 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case 16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
+      // A few special case instructions have 16-bit operands on subtargets
+      // where 16-bit instructions are not legal.
+      // TODO: Do the 32-bit immediates work? We shouldn't really need to handle
+      // constants in these cases
       int16_t Trunc = static_cast<int16_t>(Imm);
-      return AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
+      return ST.has16BitInsts() &&
+             AMDGPU::isInlinableLiteral16(Trunc, ST.hasInv2PiInlineImm());
     }
 
     return false;

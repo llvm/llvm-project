@@ -149,3 +149,174 @@ latch:
 return:
   ret i32 %sum
 }
+
+declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) nounwind readonly
+declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) nounwind
+declare void @escaping.invariant.start({}*) nounwind
+; invariant.start dominates the load, and in this scope, the
+; load is invariant. So, we can hoist the `addrld` load out of the loop.
+define i32 @test_fence(i8* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence
+; CHECK-LABEL: entry
+; CHECK: invariant.start
+; CHECK: %addrld = load atomic i32, i32* %addr.i unordered, align 8
+; CHECK: br label %loop
+entry: 
+  %gep = getelementptr inbounds i8, i8* %addr, i64 8
+  %addr.i = bitcast i8* %gep to i32 *
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %gep)
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}
+
+
+
+; Same as test above, but the load is no longer invariant (presence of
+; invariant.end). We cannot hoist the addrld out of loop.
+define i32 @test_fence1(i8* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence1
+; CHECK-LABEL: entry
+; CHECK: invariant.start
+; CHECK-NEXT: invariant.end
+; CHECK-NEXT: br label %loop
+entry:
+  %gep = getelementptr inbounds i8, i8* %addr, i64 8
+  %addr.i = bitcast i8* %gep to i32 *
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %gep)
+  call void @llvm.invariant.end.p0i8({}* %invst, i64 4, i8* %gep)
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}
+
+; same as test above, but instead of invariant.end, we have the result of
+; invariant.start escaping through a call. We cannot hoist the load.
+define i32 @test_fence2(i8* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence2
+; CHECK-LABEL: entry
+; CHECK-NOT: load
+; CHECK: br label %loop
+entry:
+  %gep = getelementptr inbounds i8, i8* %addr, i64 8
+  %addr.i = bitcast i8* %gep to i32 *
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %gep)
+  call void @escaping.invariant.start({}* %invst)
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}
+
+; FIXME: invariant.start dominates the load, and in this scope, the
+; load is invariant. So, we can hoist the `addrld` load out of the loop.
+; Consider the loadoperand addr.i bitcasted before being passed to
+; invariant.start
+define i32 @test_fence3(i32* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence3
+; CHECK-LABEL: entry
+; CHECK: invariant.start
+; CHECK-NOT: %addrld = load atomic i32, i32* %addr.i unordered, align 8
+; CHECK: br label %loop
+entry: 
+  %addr.i = getelementptr inbounds i32, i32* %addr, i64 8
+  %gep = bitcast i32* %addr.i to i8 *
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %gep)
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}
+
+; We should not hoist the addrld out of the loop.
+define i32 @test_fence4(i32* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence4
+; CHECK-LABEL: entry
+; CHECK-NOT: %addrld = load atomic i32, i32* %addr.i unordered, align 8
+; CHECK: br label %loop
+entry: 
+  %addr.i = getelementptr inbounds i32, i32* %addr, i64 8
+  %gep = bitcast i32* %addr.i to i8 *
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %gep)
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}

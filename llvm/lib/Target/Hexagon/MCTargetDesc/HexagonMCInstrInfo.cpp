@@ -131,12 +131,8 @@ MCInst HexagonMCInstrInfo::deriveExtender(MCInstrInfo const &MCII,
   assert(HexagonMCInstrInfo::isExtendable(MCII, Inst) ||
          HexagonMCInstrInfo::isExtended(MCII, Inst));
 
-  MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, Inst);
   MCInst XMI;
-  XMI.setOpcode((Desc.isBranch() || Desc.isCall() ||
-                 HexagonMCInstrInfo::getType(MCII, Inst) == HexagonII::TypeCR)
-                    ? Hexagon::A4_ext_b
-                    : Hexagon::A4_ext);
+  XMI.setOpcode(Hexagon::A4_ext);
   if (MO.isImm())
     XMI.addOperand(MCOperand::createImm(MO.getImm() & (~0x3f)));
   else if (MO.isExpr())
@@ -438,7 +434,7 @@ bool HexagonMCInstrInfo::isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI) {
 
 bool HexagonMCInstrInfo::isCompound(MCInstrInfo const &MCII,
                                     MCInst const &MCI) {
-  return (getType(MCII, MCI) == HexagonII::TypeCOMPOUND);
+  return getType(MCII, MCI) == HexagonII::TypeCJ;
 }
 
 bool HexagonMCInstrInfo::isDblRegForSubInst(unsigned Reg) {
@@ -470,7 +466,7 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
     return true;
   // Branch insns are handled as necessary by relaxation.
   if ((HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeJ) ||
-      (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCOMPOUND &&
+      (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCJ &&
        HexagonMCInstrInfo::getDesc(MCII, MCI).isBranch()) ||
       (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNV &&
        HexagonMCInstrInfo::getDesc(MCII, MCI).isBranch()))
@@ -510,9 +506,7 @@ bool HexagonMCInstrInfo::isFloat(MCInstrInfo const &MCII, MCInst const &MCI) {
 }
 
 bool HexagonMCInstrInfo::isImmext(MCInst const &MCI) {
-  auto Op = MCI.getOpcode();
-  return (Op == Hexagon::A4_ext_b || Op == Hexagon::A4_ext_c ||
-          Op == Hexagon::A4_ext_g || Op == Hexagon::A4_ext);
+  return MCI.getOpcode() == Hexagon::A4_ext;
 }
 
 bool HexagonMCInstrInfo::isInnerLoop(MCInst const &MCI) {
@@ -558,6 +552,10 @@ bool HexagonMCInstrInfo::isPredicated(MCInstrInfo const &MCII,
   return ((F >> HexagonII::PredicatedPos) & HexagonII::PredicatedMask);
 }
 
+bool HexagonMCInstrInfo::isPrefix(MCInstrInfo const &MCII, MCInst const &MCI) {
+  return HexagonII::TypeEXTENDER == HexagonMCInstrInfo::getType(MCII, MCI);
+}
+
 bool HexagonMCInstrInfo::isPredicateLate(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
@@ -580,10 +578,6 @@ bool HexagonMCInstrInfo::isPredicatedTrue(MCInstrInfo const &MCII,
 
 bool HexagonMCInstrInfo::isPredReg(unsigned Reg) {
   return (Reg >= Hexagon::P0 && Reg <= Hexagon::P3_0);
-}
-
-bool HexagonMCInstrInfo::isPrefix(MCInstrInfo const &MCII, MCInst const &MCI) {
-  return (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypePREFIX);
 }
 
 bool HexagonMCInstrInfo::isSolo(MCInstrInfo const &MCII, MCInst const &MCI) {
@@ -713,6 +707,17 @@ bool HexagonMCInstrInfo::mustNotExtend(MCExpr const &Expr) {
   HexagonMCExpr const &HExpr = cast<HexagonMCExpr>(Expr);
   return HExpr.mustNotExtend();
 }
+void HexagonMCInstrInfo::setS23_2_reloc(MCExpr const &Expr, bool Val) {
+  HexagonMCExpr &HExpr =
+      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
+  HExpr.setS23_2_reloc(Val);
+}
+bool HexagonMCInstrInfo::s23_2_reloc(MCExpr const &Expr) {
+  HexagonMCExpr const *HExpr = llvm::dyn_cast<HexagonMCExpr>(&Expr);
+  if (!HExpr)
+    return false;
+  return HExpr->s23_2_reloc();
+}
 
 void HexagonMCInstrInfo::padEndloop(MCContext &Context, MCInst &MCB) {
   MCInst Nop;
@@ -777,15 +782,6 @@ void HexagonMCInstrInfo::setMemStoreReorderEnabled(MCInst &MCI) {
   MCOperand &Operand = MCI.getOperand(0);
   Operand.setImm(Operand.getImm() | memStoreReorderEnabledMask);
   assert(isMemStoreReorderEnabled(MCI));
-}
-void HexagonMCInstrInfo::setS23_2_reloc(MCExpr const &Expr, bool Val) {
-  HexagonMCExpr &HExpr =
-      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
-  HExpr.setS23_2_reloc(Val);
-}
-bool HexagonMCInstrInfo::s23_2_reloc(MCExpr const &Expr) {
-  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
-  return HExpr.s23_2_reloc();
 }
 
 void HexagonMCInstrInfo::setOuterLoop(MCInst &MCI) {

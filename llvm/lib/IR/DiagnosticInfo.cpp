@@ -319,6 +319,13 @@ void llvm::emitOptimizationRemarkAnalysisAliasing(LLVMContext &Ctx,
   Ctx.diagnose(OptimizationRemarkAnalysisAliasing(PassName, Fn, DLoc, Msg));
 }
 
+DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
+    const char *PassName, StringRef RemarkName, const DebugLoc &DLoc,
+    Value *CodeRegion)
+    : DiagnosticInfoIROptimization(
+          DK_OptimizationFailure, DS_Warning, PassName, RemarkName,
+          *cast<BasicBlock>(CodeRegion)->getParent(), DLoc, CodeRegion) {}
+
 bool DiagnosticInfoOptimizationFailure::isEnabled() const {
   // Only print warnings.
   return getSeverity() == DS_Warning;
@@ -332,18 +339,6 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
      << *getFunction().getFunctionType() << ": " << Msg << '\n';
   OS.flush();
   DP << Str;
-}
-
-void llvm::emitLoopVectorizeWarning(LLVMContext &Ctx, const Function &Fn,
-                                    const DebugLoc &DLoc, const Twine &Msg) {
-  Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-      Fn, DLoc, Twine("loop not vectorized: " + Msg)));
-}
-
-void llvm::emitLoopInterleaveWarning(LLVMContext &Ctx, const Function &Fn,
-                                     const DebugLoc &DLoc, const Twine &Msg) {
-  Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-      Fn, DLoc, Twine("loop not interleaved: " + Msg)));
 }
 
 void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {

@@ -424,7 +424,6 @@ class InternalSymbolizer : public SymbolizerTool {
   InternalSymbolizer() { }
 
   static const int kBufferSize = 16 * 1024;
-  static const int kMaxDemangledNameSize = 1024;
   char buffer_[kBufferSize];
 };
 #else  // SANITIZER_SUPPORTS_WEAK_HOOKS

@@ -19,8 +19,7 @@ define void @fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 
 ; GCN-LABEL: {{^}}fabs_f16:
 ; CI: flat_load_ushort [[VAL:v[0-9]+]],
-; CI: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[VAL]]
-; CI: v_cvt_f16_f32_e64 [[RESULT:v[0-9]+]], |[[CVT0]]|
+; CI: v_and_b32_e32 [[CVT0:v[0-9]+]], 0x7fff, [[VAL]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define void @fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
@@ -30,10 +29,10 @@ define void @fabs_f16(half addrspace(1)* %out, half %in) {
 
 ; FIXME: Should be able to use single and
 ; GCN-LABEL: {{^}}fabs_v2f16:
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}},
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}},
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
+
+; CI: s_movk_i32 [[MASK:s[0-9]+]], 0x7fff
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
 
 ; VI: flat_load_ushort [[LO:v[0-9]+]]
 ; VI: flat_load_ushort [[HI:v[0-9]+]]
@@ -51,10 +50,11 @@ define void @fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
 }
 
 ; GCN-LABEL: {{^}}fabs_v4f16:
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|
+; CI: s_movk_i32 [[MASK:s[0-9]+]], 0x7fff
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
+; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
 
 ; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
 ; VI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]], v{{[0-9]+}}
@@ -72,9 +72,10 @@ define void @fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
 ; GCN-LABEL: {{^}}fabs_fold_f16:
 ; GCN: flat_load_ushort [[IN0:v[0-9]+]]
 ; GCN: flat_load_ushort [[IN1:v[0-9]+]]
+
 ; CI-DAG: v_cvt_f32_f16_e32 [[CVT0:v[0-9]+]], [[IN0]]
-; CI-DAG: v_cvt_f32_f16_e32 [[CVT1:v[0-9]+]], [[IN1]]
-; CI: v_mul_f32_e64 [[RESULT:v[0-9]+]],  |[[CVT1]]|, [[CVT0]]
+; CI-DAG: v_cvt_f32_f16_e64 [[ABS_CVT1:v[0-9]+]], |[[IN1]]|
+; CI: v_mul_f32_e32 [[RESULT:v[0-9]+]],  [[CVT0]], [[ABS_CVT1]]
 ; CI: v_cvt_f16_f32_e32 [[CVTRESULT:v[0-9]+]], [[RESULT]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[CVTRESULT]]
 

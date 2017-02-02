@@ -134,3 +134,41 @@ entry:
   %sum = add i8 %p2, %p4
   ret i8 %sum
 }
+
+define i16 @test_ptr_arg(i16* %p) {
+; CHECK-LABEL: name: test_ptr_arg
+; CHECK: liveins: %r0
+; CHECK: [[VREGP:%[0-9]+]](p0) = COPY %r0
+; CHECK: [[VREGV:%[0-9]+]](s16) = G_LOAD [[VREGP]](p0)
+entry:
+  %v = load i16, i16* %p
+  ret i16 %v
+}
+
+define i32* @test_ptr_ret(i32** %p) {
+; Test pointer returns and pointer-to-pointer arguments
+; CHECK-LABEL: name: test_ptr_ret
+; CHECK: liveins: %r0
+; CHECK: [[VREGP:%[0-9]+]](p0) = COPY %r0
+; CHECK: [[VREGV:%[0-9]+]](p0) = G_LOAD [[VREGP]](p0)
+; CHECK: %r0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %v = load i32*, i32** %p
+  ret i32* %v
+}
+
+define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32* %p) {
+; CHECK-LABEL: name: test_ptr_arg_on_stack
+; CHECK: fixedStack:
+; CHECK: id: [[P:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
+; CHECK: liveins: %r0, %r1, %r2, %r3
+; CHECK: [[FIP:%[0-9]+]]{{.*}} = G_FRAME_INDEX %fixed-stack.[[P]]
+; CHECK: [[VREGP:%[0-9]+]](p0) = G_LOAD [[FIP]](p0)
+; CHECK: [[VREGV:%[0-9]+]](s32) = G_LOAD [[VREGP]](p0)
+; CHECK: %r0 = COPY [[VREGV]]
+; CHECK: BX_RET 14, _, implicit %r0
+entry:
+  %v = load i32, i32* %p
+  ret i32 %v
+}

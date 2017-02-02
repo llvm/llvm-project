@@ -64,6 +64,7 @@ void MetaMap::AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz) {
   u32 idx = block_alloc_.Alloc(&thr->proc()->block_cache);
   MBlock *b = block_alloc_.Map(idx);
   b->siz = sz;
+  b->tag = 0;
   b->tid = thr->tid;
   b->stk = CurrentStackId(thr, pc);
   u32 *meta = MemToMeta(p);

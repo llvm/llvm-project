@@ -94,6 +94,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     switch (Info.OperandType) {
     case MCOI::OPERAND_IMMEDIATE:
     case WebAssembly::OPERAND_LOCAL:
+    case WebAssembly::OPERAND_GLOBAL:
     case WebAssembly::OPERAND_P2ALIGN:
     case WebAssembly::OPERAND_BASIC_BLOCK: {
       if (Pos + sizeof(uint64_t) > Bytes.size())

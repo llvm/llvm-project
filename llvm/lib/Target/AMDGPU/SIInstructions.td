@@ -430,9 +430,26 @@ def : Pat <
 
 } // End Predicates = [UnsafeFPMath]
 
+
+// f16_to_fp patterns
 def : Pat <
-  (f32 (fpextend f16:$src)),
-  (V_CVT_F32_F16_e32 $src)
+  (f32 (f16_to_fp i32:$src0)),
+  (V_CVT_F32_F16_e64 SRCMODS.NONE, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : Pat <
+  (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
+  (V_CVT_F32_F16_e64 SRCMODS.ABS, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : Pat <
+  (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
+  (V_CVT_F32_F16_e64 SRCMODS.NEG_ABS, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : Pat <
+  (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
+  (V_CVT_F32_F16_e64 SRCMODS.NEG, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
 def : Pat <
@@ -440,9 +457,10 @@ def : Pat <
   (V_CVT_F64_F32_e32 (V_CVT_F32_F16_e32 $src))
 >;
 
+// fp_to_fp16 patterns
 def : Pat <
-  (f16 (fpround f32:$src)),
-  (V_CVT_F16_F32_e32 $src)
+  (i32 (fp_to_f16 (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)))),
+  (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0, $clamp, $omod)
 >;
 
 def : Pat <

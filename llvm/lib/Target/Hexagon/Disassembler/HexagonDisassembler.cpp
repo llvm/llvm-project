@@ -332,7 +332,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
       // follow the duplex model, so the register values in the MCInst are
       // incorrect. If the instruction is a compound, loop through the
       // operands and change registers appropriately.
-      if (HexagonMCInstrInfo::getType(*MCII, MI) == HexagonII::TypeCOMPOUND) {
+      if (HexagonMCInstrInfo::getType(*MCII, MI) == HexagonII::TypeCJ) {
         for (MCInst::iterator i = MI.begin(), last = MI.end(); i < last; ++i) {
           if (i->isReg()) {
             unsigned reg = i->getReg() - Hexagon::R0;

@@ -261,6 +261,11 @@ struct FormatToken {
   /// Only set if \c Type == \c TT_StartOfName.
   bool PartOfMultiVariableDeclStmt = false;
 
+  /// \brief Does this line comment continue a line comment section?
+  ///
+  /// Only set to true if \c Type == \c TT_LineComment.
+  bool ContinuesLineCommentSection = false;
+
   /// \brief If this is a bracket, this points to the matching one.
   FormatToken *MatchingParen = nullptr;
 

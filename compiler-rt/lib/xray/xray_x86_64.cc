@@ -1,6 +1,8 @@
+#include "cpuid.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
+
 #include <atomic>
 #include <cstdint>
 #include <errno.h>
@@ -61,8 +63,8 @@ uint64_t cycleFrequency() XRAY_NEVER_INSTRUMENT {
                         &CPUFrequency)) {
     CPUFrequency *= 1000;
   } else if (readValueFromFile(
-      "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
-      &CPUFrequency)) {
+                 "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+                 &CPUFrequency)) {
     CPUFrequency *= 1000;
   } else {
     Report("Unable to determine CPU frequency for TSC accounting.\n");
@@ -195,6 +197,22 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
         reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), Jmp9Seq,
         std::memory_order_release);
     // FIXME: Write out the nops still?
+  }
+  return true;
+}
+
+// We determine whether the CPU we're running on has the correct features we
+// need. In x86_64 this will be rdtscp support.
+bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
+  unsigned int EAX, EBX, ECX, EDX;
+
+  // We check whether rdtscp support is enabled. According to the x86_64 manual,
+  // level should be set at 0x80000001, and we should have a look at bit 27 in
+  // EDX. That's 0x8000000 (or 1u << 26).
+  __get_cpuid(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  if (!(EDX & (1u << 26))) {
+    Report("Missing rdtscp support.\n");
+    return false;
   }
   return true;
 }

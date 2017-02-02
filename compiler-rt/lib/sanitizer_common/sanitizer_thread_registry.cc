@@ -19,7 +19,7 @@ namespace __sanitizer {
 ThreadContextBase::ThreadContextBase(u32 tid)
     : tid(tid), unique_id(0), reuse_count(), os_id(0), user_id(0),
       status(ThreadStatusInvalid),
-      detached(false), parent_tid(0), next(0) {
+      detached(false), workerthread(false), parent_tid(0), next(0) {
   name[0] = '\0';
 }
 
@@ -59,9 +59,10 @@ void ThreadContextBase::SetFinished() {
   OnFinished();
 }
 
-void ThreadContextBase::SetStarted(uptr _os_id, void *arg) {
+void ThreadContextBase::SetStarted(uptr _os_id, bool _workerthread, void *arg) {
   status = ThreadStatusRunning;
   os_id = _os_id;
+  workerthread = _workerthread;
   OnStarted(arg);
 }
 
@@ -266,14 +267,15 @@ void ThreadRegistry::FinishThread(u32 tid) {
   }
 }
 
-void ThreadRegistry::StartThread(u32 tid, uptr os_id, void *arg) {
+void ThreadRegistry::StartThread(u32 tid, uptr os_id, bool workerthread,
+                                 void *arg) {
   BlockingMutexLock l(&mtx_);
   running_threads_++;
   CHECK_LT(tid, n_contexts_);
   ThreadContextBase *tctx = threads_[tid];
   CHECK_NE(tctx, 0);
   CHECK_EQ(ThreadStatusCreated, tctx->status);
-  tctx->SetStarted(os_id, arg);
+  tctx->SetStarted(os_id, workerthread, arg);
 }
 
 void ThreadRegistry::QuarantinePush(ThreadContextBase *tctx) {

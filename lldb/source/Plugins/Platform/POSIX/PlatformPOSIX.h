@@ -101,6 +101,10 @@ public:
       uint32_t timeout_sec)
       override; // Timeout in seconds to wait for shell program to finish
 
+  lldb_private::Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
+      lldb::ModuleSP &module_sp,
+      const lldb_private::FileSpecList *module_search_paths_ptr) override;
+
   lldb_private::Error MakeDirectory(const lldb_private::FileSpec &file_spec,
                                     uint32_t mode) override;
 

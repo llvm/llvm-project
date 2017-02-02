@@ -21,6 +21,7 @@
 #include "Encoding.h"
 #include "TokenAnnotator.h"
 #include "WhitespaceManager.h"
+#include "llvm/Support/Regex.h"
 #include <utility>
 
 namespace clang {
@@ -118,7 +119,8 @@ public:
   /// needs to be reformatted before any breaks are made.
   virtual Split getSplitBefore(unsigned LineIndex,
                                unsigned PreviousEndColumn,
-                               unsigned ColumnLimit) const {
+                               unsigned ColumnLimit,
+                               llvm::Regex& CommentPragmasRegex) const {
     return Split(StringRef::npos, 0);
   }
 
@@ -238,7 +240,8 @@ protected:
 
   // Checks if the content of line LineIndex may be reflown with the previous
   // line.
-  bool mayReflow(unsigned LineIndex) const;
+  virtual bool mayReflow(unsigned LineIndex,
+                         llvm::Regex &CommentPragmasRegex) const = 0;
 
   // Contains the original text of the lines of the block comment.
   //
@@ -307,7 +310,8 @@ public:
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
                    WhitespaceManager &Whitespaces) override;
   Split getSplitBefore(unsigned LineIndex, unsigned PreviousEndColumn,
-                       unsigned ColumnLimit) const override;
+                       unsigned ColumnLimit,
+                       llvm::Regex &CommentPragmasRegex) const override;
   unsigned getLineLengthAfterSplitBefore(unsigned LineIndex,
                                          unsigned TailOffset,
                                          unsigned PreviousEndColumn,
@@ -317,6 +321,8 @@ public:
                                unsigned ColumnLimit,
                                Split SplitBefore,
                                WhitespaceManager &Whitespaces) override;
+  bool mayReflow(unsigned LineIndex,
+                 llvm::Regex &CommentPragmasRegex) const override;
 
 private:
   // Rearranges the whitespace between Lines[LineIndex-1] and Lines[LineIndex].
@@ -371,7 +377,8 @@ public:
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
                    WhitespaceManager &Whitespaces) override;
   Split getSplitBefore(unsigned LineIndex, unsigned PreviousEndColumn,
-                       unsigned ColumnLimit) const override;
+                       unsigned ColumnLimit,
+                       llvm::Regex &CommentPragmasRegex) const override;
   unsigned getLineLengthAfterSplitBefore(unsigned LineIndex, unsigned TailOffset,
                                          unsigned PreviousEndColumn,
                                          unsigned ColumnLimit,
@@ -380,6 +387,8 @@ public:
                                unsigned ColumnLimit, Split SplitBefore,
                                WhitespaceManager &Whitespaces) override;
   void updateNextToken(LineState& State) const override;
+  bool mayReflow(unsigned LineIndex,
+                 llvm::Regex &CommentPragmasRegex) const override;
 
 private:
   unsigned getContentStartColumn(unsigned LineIndex,

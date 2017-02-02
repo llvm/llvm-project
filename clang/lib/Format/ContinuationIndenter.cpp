@@ -429,7 +429,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // does not help.
     bool HasTwoOperands =
         P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
-    if ((!BreakBeforeOperator && !HasTwoOperands) ||
+    if ((!BreakBeforeOperator && !(HasTwoOperands && Style.AlignOperands)) ||
         (!State.Stack.back().LastOperatorWrapped && BreakBeforeOperator))
       State.Stack.back().NoLineBreakInOperand = true;
   }
@@ -1213,7 +1213,7 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     BreakableToken::Split SplitBefore(StringRef::npos, 0);
     if (ReflowInProgress) {
       SplitBefore = Token->getSplitBefore(LineIndex, RemainingTokenColumns,
-                                          RemainingSpace);
+                                          RemainingSpace, CommentPragmasRegex);
     }
     ReflowInProgress = SplitBefore.first != StringRef::npos;
     unsigned TailOffset =

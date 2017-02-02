@@ -757,6 +757,7 @@ existed.
   #if foo
   #endif foo // warning: extra tokens at end of #endif directive
 
+  #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wextra-tokens"
 
   #if foo

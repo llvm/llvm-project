@@ -85,7 +85,8 @@ Value *FindAvailableLoadedValue(LoadInst *Load,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,
-                                bool *IsLoadCSE = nullptr);
+                                bool *IsLoadCSE = nullptr,
+                                unsigned *NumScanedInst = nullptr);
 
 }
 

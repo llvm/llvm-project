@@ -1131,10 +1131,11 @@ namespace {
           RHS = EC->getSubExpr();
         if (!RHS)
           return nullptr;
-        MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS);
-        if (dyn_cast<FieldDecl>(ME2->getMemberDecl()) != Field)
-          return nullptr;
-        return Field;
+        if (MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS)) {
+          if (ME2->getMemberDecl() == Field)
+            return Field;
+        }
+        return nullptr;
       } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
         CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
         if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
@@ -1416,9 +1417,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (DtorType) {
-  case Dtor_Comdat:
-    llvm_unreachable("not expecting a COMDAT");
-
+  case Dtor_Comdat: llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting: llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
@@ -1433,7 +1432,9 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
                             /*Delegating=*/false, LoadCXXThisAddress());
       break;
     }
+
     // Fallthrough: act like we're in the base variant.
+    LLVM_FALLTHROUGH;
 
   case Dtor_Base:
     assert(Body);

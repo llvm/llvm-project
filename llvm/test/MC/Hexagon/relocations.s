@@ -30,19 +30,19 @@ r_hex_8:
 
 # CHECK: R_HEX_GPREL16_0
 r_hex_gprel16_0:
-{ r0 = memb (#undefined@gotrel) }
+{ r0 = memb (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_1
 r_hex_gprel16_1:
-{ r0 = memh (#undefined@gotrel) }
+{ r0 = memh (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_2
 r_hex_gprel16_2:
-{ r0 = memw (#undefined@gotrel) }
+{ r0 = memw (gp+#undefined) }
 
 # CHECK: R_HEX_GPREL16_3
 r_hex_gprel16_3:
-{ r1:0 = memd (#undefined@gotrel) }
+{ r1:0 = memd (gp+#undefined) }
 
 # CHECK: R_HEX_B13_PCREL
 r_hex_b13_pcrel:
