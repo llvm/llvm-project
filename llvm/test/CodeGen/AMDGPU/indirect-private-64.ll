@@ -22,8 +22,8 @@ declare void @llvm.amdgcn.s.barrier() #0
 ; CI-PROMOTE: ds_read_b64
 define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load double, double addrspace(1)* %in, align 8
-  %array = alloca [16 x double], align 8
-  %ptr = getelementptr inbounds [16 x double], [16 x double]* %array, i32 0, i32 %b
+  %array = alloca [8 x double], align 8
+  %ptr = getelementptr inbounds [8 x double], [8 x double]* %array, i32 0, i32 %b
   store double %val, double* %ptr, align 8
   call void @llvm.amdgcn.s.barrier()
   %result = load double, double* %ptr, align 8
@@ -53,8 +53,8 @@ define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double
 ; CI-PROMOTE: ds_read2_b64
 define void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out, <2 x double> addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load <2 x double>, <2 x double> addrspace(1)* %in, align 16
-  %array = alloca [8 x <2 x double>], align 16
-  %ptr = getelementptr inbounds [8 x <2 x double>], [8 x <2 x double>]* %array, i32 0, i32 %b
+  %array = alloca [4 x <2 x double>], align 16
+  %ptr = getelementptr inbounds [4 x <2 x double>], [4 x <2 x double>]* %array, i32 0, i32 %b
   store <2 x double> %val, <2 x double>* %ptr, align 16
   call void @llvm.amdgcn.s.barrier()
   %result = load <2 x double>, <2 x double>* %ptr, align 16
@@ -111,8 +111,8 @@ define void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrs
 ; CI-PROMOTE: ds_read2_b64
 define void @private_access_v2i64_alloca(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in, i32 %b) #1 {
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
-  %array = alloca [8 x <2 x i64>], align 16
-  %ptr = getelementptr inbounds [8 x <2 x i64>], [8 x <2 x i64>]* %array, i32 0, i32 %b
+  %array = alloca [4 x <2 x i64>], align 16
+  %ptr = getelementptr inbounds [4 x <2 x i64>], [4 x <2 x i64>]* %array, i32 0, i32 %b
   store <2 x i64> %val, <2 x i64>* %ptr, align 16
   call void @llvm.amdgcn.s.barrier()
   %result = load <2 x i64>, <2 x i64>* %ptr, align 16

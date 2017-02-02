@@ -180,7 +180,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
       if (getprogpath(exe_path, argv0))
         return exe_path;
   }
-#elif defined(HAVE_DLFCN_H)
+#elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   // Use dladdr to get executable path if available.
   Dl_info DLInfo;
   int err = dladdr(MainAddr, &DLInfo);

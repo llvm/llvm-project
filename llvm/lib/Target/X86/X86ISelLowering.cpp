@@ -1672,6 +1672,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+  setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
   setTargetDAGCombine(ISD::BITCAST);
   setTargetDAGCombine(ISD::VSELECT);
   setTargetDAGCombine(ISD::SELECT);
@@ -5956,8 +5957,7 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
 static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
                                        unsigned NumNonZero, unsigned NumZero,
                                        SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget,
-                                       const TargetLowering &TLI) {
+                                       const X86Subtarget &Subtarget) {
   if (NumNonZero > 8)
     return SDValue();
 
@@ -6026,8 +6026,7 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
                                      unsigned NumNonZero, unsigned NumZero,
                                      SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   if (NumNonZero > 4)
     return SDValue();
 
@@ -6055,8 +6054,7 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
 
 /// Custom lower build_vector of v4i32 or v4f32.
 static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget,
-                                     const TargetLowering &TLI) {
+                                     const X86Subtarget &Subtarget) {
   // Find all zeroable elements.
   std::bitset<4> Zeroable;
   for (int i=0; i < 4; ++i) {
@@ -7601,17 +7599,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // If element VT is < 32 bits, convert it to inserts into a zero vector.
   if (EVTBits == 8 && NumElems == 16)
     if (SDValue V = LowerBuildVectorv16i8(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   if (EVTBits == 16 && NumElems == 8)
     if (SDValue V = LowerBuildVectorv8i16(Op, NonZeros, NumNonZero, NumZero,
-                                          DAG, Subtarget, *this))
+                                          DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits and has 4 elems, try to generate an INSERTPS
   if (EVTBits == 32 && NumElems == 4)
-    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget, *this))
+    if (SDValue V = LowerBuildVectorv4x32(Op, DAG, Subtarget))
       return V;
 
   // If element VT is == 32 bits, turn it into a number of shuffles.
@@ -13921,25 +13919,27 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   }
   assert(VT.is128BitVector() && "Only 128-bit vector types should be left!");
 
-  if (Subtarget.hasSSE41()) {
-    if (EltVT.getSizeInBits() == 8 || EltVT.getSizeInBits() == 16) {
-      unsigned Opc;
-      if (VT == MVT::v8i16) {
-        Opc = X86ISD::PINSRW;
-      } else {
-        assert(VT == MVT::v16i8);
-        Opc = X86ISD::PINSRB;
-      }
-
-      // Transform it so it match pinsr{b,w} which expects a GR32 as its second
-      // argument.
-      if (N1.getValueType() != MVT::i32)
-        N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-      if (N2.getValueType() != MVT::i32)
-        N2 = DAG.getIntPtrConstant(IdxVal, dl);
-      return DAG.getNode(Opc, dl, VT, N0, N1, N2);
+  // Transform it so it match pinsr{b,w} which expects a GR32 as its second
+  // argument. SSE41 required for pinsrb.
+  if (VT == MVT::v8i16 || (VT == MVT::v16i8 && Subtarget.hasSSE41())) {
+    unsigned Opc;
+    if (VT == MVT::v8i16) {
+      assert(Subtarget.hasSSE2() && "SSE2 required for PINSRW");
+      Opc = X86ISD::PINSRW;
+    } else {
+      assert(VT == MVT::v16i8 && "PINSRB requires v16i8 vector");
+      assert(Subtarget.hasSSE41() && "SSE41 required for PINSRB");
+      Opc = X86ISD::PINSRB;
     }
 
+    if (N1.getValueType() != MVT::i32)
+      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
+    if (N2.getValueType() != MVT::i32)
+      N2 = DAG.getIntPtrConstant(IdxVal, dl);
+    return DAG.getNode(Opc, dl, VT, N0, N1, N2);
+  }
+
+  if (Subtarget.hasSSE41()) {
     if (EltVT == MVT::f32) {
       // Bits [7:6] of the constant are the source select. This will always be
       //   zero here. The DAG Combiner may combine an extract_elt index into
@@ -13969,24 +13969,11 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       return DAG.getNode(X86ISD::INSERTPS, dl, VT, N0, N1, N2);
     }
 
-    if (EltVT == MVT::i32 || EltVT == MVT::i64) {
-      // PINSR* works with constant index.
+    // PINSR* works with constant index.
+    if (EltVT == MVT::i32 || EltVT == MVT::i64)
       return Op;
-    }
   }
 
-  if (EltVT == MVT::i8)
-    return SDValue();
-
-  if (EltVT.getSizeInBits() == 16) {
-    // Transform it so it match pinsrw which expects a 16-bit value in a GR32
-    // as its second argument.
-    if (N1.getValueType() != MVT::i32)
-      N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, N1);
-    if (N2.getValueType() != MVT::i32)
-      N2 = DAG.getIntPtrConstant(IdxVal, dl);
-    return DAG.getNode(X86ISD::PINSRW, dl, VT, N0, N1, N2);
-  }
   return SDValue();
 }
 
@@ -14078,59 +14065,6 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
 
   assert((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
          "Can only insert into 256-bit or 512-bit vectors");
-
-  // Fold two 16-byte or 32-byte subvector loads into one 32-byte or 64-byte
-  // load:
-  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
-  //                   (load16 addr + 16), Elts/2)
-  // --> load32 addr
-  // or:
-  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
-  //                   (load32 addr + 32), Elts/2)
-  // --> load64 addr
-  // or a 16-byte or 32-byte broadcast:
-  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
-  //                   (load16 addr), Elts/2)
-  // --> X86SubVBroadcast(load16 addr)
-  // or:
-  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
-  //                   (load32 addr), Elts/2)
-  // --> X86SubVBroadcast(load32 addr)
-  if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
-      Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2) {
-    auto *Idx2 = dyn_cast<ConstantSDNode>(Vec.getOperand(2));
-    if (Idx2 && Idx2->getZExtValue() == 0) {
-      SDValue SubVec2 = Vec.getOperand(1);
-      // If needed, look through bitcasts to get to the load.
-      if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(SubVec2))) {
-        bool Fast;
-        unsigned Alignment = FirstLd->getAlignment();
-        unsigned AS = FirstLd->getAddressSpace();
-        const X86TargetLowering *TLI = Subtarget.getTargetLowering();
-        if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
-                                    OpVT, AS, Alignment, &Fast) && Fast) {
-          SDValue Ops[] = {SubVec2, SubVec};
-          if (SDValue Ld = EltsFromConsecutiveLoads(OpVT, Ops, dl, DAG, false))
-            return Ld;
-        }
-      }
-      // If lower/upper loads are the same and the only users of the load, then
-      // lower to a VBROADCASTF128/VBROADCASTI128/etc.
-      if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
-        if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
-            areOnlyUsersOf(SubVec2.getNode(), {Op, Vec})) {
-          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
-        }
-      }
-      // If this is subv_broadcast insert into both halves, use a larger
-      // subv_broadcast.
-      if (SubVec.getOpcode() == X86ISD::SUBV_BROADCAST && SubVec == SubVec2) {
-        return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT,
-                           SubVec.getOperand(0));
-      }
-    }
-  }
 
   if (SubVecVT.is128BitVector())
     return insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
@@ -27679,8 +27613,7 @@ static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
 /// altering anything.
 static SDValue
 combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
-                             SelectionDAG &DAG,
-                             TargetLowering::DAGCombinerInfo &DCI) {
+                             SelectionDAG &DAG) {
   assert(N.getOpcode() == X86ISD::PSHUFD &&
          "Called with something other than an x86 128-bit half shuffle!");
   SDLoc DL(N);
@@ -28143,7 +28076,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     break;
 
   case X86ISD::PSHUFD:
-    if (SDValue NewN = combineRedundantDWordShuffle(N, Mask, DAG, DCI))
+    if (SDValue NewN = combineRedundantDWordShuffle(N, Mask, DAG))
       return NewN;
 
     break;
@@ -33612,7 +33545,6 @@ static SDValue MaterializeSETB(const SDLoc &DL, SDValue EFLAGS,
 
 // Optimize  RES = X86ISD::SETCC CONDCODE, EFLAG_INPUT
 static SDValue combineX86SetCC(SDNode *N, SelectionDAG &DAG,
-                               TargetLowering::DAGCombinerInfo &DCI,
                                const X86Subtarget &Subtarget) {
   SDLoc DL(N);
   X86::CondCode CC = X86::CondCode(N->getConstantOperandVal(0));
@@ -33651,7 +33583,6 @@ static SDValue combineX86SetCC(SDNode *N, SelectionDAG &DAG,
 
 /// Optimize branch condition evaluation.
 static SDValue combineBrCond(SDNode *N, SelectionDAG &DAG,
-                             TargetLowering::DAGCombinerInfo &DCI,
                              const X86Subtarget &Subtarget) {
   SDLoc DL(N);
   SDValue EFLAGS = N->getOperand(3);
@@ -34136,6 +34067,77 @@ static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const X86Subtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDLoc dl(N);
+  SDValue Vec = N->getOperand(0);
+  SDValue SubVec = N->getOperand(1);
+  SDValue Idx = N->getOperand(2);
+
+  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  MVT OpVT = N->getSimpleValueType(0);
+  MVT SubVecVT = SubVec.getSimpleValueType();
+
+  // Fold two 16-byte or 32-byte subvector loads into one 32-byte or 64-byte
+  // load:
+  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
+  //                   (load16 addr + 16), Elts/2)
+  // --> load32 addr
+  // or:
+  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
+  //                   (load32 addr + 32), Elts/2)
+  // --> load64 addr
+  // or a 16-byte or 32-byte broadcast:
+  // (insert_subvector (insert_subvector undef, (load16 addr), 0),
+  //                   (load16 addr), Elts/2)
+  // --> X86SubVBroadcast(load16 addr)
+  // or:
+  // (insert_subvector (insert_subvector undef, (load32 addr), 0),
+  //                   (load32 addr), Elts/2)
+  // --> X86SubVBroadcast(load32 addr)
+  if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
+      Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2) {
+    auto *Idx2 = dyn_cast<ConstantSDNode>(Vec.getOperand(2));
+    if (Idx2 && Idx2->getZExtValue() == 0) {
+      SDValue SubVec2 = Vec.getOperand(1);
+      // If needed, look through bitcasts to get to the load.
+      if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(SubVec2))) {
+        bool Fast;
+        unsigned Alignment = FirstLd->getAlignment();
+        unsigned AS = FirstLd->getAddressSpace();
+        const X86TargetLowering *TLI = Subtarget.getTargetLowering();
+        if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                    OpVT, AS, Alignment, &Fast) && Fast) {
+          SDValue Ops[] = {SubVec2, SubVec};
+          if (SDValue Ld = EltsFromConsecutiveLoads(OpVT, Ops, dl, DAG, false))
+            return Ld;
+        }
+      }
+      // If lower/upper loads are the same and the only users of the load, then
+      // lower to a VBROADCASTF128/VBROADCASTI128/etc.
+      if (auto *Ld = dyn_cast<LoadSDNode>(peekThroughOneUseBitcasts(SubVec2))) {
+        if (SubVec2 == SubVec && ISD::isNormalLoad(Ld) &&
+            areOnlyUsersOf(SubVec2.getNode(), {SDValue(N, 0), Vec})) {
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
+        }
+      }
+      // If this is subv_broadcast insert into both halves, use a larger
+      // subv_broadcast.
+      if (SubVec.getOpcode() == X86ISD::SUBV_BROADCAST && SubVec == SubVec2) {
+        return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT,
+                           SubVec.getOperand(0));
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -34144,6 +34146,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   default: break;
   case ISD::EXTRACT_VECTOR_ELT:
     return combineExtractVectorElt(N, DAG, DCI, Subtarget);
+  case ISD::INSERT_SUBVECTOR:
+    return combineInsertSubvector(N, DAG, DCI, Subtarget);
   case ISD::VSELECT:
   case ISD::SELECT:
   case X86ISD::SHRUNKBLEND: return combineSelect(N, DAG, DCI, Subtarget);
@@ -34184,8 +34188,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND:    return combineSext(N, DAG, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG: return combineSignExtendInReg(N, DAG, Subtarget);
   case ISD::SETCC:          return combineSetCC(N, DAG, Subtarget);
-  case X86ISD::SETCC:       return combineX86SetCC(N, DAG, DCI, Subtarget);
-  case X86ISD::BRCOND:      return combineBrCond(N, DAG, DCI, Subtarget);
+  case X86ISD::SETCC:       return combineX86SetCC(N, DAG, Subtarget);
+  case X86ISD::BRCOND:      return combineBrCond(N, DAG, Subtarget);
   case X86ISD::VSHLI:
   case X86ISD::VSRAI:
   case X86ISD::VSRLI:       return combineVectorShift(N, DAG, DCI, Subtarget);

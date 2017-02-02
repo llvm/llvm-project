@@ -35,7 +35,8 @@ static unsigned getMaxWaves(unsigned SGPRs, unsigned VGPRs,
   unsigned MinRegOccupancy = std::min(ST.getOccupancyWithNumSGPRs(SGPRs),
                                       ST.getOccupancyWithNumVGPRs(VGPRs));
   return std::min(MinRegOccupancy,
-                  ST.getOccupancyWithLocalMemSize(MFI->getLDSSize()));
+                  ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
+                                                  *MF.getFunction()));
 }
 
 void GCNMaxOccupancySchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,

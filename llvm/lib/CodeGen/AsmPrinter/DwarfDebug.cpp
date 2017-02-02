@@ -731,6 +731,7 @@ DbgVariable *DwarfDebug::getExistingAbstractVariable(InlinedVariable IV) {
 
 void DwarfDebug::createAbstractVariable(const DILocalVariable *Var,
                                         LexicalScope *Scope) {
+  assert(Scope && Scope->isAbstractScope());
   auto AbsDbgVariable = make_unique<DbgVariable>(Var, /* IA */ nullptr);
   InfoHolder.addScopeVariable(Scope, AbsDbgVariable.get());
   AbstractVariables[Var] = std::move(AbsDbgVariable);
@@ -1213,14 +1214,10 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it. But with -fdebug-info-for-profiling, the subprogram
   // is still needed as we need its source location.
-  if (!Asm->TM.Options.DebugInfoForProfiling &&
+  if (!TheCU.getCUNode()->getDebugInfoForProfiling() &&
       TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
-    assert(DbgValues.empty());
-    // FIXME: This wouldn't be true in LTO with a -g (with inlining) CU followed
-    // by a -gmlt CU. Add a test and remove this assertion.
-    assert(AbstractVariables.empty());
     PrevLabel = nullptr;
     CurFn = nullptr;
     DebugHandlerBase::endFunction(MF);

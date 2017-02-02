@@ -412,7 +412,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 
   if (printSymbolizedStackTrace(Argv0, StackTrace, depth, OS))
     return;
-#if HAVE_DLFCN_H && __GNUG__ && !defined(__CYGWIN__)
+#if HAVE_DLFCN_H && HAVE_DLADDR
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;

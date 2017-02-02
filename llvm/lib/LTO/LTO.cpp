@@ -446,6 +446,11 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     if (GV.hasAppendingLinkage())
       Keep.push_back(&GV);
 
+  DenseSet<GlobalObject *> AliasedGlobals;
+  for (auto &GA : M.aliases())
+    if (GlobalObject *GO = GA.getBaseObject())
+      AliasedGlobals.insert(GO);
+
   for (const InputFile::Symbol &Sym :
        make_range(InputFile::symbol_iterator(SymTab.symbols().begin(), SymTab,
                                              nullptr),
@@ -455,20 +460,37 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
     SymbolResolution Res = *ResI++;
     addSymbolToGlobalRes(Used, Sym, Res, 0);
 
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
-      continue;
-    if (Res.Prevailing && Sym.isGV()) {
+    if (Sym.isGV()) {
       GlobalValue *GV = Sym.getGV();
-      Keep.push_back(GV);
-      switch (GV->getLinkage()) {
-      default:
-        break;
-      case GlobalValue::LinkOnceAnyLinkage:
-        GV->setLinkage(GlobalValue::WeakAnyLinkage);
-        break;
-      case GlobalValue::LinkOnceODRLinkage:
-        GV->setLinkage(GlobalValue::WeakODRLinkage);
-        break;
+      if (Res.Prevailing) {
+        if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+          continue;
+        Keep.push_back(GV);
+        switch (GV->getLinkage()) {
+        default:
+          break;
+        case GlobalValue::LinkOnceAnyLinkage:
+          GV->setLinkage(GlobalValue::WeakAnyLinkage);
+          break;
+        case GlobalValue::LinkOnceODRLinkage:
+          GV->setLinkage(GlobalValue::WeakODRLinkage);
+          break;
+        }
+      } else if (isa<GlobalObject>(GV) &&
+                 (GV->hasLinkOnceODRLinkage() || GV->hasWeakODRLinkage() ||
+                  GV->hasAvailableExternallyLinkage()) &&
+                 !AliasedGlobals.count(cast<GlobalObject>(GV))) {
+        // Either of the above three types of linkage indicates that the
+        // chosen prevailing symbol will have the same semantics as this copy of
+        // the symbol, so we can link it with available_externally linkage. We
+        // only need to do this if the symbol is undefined.
+        GlobalValue *CombinedGV =
+            RegularLTO.CombinedModule->getNamedValue(GV->getName());
+        if (!CombinedGV || CombinedGV->isDeclaration()) {
+          Keep.push_back(GV);
+          GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
+          cast<GlobalObject>(GV)->setComdat(nullptr);
+        }
       }
     }
     // Common resolution: collect the maximum size/alignment over all commons.

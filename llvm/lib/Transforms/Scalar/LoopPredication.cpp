@@ -164,7 +164,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
                             ? IndexAR->getStart()
                             : SE->getSCEVAtScope(IndexAR, L->getParentLoop());
   if (NewLHSS == IndexAR) {
-    DEBUG(dbgs() << "Can't compute NewLHSS!");
+    DEBUG(dbgs() << "Can't compute NewLHSS!\n");
     return None;
   }
 

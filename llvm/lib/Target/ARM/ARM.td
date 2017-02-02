@@ -759,6 +759,16 @@ def : ProcNoItin<"cortex-m7",                           [ARMv7em,
                                                          FeatureFPARMv8,
                                                          FeatureD16]>;
 
+def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
+                                                         FeatureNoMovt]>;
+
+def : ProcNoItin<"cortex-m33",                          [ARMv8mMainline,
+                                                         FeatureDSP,
+                                                         FeatureT2XtPk,
+                                                         FeatureFPARMv8,
+                                                         FeatureD16,
+                                                         FeatureVFPOnlySP]>;
+
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDiv,
                                                          FeatureHWDivARM,

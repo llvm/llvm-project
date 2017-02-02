@@ -3,8 +3,8 @@
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
 ; CI: v_cvt_f32_f16_e32
-; CI: v_cvt_f32_f16_e32
-; CI: v_sub_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, |v{{[0-9]+}}|
+; CI: v_cvt_f32_f16_e64 [[CVT_ABS_X:v[0-9]+]], |v{{[0-9]+}}|
+; CI: v_subrev_f32_e32 v{{[0-9]+}}, [[CVT_ABS_X]], v{{[0-9]+}}
 
 ; VI-NOT: and
 ; VI: v_sub_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|
@@ -17,14 +17,15 @@ define void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_fmul_f16:
-; CI: v_cvt_f32_f16_e32
-; CI: v_cvt_f32_f16_e32
-; CI: v_mul_f32_e64 {{v[0-9]+}}, {{v[0-9]+}}, -|{{v[0-9]+}}|
+; CI-DAG: v_cvt_f32_f16_e32
+; CI-DAG: v_cvt_f32_f16_e64 [[CVT_NEG_ABS_X:v[0-9]+]], -|{{v[0-9]+}}|
+; CI: v_mul_f32_e32 {{v[0-9]+}}, [[CVT_NEG_ABS_X]], {{v[0-9]+}}
 ; CI: v_cvt_f16_f32_e32
 
 ; VI-NOT: and
-; VI: v_mul_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, -|{{v[0-9]+}}|
-; VI-NOT: and
+; VI: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
+; VI-NOT: [[MUL]]
+; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
 define void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.000000e+00, %fabs
@@ -49,10 +50,7 @@ define void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 
 ; FIXME: Should use or
 ; GCN-LABEL: {{^}}fneg_fabs_f16:
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}},
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-
-; VI: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
 define void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   %fsub = fsub half -0.000000e+00, %fabs
@@ -61,10 +59,7 @@ define void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
 }
 
 ; GCN-LABEL: {{^}}v_fneg_fabs_f16:
-; CI: v_cvt_f32_f16_e32 v{{[0-9]+}},
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-
-; VI: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
 define void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
   %val = load half, half addrspace(1)* %in, align 2
   %fabs = call half @llvm.fabs.f16(half %val)
@@ -75,13 +70,10 @@ define void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
 
 ; FIXME: single bit op
 ; GCN-LABEL: {{^}}fneg_fabs_v2f16:
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-
-; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: flat_store_dword
+; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: store_dword
 define void @fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fsub = fsub <2 x half> <half -0.000000e+00, half -0.000000e+00>, %fabs
@@ -90,17 +82,12 @@ define void @fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f16:
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-; CI: v_cvt_f16_f32_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-
-; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: flat_store_dwordx2
+; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
+; GCN: store_dwordx2
 define void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
   %fsub = fsub <4 x half> <half -0.000000e+00, half -0.000000e+00, half -0.000000e+00, half -0.000000e+00>, %fabs

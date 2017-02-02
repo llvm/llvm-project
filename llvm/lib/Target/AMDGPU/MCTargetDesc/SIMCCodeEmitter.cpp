@@ -226,6 +226,8 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case 8:
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
   case 2:
+    // FIXME Is this correct? What do inline immediates do on SI for f16 src
+    // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
   default:
     llvm_unreachable("invalid operand size");

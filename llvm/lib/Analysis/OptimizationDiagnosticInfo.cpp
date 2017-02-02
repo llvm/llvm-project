@@ -93,8 +93,10 @@ void MappingTraits<DiagnosticInfoOptimizationBase *>::mapping(
                      OptDiag->getKind() ==
                          DK_OptimizationRemarkAnalysisAliasing))
     ;
+  else if (io.mapTag("!Failure", OptDiag->getKind() == DK_OptimizationFailure))
+    ;
   else
-    llvm_unreachable("todo");
+    llvm_unreachable("Unknown remark type");
 
   // These are read-only for now.
   DebugLoc DL = OptDiag->getDebugLoc();

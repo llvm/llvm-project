@@ -770,9 +770,10 @@ def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
 }
 
 // A single-register address. This is used with the SjLj
-// pseudo-instructions.
+// pseudo-instructions which tranlates to LD/LWZ.  These instructions requires
+// G8RC_NOX0 registers.
 def memr : Operand<iPTR> {
-  let MIOperandInfo = (ops ptr_rc:$ptrreg);
+  let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg);
 }
 def PPCTLSRegOperand : AsmOperandClass {
   let Name = "TLSReg"; let PredicateMethod = "isTLSReg";

@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -7315,18 +7316,6 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   return true;
 }
 
-/// \brief Get a mask consisting of sequential integers starting from \p Start.
-///
-/// I.e. <Start, Start + 1, ..., Start + NumElts - 1>
-static Constant *getSequentialMask(IRBuilder<> &Builder, unsigned Start,
-                                   unsigned NumElts) {
-  SmallVector<Constant *, 16> Mask;
-  for (unsigned i = 0; i < NumElts; i++)
-    Mask.push_back(Builder.getInt32(Start + i));
-
-  return ConstantVector::get(Mask);
-}
-
 /// \brief Lower an interleaved store into a stN intrinsic.
 ///
 /// E.g. Lower an interleaved store (Factor = 3):
@@ -7408,7 +7397,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   for (unsigned i = 0; i < Factor; i++) {
     if (Mask[i] >= 0) {
       Ops.push_back(Builder.CreateShuffleVector(
-        Op0, Op1, getSequentialMask(Builder, Mask[i], LaneLen)));
+          Op0, Op1, createSequentialMask(Builder, Mask[i], LaneLen, 0)));
     } else {
       unsigned StartMask = 0;
       for (unsigned j = 1; j < LaneLen; j++) {
@@ -7423,7 +7412,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
       // In the case of all undefs we're defaulting to using elems from 0
       // Note: StartMask cannot be negative, it's checked in isReInterleaveMask
       Ops.push_back(Builder.CreateShuffleVector(
-        Op0, Op1, getSequentialMask(Builder, StartMask, LaneLen)));
+          Op0, Op1, createSequentialMask(Builder, StartMask, LaneLen, 0)));
     }
   }
 

@@ -118,25 +118,17 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // FIXME: avoid re-calculating this every time.
   BitVector Reserved(getNumRegs());
-  markSuperRegs(Reserved, AArch64::SP);
-  markSuperRegs(Reserved, AArch64::XZR);
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->hasFP(MF) || TT.isOSDarwin()) {
-    markSuperRegs(Reserved, AArch64::FP);
+  if (TFI->hasFP(MF) || TT.isOSDarwin())
     markSuperRegs(Reserved, AArch64::W29);
-  }
 
-  if (MF.getSubtarget<AArch64Subtarget>().isX18Reserved()) {
-    markSuperRegs(Reserved, AArch64::X18); // Platform register
-    markSuperRegs(Reserved, AArch64::W18);
-  }
+  if (MF.getSubtarget<AArch64Subtarget>().isX18Reserved())
+    markSuperRegs(Reserved, AArch64::W18); // Platform register
 
-  if (hasBasePointer(MF)) {
-    markSuperRegs(Reserved, AArch64::X19);
+  if (hasBasePointer(MF))
     markSuperRegs(Reserved, AArch64::W19);
-  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;

@@ -179,12 +179,9 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
 }
 
 std::string DisassembleCmd(const std::string &FileName) {
-  if (ExecuteCommand("dumpbin > nul") == 0)
+  if (ExecuteCommand("dumpbin /summary > nul") == 0)
     return "dumpbin /disasm " + FileName;
-  if (ExecuteCommand("llvm-objdump > nul") == 0)
-    return "llvm-objdump -d " + FileName;
-  Printf("libFuzzer: couldn't find tool to disassemble (dumpbin, "
-      "llvm-objdump)\n");
+  Printf("libFuzzer: couldn't find tool to disassemble (dumpbin)\n");
   exit(1);
 }
 

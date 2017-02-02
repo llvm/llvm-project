@@ -309,41 +309,6 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   }
 }
 
-/// Try to fold (X << C1) << C2, where the shifts are some combination of
-/// shl/ashr/lshr.
-static Instruction *
-foldShiftByConstOfShiftByConst(BinaryOperator &I, const APInt *COp1,
-                               InstCombiner::BuilderTy *Builder) {
-  Value *Op0 = I.getOperand(0);
-  unsigned TypeBits = Op0->getType()->getScalarSizeInBits();
-
-  // Find out if this is a shift of a shift by a constant.
-  BinaryOperator *ShiftOp = dyn_cast<BinaryOperator>(Op0);
-  if (!ShiftOp || !ShiftOp->isShift())
-    return nullptr;
-
-  const APInt *ShAmt1;
-  if (!match(ShiftOp->getOperand(1), m_APInt(ShAmt1)))
-    return nullptr;
-
-  // Check for (X << c1) << c2  and  (X >> c1) >> c2
-  if (I.getOpcode() == ShiftOp->getOpcode()) {
-    unsigned AmtSum = (*ShAmt1 + *COp1).getZExtValue();
-    // If this is an oversized composite shift, then unsigned shifts become
-    // zero (handled in InstSimplify) and ashr saturates.
-    if (AmtSum >= TypeBits) {
-      if (I.getOpcode() != Instruction::AShr)
-        return nullptr;
-      AmtSum = TypeBits - 1; // Saturate to 31 for i32 ashr.
-    }
-
-    return BinaryOperator::Create(I.getOpcode(), ShiftOp->getOperand(0),
-                                  ConstantInt::get(I.getType(), AmtSum));
-  }
-
-  return nullptr;
-}
-
 Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
                                                BinaryOperator &I) {
   bool isLeftShift = I.getOpcode() == Instruction::Shl;
@@ -553,9 +518,6 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
     }
   }
 
-  if (Instruction *Folded = foldShiftByConstOfShiftByConst(I, Op1C, Builder))
-    return Folded;
-
   return nullptr;
 }
 
@@ -598,10 +560,10 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
     // arithmetic expressions are still recognizable by scalar evolution.
     // The inexact versions are deferred to DAGCombine, so we don't hide shl
     // behind a bit mask.
-    const APInt *ShrOp1;
-    if (match(Op0, m_CombineOr(m_Exact(m_LShr(m_Value(X), m_APInt(ShrOp1))),
-                               m_Exact(m_AShr(m_Value(X), m_APInt(ShrOp1)))))) {
-      unsigned ShrAmt = ShrOp1->getZExtValue();
+    const APInt *ShOp1;
+    if (match(Op0, m_CombineOr(m_Exact(m_LShr(m_Value(X), m_APInt(ShOp1))),
+                               m_Exact(m_AShr(m_Value(X), m_APInt(ShOp1)))))) {
+      unsigned ShrAmt = ShOp1->getZExtValue();
       if (ShrAmt < ShAmt) {
         // If C1 < C2: (X >>?,exact C1) << C2 --> X << (C2 - C1)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShrAmt);
@@ -618,6 +580,14 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
         NewShr->setIsExact(true);
         return NewShr;
       }
+    }
+
+    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShOp1)))) {
+      unsigned AmtSum = ShAmt + ShOp1->getZExtValue();
+      // Oversized shifts are simplified to zero in InstSimplify.
+      if (AmtSum < BitWidth)
+        // (X << C1) << C2 --> X << (C1 + C2)
+        return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
     }
 
     // If the shifted-out value is known-zero, then this is a NUW shift.
@@ -675,9 +645,9 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
     }
 
     Value *X;
-    const APInt *ShlAmtAPInt;
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShlAmtAPInt)))) {
-      unsigned ShlAmt = ShlAmtAPInt->getZExtValue();
+    const APInt *ShOp1;
+    if (match(Op0, m_Shl(m_Value(X), m_APInt(ShOp1)))) {
+      unsigned ShlAmt = ShOp1->getZExtValue();
       if (ShlAmt < ShAmt) {
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShlAmt);
         if (cast<BinaryOperator>(Op0)->hasNoUnsignedWrap()) {
@@ -708,6 +678,14 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
       // (X << C) >>u C --> X & (-1 >>u C)
       APInt Mask(APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt));
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
+
+    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShOp1)))) {
+      unsigned AmtSum = ShAmt + ShOp1->getZExtValue();
+      // Oversized shifts are simplified to zero in InstSimplify.
+      if (AmtSum < BitWidth)
+        // (X >>u C1) >>u C2 --> X >>u (C1 + C2)
+        return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
@@ -747,9 +725,9 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
 
     // We can't handle (X << C1) >>s C2. It shifts arbitrary bits in. However,
     // we can handle (X <<nsw C1) >>s C2 since it only shifts in sign bits.
-    const APInt *ShlAmtAPInt;
-    if (match(Op0, m_NSWShl(m_Value(X), m_APInt(ShlAmtAPInt)))) {
-      unsigned ShlAmt = ShlAmtAPInt->getZExtValue();
+    const APInt *ShOp1;
+    if (match(Op0, m_NSWShl(m_Value(X), m_APInt(ShOp1)))) {
+      unsigned ShlAmt = ShOp1->getZExtValue();
       if (ShlAmt < ShAmt) {
         // (X <<nsw C1) >>s C2 --> X >>s (C2 - C1)
         Constant *ShiftDiff = ConstantInt::get(Ty, ShAmt - ShlAmt);
@@ -764,6 +742,14 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
         NewShl->setHasNoSignedWrap(true);
         return NewShl;
       }
+    }
+
+    if (match(Op0, m_AShr(m_Value(X), m_APInt(ShOp1)))) {
+      unsigned AmtSum = ShAmt + ShOp1->getZExtValue();
+      // Oversized arithmetic shifts replicate the sign bit.
+      AmtSum = std::min(AmtSum, BitWidth - 1);
+      // (X >>s C1) >>s C2 --> X >>s (C1 + C2)
+      return BinaryOperator::CreateAShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
