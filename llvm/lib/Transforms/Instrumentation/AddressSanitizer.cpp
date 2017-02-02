@@ -1853,7 +1853,8 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     GlobalValue *InstrumentedGlobal = NewGlobal;
 
     bool CanUsePrivateAliases =
-        TargetTriple.isOSBinFormatELF() || TargetTriple.isOSBinFormatMachO();
+        TargetTriple.isOSBinFormatELF() || TargetTriple.isOSBinFormatMachO() ||
+        TargetTriple.isOSBinFormatWasm();
     if (CanUsePrivateAliases && ClUsePrivateAliasForGlobals) {
       // Create local alias for NewGlobal to avoid crash on ODR between
       // instrumented and non-instrumented libraries.
