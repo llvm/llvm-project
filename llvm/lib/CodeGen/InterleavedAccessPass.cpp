@@ -174,7 +174,7 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
 /// I.e. <0, LaneLen, ... , LaneLen*(Factor - 1), 1, LaneLen + 1, ...>
 /// E.g. For a Factor of 2 (LaneLen=4): <0, 4, 1, 5, 2, 6, 3, 7>
 static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
-                               unsigned MaxFactor) {
+                               unsigned MaxFactor, unsigned OpNumElts) {
   unsigned NumElts = Mask.size();
   if (NumElts < 4)
     return false;
@@ -245,6 +245,9 @@ static bool isReInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
       // else StartMask remains set to 0, i.e. all elements are undefs
 
       if (StartMask < 0)
+        break;
+      // We must stay within the vectors; This case can happen with undefs.
+      if (StartMask + LaneLen > OpNumElts*2)
         break;
     }
 
@@ -406,7 +409,8 @@ bool InterleavedAccess::lowerInterleavedStore(
 
   // Check if the shufflevector is RE-interleave shuffle.
   unsigned Factor;
-  if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor))
+  unsigned OpNumElts = SVI->getOperand(0)->getType()->getVectorNumElements();
+  if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor, OpNumElts))
     return false;
 
   DEBUG(dbgs() << "IA: Found an interleaved store: " << *SI << "\n");

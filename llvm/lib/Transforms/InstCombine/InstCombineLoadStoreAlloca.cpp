@@ -502,7 +502,8 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
       !DL.isNonIntegralPointerType(Ty)) {
     if (all_of(LI.users(), [&LI](User *U) {
           auto *SI = dyn_cast<StoreInst>(U);
-          return SI && SI->getPointerOperand() != &LI;
+          return SI && SI->getPointerOperand() != &LI &&
+                 !SI->getPointerOperand()->isSwiftError();
         })) {
       LoadInst *NewLoad = combineLoadToNewType(
           IC, LI,
