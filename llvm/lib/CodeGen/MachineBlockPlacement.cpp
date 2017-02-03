@@ -160,10 +160,14 @@ static cl::opt<unsigned> TailDupPlacementPenalty(
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 
-#ifndef NDEBUG
+// Internal option used to control BFI display only after MBP pass.
+// Defined in CodeGen/MachineBlockFrequencyInfo.cpp:
+// -view-block-layout-with-bfi=
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
+
+// Command line option to specify the name of the function for CFG dump
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
-#endif
 
 namespace {
 class BlockChain;
@@ -2365,13 +2369,11 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
         MBI->setAlignment(AlignAllNonFallThruBlocks);
     }
   }
-#ifndef NDEBUG
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
     MBFI->view(false);
   }
-#endif
 
 
   // We always return true as we have no way to track whether the final order

@@ -81,6 +81,11 @@ static cl::opt<bool>
     DisablePromotion("disable-licm-promotion", cl::Hidden,
                      cl::desc("Disable memory promotion in LICM pass"));
 
+static cl::opt<uint32_t> MaxNumUsesTraversed(
+    "licm-max-num-uses-traversed", cl::Hidden, cl::init(8),
+    cl::desc("Max num uses visited for identifying load "
+             "invariance in loop using invariant start (default = 8)"));
+
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
                             const LoopSafetyInfo *SafetyInfo);
@@ -480,6 +485,59 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 
+// Return true if LI is invariant within scope of the loop. LI is invariant if
+// CurLoop is dominated by an invariant.start representing the same memory location
+// and size as the memory location LI loads from, and also the invariant.start
+// has no uses.
+static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
+                                  Loop *CurLoop) {
+  Value *Addr = LI->getOperand(0);
+  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const uint32_t LocSizeInBits = DL.getTypeSizeInBits(
+      cast<PointerType>(Addr->getType())->getElementType());
+
+  // if the type is i8 addrspace(x)*, we know this is the type of
+  // llvm.invariant.start operand
+  auto *PtrInt8Ty = PointerType::get(Type::getInt8Ty(LI->getContext()),
+                                     LI->getPointerAddressSpace());
+  unsigned BitcastsVisited = 0;
+  // Look through bitcasts until we reach the i8* type (this is invariant.start
+  // operand type).
+  while (Addr->getType() != PtrInt8Ty) {
+    auto *BC = dyn_cast<BitCastInst>(Addr);
+    // Avoid traversing high number of bitcast uses.
+    if (++BitcastsVisited > MaxNumUsesTraversed || !BC)
+      return false;
+    Addr = BC->getOperand(0);
+  }
+
+  unsigned UsesVisited = 0;
+  // Traverse all uses of the load operand value, to see if invariant.start is
+  // one of the uses, and whether it dominates the load instruction.
+  for (auto *U : Addr->users()) {
+    // Avoid traversing for Load operand with high number of users.
+    if (++UsesVisited > MaxNumUsesTraversed)
+      return false;
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
+    // If there are escaping uses of invariant.start instruction, the load maybe
+    // non-invariant.
+    if (!II || II->getIntrinsicID() != Intrinsic::invariant_start ||
+        II->hasNUsesOrMore(1))
+      continue;
+    unsigned InvariantSizeInBits =
+        cast<ConstantInt>(II->getArgOperand(0))->getSExtValue() * 8;
+    // Confirm the invariant.start location size contains the load operand size
+    // in bits. Also, the invariant.start should dominate the load, and we
+    // should not hoist the load out of a loop that contains this dominating
+    // invariant.start.
+    if (LocSizeInBits <= InvariantSizeInBits &&
+        DT->properlyDominates(II->getParent(), CurLoop->getHeader()))
+      return true;
+  }
+
+  return false;
+}
+
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
                               LoopSafetyInfo *SafetyInfo,
@@ -494,6 +552,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (AA->pointsToConstantMemory(LI->getOperand(0)))
       return true;
     if (LI->getMetadata(LLVMContext::MD_invariant_load))
+      return true;
+
+    // This checks for an invariant.start dominating the load.
+    if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
     // Don't hoist loads which have may-aliased stores in loop.

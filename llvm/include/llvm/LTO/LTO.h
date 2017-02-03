@@ -25,6 +25,7 @@
 #include "llvm/LTO/Config.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -145,6 +146,22 @@ public:
       skip();
     }
 
+    /// For COFF weak externals, returns the name of the symbol that is used
+    /// as a fallback if the weak external remains undefined.
+    std::string getCOFFWeakExternalFallback() const {
+      assert((Flags & object::BasicSymbolRef::SF_Weak) &&
+             (Flags & object::BasicSymbolRef::SF_Indirect) &&
+             "symbol is not a weak external");
+      std::string Name;
+      raw_string_ostream OS(Name);
+      SymTab.printSymbolName(
+          OS,
+          cast<GlobalValue>(
+              cast<GlobalAlias>(getGV())->getAliasee()->stripPointerCasts()));
+      OS.flush();
+      return Name;
+    }
+
     /// Returns the mangled name of the global.
     StringRef getName() const { return Name; }
 
@@ -219,6 +236,9 @@ public:
         symbol_iterator(SymTab.symbols().begin(), SymTab, this),
         symbol_iterator(SymTab.symbols().end(), SymTab, this));
   }
+
+  /// Returns linker options specified in the input file.
+  Expected<std::string> getLinkerOpts();
 
   /// Returns the path to the InputFile.
   StringRef getName() const;

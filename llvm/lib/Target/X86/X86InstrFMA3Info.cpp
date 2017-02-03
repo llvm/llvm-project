@@ -16,6 +16,9 @@
 #include "X86InstrInfo.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 /// This flag is used in the method llvm::call_once() used below to make the

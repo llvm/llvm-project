@@ -13,24 +13,28 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
 namespace {
-  class X86ELFObjectWriter : public MCELFObjectTargetWriter {
-  public:
-    X86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
 
-    ~X86ELFObjectWriter() override;
+class X86ELFObjectWriter : public MCELFObjectTargetWriter {
+public:
+  X86ELFObjectWriter(bool IsELF64, uint8_t OSABI, uint16_t EMachine);
+  ~X86ELFObjectWriter() override = default;
 
-  protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
-  };
-}
+protected:
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
+};
+
+} // end anonymous namespace
 
 X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
                                        uint16_t EMachine)
@@ -39,9 +43,6 @@ X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
                               /*HasRelocationAddend*/
                               (EMachine != ELF::EM_386) &&
                                   (EMachine != ELF::EM_IAMCU)) {}
-
-X86ELFObjectWriter::~X86ELFObjectWriter()
-{}
 
 enum X86_64RelType { RT64_64, RT64_32, RT64_32S, RT64_16, RT64_8 };
 

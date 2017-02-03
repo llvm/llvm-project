@@ -409,9 +409,8 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3,4,5,6,7]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0,1,2,3,4,5],xmm1[6],xmm0[7]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5,6],xmm1[7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -421,8 +420,7 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3,4,5,6,7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0,1,2,3,4,5],xmm1[6],xmm0[7]
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5,6],xmm1[7]
@@ -500,9 +498,8 @@ define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    xorl %eax, %eax
 ; AVX1-NEXT:    vpinsrb $0, %eax, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX1-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX1-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6],xmm2[7]
@@ -513,8 +510,7 @@ define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vpinsrb $0, %eax, %xmm0, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm1
+; AVX2-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2

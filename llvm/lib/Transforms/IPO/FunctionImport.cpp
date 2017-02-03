@@ -75,12 +75,6 @@ static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
 static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
 
-// Temporary allows the function import pass to disable always linking
-// referenced discardable symbols.
-static cl::opt<bool>
-    DontForceImportReferencedDiscardableSymbols("disable-force-link-odr",
-                                                cl::init(false), cl::Hidden);
-
 static cl::opt<bool> EnableImportMetadata(
     "enable-import-metadata", cl::init(
 #if !defined(NDEBUG)
@@ -659,8 +653,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
 // index.
 //
 Expected<bool> FunctionImporter::importFunctions(
-    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList,
-    bool ForceImportReferencedDiscardableSymbols) {
+    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList) {
   DEBUG(dbgs() << "Starting import for Module "
                << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0;
@@ -774,9 +767,7 @@ Expected<bool> FunctionImporter::importFunctions(
     }
 
     // Instruct the linker that the client will take care of linkonce resolution
-    unsigned Flags = Linker::Flags::None;
-    if (!ForceImportReferencedDiscardableSymbols)
-      Flags |= Linker::Flags::DontForceLinkLinkonceODR;
+    unsigned Flags = Linker::Flags::DontForceLinkLinkonceODR;
 
     if (TheLinker.linkInModule(std::move(SrcModule), Flags, &GlobalsToImport))
       report_fatal_error("Function Import: link error");
@@ -838,8 +829,7 @@ static bool doImportingForModule(Module &M) {
     return loadFile(Identifier, M.getContext());
   };
   FunctionImporter Importer(*Index, ModuleLoader);
-  Expected<bool> Result = Importer.importFunctions(
-      M, ImportList, !DontForceImportReferencedDiscardableSymbols);
+  Expected<bool> Result = Importer.importFunctions(M, ImportList);
 
   // FIXME: Probably need to propagate Errors through the pass manager.
   if (!Result) {

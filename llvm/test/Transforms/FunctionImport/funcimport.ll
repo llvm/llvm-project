@@ -4,19 +4,15 @@
 ; RUN: llvm-lto -thinlto -print-summary-global-ids -o %t3 %t.bc %t2.bc 2>&1 | FileCheck %s --check-prefix=GUID
 
 ; Do the import now
-; RUN: opt -disable-force-link-odr -function-import -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; RUN: opt -function-import -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
 ; Try again with new pass manager
-; RUN: opt -disable-force-link-odr -passes='function-import' -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; RUN: opt -passes='function-import' -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
 ; "-stats" requires +Asserts.
 ; REQUIRES: asserts
 
 ; Test import with smaller instruction limit
-; RUN: opt -disable-force-link-odr -function-import -enable-import-metadata  -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
+; RUN: opt -function-import -enable-import-metadata  -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
 ; INSTLIM5-NOT: @staticfunc.llvm.
-
-; Test import with smaller instruction limit and without the -disable-force-link-odr
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=INSTLIM5ODR
-; INSTLIM5ODR: define linkonce_odr void @linkonceodr() {
 
 
 define i32 @main() #0 {
@@ -44,10 +40,12 @@ declare void @weakalias(...) #1
 ; CHECK-DAG: declare void @analias
 declare void @analias(...) #1
 
-; FIXME: Add this checking back when follow on fix to add alias summary
-; records is committed.
 ; Aliases import the aliasee function
 declare void @linkoncealias(...) #1
+; INSTLIMDEF-DAG: Import linkoncealias
+; INSTLIMDEF-DAG: Import linkoncefunc
+; CHECK-DAG: define linkonce_odr void @linkoncefunc()
+; CHECK-DAG: @linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*
 
 ; INSTLIMDEF-DAG: Import referencestatics
 ; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 {

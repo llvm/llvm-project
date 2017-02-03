@@ -1944,6 +1944,16 @@ def A9WriteMHi : SchedWriteRes<[A9UnitMul]> { let Latency = 5;
 def A9WriteM16   : SchedWriteRes<[A9UnitMul]> { let Latency = 3; }
 def A9WriteM16Hi : SchedWriteRes<[A9UnitMul]> { let Latency = 4;
                                                 let NumMicroOps = 0; }
+def : SchedAlias<WriteMUL16, A9WriteM16>;
+def : SchedAlias<WriteMUL32, A9WriteM>;
+def : SchedAlias<WriteMUL64Lo, A9WriteM>;
+def : SchedAlias<WriteMUL64Hi, A9WriteMHi>;
+def : SchedAlias<WriteMAC16, A9WriteM16>;
+def : SchedAlias<WriteMAC32, A9WriteM>;
+def : SchedAlias<WriteMAC64Lo, A9WriteM>;
+def : SchedAlias<WriteMAC64Hi, A9WriteMHi>;
+def : ReadAdvance<ReadMUL, 0>;
+def : ReadAdvance<ReadMAC, 0>;
 
 // Floating-point
 // Only one FP or AGU instruction may issue per cycle. We model this
@@ -1953,6 +1963,7 @@ def A9WriteFMov   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 1; }
 def A9WriteFMulS  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 5; }
 def A9WriteFMulD  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 6; }
 def A9WriteFMAS   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 8; }
+
 def A9WriteFMAD   : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 9; }
 def A9WriteFDivS  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 15; }
 def A9WriteFDivD  : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 25; }
@@ -2545,7 +2556,7 @@ def : InstRW<[A9WriteLb],
       "LDRH", "LDRSH", "LDRSB")>;
 def : InstRW<[A9WriteLbsi], (instregex "LDRrs")>;
 
-def : WriteRes<WriteDiv, []> { let Latency = 0; }
+def : WriteRes<WriteDIV, []> { let Latency = 0; }
 
 def : WriteRes<WriteBr, [A9UnitB]>;
 def : WriteRes<WriteBrL, [A9UnitB]>;

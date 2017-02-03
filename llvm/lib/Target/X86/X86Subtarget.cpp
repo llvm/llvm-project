@@ -11,20 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86Subtarget.h"
-#include "X86InstrInfo.h"
 #include "X86TargetMachine.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
+#include <cassert>
+#include <string>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -205,7 +208,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       FullFS = "+sahf";
   }
 
-
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPUName, FullFS);
 
@@ -331,7 +333,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                   TargetTriple.getEnvironment() != Triple::CODE16),
       In16BitMode(TargetTriple.getArch() == Triple::x86 &&
                   TargetTriple.getEnvironment() == Triple::CODE16),
-      TSInfo(), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
   if (!isPositionIndependent())
@@ -369,4 +371,3 @@ const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
 bool X86Subtarget::enableEarlyIfConversion() const {
   return hasCMov() && X86EarlyIfConv;
 }
-

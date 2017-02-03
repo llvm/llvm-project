@@ -4186,6 +4186,8 @@ namespace {
 class HorizontalReduction {
   SmallVector<Value *, 16> ReductionOps;
   SmallVector<Value *, 32> ReducedVals;
+  // Use map vector to make stable output.
+  MapVector<Value *, Value *> ExtraArgs;
 
   BinaryOperator *ReductionRoot = nullptr;
   // After successfull horizontal reduction vectorization attempt for PHI node
@@ -4204,6 +4206,26 @@ class HorizontalReduction {
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
   bool IsPairwiseReduction = false;
+
+  /// Checks if the ParentStackElem.first should be marked as a reduction
+  /// operation with an extra argument or as extra argument itself.
+  void markExtraArg(std::pair<Instruction *, unsigned> &ParentStackElem,
+                    Value *ExtraArg) {
+    if (ExtraArgs.count(ParentStackElem.first)) {
+      ExtraArgs[ParentStackElem.first] = nullptr;
+      // We ran into something like:
+      // ParentStackElem.first = ExtraArgs[ParentStackElem.first] + ExtraArg.
+      // The whole ParentStackElem.first should be considered as an extra value
+      // in this case.
+      // Do not perform analysis of remaining operands of ParentStackElem.first
+      // instruction, this whole instruction is an extra argument.
+      ParentStackElem.second = ParentStackElem.first->getNumOperands();
+    } else {
+      // We ran into something like:
+      // ParentStackElem.first += ... + ExtraArg + ...
+      ExtraArgs[ParentStackElem.first] = ExtraArg;
+    }
+  }
 
 public:
   HorizontalReduction() = default;
@@ -4257,8 +4279,23 @@ public:
       if (EdgeToVist == 2 || IsReducedValue) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
-        else
-          ReductionOps.push_back(TreeN);
+        else {
+          auto I = ExtraArgs.find(TreeN);
+          if (I != ExtraArgs.end() && !I->second) {
+            // Check if TreeN is an extra argument of its parent operation.
+            if (Stack.size() <= 1) {
+              // TreeN can't be an extra argument as it is a root reduction
+              // operation.
+              return false;
+            }
+            // Yes, TreeN is an extra argument, do not add it to a list of
+            // reduction operations.
+            // Stack[Stack.size() - 2] always points to the parent operation.
+            markExtraArg(Stack[Stack.size() - 2], TreeN);
+            ExtraArgs.erase(TreeN);
+          } else
+            ReductionOps.push_back(TreeN);
+        }
         // Retract.
         Stack.pop_back();
         continue;
@@ -4275,30 +4312,42 @@ public:
         if (I && (!ReducedValueOpcode || I->getOpcode() == ReducedValueOpcode ||
                   I->getOpcode() == ReductionOpcode)) {
           // Only handle trees in the current basic block.
-          if (I->getParent() != B->getParent())
-            return false;
+          if (I->getParent() != B->getParent()) {
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
+          }
 
           // Each tree node needs to have one user except for the ultimate
           // reduction.
-          if (!I->hasOneUse() && I != B)
-            return false;
+          if (!I->hasOneUse() && I != B) {
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
+          }
 
           if (I->getOpcode() == ReductionOpcode) {
             // We need to be able to reassociate the reduction operations.
-            if (!I->isAssociative())
-              return false;
+            if (!I->isAssociative()) {
+              // I is an extra argument for TreeN (its parent operation).
+              markExtraArg(Stack.back(), I);
+              continue;
+            }
           } else if (ReducedValueOpcode &&
                      ReducedValueOpcode != I->getOpcode()) {
             // Make sure that the opcodes of the operations that we are going to
             // reduce match.
-            return false;
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
           } else if (!ReducedValueOpcode)
             ReducedValueOpcode = I->getOpcode();
 
           Stack.push_back(std::make_pair(I, 0));
           continue;
         }
-        return false;
+        // NextV is an extra argument for TreeN (its parent operation).
+        markExtraArg(Stack.back(), NextV);
       }
     }
     return true;
@@ -4367,10 +4416,16 @@ public:
     if (VectorizedTree) {
       // Finish the reduction.
       for (; i < NumReducedVals; ++i) {
+        auto *I = cast<Instruction>(ReducedVals[i]);
+        Builder.SetCurrentDebugLocation(I->getDebugLoc());
+        VectorizedTree =
+            Builder.CreateBinOp(ReductionOpcode, VectorizedTree, I);
+      }
+      for (auto &Pair : ExtraArgs) {
         Builder.SetCurrentDebugLocation(
-          cast<Instruction>(ReducedVals[i])->getDebugLoc());
+            cast<Instruction>(Pair.first)->getDebugLoc());
         VectorizedTree = Builder.CreateBinOp(ReductionOpcode, VectorizedTree,
-                                             ReducedVals[i]);
+                                             Pair.second, "bin.extra");
       }
       // Update users.
       if (ReductionPHI && !isa<UndefValue>(ReductionPHI)) {

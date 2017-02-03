@@ -110,3 +110,32 @@ entry:
   %sum = add i8 %p2, %p4
   ret i8 %sum
 }
+
+define i32 @test_ptr_arg_in_reg(i32* %p) {
+; CHECK-LABEL: test_ptr_arg_in_reg:
+; CHECK: ldr r0, [r0]
+; CHECK: bx lr
+entry:
+  %v = load i32, i32* %p
+  ret i32 %v
+}
+
+define i32 @test_ptr_arg_on_stack(i32 %f0, i32 %f1, i32 %f2, i32 %f3, i32* %p) {
+; CHECK-LABEL: test_ptr_arg_on_stack:
+; CHECK: mov r0, sp
+; CHECK: ldr r0, [r0]
+; CHECK: ldr r0, [r0]
+; CHECK: bx lr
+entry:
+  %v = load i32, i32* %p
+  ret i32 %v
+}
+
+define i8* @test_ptr_ret(i8** %p) {
+; CHECK-LABEL: test_ptr_ret:
+; CHECK: ldr r0, [r0]
+; CHECK: bx lr
+entry:
+  %v = load i8*, i8** %p
+  ret i8* %v
+}
