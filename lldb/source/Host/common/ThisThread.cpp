@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/ThisThread.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/ADT/STLExtras.h"
 

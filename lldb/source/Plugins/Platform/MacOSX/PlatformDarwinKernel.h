@@ -10,7 +10,7 @@
 #ifndef liblldb_PlatformDarwinKernel_h_
 #define liblldb_PlatformDarwinKernel_h_
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 
 #if defined(__APPLE__) // This Plugin uses the Mac-specific
                        // source/Host/macosx/cfcpp utilities

@@ -9,7 +9,7 @@
 
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDataExtractor.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

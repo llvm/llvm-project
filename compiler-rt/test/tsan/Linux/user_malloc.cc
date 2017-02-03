@@ -1,4 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: powerpc64le
 #include <stdio.h>
 
 // Defined by tsan.

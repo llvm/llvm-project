@@ -12,10 +12,10 @@
 
 // Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/Stream.h"
 
 // Other libraries and framework includes
 #include "llvm/Support/Chrono.h"

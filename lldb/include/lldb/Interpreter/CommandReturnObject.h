@@ -16,8 +16,8 @@
 // Project includes
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
-#include "lldb/Core/StreamTee.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StreamTee.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"

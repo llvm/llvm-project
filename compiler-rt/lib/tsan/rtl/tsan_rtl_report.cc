@@ -164,8 +164,8 @@ void ScopedReport::AddStack(StackTrace stack, bool suppressable) {
   (*rs)->suppressable = suppressable;
 }
 
-void ScopedReport::AddMemoryAccess(uptr addr, Shadow s, StackTrace stack,
-                                   const MutexSet *mset) {
+void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
+                                   StackTrace stack, const MutexSet *mset) {
   void *mem = internal_alloc(MBlockReportMop, sizeof(ReportMop));
   ReportMop *mop = new(mem) ReportMop;
   rep_->mops.PushBack(mop);
@@ -175,6 +175,7 @@ void ScopedReport::AddMemoryAccess(uptr addr, Shadow s, StackTrace stack,
   mop->write = s.IsWrite();
   mop->atomic = s.IsAtomic();
   mop->stack = SymbolizeStack(stack);
+  mop->external_tag = external_tag;
   if (mop->stack)
     mop->stack->suppressable = true;
   for (uptr i = 0; i < mset->Size(); i++) {
@@ -202,6 +203,7 @@ void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
+  rt->workerthread = tctx->workerthread;
   rt->stack = 0;
   rt->stack = SymbolizeStackId(tctx->creation_stack_id);
   if (rt->stack)
@@ -336,6 +338,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
     loc->heap_chunk_start = (uptr)allocator()->GetBlockBegin((void *)addr);
     loc->heap_chunk_size = b->siz;
+    loc->external_tag = b->tag;
     loc->tid = tctx ? tctx->tid : b->tid;
     loc->stack = SymbolizeStackId(b->stk);
     rep_->locs.PushBack(loc);
@@ -622,6 +625,8 @@ void ReportRace(ThreadState *thr) {
     typ = ReportTypeVptrRace;
   else if (freed)
     typ = ReportTypeUseAfterFree;
+  else if (thr->external_tag > 0)
+    typ = ReportTypeExternalRace;
 
   if (IsFiredSuppression(ctx, typ, addr))
     return;
@@ -650,7 +655,8 @@ void ReportRace(ThreadState *thr) {
   ScopedReport rep(typ);
   for (uptr i = 0; i < kMop; i++) {
     Shadow s(thr->racy_state[i]);
-    rep.AddMemoryAccess(addr, s, traces[i], i == 0 ? &thr->mset : mset2);
+    rep.AddMemoryAccess(addr, thr->external_tag, s, traces[i],
+                        i == 0 ? &thr->mset : mset2);
   }
 
   for (uptr i = 0; i < kMop; i++) {

@@ -9,7 +9,6 @@ add_lldb_library(lldbCore
   Broadcaster.cpp
   Communication.cpp
   Connection.cpp
-  ConstString.cpp
   DataBufferHeap.cpp
   DataBufferMemoryMap.cpp
   DataEncoder.cpp
@@ -18,7 +17,6 @@ add_lldb_library(lldbCore
   Disassembler.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
-  Error.cpp
   Event.cpp
   FastDemangle.cpp
   FileLineResolver.cpp
@@ -36,18 +34,15 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   RegisterValue.cpp
-  RegularExpression.cpp
   Scalar.cpp
   SearchFilter.cpp
   Section.cpp
   SourceManager.cpp
   State.cpp
-  Stream.cpp
   StreamAsynchronousIO.cpp
   StreamCallback.cpp
   StreamFile.cpp
   StreamGDBRemote.cpp
-  StreamString.cpp
   StringList.cpp
   StructuredData.cpp
   Timer.cpp

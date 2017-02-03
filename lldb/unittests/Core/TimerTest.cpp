@@ -16,7 +16,7 @@
 #include "lldb/Core/Timer.h"
 #include "gtest/gtest.h"
 
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 #include <thread>
 
 using namespace lldb_private;

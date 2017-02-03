@@ -19,11 +19,11 @@
 
 // Project includes
 #include "OCamlLanguage.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/OCamlASTContext.h"
+#include "lldb/Utility/ConstString.h"
 
 using namespace lldb;
 using namespace lldb_private;

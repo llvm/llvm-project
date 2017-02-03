@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Error.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 
 #include "RegisterContextThreadMemory.h"

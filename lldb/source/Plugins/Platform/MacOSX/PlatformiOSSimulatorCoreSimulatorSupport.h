@@ -24,10 +24,10 @@
 typedef void *id;
 #endif
 // Project includes
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/ADT/Optional.h"
 

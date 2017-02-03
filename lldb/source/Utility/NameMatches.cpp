@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "lldb/Utility/NameMatches.h"
-#include "lldb/Core/RegularExpression.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/ADT/StringRef.h"
 

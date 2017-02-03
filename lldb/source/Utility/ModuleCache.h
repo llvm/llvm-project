@@ -13,9 +13,9 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/Error.h"
 
 #include <functional>
 #include <string>

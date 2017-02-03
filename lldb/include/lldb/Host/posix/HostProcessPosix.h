@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Host/HostNativeProcessBase.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {

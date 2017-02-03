@@ -31,6 +31,7 @@
 // IMPORT: __asan_wrap_CreateThread
 // IMPORT: __asan_wrap_RaiseException
 // IMPORT: __asan_wrap_RtlRaiseException
+// IMPORT: __asan_wrap_SetUnhandledExceptionFilter
 //
 // RUN: cat %t.imports1 %t.imports2 | sort | uniq > %t.imports-sorted
 // RUN: cat %t.exports1 %t.exports2 | sort | uniq > %t.exports-sorted

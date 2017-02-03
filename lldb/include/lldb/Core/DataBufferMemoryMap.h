@@ -11,7 +11,7 @@
 #define liblldb_DataBufferMemoryMap_h_
 
 #include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private.h"
 #include <string>
 

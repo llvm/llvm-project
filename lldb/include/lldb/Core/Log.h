@@ -11,10 +11,10 @@
 #define liblldb_Log_h_
 
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Flags.h"
 #include "lldb/Core/Logging.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 // Other libraries and framework includes

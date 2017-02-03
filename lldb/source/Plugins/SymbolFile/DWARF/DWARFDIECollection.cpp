@@ -11,7 +11,7 @@
 
 #include <algorithm>
 
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 using namespace std;

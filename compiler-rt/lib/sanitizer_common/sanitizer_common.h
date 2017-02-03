@@ -382,6 +382,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 typedef void (*SignalHandlerType)(int, void *, void *);
 bool IsHandledDeadlySignal(int signum);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
+const char *DescribeSignalOrException(int signo);
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();

@@ -19,8 +19,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

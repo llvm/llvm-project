@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "NameToDIE.h"
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"

@@ -22,7 +22,6 @@
 // Project includes
 #include "lldb/lldb-public.h"
 
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/TypeFormat.h"
@@ -30,6 +29,7 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/DataFormatters/TypeValidator.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringLexer.h"
 
 namespace lldb_private {

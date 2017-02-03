@@ -15,10 +15,10 @@
 
 #include "lldb/lldb-private.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/IOObject.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/SocketAddress.h"
+#include "lldb/Utility/Error.h"
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"

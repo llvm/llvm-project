@@ -21,7 +21,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ConstString ConstString.h "lldb/Core/ConstString.h"
+/// @class ConstString ConstString.h "lldb/Utility/ConstString.h"
 /// @brief A uniqued constant string class.
 ///
 /// Provides an efficient way to store strings as uniqued strings. After

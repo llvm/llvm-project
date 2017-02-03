@@ -23,9 +23,9 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/Error.h"
 
 namespace lldb_private {
 class TypeSummaryOptions {

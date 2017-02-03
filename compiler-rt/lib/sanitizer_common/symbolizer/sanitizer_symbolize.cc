@@ -41,8 +41,8 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
         getDefaultSymbolizer()->symbolizeInlinedCode(ModuleName, ModuleOffset);
     Printer << (ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
   }
-  __sanitizer::internal_snprintf(Buffer, MaxLength, "%s", Result.c_str());
-  return true;
+  return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
+                                        Result.c_str()) < MaxLength;
 }
 
 bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
@@ -55,8 +55,8 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
         getDefaultSymbolizer()->symbolizeData(ModuleName, ModuleOffset);
     Printer << (ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
   }
-  __sanitizer::internal_snprintf(Buffer, MaxLength, "%s", Result.c_str());
-  return true;
+  return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
+                                        Result.c_str()) < MaxLength;
 }
 
 void __sanitizer_symbolize_flush() { getDefaultSymbolizer()->flush(); }
@@ -65,8 +65,10 @@ int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                    int MaxLength) {
   std::string Result =
       llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
-  __sanitizer::internal_snprintf(Buffer, MaxLength, "%s", Result.c_str());
-  return static_cast<int>(Result.size() + 1);
+  return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
+                                        Result.c_str()) < MaxLength
+             ? static_cast<int>(Result.size() + 1)
+             : 0;
 }
 
 }  // extern "C"

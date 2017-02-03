@@ -11,8 +11,8 @@
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
 // Other libraries and framework includes
-#include "lldb/Core/Error.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/Support/Mutex.h"

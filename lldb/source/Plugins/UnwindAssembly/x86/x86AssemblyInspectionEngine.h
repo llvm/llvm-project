@@ -17,7 +17,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 
 #include <map>
 #include <vector>

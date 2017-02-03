@@ -19,8 +19,8 @@
 #include "llvm/Support/Compiler.h"
 
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/linux/Ptrace.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

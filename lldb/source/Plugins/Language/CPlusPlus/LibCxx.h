@@ -11,10 +11,10 @@
 #ifndef liblldb_LibCxx_h_
 #define liblldb_LibCxx_h_
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
 namespace formatters {

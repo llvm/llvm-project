@@ -11,7 +11,7 @@
 #define liblldb_Mangled_h_
 #if defined(__cplusplus)
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include <vector>
 

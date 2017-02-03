@@ -282,6 +282,10 @@ bool isDeclVisibleAtLocation(const SourceManager &SM, const Decl *D,
           isNestedDeclContext(DeclCtx, D->getDeclContext()));
 }
 
+AST_MATCHER(EnumDecl, isScoped) {
+    return Node.isScoped();
+}
+
 } // anonymous namespace
 
 ChangeNamespaceTool::ChangeNamespaceTool(
@@ -454,6 +458,17 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                  to(GlobalVarMatcher.bind("var_decl")))
                          .bind("var_ref"),
                      this);
+
+  // Handle unscoped enum constant.
+  auto UnscopedEnumMatcher = enumConstantDecl(hasParent(enumDecl(
+      hasParent(namespaceDecl()),
+      unless(anyOf(isScoped(), IsInMovedNs, hasAncestor(cxxRecordDecl()),
+                   hasAncestor(namespaceDecl(isAnonymous())))))));
+  Finder->addMatcher(
+      declRefExpr(IsInMovedNs, hasAncestor(decl().bind("dc")),
+                  to(UnscopedEnumMatcher.bind("enum_const_decl")))
+          .bind("enum_const_ref"),
+      this);
 }
 
 void ChangeNamespaceTool::run(
@@ -518,6 +533,23 @@ void ChangeNamespaceTool::run(
     assert(Context && "Empty decl context.");
     fixDeclRefExpr(Result, Context->getDeclContext(),
                    llvm::cast<NamedDecl>(Var), VarRef);
+  } else if (const auto *EnumConstRef =
+                 Result.Nodes.getNodeAs<DeclRefExpr>("enum_const_ref")) {
+    // Do not rename the reference if it is already scoped by the EnumDecl name.
+    if (EnumConstRef->hasQualifier() &&
+        EnumConstRef->getQualifier()->getKind() ==
+            NestedNameSpecifier::SpecifierKind::TypeSpec &&
+        EnumConstRef->getQualifier()->getAsType()->isEnumeralType())
+      return;
+    const auto *EnumConstDecl =
+        Result.Nodes.getNodeAs<EnumConstantDecl>("enum_const_decl");
+    assert(EnumConstDecl);
+    const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");
+    assert(Context && "Empty decl context.");
+    // FIXME: this would qualify "ns::VALUE" as "ns::EnumValue::VALUE". Fix it
+    // if it turns out to be an issue.
+    fixDeclRefExpr(Result, Context->getDeclContext(),
+                   llvm::cast<NamedDecl>(EnumConstDecl), EnumConstRef);
   } else if (const auto *FuncRef =
                  Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
     // If this reference has been processed as a function call, we do not
@@ -761,7 +793,8 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
     if (isDeclVisibleAtLocation(*Result.SourceManager, Using, DeclCtx, Start)) {
       for (const auto *UsingShadow : Using->shadows()) {
         const auto *TargetDecl = UsingShadow->getTargetDecl();
-        if (TargetDecl == FromDecl) {
+        if (TargetDecl->getQualifiedNameAsString() ==
+            FromDecl->getQualifiedNameAsString()) {
           ReplaceName = FromDecl->getNameAsString();
           Matched = true;
           break;
