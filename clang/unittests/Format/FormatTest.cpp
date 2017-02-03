@@ -951,7 +951,46 @@ TEST_F(FormatTest, UnderstandsSingleLineComments) {
                    "  c\n"
                    "};",
                    getLLVMStyleWithColumns(20)));
-
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "  // line 2\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "  // line 2\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "     // line 2\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "   // line 2\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "  // line 2\n"
+            "  b\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "  // line 2\n"
+                   "  b\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("enum A {\n"
+            "  a, // line 1\n"
+            "     // line 2\n"
+            "  b\n"
+            "};",
+            format("enum A {\n"
+                   "  a, // line 1\n"
+                   "   // line 2\n"
+                   "  b\n"
+                   "};",
+                   getLLVMStyleWithColumns(20)));
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
       "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; // Trailing comment");
@@ -2305,6 +2344,46 @@ TEST_F(FormatTest, ReflowsComments) {
             "// @param arg",
             format("// long long long long\n"
                    "// @param arg",
+                   getLLVMStyleWithColumns(20)));
+  
+  // Don't reflow lines starting with 'TODO'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// TODO: long",
+            format("// long long long long\n"
+                   "// TODO: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with 'FIXME'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// FIXME: long",
+            format("// long long long long\n"
+                   "// FIXME: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow lines starting with 'XXX'.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// XXX: long",
+            format("// long long long long\n"
+                   "// XXX: long",
+                   getLLVMStyleWithColumns(20)));
+
+  // Don't reflow comment pragmas.
+  EXPECT_EQ("// long long long\n"
+            "// long\n"
+            "// IWYU pragma:",
+            format("// long long long long\n"
+                   "// IWYU pragma:",
+                   getLLVMStyleWithColumns(20)));
+  EXPECT_EQ("/* long long long\n"
+            " * long\n"
+            " * IWYU pragma:\n"
+            " */",
+            format("/* long long long long\n"
+                   " * IWYU pragma:\n"
+                   " */",
                    getLLVMStyleWithColumns(20)));
 
   // Reflow lines that have a non-punctuation character among their first 2
@@ -11773,6 +11852,40 @@ TEST_F(FormatTest, AlignTrailingComments) {
                    "             // line 3\n"
                    "          b);",
                    getLLVMStyleWithColumns(40)));
+
+  // Align newly broken trailing comments.
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n",
+            format("int ab; // line\n"
+                   "int a; // long long\n",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "        // long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "       // long",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "pt c;   // long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "pt c; // long",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "\n"
+            "// long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "\n"
+                   "// long",
+                   getLLVMStyleWithColumns(15)));
 }
 } // end namespace
 } // end namespace format

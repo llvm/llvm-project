@@ -2391,7 +2391,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         Right.Next->is(tok::string_literal))
       return true;
   } else if (Style.Language == FormatStyle::LK_Cpp ||
-             Style.Language == FormatStyle::LK_ObjC) {
+             Style.Language == FormatStyle::LK_ObjC ||
+             Style.Language == FormatStyle::LK_Proto) {
     if (Left.isStringLiteral() &&
         (Right.isStringLiteral() || Right.is(TT_ObjCStringLiteral)))
       return true;

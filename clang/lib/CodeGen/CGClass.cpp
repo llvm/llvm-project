@@ -1131,10 +1131,11 @@ namespace {
           RHS = EC->getSubExpr();
         if (!RHS)
           return nullptr;
-        MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS);
-        if (dyn_cast<FieldDecl>(ME2->getMemberDecl()) != Field)
-          return nullptr;
-        return Field;
+        if (MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS)) {
+          if (ME2->getMemberDecl() == Field)
+            return Field;
+        }
+        return nullptr;
       } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
         CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
         if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
