@@ -18,6 +18,7 @@ add_lld_library(lldCore
   ${LLD_INCLUDE_DIR}/lld/Core
 
   LINK_COMPONENTS
+    MC
     Support
 
   DEPENDS

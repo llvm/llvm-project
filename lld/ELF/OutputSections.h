@@ -129,30 +129,6 @@ public:
   uint8_t *Loc = nullptr;
 };
 
-template <class ELFT>
-class MergeOutputSection final : public OutputSectionBase {
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags,
-                     uintX_t Alignment);
-  void addSection(InputSectionData *S) override;
-  void writeTo(uint8_t *Buf) override;
-  void finalize() override;
-  bool shouldTailMerge() const;
-  Kind getKind() const override { return Merge; }
-  static bool classof(const OutputSectionBase *B) {
-    return B->getKind() == Merge;
-  }
-
-private:
-  void finalizeTailMerge();
-  void finalizeNoTailMerge();
-
-  llvm::StringTableBuilder Builder;
-  std::vector<MergeInputSection<ELFT> *> Sections;
-};
-
 struct CieRecord {
   EhSectionPiece *Piece = nullptr;
   std::vector<EhSectionPiece *> FdePieces;

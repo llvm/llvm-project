@@ -2842,14 +2842,15 @@ struct MatchScope {
 /// for this.
 class MatchStateUpdater : public SelectionDAG::DAGUpdateListener
 {
-      SmallVectorImpl<std::pair<SDValue, SDNode*> > &RecordedNodes;
-      SmallVectorImpl<MatchScope> &MatchScopes;
+  SDNode **NodeToMatch;
+  SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes;
+  SmallVectorImpl<MatchScope> &MatchScopes;
 public:
-  MatchStateUpdater(SelectionDAG &DAG,
-                    SmallVectorImpl<std::pair<SDValue, SDNode*> > &RN,
-                    SmallVectorImpl<MatchScope> &MS) :
-    SelectionDAG::DAGUpdateListener(DAG),
-    RecordedNodes(RN), MatchScopes(MS) { }
+  MatchStateUpdater(SelectionDAG &DAG, SDNode **NodeToMatch,
+                    SmallVectorImpl<std::pair<SDValue, SDNode *>> &RN,
+                    SmallVectorImpl<MatchScope> &MS)
+      : SelectionDAG::DAGUpdateListener(DAG), NodeToMatch(NodeToMatch),
+        RecordedNodes(RN), MatchScopes(MS) {}
 
   void NodeDeleted(SDNode *N, SDNode *E) override {
     // Some early-returns here to avoid the search if we deleted the node or
@@ -2859,6 +2860,9 @@ public:
     // update listener during matching a complex patterns.
     if (!E || E->isMachineOpcode())
       return;
+    // Check if NodeToMatch was updated.
+    if (N == *NodeToMatch)
+      *NodeToMatch = E;
     // Performing linear search here does not matter because we almost never
     // run this code.  You'd have to have a CSE during complex pattern
     // matching.
@@ -3151,7 +3155,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // consistent.
       std::unique_ptr<MatchStateUpdater> MSU;
       if (ComplexPatternFuncMutatesDAG())
-        MSU.reset(new MatchStateUpdater(*CurDAG, RecordedNodes,
+        MSU.reset(new MatchStateUpdater(*CurDAG, &NodeToMatch, RecordedNodes,
                                         MatchScopes));
 
       if (!CheckComplexPattern(NodeToMatch, RecordedNodes[RecNo].second,

@@ -770,6 +770,7 @@ private:
   bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, RegisterKind RegKind, unsigned Reg1, unsigned RegNum);
   bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth, unsigned *DwordRegIndex);
   void cvtMubufImpl(MCInst &Inst, const OperandVector &Operands, bool IsAtomic, bool IsAtomicReturn);
+  void cvtDSImpl(MCInst &Inst, const OperandVector &Operands, bool IsGdsHardcoded);
 
 public:
   enum AMDGPUMatchResultTy {
@@ -888,7 +889,8 @@ public:
   OperandMatchResultTy parseVReg32OrOff(OperandVector &Operands);
 
   void cvtDSOffset01(MCInst &Inst, const OperandVector &Operands);
-  void cvtDS(MCInst &Inst, const OperandVector &Operands);
+  void cvtDS(MCInst &Inst, const OperandVector &Operands) { cvtDSImpl(Inst, Operands, false); }
+  void cvtDSGds(MCInst &Inst, const OperandVector &Operands) { cvtDSImpl(Inst, Operands, true); }
   void cvtExp(MCInst &Inst, const OperandVector &Operands);
 
   bool parseCnt(int64_t &IntVal);
@@ -2350,9 +2352,8 @@ void AMDGPUAsmParser::cvtDSOffset01(MCInst &Inst,
   Inst.addOperand(MCOperand::createReg(AMDGPU::M0)); // m0
 }
 
-void AMDGPUAsmParser::cvtDS(MCInst &Inst, const OperandVector &Operands) {
+void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands, bool IsGdsHardcoded) {
   std::map<enum AMDGPUOperand::ImmTy, unsigned> OptionalIdx;
-  bool GDSOnly = false;
 
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
@@ -2364,7 +2365,7 @@ void AMDGPUAsmParser::cvtDS(MCInst &Inst, const OperandVector &Operands) {
     }
 
     if (Op.isToken() && Op.getToken() == "gds") {
-      GDSOnly = true;
+      IsGdsHardcoded = true;
       continue;
     }
 
@@ -2373,7 +2374,7 @@ void AMDGPUAsmParser::cvtDS(MCInst &Inst, const OperandVector &Operands) {
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
-  if (!GDSOnly) {
+  if (!IsGdsHardcoded) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGDS);
   }
   Inst.addOperand(MCOperand::createReg(AMDGPU::M0)); // m0

@@ -174,6 +174,7 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let has_data1 = 0;
   let has_gds = 0;
   let gdsValue = 1;
+  let AsmMatchConverter = "cvtDSGds";
 }
 
 class DS_0A_RET <string opName> : DS_Pseudo<opName,

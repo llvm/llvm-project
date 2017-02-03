@@ -1152,7 +1152,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
       ESym->st_shndx = SHN_ABS;
       ESym->st_value = Body.Value;
     } else {
-      const OutputSectionBase *OutSec = Section->OutSec;
+      const OutputSectionBase *OutSec = Section->getOutputSection();
       ESym->st_shndx = OutSec->SectionIndex;
       ESym->st_value = OutSec->Addr + Section->getOffset(Body);
     }
@@ -1218,7 +1218,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(*Sym);
     if (D.Section)
-      return D.Section->OutSec;
+      return D.Section->getOutputSection();
     break;
   }
   case SymbolBody::DefinedCommonKind:
@@ -1872,6 +1872,81 @@ template <class ELFT> bool VersionNeedSection<ELFT>::empty() const {
 }
 
 template <class ELFT>
+MergeSyntheticSection<ELFT>::MergeSyntheticSection(StringRef Name,
+                                                   uint32_t Type, uintX_t Flags,
+                                                   uintX_t Alignment)
+    : SyntheticSection<ELFT>(Flags, Type, Alignment, Name),
+      Builder(StringTableBuilder::RAW, Alignment) {
+  this->Entsize = Alignment;
+}
+
+template <class ELFT>
+void MergeSyntheticSection<ELFT>::addSection(MergeInputSection<ELFT> *MS) {
+  assert(!Finalized);
+  MS->MergeSec = this;
+  Sections.push_back(MS);
+  this->Entsize = MS->Entsize;
+}
+
+template <class ELFT> void MergeSyntheticSection<ELFT>::writeTo(uint8_t *Buf) {
+  Builder.write(Buf);
+}
+
+template <class ELFT>
+bool MergeSyntheticSection<ELFT>::shouldTailMerge() const {
+  return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
+}
+
+template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeTailMerge() {
+  // Add all string pieces to the string table builder to create section
+  // contents.
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Builder.add(Sec->getData(I));
+
+  // Fix the string table content. After this, the contents will never change.
+  Builder.finalize();
+
+  // finalize() fixed tail-optimized strings, so we can now get
+  // offsets of strings. Get an offset for each string and save it
+  // to a corresponding StringPiece for easy access.
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
+}
+
+template <class ELFT> void MergeSyntheticSection<ELFT>::finalizeNoTailMerge() {
+  // Add all string pieces to the string table builder to create section
+  // contents. Because we are not tail-optimizing, offsets of strings are
+  // fixed when they are added to the builder (string table builder contains
+  // a hash table from strings to offsets).
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
+      if (Sec->Pieces[I].Live)
+        Sec->Pieces[I].OutputOff = Builder.add(Sec->getData(I));
+
+  Builder.finalizeInOrder();
+}
+
+template <class ELFT> void MergeSyntheticSection<ELFT>::finalize() {
+  if (Finalized)
+    return;
+  Finalized = true;
+  if (shouldTailMerge())
+    finalizeTailMerge();
+  else
+    finalizeNoTailMerge();
+}
+
+template <class ELFT> size_t MergeSyntheticSection<ELFT>::getSize() const {
+  // We should finalize string builder to know the size.
+  const_cast<MergeSyntheticSection<ELFT> *>(this)->finalize();
+  return Builder.getSize();
+}
+
+template <class ELFT>
 MipsRldMapSection<ELFT>::MipsRldMapSection()
     : SyntheticSection<ELFT>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                              sizeof(typename ELFT::uint), ".rld_map") {}
@@ -2063,6 +2138,11 @@ template class elf::VersionDefinitionSection<ELF32LE>;
 template class elf::VersionDefinitionSection<ELF32BE>;
 template class elf::VersionDefinitionSection<ELF64LE>;
 template class elf::VersionDefinitionSection<ELF64BE>;
+
+template class elf::MergeSyntheticSection<ELF32LE>;
+template class elf::MergeSyntheticSection<ELF32BE>;
+template class elf::MergeSyntheticSection<ELF64LE>;
+template class elf::MergeSyntheticSection<ELF64BE>;
 
 template class elf::MipsRldMapSection<ELF32LE>;
 template class elf::MipsRldMapSection<ELF32BE>;

@@ -888,6 +888,16 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
         // ARMv4T requires BX, see emitEpilogue
         if (!STI.hasV5TOps())
           continue;
+        // Tailcall optimization failed; change TCRETURN to a tBL
+        if (MI->getOpcode() == ARM::TCRETURNdi ||
+            MI->getOpcode() == ARM::TCRETURNri) {
+          unsigned Opcode = MI->getOpcode() == ARM::TCRETURNdi
+                            ? ARM::tBL : ARM::tBLXr;
+          MachineInstrBuilder BL = BuildMI(MF, DL, TII.get(Opcode));
+          BL.add(predOps(ARMCC::AL));
+          BL.add(MI->getOperand(0));
+          MBB.insert(MI, &*BL);
+        }
         Reg = ARM::PC;
         (*MIB).setDesc(TII.get(ARM::tPOP_RET));
         if (MI != MBB.end())

@@ -3,7 +3,7 @@
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t1.bc %t2.bc
 
 ; RUN: llvm-lto -exported-symbol=_main -thinlto-action=promote %t1.bc -thinlto-index=%t.index.bc -o - | llvm-lto -exported-symbol=_main -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t1.bc - -o - | llvm-dis -o - | FileCheck %s
-; RUN: llvm-lto -exported-symbol=_main -thinlto-action=promote %t2.bc -thinlto-index=%t.index.bc -o - | llvm-lto -exported-symbol=_main -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t2.bc - -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK2-LTO
+; RUN: llvm-lto -exported-symbol=_main -thinlto-action=promote %t2.bc -thinlto-index=%t.index.bc -o - | llvm-lto -exported-symbol=_main -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t2.bc - -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK2
 
 ; RUN: llvm-lto -exported-symbol=_main -thinlto-action=run %t1.bc %t2.bc
 ; RUN: llvm-nm %t1.bc.thinlto.o | FileCheck %s --check-prefix=CHECK-NM
@@ -19,7 +19,7 @@
 ; RUN:   -r %t2.bc,_dead_func,pl \
 ; RUN:   -r %t2.bc,_another_dead_func,pl
 ; RUN: llvm-dis < %t.out.0.3.import.bc | FileCheck %s
-; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK2-LTO2
+; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK2
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
 
 ; Dead-stripping on the index allows to internalize these,
@@ -34,8 +34,7 @@
 
 ; Make sure we didn't internalize @boo, which is reachable via
 ; llvm.global_ctors
-; CHECK2-LTO: define void @boo()
-; CHECK2-LTO2: define hidden void @boo()
+; CHECK2: define void @boo()
 ; We should have eventually revoved @baz since it was internalized and unused
 ; CHECK2-NM-NOT: _baz
 

@@ -644,13 +644,6 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
     return !GlobalValue::isLocalLinkage(Linkage);
   };
 
-  // Try to auto-hide the symbols.
-  for (auto &GO : TheModule.global_objects()) {
-    const auto &GS = DefinedGlobals.find(GO.getGUID());
-    if (GS != DefinedGlobals.end() && GS->second->flags().AutoHide)
-      GO.setVisibility(GlobalValue::HiddenVisibility);
-  }
-
   // FIXME: See if we can just internalize directly here via linkage changes
   // based on the index, rather than invoking internalizeModule.
   llvm::internalizeModule(TheModule, MustPreserveGV);

@@ -63,7 +63,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       Offset += Addend;
       Addend = 0;
     }
-    uintX_t VA = (IS->OutSec ? IS->OutSec->Addr : 0) + IS->getOffset(Offset);
+    const OutputSectionBase *OutSec = IS->getOutputSection();
+    uintX_t VA = (OutSec ? OutSec->Addr : 0) + IS->getOffset(Offset);
     if (D.isTls() && !Config->Relocatable) {
       if (!Out<ELFT>::TlsPhdr)
         fatal(toString(D.File) +
