@@ -100,7 +100,7 @@ define i32 @test9(i32 %A) {
 define i1 @test10(i8 %A, i8 %b) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = sub i8 0, %b
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 %A, [[B]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[B]], %A
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = add i8 %A, %b
@@ -112,7 +112,7 @@ define i1 @test10(i8 %A, i8 %b) {
 define <2 x i1> @test10vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @test10vec(
 ; CHECK-NEXT:    [[C:%.*]] = sub <2 x i8> zeroinitializer, %b
-; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> %a, [[C]]
+; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> [[C]], %a
 ; CHECK-NEXT:    ret <2 x i1> [[D]]
 ;
   %c = add <2 x i8> %a, %b

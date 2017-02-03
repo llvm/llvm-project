@@ -490,7 +490,7 @@ define i32 @orsext_to_sel_multi_use(i32 %x, i1 %y) {
 ; CHECK-LABEL: @orsext_to_sel_multi_use(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 %y to i32
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEXT]], %x
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SEXT]], [[OR]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[SEXT]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %sext = sext i1 %y to i32

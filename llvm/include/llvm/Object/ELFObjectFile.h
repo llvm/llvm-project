@@ -895,6 +895,8 @@ elf_symbol_iterator ELFObjectFile<ELFT>::dynamic_symbol_begin() const {
 template <class ELFT>
 elf_symbol_iterator ELFObjectFile<ELFT>::dynamic_symbol_end() const {
   const Elf_Shdr *SymTab = DotDynSymSec;
+  if (!SymTab)
+    return dynamic_symbol_begin();
   DataRefImpl Sym = toDRI(SymTab, SymTab->sh_size / sizeof(Elf_Sym));
   return basic_symbol_iterator(SymbolRef(Sym, this));
 }

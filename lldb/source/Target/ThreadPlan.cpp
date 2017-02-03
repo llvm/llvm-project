@@ -76,14 +76,11 @@ Vote ThreadPlan::ShouldReportStop(Event *event_ptr) {
     ThreadPlan *prev_plan = GetPreviousPlan();
     if (prev_plan) {
       Vote prev_vote = prev_plan->ShouldReportStop(event_ptr);
-      if (log)
-        log->Format(__FILE__, __FUNCTION__,
-                    "returning previous thread plan vote: {0}", prev_vote);
+      LLDB_LOG(log, "returning previous thread plan vote: {0}", prev_vote);
       return prev_vote;
     }
   }
-  if (log)
-    log->Printf("Returning vote: {0}", m_stop_vote);
+  LLDB_LOG(log, "Returning vote: {0}", m_stop_vote);
   return m_stop_vote;
 }
 

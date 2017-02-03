@@ -17,6 +17,7 @@
 // Other libraries and framework includes
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_mips.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_mips64.h"
 #include "lldb/Core/DataBufferHeap.h"
@@ -314,12 +315,8 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
   Error error;
   RegisterValue pc_value;
   lldb::addr_t pc = fail_value;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-
-  if (log)
-    log->Printf("NativeRegisterContextLinux_mips64::%s Reading PC from "
-                "breakpoint location",
-                __FUNCTION__);
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
+  LLDB_LOG(log, "Reading PC from breakpoint location");
 
   // PC register is at index 34 of the register array
   const RegisterInfo *const pc_info_p = GetRegisterInfoAtIndex(gpr_pc_mips64);
@@ -336,11 +333,7 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
     ReadRegister(cause_info_p, cause_value);
 
     uint64_t cause = cause_value.GetAsUInt64();
-
-    if (log)
-      log->Printf("NativeRegisterContextLinux_mips64::%s PC 0x%" PRIx64
-                  " Cause 0x%" PRIx64,
-                  __FUNCTION__, pc, cause);
+    LLDB_LOG(log, "PC {0:x} cause {1:x}", pc, cause);
 
     /*
      * The breakpoint might be in a delay slot. In this case PC points
@@ -355,10 +348,7 @@ lldb::addr_t NativeRegisterContextLinux_mips64::GetPCfromBreakpointLocation(
       pc = pc + branch_delay;
       pc_value.SetUInt64(pc);
       WriteRegister(pc_info_p, pc_value);
-
-      if (log)
-        log->Printf("NativeRegisterContextLinux_mips64::%s New PC 0x%" PRIx64,
-                    __FUNCTION__, pc);
+      LLDB_LOG(log, "New PC {0:x}", pc);
     }
   }
 
@@ -378,11 +368,8 @@ NativeRegisterContextLinux_mips64::GetRegisterSet(uint32_t set_index) const {
   case llvm::Triple::mipsel:
     return &g_reg_sets_mips[set_index];
   default:
-    assert(false && "Unhandled target architecture.");
-    return nullptr;
+    llvm_unreachable("Unhandled target architecture.");
   }
-
-  return nullptr;
 }
 
 lldb_private::Error
@@ -730,70 +717,64 @@ bool NativeRegisterContextLinux_mips64::IsFPR(uint32_t reg_index) const {
 }
 
 static uint32_t GetWatchHi(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watchhi[index];
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watchhi[index];
-  if (log)
-    log->Printf("Invalid watch register style");
+  LLDB_LOG(log, "Invalid watch register style");
   return 0;
 }
 
 static void SetWatchHi(struct pt_watch_regs *regs, uint32_t index,
                        uint16_t value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     regs->mips32.watchhi[index] = value;
   else if (regs->style == pt_watch_style_mips64)
     regs->mips64.watchhi[index] = value;
-  if (log)
-    log->Printf("Invalid watch register style");
+  LLDB_LOG(log, "Invalid watch register style");
   return;
 }
 
 static lldb::addr_t GetWatchLo(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watchlo[index];
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watchlo[index];
-  if (log)
-    log->Printf("Invalid watch register style");
+  LLDB_LOG(log, "Invalid watch register style");
   return LLDB_INVALID_ADDRESS;
 }
 
 static void SetWatchLo(struct pt_watch_regs *regs, uint32_t index,
                        uint64_t value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     regs->mips32.watchlo[index] = (uint32_t)value;
   else if (regs->style == pt_watch_style_mips64)
     regs->mips64.watchlo[index] = value;
-  if (log)
-    log->Printf("Invalid watch register style");
-  return;
+  else
+    LLDB_LOG(log, "Invalid watch register style");
 }
 
 static uint32_t GetIRWMask(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watch_masks[index] & IRW;
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watch_masks[index] & IRW;
-  if (log)
-    log->Printf("Invalid watch register style");
+  LLDB_LOG(log, "Invalid watch register style");
   return 0;
 }
 
 static uint32_t GetRegMask(struct pt_watch_regs *regs, uint32_t index) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   if (regs->style == pt_watch_style_mips32)
     return regs->mips32.watch_masks[index] & ~IRW;
   else if (regs->style == pt_watch_style_mips64)
     return regs->mips64.watch_masks[index] & ~IRW;
-  if (log)
-    log->Printf("Invalid watch register style");
+  LLDB_LOG(log, "Invalid watch register style");
   return 0;
 }
 
@@ -1117,7 +1098,7 @@ NativeRegisterContextLinux_mips64::GetWatchpointHitAddress(uint32_t wp_index) {
 }
 
 uint32_t NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints() {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
   struct pt_watch_regs regs;
   static int num_valid = 0;
   if (!num_valid) {
@@ -1131,12 +1112,8 @@ uint32_t NativeRegisterContextLinux_mips64::NumSupportedHardwareWatchpoints() {
     case pt_watch_style_mips64:
       num_valid = regs.mips64.num_valid;
       return num_valid;
-    default:
-      if (log)
-        log->Printf("NativeRegisterContextLinux_mips64::%s Error: Unrecognized "
-                    "watch register style",
-                    __FUNCTION__);
     }
+    LLDB_LOG(log, "Invalid watch register style");
     return 0;
   }
   return num_valid;

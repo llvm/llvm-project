@@ -15,11 +15,13 @@
 #include "llvm-c/Linker.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Transforms/Utils/FunctionImportUtils.h"
 using namespace llvm;
 
 namespace {
@@ -36,19 +38,12 @@ class ModuleLinker {
   /// For symbol clashes, prefer those from Src.
   unsigned Flags;
 
-  /// Functions to import from source module, all other functions are
-  /// imported as declarations instead of definitions.
-  DenseSet<const GlobalValue *> *GlobalsToImport;
-
   /// Used as the callback for lazy linking.
   /// The mover has just hit GV and we have to decide if it, and other members
   /// of the same comdat, should be linked. Every member to be linked is passed
   /// to Add.
   void addLazyFor(GlobalValue &GV, const IRMover::ValueAdder &Add);
 
-  bool shouldLinkReferencedLinkOnce() {
-    return !(Flags & Linker::DontForceLinkLinkonceODR);
-  }
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
   bool shouldInternalizeLinkedSymbols() {
@@ -108,29 +103,12 @@ class ModuleLinker {
 
   bool linkIfNeeded(GlobalValue &GV);
 
-  /// Helper method to check if we are importing from the current source
-  /// module.
-  bool isPerformingImport() const { return GlobalsToImport != nullptr; }
-
-  /// If we are importing from the source module, checks if we should
-  /// import SGV as a definition, otherwise import as a declaration.
-  bool doImportAsDefinition(const GlobalValue *SGV);
-
 public:
-  ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
-               DenseSet<const GlobalValue *> *GlobalsToImport = nullptr)
-      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags),
-        GlobalsToImport(GlobalsToImport) {}
+  ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags)
+      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags) {}
 
   bool run();
 };
-}
-
-bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
-  if (!isPerformingImport())
-    return false;
-  return FunctionImportGlobalProcessing::doImportAsDefinition(SGV,
-                                                              GlobalsToImport);
 }
 
 static GlobalValue::VisibilityTypes
@@ -266,15 +244,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
 
   // We always have to add Src if it has appending linkage.
   if (Src.hasAppendingLinkage()) {
-    // Should have prevented importing for appending linkage in linkIfNeeded.
-    assert(!isPerformingImport());
     LinkFromSrc = true;
-    return false;
-  }
-
-  if (isPerformingImport()) {
-    // LinkFromSrc iff this is a global requested for importing.
-    LinkFromSrc = GlobalsToImport->count(&Src);
     return false;
   }
 
@@ -383,19 +353,9 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
     GV.setUnnamedAddr(UnnamedAddr);
   }
 
-  // Don't want to append to global_ctors list, for example, when we
-  // are importing for ThinLTO, otherwise the global ctors and dtors
-  // get executed multiple times for local variables (the latter causing
-  // double frees).
-  if (GV.hasAppendingLinkage() && isPerformingImport())
-    return false;
-
-  if (isPerformingImport()) {
-    if (!doImportAsDefinition(&GV))
-      return false;
-  } else if (!DGV && !shouldOverrideFromSrc() &&
-             (GV.hasLocalLinkage() || GV.hasLinkOnceLinkage() ||
-              GV.hasAvailableExternallyLinkage()))
+  if (!DGV && !shouldOverrideFromSrc() &&
+      (GV.hasLocalLinkage() || GV.hasLinkOnceLinkage() ||
+       GV.hasAvailableExternallyLinkage()))
     return false;
 
   if (GV.isDeclaration())
@@ -418,12 +378,6 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
 }
 
 void ModuleLinker::addLazyFor(GlobalValue &GV, const IRMover::ValueAdder &Add) {
-  if (!shouldLinkReferencedLinkOnce())
-    // For ThinLTO we don't import more than what was required.
-    // The client has to guarantee that the linkonce will be availabe at link
-    // time (by promoting it to weak for instance).
-    return;
-
   // Add these to the internalize list
   if (!GV.hasLinkOnceLinkage() && !GV.hasAvailableExternallyLinkage() &&
       !shouldLinkOnlyNeeded())
@@ -584,8 +538,7 @@ bool ModuleLinker::run() {
                            [this](GlobalValue &GV, IRMover::ValueAdder Add) {
                              addLazyFor(GV, Add);
                            },
-                           /* LinkModuleInlineAsm */ !isPerformingImport(),
-                           /* IsPerformingImport */ isPerformingImport())) {
+                           /* IsPerformingImport */ false)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       DstM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, EIB.message()));
       HasErrors = true;
@@ -604,9 +557,8 @@ bool ModuleLinker::run() {
 
 Linker::Linker(Module &M) : Mover(M) {}
 
-bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
-                          DenseSet<const GlobalValue *> *GlobalsToImport) {
-  ModuleLinker ModLinker(Mover, std::move(Src), Flags, GlobalsToImport);
+bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags) {
+  ModuleLinker ModLinker(Mover, std::move(Src), Flags);
   return ModLinker.run();
 }
 

@@ -103,7 +103,7 @@ extern "C" {
 
 #if LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
                                   const void *s2, size_t n, int result) {
   if (result == 0) return;  // No reason to mutate.
@@ -111,7 +111,7 @@ void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
   fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, n, /*StopAtZero*/false);
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
                                    const char *s2, size_t n, int result) {
   if (result == 0) return;  // No reason to mutate.
@@ -124,7 +124,7 @@ void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
 }
 
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
                                    const char *s2, int result) {
   if (result == 0) return;  // No reason to mutate.
@@ -135,31 +135,31 @@ void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
   fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, N, /*StopAtZero*/true);
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
                                        const char *s2, size_t n, int result) {
   return __sanitizer_weak_hook_strncmp(called_pc, s1, s2, n, result);
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
                                       const char *s2, int result) {
   return __sanitizer_weak_hook_strcmp(called_pc, s1, s2, result);
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
                                   const char *s2, char *result) {
   TS->AddInterestingWord(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
                                       const char *s2, char *result) {
   TS->AddInterestingWord(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
 }
 
-ATTRIBUTE_NO_SANITIZE_MEMORY
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
 void __sanitizer_weak_hook_memmem(void *called_pc, const void *s1, size_t len1,
                                   const void *s2, size_t len2, void *result) {
   if (fuzzer::DoingMyOwnMemmem) return;

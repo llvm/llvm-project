@@ -915,10 +915,10 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   const MCExpr *Size = MCBinaryExpr::createSub(
       MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
       ExprRef, Context);
-  int64_t AbsSize;
-  if (!Size->evaluateAsAbsolute(AbsSize, MCA))
-    llvm_unreachable("Function size must be evaluatable as absolute");
-  Size = MCConstantExpr::create(AbsSize, Context);
+
+  // The ELFObjectWriter can determine the absolute size as it has access to
+  // the layout information of the assembly file, so a size expression rather
+  // than an absolute value is ok here.
   static_cast<MCSymbolELF *>(Sym)->setSize(Size);
 }
 

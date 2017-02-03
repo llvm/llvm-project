@@ -1058,35 +1058,50 @@ static unsigned getAddressSpaceOperand(Value *I) {
   return -1;
 }
 
-/// Saves the memory accesses after sorting it into vector argument 'Sorted'.
-void llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
-                         ScalarEvolution &SE,
-                         SmallVectorImpl<Value *> &Sorted) {
-  SmallVector<std::pair<int, Value *>, 4> OffValPairs;
-  for (auto *Val : VL) {
-    // Compute the constant offset from the base pointer of each memory accesses
-    // and insert into the vector of key,value pair which needs to be sorted.
-    Value *Ptr = getPointerOperand(Val);
-    unsigned AS = getAddressSpaceOperand(Val);
-    unsigned PtrBitWidth = DL.getPointerSizeInBits(AS);
-    Type *Ty = cast<PointerType>(Ptr->getType())->getElementType();
-    APInt Size(PtrBitWidth, DL.getTypeStoreSize(Ty));
+bool llvm::sortMemAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+                           ScalarEvolution &SE,
+                           SmallVectorImpl<Value *> &Sorted) {
+  SmallVector<std::pair<int64_t, Value *>, 4> OffValPairs;
+  OffValPairs.reserve(VL.size());
+  Sorted.reserve(VL.size());
 
-    // FIXME: Currently the offsets are assumed to be constant.However this not
-    // always true as offsets can be variables also and we would need to
-    // consider the difference of the variable offsets.
-    APInt Offset(PtrBitWidth, 0);
-    Ptr->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
-    OffValPairs.push_back(std::make_pair(Offset.getSExtValue(), Val));
+  // Walk over the pointers, and map each of them to an offset relative to
+  // first pointer in the array.
+  Value *Ptr0 = getPointerOperand(VL[0]);
+  const SCEV *Scev0 = SE.getSCEV(Ptr0);
+  Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
+
+  for (auto *Val : VL) {
+    Value *Ptr = getPointerOperand(Val);
+
+    // If a pointer refers to a different underlying object, bail - the
+    // pointers are by definition incomparable.
+    Value *CurrObj = GetUnderlyingObject(Ptr, DL);
+    if (CurrObj != Obj0)
+      return false;
+
+    const SCEVConstant *Diff =
+        dyn_cast<SCEVConstant>(SE.getMinusSCEV(SE.getSCEV(Ptr), Scev0));
+
+    // The pointers may not have a constant offset from each other, or SCEV
+    // may just not be smart enough to figure out they do. Regardless,
+    // there's nothing we can do.
+    if (!Diff)
+      return false;
+
+    OffValPairs.emplace_back(Diff->getAPInt().getSExtValue(), Val);
   }
+
   std::sort(OffValPairs.begin(), OffValPairs.end(),
-            [](const std::pair<int, Value *> &Left,
-               const std::pair<int, Value *> &Right) {
+            [](const std::pair<int64_t, Value *> &Left,
+               const std::pair<int64_t, Value *> &Right) {
               return Left.first < Right.first;
             });
 
-  for (auto& it : OffValPairs)
+  for (auto &it : OffValPairs)
     Sorted.push_back(it.second);
+
+  return true;
 }
 
 /// Returns true if the memory operations \p A and \p B are consecutive.

@@ -9579,7 +9579,7 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
       uint32_t SegIndex = Entry.segmentIndex();
       uint64_t OffsetInSeg = Entry.segmentOffset();
       if (!sectionTable.isValidSegIndexAndOffset(SegIndex, OffsetInSeg))
-        continue;
+        return nullptr;
       uint64_t Address = sectionTable.address(SegIndex, OffsetInSeg);
       StringRef name = Entry.symbolName();
       if (!name.empty())

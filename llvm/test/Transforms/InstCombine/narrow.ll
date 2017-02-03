@@ -212,8 +212,7 @@ endif:
 
 ; FIXME:
 ; Narrowing should work with an 'xor' and is not limited to bool types.
-; FIXME:
-; We should either canonicalize based on complexity or enhance the pattern matching to catch this commuted variant.
+; Test that commuting the xor operands does not inhibit optimization.
 
 define i32 @shrinkLogicAndPhi2(i8 %x, i1 %cond) {
 ; CHECK-LABEL: @shrinkLogicAndPhi2(
@@ -224,7 +223,7 @@ define i32 @shrinkLogicAndPhi2(i8 %x, i1 %cond) {
 ; CHECK:       endif:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 21, [[ENTRY:%.*]] ], [ 33, [[IF]] ]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[LOGIC:%.*]] = xor i32 [[ZEXT]], [[PHI]]
+; CHECK-NEXT:    [[LOGIC:%.*]] = xor i32 [[PHI]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[LOGIC]]
 ;
 entry:

@@ -16,12 +16,20 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -451,8 +459,8 @@ static const LdStNInstrDesc LdStNInstInfo[] = {
   { AArch64::LD3i64,            "ld3",  ".d",     1, true,  0  },
   { AArch64::LD3i8_POST,        "ld3",  ".b",     2, true,  3  },
   { AArch64::LD3i16_POST,       "ld3",  ".h",     2, true,  6  },
-  { AArch64::LD3i32_POST,       "ld3",  ".s",     2, true,  12  },
-  { AArch64::LD3i64_POST,       "ld3",  ".d",     2, true,  24  },
+  { AArch64::LD3i32_POST,       "ld3",  ".s",     2, true,  12 },
+  { AArch64::LD3i64_POST,       "ld3",  ".d",     2, true,  24 },
   { AArch64::LD3Rv16b,          "ld3r", ".16b",   0, false, 0  },
   { AArch64::LD3Rv8h,           "ld3r", ".8h",    0, false, 0  },
   { AArch64::LD3Rv4s,           "ld3r", ".4s",    0, false, 0  },

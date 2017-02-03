@@ -2,7 +2,7 @@
 //
 // REQUIRES: has_sancovcc,stable-runtime
 // UNSUPPORTED: i386-darwin
-// XFAIL: tsan,powerpc64,s390x
+// XFAIL: tsan,powerpc64,s390x,mips
 //
 // RUN: DIR=%t_workdir
 // RUN: rm -rf $DIR

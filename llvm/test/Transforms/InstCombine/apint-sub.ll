@@ -50,7 +50,7 @@ define i19 @test5(i19 %A, i19 %Bok, i19 %Cok) {
 define i57 @test6(i57 %A, i57 %B) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor i57 %B, -1
-; CHECK-NEXT:    [[D:%.*]] = and i57 %A, [[B_NOT]]
+; CHECK-NEXT:    [[D:%.*]] = and i57 [[B_NOT]], %A
 ; CHECK-NEXT:    ret i57 [[D]]
 ;
   %C = and i57 %A, %B

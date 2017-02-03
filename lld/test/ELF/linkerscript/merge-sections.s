@@ -21,7 +21,7 @@
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
-# CHECK-NEXT:   EntrySize: 1
+# CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
 
 # CHECK:      Name: begin

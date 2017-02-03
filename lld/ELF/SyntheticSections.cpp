@@ -1876,16 +1876,13 @@ MergeSyntheticSection<ELFT>::MergeSyntheticSection(StringRef Name,
                                                    uint32_t Type, uintX_t Flags,
                                                    uintX_t Alignment)
     : SyntheticSection<ELFT>(Flags, Type, Alignment, Name),
-      Builder(StringTableBuilder::RAW, Alignment) {
-  this->Entsize = Alignment;
-}
+      Builder(StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT>
 void MergeSyntheticSection<ELFT>::addSection(MergeInputSection<ELFT> *MS) {
   assert(!Finalized);
   MS->MergeSec = this;
   Sections.push_back(MS);
-  this->Entsize = MS->Entsize;
 }
 
 template <class ELFT> void MergeSyntheticSection<ELFT>::writeTo(uint8_t *Buf) {

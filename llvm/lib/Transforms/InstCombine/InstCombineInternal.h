@@ -40,21 +40,29 @@ class DbgDeclareInst;
 class MemIntrinsic;
 class MemSetInst;
 
-/// \brief Assign a complexity or rank value to LLVM Values.
+/// Assign a complexity or rank value to LLVM Values. This is used to reduce
+/// the amount of pattern matching needed for compares and commutative
+/// instructions. For example, if we have:
+///   icmp ugt X, Constant
+/// or
+///   xor (add X, Constant), cast Z
+///
+/// We do not have to consider the commuted variants of these patterns because
+/// canonicalization based on complexity guarantees the above ordering.
 ///
 /// This routine maps IR values to various complexity ranks:
 ///   0 -> undef
 ///   1 -> Constants
 ///   2 -> Other non-instructions
 ///   3 -> Arguments
-///   3 -> Unary operations
-///   4 -> Other instructions
+///   4 -> Cast and (f)neg/not instructions
+///   5 -> Other instructions
 static inline unsigned getComplexity(Value *V) {
   if (isa<Instruction>(V)) {
-    if (BinaryOperator::isNeg(V) || BinaryOperator::isFNeg(V) ||
-        BinaryOperator::isNot(V))
-      return 3;
-    return 4;
+    if (isa<CastInst>(V) || BinaryOperator::isNeg(V) ||
+        BinaryOperator::isFNeg(V) || BinaryOperator::isNot(V))
+      return 4;
+    return 5;
   }
   if (isa<Argument>(V))
     return 3;

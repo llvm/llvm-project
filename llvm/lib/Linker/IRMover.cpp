@@ -395,11 +395,12 @@ class IRLinker {
       Worklist.push_back(GV);
   }
 
-  /// Flag whether the ModuleInlineAsm string in Src should be linked with
-  /// (concatenated into) the ModuleInlineAsm string for the destination
-  /// module. It should be true for full LTO, but not when importing for
-  /// ThinLTO, otherwise we can have duplicate symbols.
-  bool LinkModuleInlineAsm;
+  /// Whether we are importing globals for ThinLTO, as opposed to linking the
+  /// source module. If this flag is set, it means that we can rely on some
+  /// other object file to define any non-GlobalValue entities defined by the
+  /// source module. This currently causes us to not link retained types in
+  /// debug info metadata and module inline asm.
+  bool IsPerformingImport;
 
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
@@ -491,10 +492,10 @@ public:
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
            std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
-           bool LinkModuleInlineAsm, bool IsPerformingImport)
+           bool IsPerformingImport)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
-        SharedMDs(SharedMDs), LinkModuleInlineAsm(LinkModuleInlineAsm),
+        SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
         Mapper(ValueMap, RF_MoveDistinctMDs | RF_IgnoreMissingLocals, &TypeMap,
                &GValMaterializer),
         AliasMCID(Mapper.registerAlternateMappingContext(AliasValueMap,
@@ -1294,7 +1295,7 @@ Error IRLinker::run() {
   DstM.setTargetTriple(mergeTriples(SrcTriple, DstTriple));
 
   // Append the module inline asm string.
-  if (LinkModuleInlineAsm && !SrcM->getModuleInlineAsm().empty()) {
+  if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
     if (DstM.getModuleInlineAsm().empty())
       DstM.setModuleInlineAsm(SrcM->getModuleInlineAsm());
     else
@@ -1433,10 +1434,10 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(
     std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
-    bool LinkModuleInlineAsm, bool IsPerformingImport) {
+    bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       LinkModuleInlineAsm, IsPerformingImport);
+                       IsPerformingImport);
   Error E = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return E;
