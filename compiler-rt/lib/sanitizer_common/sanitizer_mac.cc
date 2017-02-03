@@ -93,20 +93,22 @@ namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
 
-// Direct syscalls, don't call libmalloc hooks.
+// Direct syscalls, don't call libmalloc hooks (but not available on 10.6).
 extern "C" void *__mmap(void *addr, size_t len, int prot, int flags, int fildes,
-                        off_t off);
-extern "C" int __munmap(void *, size_t);
+                        off_t off) SANITIZER_WEAK_ATTRIBUTE;
+extern "C" int __munmap(void *, size_t) SANITIZER_WEAK_ATTRIBUTE;
 
 // ---------------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
   if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
-  return (uptr)__mmap(addr, length, prot, flags, fd, offset);
+  if (__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
+  return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }
 
 uptr internal_munmap(void *addr, uptr length) {
-  return __munmap(addr, length);
+  if (__munmap) return __munmap(addr, length);
+  return munmap(addr, length);
 }
 
 int internal_mprotect(void *addr, uptr length, int prot) {
@@ -192,17 +194,19 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
   return sigprocmask(how, set, oldset);
 }
 
-// Doesn't call pthread_atfork() handlers.
-extern "C" pid_t __fork(void);
+// Doesn't call pthread_atfork() handlers (but not available on 10.6).
+extern "C" pid_t __fork(void) SANITIZER_WEAK_ATTRIBUTE;
 
 int internal_fork() {
-  return __fork();
+  if (__fork)
+    return __fork();
+  return fork();
 }
 
 int internal_forkpty(int *amaster) {
   int master, slave;
   if (openpty(&master, &slave, nullptr, nullptr, nullptr) == -1) return -1;
-  int pid = __fork();
+  int pid = internal_fork();
   if (pid == -1) {
     close(master);
     close(slave);

@@ -135,6 +135,9 @@ TEST_F(FormatTestProto, MessageFieldAttributes) {
                "    key: 'a'  //\n"
                "  }\n"
                "];");
+  verifyFormat("optional string test = 1 [default =\n"
+               "                              \"test\"\n"
+               "                              \"test\"];");
 }
 
 TEST_F(FormatTestProto, DoesntWrapFileOptions) {

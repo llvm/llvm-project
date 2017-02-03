@@ -11852,6 +11852,40 @@ TEST_F(FormatTest, AlignTrailingComments) {
                    "             // line 3\n"
                    "          b);",
                    getLLVMStyleWithColumns(40)));
+
+  // Align newly broken trailing comments.
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n",
+            format("int ab; // line\n"
+                   "int a; // long long\n",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "        // long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "       // long",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "pt c;   // long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "pt c; // long",
+                   getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("int ab; // line\n"
+            "int a;  // long\n"
+            "        // long\n"
+            "\n"
+            "// long",
+            format("int ab; // line\n"
+                   "int a; // long long\n"
+                   "\n"
+                   "// long",
+                   getLLVMStyleWithColumns(15)));
 }
 } // end namespace
 } // end namespace format

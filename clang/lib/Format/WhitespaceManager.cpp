@@ -164,8 +164,9 @@ void WhitespaceManager::calculateLineBreakInformation() {
   const WhitespaceManager::Change *LastBlockComment = nullptr;
   for (auto &Change : Changes) {
     // Reset the IsTrailingComment flag for changes inside of trailing comments
-    // so they don't get realigned later.
-    if (Change.IsInsideToken)
+    // so they don't get realigned later. Comment line breaks however still need
+    // to be aligned.
+    if (Change.IsInsideToken && Change.NewlinesBefore == 0)
       Change.IsTrailingComment = false;
     Change.StartOfBlockComment = nullptr;
     Change.IndentationOffset = 0;

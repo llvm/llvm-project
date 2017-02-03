@@ -9,4 +9,4 @@
 
 module asm "	.this_directive_is_very_unlikely_to_exist"
 
-; CHECK: LLVM ERROR: Error parsing inline asm
+; CHECK: error: unknown directive

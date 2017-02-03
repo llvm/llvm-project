@@ -190,8 +190,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       // FIXME: refactor this to use the same code that inliner is using.
       F.isVarArg();
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
-                                    /* LiveRoot = */ false,
-                                    /* AutoHide */ false);
+                                    /* LiveRoot = */ false);
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
       Flags, NumInsts, RefEdges.takeVector(), CallGraphEdges.takeVector(),
       TypeTests.takeVector());
@@ -208,8 +207,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
   findRefEdges(&V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
-                                    /* LiveRoot = */ false,
-                                    /* AutoHide */ false);
+                                    /* LiveRoot = */ false);
   auto GVarSummary =
       llvm::make_unique<GlobalVarSummary>(Flags, RefEdges.takeVector());
   if (NonRenamableLocal)
@@ -222,8 +220,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
                     DenseSet<GlobalValue::GUID> &CantBePromoted) {
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(A.getLinkage(), NonRenamableLocal,
-                                    /* LiveRoot = */ false,
-                                    /* AutoHide */ false);
+                                    /* LiveRoot = */ false);
   auto AS = llvm::make_unique<AliasSummary>(Flags, ArrayRef<ValueInfo>{});
   auto *Aliasee = A.getBaseObject();
   auto *AliaseeSummary = Index.getGlobalValueSummary(*Aliasee);
@@ -342,8 +339,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           assert(GV->isDeclaration() && "Def in module asm already has definition");
           GlobalValueSummary::GVFlags GVFlags(GlobalValue::InternalLinkage,
                                               /* NotEligibleToImport */ true,
-                                              /* LiveRoot */ true,
-                                              /* AutoHide */ false);
+                                              /* LiveRoot */ true);
           CantBePromoted.insert(GlobalValue::getGUID(Name));
           // Create the appropriate summary type.
           if (isa<Function>(GV)) {

@@ -479,71 +479,6 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
-                                             uintX_t Flags, uintX_t Alignment)
-    : OutputSectionBase(Name, Type, Flags),
-      Builder(StringTableBuilder::RAW, Alignment) {}
-
-template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  Builder.write(Buf);
-}
-
-template <class ELFT>
-void MergeOutputSection<ELFT>::addSection(InputSectionData *C) {
-  auto *Sec = cast<MergeInputSection<ELFT>>(C);
-  Sec->OutSec = this;
-  this->updateAlignment(Sec->Alignment);
-  this->Entsize = Sec->Entsize;
-  Sections.push_back(Sec);
-}
-
-template <class ELFT> bool MergeOutputSection<ELFT>::shouldTailMerge() const {
-  return (this->Flags & SHF_STRINGS) && Config->Optimize >= 2;
-}
-
-template <class ELFT> void MergeOutputSection<ELFT>::finalizeTailMerge() {
-  // Add all string pieces to the string table builder to create section
-  // contents.
-  for (MergeInputSection<ELFT> *Sec : Sections)
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-      if (Sec->Pieces[I].Live)
-        Builder.add(Sec->getData(I));
-
-  // Fix the string table content. After this, the contents will never change.
-  Builder.finalize();
-  this->Size = Builder.getSize();
-
-  // finalize() fixed tail-optimized strings, so we can now get
-  // offsets of strings. Get an offset for each string and save it
-  // to a corresponding StringPiece for easy access.
-  for (MergeInputSection<ELFT> *Sec : Sections)
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-      if (Sec->Pieces[I].Live)
-        Sec->Pieces[I].OutputOff = Builder.getOffset(Sec->getData(I));
-}
-
-template <class ELFT> void MergeOutputSection<ELFT>::finalizeNoTailMerge() {
-  // Add all string pieces to the string table builder to create section
-  // contents. Because we are not tail-optimizing, offsets of strings are
-  // fixed when they are added to the builder (string table builder contains
-  // a hash table from strings to offsets).
-  for (MergeInputSection<ELFT> *Sec : Sections)
-    for (size_t I = 0, E = Sec->Pieces.size(); I != E; ++I)
-      if (Sec->Pieces[I].Live)
-        Sec->Pieces[I].OutputOff = Builder.add(Sec->getData(I));
-
-  Builder.finalizeInOrder();
-  this->Size = Builder.getSize();
-}
-
-template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
-  if (shouldTailMerge())
-    finalizeTailMerge();
-  else
-    finalizeNoTailMerge();
-}
-
-template <class ELFT>
 static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
   return S->Flags & ~SHF_GROUP & ~SHF_COMPRESSED;
 }
@@ -602,24 +537,15 @@ static SectionKey createKey(InputSectionBase<ELFT> *C, StringRef OutsecName) {
   //
   // Given the above issues, we instead merge sections by name and error on
   // incompatible types and flags.
-  //
-  // The exception being SHF_MERGE, where we create different output sections
-  // for each alignment. This makes each output section simple. In case of
-  // relocatable object generation we do not try to perform merging and treat
-  // SHF_MERGE sections as regular ones, but also create different output
-  // sections for them to allow merging at final linking stage.
-  //
-  // Fortunately, creating symbols in the middle of a merge section is not
-  // supported by bfd or gold, so the SHF_MERGE exception should not cause
-  // problems with most linker scripts.
 
   typedef typename ELFT::uint uintX_t;
-  uintX_t Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
 
   uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C) ||
-      (Config->Relocatable && (C->Flags & SHF_MERGE)))
+  uintX_t Flags = 0;
+  if (Config->Relocatable && (C->Flags & SHF_MERGE)) {
     Alignment = std::max<uintX_t>(C->Alignment, C->Entsize);
+    Flags = C->Flags & (SHF_MERGE | SHF_STRINGS);
+  }
 
   return SectionKey{OutsecName, Flags, Alignment};
 }
@@ -674,17 +600,11 @@ OutputSectionFactory<ELFT>::create(const SectionKey &Key,
   }
 
   uint32_t Type = C->Type;
-  switch (C->kind()) {
-  case InputSectionBase<ELFT>::Regular:
-  case InputSectionBase<ELFT>::Synthetic:
-    Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
-    break;
-  case InputSectionBase<ELFT>::EHFrame:
+  if (C->kind() == InputSectionBase<ELFT>::EHFrame)
     return {Out<ELFT>::EhFrame, false};
-  case InputSectionBase<ELFT>::Merge:
-    Sec = make<MergeOutputSection<ELFT>>(Key.Name, Type, Flags, Key.Alignment);
-    break;
-  }
+  Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
+  if (Flags & SHF_MERGE)
+    Sec->Entsize = C->Entsize;
   return {Sec, true};
 }
 
@@ -723,11 +643,6 @@ template class EhOutputSection<ELF32LE>;
 template class EhOutputSection<ELF32BE>;
 template class EhOutputSection<ELF64LE>;
 template class EhOutputSection<ELF64BE>;
-
-template class MergeOutputSection<ELF32LE>;
-template class MergeOutputSection<ELF32BE>;
-template class MergeOutputSection<ELF64LE>;
-template class MergeOutputSection<ELF64BE>;
 
 template class OutputSectionFactory<ELF32LE>;
 template class OutputSectionFactory<ELF32BE>;
