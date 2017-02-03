@@ -235,4 +235,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_ARM_INSTPRINTER_ARMINSTPRINTER_H

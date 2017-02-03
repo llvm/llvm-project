@@ -1445,7 +1445,9 @@ public:
 
       // At the end of the line or when an operator with higher precedence is
       // found, insert fake parenthesis and return.
-      if (!Current || (Current->closesScope() && Current->MatchingParen) ||
+      if (!Current ||
+          (Current->closesScope() &&
+           (Current->MatchingParen || Current->is(TT_TemplateString))) ||
           (CurrentPrecedence != -1 && CurrentPrecedence < Precedence) ||
           (CurrentPrecedence == prec::Conditional &&
            Precedence == prec::Assignment && Current->is(tok::colon))) {

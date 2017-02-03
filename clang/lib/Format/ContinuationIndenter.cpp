@@ -837,8 +837,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
 
   moveStatePastFakeLParens(State, Newline);
-  moveStatePastScopeOpener(State, Newline);
   moveStatePastScopeCloser(State);
+  moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 
   if (Current.isStringLiteral() && State.StartOfStringLiteral == 0)
@@ -1060,7 +1060,7 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
   // If we encounter a closing ), ], } or >, we can remove a level from our
   // stacks.
   if (State.Stack.size() > 1 &&
-      (Current.isOneOf(tok::r_paren, tok::r_square) ||
+      (Current.isOneOf(tok::r_paren, tok::r_square, TT_TemplateString) ||
        (Current.is(tok::r_brace) && State.NextToken != State.Line->First) ||
        State.NextToken->is(TT_TemplateCloser)))
     State.Stack.pop_back();

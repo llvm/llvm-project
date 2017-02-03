@@ -27,8 +27,10 @@
 // The coverage counters and PCs.
 // These are declared as global variables named "__sancov_*" to simplify
 // experiments with inlined instrumentation.
-alignas(8) uint8_t
-    __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+alignas(8) ATTRIBUTE_INTERFACE
+uint8_t __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+
+ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
 
 namespace fuzzer {

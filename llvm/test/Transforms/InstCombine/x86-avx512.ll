@@ -781,7 +781,7 @@ define i64 @test(float %f, double %d) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[TMP11]]
 ; CHECK-NEXT:    ret i64 [[TMP15]]
 ;
   %v00 = insertelement <4 x float> undef, float %f, i32 0
@@ -861,7 +861,7 @@ define i64 @test2(float %f, double %d) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[TMP11]]
 ; CHECK-NEXT:    ret i64 [[TMP15]]
 ;
   %v00 = insertelement <4 x float> undef, float %f, i32 0

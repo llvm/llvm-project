@@ -540,7 +540,6 @@ Error LTO::addRegularLTO(BitcodeModule BM, const SymbolResolution *&ResI,
 
   return RegularLTO.Mover->move(std::move(*MOrErr), Keep,
                                 [](GlobalValue &, IRMover::ValueAdder) {},
-                                /* LinkModuleInlineAsm */ true,
                                 /* IsPerformingImport */ false);
 }
 

@@ -2982,16 +2982,17 @@ public:
   ExprResult RebuildObjCIvarRefExpr(Expr *BaseArg, ObjCIvarDecl *Ivar,
                                           SourceLocation IvarLoc,
                                           bool IsArrow, bool IsFreeIvar) {
-    // FIXME: We lose track of the IsFreeIvar bit.
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo(Ivar->getDeclName(), IvarLoc);
-    return getSema().BuildMemberReferenceExpr(BaseArg, BaseArg->getType(),
-                                              /*FIXME:*/IvarLoc, IsArrow,
-                                              SS, SourceLocation(),
-                                              /*FirstQualifierInScope=*/nullptr,
-                                              NameInfo,
-                                              /*TemplateArgs=*/nullptr,
-                                              /*S=*/nullptr);
+    ExprResult Result = getSema().BuildMemberReferenceExpr(
+        BaseArg, BaseArg->getType(),
+        /*FIXME:*/ IvarLoc, IsArrow, SS, SourceLocation(),
+        /*FirstQualifierInScope=*/nullptr, NameInfo,
+        /*TemplateArgs=*/nullptr,
+        /*S=*/nullptr);
+    if (IsFreeIvar && Result.isUsable())
+      cast<ObjCIvarRefExpr>(Result.get())->setIsFreeIvar(IsFreeIvar);
+    return Result;
   }
 
   /// \brief Build a new Objective-C property reference expression.

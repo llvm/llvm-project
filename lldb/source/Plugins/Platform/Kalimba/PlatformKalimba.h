@@ -51,11 +51,6 @@ public:
 
   void GetStatus(Stream &strm) override;
 
-  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
-                        FileSpec &local_file) override;
-
-  bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
-
   bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,

@@ -1,5 +1,4 @@
-//===-- TypeDumpVisitor.cpp - CodeView type info dumper -----------*- C++
-//-*-===//
+//===-- TypeDumpVisitor.cpp - CodeView type info dumper ----------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,6 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/CodeView/CVTypeDumper.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -336,7 +337,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, FuncIdRecord &Func) {
 }
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, TypeServer2Record &TS) {
-  W->printBinary("Signature", TS.getGuid());
+  W->printString("Guid", formatv("{0}", fmt_guid(TS.getGuid())).str());
   W->printNumber("Age", TS.getAge());
   W->printString("Name", TS.getName());
   return Error::success();

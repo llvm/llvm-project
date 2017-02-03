@@ -176,7 +176,7 @@ define i8 @test16(i8 %A) {
 define i8 @test17(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[Y_NOT:%.*]] = xor i8 %Y, -1
-; CHECK-NEXT:    [[D:%.*]] = or i8 %X, [[Y_NOT]]
+; CHECK-NEXT:    [[D:%.*]] = or i8 [[Y_NOT]], %X
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %B = xor i8 %X, -1

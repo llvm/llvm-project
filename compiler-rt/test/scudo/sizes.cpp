@@ -23,35 +23,28 @@ int main(int argc, char **argv)
     // Currently the maximum size the allocator can allocate is 1ULL<<40 bytes.
     size_t size = std::numeric_limits<size_t>::max();
     void *p = malloc(size);
-    if (p)
-      return 1;
+    assert(!p);
     size = (1ULL << 40) - 16;
     p = malloc(size);
-    if (p)
-      return 1;
+    assert(!p);
   }
   if (!strcmp(argv[1], "calloc")) {
     // Trigger an overflow in calloc.
     size_t size = std::numeric_limits<size_t>::max();
     void *p = calloc((size / 0x1000) + 1, 0x1000);
-    if (p)
-      return 1;
+    assert(!p);
   }
   if (!strcmp(argv[1], "usable")) {
     // Playing with the actual usable size of a chunk.
     void *p = malloc(1007);
-    if (!p)
-      return 1;
+    assert(p);
     size_t size = malloc_usable_size(p);
-    if (size < 1007)
-      return 1;
+    assert(size >= 1007);
     memset(p, 'A', size);
     p = realloc(p, 2014);
-    if (!p)
-      return 1;
+    assert(p);
     size = malloc_usable_size(p);
-    if (size < 2014)
-      return 1;
+    assert(size >= 2014);
     memset(p, 'B', size);
     free(p);
   }

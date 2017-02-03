@@ -28,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetLowering.h"
 
@@ -820,15 +821,81 @@ bool IRTranslator::translateLandingPad(const User &U,
   return true;
 }
 
-bool IRTranslator::translateStaticAlloca(const AllocaInst &AI,
-                                         MachineIRBuilder &MIRBuilder) {
-  if (!TPC->isGlobalISelAbortEnabled() && !AI.isStaticAlloca())
-    return false;
+bool IRTranslator::translateAlloca(const User &U,
+                                   MachineIRBuilder &MIRBuilder) {
+  auto &AI = cast<AllocaInst>(U);
 
-  assert(AI.isStaticAlloca() && "only handle static allocas now");
-  unsigned Res = getOrCreateVReg(AI);
-  int FI = getOrCreateFrameIndex(AI);
-  MIRBuilder.buildFrameIndex(Res, FI);
+  if (AI.isStaticAlloca()) {
+    unsigned Res = getOrCreateVReg(AI);
+    int FI = getOrCreateFrameIndex(AI);
+    MIRBuilder.buildFrameIndex(Res, FI);
+    return true;
+  }
+
+  // Now we're in the harder dynamic case.
+  Type *Ty = AI.getAllocatedType();
+  unsigned Align =
+      std::max((unsigned)DL->getPrefTypeAlignment(Ty), AI.getAlignment());
+
+  unsigned NumElts = getOrCreateVReg(*AI.getArraySize());
+
+  LLT IntPtrTy = LLT::scalar(DL->getPointerSizeInBits());
+  if (MRI->getType(NumElts) != IntPtrTy) {
+    unsigned ExtElts = MRI->createGenericVirtualRegister(IntPtrTy);
+    MIRBuilder.buildZExtOrTrunc(ExtElts, NumElts);
+    NumElts = ExtElts;
+  }
+
+  unsigned AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
+  unsigned TySize = MRI->createGenericVirtualRegister(IntPtrTy);
+  MIRBuilder.buildConstant(TySize, DL->getTypeAllocSize(Ty));
+  MIRBuilder.buildMul(AllocSize, NumElts, TySize);
+
+  LLT PtrTy = LLT{*AI.getType(), *DL};
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
+
+  unsigned SPTmp = MRI->createGenericVirtualRegister(PtrTy);
+  MIRBuilder.buildCopy(SPTmp, SPReg);
+
+  unsigned SPInt = MRI->createGenericVirtualRegister(IntPtrTy);
+  MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT).addDef(SPInt).addUse(SPTmp);
+
+  unsigned AllocInt = MRI->createGenericVirtualRegister(IntPtrTy);
+  MIRBuilder.buildSub(AllocInt, SPInt, AllocSize);
+
+  // Handle alignment. We have to realign if the allocation granule was smaller
+  // than stack alignment, or the specific alloca requires more than stack
+  // alignment.
+  unsigned StackAlign =
+      MF->getSubtarget().getFrameLowering()->getStackAlignment();
+  Align = std::max(Align, StackAlign);
+  if (Align > StackAlign || DL->getTypeAllocSize(Ty) % StackAlign != 0) {
+    // Round the size of the allocation up to the stack alignment size
+    // by add SA-1 to the size. This doesn't overflow because we're computing
+    // an address inside an alloca.
+    unsigned TmpSize = MRI->createGenericVirtualRegister(IntPtrTy);
+    unsigned AlignMinus1 = MRI->createGenericVirtualRegister(IntPtrTy);
+    MIRBuilder.buildConstant(AlignMinus1, Align - 1);
+    MIRBuilder.buildSub(TmpSize, AllocInt, AlignMinus1);
+
+    unsigned AlignedAlloc = MRI->createGenericVirtualRegister(IntPtrTy);
+    unsigned AlignMask = MRI->createGenericVirtualRegister(IntPtrTy);
+    MIRBuilder.buildConstant(AlignMask, -(uint64_t)Align);
+    MIRBuilder.buildAnd(AlignedAlloc, TmpSize, AlignMask);
+
+    AllocInt = AlignedAlloc;
+  }
+
+  unsigned DstReg = getOrCreateVReg(AI);
+  MIRBuilder.buildInstr(TargetOpcode::G_INTTOPTR)
+      .addDef(DstReg)
+      .addUse(AllocInt);
+
+  MIRBuilder.buildCopy(SPReg, DstReg);
+
+  MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, &AI);
+  assert(MF->getFrameInfo().hasVarSizedObjects());
   return true;
 }
 

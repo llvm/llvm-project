@@ -76,13 +76,6 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
   if (V > UINT32_MAX)
     fatal(toString(File) + ": section sh_addralign is too large");
   Alignment = V;
-
-  // If it is not a mergeable section, overwrite the flag so that the flag
-  // is consistent with the class. This inconsistency could occur when
-  // string merging is disabled using -O0 flag.
-  if (!Config->Relocatable && !isa<MergeInputSection<ELFT>>(this) &&
-      !isa<SyntheticSection<ELFT>>(this))
-    this->Flags &= ~(SHF_MERGE | SHF_STRINGS);
 }
 
 template <class ELFT>

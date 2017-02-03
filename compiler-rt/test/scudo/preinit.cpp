@@ -4,6 +4,7 @@
 // Verifies that calling malloc in a preinit_array function succeeds, and that
 // the resulting pointer can be freed at program termination.
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,8 +24,7 @@ void __fini(void) {
 int main(int argc, char **argv)
 {
   void *p = malloc(1);
-  if (!p)
-    return 1;
+  assert(p);
   free(p);
 
   return 0;
@@ -34,4 +34,3 @@ __attribute__((section(".preinit_array"), used))
   void (*__local_preinit)(void) = __init;
 __attribute__((section(".fini_array"), used))
   void (*__local_fini)(void) = __fini;
-

@@ -603,8 +603,6 @@ OutputSectionFactory<ELFT>::create(const SectionKey &Key,
   if (C->kind() == InputSectionBase<ELFT>::EHFrame)
     return {Out<ELFT>::EhFrame, false};
   Sec = make<OutputSection<ELFT>>(Key.Name, Type, Flags);
-  if (Flags & SHF_MERGE)
-    Sec->Entsize = C->Entsize;
   return {Sec, true};
 }
 

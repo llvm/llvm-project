@@ -5,6 +5,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   CVTypeDumper.cpp
   CVTypeVisitor.cpp
   EnumTables.cpp
+  Formatters.cpp
   Line.cpp
   ModuleSubstream.cpp
   ModuleSubstreamVisitor.cpp
