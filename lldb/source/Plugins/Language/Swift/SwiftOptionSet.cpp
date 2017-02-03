@@ -12,7 +12,7 @@
 
 #include "SwiftOptionSet.h"
 
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"

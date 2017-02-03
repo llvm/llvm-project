@@ -16,7 +16,7 @@
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Core/Value.h"
 
 #include "lldb/Symbol/SwiftASTContext.h" // Needed for llvm::isa<SwiftASTContext>(...)

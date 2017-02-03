@@ -16,7 +16,7 @@
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/SymbolContext.h"

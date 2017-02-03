@@ -16,7 +16,7 @@
 #include "lldb/lldb-forward.h"
 #include <stdint.h>
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Target/Target.h"

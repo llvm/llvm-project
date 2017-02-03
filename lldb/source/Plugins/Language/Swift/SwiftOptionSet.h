@@ -15,7 +15,7 @@
 
 #include "lldb/lldb-forward.h"
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
 

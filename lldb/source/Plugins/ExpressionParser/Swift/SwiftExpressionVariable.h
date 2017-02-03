@@ -28,10 +28,10 @@
 
 // Project includes
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/TaggedASTType.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 
 namespace llvm {

@@ -13,7 +13,7 @@
 #ifndef liblldb_SwiftREPL_h_
 #define liblldb_SwiftREPL_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/lldb-public.h"
 

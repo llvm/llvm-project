@@ -72,7 +72,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"

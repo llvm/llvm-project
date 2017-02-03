@@ -14,7 +14,7 @@
 #define liblldb_SwiftASTManipulator_h
 
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerType.h"
 

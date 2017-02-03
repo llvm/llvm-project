@@ -12,7 +12,7 @@
 
 #include "SwiftFormatters.h"
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/ClangASTContext.h"

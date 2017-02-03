@@ -14,7 +14,7 @@
 #include "ObjCRuntimeSyntheticProvider.h"
 
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"

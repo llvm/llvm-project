@@ -23,7 +23,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"

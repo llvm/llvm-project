@@ -33,7 +33,7 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"

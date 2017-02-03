@@ -12,8 +12,8 @@
 
 #include "SwiftASTManipulator.h"
 
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/ExpressionSourceCode.h"

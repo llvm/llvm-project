@@ -15,13 +15,13 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 #include "lldb/Utility/Either.h"

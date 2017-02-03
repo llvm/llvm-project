@@ -12,9 +12,9 @@
 
 #include "SwiftExpressionVariable.h"
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Target/ExecutionContext.h"
