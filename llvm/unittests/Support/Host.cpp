@@ -35,6 +35,7 @@ protected:
     // x86_64 Linux and Darwin.
     SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Linux));
     SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Darwin));
+    SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::MacOSX));
   }
 };
 
