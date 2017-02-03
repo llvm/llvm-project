@@ -61,7 +61,7 @@ static void MaybeDumpRegisters(void *context) {
 void ErrorDeadlySignal::Print() {
   Decorator d;
   Printf("%s", d.Warning());
-  const char *description = DescribeSignalOrException(signo);
+  const char *description = __sanitizer::DescribeSignalOrException(signo);
   Report(
       "ERROR: AddressSanitizer: %s on unknown address %p (pc %p bp %p sp %p "
       "T%d)\n",

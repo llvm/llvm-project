@@ -609,6 +609,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
           fatal("/opt:lldltojobs: invalid job count: " + Jobs);
         continue;
       }
+      if (StringRef(S).startswith("lldltopartitions=")) {
+        StringRef N = StringRef(S).substr(17);
+        if (N.getAsInteger(10, Config->LTOPartitions) ||
+            Config->LTOPartitions == 0)
+          fatal("/opt:lldltopartitions: invalid partition count: " + N);
+        continue;
+      }
       if (S != "ref" && S != "lbr" && S != "nolbr")
         fatal("/opt: unknown option: " + S);
     }

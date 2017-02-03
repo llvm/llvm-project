@@ -29,6 +29,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
+static cl::opt<unsigned> UnrollThresholdPrivate(
+  "amdgpu-unroll-threshold-private",
+  cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
+  cl::init(800), cl::Hidden);
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
                                             TTI::UnrollingPreferences &UP) {
@@ -38,6 +42,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
 
   // TODO: Do we want runtime unrolling?
 
+  // Maximum alloca size than can fit registers. Reserve 16 registers.
+  const unsigned MaxAlloca = (256 - 16) * 4;
   for (const BasicBlock *BB : L->getBlocks()) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
     for (const Instruction &I : *BB) {
@@ -49,6 +55,26 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
       const AllocaInst *Alloca =
           dyn_cast<AllocaInst>(GetUnderlyingObject(Ptr, DL));
       if (Alloca) {
+        Type *Ty = Alloca->getAllocatedType();
+        unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
+        if (AllocaSize > MaxAlloca)
+          continue;
+
+        // Check if GEP depends on a value defined by this loop itself.
+        bool HasLoopDef = false;
+        for (const Value *Op : GEP->operands()) {
+          const Instruction *Inst = dyn_cast<Instruction>(Op);
+          if (!Inst || L->isLoopInvariant(Op))
+            continue;
+          if (any_of(L->getSubLoops(), [Inst](const Loop* SubLoop) {
+               return SubLoop->contains(Inst); }))
+            continue;
+          HasLoopDef = true;
+          break;
+        }
+        if (!HasLoopDef)
+          continue;
+
         // We want to do whatever we can to limit the number of alloca
         // instructions that make it through to the code generator.  allocas
         // require us to use indirect addressing, which is slow and prone to
@@ -59,7 +85,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
         //
         // Don't use the maximum allowed value here as it will make some
         // programs way too big.
-        UP.Threshold = 800;
+        UP.Threshold = UnrollThresholdPrivate;
+        return;
       }
     }
   }

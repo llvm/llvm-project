@@ -27,6 +27,7 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_win.h"
 #include "sanitizer_common/sanitizer_win_defs.h"
 
 using namespace __asan;  // NOLINT
@@ -46,6 +47,47 @@ uptr __asan_get_shadow_memory_dynamic_address() {
 }  // extern "C"
 
 // ---------------------- Windows-specific interceptors ---------------- {{{
+static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
+static LPTOP_LEVEL_EXCEPTION_FILTER user_seh_handler;
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+long __asan_unhandled_exception_filter(EXCEPTION_POINTERS *info) {
+  EXCEPTION_RECORD *exception_record = info->ExceptionRecord;
+  CONTEXT *context = info->ContextRecord;
+
+  // FIXME: Handle EXCEPTION_STACK_OVERFLOW here.
+
+  SignalContext sig = SignalContext::Create(exception_record, context);
+  ReportDeadlySignal(exception_record->ExceptionCode, sig);
+  UNREACHABLE("returned from reporting deadly signal");
+}
+
+// Wrapper SEH Handler. If the exception should be handled by asan, we call
+// __asan_unhandled_exception_filter, otherwise, we execute the user provided
+// exception handler or the default.
+static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
+  DWORD exception_code = info->ExceptionRecord->ExceptionCode;
+  if (__sanitizer::IsHandledDeadlyException(exception_code))
+    return __asan_unhandled_exception_filter(info);
+  if (user_seh_handler)
+    return user_seh_handler(info);
+  // Bubble out to the default exception filter.
+  if (default_seh_handler)
+    return default_seh_handler(info);
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+
+INTERCEPTOR_WINAPI(LPTOP_LEVEL_EXCEPTION_FILTER, SetUnhandledExceptionFilter,
+    LPTOP_LEVEL_EXCEPTION_FILTER ExceptionFilter) {
+  CHECK(REAL(SetUnhandledExceptionFilter));
+  if (ExceptionFilter == &SEHHandler || common_flags()->allow_user_segv_handler)
+    return REAL(SetUnhandledExceptionFilter)(ExceptionFilter);
+  // We record the user provided exception handler to be called for all the
+  // exceptions unhandled by asan.
+  Swap(ExceptionFilter, user_seh_handler);
+  return ExceptionFilter;
+}
+
 INTERCEPTOR_WINAPI(void, RtlRaiseException, EXCEPTION_RECORD *ExceptionRecord) {
   CHECK(REAL(RtlRaiseException));
   // This is a noreturn function, unless it's one of the exceptions raised to
@@ -118,6 +160,7 @@ namespace __asan {
 
 void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(CreateThread);
+  ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
 
 #ifdef _WIN64
   ASAN_INTERCEPT_FUNC(__C_specific_handler);
@@ -232,62 +275,6 @@ void InitializePlatformExceptionHandlers() {
   // Install our exception handler.
   CHECK(AddVectoredExceptionHandler(TRUE, &ShadowExceptionHandler));
 #endif
-}
-
-static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
-
-// Check based on flags if we should report this exception.
-static bool ShouldReportDeadlyException(unsigned code) {
-  switch (code) {
-    case EXCEPTION_ACCESS_VIOLATION:
-    case EXCEPTION_IN_PAGE_ERROR:
-      return common_flags()->handle_segv;
-    case EXCEPTION_BREAKPOINT:
-    case EXCEPTION_ILLEGAL_INSTRUCTION: {
-      return common_flags()->handle_sigill;
-    }
-  }
-  return false;
-}
-
-// Return the textual name for this exception.
-const char *DescribeSignalOrException(int signo) {
-  unsigned code = signo;
-  // Get the string description of the exception if this is a known deadly
-  // exception.
-  switch (code) {
-    case EXCEPTION_ACCESS_VIOLATION:
-      return "access-violation";
-    case EXCEPTION_IN_PAGE_ERROR:
-      return "in-page-error";
-    case EXCEPTION_BREAKPOINT:
-      return "breakpoint";
-    case EXCEPTION_ILLEGAL_INSTRUCTION:
-      return "illegal-instruction";
-  }
-  return nullptr;
-}
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-long __asan_unhandled_exception_filter(EXCEPTION_POINTERS *info) {
-  EXCEPTION_RECORD *exception_record = info->ExceptionRecord;
-  CONTEXT *context = info->ContextRecord;
-
-  // Continue the search if the signal wasn't deadly.
-  if (!ShouldReportDeadlyException(exception_record->ExceptionCode))
-    return EXCEPTION_CONTINUE_SEARCH;
-  // FIXME: Handle EXCEPTION_STACK_OVERFLOW here.
-
-  SignalContext sig = SignalContext::Create(exception_record, context);
-  ReportDeadlySignal(exception_record->ExceptionCode, sig);
-  UNREACHABLE("returned from reporting deadly signal");
-}
-
-static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
-  __asan_unhandled_exception_filter(info);
-
-  // Bubble out to the default exception filter.
-  return default_seh_handler(info);
 }
 
 // We want to install our own exception handler (EH) to print helpful reports

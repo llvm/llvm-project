@@ -17,12 +17,16 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -289,6 +293,32 @@ Expected<int> InputFile::Symbol::getComdatIndex() const {
     return I->second;
   }
   return -1;
+}
+
+Expected<std::string> InputFile::getLinkerOpts() {
+  std::string LinkerOpts;
+  raw_string_ostream LOS(LinkerOpts);
+  // Extract linker options from module metadata.
+  for (InputModule &Mod : Mods) {
+    std::unique_ptr<Module> &M = Mod.Mod;
+    if (auto E = M->materializeMetadata())
+      return std::move(E);
+    if (Metadata *Val = M->getModuleFlag("Linker Options")) {
+      MDNode *LinkerOptions = cast<MDNode>(Val);
+      for (const MDOperand &MDOptions : LinkerOptions->operands())
+        for (const MDOperand &MDOption : cast<MDNode>(MDOptions)->operands())
+          LOS << " " << cast<MDString>(MDOption)->getString();
+    }
+  }
+
+  // Synthesize export flags for symbols with dllexport storage.
+  const Triple TT(Mods[0].Mod->getTargetTriple());
+  Mangler M;
+  for (const ModuleSymbolTable::Symbol &Sym : SymTab.symbols())
+    if (auto *GV = Sym.dyn_cast<GlobalValue*>())
+      emitLinkerFlagsForGlobalCOFF(LOS, GV, TT, M);
+  LOS.flush();
+  return LinkerOpts;
 }
 
 StringRef InputFile::getName() const {

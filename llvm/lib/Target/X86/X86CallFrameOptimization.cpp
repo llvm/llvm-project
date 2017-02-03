@@ -17,22 +17,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-
-#include "X86.h"
+#include "MCTargetDesc/X86BaseInfo.h"
+#include "X86FrameLowering.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -44,6 +57,7 @@ static cl::opt<bool>
                cl::init(false), cl::Hidden);
 
 namespace {
+
 class X86CallFrameOptimization : public MachineFunctionPass {
 public:
   X86CallFrameOptimization() : MachineFunctionPass(ID) {}
@@ -53,30 +67,28 @@ public:
 private:
   // Information we know about a particular call site
   struct CallContext {
-    CallContext()
-        : FrameSetup(nullptr), Call(nullptr), SPCopy(nullptr), ExpectedDist(0),
-          MovVector(4, nullptr), NoStackParams(false), UsePush(false) {}
+    CallContext() : FrameSetup(nullptr), MovVector(4, nullptr) {}
 
     // Iterator referring to the frame setup instruction
     MachineBasicBlock::iterator FrameSetup;
 
     // Actual call instruction
-    MachineInstr *Call;
+    MachineInstr *Call = nullptr;
 
     // A copy of the stack pointer
-    MachineInstr *SPCopy;
+    MachineInstr *SPCopy = nullptr;
 
     // The total displacement of all passed parameters
-    int64_t ExpectedDist;
+    int64_t ExpectedDist = 0;
 
     // The sequence of movs used to pass the parameters
     SmallVector<MachineInstr *, 4> MovVector;
 
     // True if this call site has no stack parameters
-    bool NoStackParams;
+    bool NoStackParams = false;
 
     // True if this call site can use push instructions
-    bool UsePush;
+    bool UsePush = false;
   };
 
   typedef SmallVector<CallContext, 8> ContextVector;
@@ -112,11 +124,8 @@ private:
 };
 
 char X86CallFrameOptimization::ID = 0;
-} // end anonymous namespace
 
-FunctionPass *llvm::createX86CallFrameOptimization() {
-  return new X86CallFrameOptimization();
-}
+} // end anonymous namespace
 
 // This checks whether the transformation is legal.
 // Also returns false in cases where it's potentially legal, but
@@ -485,7 +494,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
       break;
     case X86::MOV32mr:
-    case X86::MOV64mr:
+    case X86::MOV64mr: {
       unsigned int Reg = PushOp.getReg();
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
@@ -523,6 +532,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
                    .getInstr();
       }
       break;
+    }
     }
 
     // For debugging, when using SP-based CFA, we need to adjust the CFA
@@ -582,4 +592,8 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
       return nullptr;
 
   return &DefMI;
+}
+
+FunctionPass *llvm::createX86CallFrameOptimization() {
+  return new X86CallFrameOptimization();
 }

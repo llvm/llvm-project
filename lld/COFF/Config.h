@@ -114,6 +114,8 @@ struct Configuration {
 
   // Used for /opt:lldltojobs=N
   unsigned LTOJobs = 1;
+  // Used for /opt:lldltopartitions=N
+  unsigned LTOPartitions = 1;
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> Merge;

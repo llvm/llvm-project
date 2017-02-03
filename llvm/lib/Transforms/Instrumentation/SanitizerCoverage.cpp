@@ -138,24 +138,6 @@ static cl::opt<bool> ClUse8bitCounters("sanitizer-coverage-8bit-counters",
                                        cl::desc("Experimental 8-bit counters"),
                                        cl::Hidden, cl::init(false));
 
-static StringRef getSanCovTracePCGuardSection(const Module &M) {
-  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
-             ? "__DATA,__sancov_guards"
-             : "__sancov_guards";
-}
-
-static StringRef getSanCovTracePCGuardSectionStart(const Module &M) {
-  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
-             ? "\1section$start$__DATA$__sancov_guards"
-             : "__start___sancov_guards";
-}
-
-static StringRef getSanCovTracePCGuardSectionEnd(const Module &M) {
-  return Triple(M.getTargetTriple()).isOSBinFormatMachO()
-             ? "\1section$end$__DATA$__sancov_guards"
-             : "__stop___sancov_guards";
-}
-
 namespace {
 
 SanitizerCoverageOptions getOptions(int LegacyCoverageLevel) {
@@ -233,6 +215,9 @@ private:
            SanCovWithCheckFunction->getNumUses() + SanCovTraceBB->getNumUses() +
            SanCovTraceEnter->getNumUses();
   }
+  StringRef getSanCovTracePCGuardSection() const;
+  StringRef getSanCovTracePCGuardSectionStart() const;
+  StringRef getSanCovTracePCGuardSectionEnd() const;
   Function *SanCovFunction;
   Function *SanCovWithCheckFunction;
   Function *SanCovIndirCallFunction, *SanCovTracePCIndir;
@@ -244,6 +229,7 @@ private:
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy;
   Module *CurModule;
+  Triple TargetTriple;
   LLVMContext *C;
   const DataLayout *DL;
 
@@ -263,6 +249,7 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   C = &(M.getContext());
   DL = &M.getDataLayout();
   CurModule = &M;
+  TargetTriple = Triple(M.getTargetTriple());
   HasSancovGuardsSection = false;
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   IntptrPtrTy = PointerType::getUnqual(IntptrTy);
@@ -382,11 +369,11 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
       Function *CtorFunc;
       GlobalVariable *SecStart = new GlobalVariable(
           M, Int32PtrTy, false, GlobalVariable::ExternalLinkage, nullptr,
-          getSanCovTracePCGuardSectionStart(*CurModule));
+          getSanCovTracePCGuardSectionStart());
       SecStart->setVisibility(GlobalValue::HiddenVisibility);
       GlobalVariable *SecEnd = new GlobalVariable(
           M, Int32PtrTy, false, GlobalVariable::ExternalLinkage, nullptr,
-          getSanCovTracePCGuardSectionEnd(*CurModule));
+          getSanCovTracePCGuardSectionEnd());
       SecEnd->setVisibility(GlobalValue::HiddenVisibility);
 
       std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
@@ -534,7 +521,7 @@ void SanitizerCoverageModule::CreateFunctionGuardArray(size_t NumGuards,
       Constant::getNullValue(ArrayOfInt32Ty), "__sancov_gen_");
   if (auto Comdat = F.getComdat())
     FunctionGuardArray->setComdat(Comdat);
-  FunctionGuardArray->setSection(getSanCovTracePCGuardSection(*CurModule));
+  FunctionGuardArray->setSection(getSanCovTracePCGuardSection());
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
@@ -771,6 +758,27 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     SetNoSanitizeMetadata(SI);
   }
 }
+
+StringRef SanitizerCoverageModule::getSanCovTracePCGuardSection() const {
+  if (TargetTriple.getObjectFormat() == Triple::COFF)
+    return ".SCOV$M";
+  if (TargetTriple.isOSBinFormatMachO())
+    return "__DATA,__sancov_guards";
+  return "__sancov_guards";
+}
+
+StringRef SanitizerCoverageModule::getSanCovTracePCGuardSectionStart() const {
+  if (TargetTriple.isOSBinFormatMachO())
+    return "\1section$start$__DATA$__sancov_guards";
+  return "__start___sancov_guards";
+}
+
+StringRef SanitizerCoverageModule::getSanCovTracePCGuardSectionEnd() const {
+  if (TargetTriple.isOSBinFormatMachO())
+    return "\1section$end$__DATA$__sancov_guards";
+  return "__stop___sancov_guards";
+}
+
 
 char SanitizerCoverageModule::ID = 0;
 INITIALIZE_PASS_BEGIN(SanitizerCoverageModule, "sancov",

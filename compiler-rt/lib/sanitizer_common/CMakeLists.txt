@@ -56,6 +56,7 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_coverage_libcdep.cc
   sanitizer_coverage_libcdep_new.cc
   sanitizer_coverage_mapping_libcdep.cc
+  sanitizer_coverage_win_sections.cc
   sanitizer_linux_libcdep.cc
   sanitizer_posix_libcdep.cc
   sanitizer_stacktrace_libcdep.cc
@@ -126,7 +127,10 @@ set(SANITIZER_HEADERS
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_aarch64.inc
-  sanitizer_thread_registry.h)
+  sanitizer_thread_registry.h
+  sanitizer_win.h)
+
+include_directories(..)
 
 set(SANITIZER_COMMON_DEFINITIONS)
 
@@ -183,6 +187,55 @@ add_compiler_rt_object_libraries(RTSanitizerCommonLibc
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+if(MSVC)
+  add_compiler_rt_object_libraries(SanitizerCommonWeakInterception
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_win_weak_interception.cc
+    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DYNAMIC
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  add_compiler_rt_object_libraries(SancovWeakInterception
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_coverage_win_weak_interception.cc
+    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DYNAMIC
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_object_libraries(SanitizerCommonDllThunk
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_win_dll_thunk.cc
+    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DLL_THUNK
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  add_compiler_rt_object_libraries(SancovDllThunk
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_coverage_win_dll_thunk.cc
+            sanitizer_coverage_win_sections.cc
+    CFLAGS ${SANITIZER_CFLAGS} -DSANITIZER_DLL_THUNK
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  set(DYNAMIC_RUNTIME_THUNK_CFLAGS "-DSANITIZER_DYNAMIC_RUNTIME_THUNK")
+  if(MSVC)
+    list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-Zl")
+  elseif(CMAKE_C_COMPILER_ID MATCHES Clang)
+    list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-nodefaultlibs")
+  endif()
+  add_compiler_rt_object_libraries(SanitizerCommonDynamicRuntimeThunk
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_win_dynamic_runtime_thunk.cc
+    CFLAGS ${SANITIZER_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  add_compiler_rt_object_libraries(SancovDynamicRuntimeThunk
+    ${SANITIZER_COMMON_SUPPORTED_OS}
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_coverage_win_dynamic_runtime_thunk.cc
+            sanitizer_coverage_win_sections.cc
+    CFLAGS ${SANITIZER_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
 
 # Unit tests for common sanitizer runtime.
 if(COMPILER_RT_INCLUDE_TESTS)

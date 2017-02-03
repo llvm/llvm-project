@@ -1127,7 +1127,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
     }
 
@@ -1442,7 +1442,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VSELECT,             VT, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,    VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Legal);
       setOperationAction(ISD::MLOAD,               VT, Legal);
       setOperationAction(ISD::MSTORE,              VT, Legal);
       setOperationAction(ISD::MGATHER,             VT, Legal);
@@ -1480,8 +1480,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CONCAT_VECTORS,     MVT::v64i8, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i16, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i8, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i16, Legal);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i8, Legal);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32i16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v64i8, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32i1,  Custom);
@@ -14007,30 +14007,9 @@ static bool areOnlyUsersOf(SDNode *N, ArrayRef<SDValue> ValidUsers) {
 // the upper bits of a vector.
 static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
-  assert(Subtarget.hasAVX() && "INSERT_SUBVECTOR requires AVX");
+  assert(Op.getSimpleValueType().getVectorElementType() == MVT::i1);
 
-  SDLoc dl(Op);
-  SDValue Vec = Op.getOperand(0);
-  SDValue SubVec = Op.getOperand(1);
-  SDValue Idx = Op.getOperand(2);
-
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  MVT OpVT = Op.getSimpleValueType();
-  MVT SubVecVT = SubVec.getSimpleValueType();
-
-  if (OpVT.getVectorElementType() == MVT::i1)
-    return insert1BitVector(Op, DAG, Subtarget);
-
-  assert((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
-         "Can only insert into 256-bit or 512-bit vectors");
-
-  if (SubVecVT.is128BitVector())
-    return insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
-
-  if (SubVecVT.is256BitVector())
-    return insert256BitVector(Vec, SubVec, IdxVal, DAG, dl);
-
-  llvm_unreachable("Unimplemented!");
+  return insert1BitVector(Op, DAG, Subtarget);
 }
 
 // Returns the appropriate wrapper opcode for a global reference.

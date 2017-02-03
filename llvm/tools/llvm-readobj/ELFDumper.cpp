@@ -3416,10 +3416,12 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (Name == "GNU") {
         OS << getGNUNoteTypeName(Type) << '\n';
         printGNUNote<ELFT>(OS, Type, Descriptor);
+      } else {
+        OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
       }
       OS << '\n';
 
-      P = P + 3 * sizeof(Elf_Word) * alignTo<4>(NameSize) +
+      P = P + 3 * sizeof(Elf_Word) + alignTo<4>(NameSize) +
           alignTo<4>(DescriptorSize);
     }
   };

@@ -697,12 +697,24 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 /// addGlobalName - Add a new global name to the compile unit.
-void DwarfCompileUnit::addGlobalName(StringRef Name, DIE &Die,
+void DwarfCompileUnit::addGlobalName(StringRef Name, const DIE &Die,
                                      const DIScope *Context) {
   if (includeMinimalInlineScopes())
     return;
   std::string FullName = getParentContextString(Context) + Name.str();
   GlobalNames[FullName] = &Die;
+}
+
+void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
+                                                const DIScope *Context) {
+  if (includeMinimalInlineScopes())
+    return;
+  std::string FullName = getParentContextString(Context) + Name.str();
+  // Insert, allowing the entry to remain as-is if it's already present
+  // This way the CU-level type DIE is preferred over the "can't describe this
+  // type as a unit offset because it's not really in the CU at all, it's only
+  // in a type unit"
+  GlobalNames.insert(std::make_pair(std::move(FullName), &getUnitDie()));
 }
 
 /// Add a new global type to the unit.
@@ -712,6 +724,18 @@ void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
   GlobalTypes[FullName] = &Die;
+}
+
+void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
+                                             const DIScope *Context) {
+  if (includeMinimalInlineScopes())
+    return;
+  std::string FullName = getParentContextString(Context) + Ty->getName().str();
+  // Insert, allowing the entry to remain as-is if it's already present
+  // This way the CU-level type DIE is preferred over the "can't describe this
+  // type as a unit offset because it's not really in the CU at all, it's only
+  // in a type unit"
+  GlobalTypes.insert(std::make_pair(std::move(FullName), &getUnitDie()));
 }
 
 /// addVariableAddress - Add DW_AT_location attribute for a

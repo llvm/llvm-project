@@ -12,8 +12,8 @@
 ; RUN: llvm-nm %t | FileCheck %s
 
 ; CHECK: T _start
-; CHECK: T blah
-; CHECK: T foo
+; CHECK: t blah
+; CHECK: t foo
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
