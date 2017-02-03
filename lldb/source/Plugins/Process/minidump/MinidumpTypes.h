@@ -13,7 +13,7 @@
 // Project includes
 
 // Other libraries and framework includes
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"

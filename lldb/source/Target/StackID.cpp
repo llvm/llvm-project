@@ -12,10 +12,10 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/StackID.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 

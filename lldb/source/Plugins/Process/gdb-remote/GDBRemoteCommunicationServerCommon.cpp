@@ -25,7 +25,6 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StreamGDBRemote.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Host/File.h"
@@ -39,6 +38,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
 
 // Project includes

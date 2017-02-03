@@ -42,13 +42,6 @@ class T_Immext<Operand ImmType>
   }
 
 def A4_ext : T_Immext<u26_6Imm>;
-let isCodeGenOnly = 1 in {
-  let isBranch = 1 in
-    def A4_ext_b : T_Immext<brtarget>;
-  let isCall = 1 in
-    def A4_ext_c : T_Immext<calltarget>;
-  def A4_ext_g : T_Immext<globaladdress>;
-}
 
 // Hexagon V4 Architecture spec defines 8 instruction classes:
 // LD ST ALU32 XTYPE J JR MEMOP NV CR SYSTEM(system is not implemented in the
@@ -2550,6 +2543,14 @@ class T_StoreAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
                      !if (!eq(ImmOpStr, "u16_2Imm"), addr{17-2},
                      !if (!eq(ImmOpStr, "u16_1Imm"), addr{16-1},
                                       /* u16_0Imm */ addr{15-0})));
+    let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
+                       !if (!eq(ImmOpStr, "u16_2Imm"), 18,
+                       !if (!eq(ImmOpStr, "u16_1Imm"), 17,
+                                        /* u16_0Imm */ 16)));
+    let opExtentAlign = !if (!eq(ImmOpStr, "u16_3Imm"), 3,
+                        !if (!eq(ImmOpStr, "u16_2Imm"), 2,
+                        !if (!eq(ImmOpStr, "u16_1Imm"), 1,
+                                         /* u16_0Imm */ 0)));
     // Store upper-half and store doubleword cannot be NV.
     let isNVStorable = !if (!eq(mnemonic, "memd"), 0, !if(isHalf,0,1));
     let Uses = !if (isAbs, [], [GP]);
@@ -2658,6 +2659,14 @@ class T_StoreAbsGP_NV <string mnemonic, Operand ImmOp, bits<2>MajOp>
                      !if (!eq(ImmOpStr, "u16_2Imm"), addr{17-2},
                      !if (!eq(ImmOpStr, "u16_1Imm"), addr{16-1},
                                       /* u16_0Imm */ addr{15-0})));
+    let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
+                       !if (!eq(ImmOpStr, "u16_2Imm"), 18,
+                       !if (!eq(ImmOpStr, "u16_1Imm"), 17,
+                                        /* u16_0Imm */ 16)));
+    let opExtentAlign = !if (!eq(ImmOpStr, "u16_3Imm"), 3,
+                        !if (!eq(ImmOpStr, "u16_2Imm"), 2,
+                        !if (!eq(ImmOpStr, "u16_1Imm"), 1,
+                                         /* u16_0Imm */ 0)));
     let IClass = 0b0100;
 
     let Inst{27} = 1;
@@ -2829,6 +2838,14 @@ class T_LoadAbsGP <string mnemonic, RegisterClass RC, Operand ImmOp,
                      !if (!eq(ImmOpStr, "u16_2Imm"), addr{17-2},
                      !if (!eq(ImmOpStr, "u16_1Imm"), addr{16-1},
                                       /* u16_0Imm */ addr{15-0})));
+    let opExtentBits = !if (!eq(ImmOpStr, "u16_3Imm"), 19,
+                       !if (!eq(ImmOpStr, "u16_2Imm"), 18,
+                       !if (!eq(ImmOpStr, "u16_1Imm"), 17,
+                                        /* u16_0Imm */ 16)));
+    let opExtentAlign = !if (!eq(ImmOpStr, "u16_3Imm"), 3,
+                        !if (!eq(ImmOpStr, "u16_2Imm"), 2,
+                        !if (!eq(ImmOpStr, "u16_1Imm"), 1,
+                                         /* u16_0Imm */ 0)));
 
     let IClass = 0b0100;
 

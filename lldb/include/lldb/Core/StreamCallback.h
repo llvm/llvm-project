@@ -13,8 +13,8 @@
 #include <mutex>
 #include <string>
 
-#include "lldb/Core/Stream.h"
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 namespace lldb_private {
 

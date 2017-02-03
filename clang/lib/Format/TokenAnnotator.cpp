@@ -1445,7 +1445,9 @@ public:
 
       // At the end of the line or when an operator with higher precedence is
       // found, insert fake parenthesis and return.
-      if (!Current || (Current->closesScope() && Current->MatchingParen) ||
+      if (!Current ||
+          (Current->closesScope() &&
+           (Current->MatchingParen || Current->is(TT_TemplateString))) ||
           (CurrentPrecedence != -1 && CurrentPrecedence < Precedence) ||
           (CurrentPrecedence == prec::Conditional &&
            Precedence == prec::Assignment && Current->is(tok::colon))) {
@@ -2391,7 +2393,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         Right.Next->is(tok::string_literal))
       return true;
   } else if (Style.Language == FormatStyle::LK_Cpp ||
-             Style.Language == FormatStyle::LK_ObjC) {
+             Style.Language == FormatStyle::LK_ObjC ||
+             Style.Language == FormatStyle::LK_Proto) {
     if (Left.isStringLiteral() &&
         (Right.isStringLiteral() || Right.is(TT_ObjCStringLiteral)))
       return true;

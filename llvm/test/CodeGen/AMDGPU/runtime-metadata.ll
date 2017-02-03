@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -o - < %s | llvm-readobj -amdgpu-runtime-metadata | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -o - < %s | llvm-readobj -amdgpu-runtime-metadata -elf-output-style=GNU -notes | FileCheck %s --check-prefix=NOTES
 ; RUN: llc -mtriple=amdgcn--amdhsa -filetype=obj -amdgpu-dump-rtmd -amdgpu-check-rtmd-parser %s -o - 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=PARSER %s
 
 %struct.A = type { i8, float }
@@ -340,6 +340,12 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a, i8 addrspace
 ; CHECK-NEXT:...
 
 ; PARSER: AMDGPU runtime metadata parser test passes.
+
+; NOTES: Displaying notes found at file offset 0x{{[0-9]+}}
+; NOTES-NEXT: Owner    Data size    Description
+; NOTES-NEXT: AMD      0x00000008   Unknown note type: (0x00000001)
+; NOTES-NEXT: AMD      0x0000001b   Unknown note type: (0x00000003)
+; NOTES-NEXT: AMD      0x00005196   Unknown note type: (0x00000008)
 
 !llvm.printf.fmts = !{!100, !101}
 

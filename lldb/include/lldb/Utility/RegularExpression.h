@@ -48,7 +48,8 @@ class StringRef;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class RegularExpression RegularExpression.h "lldb/Core/RegularExpression.h"
+/// @class RegularExpression RegularExpression.h
+/// "lldb/Utility/RegularExpression.h"
 /// @brief A C++ wrapper class for regex.
 ///
 /// This regular expression class wraps the posix regex functions

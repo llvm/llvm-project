@@ -12,7 +12,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "lldb/Core/Log.h"
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 

@@ -70,8 +70,10 @@ def : WriteRes<WriteCMP, [R52UnitALU]> { let Latency = 0; }
 def : WriteRes<WriteCMPsi, [R52UnitALU]> { let Latency = 0; }
 def : WriteRes<WriteCMPsr, [R52UnitALU]> { let Latency = 0; }
 
+// Multiply - aliased to sub-target specific later
+
 // Div - may stall 0-9 cycles depending on input (i.e. WRI+(0-9)/2)
-def : WriteRes<WriteDiv, [R52UnitDiv]> {
+def : WriteRes<WriteDIV, [R52UnitDiv]> {
   let Latency = 8; let ResourceCycles = [8]; // not pipelined
 }
 
@@ -90,7 +92,8 @@ def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
 // Integer pipeline by-passes
 def : ReadAdvance<ReadALU, 1>;   // Operand needed in EX1 stage
 def : ReadAdvance<ReadALUsr, 0>; // Shift operands needed in ISS
-
+def : ReadAdvance<ReadMUL, 0>;
+def : ReadAdvance<ReadMAC, 0>;
 
 // Floating-point. Map target-defined SchedReadWrites to subtarget
 def : WriteRes<WriteFPMUL32, [R52UnitFPMUL]> { let Latency = 6; }
@@ -124,7 +127,6 @@ def : WriteRes<WriteFPSQRT64, [R52UnitDiv]> { let Latency = 17; }
 def : ReadAdvance<ReadFPMUL, 1>; // mul operand read in F1
 def : ReadAdvance<ReadFPMAC, 1>; // fp-mac operand read in F1
 
-
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedReadWrites.
 
@@ -139,6 +141,9 @@ def : ReadAdvance<R52Read_F2, 2>;
 
 // Cortex-R52 specific SchedWrites for use with InstRW
 def R52WriteMAC        : SchedWriteRes<[R52UnitMAC]> { let Latency = 4; }
+def R52WriteMACHi      : SchedWriteRes<[R52UnitMAC]> {
+  let Latency = 4; let NumMicroOps = 0;
+}
 def R52WriteDIV        : SchedWriteRes<[R52UnitDiv]> {
   let Latency = 8; let ResourceCycles = [8]; // not pipelined
 }
@@ -152,6 +157,16 @@ def R52WriteALU_WRI    : SchedWriteRes<[R52UnitALU]> { let Latency = 4; }
 
 def R52WriteNoRSRC_EX2 : SchedWriteRes<[]> { let Latency = 3; }
 def R52WriteNoRSRC_WRI : SchedWriteRes<[]> { let Latency = 4; }
+
+// Alias generics to sub-target specific
+def : SchedAlias<WriteMUL16, R52WriteMAC>;
+def : SchedAlias<WriteMUL32, R52WriteMAC>;
+def : SchedAlias<WriteMUL64Lo, R52WriteMAC>;
+def : SchedAlias<WriteMUL64Hi, R52WriteMACHi>;
+def : SchedAlias<WriteMAC16, R52WriteMAC>;
+def : SchedAlias<WriteMAC32, R52WriteMAC>;
+def : SchedAlias<WriteMAC64Lo, R52WriteMAC>;
+def : SchedAlias<WriteMAC64Hi, R52WriteMACHi>;
 
 def R52WriteFPALU_F3   : SchedWriteRes<[R52UnitFPALU]> { let Latency = 4; }
 def R52Write2FPALU_F3  : SchedWriteRes<[R52UnitFPALU, R52UnitFPALU]> {
@@ -266,7 +281,7 @@ def : InstRW<[R52WriteMAC, R52Read_ISS, R52Read_ISS, R52Read_ISS],
       "t2SMLSLD", "t2SMLSLDX", "t2UMAAL")>;
 
 def : InstRW <[R52WriteDIV, R52Read_ISS, R52Read_ISS],
-      (instregex "SDIV", "UDIV", "t2SDIV", "t2UDIV")>;
+      (instregex "t2SDIV", "t2UDIV")>;
 
 // Loads (except POST) with SHL > 2, or ror, require 2 extra cycles.
 // However, that's non-trivial to specify, so we keep it uniform

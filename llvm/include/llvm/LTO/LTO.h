@@ -25,6 +25,7 @@
 #include "llvm/LTO/Config.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -52,18 +53,12 @@ void thinLTOResolveWeakForLinkerInIndex(
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage);
 
-/// This enum is used for the returned value of the callback passed to
-/// thinLTOInternalizeAndPromoteInIndex, it indicates if a symbol can be made
-/// Internal (only referenced from its defining object), Hidden (
-/// outside the DSO), or Exported (exposed as public API for the DSO).
-enum SummaryResolution { Internal, Hidden, Exported };
-
 /// Update the linkages in the given \p Index to mark exported values
 /// as external and non-exported values as internal. The ThinLTO backends
 /// must apply the changes to the Module via thinLTOInternalizeModule.
 void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported);
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported);
 
 namespace lto {
 
@@ -151,6 +146,22 @@ public:
       skip();
     }
 
+    /// For COFF weak externals, returns the name of the symbol that is used
+    /// as a fallback if the weak external remains undefined.
+    std::string getCOFFWeakExternalFallback() const {
+      assert((Flags & object::BasicSymbolRef::SF_Weak) &&
+             (Flags & object::BasicSymbolRef::SF_Indirect) &&
+             "symbol is not a weak external");
+      std::string Name;
+      raw_string_ostream OS(Name);
+      SymTab.printSymbolName(
+          OS,
+          cast<GlobalValue>(
+              cast<GlobalAlias>(getGV())->getAliasee()->stripPointerCasts()));
+      OS.flush();
+      return Name;
+    }
+
     /// Returns the mangled name of the global.
     StringRef getName() const { return Name; }
 
@@ -225,6 +236,9 @@ public:
         symbol_iterator(SymTab.symbols().begin(), SymTab, this),
         symbol_iterator(SymTab.symbols().end(), SymTab, this));
   }
+
+  /// Returns linker options specified in the input file.
+  Expected<std::string> getLinkerOpts();
 
   /// Returns the path to the InputFile.
   StringRef getName() const;

@@ -696,9 +696,28 @@ static bool shouldSkip(const BaseCommand &Cmd) {
   return Assign->Name != ".";
 }
 
-// Orphan sections are sections present in the input files which are not
-// explicitly placed into the output file by the linker script. This just
-// places them in the order already decided in OutputSections.
+// Orphan sections are sections present in the input files which are
+// not explicitly placed into the output file by the linker script.
+//
+// When the control reaches this function, Opt.Commands contains
+// output section commands for non-orphan sections only. This function
+// adds new elements for orphan sections to Opt.Commands so that all
+// sections are explicitly handled by Opt.Commands.
+//
+// Writer<ELFT>::sortSections has already sorted output sections.
+// What we need to do is to scan OutputSections vector and
+// Opt.Commands in parallel to find orphan sections. If there is an
+// output section that doesn't have a corresponding entry in
+// Opt.Commands, we will insert a new entry to Opt.Commands.
+//
+// There is some ambiguity as to where exactly a new entry should be
+// inserted, because Opt.Commands contains not only output section
+// commands but other types of commands such as symbol assignment
+// expressions. There's no correct answer here due to the lack of the
+// formal specification of the linker script. We use heuristics to
+// determine whether a new output command should be added before or
+// after another commands. For the details, look at shouldSkip
+// function.
 template <class ELFT> void LinkerScript<ELFT>::placeOrphanSections() {
   // The OutputSections are already in the correct order.
   // This loops creates or moves commands as needed so that they are in the
@@ -1919,17 +1938,20 @@ unsigned ScriptParser::readPhdrType() {
 void ScriptParser::readAnonymousDeclaration() {
   // Read global symbols first. "global:" is default, so if there's
   // no label, we assume global symbols.
-  if (consume("global:") || peek() != "local:")
+  if (peek() != "local") {
+    if (consume("global"))
+      expect(":");
     Config->VersionScriptGlobals = readSymbols();
-
+  }
   readLocals();
   expect("}");
   expect(";");
 }
 
 void ScriptParser::readLocals() {
-  if (!consume("local:"))
+  if (!consume("local"))
     return;
+  expect(":");
   std::vector<SymbolVersion> Locals = readSymbols();
   for (SymbolVersion V : Locals) {
     if (V.Name == "*") {
@@ -1948,9 +1970,11 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   Config->VersionDefinitions.push_back({VerStr, VersionId});
 
   // Read global symbols.
-  if (consume("global:") || peek() != "local:")
+  if (peek() != "local") {
+    if (consume("global"))
+      expect(":");
     Config->VersionDefinitions.back().Globals = readSymbols();
-
+  }
   readLocals();
   expect("}");
 
@@ -1974,7 +1998,7 @@ std::vector<SymbolVersion> ScriptParser::readSymbols() {
       continue;
     }
 
-    if (peek() == "}" || peek() == "local:" || Error)
+    if (peek() == "}" || peek() == "local" || Error)
       break;
     StringRef Tok = next();
     Ret.push_back({unquote(Tok), false, hasWildcard(Tok)});

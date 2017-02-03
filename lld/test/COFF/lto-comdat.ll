@@ -10,6 +10,8 @@
 ; RUN: rm -f %T/comdat.lib
 ; RUN: llvm-ar cru %T/comdat.lib %T/comdat1.obj %T/comdat2.obj
 
+; Check that, when we use an LTO main with LTO objects, we optimize away all
+; of f1, f2, and comdat.
 ; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat1.lto.obj %T/comdat2.lto.obj
 ; RUN: llvm-readobj -file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
 ; RUN: llvm-objdump -d %T/comdat-main.exe | FileCheck -check-prefix=TEXT-11 %s
@@ -17,6 +19,9 @@
 ; RUN: llvm-readobj -file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-11 %s
 ; RUN: llvm-objdump -d %T/comdat-main.exe | FileCheck -check-prefix=TEXT-11 %s
 
+; Check that, when we use a non-LTO main with LTO objects, we pick the comdat
+; implementation in LTO, elide calls to it from inside LTO, and retain the
+; call to comdat from main.
 ; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.obj %T/comdat1.lto.obj %T/comdat2.lto.obj
 ; RUN: llvm-readobj -file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
 ; RUN: llvm-objdump -d %T/comdat-main.exe | FileCheck -check-prefix=TEXT-01 %s
@@ -24,6 +29,9 @@
 ; RUN: llvm-readobj -file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-01 %s
 ; RUN: llvm-objdump -d %T/comdat-main.exe | FileCheck -check-prefix=TEXT-01 %s
 
+; Check that, when we use an LTO main with non-LTO objects, we pick the comdat
+; implementation in LTO, elide the call to it from inside LTO, and keep the
+; calls to comdat from the non-LTO objects.
 ; RUN: lld-link /out:%T/comdat-main.exe /entry:main /subsystem:console %T/comdat-main.lto.obj %T/comdat1.obj %T/comdat2.obj
 ; RUN: llvm-readobj -file-headers %T/comdat-main.exe | FileCheck -check-prefix=HEADERS-10 %s
 ; RUN: llvm-objdump -d %T/comdat-main.exe | FileCheck -check-prefix=TEXT-10 %s
@@ -46,70 +54,39 @@
 ; TEXT-01-NEXT: callq	13
 ; TEXT-01-NEXT: xorl	%eax, %eax
 ; TEXT-01-NEXT: addq	$40, %rsp
-; TEXT-01-NEXT: retq
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: retq
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: int3
-; TEXT-01-NEXT: retq
-; TEXT-01-NEXT: nopw	%cs:(%rax,%rax)
-; TEXT-01-NEXT: retq
+; TEXT-01: retq
+; TEXT-01-NOT: callq
+; TEXT-01: retq
+; TEXT-01-NOT: callq
+; TEXT-01: retq
+; TEXT-01-NOT: callq
+; TEXT-01: retq
+; TEXT-01-NOT: {{.}}
 
-; HEADERS-10: AddressOfEntryPoint: 0x2030
+; HEADERS-10: AddressOfEntryPoint: 0x2020
 ; TEXT-10: Disassembly of section .text:
 ; TEXT-10-NEXT: .text:
 ; TEXT-10-NEXT: subq	$40, %rsp
-; TEXT-10-NEXT: callq	7
-; TEXT-10-NEXT: nop
-; TEXT-10-NEXT: addq	$40, %rsp
-; TEXT-10-NEXT: retq
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: retq
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: int3
-; TEXT-10-NEXT: subq	$40, %rsp
-; TEXT-10-NEXT: callq	-25
+; TEXT-10-NEXT: callq	55
 ; TEXT-10-NEXT: nop
 ; TEXT-10-NEXT: addq	$40, %rsp
 ; TEXT-10-NEXT: retq
 ; TEXT-10-NEXT: int3
 ; TEXT-10-NEXT: subq	$40, %rsp
-; TEXT-10-NEXT: callq	-57
+; TEXT-10-NEXT: callq	39
+; TEXT-10-NEXT: nop
+; TEXT-10-NEXT: addq	$40, %rsp
+; TEXT-10-NEXT: retq
+; TEXT-10-NEXT: int3
+; TEXT-10-NEXT: subq	$40, %rsp
+; TEXT-10-NEXT: callq	-41
 ; TEXT-10-NEXT: callq	-30
 ; TEXT-10-NEXT: xorl	%eax, %eax
 ; TEXT-10-NEXT: addq	$40, %rsp
 ; TEXT-10-NEXT: retq
+; TEXT-10-NOT: callq
+; TEXT-10: retq
+; TEXT-10-NOT: {{.}}
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"

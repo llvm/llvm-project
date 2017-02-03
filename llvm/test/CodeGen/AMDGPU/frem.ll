@@ -12,8 +12,8 @@
 ; GCN: v_mul_f32_e32
 ; GCN: v_div_fmas_f32
 ; GCN: v_div_fixup_f32
-; GCN: v_trunc_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}
-; GCN: v_mac_f32_e32
+; GCN: v_trunc_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: s_endpgm
 define void @frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
                       float addrspace(1)* %in2) #0 {
@@ -28,12 +28,11 @@ define void @frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
 ; FUNC-LABEL: {{^}}unsafe_frem_f32:
 ; GCN: buffer_load_dword [[Y:v[0-9]+]], {{.*}} offset:16
 ; GCN: buffer_load_dword [[X:v[0-9]+]], {{.*}}
-; GCN: v_rcp_f32_e64 [[INVY:v[0-9]+]], -[[Y]]
+; GCN: v_rcp_f32_e32 [[INVY:v[0-9]+]], [[Y]]
 ; GCN: v_mul_f32_e32 [[DIV:v[0-9]+]], [[INVY]], [[X]]
 ; GCN: v_trunc_f32_e32 [[TRUNC:v[0-9]+]], [[DIV]]
-; GCN: v_mac_f32_e32 [[X]], [[Y]], [[TRUNC]]
-; GCN: buffer_store_dword [[X]]
-; GCN: s_endpgm
+; GCN: v_mad_f32 [[RESULT:v[0-9]+]], -[[TRUNC]], [[Y]], [[X]]
+; GCN: buffer_store_dword [[RESULT]]
 define void @unsafe_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
                              float addrspace(1)* %in2) #1 {
    %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4

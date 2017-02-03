@@ -5,7 +5,7 @@
 # RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=NOGC
 
 # NOGC: Symbol {
-# NOGC:   Name: .tbss
+# NOGC:   Name: (0)
 # NOGC:   Value: 0x1000
 # NOGC:   Size: 0
 # NOGC:   Binding: Local

@@ -72,8 +72,22 @@ def WriteCMP : SchedWrite;
 def WriteCMPsi : SchedWrite;
 def WriteCMPsr : SchedWrite;
 
-// Division.
-def WriteDiv : SchedWrite;
+// Multiplys.
+def WriteMUL16   : SchedWrite; // 16-bit multiply.
+def WriteMUL32   : SchedWrite; // 32-bit multiply.
+def WriteMUL64Lo : SchedWrite; // 64-bit result. Low reg.
+def WriteMUL64Hi : SchedWrite; // 64-bit result. High reg.
+def ReadMUL  : SchedRead;
+
+// Multiply-accumulates.
+def WriteMAC16   : SchedWrite; // 16-bit mac.
+def WriteMAC32   : SchedWrite; // 32-bit mac.
+def WriteMAC64Lo : SchedWrite; // 64-bit mac. Low reg.
+def WriteMAC64Hi : SchedWrite; // 64-bit mac. High reg.
+def ReadMAC : SchedRead;
+
+// Divisions.
+def WriteDIV : SchedWrite;
 
 // Loads.
 def WriteLd : SchedWrite;

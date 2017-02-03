@@ -356,11 +356,19 @@ const char *LLVMSymbolizer::FormatAndSendCommand(bool is_data,
   CHECK(module_name);
   const char *is_data_str = is_data ? "DATA " : "";
   if (arch == kModuleArchUnknown) {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
-                      module_name, module_offset);
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
+                          module_name,
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
   } else {
-    internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n", is_data_str,
-                      module_name, ModuleArchToString(arch), module_offset);
+    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n",
+                          is_data_str, module_name, ModuleArchToString(arch),
+                          module_offset) >= static_cast<int>(kBufferSize)) {
+      Report("WARNING: Command buffer too small");
+      return nullptr;
+    }
   }
   return symbolizer_process_->SendCommand(buffer_);
 }
@@ -426,6 +434,11 @@ bool SymbolizerProcess::ReadFromSymbolizer(char *buffer, uptr max_length) {
     read_len += just_read;
     if (ReachedEndOfOutput(buffer, read_len))
       break;
+    if (read_len + 1 == max_length) {
+      Report("WARNING: Symbolizer buffer too small");
+      read_len = 0;
+      break;
+    }
   }
   buffer[read_len] = '\0';
   return true;

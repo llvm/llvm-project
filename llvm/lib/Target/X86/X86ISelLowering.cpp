@@ -1127,7 +1127,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,   VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS,     VT, Custom);
     }
 
@@ -1442,7 +1442,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VSELECT,             VT, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT,  VT, Custom);
       setOperationAction(ISD::SCALAR_TO_VECTOR,    VT, Custom);
-      setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR,    VT, Legal);
       setOperationAction(ISD::MLOAD,               VT, Legal);
       setOperationAction(ISD::MSTORE,              VT, Legal);
       setOperationAction(ISD::MGATHER,             VT, Legal);
@@ -1480,8 +1480,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CONCAT_VECTORS,     MVT::v64i8, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i1, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i16, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i8, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v32i16, Legal);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i8, Legal);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32i16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v64i8, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32i1,  Custom);
@@ -2783,12 +2783,14 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
   return makeArrayRef(std::begin(XMMArgRegs64Bit), std::end(XMMArgRegs64Bit));
 }
 
+#ifndef NDEBUG
 static bool isSortedByValueNo(const SmallVectorImpl<CCValAssign> &ArgLocs) {
   return std::is_sorted(ArgLocs.begin(), ArgLocs.end(),
                         [](const CCValAssign &A, const CCValAssign &B) -> bool {
                           return A.getValNo() < B.getValNo();
                         });
 }
+#endif
 
 SDValue X86TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -2838,8 +2840,8 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
-  if (!isSortedByValueNo(ArgLocs))
-    llvm_unreachable("Argument Location list must be sorted before lowering");
+  assert(isSortedByValueNo(ArgLocs) &&
+         "Argument Location list must be sorted before lowering");
 
   SDValue ArgValue;
   for (unsigned I = 0, InsIndex = 0, E = ArgLocs.size(); I != E;
@@ -3350,8 +3352,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
-  if (!isSortedByValueNo(ArgLocs))
-    llvm_unreachable("Argument Location list must be sorted before lowering");
+  assert(isSortedByValueNo(ArgLocs) &&
+         "Argument Location list must be sorted before lowering");
 
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
   // of tail call optimization arguments are handle later.
@@ -4917,50 +4919,6 @@ static SDValue insertSubVector(SDValue Result, SDValue Vec, unsigned IdxVal,
 static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
                                   SelectionDAG &DAG, const SDLoc &dl) {
   assert(Vec.getValueType().is128BitVector() && "Unexpected vector size!");
-
-  // For insertion into the zero index (low half) of a 256-bit vector, it is
-  // more efficient to generate a blend with immediate instead of an insert*128.
-  // We are still creating an INSERT_SUBVECTOR below with an undef node to
-  // extend the subvector to the size of the result vector. Make sure that
-  // we are not recursing on that node by checking for undef here.
-  if (IdxVal == 0 && Result.getValueType().is256BitVector() &&
-      !Result.isUndef()) {
-    EVT ResultVT = Result.getValueType();
-    SDValue ZeroIndex = DAG.getIntPtrConstant(0, dl);
-    SDValue Undef = DAG.getUNDEF(ResultVT);
-    SDValue Vec256 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResultVT, Undef,
-                                 Vec, ZeroIndex);
-
-    // The blend instruction, and therefore its mask, depend on the data type.
-    MVT ScalarType = ResultVT.getVectorElementType().getSimpleVT();
-    if (ScalarType.isFloatingPoint()) {
-      // Choose either vblendps (float) or vblendpd (double).
-      unsigned ScalarSize = ScalarType.getSizeInBits();
-      assert((ScalarSize == 64 || ScalarSize == 32) && "Unknown float type");
-      unsigned MaskVal = (ScalarSize == 64) ? 0x03 : 0x0f;
-      SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BLENDI, dl, ResultVT, Result, Vec256, Mask);
-    }
-
-    const X86Subtarget &Subtarget =
-    static_cast<const X86Subtarget &>(DAG.getSubtarget());
-
-    // AVX2 is needed for 256-bit integer blend support.
-    // Integers must be cast to 32-bit because there is only vpblendd;
-    // vpblendw can't be used for this because it has a handicapped mask.
-
-    // If we don't have AVX2, then cast to float. Using a wrong domain blend
-    // is still more efficient than using the wrong domain vinsertf128 that
-    // will be created by InsertSubVector().
-    MVT CastVT = Subtarget.hasAVX2() ? MVT::v8i32 : MVT::v8f32;
-
-    SDValue Mask = DAG.getConstant(0x0f, dl, MVT::i8);
-    Result = DAG.getBitcast(CastVT, Result);
-    Vec256 = DAG.getBitcast(CastVT, Vec256);
-    Vec256 = DAG.getNode(X86ISD::BLENDI, dl, CastVT, Result, Vec256, Mask);
-    return DAG.getBitcast(ResultVT, Vec256);
-  }
-
   return insertSubVector(Result, Vec, IdxVal, DAG, dl, 128);
 }
 
@@ -14049,30 +14007,9 @@ static bool areOnlyUsersOf(SDNode *N, ArrayRef<SDValue> ValidUsers) {
 // the upper bits of a vector.
 static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
-  assert(Subtarget.hasAVX() && "INSERT_SUBVECTOR requires AVX");
+  assert(Op.getSimpleValueType().getVectorElementType() == MVT::i1);
 
-  SDLoc dl(Op);
-  SDValue Vec = Op.getOperand(0);
-  SDValue SubVec = Op.getOperand(1);
-  SDValue Idx = Op.getOperand(2);
-
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  MVT OpVT = Op.getSimpleValueType();
-  MVT SubVecVT = SubVec.getSimpleValueType();
-
-  if (OpVT.getVectorElementType() == MVT::i1)
-    return insert1BitVector(Op, DAG, Subtarget);
-
-  assert((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
-         "Can only insert into 256-bit or 512-bit vectors");
-
-  if (SubVecVT.is128BitVector())
-    return insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
-
-  if (SubVecVT.is256BitVector())
-    return insert256BitVector(Vec, SubVec, IdxVal, DAG, dl);
-
-  llvm_unreachable("Unimplemented!");
+  return insert1BitVector(Op, DAG, Subtarget);
 }
 
 // Returns the appropriate wrapper opcode for a global reference.
@@ -34164,6 +34101,45 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   MVT OpVT = N->getSimpleValueType(0);
   MVT SubVecVT = SubVec.getSimpleValueType();
+
+  // For insertion into the zero index (low half) of a 256-bit vector, it is
+  // more efficient to generate a blend with immediate instead of an insert*128.
+  // We are still creating an INSERT_SUBVECTOR below with an undef node to
+  // extend the subvector to the size of the result vector. Make sure that
+  // we are not recursing on that node by checking for undef here.
+  if (IdxVal == 0 && OpVT.is256BitVector() && SubVecVT.is128BitVector() &&
+      !Vec.isUndef()) {
+    SDValue ZeroIndex = DAG.getIntPtrConstant(0, dl);
+    SDValue Undef = DAG.getUNDEF(OpVT);
+    SDValue Vec256 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT, Undef,
+                                 SubVec, ZeroIndex);
+
+    // The blend instruction, and therefore its mask, depend on the data type.
+    MVT ScalarType = OpVT.getVectorElementType();
+    if (ScalarType.isFloatingPoint()) {
+      // Choose either vblendps (float) or vblendpd (double).
+      unsigned ScalarSize = ScalarType.getSizeInBits();
+      assert((ScalarSize == 64 || ScalarSize == 32) && "Unknown float type");
+      unsigned MaskVal = (ScalarSize == 64) ? 0x03 : 0x0f;
+      SDValue Mask = DAG.getConstant(MaskVal, dl, MVT::i8);
+      return DAG.getNode(X86ISD::BLENDI, dl, OpVT, Vec, Vec256, Mask);
+    }
+
+    // AVX2 is needed for 256-bit integer blend support.
+    // Integers must be cast to 32-bit because there is only vpblendd;
+    // vpblendw can't be used for this because it has a handicapped mask.
+
+    // If we don't have AVX2, then cast to float. Using a wrong domain blend
+    // is still more efficient than using the wrong domain vinsertf128 that
+    // will be created by InsertSubVector().
+    MVT CastVT = Subtarget.hasAVX2() ? MVT::v8i32 : MVT::v8f32;
+
+    SDValue Mask = DAG.getConstant(0x0f, dl, MVT::i8);
+    Vec = DAG.getBitcast(CastVT, Vec);
+    Vec256 = DAG.getBitcast(CastVT, Vec256);
+    Vec256 = DAG.getNode(X86ISD::BLENDI, dl, CastVT, Vec, Vec256, Mask);
+    return DAG.getBitcast(OpVT, Vec256);
+  }
 
   // Fold two 16-byte or 32-byte subvector loads into one 32-byte or 64-byte
   // load:

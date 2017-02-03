@@ -160,7 +160,13 @@ static cl::opt<unsigned> TailDupPlacementPenalty(
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 
+// Internal option used to control BFI display only after MBP pass.
+// Defined in CodeGen/MachineBlockFrequencyInfo.cpp:
+// -view-block-layout-with-bfi=
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
+
+// Command line option to specify the name of the function for CFG dump
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 namespace {

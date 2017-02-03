@@ -1399,6 +1399,10 @@ TEST_F(FormatTestJS, TemplateStrings) {
                "         aaaaaaaaaaaaa:${aaaaaaa.aaaaa} aaaaaaaa`;",
                "var f = `aaaaaaaaaaaaa:${aaaaaaa.  aaaaa} aaaaaaaa\n"
                "         aaaaaaaaaaaaa:${  aaaaaaa. aaaaa} aaaaaaaa`;");
+  verifyFormat("var x = someFunction(`${})`)  //\n"
+               "            .oooooooooooooooooon();");
+  verifyFormat("var x = someFunction(`${aaaa}${aaaaa(  //\n"
+               "                                   aaaaa)})`);");
 }
 
 TEST_F(FormatTestJS, TemplateStringMultiLineExpression) {

@@ -10,7 +10,7 @@
 #ifndef liblldb_ExpressionParser_h_
 #define liblldb_ExpressionParser_h_
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {

@@ -20,13 +20,21 @@
 //===---------------------------------------------------------------------===//
 
 #include "InstPrinter/X86InstComments.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86InstrTablesInfo.h"
-#include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
-#include "X86TargetMachine.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Pass.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -56,8 +64,6 @@ class EvexToVexInstPass : public MachineFunctionPass {
 public:
   static char ID;
 
-  StringRef getPassName() const override { return EVEX2VEX_DESC; }
-
   EvexToVexInstPass() : MachineFunctionPass(ID) {
     initializeEvexToVexInstPassPass(*PassRegistry::getPassRegistry());
 
@@ -71,6 +77,8 @@ public:
       AddTableEntry(EvexToVex256Table, Entry.EvexOpcode, Entry.VexOpcode);
     }
   }
+
+  StringRef getPassName() const override { return EVEX2VEX_DESC; }
 
   /// Loop over all of the basic blocks, replacing EVEX instructions
   /// by equivalent VEX instructions when possible for reducing code size.
@@ -88,13 +96,8 @@ private:
 };
 
 char EvexToVexInstPass::ID = 0;
-}
 
-INITIALIZE_PASS(EvexToVexInstPass, EVEX2VEX_NAME, EVEX2VEX_DESC, false, false)
-
-FunctionPass *llvm::createX86EvexToVexInsts() {
-  return new EvexToVexInstPass();
-}
+} // end anonymous namespace
 
 bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
@@ -125,7 +128,6 @@ void EvexToVexInstPass::AddTableEntry(EvexToVexTableType &EvexToVexTable,
 // For EVEX instructions that can be encoded using VEX encoding
 // replace them by the VEX encoding in order to reduce size.
 bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
-
   // VEX format.
   // # of bytes: 0,2,3  1      1      0,1   0,1,2,4  0,1
   //  [Prefixes] [VEX]  OPCODE ModR/M [SIB] [DISP]  [IMM]
@@ -210,4 +212,10 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   MI.setDesc(MCID);
   MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
   return true; 
+}
+
+INITIALIZE_PASS(EvexToVexInstPass, EVEX2VEX_NAME, EVEX2VEX_DESC, false, false)
+
+FunctionPass *llvm::createX86EvexToVexInsts() {
+  return new EvexToVexInstPass();
 }

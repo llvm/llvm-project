@@ -10,8 +10,8 @@
 
 #include "ObjCPlusPlusLanguage.h"
 
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Utility/ConstString.h"
 
 using namespace lldb;
 using namespace lldb_private;

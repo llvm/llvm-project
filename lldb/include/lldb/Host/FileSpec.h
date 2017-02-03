@@ -17,9 +17,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/FormatVariadic.h"

@@ -24,9 +24,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
 

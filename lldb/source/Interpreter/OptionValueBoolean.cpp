@@ -13,10 +13,10 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Stream.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;

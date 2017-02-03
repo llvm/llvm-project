@@ -12,9 +12,9 @@
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-public.h"
 
 #include <string>

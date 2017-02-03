@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/RegularExpression.h"
+#include "lldb/Utility/RegularExpression.h"
 
 // C Includes
 // C++ Includes
@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 //----------------------------------------------------------------------
 // Enable enhanced mode if it is available. This allows for things like

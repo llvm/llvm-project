@@ -202,12 +202,12 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // support in the assembler and linker to be used. This would need to be
   // fixed to fully support tail calls in Thumb1.
   //
-  // Doing this is tricky, since the LDM/POP instruction on Thumb doesn't take
-  // LR.  This means if we need to reload LR, it takes an extra instructions,
-  // which outweighs the value of the tail call; but here we don't know yet
-  // whether LR is going to be used.  Probably the right approach is to
-  // generate the tail call here and turn it back into CALL/RET in
-  // emitEpilogue if LR is used.
+  // For ARMv8-M, we /do/ implement tail calls.  Doing this is tricky for v8-M
+  // baseline, since the LDM/POP instruction on Thumb doesn't take LR.  This
+  // means if we need to reload LR, it takes extra instructions, which outweighs
+  // the value of the tail call; but here we don't know yet whether LR is going
+  // to be used. We generate the tail call here and turn it back into CALL/RET
+  // in emitEpilogue if LR is used.
 
   // Thumb1 PIC calls to external symbols use BX, so they can be tail calls,
   // but we need to make sure there are enough registers; the only valid

@@ -11,8 +11,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Utility/Stream.h"
 #include <algorithm>
 
 using namespace lldb;

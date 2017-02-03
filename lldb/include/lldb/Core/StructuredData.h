@@ -23,8 +23,8 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
 
 namespace lldb_private {

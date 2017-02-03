@@ -537,6 +537,8 @@ void ChangeNamespaceTool::run(
                  Result.Nodes.getNodeAs<DeclRefExpr>("enum_const_ref")) {
     // Do not rename the reference if it is already scoped by the EnumDecl name.
     if (EnumConstRef->hasQualifier() &&
+        EnumConstRef->getQualifier()->getKind() ==
+            NestedNameSpecifier::SpecifierKind::TypeSpec &&
         EnumConstRef->getQualifier()->getAsType()->isEnumeralType())
       return;
     const auto *EnumConstDecl =

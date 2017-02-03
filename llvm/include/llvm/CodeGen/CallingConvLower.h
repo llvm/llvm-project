@@ -183,11 +183,6 @@ typedef bool CCCustomFn(unsigned &ValNo, MVT &ValVT,
                         MVT &LocVT, CCValAssign::LocInfo &LocInfo,
                         ISD::ArgFlagsTy &ArgFlags, CCState &State);
 
-/// ParmContext - This enum tracks whether calling convention lowering is in
-/// the context of prologue or call generation. Not all backends make use of
-/// this information.
-typedef enum { Unknown, Prologue, Call } ParmContext;
-
 /// CCState - This class holds information needed while lowering arguments and
 /// return values.  It captures which registers are already assigned and which
 /// stack slots are used.  It provides accessors to allocate these values.
@@ -255,9 +250,6 @@ private:
   // InRegsParamsProcessed - shows how many instances of ByValRegs was proceed
   // during argument analysis.
   unsigned InRegsParamsProcessed;
-
-protected:
-  ParmContext CallOrPrologue;
 
 public:
   CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &MF,
@@ -509,8 +501,6 @@ public:
   void rewindByValRegsInfo() {
     InRegsParamsProcessed = 0;
   }
-
-  ParmContext getCallOrPrologue() const { return CallOrPrologue; }
 
   // Get list of pending assignments
   SmallVectorImpl<llvm::CCValAssign> &getPendingLocs() {

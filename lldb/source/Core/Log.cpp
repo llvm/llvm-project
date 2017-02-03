@@ -11,11 +11,11 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/ThisThread.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/StreamString.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"

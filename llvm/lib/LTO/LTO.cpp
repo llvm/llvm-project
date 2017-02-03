@@ -17,12 +17,16 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -199,14 +203,11 @@ void llvm::thinLTOResolveWeakForLinkerInIndex(
 
 static void thinLTOInternalizeAndPromoteGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &S : GVSummaryList) {
-    auto ExportResolution = isExported(S->modulePath(), GUID);
-    if (ExportResolution != Internal) {
+    if (isExported(S->modulePath(), GUID)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
-      if (ExportResolution == Hidden)
-        S->setAutoHide();
     } else if (!GlobalValue::isLocalLinkage(S->linkage()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
@@ -216,7 +217,7 @@ static void thinLTOInternalizeAndPromoteGUID(
 // as external and non-exported values as internal.
 void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<SummaryResolution(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(I.second, I.first, isExported);
 }
@@ -289,6 +290,32 @@ Expected<int> InputFile::Symbol::getComdatIndex() const {
     return I->second;
   }
   return -1;
+}
+
+Expected<std::string> InputFile::getLinkerOpts() {
+  std::string LinkerOpts;
+  raw_string_ostream LOS(LinkerOpts);
+  // Extract linker options from module metadata.
+  for (InputModule &Mod : Mods) {
+    std::unique_ptr<Module> &M = Mod.Mod;
+    if (auto E = M->materializeMetadata())
+      return std::move(E);
+    if (Metadata *Val = M->getModuleFlag("Linker Options")) {
+      MDNode *LinkerOptions = cast<MDNode>(Val);
+      for (const MDOperand &MDOptions : LinkerOptions->operands())
+        for (const MDOperand &MDOption : cast<MDNode>(MDOptions)->operands())
+          LOS << " " << cast<MDString>(MDOption)->getString();
+    }
+  }
+
+  // Synthesize export flags for symbols with dllexport storage.
+  const Triple TT(Mods[0].Mod->getTargetTriple());
+  Mangler M;
+  for (const ModuleSymbolTable::Symbol &Sym : SymTab.symbols())
+    if (auto *GV = Sym.dyn_cast<GlobalValue*>())
+      emitLinkerFlagsForGlobalCOFF(LOS, GV, TT, M);
+  LOS.flush();
+  return LinkerOpts;
 }
 
 StringRef InputFile::getName() const {
@@ -924,20 +951,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
                             const GlobalValueSummary *S) {
       return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
     };
-    auto isExported = [&](StringRef ModuleIdentifier,
-                          GlobalValue::GUID GUID) -> SummaryResolution {
+    auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
       const auto &ExportList = ExportLists.find(ModuleIdentifier);
-      if ((ExportList != ExportLists.end() && ExportList->second.count(GUID)) ||
-          ExportedGUIDs.count(GUID)) {
-        // We could do better by hiding when a symbol is in
-        // GUIDPreservedSymbols because it is only referenced from regular LTO
-        // or from native files and not outside the final binary, but that's
-        // something the native linker could do as gwell.
-        if (GUIDPreservedSymbols.count(GUID))
-          return Exported;
-        return Hidden;
-      }
-      return Internal;
+      return (ExportList != ExportLists.end() &&
+              ExportList->second.count(GUID)) ||
+             ExportedGUIDs.count(GUID);
     };
     thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
 

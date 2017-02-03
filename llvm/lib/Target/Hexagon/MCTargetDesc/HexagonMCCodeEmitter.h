@@ -15,6 +15,7 @@
 #ifndef HEXAGONMCCODEEMITTER_H
 #define HEXAGONMCCODEEMITTER_H
 
+#include "MCTargetDesc/HexagonFixupKinds.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -37,6 +38,10 @@ class HexagonMCCodeEmitter : public MCCodeEmitter {
   unsigned getExprOpValue(const MCInst &MI, const MCOperand &MO,
                           const MCExpr *ME, SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+
+  Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
+                                 const MCOperand &MO,
+                                 const MCSymbolRefExpr::VariantKind kind) const;
 
 public:
   HexagonMCCodeEmitter(MCInstrInfo const &aMII, MCContext &aMCT);

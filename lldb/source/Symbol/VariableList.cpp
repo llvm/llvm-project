@@ -9,10 +9,10 @@
 
 #include "lldb/Symbol/VariableList.h"
 
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Utility/RegularExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -27,7 +27,7 @@ namespace lldb_private {
 class Log;
 
 //----------------------------------------------------------------------
-/// @class Error Error.h "lldb/Core/Error.h"
+/// @class Error Error.h "lldb/Utility/Error.h"
 /// @brief An error handling class.
 ///
 /// This class is designed to be able to hold any error code that can be

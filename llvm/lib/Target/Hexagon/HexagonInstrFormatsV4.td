@@ -21,7 +21,7 @@ def TypeV4LDST   : IType<9>;
 def TypeNV       : IType<10>;
 def TypeDUPLEX   : IType<11>;
 def TypeCJ       : IType<12>;
-def TypePREFIX   : IType<30>;
+def TypeEXTENDER   : IType<30>;
 
 //                      Duplex Instruction Class Declaration
 //===----------------------------------------------------------------------===//
@@ -141,7 +141,7 @@ class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 
 class EXTENDERInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   : InstHexagon<outs, ins, asmstr, pattern, "", EXTENDER_tc_1_SLOT0123,
-                TypePREFIX>, OpcodeHexagon;
+                TypeEXTENDER>, OpcodeHexagon;
 
 class SUBInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "">

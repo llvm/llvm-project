@@ -9,8 +9,8 @@
 
 #include "lldb/Utility/JSON.h"
 
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <limits.h>
 

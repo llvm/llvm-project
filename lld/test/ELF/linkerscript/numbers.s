@@ -49,6 +49,20 @@
 # RUN:  FileCheck --check-prefix=ERR3 %s
 # ERR3: malformed number: 0x11m
 
+## Make sure that numbers can be followed by a ":" with and without a space,
+## e.g. "0x100 :" or "0x100:"
+# RUN: echo "SECTIONS { \
+# RUN:  .hex1 0x400 : { *(.hex.1) } \
+# RUN:  .hex2 0x500:{ *(.hex.2) } \
+# RUN: }" > %t5.script
+# RUN: ld.lld %t --script %t5.script -o %t6
+# RUN: llvm-objdump -section-headers %t6 | FileCheck -check-prefix=SECADDR %s
+# SECADDR:     Sections:
+# SECADDR-NEXT: Idx Name          Size      Address
+# SECADDR-NEXT:   0               00000000 0000000000000000
+# SECADDR-NEXT:   1 .hex1         00000008 0000000000000400
+# SECADDR-NEXT:   2 .hex2         00000008 0000000000000500
+
 .globl _start
 _start:
 nop

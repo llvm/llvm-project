@@ -17,8 +17,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

@@ -268,10 +268,13 @@ template <> struct format_provider<lldb_private::Vote> {
     switch (V) {
     case lldb_private::eVoteNo:
       Stream << "no";
+      return;
     case lldb_private::eVoteNoOpinion:
       Stream << "no opinion";
+      return;
     case lldb_private::eVoteYes:
       Stream << "yes";
+      return;
     }
     Stream << "invalid";
   }

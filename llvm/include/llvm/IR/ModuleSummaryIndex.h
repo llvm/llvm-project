@@ -126,14 +126,11 @@ public:
     /// llvm.global_ctors that the linker does not know about.
     unsigned LiveRoot : 1;
 
-    /// Indicate if the global value should be hidden.
-    unsigned AutoHide : 1;
-
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
-                     bool NotEligibleToImport, bool LiveRoot, bool AutoHide)
+                     bool NotEligibleToImport, bool LiveRoot)
         : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          LiveRoot(LiveRoot), AutoHide(AutoHide) {}
+          LiveRoot(LiveRoot) {}
   };
 
 private:
@@ -200,9 +197,6 @@ public:
   void setLinkage(GlobalValue::LinkageTypes Linkage) {
     Flags.Linkage = Linkage;
   }
-
-  /// Sets the visibility to be autohidden.
-  void setAutoHide() { Flags.AutoHide = true; }
 
   /// Return true if this global value can't be imported.
   bool notEligibleToImport() const { return Flags.NotEligibleToImport; }

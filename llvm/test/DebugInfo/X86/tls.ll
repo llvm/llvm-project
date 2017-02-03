@@ -78,7 +78,6 @@
 
 ; check that the expected TLS address description is the first thing in the debug_addr section
 ; FISSION: .section    .debug_addr
-; FISSION: addr_sec:
 ; FISSION-NEXT: .quad  tls@DTPOFF
 ; FISSION-NEXT: .quad  glbl
 ; FISSION-NOT: .quad  glbl

@@ -13,7 +13,7 @@
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {

@@ -13,8 +13,7 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/LTO/legacy/LTOModule.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/StringSaver.h"
@@ -25,7 +24,6 @@
 namespace lld {
 namespace coff {
 
-using llvm::LTOModule;
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::MachineTypes;
 using llvm::object::Archive;
@@ -191,16 +189,13 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   std::vector<SymbolBody *> &getSymbols() { return SymbolBodies; }
   MachineTypes getMachineType() override;
-  std::unique_ptr<LTOModule> takeModule() { return std::move(M); }
-
-  static llvm::LLVMContext Context;
+  std::unique_ptr<llvm::lto::InputFile> Obj;
 
 private:
   void parse() override;
 
   std::vector<SymbolBody *> SymbolBodies;
   llvm::BumpPtrAllocator Alloc;
-  std::unique_ptr<LTOModule> M;
 };
 } // namespace coff
 
