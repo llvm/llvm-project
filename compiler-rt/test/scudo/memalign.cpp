@@ -29,12 +29,10 @@ int main(int argc, char **argv)
 
   if (!strcmp(argv[1], "valid")) {
     posix_memalign(&p, alignment, size);
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     p = aligned_alloc(alignment, size);
-    if (!p)
-      return 1;
+    assert(p);
     free(p);
     // Tests various combinations of alignment and sizes
     for (int i = (sizeof(void *) == 4) ? 3 : 4; i < 19; i++) {
@@ -43,8 +41,7 @@ int main(int argc, char **argv)
         size = 0x800 * j;
         for (int k = 0; k < 3; k++) {
           p = memalign(alignment, size - (2 * sizeof(void *) * k));
-          if (!p)
-            return 1;
+          assert(p);
           free(p);
         }
       }
@@ -54,8 +51,7 @@ int main(int argc, char **argv)
     for (int i = 19; i <= 24; i++) {
       for (int k = 0; k < 3; k++) {
         p = memalign(alignment, 0x1000 - (2 * sizeof(void *) * k));
-        if (!p)
-          return 1;
+        assert(p);
         free(p);
       }
     }

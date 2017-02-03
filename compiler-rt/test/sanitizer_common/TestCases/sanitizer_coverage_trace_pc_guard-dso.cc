@@ -1,7 +1,7 @@
 // Tests trace pc guard coverage collection.
 //
 // REQUIRES: has_sancovcc,stable-runtime
-// XFAIL: tsan,darwin,powerpc64,s390x
+// XFAIL: tsan,darwin,powerpc64,s390x,mips
 //
 // RUN: DIR=%t_workdir
 // RUN: CLANG_ARGS="-O0 -fsanitize-coverage=trace-pc-guard"

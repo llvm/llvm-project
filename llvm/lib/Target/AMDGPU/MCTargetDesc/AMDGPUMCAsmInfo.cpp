@@ -14,6 +14,7 @@
 using namespace llvm;
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT) : MCAsmInfoELF() {
+  PointerSize = (TT.getArch() == Triple::amdgcn) ? 8 : 4;
   HasSingleParameterDotFile = false;
   //===------------------------------------------------------------------===//
   MinInstAlignment = 4;

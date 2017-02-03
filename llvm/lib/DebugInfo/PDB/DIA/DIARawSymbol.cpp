@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIARawSymbol.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSymbols.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
@@ -178,9 +179,10 @@ void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
 }
 
 namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const GUID &Guid) {
-  const PDB_UniqueId *Id = reinterpret_cast<const PDB_UniqueId *>(&Guid);
-  OS << *Id;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GUID &G) {
+  StringRef GuidBytes(reinterpret_cast<const char *>(&G), sizeof(G));
+  codeview::detail::GuidAdapter A(GuidBytes);
+  A.format(OS, "");
   return OS;
 }
 }

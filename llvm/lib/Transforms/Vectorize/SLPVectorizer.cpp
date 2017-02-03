@@ -467,7 +467,9 @@ private:
                         ScalarEvolution &SE) const {
       assert(VL.size() == Scalars.size() && "Invalid size");
       SmallVector<Value *, 8> List;
-      sortMemAccesses(VL, DL, SE, List);
+      if (!sortMemAccesses(VL, DL, SE, List))
+        return false;
+
       return std::equal(List.begin(), List.end(), Scalars.begin());
     }
 
@@ -1223,18 +1225,19 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
 
       if (VL.size() > 2 && !ReverseConsecutive) {
         bool ShuffledLoads = true;
-        SmallVector<Value *, 8> List;
-        sortMemAccesses(VL, *DL, *SE, List);
-        auto NewVL = makeArrayRef(List.begin(), List.end());
-        for (unsigned i = 0, e = NewVL.size() - 1; i < e; ++i) {
-          if (!isConsecutiveAccess(NewVL[i], NewVL[i + 1], *DL, *SE)) {
-            ShuffledLoads = false;
-            break;
+        SmallVector<Value *, 8> Sorted;
+        if (sortMemAccesses(VL, *DL, *SE, Sorted)) {
+          auto NewVL = makeArrayRef(Sorted.begin(), Sorted.end());
+          for (unsigned i = 0, e = NewVL.size() - 1; i < e; ++i) {
+            if (!isConsecutiveAccess(NewVL[i], NewVL[i + 1], *DL, *SE)) {
+              ShuffledLoads = false;
+              break;
+            }
           }
-        }
-        if (ShuffledLoads) {
-          newTreeEntry(NewVL, true, true);
-          return;
+          if (ShuffledLoads) {
+            newTreeEntry(NewVL, true, true);
+            return;
+          }
         }
       }
 

@@ -22,9 +22,6 @@ protected:
   explicit FormatAdapter(T &&Item) : Item(Item) {}
 
   T Item;
-
-  static_assert(!detail::uses_missing_provider<T>::value,
-                "Item does not have a format provider!");
 };
 
 namespace detail {

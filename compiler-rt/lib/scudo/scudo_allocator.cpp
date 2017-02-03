@@ -354,6 +354,8 @@ struct Allocator {
 
   // Helper function that checks for a valid Scudo chunk.
   bool isValidPointer(const void *UserPtr) {
+    if (UNLIKELY(!ThreadInited))
+      initThread();
     uptr ChunkBeg = reinterpret_cast<uptr>(UserPtr);
     if (!IsAligned(ChunkBeg, MinAlignment)) {
       return false;
@@ -580,6 +582,14 @@ struct Allocator {
     AllocatorQuarantine.Drain(&ThreadQuarantineCache,
                               QuarantineCallback(&Cache));
   }
+
+  uptr getStats(AllocatorStat StatType) {
+    if (UNLIKELY(!ThreadInited))
+      initThread();
+    uptr stats[AllocatorStatCount];
+    BackendAllocator.GetStats(stats);
+    return stats[StatType];
+  }
 };
 
 static Allocator Instance(LINKER_INITIALIZED);
@@ -664,15 +674,11 @@ using namespace __scudo;
 // MallocExtension helper functions
 
 uptr __sanitizer_get_current_allocated_bytes() {
-  uptr stats[AllocatorStatCount];
-  getAllocator().GetStats(stats);
-  return stats[AllocatorStatAllocated];
+  return Instance.getStats(AllocatorStatAllocated);
 }
 
 uptr __sanitizer_get_heap_size() {
-  uptr stats[AllocatorStatCount];
-  getAllocator().GetStats(stats);
-  return stats[AllocatorStatMapped];
+  return Instance.getStats(AllocatorStatMapped);
 }
 
 uptr __sanitizer_get_free_bytes() {

@@ -205,20 +205,6 @@ void PlatformLinux::Terminate() {
   PlatformPOSIX::Terminate();
 }
 
-Error PlatformLinux::GetFileWithUUID(const FileSpec &platform_file,
-                                     const UUID *uuid_ptr,
-                                     FileSpec &local_file) {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
-                                                   local_file);
-  }
-
-  // Default to the local case
-  local_file = platform_file;
-  return Error();
-}
-
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
@@ -226,41 +212,7 @@ PlatformLinux::PlatformLinux(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
 
-//------------------------------------------------------------------
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-//------------------------------------------------------------------
 PlatformLinux::~PlatformLinux() = default;
-
-bool PlatformLinux::GetProcessInfo(lldb::pid_t pid,
-                                   ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = Platform::GetProcessInfo(pid, process_info);
-  } else {
-    if (m_remote_platform_sp)
-      success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
-
-uint32_t
-PlatformLinux::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                             ProcessInstanceInfoList &process_infos) {
-  uint32_t match_count = 0;
-  if (IsHost()) {
-    // Let the base class figure out the host details
-    match_count = Platform::FindProcesses(match_info, process_infos);
-  } else {
-    // If we are remote, we can only return results if we are connected
-    if (m_remote_platform_sp)
-      match_count =
-          m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  }
-  return match_count;
-}
 
 bool PlatformLinux::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                     ArchSpec &arch) {
@@ -582,11 +534,3 @@ uint64_t PlatformLinux::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
   return flags_platform;
 }
 
-ConstString PlatformLinux::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
-
-  StreamString stream;
-  stream.Printf("lib%s.so", basename.GetCString());
-  return ConstString(stream.GetString());
-}

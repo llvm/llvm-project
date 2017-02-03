@@ -1331,6 +1331,16 @@ template <> struct GraphTraits<PGOUseFunc *> {
   }
 };
 
+static std::string getSimpleNodeName(const BasicBlock *Node) {
+  if (!Node->getName().empty())
+    return Node->getName();
+
+  std::string SimpleNodeName;
+  raw_string_ostream OS(SimpleNodeName);
+  Node->printAsOperand(OS, false);
+  return OS.str();
+}
+
 template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
   explicit DOTGraphTraits(bool isSimple = false)
       : DefaultDOTGraphTraits(isSimple) {}
@@ -1342,12 +1352,31 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
   std::string getNodeLabel(const BasicBlock *Node, const PGOUseFunc *Graph) {
     std::string Result;
     raw_string_ostream OS(Result);
-    OS << Node->getName().str() << " : ";
+
+    OS << getSimpleNodeName(Node) << ":\\l";
     UseBBInfo *BI = Graph->findBBInfo(Node);
+    OS << "Count : ";
     if (BI && BI->CountValid)
-      OS << BI->CountValue;
+      OS << BI->CountValue << "\\l";
     else
-      OS << "Unknown";
+      OS << "Unknown\\l";
+
+    if (!PGOInstrSelect)
+      return Result;
+
+    for (auto BI = Node->begin(); BI != Node->end(); ++BI) {
+      auto *I = &*BI;
+      if (!isa<SelectInst>(I))
+        continue;
+      // Display scaled counts for SELECT instruction:
+      OS << "SELECT : { T = ";
+      uint64_t TC, FC;
+      bool hasProf = I->extractProfMetadata(TC, FC);
+      if (!hasProf)
+        OS << "Unknown, F = Unknown }\\l";
+      else
+        OS << TC << ", F = " << FC << " }\\l";
+    }
     return Result;
   }
 };

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++98 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++11 -o - %s
 
 int foo();
 
@@ -123,6 +125,9 @@ T foo() {
 #pragma omp ordered depend(sink : j, i) // expected-error {{expected 'i' loop iteration variable}} expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(sink : i, j, k) // expected-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
 #pragma omp ordered depend(sink : i+foo(), j/4) // expected-error {{expression is not an integral constant expression}} expected-error {{expected '+' or '-' operation}}
+#if __cplusplus >= 201103L
+// expected-note@-2 {{non-constexpr function 'foo' cannot be used in a constant expression}}
+#endif
 #pragma omp ordered depend(sink : i*0, j-4)// expected-error {{expected '+' or '-' operation}}
 #pragma omp ordered depend(sink : i-0, j+sizeof(T)) depend(sink : i-0, j+sizeof(T))
 #pragma omp ordered depend(sink : i-0, j+sizeof(T)) depend(source) // expected-error {{'depend(source)' clause cannot be mixed with 'depend(sink:vec)' clauses}}
@@ -133,6 +138,9 @@ T foo() {
 }
 
 int foo() {
+#if __cplusplus >= 201103L
+// expected-note@-2 2 {{declared here}}
+#endif
 int k;
   #pragma omp for ordered
   for (int i = 0; i < 10; ++i) {
@@ -252,6 +260,9 @@ int k;
 #pragma omp ordered depend(sink : j, i) // expected-error {{expected 'i' loop iteration variable}} expected-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered depend(sink : i, j, k) // expected-error {{unexpected expression: number of expressions is larger than the number of associated loops}}
 #pragma omp ordered depend(sink : i+foo(), j/4) // expected-error {{expression is not an integral constant expression}} expected-error {{expected '+' or '-' operation}}
+#if __cplusplus >= 201103L
+// expected-note@-2 {{non-constexpr function 'foo' cannot be used in a constant expression}}
+#endif
 #pragma omp ordered depend(sink : i*0, j-4)// expected-error {{expected '+' or '-' operation}}
 #pragma omp ordered depend(sink : i-0, j+sizeof(int)) depend(sink : i-0, j+sizeof(int))
 #pragma omp ordered depend(sink : i-0, j+sizeof(int)) depend(source) // expected-error {{'depend(source)' clause cannot be mixed with 'depend(sink:vec)' clauses}}

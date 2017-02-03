@@ -6,7 +6,7 @@ define <4 x i32> @psignd_3(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, %a
 ; CHECK-NEXT:    [[B_LOBIT:%.*]] = ashr <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[B_LOBIT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> %a, [[T1]]
+; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[T1]], %a
 ; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT]], [[SUB]]
 ; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
 ; CHECK-NEXT:    ret <4 x i32> [[COND]]
