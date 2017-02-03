@@ -94,11 +94,18 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
   bool SuggestStatic = false;
   os << "Call to '" << FName << "' uses";
   if (const VarRegion *VR = dyn_cast<VarRegion>(RB)) {
+    const VarDecl *VD = VR->getDecl();
+    // FIXME: These should have correct memory space and thus should be filtered
+    // out earlier. This branch only fires when we're looking from a block,
+    // which we analyze as a top-level declaration, onto a static local
+    // in a function that contains the block.
+    if (VD->isStaticLocal())
+      return;
     // We filtered out globals earlier, so it must be a local variable
     // or a block variable which is under UnknownSpaceRegion.
     if (VR != R)
       os << " memory within";
-    if (VR->getDecl()->hasAttr<BlocksAttr>())
+    if (VD->hasAttr<BlocksAttr>())
       os << " the block variable '";
     else
       os << " the local variable '";
