@@ -27,7 +27,7 @@ class TsanSwiftTestCase(lldbtest.TestBase):
 
     @decorators.swiftTest
     @decorators.skipIfLinux
-    @decorators.skipUnlessThreadSanitizer
+    @decorators.skipUnlessSwiftThreadSanitizer
     def test_tsan_swift(self):
         self.build()
         self.do_test()

@@ -433,7 +433,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
           }
 
           for (auto decl : nominal_decl->getMembers()) {
-            if (decl->getKind() == swift::DeclKind::Var) {
+            if (swift::isa<swift::VarDecl>(decl)) {
               swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
               if (var_decl->hasStorage() && !var_decl->isStatic()) {
                 MemberInfo member_info(MemberType::Field);
@@ -494,7 +494,7 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
 
           for (auto decl : t_decl->getMembers()) {
             // Find ivars that aren't properties
-            if (decl->getKind() == swift::DeclKind::Var) {
+            if (swift::isa<swift::VarDecl>(decl)) {
               swift::VarDecl *var_decl = llvm::cast<swift::VarDecl>(decl);
               if (var_decl->hasStorage() && !var_decl->isStatic()) {
                 MemberInfo member_info(MemberType::Field);
@@ -4012,13 +4012,7 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
 
   swift::Type swift_type(type_base);
 
-  bool has_archetypes = false;
-
-  swift_type.visit([&has_archetypes](swift::Type part_type) -> void {
-    if (part_type->getKind() == swift::TypeKind::Archetype) {
-      has_archetypes = true;
-    }
-  });
+  bool has_archetypes = swift_type->hasArchetype();
 
   if (!has_archetypes) {
     swift::Mangle::Mangler mangler(true);
@@ -5035,7 +5029,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
   } else if (auto enum_decl = swift_can_type->getEnumOrBoundGenericEnum()) {
     size_t num_nopayload = 0, num_payload = 0;
     for (auto the_case : enum_decl->getAllElements()) {
-      if (the_case->hasArgumentType()) {
+      if (the_case->getArgumentInterfaceType()) {
         num_payload = 1;
         break;
       } else {
@@ -8343,7 +8337,7 @@ bool SwiftASTContext::GetEnumTypeInfo(const CompilerType &type,
       auto iter = range.begin(), end = range.end();
       for (; iter != end; ++iter) {
         swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->hasArgumentType())
+        if (element_decl->getArgumentInterfaceType())
           num_payload_cases++;
         else
           num_nopayload_cases++;
@@ -8362,7 +8356,7 @@ bool SwiftASTContext::GetEnumTypeInfo(const CompilerType &type,
       auto iter = range.begin(), end = range.end();
       for (; iter != end; ++iter) {
         swift::EnumElementDecl *element_decl = *iter;
-        if (element_decl->hasArgumentType())
+        if (element_decl->getArgumentInterfaceType())
           num_payload_cases++;
         else
           num_nopayload_cases++;

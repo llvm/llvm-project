@@ -889,8 +889,6 @@
 					SpringBoardServices,
 					"-framework",
 					BackBoardServices,
-					"-framework",
-					Foundation,
 					"-llockdown",
 					"-framework",
 					FrontBoardServices,
