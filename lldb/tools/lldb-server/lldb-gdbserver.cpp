@@ -28,7 +28,6 @@
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostGetOpt.h"
@@ -36,6 +35,7 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/Error.h"
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"

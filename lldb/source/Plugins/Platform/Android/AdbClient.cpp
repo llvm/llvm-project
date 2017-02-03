@@ -19,11 +19,11 @@
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataEncoder.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <limits.h>
 

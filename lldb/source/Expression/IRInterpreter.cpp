@@ -8,19 +8,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRInterpreter.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Host/Endian.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"

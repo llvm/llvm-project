@@ -13,7 +13,6 @@
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DWARFExpression.h"
@@ -22,6 +21,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserJava.h"
 

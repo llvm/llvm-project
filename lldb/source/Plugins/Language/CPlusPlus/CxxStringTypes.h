@@ -11,9 +11,9 @@
 #ifndef liblldb_CxxStringTypes_h_
 #define liblldb_CxxStringTypes_h_
 
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
 namespace formatters {

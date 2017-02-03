@@ -15,7 +15,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -34,6 +33,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Utility/Stream.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"

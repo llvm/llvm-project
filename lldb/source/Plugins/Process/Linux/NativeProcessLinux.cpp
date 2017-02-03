@@ -24,7 +24,6 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
@@ -38,6 +37,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/PseudoTerminal.h"
 #include "lldb/Utility/StringExtractor.h"

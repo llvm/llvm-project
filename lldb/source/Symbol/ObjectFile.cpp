@@ -15,15 +15,15 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Target/Target.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
-#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;

@@ -23,7 +23,6 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamGDBRemote.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -35,6 +34,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/JSON.h"
+#include "lldb/Utility/StreamString.h"
 
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"

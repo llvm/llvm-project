@@ -24,7 +24,7 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Stream Stream.h "lldb/Core/Stream.h"
+/// @class Stream Stream.h "lldb/Utility/Stream.h"
 /// @brief A stream class that can stream formatted output to a file.
 //----------------------------------------------------------------------
 class Stream {
@@ -34,7 +34,7 @@ public:
   //------------------------------------------------------------------
   enum {
     eBinary = (1 << 0) ///< Get and put data as binary instead of as the default
-                       ///string mode.
+                       /// string mode.
   };
 
   //------------------------------------------------------------------

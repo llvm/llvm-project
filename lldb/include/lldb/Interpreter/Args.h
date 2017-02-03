@@ -21,8 +21,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 

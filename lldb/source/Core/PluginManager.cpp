@@ -22,11 +22,11 @@
 
 // Project includes
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

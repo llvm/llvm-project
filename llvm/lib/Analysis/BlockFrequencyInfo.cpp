@@ -55,7 +55,18 @@ cl::opt<unsigned>
                                 "function multiplied by this percent."));
 
 // Command line option to turn on CFG dot dump after profile annotation.
-cl::opt<bool> PGOViewCounts("pgo-view-counts", cl::init(false), cl::Hidden);
+cl::opt<bool>
+    PGOViewCounts("pgo-view-counts", cl::init(false), cl::Hidden,
+                  cl::desc("A boolean option to show CFG dag with "
+                           "block profile counts and branch probabilities "
+                           "right after PGO profile annotation step. The "
+                           "profile counts are computed using branch "
+                           "probabilities from the runtime profile data and "
+                           "block frequency propagation algorithm. To view "
+                           "the raw counts from the profile, use option "
+                           "-pgo-view-raw-counts instead. To limit graph "
+                           "display to only one function, use filtering option "
+                           "-view-bfi-func-name."));
 
 namespace llvm {
 

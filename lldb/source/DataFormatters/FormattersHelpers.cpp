@@ -17,11 +17,11 @@
 // Project includes
 #include "lldb/DataFormatters/FormattersHelpers.h"
 
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegularExpression.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -18,8 +18,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-public.h"
 
 // This class will insert a UtilityFunction into the inferior process for

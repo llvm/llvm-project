@@ -15,8 +15,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;

@@ -11,7 +11,6 @@
 #include "ExceptionRecord.h"
 #include "IDebugDelegate.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSpec.h"
@@ -23,6 +22,7 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Utility/Error.h"
 
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 

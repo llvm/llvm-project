@@ -10,6 +10,7 @@
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include "llvm/Support/COFF.h"
@@ -17,27 +18,23 @@
 
 using namespace llvm;
 
-namespace llvm {
-  class MCObjectWriter;
-}
-
 namespace {
-  class X86WinCOFFObjectWriter : public MCWinCOFFObjectTargetWriter {
-  public:
-    X86WinCOFFObjectWriter(bool Is64Bit);
-    ~X86WinCOFFObjectWriter() override;
 
-    unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup,
-                          bool IsCrossSection,
-                          const MCAsmBackend &MAB) const override;
-  };
-}
+class X86WinCOFFObjectWriter : public MCWinCOFFObjectTargetWriter {
+public:
+  X86WinCOFFObjectWriter(bool Is64Bit);
+  ~X86WinCOFFObjectWriter() override = default;
+
+  unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup,
+                        bool IsCrossSection,
+                        const MCAsmBackend &MAB) const override;
+};
+
+} // end anonymous namespace
 
 X86WinCOFFObjectWriter::X86WinCOFFObjectWriter(bool Is64Bit)
     : MCWinCOFFObjectTargetWriter(Is64Bit ? COFF::IMAGE_FILE_MACHINE_AMD64
                                           : COFF::IMAGE_FILE_MACHINE_I386) {}
-
-X86WinCOFFObjectWriter::~X86WinCOFFObjectWriter() {}
 
 unsigned X86WinCOFFObjectWriter::getRelocType(const MCValue &Target,
                                               const MCFixup &Fixup,

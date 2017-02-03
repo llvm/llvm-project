@@ -16,6 +16,12 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
 
+#ifdef _M_IX86
+#define WINAPI __stdcall
+#else
+#define WINAPI
+#endif
+
 #if defined(_WIN64)
 #define WIN_SYM_PREFIX
 #else

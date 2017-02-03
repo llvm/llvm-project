@@ -13,8 +13,8 @@
 #include <mutex>
 #include <vector>
 
-#include "lldb/Core/Error.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"

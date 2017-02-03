@@ -9,8 +9,8 @@
 
 #include "lldb/Host/common/NativeBreakpoint.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-defines.h"
 
 using namespace lldb_private;

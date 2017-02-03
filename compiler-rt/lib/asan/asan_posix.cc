@@ -33,19 +33,6 @@
 
 namespace __asan {
 
-const char *DescribeSignalOrException(int signo) {
-  switch (signo) {
-    case SIGFPE:
-      return "FPE";
-    case SIGILL:
-      return "ILL";
-    case SIGABRT:
-      return "ABRT";
-    default:
-      return "SEGV";
-  }
-}
-
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ScopedDeadlySignal signal_scope(GetCurrentThread());
   int code = (int)((siginfo_t*)siginfo)->si_code;

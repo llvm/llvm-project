@@ -17,10 +17,10 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

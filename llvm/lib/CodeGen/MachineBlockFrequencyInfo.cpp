@@ -59,7 +59,11 @@ cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
                           "display a graph using the real "
                           "profile count if available.")));
 
+// Command line option to specify the name of the function for CFG dump
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
+// Command line option to specify hot frequency threshold.
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-hot-freq-perc=
 extern cl::opt<unsigned> ViewHotFreqPercent;
 
 static GVDAGType getGVDT() {

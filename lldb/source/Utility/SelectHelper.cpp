@@ -31,7 +31,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 // Project includes
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SelectHelper.h"
 

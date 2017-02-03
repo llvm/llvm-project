@@ -11,14 +11,14 @@
 #include <algorithm>
 #include <string.h>
 
-#include "lldb/Core/Error.h"
-#include "lldb/Core/RegularExpression.h"
-#include "lldb/Core/Stream.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

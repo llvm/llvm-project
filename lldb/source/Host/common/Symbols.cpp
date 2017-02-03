@@ -14,12 +14,12 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/SafeMachO.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/FileSystem.h"
 

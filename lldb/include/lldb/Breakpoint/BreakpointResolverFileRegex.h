@@ -17,7 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 

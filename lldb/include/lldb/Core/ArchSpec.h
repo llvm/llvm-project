@@ -12,7 +12,7 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/Triple.h"
 

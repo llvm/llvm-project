@@ -13,11 +13,11 @@
 #include <stdlib.h>
 #include <string>
 
-#include "lldb/Core/Error.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

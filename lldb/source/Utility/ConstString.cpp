@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ConstString.h"
+#include "lldb/Utility/ConstString.h"
 
 // C Includes
 // C++ Includes
@@ -20,7 +20,7 @@
 #include "llvm/Support/RWMutex.h"
 
 // Project includes
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 

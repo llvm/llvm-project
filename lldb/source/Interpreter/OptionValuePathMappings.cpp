@@ -13,10 +13,10 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Stream.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

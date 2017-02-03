@@ -15,13 +15,10 @@
 #include "clang/AST/Type.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -31,6 +28,9 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/StreamString.h"
 
 #include <vector>
 

@@ -19,11 +19,11 @@
 #include <thread>
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-types.h"
 
 #include "RegisterContextWindows_x64.h"

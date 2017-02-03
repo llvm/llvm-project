@@ -15,10 +15,10 @@
 // Project includes
 #include "DynamicRegisterInfo.h"
 #include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

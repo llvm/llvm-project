@@ -32,8 +32,6 @@
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Stream.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/Endian.h"
@@ -42,6 +40,8 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;

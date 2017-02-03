@@ -358,6 +358,20 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
   return SignalContext(context, addr, pc, sp, bp, is_memory_access, write_flag);
 }
 
+const char *DescribeSignalOrException(int signo) {
+  switch (signo) {
+    case SIGFPE:
+      return "FPE";
+    case SIGILL:
+      return "ILL";
+    case SIGABRT:
+      return "ABRT";
+    default:
+      return "SEGV";
+  }
+  return "UNKNOWN SIGNAL";
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_POSIX

@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ProcessStructReader.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "SystemRuntimeMacOSX.h"
 

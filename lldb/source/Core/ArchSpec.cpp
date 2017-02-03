@@ -24,7 +24,6 @@
 // Project includes
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Host/HostInfo.h"
@@ -33,6 +32,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/SafeMachO.h"
 
 using namespace lldb;

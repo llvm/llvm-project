@@ -26,13 +26,13 @@
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/Log.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 

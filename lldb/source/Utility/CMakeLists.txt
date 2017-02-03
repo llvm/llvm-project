@@ -1,4 +1,6 @@
 add_lldb_library(lldbUtility
+  ConstString.cpp
+  Error.cpp
   JSON.cpp
   LLDBAssert.cpp
   ModuleCache.cpp
@@ -6,8 +8,11 @@ add_lldb_library(lldbUtility
   PseudoTerminal.cpp
   Range.cpp
   RegisterNumber.cpp
+  RegularExpression.cpp
   SelectHelper.cpp
   SharingPtr.cpp
+  Stream.cpp
+  StreamString.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringLexer.cpp

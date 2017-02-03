@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "lldb/Core/MappedHash.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-defines.h"
 
 #include "DWARFDefines.h"

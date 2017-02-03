@@ -129,38 +129,52 @@ static cl::opt<bool> DoComdatRenaming(
 
 // Command line option to enable/disable the warning about missing profile
 // information.
-static cl::opt<bool> PGOWarnMissing("pgo-warn-missing-function",
-                                     cl::init(false),
-                                     cl::Hidden);
+static cl::opt<bool>
+    PGOWarnMissing("pgo-warn-missing-function", cl::init(false), cl::Hidden,
+                   cl::desc("Use this option to turn on/off "
+                            "warnings about missing profile data for "
+                            "functions."));
 
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data.
-static cl::opt<bool> NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false),
-                                       cl::Hidden);
+static cl::opt<bool>
+    NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false), cl::Hidden,
+                      cl::desc("Use this option to turn off/on "
+                               "warnings about profile cfg mismatch."));
 
 // Command line option to enable/disable the warning about a hash mismatch in
 // the profile data for Comdat functions, which often turns out to be false
 // positive due to the pre-instrumentation inline.
-static cl::opt<bool> NoPGOWarnMismatchComdat("no-pgo-warn-mismatch-comdat",
-                                             cl::init(true), cl::Hidden);
+static cl::opt<bool>
+    NoPGOWarnMismatchComdat("no-pgo-warn-mismatch-comdat", cl::init(true),
+                            cl::Hidden,
+                            cl::desc("The option is used to turn on/off "
+                                     "warnings about hash mismatch for comdat "
+                                     "functions."));
 
 // Command line option to enable/disable select instruction instrumentation.
-static cl::opt<bool> PGOInstrSelect("pgo-instr-select", cl::init(true),
-                                    cl::Hidden);
-
-// Command line option to specify the name of the function for CFG dump
-static cl::opt<std::string>
-    PGOViewFunction("pgo-view-function", cl::Hidden,
-                    cl::desc("The option to specify "
-                             "the name of the function "
-                             "whose CFG will be displayed."));
+static cl::opt<bool>
+    PGOInstrSelect("pgo-instr-select", cl::init(true), cl::Hidden,
+                   cl::desc("Use this option to turn on/off SELECT "
+                            "instruction instrumentation. "));
 
 // Command line option to turn on CFG dot dump of raw profile counts
-static cl::opt<bool> PGOViewRawCounts("pgo-view-raw-counts", cl::init(false),
-                                      cl::Hidden);
+static cl::opt<bool>
+    PGOViewRawCounts("pgo-view-raw-counts", cl::init(false), cl::Hidden,
+                     cl::desc("A boolean option to show CFG dag "
+                              "with raw profile counts from "
+                              "profile data. See also option "
+                              "-pgo-view-counts. To limit graph "
+                              "display to only one function, use "
+                              "filtering option -view-bfi-func-name."));
 
 // Command line option to turn on CFG dot dump after profile annotation.
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
 extern cl::opt<bool> PGOViewCounts;
+
+// Command line option to specify the name of the function for CFG dump
+// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
+extern cl::opt<std::string> ViewBlockFreqFuncName;
 
 namespace {
 
@@ -1223,8 +1237,8 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-    if (PGOViewCounts &&
-        (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
+    if (PGOViewCounts && (ViewBlockFreqFuncName.empty() ||
+                          F.getName().equals(ViewBlockFreqFuncName))) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           llvm::make_unique<BranchProbabilityInfo>(F, LI);
@@ -1233,9 +1247,9 @@ static bool annotateAllFunctions(
 
       NewBFI->view();
     }
-    if (PGOViewRawCounts &&
-        (PGOViewFunction.empty() || F.getName().equals(PGOViewFunction))) {
-      if (PGOViewFunction.empty())
+    if (PGOViewRawCounts && (ViewBlockFreqFuncName.empty() ||
+                             F.getName().equals(ViewBlockFreqFuncName))) {
+      if (ViewBlockFreqFuncName.empty())
         WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
       else
         ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());

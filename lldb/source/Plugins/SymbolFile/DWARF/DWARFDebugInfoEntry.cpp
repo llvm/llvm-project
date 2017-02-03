@@ -14,9 +14,9 @@
 #include <algorithm>
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/Stream.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDIECollection.h"

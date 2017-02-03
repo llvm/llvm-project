@@ -11,9 +11,9 @@
 #define lldb_EmulateInstructionARM_h_
 
 #include "Plugins/Process/Utility/ARMDefines.h"
-#include "lldb/Core/ConstString.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Error.h"
 
 namespace lldb_private {
 

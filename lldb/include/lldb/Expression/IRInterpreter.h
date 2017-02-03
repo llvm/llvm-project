@@ -10,8 +10,8 @@
 #ifndef liblldb_IRInterpreter_h_
 #define liblldb_IRInterpreter_h_
 
-#include "lldb/Core/ConstString.h"
-#include "lldb/Core/Stream.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Pass.h"

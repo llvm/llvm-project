@@ -17,9 +17,7 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "lldb/Core/Log.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
@@ -30,6 +28,8 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ScopedPrinter.h"
 

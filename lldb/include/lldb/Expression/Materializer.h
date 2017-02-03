@@ -17,10 +17,10 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/lldb-private-types.h"
 
 namespace lldb_private {

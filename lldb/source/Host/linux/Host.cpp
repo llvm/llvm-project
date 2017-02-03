@@ -21,9 +21,9 @@
 // Other libraries and framework includes
 #include "llvm/Support/ScopedPrinter.h"
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Error.h"
 
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"

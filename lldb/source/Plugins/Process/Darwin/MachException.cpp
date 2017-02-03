@@ -22,11 +22,11 @@
 #include <mutex>
 
 // LLDB includes
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Stream.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/Error.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;

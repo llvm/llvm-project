@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StreamString.h"
+#include "lldb/Utility/StreamString.h"
 #include <stdio.h>
 
 using namespace lldb;

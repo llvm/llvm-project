@@ -14,7 +14,7 @@
 #include <chrono>
 #include <string>
 
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 

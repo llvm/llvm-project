@@ -10,8 +10,8 @@
 #define lldb_server_Acceptor_h_
 
 #include "lldb/Core/Connection.h"
-#include "lldb/Core/Error.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Utility/Error.h"
 
 #include <functional>
 #include <memory>

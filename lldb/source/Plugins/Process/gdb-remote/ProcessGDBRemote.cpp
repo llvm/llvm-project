@@ -35,7 +35,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -66,6 +65,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Utility/StreamString.h"
 
 // Project includes
 #include "GDBRemoteRegisterContext.h"

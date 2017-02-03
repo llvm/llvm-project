@@ -20,7 +20,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ExpressionParser/Go/GoParser.h"
-#include "lldb/Core/Error.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb_private;
 

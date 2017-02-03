@@ -2,7 +2,6 @@
 
 #include "DWARFASTParserOCaml.h"
 
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -10,6 +9,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
+#include "lldb/Utility/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;

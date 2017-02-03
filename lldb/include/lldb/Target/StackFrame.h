@@ -17,15 +17,15 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Error.h"
 #include "lldb/Core/Flags.h"
 #include "lldb/Core/Scalar.h"
-#include "lldb/Core/StreamString.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Utility/Error.h"
+#include "lldb/Utility/StreamString.h"
 
 namespace lldb_private {
 

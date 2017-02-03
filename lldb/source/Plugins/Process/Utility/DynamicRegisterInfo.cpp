@@ -14,11 +14,11 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
 
 using namespace lldb;
