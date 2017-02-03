@@ -8976,11 +8976,19 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     return new SPIR64TargetInfo(Triple, Opts);
   }
   case llvm::Triple::wasm32:
-    if (!(Triple == llvm::Triple("wasm32-unknown-unknown")))
+    if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
+        Triple.getVendor() != llvm::Triple::UnknownVendor ||
+        Triple.getOS() != llvm::Triple::UnknownOS ||
+        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment ||
+        !(Triple.isOSBinFormatELF() || Triple.isOSBinFormatWasm()))
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
   case llvm::Triple::wasm64:
-    if (!(Triple == llvm::Triple("wasm64-unknown-unknown")))
+    if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
+        Triple.getVendor() != llvm::Triple::UnknownVendor ||
+        Triple.getOS() != llvm::Triple::UnknownOS ||
+        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment ||
+        !(Triple.isOSBinFormatELF() || Triple.isOSBinFormatWasm()))
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
 
