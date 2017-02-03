@@ -139,6 +139,7 @@ void *realloc(void *p, size_t size) {
   return p;
 }
 
+#if SANITIZER_INTERCEPT_MEMALIGN
 void *memalign(size_t alignment, size_t size) {
   if (UNLIKELY(!thread_inited))
     thread_init();
@@ -146,6 +147,7 @@ void *memalign(size_t alignment, size_t size) {
   SANITIZER_MALLOC_HOOK(p, size);
   return p;
 }
+#endif // SANITIZER_INTERCEPT_MEMALIGN
 
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
   if (UNLIKELY(!thread_inited))
@@ -165,18 +167,26 @@ void *valloc(size_t size) {
   return p;
 }
 
+#if SANITIZER_INTERCEPT_CFREE
 void cfree(void *p) ALIAS("free");
+#endif // SANITIZER_INTERCEPT_CFREE
+#if SANITIZER_INTERCEPT_PVALLOC
 void *pvalloc(size_t size) ALIAS("valloc");
+#endif // SANITIZER_INTERCEPT_PVALLOC
+#if SANITIZER_INTERCEPT_MEMALIGN
 void *__libc_memalign(size_t alignment, size_t size) ALIAS("memalign");
+#endif // SANITIZER_INTERCEPT_MEMALIGN
 
 void malloc_usable_size() {
 }
 
+#if SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 void mallinfo() {
 }
 
 void mallopt() {
 }
+#endif // SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 }  // extern "C"
 
 namespace std {
