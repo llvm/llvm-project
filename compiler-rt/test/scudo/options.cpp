@@ -6,8 +6,9 @@
 // Tests that the options can be passed using getScudoDefaultOptions, and that
 // the environment ones take precedence over them.
 
-#include <stdlib.h>
+#include <assert.h>
 #include <malloc.h>
+#include <stdlib.h>
 
 extern "C" const char* __scudo_default_options() {
   return "DeallocationTypeMismatch=0";  // Defaults to true in scudo_flags.inc.
@@ -16,8 +17,7 @@ extern "C" const char* __scudo_default_options() {
 int main(int argc, char **argv)
 {
   int *p = (int *)malloc(16);
-  if (!p)
-    return 1;
+  assert(p);
   delete p;
   return 0;
 }

@@ -489,34 +489,6 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
   return 0;
 }
 
-bool PlatformDarwin::GetProcessInfo(lldb::pid_t pid,
-                                    ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = Platform::GetProcessInfo(pid, process_info);
-  } else {
-    if (m_remote_platform_sp)
-      success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
-
-uint32_t
-PlatformDarwin::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                              ProcessInstanceInfoList &process_infos) {
-  uint32_t match_count = 0;
-  if (IsHost()) {
-    // Let the base class figure out the host details
-    match_count = Platform::FindProcesses(match_info, process_infos);
-  } else {
-    // If we are remote, we can only return results if we are connected
-    if (m_remote_platform_sp)
-      match_count =
-          m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  }
-  return match_count;
-}
-
 bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
     lldb_private::Target &target, const lldb::ModuleSP &module_sp) {
   if (!module_sp)

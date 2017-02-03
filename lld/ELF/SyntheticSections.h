@@ -39,7 +39,7 @@ template <class ELFT> class SyntheticSection : public InputSection<ELFT> {
 public:
   SyntheticSection(uintX_t Flags, uint32_t Type, uintX_t Addralign,
                    StringRef Name)
-      : InputSection<ELFT>(Flags, Type, Addralign, ArrayRef<uint8_t>(), Name,
+      : InputSection<ELFT>(Flags, Type, Addralign, {}, Name,
                            InputSectionData::Synthetic) {
     this->Live = true;
   }
@@ -627,6 +627,32 @@ public:
   size_t getSize() const override;
   size_t getNeedNum() const { return Needed.size(); }
   bool empty() const override;
+};
+
+// MergeSyntheticSection is a class that allows us to put mergeable sections
+// with different attributes in a single output sections. To do that
+// we put them into MergeSyntheticSection synthetic input sections which are
+// attached to regular output sections.
+template <class ELFT>
+class MergeSyntheticSection final : public SyntheticSection<ELFT> {
+  typedef typename ELFT::uint uintX_t;
+
+public:
+  MergeSyntheticSection(StringRef Name, uint32_t Type, uintX_t Flags,
+                        uintX_t Alignment);
+  void addSection(MergeInputSection<ELFT> *MS);
+  void writeTo(uint8_t *Buf) override;
+  void finalize() override;
+  bool shouldTailMerge() const;
+  size_t getSize() const override;
+
+private:
+  void finalizeTailMerge();
+  void finalizeNoTailMerge();
+
+  bool Finalized = false;
+  llvm::StringTableBuilder Builder;
+  std::vector<MergeInputSection<ELFT> *> Sections;
 };
 
 // .MIPS.abiflags section.

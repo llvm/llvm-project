@@ -51,15 +51,8 @@ public:
       lldb_private::Target &target,
       lldb_private::BreakpointSite *bp_site) override;
 
-  bool GetProcessInfo(lldb::pid_t pid,
-                      lldb_private::ProcessInstanceInfo &proc_info) override;
-
   lldb::BreakpointSP
   SetThreadCreationBreakpoint(lldb_private::Target &target) override;
-
-  uint32_t
-  FindProcesses(const lldb_private::ProcessInstanceInfoMatch &match_info,
-                lldb_private::ProcessInstanceInfoList &process_infos) override;
 
   bool ModuleIsExcludedForUnconstrainedSearches(
       lldb_private::Target &target, const lldb::ModuleSP &module_sp) override;

@@ -148,11 +148,60 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
   Phdrs.erase(I, Phdrs.end());
 }
 
+template <class ELFT>
+static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
+  return S->Flags & ~(typename ELFT::uint)(SHF_GROUP | SHF_COMPRESSED);
+}
+
+// This function scans over the input sections and creates mergeable
+// synthetic sections. It removes MergeInputSections from array and
+// adds new synthetic ones. Each synthetic section is added to the
+// location of the first input section it replaces.
+template <class ELFT> static void combineMergableSections() {
+  typedef typename ELFT::uint uintX_t;
+
+  std::vector<MergeSyntheticSection<ELFT> *> MergeSections;
+  for (InputSectionBase<ELFT> *&S : Symtab<ELFT>::X->Sections) {
+    MergeInputSection<ELFT> *MS = dyn_cast<MergeInputSection<ELFT>>(S);
+    if (!MS)
+      continue;
+
+    // We do not want to handle sections that are not alive, so just remove
+    // them instead of trying to merge.
+    if (!MS->Live)
+      continue;
+
+    StringRef OutsecName = getOutputSectionName(MS->Name);
+    uintX_t Flags = getOutFlags(MS);
+    uintX_t Alignment = std::max<uintX_t>(MS->Alignment, MS->Entsize);
+
+    auto I =
+        llvm::find_if(MergeSections, [=](MergeSyntheticSection<ELFT> *Sec) {
+          return Sec->Name == OutsecName && Sec->Flags == Flags &&
+                 Sec->Alignment == Alignment;
+        });
+    if (I == MergeSections.end()) {
+      MergeSyntheticSection<ELFT> *Syn = make<MergeSyntheticSection<ELFT>>(
+          OutsecName, MS->Type, Flags, Alignment);
+      MergeSections.push_back(Syn);
+      I = std::prev(MergeSections.end());
+      S = Syn;
+    } else {
+      S = nullptr;
+    }
+    (*I)->addSection(MS);
+  }
+
+  std::vector<InputSectionBase<ELFT> *> &V = Symtab<ELFT>::X->Sections;
+  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections();
+  combineMergableSections<ELFT>();
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
@@ -973,8 +1022,9 @@ finalizeSynthetic(const std::vector<SyntheticSection<ELFT> *> &Sections) {
 // sometimes. This function filters out such unused sections from output.
 template <class ELFT>
 static void removeUnusedSyntheticSections(std::vector<OutputSectionBase *> &V) {
-  // Input synthetic sections are placed after all regular ones. We iterate over
-  // them all and exit at first non-synthetic.
+  // All input synthetic sections that can be empty are placed after
+  // all regular ones. We iterate over them all and exit at first
+  // non-synthetic.
   for (InputSectionBase<ELFT> *S : llvm::reverse(Symtab<ELFT>::X->Sections)) {
     SyntheticSection<ELFT> *SS = dyn_cast<SyntheticSection<ELFT>>(S);
     if (!SS)
