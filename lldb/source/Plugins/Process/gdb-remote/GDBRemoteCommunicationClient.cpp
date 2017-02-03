@@ -3468,8 +3468,11 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                       case eSymbolTypeCompiler:
                       case eSymbolTypeInstrumentation:
                       case eSymbolTypeTrampoline:
+                      case eSymbolTypeASTFile:
+                      case eSymbolTypeMetadata:
                         break;
 
+                      case eSymbolTypeIVarOffset:
                       case eSymbolTypeCode:
                       case eSymbolTypeResolver:
                       case eSymbolTypeData:

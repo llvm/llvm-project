@@ -50,6 +50,7 @@ import sys
 import time
 import traceback
 import types
+import lldb
 
 # Third-party modules
 import unittest2
@@ -65,6 +66,7 @@ from . import decorators
 from . import lldbplatformutil
 from . import lldbtest_config
 from . import lldbutil
+from . import lock
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
@@ -554,7 +556,6 @@ class Base(unittest2.TestCase):
             os.chdir(os.path.join(os.environ["LLDB_TEST"], cls.mydir))
 
         if debug_confirm_directory_exclusivity:
-            import lock
             cls.dir_lock = lock.Lock(os.path.join(full_dir, ".dirlock"))
             try:
                 cls.dir_lock.try_acquire()
@@ -1114,13 +1115,12 @@ class Base(unittest2.TestCase):
                 components.append(self.__class__.__name__)
             elif c == 'c':
                 compiler = self.getCompiler()
-
-                if compiler[1] == ':':
-                    compiler = compiler[2:]
-                if os.path.altsep is not None:
-                    compiler = compiler.replace(os.path.altsep, os.path.sep)
-                components.extend(
-                    [x for x in compiler.split(os.path.sep) if x != ""])
+                if compiler is not None:
+                    # Only use the basename of the compiler.  The older
+                    # directory encoding of the compiler was creating filenames
+                    # that were too long on our CI, and provided minimal
+                    # benefit.
+                    components.append(os.path.basename(compiler))
             elif c == 'a':
                 components.append(self.getArchitecture())
             elif c == 'm':
@@ -1368,6 +1368,8 @@ class Base(unittest2.TestCase):
             option_str = ""
         if comp:
             option_str += " -C " + comp
+        if lldb.remote_platform:
+            option_str += ' --platform-name=%s' % (lldb.remote_platform_name)
         return option_str
 
     # ==================================================
@@ -1578,6 +1580,10 @@ class Base(unittest2.TestCase):
             "llvm-build/Debug+Asserts/x86_64/Debug+Asserts/bin/clang",
             "llvm-build/Release/x86_64/Release/bin/clang",
             "llvm-build/Debug/x86_64/Debug/bin/clang",
+            "llvm-build/ReleaseAsserts/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/DebugAsserts/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Release/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Debug/llvm-macosx-x86_64/bin/clang",
         ]
         lldb_root_path = os.path.join(
             os.path.dirname(__file__), "..", "..", "..", "..")

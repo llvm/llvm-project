@@ -31,6 +31,7 @@ add_lldb_library(lldbTarget
   StackID.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
+  SwiftLanguageRuntime.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp

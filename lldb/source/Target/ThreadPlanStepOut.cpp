@@ -17,13 +17,16 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
@@ -45,8 +48,10 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                  run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
-      m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
-      m_immediate_step_from_function(nullptr),
+      m_return_addr(LLDB_INVALID_ADDRESS),
+      m_swift_error_return_addr(LLDB_INVALID_ADDRESS),
+      m_stop_others(stop_others), m_immediate_step_from_function(nullptr),
+      m_is_swift_error_value(false),
       m_calculate_return_value(gather_return_value) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
@@ -129,6 +134,40 @@ ThreadPlanStepOut::ThreadPlanStepOut(
           immediate_return_from_sp->GetSymbolContext(eSymbolContextFunction);
       if (sc.function) {
         m_immediate_step_from_function = sc.function;
+      }
+    }
+  }
+
+  // If we are about to step out of a swift frame, we need to store away the
+  // location that swift will use for
+  // any error return:
+  // FIXME: I'm only doing this if you are stepping out ONE frame at present.
+  // I'll have to change the stepping
+  // code so that it first runs to the frame we are stepping out FROM, then
+  // capture the error return pointer, then
+  // step out.  That's more than I have time to do right now.
+
+  if (frame_idx == 0) {
+    bool stepping_from_swift = false;
+    StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+    Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
+    if (symbol) {
+      Mangled symbol_mangled = symbol->GetMangled();
+      if (symbol_mangled.GuessLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    } else {
+      CompileUnit *comp_unit =
+          frame_sp->GetSymbolContext(eSymbolContextCompUnit).comp_unit;
+      if (comp_unit && comp_unit->GetLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    }
+
+    if (stepping_from_swift) {
+      SwiftLanguageRuntime *swift_runtime =
+          m_thread.GetProcess()->GetSwiftLanguageRuntime();
+      if (swift_runtime) {
+        m_swift_error_return_addr =
+            swift_runtime->GetErrorReturnLocationForFrame(frame_sp);
       }
     }
   }
@@ -457,13 +496,27 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
-  if (m_return_valobj_sp)
-    return;
-
   if (!m_calculate_return_value)
     return;
 
-  if (m_immediate_step_from_function != nullptr) {
+  if (m_return_valobj_sp)
+    return;
+  // First check if we have an error return address, and if that pointer
+  // contains a valid error return, grab it:
+  if (m_swift_error_return_addr != LLDB_INVALID_ADDRESS) {
+    SwiftLanguageRuntime *swift_runtime =
+        m_thread.GetProcess()->GetSwiftLanguageRuntime();
+    if (swift_runtime) {
+      ConstString name("swift_thrown_error");
+      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectAtAddress(
+          m_swift_error_return_addr, name, true);
+      if (m_return_valobj_sp && m_return_valobj_sp->GetError().Success())
+        m_is_swift_error_value = true;
+    }
+  }
+
+  if ((!m_return_valobj_sp || m_return_valobj_sp->GetError().Fail()) &&
+      m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =
         m_immediate_step_from_function->GetCompilerType()
             .GetFunctionReturnType();

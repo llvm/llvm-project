@@ -55,7 +55,6 @@ public:
 
   //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~ClangExpressionParser() override;
 
   //------------------------------------------------------------------
@@ -69,7 +68,9 @@ public:
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
-  unsigned Parse(DiagnosticManager &diagnostic_manager) override;
+  unsigned Parse(DiagnosticManager &diagnostic_manager, uint32_t first_line = 0,
+                 uint32_t last_line = UINT32_MAX,
+                 uint32_t line_offset = 0) override;
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
@@ -110,7 +111,7 @@ public:
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
-  Error
+  virtual Error
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       lldb::IRExecutionUnitSP &execution_unit_sp,
                       ExecutionContext &exe_ctx, bool &can_interpret,

@@ -17,13 +17,13 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -433,7 +433,7 @@ class EntityVariable : public Materializer::Entity {
 public:
   EntityVariable(lldb::VariableSP &variable_sp)
       : Entity(), m_variable_sp(variable_sp), m_is_reference(false),
-        m_temporary_allocation(LLDB_INVALID_ADDRESS),
+        m_is_archetype(false), m_temporary_allocation(LLDB_INVALID_ADDRESS),
         m_temporary_allocation_size(0) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
@@ -441,6 +441,8 @@ public:
     m_alignment = 8;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
+    m_is_archetype = SwiftASTContext::IsArchetypeType(
+        m_variable_sp->GetType()->GetForwardCompilerType());
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -478,6 +480,16 @@ public:
       return;
     }
 
+    // In the case where the value is of Swift archetype type, we need to unbox
+    // it
+    CompilerType valobj_type = valobj_sp->GetCompilerType();
+
+    if (m_is_archetype) {
+      valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+      valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to
+                                                  // the dynamic type
+    }
+
     if (m_is_reference) {
       DataExtractor valobj_extractor;
       Error extract_error;
@@ -505,9 +517,19 @@ public:
       }
     } else {
       AddressType address_type = eAddressTypeInvalid;
-      const bool scalar_is_load_address = false;
+      const bool is_dynamic_class_type =
+          m_is_archetype &&
+          (valobj_type.GetTypeClass() == lldb::eTypeClassClass);
+      const bool scalar_is_load_address = m_is_archetype; // this is the only
+                                                          // time we're dealing
+                                                          // with dynamic values
+
+      // if the dynamic type is a class, bypass the GetAddressOf() optimization
+      // as it doesn't do the right thing
       lldb::addr_t addr_of_valobj =
-          valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+          is_dynamic_class_type
+              ? LLDB_INVALID_ADDRESS
+              : valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
       if (addr_of_valobj != LLDB_INVALID_ADDRESS) {
         Error write_error;
         map.WritePointerToMemory(load_addr, addr_of_valobj, write_error);
@@ -634,6 +656,16 @@ public:
         return;
       }
 
+      // In the case where the value is of Swift archetype type, resolve its
+      // dynamic type, because we may
+      // need to unbox the target.
+
+      CompilerType valobj_type = valobj_sp->GetCompilerType();
+
+      if (SwiftASTContext::IsArchetypeType(valobj_type)) {
+        valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+      }
+
       lldb_private::DataExtractor data;
 
       Error extract_error;
@@ -743,7 +775,7 @@ public:
                                 map.GetByteOrder(), map.GetAddressByteSize());
 
         extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+                               data.GetByteSize(), 16, m_temporary_allocation);
 
         dump_stream.PutChar('\n');
       }
@@ -766,6 +798,7 @@ public:
 private:
   lldb::VariableSP m_variable_sp;
   bool m_is_reference;
+  bool m_is_archetype;
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
   lldb::DataBufferSP m_original_data;
@@ -875,6 +908,11 @@ public:
       return;
     }
 
+    lldb::LanguageType lang =
+        (m_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift)
+            ? lldb::eLanguageTypeSwift
+            : lldb::eLanguageTypeObjC_plus_plus;
+
     Error type_system_error;
     TypeSystem *type_system = target_sp->GetScratchTypeSystemForLanguage(
         &type_system_error, m_type.GetMinimumLanguage());
@@ -901,6 +939,17 @@ public:
                            ? m_delegate->GetName()
                            : persistent_state->GetNextPersistentVariableName();
 
+    lldb::ProcessSP process_sp =
+        map.GetBestExecutionContextScope()->CalculateProcess();
+
+    if (lang == lldb::eLanguageTypeSwift) {
+      SwiftLanguageRuntime *language_runtime =
+          process_sp->GetSwiftLanguageRuntime();
+
+      if (language_runtime && frame_sp)
+        m_type = language_runtime->DoArchetypeBindingForType(*frame_sp, m_type);
+    }
+
     lldb::ExpressionVariableSP ret = persistent_state->CreatePersistentVariable(
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());
 
@@ -910,9 +959,6 @@ public:
                                    name.AsCString());
       return;
     }
-
-    lldb::ProcessSP process_sp =
-        map.GetBestExecutionContextScope()->CalculateProcess();
 
     if (m_delegate) {
       m_delegate->DidDematerialize(ret);
@@ -1013,7 +1059,7 @@ public:
                                 map.GetByteOrder(), map.GetAddressByteSize());
 
         extractor.DumpHexBytes(&dump_stream, data.GetBytes(),
-                               data.GetByteSize(), 16, load_addr);
+                               data.GetByteSize(), 16, m_temporary_allocation);
 
         dump_stream.PutChar('\n');
       }
@@ -1037,6 +1083,7 @@ private:
   CompilerType m_type;
   bool m_is_program_reference;
   bool m_keep_in_memory;
+  bool m_is_error_result;
 
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
@@ -1351,8 +1398,13 @@ uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
   return ret;
 }
 
+Materializer::Materializer(LLVMCastKind kind)
+    : m_kind(kind), m_dematerializer_wp(), m_current_offset(0),
+      m_struct_alignment(8) {}
+
 Materializer::Materializer()
-    : m_dematerializer_wp(), m_current_offset(0), m_struct_alignment(8) {}
+    : m_kind(eKindBasic), m_dematerializer_wp(), m_current_offset(0),
+      m_struct_alignment(8) {}
 
 Materializer::~Materializer() {
   DematerializerSP dematerializer_sp = m_dematerializer_wp.lock();
@@ -1442,6 +1494,9 @@ void Materializer::Dematerializer::Dematerialize(Error &error,
       if (!error.Success())
         break;
     }
+
+    // Okay now if there's an error and it is not empty, then report that,
+    // otherwise report the regular error...
   }
 
   Wipe();

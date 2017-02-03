@@ -58,6 +58,12 @@ public:
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
+  bool GetDynamicTypeAndAddress(ValueObject &in_value,
+                                lldb::DynamicValueType use_dynamic,
+                                TypeAndOrName &class_type_or_name,
+                                Address &address, Value::ValueType &value_type,
+                                bool allow_swift) override;
+
   UtilityFunction *CreateObjectChecker(const char *) override;
 
   //------------------------------------------------------------------
@@ -87,6 +93,8 @@ public:
   lldb::addr_t LookupRuntimeSymbol(const ConstString &name) override;
 
   EncodingToTypeSP GetEncodingToType() override;
+
+  bool IsTaggedPointer(lldb::addr_t ptr);
 
   TaggedPointerVendor *GetTaggedPointerVendor() override {
     return m_tagged_pointer_vendor_ap.get();
@@ -279,8 +287,6 @@ private:
 
   ObjCISA GetPointerISA(ObjCISA isa);
 
-  bool IsTaggedPointer(lldb::addr_t ptr);
-
   lldb::addr_t GetISAHashTablePointer();
 
   bool UpdateISAToDescriptorMapFromMemory(RemoteNXMapTable &hash_table);
@@ -305,6 +311,7 @@ private:
   bool GetCFBooleanValuesIfNeeded();
 
   friend class ClassDescriptorV2;
+  friend class SwiftLanguageRuntime;
 
   std::unique_ptr<UtilityFunction> m_get_class_info_code;
   lldb::addr_t m_get_class_info_args;

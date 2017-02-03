@@ -1,0 +1,4 @@
+module modbModule {
+  header "myModule.h"
+  export *
+}

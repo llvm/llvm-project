@@ -74,7 +74,7 @@ set( LLDB_USED_LIBS
   lldbPluginObjectFilePECOFF
   lldbPluginExpressionParserClang
   lldbPluginExpressionParserGo
-  )
+  lldbPluginExpressionParserSwift)
 
 # Linux-only libraries
 if ( CMAKE_SYSTEM_NAME MATCHES "Linux|Android" )
@@ -91,21 +91,40 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
     )
 endif()
 
-set( CLANG_USED_LIBS
-  clangAnalysis
-  clangAST
-  clangBasic
-  clangCodeGen
-  clangDriver
-  clangEdit
-  clangFrontend
-  clangLex
-  clangParse
-  clangRewrite
-  clangRewriteFrontend
-  clangSema
-  clangSerialization
-  )
+set(CLANG_ALL_LIBS
+    clangAnalysis
+    clangAST
+    clangBasic
+    clangCodeGen
+    clangDriver
+    clangEdit
+    clangFrontend
+    clangIndex
+    clangLex
+    clangParse
+    clangRewrite
+    clangRewriteFrontend
+    clangSema
+    clangSerialization)
+set(SWIFT_ALL_LIBS
+    swiftBasic
+    swiftAST
+    swiftIDE
+    swiftIRGen
+    swiftFrontend
+    swiftSerialization
+    swiftClangImporter
+    swiftMarkup
+    swiftParse
+    swiftSema
+    swiftSIL
+    swiftSILGen
+    swiftSILOptimizer
+    swiftASTSectionImporter
+    swiftRemoteAST
+    swiftLLVMPasses
+    swiftOption
+    )
 
 set(LLDB_SYSTEM_LIBS)
 if (NOT LLDB_DISABLE_LIBEDIT)
@@ -142,6 +161,23 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
+if(LLDB_BUILT_STANDALONE)
+  # this needs to be linked statially
+  list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
+else()
+  list(APPEND LLDB_SYSTEM_LIBS libcmark_static)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(UUID_LIBRARIES "ole32.lib")
+else()
+  find_package(UUID REQUIRED)
+endif()
+
+if(UUID_LIBRARIES)
+  list(APPEND LLDB_SYSTEM_LIBS ${UUID_LIBRARIES})
+endif()
+
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   interpreter
@@ -173,15 +209,29 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     LLDBServerUtilities.cpp
 )
 
-# The Darwin linker doesn't understand --start-group/--end-group.
-if (LLDB_LINKER_SUPPORTS_GROUPS)
-  target_link_libraries(lldb-server
-                        -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
-  target_link_libraries(lldb-server
-                        -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
+if (BUILD_SHARED_LIBS )
+  target_link_libraries(lldb-server liblldb)
+  target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 else()
-  target_link_libraries(lldb-server ${LLDB_USED_LIBS})
-  target_link_libraries(lldb-server ${CLANG_USED_LIBS})
+  # The Darwin linker doesn't understand --start-group/--end-group.
+  if (LLDB_LINKER_SUPPORTS_GROUPS)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${SWIFT_ALL_LIBS} -Wl,--end-group)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${CLANG_ALL_LIBS} -Wl,--end-group)
+    target_link_libraries(lldb-server
+                          -Wl,--start-group ${LLVM_ALL_LIBS} -Wl,--end-group)
+  else()
+    target_link_libraries(lldb-server ${LLDB_USED_LIBS})
+    target_link_libraries(lldb-server ${SWIFT_ALL_LIBS})
+    target_link_libraries(lldb-server ${CLANG_ALL_LIBS})
+    target_link_libraries(lldb-server ${LLVM_ALL_LIBS})
+  endif()
+  llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
+
+  target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 endif()
 if(NOT LLVM_LINK_LLVM_DYLIB)
   # This is necessary in !LLVM_LINK_LLVM_DYLIB as LLDB's libs do not track their

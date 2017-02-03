@@ -315,6 +315,9 @@ public:
     lldb::SBAddress
     GetObjectFileHeaderAddress() const;
 
+    lldb::SBError
+    IsTypeSystemCompatible (lldb::LanguageType language);
+
     bool
     operator == (const lldb::SBModule &rhs) const;
              

@@ -3,6 +3,7 @@ import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import decorators
 
 
 class TestWithGmodulesDebugInfo(TestBase):

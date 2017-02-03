@@ -15,6 +15,7 @@ class SharedLibStrippedTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://28182015")
     def test_expr(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():

@@ -1142,6 +1142,72 @@ class RecursiveDecentFormatter(BasicFormatter):
 
         return output.getvalue()
 
+
+def check_variable(
+        test,
+        valobj,
+        use_dynamic=False,
+        summary=None,
+        value=None,
+        typename=None,
+        num_children=None,
+        use_synthetic=True):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    if use_dynamic:
+        valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+        test.assertTrue(
+            valobj.IsValid(),
+            "dynamic value of %s is not valid" %
+            (valobj.GetName() if valobj else "<unknown>"))
+        test.assertTrue(
+            valobj.IsDynamic(),
+            "dynamic value of %s is not dynamic" %
+            (valobj.GetName() if valobj else "<unknown>"))
+    if use_synthetic:
+        valobj.SetPreferSyntheticValue(True)
+    if summary:
+        test.assertTrue(
+            valobj.GetSummary() == summary,
+            "expected summary: '%s' - actual summary: '%s'" %
+            (summary,
+             valobj.GetSummary() if valobj else "<unknown>"))
+    if value:
+        test.assertTrue(
+            valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" %
+            (value, valobj.GetValue() if valobj else "<unknown>"))
+    if typename:
+        test.assertTrue(
+            valobj.GetTypeName() == typename,
+            "expected typename: '%s' - actual typename: '%s'" %
+            (typename,
+             valobj.GetTypeName() if valobj else "<unknown>"))
+    if num_children:
+        test.assertTrue(
+            valobj.GetNumChildren() == num_children,
+            "expected num children: '%s' - actual num children: '%s'" %
+            (num_children,
+             valobj.GetNumChildren() if valobj else "<unknown>"))
+
+
+def check_children(test, valobj, thecallable):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    i = 0
+    while i < valobj.GetNumChildren():
+        child = valobj.GetChildAtIndex(i)
+        test.assertTrue(
+            thecallable(
+                child,
+                i),
+            "child %d failed the test" %
+            (i))
+        i = i + 1
+
 # ===========================================================
 # Utility functions for path manipulation on remote platforms
 # ===========================================================

@@ -209,7 +209,7 @@ bool GoUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                              ExecutionContext &exe_ctx,
                              lldb_private::ExecutionPolicy execution_policy,
                              bool keep_result_in_memory,
-                             bool generate_debug_info) {
+                             bool generate_debug_info, uint32_t line_offset) {
   InstallContext(exe_ctx);
   m_interpreter.reset(new GoInterpreter(exe_ctx, GetUserText()));
   if (m_interpreter->Parse())
@@ -651,7 +651,8 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitCallExpr(
 GoPersistentExpressionState::GoPersistentExpressionState()
     : PersistentExpressionState(eKindGo) {}
 
-ConstString GoPersistentExpressionState::GetNextPersistentVariableName() {
+ConstString
+GoPersistentExpressionState::GetNextPersistentVariableName(bool is_error) {
   char name_cstr[256];
   // We can't use the same variable format as clang.
   ::snprintf(name_cstr, sizeof(name_cstr), "$go%u",

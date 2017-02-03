@@ -27,8 +27,16 @@ namespace lldb_private {
 
 class Materializer {
 public:
+  //----------------------------------------------------------------------
+  // See TypeSystem.h for how to add subclasses to this.
+  //----------------------------------------------------------------------
+  enum LLVMCastKind { eKindBasic, eKindSwiftREPL };
+
+  LLVMCastKind getKind() const { return m_kind; }
+
+  Materializer(LLVMCastKind kind);
   Materializer();
-  ~Materializer();
+  virtual ~Materializer();
 
   class Dematerializer {
   public:
@@ -43,10 +51,7 @@ public:
 
     void Wipe();
 
-    bool IsValid() {
-      return m_materializer && m_map &&
-             (m_process_address != LLDB_INVALID_ADDRESS);
-    }
+    bool IsValid() { return m_materializer && m_map; }
 
   private:
     friend class Materializer;
@@ -81,15 +86,16 @@ public:
     virtual void DidDematerialize(lldb::ExpressionVariableSP &variable) = 0;
   };
 
-  uint32_t
+  virtual uint32_t
   AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
                         PersistentVariableDelegate *delegate, Error &err);
-  uint32_t AddVariable(lldb::VariableSP &variable_sp, Error &err);
-  uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
-                             bool keep_in_memory,
-                             PersistentVariableDelegate *delegate, Error &err);
-  uint32_t AddSymbol(const Symbol &symbol_sp, Error &err);
-  uint32_t AddRegister(const RegisterInfo &register_info, Error &err);
+  virtual uint32_t AddVariable(lldb::VariableSP &variable_sp, Error &err);
+  virtual uint32_t AddResultVariable(const CompilerType &type, bool is_lvalue,
+                                     bool keep_in_memory,
+                                     PersistentVariableDelegate *delegate,
+                                     Error &err);
+  virtual uint32_t AddSymbol(const Symbol &symbol_sp, Error &err);
+  virtual uint32_t AddRegister(const RegisterInfo &register_info, Error &err);
 
   uint32_t GetStructAlignment() { return m_struct_alignment; }
 
@@ -127,12 +133,13 @@ public:
     uint32_t m_offset;
   };
 
-private:
+protected:
   uint32_t AddStructMember(Entity &entity);
 
   typedef std::unique_ptr<Entity> EntityUP;
   typedef std::vector<EntityUP> EntityVector;
 
+  LLVMCastKind m_kind;
   DematerializerWP m_dematerializer_wp;
   EntityVector m_entities;
   uint32_t m_current_offset;

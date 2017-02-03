@@ -583,6 +583,31 @@ def skipUnlessDarwin(func):
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
 
 
+def swiftTest(func):
+    """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
+
+    def is_not_swift_compatible(self):
+        if "i386" == self.getArchitecture():
+            return "skipping Swift test because i386 is not a supported architecture"
+        elif not(any(x in sys.platform for x in ['darwin', 'linux'])):
+            return "skipping Swift test because only Darwin and Linux are supported OSes"
+        else:
+            # This configuration is Swift-compatible
+            return None
+    return skipTestIfFn(is_not_swift_compatible)(func)
+
+
+def skipIfSmooshbase(func):
+    """Decorate the item to skip tests that should be skipped on the smooshbase buildbot."""
+
+    def is_smooshbase(self):
+        if os.environ.get('IS_SMOOSHBASE', 'FAIL') != 'FAIL':
+            return 'skip on the smooshbase buildbot'
+        else:
+            return None
+    return skipTestIfFn(is_smooshbase)(func)
+
+
 def skipUnlessGoInstalled(func):
     """Decorate the item to skip tests when no Go compiler is available."""
 

@@ -44,9 +44,13 @@ public:
   Symbol *Resize(size_t count);
   uint32_t AddSymbol(const Symbol &symbol);
   size_t GetNumSymbols() const;
+  void
+  Dump(Stream *s, Target *target, SortOrder sort_type,
+       Mangled::NamePreference name_preference = Mangled::ePreferDemangled);
+  void Dump(Stream *s, Target *target, std::vector<uint32_t> &indexes,
+            Mangled::NamePreference name_preference =
+                Mangled::ePreferDemangled) const;
   void SectionFileAddressesChanged();
-  void Dump(Stream *s, Target *target, SortOrder sort_type);
-  void Dump(Stream *s, Target *target, std::vector<uint32_t> &indexes) const;
   uint32_t GetIndexForSymbol(const Symbol *symbol) const;
   std::recursive_mutex &GetMutex() { return m_mutex; }
   Symbol *FindSymbolByID(lldb::user_id_t uid) const;

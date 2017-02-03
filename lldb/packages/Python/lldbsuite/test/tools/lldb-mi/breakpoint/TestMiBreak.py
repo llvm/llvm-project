@@ -18,7 +18,11 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFlakeyLinux("llvm.org/pr24717")
+    @expectedFailureAll(
+        oslist=[
+            "linux",
+            "macosx"],
+        bugnumber="llvm.org/pr24717")
     def test_lldbmi_break_insert_function_pending(self):
         """Test that 'lldb-mi --interpreter' works for pending function breakpoints."""
 
@@ -45,6 +49,11 @@ class MiBreakTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll(
+        oslist=[
+            "linux",
+            "macosx"],
+        bugnumber="llvm.org/pr24717")
     def test_lldbmi_break_insert_function(self):
         """Test that 'lldb-mi --interpreter' works for function breakpoints."""
 

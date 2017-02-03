@@ -216,6 +216,8 @@ uint64_t Value::GetValueByteSize(Error *error_ptr, ExecutionContext *exe_ctx) {
     if (ast_type.IsValid())
       byte_size = ast_type.GetByteSize(
           exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+    if (byte_size == 0 && SwiftASTContext::IsPossibleZeroSizeType(ast_type))
+      return 0;
   } break;
   }
 
@@ -533,6 +535,9 @@ Error Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
   // Bail if we encountered any errors getting the byte size
   if (error.Fail())
+    return error;
+  else if (byte_size == 0 &&
+           SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
     return error;
 
   // Make sure we have enough room within "data", and if we don't make

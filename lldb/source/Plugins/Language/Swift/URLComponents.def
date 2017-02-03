@@ -1,0 +1,15 @@
+#ifndef COMPONENT
+#define COMPONENT(Name, PrettyName, Index)
+#endif
+
+COMPONENT(urlString,urlString,0)
+COMPONENT(schemeComponent,scheme,1)
+COMPONENT(userComponent,user,2)
+COMPONENT(passwordComponent,password,3)
+COMPONENT(hostComponent,host,4)
+COMPONENT(portComponent,port,5)
+COMPONENT(pathComponent,path,6)
+COMPONENT(queryComponent,query,7)
+COMPONENT(fragmentComponent,fragment,8)
+
+#undef COMPONENT

@@ -563,6 +563,9 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
     case eSymbolTypeObjCClass:
     case eSymbolTypeObjCMetaClass:
     case eSymbolTypeObjCIVar:
+    case eSymbolTypeIVarOffset:
+    case eSymbolTypeMetadata:
+    case eSymbolTypeASTFile:
       symbol_load_addr = sym_address.GetLoadAddress(&target);
       break;
     }
@@ -617,6 +620,8 @@ const Symbol *ClangExpressionDeclMap::FindGlobalDataSymbol(
         case eSymbolTypeObjCClass:
         case eSymbolTypeObjCMetaClass:
         case eSymbolTypeObjCIVar:
+        case eSymbolTypeIVarOffset:
+        case eSymbolTypeMetadata:
           if (symbol->GetDemangledNameIsSynthesized()) {
             // If the demangled name was synthesized, then don't use it
             // for expressions. Only let the symbol match if the mangled
@@ -679,6 +684,7 @@ const Symbol *ClangExpressionDeclMap::FindGlobalDataSymbol(
         case eSymbolTypeInstrumentation:
         case eSymbolTypeUndefined:
         case eSymbolTypeResolver:
+        case eSymbolTypeASTFile:
           break;
         }
       }
@@ -1613,6 +1619,22 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     if (log)
       log->PutCString("Skipped a definition because it has no Clang type");
     return false;
+  }
+
+  if (llvm::isa<SwiftASTContext>(var_clang_type.GetTypeSystem())) {
+#ifdef CAN_IMPORT_SWIFT_CLANG_TYPES // <rdar://problem/16102770> ASTImporter
+                                    // can't import Swift-generated types
+    // Try to get a Clang type for the Swift type.
+
+    if (!var_clang_type.IsImportedType(&var_clang_type)) {
+      if (log)
+        log->PutCString("Skipped a definition because it has a Swift type and "
+                        "we can't get a Clang type for it");
+      return false;
+    }
+#else
+    return false;
+#endif
   }
 
   ClangASTContext *clang_ast = llvm::dyn_cast_or_null<ClangASTContext>(

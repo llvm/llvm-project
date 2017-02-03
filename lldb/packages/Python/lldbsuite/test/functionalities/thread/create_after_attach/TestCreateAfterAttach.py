@@ -22,6 +22,7 @@ class CreateAfterAttachTestCase(TestBase):
     # is implemented for FreeBSD.
     # Occasionally hangs on Windows, may be same as other issues.
     @skipIfWindows
+    @skipIfSmooshbase
     @skipIfiOSSimulator
     def test_create_after_attach_with_popen(self):
         """Test thread creation after process attach."""

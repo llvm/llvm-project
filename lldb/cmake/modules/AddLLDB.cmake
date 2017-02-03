@@ -70,6 +70,9 @@ function(add_lldb_library name)
                                 ${LLDB_USED_LIBS}
                                 ${end_group}
                                 ${start_group}
+                                ${SWIFT_ALL_LIBS}
+                                ${end_group}
+                                ${start_group}
                                 ${CLANG_USED_LIBS}
                                 ${end_group}
                                 ${PARAM_LINK_LIBS}

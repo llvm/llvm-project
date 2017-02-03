@@ -365,6 +365,10 @@ def send_events_to_collector(events, command):
     # Send the events: the port-based event just pickles the content
     # and sends over to the server side of the socket.
     for event in events:
+        # print("sending event ({}:{}) to formatter (type={})".format(
+        #     event.get("event", "{unknown}"),
+        #     event.get("status", "{unknown}"),
+        #     type(formatter_spec.formatter)), file=sys.stderr)
         formatter_spec.formatter.handle_event(event)
 
     # Cleanup
@@ -401,6 +405,7 @@ def send_inferior_post_run_events(
 
     # Handle signal/exceptional exits.
     if process_driver.is_exceptional_exit():
+        # print("\n** post-process events: sending exceptional exit test_event", file=sys.stderr)
         (code, desc) = process_driver.exceptional_exit_details()
         post_events.append(
             EventBuilder.event_for_job_exceptional_exit(
@@ -413,6 +418,7 @@ def send_inferior_post_run_events(
 
     # Handle timeouts.
     if process_driver.is_timeout():
+        # print("\n** post-process events: sending timeout test_event", file=sys.stderr)
         post_events.append(EventBuilder.event_for_job_timeout(
             process_driver.pid,
             worker_index,
@@ -420,6 +426,7 @@ def send_inferior_post_run_events(
             command))
 
     if len(post_events) > 0:
+        # print("\n** post-process events: sending queued events", file=sys.stderr)
         send_events_to_collector(post_events, command)
 
 
@@ -1268,6 +1275,11 @@ def getDefaultTimeout(platform_name):
     if os.getenv("LLDB_TEST_TIMEOUT"):
         return os.getenv("LLDB_TEST_TIMEOUT")
 
+    # https://bugs.swift.org/browse/SR-1220
+    # Temporary work-around for timeout rerun issues.
+    # Remove this as soon as SR-1220 is resolved.
+    return "10m"
+
     if platform_name is None:
         platform_name = sys.platform
 
@@ -1277,7 +1289,7 @@ def getDefaultTimeout(platform_name):
         # We are consistently needing more time on a few tests.
         return "6m"
     else:
-        return "4m"
+        return "5m"
 
 
 def touch(fname, times=None):

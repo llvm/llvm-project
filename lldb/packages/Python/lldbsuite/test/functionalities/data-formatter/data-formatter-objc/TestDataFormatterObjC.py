@@ -51,6 +51,7 @@ class ObjCDataFormatterTestCase(TestBase):
         self.appkit_tester_impl(self.nsurl_data_formatter_commands)
 
     @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://25587546")
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands)
@@ -270,8 +271,8 @@ class ObjCDataFormatterTestCase(TestBase):
         self.expect('frame variable nserror',
                     substrs=['domain: @"Foobar" - code: 12'])
 
-        self.expect('frame variable nserrorptr',
-                    substrs=['domain: @"Foobar" - code: 12'])
+        self.expect('frame variable  -d run-target nserror->_userInfo',
+                    substrs=['2 key/value pairs'])
 
         self.expect('frame variable nserror->_userInfo',
                     substrs=['2 key/value pairs'])

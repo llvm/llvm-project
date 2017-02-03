@@ -10,6 +10,8 @@
 #ifndef liblldb_SymbolFile_h_
 #define liblldb_SymbolFile_h_
 
+#include <vector>
+
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -198,10 +200,76 @@ public:
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged() {}
 
+  virtual bool GetCompileOption(const char *option, std::string &value,
+                                CompileUnit *cu = nullptr) {
+    value.clear();
+    return false;
+  }
+
+  virtual int GetCompileOptions(const char *option,
+                                std::vector<std::string> &values,
+                                CompileUnit *cu = nullptr) {
+    values.clear();
+    return false;
+  }
+
+  virtual void GetLoadedModules(lldb::LanguageType language,
+                                FileSpecList &modules) {}
+
+  //------------------------------------------------------------------
+  // Some symbol files might know if we should always check for inline
+  // source file and line entries. This virtual function lets
+  // SymbolFile subclasses control that, but a default implementation
+  // is supplied.
+  //------------------------------------------------------------------
+  virtual bool ForceInlineSourceFileCheck();
+
+  //------------------------------------------------------------------
+  /// Retrieve all the AST data blobs from the SymbolFile.
+  ///
+  /// Symbol files can store AST data for any language that wants to
+  /// store the native AST format supported by the current compiler.
+  /// This information is often only usable by a compiler that is in
+  /// sync with the compiler sources that were used to build LLDB so
+  /// any data should be versioned appropriately so the compiler can
+  /// try to load the data and know if the data will be able to be
+  /// used.
+  ///
+  /// @param[in] language
+  ///   The language for which AST data is being requested.
+  ///   A given file can contain ASTs for more than one language.
+  ///
+  /// @return
+  ///   Zero or more buffers, each of which contain the raw data
+  ///   of an AST in the requested language.
+  //------------------------------------------------------------------
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
+
+  // Used for the REPL to limit source file ranges that are valid within "file".
+  // Since
+  // breakpoint setting call fall through, we need to stop the fall through from
+  // happening
+  virtual bool SetLimitSourceFileRange(const FileSpec &file,
+                                       uint32_t first_line, uint32_t last_line);
+
+  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                             uint32_t actual_line);
+
 protected:
+  class SourceRange {
+  public:
+    SourceRange(const FileSpec &f, uint32_t first, uint32_t last)
+        : file(f), first_line(first), last_line(last) {}
+    FileSpec file;
+    uint32_t first_line;
+    uint32_t last_line;
+  };
+
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
   uint32_t m_abilities;
   bool m_calculated_abilities;
+  std::vector<SourceRange> m_limit_source_ranges;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(SymbolFile);

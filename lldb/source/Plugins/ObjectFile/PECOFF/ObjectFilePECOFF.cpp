@@ -681,6 +681,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
         static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
         static ConstString g_sect_name_dwarf_debug_str(".debug_str");
         static ConstString g_sect_name_eh_frame(".eh_frame");
+        static ConstString g_sect_name_swift_ast(".swift_ast");
         static ConstString g_sect_name_go_symtab(".gosymtab");
         SectionType section_type = eSectionTypeOther;
         if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
@@ -730,6 +731,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           section_type = eSectionTypeDWARFDebugStr;
         else if (const_sect_name == g_sect_name_eh_frame)
           section_type = eSectionTypeEHFrame;
+        else if (const_sect_name == g_sect_name_swift_ast)
+          section_type = eSectionTypeSwiftModules;
         else if (const_sect_name == g_sect_name_go_symtab)
           section_type = eSectionTypeGoSymtab;
         else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {

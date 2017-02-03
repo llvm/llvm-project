@@ -31,6 +31,10 @@ class BSDArchivesTestCase(TestBase):
             "arm",
             "aarch64"],
         bugnumber="llvm.org/pr27795")
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=["x86_64"],
+        bugnumber="rdar://28181750")
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()

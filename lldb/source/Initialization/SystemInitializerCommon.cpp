@@ -9,6 +9,10 @@
 
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
+#include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
@@ -21,6 +25,9 @@
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/GoASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 
 #if defined(__APPLE__)
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
@@ -77,6 +84,12 @@ void SystemInitializerCommon::Initialize() {
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
   // Initialize plug-ins
+  ClangASTContext::Initialize();
+  GoASTContext::Initialize();
+  SwiftASTContext::Initialize();
+
+  SwiftREPL::Initialize();
+
   ObjectContainerBSDArchive::Initialize();
   ObjectFileELF::Initialize();
   ObjectFilePECOFF::Initialize();
@@ -107,6 +120,12 @@ void SystemInitializerCommon::Terminate() {
   ObjectContainerBSDArchive::Terminate();
   ObjectFileELF::Terminate();
   ObjectFilePECOFF::Terminate();
+
+  ClangASTContext::Terminate();
+  GoASTContext::Terminate();
+  SwiftASTContext::Terminate();
+
+  SwiftREPL::Terminate();
 
   EmulateInstructionARM::Terminate();
   EmulateInstructionMIPS::Terminate();

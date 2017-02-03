@@ -664,7 +664,7 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   CompilerType valobj_type(valobj_sp->GetCompilerType());
   Flags flags(valobj_type.GetTypeInfo());
 
-  if (flags.IsClear(eTypeIsPointer)) {
+  if (flags.IsClear(eTypeIsPointer) && flags.IsClear(eTypeIsSwift)) {
     Error error;
     valobj_sp = valobj_sp->AddressOf(error);
     if (error.Fail() || !valobj_sp)

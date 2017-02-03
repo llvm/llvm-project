@@ -115,11 +115,11 @@ static OptionDefinition g_breakpoint_set_options[] = {
   "options, on throw but not catch.)" },
   { LLDB_OPT_SET_10,               false, "on-throw",               'w', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception throW." },
   { LLDB_OPT_SET_10,               false, "on-catch",               'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception catcH." },
-
-  //  Don't add this option till it actually does something useful...
-  //    { LLDB_OPT_SET_10, false, "exception-typename", 'O', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeTypeName,
-  //        "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop for multiple object types" },
-
+  { LLDB_OPT_SET_10,               false, "exception-typename",     'O', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeTypeName,
+    "The breakpoint will only stop if an exception Object of this type is thrown.  Can be repeated multiple times to stop "
+    "for multiple object types.  If you just specify the type's base name it will match against that type in all modules,"
+    " or you can specify the full type name including modules.  Other submatches are not supported at present."
+    "Only supported for Swift at present."},
   { LLDB_OPT_EXPR_LANGUAGE,        false, "language",               'L', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLanguage,            "Specifies the Language to use when interpreting the breakpoint's expression "
   "(note: currently only implemented for setting breakpoints on identifiers).  "
   "If not set the target.language setting is used." },
@@ -234,6 +234,9 @@ public:
         case eLanguageTypeObjC_plus_plus:
           error.SetErrorStringWithFormat(
               "Set exception breakpoints separately for c++ and objective-c");
+          break;
+        case eLanguageTypeSwift:
+          m_exception_language = eLanguageTypeSwift;
           break;
         case eLanguageTypeUnknown:
           error.SetErrorStringWithFormat(
@@ -435,6 +438,7 @@ public:
       m_catch_bp = false;
       m_throw_bp = true;
       m_hardware = false;
+      m_language = eLanguageTypeUnknown;
       m_exception_language = eLanguageTypeUnknown;
       m_language = lldb::eLanguageTypeUnknown;
       m_skip_prologue = eLazyBoolCalculate;

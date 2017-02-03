@@ -92,6 +92,7 @@ class HelpCommandTestCase(TestBase):
         version_str = self.version_number_string()
         match = re.match('[0-9]+', version_str)
         search_regexp = ['lldb( version|-' + (version_str if match else '[0-9]+') + ').*\n']
+        search_regexp[0] += '  Swift-\d+\.\d+'
 
         self.expect("version",
                     patterns=search_regexp)

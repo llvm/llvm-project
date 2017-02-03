@@ -10,6 +10,14 @@ def enum(*sequential, **named):
 
 #### SETTINGS ####
 
+
+def LLVM_BUILD_DIRS():
+    return {
+        "Debug": "Ninja-RelWithDebInfoAssert",
+        "DebugClang": "Ninja-DebugAssert",
+        "Release": "Ninja-RelWithDebInfoAssert",
+    }
+
 #### INTERFACE TO THE XCODEPROJ ####
 
 
@@ -18,8 +26,8 @@ def lldb_source_path():
 
 
 def expected_llvm_build_path():
-    if build_type() == BuildType.Xcode:
-        return package_build_path()
+    if build_type() == BuildType.CustomSwift:
+        return os.environ.get('LLDB_PATH_TO_LLVM_BUILD')
     else:
         return os.path.join(
             os.environ.get('LLDB_PATH_TO_LLVM_BUILD'),
@@ -27,7 +35,10 @@ def expected_llvm_build_path():
 
 
 def archives_txt():
-    return os.path.join(expected_package_build_path(), "archives.txt")
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(expected_llvm_build_path(), "archives.txt")
+    else:
+        return os.path.join(expected_package_build_path(), "archives.txt")
 
 
 def expected_package_build_path():
@@ -67,10 +78,14 @@ def llvm_build_dirtree():
 
 # Edit the code below when adding build styles.
 
-BuildType = enum('Xcode')                # (Debug,DebugClang,Release)
+BuildType = enum('CustomSwift',          # CustomSwift-(Debug,Release)
+                 'Xcode')                # (Debug,DebugClang,Release)
 
 
 def build_type():
+    configuration = lldb_configuration()
+    if "CustomSwift" in configuration:
+        return BuildType.CustomSwift
     return BuildType.Xcode
 
 #### VCS UTILITIES ####
@@ -95,12 +110,8 @@ class Git:
         return run_in_directory(["git", "diff"], self.spec['root'])
 
     def check_out(self):
-        run_in_directory(["git",
-                          "clone",
-                          "--depth=1",
-                          self.spec['url'],
-                          self.spec['root']],
-                         lldb_source_path())
+        run_in_directory(["git", "clone", self.spec['url'],
+                          self.spec['root']], lldb_source_path())
         run_in_directory(["git", "fetch", "--all"], self.spec['root'])
         run_in_directory(["git", "checkout", self.spec[
                          'ref']], self.spec['root'])
@@ -131,24 +142,44 @@ def vcs(spec):
 
 
 def llvm_source_path():
-    if build_type() == BuildType.Xcode:
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(lldb_source_path(), "..", "llvm")
+    elif build_type() == BuildType.Xcode:
         return os.path.join(lldb_source_path(), "llvm")
 
 
 def clang_source_path():
-    if build_type() == BuildType.Xcode:
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(lldb_source_path(), "..", "clang")
+    elif build_type() == BuildType.Xcode:
         return os.path.join(llvm_source_path(), "tools", "clang")
 
 
+def swift_source_path():
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(lldb_source_path(), "..", "swift")
+    elif build_type() == BuildType.Xcode:
+        return os.path.join(llvm_source_path(), "tools", "swift")
+
+
+def cmark_source_path():
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(lldb_source_path(), "..", "cmark")
+    elif build_type() == BuildType.Xcode:
+        return os.path.join(llvm_source_path(), "tools", "cmark")
+
+
 def ninja_source_path():
-    if build_type() == BuildType.Xcode:
-        return os.path.join(lldb_source_path(), "ninja")
+    if build_type() == BuildType.CustomSwift:
+        return os.path.join(lldb_source_path(), "..", "ninja")
+    elif build_type() == BuildType.Xcode:
+        return os.path.join(llvm_source_path(), "tools", "ninja")
 
 #### BUILD PATHS ####
 
 
 def packages():
-    return ["llvm"]
+    return ["llvm", "swift", "cmark"]
 
 
 def package_build_dir_name(package):
@@ -156,10 +187,6 @@ def package_build_dir_name(package):
 
 
 def expected_package_build_path_for(package):
-    if build_type() == BuildType.Xcode:
-        if package != "llvm":
-            raise "On Xcode build, we only support the llvm package: requested {}"
-        return package_build_path()
     return os.path.join(
         expected_package_build_path(),
         package_build_dir_name(package))
@@ -170,19 +197,19 @@ def expected_package_build_paths():
 
 
 def library_path(build_path):
-    return build_path + "/lib"
+    if "cmark" in build_path:
+        return build_path + "/src"
+    else:
+        return build_path + "/lib"
 
 
 def library_paths():
-    if build_type() == BuildType.Xcode:
-        package_build_paths = [package_build_path()]
-    else:
-        package_build_paths = expected_package_build_paths()
-    return [library_path(build_path) for build_path in package_build_paths]
+    return [library_path(build_path)
+            for build_path in expected_package_build_paths()]
 
 
 def package_build_path():
     return os.path.join(
         llvm_build_dirtree(),
-        os.environ["LLVM_CONFIGURATION"],
-        os.environ["CURRENT_ARCH"])
+        LLVM_BUILD_DIRS()[
+            lldb_configuration()])

@@ -255,7 +255,8 @@ SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFile *obj_file) {
 SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFile *ofile)
     : SymbolFile(ofile), m_flags(), m_compile_unit_infos(), m_func_indexes(),
       m_glob_indexes(),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
+      m_initialized_swift_modules(false) {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() {}
 
@@ -1437,4 +1438,67 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
     }
   }
   return num_line_entries_added;
+}
+
+std::vector<DataBufferSP>
+SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
+  Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
+
+  std::vector<DataBufferSP> ast_datas;
+  if (language != eLanguageTypeSwift) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because not Swift",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  Symtab *symtab = m_obj_file->GetSymtab();
+  if (!symtab) {
+    if (log)
+      log->Printf("SymbolFileDWARFDebugMap::%s() - ignoring because the obj "
+                  "file has no symbol table",
+                  __FUNCTION__);
+    return ast_datas;
+  }
+
+  uint32_t next_idx = 0;
+  bool done = false;
+  do {
+    Symbol *symbol =
+        symtab->FindSymbolWithType(eSymbolTypeASTFile, Symtab::eDebugAny,
+                                   Symtab::eVisibilityAny, next_idx);
+    if (symbol == nullptr) {
+      // We didn't find any more symbols of type eSymbolTypeASTFile.  We are
+      // done looping for them.
+      done = true;
+    } else {
+      // Try to load the specified file.
+      FileSpec file_spec(symbol->GetName().GetCString(), false);
+      if (file_spec.Exists()) {
+        // We found the source data for the AST data blob.
+        // Read it in and add it to our return vector.
+        ast_datas.push_back(file_spec.ReadFileContents());
+        if (log)
+          log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
+                      "data from file %s",
+                      __FUNCTION__, file_spec.GetPath().c_str());
+      } else {
+        if (log)
+          log->Printf("SymbolFileDWARFDebugMap::%s() - found reference to AST "
+                      "file %s, but could not find the file, ignoring",
+                      __FUNCTION__, file_spec.GetPath().c_str());
+      }
+
+      // Regardless of whether we could find the specified file, start the next
+      // symbol search at the index past the one we just found.
+      ++next_idx;
+    }
+  } while (!done);
+
+  // Return the vector of AST data blobs
+  if (log)
+    log->Printf("SymbolFileDWARFDebugMap::%s() - returning %d AST data blobs",
+                __FUNCTION__, (int)ast_datas.size());
+
+  return ast_datas;
 }

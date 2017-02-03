@@ -2848,7 +2848,8 @@ public:
     StreamString stream;
     // FIXME: hardcoding languages is not good
     lldb::LanguageType languages[] = {eLanguageTypeObjC,
-                                      eLanguageTypeC_plus_plus};
+                                      eLanguageTypeC_plus_plus,
+                                      eLanguageTypeSwift};
 
     for (const auto lang_type : languages) {
       if (auto language = Language::FindPlugin(lang_type)) {
@@ -2928,6 +2929,7 @@ public:
       // FIXME: hardcoding languages is not good
       languages.push_back(Language::FindPlugin(eLanguageTypeObjC));
       languages.push_back(Language::FindPlugin(eLanguageTypeC_plus_plus));
+      languages.push_back(Language::FindPlugin(eLanguageTypeSwift));
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));
     }

@@ -35,6 +35,9 @@ class ConstVariableTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(
+        debug_info="dwo", 
+        bugnumber="rdar://problem/30100738")
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""
         self.build()

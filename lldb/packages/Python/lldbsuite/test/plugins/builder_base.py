@@ -22,6 +22,7 @@ import sys
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test_event import build_exception
+import swift
 
 
 def getArchitecture():
@@ -76,13 +77,23 @@ def getCCSpec(compiler):
     Helper function to return the key-value string to specify the compiler
     used for the make system.
     """
+
+    lldbLib = os.environ[
+        "LLDB_LIB_DIR"] if "LLDB_LIB_DIR" in os.environ else None
+
     cc = compiler if compiler else None
     if not cc and "CC" in os.environ:
         cc = os.environ["CC"]
+
+    swiftcc = swift.getSwiftCompiler()
+
+    # Note the leading space character.
     if cc:
-        return "CC=\"%s\"" % cc
-    else:
-        return ""
+        if swiftcc:
+            return (" CC=" + cc + " SWIFTCC=" + swiftcc)
+        else:
+            return "CC=\"%s\"" % cc
+    return ""
 
 
 def getCmdLine(d):
@@ -133,6 +144,10 @@ def buildDefault(
 
     # True signifies that we can handle building default.
     return True
+
+
+def safeGetEnviron(name, default=None):
+    return os.environ[name] if name in os.environ else default
 
 
 def buildDwarf(

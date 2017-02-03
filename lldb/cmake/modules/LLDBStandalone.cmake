@@ -12,7 +12,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Rely on llvm-config.
   set(CONFIG_OUTPUT)
-  find_program(LLVM_CONFIG "llvm-config")
+  set(FIND_PATHS "")
+  if (LLDB_PATH_TO_LLVM_BUILD)
+    set(FIND_PATHS "${LLDB_PATH_TO_LLVM_BUILD}/bin")
+  endif()
+  find_program(LLVM_CONFIG "llvm-config"
+    HINTS ${FIND_PATHS})
+
   if(LLVM_CONFIG)
     message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
     set(CONFIG_COMMAND ${LLVM_CONFIG}
@@ -57,6 +63,18 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
+  if (LLDB_PATH_TO_CLANG_SOURCE)
+    get_filename_component(CLANG_MAIN_SRC_DIR ${LLDB_PATH_TO_CLANG_SOURCE} ABSOLUTE)
+    set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
+  endif()
+
+  if (LLDB_PATH_TO_SWIFT_SOURCE)
+      get_filename_component(SWIFT_MAIN_SRC_DIR ${LLDB_PATH_TO_SWIFT_SOURCE}
+                             ABSOLUTE)
+  endif()
+
+  list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake")
+  list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules")
   set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
   set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
   set(LLVM_MAIN_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
@@ -75,6 +93,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message(FATAL_ERROR "Not found: ${LLVMCONFIG_FILE}")
   endif()
 
+
+  get_filename_component(PATH_TO_SWIFT_BUILD ${LLDB_PATH_TO_SWIFT_BUILD}
+                         ABSOLUTE)
+
+  get_filename_component(PATH_TO_CMARK_BUILD ${LLDB_PATH_TO_CMARK_BUILD}
+                         ABSOLUTE)
+
+  # These variables are used by add_llvm_library.
   # They are used as destination of target generators.
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
@@ -89,6 +115,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleLLVMOptions)
   include(CheckAtomic)
 
+
   if (PYTHON_EXECUTABLE STREQUAL "")
     set(Python_ADDITIONAL_VERSIONS 3.5 3.4 3.3 3.2 3.1 3.0 2.7 2.6 2.5)
     include(FindPythonInterp)
@@ -102,34 +129,38 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   # Import CMake library targets from LLVM and Clang.
-  include("${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm/LLVMConfig.cmake")
-  # cmake/clang/ClangConfig.cmake is not created when LLVM and Cland are built together.
-  if (EXISTS "${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
-    include("${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
+  if (EXISTS "${LLDB_PATH_TO_CLANG_BUILD}/lib/cmake/clang/ClangConfig.cmake")
+      include("${LLDB_PATH_TO_CLANG_BUILD}/lib/cmake/clang/ClangConfig.cmake")
   endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
-  set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
+  # Why are we doing this?
+  # set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
+
+  set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
+
+  set(SWIFT_MAIN_INCLUDE_DIR "${SWIFT_MAIN_SRC_DIR}/include")
 
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
-  include_directories("${LLVM_BINARY_DIR}/include" "${LLVM_MAIN_INCLUDE_DIR}")
-  # Next three include directories are needed when llvm-config is located in build directory.
-  # LLVM and Cland are assumed to be built together
-  if (EXISTS "${LLVM_OBJ_ROOT}/include")
-    include_directories("${LLVM_OBJ_ROOT}/include")
-  endif()
-  if (EXISTS "${LLVM_MAIN_SRC_DIR}/tools/clang/include")
-    include_directories("${LLVM_MAIN_SRC_DIR}/tools/clang/include")
-  endif()
-  if (EXISTS "${LLVM_OBJ_ROOT}/tools/clang/include")
-    include_directories("${LLVM_OBJ_ROOT}/tools/clang/include")
-  endif()
-  link_directories("${LLVM_LIBRARY_DIR}")
+  include_directories("${LLVM_BINARY_DIR}/include"
+                      "${LLVM_BINARY_DIR}/tools/clang/include"
+                      "${LLVM_MAIN_INCLUDE_DIR}"
+                      "${PATH_TO_CLANG_BUILD}/include"
+                      "${CLANG_MAIN_INCLUDE_DIR}"
+                      "${PATH_TO_SWIFT_BUILD}/include"
+                      "${SWIFT_MAIN_INCLUDE_DIR}"
+                      "${CMAKE_CURRENT_SOURCE_DIR}/source")
+  link_directories("${LLVM_LIBRARY_DIR}"
+                   "${PATH_TO_CLANG_BUILD}/lib${LLVM_LIBDIR_SUFFIX}"
+                   "${PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}"
+                   "${PATH_TO_CMARK_BUILD}/src")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
   set(LLDB_BUILT_STANDALONE 1)
+else()
+  set(LLDB_PATH_TO_SWIFT_BUILD ${CMAKE_BINARY_DIR})
 endif()

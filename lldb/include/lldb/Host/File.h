@@ -57,13 +57,15 @@ public:
       : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
         m_stream(kInvalidStream), m_options(0), m_own_stream(false),
         m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate) {}
+        m_is_real_terminal(eLazyBoolCalculate),
+        m_supports_colors(eLazyBoolCalculate) {}
 
   File(FILE *fh, bool transfer_ownership)
       : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
         m_stream(fh), m_options(0), m_own_stream(transfer_ownership),
         m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate) {}
+        m_is_real_terminal(eLazyBoolCalculate),
+        m_supports_colors(eLazyBoolCalculate) {}
 
   //------------------------------------------------------------------
   /// Constructor with path.
@@ -112,7 +114,8 @@ public:
       : IOObject(eFDTypeFile, transfer_ownership), m_descriptor(fd),
         m_stream(kInvalidStream), m_options(0), m_own_stream(false),
         m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate) {}
+        m_is_real_terminal(eLazyBoolCalculate),
+        m_supports_colors(eLazyBoolCalculate) {}
 
   //------------------------------------------------------------------
   /// Destructor.
@@ -479,6 +482,7 @@ protected:
   FILE *m_stream;
   uint32_t m_options;
   bool m_own_stream;
+  bool m_own_descriptor;
   LazyBool m_is_interactive;
   LazyBool m_is_real_terminal;
   LazyBool m_supports_colors;

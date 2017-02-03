@@ -1516,7 +1516,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
     if (success)
       return_valobj_sp = ValueObjectConstResult::Create(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
-  } else if (type_flags & eTypeIsPointer) {
+  } else if ((type_flags & eTypeIsPointer) ||
+             (type_flags & eTypeInstanceIsPointer)) {
     unsigned rax_id =
         reg_ctx->GetRegisterInfoByName("rax", 0)->kinds[eRegisterKindLLDB];
     value.GetScalar() =
@@ -1596,6 +1597,216 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
   return return_valobj_sp;
 }
 
+static bool ExtractBytesFromRegisters(
+    ExecutionContext &exe_ctx, CompilerType &clang_type,
+    const DataExtractor &rax_data, const DataExtractor &rdx_data,
+    const DataExtractor &rcx_data, const DataExtractor &xmm0_data,
+    const DataExtractor &xmm1_data, const DataExtractor &xmm2_data,
+    const ByteOrder byte_order, DataBufferSP &data_sp,
+    uint32_t data_byte_offset, uint32_t &integer_bytes, uint32_t &fp_bytes,
+    bool &is_memory) {
+  const bool is_swift_type = (clang_type.GetTypeInfo() & eTypeIsSwift);
+  const uint32_t num_children = clang_type.GetNumFields();
+  for (uint32_t idx = 0; idx < num_children; ++idx) {
+    std::string name;
+    bool is_signed;
+
+    const bool transparent_pointers = false;
+    const bool omit_empty_base_classes = true;
+    const bool ignore_array_bounds = false;
+    uint32_t child_byte_size = 0;
+    int32_t child_byte_offset = 0;
+    uint32_t child_bitfield_bit_size = 0;
+    uint32_t child_bitfield_bit_offset = 0;
+    bool child_is_base_class = false;
+    bool child_is_deref_of_parent = false;
+    uint64_t language_flags;
+    CompilerType field_clang_type = clang_type.GetChildCompilerTypeAtIndex(
+        &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+        ignore_array_bounds, name, child_byte_size, child_byte_offset,
+        child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+        child_is_deref_of_parent, nullptr, language_flags);
+
+    const uint64_t field_bit_offset = child_byte_offset * 8;
+    const size_t field_bit_width =
+        child_byte_size * 8 + child_bitfield_bit_size;
+
+    // If there are any unaligned fields, this is stored in memory.
+    if (field_bit_offset % field_bit_width != 0) {
+      is_memory = true;
+      return false;
+    }
+
+    uint32_t field_byte_width = field_bit_width / 8;
+    uint32_t field_byte_offset = field_bit_offset / 8 + data_byte_offset;
+
+    const DataExtractor *copy_from_extractor = NULL;
+    uint32_t copy_from_offset = 0;
+
+    const uint32_t field_type_flags = field_clang_type.GetTypeInfo();
+    const bool is_swift_enum = (field_type_flags & eTypeIsEnumeration) &&
+                               (field_type_flags & eTypeIsSwift);
+    // HACK: Swift enums are really hard to figure out the return value ABI for.
+    // We really need compiler assistance but we don't have it. We need
+    // Swift.Dictionary
+    // objects to work though for return values, so we check for that simple
+    // case here
+    // and just assume that of the value is less than a pointer size that it can
+    // be treated
+    // as a integer type...
+    const bool is_simple_swift_enum = is_swift_enum && field_byte_width <= 8;
+
+    if (field_type_flags & eTypeIsInteger ||
+        field_type_flags & eTypeIsPointer ||
+        field_type_flags & eTypeIsReference ||
+        (field_type_flags & eTypeInstanceIsPointer &&
+         child_is_base_class == false) ||
+        is_simple_swift_enum) {
+      if (integer_bytes < 8) {
+        if (integer_bytes + field_byte_width <= 8) {
+          // This is in RAX, copy from register to our result structure:
+          copy_from_extractor = &rax_data;
+          copy_from_offset = integer_bytes;
+          integer_bytes += field_byte_width;
+        } else {
+          // The next field wouldn't fit in the remaining space, so we pushed it
+          // to rdx.
+          copy_from_extractor = &rdx_data;
+          copy_from_offset = 0;
+          integer_bytes = 8 + field_byte_width;
+        }
+      } else if (integer_bytes + field_byte_width <= 16) {
+        copy_from_extractor = &rdx_data;
+        copy_from_offset = integer_bytes - 8;
+        integer_bytes += field_byte_width;
+      } else if (is_swift_type && (integer_bytes + field_byte_width <= 24)) {
+        copy_from_extractor = &rcx_data;
+        copy_from_offset = integer_bytes - 8;
+        integer_bytes += field_byte_width;
+      } else {
+        // The last field didn't fit.  I can't see how that would happen w/o
+        // the overall size being greater than 16 bytes.
+        return false;
+      }
+    } else if (field_type_flags & eTypeIsFloat ||
+               field_type_flags & eTypeIsVector) {
+      // Structs with long doubles are always passed in memory.
+      if (field_bit_width == 128) {
+        is_memory = true;
+        break;
+      } else if (field_bit_width == 64) {
+        // These have to be in a single xmm register.
+        if (fp_bytes == 0)
+          copy_from_extractor = &xmm0_data;
+        else if (fp_bytes >= 8)
+          copy_from_extractor = &xmm1_data;
+        else if (fp_bytes >= 16)
+          copy_from_extractor = &xmm2_data;
+
+        copy_from_offset = 0;
+        fp_bytes += field_byte_width;
+      } else if (field_bit_width == 32) {
+        // This one is kind of complicated.  If we are in an "eightbyte" with
+        // another float, we'll
+        // be stuffed into an xmm register with it.  If we are in an "eightbyte"
+        // with one or more ints,
+        // then we will be stuffed into the appropriate GPR with them.
+        bool in_gpr;
+        if (field_byte_offset % 8 == 0) {
+          // We are at the beginning of one of the eightbytes, so check the next
+          // element (if any)
+          if (idx == num_children - 1)
+            in_gpr = false;
+          else {
+            uint64_t next_field_bit_offset = 0;
+            CompilerType next_field_clang_type = clang_type.GetFieldAtIndex(
+                idx + 1, name, &next_field_bit_offset, NULL, NULL);
+            if (next_field_clang_type.IsIntegerType(is_signed))
+              in_gpr = true;
+            else {
+              copy_from_offset = 0;
+              in_gpr = false;
+            }
+          }
+
+        } else if (field_byte_offset % 4 == 0) {
+          // We are inside of an eightbyte, so see if the field before us is
+          // floating point:
+          // This could happen if somebody put padding in the structure.
+          if (idx == 0)
+            in_gpr = false;
+          else {
+            uint64_t prev_field_bit_offset = 0;
+            CompilerType prev_field_clang_type = clang_type.GetFieldAtIndex(
+                idx - 1, name, &prev_field_bit_offset, NULL, NULL);
+            if (prev_field_clang_type.IsIntegerType(is_signed))
+              in_gpr = true;
+            else {
+              copy_from_offset = 4;
+              in_gpr = false;
+            }
+          }
+
+        } else {
+          is_memory = true;
+          return false;
+        }
+
+        // Okay, we've figured out whether we are in GPR or XMM, now figure out
+        // which one.
+        if (in_gpr) {
+          if (integer_bytes < 8) {
+            // This is in RAX, copy from register to our result structure:
+            copy_from_extractor = &rax_data;
+            copy_from_offset = integer_bytes;
+            integer_bytes += field_byte_width;
+          } else {
+            copy_from_extractor = &rdx_data;
+            copy_from_offset = integer_bytes - 8;
+            integer_bytes += field_byte_width;
+          }
+        } else {
+          if (fp_bytes < 8)
+            copy_from_extractor = &xmm0_data;
+          else if (fp_bytes < 16)
+            copy_from_extractor = &xmm1_data;
+          else if (is_swift_type && fp_bytes < 24)
+            copy_from_extractor = &xmm2_data;
+
+          fp_bytes += field_byte_width;
+        }
+      }
+    } else if (field_type_flags & eTypeHasChildren) {
+      // Swift enums are unions and we can't just iterate through the fields. We
+      // need
+      // help from the compiler to do enums correctly.
+      if (is_swift_enum)
+        return false;
+
+      if (ExtractBytesFromRegisters(
+              exe_ctx, field_clang_type, rax_data, rdx_data, rcx_data,
+              xmm0_data, xmm1_data, xmm2_data, byte_order, data_sp,
+              data_byte_offset + child_byte_offset, integer_bytes, fp_bytes,
+              is_memory) == false) {
+        return false;
+      }
+    }
+
+    // These two tests are just sanity checks.  If I somehow get the
+    // type calculation wrong above it is better to just return nothing
+    // than to assert or crash.
+    if (copy_from_extractor &&
+        copy_from_offset + field_byte_width <=
+            copy_from_extractor->GetByteSize()) {
+      copy_from_extractor->CopyByteOrderedData(
+          copy_from_offset, field_byte_width,
+          data_sp->GetBytes() + field_byte_offset, field_byte_width,
+          byte_order);
+    }
+  }
+  return true;
+}
+
 ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
     Thread &thread, CompilerType &return_compiler_type) const {
   ValueObjectSP return_valobj_sp;
@@ -1616,38 +1827,63 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
   if (return_compiler_type.IsAggregateType()) {
     Target *target = exe_ctx.GetTargetPtr();
     bool is_memory = true;
-    if (bit_width <= 128) {
-      ByteOrder target_byte_order = target->GetArchitecture().GetByteOrder();
-      DataBufferSP data_sp(new DataBufferHeap(16, 0));
-      DataExtractor return_ext(data_sp, target_byte_order,
-                               target->GetArchitecture().GetAddressByteSize());
-
+    const bool is_swift_type =
+        (return_compiler_type.GetTypeInfo() & eTypeIsSwift);
+    uint32_t max_register_value_bit_width = 128;
+    if (is_swift_type)
+      max_register_value_bit_width += 64;
+    if (bit_width <= max_register_value_bit_width) {
+      const ArchSpec &arch = target->GetArchitecture();
+      ByteOrder byte_order = arch.GetByteOrder();
+      DataBufferSP data_sp(
+          new DataBufferHeap(max_register_value_bit_width / 8, 0));
+      DataExtractor return_ext(data_sp, byte_order, arch.GetAddressByteSize());
       const RegisterInfo *rax_info =
           reg_ctx_sp->GetRegisterInfoByName("rax", 0);
       const RegisterInfo *rdx_info =
           reg_ctx_sp->GetRegisterInfoByName("rdx", 0);
+      const RegisterInfo *rcx_info =
+          reg_ctx_sp->GetRegisterInfoByName("rcx", 0);
       const RegisterInfo *xmm0_info =
           reg_ctx_sp->GetRegisterInfoByName("xmm0", 0);
       const RegisterInfo *xmm1_info =
           reg_ctx_sp->GetRegisterInfoByName("xmm1", 0);
+      const RegisterInfo *xmm2_info =
+          reg_ctx_sp->GetRegisterInfoByName("xmm2", 0);
 
-      RegisterValue rax_value, rdx_value, xmm0_value, xmm1_value;
+      RegisterValue rax_value;
+      RegisterValue rdx_value;
+      RegisterValue rcx_value;
+      RegisterValue xmm0_value;
+      RegisterValue xmm1_value;
+      RegisterValue xmm2_value;
       reg_ctx_sp->ReadRegister(rax_info, rax_value);
       reg_ctx_sp->ReadRegister(rdx_info, rdx_value);
+      reg_ctx_sp->ReadRegister(rcx_info, rcx_value);
       reg_ctx_sp->ReadRegister(xmm0_info, xmm0_value);
       reg_ctx_sp->ReadRegister(xmm1_info, xmm1_value);
+      reg_ctx_sp->ReadRegister(xmm2_info, xmm2_value);
 
-      DataExtractor rax_data, rdx_data, xmm0_data, xmm1_data;
+      DataExtractor rax_data;
+      DataExtractor rdx_data;
+      DataExtractor rcx_data;
+      DataExtractor xmm0_data;
+      DataExtractor xmm1_data;
+      DataExtractor xmm2_data;
 
       rax_value.GetData(rax_data);
       rdx_value.GetData(rdx_data);
+      rcx_value.GetData(rcx_data);
       xmm0_value.GetData(xmm0_data);
       xmm1_value.GetData(xmm1_data);
+      xmm2_value.GetData(xmm2_data);
 
       uint32_t fp_bytes =
           0; // Tracks how much of the xmm registers we've consumed so far
       uint32_t integer_bytes =
           0; // Tracks how much of the rax/rds registers we've consumed so far
+      uint32_t data_byte_offset =
+          0; // The offset into "data_sp" where to place the next chunk of data
 
       const uint32_t num_children = return_compiler_type.GetNumFields();
 
@@ -1664,6 +1900,27 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
         const size_t field_bit_width = field_compiler_type.GetBitSize(&thread);
+
+        bool child_is_base_class = false;
+        int32_t child_byte_offset = 0;
+
+        {
+          const bool transparent_pointers = false;
+          const bool omit_empty_base_classes = true;
+          const bool ignore_array_bounds = false;
+          uint32_t child_byte_size = 0;
+          uint32_t child_bitfield_bit_size = 0;
+          uint32_t child_bitfield_bit_offset = 0;
+          bool child_is_deref_of_parent = false;
+          uint64_t language_flags;
+          CompilerType field_compiler_type =
+              return_compiler_type.GetChildCompilerTypeAtIndex(
+                  &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+                  ignore_array_bounds, name, child_byte_size, child_byte_offset,
+                  child_bitfield_bit_size, child_bitfield_bit_offset,
+                  child_is_base_class, child_is_deref_of_parent, nullptr,
+                  language_flags);
+        }
 
         // if we don't know the size of the field (e.g. invalid type), just bail
         // out
@@ -1682,8 +1939,27 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
         DataExtractor *copy_from_extractor = nullptr;
         uint32_t copy_from_offset = 0;
 
+        const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
+        const bool is_swift_enum = (field_type_flags & eTypeIsEnumeration) &&
+                                   (field_type_flags & eTypeIsSwift);
+        // HACK: Swift enums are really hard to figure out the return value ABI
+        // for.
+        // We really need compiler assistance but we don't have it. We need
+        // Swift.Dictionary
+        // objects to work though for return values, so we check for that simple
+        // case here
+        // and just assume that of the value is less than a pointer size that it
+        // can be treated
+        // as a integer type...
+        const bool is_simple_swift_enum =
+            is_swift_enum && field_byte_width <= 8;
+
         if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
-            field_compiler_type.IsPointerType()) {
+            field_compiler_type.IsPointerType() ||
+            field_compiler_type.IsReferenceType() ||
+            (field_type_flags & eTypeInstanceIsPointer &&
+             child_is_base_class == false) ||
+            is_simple_swift_enum) {
           if (integer_bytes < 8) {
             if (integer_bytes + field_byte_width <= 8) {
               // This is in RAX, copy from register to our result structure:
@@ -1795,6 +2071,21 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
               fp_bytes += field_byte_width;
             }
           }
+        } else if (field_type_flags & eTypeHasChildren) {
+          // Swift enums are unions and we can't just iterate through the
+          // fields. We need
+          // help from the compiler to do enums correctly.
+          if (is_swift_enum)
+            return return_valobj_sp;
+
+          if (ExtractBytesFromRegisters(
+                  exe_ctx, field_compiler_type, rax_data, rdx_data, rcx_data,
+                  xmm0_data, xmm1_data, xmm2_data, byte_order, data_sp,
+                  data_byte_offset + child_byte_offset, integer_bytes, fp_bytes,
+                  is_memory) == false) {
+            return return_valobj_sp;
+          } else
+            copy_from_extractor = &return_ext;
         }
 
         // These two tests are just sanity checks.  If I somehow get the
@@ -1809,7 +2100,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
         copy_from_extractor->CopyByteOrderedData(
             copy_from_offset, field_byte_width,
             data_sp->GetBytes() + field_byte_offset, field_byte_width,
-            target_byte_order);
+            byte_order);
       }
 
       if (!is_memory) {
@@ -1841,7 +2132,6 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
 
   return return_valobj_sp;
 }
-
 // This defines the CFA as rsp+8
 // the saved pc is at CFA-8 (i.e. rsp+0)
 // The saved rsp is CFA+0

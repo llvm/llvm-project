@@ -16,6 +16,9 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/lldb-forward.h"
@@ -874,7 +877,23 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
+  // This function must be called immediately after construction of the Module
+  // in the cases where the AST is to be shared.
+  void SetTypeSystemForLanguage(lldb::LanguageType language,
+                                const lldb::TypeSystemSP &type_system_sp);
+
+#ifdef __clang_analyzer__
+  // See GetScratchTypeSystemForLanguage() in Target.h for what this block does
+  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language)
+      __attribute__((always_inline)) {
+    TypeSystem *ret = GetTypeSystemForLanguageImpl(language);
+    return ret ? ret : nullptr;
+  }
+
+  TypeSystem *GetTypeSystemForLanguageImpl(lldb::LanguageType language);
+#else
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language);
+#endif
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with
@@ -976,6 +995,12 @@ public:
   //------------------------------------------------------------------
   Error LoadInMemory(Target &target, bool set_pc);
 
+  void ClearModuleDependentCaches();
+
+  void SetTypeSystemMap(const TypeSystemMap &type_system_map) {
+    m_type_system_map = type_system_map;
+  }
+
   //----------------------------------------------------------------------
   /// @class LookupInfo Module.h "lldb/Core/Module.h"
   /// @brief A class that encapsulates name lookup information.
@@ -1038,6 +1063,8 @@ public:
   };
 
 protected:
+  SwiftASTContext *GetSwiftASTContextNoCreate();
+
   //------------------------------------------------------------------
   // Member Variables
   //------------------------------------------------------------------

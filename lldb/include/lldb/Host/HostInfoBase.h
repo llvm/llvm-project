@@ -117,12 +117,14 @@ public:
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
+  static bool ComputeSupportFileDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeClangDirectory(FileSpec &file_spec);
+  static bool ComputeSwiftDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

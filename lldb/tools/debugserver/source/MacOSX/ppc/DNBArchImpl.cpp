@@ -418,17 +418,17 @@ bool DNBArchMachPPC::GetRegisterValue(uint32_t set, uint32_t reg,
         {
           // Copy all 4 uint32 values for this vector register
           value->value.v_uint32[0] =
-              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(save_vr)[reg]
-                                                                         [0];
+              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(
+                  save_vr)[reg][0];
           value->value.v_uint32[1] =
-              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(save_vr)[reg]
-                                                                         [1];
+              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(
+                  save_vr)[reg][1];
           value->value.v_uint32[2] =
-              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(save_vr)[reg]
-                                                                         [2];
+              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(
+                  save_vr)[reg][2];
           value->value.v_uint32[3] =
-              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(save_vr)[reg]
-                                                                         [3];
+              m_state.vec.PREFIX_DOUBLE_UNDERSCORE_DARWIN_UNIX03(
+                  save_vr)[reg][3];
           return true;
         } else if (reg == 34) // VRVALID
         {

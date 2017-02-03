@@ -58,7 +58,8 @@ ifneq "$(TRIPLE)" ""
 					ifeq "$(TRIPLE_VERSION)" ""
 						TRIPLE_VERSION =$(shell echo $(notdir $(SDKROOT)) | sed -e 's/.*\([0-9]\.[0-9]\).*/\1/')
 					endif
-					TRIPLE_CFLAGS :=-mios-simulator-version-min=$(TRIPLE_VERSION) -isysroot "$(SDKROOT)"
+					TRIPLE_CFLAGS :=-mios-simulator-version-min=9.0 -isysroot "$(SDKROOT)"
+					TRIPLE_SWIFTFLAGS :=-target $(TRIPLE) -sdk "$(SDKROOT)"
 				endif
 			endif
 		endif
@@ -103,7 +104,13 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-CC ?= clang
+
+# On Darwin, we default to specifying the default toolchain.
+ifeq "$(OS)" "Darwin"
+    CC ?= xcrun -toolchain default clang
+else
+    CC ?= clang
+endif
 ifeq "$(CC)" "cc"
 	ifneq "$(shell which clang)" ""
 		CC = clang
@@ -112,6 +119,35 @@ ifeq "$(CC)" "cc"
 	else ifneq "$(shell which gcc)" ""
 		CC = gcc
 	endif
+endif
+
+#----------------------------------------------------------------------
+# Handle SDKROOT on Darwin
+#----------------------------------------------------------------------
+
+ifeq "$(OS)" "Darwin"
+    ifeq "$(SDKROOT)" ""
+        # We haven't otherwise set the SDKROOT, so set it now to macosx
+        SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+    endif
+endif
+
+#----------------------------------------------------------------------
+# SWIFTCC defaults to swift.
+# TODO:
+# If you change the defaults of SWIFTCC, be sure to also change it in the file
+# test/plugins/builder_base.py, which provides a Python way to return the
+# value of the make variable SWIFTCC -- getSwiftCompiler().
+#
+# See also these functions:
+#   o cxx_compiler
+#   o cxx_linker
+#----------------------------------------------------------------------
+SWIFTCC ?= $(shell $(LEVEL)/find-swift.py)
+ifeq "$(SDKROOT)" ""
+	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
+else
+	SWIFTSDKROOT = $(SDKROOT)
 endif
 
 #----------------------------------------------------------------------
@@ -193,13 +229,24 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
+SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
+
+# Setup a default per-user Swift module cache directory.
+SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
+SWIFTFLAGS += -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
+
+CFLAGS += $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
-else
-	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
+	ifneq "$(SDKROOT)" ""
+		CFLAGS += -isysroot "$(SDKROOT)"
+	endif
 endif
 
 CFLAGS += -include $(THIS_FILE_DIR)test_common.h $(TRIPLE_CFLAGS)
+CFLAGS_NO_ARCH := $(CFLAGS)
+CFLAGS += $(ARCHFLAG)$(ARCH)
+
+SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
@@ -213,12 +260,12 @@ ifeq "$(MAKE_DWO)" "YES"
 endif
 
 ifeq "$(MAKE_GMODULES)" "YES"
-	CFLAGS += -fmodules -gmodules
+	CFLAGS += -fmodules -gmodules -fmodules-cache-path=./clang-module-cache
 endif
 
 CXXFLAGS += -std=c++11
 # FIXME: C++ modules aren't supported on all platforms.
-CXXFLAGS += $(subst -fmodules,, $(CFLAGS))
+CXXFLAGS += $(subst -fmodules,, $(subst -fmodules-cache-path=./clang-module-cache,, $(CFLAGS)))
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS)
@@ -385,6 +432,24 @@ ifneq "$(strip $(OBJC_SOURCES))" ""
 endif
 
 #----------------------------------------------------------------------
+# Check if we have any Swift source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(SWIFT_SOURCES))" ""
+	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
+	LDFLAGS +=-L"$(SWIFTLIBS)"
+	SWIFTFLAGS +=-sdk "$(SWIFTSDKROOT)"
+	USESWIFTDRIVER = 1
+endif
+
+#----------------------------------------------------------------------
+# Check if we need the Swift/ObjC interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_OBJC_INTEROP)" "1"
+	SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
+endif
+
+#----------------------------------------------------------------------
 # Check if we have any ObjC++ source files
 #----------------------------------------------------------------------
 ifneq "$(strip $(OBJCXX_SOURCES))" ""
@@ -482,6 +547,10 @@ endif
 #----------------------------------------------------------------------
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
+ifeq "$(USESWIFTDRIVER)" "1"
+$(EXE) : $(SWIFT_SOURCES)
+	$(SWIFTCC) $(SWIFT_SOURCES) $(SWIFTFLAGS) -o "$(EXE)"
+else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
@@ -493,7 +562,7 @@ else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
 	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
 endif
-
+endif
 #----------------------------------------------------------------------
 # Make the archive
 #----------------------------------------------------------------------
@@ -617,6 +686,9 @@ ifneq "$(PCH_OUTPUT)" ""
 endif
 ifneq "$(DSYM)" ""
 	$(RM) -r "$(DSYM)"
+endif
+ifeq "$(MAKE_GMODULES)" "YES"
+	$(RM) -rf ./clang-module-cache
 endif
 ifeq "$(OS)" "Windows_NT"
 # http://llvm.org/pr24589
