@@ -291,6 +291,19 @@ public:
   virtual void emitCxxActionStmts(raw_ostream &OS) const = 0;
 };
 
+/// Generates a comment describing the matched rule being acted upon.
+class DebugCommentAction : public MatchAction {
+private:
+  const PatternToMatch &P;
+
+public:
+  DebugCommentAction(const PatternToMatch &P) : P(P) {}
+
+  virtual void emitCxxActionStmts(raw_ostream &OS) const {
+    OS << "// " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern();
+  }
+};
+
 class MutateOpcodeAction : public MatchAction {
 private:
   const CodeGenInstruction *I;
@@ -310,14 +323,11 @@ public:
 /// support multiple positions to support div/rem fusion or load-multiple
 /// instructions.
 class RuleMatcher {
-  const PatternToMatch &P;
-
   std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
 public:
-
-  RuleMatcher(const PatternToMatch &P) : P(P) {}
+  RuleMatcher() {}
 
   InstructionMatcher &addInstructionMatcher() {
     Matchers.emplace_back(new InstructionMatcher());
@@ -333,9 +343,6 @@ public:
   void emit(raw_ostream &OS) {
     if (Matchers.empty())
       llvm_unreachable("Unexpected empty matcher!");
-
-    OS << "  // Src: " << *P.getSrcPattern() << "\n"
-       << "  // Dst: " << *P.getDstPattern() << "\n";
 
     // The representation supports rules that require multiple roots such as:
     //    %ptr(p0) = ...
@@ -385,7 +392,8 @@ Optional<GlobalISelEmitter::SkipReason>
 GlobalISelEmitter::runOnPattern(const PatternToMatch &P, raw_ostream &OS) {
 
   // Keep track of the matchers and actions to emit.
-  RuleMatcher M(P);
+  RuleMatcher M;
+  M.addAction<DebugCommentAction>(P);
 
   // First, analyze the whole pattern.
   // If the entire pattern has a predicate (e.g., target features), ignore it.
