@@ -552,6 +552,46 @@ define <16 x i8> @combine_unpckl_arg1_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i8> %2
 }
 
+define <8 x i16> @shuffle_combine_unpack_insert(<8 x i16> %a0) {
+; SSE-LABEL: shuffle_combine_unpack_insert:
+; SSE:       # BB#0:
+; SSE-NEXT:    pextrw $2, %xmm0, %eax
+; SSE-NEXT:    pextrw $4, %xmm0, %ecx
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pinsrw $4, %eax, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pinsrw $2, %ecx, %xmm1
+; SSE-NEXT:    movdqa %xmm2, %xmm3
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_combine_unpack_insert:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpextrw $2, %xmm0, %eax
+; AVX-NEXT:    vpextrw $4, %xmm0, %ecx
+; AVX-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm1
+; AVX-NEXT:    vpinsrw $2, %ecx, %xmm0, %xmm2
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX-NEXT:    retq
+  %1 = extractelement <8 x i16> %a0, i32 2
+  %2 = extractelement <8 x i16> %a0, i32 4
+  %3 = insertelement <8 x i16> %a0, i16 %1, i32 4
+  %4 = insertelement <8 x i16> %a0, i16 %2, i32 2
+  %5 = shufflevector <8 x i16> %3, <8 x i16> %4, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  %6 = shufflevector <8 x i16> %5, <8 x i16> %3, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
+  %7 = shufflevector <8 x i16> %5, <8 x i16> %a0, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
+  %8 = shufflevector <8 x i16> %6, <8 x i16> %7, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i16> %8
+}
+
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:
 ; SSE:       # BB#0:

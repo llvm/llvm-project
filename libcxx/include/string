@@ -998,7 +998,7 @@ public:
     basic_string& assign(const value_type* __s);
     basic_string& assign(size_type __n, value_type __c);
     template<class _InputIterator>
-        typename enable_if
+        inline typename enable_if
         <
            __is_exactly_input_iterator<_InputIterator>::value
                 || !__libcpp_string_gets_noexcept_iterator<_InputIterator>::value,
@@ -1006,7 +1006,7 @@ public:
         >::type
         assign(_InputIterator __first, _InputIterator __last);
     template<class _ForwardIterator>
-        typename enable_if
+      inline typename enable_if
         <
             __is_forward_iterator<_ForwardIterator>::value
                  && __libcpp_string_gets_noexcept_iterator<_ForwardIterator>::value,

@@ -136,7 +136,13 @@ static bool PropagateConstantReturn(Function &F) {
   // For more details, see GlobalValue::mayBeDerefined.
   if (!F.isDefinitionExact())
     return false;
-    
+
+  // Don't touch naked functions. The may contain asm returning
+  // value we don't see, so we may end up interprocedurally propagating
+  // the return value incorrectly.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
   // Check to see if this function returns a constant.
   SmallVector<Value *,4> RetVals;
   StructType *STy = dyn_cast<StructType>(F.getReturnType());
