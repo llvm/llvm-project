@@ -446,6 +446,58 @@ TEST(APIntTest, compareLargeIntegers) {
   EXPECT_TRUE(!MinusTwo.slt(MinusTwo));
 }
 
+TEST(APIntTest, binaryOpsWithRawIntegers) {
+  // Single word check.
+  uint64_t E1 = 0x2CA7F46BF6569915ULL;
+  APInt A1(64, E1);
+
+  EXPECT_EQ(A1 & E1, E1);
+  EXPECT_EQ(A1 & 0, 0);
+  EXPECT_EQ(A1 & 1, 1);
+  EXPECT_EQ(A1 & 5, 5);
+  EXPECT_EQ(A1 & UINT64_MAX, E1);
+
+  EXPECT_EQ(A1 | E1, E1);
+  EXPECT_EQ(A1 | 0, E1);
+  EXPECT_EQ(A1 | 1, E1);
+  EXPECT_EQ(A1 | 2, E1 | 2);
+  EXPECT_EQ(A1 | UINT64_MAX, UINT64_MAX);
+
+  EXPECT_EQ(A1 ^ E1, 0);
+  EXPECT_EQ(A1 ^ 0, E1);
+  EXPECT_EQ(A1 ^ 1, E1 ^ 1);
+  EXPECT_EQ(A1 ^ 7, E1 ^ 7);
+  EXPECT_EQ(A1 ^ UINT64_MAX, ~E1);
+
+  // Multiword check.
+  uint64_t N = 0xEB6EB136591CBA21ULL;
+  integerPart E2[4] = {
+    N,
+    0x7B9358BD6A33F10AULL,
+    0x7E7FFA5EADD8846ULL,
+    0x305F341CA00B613DULL
+  };
+  APInt A2(integerPartWidth*4, E2);
+
+  EXPECT_EQ(A2 & N, N);
+  EXPECT_EQ(A2 & 0, 0);
+  EXPECT_EQ(A2 & 1, 1);
+  EXPECT_EQ(A2 & 5, 1);
+  EXPECT_EQ(A2 & UINT64_MAX, N);
+
+  EXPECT_EQ(A2 | N, A2);
+  EXPECT_EQ(A2 | 0, A2);
+  EXPECT_EQ(A2 | 1, A2);
+  EXPECT_EQ(A2 | 2, A2 + 2);
+  EXPECT_EQ(A2 | UINT64_MAX, A2 - N + UINT64_MAX);
+
+  EXPECT_EQ(A2 ^ N, A2 - N);
+  EXPECT_EQ(A2 ^ 0, A2);
+  EXPECT_EQ(A2 ^ 1, A2 - 1);
+  EXPECT_EQ(A2 ^ 7, A2 + 5);
+  EXPECT_EQ(A2 ^ UINT64_MAX, A2 - N + ~N);
+}
+
 TEST(APIntTest, rvalue_arithmetic) {
   // Test all combinations of lvalue/rvalue lhs/rhs of add/sub
 

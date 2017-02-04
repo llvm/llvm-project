@@ -240,7 +240,7 @@ void TracePC::DumpCoverage() {
 // For cmp instructions the interesting value is a XOR of the parameters.
 // The interesting value is mixed up with the PC and is then added to the map.
 
-ATTRIBUTE_NO_SANITIZE_ADDRESS
+ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                                 size_t n, bool StopAtZero) {
   if (!n) return;

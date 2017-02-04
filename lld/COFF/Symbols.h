@@ -154,7 +154,7 @@ public:
                  bool IsExternal = false,
                  const coff_symbol_generic *S = nullptr,
                  SectionChunk *C = nullptr)
-      : DefinedCOFF(DefinedRegularKind, F, N, S), Data(&C->Repl) {
+      : DefinedCOFF(DefinedRegularKind, F, N, S), Data(C ? &C->Repl : nullptr) {
     this->IsExternal = IsExternal;
     this->IsCOMDAT = IsCOMDAT;
   }
