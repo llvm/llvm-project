@@ -53,14 +53,6 @@ public:
 
   void GetStatus(Stream &strm) override;
 
-  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
-                        FileSpec &local_file) override;
-
-  bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
-
-  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                         ProcessInstanceInfoList &process_infos) override;
-
   bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
   int32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) override;
@@ -75,8 +67,6 @@ public:
 
   uint64_t ConvertMmapFlagsToPlatform(const ArchSpec &arch,
                                       unsigned flags) override;
-
-  ConstString GetFullNameForDylib(ConstString basename) override;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformLinux);

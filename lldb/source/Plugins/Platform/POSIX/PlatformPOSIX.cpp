@@ -250,6 +250,38 @@ Error PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
   return error;
 }
 
+Error PlatformPOSIX::GetFileWithUUID(const FileSpec &platform_file,
+                                       const UUID *uuid_ptr,
+                                       FileSpec &local_file) {
+  if (IsRemote() && m_remote_platform_sp)
+      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
+                                                   local_file);
+
+  // Default to the local case
+  local_file = platform_file;
+  return Error();
+}
+
+bool PlatformPOSIX::GetProcessInfo(lldb::pid_t pid,
+                                     ProcessInstanceInfo &process_info) {
+  if (IsHost())
+    return Platform::GetProcessInfo(pid, process_info);
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetProcessInfo(pid, process_info);
+  return false;
+}
+
+uint32_t
+PlatformPOSIX::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                               ProcessInstanceInfoList &process_infos) {
+  if (IsHost())
+    return Platform::FindProcesses(match_info, process_infos);
+  if (m_remote_platform_sp)
+    return
+      m_remote_platform_sp->FindProcesses(match_info, process_infos);
+  return 0;
+}
+
 Error PlatformPOSIX::MakeDirectory(const FileSpec &file_spec,
                                    uint32_t file_permissions) {
   if (m_remote_platform_sp)
@@ -1002,4 +1034,13 @@ size_t PlatformPOSIX::ConnectToWaitingProcesses(Debugger &debugger,
   if (m_remote_platform_sp)
     return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
   return Platform::ConnectToWaitingProcesses(debugger, error);
+}
+
+ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
+  if (basename.IsEmpty())
+    return basename;
+
+  StreamString stream;
+  stream.Printf("lib%s.so", basename.GetCString());
+  return ConstString(stream.GetString());
 }

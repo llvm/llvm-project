@@ -134,21 +134,6 @@ Error PlatformFreeBSD::RunShellCommand(const char *command,
   }
 }
 
-// From PlatformMacOSX only
-Error PlatformFreeBSD::GetFileWithUUID(const FileSpec &platform_file,
-                                       const UUID *uuid_ptr,
-                                       FileSpec &local_file) {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
-                                                   local_file);
-  }
-
-  // Default to the local case
-  local_file = platform_file;
-  return Error();
-}
-
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
@@ -254,33 +239,6 @@ Error PlatformFreeBSD::DisconnectRemote() {
       error.SetErrorString("the platform is not currently connected");
   }
   return error;
-}
-
-bool PlatformFreeBSD::GetProcessInfo(lldb::pid_t pid,
-                                     ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = Platform::GetProcessInfo(pid, process_info);
-  } else if (m_remote_platform_sp) {
-    success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
-
-uint32_t
-PlatformFreeBSD::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                               ProcessInstanceInfoList &process_infos) {
-  uint32_t match_count = 0;
-  if (IsHost()) {
-    // Let the base class figure out the host details
-    match_count = Platform::FindProcesses(match_info, process_infos);
-  } else {
-    // If we are remote, we can only return results if we are connected
-    if (m_remote_platform_sp)
-      match_count =
-          m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  }
-  return match_count;
 }
 
 const char *PlatformFreeBSD::GetUserName(uint32_t uid) {

@@ -84,12 +84,6 @@ void PlatformKalimba::Terminate() {
   Platform::Terminate();
 }
 
-Error PlatformKalimba::GetFileWithUUID(const FileSpec & /*platform_file*/,
-                                       const UUID * /*uuid_ptr*/,
-                                       FileSpec & /*local_file*/) {
-  return Error();
-}
-
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
@@ -104,18 +98,6 @@ PlatformKalimba::PlatformKalimba(bool is_host)
 /// inherited from by the plug-in instance.
 //------------------------------------------------------------------
 PlatformKalimba::~PlatformKalimba() {}
-
-bool PlatformKalimba::GetProcessInfo(lldb::pid_t pid,
-                                     ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = false;
-  } else {
-    if (m_remote_platform_sp)
-      success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
 
 bool PlatformKalimba::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {

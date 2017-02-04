@@ -22,7 +22,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -36,19 +35,9 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using namespace llvm::ELF;
 
 using namespace lld;
-using namespace lld::elf;
-
-// This is for use when debugging LTO.
-static void saveBuffer(StringRef Buffer, const Twine &Path) {
-  std::error_code EC;
-  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
-  if (EC)
-    error("cannot create " + Path + ": " + EC.message());
-  OS << Buffer;
-}
+using namespace lld::coff;
 
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   SmallString<128> ErrStorage;
@@ -67,27 +56,14 @@ static void checkError(Error E) {
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config Conf;
-
-  // LLD supports the new relocations.
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
-  Conf.Options.RelaxELFRelocations = true;
-
-  Conf.RelocModel = Config->Pic ? Reloc::PIC_ : Reloc::Static;
-  Conf.DisableVerify = Config->DisableVerify;
+  Conf.RelocModel = Reloc::PIC_;
+  Conf.DisableVerify = true;
   Conf.DiagHandler = diagnosticHandler;
-  Conf.OptLevel = Config->LTOO;
-
-  // Set up a custom pipeline if we've been asked to.
-  Conf.OptPipeline = Config->LTONewPmPasses;
-  Conf.AAPipeline = Config->LTOAAPipeline;
-
-  if (Config->SaveTemps)
-    checkError(Conf.addSaveTemps(std::string(Config->OutputFile) + ".",
-                                 /*UseInputModulePath*/ true));
-
+  Conf.OptLevel = Config->LTOOptLevel;
   lto::ThinBackend Backend;
-  if (Config->ThinLTOJobs != -1u)
-    Backend = lto::createInProcessThinBackend(Config->ThinLTOJobs);
+  if (Config->LTOJobs != -1u)
+    Backend = lto::createInProcessThinBackend(Config->LTOJobs);
   return llvm::make_unique<lto::LTO>(std::move(Conf), Backend,
                                      Config->LTOPartitions);
 }
@@ -97,22 +73,21 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->body()->Type, nullptr);
+  replaceBody<Undefined>(S, S->body()->getName());
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
-  std::vector<Symbol *> Syms = F.getSymbols();
-  std::vector<lto::SymbolResolution> Resols(Syms.size());
+  std::vector<SymbolBody *> SymBodies = F.getSymbols();
+  std::vector<lto::SymbolResolution> Resols(SymBodies.size());
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    Symbol *Sym = Syms[SymNum];
+    SymbolBody *B = SymBodies[SymNum];
+    Symbol *Sym = B->symbol();
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
-    SymbolBody *B = Sym->body();
 
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
@@ -121,10 +96,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // be removed.
     R.Prevailing =
         !(ObjSym.getFlags() & object::BasicSymbolRef::SF_Undefined) &&
-        B->File == &F;
-
-    R.VisibleToRegularObj =
-        Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
+        B->getFile() == &F;
+    R.VisibleToRegularObj = Sym->IsUsedInRegularObj;
     if (R.Prevailing)
       undefine(Sym);
   }
@@ -146,14 +119,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   for (unsigned I = 0; I != MaxTasks; ++I) {
     if (Buff[I].empty())
       continue;
-    if (Config->SaveTemps) {
-      if (I == 0)
-        saveBuffer(Buff[I], Config->OutputFile + ".lto.o");
-      else
-        saveBuffer(Buff[I], Config->OutputFile + Twine(I) + ".lto.o");
-    }
-    InputFile *Obj = createObjectFile(MemoryBufferRef(Buff[I], "lto.tmp"));
-    Ret.push_back(Obj);
+    Ret.push_back(make<ObjectFile>(MemoryBufferRef(Buff[I], "lto.tmp")));
   }
   return Ret;
 }

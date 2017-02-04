@@ -104,7 +104,7 @@ void ScriptParserBase::tokenize(MemoryBufferRef MB) {
     // so that you can write "file-name.cpp" as one bare token, for example.
     size_t Pos = S.find_first_not_of(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-:!<>^");
+        "0123456789_.$/\\~=+[]*?-!<>^");
 
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.

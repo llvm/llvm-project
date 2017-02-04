@@ -81,11 +81,6 @@ public:
 
   const char *GetGroupName(uint32_t gid) override;
 
-  bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
-
-  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                         ProcessInstanceInfoList &process_infos) override;
-
   Error LaunchProcess(ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
@@ -93,10 +88,6 @@ public:
 
   // NetBSD processes can not be launched by spawning and attaching.
   bool CanDebugProcess() override { return false; }
-
-  // Only on PlatformMacOSX:
-  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
-                        FileSpec &local_file) override;
 
   Error GetSharedModule(const ModuleSpec &module_spec, Process *process,
                         lldb::ModuleSP &module_sp,
