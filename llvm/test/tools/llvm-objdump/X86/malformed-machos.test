@@ -63,3 +63,6 @@ INVALID-SYMBOL-STRX-UNIVERSAL: macho-invalid-symbol-strx-universal' (for archite
 
 RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-lib_ordinal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-LIB_ORDINAL %s
 INVALID-SYMBOL-LIB_ORDINAL: macho-invalid-symbol-lib_ordinal': truncated or malformed object (bad library ordinal: 7 for symbol at index 2)
+
+RUN: llvm-objdump -macho -objc-meta-data %p/Inputs/macho-invalid-bind-entry | FileCheck -check-prefix INVALID-BIND-ENTRY %s
+INVALID-BIND-ENTRY: 0000000100020c90 0x2d0409887202e473

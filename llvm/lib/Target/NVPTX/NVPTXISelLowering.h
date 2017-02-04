@@ -530,6 +530,8 @@ public:
                           int &ExtraSteps, bool &UseOneConst,
                           bool Reciprocal) const override;
 
+  unsigned combineRepeatedFPDivisors() const override { return 2; }
+
   bool allowFMA(MachineFunction &MF, CodeGenOpt::Level OptLevel) const;
   bool allowUnsafeFPMath(MachineFunction &MF) const;
 

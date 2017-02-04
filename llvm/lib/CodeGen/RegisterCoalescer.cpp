@@ -1472,7 +1472,7 @@ void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg,
 
     // If SrcReg wasn't read, it may still be the case that DstReg is live-in
     // because SrcReg is a sub-register.
-    if (DstInt && !Reads && SubIdx)
+    if (DstInt && !Reads && SubIdx && !UseMI->isDebugValue())
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
     // Replace SrcReg with DstReg in all UseMI operands.

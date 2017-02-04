@@ -16,14 +16,22 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/MachO.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 namespace {
+
 class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
   bool getAArch64FixupKindMachOInfo(const MCFixup &Fixup, unsigned &RelocType,
                                   const MCSymbolRefExpr *Sym,
@@ -38,7 +46,8 @@ public:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
 };
-}
+
+} // end anonymous namespace
 
 bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     const MCFixup &Fixup, unsigned &RelocType, const MCSymbolRefExpr *Sym,
@@ -51,18 +60,18 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return false;
 
   case FK_Data_1:
-    Log2Size = llvm::Log2_32(1);
+    Log2Size = Log2_32(1);
     return true;
   case FK_Data_2:
-    Log2Size = llvm::Log2_32(2);
+    Log2Size = Log2_32(2);
     return true;
   case FK_Data_4:
-    Log2Size = llvm::Log2_32(4);
+    Log2Size = Log2_32(4);
     if (Sym->getKind() == MCSymbolRefExpr::VK_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case FK_Data_8:
-    Log2Size = llvm::Log2_32(8);
+    Log2Size = Log2_32(8);
     if (Sym->getKind() == MCSymbolRefExpr::VK_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
@@ -72,7 +81,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   case AArch64::fixup_aarch64_ldst_imm12_scale4:
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
-    Log2Size = llvm::Log2_32(4);
+    Log2Size = Log2_32(4);
     switch (Sym->getKind()) {
     default:
       return false;
@@ -87,14 +96,13 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
       return true;
     }
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
-    Log2Size = llvm::Log2_32(4);
+    Log2Size = Log2_32(4);
     // This encompasses the relocation for the whole 21-bit value.
     switch (Sym->getKind()) {
-    default: {
+    default:
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "ADR/ADRP relocations must be GOT relative");
       return false;
-    }
     case MCSymbolRefExpr::VK_PAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGE21);
       return true;
@@ -108,7 +116,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return true;
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
-    Log2Size = llvm::Log2_32(4);
+    Log2Size = Log2_32(4);
     RelocType = unsigned(MachO::ARM64_RELOC_BRANCH26);
     return true;
   }

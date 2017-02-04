@@ -21,11 +21,11 @@ using namespace llvm;
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV, DenseSet<const GlobalValue *> *GlobalsToImport) {
+    const GlobalValue *SGV, SetVector<GlobalValue *> *GlobalsToImport) {
 
   // For alias, we tie the definition to the base object. Extract it and recurse
   if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
-    if (GA->hasWeakAnyLinkage())
+    if (GA->isInterposable())
       return false;
     const GlobalObject *GO = GA->getBaseObject();
     if (!GO->hasLinkOnceODRLinkage())
@@ -34,7 +34,7 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
         GO, GlobalsToImport);
   }
   // Only import the globals requested for importing.
-  if (GlobalsToImport->count(SGV))
+  if (GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
     return true;
   // Otherwise no.
   return false;
@@ -57,7 +57,8 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
     return false;
 
   if (isPerformingImport()) {
-    assert((!GlobalsToImport->count(SGV) || !isNonRenamableLocal(*SGV)) &&
+    assert((!GlobalsToImport->count(const_cast<GlobalValue *>(SGV)) ||
+            !isNonRenamableLocal(*SGV)) &&
            "Attempting to promote non-renamable local");
     // We don't know for sure yet if we are importing this value (as either
     // a reference or a def), since we are simply walking all values in the
@@ -254,9 +255,8 @@ bool FunctionImportGlobalProcessing::run() {
   return false;
 }
 
-bool llvm::renameModuleForThinLTO(
-    Module &M, const ModuleSummaryIndex &Index,
-    DenseSet<const GlobalValue *> *GlobalsToImport) {
+bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+                                  SetVector<GlobalValue *> *GlobalsToImport) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport);
   return ThinLTOProcessing.run();
 }

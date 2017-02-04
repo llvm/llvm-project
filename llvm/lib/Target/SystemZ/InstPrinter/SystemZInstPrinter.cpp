@@ -1,4 +1,4 @@
-//===-- SystemZInstPrinter.cpp - Convert SystemZ MCInst to assembly syntax ===//
+//===- SystemZInstPrinter.cpp - Convert SystemZ MCInst to assembly syntax -===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,10 +10,13 @@
 #include "SystemZInstPrinter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 

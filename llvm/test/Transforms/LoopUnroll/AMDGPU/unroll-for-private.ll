@@ -109,6 +109,40 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+; Check we do not enforce unroll if alloca is dynamic
+; CHECK-LABEL: @dynamic_size_alloca(
+; CHECK: alloca i32, i32 %n
+; CHECK:       for.body:
+; CHECK:       icmp eq i32 %{{.*}}, 100
+; CHECK:       br
+
+define void @dynamic_size_alloca(i32 addrspace(1)* nocapture %a, i32 %n, i32 %x) {
+entry:
+  %arr = alloca i32, i32 %n, align 4
+  %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds i32, i32* %arr, i32 %x
+  %tmp15 = load i32, i32* %arrayidx5, align 4
+  %arrayidx7 = getelementptr inbounds i32, i32 addrspace(1)* %a, i32 %tmp1
+  store i32 %tmp15, i32 addrspace(1)* %arrayidx7, align 4
+  ret void
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.015 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %idxprom = sext i32 %i.015 to i64
+  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %a, i64 %idxprom
+  %tmp16 = load i32, i32 addrspace(1)* %arrayidx, align 4
+  %add = add nsw i32 %i.015, %tmp1
+  %rem = srem i32 %add, 64
+  %arrayidx3 = getelementptr inbounds i32, i32* %arr, i32 %rem
+  store i32 %tmp16, i32* %arrayidx3, align 4
+  %inc = add nuw nsw i32 %i.015, 1
+  %exitcond = icmp eq i32 %inc, 100
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
 declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1

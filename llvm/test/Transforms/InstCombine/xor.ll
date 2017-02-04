@@ -321,7 +321,7 @@ define i32 @test25(i32 %g, i32 %h) {
 
 define i32 @test26(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[T4:%.*]] = and i32 %a, %b
+; CHECK-NEXT:    [[T4:%.*]] = and i32 %b, %a
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1

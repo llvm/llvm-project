@@ -335,14 +335,14 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 }
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo <= Desc.NumOperands);
+  assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo <= Desc.NumOperands);
+  assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -358,7 +358,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 }
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo <= Desc.NumOperands);
+  assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.OpInfo[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
@@ -402,7 +402,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
-  assert(OpNo <= Desc.NumOperands);
+  assert(OpNo < Desc.NumOperands);
   unsigned RCID = Desc.OpInfo[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }

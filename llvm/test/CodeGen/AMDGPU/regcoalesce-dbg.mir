@@ -1,0 +1,76 @@
+# RUN: llc -march=amdgcn -run-pass simple-register-coalescing -o - %s | FileCheck %s
+
+# Test that register coalescing does not allow a call to
+# LIS->getInstructionIndex with a DBG_VALUE instruction, which does not have
+# a slot index.
+
+# CHECK: %13.sub2 = S_MOV_B32 0
+# CHECK: DBG_VALUE{{.*}}debug-use %13.sub2
+
+--- |
+  define void @test(i32 addrspace(1)* %out) { ret void }
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4, producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4)
+  !1 = !DILocalVariable(name: "a", scope: !2, file: !4, line: 126, type: !6)
+  !2 = distinct !DISubprogram(name: "test", scope: !4, file: !4, line: 1, type: !3, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !5)
+  !3 = !DISubroutineType(types: !4)
+  !4 = !{null}
+  !5 = !{!1}
+  !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 32)
+  !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !8 = !DIExpression()
+  !9 = !DILocation(line: 126, column: 9, scope: !2)
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vreg_64 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vreg_64 }
+  - { id: 20, class: vreg_64 }
+liveins:         
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '%vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: %sgpr0_sgpr1, %vgpr0
+  
+    %3 = COPY killed %vgpr0
+    %0 = COPY killed %sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %5 = S_LOAD_DWORD_IMM killed %0, 13, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    %18 = V_ASHRREV_I32_e32 31, %3, implicit %exec
+    undef %19.sub0 = COPY killed %3
+    %19.sub1 = COPY killed %18
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    DBG_VALUE debug-use %11, debug-use _, !1, !8, debug-location !9
+    undef %12.sub0 = COPY killed %11
+    %12.sub1 = COPY killed %10
+    undef %13.sub0_sub1 = COPY killed %4
+    %13.sub2_sub3 = COPY killed %12
+    %20 = V_LSHL_B64 killed %19, 2, implicit %exec
+    %16 = COPY killed %5
+    BUFFER_STORE_DWORD_ADDR64 killed %16, killed %20, killed %13, 0, 0, 0, 0, 0, implicit %exec :: (store 4 into %ir.out)
+    S_ENDPGM
+
+...

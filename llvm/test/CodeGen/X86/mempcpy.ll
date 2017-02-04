@@ -1,5 +1,4 @@
 ;  RUN: llc < %s -mtriple=x86_64-unknown-linux -O2 | FileCheck %s
-;  RUN: llc < %s -mtriple=i686-unknown-linux -O2 | FileCheck %s
 
 ; This test checks that:
 ; (1)  mempcpy is lowered as memcpy, and 
@@ -11,12 +10,15 @@
 ; the first instance to be reused as the return value. This allows the check for
 ; (2) to be expressed as verifying that the MOV to store DST+N to G and
 ; the MOV to copy DST+N to %rax use the same source register.
+
+; Also see mempcpy-32.ll
+
 @G = common global i8* null, align 8
 
 ; CHECK-LABEL: RET_MEMPCPY:
-; CHECK: mov{{.*}} [[REG:%[er][a-z0-9]+]], {{.*}}G
-; CHECK: call{{.*}} {{.*}}memcpy
-; CHECK: mov{{.*}} [[REG]], %{{[er]}}ax
+; CHECK: movq [[REG:%r[a-z0-9]+]], {{.*}}G
+; CHECK: callq {{.*}}memcpy
+; CHECK: movq [[REG]], %rax
 ;
 define i8* @RET_MEMPCPY(i8* %DST, i8* %SRC, i64 %N) {
   %add.ptr = getelementptr inbounds i8, i8* %DST, i64 %N

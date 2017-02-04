@@ -110,7 +110,7 @@ define i32 @test6(i32 %x) {
 define i32 @test7(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 %b, -1
-; CHECK-NEXT:    [[XOR:%.*]] = or i32 %a, [[B_NOT]]
+; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], %a
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %or = or i32 %a, %b
@@ -123,7 +123,7 @@ define i32 @test7(i32 %a, i32 %b) {
 define i32 @test8(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[B_NOT:%.*]] = xor i32 %b, -1
-; CHECK-NEXT:    [[XOR:%.*]] = or i32 %a, [[B_NOT]]
+; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[B_NOT]], %a
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %neg = xor i32 %a, -1

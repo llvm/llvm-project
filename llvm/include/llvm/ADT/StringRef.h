@@ -600,7 +600,7 @@ namespace llvm {
       return drop_back(size() - N);
     }
 
-    /// Return a StringRef equal to 'this' but with only the first \p N
+    /// Return a StringRef equal to 'this' but with only the last \p N
     /// elements remaining.  If \p N is greater than the length of the
     /// string, the entire string is returned.
     LLVM_NODISCARD

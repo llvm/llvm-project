@@ -27,8 +27,10 @@
 // The coverage counters and PCs.
 // These are declared as global variables named "__sancov_*" to simplify
 // experiments with inlined instrumentation.
-alignas(8) uint8_t
-    __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+alignas(8) ATTRIBUTE_INTERFACE
+uint8_t __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+
+ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
 
 namespace fuzzer {
@@ -238,7 +240,7 @@ void TracePC::DumpCoverage() {
 // For cmp instructions the interesting value is a XOR of the parameters.
 // The interesting value is mixed up with the PC and is then added to the map.
 
-ATTRIBUTE_NO_SANITIZE_ADDRESS
+ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                                 size_t n, bool StopAtZero) {
   if (!n) return;

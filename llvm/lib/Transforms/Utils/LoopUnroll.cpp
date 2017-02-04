@@ -366,7 +366,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
       RuntimeTripCount = false;
     else {
       DEBUG(
-          dbgs() << "Wont unroll; prolog and epilog code could not be inserted "
+          dbgs() << "Wont unroll; remainder loop could not be generated"
                     "when assuming runtime trip count\n");
       return false;
     }

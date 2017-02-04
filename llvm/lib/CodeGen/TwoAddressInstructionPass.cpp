@@ -905,7 +905,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
     ++End;
   }
 
-  // Check if the reschedule will not break depedencies.
+  // Check if the reschedule will not break dependencies.
   unsigned NumVisited = 0;
   MachineBasicBlock::iterator KillPos = KillMI;
   ++KillPos;

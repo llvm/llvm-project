@@ -190,7 +190,7 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %A, true
-; CHECK-NEXT:    [[C:%.*]] = or i1 %B, [[NOT]]
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[NOT]], %B
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -201,7 +201,7 @@ define i1 @test63(i1 %A, i1 %B) {
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> %A, <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> %B, [[NOT]]
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i1> [[NOT]], %B
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>

@@ -368,6 +368,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           TypeServer2Record &Record) {
+  error(IO.mapGuid(Record.Guid));
+  error(IO.mapInteger(Record.Age));
+  error(IO.mapStringZ(Record.Name));
   return Error::success();
 }
 

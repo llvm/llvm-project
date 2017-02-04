@@ -342,23 +342,18 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
   ret void
 }
 
-; FIXME: Failed to fold to vpermil2ps
 define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr) {
 ; X32-LABEL: buildvector_v4f32_07z6:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,1,2,3]
-; X32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],zero,xmm0[2]
+; X32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm1[0],xmm0[3],zero,xmm0[2]
 ; X32-NEXT:    vmovaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: buildvector_v4f32_07z6:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,1,2,3]
-; X64-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm1[2]
+; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[3],zero,xmm1[2]
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %b2 = extractelement <4 x float> %b, i32 2
