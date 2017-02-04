@@ -512,13 +512,16 @@ template <class ELFT> void LinkerScript<ELFT>::process(BaseCommand &Base) {
 }
 
 template <class ELFT>
-static std::vector<OutputSectionBase *>
-findSections(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
+static OutputSectionBase *
+findSection(StringRef Name, const std::vector<OutputSectionBase *> &Sections) {
+  auto End = Sections.end();
+  auto HasName = [=](OutputSectionBase *Sec) { return Sec->getName() == Name; };
+  auto I = std::find_if(Sections.begin(), End, HasName);
   std::vector<OutputSectionBase *> Ret;
-  for (OutputSectionBase *Sec : Sections)
-    if (Sec->getName() == Name)
-      Ret.push_back(Sec);
-  return Ret;
+  if (I == End)
+    return nullptr;
+  assert(std::find_if(I + 1, End, HasName) == End);
+  return *I;
 }
 
 // This function searches for a memory region to place the given output
@@ -563,12 +566,10 @@ template <class ELFT>
 void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
   if (Cmd->LMAExpr)
     LMAOffset = Cmd->LMAExpr(Dot) - Dot;
-  std::vector<OutputSectionBase *> Sections =
-      findSections<ELFT>(Cmd->Name, *OutputSections);
-  if (Sections.empty())
+  OutputSectionBase *Sec = findSection<ELFT>(Cmd->Name, *OutputSections);
+  if (!Sec)
     return;
 
-  OutputSectionBase *Sec = Sections[0];
   // Try and find an appropriate memory region to assign offsets in.
   CurMemRegion = findMemoryRegion(Cmd, Sec);
   if (CurMemRegion)
@@ -584,8 +585,6 @@ void LinkerScript<ELFT>::assignOffsets(OutputSectionCommand *Cmd) {
                .base();
   for (auto I = Cmd->Commands.begin(); I != E; ++I)
     process(**I);
-  for (OutputSectionBase *Base : Sections)
-    switchTo(Base);
   flush();
   std::for_each(E, Cmd->Commands.end(),
                 [this](std::unique_ptr<BaseCommand> &B) { process(*B.get()); });
@@ -602,7 +601,7 @@ template <class ELFT> void LinkerScript<ELFT>::removeEmptyCommands() {
       Opt.Commands.begin(), Opt.Commands.end(),
       [&](const std::unique_ptr<BaseCommand> &Base) {
         if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
-          return findSections<ELFT>(Cmd->Name, *OutputSections).empty();
+          return !findSection<ELFT>(Cmd->Name, *OutputSections);
         return false;
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
@@ -626,11 +625,10 @@ template <class ELFT> void LinkerScript<ELFT>::adjustSectionsBeforeSorting() {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
     if (!Cmd)
       continue;
-    std::vector<OutputSectionBase *> Secs =
-        findSections<ELFT>(Cmd->Name, *OutputSections);
-    if (!Secs.empty()) {
-      Flags = Secs[0]->Flags;
-      Type = Secs[0]->Type;
+    if (OutputSectionBase *Sec =
+            findSection<ELFT>(Cmd->Name, *OutputSections)) {
+      Flags = Sec->Flags;
+      Type = Sec->Type;
       continue;
     }
 
