@@ -821,7 +821,9 @@ def main(vDictArgs):
         bOk, strMsg = create_symlinks(
             vDictArgs, strFrameworkPythonDir, strLldbLibDir)
 
-    if bOk:
+    bUseSystemSix = "--useSystemSix" in vDictArgs
+
+    if not bUseSystemSix and bOk:
         bOk, strMsg = copy_six(vDictArgs, strFrameworkPythonDir)
 
     if bOk:

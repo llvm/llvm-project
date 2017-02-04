@@ -698,6 +698,13 @@ public:
   /// \returns *this after ANDing with RHS.
   APInt &operator&=(const APInt &RHS);
 
+  /// \brief Bitwise AND assignment operator.
+  ///
+  /// Performs a bitwise AND operation on this APInt and RHS. RHS is
+  /// logically zero-extended or truncated to match the bit-width of
+  /// the LHS.
+  APInt &operator&=(uint64_t RHS);
+
   /// \brief Bitwise OR assignment operator.
   ///
   /// Performs a bitwise OR operation on this APInt and RHS. The result is
@@ -728,6 +735,21 @@ public:
   ///
   /// \returns *this after XORing with RHS.
   APInt &operator^=(const APInt &RHS);
+
+  /// \brief Bitwise XOR assignment operator.
+  ///
+  /// Performs a bitwise XOR operation on this APInt and RHS. RHS is
+  /// logically zero-extended or truncated to match the bit-width of
+  /// the LHS.
+  APInt &operator^=(uint64_t RHS) {
+    if (isSingleWord()) {
+      VAL ^= RHS;
+      clearUnusedBits();
+    } else {
+      pVal[0] ^= RHS;
+    }
+    return *this;
+  }
 
   /// \brief Multiplication assignment operator.
   ///
@@ -1722,6 +1744,36 @@ struct APInt::mu {
 inline bool operator==(uint64_t V1, const APInt &V2) { return V2 == V1; }
 
 inline bool operator!=(uint64_t V1, const APInt &V2) { return V2 != V1; }
+
+inline APInt operator&(APInt a, uint64_t RHS) {
+  a &= RHS;
+  return a;
+}
+
+inline APInt operator&(uint64_t LHS, APInt b) {
+  b &= LHS;
+  return b;
+}
+
+inline APInt operator|(APInt a, uint64_t RHS) {
+  a |= RHS;
+  return a;
+}
+
+inline APInt operator|(uint64_t LHS, APInt b) {
+  b |= LHS;
+  return b;
+}
+
+inline APInt operator^(APInt a, uint64_t RHS) {
+  a ^= RHS;
+  return a;
+}
+
+inline APInt operator^(uint64_t LHS, APInt b) {
+  b ^= LHS;
+  return b;
+}
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APInt &I) {
   I.print(OS, true);

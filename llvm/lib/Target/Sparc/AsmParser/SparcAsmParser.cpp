@@ -9,32 +9,49 @@
 
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <memory>
 
 using namespace llvm;
 
 // The generated AsmMatcher SparcGenAsmMatcher uses "Sparc" as the target
 // namespace. But SPARC backend uses "SP" as its namespace.
 namespace llvm {
-  namespace Sparc {
+namespace Sparc {
+
     using namespace SP;
-  }
-}
+
+} // end namespace Sparc
+} // end namespace llvm
 
 namespace {
-class SparcOperand;
-class SparcAsmParser : public MCTargetAsmParser {
 
+class SparcOperand;
+
+class SparcAsmParser : public MCTargetAsmParser {
   MCAsmParser &Parser;
 
   /// @name Auto-generated Match Functions
@@ -95,8 +112,9 @@ public:
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
-
 };
+
+} // end anonymous namespace
 
   static const MCPhysReg IntRegs[32] = {
     Sparc::G0, Sparc::G1, Sparc::G2, Sparc::G3,
@@ -166,6 +184,8 @@ public:
     Sparc::C16_C17, Sparc::C18_C19, Sparc::C20_C21, Sparc::C22_C23,
     Sparc::C24_C25, Sparc::C26_C27, Sparc::C28_C29, Sparc::C30_C31};
   
+namespace {
+
 /// SparcOperand - Instances of this class represent a parsed Sparc machine
 /// instruction.
 class SparcOperand : public MCParsedAsmOperand {
@@ -219,6 +239,7 @@ private:
     struct ImmOp Imm;
     struct MemOp Mem;
   };
+
 public:
   SparcOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
 
@@ -464,7 +485,7 @@ public:
   }
 };
 
-} // end namespace
+} // end anonymous namespace
 
 bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
                                SmallVectorImpl<MCInst> &Instructions) {
@@ -591,9 +612,8 @@ bool SparcAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Implement any new match types added!");
 }
 
-bool SparcAsmParser::
-ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc)
-{
+bool SparcAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                   SMLoc &EndLoc) {
   const AsmToken &Tok = Parser.getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
@@ -695,7 +715,7 @@ ParseDirective(AsmToken DirectiveID)
 
 bool SparcAsmParser:: parseDirectiveWord(unsigned Size, SMLoc L) {
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    for (;;) {
+    while (true) {
       const MCExpr *Value;
       if (getParser().parseExpression(Value))
         return true;
@@ -717,7 +737,6 @@ bool SparcAsmParser:: parseDirectiveWord(unsigned Size, SMLoc L) {
 
 OperandMatchResultTy
 SparcAsmParser::parseMEMOperand(OperandVector &Operands) {
-
   SMLoc S, E;
   unsigned BaseReg = 0;
 
@@ -824,7 +843,6 @@ SparcAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 OperandMatchResultTy
 SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
                                      bool isCall) {
-
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   const MCExpr *EVal;
@@ -910,11 +928,9 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
 
 OperandMatchResultTy
 SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
-
   // parse (,a|,pn|,pt)+
 
   while (getLexer().is(AsmToken::Comma)) {
-
     Parser.Lex(); // Eat the comma
 
     if (!getLexer().is(AsmToken::Identifier))
@@ -929,10 +945,8 @@ SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool SparcAsmParser::matchRegisterName(const AsmToken &Tok,
-                                       unsigned &RegNo,
-                                       unsigned &RegKind)
-{
+bool SparcAsmParser::matchRegisterName(const AsmToken &Tok, unsigned &RegNo,
+                                       unsigned &RegKind) {
   int64_t intVal = 0;
   RegNo = 0;
   RegKind = SparcOperand::rk_None;
@@ -1211,8 +1225,7 @@ static bool hasGOTReference(const MCExpr *Expr) {
 
 const SparcMCExpr *
 SparcAsmParser::adjustPICRelocation(SparcMCExpr::VariantKind VK,
-                                    const MCExpr *subExpr)
-{
+                                    const MCExpr *subExpr) {
   // When in PIC mode, "%lo(...)" and "%hi(...)" behave differently.
   // If the expression refers contains _GLOBAL_OFFSETE_TABLE, it is
   // actually a %pc10 or %pc22 relocation. Otherwise, they are interpreted
@@ -1236,8 +1249,7 @@ SparcAsmParser::adjustPICRelocation(SparcMCExpr::VariantKind VK,
 }
 
 bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
-                                            SMLoc &EndLoc)
-{
+                                            SMLoc &EndLoc) {
   AsmToken Tok = Parser.getTok();
   if (!Tok.is(AsmToken::Identifier))
     return false;

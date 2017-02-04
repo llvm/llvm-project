@@ -89,11 +89,13 @@ Value *InstCombiner::EmitGEPOffset(User *GEP) {
 /// Return true if it is desirable to convert an integer computation from a
 /// given bit width to a new bit width.
 /// We don't want to convert from a legal to an illegal type or from a smaller
-/// to a larger illegal type.
+/// to a larger illegal type. A width of '1' is always treated as a legal type
+/// because i1 is a fundamental type in IR, and there are many specialized
+/// optimizations for i1 types.
 bool InstCombiner::shouldChangeType(unsigned FromWidth,
                                     unsigned ToWidth) const {
-  bool FromLegal = DL.isLegalInteger(FromWidth);
-  bool ToLegal = DL.isLegalInteger(ToWidth);
+  bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
+  bool ToLegal = ToWidth == 1 || DL.isLegalInteger(ToWidth);
 
   // If this is a legal integer from type, and the result would be an illegal
   // type, don't do the transformation.
@@ -110,7 +112,9 @@ bool InstCombiner::shouldChangeType(unsigned FromWidth,
 
 /// Return true if it is desirable to convert a computation from 'From' to 'To'.
 /// We don't want to convert from a legal to an illegal type or from a smaller
-/// to a larger illegal type.
+/// to a larger illegal type. i1 is always treated as a legal type because it is
+/// a fundamental type in IR, and there are many specialized optimizations for
+/// i1 types.
 bool InstCombiner::shouldChangeType(Type *From, Type *To) const {
   assert(From->isIntegerTy() && To->isIntegerTy());
 

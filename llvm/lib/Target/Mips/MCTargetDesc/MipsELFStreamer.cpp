@@ -8,9 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsELFStreamer.h"
+#include "MipsOptionRecord.h"
 #include "MipsTargetStreamer.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 
 using namespace llvm;
