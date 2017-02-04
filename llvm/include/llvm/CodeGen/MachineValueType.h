@@ -231,17 +231,17 @@ class MVT {
 
     /// is32BitVector - Return true if this is a 32-bit vector type.
     bool is32BitVector() const {
-      return (SimpleTy == MVT::v4i8  || SimpleTy == MVT::v2i16 ||
-              SimpleTy == MVT::v1i32 || SimpleTy == MVT::v2f16 ||
-              SimpleTy == MVT::v1f32);
+      return (SimpleTy == MVT::v32i1 || SimpleTy == MVT::v4i8  ||
+              SimpleTy == MVT::v2i16 || SimpleTy == MVT::v1i32 ||
+              SimpleTy == MVT::v2f16 || SimpleTy == MVT::v1f32);
     }
 
     /// is64BitVector - Return true if this is a 64-bit vector type.
     bool is64BitVector() const {
-      return (SimpleTy == MVT::v8i8  || SimpleTy == MVT::v4i16 ||
-              SimpleTy == MVT::v2i32 || SimpleTy == MVT::v1i64 ||
-              SimpleTy == MVT::v4f16 || SimpleTy == MVT::v2f32 ||
-              SimpleTy == MVT::v1f64);
+      return (SimpleTy == MVT::v64i1 || SimpleTy == MVT::v8i8  ||
+              SimpleTy == MVT::v4i16 || SimpleTy == MVT::v2i32 ||
+              SimpleTy == MVT::v1i64 || SimpleTy == MVT::v4f16 ||
+              SimpleTy == MVT::v2f32 || SimpleTy == MVT::v1f64);
     }
 
     /// is128BitVector - Return true if this is a 128-bit vector type.

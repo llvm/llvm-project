@@ -554,13 +554,6 @@ template <class ELFT> OutputSectionFactory<ELFT>::OutputSectionFactory() {}
 
 template <class ELFT> OutputSectionFactory<ELFT>::~OutputSectionFactory() {}
 
-template <class ELFT>
-std::pair<OutputSectionBase *, bool>
-OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
-                                   StringRef OutsecName) {
-  SectionKey Key = createKey(C, OutsecName);
-  return create(Key, C);
-}
 
 static uint64_t getIncompatibleFlags(uint64_t Flags) {
   return Flags & (SHF_ALLOC | SHF_TLS);
@@ -580,8 +573,9 @@ static bool canMergeToProgbits(unsigned Type) {
 
 template <class ELFT>
 std::pair<OutputSectionBase *, bool>
-OutputSectionFactory<ELFT>::create(const SectionKey &Key,
-                                   InputSectionBase<ELFT> *C) {
+OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
+                                   StringRef OutsecName) {
+  SectionKey Key = createKey(C, OutsecName);
   uintX_t Flags = getOutFlags(C);
   OutputSectionBase *&Sec = Map[Key];
   if (Sec) {

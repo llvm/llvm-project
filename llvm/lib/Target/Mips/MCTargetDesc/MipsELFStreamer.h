@@ -1,4 +1,4 @@
-//===-------- MipsELFStreamer.h - ELF Object Output -----------------------===//
+//===- MipsELFStreamer.h - ELF Object Output --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,6 +21,7 @@
 #include <memory>
 
 namespace llvm {
+
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
@@ -31,12 +32,10 @@ class MipsELFStreamer : public MCELFStreamer {
   MipsRegInfoRecord *RegInfoRecord;
   SmallVector<MCSymbol*, 4> Labels;
 
-
 public:
   MipsELFStreamer(MCContext &Context, MCAsmBackend &MAB, raw_pwrite_stream &OS,
                   MCCodeEmitter *Emitter)
       : MCELFStreamer(Context, MAB, OS, Emitter) {
-
     RegInfoRecord = new MipsRegInfoRecord(this, Context);
     MipsOptionRecords.push_back(
         std::unique_ptr<MipsRegInfoRecord>(RegInfoRecord));
@@ -72,5 +71,6 @@ public:
 MCELFStreamer *createMipsELFStreamer(MCContext &Context, MCAsmBackend &MAB,
                                      raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll);
-} // namespace llvm.
-#endif
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSELFSTREAMER_H

@@ -293,15 +293,6 @@ template <> struct simplify_type<polly::MemAccInst> {
 
 namespace polly {
 
-/// Check if the PHINode has any incoming Invoke edge.
-///
-/// @param PN The PHINode to check.
-///
-/// @return If the PHINode has an incoming BB that jumps to the parent BB
-///         of the PHINode with an invoke instruction, return true,
-///         otherwise, return false.
-bool hasInvokeEdge(const llvm::PHINode *PN);
-
 /// Simplify the region to have a single unconditional entry edge and a
 /// single exit edge.
 ///

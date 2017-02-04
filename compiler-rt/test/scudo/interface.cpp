@@ -39,8 +39,8 @@ int main(int argc, char **argv)
   }
   if (!strcmp(argv[1], "heap-size")) {
     // Ensures that __sanitizer_get_heap_size can be called before any other
-    // allocator function. At this point, this heap size should be 0.
-    assert(__sanitizer_get_heap_size() == 0);
+    // allocator function.
+    assert(__sanitizer_get_heap_size() >= 0);
   }
 
   return 0;

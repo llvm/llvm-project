@@ -11,9 +11,15 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 using namespace llvm;
 

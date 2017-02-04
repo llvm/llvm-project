@@ -15,8 +15,10 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_INSTPRINTER_SYSTEMZINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
+#include <cstdint>
 
 namespace llvm {
+
 class MCOperand;
 
 class SystemZInstPrinter : public MCInstPrinter {
@@ -70,6 +72,7 @@ private:
   // This forms part of the instruction name rather than the operand list.
   void printCond4Operand(const MCInst *MI, int OpNum, raw_ostream &O);
 };
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_SYSTEMZ_INSTPRINTER_SYSTEMZINSTPRINTER_H
