@@ -7778,6 +7778,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                                      VT.getSizeInBits())))
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Shorter);
   }
+
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
   if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
@@ -7799,6 +7800,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       }
     }
   }
+
   // fold (trunc (concat ... x ...)) -> (concat ..., (trunc x), ...)),
   // where ... are all 'undef'.
   if (N0.getOpcode() == ISD::CONCAT_VECTORS && !LegalTypes) {
