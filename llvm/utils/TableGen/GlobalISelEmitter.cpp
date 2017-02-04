@@ -285,6 +285,11 @@ public:
 
 //===- Actions ------------------------------------------------------------===//
 
+/// An action taken when all Matcher predicates succeeded for a parent rule.
+///
+/// Typical actions include:
+/// * Changing the opcode of an instruction.
+/// * Adding an operand to an instruction.
 class MatchAction {
 public:
   virtual ~MatchAction() {}
@@ -304,6 +309,8 @@ public:
   }
 };
 
+/// Generates code to set the opcode (really, the MCInstrDesc) of a matched
+/// instruction to a given Instruction.
 class MutateOpcodeAction : public MatchAction {
 private:
   const CodeGenInstruction *I;
@@ -318,12 +325,15 @@ public:
 };
 
 /// Generates code to check that a match rule matches.
-///
-/// This currently supports a single match position but could be extended to
-/// support multiple positions to support div/rem fusion or load-multiple
-/// instructions.
 class RuleMatcher {
+  /// A list of matchers that all need to succeed for the current rule to match.
+  /// FIXME: This currently supports a single match position but could be
+  /// extended to support multiple positions to support div/rem fusion or
+  /// load-multiple instructions.
   std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
+
+  /// A list of actions that need to be taken when all predicates in this rule
+  /// have succeeded.
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
 public:
