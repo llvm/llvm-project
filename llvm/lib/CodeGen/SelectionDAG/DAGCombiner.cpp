@@ -7778,6 +7778,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                                      VT.getSizeInBits())))
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Shorter);
   }
+
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
   if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
@@ -7799,6 +7800,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       }
     }
   }
+
   // fold (trunc (concat ... x ...)) -> (concat ..., (trunc x), ...)),
   // where ... are all 'undef'.
   if (N0.getOpcode() == ISD::CONCAT_VECTORS && !LegalTypes) {
@@ -12775,10 +12777,6 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
   EVT VT = InVec.getValueType();
 
-  // If we can't generate a legal BUILD_VECTOR, exit
-  if (LegalOperations && !TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
-    return SDValue();
-
   // Check that we know which element is being inserted
   if (!isa<ConstantSDNode>(EltNo))
     return SDValue();
@@ -12805,6 +12803,10 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     }
   }
 
+  // If we can't generate a legal BUILD_VECTOR, exit
+  if (LegalOperations && !TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
+    return SDValue();
+
   // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
   // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
   // vector elements.
@@ -12826,11 +12828,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     // All the operands of BUILD_VECTOR must have the same type;
     // we enforce that here.
     EVT OpVT = Ops[0].getValueType();
-    if (InVal.getValueType() != OpVT)
-      InVal = OpVT.bitsGT(InVal.getValueType()) ?
-                DAG.getNode(ISD::ANY_EXTEND, DL, OpVT, InVal) :
-                DAG.getNode(ISD::TRUNCATE, DL, OpVT, InVal);
-    Ops[Elt] = InVal;
+    Ops[Elt] = OpVT.isInteger() ? DAG.getAnyExtOrTrunc(InVal, DL, OpVT) : InVal;
   }
 
   // Return the new vector
@@ -14549,15 +14547,35 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, N0.getOperand(0),
                        N1, N2);
 
+  if (!isa<ConstantSDNode>(N2))
+    return SDValue();
+
+  unsigned InsIdx = cast<ConstantSDNode>(N2)->getZExtValue();
+
+  // Canonicalize insert_subvector dag nodes.
+  // Example:
+  // (insert_subvector (insert_subvector A, Idx0), Idx1)
+  // -> (insert_subvector (insert_subvector A, Idx1), Idx0)
+  if (N0.getOpcode() == ISD::INSERT_SUBVECTOR && N0.hasOneUse() &&
+      N1.getValueType() == N0.getOperand(1).getValueType() &&
+      isa<ConstantSDNode>(N0.getOperand(2))) {
+    unsigned OtherIdx = cast<ConstantSDNode>(N0.getOperand(2))->getZExtValue();
+    if (InsIdx < OtherIdx) {
+      // Swap nodes.
+      SDValue NewOp = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT,
+                                  N0.getOperand(0), N1, N2);
+      AddToWorklist(NewOp.getNode());
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N0.getNode()),
+                         VT, NewOp, N0.getOperand(1), N0.getOperand(2));
+    }
+  }
+
   if (N0.getValueType() != N1.getValueType())
     return SDValue();
 
   // If the input vector is a concatenation, and the insert replaces
   // one of the halves, we can optimize into a single concat_vectors.
-  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0->getNumOperands() == 2 &&
-      isa<ConstantSDNode>(N2)) {
-    unsigned InsIdx = cast<ConstantSDNode>(N2)->getZExtValue();
-
+  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0->getNumOperands() == 2) {
     // Lower half: fold (insert_subvector (concat_vectors X, Y), Z) ->
     // (concat_vectors Z, Y)
     if (InsIdx == 0)

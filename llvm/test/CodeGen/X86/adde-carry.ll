@@ -24,6 +24,69 @@ entry:
  ret void
 }
 
+define void @b(i32* nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
+; CHECK-LABEL: b:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+ %0 = zext i64 %a to i128
+ %1 = zext i64 %b to i128
+ %2 = zext i32 %c to i128
+ %3 = add i128 %1, %0
+ %4 = lshr i128 %3, 64
+ %5 = add i128 %4, %2
+ %6 = trunc i128 %5 to i32
+ store i32 %6, i32* %r, align 4
+ ret void
+}
+
+define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
+; CHECK-LABEL: c:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+ %0 = zext i64 %a to i128
+ %1 = zext i64 %b to i128
+ %2 = zext i16 %c to i128
+ %3 = add i128 %1, %0
+ %4 = lshr i128 %3, 64
+ %5 = add i128 %4, %2
+ %6 = trunc i128 %5 to i16
+ store i16 %6, i16* %r, align 4
+ ret void
+}
+
+define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
+; CHECK-LABEL: d:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    addq %rdx, %rsi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movb %al, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+ %0 = zext i64 %a to i128
+ %1 = zext i64 %b to i128
+ %2 = zext i8 %c to i128
+ %3 = add i128 %1, %0
+ %4 = lshr i128 %3, 64
+ %5 = add i128 %4, %2
+ %6 = trunc i128 %5 to i8
+ store i8 %6, i8* %r, align 4
+ ret void
+}
+
 %scalar = type { [4 x i64] }
 
 define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
