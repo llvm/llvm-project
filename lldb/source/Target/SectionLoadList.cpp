@@ -67,21 +67,13 @@ SectionLoadList::GetSectionLoadAddress(const lldb::SectionSP &section) const {
 bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
                                             addr_t load_addr,
                                             bool warn_multiple) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
-                                                  LIBLLDB_LOG_VERBOSE));
-
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
   ModuleSP module_sp(section->GetModule());
 
   if (module_sp) {
-    if (log) {
-      const FileSpec &module_file_spec(module_sp->GetFileSpec());
-      log->Printf("SectionLoadList::%s (section = %p (%s.%s), load_addr = "
-                  "0x%16.16" PRIx64 ") module = %p",
-                  __FUNCTION__, static_cast<void *>(section.get()),
-                  module_file_spec.GetPath().c_str(),
-                  section->GetName().AsCString(), load_addr,
-                  static_cast<void *>(module_sp.get()));
-    }
+    LLDB_LOGV(log, "(section = {0} ({1}.{2}), load_addr = {3:x}) module = {4}",
+              section.get(), module_sp->GetFileSpec(), section->GetName(),
+              load_addr, module_sp.get());
 
     if (section->GetByteSize() == 0)
       return false; // No change
@@ -147,10 +139,9 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
   size_t unload_count = 0;
 
   if (section_sp) {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
-                                                    LIBLLDB_LOG_VERBOSE));
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
-    if (log) {
+    if (log && log->GetVerbose()) {
       ModuleSP module_sp = section_sp->GetModule();
       std::string module_name("<Unknown>");
       if (module_sp) {
@@ -183,10 +174,9 @@ size_t SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp) {
 
 bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
                                          addr_t load_addr) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
-                                                  LIBLLDB_LOG_VERBOSE));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
-  if (log) {
+  if (log && log->GetVerbose()) {
     ModuleSP module_sp = section_sp->GetModule();
     std::string module_name("<Unknown>");
     if (module_sp) {

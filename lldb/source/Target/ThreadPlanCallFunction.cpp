@@ -174,9 +174,8 @@ ThreadPlanCallFunction::~ThreadPlanCallFunction() {
 }
 
 void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP |
-                                                  LIBLLDB_LOG_VERBOSE));
-  if (log) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  if (log && log->GetVerbose()) {
     StreamString strm;
     RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
 

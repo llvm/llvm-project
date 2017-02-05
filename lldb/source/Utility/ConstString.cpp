@@ -334,3 +334,9 @@ size_t ConstString::StaticMemorySize() {
   // Get the size of the static string pool
   return StringPool().MemorySize();
 }
+
+void llvm::format_provider<ConstString>::format(const ConstString &CS,
+                                                llvm::raw_ostream &OS,
+                                                llvm::StringRef Options) {
+  format_provider<StringRef>::format(CS.AsCString(), OS, Options);
+}

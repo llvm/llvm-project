@@ -476,4 +476,11 @@ Stream &operator<<(Stream &s, const ConstString &str);
 
 } // namespace lldb_private
 
+namespace llvm {
+template <> struct format_provider<lldb_private::ConstString> {
+  static void format(const lldb_private::ConstString &CS, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+}
+
 #endif // liblldb_ConstString_h_
