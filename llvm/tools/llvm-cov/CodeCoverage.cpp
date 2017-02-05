@@ -808,6 +808,10 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
 int CodeCoverageTool::report(int argc, const char **argv,
                              CommandLineParserType commandLineParser) {
+  cl::opt<bool> ShowFunctionSummaries(
+      "show-functions", cl::Optional, cl::init(false),
+      cl::desc("Show coverage summaries for each function"));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -820,7 +824,7 @@ int CodeCoverageTool::report(int argc, const char **argv,
     return 1;
 
   CoverageReport Report(ViewOpts, *Coverage.get());
-  if (SourceFiles.empty())
+  if (!ShowFunctionSummaries)
     Report.renderFileReports(llvm::outs());
   else
     Report.renderFunctionReports(SourceFiles, DC, llvm::outs());
