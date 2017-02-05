@@ -970,6 +970,9 @@ TEST(TripleTest, FileFormat) {
   Triple T = Triple("");
   T.setObjectFormat(Triple::ELF);
   EXPECT_EQ(Triple::ELF, T.getObjectFormat());
+
+  T.setObjectFormat(Triple::MachO);
+  EXPECT_EQ(Triple::MachO, T.getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {
