@@ -200,12 +200,14 @@ void CoverageReport::render(const FileCoverageSummary &File,
 }
 
 void CoverageReport::render(const FunctionCoverageSummary &Function,
+                            const DemangleCache &DC,
                             raw_ostream &OS) const {
   auto FuncCoverageColor =
       determineCoveragePercentageColor(Function.RegionCoverage);
   auto LineCoverageColor =
       determineCoveragePercentageColor(Function.LineCoverage);
-  OS << column(Function.Name, FunctionReportColumns[0], Column::RightTrim)
+  OS << column(DC.demangle(Function.Name), FunctionReportColumns[0],
+               Column::RightTrim)
      << format("%*u", FunctionReportColumns[1],
                (unsigned)Function.RegionCoverage.NumRegions);
   Options.colored_ostream(OS, FuncCoverageColor)
@@ -230,6 +232,7 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
 }
 
 void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
+                                           const DemangleCache &DC,
                                            raw_ostream &OS) {
   bool isFirst = true;
   for (StringRef Filename : Files) {
@@ -242,7 +245,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
 
     std::vector<StringRef> Funcnames;
     for (const auto &F : Functions)
-      Funcnames.emplace_back(F.Name);
+      Funcnames.emplace_back(DC.demangle(F.Name));
     adjustColumnWidths({}, Funcnames);
 
     OS << "File '" << Filename << "':\n";
@@ -262,12 +265,12 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
-      render(Function, OS);
+      render(Function, DC, OS);
     }
     if (Totals.ExecutionCount) {
       renderDivider(FunctionReportColumns, OS);
       OS << "\n";
-      render(Totals, OS);
+      render(Totals, DC, OS);
     }
   }
 }

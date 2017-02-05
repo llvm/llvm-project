@@ -21,9 +21,9 @@ void _mipsdefined() {}
 void __native_client__defined() {}
 #endif
 
-// CHECK: unixdefined
-#ifdef unix
-void unixdefined() {}
+// CHECK: __unix__defined
+#ifdef __unix__
+void __unix__defined() {}
 #endif
 
 // CHECK: __ELF__defined

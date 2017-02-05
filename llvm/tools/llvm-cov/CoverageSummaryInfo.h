@@ -160,6 +160,19 @@ struct FileCoverageSummary {
   }
 };
 
+/// \brief A cache for demangled symbols.
+struct DemangleCache {
+  StringMap<std::string> DemangledNames;
+
+  /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
+  StringRef demangle(StringRef Sym) const {
+    const auto DemangledName = DemangledNames.find(Sym);
+    if (DemangledName == DemangledNames.end())
+      return Sym;
+    return DemangledName->getValue();
+  }
+};
+
 } // namespace llvm
 
 #endif // LLVM_COV_COVERAGESUMMARYINFO_H

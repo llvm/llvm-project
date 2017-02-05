@@ -5,7 +5,7 @@ target triple = "x86_64-apple-macosx10.6.6"
 
 ; Test that the order of operands is correct
 ; CHECK: select_func
-; CHECK: pblendvb        {{LCPI0_[0-9]*}}(%rip), %xmm1
+; CHECK: pblendvb        %xmm0, {{LCPI0_[0-9]*}}(%rip), %xmm1
 ; CHECK: ret
 
 define void @select_func(<8 x i16> %in) {

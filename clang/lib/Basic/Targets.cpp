@@ -303,10 +303,10 @@ protected:
     // DragonFly defines; list based off of gcc output
     Builder.defineMacro("__DragonFly__");
     Builder.defineMacro("__DragonFly_cc_version", "100001");
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     Builder.defineMacro("__tune_i386__");
-    DefineStd(Builder, "unix", Opts);
   }
 public:
   DragonFlyBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -343,7 +343,7 @@ protected:
     Builder.defineMacro("__FreeBSD__", Twine(Release));
     Builder.defineMacro("__FreeBSD_cc_version", Twine(CCVersion));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
 
     // On FreeBSD, wchar_t contains the number of the code point as
@@ -388,9 +388,9 @@ protected:
                     MacroBuilder &Builder) const override {
     // GNU/kFreeBSD defines; list based off of gcc output
 
-    DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__FreeBSD_kernel__");
     Builder.defineMacro("__GLIBC__");
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
@@ -410,8 +410,8 @@ protected:
                     MacroBuilder &Builder) const override {
     // Haiku defines; list based off of gcc output
     Builder.defineMacro("__HAIKU__");
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
-    DefineStd(Builder, "unix", Opts);
   }
 public:
   HaikuTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -440,8 +440,8 @@ protected:
     Builder.defineMacro("_EM_LSIZE", "4");
     Builder.defineMacro("_EM_FSIZE", "4");
     Builder.defineMacro("_EM_DSIZE", "8");
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
-    DefineStd(Builder, "unix", Opts);
   }
 public:
   MinixTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -455,7 +455,7 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     // Linux defines; list based off of gcc output
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     DefineStd(Builder, "linux", Opts);
     Builder.defineMacro("__gnu_linux__");
     Builder.defineMacro("__ELF__");
@@ -541,7 +541,7 @@ protected:
     // OpenBSD defines; list based off of gcc output
 
     Builder.defineMacro("__OpenBSD__");
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
@@ -578,7 +578,7 @@ protected:
     // Bitrig defines; list based off of gcc output
 
     Builder.defineMacro("__Bitrig__");
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
@@ -652,7 +652,7 @@ protected:
     Builder.defineMacro("__FreeBSD__", "9");
     Builder.defineMacro("__FreeBSD_cc_version", "900001");
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__ORBIS__");
   }
@@ -683,8 +683,8 @@ class SolarisTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
+    Builder.defineMacro("__unix__");
     DefineStd(Builder, "sun", Opts);
-    DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__svr4__");
     Builder.defineMacro("__SVR4");
@@ -786,7 +786,7 @@ protected:
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
 
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
     Builder.defineMacro("__native_client__");
   }
@@ -4455,7 +4455,7 @@ public:
     Builder.defineMacro("__CYGWIN__");
     Builder.defineMacro("__CYGWIN32__");
     addCygMingDefines(Opts, Builder);
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
@@ -4750,7 +4750,7 @@ public:
     Builder.defineMacro("__CYGWIN__");
     Builder.defineMacro("__CYGWIN64__");
     addCygMingDefines(Opts, Builder);
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
 
@@ -5865,7 +5865,7 @@ public:
     Builder.defineMacro("_ARM_");
     Builder.defineMacro("__CYGWIN__");
     Builder.defineMacro("__CYGWIN32__");
-    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__unix__");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
@@ -8029,8 +8029,8 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
-    DefineStd(Builder, "unix", Opts);
     defineCPUMacros(Builder, "le64", /*Tuning=*/false);
+    Builder.defineMacro("__unix__");
     Builder.defineMacro("__ELF__");
   }
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {

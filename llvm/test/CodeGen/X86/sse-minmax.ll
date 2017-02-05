@@ -1203,7 +1203,7 @@ define <2 x double> @test_maxpd(<2 x double> %x, <2 x double> %y)  {
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    cmplepd %xmm2, %xmm0
-; STRICT-NEXT:    blendvpd %xmm2, %xmm1
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1221,7 +1221,7 @@ define <2 x double> @test_minpd(<2 x double> %x, <2 x double> %y)  {
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movapd %xmm0, %xmm2
 ; STRICT-NEXT:    cmplepd %xmm1, %xmm0
-; STRICT-NEXT:    blendvpd %xmm2, %xmm1
+; STRICT-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movapd %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1240,7 +1240,7 @@ define <4 x float> @test_maxps(<4 x float> %x, <4 x float> %y)  {
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    cmpleps %xmm2, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1258,7 +1258,7 @@ define <4 x float> @test_minps(<4 x float> %x, <4 x float> %y)  {
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    cmpleps %xmm1, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1279,7 +1279,7 @@ define <2 x float> @test_maxps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; STRICT-NEXT:    cmpleps %xmm2, %xmm0
 ; STRICT-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; STRICT-NEXT:    pslld $31, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1299,7 +1299,7 @@ define <2 x float> @test_minps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; STRICT-NEXT:    cmpleps %xmm1, %xmm0
 ; STRICT-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[1]
 ; STRICT-NEXT:    pslld $31, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1318,7 +1318,7 @@ define <3 x float> @test_maxps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    cmpleps %xmm2, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
@@ -1336,7 +1336,7 @@ define <3 x float> @test_minps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
 ; STRICT:       # BB#0:
 ; STRICT-NEXT:    movaps %xmm0, %xmm2
 ; STRICT-NEXT:    cmpleps %xmm1, %xmm0
-; STRICT-NEXT:    blendvps %xmm2, %xmm1
+; STRICT-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; STRICT-NEXT:    movaps %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;

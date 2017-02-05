@@ -54,7 +54,7 @@ define <2 x i64> @test_mm_blendv_epi8(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a
 ; X32:       # BB#0:
 ; X32-NEXT:    movdqa %xmm0, %xmm3
 ; X32-NEXT:    movaps %xmm2, %xmm0
-; X32-NEXT:    pblendvb %xmm1, %xmm3
+; X32-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
 ; X32-NEXT:    movdqa %xmm3, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -62,7 +62,7 @@ define <2 x i64> @test_mm_blendv_epi8(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a
 ; X64:       # BB#0:
 ; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    movaps %xmm2, %xmm0
-; X64-NEXT:    pblendvb %xmm1, %xmm3
+; X64-NEXT:    pblendvb %xmm0, %xmm1, %xmm3
 ; X64-NEXT:    movdqa %xmm3, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
@@ -79,7 +79,7 @@ define <2 x double> @test_mm_blendv_pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; X32:       # BB#0:
 ; X32-NEXT:    movapd %xmm0, %xmm3
 ; X32-NEXT:    movaps %xmm2, %xmm0
-; X32-NEXT:    blendvpd %xmm1, %xmm3
+; X32-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; X32-NEXT:    movapd %xmm3, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -87,7 +87,7 @@ define <2 x double> @test_mm_blendv_pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; X64:       # BB#0:
 ; X64-NEXT:    movapd %xmm0, %xmm3
 ; X64-NEXT:    movaps %xmm2, %xmm0
-; X64-NEXT:    blendvpd %xmm1, %xmm3
+; X64-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; X64-NEXT:    movapd %xmm3, %xmm0
 ; X64-NEXT:    retq
   %res = call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2)
@@ -100,7 +100,7 @@ define <4 x float> @test_mm_blendv_ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; X32:       # BB#0:
 ; X32-NEXT:    movaps %xmm0, %xmm3
 ; X32-NEXT:    movaps %xmm2, %xmm0
-; X32-NEXT:    blendvps %xmm1, %xmm3
+; X32-NEXT:    blendvps %xmm0, %xmm1, %xmm3
 ; X32-NEXT:    movaps %xmm3, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -108,7 +108,7 @@ define <4 x float> @test_mm_blendv_ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; X64:       # BB#0:
 ; X64-NEXT:    movaps %xmm0, %xmm3
 ; X64-NEXT:    movaps %xmm2, %xmm0
-; X64-NEXT:    blendvps %xmm1, %xmm3
+; X64-NEXT:    blendvps %xmm0, %xmm1, %xmm3
 ; X64-NEXT:    movaps %xmm3, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2)

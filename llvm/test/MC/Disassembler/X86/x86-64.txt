@@ -185,10 +185,10 @@
 # CHECK: sha1msg2 (%rax), %xmm2
 0x0f 0x38 0xca 0x10
 
-# CHECK: sha256rnds2 (%rax), %xmm2
+# CHECK: sha256rnds2 %xmm0, (%rax), %xmm2
 0x0f 0x38 0xcb 0x10
 
-# CHECK: sha256rnds2 %xmm1, %xmm2
+# CHECK: sha256rnds2 %xmm0, %xmm1, %xmm2
 0x0f 0x38 0xcb 0xd1
 
 # CHECK: sha256msg1 %xmm1, %xmm2

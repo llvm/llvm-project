@@ -4839,13 +4839,13 @@ define <8 x i64> @test121(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm11
 ; SSE4-NEXT:    movdqa %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm8, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -4983,13 +4983,13 @@ define <8 x i64> @test122(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm12, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5113,13 +5113,13 @@ define <8 x i64> @test123(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm1, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm5, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5259,13 +5259,13 @@ define <8 x i64> @test124(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm4, %xmm12
 ; SSE4-NEXT:    pcmpgtq %xmm8, %xmm12
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5402,13 +5402,13 @@ define <8 x i64> @test125(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm12
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5573,13 +5573,13 @@ define <8 x i64> @test126(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm9, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm13, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm9, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm9, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm8, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5730,13 +5730,13 @@ define <8 x i64> @test127(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm12
 ; SSE4-NEXT:    pxor %xmm8, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm8, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -5902,13 +5902,13 @@ define <8 x i64> @test128(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm13, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm9, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm9, %xmm4
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm5
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm6
 ; SSE4-NEXT:    movdqa %xmm8, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm7
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm7
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    movapd %xmm5, %xmm1
 ; SSE4-NEXT:    movapd %xmm6, %xmm2
@@ -7562,13 +7562,13 @@ define <8 x i64> @test153(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm11
 ; SSE4-NEXT:    movdqa %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm8, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -7703,13 +7703,13 @@ define <8 x i64> @test154(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm12, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -7834,13 +7834,13 @@ define <8 x i64> @test155(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm1, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm5, %xmm11
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -7977,13 +7977,13 @@ define <8 x i64> @test156(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm4, %xmm12
 ; SSE4-NEXT:    pcmpgtq %xmm8, %xmm12
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -8121,13 +8121,13 @@ define <8 x i64> @test157(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm12
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -8289,13 +8289,13 @@ define <8 x i64> @test158(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm8, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm13, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -8447,13 +8447,13 @@ define <8 x i64> @test159(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm12
 ; SSE4-NEXT:    pxor %xmm8, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -8616,13 +8616,13 @@ define <8 x i64> @test160(<8 x i64> %a, <8 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm13, %xmm0
 ; SSE4-NEXT:    pxor %xmm12, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm8
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm8
 ; SSE4-NEXT:    movdqa %xmm11, %xmm0
-; SSE4-NEXT:    blendvpd %xmm5, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
 ; SSE4-NEXT:    movdqa %xmm10, %xmm0
-; SSE4-NEXT:    blendvpd %xmm6, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm2
 ; SSE4-NEXT:    movdqa %xmm9, %xmm0
-; SSE4-NEXT:    blendvpd %xmm7, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm7, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -8724,9 +8724,9 @@ define <4 x i64> @test161(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -8807,9 +8807,9 @@ define <4 x i64> @test162(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm6, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -8886,9 +8886,9 @@ define <4 x i64> @test163(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm1, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -8970,9 +8970,9 @@ define <4 x i64> @test164(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm2, %xmm6
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm6
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -9056,9 +9056,9 @@ define <4 x i64> @test165(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm6
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -9154,9 +9154,9 @@ define <4 x i64> @test166(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm7, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -9248,9 +9248,9 @@ define <4 x i64> @test167(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm6
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -9346,9 +9346,9 @@ define <4 x i64> @test168(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm7, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm4, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    movapd %xmm3, %xmm1
 ; SSE4-NEXT:    retq
@@ -9436,9 +9436,9 @@ define <4 x i64> @test169(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm5
 ; SSE4-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9518,9 +9518,9 @@ define <4 x i64> @test170(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm6, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9598,9 +9598,9 @@ define <4 x i64> @test171(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm1, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm5
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9681,9 +9681,9 @@ define <4 x i64> @test172(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm2, %xmm6
 ; SSE4-NEXT:    pcmpgtq %xmm4, %xmm6
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9768,9 +9768,9 @@ define <4 x i64> @test173(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm6
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9865,9 +9865,9 @@ define <4 x i64> @test174(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm7, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -9960,9 +9960,9 @@ define <4 x i64> @test175(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm6
 ; SSE4-NEXT:    pxor %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10057,9 +10057,9 @@ define <4 x i64> @test176(<4 x i64> %a, <4 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm7, %xmm0
 ; SSE4-NEXT:    pxor %xmm6, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm4
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm4
 ; SSE4-NEXT:    movdqa %xmm5, %xmm0
-; SSE4-NEXT:    blendvpd %xmm3, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10127,7 +10127,7 @@ define <2 x i64> @test177(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    movdqa %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10182,7 +10182,7 @@ define <2 x i64> @test178(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10236,7 +10236,7 @@ define <2 x i64> @test179(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4:       # BB#0: # %entry
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10292,7 +10292,7 @@ define <2 x i64> @test180(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10350,7 +10350,7 @@ define <2 x i64> @test181(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm3
 ; SSE4-NEXT:    pxor %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10415,7 +10415,7 @@ define <2 x i64> @test182(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10479,7 +10479,7 @@ define <2 x i64> @test183(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm3
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10543,7 +10543,7 @@ define <2 x i64> @test184(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm2, %xmm1
+; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
 ; SSE4-NEXT:    movapd %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10605,7 +10605,7 @@ define <2 x i64> @test185(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    movdqa %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10660,7 +10660,7 @@ define <2 x i64> @test186(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10715,7 +10715,7 @@ define <2 x i64> @test187(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4:       # BB#0: # %entry
 ; SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10771,7 +10771,7 @@ define <2 x i64> @test188(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10830,7 +10830,7 @@ define <2 x i64> @test189(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm3
 ; SSE4-NEXT:    pxor %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10895,7 +10895,7 @@ define <2 x i64> @test190(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -10960,7 +10960,7 @@ define <2 x i64> @test191(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pxor %xmm0, %xmm3
 ; SSE4-NEXT:    pxor %xmm2, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
@@ -11024,7 +11024,7 @@ define <2 x i64> @test192(<2 x i64> %a, <2 x i64> %b) {
 ; SSE4-NEXT:    pcmpgtq %xmm0, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE4-NEXT:    pxor %xmm3, %xmm0
-; SSE4-NEXT:    blendvpd %xmm1, %xmm2
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;

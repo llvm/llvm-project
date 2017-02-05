@@ -2315,6 +2315,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 masked instructions
     { X86::VADDPDZrrkz,           X86::VADDPDZrmkz,           0 },
     { X86::VADDPSZrrkz,           X86::VADDPSZrmkz,           0 },
+    { X86::VADDSDZrr_Intkz,       X86::VADDSDZrm_Intkz,       TB_NO_REVERSE },
+    { X86::VADDSSZrr_Intkz,       X86::VADDSSZrm_Intkz,       TB_NO_REVERSE },
     { X86::VALIGNDZrrikz,         X86::VALIGNDZrmikz,         0 },
     { X86::VALIGNQZrrikz,         X86::VALIGNQZrmikz,         0 },
     { X86::VANDNPDZrrkz,          X86::VANDNPDZrmkz,          0 },
@@ -2323,6 +2325,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZrrkz,           X86::VANDPSZrmkz,           0 },
     { X86::VDIVPDZrrkz,           X86::VDIVPDZrmkz,           0 },
     { X86::VDIVPSZrrkz,           X86::VDIVPSZrmkz,           0 },
+    { X86::VDIVSDZrr_Intkz,       X86::VDIVSDZrm_Intkz,       TB_NO_REVERSE },
+    { X86::VDIVSSZrr_Intkz,       X86::VDIVSSZrm_Intkz,       TB_NO_REVERSE },
     { X86::VINSERTF32x4Zrrkz,     X86::VINSERTF32x4Zrmkz,     0 },
     { X86::VINSERTF32x8Zrrkz,     X86::VINSERTF32x8Zrmkz,     0 },
     { X86::VINSERTF64x2Zrrkz,     X86::VINSERTF64x2Zrmkz,     0 },
@@ -2335,12 +2339,18 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VMAXCPSZrrkz,          X86::VMAXCPSZrmkz,          0 },
     { X86::VMAXPDZrrkz,           X86::VMAXPDZrmkz,           0 },
     { X86::VMAXPSZrrkz,           X86::VMAXPSZrmkz,           0 },
+    { X86::VMAXSDZrr_Intkz,       X86::VMAXSDZrm_Intkz,       0 },
+    { X86::VMAXSSZrr_Intkz,       X86::VMAXSSZrm_Intkz,       0 },
     { X86::VMINCPDZrrkz,          X86::VMINCPDZrmkz,          0 },
     { X86::VMINCPSZrrkz,          X86::VMINCPSZrmkz,          0 },
     { X86::VMINPDZrrkz,           X86::VMINPDZrmkz,           0 },
     { X86::VMINPSZrrkz,           X86::VMINPSZrmkz,           0 },
+    { X86::VMINSDZrr_Intkz,       X86::VMINSDZrm_Intkz,       0 },
+    { X86::VMINSSZrr_Intkz,       X86::VMINSSZrm_Intkz,       0 },
     { X86::VMULPDZrrkz,           X86::VMULPDZrmkz,           0 },
     { X86::VMULPSZrrkz,           X86::VMULPSZrmkz,           0 },
+    { X86::VMULSDZrr_Intkz,       X86::VMULSDZrm_Intkz,       TB_NO_REVERSE },
+    { X86::VMULSSZrr_Intkz,       X86::VMULSSZrm_Intkz,       TB_NO_REVERSE },
     { X86::VORPDZrrkz,            X86::VORPDZrmkz,            0 },
     { X86::VORPSZrrkz,            X86::VORPSZrmkz,            0 },
     { X86::VPADDBZrrkz,           X86::VPADDBZrmkz,           0 },
@@ -2389,6 +2399,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPXORQZrrkz,           X86::VPXORQZrmkz,           0 },
     { X86::VSUBPDZrrkz,           X86::VSUBPDZrmkz,           0 },
     { X86::VSUBPSZrrkz,           X86::VSUBPSZrmkz,           0 },
+    { X86::VSUBSDZrr_Intkz,       X86::VSUBSDZrm_Intkz,       TB_NO_REVERSE },
+    { X86::VSUBSSZrr_Intkz,       X86::VSUBSSZrm_Intkz,       TB_NO_REVERSE },
     { X86::VUNPCKHPDZrrkz,        X86::VUNPCKHPDZrmkz,        0 },
     { X86::VUNPCKHPSZrrkz,        X86::VUNPCKHPSZrmkz,        0 },
     { X86::VUNPCKLPDZrrkz,        X86::VUNPCKLPDZrmkz,        0 },
@@ -2642,6 +2654,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 foldable masked instructions
     { X86::VADDPDZrrk,         X86::VADDPDZrmk,           0 },
     { X86::VADDPSZrrk,         X86::VADDPSZrmk,           0 },
+    { X86::VADDSDZrr_Intk,     X86::VADDSDZrm_Intk,       TB_NO_REVERSE },
+    { X86::VADDSSZrr_Intk,     X86::VADDSSZrm_Intk,       TB_NO_REVERSE },
     { X86::VALIGNDZrrik,       X86::VALIGNDZrmik,         0 },
     { X86::VALIGNQZrrik,       X86::VALIGNQZrmik,         0 },
     { X86::VANDNPDZrrk,        X86::VANDNPDZrmk,          0 },
@@ -2650,6 +2664,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VANDPSZrrk,         X86::VANDPSZrmk,           0 },
     { X86::VDIVPDZrrk,         X86::VDIVPDZrmk,           0 },
     { X86::VDIVPSZrrk,         X86::VDIVPSZrmk,           0 },
+    { X86::VDIVSDZrr_Intk,     X86::VDIVSDZrm_Intk,       TB_NO_REVERSE },
+    { X86::VDIVSSZrr_Intk,     X86::VDIVSSZrm_Intk,       TB_NO_REVERSE },
     { X86::VINSERTF32x4Zrrk,   X86::VINSERTF32x4Zrmk,     0 },
     { X86::VINSERTF32x8Zrrk,   X86::VINSERTF32x8Zrmk,     0 },
     { X86::VINSERTF64x2Zrrk,   X86::VINSERTF64x2Zrmk,     0 },
@@ -2662,12 +2678,18 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VMAXCPSZrrk,        X86::VMAXCPSZrmk,          0 },
     { X86::VMAXPDZrrk,         X86::VMAXPDZrmk,           0 },
     { X86::VMAXPSZrrk,         X86::VMAXPSZrmk,           0 },
+    { X86::VMAXSDZrr_Intk,     X86::VMAXSDZrm_Intk,       0 },
+    { X86::VMAXSSZrr_Intk,     X86::VMAXSSZrm_Intk,       0 },
     { X86::VMINCPDZrrk,        X86::VMINCPDZrmk,          0 },
     { X86::VMINCPSZrrk,        X86::VMINCPSZrmk,          0 },
     { X86::VMINPDZrrk,         X86::VMINPDZrmk,           0 },
     { X86::VMINPSZrrk,         X86::VMINPSZrmk,           0 },
+    { X86::VMINSDZrr_Intk,     X86::VMINSDZrm_Intk,       0 },
+    { X86::VMINSSZrr_Intk,     X86::VMINSSZrm_Intk,       0 },
     { X86::VMULPDZrrk,         X86::VMULPDZrmk,           0 },
     { X86::VMULPSZrrk,         X86::VMULPSZrmk,           0 },
+    { X86::VMULSDZrr_Intk,     X86::VMULSDZrm_Intk,       TB_NO_REVERSE },
+    { X86::VMULSSZrr_Intk,     X86::VMULSSZrm_Intk,       TB_NO_REVERSE },
     { X86::VORPDZrrk,          X86::VORPDZrmk,            0 },
     { X86::VORPSZrrk,          X86::VORPSZrmk,            0 },
     { X86::VPADDBZrrk,         X86::VPADDBZrmk,           0 },
@@ -2729,6 +2751,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPXORQZrrk,         X86::VPXORQZrmk,           0 },
     { X86::VSUBPDZrrk,         X86::VSUBPDZrmk,           0 },
     { X86::VSUBPSZrrk,         X86::VSUBPSZrmk,           0 },
+    { X86::VSUBSDZrr_Intk,     X86::VSUBSDZrm_Intk,       TB_NO_REVERSE },
+    { X86::VSUBSSZrr_Intk,     X86::VSUBSSZrm_Intk,       TB_NO_REVERSE },
     { X86::VUNPCKHPDZrrk,      X86::VUNPCKHPDZrmk,        0 },
     { X86::VUNPCKHPSZrrk,      X86::VUNPCKHPSZrmk,        0 },
     { X86::VUNPCKLPDZrrk,      X86::VUNPCKLPDZrmk,        0 },
@@ -7726,6 +7750,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSSrr_Int: case X86::VMINSSrr_Int: case X86::VMINSSZrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
+    case X86::VADDSSZrr_Intk: case X86::VADDSSZrr_Intkz:
+    case X86::VDIVSSZrr_Intk: case X86::VDIVSSZrr_Intkz:
+    case X86::VMAXSSZrr_Intk: case X86::VMAXSSZrr_Intkz:
+    case X86::VMINSSZrr_Intk: case X86::VMINSSZrr_Intkz:
+    case X86::VMULSSZrr_Intk: case X86::VMULSSZrr_Intkz:
+    case X86::VSUBSSZrr_Intk: case X86::VSUBSSZrr_Intkz:
     case X86::VFMADDSS4rr_Int:   case X86::VFNMADDSS4rr_Int:
     case X86::VFMSUBSS4rr_Int:   case X86::VFNMSUBSS4rr_Int:
     case X86::VFMADD132SSr_Int:  case X86::VFNMADD132SSr_Int:
@@ -7740,6 +7770,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFMSUB132SSZr_Int: case X86::VFNMSUB132SSZr_Int:
     case X86::VFMSUB213SSZr_Int: case X86::VFNMSUB213SSZr_Int:
     case X86::VFMSUB231SSZr_Int: case X86::VFNMSUB231SSZr_Int:
+    case X86::VFMADD132SSZr_Intk: case X86::VFNMADD132SSZr_Intk:
+    case X86::VFMADD213SSZr_Intk: case X86::VFNMADD213SSZr_Intk:
+    case X86::VFMADD231SSZr_Intk: case X86::VFNMADD231SSZr_Intk:
+    case X86::VFMSUB132SSZr_Intk: case X86::VFNMSUB132SSZr_Intk:
+    case X86::VFMSUB213SSZr_Intk: case X86::VFNMSUB213SSZr_Intk:
+    case X86::VFMSUB231SSZr_Intk: case X86::VFNMSUB231SSZr_Intk:
+    case X86::VFMADD132SSZr_Intkz: case X86::VFNMADD132SSZr_Intkz:
+    case X86::VFMADD213SSZr_Intkz: case X86::VFNMADD213SSZr_Intkz:
+    case X86::VFMADD231SSZr_Intkz: case X86::VFNMADD231SSZr_Intkz:
+    case X86::VFMSUB132SSZr_Intkz: case X86::VFNMSUB132SSZr_Intkz:
+    case X86::VFMSUB213SSZr_Intkz: case X86::VFNMSUB213SSZr_Intkz:
+    case X86::VFMSUB231SSZr_Intkz: case X86::VFNMSUB231SSZr_Intkz:
       return false;
     default:
       return true;
@@ -7759,6 +7801,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::MINSDrr_Int: case X86::VMINSDrr_Int: case X86::VMINSDZrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
+    case X86::VADDSDZrr_Intk: case X86::VADDSDZrr_Intkz:
+    case X86::VDIVSDZrr_Intk: case X86::VDIVSDZrr_Intkz:
+    case X86::VMAXSDZrr_Intk: case X86::VMAXSDZrr_Intkz:
+    case X86::VMINSDZrr_Intk: case X86::VMINSDZrr_Intkz:
+    case X86::VMULSDZrr_Intk: case X86::VMULSDZrr_Intkz:
+    case X86::VSUBSDZrr_Intk: case X86::VSUBSDZrr_Intkz:
     case X86::VFMADDSD4rr_Int:   case X86::VFNMADDSD4rr_Int:
     case X86::VFMSUBSD4rr_Int:   case X86::VFNMSUBSD4rr_Int:
     case X86::VFMADD132SDr_Int:  case X86::VFNMADD132SDr_Int:
@@ -7773,6 +7821,18 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VFMSUB132SDZr_Int: case X86::VFNMSUB132SDZr_Int:
     case X86::VFMSUB213SDZr_Int: case X86::VFNMSUB213SDZr_Int:
     case X86::VFMSUB231SDZr_Int: case X86::VFNMSUB231SDZr_Int:
+    case X86::VFMADD132SDZr_Intk: case X86::VFNMADD132SDZr_Intk:
+    case X86::VFMADD213SDZr_Intk: case X86::VFNMADD213SDZr_Intk:
+    case X86::VFMADD231SDZr_Intk: case X86::VFNMADD231SDZr_Intk:
+    case X86::VFMSUB132SDZr_Intk: case X86::VFNMSUB132SDZr_Intk:
+    case X86::VFMSUB213SDZr_Intk: case X86::VFNMSUB213SDZr_Intk:
+    case X86::VFMSUB231SDZr_Intk: case X86::VFNMSUB231SDZr_Intk:
+    case X86::VFMADD132SDZr_Intkz: case X86::VFNMADD132SDZr_Intkz:
+    case X86::VFMADD213SDZr_Intkz: case X86::VFNMADD213SDZr_Intkz:
+    case X86::VFMADD231SDZr_Intkz: case X86::VFNMADD231SDZr_Intkz:
+    case X86::VFMSUB132SDZr_Intkz: case X86::VFNMSUB132SDZr_Intkz:
+    case X86::VFMSUB213SDZr_Intkz: case X86::VFNMSUB213SDZr_Intkz:
+    case X86::VFMSUB231SDZr_Intkz: case X86::VFNMSUB231SDZr_Intkz:
       return false;
     default:
       return true;

@@ -148,19 +148,19 @@ sha1msg2 %xmm1, %xmm2
 // CHECK:   encoding: [0x0f,0x38,0xca,0x10]
 sha1msg2 (%rax), %xmm2
 
-// CHECK: sha256rnds2 (%rax), %xmm2
+// CHECK: sha256rnds2 %xmm0, (%rax), %xmm2
 // CHECK:   encoding: [0x0f,0x38,0xcb,0x10]
 sha256rnds2 (%rax), %xmm2
 
-// CHECK: sha256rnds2 %xmm1, %xmm2
+// CHECK: sha256rnds2 %xmm0, %xmm1, %xmm2
 // CHECK:   encoding: [0x0f,0x38,0xcb,0xd1]
 sha256rnds2 %xmm1, %xmm2
 
-// CHECK: sha256rnds2 (%rax), %xmm2
+// CHECK: sha256rnds2 %xmm0, (%rax), %xmm2
 // CHECK:   encoding: [0x0f,0x38,0xcb,0x10]
 sha256rnds2 %xmm0, (%rax), %xmm2
 
-// CHECK: sha256rnds2 %xmm1, %xmm2
+// CHECK: sha256rnds2 %xmm0, %xmm1, %xmm2
 // CHECK:   encoding: [0x0f,0x38,0xcb,0xd1]
 sha256rnds2 %xmm0, %xmm1, %xmm2
 
