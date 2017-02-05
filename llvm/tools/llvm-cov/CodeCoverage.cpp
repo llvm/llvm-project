@@ -823,7 +823,7 @@ int CodeCoverageTool::report(int argc, const char **argv,
   if (SourceFiles.empty())
     Report.renderFileReports(llvm::outs());
   else
-    Report.renderFunctionReports(SourceFiles, llvm::outs());
+    Report.renderFunctionReports(SourceFiles, DC, llvm::outs());
   return 0;
 }
 
