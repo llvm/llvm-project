@@ -848,6 +848,8 @@ def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
 
 include "ARMRegisterInfo.td"
 
+include "ARMRegisterBanks.td"
+
 include "ARMCallingConv.td"
 
 //===----------------------------------------------------------------------===//

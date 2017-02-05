@@ -511,18 +511,15 @@ const char *PlatformRemoteAppleWatch::GetDeviceSupportDirectoryForOSVersion() {
 uint32_t
 PlatformRemoteAppleWatch::FindFileInAllSDKs(const char *platform_file_path,
                                             FileSpecList &file_list) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                    LIBLLDB_LOG_VERBOSE);
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
   if (platform_file_path && platform_file_path[0] &&
       UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
     lldb_private::FileSpec local_file;
     // First try for an exact match of major, minor and update
     for (uint32_t sdk_idx = 0; sdk_idx < num_sdk_infos; ++sdk_idx) {
-      if (log) {
-        log->Printf("Searching for %s in sdk path %s", platform_file_path,
-                    m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
-      }
+      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file_path,
+                m_sdk_directory_infos[sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, sdk_idx, local_file)) {
         file_list.Append(local_file);
       }
@@ -633,8 +630,7 @@ Error PlatformRemoteAppleWatch::GetSharedModule(
   // then we attempt to get a shared module for the right architecture
   // with the right UUID.
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST |
-                                                    LIBLLDB_LOG_VERBOSE);
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
   Error error;
   char platform_file_path[PATH_MAX];
@@ -651,12 +647,8 @@ Error PlatformRemoteAppleWatch::GetSharedModule(
     // using the OS build.
     const uint32_t connected_sdk_idx = GetConnectedSDKIndex();
     if (connected_sdk_idx < num_sdk_infos) {
-      if (log) {
-        log->Printf("Searching for %s in sdk path %s", platform_file_path,
-                    m_sdk_directory_infos[connected_sdk_idx]
-                        .directory.GetPath()
-                        .c_str());
-      }
+      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
+                m_sdk_directory_infos[connected_sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, connected_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
@@ -672,12 +664,8 @@ Error PlatformRemoteAppleWatch::GetSharedModule(
     // Try the last SDK index if it is set as most files from an SDK
     // will tend to be valid in that same SDK.
     if (m_last_module_sdk_idx < num_sdk_infos) {
-      if (log) {
-        log->Printf("Searching for %s in sdk path %s", platform_file_path,
-                    m_sdk_directory_infos[m_last_module_sdk_idx]
-                        .directory.GetPath()
-                        .c_str());
-      }
+      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
+                m_sdk_directory_infos[m_last_module_sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, m_last_module_sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         module_sp.reset();
@@ -696,10 +684,8 @@ Error PlatformRemoteAppleWatch::GetSharedModule(
         // it above
         continue;
       }
-      if (log) {
-        log->Printf("Searching for %s in sdk path %s", platform_file_path,
-                    m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
-      }
+      LLDB_LOGV(log, "Searching for {0} in sdk path {1}", platform_file,
+                m_sdk_directory_infos[sdk_idx].directory);
       if (GetFileInSDK(platform_file_path, sdk_idx,
                        platform_module_spec.GetFileSpec())) {
         // printf ("sdk[%u]: '%s'\n", sdk_idx, local_file.GetPath().c_str());

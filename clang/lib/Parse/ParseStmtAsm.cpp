@@ -457,6 +457,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
             break;
           LineNo = SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second);
           SkippedStartOfLine = Tok.isAtStartOfLine();
+        } else if (Tok.is(tok::semi)) {
+          // A multi-line asm-statement, where next line is a comment
+          InAsmComment = true;
+          FID = ExpLoc.first;
+          LineNo = SrcMgr.getLineNumber(FID, ExpLoc.second);
         }
       } else if (!InAsmComment && Tok.is(tok::r_brace)) {
         // In MSVC mode, braces only participate in brace matching and

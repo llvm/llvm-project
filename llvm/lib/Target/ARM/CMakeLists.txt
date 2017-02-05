@@ -1,5 +1,6 @@
 set(LLVM_TARGET_DEFINITIONS ARM.td)
 
+tablegen(LLVM ARMGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM ARMGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARMGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ARMGenMCCodeEmitter.inc -gen-emitter)

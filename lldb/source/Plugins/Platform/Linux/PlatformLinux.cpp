@@ -19,18 +19,12 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Interpreter/Property.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Error.h"
@@ -46,63 +40,6 @@ using namespace lldb_private;
 using namespace lldb_private::platform_linux;
 
 static uint32_t g_initialize_count = 0;
-
-//------------------------------------------------------------------
-/// Code to handle the PlatformLinux settings
-//------------------------------------------------------------------
-
-namespace {
-class PlatformLinuxProperties : public Properties {
-public:
-  PlatformLinuxProperties();
-
-  ~PlatformLinuxProperties() override = default;
-
-  static ConstString &GetSettingName();
-
-private:
-  static const PropertyDefinition *GetStaticPropertyDefinitions();
-};
-
-typedef std::shared_ptr<PlatformLinuxProperties> PlatformLinuxPropertiesSP;
-
-} // anonymous namespace
-
-PlatformLinuxProperties::PlatformLinuxProperties() : Properties() {
-  m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
-  m_collection_sp->Initialize(GetStaticPropertyDefinitions());
-}
-
-ConstString &PlatformLinuxProperties::GetSettingName() {
-  static ConstString g_setting_name("linux");
-  return g_setting_name;
-}
-
-const PropertyDefinition *
-PlatformLinuxProperties::GetStaticPropertyDefinitions() {
-  static PropertyDefinition g_properties[] = {
-      {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
-
-  return g_properties;
-}
-
-static const PlatformLinuxPropertiesSP &GetGlobalProperties() {
-  static PlatformLinuxPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp.reset(new PlatformLinuxProperties());
-  return g_settings_sp;
-}
-
-void PlatformLinux::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForPlatformPlugin(
-          debugger, PlatformLinuxProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties()->GetValueProperties(),
-        ConstString("Properties for the PlatformLinux plug-in."),
-        is_global_setting);
-  }
-}
 
 //------------------------------------------------------------------
 
@@ -191,7 +128,7 @@ void PlatformLinux::Initialize() {
     PluginManager::RegisterPlugin(
         PlatformLinux::GetPluginNameStatic(false),
         PlatformLinux::GetPluginDescriptionStatic(false),
-        PlatformLinux::CreateInstance, PlatformLinux::DebuggerInitialize);
+        PlatformLinux::CreateInstance, nullptr);
   }
 }
 

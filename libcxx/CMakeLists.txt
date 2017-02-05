@@ -107,15 +107,6 @@ set(LIBCXX_CXX_ABI "default" CACHE STRING
 set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
-# FIXME: This is a temporary hack to force LLVM buildbots to store
-# the fixed cache entry instead of the previous cache entry. This is needed
-# because some LLVM buildbots don't clear their cache. It will be removed
-# once all LLVM bots have been run.
-if (LIBCXX_CXX_ABI STREQUAL "")
-  set(LIBCXX_CXX_ABI "default" CACHE STRING
-      "Specify the C++ ABI library to use." FORCE)
-endif()
-
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
   find_path(
