@@ -751,7 +751,7 @@ public:
                          _CheckArgsConstructor<
                             !_EnableImplicitReducedArityExtension
                             && sizeof...(_Up) < sizeof...(_Tp)
-                            && !_PackExpandsToThisTuple<_Up...>()
+                            && !_PackExpandsToThisTuple<_Up...>::value
                          >::template __enable_implicit<_Up...>(),
                          bool
                       >::type = false

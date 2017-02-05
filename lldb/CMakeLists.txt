@@ -20,6 +20,10 @@ endif()
 # add_subdirectory(include)
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
+  if(LLDB_USE_SYSTEM_SIX)
+    set(SIX_EXTRA_ARGS "--useSystemSix")
+  endif()
+
   set(LLDB_PYTHON_TARGET_DIR ${LLDB_BINARY_DIR}/scripts)
   if(LLDB_BUILD_FRAMEWORK)
     set(LLDB_PYTHON_TARGET_DIR
@@ -50,6 +54,7 @@ if (NOT LLDB_DISABLE_PYTHON)
                --prefix=${CMAKE_BINARY_DIR}
                --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
                --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
+               ${SIX_EXTRA_ARGS}
                ${FINISH_EXTRA_ARGS}
         VERBATIM
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py

@@ -17,26 +17,17 @@ using namespace llvm;
 
 class HostTest : public testing::Test {
   Triple Host;
-  SmallVector<std::pair<Triple::ArchType, Triple::OSType>, 4> SupportedArchAndOSs;
 
 protected:
   bool isSupportedArchAndOS() {
-    if (is_contained(SupportedArchAndOSs, std::make_pair(Host.getArch(), Host.getOS())))
-      return true;
-
-    return false;
-  }
-
-  HostTest() {
-    Host.setTriple(Triple::normalize(sys::getProcessTriple()));
-
     // Initially this is only testing detection of the number of
     // physical cores, which is currently only supported/tested for
     // x86_64 Linux and Darwin.
-    SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Linux));
-    SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::Darwin));
-    SupportedArchAndOSs.push_back(std::make_pair(Triple::x86_64, Triple::MacOSX));
+    return (Host.getArch() == Triple::x86_64 &&
+            (Host.isOSDarwin() || Host.getOS() == Triple::Linux));
   }
+
+  HostTest() : Host(Triple::normalize(sys::getProcessTriple())) {}
 };
 
 TEST_F(HostTest, NumPhysicalCores) {

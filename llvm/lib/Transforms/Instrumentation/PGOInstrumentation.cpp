@@ -1371,8 +1371,8 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       // Display scaled counts for SELECT instruction:
       OS << "SELECT : { T = ";
       uint64_t TC, FC;
-      bool hasProf = I->extractProfMetadata(TC, FC);
-      if (!hasProf)
+      bool HasProf = I->extractProfMetadata(TC, FC);
+      if (!HasProf)
         OS << "Unknown, F = Unknown }\\l";
       else
         OS << TC << ", F = " << FC << " }\\l";

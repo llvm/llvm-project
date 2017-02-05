@@ -200,4 +200,11 @@ private:
       log_private->Format(__FILE__, __FUNCTION__, __VA_ARGS__);                \
   } while (0)
 
+#define LLDB_LOGV(log, ...)                                                    \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private && log_private->GetVerbose())                              \
+      log_private->Format(__FILE__, __FUNCTION__, __VA_ARGS__);                \
+  } while (0)
+
 #endif // liblldb_Log_h_

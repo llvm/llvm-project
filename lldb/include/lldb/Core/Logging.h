@@ -19,7 +19,6 @@
 //----------------------------------------------------------------------
 // Log Bits specific to logging in lldb
 //----------------------------------------------------------------------
-#define LIBLLDB_LOG_VERBOSE (1u << 0)
 #define LIBLLDB_LOG_PROCESS (1u << 1)
 #define LIBLLDB_LOG_THREAD (1u << 2)
 #define LIBLLDB_LOG_DYNAMIC_LOADER (1u << 3)
@@ -68,8 +67,6 @@ Log *GetLogIfAllCategoriesSet(uint32_t mask);
 Log *GetLogIfAnyCategoriesSet(uint32_t mask);
 
 uint32_t GetLogMask();
-
-bool IsLogVerbose();
 
 void DisableLog(const char **categories, Stream *feedback_strm);
 

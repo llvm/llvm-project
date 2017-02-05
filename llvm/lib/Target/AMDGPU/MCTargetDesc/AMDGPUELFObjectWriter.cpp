@@ -1,16 +1,20 @@
-//===-- AMDGPUELFObjectWriter.cpp - AMDGPU ELF Writer ----------------------==//
+//===- AMDGPUELFObjectWriter.cpp - AMDGPU ELF Writer ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-/// \file
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -19,20 +23,21 @@ namespace {
 class AMDGPUELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   AMDGPUELFObjectWriter(bool Is64Bit, bool HasRelocationAddend);
+
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
 };
 
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit,
                                              bool HasRelocationAddend)
   : MCELFObjectTargetWriter(Is64Bit,
                             ELF::ELFOSABI_AMDGPU_HSA,
                             ELF::EM_AMDGPU,
-                            HasRelocationAddend) { }
+                            HasRelocationAddend) {}
 
 unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
                                              const MCValue &Target,
@@ -76,7 +81,6 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
 
   llvm_unreachable("unhandled relocation type");
 }
-
 
 MCObjectWriter *llvm::createAMDGPUELFObjectWriter(bool Is64Bit,
                                                   bool HasRelocationAddend,

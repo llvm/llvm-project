@@ -175,14 +175,11 @@ size_t DataBufferMemoryMap::MemoryMapFromFileDescriptor(int fd,
                                                         bool fd_is_file) {
   Clear();
   if (fd >= 0) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MMAP |
-                                                    LIBLLDB_LOG_VERBOSE));
-    if (log) {
-      log->Printf("DataBufferMemoryMap::MemoryMapFromFileDescriptor(fd=%i, "
-                  "offset=0x%" PRIx64 ", length=0x%" PRIx64
-                  ", writeable=%i, fd_is_file=%i)",
-                  fd, offset, (uint64_t)length, writeable, fd_is_file);
-    }
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MMAP));
+    LLDB_LOGV(log,
+              "(fd={0}, offset={1:x}, length={2:x}, "
+              "writeable={3}, fd_is_file={4})",
+              fd, offset, length, writeable, fd_is_file);
 #ifdef _WIN32
     HANDLE handle = (HANDLE)_get_osfhandle(fd);
     DWORD file_size_low, file_size_high;
@@ -291,13 +288,8 @@ size_t DataBufferMemoryMap::MemoryMapFromFileDescriptor(int fd,
             m_data = m_mmap_addr;
             m_size = length;
           }
-
-          if (log) {
-            log->Printf(
-                "DataBufferMemoryMap::MemoryMapFromFileSpec() m_mmap_addr = "
-                "%p, m_mmap_size = %" PRIu64 ", error = %s",
-                (void *)m_mmap_addr, (uint64_t)m_mmap_size, error.AsCString());
-          }
+          LLDB_LOGV(log, "m_mmap_addr = {0}, m_mmap_size = {1}, error = {2}",
+                    m_mmap_addr, m_mmap_size, error);
         }
       }
     }

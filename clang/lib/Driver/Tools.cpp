@@ -8696,6 +8696,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Let the tool chain choose which runtime library to link.
     getMachOToolChain().AddLinkRuntimeLibArgs(Args, CmdArgs);
+
+    // No need to do anything for pthreads. Claim argument to avoid warning.
+    Args.ClaimAllArgs(options::OPT_pthread);
+    Args.ClaimAllArgs(options::OPT_pthreads);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
