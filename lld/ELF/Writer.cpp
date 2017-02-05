@@ -301,6 +301,10 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   // you can call lld::elf::main more than once as a library.
   memset(&Out<ELFT>::First, 0, sizeof(Out<ELFT>));
 
+  auto Add = [](InputSectionBase<ELFT> *Sec) {
+    Symtab<ELFT>::X->Sections.push_back(Sec);
+  };
+
   // Create singleton output sections.
   Out<ELFT>::Bss =
       make<OutputSection<ELFT>>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
@@ -320,13 +324,13 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   if (needsInterpSection<ELFT>()) {
     In<ELFT>::Interp = createInterpSection<ELFT>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Interp);
+    Add(In<ELFT>::Interp);
   } else {
     In<ELFT>::Interp = nullptr;
   }
 
   if (!Config->Relocatable)
-    Symtab<ELFT>::X->Sections.push_back(createCommentSection<ELFT>());
+    Add(createCommentSection<ELFT>());
 
   if (Config->Strip != StripPolicy::All) {
     In<ELFT>::StrTab = make<StringTableSection<ELFT>>(".strtab", false);
@@ -335,13 +339,13 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   if (Config->BuildId != BuildIdKind::None) {
     In<ELFT>::BuildId = make<BuildIdSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::BuildId);
+    Add(In<ELFT>::BuildId);
   }
 
   InputSection<ELFT> *Common = createCommonSection<ELFT>();
   if (!Common->Data.empty()) {
     In<ELFT>::Common = Common;
-    Symtab<ELFT>::X->Sections.push_back(Common);
+    Add(Common);
   }
 
   // Add MIPS-specific sections.
@@ -349,94 +353,94 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   if (Config->EMachine == EM_MIPS) {
     if (!Config->Shared && HasDynSymTab) {
       In<ELFT>::MipsRldMap = make<MipsRldMapSection<ELFT>>();
-      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsRldMap);
+      Add(In<ELFT>::MipsRldMap);
     }
     if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())
-      Symtab<ELFT>::X->Sections.push_back(Sec);
+      Add(Sec);
     if (auto *Sec = MipsOptionsSection<ELFT>::create())
-      Symtab<ELFT>::X->Sections.push_back(Sec);
+      Add(Sec);
     if (auto *Sec = MipsReginfoSection<ELFT>::create())
-      Symtab<ELFT>::X->Sections.push_back(Sec);
+      Add(Sec);
   }
 
   if (HasDynSymTab) {
     In<ELFT>::DynSymTab = make<SymbolTableSection<ELFT>>(*In<ELFT>::DynStrTab);
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::DynSymTab);
+    Add(In<ELFT>::DynSymTab);
 
     In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerSym);
+    Add(In<ELFT>::VerSym);
 
     if (!Config->VersionDefinitions.empty()) {
       In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
-      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerDef);
+      Add(In<ELFT>::VerDef);
     }
 
     In<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::VerNeed);
+    Add(In<ELFT>::VerNeed);
 
     if (Config->GnuHash) {
       In<ELFT>::GnuHashTab = make<GnuHashTableSection<ELFT>>();
-      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GnuHashTab);
+      Add(In<ELFT>::GnuHashTab);
     }
 
     if (Config->SysvHash) {
       In<ELFT>::HashTab = make<HashTableSection<ELFT>>();
-      Symtab<ELFT>::X->Sections.push_back(In<ELFT>::HashTab);
+      Add(In<ELFT>::HashTab);
     }
 
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Dynamic);
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::DynStrTab);
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaDyn);
+    Add(In<ELFT>::Dynamic);
+    Add(In<ELFT>::DynStrTab);
+    Add(In<ELFT>::RelaDyn);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (Config->EMachine == EM_MIPS) {
     In<ELFT>::MipsGot = make<MipsGotSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::MipsGot);
+    Add(In<ELFT>::MipsGot);
   } else {
     In<ELFT>::Got = make<GotSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Got);
+    Add(In<ELFT>::Got);
   }
 
   In<ELFT>::GotPlt = make<GotPltSection<ELFT>>();
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GotPlt);
+  Add(In<ELFT>::GotPlt);
   In<ELFT>::IgotPlt = make<IgotPltSection<ELFT>>();
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::IgotPlt);
+  Add(In<ELFT>::IgotPlt);
 
   if (Config->GdbIndex) {
     In<ELFT>::GdbIndex = make<GdbIndexSection<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::GdbIndex);
+    Add(In<ELFT>::GdbIndex);
   }
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
       Config->Rela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaPlt);
+  Add(In<ELFT>::RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
   // that the IRelative relocations are processed last by the dynamic loader
   In<ELFT>::RelaIplt = make<RelocationSection<ELFT>>(
       (Config->EMachine == EM_ARM) ? ".rel.dyn" : In<ELFT>::RelaPlt->Name,
       false /*Sort*/);
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::RelaIplt);
+  Add(In<ELFT>::RelaIplt);
 
   In<ELFT>::Plt = make<PltSection<ELFT>>();
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Plt);
+  Add(In<ELFT>::Plt);
   In<ELFT>::Iplt = make<IpltSection<ELFT>>();
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::Iplt);
+  Add(In<ELFT>::Iplt);
 
   if (Config->EhFrameHdr) {
     In<ELFT>::EhFrameHdr = make<EhFrameHeader<ELFT>>();
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::EhFrameHdr);
+    Add(In<ELFT>::EhFrameHdr);
   }
 
   if (In<ELFT>::SymTab)
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::SymTab);
-  Symtab<ELFT>::X->Sections.push_back(In<ELFT>::ShStrTab);
+    Add(In<ELFT>::SymTab);
+  Add(In<ELFT>::ShStrTab);
   if (In<ELFT>::StrTab)
-    Symtab<ELFT>::X->Sections.push_back(In<ELFT>::StrTab);
+    Add(In<ELFT>::StrTab);
 }
 
 template <class ELFT>

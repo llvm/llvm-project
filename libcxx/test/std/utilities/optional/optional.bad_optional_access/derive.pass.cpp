@@ -11,7 +11,7 @@
 
 // <optional>
 
-// class bad_optional_access : public logic_error
+// class bad_optional_access : public exception
 
 #include <optional>
 #include <type_traits>
@@ -20,6 +20,6 @@ int main()
 {
     using std::bad_optional_access;
 
-    static_assert(std::is_base_of<std::logic_error, bad_optional_access>::value, "");
-    static_assert(std::is_convertible<bad_optional_access*, std::logic_error*>::value, "");
+    static_assert(std::is_base_of<std::exception, bad_optional_access>::value, "");
+    static_assert(std::is_convertible<bad_optional_access*, std::exception*>::value, "");
 }

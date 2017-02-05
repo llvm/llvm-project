@@ -160,14 +160,12 @@ namespace std  // purposefully not using versioning namespace
 {
 
 class _LIBCPP_EXCEPTION_ABI bad_optional_access
-    : public logic_error
+    : public exception
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
-    bad_optional_access() : logic_error("bad optional access") {}
-
     // Get the key function ~bad_optional_access() into the dylib
     virtual ~bad_optional_access() _NOEXCEPT;
+    virtual const char* what() const _NOEXCEPT;
 };
 
 }  // std
