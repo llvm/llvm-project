@@ -10,10 +10,6 @@
 #ifndef liblldb_PlatformLinux_h_
 #define liblldb_PlatformLinux_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 
 namespace lldb_private {
@@ -24,8 +20,6 @@ public:
   PlatformLinux(bool is_host);
 
   ~PlatformLinux() override;
-
-  static void DebuggerInitialize(Debugger &debugger);
 
   static void Initialize();
 

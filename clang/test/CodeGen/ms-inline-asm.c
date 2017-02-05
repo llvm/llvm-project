@@ -55,9 +55,15 @@ void t7() {
     }
   }
   __asm {}
+  __asm {
+    ;
+    ; label
+    mov eax, ebx
+  }
 // CHECK: t7
 // CHECK: call void asm sideeffect inteldialect "int $$0x2cU", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void asm sideeffect inteldialect "", "~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "mov eax, ebx", "~{eax},~{dirflag},~{fpsr},~{flags}"()
 }
 
 int t8() {

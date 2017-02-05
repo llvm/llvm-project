@@ -501,10 +501,8 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
   if (m_filled)
     return;
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_VERBOSE));
-  if (log)
-    log->Printf("[ClassDescriptorV2::iVarsStorage::fill] class_name = %s",
-                descriptor.GetClassName().AsCString("<unknown"));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  LLDB_LOGV(log, "class_name = {0}", descriptor.GetClassName());
   m_filled = true;
   ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp(
       runtime.GetEncodingToType());
@@ -519,19 +517,15 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                                                        uint64_t size) -> bool {
     const bool for_expression = false;
     const bool stop_loop = false;
-    if (log)
-      log->Printf("[ClassDescriptorV2::iVarsStorage::fill] name = %s, encoding "
-                  "= %s, offset_ptr = %" PRIx64 ", size = %" PRIu64,
-                  name, type, offset_ptr, size);
+    LLDB_LOGV(log, "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = {3}",
+              name, type, offset_ptr, size);
     CompilerType ivar_type =
         encoding_to_type_sp->RealizeType(type, for_expression);
     if (ivar_type) {
-      if (log)
-        log->Printf("[ClassDescriptorV2::iVarsStorage::fill] name = %s, "
-                    "encoding = %s, offset_ptr = %" PRIx64 ", size = %" PRIu64
-                    " , type_size = %" PRIu64,
-                    name, type, offset_ptr, size,
-                    ivar_type.GetByteSize(nullptr));
+      LLDB_LOGV(log,
+                "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
+                "{3}, type_size = {4}",
+                name, type, offset_ptr, size, ivar_type.GetByteSize(nullptr));
       Scalar offset_scalar;
       Error error;
       const int offset_ptr_size = 4;
@@ -539,18 +533,13 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
       size_t read = process->ReadScalarIntegerFromMemory(
           offset_ptr, offset_ptr_size, is_signed, offset_scalar, error);
       if (error.Success() && 4 == read) {
-        if (log)
-          log->Printf(
-              "[ClassDescriptorV2::iVarsStorage::fill] offset_ptr = %" PRIx64
-              " --> %" PRIu32,
-              offset_ptr, offset_scalar.SInt());
+        LLDB_LOGV(log, "offset_ptr = {0:x} --> {1}", offset_ptr,
+                  offset_scalar.SInt());
         m_ivars.push_back(
             {ConstString(name), ivar_type, size, offset_scalar.SInt()});
-      } else if (log)
-        log->Printf(
-            "[ClassDescriptorV2::iVarsStorage::fill] offset_ptr = %" PRIx64
-            " --> read fail, read = %zu",
-            offset_ptr, read);
+      } else
+        LLDB_LOGV(log, "offset_ptr = {0:x} --> read fail, read = %{1}",
+                  offset_ptr, read);
     }
     return stop_loop;
   });

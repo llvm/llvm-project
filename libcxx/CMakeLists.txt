@@ -60,7 +60,7 @@ endif()
 include(CMakeDependentOption)
 
 # Basic options ---------------------------------------------------------------
-option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
+option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
@@ -106,15 +106,6 @@ set(LIBCXX_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
 set(CXXABIS none default libcxxabi libcxxrt libstdc++ libsupc++ vcruntime)
 set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
-
-# FIXME: This is a temporary hack to force LLVM buildbots to store
-# the fixed cache entry instead of the previous cache entry. This is needed
-# because some LLVM buildbots don't clear their cache. It will be removed
-# once all LLVM bots have been run.
-if (LIBCXX_CXX_ABI STREQUAL "")
-  set(LIBCXX_CXX_ABI "default" CACHE STRING
-      "Specify the C++ ABI library to use." FORCE)
-endif()
 
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
@@ -501,6 +492,7 @@ endif()
 # Assertion flags =============================================================
 define_if(LIBCXX_ENABLE_ASSERTIONS -UNDEBUG)
 define_if_not(LIBCXX_ENABLE_ASSERTIONS -DNDEBUG)
+define_if(LIBCXX_ENABLE_ASSERTIONS -D_LIBCPP_DEBUG=0)
 define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
 if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
