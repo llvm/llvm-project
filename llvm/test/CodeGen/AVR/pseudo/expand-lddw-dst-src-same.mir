@@ -18,6 +18,7 @@
 ...
 ---
 name:            test_lddw
+tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, offset: -4, size: 1, alignment: 1, callee-saved-register: '%r28' }
 body:             |

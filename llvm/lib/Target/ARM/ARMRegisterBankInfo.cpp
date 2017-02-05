@@ -18,6 +18,9 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
+#define GET_TARGET_REGBANK_IMPL
+#include "ARMGenRegisterBank.inc"
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
@@ -29,37 +32,6 @@ using namespace llvm;
 // into an ARMGenRegisterBankInfo.def (similar to AArch64).
 namespace llvm {
 namespace ARM {
-const uint32_t GPRCoverageData[] = {
-    // Classes 0-31
-    (1u << ARM::GPRRegClassID) | (1u << ARM::GPRwithAPSRRegClassID) |
-        (1u << ARM::GPRnopcRegClassID) | (1u << ARM::rGPRRegClassID) |
-        (1u << ARM::hGPRRegClassID) | (1u << ARM::tGPRRegClassID) |
-        (1u << ARM::GPRnopc_and_hGPRRegClassID) |
-        (1u << ARM::hGPR_and_rGPRRegClassID) | (1u << ARM::tcGPRRegClassID) |
-        (1u << ARM::tGPR_and_tcGPRRegClassID) | (1u << ARM::GPRspRegClassID) |
-        (1u << ARM::hGPR_and_tcGPRRegClassID),
-    // Classes 32-63
-    0,
-    // Classes 64-96
-    0,
-    // FIXME: Some of the entries below this point can be safely removed once
-    // this is tablegenerated. It's only needed because of the hardcoded
-    // register class limit.
-    // Classes 97-128
-    0,
-    // Classes 129-160
-    0,
-    // Classes 161-192
-    0,
-    // Classes 193-224
-    0,
-};
-
-// FIXME: The 200 will be replaced by the number of register classes when this is
-//        tablegenerated.
-RegisterBank GPRRegBank(ARM::GPRRegBankID, "GPRB", 32, ARM::GPRCoverageData, 200);
-RegisterBank *RegBanks[] = {&GPRRegBank};
-
 RegisterBankInfo::PartialMapping GPRPartialMapping{0, 32, GPRRegBank};
 
 RegisterBankInfo::ValueMapping ValueMappings[] = {
@@ -68,7 +40,7 @@ RegisterBankInfo::ValueMapping ValueMappings[] = {
 } // end namespace llvm
 
 ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
-    : RegisterBankInfo(ARM::RegBanks, ARM::NumRegisterBanks) {
+    : ARMGenRegisterBankInfo() {
   static bool AlreadyInit = false;
   // We have only one set of register banks, whatever the subtarget
   // is. Therefore, the initialization of the RegBanks table should be

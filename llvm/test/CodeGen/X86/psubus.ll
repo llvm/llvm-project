@@ -623,7 +623,7 @@ define void @test13(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
@@ -863,7 +863,7 @@ define void @test14(i8* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm4, %xmm4
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,4,5,8,9,12,13,128,128,128,128,128,128,128,128,0,1,4,5,8,9,12,13,128,128,128,128,128,128,128,128]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vpshufb %xmm6, %xmm1, %xmm1
@@ -1000,7 +1000,7 @@ define void @test15(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
@@ -1130,7 +1130,7 @@ define void @test16(i16* nocapture %head, i32* nocapture %w) nounwind {
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpacksswb %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)

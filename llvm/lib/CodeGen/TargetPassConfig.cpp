@@ -733,7 +733,7 @@ MachinePassRegistry RegisterRegAlloc::Registry;
 
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
-LLVM_DEFINE_ONCE_FLAG(InitializeDefaultRegisterAllocatorFlag);
+static llvm::once_flag InitializeDefaultRegisterAllocatorFlag;
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
 static RegisterRegAlloc
 defaultRegAlloc("default",
