@@ -15,6 +15,7 @@
 
 #include "CoverageFilters.h"
 #include "CoverageReport.h"
+#include "CoverageSummaryInfo.h"
 #include "CoverageViewOptions.h"
 #include "RenderingSupport.h"
 #include "SourceCoverageView.h"
@@ -98,9 +99,6 @@ private:
   /// \brief If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
-  StringRef getSymbolForHumans(StringRef Sym) const;
-
   /// \brief Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
                            CoveragePrinter *Printer, bool ShowFilenames);
@@ -136,8 +134,8 @@ private:
   /// The architecture the coverage mapping data targets.
   std::string CoverageArch;
 
-  /// A cache for demangled symbol names.
-  StringMap<std::string> DemangledNames;
+  /// A cache for demangled symbols.
+  DemangleCache DC;
 
   /// A lock which guards printing to stderr.
   std::mutex ErrsLock;
@@ -267,7 +265,7 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
     return nullptr;
 
   auto Expansions = FunctionCoverage.getExpansions();
-  auto View = SourceCoverageView::create(getSymbolForHumans(Function.Name),
+  auto View = SourceCoverageView::create(DC.demangle(Function.Name),
                                          SourceBuffer.get(), ViewOpts,
                                          std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
@@ -293,7 +291,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
     std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
-    StringRef Funcname = getSymbolForHumans(Function->Name);
+    StringRef Funcname = DC.demangle(Function->Name);
 
     if (Function->ExecutionCount > 0) {
       auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
@@ -453,14 +451,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Cache the demangled names.
   unsigned I = 0;
   for (const auto &Function : Coverage.getCoveredFunctions())
-    DemangledNames[Function.Name] = Symbols[I++];
-}
-
-StringRef CodeCoverageTool::getSymbolForHumans(StringRef Sym) const {
-  const auto DemangledName = DemangledNames.find(Sym);
-  if (DemangledName == DemangledNames.end())
-    return Sym;
-  return DemangledName->getValue();
+    DC.DemangledNames[Function.Name] = Symbols[I++];
 }
 
 void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
