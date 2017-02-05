@@ -139,7 +139,7 @@ private:
   /// A cache for demangled symbol names.
   StringMap<std::string> DemangledNames;
 
-  /// Errors and warnings which have not been printed.
+  /// A lock which guards printing to stderr.
   std::mutex ErrsLock;
 
   /// A container for input source file buffers.
