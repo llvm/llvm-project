@@ -28,7 +28,8 @@ PCHGenerator::PCHGenerator(
     bool AllowASTWithErrors, bool IncludeTimestamps)
     : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       SemaPtr(nullptr), Buffer(Buffer), Stream(Buffer->Data),
-      Writer(Stream, Buffer->Data, Extensions, IncludeTimestamps),
+      Writer(Stream, Buffer->Data, PP.getPCMCache(), Extensions,
+             IncludeTimestamps),
       AllowASTWithErrors(AllowASTWithErrors) {
   Buffer->IsComplete = false;
 }
