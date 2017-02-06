@@ -343,6 +343,29 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SELECT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    // Perform operation at larger width (any extension is fine here, high bits
+    // don't affect the result) and then truncate the result back to the
+    // original type.
+    unsigned Src1Ext = MRI.createGenericVirtualRegister(WideTy);
+    unsigned Src2Ext = MRI.createGenericVirtualRegister(WideTy);
+    MIRBuilder.buildAnyExt(Src1Ext, MI.getOperand(2).getReg());
+    MIRBuilder.buildAnyExt(Src2Ext, MI.getOperand(3).getReg());
+
+    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
+    MIRBuilder.buildInstr(TargetOpcode::G_SELECT)
+        .addDef(DstExt)
+        .addReg(MI.getOperand(1).getReg())
+        .addUse(Src1Ext)
+        .addUse(Src2Ext);
+
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     if (TypeIdx != 0)
