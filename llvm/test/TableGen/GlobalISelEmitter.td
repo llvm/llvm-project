@@ -34,6 +34,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT: (((MRI.getType(I.getOperand(2).getReg()) == (LLT::scalar(32))) &&
 // CHECK-NEXT:  ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(I.getOperand(2).getReg(), MRI, TRI)))))) {
 
+// CHECK-NEXT:   // (add:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (ADD:i32 GPR32:i32:$src1, GPR32:i32:$src2)
 // CHECK-NEXT:   I.setDesc(TII.get(MyTarget::ADD));
 // CHECK-NEXT:   constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 // CHECK-NEXT:   return true;
@@ -47,6 +48,7 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK: if ((I.getOpcode() == TargetOpcode::G_BR) &&
 // CHECK-NEXT: (((I.getOperand(0).isMBB())))) {
 
+// CHECK-NEXT:   // (br (bb:Other):$target) => (BR (bb:Other):$target)
 // CHECK-NEXT:   I.setDesc(TII.get(MyTarget::BR));
 // CHECK-NEXT:   constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 // CHECK-NEXT:   return true;
