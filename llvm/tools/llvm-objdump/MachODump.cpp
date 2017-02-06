@@ -1142,7 +1142,7 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
       StringRef BytesStr;
       Section.getContents(BytesStr);
       const char *sect = reinterpret_cast<const char *>(BytesStr.data());
-      outs() << sect;
+      outs() << format("%.*s", BytesStr.size(), sect) << "\n";
       return;
     }
   }
