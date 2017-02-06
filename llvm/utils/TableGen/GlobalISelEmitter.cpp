@@ -143,7 +143,7 @@ public:
       OS << Separator << "(";
       Predicate->emitCxxPredicateExpr(OS, std::forward<Args>(args)...);
       OS << ")";
-      Separator = " && ";
+      Separator = " &&\n";
     }
   }
 };
@@ -276,7 +276,7 @@ public:
   void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
     emitCxxPredicateListExpr(OS, InsnVarName);
     for (const auto &Operand : Operands) {
-      OS << " && (";
+      OS << " &&\n(";
       Operand.emitCxxPredicateExpr(OS, InsnVarName);
       OS << ")";
     }
@@ -359,7 +359,7 @@ public:
 
     OS << "    constrainSelectedInstRegOperands(I, TII, TRI, RBI);\n";
     OS << "    return true;\n";
-    OS << "  }\n";
+    OS << "  }\n\n";
   }
 };
 
@@ -515,7 +515,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl"
         "(MachineInstr &I) const {\n  const MachineRegisterInfo &MRI = "
-        "I.getParent()->getParent()->getRegInfo();\n";
+        "I.getParent()->getParent()->getRegInfo();\n\n";
 
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
