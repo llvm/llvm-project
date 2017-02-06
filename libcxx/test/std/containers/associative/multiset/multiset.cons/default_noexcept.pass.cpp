@@ -36,14 +36,16 @@ struct some_comp
 
 int main()
 {
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::multiset<MoveOnly> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<C>::value, "");
+        static_assert(std::is_nothrow_default_constructible<C>::value, "");
     }
     {
         typedef std::multiset<MoveOnly, std::less<MoveOnly>, test_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<C>::value, "");
+        static_assert(std::is_nothrow_default_constructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::multiset<MoveOnly, std::less<MoveOnly>, other_allocator<MoveOnly>> C;
         static_assert(!std::is_nothrow_default_constructible<C>::value, "");

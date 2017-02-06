@@ -29,13 +29,11 @@ int main()
 {
     {
         typedef std::unordered_set<int> C;
-        typedef int P;
         const C c;
         assert(c.max_load_factor() == 1);
     }
     {
         typedef std::unordered_set<int> C;
-        typedef int P;
         C c;
         assert(c.max_load_factor() == 1);
         c.max_load_factor(2.5);
@@ -45,14 +43,12 @@ int main()
     {
         typedef std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;
-        typedef int P;
         const C c;
         assert(c.max_load_factor() == 1);
     }
     {
         typedef std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;
-        typedef int P;
         C c;
         assert(c.max_load_factor() == 1);
         c.max_load_factor(2.5);

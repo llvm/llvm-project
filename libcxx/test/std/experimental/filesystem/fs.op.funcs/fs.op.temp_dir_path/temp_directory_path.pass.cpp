@@ -97,6 +97,14 @@ TEST_CASE(basic_tests)
         TEST_CHECK(ec == std::make_error_code(std::errc::permission_denied));
         TEST_CHECK(ret == "");
 
+        // Set the env variable to point to a non-existent dir
+        PutEnv(TC.name, TC.p / "does_not_exist");
+        ec = GetTestEC();
+        ret = temp_directory_path(ec);
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(ec);
+        TEST_CHECK(ret == "");
+
         // Finally erase this env variable
         UnsetEnv(TC.name);
     }
