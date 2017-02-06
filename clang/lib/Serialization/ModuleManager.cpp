@@ -52,6 +52,17 @@ ModuleManager::lookupBuffer(StringRef Name) {
   return std::move(InMemoryBuffers[Entry]);
 }
 
+static bool checkSignature(ASTFileSignature Signature,
+                           ASTFileSignature ExpectedSignature,
+                           std::string &ErrorStr) {
+  if (!ExpectedSignature || Signature == ExpectedSignature)
+    return false;
+
+  ErrorStr =
+      Signature ? "signature mismatch" : "could not read module signature";
+  return true;
+}
+
 ModuleManager::AddModuleResult
 ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                          SourceLocation ImportLoc, ModuleFile *ImportedBy,
@@ -136,22 +147,14 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
     // Initialize the stream.
     ModuleEntry->Data = PCHContainerRdr.ExtractPCH(*ModuleEntry->Buffer);
-  }
 
-  if (ExpectedSignature) {
-    // If we've not read the control block yet, read the signature eagerly now
-    // so that we can check it.
-    if (!ModuleEntry->Signature)
-      ModuleEntry->Signature = ReadSignature(ModuleEntry->Data);
-
-    if (ModuleEntry->Signature != ExpectedSignature) {
-      ErrorStr = ModuleEntry->Signature ? "signature mismatch"
-                                        : "could not read module signature";
-
-      if (NewModule)
-        delete ModuleEntry;
+    // Read the signature eagerly now so that we can check it.
+    if (checkSignature(ReadSignature(ModuleEntry->Data), ExpectedSignature, ErrorStr)) {
+      delete ModuleEntry;
       return OutOfDate;
     }
+  } else if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr)) {
+    return OutOfDate;
   }
 
   if (ImportedBy) {
