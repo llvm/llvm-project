@@ -17,13 +17,9 @@
 #ifndef ASAN_TEST_CONFIG_H
 #define ASAN_TEST_CONFIG_H
 
-#include <vector>
 #include <string>
-#include <map>
 
 using std::string;
-using std::vector;
-using std::map;
 
 #ifndef ASAN_UAR
 # error "please define ASAN_UAR"
