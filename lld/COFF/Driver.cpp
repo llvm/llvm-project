@@ -814,6 +814,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       addUndefined(mangle("_load_config_used"));
   } while (run());
 
+  // If /msvclto is given, we use the MSVC linker to link LTO output files.
+  // This is useful because MSVC link.exe can generate complete PDBs.
+  if (Args.hasArg(OPT_msvclto)) {
+    std::vector<StringRef> ObjectFiles = Symtab.compileBitcodeFiles();
+    runMSVCLinker(Args, ObjectFiles);
+    exit(0);
+  }
+
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files.
   Symtab.addCombinedLTOObjects();

@@ -1884,6 +1884,7 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
     KA_TRACE(15, ("__kmp_execute_tasks_template(enter): T#%d final_spin=%d *thread_finished=%d\n",
                   gtid, final_spin, *thread_finished) );
 
+    thread->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
     threads_data = (kmp_thread_data_t *)TCR_PTR(task_team -> tt.tt_threads_data);
     KMP_DEBUG_ASSERT( threads_data != NULL );
 

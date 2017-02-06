@@ -1064,11 +1064,13 @@ template <class _Up>
 struct __ignore_t
 {
     template <class _Tp>
-        _LIBCPP_INLINE_VISIBILITY
-        const __ignore_t& operator=(_Tp&&) const {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+    const __ignore_t& operator=(_Tp&&) const {return *this;}
 };
 
-namespace { const __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>(); }
+namespace {
+  constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
+}
 
 template <class _Tp>
 struct __make_tuple_return_impl

@@ -73,8 +73,6 @@ void ProcessKDPLog::DisableLog(const char **categories, Stream *feedback_strm) {
           flag_bits &= ~KDP_LOG_STEP;
         else if (::strcasecmp(arg, "thread") == 0)
           flag_bits &= ~KDP_LOG_THREAD;
-        else if (::strcasecmp(arg, "verbose") == 0)
-          flag_bits &= ~KDP_LOG_VERBOSE;
         else if (::strncasecmp(arg, "watch", 5) == 0)
           flag_bits &= ~KDP_LOG_WATCHPOINTS;
         else {
@@ -138,8 +136,6 @@ Log *ProcessKDPLog::EnableLog(StreamSP &log_stream_sp, uint32_t log_options,
         flag_bits |= KDP_LOG_STEP;
       else if (::strcasecmp(arg, "thread") == 0)
         flag_bits |= KDP_LOG_THREAD;
-      else if (::strcasecmp(arg, "verbose") == 0)
-        flag_bits |= KDP_LOG_VERBOSE;
       else if (::strncasecmp(arg, "watch", 5) == 0)
         flag_bits |= KDP_LOG_WATCHPOINTS;
       else {

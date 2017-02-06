@@ -42,8 +42,10 @@ int main()
         typedef std::set<MoveOnly, std::less<MoveOnly>, other_allocator<MoveOnly>> C;
         static_assert(std::is_nothrow_destructible<C>::value, "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::set<MoveOnly, some_comp<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
+        static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
 }

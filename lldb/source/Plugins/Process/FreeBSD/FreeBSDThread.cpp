@@ -53,8 +53,7 @@ FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_frame_ap(), m_breakpoint(),
       m_thread_name_valid(false), m_thread_name(), m_posix_thread(NULL) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-    log->Printf("FreeBSDThread::%s (tid = %" PRIi64 ")", __FUNCTION__, tid);
+  LLDB_LOGV(log, "tid = {0}", tid);
 
   // Set the current watchpoints for this thread.
   Target &target = GetProcess()->GetTarget();
@@ -215,8 +214,7 @@ FreeBSDThread::CreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-    log->Printf("FreeBSDThread::%s ()", __FUNCTION__);
+  LLDB_LOGV(log, "called");
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();

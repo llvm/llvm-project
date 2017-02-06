@@ -96,7 +96,7 @@ int main()
     }
     {
         // Test that the uses-allocator default constructor does not evaluate
-        // it's SFINAE when it otherwise shouldn't be selected. Do this by
+        // its SFINAE when it otherwise shouldn't be selected. Do this by
         // using 'NonDefaultConstructible' which will cause a compile error
         // if std::is_default_constructible is evaluated on it.
         using T = NonDefaultConstructible<>;

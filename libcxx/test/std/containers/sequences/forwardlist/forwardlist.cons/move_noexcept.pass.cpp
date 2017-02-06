@@ -32,18 +32,20 @@ struct some_alloc
 
 int main()
 {
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::forward_list<MoveOnly> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::forward_list<MoveOnly, test_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
     {
         typedef std::forward_list<MoveOnly, other_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible<C>::value, "");
+        static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::forward_list<MoveOnly, some_alloc<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
