@@ -6,9 +6,19 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildslave to private slave builder to LLVM Buildbot Infrastructure
-`<http://lab.llvm.org:8011>`_.
+buildslave to private slave builder to LLVM Buildbot Infrastructure.
 
+Buildmasters
+============
+
+There are two buildmasters running.
+
+* The main buildmaster at `<http://lab.llvm.org:8011>`_. All builders attached
+  to this machine will notify commit authors every time they break the build.
+* The staging buildbot at `<http://lab.llvm.org:8014>`_. All builders attached
+  to this machine will be completely silent by default when the build is broken.
+  Builders for experimental backends should generally be attached to this
+  buildmaster.
 
 Steps To Add Builder To LLVM Buildbot
 =====================================
@@ -72,6 +82,11 @@ Here are the steps you can follow to do so:
 
    * slaves are added to ``buildbot/osuosl/master/config/slaves.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``
+
+   It is possible to whitelist email addresses to unconditionally receive notifications
+   on build failure; for this you'll need to add an ``InformativeMailNotifier`` to
+   ``buildbot/osuosl/master/config/status.py``. This is particularly useful for the
+   staging buildmaster which is silent otherwise.
 
 #. Send the buildslave access name and the access password directly to
    `Galina Kistanova <mailto:gkistanova@gmail.com>`_, and wait till she

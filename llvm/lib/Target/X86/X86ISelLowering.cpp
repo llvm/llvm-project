@@ -13844,17 +13844,21 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   auto *N2C = cast<ConstantSDNode>(N2);
   unsigned IdxVal = N2C->getZExtValue();
 
-  // If we are clearing out a element, we do this more efficiently with a
-  // blend shuffle than a costly integer insertion.
-  // TODO: would other rematerializable values (e.g. allbits) benefit as well?
+  bool IsZeroElt = X86::isZeroNode(N1);
+  bool IsAllOnesElt = VT.isInteger() && llvm::isAllOnesConstant(N1);
+
+  // If we are inserting a element, see if we can do this more efficiently with
+  // a blend shuffle with a rematerializable vector than a costly integer
+  // insertion.
   // TODO: pre-SSE41 targets will tend to use bit masking - this could still
   // be beneficial if we are inserting several zeros and can combine the masks.
-  if (X86::isZeroNode(N1) && Subtarget.hasSSE41() && NumElts <= 8) {
-    SmallVector<int, 8> ClearMask;
+  if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() && NumElts <= 8) {
+    SmallVector<int, 8> BlendMask;
     for (unsigned i = 0; i != NumElts; ++i)
-      ClearMask.push_back(i == IdxVal ? i + NumElts : i);
-    SDValue ZeroVector = getZeroVector(VT, Subtarget, DAG, dl);
-    return DAG.getVectorShuffle(VT, dl, N0, ZeroVector, ClearMask);
+      BlendMask.push_back(i == IdxVal ? i + NumElts : i);
+    SDValue CstVector = IsZeroElt ? getZeroVector(VT, Subtarget, DAG, dl)
+                                  : DAG.getConstant(-1, dl, VT);
+    return DAG.getVectorShuffle(VT, dl, N0, CstVector, BlendMask);
   }
 
   // If the vector is wider than 128 bits, extract the 128-bit subvector, insert
@@ -15492,8 +15496,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     if (Subtarget.hasInt256()) {
       static const int ShufMask[] = {0, 2, 4, 6, -1, -1, -1, -1};
       In = DAG.getBitcast(MVT::v8i32, In);
-      In = DAG.getVectorShuffle(MVT::v8i32, DL, In, DAG.getUNDEF(MVT::v8i32),
-                                ShufMask);
+      In = DAG.getVectorShuffle(MVT::v8i32, DL, In, In, ShufMask);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, In,
                          DAG.getIntPtrConstant(0, DL));
     }
@@ -15513,26 +15516,16 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     if (Subtarget.hasInt256()) {
       In = DAG.getBitcast(MVT::v32i8, In);
 
-      SmallVector<SDValue,32> pshufbMask;
-      for (unsigned i = 0; i < 2; ++i) {
-        pshufbMask.push_back(DAG.getConstant(0x0, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0x1, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0x4, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0x5, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0x8, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0x9, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0xc, DL, MVT::i8));
-        pshufbMask.push_back(DAG.getConstant(0xd, DL, MVT::i8));
-        for (unsigned j = 0; j < 8; ++j)
-          pshufbMask.push_back(DAG.getConstant(0x80, DL, MVT::i8));
-      }
-      SDValue BV = DAG.getBuildVector(MVT::v32i8, DL, pshufbMask);
-      In = DAG.getNode(X86ISD::PSHUFB, DL, MVT::v32i8, In, BV);
+      // The PSHUFB mask:
+      static const int ShufMask1[] = { 0,  1,  4,  5,  8,  9, 12, 13,
+                                      -1, -1, -1, -1, -1, -1, -1, -1,
+                                      16, 17, 20, 21, 24, 25, 28, 29,
+                                      -1, -1, -1, -1, -1, -1, -1, -1 };
+      In = DAG.getVectorShuffle(MVT::v32i8, DL, In, In, ShufMask1);
       In = DAG.getBitcast(MVT::v4i64, In);
 
-      static const int ShufMask[] = {0,  2,  -1,  -1};
-      In = DAG.getVectorShuffle(MVT::v4i64, DL,  In, DAG.getUNDEF(MVT::v4i64),
-                                ShufMask);
+      static const int ShufMask2[] = {0,  2,  -1,  -1};
+      In = DAG.getVectorShuffle(MVT::v4i64, DL,  In, In, ShufMask2);
       In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, In,
                        DAG.getIntPtrConstant(0, DL));
       return DAG.getBitcast(VT, In);
@@ -15551,9 +15544,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     static const int ShufMask1[] = {0,  1,  4,  5,  8,  9, 12, 13,
                                    -1, -1, -1, -1, -1, -1, -1, -1};
 
-    SDValue Undef = DAG.getUNDEF(MVT::v16i8);
-    OpLo = DAG.getVectorShuffle(MVT::v16i8, DL, OpLo, Undef, ShufMask1);
-    OpHi = DAG.getVectorShuffle(MVT::v16i8, DL, OpHi, Undef, ShufMask1);
+    OpLo = DAG.getVectorShuffle(MVT::v16i8, DL, OpLo, OpLo, ShufMask1);
+    OpHi = DAG.getVectorShuffle(MVT::v16i8, DL, OpHi, OpHi, ShufMask1);
 
     OpLo = DAG.getBitcast(MVT::v4i32, OpLo);
     OpHi = DAG.getBitcast(MVT::v4i32, OpHi);
@@ -15577,8 +15569,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // Prepare truncation shuffle mask
   for (unsigned i = 0; i != NumElems; ++i)
     MaskVec[i] = i * 2;
-  SDValue V = DAG.getVectorShuffle(NVT, DL, DAG.getBitcast(NVT, In),
-                                   DAG.getUNDEF(NVT), MaskVec);
+  In = DAG.getBitcast(NVT, In);
+  SDValue V = DAG.getVectorShuffle(NVT, DL, In, In, MaskVec);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V,
                      DAG.getIntPtrConstant(0, DL));
 }

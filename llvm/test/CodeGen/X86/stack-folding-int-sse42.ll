@@ -318,7 +318,7 @@ declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <16 x i8> @stack_fold_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %c) {
   ;CHECK-LABEL: stack_fold_pblendvb
-  ;CHECK:       pblendvb {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  ;CHECK:       pblendvb %xmm0, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %a1, <16 x i8> %c, <16 x i8> %a0)
   ret <16 x i8> %2

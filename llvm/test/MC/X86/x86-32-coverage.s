@@ -10526,9 +10526,9 @@
 // CHECK: 	invlpga %ecx, %eax
         	invlpga %ecx, %eax
 
-// CHECK:   blendvps	(%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
+// CHECK:   blendvps	%xmm0, (%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]
             blendvps (%eax), %xmm1
-// CHECK:   blendvps	%xmm2, %xmm1    # encoding: [0x66,0x0f,0x38,0x14,0xca]
+// CHECK:   blendvps	%xmm0, %xmm2, %xmm1    # encoding: [0x66,0x0f,0x38,0x14,0xca]
             blendvps %xmm2, %xmm1
 
 // These instructions can take an unsigned 8-bit mask as well as a signed 8-bit
@@ -10563,29 +10563,29 @@
           insertps $-64, %xmm2, %xmm1
 
 // PR13253 handle implicit optional third argument that must always be xmm0
-// CHECK: pblendvb %xmm2, %xmm1
+// CHECK: pblendvb %xmm0, %xmm2, %xmm1
 pblendvb %xmm2, %xmm1
-// CHECK: pblendvb %xmm2, %xmm1
+// CHECK: pblendvb %xmm0, %xmm2, %xmm1
 pblendvb %xmm0, %xmm2, %xmm1
-// CHECK: pblendvb (%eax), %xmm1
+// CHECK: pblendvb %xmm0, (%eax), %xmm1
 pblendvb (%eax), %xmm1
-// CHECK: pblendvb (%eax), %xmm1
+// CHECK: pblendvb %xmm0, (%eax), %xmm1
 pblendvb %xmm0, (%eax), %xmm1
-// CHECK: blendvpd %xmm2, %xmm1
+// CHECK: blendvpd %xmm0, %xmm2, %xmm1
 blendvpd %xmm2, %xmm1
-// CHECK: blendvpd %xmm2, %xmm1
+// CHECK: blendvpd %xmm0, %xmm2, %xmm1
 blendvpd %xmm0, %xmm2, %xmm1
-// CHECK: blendvpd (%eax), %xmm1
+// CHECK: blendvpd %xmm0, (%eax), %xmm1
 blendvpd (%eax), %xmm1
-// CHECK: blendvpd (%eax), %xmm1
+// CHECK: blendvpd %xmm0, (%eax), %xmm1
 blendvpd %xmm0, (%eax), %xmm1
-// CHECK: blendvps %xmm2, %xmm1
+// CHECK: blendvps %xmm0, %xmm2, %xmm1
 blendvps %xmm2, %xmm1
-// CHECK: blendvps %xmm2, %xmm1
+// CHECK: blendvps %xmm0, %xmm2, %xmm1
 blendvps %xmm0, %xmm2, %xmm1
-// CHECK: blendvps (%eax), %xmm1
+// CHECK: blendvps %xmm0, (%eax), %xmm1
 blendvps (%eax), %xmm1
-// CHECK: blendvps (%eax), %xmm1
+// CHECK: blendvps %xmm0, (%eax), %xmm1
 blendvps %xmm0, (%eax), %xmm1
 
 

@@ -8,7 +8,7 @@ define <2 x double> @test_x86_sse41_blendvpd(<2 x double> %a0, <2 x double> %a1,
 ; SSE41:       ## BB#0:
 ; SSE41-NEXT:    movapd %xmm0, %xmm3 ## encoding: [0x66,0x0f,0x28,0xd8]
 ; SSE41-NEXT:    movaps %xmm2, %xmm0 ## encoding: [0x0f,0x28,0xc2]
-; SSE41-NEXT:    blendvpd %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x15,0xd9]
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x15,0xd9]
 ; SSE41-NEXT:    movapd %xmm3, %xmm0 ## encoding: [0x66,0x0f,0x28,0xc3]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -27,7 +27,7 @@ define <4 x float> @test_x86_sse41_blendvps(<4 x float> %a0, <4 x float> %a1, <4
 ; SSE41:       ## BB#0:
 ; SSE41-NEXT:    movaps %xmm0, %xmm3 ## encoding: [0x0f,0x28,0xd8]
 ; SSE41-NEXT:    movaps %xmm2, %xmm0 ## encoding: [0x0f,0x28,0xc2]
-; SSE41-NEXT:    blendvps %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x14,0xd9]
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x14,0xd9]
 ; SSE41-NEXT:    movaps %xmm3, %xmm0 ## encoding: [0x0f,0x28,0xc3]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -140,7 +140,7 @@ define <16 x i8> @test_x86_sse41_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8
 ; SSE41:       ## BB#0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3 ## encoding: [0x66,0x0f,0x6f,0xd8]
 ; SSE41-NEXT:    movaps %xmm2, %xmm0 ## encoding: [0x0f,0x28,0xc2]
-; SSE41-NEXT:    pblendvb %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x10,0xd9]
+; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm3 ## encoding: [0x66,0x0f,0x38,0x10,0xd9]
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0 ## encoding: [0x66,0x0f,0x6f,0xc3]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;

@@ -9,7 +9,7 @@ define <4 x i32> @foo(<4 x i32>* %p, <4 x i1> %cond, <4 x i32> %v1, <4 x i32> %v
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    blendvps %xmm1, %xmm2
+; CHECK-NEXT:    blendvps %xmm0, %xmm1, %xmm2
 ; CHECK-NEXT:    paddd %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm2, (%rdi)
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0

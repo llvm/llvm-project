@@ -771,7 +771,7 @@ define <8 x i16> @blendvb_fallback(<8 x i1> %mask, <8 x i16> %x, <8 x i16> %y) {
 ; X32:       ## BB#0:
 ; X32-NEXT:    psllw $15, %xmm0
 ; X32-NEXT:    psraw $15, %xmm0
-; X32-NEXT:    pblendvb %xmm1, %xmm2
+; X32-NEXT:    pblendvb %xmm0, %xmm1, %xmm2
 ; X32-NEXT:    movdqa %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -779,7 +779,7 @@ define <8 x i16> @blendvb_fallback(<8 x i1> %mask, <8 x i16> %x, <8 x i16> %y) {
 ; X64:       ## BB#0:
 ; X64-NEXT:    psllw $15, %xmm0
 ; X64-NEXT:    psraw $15, %xmm0
-; X64-NEXT:    pblendvb %xmm1, %xmm2
+; X64-NEXT:    pblendvb %xmm0, %xmm1, %xmm2
 ; X64-NEXT:    movdqa %xmm2, %xmm0
 ; X64-NEXT:    retq
   %ret = select <8 x i1> %mask, <8 x i16> %x, <8 x i16> %y
