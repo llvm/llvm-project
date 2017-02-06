@@ -204,10 +204,10 @@ void ModuleManager::removeModules(
     return victimSet.count(MF);
   };
   // Remove any references to the now-destroyed modules.
-  //
-  // FIXME: this should probably clean up Imports as well.
-  for (auto I = begin(); I != First; ++I)
+  for (auto I = begin(); I != First; ++I) {
+    I->Imports.remove_if(IsVictim);
     I->ImportedBy.remove_if(IsVictim);
+  }
   Roots.erase(std::remove_if(Roots.begin(), Roots.end(), IsVictim),
               Roots.end());
 
