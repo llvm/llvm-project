@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_EXTERNALASTSOURCE_H
 #define LLVM_CLANG_AST_EXTERNALASTSOURCE_H
 
+#include "clang/Basic/Module.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclBase.h"
 #include "llvm/ADT/DenseMap.h"
@@ -149,20 +150,20 @@ public:
     StringRef PCHModuleName;
     StringRef Path;
     StringRef ASTFile;
-    uint64_t Signature = 0;
+    ASTFileSignature Signature;
     const Module *ClangModule = nullptr;
 
   public:
     ASTSourceDescriptor(){};
     ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                        uint64_t Signature)
+                        ASTFileSignature Signature)
         : PCHModuleName(std::move(Name)), Path(std::move(Path)),
           ASTFile(std::move(ASTFile)), Signature(Signature){};
     ASTSourceDescriptor(const Module &M);
     std::string getModuleName() const;
     StringRef getPath() const { return Path; }
     StringRef getASTFile() const { return ASTFile; }
-    uint64_t getSignature() const { return Signature; }
+    ASTFileSignature getSignature() const { return Signature; }
     const Module *getModuleOrNull() const { return ClangModule; }
   };
 
