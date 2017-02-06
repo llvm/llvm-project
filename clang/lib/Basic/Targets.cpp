@@ -8517,6 +8517,57 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
+    // There aren't any multi-character AVR specific constraints.
+    if (StringRef(Name).size() > 1) return false;
+
+    switch (*Name) {
+      default: return false;
+      case 'a': // Simple upper registers
+      case 'b': // Base pointer registers pairs
+      case 'd': // Upper register
+      case 'l': // Lower registers
+      case 'e': // Pointer register pairs
+      case 'q': // Stack pointer register
+      case 'r': // Any register
+      case 'w': // Special upper register pairs
+      case 't': // Temporary register
+      case 'x': case 'X': // Pointer register pair X
+      case 'y': case 'Y': // Pointer register pair Y
+      case 'z': case 'Z': // Pointer register pair Z
+        Info.setAllowsRegister();
+        return true;
+      case 'I': // 6-bit positive integer constant
+        Info.setRequiresImmediate(0, 63);
+        return true;
+      case 'J': // 6-bit negative integer constant
+        Info.setRequiresImmediate(-63, 0);
+        return true;
+      case 'K': // Integer constant (Range: 2)
+        Info.setRequiresImmediate(2);
+        return true;
+      case 'L': // Integer constant (Range: 0)
+        Info.setRequiresImmediate(0);
+        return true;
+      case 'M': // 8-bit integer constant
+        Info.setRequiresImmediate(0, 0xff);
+        return true;
+      case 'N': // Integer constant (Range: -1)
+        Info.setRequiresImmediate(-1);
+        return true;
+      case 'O': // Integer constant (Range: 8, 16, 24)
+        Info.setRequiresImmediate({8, 16, 24});
+        return true;
+      case 'P': // Integer constant (Range: 1)
+        Info.setRequiresImmediate(1);
+        return true;
+      case 'R': // Integer constant (Range: -6 to 5)
+        Info.setRequiresImmediate(-6, 5);
+        return true;
+      case 'G': // Floating point constant
+      case 'Q': // A memory address based on Y or Z pointer with displacement.
+        return true;
+    }
+
     return false;
   }
 

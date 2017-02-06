@@ -138,7 +138,7 @@ int uncaught_exceptions() _NOEXCEPT
 #elif defined(_LIBCPP_ABI_MICROSOFT)
     return __uncaught_exceptions();
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING("uncaught_exceptions not yet implemented")
 #   else
 #       warning uncaught_exception not yet implemented
@@ -211,7 +211,7 @@ exception_ptr::~exception_ptr() _NOEXCEPT
 #elif defined(__GLIBCXX__)
     reinterpret_cast<__exception_ptr::exception_ptr*>(this)->~exception_ptr();
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING("exception_ptr not yet implemented")
 #   else
 #       warning exception_ptr not yet implemented
@@ -230,7 +230,7 @@ exception_ptr::exception_ptr(const exception_ptr& other) _NOEXCEPT
     new (reinterpret_cast<void*>(this)) __exception_ptr::exception_ptr(
         reinterpret_cast<const __exception_ptr::exception_ptr&>(other));
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING("exception_ptr not yet implemented")
 #   else
 #       warning exception_ptr not yet implemented
@@ -255,7 +255,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) _NOEXCEPT
         reinterpret_cast<const __exception_ptr::exception_ptr&>(other);
     return *this;
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING("exception_ptr not yet implemented")
 #   else
 #       warning exception_ptr not yet implemented
@@ -299,7 +299,7 @@ exception_ptr current_exception() _NOEXCEPT
     ptr.__ptr_ = __cxa_current_primary_exception();
     return ptr;
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING( "exception_ptr not yet implemented" )
 #   else
 #       warning exception_ptr not yet implemented
@@ -321,7 +321,7 @@ void rethrow_exception(exception_ptr p)
 #elif defined(__GLIBCXX__)
     rethrow_exception(reinterpret_cast<__exception_ptr::exception_ptr&>(p));
 #else
-#   if defined(_MSC_VER) && ! defined(__clang__)
+#   if defined(_LIBCPP_MSVC)
         _LIBCPP_WARNING("exception_ptr not yet implemented")
 #   else
 #       warning exception_ptr not yet implemented

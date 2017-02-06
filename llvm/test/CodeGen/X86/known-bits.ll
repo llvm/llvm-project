@@ -103,3 +103,69 @@ CF246:                                            ; preds = %CF237
   %E156 = extractelement <4 x i1> %Cmp117, i32 2
   br label %CF
 }
+
+define i32 @knownbits_mask_add_lshr(i32 %a0, i32 %a1) nounwind {
+; X32-LABEL: knownbits_mask_add_lshr:
+; X32:       # BB#0:
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_mask_add_lshr:
+; X64:       # BB#0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %1 = and i32 %a0, 32767
+  %2 = and i32 %a1, 32766
+  %3 = add i32 %1, %2
+  %4 = lshr i32 %3, 17
+  ret i32 %4
+}
+
+define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
+; X32-LABEL: knownbits_mask_addc_shl:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %edi
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl $-1024, %esi # imm = 0xFC00
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    andl %esi, %edi
+; X32-NEXT:    andl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    addl %edi, %esi
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    adcl $0, %ecx
+; X32-NEXT:    shldl $22, %edx, %ecx
+; X32-NEXT:    shldl $22, %esi, %edx
+; X32-NEXT:    shll $22, %esi
+; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    movl %edx, 8(%eax)
+; X32-NEXT:    movl %ecx, 12(%eax)
+; X32-NEXT:    movl $0, (%eax)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    popl %edi
+; X32-NEXT:    retl $4
+;
+; X64-LABEL: knownbits_mask_addc_shl:
+; X64:       # BB#0:
+; X64-NEXT:    andq $-1024, %rdi # imm = 0xFC00
+; X64-NEXT:    andq $-1024, %rsi # imm = 0xFC00
+; X64-NEXT:    addq %rdi, %rsi
+; X64-NEXT:    sbbq %rax, %rax
+; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    shldq $54, %rsi, %rdx
+; X64-NEXT:    shlq $54, %rsi
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    retq
+  %1 = and i64 %a0, -1024
+  %2 = zext i64 %1 to i128
+  %3 = and i64 %a1, -1024
+  %4 = zext i64 %3 to i128
+  %5 = add i128 %2, %4
+  %6 = zext i64 %a2 to i128
+  %7 = shl i128 %6, 64
+  %8 = add i128 %5, %7
+  %9 = shl i128 %8, 54
+  ret i128 %9
+}

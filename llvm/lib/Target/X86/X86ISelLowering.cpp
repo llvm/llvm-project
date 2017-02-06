@@ -27333,6 +27333,7 @@ static bool combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
 static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
                                           int SrcOpIndex, SDValue Root,
                                           ArrayRef<int> RootMask,
+                                          ArrayRef<const SDNode*> SrcNodes,
                                           int Depth, bool HasVariableMask,
                                           SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
@@ -27469,11 +27470,20 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
 
   HasVariableMask |= isTargetShuffleVariableMask(Op.getOpcode());
 
-  // See if we can recurse into each shuffle source op (if it's a target shuffle).
+  // Update the list of shuffle nodes that have been combined so far.
+  SmallVector<const SDNode *, 8> CombinedNodes(SrcNodes.begin(),
+                                               SrcNodes.end());
+  CombinedNodes.push_back(Op.getNode());
+
+  // See if we can recurse into each shuffle source op (if it's a target
+  // shuffle). The source op should only be combined if it either has a
+  // single use (i.e. current Op) or all its users have already been combined.
   for (int i = 0, e = Ops.size(); i < e; ++i)
-    if (Ops[i].getNode()->hasOneUse() || Op->isOnlyUserOf(Ops[i].getNode()))
-      if (combineX86ShufflesRecursively(Ops, i, Root, Mask, Depth + 1,
-                                        HasVariableMask, DAG, DCI, Subtarget))
+    if (Ops[i].getNode()->hasOneUse() ||
+        SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
+      if (combineX86ShufflesRecursively(Ops, i, Root, Mask, CombinedNodes,
+                                        Depth + 1, HasVariableMask, DAG, DCI,
+                                        Subtarget))
         return true;
 
   // Attempt to constant fold all of the constant source ops.
@@ -28270,7 +28280,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // a particular chain.
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
@@ -30541,7 +30551,7 @@ static SDValue combineVectorShift(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
@@ -30582,7 +30592,7 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
   SDValue Op(N, 0);
   SmallVector<int, 1> NonceMask; // Just a placeholder.
   NonceMask.push_back(0);
-  combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+  combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
                                 /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                 DCI, Subtarget);
   return SDValue();
@@ -30895,7 +30905,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
@@ -33053,7 +33063,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     SmallVector<int, 1> NonceMask; // Just a placeholder.
     NonceMask.push_back(0);
-    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask,
+    if (combineX86ShufflesRecursively({Op}, 0, Op, NonceMask, {},
                                       /*Depth*/ 1, /*HasVarMask*/ false, DAG,
                                       DCI, Subtarget))
       return SDValue(); // This routine will use CombineTo to replace N.
