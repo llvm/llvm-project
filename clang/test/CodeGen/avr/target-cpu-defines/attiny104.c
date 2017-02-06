@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -E -dM -triple avr-unknown-unknown -target-cpu attiny104 /dev/null | FileCheck -match-full-lines %s
+
+// CHECK: #define AVR 1
+// CHECK: #define __AVR 1
+// CHECK: #define __AVR_ATtiny104 1
+// CHECK: #define __AVR__ 1
