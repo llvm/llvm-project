@@ -6602,6 +6602,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     if (Bytes.size() == 0)
       return;
 
+    // If the section has symbols but no symbol at the start of the section
+    // these are used to make sure the bytes before the first symbol are
+    // disassembled.
+    bool FirstSymbol = true;
+    bool FirstSymbolAtSectionStart = true;
+
     // Disassemble symbol by symbol.
     for (unsigned SymIdx = 0; SymIdx != Symbols.size(); SymIdx++) {
       Expected<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
@@ -6691,10 +6697,28 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       // (i.e. we're not targeting M-class) and the function is Thumb.
       bool UseThumbTarget = IsThumb && ThumbTarget;
 
-      outs() << SymName << ":\n";
+      // If we are not specifying a symbol to start disassembly with and this
+      // is the first symbol in the section but not at the start of the section
+      // then move the disassembly index to the start of the section and
+      // don't print the symbol name just yet.  This is so the bytes before the
+      // first symbol are disassembled.
+      uint64_t SymbolStart = Start;
+      if (DisSymName.empty() && FirstSymbol && Start != 0) {
+        FirstSymbolAtSectionStart = false;
+        Start = 0;
+      }
+      else
+        outs() << SymName << ":\n";
+
       DILineInfo lastLine;
       for (uint64_t Index = Start; Index < End; Index += Size) {
         MCInst Inst;
+
+        // If this is the first symbol in the section and it was not at the
+        // start of the section, see if we are at its Index now and if so print
+        // the symbol name.
+        if (FirstSymbol && !FirstSymbolAtSectionStart && Index == SymbolStart)
+          outs() << SymName << ":\n";
 
         uint64_t PC = SectAddress + Index;
         if (!NoLeadingAddr) {
@@ -6788,6 +6812,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           }
         }
       }
+      // Now that we are done disassembled the first symbol set the bool that
+      // were doing this to false.
+      FirstSymbol = false;
     }
     if (!symbolTableWorked) {
       // Reading the symbol table didn't work, disassemble the whole section.
