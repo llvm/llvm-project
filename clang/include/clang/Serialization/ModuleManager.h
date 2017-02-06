@@ -19,6 +19,7 @@
 #include "clang/Serialization/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/iterator.h"
 
 namespace clang { 
 
@@ -111,9 +112,13 @@ class ModuleManager {
   void returnVisitState(VisitState *State);
 
 public:
-  typedef SmallVectorImpl<ModuleFile*>::iterator ModuleIterator;
-  typedef SmallVectorImpl<ModuleFile*>::const_iterator ModuleConstIterator;
-  typedef SmallVectorImpl<ModuleFile*>::reverse_iterator ModuleReverseIterator;
+  typedef llvm::pointee_iterator<SmallVectorImpl<ModuleFile *>::iterator>
+      ModuleIterator;
+  typedef llvm::pointee_iterator<SmallVectorImpl<ModuleFile *>::const_iterator>
+      ModuleConstIterator;
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<ModuleFile *>::reverse_iterator>
+      ModuleReverseIterator;
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
   explicit ModuleManager(FileManager &FileMgr,
@@ -136,7 +141,8 @@ public:
   ModuleReverseIterator rend() { return Chain.rend(); }
 
   /// \brief A range covering the PCH and preamble module files loaded.
-  llvm::iterator_range<ModuleConstIterator> pch_modules() const {
+  llvm::iterator_range<SmallVectorImpl<ModuleFile *>::const_iterator>
+  pch_modules() const {
     return llvm::make_range(PCHChain.begin(), PCHChain.end());
   }
 
