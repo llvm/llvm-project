@@ -82,3 +82,11 @@ define void @legal_default([8 x i8] %in) {
   insertvalue { [4 x i8], [8 x i8], [4 x i8] } undef, [8 x i8] %in, 1
   ret void
 }
+
+  ; AArch64 was asserting instead of returning an invalid mapping for unknown
+  ; sizes.
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for sequence_sizes
+; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
+define i128 @sequence_sizes([8 x i8] %in) {
+  ret i128 undef
+}
