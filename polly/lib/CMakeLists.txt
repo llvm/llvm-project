@@ -1,9 +1,9 @@
 set(LLVM_NO_RTTI 1)
 
 set(POLLY_JSON_FILES
-    JSON/json_reader.cpp
-    JSON/json_value.cpp
-    JSON/json_writer.cpp
+    External/JSON/json_reader.cpp
+    External/JSON/json_value.cpp
+    External/JSON/json_writer.cpp
 )
 
 set(ISL_CODEGEN_FILES

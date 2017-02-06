@@ -129,7 +129,7 @@ private:
 };
 
 //==============================================================================
-// DerivedFromBase - A type that derives from it's template argument 'Base'
+// DerivedFromBase - A type that derives from its template argument 'Base'
 template <class Base>
 struct DerivedFromType : public Base {
     DerivedFromType() : Base() {}
@@ -138,7 +138,7 @@ struct DerivedFromType : public Base {
 };
 
 //==============================================================================
-// DerefToType - A type that dereferences to it's template argument 'To'.
+// DerefToType - A type that dereferences to its template argument 'To'.
 //   The cv-ref qualifiers of the 'DerefToType' object do not propagate
 //   to the resulting 'To' object.
 template <class To>
@@ -154,7 +154,7 @@ struct DerefToType {
 };
 
 //==============================================================================
-// DerefPropToType - A type that dereferences to it's template argument 'To'.
+// DerefPropToType - A type that dereferences to its template argument 'To'.
 //   The cv-ref qualifiers of the 'DerefPropToType' object propagate
 //   to the resulting 'To' object.
 template <class To>

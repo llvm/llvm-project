@@ -130,7 +130,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     }
   }
 
-  printOperand(MI, OpNum, O);
+  if (Error)
+    printOperand(MI, OpNum, O);
 
   return false;
 }

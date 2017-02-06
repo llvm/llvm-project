@@ -306,6 +306,7 @@ set(thumb1_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
   arm/comparesf2.S
+  arm/addsf3.S
   ${GENERIC_SOURCES})
 
 set(arm_EABI_SOURCES

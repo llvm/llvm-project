@@ -176,7 +176,7 @@ protected:
   void buildEdges(Function &F);
   bool propagateThroughEdges(Function &F, bool UpdateBlockCount);
   void computeDominanceAndLoopInfo(Function &F);
-  unsigned getOffset(unsigned L, unsigned H) const;
+  unsigned getOffset(const DILocation *DIL) const;
   void clearFunctionData();
 
   /// \brief Map basic blocks to their computed weights.
@@ -401,15 +401,11 @@ void SampleProfileLoader::clearFunctionData() {
   CoverageTracker.clear();
 }
 
-/// \brief Returns the offset of lineno \p L to head_lineno \p H
-///
-/// \param L  Lineno
-/// \param H  Header lineno of the function
-///
-/// \returns offset to the header lineno. 16 bits are used to represent offset.
+/// Returns the line offset to the start line of the subprogram.
 /// We assume that a single function will not exceed 65535 LOC.
-unsigned SampleProfileLoader::getOffset(unsigned L, unsigned H) const {
-  return (L - H) & 0xffff;
+unsigned SampleProfileLoader::getOffset(const DILocation *DIL) const {
+  return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+         0xffff;
 }
 
 /// \brief Print the weight of edge \p E on stream \p OS.
@@ -477,10 +473,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
     return 0;
 
   const DILocation *DIL = DLoc;
-  unsigned Lineno = DLoc.getLine();
-  unsigned HeaderLineno = DIL->getScope()->getSubprogram()->getLine();
-
-  uint32_t LineOffset = getOffset(Lineno, HeaderLineno);
+  uint32_t LineOffset = getOffset(DIL);
   uint32_t Discriminator = DIL->getDiscriminator();
   ErrorOr<uint64_t> R = IsCall
                             ? FS->findCallSamplesAt(LineOffset, Discriminator)
@@ -497,8 +490,8 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
               " samples from profile (offset: " + Twine(LineOffset) +
               ((Discriminator) ? Twine(".") + Twine(Discriminator) : "") + ")");
     }
-    DEBUG(dbgs() << "    " << Lineno << "." << DIL->getDiscriminator() << ":"
-                 << Inst << " (line offset: " << Lineno - HeaderLineno << "."
+    DEBUG(dbgs() << "    " << DLoc.getLine() << "." << DIL->getDiscriminator()
+                 << ":" << Inst << " (line offset: " << LineOffset << "."
                  << DIL->getDiscriminator() << " - weight: " << R.get()
                  << ")\n");
   }
@@ -566,16 +559,12 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
   if (!DIL) {
     return nullptr;
   }
-  DISubprogram *SP = DIL->getScope()->getSubprogram();
-  if (!SP)
-    return nullptr;
-
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
     return nullptr;
 
-  return FS->findFunctionSamplesAt(LineLocation(
-      getOffset(DIL->getLine(), SP->getLine()), DIL->getDiscriminator()));
+  return FS->findFunctionSamplesAt(
+      LineLocation(getOffset(DIL), DIL->getDiscriminator()));
 }
 
 /// \brief Get the FunctionSamples for an instruction.
@@ -594,13 +583,8 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   if (!DIL) {
     return Samples;
   }
-  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    DISubprogram *SP = DIL->getScope()->getSubprogram();
-    if (!SP)
-      return nullptr;
-    S.push_back(LineLocation(getOffset(DIL->getLine(), SP->getLine()),
-                             DIL->getDiscriminator()));
-  }
+  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt())
+    S.push_back(LineLocation(getOffset(DIL), DIL->getDiscriminator()));
   if (S.size() == 0)
     return Samples;
   const FunctionSamples *FS = Samples;
@@ -669,10 +653,9 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       }
       if (!CalledFunction || !CalledFunction->getSubprogram())
         continue;
-      CallSite CS(DI);
       DebugLoc DLoc = I->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*I)->getTotalSamples();
-      if (InlineFunction(CS, IFI)) {
+      if (InlineFunction(CallSite(DI), IFI)) {
         LocalChanged = true;
         emitOptimizationRemark(Ctx, DEBUG_TYPE, F, DLoc,
                                Twine("inlined hot callee '") +
@@ -1118,8 +1101,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           if (!DLoc)
             continue;
           const DILocation *DIL = DLoc;
-          uint32_t LineOffset = getOffset(
-              DLoc.getLine(), DIL->getScope()->getSubprogram()->getLine());
+          uint32_t LineOffset = getOffset(DIL);
           uint32_t Discriminator = DIL->getDiscriminator();
 
           const FunctionSamples *FS = findFunctionSamples(I);

@@ -189,7 +189,7 @@ define void @trunc_v8i32_to_v8i16(<16 x i16>* %L, <8 x i16>* %S) nounwind {
 ; AVX-LABEL: trunc_v8i32_to_v8i16:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX-NEXT:    vzeroupper
@@ -384,7 +384,7 @@ define void @trunc_v8i32_to_v8i8(<32 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX-LABEL: trunc_v8i32_to_v8i8:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    vmovq %xmm0, (%rsi)

@@ -56,7 +56,7 @@ void AVRMCInstLower::lowerInstruction(const MachineInstr &MI, MCInst &OutMI) con
 
     switch (MO.getType()) {
     default:
-      MI.dump();
+      MI.print(errs());
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_Register:
       // Ignore all implicit register operands.

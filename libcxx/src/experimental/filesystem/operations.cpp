@@ -886,23 +886,28 @@ path __system_complete(const path& p, std::error_code *ec) {
     return absolute(p, current_path());
 }
 
-path __temp_directory_path(std::error_code *ec) {
-    const char* env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
-    const char* ret = nullptr;
-    for (auto & ep : env_paths)  {
-        if ((ret = std::getenv(ep)))
-            break;
-    }
-    path p(ret ? ret : "/tmp");
-    std::error_code m_ec;
-    if (is_directory(p, m_ec)) {
-        if (ec) ec->clear();
-        return p;
-    }
+path __temp_directory_path(std::error_code* ec) {
+  const char* env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
+  const char* ret = nullptr;
+
+  for (auto& ep : env_paths)
+    if ((ret = std::getenv(ep)))
+      break;
+  if (ret == nullptr)
+    ret = "/tmp";
+
+  path p(ret);
+  std::error_code m_ec;
+  if (!exists(p, m_ec) || !is_directory(p, m_ec)) {
     if (!m_ec || m_ec == make_error_code(errc::no_such_file_or_directory))
-        m_ec = make_error_code(errc::not_a_directory);
+      m_ec = make_error_code(errc::not_a_directory);
     set_or_throw(m_ec, ec, "temp_directory_path");
     return {};
+  }
+
+  if (ec)
+    ec->clear();
+  return p;
 }
 
 // An absolute path is composed according to the table in [fs.op.absolute].

@@ -29,9 +29,8 @@ define void @b(i32* nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
  %0 = zext i64 %a to i128
@@ -50,9 +49,8 @@ define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    movw %cx, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
  %0 = zext i64 %a to i128
@@ -71,9 +69,8 @@ define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    movb %al, (%rdi)
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    movb %cl, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
  %0 = zext i64 %a to i128
@@ -169,9 +166,8 @@ define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    addq 8(%rdi), %rdx
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-NEXT:    addl %eax, 16(%rdi)
+; CHECK-NEXT:    subl %eax, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = zext i64 %arg.a to i128
