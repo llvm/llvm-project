@@ -96,30 +96,29 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   // Check whether we already loaded this module, before
   ModuleFile *ModuleEntry = Modules[Entry];
-  bool NewModule = false;
+  std::unique_ptr<ModuleFile> NewModule;
   if (!ModuleEntry) {
     // Allocate a new module.
-    NewModule = true;
-    ModuleEntry = new ModuleFile(Type, Generation);
-    ModuleEntry->Index = Chain.size();
-    ModuleEntry->FileName = FileName.str();
-    ModuleEntry->File = Entry;
-    ModuleEntry->ImportLoc = ImportLoc;
-    ModuleEntry->InputFilesValidationTimestamp = 0;
+    NewModule = llvm::make_unique<ModuleFile>(Type, Generation);
+    NewModule->Index = Chain.size();
+    NewModule->FileName = FileName.str();
+    NewModule->File = Entry;
+    NewModule->ImportLoc = ImportLoc;
+    NewModule->InputFilesValidationTimestamp = 0;
 
-    if (ModuleEntry->Kind == MK_ImplicitModule) {
-      std::string TimestampFilename = ModuleEntry->getTimestampFilename();
+    if (NewModule->Kind == MK_ImplicitModule) {
+      std::string TimestampFilename = NewModule->getTimestampFilename();
       vfs::Status Status;
       // A cached stat value would be fine as well.
       if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-        ModuleEntry->InputFilesValidationTimestamp =
+        NewModule->InputFilesValidationTimestamp =
             llvm::sys::toTimeT(Status.getLastModificationTime());
     }
 
     // Load the contents of the module
     if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
       // The buffer was already provided for us.
-      ModuleEntry->Buffer = std::move(Buffer);
+      NewModule->Buffer = std::move(Buffer);
     } else {
       // Open the AST file.
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf(
@@ -131,28 +130,28 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
         // ModuleManager it must be the same underlying file.
         // FIXME: Because FileManager::getFile() doesn't guarantee that it will
         // give us an open file, this may not be 100% reliable.
-        Buf = FileMgr.getBufferForFile(ModuleEntry->File,
+        Buf = FileMgr.getBufferForFile(NewModule->File,
                                        /*IsVolatile=*/false,
                                        /*ShouldClose=*/false);
       }
 
       if (!Buf) {
         ErrorStr = Buf.getError().message();
-        delete ModuleEntry;
         return Missing;
       }
 
-      ModuleEntry->Buffer = std::move(*Buf);
+      NewModule->Buffer = std::move(*Buf);
     }
 
     // Initialize the stream.
-    ModuleEntry->Data = PCHContainerRdr.ExtractPCH(*ModuleEntry->Buffer);
+    NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
 
     // Read the signature eagerly now so that we can check it.
-    if (checkSignature(ReadSignature(ModuleEntry->Data), ExpectedSignature, ErrorStr)) {
-      delete ModuleEntry;
+    if (checkSignature(ReadSignature(NewModule->Data), ExpectedSignature, ErrorStr))
       return OutOfDate;
-    }
+
+    // We're keeping this module.  Update the map entry.
+    ModuleEntry = NewModule.get();
   } else if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr)) {
     return OutOfDate;
   }
@@ -175,7 +174,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   assert(!Modules[Entry] && "module loaded twice");
   Modules[Entry] = ModuleEntry;
 
-  Chain.push_back(ModuleEntry);
+  Chain.push_back(std::move(NewModule));
   if (!ModuleEntry->isModule())
     PCHChain.push_back(ModuleEntry);
   if (!ImportedBy)
@@ -234,11 +233,9 @@ void ModuleManager::removeModules(
     // new files that will be renamed over the old ones.
     if (LoadedSuccessfully.count(&*victim) == 0)
       FileMgr.invalidateCache(victim->File);
-
-    delete &*victim;
   }
 
-  // Remove the modules from the chain.
+  // Delete the modules.
   Chain.erase(Chain.begin() + (first - begin()),
               Chain.begin() + (last - begin()));
 }
@@ -280,11 +277,9 @@ void ModuleManager::setGlobalIndex(GlobalModuleIndex *Index) {
 
   // Notify the global module index about all of the modules we've already
   // loaded.
-  for (unsigned I = 0, N = Chain.size(); I != N; ++I) {
-    if (!GlobalIndex->loadedModuleFile(Chain[I])) {
-      ModulesInCommonWithGlobalIndex.push_back(Chain[I]);
-    }
-  }
+  for (ModuleFile &M : *this)
+    if (!GlobalIndex->loadedModuleFile(&M))
+      ModulesInCommonWithGlobalIndex.push_back(&M);
 }
 
 void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
@@ -299,11 +294,7 @@ ModuleManager::ModuleManager(FileManager &FileMgr,
     : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr), GlobalIndex(),
       FirstVisitState(nullptr) {}
 
-ModuleManager::~ModuleManager() {
-  for (unsigned i = 0, e = Chain.size(); i != e; ++i)
-    delete Chain[e - i - 1];
-  delete FirstVisitState;
-}
+ModuleManager::~ModuleManager() { delete FirstVisitState; }
 
 void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
                           llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit) {

@@ -33,7 +33,7 @@ namespace serialization {
 class ModuleManager {
   /// \brief The chain of AST files, in the order in which we started to load
   /// them (this order isn't really useful for anything).
-  SmallVector<ModuleFile *, 2> Chain;
+  SmallVector<std::unique_ptr<ModuleFile>, 2> Chain;
 
   /// \brief The chain of non-module PCH files. The first entry is the one named
   /// by the user, the last one is the one that doesn't depend on anything
@@ -112,12 +112,14 @@ class ModuleManager {
   void returnVisitState(VisitState *State);
 
 public:
-  typedef llvm::pointee_iterator<SmallVectorImpl<ModuleFile *>::iterator>
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::iterator>
       ModuleIterator;
-  typedef llvm::pointee_iterator<SmallVectorImpl<ModuleFile *>::const_iterator>
+  typedef llvm::pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::const_iterator>
       ModuleConstIterator;
   typedef llvm::pointee_iterator<
-      SmallVectorImpl<ModuleFile *>::reverse_iterator>
+      SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>
       ModuleReverseIterator;
   typedef std::pair<uint32_t, StringRef> ModuleOffset;
 
