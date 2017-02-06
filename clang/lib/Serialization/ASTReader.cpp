@@ -3638,11 +3638,10 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     for (const ImportedModule &IM : Loaded)
       LoadedSet.insert(IM.Mod);
 
-    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules, ModuleMgr.end(),
-                            LoadedSet,
+    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules, LoadedSet,
                             Context.getLangOpts().Modules
-                              ? &PP.getHeaderSearchInfo().getModuleMap()
-                              : nullptr);
+                                ? &PP.getHeaderSearchInfo().getModuleMap()
+                                : nullptr);
 
     // If we find that any modules are unusable, the global index is going
     // to be out-of-date. Just remove it.
