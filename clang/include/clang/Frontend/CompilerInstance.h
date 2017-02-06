@@ -44,6 +44,7 @@ class ExternalASTSource;
 class FileEntry;
 class FileManager;
 class FrontendAction;
+class MemoryBufferCache;
 class Module;
 class Preprocessor;
 class Sema;
@@ -89,6 +90,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The source manager.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
+
+  /// The cache of PCM files.
+  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -142,13 +146,13 @@ class CompilerInstance : public ModuleLoader {
 
   /// \brief Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
-  bool BuildGlobalModuleIndex;
+  bool BuildGlobalModuleIndex = false;
 
   /// \brief We have a full global module index, with all modules.
-  bool HaveFullGlobalModuleIndex;
+  bool HaveFullGlobalModuleIndex = false;
 
   /// \brief One or more modules failed to build.
-  bool ModuleBuildFailed;
+  bool ModuleBuildFailed = false;
 
   /// \brief Holds information about the output file.
   ///
@@ -178,7 +182,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      bool BuildingModule = false);
+      MemoryBufferCache *SharedPCMCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -790,6 +794,8 @@ public:
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
+
+  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
 };
 
 } // end namespace clang

@@ -408,6 +408,9 @@ private:
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
 
+  /// The cache that manages memory buffers for PCM files.
+  MemoryBufferCache &PCMCache;
+
   /// \brief A dummy identifier resolver used to merge TU-scope declarations in
   /// C, for the cases where we don't have a Sema object to provide a real
   /// identifier resolver.
@@ -1174,7 +1177,7 @@ private:
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
-                            serialization::ASTFileSignature ExpectedSignature,
+                            ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
@@ -1183,7 +1186,22 @@ private:
   static ASTReadResult ReadOptionsBlock(
       llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
       bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-      std::string &SuggestedPredefines, bool ValidateDiagnosticOptions);
+      std::string &SuggestedPredefines);
+
+  /// Read the unhashed control block.
+  ///
+  /// This has no effect on \c F.Stream, instead creating a fresh cursor from
+  /// \c F.Data and reading ahead.
+  ASTReadResult readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
+                                         unsigned ClientLoadCapabilities);
+
+  static ASTReadResult
+  readUnhashedControlBlockImpl(ModuleFile *F, llvm::StringRef StreamData,
+                               unsigned ClientLoadCapabilities,
+                               bool AllowCompatibleConfigurationMismatch,
+                               ASTReaderListener *Listener,
+                               bool ValidateDiagnosticOptions);
+
   ASTReadResult ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   ASTReadResult ReadExtensionBlock(ModuleFile &F);
   bool ParseLineTable(ModuleFile &F, const RecordData &Record);
@@ -1635,7 +1653,7 @@ public:
     unsigned Result = 0;
     for (ModuleConstIterator I = ModuleMgr.begin(),
         E = ModuleMgr.end(); I != E; ++I) {
-      Result += (*I)->NumPreprocessedEntities;
+      Result += I->NumPreprocessedEntities;
     }
 
     return Result;
