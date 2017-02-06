@@ -185,6 +185,7 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenGlobalISel:
     EmitGlobalISel(Records, OS);
+    break;
   case GenRegisterBank:
     EmitRegisterBank(Records, OS);
     break;

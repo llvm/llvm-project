@@ -110,16 +110,6 @@ static bool isTrivialOperatorNode(const TreePatternNode *N) {
 
 //===- Matchers -----------------------------------------------------------===//
 
-struct MatchAction {
-  virtual ~MatchAction() {}
-  virtual void emit(raw_ostream &OS) const = 0;
-};
-
-raw_ostream &operator<<(raw_ostream &S, const MatchAction &A) {
-  A.emit(S);
-  return S;
-}
-
 template <class PredicateTy> class PredicateListMatcher {
 private:
   typedef std::vector<std::unique_ptr<PredicateTy>> PredicateVec;
@@ -153,7 +143,7 @@ public:
       OS << Separator << "(";
       Predicate->emitCxxPredicateExpr(OS, std::forward<Args>(args)...);
       OS << ")";
-      Separator = " && ";
+      Separator = " &&\n";
     }
   }
 };
@@ -286,49 +276,83 @@ public:
   void emitCxxPredicateExpr(raw_ostream &OS, const StringRef InsnVarName) const {
     emitCxxPredicateListExpr(OS, InsnVarName);
     for (const auto &Operand : Operands) {
-      OS << " && (";
+      OS << " &&\n(";
       Operand.emitCxxPredicateExpr(OS, InsnVarName);
       OS << ")";
     }
   }
 };
 
-struct MutateOpcode : public MatchAction {
-  MutateOpcode(const CodeGenInstruction *I) : I(I) {}
+//===- Actions ------------------------------------------------------------===//
+
+/// An action taken when all Matcher predicates succeeded for a parent rule.
+///
+/// Typical actions include:
+/// * Changing the opcode of an instruction.
+/// * Adding an operand to an instruction.
+class MatchAction {
+public:
+  virtual ~MatchAction() {}
+  virtual void emitCxxActionStmts(raw_ostream &OS) const = 0;
+};
+
+/// Generates a comment describing the matched rule being acted upon.
+class DebugCommentAction : public MatchAction {
+private:
+  const PatternToMatch &P;
+
+public:
+  DebugCommentAction(const PatternToMatch &P) : P(P) {}
+
+  virtual void emitCxxActionStmts(raw_ostream &OS) const {
+    OS << "// " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern();
+  }
+};
+
+/// Generates code to set the opcode (really, the MCInstrDesc) of a matched
+/// instruction to a given Instruction.
+class MutateOpcodeAction : public MatchAction {
+private:
   const CodeGenInstruction *I;
 
-  virtual void emit(raw_ostream &OS) const {
+public:
+  MutateOpcodeAction(const CodeGenInstruction *I) : I(I) {}
+
+  virtual void emitCxxActionStmts(raw_ostream &OS) const {
     OS << "I.setDesc(TII.get(" << I->Namespace << "::" << I->TheDef->getName()
        << "));";
   }
 };
 
 /// Generates code to check that a match rule matches.
-///
-/// This currently supports a single match position but could be extended to
-/// support multiple positions to support div/rem fusion or load-multiple
-/// instructions.
 class RuleMatcher {
-  const PatternToMatch &P;
-
+  /// A list of matchers that all need to succeed for the current rule to match.
+  /// FIXME: This currently supports a single match position but could be
+  /// extended to support multiple positions to support div/rem fusion or
+  /// load-multiple instructions.
   std::vector<std::unique_ptr<InstructionMatcher>> Matchers;
 
-public:
+  /// A list of actions that need to be taken when all predicates in this rule
+  /// have succeeded.
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
-  RuleMatcher(const PatternToMatch &P) : P(P) {}
+public:
+  RuleMatcher() {}
 
   InstructionMatcher &addInstructionMatcher() {
     Matchers.emplace_back(new InstructionMatcher());
     return *Matchers.back();
   }
 
+  template <class Kind, class... Args>
+  Kind &addAction(Args&&... args) {
+    Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
+    return *static_cast<Kind *>(Actions.back().get());
+  }
+
   void emit(raw_ostream &OS) {
     if (Matchers.empty())
       llvm_unreachable("Unexpected empty matcher!");
-
-    OS << "  // Src: " << *P.getSrcPattern() << "\n"
-       << "  // Dst: " << *P.getDstPattern() << "\n";
 
     // The representation supports rules that require multiple roots such as:
     //    %ptr(p0) = ...
@@ -344,12 +368,15 @@ public:
     Matchers.front()->emitCxxPredicateExpr(OS, "I");
     OS << ") {\n";
 
-    for (auto &MA : Actions)
-      OS << "    " << *MA << "\n";
+    for (const auto &MA : Actions) {
+      OS << "    ";
+      MA->emitCxxActionStmts(OS);
+      OS << "\n";
+    }
 
     OS << "    constrainSelectedInstRegOperands(I, TII, TRI, RBI);\n";
     OS << "    return true;\n";
-    OS << "  }\n";
+    OS << "  }\n\n";
   }
 };
 
@@ -375,7 +402,8 @@ Optional<GlobalISelEmitter::SkipReason>
 GlobalISelEmitter::runOnPattern(const PatternToMatch &P, raw_ostream &OS) {
 
   // Keep track of the matchers and actions to emit.
-  RuleMatcher M(P);
+  RuleMatcher M;
+  M.addAction<DebugCommentAction>(P);
 
   // First, analyze the whole pattern.
   // If the entire pattern has a predicate (e.g., target features), ignore it.
@@ -410,7 +438,7 @@ GlobalISelEmitter::runOnPattern(const PatternToMatch &P, raw_ostream &OS) {
   // The operators look good: match the opcode and mutate it to the new one.
   InstructionMatcher &InsnMatcher = M.addInstructionMatcher();
   InsnMatcher.addPredicate<InstructionOpcodeMatcher>(&SrcGI);
-  M.Actions.emplace_back(new MutateOpcode(&DstI));
+  M.addAction<MutateOpcodeAction>(&DstI);
 
   // Next, analyze the children, only accepting patterns that don't require
   // any change to operands.
@@ -505,7 +533,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl"
         "(MachineInstr &I) const {\n  const MachineRegisterInfo &MRI = "
-        "I.getParent()->getParent()->getRegInfo();\n";
+        "I.getParent()->getParent()->getRegInfo();\n\n";
 
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
