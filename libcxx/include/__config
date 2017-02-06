@@ -929,7 +929,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  if defined(__GNUC__) && ((__GNUC__ >= 5) || (__GNUC__ == 4 && \
    (__GNUC_MINOR__ >= 3 || __GNUC_PATCHLEVEL__ >= 2))) && !defined(__GXX_RTTI)
 #    define _LIBCPP_NO_RTTI
-#  elif (defined(_MSC_VER) && !defined(__clang__)) && !defined(_CPPRTTI)
+#  elif defined(_LIBCPP_MSVC) && !defined(_CPPRTTI)
 #    define _LIBCPP_NO_RTTI
 #  endif
 #endif

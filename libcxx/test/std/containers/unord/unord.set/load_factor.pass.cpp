@@ -43,7 +43,6 @@ int main()
     }
     {
         typedef std::unordered_set<int> C;
-        typedef int P;
         const C c;
         assert(c.load_factor() == 0);
     }
@@ -69,7 +68,6 @@ int main()
     {
         typedef std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;
-        typedef int P;
         const C c;
         assert(c.load_factor() == 0);
     }

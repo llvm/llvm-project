@@ -2635,7 +2635,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                        tok::colon, tok::l_square, tok::at) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
-         (Left.is(tok::l_paren) && !Right.is(tok::r_paren));
+         (Left.is(tok::l_paren) && !Right.is(tok::r_paren)) ||
+         (Left.is(TT_TemplateOpener) && !Right.is(TT_TemplateCloser));
 }
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {

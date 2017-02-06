@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -200,8 +201,8 @@ void setupNewBuffer(const BufferQueue::Buffer &Buffer) XRAY_NEVER_INSTRUMENT {
     auto &NewBuffer = *reinterpret_cast<MetadataRecord *>(&Records[0]);
     NewBuffer.Type = RecordType::Metadata;
     NewBuffer.RecordKind = MetadataRecord::RecordKinds::NewBuffer;
-    pid_t Pid = getpid();
-    std::memcpy(&NewBuffer.Data, &Pid, sizeof(pid_t));
+    pid_t Tid = syscall(SYS_gettid);
+    std::memcpy(&NewBuffer.Data, &Tid, sizeof(pid_t));
   }
 
   // Also write the WalltimeMarker record.

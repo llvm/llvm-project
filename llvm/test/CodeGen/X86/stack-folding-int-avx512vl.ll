@@ -8,6 +8,78 @@ target triple = "x86_64-unknown-unknown"
 ; By including a nop call with sideeffects we can force a partial register spill of the
 ; relevant registers and check that the reload is correctly folded into the instruction.
 
+define <16 x i8> @stack_fold_pabsb(<16 x i8> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsb
+  ;CHECK:       vpabsb {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8> %a0)
+  ret <16 x i8> %2
+}
+declare <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8>) nounwind readnone
+
+define <32 x i8> @stack_fold_pabsb_ymm(<32 x i8> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsb_ymm
+  ;CHECK:       vpabsb {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8> %a0)
+  ret <32 x i8> %2
+}
+declare <32 x i8> @llvm.x86.avx2.pabs.b(<32 x i8>) nounwind readnone
+
+define <4 x i32> @stack_fold_pabsd(<4 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsd
+  ;CHECK:       vpabsd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32> %a0)
+  ret <4 x i32> %2
+}
+declare <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32>) nounwind readnone
+
+define <8 x i32> @stack_fold_pabsd_ymm(<8 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsd_ymm
+  ;CHECK:       vpabsd {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32> %a0)
+  ret <8 x i32> %2
+}
+declare <8 x i32> @llvm.x86.avx2.pabs.d(<8 x i32>) nounwind readnone
+
+define <2 x i64> @stack_fold_pabsq(<2 x i64> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsq
+  ;CHECK:       vpabsq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.pabs.q.128(<2 x i64> %a0, <2 x i64> undef, i8 -1)
+  ret <2 x i64> %2
+}
+declare <2 x i64> @llvm.x86.avx512.mask.pabs.q.128(<2 x i64>, <2 x i64>, i8) nounwind readnone
+
+define <4 x i64> @stack_fold_pabsq_ymm(<4 x i64> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsq_ymm
+  ;CHECK:       vpabsq {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.pabs.q.256(<4 x i64> %a0, <4 x i64> undef, i8 -1)
+  ret <4 x i64> %2
+}
+declare <4 x i64> @llvm.x86.avx512.mask.pabs.q.256(<4 x i64>, <4 x i64>, i8) nounwind readnone
+
+define <8 x i16> @stack_fold_pabsw(<8 x i16> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsw
+  ;CHECK:       vpabsw {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16> %a0)
+  ret <8 x i16> %2
+}
+declare <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16>) nounwind readnone
+
+define <16 x i16> @stack_fold_pabsw_ymm(<16 x i16> %a0) {
+  ;CHECK-LABEL: stack_fold_pabsw_ymm
+  ;CHECK:       vpabsw {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16> %a0)
+  ret <16 x i16> %2
+}
+declare <16 x i16> @llvm.x86.avx2.pabs.w(<16 x i16>) nounwind readnone
+
 define <16 x i8> @stack_fold_paddb(<16 x i8> %a0, <16 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_paddb
   ;CHECK:       vpaddb {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
@@ -861,6 +933,65 @@ define <4 x i64> @stack_fold_pmovzxwq_mask_ymm(<4 x i64> %passthru, <8 x i16> %a
   ret <4 x i64> %6
 }
 
+define <2 x i64> @stack_fold_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
+  ;CHECK-LABEL: stack_fold_pmuldq
+  ;CHECK:       vpmuldq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %a0, <4 x i32> %a1)
+  ret <2 x i64> %2
+}
+declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone
+
+define <4 x i64> @stack_fold_pmuldq_ymm(<8 x i32> %a0, <8 x i32> %a1) {
+  ;CHECK-LABEL: stack_fold_pmuldq_ymm
+  ;CHECK:       vpmuldq {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32> %a0, <8 x i32> %a1)
+  ret <4 x i64> %2
+}
+declare <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32>, <8 x i32>) nounwind readnone
+
+define <2 x i64> @stack_fold_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
+  ;CHECK-LABEL: stack_fold_pmuludq
+  ;CHECK:       vpmuludq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32> %a0, <4 x i32> %a1)
+  ret <2 x i64> %2
+}
+declare <2 x i64> @llvm.x86.sse2.pmulu.dq(<4 x i32>, <4 x i32>) nounwind readnone
+
+define <4 x i64> @stack_fold_pmuludq_ymm(<8 x i32> %a0, <8 x i32> %a1) {
+  ;CHECK-LABEL: stack_fold_pmuludq_ymm
+  ;CHECK:       vpmuludq {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i64> @llvm.x86.avx2.pmulu.dq(<8 x i32> %a0, <8 x i32> %a1)
+  ret <4 x i64> %2
+}
+declare <4 x i64> @llvm.x86.avx2.pmulu.dq(<8 x i32>, <8 x i32>) nounwind readnone
+
+define <4 x i64> @stack_fold_pmuludq_ymm_mask(<4 x i64>* %passthru, <8 x i32> %a0, <8 x i32> %a1, i8 %mask) {
+  ;CHECK-LABEL: stack_fold_pmuludq_ymm_mask
+  ;CHECK:       vpmuludq {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i64> @llvm.x86.avx2.pmulu.dq(<8 x i32> %a0, <8 x i32> %a1)
+  %3 = bitcast i8 %mask to <8 x i1>
+  %4 = shufflevector <8 x i1> %3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = load <4 x i64>, <4 x i64>* %passthru
+  %6 = select <4 x i1> %4, <4 x i64> %2, <4 x i64> %5
+  ret <4 x i64> %6
+}
+
+define <4 x i64> @stack_fold_pmuludq_ymm_maskz(<8 x i32> %a0, <8 x i32> %a1, i8 %mask) {
+  ;CHECK-LABEL: stack_fold_pmuludq_ymm_maskz
+  ;CHECK:       vpmuludq {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <4 x i64> @llvm.x86.avx2.pmulu.dq(<8 x i32> %a0, <8 x i32> %a1)
+  %3 = bitcast i8 %mask to <8 x i1>
+  %4 = shufflevector <8 x i1> %3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = select <4 x i1> %4, <4 x i64> %2, <4 x i64> zeroinitializer
+  ret <4 x i64> %5
+}
+
 define <16 x i8> @stack_fold_punpckhbw(<16 x i8> %a0, <16 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_punpckhbw
   ;CHECK:       vpunpckhbw {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
@@ -1401,4 +1532,36 @@ define <32 x i8> @stack_fold_palignr_maskz(<32 x i8> %a0, <32 x i8> %a1, i32 %ma
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = select <32 x i1> %3, <32 x i8> %2, <32 x i8> zeroinitializer
   ret <32 x i8> %4
+}
+
+define <16 x i8> @stack_fold_pslldq(<16 x i8> %a) {
+  ;CHECK-LABEL: stack_fold_pslldq
+  ;CHECK:       vpslldq $12, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 16, i32 17, i32 18, i32 19>
+  ret <16 x i8> %2
+}
+
+define <32 x i8> @stack_fold_pslldq_ymm(<32 x i8> %a) {
+  ;CHECK-LABEL: stack_fold_pslldq_ymm
+  ;CHECK:       vpslldq $15, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i8> zeroinitializer, <32 x i8> %a, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 32, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 48>
+  ret <32 x i8> %2
+}
+
+define <16 x i8> @stack_fold_psrldq(<16 x i8> %a) {
+  ;CHECK-LABEL: stack_fold_psrldq
+  ;CHECK:       vpsrldq $12, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <16 x i8> zeroinitializer, <16 x i8> %a, <16 x i32> <i32 28, i32 29, i32 30, i32 31, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 09, i32 0, i32 0, i32 0, i32 0, i32 0>
+  ret <16 x i8> %2
+}
+
+define <32 x i8> @stack_fold_psrldq_ymm(<32 x i8> %a) {
+  ;CHECK-LABEL: stack_fold_psrldq_ymm
+  ;CHECK:       vpsrldq $15, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = shufflevector <32 x i8> zeroinitializer, <32 x i8> %a, <32 x i32> <i32 47, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 63, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  ret <32 x i8> %2
 }

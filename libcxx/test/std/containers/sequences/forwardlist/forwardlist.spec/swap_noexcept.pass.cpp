@@ -59,14 +59,16 @@ int main()
         typedef std::forward_list<MoveOnly> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::forward_list<MoveOnly, test_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::forward_list<MoveOnly, other_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::forward_list<MoveOnly, some_alloc<MoveOnly>> C;
 #if TEST_STD_VER >= 14
