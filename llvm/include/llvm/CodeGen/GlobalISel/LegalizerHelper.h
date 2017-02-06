@@ -95,6 +95,15 @@ private:
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
                     SmallVectorImpl<unsigned> &Ops);
 
+  /// Set \p CurOp and \p EndOp to the range of G_INSERT operands that fall
+  /// inside the bit-range specified by \DstStart and \p DstEnd. Assumes \p
+  /// CurOp is initially pointing at one of the (Reg, Offset) pairs in \p MI (or
+  /// at the end), which should be a G_INSERT instruction.
+  void findInsertionsForRange(int64_t DstStart, int64_t DstEnd,
+                              MachineInstr::mop_iterator &CurOp,
+                              MachineInstr::mop_iterator &EndOp,
+                              MachineInstr &MI);
+
   MachineIRBuilder MIRBuilder;
   MachineRegisterInfo &MRI;
 };
