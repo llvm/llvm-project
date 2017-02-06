@@ -78,6 +78,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   setAction({G_FREM, s32}, Libcall);
   setAction({G_FREM, s64}, Libcall);
 
+  // FIXME: what should we do about G_INSERTs with more than one source value?
+  // For now the default of not specifying means we'll fall back.
+  for (auto Ty : {s32, s64}) {
+    setAction({G_INSERT, Ty}, Legal);
+    setAction({G_INSERT, 1, Ty}, Legal);
+  }
+  for (auto Ty : {s1, s8, s16}) {
+    setAction({G_INSERT, Ty}, WidenScalar);
+    // FIXME: Can't widen the sources because that violates the constraints on
+    // G_INSERT (It seems entirely reasonable that inputs shouldn't overlap).
+  }
+
   for (unsigned MemOp : {G_LOAD, G_STORE}) {
     for (auto Ty : {s8, s16, s32, s64, p0, v2s32})
       setAction({MemOp, Ty}, Legal);

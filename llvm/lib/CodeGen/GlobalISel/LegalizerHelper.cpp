@@ -119,6 +119,17 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   }
 }
 
+void LegalizerHelper::findInsertionsForRange(
+    int64_t DstStart, int64_t DstEnd, MachineInstr::mop_iterator &CurOp,
+    MachineInstr::mop_iterator &EndOp, MachineInstr &MI) {
+  while (CurOp != MI.operands_end() && std::next(CurOp)->getImm() < DstStart)
+    CurOp += 2;
+
+  EndOp = CurOp;
+  while (EndOp != MI.operands_end() && std::next(EndOp)->getImm() < DstEnd)
+    EndOp += 2;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
                                                               unsigned TypeIdx,
                                                               LLT NarrowTy) {
@@ -158,6 +169,65 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     }
     unsigned DstReg = MI.getOperand(0).getReg();
     MIRBuilder.buildSequence(DstReg, DstRegs, Indexes);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_INSERT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    int NumParts =
+        MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
+
+    SmallVector<unsigned, 2> SrcRegs, DstRegs;
+    SmallVector<uint64_t, 2> Indexes;
+    extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs);
+
+    MachineInstr::mop_iterator CurOp = MI.operands_begin() + 2, EndOp;
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned DstStart = i * NarrowSize;
+      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+      Indexes.push_back(DstStart);
+
+      findInsertionsForRange(DstStart, DstStart + NarrowSize, CurOp, EndOp, MI);
+
+      if (CurOp == EndOp) {
+        // No part of the insert affects this subregister, forward the original.
+        DstRegs.push_back(SrcRegs[i]);
+        continue;
+      } else if (MRI.getType(CurOp->getReg()) == NarrowTy &&
+                 std::next(CurOp)->getImm() == DstStart) {
+        // The entire subregister is defined by this insert, forward the new
+        // value.
+        DstRegs.push_back(CurOp->getReg());
+        continue;
+      }
+
+      auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_INSERT)
+        .addDef(DstReg)
+        .addUse(SrcRegs[i]);
+
+      for (; CurOp != EndOp; CurOp += 2) {
+        unsigned Reg = CurOp->getReg();
+        uint64_t Offset = std::next(CurOp)->getImm() - DstStart;
+
+        // Make sure we don't have a cross-register insert.
+        if (Offset + MRI.getType(Reg).getSizeInBits() > NarrowSize) {
+          // FIXME: we should handle this case, though it's unlikely to be
+          // common given ABI-related layout restrictions.
+          return UnableToLegalize;
+        }
+
+        MIB.addUse(Reg);
+        MIB.addImm(Offset);
+      }
+
+      DstRegs.push_back(DstReg);
+    }
+
+    assert(DstRegs.size() == (unsigned)NumParts && "not all parts covered");
+    MIRBuilder.buildSequence(MI.getOperand(0).getReg(), DstRegs, Indexes);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -306,6 +376,26 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
         .addDef(MI.getOperand(0).getReg())
         .addUse(SrcExt);
 
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_INSERT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    unsigned Src = MI.getOperand(1).getReg();
+    unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);
+    MIRBuilder.buildAnyExt(SrcExt, Src);
+
+    unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
+    auto MIB = MIRBuilder.buildInsert(DstExt, SrcExt, MI.getOperand(2).getReg(),
+                                      MI.getOperand(3).getImm());
+    for (unsigned OpNum = 4; OpNum < MI.getNumOperands(); OpNum += 2) {
+      MIB.addReg(MI.getOperand(OpNum).getReg());
+      MIB.addImm(MI.getOperand(OpNum + 1).getImm());
+    }
+
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), DstExt);
     MI.eraseFromParent();
     return Legalized;
   }
