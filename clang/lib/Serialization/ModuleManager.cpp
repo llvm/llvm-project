@@ -63,6 +63,19 @@ static bool checkSignature(ASTFileSignature Signature,
   return true;
 }
 
+static void updateModuleImports(ModuleFile &MF, ModuleFile *ImportedBy,
+                                SourceLocation ImportLoc) {
+  if (ImportedBy) {
+    MF.ImportedBy.insert(ImportedBy);
+    ImportedBy->Imports.insert(&MF);
+  } else {
+    if (!MF.DirectlyImported)
+      MF.ImportLoc = ImportLoc;
+
+    MF.DirectlyImported = true;
+  }
+}
+
 ModuleManager::AddModuleResult
 ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                          SourceLocation ImportLoc, ModuleFile *ImportedBy,
@@ -95,91 +108,79 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   // Check whether we already loaded this module, before
-  ModuleFile *ModuleEntry = Modules[Entry];
-  std::unique_ptr<ModuleFile> NewModule;
-  if (!ModuleEntry) {
-    // Allocate a new module.
-    NewModule = llvm::make_unique<ModuleFile>(Type, Generation);
-    NewModule->Index = Chain.size();
-    NewModule->FileName = FileName.str();
-    NewModule->File = Entry;
-    NewModule->ImportLoc = ImportLoc;
-    NewModule->InputFilesValidationTimestamp = 0;
-
-    if (NewModule->Kind == MK_ImplicitModule) {
-      std::string TimestampFilename = NewModule->getTimestampFilename();
-      vfs::Status Status;
-      // A cached stat value would be fine as well.
-      if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-        NewModule->InputFilesValidationTimestamp =
-            llvm::sys::toTimeT(Status.getLastModificationTime());
-    }
-
-    // Load the contents of the module
-    if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
-      // The buffer was already provided for us.
-      NewModule->Buffer = std::move(Buffer);
-    } else {
-      // Open the AST file.
-      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf(
-          (std::error_code()));
-      if (FileName == "-") {
-        Buf = llvm::MemoryBuffer::getSTDIN();
-      } else {
-        // Leave the FileEntry open so if it gets read again by another
-        // ModuleManager it must be the same underlying file.
-        // FIXME: Because FileManager::getFile() doesn't guarantee that it will
-        // give us an open file, this may not be 100% reliable.
-        Buf = FileMgr.getBufferForFile(NewModule->File,
-                                       /*IsVolatile=*/false,
-                                       /*ShouldClose=*/false);
-      }
-
-      if (!Buf) {
-        ErrorStr = Buf.getError().message();
-        return Missing;
-      }
-
-      NewModule->Buffer = std::move(*Buf);
-    }
-
-    // Initialize the stream.
-    NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
-
-    // Read the signature eagerly now so that we can check it.
-    if (checkSignature(ReadSignature(NewModule->Data), ExpectedSignature, ErrorStr))
+  if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
+    // Check the stored signature.
+    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
       return OutOfDate;
 
-    // We're keeping this module.  Update the map entry.
-    ModuleEntry = NewModule.get();
-  } else if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr)) {
-    return OutOfDate;
-  }
-
-  if (ImportedBy) {
-    ModuleEntry->ImportedBy.insert(ImportedBy);
-    ImportedBy->Imports.insert(ModuleEntry);
-  } else {
-    if (!ModuleEntry->DirectlyImported)
-      ModuleEntry->ImportLoc = ImportLoc;
-    
-    ModuleEntry->DirectlyImported = true;
-  }
-
-  Module = ModuleEntry;
-
-  if (!NewModule)
+    Module = ModuleEntry;
+    updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
     return AlreadyLoaded;
+  }
 
-  assert(!Modules[Entry] && "module loaded twice");
-  Modules[Entry] = ModuleEntry;
+  // Allocate a new module.
+  auto NewModule = llvm::make_unique<ModuleFile>(Type, Generation);
+  NewModule->Index = Chain.size();
+  NewModule->FileName = FileName.str();
+  NewModule->File = Entry;
+  NewModule->ImportLoc = ImportLoc;
+  NewModule->InputFilesValidationTimestamp = 0;
+
+  if (NewModule->Kind == MK_ImplicitModule) {
+    std::string TimestampFilename = NewModule->getTimestampFilename();
+    vfs::Status Status;
+    // A cached stat value would be fine as well.
+    if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
+      NewModule->InputFilesValidationTimestamp =
+          llvm::sys::toTimeT(Status.getLastModificationTime());
+  }
+
+  // Load the contents of the module
+  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
+    // The buffer was already provided for us.
+    NewModule->Buffer = std::move(Buffer);
+  } else {
+    // Open the AST file.
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
+    if (FileName == "-") {
+      Buf = llvm::MemoryBuffer::getSTDIN();
+    } else {
+      // Leave the FileEntry open so if it gets read again by another
+      // ModuleManager it must be the same underlying file.
+      // FIXME: Because FileManager::getFile() doesn't guarantee that it will
+      // give us an open file, this may not be 100% reliable.
+      Buf = FileMgr.getBufferForFile(NewModule->File,
+                                     /*IsVolatile=*/false,
+                                     /*ShouldClose=*/false);
+    }
+
+    if (!Buf) {
+      ErrorStr = Buf.getError().message();
+      return Missing;
+    }
+
+    NewModule->Buffer = std::move(*Buf);
+  }
+
+  // Initialize the stream.
+  NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
+
+  // Read the signature eagerly now so that we can check it.
+  if (checkSignature(ReadSignature(NewModule->Data), ExpectedSignature,
+                     ErrorStr))
+    return OutOfDate;
+
+  // We're keeping this module.  Store it everywhere.
+  Module = Modules[Entry] = NewModule.get();
+
+  updateModuleImports(*NewModule, ImportedBy, ImportLoc);
+
+  if (!NewModule->isModule())
+    PCHChain.push_back(NewModule.get());
+  if (!ImportedBy)
+    Roots.push_back(NewModule.get());
 
   Chain.push_back(std::move(NewModule));
-  if (!ModuleEntry->isModule())
-    PCHChain.push_back(ModuleEntry);
-  if (!ImportedBy)
-    Roots.push_back(ModuleEntry);
-
   return NewlyLoaded;
 }
 
