@@ -60,10 +60,12 @@ int main()
         typedef std::vector<MoveOnly> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
-        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");

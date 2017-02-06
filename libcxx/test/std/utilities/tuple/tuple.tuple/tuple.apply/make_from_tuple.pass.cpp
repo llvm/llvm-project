@@ -66,7 +66,7 @@ constexpr bool do_constexpr_test(Tuple&& tup) {
     return std::make_from_tuple<Tp>(std::forward<Tuple>(tup)).args == tup;
 }
 
-// Needed by do_forwarding_test() since it compare pairs of different types.
+// Needed by do_forwarding_test() since it compares pairs of different types.
 template <class T1, class T2, class U1, class U2>
 inline bool operator==(const std::pair<T1, T2>& lhs, const std::pair<U1, U2>& rhs) {
     return lhs.first == rhs.first && lhs.second == rhs.second;

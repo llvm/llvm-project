@@ -13844,17 +13844,21 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   auto *N2C = cast<ConstantSDNode>(N2);
   unsigned IdxVal = N2C->getZExtValue();
 
-  // If we are clearing out a element, we do this more efficiently with a
-  // blend shuffle than a costly integer insertion.
-  // TODO: would other rematerializable values (e.g. allbits) benefit as well?
+  bool IsZeroElt = X86::isZeroNode(N1);
+  bool IsAllOnesElt = VT.isInteger() && llvm::isAllOnesConstant(N1);
+
+  // If we are inserting a element, see if we can do this more efficiently with
+  // a blend shuffle with a rematerializable vector than a costly integer
+  // insertion.
   // TODO: pre-SSE41 targets will tend to use bit masking - this could still
   // be beneficial if we are inserting several zeros and can combine the masks.
-  if (X86::isZeroNode(N1) && Subtarget.hasSSE41() && NumElts <= 8) {
-    SmallVector<int, 8> ClearMask;
+  if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() && NumElts <= 8) {
+    SmallVector<int, 8> BlendMask;
     for (unsigned i = 0; i != NumElts; ++i)
-      ClearMask.push_back(i == IdxVal ? i + NumElts : i);
-    SDValue ZeroVector = getZeroVector(VT, Subtarget, DAG, dl);
-    return DAG.getVectorShuffle(VT, dl, N0, ZeroVector, ClearMask);
+      BlendMask.push_back(i == IdxVal ? i + NumElts : i);
+    SDValue CstVector = IsZeroElt ? getZeroVector(VT, Subtarget, DAG, dl)
+                                  : DAG.getConstant(-1, dl, VT);
+    return DAG.getVectorShuffle(VT, dl, N0, CstVector, BlendMask);
   }
 
   // If the vector is wider than 128 bits, extract the 128-bit subvector, insert

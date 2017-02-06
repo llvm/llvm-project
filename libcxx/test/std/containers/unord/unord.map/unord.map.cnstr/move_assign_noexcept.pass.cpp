@@ -54,11 +54,13 @@ int main()
                            std::equal_to<MoveOnly>, test_allocator<std::pair<const MoveOnly, MoveOnly>>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, std::hash<MoveOnly>,
                           std::equal_to<MoveOnly>, other_allocator<std::pair<const MoveOnly, MoveOnly>>> C;
-        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable<C>::value, "");
+        static_assert(std::is_nothrow_move_assignable<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::unordered_map<MoveOnly, MoveOnly, some_hash<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");

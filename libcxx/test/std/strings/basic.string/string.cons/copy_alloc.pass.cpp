@@ -112,15 +112,15 @@ int main()
     typedef std::basic_string<char, std::char_traits<char>, A> S;
 	const char * p1 = "This is my first string";
 	const char * p2 = "This is my second string";
-	
+
     alloc_imp<char> imp1;
     alloc_imp<char> imp2;
 	S s1(p1, A(&imp1));
 	S s2(p2, A(&imp2));
-	
+
 	assert(s1 == p1);
 	assert(s2 == p2);
-	
+
 	imp2.deactivate();
 	test_assign(s1, s2);
 	assert(s1 == p1);

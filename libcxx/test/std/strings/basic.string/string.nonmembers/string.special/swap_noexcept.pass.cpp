@@ -59,10 +59,12 @@ int main()
         typedef std::string C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#if defined(_LIBCPP_VERSION)
     {
         typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> C;
-        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+#endif // _LIBCPP_VERSION
     {
         typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
 #if TEST_STD_VER >= 14
